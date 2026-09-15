@@ -1,0 +1,120 @@
+.page {
+  --ink: #0d3b3e;
+  --ink-deep: #082b2e;
+  --mist: #eef2ef;
+  --mist-deep: #e1e8e3;
+  --sand: #e4dfd3;
+  --sea: #1f7a7a;
+  --lantern: #e0a23a;
+  --lantern-deep: #c98b25;
+  --text: #1c2a2c;
+  --muted: #4d5f62;
+  --line: #cbd6d1;
+  --on-ink-muted: #b8cfcc;
+
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  color: var(--text);
+  background: var(--mist);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+  font-optical-sizing: auto;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--lantern);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.page a,
+.page button {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+/* Single orchestrated entrance: the trip sheet settles onto the photo. */
+.sheet {
+  animation: settle 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 250ms both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Route line: the one section that is a real sequence. */
+.route {
+  position: relative;
+}
+
+.route::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: var(--line);
+}
+
+@media (min-width: 768px) {
+  .route::before {
+    left: 0;
+    right: 0;
+    top: 11px;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
+}
+
+.stop {
+  position: relative;
+}
+
+.stop::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--lantern);
+  border: 3px solid var(--mist);
+  box-shadow: 0 0 0 2px var(--lantern);
+}
+
+@media (min-width: 768px) {
+  .stop::before {
+    left: 0;
+    top: 3px;
+  }
+}
+
+.fleetRow + .fleetRow {
+  border-top: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+
+  .page a,
+  .page button {
+    transition: none;
+  }
+}

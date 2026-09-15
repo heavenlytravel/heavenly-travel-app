@@ -1,0 +1,137 @@
+.page {
+  --green: #0e3a2f;
+  --ink: #0a2a22;
+  --chassis: #eef1ee;
+  --paper: #ffffff;
+  --brass: #c49a3c;
+  --brass-deep: #7d5a14;
+  --slate: #4f5b56;
+
+  background: var(--chassis);
+  color: var(--ink);
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-variation-settings: "wdth" 100;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Wide livery lettering used for display type */
+.wide {
+  font-variation-settings: "wdth" 125;
+  letter-spacing: -0.01em;
+}
+
+.semi {
+  font-variation-settings: "wdth" 112;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* The livery stripe: a green band with a brass pinstripe, as painted along a coach body */
+.stripe {
+  position: relative;
+  height: 14px;
+  background: var(--green);
+}
+
+.stripe::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 3px;
+  background: var(--brass);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stripe::after {
+    animation: draw 1400ms cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Timeline: the same pinstripe used as the route line */
+.route {
+  position: relative;
+}
+
+.route::before {
+  content: "";
+  position: absolute;
+  background: var(--brass);
+  left: 19px;
+  top: 20px;
+  bottom: 20px;
+  width: 3px;
+}
+
+@media (min-width: 900px) {
+  .route::before {
+    left: 20px;
+    right: 20px;
+    top: 19px;
+    bottom: auto;
+    width: auto;
+    height: 3px;
+  }
+}
+
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq .mark {
+  transition: transform 200ms ease;
+}
+
+.faq[open] .mark {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq .mark {
+    transition: none;
+  }
+}
+
+.field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  color: #fff;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.field::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.field:focus-visible {
+  border-color: var(--brass);
+}
+
+.field option {
+  color: #0a2a22;
+}

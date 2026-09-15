@@ -1,7 +1,8 @@
 import styles from "../page.module.css";
 
 /* A simplified, stylised Peninsular Malaysia drawn from rough lon/lat
-   points so the stops sit in the right places relative to each other. */
+   points so the places sit in the right spots relative to each other.
+   The lines form a network of roads we drive, not a trip from one origin. */
 
 const LON0 = 99.45;
 const LAT0 = 6.95;
@@ -30,18 +31,18 @@ const toPath = (pts: [number, number][], close = false) =>
     })
     .join(" ") + (close ? " Z" : "");
 
-type Stop = {
+type Place = {
   name: string;
   lon: number;
   lat: number;
   side: "left" | "right" | "below";
   delay: number;
-  origin?: boolean;
 };
 
-const stops: Stop[] = [
-  { name: "Langkawi", lon: 99.8, lat: 6.35, side: "below", delay: 0.3, origin: true },
+const places: Place[] = [
+  { name: "Langkawi", lon: 99.8, lat: 6.35, side: "below", delay: 0.6 },
   { name: "Penang", lon: 100.3, lat: 5.4, side: "left", delay: 0.9 },
+  { name: "Ipoh", lon: 101.09, lat: 4.6, side: "left", delay: 1.2 },
   { name: "Cameron Highlands", lon: 101.38, lat: 4.47, side: "right", delay: 1.4 },
   { name: "Kuala Lumpur", lon: 101.69, lat: 3.14, side: "left", delay: 1.8 },
   { name: "Melaka", lon: 102.25, lat: 2.19, side: "left", delay: 2.2 },
@@ -51,15 +52,24 @@ const stops: Stop[] = [
   { name: "Kota Bharu", lon: 102.24, lat: 6.13, side: "right", delay: 3.9 },
 ];
 
-const mainRoute: [number, number][] = [
+/* West-coast and southern spine, plus the ferry hop to Langkawi. */
+const westRoad: [number, number][] = [
   [99.8, 6.35], [100.3, 6.1], [100.3, 5.4], [100.7, 4.9], [101.09, 4.6],
   [101.38, 4.47], [101.69, 3.14], [102.25, 2.19], [103.0, 1.7], [103.76, 1.46],
 ];
 
-const eastRoute: [number, number][] = [
+/* East-coast road, joined to the capital and back across the north. */
+const eastRoad: [number, number][] = [
   [101.69, 3.14], [102.5, 3.5], [103.33, 3.8], [103.14, 5.33], [102.6, 5.85],
-  [102.24, 6.13],
+  [102.24, 6.13], [101.6, 5.9], [101.1, 6.25], [100.3, 6.1],
 ];
+
+const roadProps = {
+  fill: "none",
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  pathLength: 1,
+};
 
 export function RouteMap() {
   const [lkX, lkY] = px(99.8, 6.35);
@@ -72,11 +82,11 @@ export function RouteMap() {
       aria-labelledby="route-map-title route-map-desc"
       className="h-auto w-full max-w-[440px]"
     >
-      <title id="route-map-title">Routes Heavenly Travel drives across Peninsular Malaysia</title>
+      <title id="route-map-title">Places Heavenly Travel drives across Peninsular Malaysia</title>
       <desc id="route-map-desc">
-        A map of Peninsular Malaysia with a road route from Langkawi through Penang, the Cameron
-        Highlands, Kuala Lumpur and Melaka to Johor Bahru, and a second route from Kuala Lumpur up
-        the East Coast through Kuantan and Kuala Terengganu to Kota Bharu.
+        A map of Peninsular Malaysia with roads linking Langkawi, Penang, Ipoh, the Cameron
+        Highlands, Kuala Lumpur, Melaka and Johor Bahru on the west and south, and Kuantan, Kuala
+        Terengganu and Kota Bharu on the East Coast.
       </desc>
 
       {/* Land */}
@@ -91,74 +101,43 @@ export function RouteMap() {
       <ellipse cx={lkX} cy={lkY} rx="11" ry="8" fill="#e4ede6" stroke="#b9c9bf" strokeWidth="1.5" />
       <ellipse cx={pgX} cy={pgY} rx="6" ry="8" fill="#e4ede6" stroke="#b9c9bf" strokeWidth="1.5" />
 
-      {/* Road under-line (asphalt), then the yellow marking drawn over it */}
+      {/* Roads: asphalt under-line, then the yellow marking drawn over it */}
+      <path d={toPath(westRoad)} stroke="#0c2340" strokeWidth="7" className={styles.routeLine} {...roadProps} />
+      <path d={toPath(westRoad)} stroke="#f5b800" strokeWidth="2.5" className={styles.routeLine} {...roadProps} />
       <path
-        d={toPath(mainRoute)}
-        fill="none"
+        d={toPath(eastRoad)}
         stroke="#0c2340"
         strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
-        className={styles.routeLine}
+        className={`${styles.routeLine} ${styles.routeLineEast}`}
+        {...roadProps}
       />
       <path
-        d={toPath(mainRoute)}
-        fill="none"
+        d={toPath(eastRoad)}
         stroke="#f5b800"
         strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
-        className={styles.routeLine}
-      />
-      <path
-        d={toPath(eastRoute)}
-        fill="none"
-        stroke="#0c2340"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
         className={`${styles.routeLine} ${styles.routeLineEast}`}
-      />
-      <path
-        d={toPath(eastRoute)}
-        fill="none"
-        stroke="#f5b800"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
-        className={`${styles.routeLine} ${styles.routeLineEast}`}
+        {...roadProps}
       />
 
-      {/* Stops */}
-      {stops.map((s) => {
-        const [x, y] = px(s.lon, s.lat);
-        const anchor = s.side === "left" ? "end" : s.side === "right" ? "start" : "middle";
-        const dx = s.side === "left" ? -12 : s.side === "right" ? 12 : 0;
-        const dy = s.side === "below" ? 26 : 4.5;
+      {/* Places */}
+      {places.map((p) => {
+        const [x, y] = px(p.lon, p.lat);
+        const anchor = p.side === "left" ? "end" : p.side === "right" ? "start" : "middle";
+        const dx = p.side === "left" ? -12 : p.side === "right" ? 12 : 0;
+        const dy = p.side === "below" ? 26 : 4.5;
         return (
-          <g key={s.name} className={styles.stop} style={{ animationDelay: `${s.delay}s` }}>
-            {s.origin ? (
-              <>
-                <circle cx={x} cy={y} r="9" fill="#f5b800" />
-                <circle cx={x} cy={y} r="4" fill="#0c2340" />
-              </>
-            ) : (
-              <circle cx={x} cy={y} r="5.5" fill="#ffffff" stroke="#0c2340" strokeWidth="2.5" />
-            )}
+          <g key={p.name} className={styles.stop} style={{ animationDelay: `${p.delay}s` }}>
+            <circle cx={x} cy={y} r="5.5" fill="#ffffff" stroke="#0c2340" strokeWidth="2.5" />
             <text
               x={x + dx}
               y={y + dy}
               textAnchor={anchor}
               fontSize="13"
-              fontWeight={s.origin ? 700 : 600}
+              fontWeight={600}
               fill="#0c2340"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              {s.name}
+              {p.name}
             </text>
           </g>
         );

@@ -2,15 +2,18 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/fable/2
  * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Direction: The operator's trip sheet — deep Andaman teal, amber marker-light accent, a confirmed trip sheet as the hero artefact and an editorial two-column layout that reads like a well-run fleet office.
+ * Direction: The operator's trip sheet — deep Andaman teal, amber marker-light accent, a confirmed trip sheet in the hero, a booking search bar in the same tokens, and an editorial two-column layout that reads like a well-run fleet office serving all of Malaysia.
  * Tokens used: 71,656 (48 tool calls)
  * Time taken: 7m 00s
+ * Revision 1: 87,938 tokens (23 tool calls), 2m 35s
+ * Revision 1 notes: Repositioned copy Malaysia-wide (Langkawi only as base in coverage/footer), set the required hero title and description, added an accessible client-side booking search bar under the hero, and moved the trip sheet inside the hero so nothing overlaps the new bar.
  * Generated: 2026-09-15
  */
 
 import type { Metadata } from "next";
 import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 import styles from "./page.module.css";
+import { SearchBar } from "./_components/search-bar";
 
 const display = Newsreader({
   subsets: ["latin"],
@@ -28,9 +31,9 @@ const body = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel — Coach charter and chauffeured cars, Langkawi and across Malaysia",
+  title: "Heavenly Travel — Coach charter and chauffeured cars across Malaysia",
   description:
-    "Ten years running coaches and chauffeured cars in Langkawi. Airport and jetty transfers, corporate and school charters, private drivers. Now booking across Malaysia.",
+    "Coach charter and cars with drivers, wherever you are in Malaysia. Airport transfers, corporate and school charters, private drivers and island escapes, arranged by a local team with ten years' experience.",
 };
 
 const IMG = {
@@ -62,7 +65,7 @@ const fleet = [
     name: "14-seat van",
     seats: "14 passengers",
     luggage: "Rear luggage space",
-    bestFor: "Extended families, small teams, island tours",
+    bestFor: "Extended families, small teams, city and island tours",
   },
   {
     name: "Executive MPV with driver",
@@ -98,12 +101,12 @@ const steps = [
 ];
 
 const coverage = [
-  { place: "Langkawi", note: "Home base. Airport, Kuah jetty, every resort and attraction." },
-  { place: "Kedah and Perlis", note: "Alor Setar, Kuala Kedah and Kuala Perlis jetties." },
+  { place: "Kuala Lumpur and Selangor", note: "KLIA, city hotels, corporate itineraries and events." },
   { place: "Penang", note: "Airport, George Town, conference and hotel transfers." },
-  { place: "Kuala Lumpur and Selangor", note: "KLIA, city hotels, corporate itineraries." },
+  { place: "Langkawi, Kedah and Perlis", note: "Airport, jetties, resorts and island tours." },
   { place: "Melaka and Johor", note: "Heritage tours and cross-border group pick-ups." },
-  { place: "Anywhere else in Malaysia", note: "East coast, highlands, Sabah and Sarawak on request." },
+  { place: "Pahang and the east coast", note: "Highlands, Kuantan, Cherating and island jetties." },
+  { place: "Sabah and Sarawak", note: "Kota Kinabalu and Kuching transfers on request." },
 ];
 
 export default function Page() {
@@ -120,7 +123,7 @@ export default function Page() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
           <a href="#top" className="flex items-baseline gap-2">
             <span className={`${styles.display} text-2xl text-(--ink)`}>Heavenly Travel</span>
-            <span className="hidden text-sm text-(--muted) sm:inline">Langkawi, since 2016</span>
+            <span className="hidden text-sm text-(--muted) sm:inline">Across Malaysia, since 2016</span>
           </a>
           <nav aria-label="Page sections" className="hidden items-center gap-7 text-[15px] font-medium md:flex">
             <a href="#services" className="text-(--text) hover:text-(--sea)">
@@ -151,11 +154,11 @@ export default function Page() {
           <div className="mx-auto grid max-w-6xl gap-12 px-5 pt-16 pb-14 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-24">
             <div className="max-w-xl">
               <h1 className={`${styles.display} text-[2.6rem] sm:text-6xl lg:text-[4.25rem]`}>
-                Coaches and chauffeured cars, run the way a good operator should.
+                A better way to get away.
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-(--on-ink-muted)">
-                Ten years of moving groups and guests around Langkawi, on time and in comfort, with
-                drivers who know the roads. Now taking bookings across Malaysia.
+                Island escapes, seamless transport and trips made around you. Let our local team
+                take care of the details.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
@@ -193,7 +196,7 @@ export default function Page() {
               </div>
 
               <div
-                className={`${styles.sheet} -mt-16 ml-4 max-w-sm rounded-xl bg-(--mist) p-5 text-(--text) shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] sm:ml-10 lg:absolute lg:right-[-1.5rem] lg:bottom-[-2.5rem] lg:mt-0 lg:ml-0`}
+                className={`${styles.sheet} -mt-16 ml-4 max-w-sm rounded-xl bg-(--mist) p-5 text-(--text) shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] sm:ml-10 lg:absolute lg:right-[-1.5rem] lg:bottom-6 lg:mt-0 lg:ml-0`}
                 aria-label="Sample trip sheet"
               >
                 <div className="flex items-center justify-between border-b border-(--line) pb-3">
@@ -207,9 +210,9 @@ export default function Page() {
                   <dt className="text-(--muted)">Group</dt>
                   <dd>Corporate offsite, 38 people</dd>
                   <dt className="text-(--muted)">Pick up</dt>
-                  <dd>Langkawi International Airport, 09:40</dd>
+                  <dd>KLIA Terminal 1, 09:40</dd>
                   <dt className="text-(--muted)">Drop off</dt>
-                  <dd>Pantai Cenang resort, then Kilim Geoforest jetty</dd>
+                  <dd>Port Dickson resort, then Melaka old town</dd>
                   <dt className="text-(--muted)">Vehicle</dt>
                   <dd>44-seat executive coach</dd>
                   <dt className="text-(--muted)">Driver</dt>
@@ -222,14 +225,24 @@ export default function Page() {
           </div>
         </section>
 
+        {/* Booking search: sits across the hero's bottom edge */}
+        <section aria-labelledby="search-heading" className="relative z-10 -mt-1 bg-linear-to-b from-(--ink) from-50% to-transparent to-50%">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8">
+            <h2 id="search-heading" className="sr-only">
+              Search for a coach or car with driver
+            </h2>
+            <SearchBar />
+          </div>
+        </section>
+
         {/* Services */}
         <section id="services" className="scroll-mt-20 border-b border-(--line)">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
             <div>
               <h2 className={`${styles.display} text-4xl text-(--ink)`}>What we run</h2>
               <p className="mt-4 text-(--muted)">
-                Two services carry most of our work today. More are being added as we grow beyond
-                Langkawi, so ask if your trip does not fit neatly here.
+                Two services carry most of our work today, anywhere in Malaysia. More are being
+                added as we grow, so ask if your trip does not fit neatly here.
               </p>
             </div>
 
@@ -301,7 +314,7 @@ export default function Page() {
                     We are building the same standard into new products as we digitalise.
                   </p>
                   <ul className="mt-4 grid gap-2 text-[15px]">
-                    <li>Packaged island day tours</li>
+                    <li>Packaged island and city escapes</li>
                     <li>Multi-city corporate itineraries</li>
                     <li>Online booking with live availability</li>
                   </ul>
@@ -435,10 +448,11 @@ export default function Page() {
               </ul>
             </div>
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>Langkawi first, Malaysia now</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>Wherever you are in Malaysia</h2>
               <p className="mt-4 text-(--muted)">
-                We started on the island and still know it best. The same drivers, vehicles and
-                trip sheets now run on the mainland too.
+                Pick-ups start where you are: a hotel, an airport, a jetty or the office. Our team
+                is based in Langkawi and runs the same drivers, vehicles and trip sheets across the
+                country.
               </p>
               <dl className="mt-8 grid gap-4 sm:grid-cols-2">
                 {coverage.map((c) => (
@@ -493,7 +507,7 @@ export default function Page() {
               </div>
               <Field label="Number of passengers" id="pax" type="number" inputMode="numeric" min={1} />
               <Field label="Travel date" id="date" type="date" />
-              <Field label="Pick-up location" id="pickup" placeholder="e.g. Langkawi International Airport" />
+              <Field label="Pick-up location" id="pickup" placeholder="e.g. KLIA Terminal 1, or your hotel" />
               <div className="grid gap-1.5 sm:col-span-2">
                 <label htmlFor="notes" className="text-sm font-semibold">
                   Anything else we should know
@@ -527,8 +541,8 @@ export default function Page() {
           <div>
             <span className={`${styles.display} text-2xl text-white`}>Heavenly Travel</span>
             <p className="mt-2 max-w-xs">
-              Coach charter and chauffeured cars. Operating from Langkawi since 2016 and now across
-              Malaysia.
+              Coach charter and chauffeured cars. Based in Langkawi, serving all of Malaysia since
+              2016.
             </p>
           </div>
           <address className="not-italic">

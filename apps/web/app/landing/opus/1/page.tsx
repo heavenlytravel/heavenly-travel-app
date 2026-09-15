@@ -2,9 +2,11 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/opus/1
  * Model: Claude Opus 5 (claude-opus-5)
- * Direction: Malaysian road-sign vernacular meets island hospitality: a signage plate over a Langkawi kite photo and a route board that draws outward from Langkawi to the rest of Malaysia.
+ * Direction: Malaysian road-sign vernacular meets island hospitality: a signage-plate hero and booking search over a kite photo, and a regional direction-sign board showing pick-ups and drop-offs anywhere in Malaysia.
  * Tokens used: 62,854 (31 tool calls)
  * Time taken: 7m 18s
+ * Revision 1: 97,821 tokens (40 tool calls), 4m 28s
+ * Revision 1 notes: Removed Langkawi-as-origin framing (route line became a regional destination sign board), set the required hero copy, added a sign-plate booking search bar under the hero.
  * Generated: 2026-09-15
  */
 
@@ -12,6 +14,7 @@ import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { Literata, Overpass } from "next/font/google";
 import styles from "./landing.module.css";
+import { BookingSearch } from "./_components/BookingSearch";
 
 const overpass = Overpass({
   subsets: ["latin"],
@@ -29,9 +32,9 @@ const literata = Literata({
 });
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel | Coach charter and car with driver, from Langkawi across Malaysia",
+  title: "Heavenly Travel | Coach charter and car with driver across Malaysia",
   description:
-    "Ten years of coach charter and chauffeured car hire in Langkawi, now serving travellers, families, groups and companies across Malaysia. Request a quote.",
+    "Coach charter and private cars with drivers for travellers, families, groups and companies, wherever you are in Malaysia. Based in Langkawi for ten years. Request a quote.",
 };
 
 /* Design tokens (kept as literals so Tailwind can see them)
@@ -47,25 +50,21 @@ const HERO_IMG =
 const HIGHLANDS_IMG =
   "https://images.unsplash.com/photo-1588387695597-87bfcf4cd1bf?auto=format&fit=crop&w=1200&q=75";
 
-type Stop = { name: string; note?: string; sea?: boolean };
+type Region = { name: string; places: string[] };
 
-// `sea: true` means the leg from this stop to the next crosses water.
-const stops: Stop[] = [
-  { name: "Langkawi", note: "Home for ten years", sea: true },
-  { name: "Kuala Perlis", note: "Ferry to the mainland" },
-  { name: "Penang" },
-  { name: "Ipoh" },
-  { name: "Cameron Highlands" },
-  { name: "Kuala Lumpur" },
-  { name: "Melaka" },
-  { name: "Johor Bahru", sea: true },
-  { name: "Sabah and Sarawak", note: "Ask us" },
+// A direction sign with no "you are here": every place is a possible pick-up or drop-off.
+const regions: Region[] = [
+  { name: "North", places: ["Langkawi", "Penang", "Alor Setar", "Ipoh"] },
+  { name: "Central", places: ["Kuala Lumpur", "KLIA", "Genting Highlands", "Cameron Highlands"] },
+  { name: "South", places: ["Melaka", "Johor Bahru", "Desaru"] },
+  { name: "East Coast", places: ["Kuantan", "Kuala Terengganu", "Kota Bharu"] },
+  { name: "Sabah and Sarawak", places: ["Kota Kinabalu", "Kuching", "Miri"] },
 ];
 
 const lessons = [
   {
-    title: "Ferries run late. We plan for it.",
-    body: "On an island, arrival times are a guess. Our drivers follow your ferry or flight and wait for you, so the first face you see is someone holding your name.",
+    title: "Ferries and flights run late. We plan for it.",
+    body: "Arrival times are a guess. Our drivers follow your ferry or flight and wait for you, so the first face you see is someone holding your name.",
   },
   {
     title: "A price should be settled before the trip.",
@@ -73,7 +72,7 @@ const lessons = [
   },
   {
     title: "Knowing the road means knowing the stops.",
-    body: "Where to have lunch, which viewpoint is worth the detour, when to leave to beat the traffic. That local habit now comes with us on every road in the country.",
+    body: "Where to have lunch, which viewpoint is worth the detour, when to leave to beat the traffic. That habit goes with every driver, on every road in the country.",
   },
 ];
 
@@ -92,18 +91,18 @@ const steps = [
   },
   {
     title: "Meet your driver",
-    body: "At the jetty, the airport, your hotel lobby or the office gate. Then sit back.",
+    body: "At the airport, the ferry terminal, your hotel lobby or the office gate. Then sit back.",
   },
 ];
 
 const faqs = [
   {
-    q: "Do you only operate in Langkawi?",
-    a: "No. We've been based in Langkawi for ten years and now take bookings across Malaysia. For trips in Sabah or Sarawak, message us and we'll tell you what we can arrange.",
+    q: "Where in Malaysia can you pick me up?",
+    a: "Wherever you are. We take bookings across Malaysia, and every trip starts and ends where you need it to. Tell us your pick-up point and destination and we'll plan the rest.",
   },
   {
-    q: "Can you pick us up from the jetty or the airport?",
-    a: "Yes. Kuah Jetty and Langkawi International Airport transfers are some of our most common trips, and we arrange airport and terminal pickups elsewhere in Malaysia too.",
+    q: "Can you pick us up from the airport or a ferry terminal?",
+    a: "Yes. Airport, ferry terminal and hotel pickups are some of our most common trips, and your driver tracks your arrival time.",
   },
   {
     q: "How far ahead should I book a coach?",
@@ -168,7 +167,6 @@ function CarArt() {
 }
 
 const btnPrimary = `${sign} inline-flex min-h-12 items-center justify-center rounded-full bg-[#F2B33D] px-6 text-[1.0625rem] font-extrabold text-[#0D3B40] transition-colors hover:bg-[#F7C766]`;
-const btnGhostDark = `${sign} inline-flex min-h-12 items-center justify-center rounded-full px-6 text-[1.0625rem] font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white`;
 
 const fieldLabel = `${sign} mb-1.5 block text-sm font-semibold text-white`;
 const fieldInput =
@@ -193,7 +191,7 @@ export default function HeavenlyTravelLanding() {
           <span className="leading-tight">
             <span className="block text-lg font-black tracking-tight">Heavenly Travel</span>
             <span className="hidden text-[0.8125rem] font-semibold text-[#2E5E4E] sm:block">
-              Langkawi, and on across Malaysia
+              Coaches and cars with drivers, across Malaysia
             </span>
           </span>
         </a>
@@ -221,50 +219,55 @@ export default function HeavenlyTravelLanding() {
 
       <main id="main">
         {/* ---------- Hero ---------- */}
-        <section aria-labelledby="hero-title" className={`${wrap} relative pb-6`}>
-          <figure className="relative m-0 overflow-hidden rounded-[28px] bg-[#2E5E4E]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={HERO_IMG}
-              alt="A brahminy kite gliding low over green water off Langkawi, with forested hills and an old wooden jetty behind"
-              className="h-[340px] w-full object-cover object-[60%_center] sm:h-[460px] lg:h-[640px]"
-              fetchPriority="high"
-            />
-            <figcaption
-              className={`${sign} absolute left-4 right-4 top-4 hidden rounded-full sm:left-auto sm:block bg-[#0D3B40]/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm sm:right-6 sm:top-6`}
-            >
-              A brahminy kite, the island&apos;s own bird, over Langkawi waters
-            </figcaption>
-          </figure>
-
-          <div
-            className={`${styles.dark} relative z-10 -mt-20 rounded-[22px] bg-[#0D3B40] p-2 sm:mx-6 lg:absolute lg:bottom-14 lg:left-14 lg:mx-0 lg:mt-0 lg:max-w-[640px]`}
-          >
-            <div className={`${styles.plate} rounded-[16px] px-6 py-8 sm:px-10 sm:py-10`}>
-              <h1
-                id="hero-title"
-                className={`${sign} text-[2.5rem] font-black leading-[1.02] tracking-[-0.02em] text-white sm:text-[3.5rem] lg:text-[4rem]`}
+        <section aria-labelledby="hero-title" className={`${wrap} pb-6`}>
+          <div className="relative">
+            <figure className="relative m-0 overflow-hidden rounded-[28px] bg-[#2E5E4E]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={HERO_IMG}
+                alt="A brahminy kite gliding low over green water, with forested hills and an old wooden jetty behind"
+                className="h-[340px] w-full object-cover object-[60%_center] sm:h-[460px] lg:h-[700px]"
+                fetchPriority="high"
+              />
+              <figcaption
+                className={`${sign} absolute right-6 top-6 hidden rounded-full bg-[#0D3B40]/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm sm:block`}
               >
-                From the Kuah jetty to anywhere in Malaysia.
-              </h1>
-              <p className="mt-5 max-w-[34rem] text-[1.0625rem] leading-[1.7] text-white/85">
-                For ten years we&apos;ve met families, tour groups and teams off the ferry in Langkawi and
-                driven them where they needed to go. Our coaches and chauffeured cars now run across the
-                country, with the same island welcome.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <a href="#quote" className={btnPrimary}>
-                  Request a quote on WhatsApp
-                </a>
-                <a href="#services" className={btnGhostDark}>
-                  See what we drive
-                </a>
+                A brahminy kite over Langkawi waters
+              </figcaption>
+            </figure>
+
+            <div
+              className={`${styles.dark} relative z-10 -mt-20 rounded-[22px] bg-[#0D3B40] p-2 sm:mx-6 lg:absolute lg:bottom-28 lg:left-14 lg:mx-0 lg:mt-0 lg:max-w-[600px]`}
+            >
+              <div className={`${styles.plate} rounded-[16px] px-6 py-8 sm:px-10 sm:py-10`}>
+                <h1
+                  id="hero-title"
+                  className={`${sign} text-[2.75rem] font-black leading-[1.02] tracking-[-0.02em] text-white sm:text-[3.75rem] lg:text-[4.5rem]`}
+                >
+                  A better way to get away.
+                </h1>
+                <p className="mt-5 max-w-[30rem] text-[1.125rem] leading-[1.7] text-white/85">
+                  Island escapes, seamless transport and trips made around you. Let our local team take care of the
+                  details.
+                </p>
+                <p className="mt-6">
+                  <a
+                    href="#quote"
+                    className={`${sign} text-base font-semibold text-white underline decoration-[#F2B33D] decoration-2 underline-offset-[6px] hover:text-[#F2B33D]`}
+                  >
+                    Prefer to talk it through? Message our team
+                  </a>
+                </p>
               </div>
             </div>
           </div>
+
+          <div className="relative z-20 mt-4 sm:mx-6 lg:-mt-16 lg:mx-8">
+            <BookingSearch />
+          </div>
         </section>
 
-        {/* ---------- Route board (the memorable thing) ---------- */}
+        {/* ---------- Direction board (the memorable thing) ---------- */}
         <section
           aria-labelledby="route-title"
           className={`${styles.dark} mt-10 bg-[#0D3B40] text-white lg:mt-16`}
@@ -275,59 +278,47 @@ export default function HeavenlyTravelLanding() {
                 id="route-title"
                 className={`${sign} text-[2rem] font-black leading-[1.08] tracking-[-0.015em] sm:text-[2.5rem] lg:col-span-7`}
               >
-                Ten years starting every trip on one island. Now the whole map.
+                Wherever you are. Wherever you&apos;re going.
               </h2>
               <p className="max-w-[36rem] text-[1.0625rem] leading-[1.7] text-white/80 lg:col-span-5">
-                Langkawi is still where we start from. From there our drivers cover the peninsula, north to
-                south, and we&apos;re growing into Sabah and Sarawak.
+                Your trip starts where you are: a city airport, a ferry terminal, a hotel lobby or your front door.
+                Our coaches and drivers cover the whole of Malaysia.
               </p>
             </div>
 
-            <ol className={`${styles.route} mt-12 lg:mt-16`} aria-label="Places we drive, starting from Langkawi">
-              {stops.map((stop, i) => (
-                <li
-                  key={stop.name}
-                  className={[styles.stop, i === 0 ? styles.origin : "", stop.sea ? styles.sea : ""].join(" ")}
-                  style={{ "--i": i } as CSSProperties}
-                >
-                  <span className={styles.dot} aria-hidden="true" />
-                  <span
-                    className={`${sign} block font-extrabold leading-tight ${
-                      i === 0 ? "text-xl text-[#F2B33D] lg:text-2xl" : "text-[1.0625rem]"
-                    }`}
-                  >
-                    {stop.name}
-                  </span>
-                  {stop.note ? (
-                    <span className={`${sign} mt-1 block text-[0.8125rem] text-white/70`}>{stop.note}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
+            <div className={`${styles.board} mt-12 lg:mt-16`}>
+              {regions.map((region, r) => (
+                  <section key={region.name} aria-labelledby={`region-${r}`} className={styles.region}>
+                    <h3 id={`region-${r}`} className={`${sign} text-sm font-bold text-[#F2B33D]`}>
+                      {region.name}
+                    </h3>
+                    <ul
+                      className={styles.places}
+                      style={{ "--r": r } as CSSProperties}
+                    >
+                      {region.places.map((place, p) => (
+                        <li
+                          key={place}
+                          className={`${styles.place} ${sign} text-[1.0625rem] font-extrabold leading-tight`}
+                          style={{ "--i": r + p } as CSSProperties}
+                        >
+                          <span className={styles.dot} aria-hidden="true" />
+                          {place}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+            </div>
 
-            <div
-              className={`${sign} mt-10 flex flex-col gap-4 border-t border-white/20 pt-6 text-sm text-white/75 sm:flex-row sm:items-center sm:justify-between`}
+            <p
+              className={`${sign} mt-10 border-t border-white/20 pt-6 text-sm text-white/75`}
             >
-              <p className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span className="inline-flex items-center gap-2">
-                  <span className="inline-block h-0.5 w-8 bg-white/75" aria-hidden="true" />
-                  By road
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span
-                    className="inline-block h-0.5 w-8 bg-[repeating-linear-gradient(to_right,rgb(255_255_255/0.75)_0_6px,transparent_6px_12px)]"
-                    aria-hidden="true"
-                  />
-                  Across the water, we meet you on the other side
-                </span>
-              </p>
-              <p>
-                Heading somewhere not listed?{" "}
-                <a href="#quote" className="font-semibold text-[#F2B33D] underline underline-offset-4">
-                  Ask us about your route
-                </a>
-              </p>
-            </div>
+              Heading somewhere not listed?{" "}
+              <a href="#quote" className="font-semibold text-[#F2B33D] underline underline-offset-4">
+                Ask us about your route
+              </a>
+            </p>
           </div>
         </section>
 
@@ -357,11 +348,11 @@ export default function HeavenlyTravelLanding() {
               <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>Groups we often carry</h4>
               <ul className={`${sign} mt-3 grid gap-x-8 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2`}>
                 {[
-                  "Island and interstate tours",
+                  "City, island and interstate tours",
                   "Corporate trips and retreats",
                   "School trips and sports teams",
                   "Weddings, conferences and events",
-                  "Airport and jetty transfers",
+                  "Airport and ferry terminal transfers",
                   "Tour operators and travel agents",
                 ].map((item) => (
                   <li key={item} className="flex gap-3">
@@ -376,8 +367,8 @@ export default function HeavenlyTravelLanding() {
               <CarArt />
               <h3 className={`${sign} mt-8 text-[1.75rem] font-black text-[#0D3B40]`}>Car with driver</h3>
               <p className="mt-3 text-[1.0625rem] leading-[1.75]">
-                A private car and a driver for as long as you need. An airport pickup, a full day around the
-                island, or a long drive between states while you look out of the window.
+                A private car and a driver for as long as you need. An airport pickup, a full day of
+                sightseeing, or a long drive between states while you look out of the window.
               </p>
               <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>Good for</h4>
               <ul className={`${sign} mt-3 grid gap-2.5 text-[0.9375rem]`}>
@@ -412,10 +403,11 @@ export default function HeavenlyTravelLanding() {
                 id="island-title"
                 className={`${sign} text-[2rem] font-black leading-[1.08] tracking-[-0.015em] text-[#0D3B40] sm:text-[2.75rem]`}
               >
-                What ten years in Langkawi taught us
+                What ten years of looking after travellers taught us
               </h2>
               <p className="mt-4 text-lg leading-[1.7] text-[#2B3F42]">
-                Island hospitality isn&apos;t a slogan here. It&apos;s a set of habits, and they travel with us.
+                We&apos;re based in Langkawi and serve all of Malaysia. A decade of island hospitality has left us
+                with a set of habits, and every one of our drivers keeps them.
               </p>
 
               <div className="mt-10 grid gap-9">
@@ -437,7 +429,7 @@ export default function HeavenlyTravelLanding() {
                 loading="lazy"
               />
               <figcaption className="mt-4 text-[0.9375rem] italic leading-relaxed text-[#2E5E4E]">
-                Cameron Highlands, Pahang. A longer road than any on the island, driven with the same habits.
+                Cameron Highlands, Pahang. Winding roads, driven with the same care as the short ones.
               </figcaption>
             </figure>
           </div>
@@ -534,7 +526,7 @@ export default function HeavenlyTravelLanding() {
                     id="q-from"
                     name="from"
                     type="text"
-                    placeholder="e.g. Kuah Jetty"
+                    placeholder="e.g. KLIA Terminal 1"
                     className={fieldInput}
                   />
                 </div>
@@ -542,7 +534,7 @@ export default function HeavenlyTravelLanding() {
                   <label htmlFor="q-to" className={fieldLabel}>
                     Drop-off point
                   </label>
-                  <input id="q-to" name="to" type="text" placeholder="e.g. Pantai Cenang" className={fieldInput} />
+                  <input id="q-to" name="to" type="text" placeholder="e.g. a hotel in Penang" className={fieldInput} />
                 </div>
                 <div>
                   <label htmlFor="q-date" className={fieldLabel}>
@@ -639,8 +631,8 @@ export default function HeavenlyTravelLanding() {
               <span className="text-lg font-black">Heavenly Travel</span>
             </div>
             <p className="mt-4 max-w-[26rem] leading-[1.7] text-white/75">
-              Coach charter and cars with drivers. Based in Langkawi, Kedah, for ten years, and now on the road
-              across Malaysia.
+              Coach charter and cars with drivers, wherever you are in Malaysia. Based in Langkawi, Kedah, for
+              ten years.
             </p>
           </div>
           <nav aria-label="Footer" className={`${sign} md:col-span-3`}>
@@ -669,7 +661,7 @@ export default function HeavenlyTravelLanding() {
             </address>
           </div>
         </div>
-        <div className={`${wrap} ${sign} border-t border-white/10 py-6 text-sm text-white/55`}>
+        <div className={`${wrap} ${sign} border-t border-white/10 pb-24 pt-6 text-sm text-white/55`}>
           <p>&copy; 2026 Heavenly Travel. All rights reserved.</p>
         </div>
       </footer>

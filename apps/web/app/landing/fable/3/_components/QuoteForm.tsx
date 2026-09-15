@@ -62,7 +62,7 @@ export function QuoteForm() {
         <input
           id="q-from"
           className={inputClass}
-          placeholder="Langkawi airport"
+          placeholder="Penang airport"
           value={form.from}
           onChange={update("from")}
           autoComplete="off"

@@ -1,4 +1,4 @@
-/* Scoped styles for /landing/opus/1: focus rings, the route board and its one load animation. */
+/* Scoped styles for /landing/opus/1: focus rings, sign plates, the direction board and its one load animation. */
 
 .root :focus-visible {
   outline: 3px solid #9c4a22;
@@ -16,107 +16,71 @@
   box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.85);
 }
 
-/* ---------- Route board ---------- */
+/* ---------- Direction board ---------- */
 
-.route {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.board {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.5rem 1.5rem;
 }
 
-.stop {
+@media (min-width: 768px) {
+  .board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2rem;
+  }
+}
+
+.region {
+  border-top: 2px solid rgb(255 255 255 / 0.25);
+  padding-top: 1rem;
+}
+
+.places {
   position: relative;
-  padding: 0 0 1.9rem 2.5rem;
-  min-height: 3.25rem;
+  list-style: none;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1.15rem;
+}
+
+/* the line joining a region's places */
+.places::before {
+  content: "";
+  position: absolute;
+  left: calc(0.4375rem - 1px);
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 2px;
+  background: rgb(255 255 255 / 0.6);
+  transform-origin: top;
+  animation: growY 600ms ease-out both;
+  animation-delay: calc(var(--r) * 140ms + 200ms);
+}
+
+.place {
+  position: relative;
+  padding-left: 1.75rem;
 }
 
 .dot {
   position: absolute;
   left: 0;
-  top: 0.2rem;
-  width: 1rem;
-  height: 1rem;
+  top: 0.12rem;
+  width: 0.875rem;
+  height: 0.875rem;
   border-radius: 999px;
   background: #0d3b40;
   border: 3px solid #ffffff;
-  z-index: 1;
   animation: pop 420ms cubic-bezier(0.2, 0.8, 0.2, 1.2) both;
-  animation-delay: calc(var(--i) * 130ms + 250ms);
-}
-
-.origin .dot {
-  left: -0.25rem;
-  top: -0.05rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  background: #f2b33d;
-  border-color: #ffffff;
-}
-
-/* connector from this stop to the next */
-.stop::after {
-  content: "";
-  position: absolute;
-  left: calc(0.5rem - 1px);
-  top: 1.2rem;
-  bottom: -0.2rem;
-  width: 2px;
-  background: rgb(255 255 255 / 0.75);
-  transform-origin: top;
-  animation: growY 380ms ease-out both;
-  animation-delay: calc(var(--i) * 130ms + 330ms);
-}
-
-.sea::after {
-  background: repeating-linear-gradient(
-    to bottom,
-    rgb(255 255 255 / 0.75) 0 5px,
-    transparent 5px 11px
-  );
-}
-
-.stop:last-child::after {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .route {
-    grid-template-columns: repeat(9, minmax(0, 1fr));
-  }
-
-  .stop {
-    padding: 2.4rem 0.75rem 0 0;
-    min-height: 0;
-  }
-
-  .dot {
-    top: 0;
-  }
-
-  .origin .dot {
-    top: -0.25rem;
-    left: -0.25rem;
-  }
-
-  .stop::after {
-    left: 1rem;
-    right: 0;
-    top: calc(0.5rem - 1px);
-    bottom: auto;
-    width: auto;
-    height: 2px;
-    transform-origin: left;
-    animation-name: growX;
-  }
-
-  .sea::after {
-    background: repeating-linear-gradient(
-      to right,
-      rgb(255 255 255 / 0.75) 0 6px,
-      transparent 6px 12px
-    );
-  }
+  animation-delay: calc(var(--i) * 110ms + 300ms);
 }
 
 @keyframes growY {
@@ -125,15 +89,6 @@
   }
   to {
     transform: scaleY(1);
-  }
-}
-
-@keyframes growX {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
   }
 }
 
@@ -150,7 +105,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dot,
-  .stop::after {
+  .places::before {
     animation: none;
   }
 

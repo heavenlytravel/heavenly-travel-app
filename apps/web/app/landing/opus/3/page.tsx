@@ -2,9 +2,11 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/opus/3
  * Model: Claude Opus 5 (claude-opus-5)
- * Direction: Malaysian expressway signage — a green direction sign hero and a drawn road that runs Langkawi to Johor with an E8 branch to the East Coast
+ * Direction: Malaysian expressway signage — a green direction sign hero with a sign-panel ride search, and a drawn road of destinations north to south with an E8 East Coast branch, pick-ups anywhere
  * Tokens used: 54,940 (20 tool calls)
  * Time taken: 6m 09s
+ * Revision 1: 72,091 tokens (18 tool calls), 2m 29s
+ * Revision 1 notes: New hero title/copy, green sign-panel booking search bar under hero, removed Langkawi-as-origin framing from sign, route, trust copy and metadata
  * Generated: 2026-09-15
  */
 import type { Metadata } from "next";
@@ -12,6 +14,7 @@ import { Overpass } from "next/font/google";
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./landing.module.css";
 import { QuoteBuilder, WhatsAppGlyph } from "./_components/QuoteBuilder";
+import { SearchBar } from "./_components/SearchBar";
 
 const overpass = Overpass({
   subsets: ["latin"],
@@ -22,7 +25,7 @@ const overpass = Overpass({
 export const metadata: Metadata = {
   title: "Heavenly Travel | Coach charter and car with driver across Malaysia",
   description:
-    "Langkawi-based travel company with ten years on the road. Coach charter and private car with driver for groups, families and events, from Langkawi to anywhere in Malaysia.",
+    "Coach charter and private car with driver for groups, families and events, wherever you are in Malaysia and wherever you want to go. Ten years on the road, based in Langkawi.",
 };
 
 type Dir = "up" | "upRight" | "right";
@@ -46,9 +49,9 @@ type Stop = {
 const mainStops: Stop[] = [
   {
     place: "Langkawi",
-    road: "Home",
-    roadName: "Where we started",
-    lead: "Our home island for ten years.",
+    road: "Ferry",
+    roadName: "Kuala Perlis and Kuala Kedah jetties",
+    lead: "Island escapes.",
     detail:
       "Airport and jetty transfers, island tours, hotel pick-ups and wedding guests moved on time.",
   },
@@ -224,41 +227,40 @@ function Arrow({ dir }: { dir: Dir }) {
 function Hero() {
   return (
     <section aria-labelledby="hero-title" className="overflow-hidden">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 pt-8 pb-16 sm:px-8 md:pt-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pt-8 pb-10 sm:px-8 md:pt-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
         <div>
           <h1
             id="hero-title"
-            className="text-[2.6rem] leading-[1.02] font-black tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.4rem]"
+            className="text-[2.75rem] leading-[1.02] font-black tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.6rem]"
           >
-            From Langkawi to every road in Malaysia.
+            A better way to get away.
           </h1>
           <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#263033]/85 sm:text-xl">
-            Coach charter and private cars with a driver, for tour groups,
-            families, schools and company trips. Ten years on Langkawi&apos;s
-            roads, and now taking bookings across the country.
+            Island escapes, seamless transport and trips made around you. Let
+            our local team take care of the details.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[17px] font-bold">
             <a
               href="#quote"
-              className={`${styles.cta} inline-flex items-center justify-center gap-2 rounded-full bg-[#00573F] px-6 py-4 text-lg font-extrabold text-white hover:bg-[#00442f]`}
+              className="inline-flex items-center gap-2 text-[#00573F] underline decoration-2 underline-offset-4 hover:decoration-[#FFC72C]"
             >
               <WhatsAppGlyph />
-              Get a quote on WhatsApp
+              Ask for a quote on WhatsApp
             </a>
             <a
               href="#route"
-              className="inline-flex items-center justify-center rounded-full border-2 border-[#263033] px-6 py-[14px] text-lg font-bold hover:bg-[#263033] hover:text-white"
+              className="underline decoration-2 underline-offset-4 hover:decoration-[#FFC72C]"
             >
               See where we go
             </a>
-          </div>
+          </p>
         </div>
 
         <figure className="relative">
           <div className={`${styles.sign} mx-auto max-w-[31rem] rotate-[-1.2deg]`}>
             <div className={`${styles.signInner} px-4 pt-5 pb-3 sm:px-6`}>
               <p className="text-[15px] font-semibold text-white/85">
-                Leaving Langkawi? We&apos;re going your way.
+                Wherever you are, we&apos;re going your way.
               </p>
               <ul className="mt-3 divide-y-2 divide-white/25">
                 {signRows.map((row, i) => (
@@ -295,6 +297,9 @@ function Hero() {
           </div>
         </figure>
       </div>
+      <div className="mx-auto max-w-6xl px-3 pb-14 sm:px-8 lg:pb-20">
+        <SearchBar />
+      </div>
       <div aria-hidden="true" className={`${styles.roadH} h-14`} />
     </section>
   );
@@ -316,9 +321,9 @@ function RouteSection() {
             One company for the whole trip.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-[#263033]/85">
-            Follow the road down the peninsula to see where groups travel with
-            us. Start in Langkawi or join anywhere along the way: pick-ups
-            aren&apos;t limited to the island.
+            Follow the road down the peninsula to see where people travel with
+            us. Get picked up at any stop and dropped at any other, or somewhere
+            that isn&apos;t on this map at all.
           </p>
         </div>
 
@@ -608,7 +613,7 @@ function WhyUs() {
   const points = [
     {
       title: "Drivers who know the way",
-      body: "Our team learned the job on Langkawi's roads: early flights, ferry timetables and tight hotel driveways.",
+      body: "Our local team plans around the real road: early flights, ferry timetables, hill roads and city traffic.",
     },
     {
       title: "A clear quote first",
@@ -750,7 +755,7 @@ function Footer() {
         <div>
           <p className="text-2xl font-black">Heavenly Travel</p>
           <p className="mt-3 max-w-sm text-[17px] leading-relaxed text-white/85">
-            Coach charter and car with driver. Based in Langkawi, driving all of
+            Coach charter and car with driver. Based in Langkawi, serving all of
             Malaysia.
           </p>
         </div>
@@ -782,7 +787,7 @@ function Footer() {
           </ul>
         </div>
       </div>
-      <p className="mx-auto max-w-6xl border-t border-white/20 px-5 py-6 text-sm text-white/75 sm:px-8">
+      <p className="mx-auto max-w-6xl border-t border-white/20 px-5 pt-6 pb-24 text-sm text-white/75 sm:px-8">
         © Heavenly Travel. Prices and availability are confirmed in your quote.
       </p>
     </footer>

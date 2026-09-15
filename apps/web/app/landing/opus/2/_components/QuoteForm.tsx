@@ -127,7 +127,7 @@ export function QuoteForm() {
           id="q-pickup"
           name="pickup"
           required
-          placeholder="e.g. Langkawi International Airport"
+          placeholder="e.g. KLIA Terminal 1"
           className={styles.field}
         />
       </div>
@@ -139,7 +139,7 @@ export function QuoteForm() {
           id="q-destination"
           name="destination"
           required
-          placeholder="e.g. Hotel in Pantai Cenang"
+          placeholder="e.g. Hotel in George Town, Penang"
           className={styles.field}
         />
       </div>

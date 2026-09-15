@@ -2,9 +2,11 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/fable/3
  * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Direction: A road-trip itinerary page — an animated route map of Peninsular Malaysia, a leg-by-leg route board, and road-marking yellow on deep navy, set in Barlow's road-sign type.
+ * Direction: A road-network page — an animated map of the places we drive across Peninsular Malaysia, a booking search bar, a board of typical journeys, and road-marking yellow on deep navy, set in Barlow's road-sign type.
  * Tokens used: 86,671 (72 tool calls)
  * Time taken: 9m 41s
+ * Revision 1: 109,291 tokens (24 tool calls), 3m 23s
+ * Revision 1 notes: Exact hero title/description, added in-hero search bar, reworked map and route board from a Langkawi-origin trip into a nationwide network, scrubbed origin framing from copy.
  * Generated: 2026-09-15
  */
 
@@ -13,6 +15,7 @@ import { Barlow, Barlow_Condensed } from "next/font/google";
 import styles from "./page.module.css";
 import { RouteMap } from "./_components/RouteMap";
 import { QuoteForm } from "./_components/QuoteForm";
+import { SearchBar } from "./_components/SearchBar";
 
 const display = Barlow_Condensed({
   subsets: ["latin"],
@@ -29,24 +32,20 @@ const body = Barlow({
 export const metadata: Metadata = {
   title: "Heavenly Travel — Coach charter and cars with driver across Malaysia",
   description:
-    "Langkawi-based coach charter and chauffeured car hire, now driving tour groups, families, schools and companies across the whole of Malaysia. Get a quote on WhatsApp.",
+    "Coach charter and chauffeured car hire anywhere in Malaysia, for tour groups, families, schools and companies. Tell us where you are and where you're going, and get a quote on WhatsApp.",
 };
 
 const PHONE = "+60 X-XXX XXXX";
 
-const legs = [
-  { stop: "Langkawi", note: "Kuah jetty, Pantai Cenang, the airport", time: "Start" },
-  { stop: "Penang", note: "George Town and Batu Ferringhi", time: "ferry, then 1 h 20" },
-  { stop: "Cameron Highlands", note: "Tea estates, strawberry farms, Brinchang", time: "3 h 30" },
-  { stop: "Kuala Lumpur", note: "KLCC, Bukit Bintang, KLIA transfers", time: "3 h" },
-  { stop: "Melaka", note: "Jonker Street and the Dutch Square", time: "2 h" },
-  { stop: "Johor Bahru", note: "Legoland and the Singapore causeway", time: "2 h 30" },
-];
-
-const eastLegs = [
-  { stop: "Kuantan", note: "Teluk Cempedak, from Kuala Lumpur", time: "3 h" },
-  { stop: "Kuala Terengganu", note: "Crystal Mosque, Redang and Perhentian jetties", time: "2 h 30" },
-  { stop: "Kota Bharu", note: "Kelantan markets and the Thai border", time: "2 h" },
+const journeys = [
+  { from: "KLIA", to: "Kuala Lumpur city", note: "Arrivals met at the gate, any hour", time: "1 h" },
+  { from: "Kuala Lumpur", to: "Cameron Highlands", note: "Tea estates, strawberry farms, Brinchang", time: "3 h 30" },
+  { from: "Penang", to: "Ipoh", note: "George Town to the old town and cave temples", time: "2 h" },
+  { from: "Kuala Lumpur", to: "Melaka", note: "Jonker Street and the Dutch Square", time: "2 h" },
+  { from: "Johor Bahru", to: "Kuala Lumpur", note: "Legoland, the causeway, the capital", time: "3 h 30" },
+  { from: "Kuala Lumpur", to: "Kuantan", note: "Teluk Cempedak and the East Coast road", time: "3 h" },
+  { from: "Kuala Terengganu", to: "Kota Bharu", note: "Redang and Perhentian jetties to Kelantan", time: "2 h" },
+  { from: "Langkawi airport", to: "Pantai Cenang", note: "Island transfers and day tours", time: "20 min" },
 ];
 
 const steps = [
@@ -71,11 +70,11 @@ const steps = [
 const audiences = [
   {
     who: "Tourists and families",
-    what: "Airport and jetty pick-ups, island day tours, a car and driver for the week, or the long drive down to Penang and Kuala Lumpur without renting a car.",
+    what: "Airport and jetty pick-ups, day tours, a car and driver for the week, or the long drive between cities without renting a car.",
   },
   {
     who: "Tour groups and agents",
-    what: "Coaches for inbound groups, multi-day itineraries with the same driver throughout, and a partner in Langkawi who answers the phone.",
+    what: "Coaches for inbound groups, multi-day itineraries with the same driver throughout, and a partner on the ground who answers the phone.",
   },
   {
     who: "Companies and event organisers",
@@ -89,8 +88,8 @@ const audiences = [
 
 const reasons = [
   {
-    title: "Ten years of pick-ups in Langkawi",
-    text: "We started on the island in 2016 and still run it every day. We know which ferry to meet and how long the airport queue really takes.",
+    title: "Ten years on the road",
+    text: "We started in Langkawi in 2016 and have been driving daily since. We know which ferry to meet, how long the airport queue really takes and where the traffic builds.",
   },
   {
     title: "Licensed, insured and looked after",
@@ -101,14 +100,14 @@ const reasons = [
     text: "The person who quotes your trip is the person you message on the day. No call centre, no ticket numbers.",
   },
   {
-    title: "Growing across Malaysia, on purpose",
-    text: "Penang, the Cameron Highlands, Kuala Lumpur, Melaka, Johor and the East Coast are now regular routes. New services are on the way as we go.",
+    title: "Anywhere in Malaysia, on purpose",
+    text: "Wherever you're starting from, Penang, the Cameron Highlands, Kuala Lumpur, Melaka, Johor or the East Coast, we drive there every week. New services are on the way as we grow.",
   },
 ];
 
 const navLinks = [
   { href: "#services", label: "Services" },
-  { href: "#routes", label: "Routes" },
+  { href: "#routes", label: "Where we drive" },
   { href: "#how", label: "How it works" },
   { href: "#why", label: "Why us" },
 ];
@@ -157,37 +156,41 @@ export default function Page() {
 
       <main id="top">
         {/* Hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-16 pt-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:pb-24 lg:pt-12">
-          <div>
-            <h1 className="font-(family-name:--font-display) text-[clamp(2.75rem,8vw,5.5rem)] font-bold leading-[0.95] tracking-tight text-[#0c2340]">
-              Ten years on Langkawi&rsquo;s roads. Now the whole of Malaysia.
-            </h1>
-            <div className={`${styles.roadRule} mt-6 w-40`} aria-hidden="true" />
-            <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#3d4a58] sm:text-xl">
-              Coach charter and cars with driver for tour groups, families, schools and companies.
-              From the Kuah jetty to the tea estates, the capital and the East Coast, with a driver
-              who knows the way.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <a
-                href="#quote"
-                className={`inline-flex items-center justify-center rounded-md bg-[#f5b800] px-6 py-3.5 text-base font-semibold text-[#0c2340] hover:bg-[#ffc933] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#0c2340]`}
-              >
-                Get a quote on WhatsApp
-              </a>
-              <a
-                href="#routes"
-                className={`inline-flex items-center justify-center rounded-md border-2 border-[#0c2340] px-6 py-3 text-base font-semibold text-[#0c2340] hover:bg-white ${focusRing}`}
-              >
-                See the routes we drive
-              </a>
+        <section className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 lg:pb-24 lg:pt-12">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+            <div>
+              <h1 className="font-(family-name:--font-display) text-[clamp(3rem,9vw,6.5rem)] font-bold leading-[0.95] tracking-tight text-[#0c2340]">
+                A better way to get away.
+              </h1>
+              <div className={`${styles.roadRule} mt-6 w-40`} aria-hidden="true" />
+              <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#3d4a58] sm:text-xl">
+                Island escapes, seamless transport and trips made around you. Let our local team
+                take care of the details.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a
+                  href="#quote"
+                  className="inline-flex items-center justify-center rounded-md bg-[#f5b800] px-6 py-3.5 text-base font-semibold text-[#0c2340] hover:bg-[#ffc933] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#0c2340]"
+                >
+                  Get a quote on WhatsApp
+                </a>
+                <a
+                  href="#routes"
+                  className={`inline-flex items-center justify-center rounded-md border-2 border-[#0c2340] px-6 py-3 text-base font-semibold text-[#0c2340] hover:bg-white ${focusRing}`}
+                >
+                  See where we drive
+                </a>
+              </div>
+              <p className="mt-6 text-sm text-[#5b6673]">
+                Coach charter and cars with driver, anywhere in Malaysia. Malay and English spoken.
+              </p>
             </div>
-            <p className="mt-6 text-sm text-[#5b6673]">
-              Based in Langkawi, Kedah. On the road since 2016. Malay and English spoken.
-            </p>
+            <div className="flex justify-center lg:justify-end">
+              <RouteMap />
+            </div>
           </div>
-          <div className="flex justify-center lg:justify-end">
-            <RouteMap />
+          <div className="mt-12 lg:mt-16">
+            <SearchBar />
           </div>
         </section>
 
@@ -196,66 +199,41 @@ export default function Page() {
           <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 lg:py-20">
             <div className="max-w-2xl">
               <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
-                The road from Langkawi, leg by leg
+                Journeys we drive every week
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[#b9c8d6]">
-                Typical driving times between stops on a normal day. Tell us where you want to
-                stop along the way and we&rsquo;ll build the itinerary around it.
+                A few of the trips people book most, with typical driving times on a normal day.
+                Start anywhere, end anywhere; tell us the stops in between and we&rsquo;ll build
+                the itinerary around them.
               </p>
             </div>
 
-            <h3 className="mt-12 text-sm font-semibold text-[#f5b800]">West coast and south</h3>
-            <ol
-              className={`${styles.board} mt-3 -mx-5 flex snap-x gap-0 overflow-x-auto px-5 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-6 lg:overflow-visible`}
+            <ul
+              className={`${styles.board} mt-12 -mx-5 flex snap-x gap-0 overflow-x-auto px-5 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-4 lg:gap-y-12 lg:overflow-visible`}
             >
-              {legs.map((leg, i) => (
+              {journeys.map((j) => (
                 <li
-                  key={leg.stop}
-                  className="relative min-w-[210px] shrink-0 snap-start border-t-2 border-[#26466c] pr-5 pt-4 lg:min-w-0"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`absolute -top-[7px] left-0 h-3 w-3 rounded-full ${
-                      i === 0 ? "bg-[#f5b800]" : "border-2 border-[#f5b800] bg-[#0c2340]"
-                    }`}
-                  />
-                  <p className="text-sm tabular-nums text-[#f5b800]">{leg.time}</p>
-                  <p className="mt-1 font-(family-name:--font-display) text-2xl font-semibold leading-tight">
-                    {leg.stop}
-                  </p>
-                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">{leg.note}</p>
-                </li>
-              ))}
-            </ol>
-
-            <h3 className="mt-12 text-sm font-semibold text-[#f5b800]">East coast, branching from Kuala Lumpur</h3>
-            <ol
-              className={`${styles.board} mt-3 -mx-5 flex snap-x gap-0 overflow-x-auto px-5 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-6 lg:overflow-visible`}
-            >
-              {eastLegs.map((leg) => (
-                <li
-                  key={leg.stop}
-                  className="relative min-w-[210px] shrink-0 snap-start border-t-2 border-[#26466c] pr-5 pt-4 lg:min-w-0"
+                  key={`${j.from}-${j.to}`}
+                  className="relative min-w-[230px] shrink-0 snap-start border-t-2 border-[#26466c] pr-5 pt-4 lg:min-w-0"
                 >
                   <span
                     aria-hidden="true"
                     className="absolute -top-[7px] left-0 h-3 w-3 rounded-full border-2 border-[#f5b800] bg-[#0c2340]"
                   />
-                  <p className="text-sm tabular-nums text-[#f5b800]">{leg.time}</p>
+                  <p className="text-sm tabular-nums text-[#f5b800]">{j.time}</p>
                   <p className="mt-1 font-(family-name:--font-display) text-2xl font-semibold leading-tight">
-                    {leg.stop}
+                    {j.from}
+                    <span className="mx-1.5 text-[#f5b800]" aria-hidden="true">
+                      &rarr;
+                    </span>
+                    <span className="sr-only">to </span>
+                    {j.to}
                   </p>
-                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">{leg.note}</p>
+                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">{j.note}</p>
                 </li>
               ))}
-              <li className="hidden lg:col-span-3 lg:flex lg:items-end lg:pb-1">
-                <p className="max-w-sm text-sm leading-snug text-[#b9c8d6]">
-                  Not on the map? Sabah, Sarawak and cross-border trips into Singapore and southern
-                  Thailand are quoted case by case. Just ask.
-                </p>
-              </li>
-            </ol>
-            <p className="mt-6 max-w-sm text-sm leading-snug text-[#b9c8d6] lg:hidden">
+            </ul>
+            <p className="mt-10 max-w-md text-sm leading-snug text-[#b9c8d6]">
               Not on the map? Sabah, Sarawak and cross-border trips into Singapore and southern
               Thailand are quoted case by case. Just ask.
             </p>
@@ -331,7 +309,7 @@ export default function Page() {
                   Car with driver
                 </h3>
                 <p className="mt-3 text-base leading-relaxed text-[#d7eadf]">
-                  A private car and a driver who knows the island and the mainland. Airport
+                  A private car and a driver who knows the roads and the shortcuts. Airport
                   pick-ups, day tours at your own pace, business travel between cities and
                   long-distance transfers when you&rsquo;d rather not drive.
                 </p>
@@ -417,7 +395,7 @@ export default function Page() {
         <section id="why" className="scroll-mt-6 bg-[#e4ede6]">
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
             <h2 className="max-w-2xl font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
-              Why people book with a Langkawi company for the whole country
+              Why people book with us, wherever they&rsquo;re going
             </h2>
             <ul className="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
               {reasons.map((r) => (
@@ -487,7 +465,7 @@ export default function Page() {
               Get a quote
             </a>
           </nav>
-          <p>Langkawi, Kedah, Malaysia. Coach charter and car with driver since 2016.</p>
+          <p>Based in Langkawi, serving all of Malaysia. Coach charter and car with driver since 2016.</p>
         </div>
       </footer>
     </div>

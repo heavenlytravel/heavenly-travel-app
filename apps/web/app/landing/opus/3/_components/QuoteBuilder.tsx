@@ -41,7 +41,7 @@ export function QuoteBuilder() {
             className={fieldClass}
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            placeholder="Kuah Jetty, Langkawi"
+            placeholder="Your hotel or airport"
             autoComplete="off"
           />
         </label>

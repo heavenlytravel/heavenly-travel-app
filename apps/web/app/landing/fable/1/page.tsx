@@ -2,9 +2,11 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/fable/1
  * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Direction: Island-host warmth on an Andaman teal and sunset-gold palette; a route map fanning out from Langkawi to every Malaysian city is the hero, with two unequal service panels, regional coverage, a three-step booking flow and a WhatsApp-first quote form.
+ * Direction: Island-host warmth on an Andaman teal and sunset-gold palette; a Malaysia coverage map linking cities as a network is the hero, with a booking search bar beneath it, two unequal service panels, regional coverage, a three-step booking flow and a WhatsApp-first quote form.
  * Tokens used: 77,806 (71 tool calls)
  * Time taken: 10m 08s
+ * Revision 1: 101,153 tokens (29 tool calls), 3m 40s
+ * Revision 1 notes: Replaced Langkawi-origin framing with nationwide "wherever you are" positioning (map now a city network, hero copy set to client text, story and FAQ reworded) and added an Agoda-style search bar under the hero.
  * Generated: 2026-09-15
  */
 
@@ -12,23 +14,24 @@ import type { Metadata } from "next";
 import { Young_Serif, Figtree } from "next/font/google";
 import styles from "./landing.module.css";
 import { RouteMap } from "./_components/RouteMap";
+import { SearchBar } from "./_components/SearchBar";
 
 const display = Young_Serif({ subsets: ["latin"], weight: "400", display: "swap" });
 const body = Figtree({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel | Coach charter and chauffeured cars across Malaysia, from Langkawi",
+  title: "Heavenly Travel | Coach charter and chauffeured cars anywhere in Malaysia",
   description:
-    "Ten years of Langkawi hospitality, now on the road across all of Malaysia. Coach charter for groups and private cars with a driver. Request a quote on WhatsApp.",
+    "Island escapes, seamless transport and trips made around you. Coach charter for groups and private cars with a driver, anywhere in Malaysia. Request a quote on WhatsApp.",
 };
 
 const WHATSAPP = "https://wa.me/60XXXXXXXXX?text=Hi%20Heavenly%20Travel%2C%20I%27d%20like%20a%20quote.";
 
 const REGIONS: { name: string; places: string; note: string }[] = [
   {
-    name: "Langkawi and the north",
-    places: "Langkawi, Kuala Perlis, Alor Setar, Penang, Ipoh",
-    note: "Our home patch. Jetty and airport pick-ups timed to the ferry and flight boards.",
+    name: "Penang and the north",
+    places: "Penang, Langkawi, Kuala Perlis, Alor Setar, Ipoh",
+    note: "Island and mainland runs, with jetty and airport pick-ups timed to the ferry and flight boards.",
   },
   {
     name: "Klang Valley",
@@ -69,8 +72,8 @@ const STEPS: { title: string; text: string }[] = [
 
 const FAQ: { q: string; a: string }[] = [
   {
-    q: "Do you only operate in Langkawi?",
-    a: "No. Langkawi is where we started and where our office is, but our coaches and drivers now run across Peninsular Malaysia, and we arrange trips in Sabah and Sarawak through partners we have vetted in person.",
+    q: "Where do you operate?",
+    a: "Anywhere in Malaysia. Pick-up can be your hotel, home, office, airport or jetty in any state. Our own coaches and drivers cover Peninsular Malaysia, and we arrange trips in Sabah and Sarawak through partners we have vetted in person. Our office happens to be in Langkawi.",
   },
   {
     q: "What sizes of coach do you have?",
@@ -82,7 +85,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How far in advance should I book?",
-    a: "A week is comfortable for most trips. School holidays, Hari Raya, Chinese New Year and the Langkawi International Maritime and Aerospace exhibition fill up early, so ask sooner for those dates.",
+    a: "A week is comfortable for most trips. School holidays, Hari Raya, Chinese New Year and big event weekends fill up early, so ask sooner for those dates.",
   },
   {
     q: "How do I pay?",
@@ -159,18 +162,17 @@ export default function Page() {
           className={`${styles.onDark} bg-[var(--sea-deep)] text-white`}
           aria-labelledby="hero-heading"
         >
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-14 lg:pb-24">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-24 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-14 lg:pb-28">
             <div className="max-w-xl">
               <h1
                 id="hero-heading"
-                className={`${display.className} text-[2.35rem] leading-[1.06] tracking-tight sm:text-5xl lg:text-[3.4rem]`}
+                className={`${display.className} text-[2.6rem] leading-[1.04] tracking-tight sm:text-6xl lg:text-[4rem]`}
               >
-                Ten years of Langkawi hospitality, now on the road across Malaysia.
+                A better way to get away.
               </h1>
-              <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-white/85">
-                We started with one coach meeting ferries at Kuah jetty. Today our coaches and chauffeured
-                cars carry tour groups, families, schools and companies anywhere in the country, with the
-                same driver who waits when the flight is late.
+              <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-white/85 sm:text-xl">
+                Island escapes, seamless transport and trips made around you. Let our local team take care
+                of the details.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
@@ -195,14 +197,19 @@ export default function Page() {
             <figure className="rounded-xl border border-white/12 bg-white/[0.04] p-4 sm:p-6">
               <RouteMap />
               <figcaption className="mt-2 text-xs text-white/55">
-                Cities we drive to regularly. Not on the map? We probably still go there.
+                Cities we pick up from and drive to every week. Start and finish anywhere with a road to it.
               </figcaption>
             </figure>
           </div>
         </section>
 
-        {/* Heritage */}
-        <section className="bg-[var(--sand)]" aria-labelledby="heritage-heading">
+        {/* Search: sits across the hero's bottom edge */}
+        <div className="relative z-10 mx-auto -mt-14 max-w-6xl px-5 sm:px-8 lg:-mt-16">
+          <SearchBar />
+        </div>
+
+        {/* Story */}
+        <section className="-mt-14 bg-[var(--sand)] pt-14 lg:-mt-16 lg:pt-16" aria-labelledby="heritage-heading">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-12 lg:gap-12 lg:py-24">
             <div className="lg:col-span-5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -220,23 +227,23 @@ export default function Page() {
                 id="heritage-heading"
                 className={`${display.className} text-3xl leading-tight tracking-tight sm:text-4xl`}
               >
-                Island hospitality is a habit, and we packed it.
+                Local knowledge, wherever you land.
               </h2>
               <div className="mt-6 max-w-[62ch] space-y-5 text-[17px] leading-relaxed text-[var(--ink-soft)]">
                 <p>
-                  On Langkawi, a driver is not just a driver. They know which side of the road the sunset
-                  is on, which stall at Kuah has the good laksa, and that the last ferry to Kuala Kedah
-                  leaves earlier than the timetable says on public holidays. For ten years that has been
-                  our whole job.
+                  A good driver is not just a driver. Ours know which stretch of the coast road has the
+                  sunset on the right side, where the clean rest stops are on the East Coast Expressway,
+                  and that a ferry timetable on a public holiday is a suggestion. For ten years that kind of
+                  detail has been our whole job.
                 </p>
                 <p>
-                  When customers started asking us to bring the same coaches to Penang, then Kuala Lumpur,
-                  then Johor, we said yes and kept the habits: the driver is briefed on your itinerary the
-                  night before, the coach is washed inside and out, and one person at our office answers
-                  the phone while you are on the road.
+                  Wherever your trip starts, the habits are the same: the driver is briefed on your
+                  itinerary the night before, the vehicle is washed inside and out, and one person at our
+                  office answers the phone while you are on the road.
                 </p>
                 <p>
-                  We are still a family-run company on Langkawi. We are just no longer only on Langkawi.
+                  We are a family-run company with our office in Langkawi and our coaches, cars and drivers
+                  working across all of Malaysia.
                 </p>
               </div>
               <dl className="mt-8 grid gap-5 border-t border-[rgba(20,37,35,0.14)] pt-6 sm:grid-cols-3">
@@ -360,7 +367,7 @@ export default function Page() {
               <div className="max-w-[60ch]">
                 <h3 className="text-lg font-semibold">Coming next</h3>
                 <p className="mt-1 leading-relaxed text-[var(--ink-soft)]">
-                  Island-hopping boats, guided Langkawi day tours and packaged multi-day itineraries across
+                  Island-hopping boats, guided day tours and packaged multi-day itineraries across
                   Malaysia are on the way. If you need one of these now, ask; we can usually arrange it.
                 </p>
               </div>
@@ -386,7 +393,8 @@ export default function Page() {
                   Where we go
                 </h2>
                 <p className="mt-4 max-w-[48ch] text-lg leading-relaxed text-[var(--ink-soft)]">
-                  Anywhere in Malaysia with a road to it. These are the regions we cover week in, week out.
+                  Wherever you are and wherever you are heading, as long as there is a road. These are the
+                  regions we cover week in, week out.
                 </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -572,7 +580,7 @@ export default function Page() {
                   <label htmlFor="q-from" className="mb-1.5 block text-sm text-white/80">
                     Pick-up
                   </label>
-                  <input id="q-from" name="from" type="text" placeholder="Langkawi airport" className={styles.field} />
+                  <input id="q-from" name="from" type="text" placeholder="Hotel, airport or jetty" className={styles.field} />
                 </div>
                 <div>
                   <label htmlFor="q-date" className="mb-1.5 block text-sm text-white/80">

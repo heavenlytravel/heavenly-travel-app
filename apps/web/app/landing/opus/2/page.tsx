@@ -2,9 +2,11 @@
  * Heavenly Travel — landing page variation
  * Route: /landing/opus/2
  * Model: Claude Opus 5 (claude-opus-5)
- * Direction: Coach-livery operator — bottle green and brass pinstripe, wide livery lettering, and a "your driver is confirmed" trip sheet that shows the operation behind every booking.
+ * Direction: Coach-livery operator — bottle green and brass pinstripe, wide livery lettering, a livery-styled trip search bar and a "your pickup is confirmed" trip sheet showing the operation behind every booking, wherever in Malaysia it starts.
  * Tokens used: 57,099 (31 tool calls)
  * Time taken: 5m 39s
+ * Revision 1: 84,971 tokens (22 tool calls), 2m 42s
+ * Revision 1 notes: Repositioned as Malaysia-wide (Langkawi as base only), client hero title/description, added livery-styled trip search bar under the hero, reworked coverage section and FAQ.
  * Generated: 2026-09-15
  */
 
@@ -12,6 +14,7 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import styles from "./landing.module.css";
 import { QuoteForm } from "./_components/QuoteForm";
+import { TripSearch } from "./_components/TripSearch";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -23,7 +26,7 @@ const archivo = Archivo({
 export const metadata: Metadata = {
   title: "Heavenly Travel — Coach charter and cars with driver across Malaysia",
   description:
-    "Ten years moving tour groups, corporate teams, schools and families around Langkawi. Coach charter and chauffeured cars, now bookable across Malaysia. Request a quote.",
+    "Coach charter and cars with driver wherever you are in Malaysia. Experienced drivers, well-kept vehicles and a local team that takes care of the details. Request a quote.",
 };
 
 const WHATSAPP_HREF = "https://wa.me/60XXXXXXXXX";
@@ -80,12 +83,12 @@ const steps = [
   },
 ];
 
-const regions = [
-  { name: "Langkawi", note: "Home base since day one" },
-  { name: "Kedah and Perlis", note: "Mainland jetty and airport connections" },
-  { name: "Penang", note: "Tours, events and transfers" },
-  { name: "Kuala Lumpur and Selangor", note: "Company trips and events" },
-  { name: "Other states", note: "Ask us about your route" },
+const pickups = [
+  { name: "Airports and ferry terminals", note: "Planned around your flight or sailing" },
+  { name: "Hotels and resorts", note: "Collected from the lobby" },
+  { name: "Offices and event venues", note: "Shuttles to your schedule" },
+  { name: "Schools and campuses", note: "Excursions and group trips" },
+  { name: "Your front door", note: "Door to door for families" },
 ];
 
 const faqs = [
@@ -98,8 +101,8 @@ const faqs = [
     a: "For school holidays, public holidays and large events, book as early as you can so the right vehicle is reserved. We always check short-notice requests — message us and we'll tell you honestly what's available.",
   },
   {
-    q: "Do you only operate in Langkawi?",
-    a: "Langkawi is where we started and where we're based, but we now arrange coach charter and chauffeured cars in other parts of Malaysia. Tell us your route and we'll quote it.",
+    q: "Where can you pick us up?",
+    a: "Wherever you are in Malaysia — an airport, hotel, office, school or your home — and take you wherever you're going. Tell us both ends of the trip and we'll quote the route.",
   },
   {
     q: "What is included in the price?",
@@ -201,20 +204,18 @@ export default function Page() {
           <div className="mx-auto grid max-w-[1200px] lg:grid-cols-[1.05fr_1fr]">
             <div className="px-5 pb-14 pt-12 sm:px-8 sm:pt-20 lg:pb-24">
               <p className="text-[0.95rem] text-[#e2c47f]">
-                Coach charter and cars with driver, from Langkawi to all of
+                Coach charter and cars with driver, wherever you are in
                 Malaysia
               </p>
               <h1
                 id="hero-title"
                 className={`${styles.wide} mt-5 text-[2.35rem] font-bold leading-[1.04] sm:text-[3.4rem] lg:text-[4.1rem]`}
               >
-                Transport you don&apos;t have to think about.
+                A better way to get away.
               </h1>
               <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-white/80">
-                For ten years Heavenly Travel has moved tour groups, company
-                teams, schools and families around Langkawi — on time, in clean
-                vehicles, with drivers who know the way. Now we&apos;re taking
-                bookings across Malaysia.
+                Island escapes, seamless transport and trips made around you.
+                Let our local team take care of the details.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <a href="#quote" className={btnPrimary}>
@@ -243,7 +244,7 @@ export default function Page() {
                 className="absolute inset-0 bg-gradient-to-t from-[#0e3a2f]/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-[#0e3a2f]/60"
               />
               {/* Trip sheet: what every client receives before pickup */}
-              <figure className="absolute bottom-5 left-5 right-5 max-w-[360px] rounded-md bg-white p-5 text-[#0a2a22] shadow-[0_18px_40px_-12px_rgba(6,30,23,0.55)] sm:bottom-8 sm:left-auto sm:right-8">
+              <figure className="absolute bottom-5 left-5 right-5 max-w-[360px] rounded-md bg-white p-5 text-[#0a2a22] shadow-[0_18px_40px_-12px_rgba(6,30,23,0.55)] sm:bottom-8 sm:left-auto sm:right-8 lg:bottom-20">
                 <figcaption className="flex items-center justify-between gap-3 border-b border-[#0e3a2f]/15 pb-3">
                   <span className={`${styles.semi} font-semibold`}>
                     Your pickup is confirmed
@@ -265,6 +266,12 @@ export default function Page() {
               </figure>
             </div>
           </div>
+          <div className="mx-auto max-w-[1200px] px-5 pb-12 pt-10 sm:px-8 lg:relative lg:z-10 lg:-mt-12 lg:pt-0">
+            <h2 id="search-title" className="sr-only">
+              Search for a vehicle
+            </h2>
+            <TripSearch />
+          </div>
         </section>
 
         <div className={styles.stripe} aria-hidden="true" />
@@ -282,8 +289,9 @@ export default function Page() {
               The standard on every trip
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-              Whether it&apos;s one car to the airport or a convoy of coaches
-              for a conference, the booking runs the same way.
+              Ten years of running group and private transport taught us that
+              one car to the airport and a convoy of coaches for a conference
+              deserve the same care.
             </p>
           </div>
           <ul className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -325,7 +333,7 @@ export default function Page() {
                   Coach charter
                 </h3>
                 <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-                  For island tours, company trips, school outings, weddings
+                  For sightseeing tours, company trips, school outings, weddings
                   and event shuttles. Give us your headcount and luggage and
                   we&apos;ll size the coach to fit — no half-empty buses, no
                   squeezing in.
@@ -333,7 +341,7 @@ export default function Page() {
                 <h4 className="mt-8 font-semibold">Booked for</h4>
                 <ul className="mt-3 divide-y divide-[#0e3a2f]/12 border-y border-[#0e3a2f]/12">
                   {[
-                    "Island and city sightseeing tours",
+                    "City, highland and island sightseeing tours",
                     "Corporate retreats, conferences and incentive trips",
                     "School and university excursions",
                     "Group transfers from airports and ferry jetties",
@@ -455,15 +463,18 @@ export default function Page() {
                 id="coverage-title"
                 className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.4rem]`}
               >
-                Langkawi is home. Malaysia is the route.
+                Wherever you are. Wherever you&apos;re going.
               </h2>
               <p className="mt-5 max-w-[34rem] text-lg leading-relaxed text-white/80">
-                A decade on the island&apos;s roads, jetties and airport taught
-                us how to run transport properly. We now bring the same
-                standard to trips across the peninsula.
+                Tell us where to collect you and where the day ends — in any
+                state, city or island in Malaysia. We plan the route, the
+                vehicle and the timings around your trip.
               </p>
-              <ul className="mt-9 border-t border-white/20">
-                {regions.map((r) => (
+              <h3 className="mt-9 text-[0.95rem] text-[#e2c47f]">
+                Where we collect you
+              </h3>
+              <ul className="mt-3 border-t border-white/20">
+                {pickups.map((r) => (
                   <li
                     key={r.name}
                     className="flex flex-col gap-0.5 border-b border-white/20 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
@@ -546,7 +557,7 @@ export default function Page() {
                 </div>
                 <div>
                   <dt className="text-sm text-white/60">Office</dt>
-                  <dd className="mt-1">Langkawi, Kedah, Malaysia</dd>
+                  <dd className="mt-1">Based in Langkawi, serving all of Malaysia</dd>
                 </div>
               </dl>
             </div>
@@ -556,10 +567,10 @@ export default function Page() {
       </main>
 
       <footer className="bg-[#0a2a22] text-white/70">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-5 pb-24 pt-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p>
             <span className={`${styles.wide} font-bold text-white`}>Heavenly Travel</span>
-            <span className="ml-3">Coach charter and cars with driver, Langkawi and Malaysia</span>
+            <span className="ml-3">Based in Langkawi, serving all of Malaysia</span>
           </p>
           <p>&copy; 2026 Heavenly Travel</p>
         </div>

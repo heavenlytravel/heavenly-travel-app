@@ -4,3 +4,8 @@ packages:
 
 allowBuilds:
   "@parcel/watcher": true
+
+# Keep every turbo resolution (incl. eslint-plugin-turbo's peer) on the version
+# pinned in root package.json, so installs pass pnpm's minimumReleaseAge check.
+overrides:
+  turbo: 2.10.12

@@ -13,6 +13,7 @@ coverage
 out/
 build
 .swc/
+next-env.d.ts
 
 # misc
 .DS_Store
@@ -23,14 +24,22 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# env files (never commit secrets; keep .env.example as a template)
+.env
+.env*
+!.env.example
+
+# vercel
+.vercel
 
 # turbo
 .turbo
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
 
 # ui
 dist/

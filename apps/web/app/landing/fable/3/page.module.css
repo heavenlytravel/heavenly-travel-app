@@ -1,0 +1,70 @@
+/* Heavenly Travel — /landing/fable/3
+   Only the pieces Tailwind can't express cleanly: the route-draw
+   animation for the hero map and the road-marking underline. */
+
+.page {
+  --sky: #f3f7fa;
+  --ink: #0c2340;
+  --road: #f5b800;
+  --road-deep: #c98f00;
+  --forest: #1e6b4a;
+  --sea: #2a9db0;
+  --asphalt: #5b6673;
+  --line: #d5dee6;
+  color: var(--ink);
+  background: var(--sky);
+}
+
+/* Hero map: the one orchestrated motion moment on the page. */
+.routeLine {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.stop {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .routeLine {
+    stroke-dashoffset: 1;
+    animation: draw 2.4s cubic-bezier(0.65, 0, 0.35, 1) 0.3s forwards;
+  }
+  .routeLineEast {
+    stroke-dashoffset: 1;
+    animation: draw 1.3s cubic-bezier(0.65, 0, 0.35, 1) 2.7s forwards;
+  }
+  .stop {
+    opacity: 0;
+    animation: appear 0.35s ease-out forwards;
+  }
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dashed centre-line under the headline, drawn like a road marking. */
+.roadRule {
+  height: 6px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--road) 0 28px,
+    transparent 28px 44px
+  );
+  border-radius: 3px;
+}
+
+/* Horizontal route board: hide the scrollbar chrome but keep scrolling. */
+.board {
+  scrollbar-width: none;
+}
+.board::-webkit-scrollbar {
+  display: none;
+}

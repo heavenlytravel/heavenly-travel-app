@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MODELS, VARIATIONS, type ModelKey } from "../_data";
+import { MODELS, VARIATIONS, type ModelKey } from "../../_lib/variations";
 
 const GROUPS: ModelKey[] = ["opus", "fable"];
 

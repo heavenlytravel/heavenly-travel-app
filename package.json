@@ -6,7 +6,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "stage": "git push -u origin HEAD && git push origin HEAD:staging --force"
   },
   "devDependencies": {
     "prettier": "3.9.6",

@@ -2,12 +2,12 @@
 
 ## Environments
 
-| Environment | URL                           | Git branch | Vercel environment         |
-| ----------- | ----------------------------- | ---------- | -------------------------- |
-| Production  | https://new.heavenlytravel.my | `main`     | Production                 |
-| Staging     | https://staging.heavenlytravel.my | `staging`  | Preview (branch `staging`) |
-| PR previews | Vercel preview URL per PR     | `feat/*`, `fix/*` | Preview              |
-| Local       | http://localhost:3000 (web)   | any        | —                          |
+| Environment | URL                               | Git branch          | Vercel environment         |
+| ----------- | --------------------------------- | ------------------- | -------------------------- |
+| Production  | https://new.heavenlytravel.my     | `main`              | Production                 |
+| Staging     | https://staging.heavenlytravel.my | `staging` (pointer) | Preview (branch `staging`) |
+| PR previews | Vercel preview URL per PR         | `feat/*`, `fix/*`   | Preview                    |
+| Local       | http://localhost:3000 (web)       | any                 | —                          |
 
 Deploys are automatic. Vercel builds every push; pushes to `main` go to production,
 pushes to `staging` go to the staging domain, and every other branch gets a preview URL
@@ -16,21 +16,26 @@ posted on its PR.
 ## Branch model
 
 ```
-feat/xyz ──PR, squash──▶ staging ──PR, merge commit──▶ main
-                           │                             │
-             staging.heavenlytravel.my       new.heavenlytravel.my
+feat/xyz ──PR, squash──▶ main ──▶ new.heavenlytravel.my
+   │
+   └──force push──▶ staging ──▶ staging.heavenlytravel.my
 ```
 
-- `main`: what is live. Only changes through a release PR from `staging` (or a hotfix PR).
-- `staging`: what is being tested. Feature PRs are squash-merged here.
-- `feat/<name>`, `fix/<name>`, `chore/<name>`: short-lived work branches, always cut from `staging`.
+- `main`: what is live. Only changes through squash-merged PRs. Protected by a ruleset.
+- `feat/<name>`, `fix/<name>`, `chore/<name>`: short-lived work branches, always cut from `main`.
+- `staging`: **a review pointer, not a branch you work on.** It is force-pushed to whatever
+  branch the team should look at on the staging domain. Nothing is ever merged into it or out
+  of it, and no PR is ever opened from it.
+
+The staging domain exists so reviewers can see a feature on a fixed URL without a Vercel
+account. Per-PR preview URLs also work, but they require a Vercel login.
 
 ## Day-to-day
 
 ### 1. Start work
 
 ```sh
-git checkout staging
+git checkout main
 git pull
 git checkout -b feat/short-description
 ```
@@ -48,82 +53,70 @@ pnpm lint
 pnpm check-types
 ```
 
-### 3. Open a PR into `staging`
+### 3. Open a PR into `main`
 
 ```sh
 git push -u origin feat/short-description
-gh pr create --base staging --fill
+gh pr create --base main --fill
 ```
 
-Check the Vercel preview URL on the PR.
+### 4. Show it on staging (optional, repeatable)
 
-### 4. Merge into `staging`
+When the team should review the feature live:
+
+```sh
+pnpm stage
+```
+
+This pushes the current branch to its own remote ref and then force-pushes it onto
+`staging`. Vercel rebuilds and https://staging.heavenlytravel.my shows the branch a minute
+later. Run it again after every review fix. Pushing a different branch replaces what is
+there.
+
+The domain shows one branch at a time. To review two features together, build a throwaway
+branch and stage that:
+
+```sh
+git checkout -b review/a-and-b main
+git merge feat/a feat/b
+git push origin review/a-and-b:staging --force
+git checkout main && git branch -D review/a-and-b
+```
+
+### 5. Merge
 
 Use **Squash and merge**. The squash commit message should read like a changelog line,
-e.g. `feat(web): add landing page search bar`.
+e.g. `feat(web): add landing page search bar`. GitHub deletes the remote branch on merge.
 
-Then verify on https://staging.heavenlytravel.my and clean up:
-
-```sh
-git checkout staging
-git pull
-git branch -D feat/short-description
-git push origin --delete feat/short-description   # if GitHub didn't delete it
-```
-
-### 5. Release to production
-
-When staging is good, open a release PR from `staging` into `main`:
-
-```sh
-gh pr create --base main --head staging --title "release: YYYY-MM-DD"
-```
-
-Merge it with **Create a merge commit**. Never squash this PR (the ruleset on `main`
-only allows merge commits, so GitHub won't offer squash).
-
-> **Why not squash here?** Squashing `staging` into `main` creates a new commit on `main`
-> that `staging` doesn't have. The branches drift apart, and every later release PR
-> re-lists old commits and shows fake conflicts. A merge commit keeps them in sync.
-
-## Hotfixes
-
-For an urgent production bug that can't wait for the next release:
+Then clean up locally:
 
 ```sh
 git checkout main
 git pull
-git checkout -b fix/short-description
-# fix, commit, push
-gh pr create --base main --fill
+git branch -D feat/short-description
 ```
 
-1. Merge the PR into `main` with a merge commit.
-2. Bring the fix back into staging so it isn't lost on the next release:
+Leave `staging` alone. It still points at the pre-squash commits, so `main...staging`
+reports a few commits ahead and behind. The files are identical to `main` and the number
+means nothing. It gets overwritten by the next `pnpm stage`.
 
-   ```sh
-   gh pr create --base staging --head main --title "chore: sync main into staging"
-   ```
+## Hotfixes
 
-   Merge this one with **Create a merge commit** too (not squash).
+A hotfix is just another PR into `main`, from a `fix/*` branch cut from `main`. Stage it
+first if you want a second pair of eyes on the staging domain. There is no sync step
+afterwards, because `staging` never accumulates anything.
 
-## Merge method cheat sheet
+## Guard rails (GitHub rulesets and settings)
 
-| PR                    | Merge method       |
-| --------------------- | ------------------ |
-| `feat/*` → `staging`  | Squash and merge   |
-| `staging` → `main`    | Create a merge commit |
-| `fix/*` → `main`      | Create a merge commit |
-| `main` → `staging`    | Create a merge commit |
+Configured under **Settings → Rules → Rulesets** and **Settings → General**:
 
-## Guard rails (GitHub rulesets)
+| Ruleset             | Branch    | Rules                                                |
+| ------------------- | --------- | ---------------------------------------------------- |
+| `main (production)` | `main`    | PR required, squash only, no force push, no deletion |
+| _(none)_            | `staging` | Unprotected on purpose so it can be force-pushed     |
 
-Configured under **Settings → Rules → Rulesets**:
-
-| Ruleset             | Branch    | Rules                                                              |
-| ------------------- | --------- | ------------------------------------------------------------------ |
-| `main (production)` | `main`    | PR required, merge commit only, no force push, no deletion         |
-| `staging`           | `staging` | PR required, squash or merge commit, no force push, no deletion    |
+Repo settings: squash merge is the only merge method offered, and head branches are deleted
+automatically after merge.
 
 No approvals are required, so a solo developer can merge their own PRs. Raise
 `required_approving_review_count` when the team grows.
@@ -135,19 +128,35 @@ Each Vercel project (`web`, and `admin` if deployed separately) needs:
 1. **Settings → Git → Production Branch**: `main`.
 2. **Settings → Domains**:
    - `new.heavenlytravel.my` → Production (no Git branch).
-   - `staging.heavenlytravel.my` → Git branch `staging`.
+   - `staging.heavenlytravel.my` → Preview, Git branch `staging`.
 3. **DNS** (at the `heavenlytravel.my` DNS provider): `CNAME` records for `new` and
    `staging` pointing at the value Vercel shows (usually `cname.vercel-dns.com`).
-4. **Settings → Environment Variables**:
+4. **Settings → Deployment Protection**: Vercel Authentication **Disabled**, so reviewers
+   do not need a Vercel account to open the staging domain. Access control for staging
+   belongs in the app instead (see below).
+5. **Settings → Environment Variables**:
    - Production values scoped to **Production**.
-   - Staging values scoped to **Preview**, branch `staging`.
-   - Optionally, generic preview values scoped to **Preview** (all branches) for PR previews.
-5. Optional: **Settings → Deployment Protection** to password-protect staging and previews.
+   - Staging-only values (for example the review gate and its auth keys) scoped to
+     **Preview**, branch `staging`.
 
 After changing environment variables, redeploy the branch for them to take effect.
+
+## Gating the staging site
+
+Because Vercel Authentication is off, the staging domain is public until the app gates it.
+The plan is a Clerk sign-in in `apps/web/proxy.ts`, enabled only when a staging-scoped
+environment variable is set, with Clerk sign-ups restricted to internal accounts.
+Production never has that variable, so the gate never appears on the live site.
+
+## One-time migration note
+
+Before 2026-09-16 `staging` was an integration branch that released into `main` through
+merge-commit PRs. The last three PRs on it (#1, #2, #3) were fast-forwarded onto `main`
+on that date, and the `staging` ruleset was removed. Nothing about that model applies
+any more.
 
 ## Optional next steps
 
 - GitHub Actions workflow running `pnpm lint`, `pnpm check-types` and `pnpm build` on PRs
-  into `staging` and `main`, then add it as a required status check in both rulesets.
+  into `main`, then add it as a required status check in the `main` ruleset.
 - Release tags on `main` (e.g. `v2026.09.15`) for an easy rollback reference.

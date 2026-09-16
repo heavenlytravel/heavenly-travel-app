@@ -48,8 +48,11 @@ Long term maintainability is a core priority. If you add new functionality, firs
 Full details in `docs/development-workflow.md`.
 
 - `apps/web` runs on port 3000, `apps/admin` on port 3001.
-- `main` is production, `staging` is the staging site. Both are protected: never commit or push to them directly.
-- Start work by branching from `staging`: `feat/*`, `fix/*` or `chore/*`.
+- `main` is production. It is protected: never commit or push to it directly.
+- Start work by branching from `main`: `feat/*`, `fix/*` or `chore/*`.
 - Run `pnpm lint` and `pnpm check-types` before pushing.
-- Open the PR against `staging`. It is squash-merged, so the PR title is the changelog line.
-- Releases and hotfixes go through `main` with a merge commit. Follow the doc for those.
+- Open the PR against `main`. It is squash-merged, so the PR title is the changelog line.
+- `staging` is a review pointer, not a branch to work on. `pnpm stage` force-pushes the
+  current branch onto it so the team can review at https://staging.heavenlytravel.my.
+  Never merge into or from `staging`, never open a PR from it, and ignore how far it
+  is ahead of or behind `main`.

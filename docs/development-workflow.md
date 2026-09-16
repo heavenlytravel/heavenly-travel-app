@@ -65,7 +65,7 @@ gh pr create --base main --fill
 When the team should review the feature live:
 
 ```sh
-pnpm stage
+pnpm staging
 ```
 
 This pushes the current branch to its own remote ref and then force-pushes it onto
@@ -98,7 +98,7 @@ git branch -D feat/short-description
 
 Leave `staging` alone. It still points at the pre-squash commits, so `main...staging`
 reports a few commits ahead and behind. The files are identical to `main` and the number
-means nothing. It gets overwritten by the next `pnpm stage`.
+means nothing. It gets overwritten by the next `pnpm staging`.
 
 ## Hotfixes
 

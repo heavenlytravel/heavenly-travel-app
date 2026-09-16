@@ -52,7 +52,7 @@ Full details in `docs/development-workflow.md`.
 - Start work by branching from `main`: `feat/*`, `fix/*` or `chore/*`.
 - Run `pnpm lint` and `pnpm check-types` before pushing.
 - Open the PR against `main`. It is squash-merged, so the PR title is the changelog line.
-- `staging` is a review pointer, not a branch to work on. `pnpm stage` force-pushes the
+- `staging` is a review pointer, not a branch to work on. `pnpm staging` force-pushes the
   current branch onto it so the team can review at https://staging.heavenlytravel.my.
   Never merge into or from `staging`, never open a PR from it, and ignore how far it
   is ahead of or behind `main`.

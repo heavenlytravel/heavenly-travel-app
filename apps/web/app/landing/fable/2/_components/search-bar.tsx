@@ -71,7 +71,9 @@ export function SearchBar() {
             autoComplete="off"
           />
         </div>
-        <div className={`${cell} border-b border-(--line) sm:border-l lg:border-b-0 lg:border-l-0`}>
+        <div
+          className={`${cell} border-b border-(--line) sm:border-l lg:border-b-0 lg:border-l-0`}
+        >
           <label htmlFor="s-destination" className={label}>
             Destination
           </label>
@@ -87,7 +89,11 @@ export function SearchBar() {
           <span className={label} id="s-dates-label">
             Dates
           </span>
-          <div className="flex items-center gap-2" role="group" aria-labelledby="s-dates-label">
+          <div
+            className="flex items-center gap-2"
+            role="group"
+            aria-labelledby="s-dates-label"
+          >
             <label htmlFor="s-from" className="sr-only">
               From
             </label>
@@ -101,7 +107,9 @@ export function SearchBar() {
             <input id="s-to" name="to" type="date" className={input} />
           </div>
         </div>
-        <div className={`${cell} border-b border-(--line) sm:border-l lg:border-b-0 lg:border-l-0`}>
+        <div
+          className={`${cell} border-b border-(--line) sm:border-l lg:border-b-0 lg:border-l-0`}
+        >
           <label htmlFor="s-pax" className={label}>
             Passengers
           </label>
@@ -121,7 +129,15 @@ export function SearchBar() {
             type="submit"
             className="flex h-full w-full items-center justify-center gap-2 rounded-xl bg-(--lantern) px-6 py-3 font-semibold text-(--ink) hover:bg-(--lantern-deep) lg:min-w-36"
           >
-            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
               <circle cx="8.5" cy="8.5" r="5.5" />
               <path d="M13 13l4.5 4.5" />
             </svg>
@@ -130,7 +146,10 @@ export function SearchBar() {
         </div>
       </div>
 
-      <p aria-live="polite" className={`${styles.display} px-5 text-[17px] text-(--sea) ${message ? "pb-4" : ""}`}>
+      <p
+        aria-live="polite"
+        className={`${styles.display} px-5 text-[17px] text-(--sea) ${message ? "pb-4" : ""}`}
+      >
         {message}
       </p>
     </form>

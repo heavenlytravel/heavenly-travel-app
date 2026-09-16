@@ -55,7 +55,10 @@ type Region = { name: string; places: string[] };
 // A direction sign with no "you are here": every place is a possible pick-up or drop-off.
 const regions: Region[] = [
   { name: "North", places: ["Langkawi", "Penang", "Alor Setar", "Ipoh"] },
-  { name: "Central", places: ["Kuala Lumpur", "KLIA", "Genting Highlands", "Cameron Highlands"] },
+  {
+    name: "Central",
+    places: ["Kuala Lumpur", "KLIA", "Genting Highlands", "Cameron Highlands"],
+  },
   { name: "South", places: ["Melaka", "Johor Bahru", "Desaru"] },
   { name: "East Coast", places: ["Kuantan", "Kuala Terengganu", "Kota Bharu"] },
   { name: "Sabah and Sarawak", places: ["Kota Kinabalu", "Kuching", "Miri"] },
@@ -118,7 +121,16 @@ function KiteMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" aria-hidden="true" className={className}>
       <rect width="40" height="40" rx="9" fill="#0D3B40" />
-      <rect x="2.5" y="2.5" width="35" height="35" rx="7" fill="none" stroke="#fff" strokeWidth="1.5" />
+      <rect
+        x="2.5"
+        y="2.5"
+        width="35"
+        height="35"
+        rx="7"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="1.5"
+      />
       <path
         d="M7 19c4.5-1.2 8.5-.4 11.6 2.2L20 23l1.4-1.8C24.5 18.6 28.5 17.8 33 19c-4 .6-7.4 2.6-9.6 5.8L20 30l-3.4-5.2C14.4 21.6 11 19.6 7 19z"
         fill="#F2B33D"
@@ -129,7 +141,11 @@ function KiteMark({ className }: { className?: string }) {
 
 function CoachArt() {
   return (
-    <svg viewBox="0 0 320 120" aria-hidden="true" className="h-auto w-full max-w-[340px]">
+    <svg
+      viewBox="0 0 320 120"
+      aria-hidden="true"
+      className="h-auto w-full max-w-[340px]"
+    >
       <rect x="8" y="22" width="296" height="74" rx="14" fill="#0D3B40" />
       <path d="M270 22h18a16 16 0 0 1 16 16v30h-34z" fill="#15525A" />
       <rect x="22" y="34" width="44" height="28" rx="4" fill="#D5E3DC" />
@@ -143,14 +159,26 @@ function CoachArt() {
       <circle cx="66" cy="98" r="6" fill="#EEF0EA" />
       <circle cx="248" cy="98" r="15" fill="#14272A" />
       <circle cx="248" cy="98" r="6" fill="#EEF0EA" />
-      <line x1="0" y1="114" x2="320" y2="114" stroke="#2E5E4E" strokeWidth="2" strokeDasharray="14 10" />
+      <line
+        x1="0"
+        y1="114"
+        x2="320"
+        y2="114"
+        stroke="#2E5E4E"
+        strokeWidth="2"
+        strokeDasharray="14 10"
+      />
     </svg>
   );
 }
 
 function CarArt() {
   return (
-    <svg viewBox="0 0 220 100" aria-hidden="true" className="h-auto w-full max-w-[220px]">
+    <svg
+      viewBox="0 0 220 100"
+      aria-hidden="true"
+      className="h-auto w-full max-w-[220px]"
+    >
       <path
         d="M16 66c0-8 5-13 13-14l26-4 26-22c4-3 8-4 13-4h44c6 0 11 2 15 6l20 20 22 4c7 1 11 7 11 13v9c0 4-3 7-7 7H23c-4 0-7-3-7-7z"
         fill="#9C4A22"
@@ -161,7 +189,15 @@ function CarArt() {
       <circle cx="58" cy="80" r="5" fill="#EEF0EA" />
       <circle cx="170" cy="80" r="13" fill="#14272A" />
       <circle cx="170" cy="80" r="5" fill="#EEF0EA" />
-      <line x1="0" y1="96" x2="220" y2="96" stroke="#2E5E4E" strokeWidth="2" strokeDasharray="14 10" />
+      <line
+        x1="0"
+        y1="96"
+        x2="220"
+        y2="96"
+        stroke="#2E5E4E"
+        strokeWidth="2"
+        strokeDasharray="14 10"
+      />
     </svg>
   );
 }
@@ -185,17 +221,27 @@ export default function HeavenlyTravelLanding() {
       </a>
 
       {/* ---------- Header ---------- */}
-      <header className={`${wrap} flex items-center justify-between gap-4 py-5`}>
-        <a href="#" className={`${sign} flex items-center gap-3 text-[#0D3B40]`}>
+      <header
+        className={`${wrap} flex items-center justify-between gap-4 py-5`}
+      >
+        <a
+          href="#"
+          className={`${sign} flex items-center gap-3 text-[#0D3B40]`}
+        >
           <KiteMark className="size-10 shrink-0" />
           <span className="leading-tight">
-            <span className="block text-lg font-black tracking-tight">Heavenly Travel</span>
+            <span className="block text-lg font-black tracking-tight">
+              Heavenly Travel
+            </span>
             <span className="hidden text-[0.8125rem] font-semibold text-[#2E5E4E] sm:block">
               Coaches and cars with drivers, across Malaysia
             </span>
           </span>
         </a>
-        <nav aria-label="Main" className={`${sign} hidden items-center gap-7 text-[0.9375rem] font-semibold md:flex`}>
+        <nav
+          aria-label="Main"
+          className={`${sign} hidden items-center gap-7 text-[0.9375rem] font-semibold md:flex`}
+        >
           <a href="#services" className="text-[#14272A] hover:text-[#9C4A22]">
             Services
           </a>
@@ -239,7 +285,9 @@ export default function HeavenlyTravelLanding() {
             <div
               className={`${styles.dark} relative z-10 -mt-20 rounded-[22px] bg-[#0D3B40] p-2 sm:mx-6 lg:absolute lg:bottom-28 lg:left-14 lg:mx-0 lg:mt-0 lg:max-w-[600px]`}
             >
-              <div className={`${styles.plate} rounded-[16px] px-6 py-8 sm:px-10 sm:py-10`}>
+              <div
+                className={`${styles.plate} rounded-[16px] px-6 py-8 sm:px-10 sm:py-10`}
+              >
                 <h1
                   id="hero-title"
                   className={`${sign} text-[2.75rem] font-black leading-[1.02] tracking-[-0.02em] text-white sm:text-[3.75rem] lg:text-[4.5rem]`}
@@ -247,8 +295,8 @@ export default function HeavenlyTravelLanding() {
                   A better way to get away.
                 </h1>
                 <p className="mt-5 max-w-[30rem] text-[1.125rem] leading-[1.7] text-white/85">
-                  Island escapes, seamless transport and trips made around you. Let our local team take care of the
-                  details.
+                  Island escapes, seamless transport and trips made around you.
+                  Let our local team take care of the details.
                 </p>
                 <p className="mt-6">
                   <a
@@ -281,41 +329,52 @@ export default function HeavenlyTravelLanding() {
                 Wherever you are. Wherever you&apos;re going.
               </h2>
               <p className="max-w-[36rem] text-[1.0625rem] leading-[1.7] text-white/80 lg:col-span-5">
-                Your trip starts where you are: a city airport, a ferry terminal, a hotel lobby or your front door.
-                Our coaches and drivers cover the whole of Malaysia.
+                Your trip starts where you are: a city airport, a ferry
+                terminal, a hotel lobby or your front door. Our coaches and
+                drivers cover the whole of Malaysia.
               </p>
             </div>
 
             <div className={`${styles.board} mt-12 lg:mt-16`}>
               {regions.map((region, r) => (
-                  <section key={region.name} aria-labelledby={`region-${r}`} className={styles.region}>
-                    <h3 id={`region-${r}`} className={`${sign} text-sm font-bold text-[#F2B33D]`}>
-                      {region.name}
-                    </h3>
-                    <ul
-                      className={styles.places}
-                      style={{ "--r": r } as CSSProperties}
-                    >
-                      {region.places.map((place, p) => (
-                        <li
-                          key={place}
-                          className={`${styles.place} ${sign} text-[1.0625rem] font-extrabold leading-tight`}
-                          style={{ "--i": r + p } as CSSProperties}
-                        >
-                          <span className={styles.dot} aria-hidden="true" />
-                          {place}
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ))}
+                <section
+                  key={region.name}
+                  aria-labelledby={`region-${r}`}
+                  className={styles.region}
+                >
+                  <h3
+                    id={`region-${r}`}
+                    className={`${sign} text-sm font-bold text-[#F2B33D]`}
+                  >
+                    {region.name}
+                  </h3>
+                  <ul
+                    className={styles.places}
+                    style={{ "--r": r } as CSSProperties}
+                  >
+                    {region.places.map((place, p) => (
+                      <li
+                        key={place}
+                        className={`${styles.place} ${sign} text-[1.0625rem] font-extrabold leading-tight`}
+                        style={{ "--i": r + p } as CSSProperties}
+                      >
+                        <span className={styles.dot} aria-hidden="true" />
+                        {place}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
             </div>
 
             <p
               className={`${sign} mt-10 border-t border-white/20 pt-6 text-sm text-white/75`}
             >
               Heading somewhere not listed?{" "}
-              <a href="#quote" className="font-semibold text-[#F2B33D] underline underline-offset-4">
+              <a
+                href="#quote"
+                className="font-semibold text-[#F2B33D] underline underline-offset-4"
+              >
                 Ask us about your route
               </a>
             </p>
@@ -323,7 +382,11 @@ export default function HeavenlyTravelLanding() {
         </section>
 
         {/* ---------- Services ---------- */}
-        <section id="services" aria-labelledby="services-title" className={`${wrap} scroll-mt-6 py-20 lg:py-28`}>
+        <section
+          id="services"
+          aria-labelledby="services-title"
+          className={`${wrap} scroll-mt-6 py-20 lg:py-28`}
+        >
           <div className="max-w-[44rem]">
             <h2
               id="services-title"
@@ -332,21 +395,31 @@ export default function HeavenlyTravelLanding() {
               Two ways to travel with us, for now
             </h2>
             <p className="mt-4 text-lg leading-[1.7] text-[#2B3F42]">
-              Whether it&apos;s forty colleagues heading to a team retreat or a family of four landing late at
-              night, there&apos;s a driver who has done the route before.
+              Whether it&apos;s forty colleagues heading to a team retreat or a
+              family of four landing late at night, there&apos;s a driver who
+              has done the route before.
             </p>
           </div>
 
           <div className="mt-12 grid gap-6 lg:grid-cols-12">
             <article className="rounded-[28px] bg-[#D5E3DC] p-7 sm:p-10 lg:col-span-7">
               <CoachArt />
-              <h3 className={`${sign} mt-8 text-[1.75rem] font-black text-[#0D3B40]`}>Coach charter</h3>
+              <h3
+                className={`${sign} mt-8 text-[1.75rem] font-black text-[#0D3B40]`}
+              >
+                Coach charter
+              </h3>
               <p className="mt-3 max-w-[36rem] text-[1.0625rem] leading-[1.75]">
-                A bus and an experienced driver for your whole group, on your schedule. Tell us how many people
-                are travelling and we&apos;ll match the coach to the headcount and the luggage.
+                A bus and an experienced driver for your whole group, on your
+                schedule. Tell us how many people are travelling and we&apos;ll
+                match the coach to the headcount and the luggage.
               </p>
-              <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>Groups we often carry</h4>
-              <ul className={`${sign} mt-3 grid gap-x-8 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2`}>
+              <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>
+                Groups we often carry
+              </h4>
+              <ul
+                className={`${sign} mt-3 grid gap-x-8 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2`}
+              >
                 {[
                   "City, island and interstate tours",
                   "Corporate trips and retreats",
@@ -356,7 +429,10 @@ export default function HeavenlyTravelLanding() {
                   "Tour operators and travel agents",
                 ].map((item) => (
                   <li key={item} className="flex gap-3">
-                    <span className="mt-[0.55em] size-2 shrink-0 rounded-full bg-[#9C4A22]" aria-hidden="true" />
+                    <span
+                      className="mt-[0.55em] size-2 shrink-0 rounded-full bg-[#9C4A22]"
+                      aria-hidden="true"
+                    />
                     {item}
                   </li>
                 ))}
@@ -365,30 +441,47 @@ export default function HeavenlyTravelLanding() {
 
             <article className="flex flex-col rounded-[28px] border-2 border-[#0D3B40]/15 bg-white/60 p-7 sm:p-10 lg:col-span-5">
               <CarArt />
-              <h3 className={`${sign} mt-8 text-[1.75rem] font-black text-[#0D3B40]`}>Car with driver</h3>
+              <h3
+                className={`${sign} mt-8 text-[1.75rem] font-black text-[#0D3B40]`}
+              >
+                Car with driver
+              </h3>
               <p className="mt-3 text-[1.0625rem] leading-[1.75]">
-                A private car and a driver for as long as you need. An airport pickup, a full day of
-                sightseeing, or a long drive between states while you look out of the window.
+                A private car and a driver for as long as you need. An airport
+                pickup, a full day of sightseeing, or a long drive between
+                states while you look out of the window.
               </p>
-              <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>Good for</h4>
+              <h4 className={`${sign} mt-7 text-base font-bold text-[#0D3B40]`}>
+                Good for
+              </h4>
               <ul className={`${sign} mt-3 grid gap-2.5 text-[0.9375rem]`}>
-                {["Families and couples on holiday", "Business travellers and VIP guests", "Day trips and sightseeing"].map(
-                  (item) => (
-                    <li key={item} className="flex gap-3">
-                      <span className="mt-[0.55em] size-2 shrink-0 rounded-full bg-[#9C4A22]" aria-hidden="true" />
-                      {item}
-                    </li>
-                  ),
-                )}
+                {[
+                  "Families and couples on holiday",
+                  "Business travellers and VIP guests",
+                  "Day trips and sightseeing",
+                ].map((item) => (
+                  <li key={item} className="flex gap-3">
+                    <span
+                      className="mt-[0.55em] size-2 shrink-0 rounded-full bg-[#9C4A22]"
+                      aria-hidden="true"
+                    />
+                    {item}
+                  </li>
+                ))}
               </ul>
             </article>
           </div>
 
           <p className="mt-8 max-w-[46rem] border-l-4 border-[#F2B33D] pl-5 text-[1.0625rem] leading-[1.7] text-[#2B3F42]">
-            <span className="font-medium text-[#14272A]">More is on the way.</span> As we grow across Malaysia
-            we&apos;re adding new ways to travel with us. If there&apos;s something you need that isn&apos;t here
-            yet,{" "}
-            <a href="#quote" className="font-medium text-[#9C4A22] underline underline-offset-4">
+            <span className="font-medium text-[#14272A]">
+              More is on the way.
+            </span>{" "}
+            As we grow across Malaysia we&apos;re adding new ways to travel with
+            us. If there&apos;s something you need that isn&apos;t here yet,{" "}
+            <a
+              href="#quote"
+              className="font-medium text-[#9C4A22] underline underline-offset-4"
+            >
               tell us
             </a>
             .
@@ -396,7 +489,11 @@ export default function HeavenlyTravelLanding() {
         </section>
 
         {/* ---------- Island story ---------- */}
-        <section id="island" aria-labelledby="island-title" className="scroll-mt-6 bg-white/55 py-20 lg:py-28">
+        <section
+          id="island"
+          aria-labelledby="island-title"
+          className="scroll-mt-6 bg-white/55 py-20 lg:py-28"
+        >
           <div className={`${wrap} grid gap-12 lg:grid-cols-12 lg:gap-16`}>
             <div className="lg:col-span-6">
               <h2
@@ -406,15 +503,25 @@ export default function HeavenlyTravelLanding() {
                 What ten years of looking after travellers taught us
               </h2>
               <p className="mt-4 text-lg leading-[1.7] text-[#2B3F42]">
-                We&apos;re based in Langkawi and serve all of Malaysia. A decade of island hospitality has left us
-                with a set of habits, and every one of our drivers keeps them.
+                We&apos;re based in Langkawi and serve all of Malaysia. A decade
+                of island hospitality has left us with a set of habits, and
+                every one of our drivers keeps them.
               </p>
 
               <div className="mt-10 grid gap-9">
                 {lessons.map((lesson) => (
-                  <div key={lesson.title} className="border-l-2 border-[#9C4A22] pl-6">
-                    <h3 className={`${sign} text-xl font-extrabold leading-snug text-[#14272A]`}>{lesson.title}</h3>
-                    <p className="mt-2 max-w-[34rem] text-[1.0625rem] leading-[1.75] text-[#2B3F42]">{lesson.body}</p>
+                  <div
+                    key={lesson.title}
+                    className="border-l-2 border-[#9C4A22] pl-6"
+                  >
+                    <h3
+                      className={`${sign} text-xl font-extrabold leading-snug text-[#14272A]`}
+                    >
+                      {lesson.title}
+                    </h3>
+                    <p className="mt-2 max-w-[34rem] text-[1.0625rem] leading-[1.75] text-[#2B3F42]">
+                      {lesson.body}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -429,14 +536,19 @@ export default function HeavenlyTravelLanding() {
                 loading="lazy"
               />
               <figcaption className="mt-4 text-[0.9375rem] italic leading-relaxed text-[#2E5E4E]">
-                Cameron Highlands, Pahang. Winding roads, driven with the same care as the short ones.
+                Cameron Highlands, Pahang. Winding roads, driven with the same
+                care as the short ones.
               </figcaption>
             </figure>
           </div>
         </section>
 
         {/* ---------- How booking works ---------- */}
-        <section id="booking" aria-labelledby="booking-title" className={`${wrap} scroll-mt-6 py-20 lg:py-28`}>
+        <section
+          id="booking"
+          aria-labelledby="booking-title"
+          className={`${wrap} scroll-mt-6 py-20 lg:py-28`}
+        >
           <h2
             id="booking-title"
             className={`${sign} max-w-[40rem] text-[2rem] font-black leading-[1.08] tracking-[-0.015em] text-[#0D3B40] sm:text-[2.75rem]`}
@@ -452,11 +564,15 @@ export default function HeavenlyTravelLanding() {
                 >
                   {i + 1}
                 </span>
-                <h3 className={`${sign} mt-5 text-xl font-extrabold text-[#14272A]`}>
+                <h3
+                  className={`${sign} mt-5 text-xl font-extrabold text-[#14272A]`}
+                >
                   <span className="sr-only">Step {i + 1}: </span>
                   {step.title}
                 </h3>
-                <p className="mt-2 text-[1.0625rem] leading-[1.7] text-[#2B3F42]">{step.body}</p>
+                <p className="mt-2 text-[1.0625rem] leading-[1.7] text-[#2B3F42]">
+                  {step.body}
+                </p>
               </li>
             ))}
           </ol>
@@ -468,7 +584,9 @@ export default function HeavenlyTravelLanding() {
           aria-labelledby="quote-title"
           className={`${styles.dark} scroll-mt-6 bg-[#0D3B40] text-white`}
         >
-          <div className={`${wrap} grid gap-12 py-20 lg:grid-cols-12 lg:gap-16 lg:py-28`}>
+          <div
+            className={`${wrap} grid gap-12 py-20 lg:grid-cols-12 lg:gap-16 lg:py-28`}
+          >
             <div className="lg:col-span-5">
               <h2
                 id="quote-title"
@@ -477,14 +595,17 @@ export default function HeavenlyTravelLanding() {
                 Tell us where you&apos;re headed
               </h2>
               <p className="mt-4 max-w-[30rem] text-lg leading-[1.7] text-white/80">
-                Send the basics and we&apos;ll come back with a vehicle suggestion and a price for the whole trip.
+                Send the basics and we&apos;ll come back with a vehicle
+                suggestion and a price for the whole trip.
               </p>
 
               <div className="mt-10 rounded-[20px] bg-[#0A3035] p-6 sm:p-8">
-                <h3 className={`${sign} text-xl font-extrabold`}>Prefer to chat?</h3>
+                <h3 className={`${sign} text-xl font-extrabold`}>
+                  Prefer to chat?
+                </h3>
                 <p className="mt-2 leading-[1.7] text-white/80">
-                  Message us on WhatsApp with your dates and pickup point. Most people plan their whole trip with us
-                  this way.
+                  Message us on WhatsApp with your dates and pickup point. Most
+                  people plan their whole trip with us this way.
                 </p>
                 <a href="#" className={`${btnPrimary} mt-5`}>
                   WhatsApp +60 X-XXX XXXX
@@ -502,7 +623,14 @@ export default function HeavenlyTravelLanding() {
                   <label htmlFor="q-name" className={fieldLabel}>
                     Your name
                   </label>
-                  <input id="q-name" name="name" type="text" autoComplete="name" required className={fieldInput} />
+                  <input
+                    id="q-name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    className={fieldInput}
+                  />
                 </div>
                 <div>
                   <label htmlFor="q-phone" className={fieldLabel}>
@@ -534,38 +662,58 @@ export default function HeavenlyTravelLanding() {
                   <label htmlFor="q-to" className={fieldLabel}>
                     Drop-off point
                   </label>
-                  <input id="q-to" name="to" type="text" placeholder="e.g. a hotel in Penang" className={fieldInput} />
+                  <input
+                    id="q-to"
+                    name="to"
+                    type="text"
+                    placeholder="e.g. a hotel in Penang"
+                    className={fieldInput}
+                  />
                 </div>
                 <div>
                   <label htmlFor="q-date" className={fieldLabel}>
                     Travel date
                   </label>
-                  <input id="q-date" name="date" type="date" className={`${fieldInput} [color-scheme:dark]`} />
+                  <input
+                    id="q-date"
+                    name="date"
+                    type="date"
+                    className={`${fieldInput} [color-scheme:dark]`}
+                  />
                 </div>
                 <div>
                   <label htmlFor="q-pax" className={fieldLabel}>
                     Number of passengers
                   </label>
-                  <input id="q-pax" name="passengers" type="number" min={1} inputMode="numeric" className={fieldInput} />
+                  <input
+                    id="q-pax"
+                    name="passengers"
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    className={fieldInput}
+                  />
                 </div>
                 <fieldset className="sm:col-span-2">
                   <legend className={fieldLabel}>What do you need?</legend>
                   <div className="mt-1 flex flex-wrap gap-3">
-                    {["Coach charter", "Car with driver", "Not sure yet"].map((option, i) => (
-                      <label
-                        key={option}
-                        className={`${sign} flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border-2 border-white/25 px-4 text-[0.9375rem] font-semibold has-[:checked]:border-[#F2B33D] has-[:checked]:bg-[#F2B33D]/10`}
-                      >
-                        <input
-                          type="radio"
-                          name="service"
-                          value={option}
-                          defaultChecked={i === 0}
-                          className="size-4 accent-[#F2B33D]"
-                        />
-                        {option}
-                      </label>
-                    ))}
+                    {["Coach charter", "Car with driver", "Not sure yet"].map(
+                      (option, i) => (
+                        <label
+                          key={option}
+                          className={`${sign} flex min-h-11 cursor-pointer items-center gap-2.5 rounded-full border-2 border-white/25 px-4 text-[0.9375rem] font-semibold has-[:checked]:border-[#F2B33D] has-[:checked]:bg-[#F2B33D]/10`}
+                        >
+                          <input
+                            type="radio"
+                            name="service"
+                            value={option}
+                            defaultChecked={i === 0}
+                            className="size-4 accent-[#F2B33D]"
+                          />
+                          {option}
+                        </label>
+                      ),
+                    )}
                   </div>
                 </fieldset>
                 <div className="sm:col-span-2">
@@ -585,14 +733,20 @@ export default function HeavenlyTravelLanding() {
                 <button type="submit" className={btnPrimary}>
                   Request a quote
                 </button>
-                <p className={`${sign} text-sm text-white/70`}>We reply with a price, not a sales call.</p>
+                <p className={`${sign} text-sm text-white/70`}>
+                  We reply with a price, not a sales call.
+                </p>
               </div>
             </form>
           </div>
         </section>
 
         {/* ---------- FAQ ---------- */}
-        <section id="faq" aria-labelledby="faq-title" className={`${wrap} ${styles.faq} scroll-mt-6 py-20 lg:py-28`}>
+        <section
+          id="faq"
+          aria-labelledby="faq-title"
+          className={`${wrap} ${styles.faq} scroll-mt-6 py-20 lg:py-28`}
+        >
           <div className="grid gap-10 lg:grid-cols-12">
             <h2
               id="faq-title"
@@ -614,7 +768,9 @@ export default function HeavenlyTravelLanding() {
                       +
                     </span>
                   </summary>
-                  <p className="max-w-[40rem] pb-6 text-[1.0625rem] leading-[1.75] text-[#2B3F42]">{item.a}</p>
+                  <p className="max-w-[40rem] pb-6 text-[1.0625rem] leading-[1.75] text-[#2B3F42]">
+                    {item.a}
+                  </p>
                 </details>
               ))}
             </div>
@@ -631,24 +787,32 @@ export default function HeavenlyTravelLanding() {
               <span className="text-lg font-black">Heavenly Travel</span>
             </div>
             <p className="mt-4 max-w-[26rem] leading-[1.7] text-white/75">
-              Coach charter and cars with drivers, wherever you are in Malaysia. Based in Langkawi, Kedah, for
-              ten years.
+              Coach charter and cars with drivers, wherever you are in Malaysia.
+              Based in Langkawi, Kedah, for ten years.
             </p>
           </div>
           <nav aria-label="Footer" className={`${sign} md:col-span-3`}>
             <h2 className="text-sm font-bold text-white/60">On this page</h2>
             <ul className="mt-3 grid gap-2 text-[0.9375rem] font-semibold">
               <li>
-                <a href="#services" className="hover:text-[#F2B33D]">Services</a>
+                <a href="#services" className="hover:text-[#F2B33D]">
+                  Services
+                </a>
               </li>
               <li>
-                <a href="#island" className="hover:text-[#F2B33D]">Our story</a>
+                <a href="#island" className="hover:text-[#F2B33D]">
+                  Our story
+                </a>
               </li>
               <li>
-                <a href="#booking" className="hover:text-[#F2B33D]">How booking works</a>
+                <a href="#booking" className="hover:text-[#F2B33D]">
+                  How booking works
+                </a>
               </li>
               <li>
-                <a href="#quote" className="hover:text-[#F2B33D]">Get a quote</a>
+                <a href="#quote" className="hover:text-[#F2B33D]">
+                  Get a quote
+                </a>
               </li>
             </ul>
           </nav>
@@ -661,7 +825,9 @@ export default function HeavenlyTravelLanding() {
             </address>
           </div>
         </div>
-        <div className={`${wrap} ${sign} border-t border-white/10 pb-24 pt-6 text-sm text-white/55`}>
+        <div
+          className={`${wrap} ${sign} border-t border-white/10 pb-24 pt-6 text-sm text-white/55`}
+        >
           <p>&copy; 2026 Heavenly Travel. All rights reserved.</p>
         </div>
       </footer>

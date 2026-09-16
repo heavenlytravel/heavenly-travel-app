@@ -68,7 +68,12 @@ export const VARIATIONS: Variation[] = [
       "Island-host warmth in Andaman teal and sunset gold, with an animated Malaysia coverage network as the hero.",
     runs: [
       { label: "Initial", tokens: 77806, toolCalls: 71, durationMs: 607948 },
-      { label: "Revision 1", tokens: 101153, toolCalls: 29, durationMs: 220322 },
+      {
+        label: "Revision 1",
+        tokens: 101153,
+        toolCalls: 29,
+        durationMs: 220322,
+      },
     ],
   },
   {
@@ -92,7 +97,12 @@ export const VARIATIONS: Variation[] = [
       "Road network in navy and road-marking yellow, with an animated map and a board of journeys driven every week.",
     runs: [
       { label: "Initial", tokens: 86671, toolCalls: 72, durationMs: 580919 },
-      { label: "Revision 1", tokens: 109291, toolCalls: 24, durationMs: 203283 },
+      {
+        label: "Revision 1",
+        tokens: 109291,
+        toolCalls: 24,
+        durationMs: 203283,
+      },
     ],
   },
 ];

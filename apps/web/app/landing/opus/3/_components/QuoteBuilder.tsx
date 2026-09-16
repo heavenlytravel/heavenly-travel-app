@@ -14,9 +14,8 @@ export function QuoteBuilder() {
   const [to, setTo] = useState("");
   const [date, setDate] = useState("");
   const [people, setPeople] = useState("");
-  const [vehicle, setVehicle] = useState<(typeof VEHICLES)[number]>(
-    "Not sure yet",
-  );
+  const [vehicle, setVehicle] =
+    useState<(typeof VEHICLES)[number]>("Not sure yet");
 
   const message = [
     "Hi Heavenly Travel, I'd like a quote.",

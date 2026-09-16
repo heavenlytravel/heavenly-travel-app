@@ -65,7 +65,9 @@ export function BookingSearch() {
         </fieldset>
 
         <div className="grid overflow-hidden rounded-[12px] bg-[#0A3035] sm:grid-cols-2 lg:grid-cols-[1.15fr_1.15fr_1.5fr_0.85fr_auto]">
-          <div className={`${cell} border-b border-white/15 sm:border-r lg:border-b-0`}>
+          <div
+            className={`${cell} border-b border-white/15 sm:border-r lg:border-b-0`}
+          >
             <label htmlFor={`${id}-pickup`} className={label}>
               Pick-up
             </label>
@@ -80,7 +82,9 @@ export function BookingSearch() {
             />
           </div>
 
-          <div className={`${cell} border-b border-white/15 lg:border-b-0 lg:border-r`}>
+          <div
+            className={`${cell} border-b border-white/15 lg:border-b-0 lg:border-r`}
+          >
             <label htmlFor={`${id}-destination`} className={label}>
               Destination
             </label>
@@ -95,7 +99,9 @@ export function BookingSearch() {
             />
           </div>
 
-          <fieldset className={`${cell} border-b border-white/15 sm:border-r lg:border-b-0`}>
+          <fieldset
+            className={`${cell} border-b border-white/15 sm:border-r lg:border-b-0`}
+          >
             <legend className="sr-only">Dates</legend>
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0">
@@ -112,7 +118,8 @@ export function BookingSearch() {
               </div>
               <div className="min-w-0">
                 <label htmlFor={`${id}-end`} className={`${label} block`}>
-                  Return <span className="font-normal text-white/55">(optional)</span>
+                  Return{" "}
+                  <span className="font-normal text-white/55">(optional)</span>
                 </label>
                 <input
                   id={`${id}-end`}
@@ -126,7 +133,9 @@ export function BookingSearch() {
             </div>
           </fieldset>
 
-          <div className={`${cell} border-b border-white/15 lg:border-b-0 lg:border-r`}>
+          <div
+            className={`${cell} border-b border-white/15 lg:border-b-0 lg:border-r`}
+          >
             <label htmlFor={`${id}-pax`} className={label}>
               Passengers
             </label>
@@ -146,7 +155,9 @@ export function BookingSearch() {
                 inputMode="numeric"
                 min={1}
                 value={passengers}
-                onChange={(e) => setPassengers(Math.max(1, Number(e.target.value) || 1))}
+                onChange={(e) =>
+                  setPassengers(Math.max(1, Number(e.target.value) || 1))
+                }
                 className={`${input} ${sign} mt-0 w-12 text-center text-lg font-extrabold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
               />
               <button
@@ -167,22 +178,40 @@ export function BookingSearch() {
               className={`${sign} inline-flex min-h-14 w-full items-center justify-center gap-2.5 rounded-[10px] bg-[#F2B33D] px-7 text-[1.0625rem] font-extrabold text-[#0D3B40] hover:bg-[#F7C766]`}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5">
-                <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.6" />
-                <path d="m15.5 15.5 5 5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+                <circle
+                  cx="10.5"
+                  cy="10.5"
+                  r="6.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                />
+                <path
+                  d="m15.5 15.5 5 5"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                />
               </svg>
               Search
             </button>
           </div>
         </div>
 
-        <p role="status" className={`${sign} px-2 text-sm text-white/80 ${submitted ? "pt-3" : ""}`}>
+        <p
+          role="status"
+          className={`${sign} px-2 text-sm text-white/80 ${submitted ? "pt-3" : ""}`}
+        >
           {submitted
             ? `Online booking is almost ready. For now, send these trip details to our team and we'll quote your ${service.toLowerCase()}.`
             : ""}
         </p>
         {submitted ? (
           <p className="px-2 pb-1 pt-1">
-            <a href="#quote" className={`${sign} text-sm font-bold text-[#F2B33D] underline underline-offset-4`}>
+            <a
+              href="#quote"
+              className={`${sign} text-sm font-bold text-[#F2B33D] underline underline-offset-4`}
+            >
               Request a quote instead
             </a>
           </p>

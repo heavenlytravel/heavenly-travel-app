@@ -58,9 +58,7 @@ export default function ModelStats() {
                   </h2>
                   <code className="text-xs text-neutral-500">{v.href}</code>
                 </div>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Seed: {v.seed}
-                </p>
+                <p className="mt-1 text-sm text-neutral-500">Seed: {v.seed}</p>
                 <p className="mt-3 text-neutral-700">{v.concept}</p>
 
                 <table className="mt-5 w-full text-left text-sm tabular-nums">

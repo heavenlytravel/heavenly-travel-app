@@ -1,5 +1,4 @@
 import {
-  Archivo,
   Barlow,
   Barlow_Condensed,
   DM_Sans,
@@ -8,9 +7,7 @@ import {
   Literata,
   Manrope,
   Mukta,
-  Newsreader,
   Overpass,
-  Plus_Jakarta_Sans,
   Young_Serif,
 } from "next/font/google";
 import type { FontKey } from "../../_lib/designs";
@@ -25,27 +22,12 @@ const literata = Literata({
   weight: ["400"],
   display: "swap",
 });
-const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
-  display: "swap",
-});
 const youngSerif = Young_Serif({
   subsets: ["latin"],
   weight: "400",
   display: "swap",
 });
 const figtree = Figtree({ subsets: ["latin"], display: "swap" });
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  weight: ["500"],
-  display: "swap",
-});
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400"],
-  display: "swap",
-});
 const barlowCondensed = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["700"],
@@ -60,11 +42,8 @@ const karla = Karla({ subsets: ["latin"], display: "swap" });
 export const FONT_CLASS: Record<FontKey, string> = {
   overpass: overpass.className,
   literata: literata.className,
-  archivo: archivo.className,
   youngSerif: youngSerif.className,
   figtree: figtree.className,
-  newsreader: newsreader.className,
-  plusJakarta: plusJakarta.className,
   barlowCondensed: barlowCondensed.className,
   barlow: barlow.className,
   manrope: manrope.className,

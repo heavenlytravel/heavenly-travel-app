@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import {
-  DESIGNS,
-  REFERENCES,
-  type Design,
-  type FontUse,
-} from "../_lib/designs";
+import { DESIGNS, REFERENCES, type Design } from "../_lib/designs";
 import {
   MODELS,
   VARIATIONS,
@@ -62,12 +56,6 @@ const REFS: Entry[] = REFERENCES.map((r) => ({
 
 const ALL: Entry[] = [...OPTIONS, ...REFS];
 
-function fontStyle(font: FontUse): CSSProperties | undefined {
-  return font.key === "archivo" && font.family.includes("125")
-    ? { fontVariationSettings: "'wdth' 125" }
-    : undefined;
-}
-
 function EntryLink({
   entry,
   className,
@@ -112,10 +100,7 @@ const ROWS: { label: string; cell: (d: Design) => React.ReactNode }[] = [
   {
     label: "Display font",
     cell: (d) => (
-      <span
-        className={`${FONT_CLASS[d.display.key]} text-base`}
-        style={fontStyle(d.display)}
-      >
+      <span className={`${FONT_CLASS[d.display.key]} text-base`}>
         {d.display.family}
       </span>
     ),
@@ -173,7 +158,6 @@ function Card({ entry }: { entry: Entry }) {
       <div className="mt-5 rounded-lg bg-neutral-50 p-4">
         <p
           className={`${FONT_CLASS[d.display.key]} text-2xl leading-tight tracking-tight`}
-          style={fontStyle(d.display)}
         >
           A better way to get away.
         </p>
@@ -222,9 +206,11 @@ export default function LandingIndex() {
           Landing page variations
         </h1>
         <p className="mt-3 max-w-2xl text-neutral-600">
-          Three options per model from the same brief, alongside the Codex
-          concept and the current WordPress site. The six options and the Codex
-          concept share the same headline; what differs is below.
+          Three options per model, alongside the Codex concept and the current
+          WordPress site. Options 1 and 2 come from the same brief; option 3
+          mixes the two, set in Overpass with the live site's photography. The
+          six options and the Codex concept share the same headline; what
+          differs is below.
         </p>
 
         <div className="mt-10 overflow-x-auto rounded-xl border border-neutral-200">

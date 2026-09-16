@@ -34,8 +34,8 @@ export default function ModelStats() {
         </h1>
         <p className="mt-3 max-w-2xl text-neutral-600">
           Tokens, tool calls and time for each landing page variation. Three
-          concepts per model, built from the same brief and the same three
-          direction seeds.
+          concepts per model: two built from the same brief and direction
+          seeds, and a third that mixes the first two.
         </p>
 
         <ul className="mt-12 grid gap-6 md:grid-cols-2">

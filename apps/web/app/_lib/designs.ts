@@ -9,11 +9,8 @@ export type Swatch = { hex: string; name: string; role: string };
 export type FontKey =
   | "overpass"
   | "literata"
-  | "archivo"
   | "youngSerif"
   | "figtree"
-  | "newsreader"
-  | "plusJakarta"
   | "barlowCondensed"
   | "barlow"
   | "manrope"
@@ -77,42 +74,6 @@ export const DESIGNS: Record<string, Design> = {
     lift: "The sign-plate container and the amber-on-teal pairing.",
   },
   "/landing/opus/2": {
-    label: "Coach livery",
-    palette: [
-      {
-        hex: "#0E3A2F",
-        name: "Bottle green",
-        role: "header, hero, quote band",
-      },
-      {
-        hex: "#C49A3C",
-        name: "Brass",
-        role: "buttons, pinstripe, rules, focus",
-      },
-      { hex: "#0A2A22", name: "Ink green", role: "text, footer" },
-      { hex: "#EEF1EE", name: "Chassis", role: "page background" },
-      { hex: "#FFFFFF", name: "Paper", role: "trip sheet, search bar" },
-    ],
-    display: {
-      key: "archivo",
-      family: "Archivo, width 125",
-      note: "widened 'livery lettering'",
-    },
-    body: {
-      key: "archivo",
-      family: "Archivo, width 100",
-      note: "same family, normal width",
-    },
-    hero: "Green panel with a coach photo and a white 'pickup is confirmed' trip sheet pinned on it.",
-    imagery: "4 photos only. No drawings.",
-    shape:
-      "Near-sharp, 3 to 6px. Hairline rules and brass top rules instead of boxes. Two soft shadows.",
-    motion: "Brass pinstripe wipes in across the green stripe.",
-    voice:
-      "'Nothing is booked until you confirm a written quote.' Formal and operational.",
-    lift: "The trip-sheet card and the green-and-brass pinstripe.",
-  },
-  "/landing/opus/3": {
     label: "Expressway signage",
     palette: [
       {
@@ -152,6 +113,52 @@ export const DESIGNS: Record<string, Design> = {
       "'Booking takes three messages.' Route codes E1, E2, E8 add local flavour.",
     lift: "The CSS road and yellow route shields; works with no photography.",
   },
+  "/landing/opus/3": {
+    label: "Sign plate on the expressway",
+    palette: [
+      {
+        hex: "#0D3B40",
+        name: "Andaman deep",
+        role: "hero plate, direction board, quote band",
+      },
+      {
+        hex: "#00573F",
+        name: "Expressway green",
+        role: "coach card, East Coast sign, footer",
+      },
+      {
+        hex: "#F2B33D",
+        name: "Sunset amber",
+        role: "route shields, road dashes, buttons",
+      },
+      {
+        hex: "#263033",
+        name: "Asphalt",
+        role: "drawn roads, trust band, text",
+      },
+      { hex: "#EEF0EA", name: "Limestone", role: "page background" },
+    ],
+    display: {
+      key: "overpass",
+      family: "Overpass",
+      note: "weight 900, tight tracking, Highway Gothic feel",
+    },
+    body: {
+      key: "literata",
+      family: "Literata",
+      note: "serif body under a signage display voice",
+    },
+    hero: "Teal sign plate with a white inset ring over the Dataran Lang aerial; a second plate under it holds the search.",
+    imagery:
+      "Brand photos (Langkawi aerial, coach line-up, chauffeur MPV, cable car, MICE, MATTA and MoF badges) plus a drawn coach and car on dashed roads.",
+    shape:
+      "Very rounded 14 to 28px plates with a 3px white inset border, pill buttons, amber route shields, one soft shadow.",
+    motion:
+      "Direction-board lines grow and dots pop in sequence; 1px hover lifts. Off under reduced motion.",
+    voice:
+      "'One company for the whole trip.' Route codes E1, E2, E8 and 'Booking takes three messages.'",
+    lift: "The sign plate over real photography, and route shields that make any list read as a road sign.",
+  },
   "/landing/fable/1": {
     label: "Island host",
     palette: [
@@ -180,33 +187,6 @@ export const DESIGNS: Record<string, Design> = {
     lift: "The animated map and the sand-and-foam surfaces.",
   },
   "/landing/fable/2": {
-    label: "Operator's trip sheet",
-    palette: [
-      { hex: "#0D3B3E", name: "Ink teal", role: "hero, headings, quote band" },
-      { hex: "#E0A23A", name: "Lantern", role: "buttons, stop dots, focus" },
-      { hex: "#1F7A7A", name: "Sea", role: "links, ticks" },
-      { hex: "#EEF2EF", name: "Mist", role: "page background, cards" },
-      { hex: "#E4DFD3", name: "Sand", role: "'Coming next' card" },
-    ],
-    display: {
-      key: "newsreader",
-      family: "Newsreader",
-      note: "weight 500, editorial serif",
-    },
-    body: {
-      key: "plusJakarta",
-      family: "Plus Jakarta Sans",
-      note: "clean sans at 17px",
-    },
-    hero: "Coach photo with a 'Sample trip sheet' card overlapping it; search bar straddles the hero edge.",
-    imagery: "5 photos only. Route timeline is CSS.",
-    shape:
-      "Rounded, 8 to 16px, pill buttons. Label-column grid. Two long soft shadows.",
-    motion: "Trip sheet settles onto the photo.",
-    voice: "'We arrive early, not on time.' Honest and operational.",
-    lift: "The fleet table and the label-column layout.",
-  },
-  "/landing/fable/3": {
     label: "Road network",
     palette: [
       { hex: "#0C2340", name: "Navy ink", role: "text, dark bands, map roads" },
@@ -232,6 +212,48 @@ export const DESIGNS: Record<string, Design> = {
     motion: "West road draws, then east road, then place labels fade in.",
     voice: "'Journeys we drive every week.' Confident, transport-first.",
     lift: "The route board and the navy-plus-yellow road stroke.",
+  },
+  "/landing/fable/3": {
+    label: "Island host on the road",
+    palette: [
+      {
+        hex: "#0C3B3A",
+        name: "Sea deep",
+        role: "hero scrim, quote band, map pins",
+      },
+      {
+        hex: "#E4A93C",
+        name: "Gold",
+        role: "buttons, road rule, map roads, focus",
+      },
+      {
+        hex: "#157A74",
+        name: "Sea",
+        role: "links, step rules, journey times",
+      },
+      { hex: "#F2E8D5", name: "Sand", role: "story section, inclusions panel" },
+      { hex: "#E8F2EF", name: "Foam", role: "journeys board, form fields" },
+    ],
+    display: {
+      key: "overpass",
+      family: "Overpass",
+      note: "weight 900, -0.02em tracking, 0.96 leading",
+    },
+    body: {
+      key: "figtree",
+      family: "Figtree",
+      note: "friendly geometric sans, from option 1",
+    },
+    hero: "Overpass headline over a gold dashed road rule on the scrimmed Langkawi aerial, beside a glass-card network map; a white search card overlaps the hero edge.",
+    imagery:
+      "7 brand photos (Langkawi aerial, cable car, coaches, MPV interior, LICC) plus MATTA and MoF badges and the animated SVG map. No stock.",
+    shape:
+      "Cards 16px, buttons 6px, no pills. Hairlines only; one teal-tinted shadow on the search card.",
+    motion:
+      "Two-layer roads draw outward from Langkawi by hop distance, then pins appear; Borneo follows the peninsula.",
+    voice:
+      "'Local knowledge, wherever you land' meets 'Journeys we drive every week.' Warm, a little wry, transport-first.",
+    lift: "The scrimmed brand photo behind the map card, and the journeys board on foam with gold-on-teal markers.",
   },
 };
 

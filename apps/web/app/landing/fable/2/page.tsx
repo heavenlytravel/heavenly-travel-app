@@ -101,17 +101,37 @@ const steps = [
 ];
 
 const coverage = [
-  { place: "Kuala Lumpur and Selangor", note: "KLIA, city hotels, corporate itineraries and events." },
-  { place: "Penang", note: "Airport, George Town, conference and hotel transfers." },
-  { place: "Langkawi, Kedah and Perlis", note: "Airport, jetties, resorts and island tours." },
-  { place: "Melaka and Johor", note: "Heritage tours and cross-border group pick-ups." },
-  { place: "Pahang and the east coast", note: "Highlands, Kuantan, Cherating and island jetties." },
-  { place: "Sabah and Sarawak", note: "Kota Kinabalu and Kuching transfers on request." },
+  {
+    place: "Kuala Lumpur and Selangor",
+    note: "KLIA, city hotels, corporate itineraries and events.",
+  },
+  {
+    place: "Penang",
+    note: "Airport, George Town, conference and hotel transfers.",
+  },
+  {
+    place: "Langkawi, Kedah and Perlis",
+    note: "Airport, jetties, resorts and island tours.",
+  },
+  {
+    place: "Melaka and Johor",
+    note: "Heritage tours and cross-border group pick-ups.",
+  },
+  {
+    place: "Pahang and the east coast",
+    note: "Highlands, Kuantan, Cherating and island jetties.",
+  },
+  {
+    place: "Sabah and Sarawak",
+    note: "Kota Kinabalu and Kuching transfers on request.",
+  },
 ];
 
 export default function Page() {
   return (
-    <div className={`${styles.page} ${display.variable} ${body.variable} text-[17px] leading-relaxed`}>
+    <div
+      className={`${styles.page} ${display.variable} ${body.variable} text-[17px] leading-relaxed`}
+    >
       <a
         href="#quote"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded focus:bg-(--lantern) focus:px-4 focus:py-2 focus:text-(--ink)"
@@ -122,10 +142,17 @@ export default function Page() {
       <header className="sticky top-0 z-40 border-b border-(--line) bg-(--mist)/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
           <a href="#top" className="flex items-baseline gap-2">
-            <span className={`${styles.display} text-2xl text-(--ink)`}>Heavenly Travel</span>
-            <span className="hidden text-sm text-(--muted) sm:inline">Across Malaysia, since 2016</span>
+            <span className={`${styles.display} text-2xl text-(--ink)`}>
+              Heavenly Travel
+            </span>
+            <span className="hidden text-sm text-(--muted) sm:inline">
+              Across Malaysia, since 2016
+            </span>
           </a>
-          <nav aria-label="Page sections" className="hidden items-center gap-7 text-[15px] font-medium md:flex">
+          <nav
+            aria-label="Page sections"
+            className="hidden items-center gap-7 text-[15px] font-medium md:flex"
+          >
             <a href="#services" className="text-(--text) hover:text-(--sea)">
               Services
             </a>
@@ -153,12 +180,14 @@ export default function Page() {
         <section className="bg-(--ink) text-white">
           <div className="mx-auto grid max-w-6xl gap-12 px-5 pt-16 pb-14 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-24">
             <div className="max-w-xl">
-              <h1 className={`${styles.display} text-[2.6rem] sm:text-6xl lg:text-[4.25rem]`}>
+              <h1
+                className={`${styles.display} text-[2.6rem] sm:text-6xl lg:text-[4.25rem]`}
+              >
                 A better way to get away.
               </h1>
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-(--on-ink-muted)">
-                Island escapes, seamless transport and trips made around you. Let our local team
-                take care of the details.
+                Island escapes, seamless transport and trips made around you.
+                Let our local team take care of the details.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
@@ -200,9 +229,14 @@ export default function Page() {
                 aria-label="Sample trip sheet"
               >
                 <div className="flex items-center justify-between border-b border-(--line) pb-3">
-                  <span className={`${styles.display} text-xl text-(--ink)`}>Sample trip sheet</span>
+                  <span className={`${styles.display} text-xl text-(--ink)`}>
+                    Sample trip sheet
+                  </span>
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--sea)">
-                    <span className="h-2 w-2 rounded-full bg-(--lantern)" aria-hidden="true" />
+                    <span
+                      className="h-2 w-2 rounded-full bg-(--lantern)"
+                      aria-hidden="true"
+                    />
                     Confirmed
                   </span>
                 </div>
@@ -226,7 +260,10 @@ export default function Page() {
         </section>
 
         {/* Booking search: sits across the hero's bottom edge */}
-        <section aria-labelledby="search-heading" className="relative z-10 -mt-1 bg-linear-to-b from-(--ink) from-50% to-transparent to-50%">
+        <section
+          aria-labelledby="search-heading"
+          className="relative z-10 -mt-1 bg-linear-to-b from-(--ink) from-50% to-transparent to-50%"
+        >
           <div className="mx-auto max-w-6xl px-5 sm:px-8">
             <h2 id="search-heading" className="sr-only">
               Search for a coach or car with driver
@@ -236,13 +273,19 @@ export default function Page() {
         </section>
 
         {/* Services */}
-        <section id="services" className="scroll-mt-20 border-b border-(--line)">
+        <section
+          id="services"
+          className="scroll-mt-20 border-b border-(--line)"
+        >
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>What we run</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                What we run
+              </h2>
               <p className="mt-4 text-(--muted)">
-                Two services carry most of our work today, anywhere in Malaysia. More are being
-                added as we grow, so ask if your trip does not fit neatly here.
+                Two services carry most of our work today, anywhere in Malaysia.
+                More are being added as we grow, so ask if your trip does not
+                fit neatly here.
               </p>
             </div>
 
@@ -258,11 +301,13 @@ export default function Page() {
                   loading="lazy"
                 />
                 <div className="p-7 sm:p-9">
-                  <h3 className={`${styles.display} text-3xl text-(--ink)`}>Coach charter</h3>
+                  <h3 className={`${styles.display} text-3xl text-(--ink)`}>
+                    Coach charter
+                  </h3>
                   <p className="mt-3 text-(--muted)">
-                    Air-conditioned coaches from 14 to 44 seats for tours, company events, school
-                    outings, weddings and airport or jetty transfers. Multi-day and island itineraries
-                    welcome.
+                    Air-conditioned coaches from 14 to 44 seats for tours,
+                    company events, school outings, weddings and airport or
+                    jetty transfers. Multi-day and island itineraries welcome.
                   </p>
                   <ul className="mt-5 grid gap-2 text-[15px]">
                     <li className="flex gap-3">
@@ -278,7 +323,10 @@ export default function Page() {
                       Coordinator on WhatsApp for the whole day
                     </li>
                   </ul>
-                  <a href="#quote" className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)">
+                  <a
+                    href="#quote"
+                    className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)"
+                  >
                     Get a coach quote
                   </a>
                 </div>
@@ -296,22 +344,30 @@ export default function Page() {
                     loading="lazy"
                   />
                   <div className="p-7">
-                    <h3 className={`${styles.display} text-3xl text-(--ink)`}>Car with driver</h3>
+                    <h3 className={`${styles.display} text-3xl text-(--ink)`}>
+                      Car with driver
+                    </h3>
                     <p className="mt-3 text-(--muted)">
-                      A sedan or executive MPV with a professional driver for airport runs, business
-                      days, family holidays and evenings out. Hire by the transfer, the day or the
-                      week.
+                      A sedan or executive MPV with a professional driver for
+                      airport runs, business days, family holidays and evenings
+                      out. Hire by the transfer, the day or the week.
                     </p>
-                    <a href="#quote" className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)">
+                    <a
+                      href="#quote"
+                      className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)"
+                    >
                       Book a driver
                     </a>
                   </div>
                 </article>
 
                 <article className="rounded-2xl bg-(--sand) p-7">
-                  <h3 className={`${styles.display} text-2xl text-(--ink)`}>Coming next</h3>
+                  <h3 className={`${styles.display} text-2xl text-(--ink)`}>
+                    Coming next
+                  </h3>
                   <p className="mt-3 text-[15px] text-(--muted)">
-                    We are building the same standard into new products as we digitalise.
+                    We are building the same standard into new products as we
+                    digitalise.
                   </p>
                   <ul className="mt-4 grid gap-2 text-[15px]">
                     <li>Packaged island and city escapes</li>
@@ -328,10 +384,12 @@ export default function Page() {
         <section className="border-b border-(--line)">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>Who relies on us</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                Who relies on us
+              </h2>
               <p className="mt-4 text-(--muted)">
-                Different groups need different things from a vehicle and a driver. These are the
-                three we serve most.
+                Different groups need different things from a vehicle and a
+                driver. These are the three we serve most.
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-3">
@@ -361,16 +419,30 @@ export default function Page() {
         <section id="how" className="scroll-mt-20 border-b border-(--line)">
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
             <div className="max-w-2xl">
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>How a booking runs</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                How a booking runs
+              </h2>
               <p className="mt-4 text-(--muted)">
-                Four stops between your first message and the driver at your door.
+                Four stops between your first message and the driver at your
+                door.
               </p>
             </div>
-            <ol className={`${styles.route} mt-12 grid gap-10 md:grid-cols-4 md:gap-8`}>
+            <ol
+              className={`${styles.route} mt-12 grid gap-10 md:grid-cols-4 md:gap-8`}
+            >
               {steps.map((step, i) => (
-                <li key={step.title} className={`${styles.stop} pl-10 md:pt-9 md:pl-0`}>
-                  <span className="text-sm font-semibold text-(--sea)">Stop {i + 1}</span>
-                  <h3 className={`${styles.display} mt-1 text-2xl text-(--ink)`}>{step.title}</h3>
+                <li
+                  key={step.title}
+                  className={`${styles.stop} pl-10 md:pt-9 md:pl-0`}
+                >
+                  <span className="text-sm font-semibold text-(--sea)">
+                    Stop {i + 1}
+                  </span>
+                  <h3
+                    className={`${styles.display} mt-1 text-2xl text-(--ink)`}
+                  >
+                    {step.title}
+                  </h3>
                   <p className="mt-2 text-[15px] text-(--muted)">{step.text}</p>
                 </li>
               ))}
@@ -379,13 +451,19 @@ export default function Page() {
         </section>
 
         {/* Fleet */}
-        <section id="fleet" className="scroll-mt-20 border-b border-(--line) bg-white">
+        <section
+          id="fleet"
+          className="scroll-mt-20 border-b border-(--line) bg-white"
+        >
           <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>The fleet</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                The fleet
+              </h2>
               <p className="mt-4 text-(--muted)">
-                Every vehicle is cleaned and checked before it leaves the yard. Tell us your group
-                size and luggage and we will match you to the right one.
+                Every vehicle is cleaned and checked before it leaves the yard.
+                Tell us your group size and luggage and we will match you to the
+                right one.
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -409,12 +487,19 @@ export default function Page() {
                 <tbody>
                   {fleet.map((v) => (
                     <tr key={v.name} className={styles.fleetRow}>
-                      <th scope="row" className={`${styles.display} py-4 pr-4 align-top text-xl font-medium text-(--ink)`}>
+                      <th
+                        scope="row"
+                        className={`${styles.display} py-4 pr-4 align-top text-xl font-medium text-(--ink)`}
+                      >
                         {v.name}
                       </th>
                       <td className="py-4 pr-4 align-top">{v.seats}</td>
-                      <td className="py-4 pr-4 align-top text-(--muted)">{v.luggage}</td>
-                      <td className="py-4 align-top text-(--muted)">{v.bestFor}</td>
+                      <td className="py-4 pr-4 align-top text-(--muted)">
+                        {v.luggage}
+                      </td>
+                      <td className="py-4 align-top text-(--muted)">
+                        {v.bestFor}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -424,10 +509,15 @@ export default function Page() {
         </section>
 
         {/* Standards + coverage */}
-        <section id="coverage" className="scroll-mt-20 border-b border-(--line)">
+        <section
+          id="coverage"
+          className="scroll-mt-20 border-b border-(--line)"
+        >
           <div className="mx-auto grid max-w-6xl gap-14 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:py-24">
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>What dependable means here</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                What dependable means here
+              </h2>
               <ul className="mt-8 grid gap-5">
                 <Standard
                   title="The driver is briefed the evening before"
@@ -448,17 +538,24 @@ export default function Page() {
               </ul>
             </div>
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>Wherever you are in Malaysia</h2>
+              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
+                Wherever you are in Malaysia
+              </h2>
               <p className="mt-4 text-(--muted)">
-                Pick-ups start where you are: a hotel, an airport, a jetty or the office. Our team
-                is based in Langkawi and runs the same drivers, vehicles and trip sheets across the
-                country.
+                Pick-ups start where you are: a hotel, an airport, a jetty or
+                the office. Our team is based in Langkawi and runs the same
+                drivers, vehicles and trip sheets across the country.
               </p>
               <dl className="mt-8 grid gap-4 sm:grid-cols-2">
                 {coverage.map((c) => (
-                  <div key={c.place} className="border-l-2 border-(--lantern) pl-4">
+                  <div
+                    key={c.place}
+                    className="border-l-2 border-(--lantern) pl-4"
+                  >
                     <dt className="font-semibold text-(--ink)">{c.place}</dt>
-                    <dd className="mt-1 text-[15px] text-(--muted)">{c.note}</dd>
+                    <dd className="mt-1 text-[15px] text-(--muted)">
+                      {c.note}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -472,8 +569,9 @@ export default function Page() {
             <div>
               <h2 className={`${styles.display} text-4xl`}>Request a quote</h2>
               <p className="mt-4 text-(--on-ink-muted)">
-                Tell us the basics and a coordinator will reply with a written quote, usually the
-                same working day. Prefer to talk? WhatsApp is the fastest way to reach us.
+                Tell us the basics and a coordinator will reply with a written
+                quote, usually the same working day. Prefer to talk? WhatsApp is
+                the fastest way to reach us.
               </p>
               <a
                 href="#"
@@ -483,19 +581,34 @@ export default function Page() {
                 WhatsApp +60 X-XXX XXXX
               </a>
               <p className="mt-8 text-sm text-(--on-ink-muted)">
-                Office hours 8am to 8pm, seven days. Trips in progress are answered around the
-                clock.
+                Office hours 8am to 8pm, seven days. Trips in progress are
+                answered around the clock.
               </p>
             </div>
 
-            <form action="#" method="post" className="grid gap-5 rounded-2xl bg-(--mist) p-6 text-(--text) sm:grid-cols-2 sm:p-8">
+            <form
+              action="#"
+              method="post"
+              className="grid gap-5 rounded-2xl bg-(--mist) p-6 text-(--text) sm:grid-cols-2 sm:p-8"
+            >
               <Field label="Your name" id="name" autoComplete="name" />
-              <Field label="WhatsApp or phone" id="phone" type="tel" autoComplete="tel" placeholder="+60" />
+              <Field
+                label="WhatsApp or phone"
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+60"
+              />
               <div className="grid gap-1.5">
                 <label htmlFor="service" className="text-sm font-semibold">
                   Service
                 </label>
-                <select id="service" name="service" className={inputClass} defaultValue="">
+                <select
+                  id="service"
+                  name="service"
+                  className={inputClass}
+                  defaultValue=""
+                >
                   <option value="" disabled>
                     Choose one
                   </option>
@@ -505,9 +618,19 @@ export default function Page() {
                   <option>Something else</option>
                 </select>
               </div>
-              <Field label="Number of passengers" id="pax" type="number" inputMode="numeric" min={1} />
+              <Field
+                label="Number of passengers"
+                id="pax"
+                type="number"
+                inputMode="numeric"
+                min={1}
+              />
               <Field label="Travel date" id="date" type="date" />
-              <Field label="Pick-up location" id="pickup" placeholder="e.g. KLIA Terminal 1, or your hotel" />
+              <Field
+                label="Pick-up location"
+                id="pickup"
+                placeholder="e.g. KLIA Terminal 1, or your hotel"
+              />
               <div className="grid gap-1.5 sm:col-span-2">
                 <label htmlFor="notes" className="text-sm font-semibold">
                   Anything else we should know
@@ -528,7 +651,8 @@ export default function Page() {
                   Send quote request
                 </button>
                 <p className="mt-3 text-sm text-(--muted)">
-                  No payment is taken at this stage. You will receive a quote to confirm.
+                  No payment is taken at this stage. You will receive a quote to
+                  confirm.
                 </p>
               </div>
             </form>
@@ -539,10 +663,12 @@ export default function Page() {
       <footer className="bg-(--ink-deep) text-(--on-ink-muted)">
         <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 text-sm sm:px-8 md:grid-cols-3">
           <div>
-            <span className={`${styles.display} text-2xl text-white`}>Heavenly Travel</span>
+            <span className={`${styles.display} text-2xl text-white`}>
+              Heavenly Travel
+            </span>
             <p className="mt-2 max-w-xs">
-              Coach charter and chauffeured cars. Based in Langkawi, serving all of Malaysia since
-              2016.
+              Coach charter and chauffeured cars. Based in Langkawi, serving all
+              of Malaysia since 2016.
             </p>
           </div>
           <address className="not-italic">
@@ -560,7 +686,9 @@ export default function Page() {
           </address>
           <div className="md:text-right">
             <p>Licensed tour and transport operator.</p>
-            <p className="mt-1">Company registration and licence numbers on request.</p>
+            <p className="mt-1">
+              Company registration and licence numbers on request.
+            </p>
             <p className="mt-4">2026 Heavenly Travel Sdn. Bhd.</p>
           </div>
         </div>
@@ -577,7 +705,10 @@ function Field({
   id,
   type = "text",
   ...rest
-}: { label: string; id: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+}: {
+  label: string;
+  id: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="grid gap-1.5">
       <label htmlFor={id} className="text-sm font-semibold">
@@ -588,14 +719,33 @@ function Field({
   );
 }
 
-function Audience({ img, alt, title, text }: { img: string; alt: string; title: string; text: string }) {
+function Audience({
+  img,
+  alt,
+  title,
+  text,
+}: {
+  img: string;
+  alt: string;
+  title: string;
+  text: string;
+}) {
   return (
     <article>
       <div className="overflow-hidden rounded-2xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img} alt={alt} className="aspect-[4/3] w-full object-cover" width={1200} height={900} loading="lazy" />
+        <img
+          src={img}
+          alt={alt}
+          className="aspect-[4/3] w-full object-cover"
+          width={1200}
+          height={900}
+          loading="lazy"
+        />
       </div>
-      <h3 className={`${styles.display} mt-5 text-2xl text-(--ink)`}>{title}</h3>
+      <h3 className={`${styles.display} mt-5 text-2xl text-(--ink)`}>
+        {title}
+      </h3>
       <p className="mt-2 text-[15px] text-(--muted)">{text}</p>
     </article>
   );
@@ -632,7 +782,12 @@ function Tick({ className = "mt-[0.35rem]" }: { className?: string }) {
 
 function WhatsAppIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="currentColor"
+    >
       <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8zm-3.2 4.4c-.2 0-.5 0-.7.3-.3.3-1 1-1 2.3s1 2.7 1.1 2.9c.2.2 2 3.1 4.9 4.2 2.4.9 2.9.8 3.4.7.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.3-.1-.1-.3-.2-.6-.4l-2-1c-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.4.1-.6l.4-.5.3-.5c.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6z" />
     </svg>
   );

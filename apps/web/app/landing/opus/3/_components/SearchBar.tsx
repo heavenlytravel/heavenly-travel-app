@@ -129,8 +129,19 @@ export function SearchBar() {
               height="20"
               fill="none"
             >
-              <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="3" />
-              <path d="m15.5 15.5 5 5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              <circle
+                cx="10.5"
+                cy="10.5"
+                r="6.5"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <path
+                d="m15.5 15.5 5 5"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
             </svg>
             Search
           </button>

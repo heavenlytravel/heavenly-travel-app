@@ -22,7 +22,9 @@ export function SearchBar() {
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const what = service === "coach" ? "a coach" : "a car with driver";
-    const where = [pickup.trim(), destination.trim()].filter(Boolean).join(" to ");
+    const where = [pickup.trim(), destination.trim()]
+      .filter(Boolean)
+      .join(" to ");
     setNote(
       `Online booking is on its way. For ${what}${where ? ` from ${where}` : ""}${
         date ? ` on ${date}` : ""
@@ -42,14 +44,19 @@ export function SearchBar() {
 
       <fieldset className="m-0 border-0 p-0">
         <legend className="sr-only">Service</legend>
-        <div role="presentation" className="inline-flex rounded-full bg-[var(--foam)] p-1">
+        <div
+          role="presentation"
+          className="inline-flex rounded-full bg-[var(--foam)] p-1"
+        >
           {SERVICES.map((s) => {
             const checked = service === s.value;
             return (
               <label
                 key={s.value}
                 className={`relative cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                  checked ? "bg-[var(--sea-deep)] text-white" : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                  checked
+                    ? "bg-[var(--sea-deep)] text-white"
+                    : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
                 }`}
               >
                 <input
@@ -62,7 +69,9 @@ export function SearchBar() {
                 />
                 <span className="pointer-events-none absolute inset-0 rounded-full peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--gold)]" />
                 {s.label}
-                <span className="hidden font-normal opacity-80 sm:inline">, {s.hint}</span>
+                <span className="hidden font-normal opacity-80 sm:inline">
+                  , {s.hint}
+                </span>
               </label>
             );
           })}
@@ -71,7 +80,10 @@ export function SearchBar() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.25fr_1.25fr_0.9fr_0.65fr_auto] lg:items-end">
         <div>
-          <label htmlFor={`${id}-pickup`} className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]">
+          <label
+            htmlFor={`${id}-pickup`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Pick-up
           </label>
           <input
@@ -86,7 +98,10 @@ export function SearchBar() {
           />
         </div>
         <div>
-          <label htmlFor={`${id}-dest`} className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]">
+          <label
+            htmlFor={`${id}-dest`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Destination
           </label>
           <input
@@ -101,7 +116,10 @@ export function SearchBar() {
           />
         </div>
         <div>
-          <label htmlFor={`${id}-date`} className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]">
+          <label
+            htmlFor={`${id}-date`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Date
           </label>
           <input
@@ -114,7 +132,10 @@ export function SearchBar() {
           />
         </div>
         <div>
-          <label htmlFor={`${id}-pax`} className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]">
+          <label
+            htmlFor={`${id}-pax`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Passengers
           </label>
           <input
@@ -133,7 +154,14 @@ export function SearchBar() {
           type="submit"
           className="inline-flex h-[46px] items-center justify-center gap-2 rounded-md bg-[var(--gold)] px-6 text-[15px] font-semibold text-[var(--sea-deep)] transition-colors hover:bg-[#f0bb55] sm:col-span-2 lg:col-span-1"
         >
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
             <circle cx="8.5" cy="8.5" r="5.5" />
             <path d="m13 13 4 4" strokeLinecap="round" />
           </svg>
@@ -141,7 +169,10 @@ export function SearchBar() {
         </button>
       </div>
 
-      <p aria-live="polite" className={`text-sm leading-relaxed text-[var(--ink-soft)] ${note ? "mt-4" : ""}`}>
+      <p
+        aria-live="polite"
+        className={`text-sm leading-relaxed text-[var(--ink-soft)] ${note ? "mt-4" : ""}`}
+      >
         {note}
       </p>
     </form>

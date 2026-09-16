@@ -257,7 +257,9 @@ function Hero() {
         </div>
 
         <figure className="relative">
-          <div className={`${styles.sign} mx-auto max-w-[31rem] rotate-[-1.2deg]`}>
+          <div
+            className={`${styles.sign} mx-auto max-w-[31rem] rotate-[-1.2deg]`}
+          >
             <div className={`${styles.signInner} px-4 pt-5 pb-3 sm:px-6`}>
               <p className="text-[15px] font-semibold text-white/85">
                 Wherever you are, we&apos;re going your way.
@@ -267,7 +269,9 @@ function Hero() {
                   <li
                     key={row.place}
                     className={`${styles.row} flex items-center gap-3 py-3 sm:gap-4`}
-                    style={{ animationDelay: `${150 + i * 110}ms` } as CSSProperties}
+                    style={
+                      { animationDelay: `${150 + i * 110}ms` } as CSSProperties
+                    }
                   >
                     <span
                       className={`${styles.shield} ${row.blue ? styles.shieldBlue : ""} text-sm sm:text-base`}
@@ -486,7 +490,9 @@ function Services() {
         </h2>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
-          <article className={`${styles.onDark} rounded-3xl bg-[#00573F] p-7 text-white sm:p-10`}>
+          <article
+            className={`${styles.onDark} rounded-3xl bg-[#00573F] p-7 text-white sm:p-10`}
+          >
             <CoachIcon />
             <h3 className="mt-6 text-3xl font-black tracking-[-0.01em] sm:text-4xl">
               Coach charter
@@ -549,7 +555,9 @@ function Services() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 rounded-3xl border-[3px] border-dashed border-[#263033]/35 px-7 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-10">
-          <p className="text-xl font-extrabold">More ways to travel are on the way.</p>
+          <p className="text-xl font-extrabold">
+            More ways to travel are on the way.
+          </p>
           <p className="text-[17px] text-[#263033]/85">
             Planning something bigger? Ask us, we may already be able to help.
           </p>
@@ -580,7 +588,12 @@ function Tick({ dark }: { dark?: boolean }) {
 
 function CoachIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 120 56" className="h-14 w-auto" fill="none">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 120 56"
+      className="h-14 w-auto"
+      fill="none"
+    >
       <rect x="3" y="4" width="112" height="38" rx="9" fill="#fff" />
       <rect x="10" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
       <rect x="31" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
@@ -588,23 +601,56 @@ function CoachIcon() {
       <rect x="73" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
       <path d="M95 11h11a4 4 0 0 1 4 4v19H95z" fill="#00573F" />
       <rect x="3" y="30" width="112" height="4" fill="#FFC72C" />
-      <circle cx="26" cy="44" r="8" fill="#263033" stroke="#fff" strokeWidth="3" />
-      <circle cx="90" cy="44" r="8" fill="#263033" stroke="#fff" strokeWidth="3" />
+      <circle
+        cx="26"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle
+        cx="90"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
     </svg>
   );
 }
 
 function CarIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 96 56" className="h-14 w-auto" fill="none">
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 96 56"
+      className="h-14 w-auto"
+      fill="none"
+    >
       <path
         d="M8 36c0-5 3-8 8-9l10-12c2-2 4-3 7-3h26c3 0 5 1 7 3l11 12c6 1 11 4 11 9v6H8z"
         fill="#00573F"
       />
       <path d="M30 17h13v10H22zM48 17h11c1 0 2 0 3 1l8 9H48z" fill="#E3ECE6" />
       <rect x="8" y="34" width="80" height="3" fill="#FFC72C" />
-      <circle cx="26" cy="44" r="8" fill="#263033" stroke="#fff" strokeWidth="3" />
-      <circle cx="72" cy="44" r="8" fill="#263033" stroke="#fff" strokeWidth="3" />
+      <circle
+        cx="26"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle
+        cx="72"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
     </svg>
   );
 }
@@ -703,19 +749,19 @@ function Steps() {
             style={{ backgroundSize: "100% 2px" }}
           />
           <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
-          {steps.map((s, i) => (
-            <li key={s.title} className="relative flex gap-5 md:block">
-              <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white bg-[#00573F] text-2xl font-black text-white outline-2 outline-[#00573F]">
-                {i + 1}
-              </span>
-              <div className="md:mt-5">
-                <h3 className="text-2xl font-extrabold">{s.title}</h3>
-                <p className="mt-2 max-w-[22rem] text-[17px] leading-relaxed text-[#263033]/85">
-                  {s.body}
-                </p>
-              </div>
-            </li>
-          ))}
+            {steps.map((s, i) => (
+              <li key={s.title} className="relative flex gap-5 md:block">
+                <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white bg-[#00573F] text-2xl font-black text-white outline-2 outline-[#00573F]">
+                  {i + 1}
+                </span>
+                <div className="md:mt-5">
+                  <h3 className="text-2xl font-extrabold">{s.title}</h3>
+                  <p className="mt-2 max-w-[22rem] text-[17px] leading-relaxed text-[#263033]/85">
+                    {s.body}
+                  </p>
+                </div>
+              </li>
+            ))}
           </ol>
         </div>
       </div>

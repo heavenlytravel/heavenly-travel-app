@@ -68,7 +68,9 @@ export function TripSearch() {
         </fieldset>
 
         <div className="grid divide-y divide-[#0e3a2f]/12 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-[1.35fr_1.35fr_1fr_1fr_0.85fr_auto]">
-          <div className={`${cell} sm:border-b sm:border-r sm:border-[#0e3a2f]/12 lg:border-b-0`}>
+          <div
+            className={`${cell} sm:border-b sm:border-r sm:border-[#0e3a2f]/12 lg:border-b-0`}
+          >
             <label htmlFor="ts-from" className={label}>
               Pick-up location
             </label>
@@ -80,7 +82,9 @@ export function TripSearch() {
               className={input}
             />
           </div>
-          <div className={`${cell} sm:border-b sm:border-[#0e3a2f]/12 lg:border-b-0 lg:border-r`}>
+          <div
+            className={`${cell} sm:border-b sm:border-[#0e3a2f]/12 lg:border-b-0 lg:border-r`}
+          >
             <label htmlFor="ts-to" className={label}>
               Destination
             </label>
@@ -92,13 +96,17 @@ export function TripSearch() {
               className={input}
             />
           </div>
-          <div className={`${cell} sm:border-b sm:border-r sm:border-[#0e3a2f]/12 lg:border-b-0`}>
+          <div
+            className={`${cell} sm:border-b sm:border-r sm:border-[#0e3a2f]/12 lg:border-b-0`}
+          >
             <label htmlFor="ts-start" className={label}>
               Pick-up date
             </label>
             <input id="ts-start" name="start" type="date" className={input} />
           </div>
-          <div className={`${cell} sm:border-b sm:border-[#0e3a2f]/12 lg:border-b-0 lg:border-r`}>
+          <div
+            className={`${cell} sm:border-b sm:border-[#0e3a2f]/12 lg:border-b-0 lg:border-r`}
+          >
             <label htmlFor="ts-end" className={label}>
               Return date <span className="font-normal">(optional)</span>
             </label>
@@ -121,7 +129,10 @@ export function TripSearch() {
               >
                 &minus;
               </button>
-              <output aria-live="polite" className={`${styles.semi} min-w-[2ch] text-center font-semibold`}>
+              <output
+                aria-live="polite"
+                className={`${styles.semi} min-w-[2ch] text-center font-semibold`}
+              >
                 {passengers}
               </output>
               <button
@@ -146,7 +157,11 @@ export function TripSearch() {
       </form>
       <p
         role="status"
-        className={summary ? "border-t border-[#0e3a2f]/12 px-4 py-3 text-[0.92rem] text-[#0a2a22]" : "sr-only"}
+        className={
+          summary
+            ? "border-t border-[#0e3a2f]/12 px-4 py-3 text-[0.92rem] text-[#0a2a22]"
+            : "sr-only"
+        }
       >
         {summary ?? ""}
       </p>

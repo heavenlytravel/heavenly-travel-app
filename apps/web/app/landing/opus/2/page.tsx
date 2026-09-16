@@ -84,7 +84,10 @@ const steps = [
 ];
 
 const pickups = [
-  { name: "Airports and ferry terminals", note: "Planned around your flight or sailing" },
+  {
+    name: "Airports and ferry terminals",
+    note: "Planned around your flight or sailing",
+  },
   { name: "Hotels and resorts", note: "Collected from the lobby" },
   { name: "Offices and event venues", note: "Shuttles to your schedule" },
   { name: "Schools and campuses", note: "Excursions and group trips" },
@@ -204,8 +207,7 @@ export default function Page() {
           <div className="mx-auto grid max-w-[1200px] lg:grid-cols-[1.05fr_1fr]">
             <div className="px-5 pb-14 pt-12 sm:px-8 sm:pt-20 lg:pb-24">
               <p className="text-[0.95rem] text-[#e2c47f]">
-                Coach charter and cars with driver, wherever you are in
-                Malaysia
+                Coach charter and cars with driver, wherever you are in Malaysia
               </p>
               <h1
                 id="hero-title"
@@ -296,11 +298,18 @@ export default function Page() {
           </div>
           <ul className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {standards.map((s) => (
-              <li key={s.title} className="border-t-[3px] border-[#c49a3c] pt-5">
-                <h3 className={`${styles.semi} text-lg font-semibold leading-snug`}>
+              <li
+                key={s.title}
+                className="border-t-[3px] border-[#c49a3c] pt-5"
+              >
+                <h3
+                  className={`${styles.semi} text-lg font-semibold leading-snug`}
+                >
                   {s.title}
                 </h3>
-                <p className="mt-2.5 leading-relaxed text-[#4f5b56]">{s.body}</p>
+                <p className="mt-2.5 leading-relaxed text-[#4f5b56]">
+                  {s.body}
+                </p>
               </li>
             ))}
           </ul>
@@ -329,7 +338,9 @@ export default function Page() {
                 />
               </div>
               <div className="lg:py-6">
-                <h3 className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}>
+                <h3
+                  className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}
+                >
                   Coach charter
                 </h3>
                 <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
@@ -366,14 +377,16 @@ export default function Page() {
                 />
               </div>
               <div className="lg:order-1 lg:py-6">
-                <h3 className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}>
+                <h3
+                  className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}
+                >
                   Car with driver
                 </h3>
                 <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
                   A private car and a professional driver — for a single
-                  transfer, a few hours or the whole day. For families,
-                  VIP guests and business travellers who would rather arrive
-                  than navigate.
+                  transfer, a few hours or the whole day. For families, VIP
+                  guests and business travellers who would rather arrive than
+                  navigate.
                 </p>
                 <h4 className="mt-8 font-semibold">Booked for</h4>
                 <ul className="mt-3 divide-y divide-[#0e3a2f]/12 border-y border-[#0e3a2f]/12">
@@ -395,9 +408,9 @@ export default function Page() {
             </article>
 
             <p className="mt-16 max-w-[44rem] border-l-[3px] border-[#c49a3c] pl-5 text-[#4f5b56]">
-              More travel services are on the way as we grow. If your plans
-              need something beyond a coach or a car, ask us — we&apos;ll tell
-              you straight whether we can help.
+              More travel services are on the way as we grow. If your plans need
+              something beyond a coach or a car, ask us — we&apos;ll tell you
+              straight whether we can help.
             </p>
           </div>
         </section>
@@ -420,7 +433,9 @@ export default function Page() {
               who is driving and who to call.
             </p>
           </div>
-          <ol className={`${styles.route} mt-14 grid gap-9 min-[900px]:grid-cols-5 min-[900px]:gap-6`}>
+          <ol
+            className={`${styles.route} mt-14 grid gap-9 min-[900px]:grid-cols-5 min-[900px]:gap-6`}
+          >
             {steps.map((step, i) => (
               <li
                 key={step.title}
@@ -433,11 +448,15 @@ export default function Page() {
                   {i + 1}
                 </span>
                 <div className="min-[900px]:mt-5">
-                  <h3 className={`${styles.semi} text-lg font-semibold leading-snug`}>
+                  <h3
+                    className={`${styles.semi} text-lg font-semibold leading-snug`}
+                  >
                     <span className="sr-only">Step {i + 1}: </span>
                     {step.title}
                   </h3>
-                  <p className="mt-2 leading-relaxed text-[#4f5b56]">{step.body}</p>
+                  <p className="mt-2 leading-relaxed text-[#4f5b56]">
+                    {step.body}
+                  </p>
                 </div>
               </li>
             ))}
@@ -479,7 +498,9 @@ export default function Page() {
                     key={r.name}
                     className="flex flex-col gap-0.5 border-b border-white/20 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
                   >
-                    <span className={`${styles.semi} font-semibold`}>{r.name}</span>
+                    <span className={`${styles.semi} font-semibold`}>
+                      {r.name}
+                    </span>
                     <span className="text-[0.95rem] text-white/70 sm:text-right">
                       {r.note}
                     </span>
@@ -510,7 +531,10 @@ export default function Page() {
           </div>
           <div className="border-t border-[#0e3a2f]/20">
             {faqs.map((f) => (
-              <details key={f.q} className={`${styles.faq} border-b border-[#0e3a2f]/20`}>
+              <details
+                key={f.q}
+                className={`${styles.faq} border-b border-[#0e3a2f]/20`}
+              >
                 <summary className="flex items-start justify-between gap-6 py-5 text-lg font-semibold">
                   {f.q}
                   <span
@@ -520,7 +544,9 @@ export default function Page() {
                     +
                   </span>
                 </summary>
-                <p className="max-w-[40rem] pb-6 leading-relaxed text-[#4f5b56]">{f.a}</p>
+                <p className="max-w-[40rem] pb-6 leading-relaxed text-[#4f5b56]">
+                  {f.a}
+                </p>
               </details>
             ))}
           </div>
@@ -550,14 +576,21 @@ export default function Page() {
                 <div>
                   <dt className="text-sm text-white/60">WhatsApp and phone</dt>
                   <dd className={`${styles.semi} mt-1 text-xl font-semibold`}>
-                    <a href={WHATSAPP_HREF} target="_blank" rel="noopener noreferrer" className="underline decoration-[#c49a3c] decoration-2 underline-offset-4 hover:text-[#e2c47f]">
+                    <a
+                      href={WHATSAPP_HREF}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[#c49a3c] decoration-2 underline-offset-4 hover:text-[#e2c47f]"
+                    >
                       +60 X-XXX XXXX
                     </a>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-white/60">Office</dt>
-                  <dd className="mt-1">Based in Langkawi, serving all of Malaysia</dd>
+                  <dd className="mt-1">
+                    Based in Langkawi, serving all of Malaysia
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -569,8 +602,12 @@ export default function Page() {
       <footer className="bg-[#0a2a22] text-white/70">
         <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-5 pb-24 pt-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p>
-            <span className={`${styles.wide} font-bold text-white`}>Heavenly Travel</span>
-            <span className="ml-3">Based in Langkawi, serving all of Malaysia</span>
+            <span className={`${styles.wide} font-bold text-white`}>
+              Heavenly Travel
+            </span>
+            <span className="ml-3">
+              Based in Langkawi, serving all of Malaysia
+            </span>
           </p>
           <p>&copy; 2026 Heavenly Travel</p>
         </div>

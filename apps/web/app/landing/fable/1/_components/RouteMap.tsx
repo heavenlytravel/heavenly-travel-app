@@ -7,7 +7,13 @@ import styles from "../landing.module.css";
  * Routes link neighbouring cities as a network: any pin can be a start or an end.
  */
 
-type Stop = { name: string; x: number; y: number; major?: boolean; label?: "l" | "r" | "b" | "t" };
+type Stop = {
+  name: string;
+  x: number;
+  y: number;
+  major?: boolean;
+  label?: "l" | "r" | "b" | "t";
+};
 
 const STOPS: Stop[] = [
   { name: "Langkawi", x: 24, y: 82, major: true, label: "t" },
@@ -92,23 +98,52 @@ export function RouteMap() {
     >
       <title id="routemap-title">Where Heavenly Travel operates</title>
       <desc id="routemap-desc">
-        A map of Malaysia marking cities served: Langkawi, Alor Setar, Penang, Ipoh, Kota Bharu, Kuala
-        Lumpur, Kuantan, Melaka, Johor Bahru, Kuching, Miri, Kota Kinabalu and Sandakan, with road links
-        drawn between neighbouring cities.
+        A map of Malaysia marking cities served: Langkawi, Alor Setar, Penang,
+        Ipoh, Kota Bharu, Kuala Lumpur, Kuantan, Melaka, Johor Bahru, Kuching,
+        Miri, Kota Kinabalu and Sandakan, with road links drawn between
+        neighbouring cities.
       </desc>
 
       {/* land */}
-      <path d={PENINSULA} fill="rgba(255,255,255,0.09)" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
-      <path d={BORNEO} fill="rgba(255,255,255,0.09)" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
-      <circle cx={LANGKAWI.x} cy={LANGKAWI.y} r="6" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.3)" />
+      <path
+        d={PENINSULA}
+        fill="rgba(255,255,255,0.09)"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1"
+      />
+      <path
+        d={BORNEO}
+        fill="rgba(255,255,255,0.09)"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1"
+      />
+      <circle
+        cx={LANGKAWI.x}
+        cy={LANGKAWI.y}
+        r="6"
+        fill="rgba(255,255,255,0.12)"
+        stroke="rgba(255,255,255,0.3)"
+      />
 
       {/* sea label */}
-      <text x="235" y="150" fill="rgba(255,255,255,0.35)" fontSize="11" letterSpacing="0.04em">
+      <text
+        x="235"
+        y="150"
+        fill="rgba(255,255,255,0.35)"
+        fontSize="11"
+        letterSpacing="0.04em"
+      >
         South China Sea
       </text>
 
       {/* links */}
-      <g fill="none" stroke="#e4a93c" strokeWidth="1.6" strokeLinecap="round" opacity={0.85}>
+      <g
+        fill="none"
+        stroke="#e4a93c"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity={0.85}
+      >
         {LINKS.map(([a, b], i) => (
           <path
             key={`${a}-${b}`}
@@ -124,7 +159,11 @@ export function RouteMap() {
       {STOPS.map((s, i) => {
         const p = labelPos(s);
         return (
-          <g key={s.name} className={styles.pin} style={{ "--i": i } as React.CSSProperties}>
+          <g
+            key={s.name}
+            className={styles.pin}
+            style={{ "--i": i } as React.CSSProperties}
+          >
             <circle
               cx={s.x}
               cy={s.y}

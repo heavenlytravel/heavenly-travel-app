@@ -38,14 +38,54 @@ export const metadata: Metadata = {
 const PHONE = "+60 X-XXX XXXX";
 
 const journeys = [
-  { from: "KLIA", to: "Kuala Lumpur city", note: "Arrivals met at the gate, any hour", time: "1 h" },
-  { from: "Kuala Lumpur", to: "Cameron Highlands", note: "Tea estates, strawberry farms, Brinchang", time: "3 h 30" },
-  { from: "Penang", to: "Ipoh", note: "George Town to the old town and cave temples", time: "2 h" },
-  { from: "Kuala Lumpur", to: "Melaka", note: "Jonker Street and the Dutch Square", time: "2 h" },
-  { from: "Johor Bahru", to: "Kuala Lumpur", note: "Legoland, the causeway, the capital", time: "3 h 30" },
-  { from: "Kuala Lumpur", to: "Kuantan", note: "Teluk Cempedak and the East Coast road", time: "3 h" },
-  { from: "Kuala Terengganu", to: "Kota Bharu", note: "Redang and Perhentian jetties to Kelantan", time: "2 h" },
-  { from: "Langkawi airport", to: "Pantai Cenang", note: "Island transfers and day tours", time: "20 min" },
+  {
+    from: "KLIA",
+    to: "Kuala Lumpur city",
+    note: "Arrivals met at the gate, any hour",
+    time: "1 h",
+  },
+  {
+    from: "Kuala Lumpur",
+    to: "Cameron Highlands",
+    note: "Tea estates, strawberry farms, Brinchang",
+    time: "3 h 30",
+  },
+  {
+    from: "Penang",
+    to: "Ipoh",
+    note: "George Town to the old town and cave temples",
+    time: "2 h",
+  },
+  {
+    from: "Kuala Lumpur",
+    to: "Melaka",
+    note: "Jonker Street and the Dutch Square",
+    time: "2 h",
+  },
+  {
+    from: "Johor Bahru",
+    to: "Kuala Lumpur",
+    note: "Legoland, the causeway, the capital",
+    time: "3 h 30",
+  },
+  {
+    from: "Kuala Lumpur",
+    to: "Kuantan",
+    note: "Teluk Cempedak and the East Coast road",
+    time: "3 h",
+  },
+  {
+    from: "Kuala Terengganu",
+    to: "Kota Bharu",
+    note: "Redang and Perhentian jetties to Kelantan",
+    time: "2 h",
+  },
+  {
+    from: "Langkawi airport",
+    to: "Pantai Cenang",
+    note: "Island transfers and day tours",
+    time: "20 min",
+  },
 ];
 
 const steps = [
@@ -129,13 +169,19 @@ export default function Page() {
 
       {/* Header */}
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
-        <a href="#top" className={`flex items-center gap-2.5 rounded-sm ${focusRing}`}>
+        <a
+          href="#top"
+          className={`flex items-center gap-2.5 rounded-sm ${focusRing}`}
+        >
           <Mark />
           <span className="font-(family-name:--font-display) text-2xl font-bold leading-none tracking-tight">
             Heavenly Travel
           </span>
         </a>
-        <nav aria-label="Page sections" className="hidden items-center gap-7 md:flex">
+        <nav
+          aria-label="Page sections"
+          className="hidden items-center gap-7 md:flex"
+        >
           {navLinks.map((l) => (
             <a
               key={l.href}
@@ -162,10 +208,13 @@ export default function Page() {
               <h1 className="font-(family-name:--font-display) text-[clamp(3rem,9vw,6.5rem)] font-bold leading-[0.95] tracking-tight text-[#0c2340]">
                 A better way to get away.
               </h1>
-              <div className={`${styles.roadRule} mt-6 w-40`} aria-hidden="true" />
+              <div
+                className={`${styles.roadRule} mt-6 w-40`}
+                aria-hidden="true"
+              />
               <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#3d4a58] sm:text-xl">
-                Island escapes, seamless transport and trips made around you. Let our local team
-                take care of the details.
+                Island escapes, seamless transport and trips made around you.
+                Let our local team take care of the details.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <a
@@ -182,7 +231,8 @@ export default function Page() {
                 </a>
               </div>
               <p className="mt-6 text-sm text-[#5b6673]">
-                Coach charter and cars with driver, anywhere in Malaysia. Malay and English spoken.
+                Coach charter and cars with driver, anywhere in Malaysia. Malay
+                and English spoken.
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -202,9 +252,9 @@ export default function Page() {
                 Journeys we drive every week
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[#b9c8d6]">
-                A few of the trips people book most, with typical driving times on a normal day.
-                Start anywhere, end anywhere; tell us the stops in between and we&rsquo;ll build
-                the itinerary around them.
+                A few of the trips people book most, with typical driving times
+                on a normal day. Start anywhere, end anywhere; tell us the stops
+                in between and we&rsquo;ll build the itinerary around them.
               </p>
             </div>
 
@@ -220,7 +270,9 @@ export default function Page() {
                     aria-hidden="true"
                     className="absolute -top-[7px] left-0 h-3 w-3 rounded-full border-2 border-[#f5b800] bg-[#0c2340]"
                   />
-                  <p className="text-sm tabular-nums text-[#f5b800]">{j.time}</p>
+                  <p className="text-sm tabular-nums text-[#f5b800]">
+                    {j.time}
+                  </p>
                   <p className="mt-1 font-(family-name:--font-display) text-2xl font-semibold leading-tight">
                     {j.from}
                     <span className="mx-1.5 text-[#f5b800]" aria-hidden="true">
@@ -229,26 +281,32 @@ export default function Page() {
                     <span className="sr-only">to </span>
                     {j.to}
                   </p>
-                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">{j.note}</p>
+                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">
+                    {j.note}
+                  </p>
                 </li>
               ))}
             </ul>
             <p className="mt-10 max-w-md text-sm leading-snug text-[#b9c8d6]">
-              Not on the map? Sabah, Sarawak and cross-border trips into Singapore and southern
-              Thailand are quoted case by case. Just ask.
+              Not on the map? Sabah, Sarawak and cross-border trips into
+              Singapore and southern Thailand are quoted case by case. Just ask.
             </p>
           </div>
         </section>
 
         {/* Services */}
-        <section id="services" className="scroll-mt-6 mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+        <section
+          id="services"
+          className="scroll-mt-6 mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24"
+        >
           <div className="max-w-2xl">
             <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
               Two ways to travel, one team behind both
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-[#3d4a58]">
-              Whether it&rsquo;s forty people and a coach or two people and a car, the same people
-              plan the trip and the same standard applies to the vehicle and the driver.
+              Whether it&rsquo;s forty people and a coach or two people and a
+              car, the same people plan the trip and the same standard applies
+              to the vehicle and the driver.
             </p>
           </div>
 
@@ -271,9 +329,10 @@ export default function Page() {
                   Coach charter
                 </h3>
                 <p className="mt-3 text-base leading-relaxed text-[#3d4a58]">
-                  Air-conditioned coaches for tour groups, school trips, corporate outings, weddings
-                  and events. Airport and jetty transfers for arriving groups, and multi-day
-                  itineraries across the peninsula with the same driver throughout.
+                  Air-conditioned coaches for tour groups, school trips,
+                  corporate outings, weddings and events. Airport and jetty
+                  transfers for arriving groups, and multi-day itineraries
+                  across the peninsula with the same driver throughout.
                 </p>
                 <ul className="mt-5 grid gap-2.5 text-[15px] text-[#0c2340] sm:grid-cols-2">
                   {[
@@ -309,9 +368,10 @@ export default function Page() {
                   Car with driver
                 </h3>
                 <p className="mt-3 text-base leading-relaxed text-[#d7eadf]">
-                  A private car and a driver who knows the roads and the shortcuts. Airport
-                  pick-ups, day tours at your own pace, business travel between cities and
-                  long-distance transfers when you&rsquo;d rather not drive.
+                  A private car and a driver who knows the roads and the
+                  shortcuts. Airport pick-ups, day tours at your own pace,
+                  business travel between cities and long-distance transfers
+                  when you&rsquo;d rather not drive.
                 </p>
                 <ul className="mt-5 grid gap-2.5 text-[15px]">
                   {[
@@ -330,13 +390,17 @@ export default function Page() {
           </div>
 
           <p className="mt-8 max-w-2xl text-base leading-relaxed text-[#3d4a58]">
-            More is coming as we grow. If you need something we don&rsquo;t list yet, ask anyway;
-            we&rsquo;ll either arrange it or point you to someone who can.
+            More is coming as we grow. If you need something we don&rsquo;t list
+            yet, ask anyway; we&rsquo;ll either arrange it or point you to
+            someone who can.
           </p>
         </section>
 
         {/* How it works */}
-        <section id="how" className="scroll-mt-6 border-y border-[#d5dee6] bg-white">
+        <section
+          id="how"
+          className="scroll-mt-6 border-y border-[#d5dee6] bg-white"
+        >
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
             <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
               How a trip comes together
@@ -350,7 +414,9 @@ export default function Page() {
                   <h3 className="mt-3 text-xl font-semibold leading-snug text-[#0c2340]">
                     {step.title}
                   </h3>
-                  <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">{step.text}</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                    {step.text}
+                  </p>
                 </li>
               ))}
             </ol>
@@ -365,8 +431,8 @@ export default function Page() {
                 Who rides with us
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[#3d4a58]">
-                Most of our week is a mix of these. Tell us which one you are and we&rsquo;ll know
-                what to ask next.
+                Most of our week is a mix of these. Tell us which one you are
+                and we&rsquo;ll know what to ask next.
               </p>
               <div className="mt-8 overflow-hidden rounded-2xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -383,8 +449,12 @@ export default function Page() {
             <dl className="grid gap-y-8 self-start sm:grid-cols-2 sm:gap-x-8">
               {audiences.map((a) => (
                 <div key={a.who} className="border-t-2 border-[#0c2340] pt-4">
-                  <dt className="text-xl font-semibold leading-snug text-[#0c2340]">{a.who}</dt>
-                  <dd className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">{a.what}</dd>
+                  <dt className="text-xl font-semibold leading-snug text-[#0c2340]">
+                    {a.who}
+                  </dt>
+                  <dd className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                    {a.what}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -405,8 +475,12 @@ export default function Page() {
                     className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-[#f5b800] ring-2 ring-[#0c2340]"
                   />
                   <div>
-                    <h3 className="text-xl font-semibold leading-snug text-[#0c2340]">{r.title}</h3>
-                    <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">{r.text}</p>
+                    <h3 className="text-xl font-semibold leading-snug text-[#0c2340]">
+                      {r.title}
+                    </h3>
+                    <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                      {r.text}
+                    </p>
                   </div>
                 </li>
               ))}
@@ -422,17 +496,21 @@ export default function Page() {
                 Ask for a quote
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-[#b9c8d6]">
-                Fill in what you know and send it to us on WhatsApp. If you&rsquo;d rather just
-                talk, message or call us directly.
+                Fill in what you know and send it to us on WhatsApp. If
+                you&rsquo;d rather just talk, message or call us directly.
               </p>
               <dl className="mt-8 grid gap-5 text-base">
                 <div>
                   <dt className="text-sm text-[#b9c8d6]">WhatsApp and phone</dt>
-                  <dd className="mt-0.5 text-xl font-semibold tabular-nums">{PHONE}</dd>
+                  <dd className="mt-0.5 text-xl font-semibold tabular-nums">
+                    {PHONE}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-[#b9c8d6]">Email</dt>
-                  <dd className="mt-0.5 text-xl font-semibold">hello@heavenlytravel.example</dd>
+                  <dd className="mt-0.5 text-xl font-semibold">
+                    hello@heavenlytravel.example
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-[#b9c8d6]">Office</dt>
@@ -457,15 +535,25 @@ export default function Page() {
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
             {navLinks.map((l) => (
-              <a key={l.href} href={l.href} className={`rounded-sm hover:text-white ${focusRing}`}>
+              <a
+                key={l.href}
+                href={l.href}
+                className={`rounded-sm hover:text-white ${focusRing}`}
+              >
                 {l.label}
               </a>
             ))}
-            <a href="#quote" className={`rounded-sm hover:text-white ${focusRing}`}>
+            <a
+              href="#quote"
+              className={`rounded-sm hover:text-white ${focusRing}`}
+            >
               Get a quote
             </a>
           </nav>
-          <p>Based in Langkawi, serving all of Malaysia. Coach charter and car with driver since 2016.</p>
+          <p>
+            Based in Langkawi, serving all of Malaysia. Coach charter and car
+            with driver since 2016.
+          </p>
         </div>
       </footer>
     </div>

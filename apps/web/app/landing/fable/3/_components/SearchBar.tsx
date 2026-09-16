@@ -92,7 +92,16 @@ export function SearchBar() {
           type="submit"
           className="inline-flex h-[50px] items-center justify-center gap-2 rounded-md bg-[#f5b800] px-6 text-base font-semibold text-[#0c2340] hover:bg-[#ffc933] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white sm:col-span-2 lg:col-span-1"
         >
-          <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          >
             <circle cx="8.5" cy="8.5" r="5.5" />
             <path d="M13 13l4.5 4.5" />
           </svg>

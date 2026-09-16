@@ -1,0 +1,21 @@
+/* Heavenly Travel — /landing/fable/reimagined/booking
+   Header band, results list, filter rail. Only the band texture lives here. */
+
+.page {
+  --ink: #10201f;
+  --sea-deep: #0c3b3a;
+  --sea: #157a74;
+  --gold: #e4a93c;
+  color: var(--ink);
+  background: #fff;
+}
+
+.band {
+  background:
+    radial-gradient(
+      60% 120% at 100% 0%,
+      rgba(21, 122, 116, 0.55) 0%,
+      transparent 60%
+    ),
+    #0c3b3a;
+}

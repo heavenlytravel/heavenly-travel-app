@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { REIMAGINED } from "../../_lib/reimagined";
 import { MODELS, VARIATIONS, type ModelKey } from "../../_lib/variations";
 
 const GROUPS: ModelKey[] = ["opus", "fable"];
@@ -59,6 +60,39 @@ export function LandingSwitcher() {
             })}
           </div>
         ))}
+        <div
+          role="group"
+          aria-label="Reimagined sites by Claude Fable 5.1"
+          className="flex items-center gap-0.5 border-l border-white/15 pl-1.5"
+        >
+          <Link
+            href="/landing/fable/reimagined"
+            className={`px-1.5 text-xs ${
+              pathname === "/landing/fable/reimagined"
+                ? "text-white underline underline-offset-4"
+                : "text-neutral-400 hover:text-white"
+            }`}
+            aria-current={
+              pathname === "/landing/fable/reimagined" ? "page" : undefined
+            }
+          >
+            Reimagined
+          </Link>
+          {REIMAGINED.map((r) => {
+            const active = pathname === r.href;
+            return (
+              <Link
+                key={r.href}
+                href={r.href}
+                className={itemClass(active)}
+                aria-current={active ? "page" : undefined}
+                aria-label={`Reimagined from ${r.name}`}
+              >
+                {r.short}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

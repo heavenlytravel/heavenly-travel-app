@@ -1,794 +1,602 @@
 /**
  * Heavenly Travel — landing page variation
- * Route: /landing/fable/2
+ * Route: /landing/fable/2 (originally /landing/fable/3; renumbered 2026-09-17)
  * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Direction: The operator's trip sheet — deep Andaman teal, amber marker-light accent, a confirmed trip sheet in the hero, a booking search bar in the same tokens, and an editorial two-column layout that reads like a well-run fleet office serving all of Malaysia.
- * Tokens used: 71,656 (48 tool calls)
- * Time taken: 7m 00s
- * Revision 1: 87,938 tokens (23 tool calls), 2m 35s
- * Revision 1 notes: Repositioned copy Malaysia-wide (Langkawi only as base in coverage/footer), set the required hero title and description, added an accessible client-side booking search bar under the hero, and moved the trip sheet inside the hero so nothing overlaps the new bar.
+ * Direction: A road-network page — an animated map of the places we drive across Peninsular Malaysia, a booking search bar, a board of typical journeys, and road-marking yellow on deep navy, set in Barlow's road-sign type.
+ * Tokens used: 86,671 (72 tool calls)
+ * Time taken: 9m 41s
+ * Revision 1: 109,291 tokens (24 tool calls), 3m 23s
+ * Revision 1 notes: Exact hero title/description, added in-hero search bar, reworked map and route board from a Langkawi-origin trip into a nationwide network, scrubbed origin framing from copy.
  * Generated: 2026-09-15
  */
 
 import type { Metadata } from "next";
-import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 import styles from "./page.module.css";
-import { SearchBar } from "./_components/search-bar";
+import { RouteMap } from "./_components/RouteMap";
+import { QuoteForm } from "./_components/QuoteForm";
+import { SearchBar } from "./_components/SearchBar";
 
-const display = Newsreader({
+const display = Barlow_Condensed({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  style: ["normal", "italic"],
+  weight: ["600", "700"],
   variable: "--font-display",
-  display: "swap",
 });
 
-const body = Plus_Jakarta_Sans({
+const body = Barlow({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-body",
-  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel — Coach charter and chauffeured cars across Malaysia",
+  title: "Heavenly Travel — Coach charter and cars with driver across Malaysia",
   description:
-    "Coach charter and cars with drivers, wherever you are in Malaysia. Airport transfers, corporate and school charters, private drivers and island escapes, arranged by a local team with ten years' experience.",
+    "Coach charter and chauffeured car hire anywhere in Malaysia, for tour groups, families, schools and companies. Tell us where you are and where you're going, and get a quote on WhatsApp.",
 };
 
-const IMG = {
-  coach:
-    "https://images.unsplash.com/photo-1557223562-6c77ef16210f?w=1400&q=80&auto=format&fit=crop",
-  driver:
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1200&q=80&auto=format&fit=crop",
-  kl: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1200&q=80&auto=format&fit=crop",
-  resort:
-    "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=1200&q=80&auto=format&fit=crop",
-  beach:
-    "https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?w=1200&q=80&auto=format&fit=crop",
-};
+const PHONE = "+60 X-XXX XXXX";
 
-const fleet = [
+const journeys = [
   {
-    name: "44-seat executive coach",
-    seats: "44 passengers",
-    luggage: "Full under-floor luggage bay",
-    bestFor: "Tour groups, corporate events, school trips",
+    from: "KLIA",
+    to: "Kuala Lumpur city",
+    note: "Arrivals met at the gate, any hour",
+    time: "1 h",
   },
   {
-    name: "30-seat coach",
-    seats: "30 passengers",
-    luggage: "Under-floor luggage bay",
-    bestFor: "Mid-size groups, day tours, conferences",
+    from: "Kuala Lumpur",
+    to: "Cameron Highlands",
+    note: "Tea estates, strawberry farms, Brinchang",
+    time: "3 h 30",
   },
   {
-    name: "14-seat van",
-    seats: "14 passengers",
-    luggage: "Rear luggage space",
-    bestFor: "Extended families, small teams, city and island tours",
+    from: "Penang",
+    to: "Ipoh",
+    note: "George Town to the old town and cave temples",
+    time: "2 h",
   },
   {
-    name: "Executive MPV with driver",
-    seats: "Up to 6 passengers",
-    luggage: "4 large suitcases",
-    bestFor: "Airport and jetty pickups, VIP guests",
+    from: "Kuala Lumpur",
+    to: "Melaka",
+    note: "Jonker Street and the Dutch Square",
+    time: "2 h",
   },
   {
-    name: "Sedan with driver",
-    seats: "Up to 3 passengers",
-    luggage: "2 large suitcases",
-    bestFor: "Business travel, day hire, evening dinners",
+    from: "Johor Bahru",
+    to: "Kuala Lumpur",
+    note: "Legoland, the causeway, the capital",
+    time: "3 h 30",
+  },
+  {
+    from: "Kuala Lumpur",
+    to: "Kuantan",
+    note: "Teluk Cempedak and the East Coast road",
+    time: "3 h",
+  },
+  {
+    from: "Kuala Terengganu",
+    to: "Kota Bharu",
+    note: "Redang and Perhentian jetties to Kelantan",
+    time: "2 h",
+  },
+  {
+    from: "Langkawi airport",
+    to: "Pantai Cenang",
+    note: "Island transfers and day tours",
+    time: "20 min",
   },
 ];
 
 const steps = [
   {
     title: "Tell us the trip",
-    text: "Dates, pick-up points, how many people and what the day looks like. WhatsApp, the form below or a phone call all work.",
+    text: "Where you're starting, where you're going, the date and how many people. WhatsApp or the form below, whichever is easier.",
   },
   {
-    title: "We confirm the vehicle and driver",
-    text: "You get a written quote with tolls, parking and driver allowance listed, and a named vehicle for your group size.",
+    title: "Get a quote and a vehicle suggestion",
+    text: "We reply with a price for the whole trip and the vehicle we'd recommend for your group and your luggage.",
   },
   {
-    title: "Your trip sheet is sent",
-    text: "One page with every pick-up, time and contact number. The driver is briefed on it the evening before.",
+    title: "Confirm the booking",
+    text: "Say yes, and the date is yours. Changes to the pick-up time or route can be agreed over the same chat.",
   },
   {
-    title: "The driver arrives early",
-    text: "Vehicle checked and cooled, luggage loaded, and one person to call if the plan changes on the day.",
+    title: "Your driver is waiting",
+    text: "You get the driver's name and number the day before. On the day, the vehicle is at the jetty, the airport or the hotel before you are.",
   },
 ];
 
-const coverage = [
+const audiences = [
   {
-    place: "Kuala Lumpur and Selangor",
-    note: "KLIA, city hotels, corporate itineraries and events.",
+    who: "Tourists and families",
+    what: "Airport and jetty pick-ups, day tours, a car and driver for the week, or the long drive between cities without renting a car.",
   },
   {
-    place: "Penang",
-    note: "Airport, George Town, conference and hotel transfers.",
+    who: "Tour groups and agents",
+    what: "Coaches for inbound groups, multi-day itineraries with the same driver throughout, and a partner on the ground who answers the phone.",
   },
   {
-    place: "Langkawi, Kedah and Perlis",
-    note: "Airport, jetties, resorts and island tours.",
+    who: "Companies and event organisers",
+    what: "Staff outings, conference shuttles between hotel and venue, team retreats to the highlands and transfers for visiting clients.",
   },
   {
-    place: "Melaka and Johor",
-    note: "Heritage tours and cross-border group pick-ups.",
-  },
-  {
-    place: "Pahang and the east coast",
-    note: "Highlands, Kuantan, Cherating and island jetties.",
-  },
-  {
-    place: "Sabah and Sarawak",
-    note: "Kota Kinabalu and Kuching transfers on request.",
+    who: "Schools and universities",
+    what: "Field trips, sports fixtures and study tours with experienced drivers and vehicles suited to the group size.",
   },
 ];
+
+const reasons = [
+  {
+    title: "Ten years on the road",
+    text: "We started in Langkawi in 2016 and have been driving daily since. We know which ferry to meet, how long the airport queue really takes and where the traffic builds.",
+  },
+  {
+    title: "Licensed, insured and looked after",
+    text: "Commercially licensed vehicles and drivers, serviced on schedule. Ask us for the paperwork and we'll send it over.",
+  },
+  {
+    title: "One conversation from quote to drop-off",
+    text: "The person who quotes your trip is the person you message on the day. No call centre, no ticket numbers.",
+  },
+  {
+    title: "Anywhere in Malaysia, on purpose",
+    text: "Wherever you're starting from, Penang, the Cameron Highlands, Kuala Lumpur, Melaka, Johor or the East Coast, we drive there every week. New services are on the way as we grow.",
+  },
+];
+
+const navLinks = [
+  { href: "#services", label: "Services" },
+  { href: "#routes", label: "Where we drive" },
+  { href: "#how", label: "How it works" },
+  { href: "#why", label: "Why us" },
+];
+
+const focusRing =
+  "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#f5b800]";
 
 export default function Page() {
   return (
     <div
-      className={`${styles.page} ${display.variable} ${body.variable} text-[17px] leading-relaxed`}
+      className={`${display.variable} ${body.variable} ${styles.page} min-h-screen antialiased font-(family-name:--font-body)`}
     >
       <a
         href="#quote"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded focus:bg-(--lantern) focus:px-4 focus:py-2 focus:text-(--ink)"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[#0c2340] focus:px-4 focus:py-2 focus:text-white"
       >
-        Skip to quote form
+        Skip to the quote form
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-(--line) bg-(--mist)/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
-          <a href="#top" className="flex items-baseline gap-2">
-            <span className={`${styles.display} text-2xl text-(--ink)`}>
-              Heavenly Travel
-            </span>
-            <span className="hidden text-sm text-(--muted) sm:inline">
-              Across Malaysia, since 2016
-            </span>
-          </a>
-          <nav
-            aria-label="Page sections"
-            className="hidden items-center gap-7 text-[15px] font-medium md:flex"
-          >
-            <a href="#services" className="text-(--text) hover:text-(--sea)">
-              Services
+      {/* Header */}
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <a
+          href="#top"
+          className={`flex items-center gap-2.5 rounded-sm ${focusRing}`}
+        >
+          <Mark />
+          <span className="font-(family-name:--font-display) text-2xl font-bold leading-none tracking-tight">
+            Heavenly Travel
+          </span>
+        </a>
+        <nav
+          aria-label="Page sections"
+          className="hidden items-center gap-7 md:flex"
+        >
+          {navLinks.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className={`rounded-sm text-[15px] font-medium text-[#0c2340] hover:text-[#1e6b4a] ${focusRing}`}
+            >
+              {l.label}
             </a>
-            <a href="#fleet" className="text-(--text) hover:text-(--sea)">
-              Fleet
-            </a>
-            <a href="#coverage" className="text-(--text) hover:text-(--sea)">
-              Coverage
-            </a>
-            <a href="#how" className="text-(--text) hover:text-(--sea)">
-              How it works
-            </a>
-          </nav>
-          <a
-            href="#quote"
-            className="rounded-full bg-(--ink) px-4 py-2 text-[15px] font-semibold text-white hover:bg-(--sea)"
-          >
-            Request a quote
-          </a>
-        </div>
+          ))}
+        </nav>
+        <a
+          href="#quote"
+          className={`inline-flex items-center rounded-md bg-[#0c2340] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#153560] ${focusRing}`}
+        >
+          Get a quote
+        </a>
       </header>
 
       <main id="top">
         {/* Hero */}
-        <section className="bg-(--ink) text-white">
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 pt-16 pb-14 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-24">
-            <div className="max-w-xl">
-              <h1
-                className={`${styles.display} text-[2.6rem] sm:text-6xl lg:text-[4.25rem]`}
-              >
+        <section className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 lg:pb-24 lg:pt-12">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+            <div>
+              <h1 className="font-(family-name:--font-display) text-[clamp(3rem,9vw,6.5rem)] font-bold leading-[0.95] tracking-tight text-[#0c2340]">
                 A better way to get away.
               </h1>
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-(--on-ink-muted)">
+              <div
+                className={`${styles.roadRule} mt-6 w-40`}
+                aria-hidden="true"
+              />
+              <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#3d4a58] sm:text-xl">
                 Island escapes, seamless transport and trips made around you.
                 Let our local team take care of the details.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <a
                   href="#quote"
-                  className="rounded-full bg-(--lantern) px-6 py-3 font-semibold text-(--ink) hover:bg-(--lantern-deep)"
+                  className="inline-flex items-center justify-center rounded-md bg-[#f5b800] px-6 py-3.5 text-base font-semibold text-[#0c2340] hover:bg-[#ffc933] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#0c2340]"
                 >
-                  Request a quote
+                  Get a quote on WhatsApp
                 </a>
                 <a
-                  href="#"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/40 px-6 py-3 font-semibold text-white hover:border-white hover:bg-white/10"
+                  href="#routes"
+                  className={`inline-flex items-center justify-center rounded-md border-2 border-[#0c2340] px-6 py-3 text-base font-semibold text-[#0c2340] hover:bg-white ${focusRing}`}
                 >
-                  <WhatsAppIcon />
-                  Chat on WhatsApp
+                  See where we drive
                 </a>
               </div>
-              <ul className="mt-12 flex flex-wrap gap-x-8 gap-y-2 text-sm text-(--on-ink-muted)">
-                <li>Licensed and insured</li>
-                <li>Driver assigned before you travel</li>
-                <li>Written quotes, no surprises</li>
-              </ul>
+              <p className="mt-6 text-sm text-[#5b6673]">
+                Coach charter and cars with driver, anywhere in Malaysia. Malay
+                and English spoken.
+              </p>
             </div>
-
-            <div className="relative">
-              <div className="overflow-hidden rounded-2xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={IMG.coach}
-                  alt="Front of a champagne-coloured coach parked at a kerb, ready for boarding"
-                  className="aspect-[4/3] w-full object-cover"
-                  width={1400}
-                  height={1050}
-                  fetchPriority="high"
-                />
-              </div>
-
-              <div
-                className={`${styles.sheet} -mt-16 ml-4 max-w-sm rounded-xl bg-(--mist) p-5 text-(--text) shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] sm:ml-10 lg:absolute lg:right-[-1.5rem] lg:bottom-6 lg:mt-0 lg:ml-0`}
-                aria-label="Sample trip sheet"
-              >
-                <div className="flex items-center justify-between border-b border-(--line) pb-3">
-                  <span className={`${styles.display} text-xl text-(--ink)`}>
-                    Sample trip sheet
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--sea)">
-                    <span
-                      className="h-2 w-2 rounded-full bg-(--lantern)"
-                      aria-hidden="true"
-                    />
-                    Confirmed
-                  </span>
-                </div>
-                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
-                  <dt className="text-(--muted)">Group</dt>
-                  <dd>Corporate offsite, 38 people</dd>
-                  <dt className="text-(--muted)">Pick up</dt>
-                  <dd>KLIA Terminal 1, 09:40</dd>
-                  <dt className="text-(--muted)">Drop off</dt>
-                  <dd>Port Dickson resort, then Melaka old town</dd>
-                  <dt className="text-(--muted)">Vehicle</dt>
-                  <dd>44-seat executive coach</dd>
-                  <dt className="text-(--muted)">Driver</dt>
-                  <dd>Assigned, briefed the evening before</dd>
-                  <dt className="text-(--muted)">Your contact</dt>
-                  <dd>One coordinator for the whole trip</dd>
-                </dl>
-              </div>
+            <div className="flex justify-center lg:justify-end">
+              <RouteMap />
             </div>
+          </div>
+          <div className="mt-12 lg:mt-16">
+            <SearchBar />
           </div>
         </section>
 
-        {/* Booking search: sits across the hero's bottom edge */}
-        <section
-          aria-labelledby="search-heading"
-          className="relative z-10 -mt-1 bg-linear-to-b from-(--ink) from-50% to-transparent to-50%"
-        >
-          <div className="mx-auto max-w-6xl px-5 sm:px-8">
-            <h2 id="search-heading" className="sr-only">
-              Search for a coach or car with driver
-            </h2>
-            <SearchBar />
+        {/* Route board */}
+        <section id="routes" className="scroll-mt-6 bg-[#0c2340] text-white">
+          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 lg:py-20">
+            <div className="max-w-2xl">
+              <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+                Journeys we drive every week
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-[#b9c8d6]">
+                A few of the trips people book most, with typical driving times
+                on a normal day. Start anywhere, end anywhere; tell us the stops
+                in between and we&rsquo;ll build the itinerary around them.
+              </p>
+            </div>
+
+            <ul
+              className={`${styles.board} mt-12 -mx-5 flex snap-x gap-0 overflow-x-auto px-5 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-4 lg:gap-y-12 lg:overflow-visible`}
+            >
+              {journeys.map((j) => (
+                <li
+                  key={`${j.from}-${j.to}`}
+                  className="relative min-w-[230px] shrink-0 snap-start border-t-2 border-[#26466c] pr-5 pt-4 lg:min-w-0"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-[7px] left-0 h-3 w-3 rounded-full border-2 border-[#f5b800] bg-[#0c2340]"
+                  />
+                  <p className="text-sm tabular-nums text-[#f5b800]">
+                    {j.time}
+                  </p>
+                  <p className="mt-1 font-(family-name:--font-display) text-2xl font-semibold leading-tight">
+                    {j.from}
+                    <span className="mx-1.5 text-[#f5b800]" aria-hidden="true">
+                      &rarr;
+                    </span>
+                    <span className="sr-only">to </span>
+                    {j.to}
+                  </p>
+                  <p className="mt-1.5 text-sm leading-snug text-[#b9c8d6]">
+                    {j.note}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-10 max-w-md text-sm leading-snug text-[#b9c8d6]">
+              Not on the map? Sabah, Sarawak and cross-border trips into
+              Singapore and southern Thailand are quoted case by case. Just ask.
+            </p>
           </div>
         </section>
 
         {/* Services */}
         <section
           id="services"
-          className="scroll-mt-20 border-b border-(--line)"
+          className="scroll-mt-6 mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24"
         >
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
-            <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                What we run
-              </h2>
-              <p className="mt-4 text-(--muted)">
-                Two services carry most of our work today, anywhere in Malaysia.
-                More are being added as we grow, so ask if your trip does not
-                fit neatly here.
-              </p>
-            </div>
+          <div className="max-w-2xl">
+            <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+              Two ways to travel, one team behind both
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-[#3d4a58]">
+              Whether it&rsquo;s forty people and a coach or two people and a
+              car, the same people plan the trip and the same standard applies
+              to the vehicle and the driver.
+            </p>
+          </div>
 
-            <div className="grid gap-5">
-              <article className="grid overflow-hidden rounded-2xl bg-white md:grid-cols-[1.1fr_1fr]">
+          <div className="mt-12 grid gap-8 lg:grid-cols-5">
+            {/* Coach charter */}
+            <article className="overflow-hidden rounded-2xl bg-white ring-1 ring-[#d5dee6] lg:col-span-3">
+              <div className="aspect-[16/9] w-full bg-[#e4ede6]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={IMG.coach}
-                  alt="Coach parked and ready for a group departure"
-                  className="h-56 w-full object-cover md:h-full"
-                  width={1400}
-                  height={1050}
+                  src="https://images.unsplash.com/photo-1557223562-6c77ef16210f?w=1400&q=75&auto=format&fit=crop"
+                  alt="A gold-coloured tour coach parked at the kerb under trees"
+                  className="h-full w-full object-cover"
                   loading="lazy"
+                  width={1400}
+                  height={788}
                 />
-                <div className="p-7 sm:p-9">
-                  <h3 className={`${styles.display} text-3xl text-(--ink)`}>
-                    Coach charter
-                  </h3>
-                  <p className="mt-3 text-(--muted)">
-                    Air-conditioned coaches from 14 to 44 seats for tours,
-                    company events, school outings, weddings and airport or
-                    jetty transfers. Multi-day and island itineraries welcome.
-                  </p>
-                  <ul className="mt-5 grid gap-2 text-[15px]">
-                    <li className="flex gap-3">
-                      <Tick />
-                      Driver who knows the route and the venues
-                    </li>
-                    <li className="flex gap-3">
-                      <Tick />
-                      Luggage handled, boarding kept orderly
-                    </li>
-                    <li className="flex gap-3">
-                      <Tick />
-                      Coordinator on WhatsApp for the whole day
-                    </li>
-                  </ul>
-                  <a
-                    href="#quote"
-                    className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)"
-                  >
-                    Get a coach quote
-                  </a>
-                </div>
-              </article>
-
-              <div className="grid gap-5 md:grid-cols-[1.4fr_1fr]">
-                <article className="grid overflow-hidden rounded-2xl bg-white sm:grid-cols-[1fr_1.2fr]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={IMG.driver}
-                    alt="Chauffeur's hands on the steering wheel at dusk"
-                    className="h-48 w-full object-cover sm:h-full"
-                    width={1200}
-                    height={800}
-                    loading="lazy"
-                  />
-                  <div className="p-7">
-                    <h3 className={`${styles.display} text-3xl text-(--ink)`}>
-                      Car with driver
-                    </h3>
-                    <p className="mt-3 text-(--muted)">
-                      A sedan or executive MPV with a professional driver for
-                      airport runs, business days, family holidays and evenings
-                      out. Hire by the transfer, the day or the week.
-                    </p>
-                    <a
-                      href="#quote"
-                      className="mt-6 inline-block font-semibold text-(--sea) underline underline-offset-4 hover:text-(--ink)"
-                    >
-                      Book a driver
-                    </a>
-                  </div>
-                </article>
-
-                <article className="rounded-2xl bg-(--sand) p-7">
-                  <h3 className={`${styles.display} text-2xl text-(--ink)`}>
-                    Coming next
-                  </h3>
-                  <p className="mt-3 text-[15px] text-(--muted)">
-                    We are building the same standard into new products as we
-                    digitalise.
-                  </p>
-                  <ul className="mt-4 grid gap-2 text-[15px]">
-                    <li>Packaged island and city escapes</li>
-                    <li>Multi-city corporate itineraries</li>
-                    <li>Online booking with live availability</li>
-                  </ul>
-                </article>
               </div>
-            </div>
+              <div className="p-6 sm:p-8">
+                <h3 className="font-(family-name:--font-display) text-3xl font-bold leading-none tracking-tight">
+                  Coach charter
+                </h3>
+                <p className="mt-3 text-base leading-relaxed text-[#3d4a58]">
+                  Air-conditioned coaches for tour groups, school trips,
+                  corporate outings, weddings and events. Airport and jetty
+                  transfers for arriving groups, and multi-day itineraries
+                  across the peninsula with the same driver throughout.
+                </p>
+                <ul className="mt-5 grid gap-2.5 text-[15px] text-[#0c2340] sm:grid-cols-2">
+                  {[
+                    "Minivans, mini coaches and full-size coaches",
+                    "One-way, return and multi-day charters",
+                    "Licensed drivers who know the routes",
+                    "Luggage space planned for your group",
+                  ].map((item) => (
+                    <li key={item} className="flex gap-2.5">
+                      <Tick />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+
+            {/* Car with driver */}
+            <article className="overflow-hidden rounded-2xl bg-[#1e6b4a] text-white lg:col-span-2">
+              <div className="aspect-[16/9] w-full bg-[#175539] lg:aspect-[4/3]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1563720223185-11003d516935?w=1000&q=75&auto=format&fit=crop"
+                  alt="A black SUV parked in front of a garage, seen from the front"
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  width={1000}
+                  height={750}
+                />
+              </div>
+              <div className="p-6 sm:p-8">
+                <h3 className="font-(family-name:--font-display) text-3xl font-bold leading-none tracking-tight">
+                  Car with driver
+                </h3>
+                <p className="mt-3 text-base leading-relaxed text-[#d7eadf]">
+                  A private car and a driver who knows the roads and the
+                  shortcuts. Airport pick-ups, day tours at your own pace,
+                  business travel between cities and long-distance transfers
+                  when you&rsquo;d rather not drive.
+                </p>
+                <ul className="mt-5 grid gap-2.5 text-[15px]">
+                  {[
+                    "Sedans and SUVs for up to four passengers",
+                    "Hourly, daily and multi-day hire",
+                    "Child seats on request",
+                  ].map((item) => (
+                    <li key={item} className="flex gap-2.5">
+                      <Tick />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
           </div>
+
+          <p className="mt-8 max-w-2xl text-base leading-relaxed text-[#3d4a58]">
+            More is coming as we grow. If you need something we don&rsquo;t list
+            yet, ask anyway; we&rsquo;ll either arrange it or point you to
+            someone who can.
+          </p>
         </section>
 
-        {/* Who relies on us */}
-        <section className="border-b border-(--line)">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
-            <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                Who relies on us
-              </h2>
-              <p className="mt-4 text-(--muted)">
-                Different groups need different things from a vehicle and a
-                driver. These are the three we serve most.
-              </p>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-3">
-              <Audience
-                img={IMG.kl}
-                alt="Kuala Lumpur skyline at dusk"
-                title="Corporate and events"
-                text="Conference shuttles, offsites, incentive trips and VIP guests. Invoicing for companies, one coordinator, drivers in uniform."
-              />
-              <Audience
-                img={IMG.beach}
-                alt="Aerial view of a palm-lined beach and turquoise sea"
-                title="Tour groups and schools"
-                text="Full-day and multi-day itineraries, with headcount checks at every stop and a driver who keeps the schedule honest."
-              />
-              <Audience
-                img={IMG.resort}
-                alt="Resort pool lined with palms and sun loungers at dusk"
-                title="Families and couples"
-                text="Airport and jetty pickups, child seats on request, and a driver who waits while you eat, shop or swim."
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* How a booking runs */}
-        <section id="how" className="scroll-mt-20 border-b border-(--line)">
+        {/* How it works */}
+        <section
+          id="how"
+          className="scroll-mt-6 border-y border-[#d5dee6] bg-white"
+        >
           <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
-            <div className="max-w-2xl">
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                How a booking runs
-              </h2>
-              <p className="mt-4 text-(--muted)">
-                Four stops between your first message and the driver at your
-                door.
-              </p>
-            </div>
-            <ol
-              className={`${styles.route} mt-12 grid gap-10 md:grid-cols-4 md:gap-8`}
-            >
+            <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+              How a trip comes together
+            </h2>
+            <ol className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((step, i) => (
-                <li
-                  key={step.title}
-                  className={`${styles.stop} pl-10 md:pt-9 md:pl-0`}
-                >
-                  <span className="text-sm font-semibold text-(--sea)">
-                    Stop {i + 1}
+                <li key={step.title} className="relative">
+                  <span className="font-(family-name:--font-display) text-5xl font-bold leading-none text-[#f5b800]">
+                    {i + 1}
                   </span>
-                  <h3
-                    className={`${styles.display} mt-1 text-2xl text-(--ink)`}
-                  >
+                  <h3 className="mt-3 text-xl font-semibold leading-snug text-[#0c2340]">
                     {step.title}
                   </h3>
-                  <p className="mt-2 text-[15px] text-(--muted)">{step.text}</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                    {step.text}
+                  </p>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        {/* Fleet */}
-        <section
-          id="fleet"
-          className="scroll-mt-20 border-b border-(--line) bg-white"
-        >
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16 lg:py-24">
+        {/* Who we drive */}
+        <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
             <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                The fleet
+              <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+                Who rides with us
               </h2>
-              <p className="mt-4 text-(--muted)">
-                Every vehicle is cleaned and checked before it leaves the yard.
-                Tell us your group size and luggage and we will match you to the
-                right one.
+              <p className="mt-4 text-lg leading-relaxed text-[#3d4a58]">
+                Most of our week is a mix of these. Tell us which one you are
+                and we&rsquo;ll know what to ask next.
               </p>
+              <div className="mt-8 overflow-hidden rounded-2xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1000&q=75&auto=format&fit=crop"
+                  alt="The Petronas Twin Towers and the Kuala Lumpur skyline at dusk"
+                  className="aspect-[4/3] w-full object-cover"
+                  loading="lazy"
+                  width={1000}
+                  height={750}
+                />
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] border-collapse text-left text-[15px]">
-                <thead>
-                  <tr className="border-b-2 border-(--ink) text-sm text-(--muted)">
-                    <th scope="col" className="py-3 pr-4 font-medium">
-                      Vehicle
-                    </th>
-                    <th scope="col" className="py-3 pr-4 font-medium">
-                      Seats
-                    </th>
-                    <th scope="col" className="py-3 pr-4 font-medium">
-                      Luggage
-                    </th>
-                    <th scope="col" className="py-3 font-medium">
-                      Best for
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fleet.map((v) => (
-                    <tr key={v.name} className={styles.fleetRow}>
-                      <th
-                        scope="row"
-                        className={`${styles.display} py-4 pr-4 align-top text-xl font-medium text-(--ink)`}
-                      >
-                        {v.name}
-                      </th>
-                      <td className="py-4 pr-4 align-top">{v.seats}</td>
-                      <td className="py-4 pr-4 align-top text-(--muted)">
-                        {v.luggage}
-                      </td>
-                      <td className="py-4 align-top text-(--muted)">
-                        {v.bestFor}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <dl className="grid gap-y-8 self-start sm:grid-cols-2 sm:gap-x-8">
+              {audiences.map((a) => (
+                <div key={a.who} className="border-t-2 border-[#0c2340] pt-4">
+                  <dt className="text-xl font-semibold leading-snug text-[#0c2340]">
+                    {a.who}
+                  </dt>
+                  <dd className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                    {a.what}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 
-        {/* Standards + coverage */}
-        <section
-          id="coverage"
-          className="scroll-mt-20 border-b border-(--line)"
-        >
-          <div className="mx-auto grid max-w-6xl gap-14 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:py-24">
-            <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                What dependable means here
-              </h2>
-              <ul className="mt-8 grid gap-5">
-                <Standard
-                  title="The driver is briefed the evening before"
-                  text="Route, timings, contact names and anything unusual about the group, so the morning has no questions."
-                />
-                <Standard
-                  title="We arrive early, not on time"
-                  text="Fifteen minutes before pick-up is our normal. Coaches are cooled and luggage bays open before the group appears."
-                />
-                <Standard
-                  title="One person to call"
-                  text="A single coordinator handles your booking from quote to drop-off, and answers on WhatsApp during the trip."
-                />
-                <Standard
-                  title="Quotes you can put in a budget"
-                  text="Tolls, parking, driver allowance and overnight costs are listed up front, not added afterwards."
-                />
-              </ul>
-            </div>
-            <div>
-              <h2 className={`${styles.display} text-4xl text-(--ink)`}>
-                Wherever you are in Malaysia
-              </h2>
-              <p className="mt-4 text-(--muted)">
-                Pick-ups start where you are: a hotel, an airport, a jetty or
-                the office. Our team is based in Langkawi and runs the same
-                drivers, vehicles and trip sheets across the country.
-              </p>
-              <dl className="mt-8 grid gap-4 sm:grid-cols-2">
-                {coverage.map((c) => (
-                  <div
-                    key={c.place}
-                    className="border-l-2 border-(--lantern) pl-4"
-                  >
-                    <dt className="font-semibold text-(--ink)">{c.place}</dt>
-                    <dd className="mt-1 text-[15px] text-(--muted)">
-                      {c.note}
-                    </dd>
+        {/* Why us */}
+        <section id="why" className="scroll-mt-6 bg-[#e4ede6]">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+            <h2 className="max-w-2xl font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+              Why people book with us, wherever they&rsquo;re going
+            </h2>
+            <ul className="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
+              {reasons.map((r) => (
+                <li key={r.title} className="flex gap-4">
+                  <span
+                    aria-hidden="true"
+                    className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-[#f5b800] ring-2 ring-[#0c2340]"
+                  />
+                  <div>
+                    <h3 className="text-xl font-semibold leading-snug text-[#0c2340]">
+                      {r.title}
+                    </h3>
+                    <p className="mt-2 text-[15px] leading-relaxed text-[#3d4a58]">
+                      {r.text}
+                    </p>
                   </div>
-                ))}
-              </dl>
-            </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
         {/* Quote */}
-        <section id="quote" className="scroll-mt-20 bg-(--ink) text-white">
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,20rem)_1fr] lg:gap-16 lg:py-24">
+        <section id="quote" className="scroll-mt-6 bg-[#0c2340] text-white">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:py-24">
             <div>
-              <h2 className={`${styles.display} text-4xl`}>Request a quote</h2>
-              <p className="mt-4 text-(--on-ink-muted)">
-                Tell us the basics and a coordinator will reply with a written
-                quote, usually the same working day. Prefer to talk? WhatsApp is
-                the fastest way to reach us.
+              <h2 className="font-(family-name:--font-display) text-4xl font-bold leading-none tracking-tight sm:text-5xl">
+                Ask for a quote
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-[#b9c8d6]">
+                Fill in what you know and send it to us on WhatsApp. If
+                you&rsquo;d rather just talk, message or call us directly.
               </p>
-              <a
-                href="#"
-                className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-3 font-semibold text-white hover:border-white hover:bg-white/10"
-              >
-                <WhatsAppIcon />
-                WhatsApp +60 X-XXX XXXX
-              </a>
-              <p className="mt-8 text-sm text-(--on-ink-muted)">
-                Office hours 8am to 8pm, seven days. Trips in progress are
-                answered around the clock.
-              </p>
+              <dl className="mt-8 grid gap-5 text-base">
+                <div>
+                  <dt className="text-sm text-[#b9c8d6]">WhatsApp and phone</dt>
+                  <dd className="mt-0.5 text-xl font-semibold tabular-nums">
+                    {PHONE}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[#b9c8d6]">Email</dt>
+                  <dd className="mt-0.5 text-xl font-semibold">
+                    hello@heavenlytravel.example
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-[#b9c8d6]">Office</dt>
+                  <dd className="mt-0.5">Kuah, Langkawi, Kedah, Malaysia</dd>
+                </div>
+              </dl>
             </div>
-
-            <form
-              action="#"
-              method="post"
-              className="grid gap-5 rounded-2xl bg-(--mist) p-6 text-(--text) sm:grid-cols-2 sm:p-8"
-            >
-              <Field label="Your name" id="name" autoComplete="name" />
-              <Field
-                label="WhatsApp or phone"
-                id="phone"
-                type="tel"
-                autoComplete="tel"
-                placeholder="+60"
-              />
-              <div className="grid gap-1.5">
-                <label htmlFor="service" className="text-sm font-semibold">
-                  Service
-                </label>
-                <select
-                  id="service"
-                  name="service"
-                  className={inputClass}
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Choose one
-                  </option>
-                  <option>Coach charter</option>
-                  <option>Car with driver</option>
-                  <option>Airport or jetty transfer</option>
-                  <option>Something else</option>
-                </select>
-              </div>
-              <Field
-                label="Number of passengers"
-                id="pax"
-                type="number"
-                inputMode="numeric"
-                min={1}
-              />
-              <Field label="Travel date" id="date" type="date" />
-              <Field
-                label="Pick-up location"
-                id="pickup"
-                placeholder="e.g. KLIA Terminal 1, or your hotel"
-              />
-              <div className="grid gap-1.5 sm:col-span-2">
-                <label htmlFor="notes" className="text-sm font-semibold">
-                  Anything else we should know
-                </label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows={3}
-                  className={inputClass}
-                  placeholder="Itinerary, luggage, child seats, invoicing to a company"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  className="w-full rounded-full bg-(--lantern) px-6 py-3.5 font-semibold text-(--ink) hover:bg-(--lantern-deep) sm:w-auto"
-                >
-                  Send quote request
-                </button>
-                <p className="mt-3 text-sm text-(--muted)">
-                  No payment is taken at this stage. You will receive a quote to
-                  confirm.
-                </p>
-              </div>
-            </form>
+            <div className="rounded-2xl bg-[#153560] p-6 sm:p-8">
+              <QuoteForm />
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="bg-(--ink-deep) text-(--on-ink-muted)">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 text-sm sm:px-8 md:grid-cols-3">
-          <div>
-            <span className={`${styles.display} text-2xl text-white`}>
+      <footer className="bg-[#081a30] text-[#b9c8d6]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <div className="flex items-center gap-2.5">
+            <Mark light />
+            <span className="font-(family-name:--font-display) text-xl font-bold leading-none text-white">
               Heavenly Travel
             </span>
-            <p className="mt-2 max-w-xs">
-              Coach charter and chauffeured cars. Based in Langkawi, serving all
-              of Malaysia since 2016.
-            </p>
           </div>
-          <address className="not-italic">
-            <p>Kuah, Langkawi, Kedah, Malaysia</p>
-            <p className="mt-1">
-              <a href="#" className="hover:text-white">
-                +60 X-XXX XXXX
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+            {navLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className={`rounded-sm hover:text-white ${focusRing}`}
+              >
+                {l.label}
               </a>
-            </p>
-            <p className="mt-1">
-              <a href="#" className="hover:text-white">
-                hello@heavenlytravel.example
-              </a>
-            </p>
-          </address>
-          <div className="md:text-right">
-            <p>Licensed tour and transport operator.</p>
-            <p className="mt-1">
-              Company registration and licence numbers on request.
-            </p>
-            <p className="mt-4">2026 Heavenly Travel Sdn. Bhd.</p>
-          </div>
+            ))}
+            <a
+              href="#quote"
+              className={`rounded-sm hover:text-white ${focusRing}`}
+            >
+              Get a quote
+            </a>
+          </nav>
+          <p>
+            Based in Langkawi, serving all of Malaysia. Coach charter and car
+            with driver since 2016.
+          </p>
         </div>
       </footer>
     </div>
   );
 }
 
-const inputClass =
-  "w-full rounded-lg border border-(--line) bg-white px-3.5 py-2.5 text-[15px] text-(--text) placeholder:text-(--muted)/70";
-
-function Field({
-  label,
-  id,
-  type = "text",
-  ...rest
-}: {
-  label: string;
-  id: string;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+function Mark({ light = false }: { light?: boolean }) {
+  const ink = light ? "#ffffff" : "#0c2340";
   return (
-    <div className="grid gap-1.5">
-      <label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </label>
-      <input id={id} name={id} type={type} className={inputClass} {...rest} />
-    </div>
-  );
-}
-
-function Audience({
-  img,
-  alt,
-  title,
-  text,
-}: {
-  img: string;
-  alt: string;
-  title: string;
-  text: string;
-}) {
-  return (
-    <article>
-      <div className="overflow-hidden rounded-2xl">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={img}
-          alt={alt}
-          className="aspect-[4/3] w-full object-cover"
-          width={1200}
-          height={900}
-          loading="lazy"
-        />
-      </div>
-      <h3 className={`${styles.display} mt-5 text-2xl text-(--ink)`}>
-        {title}
-      </h3>
-      <p className="mt-2 text-[15px] text-(--muted)">{text}</p>
-    </article>
-  );
-}
-
-function Standard({ title, text }: { title: string; text: string }) {
-  return (
-    <li className="flex gap-4">
-      <Tick className="mt-1.5" />
-      <div>
-        <h3 className="font-semibold text-(--ink)">{title}</h3>
-        <p className="mt-1 text-[15px] text-(--muted)">{text}</p>
-      </div>
-    </li>
-  );
-}
-
-function Tick({ className = "mt-[0.35rem]" }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      className={`h-4 w-4 shrink-0 self-start text-(--sea) ${className}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2.5 8.5l3.5 3.5 7.5-8" />
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="16" fill={ink} />
+      <path
+        d="M9 24c3-6 5-8 8-10 3-2 5-3 8-5"
+        fill="none"
+        stroke="#f5b800"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray="4 3.5"
+      />
+      <circle cx="9" cy="24" r="3" fill="#f5b800" />
+      <circle cx="25" cy="9" r="2.5" fill="#ffffff" />
     </svg>
   );
 }
 
-function WhatsAppIcon() {
+function Tick() {
   return (
     <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
       aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="currentColor"
+      className="mt-0.5 shrink-0"
     >
-      <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8zm-3.2 4.4c-.2 0-.5 0-.7.3-.3.3-1 1-1 2.3s1 2.7 1.1 2.9c.2.2 2 3.1 4.9 4.2 2.4.9 2.9.8 3.4.7.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.3-.1-.1-.3-.2-.6-.4l-2-1c-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.4.1-.6l.4-.5.3-.5c.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6z" />
+      <circle cx="10" cy="10" r="9" fill="#f5b800" />
+      <path
+        d="M6 10.5l2.6 2.5L14 7.5"
+        fill="none"
+        stroke="#0c2340"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

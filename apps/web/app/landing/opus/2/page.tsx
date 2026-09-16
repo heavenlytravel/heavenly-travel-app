@@ -1,617 +1,841 @@
 /**
  * Heavenly Travel — landing page variation
- * Route: /landing/opus/2
+ * Route: /landing/opus/2 (originally /landing/opus/3; renumbered 2026-09-17)
  * Model: Claude Opus 5 (claude-opus-5)
- * Direction: Coach-livery operator — bottle green and brass pinstripe, wide livery lettering, a livery-styled trip search bar and a "your pickup is confirmed" trip sheet showing the operation behind every booking, wherever in Malaysia it starts.
- * Tokens used: 57,099 (31 tool calls)
- * Time taken: 5m 39s
- * Revision 1: 84,971 tokens (22 tool calls), 2m 42s
- * Revision 1 notes: Repositioned as Malaysia-wide (Langkawi as base only), client hero title/description, added livery-styled trip search bar under the hero, reworked coverage section and FAQ.
+ * Direction: Malaysian expressway signage — a green direction sign hero with a sign-panel ride search, and a drawn road of destinations north to south with an E8 East Coast branch, pick-ups anywhere
+ * Tokens used: 54,940 (20 tool calls)
+ * Time taken: 6m 09s
+ * Revision 1: 72,091 tokens (18 tool calls), 2m 29s
+ * Revision 1 notes: New hero title/copy, green sign-panel booking search bar under hero, removed Langkawi-as-origin framing from sign, route, trust copy and metadata
  * Generated: 2026-09-15
  */
-
 import type { Metadata } from "next";
-import { Archivo } from "next/font/google";
+import { Overpass } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 import styles from "./landing.module.css";
-import { QuoteForm } from "./_components/QuoteForm";
-import { TripSearch } from "./_components/TripSearch";
+import { QuoteBuilder, WhatsAppGlyph } from "./_components/QuoteBuilder";
+import { SearchBar } from "./_components/SearchBar";
 
-const archivo = Archivo({
+const overpass = Overpass({
   subsets: ["latin"],
-  axes: ["wdth"],
-  variable: "--font-archivo",
   display: "swap",
+  weight: ["400", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel — Coach charter and cars with driver across Malaysia",
+  title: "Heavenly Travel | Coach charter and car with driver across Malaysia",
   description:
-    "Coach charter and cars with driver wherever you are in Malaysia. Experienced drivers, well-kept vehicles and a local team that takes care of the details. Request a quote.",
+    "Coach charter and private car with driver for groups, families and events, wherever you are in Malaysia and wherever you want to go. Ten years on the road, based in Langkawi.",
 };
 
-const WHATSAPP_HREF = "https://wa.me/60XXXXXXXXX";
+type Dir = "up" | "upRight" | "right";
 
-const IMG = {
-  coach:
-    "https://images.unsplash.com/photo-1557223562-6c77ef16210f?w=1600&q=80&auto=format&fit=crop",
-  cabin:
-    "https://images.unsplash.com/photo-1494515843206-f3117d3f51b7?w=1400&q=80&auto=format&fit=crop",
-  driver:
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1400&q=80&auto=format&fit=crop",
-  kl: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1400&q=80&auto=format&fit=crop",
+const signRows: { code: string; place: string; dir: Dir; blue?: boolean }[] = [
+  { code: "E36", place: "Penang", dir: "up" },
+  { code: "59", place: "Cameron Highlands", dir: "upRight", blue: true },
+  { code: "E1", place: "Kuala Lumpur", dir: "up" },
+  { code: "E2", place: "Melaka", dir: "up" },
+  { code: "E8", place: "Kuantan", dir: "right" },
+];
+
+type Stop = {
+  place: string;
+  road: string;
+  roadName: string;
+  lead: string;
+  detail: string;
 };
 
-const standards = [
+const mainStops: Stop[] = [
   {
-    title: "Drivers briefed before the day",
-    body: "Experienced, licensed drivers who know your itinerary, pickup points and timings before they set off.",
+    place: "Langkawi",
+    road: "Ferry",
+    roadName: "Kuala Perlis and Kuala Kedah jetties",
+    lead: "Island escapes.",
+    detail:
+      "Airport and jetty transfers, island tours, hotel pick-ups and wedding guests moved on time.",
   },
   {
-    title: "Vehicles kept in service condition",
-    body: "Air-conditioned, cleaned before each trip and maintained on schedule, so the vehicle that arrives is the one you were promised.",
+    place: "Penang",
+    road: "E36",
+    roadName: "Penang Bridge",
+    lead: "Heritage streets and hawker stalls.",
+    detail:
+      "George Town walking days, food trips and Batu Ferringhi resorts, with a driver who waits while you explore.",
   },
   {
-    title: "One coordinator, start to finish",
-    body: "The person who writes your quote stays with your booking and is reachable while you travel.",
+    place: "Cameron Highlands",
+    road: "59",
+    roadName: "Tapah to Tanah Rata",
+    lead: "Cool air and tea estates.",
+    detail:
+      "Winding hill roads are best left to someone who drives them often. Tea farms, strawberry farms and the mossy forest.",
   },
   {
-    title: "Quotes that spell it out",
-    body: "A written quote listing the vehicle, schedule and what's included, so nothing changes on the day.",
-  },
-];
-
-const steps = [
-  {
-    title: "Tell us the trip",
-    body: "Dates, pickup points, destinations and group size — by the form below or on WhatsApp.",
-  },
-  {
-    title: "Receive a written quote",
-    body: "We match the vehicle to your headcount and luggage, and list exactly what's included.",
-  },
-  {
-    title: "Confirm your booking",
-    body: "We reserve the vehicle and assign your driver and coordinator.",
-  },
-  {
-    title: "Get driver details",
-    body: "Before pickup you receive the driver's name, mobile number and vehicle registration.",
-  },
-  {
-    title: "Travel",
-    body: "Your driver arrives ahead of time. Your coordinator stays on call until the last drop-off.",
+    place: "Kuala Lumpur",
+    road: "E1",
+    roadName: "North–South Expressway",
+    lead: "Conferences, KLIA and city days.",
+    detail:
+      "Airport runs, corporate event shuttles, school trips to the museums and a day out at Batu Caves.",
   },
 ];
 
-const pickups = [
+const eastStops = [
+  { place: "Kuantan", note: "Cherating beaches and Sungai Pandan falls" },
   {
-    name: "Airports and ferry terminals",
-    note: "Planned around your flight or sailing",
+    place: "Kuala Terengganu",
+    note: "Jetty runs for Redang and the Perhentians",
   },
-  { name: "Hotels and resorts", note: "Collected from the lobby" },
-  { name: "Offices and event venues", note: "Shuttles to your schedule" },
-  { name: "Schools and campuses", note: "Excursions and group trips" },
-  { name: "Your front door", note: "Door to door for families" },
+  { place: "Kota Bharu", note: "Kelantan markets, crafts and culture" },
 ];
 
-const faqs = [
+const southStops: Stop[] = [
   {
-    q: "Can you meet early flights and late ferries?",
-    a: "Yes. Share your flight number or ferry schedule when you request a quote and we plan the pickup around it, including early-morning and late-night arrivals.",
+    place: "Melaka",
+    road: "E2",
+    roadName: "North–South Expressway",
+    lead: "The old port town.",
+    detail:
+      "Jonker Street, the Stadthuys and river cruises. A favourite for school groups and family weekends.",
   },
   {
-    q: "How far ahead should we book?",
-    a: "For school holidays, public holidays and large events, book as early as you can so the right vehicle is reserved. We always check short-notice requests — message us and we'll tell you honestly what's available.",
-  },
-  {
-    q: "Where can you pick us up?",
-    a: "Wherever you are in Malaysia — an airport, hotel, office, school or your home — and take you wherever you're going. Tell us both ends of the trip and we'll quote the route.",
-  },
-  {
-    q: "What is included in the price?",
-    a: "Every quote is written and itemised: the vehicle, the driver, the schedule and any extras such as tolls or waiting time. If something isn't listed, it isn't assumed.",
-  },
-  {
-    q: "Can we change the itinerary after booking?",
-    a: "Tell your coordinator as soon as plans change. We'll confirm whether the new timing or route works and update your quote in writing before the day.",
+    place: "Johor Bahru",
+    road: "E2",
+    roadName: "Southern end",
+    lead: "The far end of the peninsula.",
+    detail:
+      "Theme park days for families, and the Desaru coast for company retreats.",
   },
 ];
-
-function Photo({
-  src,
-  alt,
-  className,
-  eager,
-}: {
-  src: string;
-  alt: string;
-  className?: string;
-  eager?: boolean;
-}) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      loading={eager ? "eager" : "lazy"}
-      decoding="async"
-      className={`h-full w-full object-cover ${className ?? ""}`}
-    />
-  );
-}
-
-const btnPrimary =
-  "inline-flex items-center justify-center rounded-[3px] bg-[#c49a3c] px-6 py-3.5 font-semibold text-[#0a2a22] transition-colors hover:bg-[#d4ab50]";
-const btnSolid =
-  "inline-flex items-center justify-center rounded-[3px] bg-[#0e3a2f] px-6 py-3.5 font-semibold text-white transition-colors hover:bg-[#15503f]";
-const btnGhostDark =
-  "inline-flex items-center justify-center rounded-[3px] border border-white/45 px-6 py-3.5 font-semibold text-white transition-colors hover:bg-white/10";
 
 export default function Page() {
   return (
-    <div className={`${archivo.variable} ${styles.page}`}>
+    <div className={`${overpass.className} ${styles.root}`}>
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:px-4 focus:py-2 focus:text-[#0a2a22]"
+        className="sr-only z-50 rounded-full bg-[#FFC72C] px-4 py-2 font-bold text-[#263033] focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         Skip to content
       </a>
 
-      {/* Header */}
-      <header className="bg-[#0e3a2f] text-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-6 px-5 py-4 sm:px-8">
-          <a href="#" className="flex items-baseline gap-2">
-            <span className={`${styles.wide} text-lg font-bold sm:text-xl`}>
-              Heavenly Travel
-            </span>
-          </a>
-          <nav aria-label="Main" className="hidden md:block">
-            <ul className="flex gap-7 text-[0.95rem] text-white/85">
-              <li>
-                <a href="#services" className="hover:text-white">
-                  Services
-                </a>
-              </li>
-              <li>
-                <a href="#how-it-works" className="hover:text-white">
-                  How booking works
-                </a>
-              </li>
-              <li>
-                <a href="#coverage" className="hover:text-white">
-                  Where we operate
-                </a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-white">
-                  Questions
-                </a>
-              </li>
-            </ul>
-          </nav>
-          <a
-            href="#quote"
-            className="rounded-[3px] border border-[#c49a3c] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c49a3c] hover:text-[#0a2a22]"
-          >
-            Request a quote
-          </a>
-        </div>
-      </header>
+      <Header />
 
       <main id="main">
-        {/* Hero */}
-        <section
-          aria-labelledby="hero-title"
-          className="bg-[#0e3a2f] text-white"
+        <Hero />
+        <RouteSection />
+        <Services />
+        <WhyUs />
+        <Steps />
+        <QuoteSection />
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
+      <a href="#main" className="flex items-center gap-2.5 font-extrabold">
+        <Logo />
+        <span className="text-lg leading-none tracking-tight sm:text-xl">
+          Heavenly Travel
+        </span>
+      </a>
+      <nav aria-label="Main" className="flex items-center gap-1 sm:gap-6">
+        <ul className="hidden items-center gap-6 text-[15px] font-semibold md:flex">
+          <li>
+            <a className="hover:underline" href="#route">
+              Where we go
+            </a>
+          </li>
+          <li>
+            <a className="hover:underline" href="#services">
+              Vehicles
+            </a>
+          </li>
+          <li>
+            <a className="hover:underline" href="#how">
+              How booking works
+            </a>
+          </li>
+        </ul>
+        <a
+          href="#quote"
+          className={`${styles.cta} rounded-full bg-[#00573F] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#00442f] sm:px-5`}
         >
-          <div className="mx-auto grid max-w-[1200px] lg:grid-cols-[1.05fr_1fr]">
-            <div className="px-5 pb-14 pt-12 sm:px-8 sm:pt-20 lg:pb-24">
-              <p className="text-[0.95rem] text-[#e2c47f]">
-                Coach charter and cars with driver, wherever you are in Malaysia
-              </p>
-              <h1
-                id="hero-title"
-                className={`${styles.wide} mt-5 text-[2.35rem] font-bold leading-[1.04] sm:text-[3.4rem] lg:text-[4.1rem]`}
-              >
-                A better way to get away.
-              </h1>
-              <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-white/80">
-                Island escapes, seamless transport and trips made around you.
-                Let our local team take care of the details.
-              </p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <a href="#quote" className={btnPrimary}>
-                  Request a quote
-                </a>
-                <a
-                  href={WHATSAPP_HREF}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={btnGhostDark}
-                >
-                  Message us on WhatsApp
-                </a>
-              </div>
-            </div>
+          Get a quote
+        </a>
+      </nav>
+    </header>
+  );
+}
 
-            <div className="relative min-h-[420px] lg:min-h-0">
-              <Photo
-                src={IMG.coach}
-                eager
-                alt="Close view of a polished champagne-gold coach parked at the kerb"
-                className="absolute inset-0"
-              />
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-t from-[#0e3a2f]/70 via-transparent to-transparent lg:bg-gradient-to-r lg:from-[#0e3a2f]/60"
-              />
-              {/* Trip sheet: what every client receives before pickup */}
-              <figure className="absolute bottom-5 left-5 right-5 max-w-[360px] rounded-md bg-white p-5 text-[#0a2a22] shadow-[0_18px_40px_-12px_rgba(6,30,23,0.55)] sm:bottom-8 sm:left-auto sm:right-8 lg:bottom-20">
-                <figcaption className="flex items-center justify-between gap-3 border-b border-[#0e3a2f]/15 pb-3">
-                  <span className={`${styles.semi} font-semibold`}>
-                    Your pickup is confirmed
-                  </span>
-                  <span className="rounded-full bg-[#0e3a2f] px-2.5 py-0.5 text-xs font-medium text-white">
-                    Sent before pickup
-                  </span>
-                </figcaption>
-                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[0.92rem]">
-                  <dt className="text-[#4f5b56]">Pickup</dt>
-                  <dd>07:30, hotel lobby</dd>
-                  <dt className="text-[#4f5b56]">Vehicle</dt>
-                  <dd>Coach, registration included</dd>
-                  <dt className="text-[#4f5b56]">Driver</dt>
-                  <dd>Name and mobile number</dd>
-                  <dt className="text-[#4f5b56]">Coordinator</dt>
-                  <dd>On call until drop-off</dd>
-                </dl>
-              </figure>
-            </div>
-          </div>
-          <div className="mx-auto max-w-[1200px] px-5 pb-12 pt-10 sm:px-8 lg:relative lg:z-10 lg:-mt-12 lg:pt-0">
-            <h2 id="search-title" className="sr-only">
-              Search for a vehicle
-            </h2>
-            <TripSearch />
-          </div>
-        </section>
+function Logo() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="34"
+      height="34"
+      viewBox="0 0 34 34"
+      fill="none"
+    >
+      <rect width="34" height="34" rx="8" fill="#00573F" />
+      <rect
+        x="3"
+        y="3"
+        width="28"
+        height="28"
+        rx="5.5"
+        stroke="#fff"
+        strokeWidth="2"
+      />
+      <path
+        d="M17 25V11m0 0-5.5 5.5M17 11l5.5 5.5"
+        stroke="#FFC72C"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-        <div className={styles.stripe} aria-hidden="true" />
+function Arrow({ dir }: { dir: Dir }) {
+  const rotate = dir === "up" ? 0 : dir === "upRight" ? 45 : 90;
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 32 32"
+      className="h-7 w-7 shrink-0 sm:h-9 sm:w-9"
+      style={{ transform: `rotate(${rotate}deg)` }}
+    >
+      <path
+        d="M16 28V6m0 0L6 16m10-10 10 10"
+        stroke="#fff"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
 
-        {/* Standards */}
-        <section
-          aria-labelledby="standards-title"
-          className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24"
-        >
-          <div className="max-w-[40rem]">
-            <h2
-              id="standards-title"
-              className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.6rem]`}
-            >
-              The standard on every trip
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-              Ten years of running group and private transport taught us that
-              one car to the airport and a convoy of coaches for a conference
-              deserve the same care.
-            </p>
-          </div>
-          <ul className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-            {standards.map((s) => (
-              <li
-                key={s.title}
-                className="border-t-[3px] border-[#c49a3c] pt-5"
-              >
-                <h3
-                  className={`${styles.semi} text-lg font-semibold leading-snug`}
-                >
-                  {s.title}
-                </h3>
-                <p className="mt-2.5 leading-relaxed text-[#4f5b56]">
-                  {s.body}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Services */}
-        <section
-          id="services"
-          aria-labelledby="services-title"
-          className="bg-white"
-        >
-          <div className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
-            <h2
-              id="services-title"
-              className={`${styles.wide} max-w-[40rem] text-[1.85rem] font-bold leading-tight sm:text-[2.6rem]`}
-            >
-              Two ways to travel with us
-            </h2>
-
-            <article className="mt-14 grid items-stretch gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-14">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-md lg:aspect-auto">
-                <Photo
-                  src={IMG.cabin}
-                  alt="Passengers seated in a coach with blue high-back seats"
-                  className="absolute inset-0"
-                />
-              </div>
-              <div className="lg:py-6">
-                <h3
-                  className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}
-                >
-                  Coach charter
-                </h3>
-                <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-                  For sightseeing tours, company trips, school outings, weddings
-                  and event shuttles. Give us your headcount and luggage and
-                  we&apos;ll size the coach to fit — no half-empty buses, no
-                  squeezing in.
-                </p>
-                <h4 className="mt-8 font-semibold">Booked for</h4>
-                <ul className="mt-3 divide-y divide-[#0e3a2f]/12 border-y border-[#0e3a2f]/12">
-                  {[
-                    "City, highland and island sightseeing tours",
-                    "Corporate retreats, conferences and incentive trips",
-                    "School and university excursions",
-                    "Group transfers from airports and ferry jetties",
-                  ].map((item) => (
-                    <li key={item} className="py-3">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <a href="#quote" className={`${btnSolid} mt-8`}>
-                  Quote a coach charter
-                </a>
-              </div>
-            </article>
-
-            <article className="mt-20 grid items-stretch gap-8 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-md lg:order-2 lg:aspect-auto">
-                <Photo
-                  src={IMG.driver}
-                  alt="A driver's hands on the steering wheel of a car at dusk"
-                  className="absolute inset-0"
-                />
-              </div>
-              <div className="lg:order-1 lg:py-6">
-                <h3
-                  className={`${styles.wide} text-2xl font-bold sm:text-[2rem]`}
-                >
-                  Car with driver
-                </h3>
-                <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-                  A private car and a professional driver — for a single
-                  transfer, a few hours or the whole day. For families, VIP
-                  guests and business travellers who would rather arrive than
-                  navigate.
-                </p>
-                <h4 className="mt-8 font-semibold">Booked for</h4>
-                <ul className="mt-3 divide-y divide-[#0e3a2f]/12 border-y border-[#0e3a2f]/12">
-                  {[
-                    "Airport and ferry terminal pickups",
-                    "Full-day sightseeing at your own pace",
-                    "Business meetings and hotel transfers",
-                    "Guests of events, weddings and delegations",
-                  ].map((item) => (
-                    <li key={item} className="py-3">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <a href="#quote" className={`${btnSolid} mt-8`}>
-                  Quote a car with driver
-                </a>
-              </div>
-            </article>
-
-            <p className="mt-16 max-w-[44rem] border-l-[3px] border-[#c49a3c] pl-5 text-[#4f5b56]">
-              More travel services are on the way as we grow. If your plans need
-              something beyond a coach or a car, ask us — we&apos;ll tell you
-              straight whether we can help.
-            </p>
-          </div>
-        </section>
-
-        {/* How booking works */}
-        <section
-          id="how-it-works"
-          aria-labelledby="how-title"
-          className="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24"
-        >
-          <div className="max-w-[40rem]">
-            <h2
-              id="how-title"
-              className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.6rem]`}
-            >
-              How a booking runs
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-[#4f5b56]">
-              Five steps from first message to final drop-off. You always know
-              who is driving and who to call.
-            </p>
-          </div>
-          <ol
-            className={`${styles.route} mt-14 grid gap-9 min-[900px]:grid-cols-5 min-[900px]:gap-6`}
+function Hero() {
+  return (
+    <section aria-labelledby="hero-title" className="overflow-hidden">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pt-8 pb-10 sm:px-8 md:pt-12 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+        <div>
+          <h1
+            id="hero-title"
+            className="text-[2.75rem] leading-[1.02] font-black tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.6rem]"
           >
-            {steps.map((step, i) => (
-              <li
-                key={step.title}
-                className="relative grid grid-cols-[40px_1fr] gap-x-5 min-[900px]:block"
-              >
-                <span
-                  className={`${styles.semi} relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-[#c49a3c] bg-[#0e3a2f] text-[0.95rem] font-bold text-white`}
-                  aria-hidden="true"
-                >
-                  {i + 1}
-                </span>
-                <div className="min-[900px]:mt-5">
-                  <h3
-                    className={`${styles.semi} text-lg font-semibold leading-snug`}
-                  >
-                    <span className="sr-only">Step {i + 1}: </span>
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 leading-relaxed text-[#4f5b56]">
-                    {step.body}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
+            A better way to get away.
+          </h1>
+          <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-[#263033]/85 sm:text-xl">
+            Island escapes, seamless transport and trips made around you. Let
+            our local team take care of the details.
+          </p>
+          <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[17px] font-bold">
+            <a
+              href="#quote"
+              className="inline-flex items-center gap-2 text-[#00573F] underline decoration-2 underline-offset-4 hover:decoration-[#FFC72C]"
+            >
+              <WhatsAppGlyph />
+              Ask for a quote on WhatsApp
+            </a>
+            <a
+              href="#route"
+              className="underline decoration-2 underline-offset-4 hover:decoration-[#FFC72C]"
+            >
+              See where we go
+            </a>
+          </p>
+        </div>
 
-        {/* Coverage */}
-        <section
-          id="coverage"
-          aria-labelledby="coverage-title"
-          className="bg-[#0e3a2f] text-white"
-        >
-          <div className="mx-auto grid max-w-[1200px] lg:grid-cols-2">
-            <div className="relative min-h-[300px] sm:min-h-[380px]">
-              <Photo
-                src={IMG.kl}
-                alt="Kuala Lumpur skyline with the Petronas Twin Towers at dusk"
-                className="absolute inset-0"
-              />
-            </div>
-            <div className="px-5 py-16 sm:px-8 sm:py-20 lg:px-14">
-              <h2
-                id="coverage-title"
-                className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.4rem]`}
-              >
-                Wherever you are. Wherever you&apos;re going.
-              </h2>
-              <p className="mt-5 max-w-[34rem] text-lg leading-relaxed text-white/80">
-                Tell us where to collect you and where the day ends — in any
-                state, city or island in Malaysia. We plan the route, the
-                vehicle and the timings around your trip.
+        <figure className="relative">
+          <div
+            className={`${styles.sign} mx-auto max-w-[31rem] rotate-[-1.2deg]`}
+          >
+            <div className={`${styles.signInner} px-4 pt-5 pb-3 sm:px-6`}>
+              <p className="text-[15px] font-semibold text-white/85">
+                Wherever you are, we&apos;re going your way.
               </p>
-              <h3 className="mt-9 text-[0.95rem] text-[#e2c47f]">
-                Where we collect you
-              </h3>
-              <ul className="mt-3 border-t border-white/20">
-                {pickups.map((r) => (
+              <ul className="mt-3 divide-y-2 divide-white/25">
+                {signRows.map((row, i) => (
                   <li
-                    key={r.name}
-                    className="flex flex-col gap-0.5 border-b border-white/20 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+                    key={row.place}
+                    className={`${styles.row} flex items-center gap-3 py-3 sm:gap-4`}
+                    style={
+                      { animationDelay: `${150 + i * 110}ms` } as CSSProperties
+                    }
                   >
-                    <span className={`${styles.semi} font-semibold`}>
-                      {r.name}
+                    <span
+                      className={`${styles.shield} ${row.blue ? styles.shieldBlue : ""} text-sm sm:text-base`}
+                    >
+                      {row.code}
                     </span>
-                    <span className="text-[0.95rem] text-white/70 sm:text-right">
-                      {r.note}
+                    <span className="min-w-0 flex-1 text-[1.35rem] leading-tight font-extrabold sm:text-[1.9rem]">
+                      {row.place}
                     </span>
+                    <Arrow dir={row.dir} />
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-        </section>
+          <figcaption className="sr-only">
+            A road sign listing Penang, Cameron Highlands, Kuala Lumpur, Melaka
+            and Kuantan.
+          </figcaption>
+          {/* sign posts */}
+          <div
+            aria-hidden="true"
+            className="mx-auto flex max-w-[31rem] justify-around px-16"
+          >
+            <span className="h-14 w-3 rounded-b bg-[#8a9894]" />
+            <span className="h-14 w-3 rounded-b bg-[#8a9894]" />
+          </div>
+        </figure>
+      </div>
+      <div className="mx-auto max-w-6xl px-3 pb-14 sm:px-8 lg:pb-20">
+        <SearchBar />
+      </div>
+      <div aria-hidden="true" className={`${styles.roadH} h-14`} />
+    </section>
+  );
+}
 
-        {/* FAQ */}
+function RouteSection() {
+  return (
+    <section
+      id="route"
+      aria-labelledby="route-title"
+      className="scroll-mt-4 bg-white pt-16 pb-6 sm:pt-24"
+    >
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="max-w-2xl">
+          <h2
+            id="route-title"
+            className="text-4xl leading-[1.05] font-black tracking-[-0.015em] sm:text-5xl"
+          >
+            One company for the whole trip.
+          </h2>
+          <p className="mt-4 text-lg leading-relaxed text-[#263033]/85">
+            Follow the road down the peninsula to see where people travel with
+            us. Get picked up at any stop and dropped at any other, or somewhere
+            that isn&apos;t on this map at all.
+          </p>
+        </div>
+
+        <ol className="mt-14" aria-label="Destinations from north to south">
+          {mainStops.map((stop, i) => (
+            <RouteStop key={stop.place} stop={stop} first={i === 0} />
+          ))}
+
+          <li>
+            <EastCoastBranch />
+          </li>
+
+          {southStops.map((stop, i) => (
+            <RouteStop
+              key={stop.place}
+              stop={stop}
+              last={i === southStops.length - 1}
+            />
+          ))}
+        </ol>
+
+        <p className="mx-auto mt-4 max-w-xl pb-10 text-center text-[17px] leading-relaxed text-[#263033]/85 md:text-lg">
+          Heading somewhere not on the map? Tell us the route. We&apos;re adding
+          new destinations as we grow.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function RoadCell({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`${styles.roadV} flex justify-center ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function RouteStop({
+  stop,
+  first,
+  last,
+}: {
+  stop: Stop;
+  first?: boolean;
+  last?: boolean;
+}) {
+  const roadClass = `${first ? styles.roadStart : ""} ${last ? styles.roadEnd : ""}`;
+  return (
+    <li className="grid grid-cols-[44px_1fr] gap-x-4 md:grid-cols-[1fr_76px_1.15fr] md:gap-x-8">
+      <div className="hidden pt-5 pb-14 text-right md:block">
+        <h3 className="text-[2.6rem] leading-none font-black tracking-[-0.015em]">
+          {stop.place}
+        </h3>
+        <p className="mt-3 inline-flex items-center gap-2 text-[15px] font-semibold text-[#263033]/80">
+          <span className={`${styles.shield} text-sm`}>{stop.road}</span>
+          {stop.roadName}
+        </p>
+      </div>
+      <RoadCell className={`md:row-auto ${roadClass}`}>
+        <span className={`${styles.stop} mt-6`} />
+      </RoadCell>
+      <div className="pt-5 pb-12 md:pb-14">
+        <div className="md:hidden">
+          <h3 className="text-[2rem] leading-none font-black tracking-[-0.015em]">
+            {stop.place}
+          </h3>
+          <p className="mt-2.5 mb-3 inline-flex items-center gap-2 text-[15px] font-semibold text-[#263033]/80">
+            <span className={`${styles.shield} text-sm`}>{stop.road}</span>
+            {stop.roadName}
+          </p>
+        </div>
+        <p className="text-xl font-bold md:pt-2">{stop.lead}</p>
+        <p className="mt-2 max-w-[30rem] text-[17px] leading-relaxed text-[#263033]/85">
+          {stop.detail}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function EastCoastBranch() {
+  return (
+    <div className="grid grid-cols-[44px_1fr] gap-x-4 md:grid-cols-[1fr_76px_1.15fr] md:gap-x-8">
+      <div className="hidden md:block" />
+      <RoadCell>
+        <span />
+      </RoadCell>
+      <div className="pb-12 md:pb-14">
         <section
-          id="faq"
-          aria-labelledby="faq-title"
-          className="mx-auto grid max-w-[1200px] gap-10 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[1fr_1.6fr] lg:gap-16"
+          aria-labelledby="east-title"
+          className={`${styles.onDark} overflow-hidden rounded-2xl bg-[#0B5E8E] text-white`}
         >
-          <div>
-            <h2
-              id="faq-title"
-              className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.6rem]`}
+          <div className="px-5 pt-5 sm:px-6">
+            <p className="inline-flex items-center gap-2 text-[15px] font-semibold text-white/90">
+              <span className={`${styles.shield} text-sm`}>E8</span>
+              Turn off at Kuala Lumpur
+            </p>
+            <h3
+              id="east-title"
+              className="mt-2 text-3xl leading-none font-black tracking-[-0.015em]"
             >
-              Before you book
-            </h2>
-            <p className="mt-4 max-w-[26rem] text-lg leading-relaxed text-[#4f5b56]">
-              The questions organisers ask us most. Anything else, ask on
-              WhatsApp.
+              The East Coast
+            </h3>
+            <p className="mt-2 max-w-[28rem] text-[17px] leading-relaxed text-white/90">
+              Across the Titiwangsa range to the South China Sea: quieter
+              beaches, island jetties and Malay heritage.
             </p>
           </div>
-          <div className="border-t border-[#0e3a2f]/20">
-            {faqs.map((f) => (
-              <details
-                key={f.q}
-                className={`${styles.faq} border-b border-[#0e3a2f]/20`}
-              >
-                <summary className="flex items-start justify-between gap-6 py-5 text-lg font-semibold">
-                  {f.q}
-                  <span
-                    aria-hidden="true"
-                    className={`${styles.mark} mt-0.5 text-2xl leading-none text-[#7d5a14]`}
-                  >
-                    +
+          <div
+            aria-hidden="true"
+            className={`${styles.branchRoadH} mt-5 h-5 border-y-2 border-[#084a70]`}
+          />
+          <ul className="grid gap-4 px-5 py-5 sm:grid-cols-3 sm:px-6">
+            {eastStops.map((s) => (
+              <li key={s.place} className="flex gap-3 sm:block">
+                <span
+                  aria-hidden="true"
+                  className={`${styles.stop} ${styles.stopBlue} mt-1 shrink-0 sm:mt-0 sm:mb-2 sm:block`}
+                />
+                <span>
+                  <span className="block text-lg leading-tight font-extrabold">
+                    {s.place}
                   </span>
-                </summary>
-                <p className="max-w-[40rem] pb-6 leading-relaxed text-[#4f5b56]">
-                  {f.a}
-                </p>
-              </details>
+                  <span className="mt-1 block text-[15px] leading-snug text-white/90">
+                    {s.note}
+                  </span>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
-
-        <div className={styles.stripe} aria-hidden="true" />
-
-        {/* Quote */}
-        <section
-          id="quote"
-          aria-labelledby="quote-title"
-          className="bg-[#0e3a2f] text-white"
-        >
-          <div className="mx-auto grid max-w-[1200px] gap-12 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-            <div>
-              <h2
-                id="quote-title"
-                className={`${styles.wide} text-[1.85rem] font-bold leading-tight sm:text-[2.6rem]`}
-              >
-                Request a quote
-              </h2>
-              <p className="mt-5 max-w-[30rem] text-lg leading-relaxed text-white/80">
-                Share the basics and we&apos;ll come back with a written quote.
-                Prefer to talk it through? Our coordinators are on WhatsApp.
-              </p>
-              <dl className="mt-10 space-y-5">
-                <div>
-                  <dt className="text-sm text-white/60">WhatsApp and phone</dt>
-                  <dd className={`${styles.semi} mt-1 text-xl font-semibold`}>
-                    <a
-                      href={WHATSAPP_HREF}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline decoration-[#c49a3c] decoration-2 underline-offset-4 hover:text-[#e2c47f]"
-                    >
-                      +60 X-XXX XXXX
-                    </a>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-white/60">Office</dt>
-                  <dd className="mt-1">
-                    Based in Langkawi, serving all of Malaysia
-                  </dd>
-                </div>
-              </dl>
-            </div>
-            <QuoteForm />
-          </div>
-        </section>
-      </main>
-
-      <footer className="bg-[#0a2a22] text-white/70">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-5 pb-24 pt-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p>
-            <span className={`${styles.wide} font-bold text-white`}>
-              Heavenly Travel
-            </span>
-            <span className="ml-3">
-              Based in Langkawi, serving all of Malaysia
-            </span>
-          </p>
-          <p>&copy; 2026 Heavenly Travel</p>
-        </div>
-      </footer>
+      </div>
     </div>
+  );
+}
+
+function Services() {
+  return (
+    <section
+      id="services"
+      aria-labelledby="services-title"
+      className="scroll-mt-4 bg-[#E3ECE6] py-20 sm:py-28"
+    >
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <h2
+          id="services-title"
+          className="max-w-2xl text-4xl leading-[1.05] font-black tracking-[-0.015em] sm:text-5xl"
+        >
+          Pick the vehicle that fits your group.
+        </h2>
+
+        <div className="mt-12 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+          <article
+            className={`${styles.onDark} rounded-3xl bg-[#00573F] p-7 text-white sm:p-10`}
+          >
+            <CoachIcon />
+            <h3 className="mt-6 text-3xl font-black tracking-[-0.01em] sm:text-4xl">
+              Coach charter
+            </h3>
+            <p className="mt-3 max-w-[32rem] text-lg leading-relaxed text-white/90">
+              A bus and driver for everyone travelling together, with luggage
+              space and one pick-up plan. Tell us your headcount and we match
+              the coach size.
+            </p>
+            <ul className="mt-7 grid gap-x-8 gap-y-3 text-[17px] font-semibold sm:grid-cols-2">
+              {[
+                "Tour groups and multi-day itineraries",
+                "Company trips, conferences and events",
+                "School outings and sports teams",
+                "Airport and jetty transfers for groups",
+              ].map((t) => (
+                <li key={t} className="flex gap-3">
+                  <Tick />
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#quote"
+              className={`${styles.cta} mt-9 inline-flex rounded-full bg-[#FFC72C] px-6 py-3.5 font-extrabold text-[#263033] hover:bg-[#ffd452]`}
+            >
+              Quote a coach
+            </a>
+          </article>
+
+          <article className="rounded-3xl bg-white p-7 sm:p-10">
+            <CarIcon />
+            <h3 className="mt-6 text-3xl font-black tracking-[-0.01em] sm:text-4xl">
+              Car with driver
+            </h3>
+            <p className="mt-3 text-lg leading-relaxed text-[#263033]/85">
+              A private car and a driver on your schedule. Stop where you like,
+              for as long as you like.
+            </p>
+            <ul className="mt-7 grid gap-3 text-[17px] font-semibold">
+              {[
+                "Families and couples on holiday",
+                "Business travel between meetings",
+                "Full-day and half-day sightseeing",
+                "Airport and jetty pick-ups",
+              ].map((t) => (
+                <li key={t} className="flex gap-3">
+                  <Tick dark />
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#quote"
+              className={`${styles.cta} mt-9 inline-flex rounded-full bg-[#00573F] px-6 py-3.5 font-extrabold text-white hover:bg-[#00442f]`}
+            >
+              Quote a car
+            </a>
+          </article>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-2 rounded-3xl border-[3px] border-dashed border-[#263033]/35 px-7 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+          <p className="text-xl font-extrabold">
+            More ways to travel are on the way.
+          </p>
+          <p className="text-[17px] text-[#263033]/85">
+            Planning something bigger? Ask us, we may already be able to help.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Tick({ dark }: { dark?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="mt-0.5 h-5 w-5 shrink-0"
+      fill="none"
+    >
+      <path
+        d="M4 10.5 8 14.5 16 5.5"
+        stroke={dark ? "#00573F" : "#FFC72C"}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CoachIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 120 56"
+      className="h-14 w-auto"
+      fill="none"
+    >
+      <rect x="3" y="4" width="112" height="38" rx="9" fill="#fff" />
+      <rect x="10" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
+      <rect x="31" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
+      <rect x="52" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
+      <rect x="73" y="11" width="16" height="13" rx="2.5" fill="#00573F" />
+      <path d="M95 11h11a4 4 0 0 1 4 4v19H95z" fill="#00573F" />
+      <rect x="3" y="30" width="112" height="4" fill="#FFC72C" />
+      <circle
+        cx="26"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle
+        cx="90"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+function CarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 96 56"
+      className="h-14 w-auto"
+      fill="none"
+    >
+      <path
+        d="M8 36c0-5 3-8 8-9l10-12c2-2 4-3 7-3h26c3 0 5 1 7 3l11 12c6 1 11 4 11 9v6H8z"
+        fill="#00573F"
+      />
+      <path d="M30 17h13v10H22zM48 17h11c1 0 2 0 3 1l8 9H48z" fill="#E3ECE6" />
+      <rect x="8" y="34" width="80" height="3" fill="#FFC72C" />
+      <circle
+        cx="26"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+      <circle
+        cx="72"
+        cy="44"
+        r="8"
+        fill="#263033"
+        stroke="#fff"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+function WhyUs() {
+  const points = [
+    {
+      title: "Drivers who know the way",
+      body: "Our local team plans around the real road: early flights, ferry timetables, hill roads and city traffic.",
+    },
+    {
+      title: "A clear quote first",
+      body: "Your quote lists the vehicle, route, timing and price, so you can agree to it before anything is booked.",
+    },
+    {
+      title: "A person on WhatsApp",
+      body: "Message the same team before the trip, on the day, and if plans change halfway.",
+    },
+  ];
+  return (
+    <section
+      aria-labelledby="why-title"
+      className={`${styles.onDark} bg-[#263033] py-20 text-white sm:py-28`}
+    >
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 sm:px-8 lg:grid-cols-[auto_1fr] lg:gap-20">
+        <div className="flex items-start gap-6 lg:flex-col">
+          <KmPost />
+          <h2
+            id="why-title"
+            className="max-w-[18rem] text-4xl leading-[1.05] font-black tracking-[-0.015em] sm:text-5xl lg:max-w-[20rem]"
+          >
+            Ten years on the road, and still driving.
+          </h2>
+        </div>
+        <ul className="grid content-center gap-10 md:grid-cols-3 md:gap-8">
+          {points.map((p) => (
+            <li key={p.title} className="border-t-4 border-[#FFC72C] pt-5">
+              <h3 className="text-xl font-extrabold">{p.title}</h3>
+              <p className="mt-2 text-[17px] leading-relaxed text-white/85">
+                {p.body}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function KmPost() {
+  return (
+    <div
+      role="img"
+      aria-label="A roadside kilometre post marked 10 years"
+      className="w-24 shrink-0 overflow-hidden rounded-t-[2.2rem] rounded-b-md bg-white text-center text-[#263033] sm:w-28"
+    >
+      <div className="bg-[#FFC72C] pt-5 pb-2 text-sm font-extrabold">HT</div>
+      <div className="pt-3 text-5xl leading-none font-black">10</div>
+      <div className="pt-1 pb-4 text-sm font-bold">years</div>
+    </div>
+  );
+}
+
+function Steps() {
+  const steps = [
+    {
+      title: "Send us your route",
+      body: "Pick-up, drop-off, date and how many people. Rough plans are fine.",
+    },
+    {
+      title: "Get your quote",
+      body: "We suggest the right vehicle and send a price for the whole trip.",
+    },
+    {
+      title: "Confirm and travel",
+      body: "Once you confirm, we send your driver's pick-up time and meet you there.",
+    },
+  ];
+  return (
+    <section
+      id="how"
+      aria-labelledby="how-title"
+      className="scroll-mt-4 bg-white py-20 sm:py-28"
+    >
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <h2
+          id="how-title"
+          className="max-w-2xl text-4xl leading-[1.05] font-black tracking-[-0.015em] sm:text-5xl"
+        >
+          Booking takes three messages.
+        </h2>
+        <div className="relative mt-12">
+          <div
+            aria-hidden="true"
+            className={`${styles.roadH} absolute top-[22px] right-[16%] left-[4%] hidden h-3 rounded-full md:block`}
+            style={{ backgroundSize: "100% 2px" }}
+          />
+          <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
+            {steps.map((s, i) => (
+              <li key={s.title} className="relative flex gap-5 md:block">
+                <span className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-white bg-[#00573F] text-2xl font-black text-white outline-2 outline-[#00573F]">
+                  {i + 1}
+                </span>
+                <div className="md:mt-5">
+                  <h3 className="text-2xl font-extrabold">{s.title}</h3>
+                  <p className="mt-2 max-w-[22rem] text-[17px] leading-relaxed text-[#263033]/85">
+                    {s.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuoteSection() {
+  return (
+    <section
+      id="quote"
+      aria-labelledby="quote-title"
+      className="scroll-mt-4 bg-[#E3ECE6] py-20 sm:py-28"
+    >
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <h2
+          id="quote-title"
+          className="max-w-2xl text-4xl leading-[1.05] font-black tracking-[-0.015em] sm:text-5xl"
+        >
+          Where are you headed?
+        </h2>
+        <p className="mt-4 mb-10 max-w-xl text-lg leading-relaxed text-[#263033]/85">
+          Fill in what you know and send it to us on WhatsApp. We&apos;ll reply
+          with a quote.
+        </p>
+        <QuoteBuilder />
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className={`${styles.onDark} bg-[#00573F] text-white`}>
+      <div aria-hidden="true" className={`${styles.roadH} h-10`} />
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
+        <div>
+          <p className="text-2xl font-black">Heavenly Travel</p>
+          <p className="mt-3 max-w-sm text-[17px] leading-relaxed text-white/85">
+            Coach charter and car with driver. Based in Langkawi, serving all of
+            Malaysia.
+          </p>
+        </div>
+        <div>
+          <h2 className="text-base font-extrabold">Contact</h2>
+          <ul className="mt-3 space-y-2 text-[17px] text-white/90">
+            <li>WhatsApp: +60 X-XXX XXXX</li>
+            <li>Langkawi, Kedah, Malaysia</li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="text-base font-extrabold">On this page</h2>
+          <ul className="mt-3 space-y-2 text-[17px]">
+            <li>
+              <a className="hover:underline" href="#route">
+                Where we go
+              </a>
+            </li>
+            <li>
+              <a className="hover:underline" href="#services">
+                Vehicles
+              </a>
+            </li>
+            <li>
+              <a className="hover:underline" href="#quote">
+                Get a quote
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p className="mx-auto max-w-6xl border-t border-white/20 px-5 pt-6 pb-24 text-sm text-white/75 sm:px-8">
+        © Heavenly Travel. Prices and availability are confirmed in your quote.
+      </p>
+    </footer>
   );
 }

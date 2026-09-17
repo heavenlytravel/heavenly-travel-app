@@ -23,7 +23,8 @@ Package manager is pnpm (Node >= 24).
 - `pnpm check-types`: TypeScript check
 - `pnpm build`: production build
 - `pnpm format`: Prettier
-- `pnpm --filter @repo/db db:push`: push the Prisma schema (no migrations)
+- `pnpm db:push`: push the Prisma schema to the development database (no migrations)
+- `pnpm db:push:prod`: same against production, after a typed confirmation. Only the developer runs this
 
 ## Priorities
 

@@ -10,8 +10,11 @@
   "scripts": {
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "db:push:prod": "node --import tsx scripts/with-production-db.ts prisma db push",
     "db:studio": "prisma studio",
+    "db:studio:prod": "node --import tsx scripts/with-production-db.ts prisma studio",
     "db:promote-admin": "node --env-file=.env --import tsx scripts/promote-admin.ts",
+    "db:promote-admin:prod": "node --import tsx scripts/with-production-db.ts node --import tsx scripts/promote-admin.ts",
     "postinstall": "prisma generate",
     "check-types": "tsc --noEmit",
     "lint": "eslint src scripts --max-warnings 0"

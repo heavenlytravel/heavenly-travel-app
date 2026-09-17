@@ -37,15 +37,19 @@ Both apps need the same variable names; see each app's `.env.example`. Never put
 
 ## Schema changes (no migrations)
 
-`packages/db/.env` holds the `DATABASE_URL` used by the Prisma CLI only. The running apps
-read their own `.env.local`, so swapping this file to the production branch for a push
-never affects a dev server.
+`packages/db/.env` is read by the Prisma CLI only and holds two URLs: `DATABASE_URL`
+(Neon `development` branch) and `DATABASE_URL_PRODUCTION` (Neon `production` branch).
+The running apps read their own `.env.local`, so nothing here affects a dev server.
 
 ```sh
-pnpm --filter @repo/db db:push      # against packages/db/.env (development branch)
-# then swap packages/db/.env to the production URL and run it again for a release
-pnpm --filter @repo/db db:studio    # browse data
+pnpm db:push         # development branch
+pnpm db:push:prod    # production branch, asks you to type "production" first
+pnpm db:studio       # browse development data
 ```
+
+Every `*:prod` script in `packages/db` goes through `scripts/with-production-db.ts`,
+which swaps in the production URL for that one command after the typed confirmation.
+Push to development first, test, then push to production before merging the PR.
 
 `prisma generate` runs on install and on build.
 
@@ -69,6 +73,8 @@ Sign in once so the `User` row exists, then:
 
 ```sh
 pnpm --filter @repo/db db:promote-admin you@heavenlytravel.my SUPER
+# production: same arguments, asks for confirmation
+pnpm --filter @repo/db db:promote-admin:prod you@heavenlytravel.my SUPER
 ```
 
 Levels: `SUPER`, `REGULAR`, `OPS` (`packages/db/src/roles.ts`). All levels currently have

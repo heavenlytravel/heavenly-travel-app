@@ -140,6 +140,7 @@ Each Vercel project (`web`, and `admin` if deployed separately) needs:
      **Preview**, branch `staging`.
 
 After changing environment variables, redeploy the branch for them to take effect.
+Which Clerk instance and Neon branch each scope uses is in `docs/auth-and-database.md`.
 
 ## Gating the staging site
 

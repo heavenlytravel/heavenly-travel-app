@@ -9,6 +9,7 @@
 - `apps/web`: Customer-facing site (landing page and customer app).
 - `apps/admin`: Internal admin side for running the app.
 - `packages/ui` (`@repo/ui`): Shared React component library used by both apps.
+- `packages/db` (`@repo/db`): Prisma schema, Neon client and the `getAccess` session/role helper. See `docs/auth-and-database.md`.
 - `packages/tailwind-config`: Shared Tailwind theme (`shared-styles.css`) and PostCSS config. Single source of truth for design tokens.
 - `packages/eslint-config`: Shared ESLint flat configs (`base`, `next-js`, `react-internal`).
 - `packages/typescript-config`: Shared `tsconfig.json` bases.
@@ -22,6 +23,7 @@ Package manager is pnpm (Node >= 24).
 - `pnpm check-types`: TypeScript check
 - `pnpm build`: production build
 - `pnpm format`: Prettier
+- `pnpm --filter @repo/db db:push`: push the Prisma schema (no migrations)
 
 ## Priorities
 

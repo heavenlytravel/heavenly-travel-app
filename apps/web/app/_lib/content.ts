@@ -1,8 +1,8 @@
 /**
- * Content shared by the four "reimagined" pages under /landing/fable/reimagined.
- * Each page borrows the structure of a reference site (the current WordPress
- * site, Airbnb, Agoda, Booking.com) and applies it to Heavenly Travel's real
- * offer: coach charter and cars with driver across Malaysia.
+ * Heavenly Travel's real offer (coach charter and cars with driver across
+ * Malaysia) as content: fleet, destinations, services, reviews and steps.
+ * Shared by the reimagined pages under /landing/fable/reimagined and the
+ * concepts under /ideas, so each page differs in design, not in facts.
  *
  * Prices are indicative placeholders so the layouts can be judged with real
  * numbers in them; every page says a quote confirms the final price.
@@ -11,8 +11,10 @@
 export const PHONE = "+60 X-XXX XXXX";
 export const WHATSAPP_HREF = "https://wa.me/60XXXXXXXXX";
 
+export type VehicleId = "sedan" | "mpv" | "van" | "minibus" | "coach";
+
 export type Vehicle = {
-  id: string;
+  id: VehicleId;
   name: string;
   kind: "car" | "coach";
   seats: number;

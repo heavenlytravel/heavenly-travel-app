@@ -22,7 +22,7 @@ import {
   STEPS,
   WHATSAPP_HREF,
   ringgit,
-} from "../_lib/content";
+} from "../../../../_lib/content";
 import {
   BagIcon,
   PersonIcon,

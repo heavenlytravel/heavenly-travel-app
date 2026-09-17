@@ -1,6 +1,10 @@
 "use client";
 
-import { SERVICE_LABELS, useTrip, type ServiceKey } from "../../_lib/trip";
+import {
+  SERVICE_LABELS,
+  useTrip,
+  type ServiceKey,
+} from "../../../../../_lib/trip";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white";

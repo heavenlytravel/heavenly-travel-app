@@ -29,9 +29,9 @@ const EMPTY: Trip = {
 };
 
 /**
- * One piece of state for every search form on the reimagined pages. The
- * forms look different (pill, tabbed box, outlined bar) but capture the same
- * trip and hand it to WhatsApp as a pre-written message.
+ * One piece of state for every booking form on the reimagined and /ideas
+ * pages. The forms look different (pill, tabbed box, sentence, seat plan) but
+ * capture the same trip and hand it to WhatsApp as a pre-written message.
  */
 export function useTrip(initial: Partial<Trip> = {}) {
   const [trip, setTrip] = useState<Trip>({ ...EMPTY, ...initial });

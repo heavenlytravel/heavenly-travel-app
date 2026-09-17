@@ -1,6 +1,10 @@
 "use client";
 
-import { SERVICE_LABELS, useTrip, type ServiceKey } from "../../_lib/trip";
+import {
+  SERVICE_LABELS,
+  useTrip,
+  type ServiceKey,
+} from "../../../../../_lib/trip";
 
 const field =
   "w-full rounded-lg border border-[#cfe0dc] bg-white px-3.5 py-3 text-[15px] text-[#10201f] placeholder:text-[#7a8c89] focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-[#e4a93c]";

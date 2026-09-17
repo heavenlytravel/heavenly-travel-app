@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Chips } from "../../../_components/Chips";
 import { REIMAGINED } from "../../../_lib/reimagined";
 
 export const metadata: Metadata = {
@@ -59,17 +60,8 @@ export default function ReimaginedIndex() {
                 </div>
               </div>
               <p className="mt-1 text-sm text-neutral-500">{r.source}</p>
-              <p className="mt-4 text-neutral-700">{r.concept}</p>
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {r.borrowed.map((b) => (
-                  <li
-                    key={b}
-                    className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
-                  >
-                    {b}
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-4 mb-4 text-neutral-700">{r.concept}</p>
+              <Chips items={r.borrowed} />
             </li>
           ))}
         </ol>

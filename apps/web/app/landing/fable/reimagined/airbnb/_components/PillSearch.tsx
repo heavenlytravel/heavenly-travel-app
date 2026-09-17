@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTrip } from "../../_lib/trip";
+import { useTrip } from "../../../../../_lib/trip";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#0c3b3a]";

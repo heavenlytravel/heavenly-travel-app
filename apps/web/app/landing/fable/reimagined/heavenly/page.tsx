@@ -20,8 +20,9 @@ import {
   SERVICES,
   WHATSAPP_HREF,
   ringgit,
-} from "../_lib/content";
-import { Stars, WhatsAppIcon, Wordmark, Photo } from "../_components/Brand";
+} from "../../../../_lib/content";
+import { WhatsAppIcon } from "../../../../_components/WhatsAppIcon";
+import { Stars, Wordmark, Photo } from "../_components/Brand";
 import { QuoteStrip } from "./_components/QuoteStrip";
 
 export const metadata: Metadata = {

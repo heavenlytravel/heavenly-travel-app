@@ -1,6 +1,6 @@
 import { LandingSwitcher } from "../_components/LandingSwitcher";
 
-export default function LandingLayout({
+export default function IdeasLayout({
   children,
 }: {
   children: React.ReactNode;

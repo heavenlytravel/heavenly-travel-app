@@ -21,13 +21,9 @@ import {
   REVIEWS,
   WHATSAPP_HREF,
   ringgit,
-} from "../_lib/content";
-import {
-  PersonIcon,
-  WhatsAppIcon,
-  Wordmark,
-  Photo,
-} from "../_components/Brand";
+} from "../../../../_lib/content";
+import { WhatsAppIcon } from "../../../../_components/WhatsAppIcon";
+import { PersonIcon, Wordmark, Photo } from "../_components/Brand";
 import { TabbedSearch } from "./_components/TabbedSearch";
 
 export const metadata: Metadata = {

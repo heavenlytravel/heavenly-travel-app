@@ -21,7 +21,7 @@ import {
   STEPS,
   WHATSAPP_HREF,
   ringgit,
-} from "../_lib/content";
+} from "../../../../_lib/content";
 import { BagIcon, PersonIcon, Wordmark, Photo } from "../_components/Brand";
 import { PillSearch } from "./_components/PillSearch";
 import { SaveButton } from "./_components/SaveButton";

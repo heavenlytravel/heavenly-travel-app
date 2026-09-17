@@ -39,24 +39,23 @@ export const VARIATIONS: Variation[] = [
     model: "opus",
     option: 2,
     href: "/landing/opus/2",
-    seed: "The dependable, premium operator",
-    concept:
-      "Coach livery in bottle green and brass, with a confirmed-pickup trip note as the hero artefact.",
-    runs: [
-      { label: "Initial", tokens: 57099, toolCalls: 31, durationMs: 338838 },
-      { label: "Revision 1", tokens: 84971, toolCalls: 22, durationMs: 162485 },
-    ],
-  },
-  {
-    model: "opus",
-    option: 3,
-    href: "/landing/opus/3",
     seed: "The road across Malaysia",
     concept:
       "Expressway signage: a green direction-sign hero and a drawn road down the page, no photography.",
     runs: [
       { label: "Initial", tokens: 54940, toolCalls: 20, durationMs: 369317 },
       { label: "Revision 1", tokens: 72091, toolCalls: 18, durationMs: 148565 },
+    ],
+  },
+  {
+    model: "opus",
+    option: 3,
+    href: "/landing/opus/3",
+    seed: "Mix of option 1 and option 2",
+    concept:
+      "Road-sign plate hero from option 1 crossed with the expressway signage and drawn road of option 2, set in Overpass with the live site's Langkawi photography.",
+    runs: [
+      { label: "Initial", tokens: 106007, toolCalls: 18, durationMs: 402311 },
     ],
   },
   {
@@ -80,18 +79,6 @@ export const VARIATIONS: Variation[] = [
     model: "fable",
     option: 2,
     href: "/landing/fable/2",
-    seed: "The dependable, premium operator",
-    concept:
-      "The operator's trip sheet: teal and amber, editorial serif headings and a fleet register table.",
-    runs: [
-      { label: "Initial", tokens: 71656, toolCalls: 48, durationMs: 420293 },
-      { label: "Revision 1", tokens: 87938, toolCalls: 23, durationMs: 155191 },
-    ],
-  },
-  {
-    model: "fable",
-    option: 3,
-    href: "/landing/fable/3",
     seed: "The road across Malaysia",
     concept:
       "Road network in navy and road-marking yellow, with an animated map and a board of journeys driven every week.",
@@ -103,6 +90,17 @@ export const VARIATIONS: Variation[] = [
         toolCalls: 24,
         durationMs: 203283,
       },
+    ],
+  },
+  {
+    model: "fable",
+    option: 3,
+    href: "/landing/fable/3",
+    seed: "Mix of option 1 and option 2",
+    concept:
+      "Island-host warmth and animated coverage map from option 1 crossed with the road-network board of option 2, set in Overpass with the live site's Langkawi photography.",
+    runs: [
+      { label: "Initial", tokens: 126134, toolCalls: 25, durationMs: 486530 },
     ],
   },
 ];

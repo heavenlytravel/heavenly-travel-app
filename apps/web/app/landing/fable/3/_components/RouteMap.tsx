@@ -1,241 +1,225 @@
-import styles from "../page.module.css";
+import styles from "../landing.module.css";
 
-/* A simplified, stylised Peninsular Malaysia drawn from rough lon/lat
-   points so the places sit in the right spots relative to each other.
-   The lines form a network of roads we drive, not a trip from one origin. */
+/*
+ * Stylised map of Malaysia, combining the two earlier Fable maps:
+ *  - fable/1's whole-country network (Peninsula and Borneo) on one projection,
+ *      x = (lon - 99) * 30,  y = (8 - lat) * 50
+ *  - fable/2's two-layer road stroke: an asphalt under-line with a gold
+ *    marking drawn on top.
+ * Links draw outward from Langkawi by hop distance, then pins appear.
+ */
 
-const LON0 = 99.45;
-const LAT0 = 6.95;
-const SCALE = 92;
-
-const px = (lon: number, lat: number): [number, number] => [
-  Math.round((lon - LON0) * SCALE * 10) / 10,
-  Math.round((LAT0 - lat) * SCALE * 10) / 10,
-];
-
-const coast: [number, number][] = [
-  [100.12, 6.7],
-  [100.4, 6.55],
-  [100.8, 6.45],
-  [101.1, 6.25],
-  [101.6, 5.9],
-  [101.9, 5.85],
-  [102.1, 6.2],
-  [102.3, 6.2],
-  [102.6, 5.85],
-  [103.0, 5.6],
-  [103.2, 5.3],
-  [103.4, 4.8],
-  [103.45, 4.2],
-  [103.35, 3.8],
-  [103.45, 3.3],
-  [103.7, 2.8],
-  [103.85, 2.4],
-  [104.1, 1.9],
-  [104.25, 1.5],
-  [104.0, 1.35],
-  [103.75, 1.4],
-  [103.4, 1.35],
-  [103.0, 1.7],
-  [102.6, 1.95],
-  [102.3, 2.15],
-  [102.0, 2.5],
-  [101.7, 2.9],
-  [101.3, 3.2],
-  [101.0, 3.7],
-  [100.8, 4.3],
-  [100.6, 4.8],
-  [100.4, 5.2],
-  [100.4, 5.6],
-  [100.3, 6.0],
-  [100.2, 6.4],
-];
-
-const toPath = (pts: [number, number][], close = false) =>
-  pts
-    .map(([lon, lat], i) => {
-      const [x, y] = px(lon, lat);
-      return `${i === 0 ? "M" : "L"}${x} ${y}`;
-    })
-    .join(" ") + (close ? " Z" : "");
-
-type Place = {
+type Stop = {
   name: string;
-  lon: number;
-  lat: number;
-  side: "left" | "right" | "below";
-  delay: number;
+  x: number;
+  y: number;
+  major?: boolean;
+  label?: "l" | "r" | "b" | "t";
 };
 
-const places: Place[] = [
-  { name: "Langkawi", lon: 99.8, lat: 6.35, side: "below", delay: 0.6 },
-  { name: "Penang", lon: 100.3, lat: 5.4, side: "left", delay: 0.9 },
-  { name: "Ipoh", lon: 101.09, lat: 4.6, side: "left", delay: 1.2 },
-  {
-    name: "Cameron Highlands",
-    lon: 101.38,
-    lat: 4.47,
-    side: "right",
-    delay: 1.4,
-  },
-  { name: "Kuala Lumpur", lon: 101.69, lat: 3.14, side: "left", delay: 1.8 },
-  { name: "Melaka", lon: 102.25, lat: 2.19, side: "left", delay: 2.2 },
-  { name: "Johor Bahru", lon: 103.76, lat: 1.46, side: "right", delay: 2.6 },
-  { name: "Kuantan", lon: 103.33, lat: 3.8, side: "right", delay: 3.1 },
-  {
-    name: "Kuala Terengganu",
-    lon: 103.14,
-    lat: 5.33,
-    side: "right",
-    delay: 3.5,
-  },
-  { name: "Kota Bharu", lon: 102.24, lat: 6.13, side: "right", delay: 3.9 },
+const STOPS: Stop[] = [
+  { name: "Langkawi", x: 24, y: 82, major: true, label: "t" },
+  { name: "Alor Setar", x: 41, y: 94, label: "r" },
+  { name: "Penang", x: 40, y: 130, major: true, label: "r" },
+  { name: "Ipoh", x: 63, y: 170, label: "l" },
+  { name: "Cameron Highlands", x: 71, y: 177, label: "r" },
+  { name: "Kota Bharu", x: 97, y: 94, label: "r" },
+  { name: "Kuala Terengganu", x: 124, y: 134, label: "r" },
+  { name: "Kuala Lumpur", x: 81, y: 243, major: true, label: "r" },
+  { name: "Kuantan", x: 130, y: 210, label: "r" },
+  { name: "Melaka", x: 98, y: 290, label: "l" },
+  { name: "Johor Bahru", x: 143, y: 326, major: true, label: "r" },
+  { name: "Kuching", x: 340, y: 322, major: true, label: "b" },
+  { name: "Miri", x: 449, y: 180, label: "r" },
+  { name: "Kota Kinabalu", x: 512, y: 101, major: true, label: "t" },
+  { name: "Sandakan", x: 574, y: 108, label: "b" },
 ];
 
-/* West-coast and southern spine, plus the ferry hop to Langkawi. */
-const westRoad: [number, number][] = [
-  [99.8, 6.35],
-  [100.3, 6.1],
-  [100.3, 5.4],
-  [100.7, 4.9],
-  [101.09, 4.6],
-  [101.38, 4.47],
-  [101.69, 3.14],
-  [102.25, 2.19],
-  [103.0, 1.7],
-  [103.76, 1.46],
+// City pairs we drive between regularly, roughly following the trunk roads.
+const LINKS: [string, string][] = [
+  ["Langkawi", "Alor Setar"],
+  ["Alor Setar", "Penang"],
+  ["Penang", "Ipoh"],
+  ["Ipoh", "Cameron Highlands"],
+  ["Ipoh", "Kuala Lumpur"],
+  ["Kuala Lumpur", "Melaka"],
+  ["Melaka", "Johor Bahru"],
+  ["Kuala Lumpur", "Kuantan"],
+  ["Kuantan", "Kuala Terengganu"],
+  ["Kuala Terengganu", "Kota Bharu"],
+  ["Kuantan", "Johor Bahru"],
+  ["Ipoh", "Kota Bharu"],
+  ["Kuching", "Miri"],
+  ["Miri", "Kota Kinabalu"],
+  ["Kota Kinabalu", "Sandakan"],
 ];
 
-/* East-coast road, joined to the capital and back across the north. */
-const eastRoad: [number, number][] = [
-  [101.69, 3.14],
-  [102.5, 3.5],
-  [103.33, 3.8],
-  [103.14, 5.33],
-  [102.6, 5.85],
-  [102.24, 6.13],
-  [101.6, 5.9],
-  [101.1, 6.25],
-  [100.3, 6.1],
-];
+// Rough silhouettes on the same projection, drawn faintly so the roads do the talking.
+const PENINSULA =
+  "M36 65 L40 100 L42 130 L48 160 L53 190 L69 240 L72 260 L90 285 L120 325 L135 335 L150 330 L158 315 L147 285 L135 250 L132 210 L134 175 L126 140 L108 105 L99 93 L93 85 L75 75 L60 70 L48 65 Z";
+const BORNEO =
+  "M318 305 L339 315 L375 290 L384 285 L420 240 L450 180 L468 170 L486 135 L512 101 L534 55 L546 70 L573 110 L588 130 L579 150 L588 175 L567 188 L540 183 L510 185 L483 200 L474 250 L450 290 L405 325 L375 350 L345 355 L321 325 Z";
 
-const roadProps = {
-  fill: "none",
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-  pathLength: 1,
-};
+function stop(name: string): Stop {
+  const s = STOPS.find((x) => x.name === name);
+  if (!s) throw new Error(`RouteMap: unknown stop "${name}"`);
+  return s;
+}
+
+/* Hop distance from Langkawi over the link graph. Borneo is not connected
+   by road, so its stops start after the peninsula has finished drawing. */
+function hopDepths(): Map<string, number> {
+  const depth = new Map<string, number>([["Langkawi", 0]]);
+  const queue = ["Langkawi"];
+  while (queue.length) {
+    const cur = queue.shift() as string;
+    const d = depth.get(cur) as number;
+    for (const [a, b] of LINKS) {
+      const other = a === cur ? b : b === cur ? a : null;
+      if (other && !depth.has(other)) {
+        depth.set(other, d + 1);
+        queue.push(other);
+      }
+    }
+  }
+  const maxPeninsula = Math.max(...depth.values());
+  const borneoOrder = ["Kuching", "Miri", "Kota Kinabalu", "Sandakan"];
+  borneoOrder.forEach((name, i) => depth.set(name, maxPeninsula + 1 + i));
+  return depth;
+}
+
+const DEPTH = hopDepths();
+const LANGKAWI = stop("Langkawi");
+
+function linkPath(a: Stop, b: Stop) {
+  // Gentle arc so overlapping links stay readable.
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const bend = Math.min(28, len * 0.14);
+  const cx = mx + (dy / len) * -bend;
+  const cy = my + (dx / len) * bend;
+  return `M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}`;
+}
+
+function labelPos(s: Stop) {
+  switch (s.label) {
+    case "l":
+      return { x: s.x - 9, y: s.y + 4, anchor: "end" as const };
+    case "b":
+      return { x: s.x, y: s.y + 18, anchor: "middle" as const };
+    case "t":
+      return { x: s.x, y: s.y - 11, anchor: "middle" as const };
+    default:
+      return { x: s.x + 9, y: s.y + 4, anchor: "start" as const };
+  }
+}
 
 export function RouteMap() {
-  const [lkX, lkY] = px(99.8, 6.35);
-  const [pgX, pgY] = px(100.25, 5.38);
-
   return (
     <svg
-      viewBox="0 0 500 545"
+      viewBox="0 0 640 380"
       role="img"
-      aria-labelledby="route-map-title route-map-desc"
-      className="h-auto w-full max-w-[440px]"
+      aria-labelledby="routemap-title routemap-desc"
+      className="h-auto w-full"
     >
-      <title id="route-map-title">
-        Places Heavenly Travel drives across Peninsular Malaysia
-      </title>
-      <desc id="route-map-desc">
-        A map of Peninsular Malaysia with roads linking Langkawi, Penang, Ipoh,
-        the Cameron Highlands, Kuala Lumpur, Melaka and Johor Bahru on the west
-        and south, and Kuantan, Kuala Terengganu and Kota Bharu on the East
-        Coast.
+      <title id="routemap-title">Where Heavenly Travel drives</title>
+      <desc id="routemap-desc">
+        A map of Malaysia marking cities served: Langkawi, Alor Setar, Penang,
+        Ipoh, the Cameron Highlands, Kota Bharu, Kuala Terengganu, Kuala Lumpur,
+        Kuantan, Melaka, Johor Bahru, Kuching, Miri, Kota Kinabalu and Sandakan,
+        with roads drawn between neighbouring cities.
       </desc>
 
-      {/* Land */}
+      {/* land */}
       <path
-        d={toPath(coast, true)}
-        fill="#e4ede6"
-        stroke="#b9c9bf"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+        d={PENINSULA}
+        fill="rgba(255,255,255,0.09)"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1"
       />
-      {/* Langkawi and Penang islands */}
-      <ellipse
-        cx={lkX}
-        cy={lkY}
-        rx="11"
-        ry="8"
-        fill="#e4ede6"
-        stroke="#b9c9bf"
-        strokeWidth="1.5"
+      <path
+        d={BORNEO}
+        fill="rgba(255,255,255,0.09)"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1"
       />
-      <ellipse
-        cx={pgX}
-        cy={pgY}
-        rx="6"
-        ry="8"
-        fill="#e4ede6"
-        stroke="#b9c9bf"
-        strokeWidth="1.5"
+      <circle
+        cx={LANGKAWI.x}
+        cy={LANGKAWI.y}
+        r="6"
+        fill="rgba(255,255,255,0.12)"
+        stroke="rgba(255,255,255,0.3)"
       />
 
-      {/* Roads: asphalt under-line, then the yellow marking drawn over it */}
-      <path
-        d={toPath(westRoad)}
-        stroke="#0c2340"
-        strokeWidth="7"
-        className={styles.routeLine}
-        {...roadProps}
-      />
-      <path
-        d={toPath(westRoad)}
-        stroke="#f5b800"
-        strokeWidth="2.5"
-        className={styles.routeLine}
-        {...roadProps}
-      />
-      <path
-        d={toPath(eastRoad)}
-        stroke="#0c2340"
-        strokeWidth="7"
-        className={`${styles.routeLine} ${styles.routeLineEast}`}
-        {...roadProps}
-      />
-      <path
-        d={toPath(eastRoad)}
-        stroke="#f5b800"
-        strokeWidth="2.5"
-        className={`${styles.routeLine} ${styles.routeLineEast}`}
-        {...roadProps}
-      />
+      {/* sea label */}
+      <text
+        x="235"
+        y="150"
+        fill="rgba(255,255,255,0.35)"
+        fontSize="11"
+        letterSpacing="0.04em"
+      >
+        South China Sea
+      </text>
 
-      {/* Places */}
-      {places.map((p) => {
-        const [x, y] = px(p.lon, p.lat);
-        const anchor =
-          p.side === "left" ? "end" : p.side === "right" ? "start" : "middle";
-        const dx = p.side === "left" ? -12 : p.side === "right" ? 12 : 0;
-        const dy = p.side === "below" ? 26 : 4.5;
+      {/* roads: asphalt under-line, then the gold marking drawn over it */}
+      {LINKS.map(([a, b]) => {
+        const d = linkPath(stop(a), stop(b));
+        const i = Math.min(DEPTH.get(a) ?? 0, DEPTH.get(b) ?? 0);
+        const style = { "--i": i } as React.CSSProperties;
+        return (
+          <g key={`${a}-${b}`} fill="none" strokeLinecap="round">
+            <path
+              d={d}
+              pathLength={1}
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="6"
+              className={styles.road}
+              style={style}
+            />
+            <path
+              d={d}
+              pathLength={1}
+              stroke="#e4a93c"
+              strokeWidth="2"
+              className={styles.road}
+              style={style}
+            />
+          </g>
+        );
+      })}
+
+      {/* pins + labels */}
+      {STOPS.map((s) => {
+        const p = labelPos(s);
+        const i = DEPTH.get(s.name) ?? 0;
         return (
           <g
-            key={p.name}
-            className={styles.stop}
-            style={{ animationDelay: `${p.delay}s` }}
+            key={s.name}
+            className={styles.pin}
+            style={{ "--i": i } as React.CSSProperties}
           >
             <circle
-              cx={x}
-              cy={y}
-              r="5.5"
-              fill="#ffffff"
-              stroke="#0c2340"
-              strokeWidth="2.5"
+              cx={s.x}
+              cy={s.y}
+              r={s.major ? 5 : 3.2}
+              fill={s.major ? "#e4a93c" : "#ffffff"}
+              stroke="#0c3b3a"
+              strokeWidth={s.major ? 2 : 1.5}
             />
             <text
-              x={x + dx}
-              y={y + dy}
-              textAnchor={anchor}
-              fontSize="13"
-              fontWeight={600}
-              fill="#0c2340"
-              style={{ fontFamily: "var(--font-body)" }}
+              x={p.x}
+              y={p.y}
+              textAnchor={p.anchor}
+              fill="#ffffff"
+              fontSize={s.major ? undefined : 10.5}
+              fontWeight={s.major ? 600 : 400}
+              className={s.major ? styles.labelMajor : "hidden sm:block"}
             >
-              {p.name}
+              {s.name}
             </text>
           </g>
         );

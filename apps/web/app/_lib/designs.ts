@@ -1,25 +1,33 @@
 /**
- * Short design summary for each landing page variation, read from each
- * variation's page.tsx and CSS module. Used by /landing so the six
+ * Short design summary for each landing page variation and each idea, read
+ * from the page's page.tsx and CSS module. Used by /landing and /ideas so the
  * options can be compared and mixed.
  */
+
+import { IDEAS } from "./ideas";
+import { VARIATIONS } from "./variations";
 
 export type Swatch = { hex: string; name: string; role: string };
 
 export type FontKey =
   | "overpass"
   | "literata"
-  | "archivo"
   | "youngSerif"
   | "figtree"
-  | "newsreader"
-  | "plusJakarta"
   | "barlowCondensed"
   | "barlow"
   | "manrope"
   | "dmSans"
   | "mukta"
-  | "karla";
+  | "karla"
+  | "besley"
+  | "splineSansMono"
+  | "archivo"
+  | "archivoExpanded"
+  | "encodeSansCondensed"
+  | "libreCaslonText"
+  | "heptaSlab"
+  | "chivo";
 
 export type FontUse = { key: FontKey; family: string; note: string };
 
@@ -77,42 +85,6 @@ export const DESIGNS: Record<string, Design> = {
     lift: "The sign-plate container and the amber-on-teal pairing.",
   },
   "/landing/opus/2": {
-    label: "Coach livery",
-    palette: [
-      {
-        hex: "#0E3A2F",
-        name: "Bottle green",
-        role: "header, hero, quote band",
-      },
-      {
-        hex: "#C49A3C",
-        name: "Brass",
-        role: "buttons, pinstripe, rules, focus",
-      },
-      { hex: "#0A2A22", name: "Ink green", role: "text, footer" },
-      { hex: "#EEF1EE", name: "Chassis", role: "page background" },
-      { hex: "#FFFFFF", name: "Paper", role: "trip sheet, search bar" },
-    ],
-    display: {
-      key: "archivo",
-      family: "Archivo, width 125",
-      note: "widened 'livery lettering'",
-    },
-    body: {
-      key: "archivo",
-      family: "Archivo, width 100",
-      note: "same family, normal width",
-    },
-    hero: "Green panel with a coach photo and a white 'pickup is confirmed' trip sheet pinned on it.",
-    imagery: "4 photos only. No drawings.",
-    shape:
-      "Near-sharp, 3 to 6px. Hairline rules and brass top rules instead of boxes. Two soft shadows.",
-    motion: "Brass pinstripe wipes in across the green stripe.",
-    voice:
-      "'Nothing is booked until you confirm a written quote.' Formal and operational.",
-    lift: "The trip-sheet card and the green-and-brass pinstripe.",
-  },
-  "/landing/opus/3": {
     label: "Expressway signage",
     palette: [
       {
@@ -152,6 +124,52 @@ export const DESIGNS: Record<string, Design> = {
       "'Booking takes three messages.' Route codes E1, E2, E8 add local flavour.",
     lift: "The CSS road and yellow route shields; works with no photography.",
   },
+  "/landing/opus/3": {
+    label: "Sign plate on the expressway",
+    palette: [
+      {
+        hex: "#0D3B40",
+        name: "Andaman deep",
+        role: "hero plate, direction board, quote band",
+      },
+      {
+        hex: "#00573F",
+        name: "Expressway green",
+        role: "coach card, East Coast sign, footer",
+      },
+      {
+        hex: "#F2B33D",
+        name: "Sunset amber",
+        role: "route shields, road dashes, buttons",
+      },
+      {
+        hex: "#263033",
+        name: "Asphalt",
+        role: "drawn roads, trust band, text",
+      },
+      { hex: "#EEF0EA", name: "Limestone", role: "page background" },
+    ],
+    display: {
+      key: "overpass",
+      family: "Overpass",
+      note: "weight 900, tight tracking, Highway Gothic feel",
+    },
+    body: {
+      key: "literata",
+      family: "Literata",
+      note: "serif body under a signage display voice",
+    },
+    hero: "Teal sign plate with a white inset ring over the Dataran Lang aerial; a second plate under it holds the search.",
+    imagery:
+      "Brand photos (Langkawi aerial, coach line-up, chauffeur MPV, cable car, MICE, MATTA and MoF badges) plus a drawn coach and car on dashed roads.",
+    shape:
+      "Very rounded 14 to 28px plates with a 3px white inset border, pill buttons, amber route shields, one soft shadow.",
+    motion:
+      "Direction-board lines grow and dots pop in sequence; 1px hover lifts. Off under reduced motion.",
+    voice:
+      "'One company for the whole trip.' Route codes E1, E2, E8 and 'Booking takes three messages.'",
+    lift: "The sign plate over real photography, and route shields that make any list read as a road sign.",
+  },
   "/landing/fable/1": {
     label: "Island host",
     palette: [
@@ -180,33 +198,6 @@ export const DESIGNS: Record<string, Design> = {
     lift: "The animated map and the sand-and-foam surfaces.",
   },
   "/landing/fable/2": {
-    label: "Operator's trip sheet",
-    palette: [
-      { hex: "#0D3B3E", name: "Ink teal", role: "hero, headings, quote band" },
-      { hex: "#E0A23A", name: "Lantern", role: "buttons, stop dots, focus" },
-      { hex: "#1F7A7A", name: "Sea", role: "links, ticks" },
-      { hex: "#EEF2EF", name: "Mist", role: "page background, cards" },
-      { hex: "#E4DFD3", name: "Sand", role: "'Coming next' card" },
-    ],
-    display: {
-      key: "newsreader",
-      family: "Newsreader",
-      note: "weight 500, editorial serif",
-    },
-    body: {
-      key: "plusJakarta",
-      family: "Plus Jakarta Sans",
-      note: "clean sans at 17px",
-    },
-    hero: "Coach photo with a 'Sample trip sheet' card overlapping it; search bar straddles the hero edge.",
-    imagery: "5 photos only. Route timeline is CSS.",
-    shape:
-      "Rounded, 8 to 16px, pill buttons. Label-column grid. Two long soft shadows.",
-    motion: "Trip sheet settles onto the photo.",
-    voice: "'We arrive early, not on time.' Honest and operational.",
-    lift: "The fleet table and the label-column layout.",
-  },
-  "/landing/fable/3": {
     label: "Road network",
     palette: [
       { hex: "#0C2340", name: "Navy ink", role: "text, dark bands, map roads" },
@@ -232,6 +223,212 @@ export const DESIGNS: Record<string, Design> = {
     motion: "West road draws, then east road, then place labels fade in.",
     voice: "'Journeys we drive every week.' Confident, transport-first.",
     lift: "The route board and the navy-plus-yellow road stroke.",
+  },
+  "/landing/fable/3": {
+    label: "Island host on the road",
+    palette: [
+      {
+        hex: "#0C3B3A",
+        name: "Sea deep",
+        role: "hero scrim, quote band, map pins",
+      },
+      {
+        hex: "#E4A93C",
+        name: "Gold",
+        role: "buttons, road rule, map roads, focus",
+      },
+      {
+        hex: "#157A74",
+        name: "Sea",
+        role: "links, step rules, journey times",
+      },
+      { hex: "#F2E8D5", name: "Sand", role: "story section, inclusions panel" },
+      { hex: "#E8F2EF", name: "Foam", role: "journeys board, form fields" },
+    ],
+    display: {
+      key: "overpass",
+      family: "Overpass",
+      note: "weight 900, -0.02em tracking, 0.96 leading",
+    },
+    body: {
+      key: "figtree",
+      family: "Figtree",
+      note: "friendly geometric sans, from option 1",
+    },
+    hero: "Overpass headline over a gold dashed road rule on the scrimmed Langkawi aerial, beside a glass-card network map; a white search card overlaps the hero edge.",
+    imagery:
+      "7 brand photos (Langkawi aerial, cable car, coaches, MPV interior, LICC) plus MATTA and MoF badges and the animated SVG map. No stock.",
+    shape:
+      "Cards 16px, buttons 6px, no pills. Hairlines only; one teal-tinted shadow on the search card.",
+    motion:
+      "Two-layer roads draw outward from Langkawi by hop distance, then pins appear; Borneo follows the peninsula.",
+    voice:
+      "'Local knowledge, wherever you land' meets 'Journeys we drive every week.' Warm, a little wry, transport-first.",
+    lift: "The scrimmed brand photo behind the map card, and the journeys board on foam with gold-on-teal markers.",
+  },
+  "/ideas/1": {
+    label: "A letter, not a form",
+    palette: [
+      { hex: "#FBFAF4", name: "Paper", role: "page background" },
+      { hex: "#1B2B26", name: "Ink", role: "all text, letterhead double rule" },
+      {
+        hex: "#FFE14D",
+        name: "Marker yellow",
+        role: "highlighter swipe behind blanks and service names",
+      },
+      {
+        hex: "#2440C8",
+        name: "Ballpoint blue",
+        role: "the reply, links, focus rings, WhatsApp button",
+      },
+      { hex: "#D9D6C8", name: "Rule grey", role: "hairlines, margin rule" },
+    ],
+    display: {
+      key: "besley",
+      family: "Besley",
+      note: "Clarendon-style serif, 500 for the sentence up to 5rem, 800 for the blanks",
+    },
+    body: {
+      key: "splineSansMono",
+      family: "Spline Sans Mono",
+      note: "the second hand: our reply, sidenotes, labels and figures; prose stays in Besley",
+    },
+    hero: "No photo and no search card. 'Dear Heavenly Travel,' then one viewport-filling sentence, 'We are [6] people going from [Langkawi] to [Penang] on [a day we'll name], and we'd like [a car with driver].', with the reply in blue mono underneath.",
+    imagery:
+      "Brand photos as figures, not backdrops: Eagle Square tipped in as Fig. 1, six 72px thumbnails in the sidenotes, the coaches as Fig. 2, MATTA and MOF as sign-off credentials.",
+    shape:
+      "Square, 2px corners, no shadows, no cards. Hairlines and a double-rule letterhead. Text column with a ruled margin of sidenotes that fall inline on mobile.",
+    motion:
+      "Marker swipes draw in left to right on load, reply sentences fade in when a blank changes, marked phrases draw on scroll where supported. Off under reduced motion.",
+    voice:
+      "A letter, plain and a little wry. 'We are a travel agency on an island, which explains a lot.' 'Encl. (5)'. 'Yours on the road,'.",
+    lift: "The sentence as the form, with a computed reply: a vehicle, a door-to-door time and a fare before the customer commits to anything.",
+  },
+  "/ideas/2": {
+    label: "One number, one seat plan",
+    palette: [
+      { hex: "#E9E4D8", name: "Canvas", role: "page, cabin floors" },
+      {
+        hex: "#141414",
+        name: "Ink",
+        role: "text, 2px outlines, driver seat, text on vermilion",
+      },
+      {
+        hex: "#E8442A",
+        name: "Vermilion",
+        role: "taken seats, the numeral, primary button, ladder marker",
+      },
+      {
+        hex: "#1F4F46",
+        name: "Coach green",
+        role: "vehicle bodies, ladder rail, reviews band, footer",
+      },
+      {
+        hex: "#F7F4EC",
+        name: "Bone",
+        role: "spare seats, manifest line, active ladder band",
+      },
+    ],
+    display: {
+      key: "archivoExpanded",
+      family: "Archivo Expanded",
+      note: "variable width axis at 125, weight 800 to 900, tabular figures; the numeral runs 12 to 22rem",
+    },
+    body: {
+      key: "archivo",
+      family: "Archivo",
+      note: "same family at normal width, 400 to 600; no second typeface",
+    },
+    hero: "Two halves: 'How many of you?' over a giant vermilion numeral with steppers and a 1 to 60 slider, beside a top-down SVG seat plan that fills seat by seat and changes vehicle. A single manifest line below holds from, to, date, fare, drive time and WhatsApp.",
+    imagery:
+      "Vehicles are drawn, not photographed. Four brand photos in 'Who travels in what', each wider than the last as the group grows from 2 to 44.",
+    shape:
+      "Flat colour, 2px ink rules, hard edges, 6px radii, rounded-square seats. Grids ruled by gaps instead of cards. No shadows; the only pattern is a hatch for the luggage bay.",
+    motion:
+      "Newly taken seats fill front to back on a short stagger, the numeral ticks, the plan fades when the vehicle changes. Off under reduced motion.",
+    voice:
+      "Direct and dry. 'Past 44 we send a second coach.' 'Counted out, counted back.' 'Five vehicles, one ruler.'",
+    lift: "The data-driven seat plan as the booking input: one number picks the vehicle, fills the seats, prices the trip and writes the WhatsApp message. The fleet ruler reuses it.",
+  },
+  "/ideas/3": {
+    label: "Road-atlas spread",
+    palette: [
+      { hex: "#F3F4EE", name: "Sheet", role: "page ground" },
+      { hex: "#1C2321", name: "Ink", role: "text, hairline rules" },
+      {
+        hex: "#1D5FA8",
+        name: "Motorway blue",
+        role: "selected cell, WhatsApp button, links",
+      },
+      {
+        hex: "#2C7A4B",
+        name: "Trunk-road green",
+        role: "crosshair tint, highlighted place names, review scores",
+      },
+      {
+        hex: "#C8324B",
+        name: "A-road red",
+        role: "line from the chosen cell to its two places, step numerals",
+      },
+    ],
+    display: {
+      key: "encodeSansCondensed",
+      family: "Encode Sans Condensed",
+      note: "600 to 700, uppercase with light tracking: map lettering, not signage; tabular figures in the chart",
+    },
+    body: {
+      key: "libreCaslonText",
+      family: "Libre Caslon Text",
+      note: "standfirst and notes upright; captions, footnotes and reviews in italic, as an atlas sets water",
+    },
+    hero: "The triangular distance chart from the back of a road atlas: ten places down the diagonal, 45 cells that switch between drive time, kilometres and fare. Pick a cell and the journey panel beside it fills in. Below 700px it becomes From and To selects over a scrolling chart.",
+    imagery:
+      "Three brand photos as numbered plates with italic captions (Eagle Square, the coaches, the Sky Bridge). Badges in the colophon. No hero photo and no map.",
+    shape:
+      "Square corners, flat colour, 1px rules, no shadows. A sheet border with grid letters A to H, a scale bar, 'Sheet 1 of 1'. B-road yellow (#F2C230) appears only as the hover cell.",
+    motion:
+      "Crosshair and place-name tints over 120ms, panel values fade over 180ms. Off under reduced motion.",
+    voice:
+      "Reference-book dry. 'Find one place on the diagonal, run a finger to the other.' 'Sent in by passengers, printed as received.' Footnotes use daggers.",
+    lift: "The chart as a booking control: one click sets origin and destination and shows time, distance and fare for every pair at once. It would work as a 'routes and prices' module on any version of the site.",
+  },
+  "/ideas/4": {
+    label: "The page is a day",
+    palette: [
+      { hex: "#DDE3EA", name: "Pre-dawn", role: "06:00, the booking control" },
+      { hex: "#CFE6F2", name: "Morning", role: "09:00, first stops" },
+      { hex: "#F6B66B", name: "Golden hour", role: "18:30, carries the photo" },
+      {
+        hex: "#101B33",
+        name: "Dusk",
+        role: "19:30 onward, hour rail, selected day, light text",
+      },
+      {
+        hex: "#D1343E",
+        name: "Hibiscus red",
+        role: "now-marker, time bullets, primary button",
+      },
+    ],
+    display: {
+      key: "heptaSlab",
+      family: "Hepta Slab",
+      note: "light 300 at huge sizes for times like 09:10, 600 to 700 for headlines: a railway timetable feel",
+    },
+    body: {
+      key: "chivo",
+      family: "Chivo",
+      note: "running text; Chivo Mono for the hour rail, table figures and small labels",
+    },
+    hero: "'Book the day, not just the ride.' at 06:00 under a pre-dawn sky, with four day templates as big typographic radio options beside passengers, date and pick-up. A fixed hour rail down the left edge tracks the time you have scrolled to.",
+    imagery:
+      "Brand photos at the stop they belong to, full width and square-edged: the MPV cabin at pick-up, Eagle Square at 09:45, the cable car at 10:50, a full-bleed photo at golden hour.",
+    shape:
+      "Flat, square, hairlines, no shadows, no cards. One calm vertical sky gradient is the only gradient; the brown stretch between golden hour and dusk carries a photo and no text, so contrast holds.",
+    motion:
+      "The now-marker follows scroll and the run sheet fades when the day changes. Off under reduced motion, where the sky is a static gradient.",
+    voice:
+      "Calm, specific times, a little wry. 'The driver is there before you are.' 'While you eat, he waits.' 'The two who are always late are late. We allowed for them.'",
+    lift: "The run sheet: the company's promises told as timed entries in a real day, with the fleet and inclusions set as timetables. It sells punctuality by showing it.",
   },
 };
 
@@ -302,3 +499,47 @@ export const REFERENCES: Reference[] = [
     },
   },
 ];
+
+/** One page to summarise: a landing variation, an idea or a reference site. */
+export type DesignEntry = {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  external?: boolean;
+  design: Design;
+};
+
+function withDesign(
+  pages: { href: string; title: string; subtitle: string }[],
+): DesignEntry[] {
+  return pages.flatMap((page) => {
+    const design = DESIGNS[page.href];
+    return design ? [{ id: page.href, ...page, design }] : [];
+  });
+}
+
+export const VARIATION_ENTRIES: DesignEntry[] = withDesign(
+  VARIATIONS.map((v) => ({
+    href: v.href,
+    title: `${v.model === "opus" ? "Opus" : "Fable"} ${v.option}`,
+    subtitle: v.seed,
+  })),
+);
+
+export const IDEA_ENTRIES: DesignEntry[] = withDesign(
+  IDEAS.map((idea) => ({
+    href: idea.href,
+    title: `${idea.option}. ${idea.name}`,
+    subtitle: idea.control,
+  })),
+);
+
+export const REFERENCE_ENTRIES: DesignEntry[] = REFERENCES.map((r) => ({
+  id: r.href,
+  title: r.name,
+  subtitle: r.by,
+  href: r.href,
+  external: true,
+  design: r.design,
+}));

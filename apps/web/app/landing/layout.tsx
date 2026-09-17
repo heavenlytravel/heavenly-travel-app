@@ -1,4 +1,4 @@
-import { LandingSwitcher } from "./_components/LandingSwitcher";
+import { LandingSwitcher } from "../_components/LandingSwitcher";
 
 export default function LandingLayout({
   children,

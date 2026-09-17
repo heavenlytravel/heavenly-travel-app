@@ -1,113 +1,180 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type FormEvent } from "react";
+import styles from "../landing.module.css";
 
-const fieldClass =
-  "w-full rounded-md border border-[#26466c] bg-[#153560] px-3.5 py-3 text-base text-white placeholder:text-[#8fa3b8] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#f5b800]";
+type Service = "coach" | "car";
 
-const labelClass = "mb-1.5 block text-sm font-medium text-[#dbe5ee]";
+const SERVICES: { value: Service; label: string; hint: string }[] = [
+  { value: "coach", label: "Coach charter", hint: "12 to 44 seats" },
+  { value: "car", label: "Car with driver", hint: "up to 6 passengers" },
+];
 
 export function SearchBar() {
-  const [service, setService] = useState("coach");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const id = useId();
+  const [service, setService] = useState<Service>("coach");
+  const [pickup, setPickup] = useState("");
+  const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
-  const [passengers, setPassengers] = useState("");
+  const [passengers, setPassengers] = useState("2");
+  const [note, setNote] = useState<string | null>(null);
+
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const what = service === "coach" ? "a coach" : "a car with driver";
+    const where = [pickup.trim(), destination.trim()]
+      .filter(Boolean)
+      .join(" to ");
+    setNote(
+      `Online booking is on its way. For ${what}${where ? ` from ${where}` : ""}${
+        date ? ` on ${date}` : ""
+      }, send the same details on WhatsApp or in the quote form below and we will price it within a working day.`,
+    );
+  }
 
   return (
     <form
-      aria-label="Search for a vehicle"
-      className="rounded-2xl bg-[#0c2340] p-5 text-white shadow-[0_18px_40px_-24px_rgba(12,35,64,0.6)] sm:p-6"
-      onSubmit={(e) => e.preventDefault()}
+      onSubmit={onSubmit}
+      aria-labelledby={`${id}-title`}
+      className="rounded-2xl border border-[var(--line)] bg-white p-4 text-[var(--ink)] shadow-[0_18px_50px_-20px_rgba(12,59,58,0.45)] sm:p-5"
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.1fr_1fr_1fr_0.9fr_0.7fr_auto] lg:items-end">
-        <div>
-          <label htmlFor="s-service" className={labelClass}>
-            Service
-          </label>
-          <select
-            id="s-service"
-            className={fieldClass}
-            value={service}
-            onChange={(e) => setService(e.target.value)}
-          >
-            <option value="coach">Coach charter</option>
-            <option value="car">Car with driver</option>
-          </select>
+      <h2 id={`${id}-title`} className="sr-only">
+        Search for a coach or a car with driver
+      </h2>
+
+      <fieldset className="m-0 border-0 p-0">
+        <legend className="sr-only">Service</legend>
+        <div
+          role="presentation"
+          className="inline-flex rounded-lg bg-[var(--foam)] p-1"
+        >
+          {SERVICES.map((s) => {
+            const checked = service === s.value;
+            return (
+              <label
+                key={s.value}
+                className={`relative cursor-pointer rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                  checked
+                    ? "bg-[var(--sea-deep)] text-white"
+                    : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="service"
+                  value={s.value}
+                  checked={checked}
+                  onChange={() => setService(s.value)}
+                  className="peer sr-only"
+                />
+                <span className="pointer-events-none absolute inset-0 rounded-md peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--gold)]" />
+                {s.label}
+                <span className="hidden font-normal opacity-80 sm:inline">
+                  , {s.hint}
+                </span>
+              </label>
+            );
+          })}
         </div>
+      </fieldset>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.25fr_1.25fr_0.9fr_0.65fr_auto] lg:items-end">
         <div>
-          <label htmlFor="s-from" className={labelClass}>
+          <label
+            htmlFor={`${id}-pickup`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Pick-up
           </label>
           <input
-            id="s-from"
-            className={fieldClass}
-            placeholder="KLIA, Penang, your hotel"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            id={`${id}-pickup`}
+            name="pickup"
+            type="text"
             autoComplete="off"
+            placeholder="City, hotel, airport or jetty"
+            value={pickup}
+            onChange={(e) => setPickup(e.target.value)}
+            className={styles.fieldLight}
           />
         </div>
         <div>
-          <label htmlFor="s-to" className={labelClass}>
+          <label
+            htmlFor={`${id}-dest`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Destination
           </label>
           <input
-            id="s-to"
-            className={fieldClass}
-            placeholder="Cameron Highlands"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
+            id={`${id}-dest`}
+            name="destination"
+            type="text"
             autoComplete="off"
+            placeholder="Anywhere in Malaysia"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            className={styles.fieldLight}
           />
         </div>
         <div>
-          <label htmlFor="s-date" className={labelClass}>
+          <label
+            htmlFor={`${id}-date`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Date
           </label>
           <input
-            id="s-date"
+            id={`${id}-date`}
+            name="date"
             type="date"
-            className={fieldClass}
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className={styles.fieldLight}
           />
         </div>
         <div>
-          <label htmlFor="s-pax" className={labelClass}>
+          <label
+            htmlFor={`${id}-pax`}
+            className="mb-1 block text-xs font-semibold text-[var(--ink-soft)]"
+          >
             Passengers
           </label>
           <input
-            id="s-pax"
+            id={`${id}-pax`}
+            name="passengers"
             type="number"
             min={1}
+            max={44}
             inputMode="numeric"
-            className={fieldClass}
-            placeholder="4"
             value={passengers}
             onChange={(e) => setPassengers(e.target.value)}
+            className={styles.fieldLight}
           />
         </div>
         <button
           type="submit"
-          className="inline-flex h-[50px] items-center justify-center gap-2 rounded-md bg-[#f5b800] px-6 text-base font-semibold text-[#0c2340] hover:bg-[#ffc933] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-white sm:col-span-2 lg:col-span-1"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[var(--gold)] px-6 text-[15px] font-semibold text-[var(--sea-deep)] transition-colors hover:bg-[var(--gold-bright)] sm:col-span-2 lg:col-span-1"
         >
           <svg
-            width="18"
-            height="18"
             viewBox="0 0 20 20"
             aria-hidden="true"
+            className="h-4 w-4"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.2"
-            strokeLinecap="round"
           >
             <circle cx="8.5" cy="8.5" r="5.5" />
-            <path d="M13 13l4.5 4.5" />
+            <path d="m13 13 4 4" strokeLinecap="round" />
           </svg>
           Search
         </button>
       </div>
+
+      <p
+        aria-live="polite"
+        className={`text-sm leading-relaxed text-[var(--ink-soft)] ${note ? "mt-4" : ""}`}
+      >
+        {note}
+      </p>
     </form>
   );
 }

@@ -1,0 +1,152 @@
+/* Heavenly Travel — /landing/fable/3
+   A hybrid of fable/1 (sea-deep teal, gold, sand and foam surfaces) and
+   fable/2 (dashed road rule, two-layer road strokes, journeys board).
+   Only what Tailwind cannot express cleanly lives here. */
+
+.page {
+  --sea-deep: #0c3b3a;
+  --sea: #157a74;
+  --sea-mid: #0f4d4b;
+  --sea-soft: #cfe5e0;
+  --foam: #e8f2ef;
+  --sand: #f2e8d5;
+  --gold: #e4a93c;
+  --gold-bright: #f0bb55;
+  --gold-deep: #b8811f;
+  --ink: #142523;
+  --ink-soft: #3f5552;
+  --line: #d6e2de;
+
+  color: var(--ink);
+  background: #ffffff;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.onDark :focus-visible {
+  outline-color: #ffd889;
+}
+
+.page a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Hero backdrop: the Langkawi aerial under a sea-deep scrim so the map,
+   headline and white text stay legible while the teal sea shows through. */
+.heroScrim {
+  background: linear-gradient(
+    100deg,
+    rgba(12, 59, 58, 0.97) 0%,
+    rgba(12, 59, 58, 0.9) 42%,
+    rgba(12, 59, 58, 0.58) 100%
+  );
+}
+
+/* Dashed centre-line under the headline, drawn like a road marking. */
+.roadRule {
+  height: 6px;
+  border-radius: 3px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--gold) 0 28px,
+    transparent 28px 44px
+  );
+}
+
+/* Route map: two-layer road (asphalt under-line, gold marking on top).
+   Each link draws outward from Langkawi; --i is the hop distance. */
+.road {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.pin {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .road {
+    stroke-dashoffset: 1;
+    animation: draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    animation-delay: calc(0.3s + var(--i) * 0.42s);
+  }
+  .pin {
+    opacity: 0;
+    animation: appear 0.4s ease-out forwards;
+    animation-delay: calc(0.7s + var(--i) * 0.42s);
+  }
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Map labels: the SVG scales to ~300px on phones, so labels grow to stay legible. */
+.labelMajor {
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .labelMajor {
+    font-size: 19px;
+  }
+}
+
+/* Light fields (search card on white, quote form on the sea-mid card). */
+.fieldLight {
+  width: 100%;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--foam);
+  color: var(--ink);
+  padding: 0 0.85rem;
+  font: inherit;
+  line-height: 1.4;
+}
+.fieldLight::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.8;
+}
+.fieldLight:hover {
+  border-color: var(--sea);
+}
+
+/* Horizontal journeys board on phones: hide scrollbar chrome, keep scrolling. */
+.board {
+  scrollbar-width: none;
+}
+.board::-webkit-scrollbar {
+  display: none;
+}
+
+/* FAQ disclosure marker */
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary .chev {
+  transition: transform 0.2s ease;
+}
+.faq[open] summary .chev {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .faq summary .chev {
+    transition: none;
+  }
+}

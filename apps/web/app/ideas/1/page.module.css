@@ -1,0 +1,219 @@
+/* Say the trip: /ideas/1
+   A letter, not a platform. Only what Tailwind can't say tidily:
+   the marker swipe, the inline blanks and the margin rule. */
+
+.page {
+  --paper: #fbfaf4;
+  --ink: #1b2b26;
+  --marker: #ffe14d;
+  --pen: #2440c8;
+  --rule: #d9d6c8;
+  --margin-w: 15rem;
+  color: var(--ink);
+  background: var(--paper);
+  color-scheme: light;
+  font-family: var(--font-letter), Georgia, serif;
+  font-feature-settings: "kern", "liga";
+}
+
+@media (min-width: 1280px) {
+  .page {
+    --margin-w: 17rem;
+  }
+}
+
+/* The hairline between the letter and its marginalia. */
+.ruled {
+  position: relative;
+}
+@media (min-width: 1024px) {
+  .ruled::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(var(--margin-w) + 1.5rem);
+    width: 1px;
+    background: var(--rule);
+  }
+}
+
+/* A highlighter swipe behind the words, not a box around them. */
+.marker {
+  color: inherit;
+  padding: 0 0.12em;
+  margin: 0 -0.04em;
+  background-color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    transparent 0.4%,
+    var(--marker) 1.8%,
+    var(--marker) 97.5%,
+    transparent 99.6%
+  );
+  background-repeat: no-repeat;
+  background-position: 0 var(--swipe-y, 62%);
+  background-size: 100% var(--swipe-h, 76%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ---------- The sentence ---------- */
+
+.sentence {
+  font-size: clamp(1.9rem, 6.1vw, 5rem);
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  font-weight: 500;
+  text-wrap: pretty;
+  --swipe-h: 60%;
+  --swipe-y: 56%;
+}
+
+.blank {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  font-weight: 800;
+}
+
+.word {
+  text-decoration: underline;
+  text-decoration-thickness: 0.045em;
+  text-underline-offset: 0.13em;
+  text-decoration-skip-ink: none;
+}
+
+/* A small chevron: the word can be changed. */
+.word::after {
+  content: "";
+  display: inline-block;
+  width: 0.2em;
+  height: 0.2em;
+  margin: 0 0.08em 0 0.2em;
+  vertical-align: 0.3em;
+  border-right: 0.06em solid var(--pen);
+  border-bottom: 0.06em solid var(--pen);
+  transform: rotate(45deg);
+}
+
+/* The real control lies over the word, invisible but fully operable. */
+.control {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+  font-family: var(--font-reply), ui-monospace, monospace;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.control:focus-visible ~ .word {
+  outline: 3px solid var(--pen);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.count {
+  display: inline-block;
+  box-sizing: content-box;
+  min-width: 1ch;
+  padding: 0 0.12em;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  font-weight: 800;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  color: inherit;
+  appearance: textfield;
+}
+
+.count:focus-visible {
+  outline: 3px solid var(--pen);
+  outline-offset: 3px;
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max(1.75rem, 0.42em);
+  height: max(1.75rem, 0.42em);
+  margin: 0 0.12em;
+  vertical-align: 0.22em;
+  border: 1px solid var(--pen);
+  border-radius: 2px;
+  font-family: var(--font-reply), ui-monospace, monospace;
+  font-size: max(1rem, 0.28em);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--pen);
+  background: transparent;
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled) {
+  color: var(--paper);
+  background: var(--pen);
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.step:focus-visible {
+  outline: 3px solid var(--pen);
+  outline-offset: 2px;
+}
+
+/* ---------- Motion, all of it optional ---------- */
+
+@keyframes swipe {
+  from {
+    background-size: 0% var(--swipe-h, 76%);
+  }
+  to {
+    background-size: 100% var(--swipe-h, 76%);
+  }
+}
+
+@keyframes write {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sentence .marker {
+    animation: swipe 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(0.25s + var(--i, 0) * 0.14s);
+  }
+
+  .line {
+    animation: write 0.45s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.16s);
+  }
+
+  @supports (animation-timeline: view()) {
+    .letter .marker {
+      animation: swipe linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 28%;
+    }
+  }
+}

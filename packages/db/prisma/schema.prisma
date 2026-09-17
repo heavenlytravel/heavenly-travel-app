@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Identity, mirrored from Clerk by the user.* webhook. Access to an area is
+/// granted by the presence of the matching profile row, never by a role
+/// column. Every signed-in user is a customer.
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminProfile   AdminProfile?
+  driverProfile  DriverProfile?
+  partnerProfile PartnerProfile?
+}
+
+/// Staff access. `level` is one of the AdminLevel values in src/roles.ts.
+model AdminProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Stub. Real driver fields (licence, vehicle links) arrive with that feature.
+model DriverProfile {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Boolean   @default(false)
+  activeAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+/// Stub. Real partner fields (company details) arrive with that feature.
+model PartnerProfile {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Boolean   @default(false)
+  activeAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}

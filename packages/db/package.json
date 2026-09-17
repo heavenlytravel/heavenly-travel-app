@@ -1,0 +1,41 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:promote-admin": "node --env-file=.env --import tsx scripts/promote-admin.ts",
+    "postinstall": "prisma generate",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src scripts --max-warnings 0"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0",
+    "@prisma/adapter-neon": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "server-only": "0.0.1"
+  },
+  "peerDependencies": {
+    "@clerk/nextjs": "7.9.4",
+    "next": "16.3.1",
+    "react": "19.2.8"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "dotenv": "17.4.2",
+    "eslint": "10.8.1",
+    "prisma": "7.10.0",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  }
+}

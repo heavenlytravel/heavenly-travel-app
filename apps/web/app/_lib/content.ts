@@ -116,17 +116,6 @@ export const FLEET_GROUPS: {
   },
 ];
 
-/**
- * The smallest vehicle that seats the group, and how many of them. Groups
- * larger than the biggest coach are split across several of it.
- */
-export function vehicleFor(passengers: number) {
-  const fit = FLEET.find((v) => v.seats >= passengers);
-  if (fit) return { vehicle: fit, count: 1 };
-  const largest = FLEET.reduce((a, b) => (b.seats > a.seats ? b : a));
-  return { vehicle: largest, count: Math.ceil(passengers / largest.seats) };
-}
-
 export type Destination = {
   name: string;
   state: string;

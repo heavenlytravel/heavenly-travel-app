@@ -3,7 +3,8 @@
  * Route: /design-cta
  * Model: Claude Fable 5.1 (claude-fable-5-1)
  * The booking search box is the main call to action on every landing design.
- * This page puts the three in use next to three more ideas, each on a backdrop
+ * This page puts the three in use next to three that build on the first and
+ * add attractions and hotels as products, each on a backdrop
  * like the hero it is meant for, so the box can be chosen apart from the page.
  */
 
@@ -13,17 +14,17 @@ import Link from "next/link";
 import styles from "./page.module.css";
 import { Chips } from "../_components/Chips";
 import { BookingCard } from "../_components/search/BookingCard";
-import { HeadcountSearch } from "../_components/search/HeadcountSearch";
+import { BundleSearch } from "../_components/search/BundleSearch";
+import { GuidedSearch } from "../_components/search/GuidedSearch";
+import { RailSearch } from "../_components/search/RailSearch";
 import { RidePanel } from "../_components/search/RidePanel";
-import { StepSearch } from "../_components/search/StepSearch";
 import { TabbedSearch } from "../_components/search/TabbedSearch";
-import { TicketSearch } from "../_components/search/TicketSearch";
 import { fontVars } from "../_lib/fonts";
 
 export const metadata: Metadata = {
   title: "Search box designs | Heavenly Travel",
   description:
-    "Six designs for the Heavenly Travel booking search box: the three used on the landing designs and three more ideas.",
+    "Six designs for the Heavenly Travel booking search box: the three used on the landing designs and three that build on the first, with attractions and hotels added.",
 };
 
 type Box = {
@@ -74,34 +75,34 @@ const BOXES: Box[] = [
     width: "max-w-[26rem]",
   },
   {
-    id: "headcount",
-    name: "Start from the headcount",
+    id: "guided",
+    name: "The bar with a guide",
     summary:
-      "The group size comes first and picks the product and the vehicle as it changes, with a starting price. Guests never need to know the fleet.",
-    traits: ["Slider and stepper", "Live vehicle match", "Shows a price"],
-    Component: HeadcountSearch,
+      "Design 1 as one joined bar, with a tray under it that follows the field you are on: popular places, quick dates, common times, a stepper for people. Tapping an answer moves to the next field, so a request can be made without typing.",
+    traits: ["Four products", "One-tap answers", "Moves you to the next field"],
+    Component: GuidedSearch,
+    backdrop: styles.teal,
+    width: "max-w-5xl",
+  },
+  {
+    id: "rail",
+    name: "Product rail on glass",
+    summary:
+      "Design 1 for a photo hero. The products move to a rail on the left so the bar stays one row, the fields ease in when the product changes, and a line underneath reads the request back in plain words, with the nights counted for a hotel.",
+    traits: ["Four products", "Request read back", "Sits on a photo"],
+    Component: RailSearch,
+    backdrop: styles.photo,
+    width: "max-w-5xl",
+  },
+  {
+    id: "bundle",
+    name: "Combine products in one request",
+    summary:
+      "Design 1 for a travel agent. The products are switches, not tabs, so a guest can ask for a car, a hotel and tickets together. Where, when and who are asked once, and each product switched on adds only its own fields, marked with its icon.",
+    traits: ["Four products", "Mix and match", "One request, one reply"],
+    Component: BundleSearch,
     backdrop: styles.mint,
-    width: "max-w-2xl",
-  },
-  {
-    id: "steps",
-    name: "One question at a time",
-    summary:
-      "A small dark card that asks one thing, keeps the answers as chips you can go back to, and ends on the send button. The smallest of the six, good on phones.",
-    traits: ["Five short steps", "Answer chips", "Smallest footprint"],
-    Component: StepSearch,
-    backdrop: styles.paper,
-    width: "max-w-[28rem]",
-  },
-  {
-    id: "ticket",
-    name: "The trip as a ticket",
-    summary:
-      "The route is the headline, set large like a boarding pass, with a button to swap it for the return leg. The tear-off stub holds the date, the group and the button.",
-    traits: ["Route as headline", "Swap button", "Tear-off stub"],
-    Component: TicketSearch,
-    backdrop: styles.deep,
-    width: "max-w-4xl",
+    width: "max-w-5xl",
   },
 ];
 
@@ -124,9 +125,10 @@ export default function DesignCta() {
         </h1>
         <p className="mt-3 max-w-2xl text-neutral-600">
           The booking search box is the main call to action. The first three are
-          in use on the landing designs. The last three are ideas for the box
-          only. All six work: fill one in and the button opens WhatsApp with the
-          trip written out.
+          in use on the landing designs. The last three build on the first one:
+          the same horizontal bar, with attractions and hotels added, and fields
+          that change with the product. All six work: fill one in and the button
+          opens WhatsApp with the request written out.
         </p>
 
         <nav aria-label="Search boxes" className="mt-6">

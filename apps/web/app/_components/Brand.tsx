@@ -155,17 +155,57 @@ export function CoachIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-/** The icon for one of the two main products. */
+export function TicketIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z" />
+      <path d="M14 6v2.5M14 11v2M14 15.5V18" />
+    </svg>
+  );
+}
+
+export function BedIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7M3 15h18M3 18v1.5M21 18v1.5" />
+      <path d="M6.5 9V7.5A1.5 1.5 0 0 1 8 6h8a1.5 1.5 0 0 1 1.5 1.5V9" />
+    </svg>
+  );
+}
+
+const PRODUCT_ICONS = {
+  car: CarIcon,
+  coach: CoachIcon,
+  attraction: TicketIcon,
+  hotel: BedIcon,
+};
+
+/** The icon for a product. */
 export function ProductIcon({
   service,
   className,
 }: {
-  service: "car" | "coach";
+  service: keyof typeof PRODUCT_ICONS;
   className?: string;
 }) {
-  return service === "car" ? (
-    <CarIcon className={className} />
-  ) : (
-    <CoachIcon className={className} />
-  );
+  const Icon = PRODUCT_ICONS[service];
+  return <Icon className={className} />;
 }

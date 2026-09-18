@@ -27,17 +27,3 @@
     ),
     linear-gradient(to bottom, #e3f3ee, #eef7f3);
 }
-
-.paper {
-  background: #f6f4ef;
-}
-
-.deep {
-  background:
-    radial-gradient(
-      50rem 24rem at 10% 0%,
-      rgba(21, 122, 116, 0.55),
-      transparent 65%
-    ),
-    #071918;
-}

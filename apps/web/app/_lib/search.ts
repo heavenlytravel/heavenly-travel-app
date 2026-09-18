@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { DESTINATIONS, WHATSAPP_HREF } from "./content";
 import { MAIN_SERVICE_NOTES, SERVICE_LABELS } from "./trip";
 
@@ -11,7 +8,8 @@ import { MAIN_SERVICE_NOTES, SERVICE_LABELS } from "./trip";
  * boxes differ in layout and interaction, never in what they ask.
  */
 
-export type ProductKey = "car" | "coach" | "attraction" | "hotel";
+export type ProductKey =
+  "rental" | "car" | "coach" | "attraction" | "hotel" | "package";
 
 export type FieldKey =
   | "from"
@@ -20,6 +18,8 @@ export type FieldKey =
   | "date"
   | "endDate"
   | "time"
+  | "endTime"
+  | "days"
   | "people"
   | "children"
   | "rooms";
@@ -72,6 +72,53 @@ const dropOff: FieldDef = {
 };
 
 export const PRODUCTS: Record<ProductKey, Product> = {
+  rental: {
+    key: "rental",
+    label: "Car rental",
+    note: "Drive yourself, by the day or the week",
+    cta: "Search cars",
+    fields: [
+      {
+        key: "from",
+        kind: "place",
+        label: "Pick-up location",
+        placeholder: "City, airport or address",
+        suggestions: PICKUPS,
+      },
+      { key: "date", kind: "date", label: "Pick-up date" },
+      { key: "time", kind: "time", label: "Pick-up time" },
+      { key: "endDate", kind: "date", label: "Return date" },
+      { key: "endTime", kind: "time", label: "Return time" },
+    ],
+  },
+  package: {
+    key: "package",
+    label: "Custom packages",
+    note: "Transport, stays and experiences in one plan",
+    cta: "Plan my package",
+    fields: [
+      {
+        key: "place",
+        kind: "place",
+        label: "Destination",
+        placeholder: "Where would you like to go?",
+        suggestions: PLACES,
+      },
+      { key: "date", kind: "date", label: "Travel date" },
+      {
+        key: "days",
+        kind: "count",
+        label: "Number of days",
+        unit: ["day", "days"],
+      },
+      {
+        key: "people",
+        kind: "count",
+        label: "Travellers",
+        unit: ["traveller", "travellers"],
+      },
+    ],
+  },
   car: {
     key: "car",
     label: SERVICE_LABELS.car,
@@ -168,6 +215,7 @@ export const PRODUCTS: Record<ProductKey, Product> = {
   },
 };
 
+/** The four products most search boxes offer, in the order they show them. */
 export const PRODUCT_LIST: Product[] = [
   PRODUCTS.car,
   PRODUCTS.coach,
@@ -177,13 +225,15 @@ export const PRODUCT_LIST: Product[] = [
 
 export type SearchValues = Record<FieldKey, string>;
 
-const EMPTY: SearchValues = {
+export const EMPTY_SEARCH: SearchValues = {
   from: "",
   to: "",
   place: "",
   date: "",
   endDate: "",
   time: "",
+  endTime: "",
+  days: "3",
   people: "2",
   children: "0",
   rooms: "1",
@@ -241,6 +291,8 @@ export function searchHref(
   products: Product[],
   fields: FieldDef[],
   values: SearchValues,
+  /** Extra lines a box adds for answers that are not fields, like a checkbox. */
+  notes: string[] = [],
 ) {
   const names = products.map((p) => p.label.toLowerCase()).join(" + ");
   const lines = [
@@ -249,39 +301,9 @@ export function searchHref(
       const text = readable(f, values[f.key]);
       return text ? [`${f.label}: ${text}`] : [];
     }),
+    ...notes,
   ];
   return `${WHATSAPP_HREF}?text=${encodeURIComponent(lines.join("\n"))}`;
-}
-
-/**
- * Values shared by every product, so a date or a destination typed for a hotel
- * is still there when the guest switches to attractions.
- */
-export function useSearchValues() {
-  const [values, setValues] = useState<SearchValues>(EMPTY);
-  const set = (key: FieldKey, value: string) =>
-    setValues((v) => {
-      const next = { ...v, [key]: value };
-      // An end date can never come before the start date.
-      if (next.date && next.endDate && next.endDate < next.date)
-        next.endDate = "";
-      return next;
-    });
-  return { values, set };
-}
-
-/** State for a search box that asks about one product at a time. */
-export function useSearch(initial: ProductKey = "car") {
-  const [key, setProduct] = useState<ProductKey>(initial);
-  const { values, set } = useSearchValues();
-  const product = PRODUCTS[key];
-  return {
-    product,
-    setProduct,
-    values,
-    set,
-    href: searchHref([product], product.fields, values),
-  };
 }
 
 /**

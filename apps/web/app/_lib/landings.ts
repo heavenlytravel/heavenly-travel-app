@@ -1,9 +1,9 @@
 /**
- * The landing designs under /landing, all built by Claude Fable 5.1
- * (claude-fable-5-1). Each is inspired by the structure of a reference site
- * and applies it to Heavenly Travel's offer, using the Overpass display type,
- * the green-teal palette with amber accents, and the photography from
- * heavenlytravel.my. Inspired by the reference, never a copy of it.
+ * The landing designs under /landing. The first three were built by Claude
+ * Fable 5.1 (claude-fable-5-1), each inspired by the structure of a reference
+ * site, never a copy of it, in Overpass with the green-teal and amber palette
+ * and the photography from heavenlytravel.my. The last is a concept designed
+ * by GPT Astra and converted to this codebase with its own look kept.
  */
 
 export type Landing = {
@@ -11,7 +11,8 @@ export type Landing = {
   href: string;
   name: string;
   source: string;
-  sourceHref: string;
+  /** The reference site, when there is one to visit. */
+  sourceHref?: string;
   label: string;
   concept: string;
   borrowed: string[];
@@ -61,6 +62,20 @@ export const LANDINGS: Landing[] = [
       "Booking panel beside the headline",
       "Rides grouped by occasion",
       "Numbered steps and an FAQ accordion",
+    ],
+  },
+  {
+    slug: "astra",
+    href: "/landing/astra",
+    name: "GPT Astra",
+    source: "Designed by GPT Astra as one HTML file, converted here",
+    label: "Travel made simple",
+    concept:
+      "A pale photo hero with a handwritten accent, a booking card of six services pulled up over it, and four destinations that each open a page of their own with the place already filled in. Serif headlines, deep green and a gold accent.",
+    borrowed: [
+      "Six services as tall icon tabs",
+      "A page for every destination",
+      "DM Serif Display with a script accent",
     ],
   },
 ];

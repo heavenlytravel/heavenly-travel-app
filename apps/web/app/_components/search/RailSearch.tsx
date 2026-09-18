@@ -1,6 +1,7 @@
 "use client";
 
-import { PRODUCT_LIST, summarise, useSearch } from "../../_lib/search";
+import { PRODUCT_LIST, summarise } from "../../_lib/search";
+import { useSearch } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
 import { WhatsAppIcon } from "../WhatsAppIcon";
 import { FieldInput, Stepper } from "./fields";

@@ -6,7 +6,7 @@ import { LANDINGS } from "../_lib/landings";
 export const metadata: Metadata = {
   title: "Landing page designs | Heavenly Travel",
   description:
-    "Landing page designs for Heavenly Travel by Claude Fable 5.1, each inspired by the structure of a reference site: Agoda, Blacklane and Grab Limo.",
+    "Landing page designs for Heavenly Travel: three by Claude Fable 5.1, inspired by Agoda, Blacklane and Grab Limo, and a concept by GPT Astra.",
 };
 
 export default function LandingIndex() {
@@ -28,10 +28,11 @@ export default function LandingIndex() {
           Landing page designs
         </h1>
         <p className="mt-3 max-w-2xl text-neutral-600">
-          Full pages by Claude Fable 5.1. Each is inspired by the structure of a
-          reference site and rebuilt for coach charter and cars with driver, in
-          Overpass with the teal-and-amber palette and the photography from
-          heavenlytravel.my.
+          Full pages rebuilt for coach charter and cars with driver. The first
+          three are by Claude Fable 5.1, each inspired by the structure of a
+          reference site, in Overpass with the teal-and-amber palette and the
+          photography from heavenlytravel.my. The last is a concept by GPT
+          Astra, converted to this codebase with its own look kept.
         </p>
 
         <ol className="mt-10 space-y-5">
@@ -46,14 +47,16 @@ export default function LandingIndex() {
                   {l.name} · {l.label}
                 </h2>
                 <div className="flex gap-4 text-sm font-medium">
-                  <a
-                    href={l.sourceHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-neutral-500 underline-offset-4 hover:underline"
-                  >
-                    Source
-                  </a>
+                  {l.sourceHref && (
+                    <a
+                      href={l.sourceHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neutral-500 underline-offset-4 hover:underline"
+                    >
+                      Source
+                    </a>
+                  )}
                   <Link
                     href={l.href}
                     className="underline-offset-4 hover:underline"

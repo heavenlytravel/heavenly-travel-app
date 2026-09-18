@@ -18,13 +18,14 @@ import { BundleSearch } from "../_components/search/BundleSearch";
 import { GuidedSearch } from "../_components/search/GuidedSearch";
 import { RailSearch } from "../_components/search/RailSearch";
 import { RidePanel } from "../_components/search/RidePanel";
+import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import { TabbedSearch } from "../_components/search/TabbedSearch";
 import { fontVars } from "../_lib/fonts";
 
 export const metadata: Metadata = {
   title: "Search box designs | Heavenly Travel",
   description:
-    "Six designs for the Heavenly Travel booking search box: the three used on the landing designs and three that build on the first, with attractions and hotels added.",
+    "Designs for the Heavenly Travel booking search box: the ones used on the landing designs and three that build on the first, with attractions and hotels added.",
 };
 
 type Box = {
@@ -104,6 +105,17 @@ const BOXES: Box[] = [
     backdrop: styles.mint,
     width: "max-w-5xl",
   },
+  {
+    id: "services",
+    name: "Six services as tall tabs",
+    usedOn: { href: "/landing/astra", label: "GPT Astra page" },
+    summary:
+      "The booking box from the GPT Astra concept. Six services sit on top as tall icon tabs, the fields join into one row that changes with the service, and the button is deep green. It adds car rental and custom packages to the product list.",
+    traits: ["Six services", "Joined field row", "Designed by GPT Astra"],
+    Component: ServiceTabsSearch,
+    backdrop: styles.mint,
+    width: "max-w-6xl",
+  },
 ];
 
 export default function DesignCta() {
@@ -125,10 +137,11 @@ export default function DesignCta() {
         </h1>
         <p className="mt-3 max-w-2xl text-neutral-600">
           The booking search box is the main call to action. The first three are
-          in use on the landing designs. The last three build on the first one:
+          in use on the landing designs. The next three build on the first one:
           the same horizontal bar, with attractions and hotels added, and fields
-          that change with the product. All six work: fill one in and the button
-          opens WhatsApp with the request written out.
+          that change with the product. The last comes from the GPT Astra
+          concept. All of them work: fill one in and the button opens WhatsApp
+          with the request written out.
         </p>
 
         <nav aria-label="Search boxes" className="mt-6">

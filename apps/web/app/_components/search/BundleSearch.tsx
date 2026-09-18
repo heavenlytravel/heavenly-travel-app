@@ -6,9 +6,9 @@ import {
   PRODUCT_LIST,
   bundleFields,
   searchHref,
-  useSearchValues,
   type ProductKey,
 } from "../../_lib/search";
+import { useSearchValues } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
 import { WhatsAppIcon } from "../WhatsAppIcon";
 import { FieldInput, Stepper } from "./fields";

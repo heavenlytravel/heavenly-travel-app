@@ -7,11 +7,11 @@ import {
   daysToSaturday,
   isoDateFromNow,
   readable,
-  useSearch,
   type FieldDef,
   type FieldKey,
   type SearchValues,
 } from "../../_lib/search";
+import { useSearch } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
 import { FieldInput, Stepper } from "./fields";
 

@@ -108,14 +108,26 @@ export function Photo({
   alt,
   className,
   loading = "lazy",
+  style,
 }: {
   src: string;
   alt: string;
   className?: string;
   loading?: "lazy" | "eager";
+  style?: React.CSSProperties;
 }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className={className} loading={loading} />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading={loading}
+      // The one eager photo on a page is its hero.
+      fetchPriority={loading === "eager" ? "high" : undefined}
+      style={style}
+    />
+  );
 }
 
 export function CarIcon({ className = "h-5 w-5" }: { className?: string }) {
@@ -191,7 +203,49 @@ export function BedIcon({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
+export function KeyIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l8.5-8.5M16 7l2.5 2.5M13.5 9.5l2 2" />
+    </svg>
+  );
+}
+
+export function SuitcaseIcon({
+  className = "h-5 w-5",
+}: {
+  className?: string;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="8" width="16" height="12" rx="2" />
+      <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16" />
+    </svg>
+  );
+}
+
 const PRODUCT_ICONS = {
+  rental: KeyIcon,
+  package: SuitcaseIcon,
   car: CarIcon,
   coach: CoachIcon,
   attraction: TicketIcon,

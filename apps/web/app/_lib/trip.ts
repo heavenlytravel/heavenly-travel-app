@@ -17,6 +17,10 @@ export type Trip = {
   from: string;
   to: string;
   date: string;
+  /** Pick-up time, HH:MM. */
+  time: string;
+  /** Hours booked when the driver is hired by the hour; empty for a one-way trip. */
+  hours: string;
   passengers: string;
 };
 
@@ -25,6 +29,8 @@ const EMPTY: Trip = {
   from: "",
   to: "",
   date: "",
+  time: "",
+  hours: "",
   passengers: "",
 };
 
@@ -46,6 +52,8 @@ export function whatsappHrefFor(trip: Trip) {
     trip.from && `From: ${trip.from}`,
     trip.to && `To: ${trip.to}`,
     trip.date && `Date: ${trip.date}`,
+    trip.time && `Pick-up time: ${trip.time}`,
+    trip.hours && `Duration: ${trip.hours} hours, driver stays with us`,
     trip.passengers && `Passengers: ${trip.passengers}`,
   ].filter(Boolean);
   return `${WHATSAPP_HREF}?text=${encodeURIComponent(lines.join("\n"))}`;

@@ -3,7 +3,7 @@ import { Figtree, Overpass } from "next/font/google";
 /** Overpass for display type, Figtree for body, on every landing design. */
 export const display = Overpass({
   subsets: ["latin"],
-  weight: ["600", "700", "900"],
+  weight: ["300", "400", "600", "700", "900"],
   variable: "--font-display",
   display: "swap",
 });

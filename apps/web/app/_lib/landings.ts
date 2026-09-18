@@ -33,4 +33,19 @@ export const LANDINGS: Landing[] = [
       "Review score chips and destination counts",
     ],
   },
+  {
+    slug: "blacklane",
+    href: "/landing/blacklane",
+    name: "Blacklane",
+    source: "blacklane.com",
+    sourceHref: "https://www.blacklane.com/",
+    label: "Quiet chauffeur service",
+    concept:
+      "A calm, premium page: a full-height photo hero with a one-way or by-the-hour booking card, services as tall photo panels, vehicle classes with seats and bags, and the chauffeur standard spelled out in a dark band.",
+    borrowed: [
+      "One-way and by-the-hour booking card",
+      "Vehicle classes instead of a vehicle list",
+      "Dark, photo-led sections with lots of air",
+    ],
+  },
 ];

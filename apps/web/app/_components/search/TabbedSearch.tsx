@@ -4,10 +4,10 @@ import {
   MAIN_SERVICES,
   MAIN_SERVICE_NOTES,
   SERVICE_LABELS,
-  useTrip,
   mainServiceOf,
   type MainService,
 } from "../../_lib/trip";
+import { useTrip } from "../../_lib/useTrip";
 import { ProductIcon } from "../Brand";
 
 const focus =

@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { WHATSAPP_HREF } from "./content";
 
 export type ServiceKey = "car" | "coach" | "transfer" | "tour";
@@ -24,7 +21,7 @@ export type Trip = {
   passengers: string;
 };
 
-const EMPTY: Trip = {
+export const EMPTY_TRIP: Trip = {
   service: "car",
   from: "",
   to: "",
@@ -33,18 +30,6 @@ const EMPTY: Trip = {
   hours: "",
   passengers: "",
 };
-
-/**
- * One piece of state for every booking form on the landing designs. The
- * forms look different (tabbed box, booking card, side panel) but capture the
- * same trip and hand it to WhatsApp as a pre-written message.
- */
-export function useTrip(initial: Partial<Trip> = {}) {
-  const [trip, setTrip] = useState<Trip>({ ...EMPTY, ...initial });
-  const set = <K extends keyof Trip>(key: K, value: Trip[K]) =>
-    setTrip((t) => ({ ...t, [key]: value }));
-  return { trip, set, whatsappHref: whatsappHrefFor(trip) };
-}
 
 export function whatsappHrefFor(trip: Trip) {
   const lines = [

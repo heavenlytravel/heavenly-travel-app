@@ -1,7 +1,8 @@
 "use client";
 
 import { WhatsAppIcon } from "../WhatsAppIcon";
-import { SERVICE_LABELS, useTrip, type ServiceKey } from "../../_lib/trip";
+import { SERVICE_LABELS, type ServiceKey } from "../../_lib/trip";
+import { useTrip } from "../../_lib/useTrip";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#157a74]";

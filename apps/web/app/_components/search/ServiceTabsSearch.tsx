@@ -9,7 +9,7 @@ import { FieldInput } from "./fields";
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
 
-/** All six services, in the order the design lists them. */
+/** All six services, in the order the tabs show them. */
 const TABS: Product[] = [
   PRODUCTS.rental,
   PRODUCTS.car,
@@ -20,11 +20,10 @@ const TABS: Product[] = [
 ];
 
 /**
- * The booking box from the GPT Astra concept: six services as tall icon tabs,
- * then one joined row of fields that changes with the service, and a deep
- * green button at the end. `destination` prefills where the trip starts or
- * goes, for a page that is already about one place. `footer` sits under the
- * fields, inside the card.
+ * Six services as tall icon tabs, then one joined row of fields that changes
+ * with the service, and a deep green button at the end. `destination` fills in
+ * where the trip starts or goes, and may change while the box is on screen.
+ * `footer` sits under the fields, inside the card.
  */
 export function ServiceTabsSearch({
   destination,
@@ -37,6 +36,14 @@ export function ServiceTabsSearch({
     "rental",
     destination ? { from: destination, place: destination } : {},
   );
+  // A newly chosen destination overwrites the place, whatever was typed, and
+  // leaves the service and the other fields alone.
+  const [applied, setApplied] = useState(destination);
+  if (destination !== applied) {
+    setApplied(destination);
+    set("from", destination ?? "");
+    set("place", destination ?? "");
+  }
   const [sameLocation, setSameLocation] = useState(true);
   const rental = product.key === "rental";
   const href = searchHref(

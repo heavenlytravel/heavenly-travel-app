@@ -1,7 +1,7 @@
-import { WHATSAPP_HREF } from "../../../_lib/content";
-import { ServiceTabsSearch } from "../../../_components/search/ServiceTabsSearch";
+import { WHATSAPP_HREF } from "../_lib/content";
+import { BookingSearch } from "./DestinationPicker";
 
-/** Pieces the home page and every destination page of the concept share. */
+/** Sections of the home page that need no state of their own. */
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
@@ -49,44 +49,31 @@ function TrustRow() {
   );
 }
 
-/**
- * The booking card, pulled up over the bottom of the hero. `lift` is how far,
- * since the tall home hero and the shorter destination heroes differ.
- */
-export function Booking({
-  destination,
-  lift,
-}: {
-  destination?: string;
-  lift: string;
-}) {
+/** The booking card, pulled up over the bottom of the hero. */
+export function Booking() {
   return (
     <section
       id="booking"
       aria-label="Travel booking search"
-      className={`relative z-[3] mx-auto w-[calc(100%-24px)] max-w-[1460px] scroll-mt-24 sm:w-[92%] ${lift}`}
+      className="relative z-[3] mx-auto -mt-[145px] w-[calc(100%-24px)] max-w-[1460px] scroll-mt-24 sm:-mt-[180px] sm:w-[92%] lg:-mt-[235px]"
     >
-      <ServiceTabsSearch destination={destination} footer={<TrustRow />} />
+      <BookingSearch footer={<TrustRow />} />
     </section>
   );
 }
 
-export function Closing({
-  eyebrow: label,
-  heading,
-}: {
-  eyebrow: string;
-  heading: string;
-}) {
+export function Closing() {
   return (
     <section
       id="contact"
       className="mx-3 mb-[35px] flex scroll-mt-8 flex-col items-start justify-between gap-[30px] rounded-[22px] bg-[#073c36] px-6 py-9 text-white sm:mx-[clamp(20px,5vw,78px)] sm:mb-[60px] sm:flex-row sm:items-center sm:px-[clamp(24px,5vw,70px)] sm:py-[52px]"
     >
       <div>
-        <p className={`${eyebrow} !text-[#c7ded8]`}>{label}</p>
+        <p className={`${eyebrow} !text-[#c7ded8]`}>
+          Local knowledge, one team
+        </p>
         <h2 className="my-2 font-(family-name:--font-display) text-[clamp(2.2rem,4vw,4rem)] leading-[1.05]">
-          {heading}
+          Tell us where you want to go.
         </h2>
       </div>
       <a
@@ -103,10 +90,9 @@ export function Closing({
 
 export function SiteFooter() {
   return (
-    <footer className="flex flex-col justify-between gap-3 px-5 pb-28 text-[0.82rem] text-[#64716e] sm:flex-row sm:px-[clamp(20px,5vw,78px)]">
+    <footer className="flex flex-col justify-between gap-3 px-5 pb-7 text-[0.82rem] text-[#64716e] sm:flex-row sm:px-[clamp(20px,5vw,78px)] sm:pb-[35px]">
       <span>© {new Date().getFullYear()} Heavenly Travel</span>
       <span>Inbound · Outbound · Ticketing · Transportation</span>
-      <span>Concept by GPT Astra, converted by Claude Fable 5.1.</span>
     </footer>
   );
 }

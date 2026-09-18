@@ -1,9 +1,9 @@
 import { DM_Sans, DM_Serif_Display, Oooh_Baby } from "next/font/google";
 
 /**
- * The GPT Astra concept's own type: DM Serif Display for headlines, DM Sans for
+ * The home page's type: DM Serif Display for headlines, DM Sans for
  * everything else and Oooh Baby for the handwritten accents. It keeps the
- * variable names of the other landing designs so shared pieces pick it up.
+ * variable names the landing designs use so shared pieces pick it up.
  */
 const display = DM_Serif_Display({
   subsets: ["latin"],

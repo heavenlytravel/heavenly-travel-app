@@ -1,8 +1,8 @@
 /**
  * Heavenly Travel's real offer (coach charter and cars with driver across
  * Malaysia) as content: fleet, destinations, services, reviews and steps.
- * Shared by the reimagined pages under /landing/fable/reimagined and the
- * concepts under /ideas, so each page differs in design, not in facts.
+ * Shared by the landing designs under /landing, so each page differs in
+ * design, not in facts.
  *
  * Prices are indicative placeholders so the layouts can be judged with real
  * numbers in them; every page says a quote confirms the final price.

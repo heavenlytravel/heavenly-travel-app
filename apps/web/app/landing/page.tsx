@@ -6,7 +6,7 @@ import { LANDINGS } from "../_lib/landings";
 export const metadata: Metadata = {
   title: "Landing page designs | Heavenly Travel",
   description:
-    "Landing page designs for Heavenly Travel by Claude Fable 5.1, each inspired by the structure of a reference site.",
+    "Landing page designs for Heavenly Travel by Claude Fable 5.1, each inspired by the structure of a reference site: Agoda, Blacklane and Grab Limo.",
 };
 
 export default function LandingIndex() {

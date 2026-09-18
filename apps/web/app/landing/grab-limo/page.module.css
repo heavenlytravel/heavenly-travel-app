@@ -1,0 +1,43 @@
+/* Heavenly Travel — /landing/grab-limo
+   Bright pre-booking page. White and mint, teal structure, amber for the
+   main action. */
+
+.page {
+  --ink: #10201f;
+  --sea-deep: #0c3b3a;
+  --sea: #157a74;
+  --mint: #eef7f3;
+  --gold: #e4a93c;
+  color: var(--ink);
+  background: #ffffff;
+}
+
+.hero {
+  background:
+    radial-gradient(
+      60rem 30rem at 85% -10%,
+      rgba(228, 169, 60, 0.18),
+      transparent 60%
+    ),
+    linear-gradient(to bottom, #e3f3ee 0%, #eef7f3 60%, #ffffff 100%);
+}
+
+/* A line joins the numbered steps once they sit in a row. */
+@media (min-width: 48rem) {
+  .steps > li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 1.5rem;
+    left: calc(50% + 2.25rem);
+    width: calc(100% - 2.5rem);
+    border-top: 2px dashed #b9d6ce;
+  }
+}
+
+/* The summary carries its own plus sign. */
+.faq summary {
+  list-style: none;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}

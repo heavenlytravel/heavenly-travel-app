@@ -48,4 +48,19 @@ export const LANDINGS: Landing[] = [
       "Dark, photo-led sections with lots of air",
     ],
   },
+  {
+    slug: "grab-limo",
+    href: "/landing/grab-limo",
+    name: "Grab Limo",
+    source: "limo.grab.com/sg/en",
+    sourceHref: "https://limo.grab.com/sg/en",
+    label: "Friendly pre-booked rides",
+    concept:
+      "A bright, approachable page: a split hero with the booking panel beside the headline, occasion tiles for who the ride is for, a fixed-price fleet picker, numbered how-it-works steps and an FAQ.",
+    borrowed: [
+      "Booking panel beside the headline",
+      "Rides grouped by occasion",
+      "Numbered steps and an FAQ accordion",
+    ],
+  },
 ];

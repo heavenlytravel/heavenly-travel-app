@@ -4,8 +4,8 @@
  * Model: Claude Fable 5.1 (claude-fable-5-1)
  * Reference: https://www.blacklane.com/
  * Direction: a quiet, premium chauffeur page. A full-height photo hero with a
- * one-way or by-the-hour booking card, services as tall photo panels, vehicle
- * classes with seats and bags, the driver standard in a dark band and
+ * one-way or by-the-hour booking card, services as tall photo panels, the
+ * fleet under the two products, the driver standard in a dark band and
  * city-to-city routes as a plain list. Near-black teal and off-white, amber
  * only for emphasis, light Overpass headlines with plenty of air.
  * Inspired by the reference, not a copy of it.
@@ -18,13 +18,12 @@ import { fontVars } from "../../_lib/fonts";
 import {
   BADGES,
   DESTINATIONS,
-  FLEET,
+  FLEET_GROUPS,
   PHONE,
   REVIEWS,
   SERVICES,
   WHATSAPP_HREF,
   ringgit,
-  type VehicleId,
 } from "../../_lib/content";
 import { WhatsAppIcon } from "../../_components/WhatsAppIcon";
 import { BagIcon, PersonIcon, Photo, Wordmark } from "../../_components/Brand";
@@ -47,7 +46,7 @@ const h2 =
 
 const NAV = [
   { href: "#services", label: "Services" },
-  { href: "#classes", label: "Vehicle classes" },
+  { href: "#fleet", label: "Fleet" },
   { href: "#standard", label: "Our standard" },
   { href: "#routes", label: "City to city" },
 ];
@@ -62,24 +61,6 @@ const FACTS = [
 /** The four services shown as tall panels, in this order. */
 const PANEL_IDS = ["transfers", "car", "coach", "mice"];
 const PANELS = PANEL_IDS.flatMap((id) => SERVICES.filter((s) => s.id === id));
-
-/** Vehicle classes: what a guest chooses, instead of a make and model. */
-const CLASS_NAMES: Record<VehicleId, { name: string; note: string }> = {
-  sedan: { name: "Executive", note: "A quiet sedan for one to three guests" },
-  mpv: {
-    name: "Premier MPV",
-    note: "Captain seats for families and executives",
-  },
-  van: { name: "Group van", note: "One vehicle for a group and its luggage" },
-  minibus: {
-    name: "Minibus",
-    note: "Touring minibus for teams and tour groups",
-  },
-  coach: {
-    name: "Executive coach",
-    note: "Full-size touring coach for large groups",
-  },
-};
 
 const STANDARD = [
   {
@@ -115,7 +96,10 @@ export default function Page() {
       </a>
 
       {/* Hero: header sits on the photo */}
-      <div id="top" className={`${styles.hero} text-white`}>
+      <div
+        id="top"
+        className={`${styles.hero} flex min-h-svh flex-col text-white`}
+      >
         <header className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-6 sm:px-10">
           <a href="#top" className={focus}>
             <Wordmark tone="light" />
@@ -145,7 +129,7 @@ export default function Page() {
 
         <section
           aria-labelledby="hero-h"
-          className="mx-auto grid max-w-7xl items-end gap-12 px-5 pt-16 pb-16 sm:px-10 lg:min-h-[min(calc(100svh-5.5rem),46rem)] lg:grid-cols-[1fr_26rem] lg:pt-24 lg:pb-24"
+          className="mx-auto grid w-full max-w-7xl flex-1 items-end gap-12 px-5 pt-16 pb-16 sm:px-10 lg:grid-cols-[1fr_26rem] lg:pt-24 lg:pb-24"
         >
           <div className="max-w-2xl">
             <p className={eyebrowOnDark}>Chauffeur service · Malaysia</p>
@@ -226,17 +210,17 @@ export default function Page() {
           </ul>
         </section>
 
-        {/* Vehicle classes */}
+        {/* Fleet, under the two products */}
         <section
-          id="classes"
-          aria-labelledby="classes-h"
+          id="fleet"
+          aria-labelledby="fleet-h"
           className="mx-auto max-w-7xl scroll-mt-8 px-5 pt-24 sm:px-10 sm:pt-32"
         >
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="max-w-2xl">
-              <p className={eyebrow}>Vehicle classes</p>
-              <h2 id="classes-h" className={`${h2} mt-4`}>
-                Choose the class. We send the right car.
+              <p className={eyebrow}>Our fleet</p>
+              <h2 id="fleet-h" className={`${h2} mt-4`}>
+                From a sedan for one to a coach for forty-four.
               </h2>
             </div>
             <p className="max-w-xs text-sm text-[#5a6b68]">
@@ -244,59 +228,59 @@ export default function Page() {
               price.
             </p>
           </div>
-          <ul className="mt-12 border-t border-[#d9ddd8]">
-            {FLEET.map((v) => {
-              const cls = CLASS_NAMES[v.id];
-              return (
-                <li
-                  key={v.id}
-                  className="grid items-center gap-6 border-b border-[#d9ddd8] py-7 md:grid-cols-[14rem_1fr_auto]"
-                >
-                  <Photo
-                    src={v.image}
-                    alt={v.alt}
-                    className="aspect-[16/10] w-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-(family-name:--font-display) text-2xl font-normal">
-                      {cls.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-[#5a6b68]">{cls.note}</p>
-                    <p className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          {FLEET_GROUPS.map((g) => (
+            <div key={g.kind} className="mt-14 border-t border-[#d9ddd8] pt-8">
+              <div className="grid gap-x-10 gap-y-2 md:grid-cols-[16rem_1fr]">
+                <h3 className="font-(family-name:--font-display) text-2xl font-normal">
+                  {g.title}
+                </h3>
+                <p className="max-w-xl text-[#5a6b68]">{g.text}</p>
+              </div>
+              <ul className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+                {g.vehicles.map((v) => (
+                  <li key={v.id} className="flex flex-col">
+                    <Photo
+                      src={v.image}
+                      alt={v.alt}
+                      className="aspect-[3/2] w-full object-cover"
+                    />
+                    <h4 className="mt-5 font-(family-name:--font-display) text-xl font-normal">
+                      {v.name}
+                    </h4>
+                    <p className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                       <span className="inline-flex items-center gap-1.5">
                         <PersonIcon /> Up to {v.seats}
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <BagIcon /> {v.luggage}
                       </span>
-                      <span className="text-[#5a6b68]">
-                        {v.perks.join(" · ")}
-                      </span>
                     </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-8 md:flex-col md:items-end md:gap-3">
-                    <p>
-                      <span className="text-xs tracking-[0.14em] text-[#5a6b68] uppercase">
-                        From
-                      </span>{" "}
-                      <span className="font-(family-name:--font-display) text-2xl font-semibold">
-                        {ringgit(v.fromPerDay)}
-                      </span>
+                    <p className="mt-2 text-sm text-[#5a6b68]">
+                      {v.perks.join(" · ")}
                     </p>
-                    <a
-                      href={WHATSAPP_HREF}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Request ${cls.name}`}
-                      className={`border border-[#071918] px-5 py-2.5 text-sm font-semibold tracking-wide hover:bg-[#071918] hover:text-white ${focus}`}
-                    >
-                      Request
-                    </a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    <div className="mt-auto flex items-center justify-between gap-4 pt-5">
+                      <p className="text-sm text-[#5a6b68]">
+                        From{" "}
+                        <span className="font-(family-name:--font-display) text-lg font-semibold text-[#071918]">
+                          {ringgit(v.fromPerDay)}
+                        </span>{" "}
+                        a day
+                      </p>
+                      <a
+                        href={WHATSAPP_HREF}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Request a price for the ${v.name}`}
+                        className={`border-b border-[#071918] pb-0.5 text-sm font-semibold tracking-wide hover:border-[#875d0c] hover:text-[#875d0c] ${focus}`}
+                      >
+                        Request a price
+                      </a>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
 
         {/* The standard: dark band */}

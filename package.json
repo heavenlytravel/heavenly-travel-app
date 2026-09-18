@@ -7,6 +7,9 @@
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:push": "pnpm --filter @repo/db db:push",
+    "db:push:prod": "pnpm --filter @repo/db db:push:prod",
+    "db:studio": "pnpm --filter @repo/db db:studio",
     "staging": "git push -u origin HEAD && git push origin HEAD:staging --force"
   },
   "devDependencies": {

@@ -4,6 +4,9 @@ packages:
 
 allowBuilds:
   "@parcel/watcher": true
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
 
 # Keep every turbo resolution (incl. eslint-plugin-turbo's peer) on the version
 # pinned in root package.json, so installs pass pnpm's minimumReleaseAge check.

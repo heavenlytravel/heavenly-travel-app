@@ -7,7 +7,7 @@ import {
   ringgit,
   type VehicleId,
 } from "../../../_lib/content";
-import { BagIcon, PersonIcon, Photo } from "../../_components/Brand";
+import { BagIcon, PersonIcon, Photo } from "../../../_components/Brand";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#157a74]";

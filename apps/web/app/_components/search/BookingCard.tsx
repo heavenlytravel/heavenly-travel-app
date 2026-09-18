@@ -1,6 +1,6 @@
 "use client";
 
-import { useTrip } from "../../../_lib/trip";
+import { useTrip } from "../../_lib/trip";
 
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e4a93c]";

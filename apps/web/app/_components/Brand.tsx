@@ -1,4 +1,4 @@
-/** Small presentational pieces shared by the landing designs. */
+/** Small presentational pieces shared by the landing designs and /design-cta. */
 
 export function Mark({
   className = "h-9 w-9",

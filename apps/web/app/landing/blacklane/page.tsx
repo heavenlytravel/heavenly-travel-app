@@ -14,7 +14,7 @@
 
 import type { Metadata } from "next";
 import styles from "./page.module.css";
-import { fontVars } from "../_lib/fonts";
+import { fontVars } from "../../_lib/fonts";
 import {
   BADGES,
   DESTINATIONS,
@@ -27,8 +27,8 @@ import {
   type VehicleId,
 } from "../../_lib/content";
 import { WhatsAppIcon } from "../../_components/WhatsAppIcon";
-import { BagIcon, PersonIcon, Photo, Wordmark } from "../_components/Brand";
-import { BookingCard } from "./_components/BookingCard";
+import { BagIcon, PersonIcon, Photo, Wordmark } from "../../_components/Brand";
+import { BookingCard } from "../../_components/search/BookingCard";
 
 export const metadata: Metadata = {
   title: "Heavenly Travel | Chauffeur service across Malaysia",

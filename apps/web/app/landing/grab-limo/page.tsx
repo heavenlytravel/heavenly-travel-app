@@ -14,7 +14,7 @@
 
 import type { Metadata } from "next";
 import styles from "./page.module.css";
-import { fontVars } from "../_lib/fonts";
+import { fontVars } from "../../_lib/fonts";
 import {
   BADGES,
   PHONE,
@@ -23,9 +23,9 @@ import {
   WHATSAPP_HREF,
 } from "../../_lib/content";
 import { WhatsAppIcon } from "../../_components/WhatsAppIcon";
-import { Photo, Stars, Wordmark } from "../_components/Brand";
+import { Photo, Stars, Wordmark } from "../../_components/Brand";
 import { FleetPicker } from "./_components/FleetPicker";
-import { RidePanel } from "./_components/RidePanel";
+import { RidePanel } from "../../_components/search/RidePanel";
 
 export const metadata: Metadata = {
   title: "Heavenly Travel | Pre-book a car with driver or a coach",

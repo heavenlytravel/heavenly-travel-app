@@ -12,7 +12,7 @@
 
 import type { Metadata } from "next";
 import styles from "./page.module.css";
-import { fontVars } from "../_lib/fonts";
+import { fontVars } from "../../_lib/fonts";
 import {
   BADGES,
   DESTINATIONS,
@@ -23,8 +23,8 @@ import {
   ringgit,
 } from "../../_lib/content";
 import { WhatsAppIcon } from "../../_components/WhatsAppIcon";
-import { PersonIcon, Wordmark, Photo } from "../_components/Brand";
-import { TabbedSearch } from "./_components/TabbedSearch";
+import { PersonIcon, Wordmark, Photo } from "../../_components/Brand";
+import { TabbedSearch } from "../../_components/search/TabbedSearch";
 
 export const metadata: Metadata = {
   title: "Heavenly Travel | Deals on cars with driver and coach charter",

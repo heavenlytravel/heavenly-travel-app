@@ -13,12 +13,17 @@ export default function LandingIndex() {
   return (
     <div className="min-h-screen bg-white font-sans text-neutral-900">
       <main className="mx-auto max-w-4xl px-5 pt-16 pb-32 sm:px-8">
-        <Link
-          href="/"
-          className="text-sm text-neutral-500 underline-offset-4 hover:underline"
-        >
-          Home
-        </Link>
+        <div className="flex gap-4 text-sm text-neutral-500">
+          <Link href="/" className="underline-offset-4 hover:underline">
+            Home
+          </Link>
+          <Link
+            href="/design-cta"
+            className="underline-offset-4 hover:underline"
+          >
+            Search box designs
+          </Link>
+        </div>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
           Landing page designs
         </h1>

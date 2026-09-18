@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const LINKS = [
   { href: "/landing", label: "Landing pages" },
+  { href: "/design-cta", label: "Search box designs" },
   { href: "/account", label: "Account" },
 ];
 

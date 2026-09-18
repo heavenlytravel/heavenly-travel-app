@@ -23,6 +23,7 @@
       ],
       "outputs": [
         "dist/**",
+        "src/generated/**",
         ".next/**",
         "!.next/cache/**",
         "!.next/dev/**"

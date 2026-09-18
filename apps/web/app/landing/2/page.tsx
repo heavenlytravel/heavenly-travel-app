@@ -1,15 +1,11 @@
 /**
  * Heavenly Travel — landing design
- * Route: /landing/blacklane
- * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Reference: https://www.blacklane.com/
+ * Route: /landing/2
  * Direction: a quiet, premium chauffeur page. A full-height photo hero with a
  * one-way or by-the-hour booking card, services as tall photo panels, the
  * fleet under the two products, the driver standard in a dark band and
  * city-to-city routes as a plain list. Near-black teal and off-white, amber
  * only for emphasis, light Overpass headlines with plenty of air.
- * Inspired by the reference, not a copy of it.
- * Generated: 2026-09-18
  */
 
 import type { Metadata } from "next";
@@ -435,7 +431,7 @@ export default function Page() {
       </main>
 
       <footer className="bg-[#071918] text-white/70">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:grid-cols-2 sm:px-10 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:grid-cols-2 sm:px-10 lg:grid-cols-3">
           <div>
             <Wordmark tone="light" className="text-white" />
             <p className="mt-4 text-sm leading-relaxed">
@@ -469,14 +465,6 @@ export default function Page() {
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="text-sm">
-            <h2 className="text-xs font-semibold tracking-[0.18em] text-white uppercase">
-              About this page
-            </h2>
-            <p className="mt-4">
-              Inspired by blacklane.com, built by Claude Fable 5.1.
-            </p>
           </div>
         </div>
         <div className="px-5 pb-28 text-center text-xs text-white/45">

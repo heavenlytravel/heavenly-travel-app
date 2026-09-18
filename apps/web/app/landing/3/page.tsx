@@ -1,15 +1,11 @@
 /**
  * Heavenly Travel — landing design
- * Route: /landing/grab-limo
- * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Reference: https://limo.grab.com/sg/en
+ * Route: /landing/3
  * Direction: a bright, friendly pre-booking page. A split hero on mint with
  * the booking panel beside the headline, rides grouped by occasion, a ride
  * size picker with one fixed price, three plain reasons, numbered steps and
  * an FAQ. White and mint with teal structure, amber for the one main action,
  * heavy Overpass headlines and generously rounded cards.
- * Inspired by the reference, not a copy of it.
- * Generated: 2026-09-18
  */
 
 import type { Metadata } from "next";
@@ -425,7 +421,7 @@ export default function Page() {
       </main>
 
       <footer className="border-t border-[#0c3b3a]/8 bg-white text-[#3f5653]">
-        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-3">
           <div>
             <Wordmark />
             <p className="mt-3 text-sm">
@@ -454,14 +450,6 @@ export default function Page() {
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="text-sm">
-            <h2 className="text-sm font-bold text-[#10201f]">
-              About this page
-            </h2>
-            <p className="mt-3">
-              Inspired by limo.grab.com, built by Claude Fable 5.1.
-            </p>
           </div>
         </div>
         <div className="px-5 pb-28 text-center text-xs text-[#7a8c89]">

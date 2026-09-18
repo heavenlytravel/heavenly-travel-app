@@ -1,73 +1,51 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Chips } from "../_components/Chips";
 import { LANDINGS } from "../_lib/landings";
 
 export const metadata: Metadata = {
   title: "Landing page designs | Heavenly Travel",
-  description:
-    "Landing page designs for Heavenly Travel: three by Claude Fable 5.1, inspired by Agoda, Blacklane and Grab Limo, and a concept by GPT Astra.",
+  description: "Alternative landing page designs for Heavenly Travel.",
 };
+
+const LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/design-cta", label: "Search box designs" },
+];
 
 export default function LandingIndex() {
   return (
     <div className="min-h-screen bg-white font-sans text-neutral-900">
-      <main className="mx-auto max-w-4xl px-5 pt-16 pb-32 sm:px-8">
+      <main className="mx-auto max-w-3xl px-5 pt-16 pb-32 sm:px-8">
         <div className="flex gap-4 text-sm text-neutral-500">
-          <Link href="/" className="underline-offset-4 hover:underline">
-            Home
-          </Link>
-          <Link
-            href="/design-cta"
-            className="underline-offset-4 hover:underline"
-          >
-            Search box designs
-          </Link>
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="underline-offset-4 hover:underline"
+            >
+              {l.label}
+            </Link>
+          ))}
         </div>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
           Landing page designs
         </h1>
-        <p className="mt-3 max-w-2xl text-neutral-600">
-          Full pages rebuilt for coach charter and cars with driver. The first
-          three are by Claude Fable 5.1, each inspired by the structure of a
-          reference site, in Overpass with the teal-and-amber palette and the
-          photography from heavenlytravel.my. The last is a concept by GPT
-          Astra, converted to this codebase with its own look kept.
-        </p>
 
-        <ol className="mt-10 space-y-5">
-          {LANDINGS.map((l, i) => (
-            <li
-              key={l.slug}
-              className="rounded-2xl border border-neutral-200 p-5 sm:p-6"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="text-xl font-semibold">
-                  <span className="mr-2 text-neutral-400">{i + 1}.</span>
-                  {l.name} · {l.label}
-                </h2>
-                <div className="flex gap-4 text-sm font-medium">
-                  {l.sourceHref && (
-                    <a
-                      href={l.sourceHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-neutral-500 underline-offset-4 hover:underline"
-                    >
-                      Source
-                    </a>
-                  )}
-                  <Link
-                    href={l.href}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    Open page
-                  </Link>
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-neutral-500">{l.source}</p>
-              <p className="mt-4 mb-4 text-neutral-700">{l.concept}</p>
-              <Chips items={l.borrowed} />
+        <ol className="mt-10 divide-y divide-neutral-200 border-y border-neutral-200">
+          {LANDINGS.map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                className="flex items-baseline justify-between gap-4 py-4 font-medium hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <span>
+                  <span className="mr-2 text-neutral-400">{l.number}.</span>
+                  {l.label}
+                </span>
+                <code className="text-sm font-normal text-neutral-500">
+                  {l.href}
+                </code>
+              </Link>
             </li>
           ))}
         </ol>

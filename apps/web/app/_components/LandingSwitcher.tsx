@@ -33,17 +33,16 @@ export function LandingSwitcher() {
         </Link>
         <div className="flex shrink-0 items-center gap-0.5 border-l border-white/15 pl-1.5">
           {LANDINGS.map((l) => {
-            // A design can have pages under it; they keep its item lit.
-            const active =
-              pathname === l.href || pathname.startsWith(`${l.href}/`);
+            const active = pathname === l.href;
             return (
               <Link
                 key={l.href}
                 href={l.href}
                 className={itemClass(active)}
                 aria-current={active ? "page" : undefined}
+                aria-label={`Design ${l.number}, ${l.label}`}
               >
-                {l.name}
+                {l.number}
               </Link>
             );
           })}

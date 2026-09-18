@@ -1,7 +1,6 @@
 /**
  * Heavenly Travel — search box designs
  * Route: /design-cta
- * Model: Claude Fable 5.1 (claude-fable-5-1)
  * The booking search box is the main call to action on every landing design.
  * This page puts the three in use next to three that build on the first and
  * add attractions and hotels as products, each on a backdrop
@@ -45,7 +44,7 @@ const BOXES: Box[] = [
   {
     id: "tabbed",
     name: "Product tabs and a field row",
-    usedOn: { href: "/landing/agoda", label: "Agoda-inspired page" },
+    usedOn: { href: "/landing/1", label: "landing design 1" },
     summary:
       "The two products sit on top as tabs and every field is in one row with the button at the end. It reads at a glance and suits a wide hero.",
     traits: ["Two product tabs", "All fields visible", "Widest footprint"],
@@ -56,7 +55,7 @@ const BOXES: Box[] = [
   {
     id: "card",
     name: "One way or by the hour",
-    usedOn: { href: "/landing/blacklane", label: "Blacklane-inspired page" },
+    usedOn: { href: "/landing/2", label: "landing design 2" },
     summary:
       "A quiet square card with underlined fields. The tabs change the trip itself: a destination for a one-way ride, a duration when the driver stays with you.",
     traits: ["Trip type tabs", "Pick-up time", "Sits on a photo"],
@@ -67,7 +66,7 @@ const BOXES: Box[] = [
   {
     id: "panel",
     name: "Friendly side panel",
-    usedOn: { href: "/landing/grab-limo", label: "Grab Limo-inspired page" },
+    usedOn: { href: "/landing/3", label: "landing design 3" },
     summary:
       "A rounded panel beside the headline. Service chips, soft fields and a passenger stepper make it feel like an app screen.",
     traits: ["Service chips", "Passenger stepper", "App-like"],
@@ -108,10 +107,10 @@ const BOXES: Box[] = [
   {
     id: "services",
     name: "Six services as tall tabs",
-    usedOn: { href: "/landing/astra", label: "GPT Astra page" },
+    usedOn: { href: "/", label: "home page" },
     summary:
-      "The booking box from the GPT Astra concept. Six services sit on top as tall icon tabs, the fields join into one row that changes with the service, and the button is deep green. It adds car rental and custom packages to the product list.",
-    traits: ["Six services", "Joined field row", "Designed by GPT Astra"],
+      "The booking box on the home page. Six services sit on top as tall icon tabs, the fields join into one row that changes with the service, and the button is deep green. It adds car rental and custom packages to the product list.",
+    traits: ["Six services", "Joined field row", "Deep green button"],
     Component: ServiceTabsSearch,
     backdrop: styles.mint,
     width: "max-w-6xl",
@@ -139,9 +138,9 @@ export default function DesignCta() {
           The booking search box is the main call to action. The first three are
           in use on the landing designs. The next three build on the first one:
           the same horizontal bar, with attractions and hotels added, and fields
-          that change with the product. The last comes from the GPT Astra
-          concept. All of them work: fill one in and the button opens WhatsApp
-          with the request written out.
+          that change with the product. The last is the one on the home page.
+          All of them work: fill one in and the button opens WhatsApp with the
+          request written out.
         </p>
 
         <nav aria-label="Search boxes" className="mt-6">

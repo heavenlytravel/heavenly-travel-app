@@ -1,13 +1,10 @@
 /**
  * Heavenly Travel — landing design
- * Route: /landing/agoda
- * Model: Claude Fable 5.1 (claude-fable-5-1)
- * Reference: https://www.agoda.com/
- * Direction: Agoda's dense page. A search box on a teal hero with the two
+ * Route: /landing/1
+ * Direction: a dense page. A search box on a teal hero with the two
  * main products as tabs, the reasons to book, the fleet under those two
  * products with review-score chips, and a destinations grid with vehicle
  * counts. Teal for structure, amber for actions.
- * Generated: 2026-09-17
  */
 
 import type { Metadata } from "next";
@@ -318,7 +315,7 @@ export default function Page() {
       </main>
 
       <footer className="bg-[#0c3b3a] text-[#cfe0dc]">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-3">
           <div>
             <Wordmark tone="light" className="text-white" />
             <p className="mt-3 text-sm">
@@ -348,14 +345,6 @@ export default function Page() {
                 </li>
               ))}
             </ul>
-          </div>
-          <div className="text-sm">
-            <h2 className="text-sm font-semibold text-white">
-              About this page
-            </h2>
-            <p className="mt-3">
-              Inspired by agoda.com, built by Claude Fable 5.1.
-            </p>
           </div>
         </div>
         <div className="px-5 pb-28 text-center text-xs text-[#9ab5b0]">

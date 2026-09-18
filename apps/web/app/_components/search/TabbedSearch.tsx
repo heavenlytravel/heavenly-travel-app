@@ -21,7 +21,7 @@ const placeholders: Record<MainService, { from: string; to: string }> = {
   coach: { from: "Johor Bahru", to: "Kuala Lumpur" },
 };
 
-/** Agoda-style search box: the two products as tabs, fields in a white card. */
+/** The two products as tabs, fields in a white card. */
 export function TabbedSearch() {
   const { trip, set, whatsappHref } = useTrip();
   const product = mainServiceOf(trip.service);

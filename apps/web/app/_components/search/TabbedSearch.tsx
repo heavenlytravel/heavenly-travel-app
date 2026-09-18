@@ -1,6 +1,14 @@
 "use client";
 
-import { SERVICE_LABELS, useTrip, type ServiceKey } from "../../_lib/trip";
+import {
+  MAIN_SERVICES,
+  MAIN_SERVICE_NOTES,
+  SERVICE_LABELS,
+  useTrip,
+  mainServiceOf,
+  type MainService,
+} from "../../_lib/trip";
+import { ProductIcon } from "../Brand";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#e4a93c]";
@@ -8,29 +16,26 @@ const field =
   "w-full rounded-md border border-[#c9d6d3] bg-white px-3 py-3 text-[15px] placeholder:text-[#8a9a97] hover:border-[#157a74] focus-visible:outline-3 focus-visible:outline-offset-0 focus-visible:outline-[#157a74]";
 const label = "mb-1 block text-xs font-semibold text-[#3f5653]";
 
-const TABS: ServiceKey[] = ["car", "coach", "transfer", "tour"];
-
-const placeholders: Record<ServiceKey, { from: string; to: string }> = {
+const placeholders: Record<MainService, { from: string; to: string }> = {
   car: { from: "Kuala Lumpur", to: "Cameron Highlands" },
   coach: { from: "Johor Bahru", to: "Kuala Lumpur" },
-  transfer: { from: "KLIA Terminal 1", to: "Bukit Bintang hotel" },
-  tour: { from: "Pantai Cenang", to: "Langkawi island loop" },
 };
 
-/** Agoda-style search box: service tabs on top, fields in a white card. */
+/** Agoda-style search box: the two products as tabs, fields in a white card. */
 export function TabbedSearch() {
   const { trip, set, whatsappHref } = useTrip();
-  const ph = placeholders[trip.service];
+  const product = mainServiceOf(trip.service);
+  const ph = placeholders[product];
 
   return (
     <div className="rounded-xl bg-white p-2 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.55)]">
       <div
         role="tablist"
-        aria-label="Service"
-        className="flex flex-wrap gap-1 px-1 pt-1"
+        aria-label="Product"
+        className="grid gap-1 px-1 pt-1 sm:grid-cols-2 md:flex"
       >
-        {TABS.map((t) => {
-          const on = trip.service === t;
+        {MAIN_SERVICES.map((t) => {
+          const on = product === t;
           return (
             <button
               key={t}
@@ -40,13 +45,27 @@ export function TabbedSearch() {
               id={`tab-${t}`}
               aria-controls="search-panel"
               onClick={() => set("service", t)}
-              className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${
+              className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-left ${
                 on
                   ? "bg-[#e8f2ef] text-[#0c3b3a]"
                   : "text-[#3f5653] hover:bg-[#f1f5f4]"
               } ${focus}`}
             >
-              {SERVICE_LABELS[t]}
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+                  on ? "bg-[#0c3b3a] text-white" : "bg-[#eef3f1]"
+                }`}
+              >
+                <ProductIcon service={t} />
+              </span>
+              <span>
+                <span className="block text-[15px] font-bold">
+                  {SERVICE_LABELS[t]}
+                </span>
+                <span className="block text-xs text-[#5a6b68]">
+                  {MAIN_SERVICE_NOTES[t]}
+                </span>
+              </span>
             </button>
           );
         })}
@@ -54,7 +73,7 @@ export function TabbedSearch() {
       <form
         id="search-panel"
         role="tabpanel"
-        aria-labelledby={`tab-${trip.service}`}
+        aria-labelledby={`tab-${product}`}
         onSubmit={(e) => e.preventDefault()}
         className="grid gap-3 p-3 md:grid-cols-[1.2fr_1.2fr_0.9fr_0.7fr_auto] md:items-end"
       >

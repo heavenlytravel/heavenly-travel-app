@@ -117,3 +117,55 @@ export function Photo({
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} className={className} loading={loading} />;
 }
+
+export function CarIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11" />
+      <rect x="3" y="11" width="18" height="6" rx="2" />
+      <path d="M6.5 17v1.5M17.5 17v1.5" />
+    </svg>
+  );
+}
+
+export function CoachIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="4" width="16" height="13" rx="2.5" />
+      <path d="M4 11h16M9 4v7M15 4v7M7.5 17v2M16.5 17v2" />
+    </svg>
+  );
+}
+
+/** The icon for one of the two main products. */
+export function ProductIcon({
+  service,
+  className,
+}: {
+  service: "car" | "coach";
+  className?: string;
+}) {
+  return service === "car" ? (
+    <CarIcon className={className} />
+  ) : (
+    <CoachIcon className={className} />
+  );
+}

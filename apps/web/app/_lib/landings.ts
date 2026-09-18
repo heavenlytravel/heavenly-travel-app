@@ -24,12 +24,12 @@ export const LANDINGS: Landing[] = [
     name: "Agoda",
     source: "agoda.com",
     sourceHref: "https://www.agoda.com/",
-    label: "Deals and destinations",
+    label: "Fleet and destinations",
     concept:
-      "A dense, deal-led page: tabbed search on a teal hero, a promotions strip, discount-badged fleet deals with review scores, and a destinations grid with vehicle counts.",
+      "A dense page: a search box on a teal hero with the two main products as tabs, the reasons to book, the fleet with review scores, and a destinations grid with vehicle counts.",
     borrowed: [
       "Tabbed search box",
-      "Discount badges and strike-through prices",
+      "Dense cards with a price and a book button",
       "Review score chips and destination counts",
     ],
   },

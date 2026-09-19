@@ -1,0 +1,94 @@
+/* Heavenly Travel — home page, /
+   Washes and the drawn airport card live here; the rest is
+   Tailwind in the components. */
+
+.page {
+  --ink: #082f2b;
+  --deep: #073c36;
+  --accent: #caa243;
+  background: #fbfcfa;
+  color: #102825;
+}
+
+/* Two pale washes over the aerial photo: one from the left so the ink headline
+   and paragraph read, one from the top so the header links do. */
+.heroWash {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(241, 248, 247, 0.78) 0%,
+      rgba(241, 248, 247, 0) 24%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(239, 247, 246, 0.94),
+      rgba(239, 247, 246, 0.6) 70%,
+      rgba(0, 0, 0, 0.02)
+    );
+}
+@media (min-width: 40rem) {
+  .heroWash {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(241, 248, 247, 0.78) 0%,
+        rgba(241, 248, 247, 0) 24%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(241, 248, 247, 0.94) 0%,
+        rgba(241, 248, 247, 0.8) 32%,
+        rgba(241, 248, 247, 0.08) 62%,
+        rgba(2, 27, 25, 0.08) 100%
+      );
+  }
+}
+
+.cardShade {
+  background: linear-gradient(
+    0deg,
+    rgba(1, 23, 21, 0.9),
+    rgba(1, 23, 21, 0.04) 78%
+  );
+}
+
+.card img {
+  transition: transform 550ms ease;
+}
+.card:hover img,
+.card:focus-visible img {
+  transform: scale(1.045);
+}
+
+/* The airport card has no photo: a green field, a gold glow and a hairline. */
+.airport {
+  background: linear-gradient(145deg, #0a5048, #052e2a);
+  isolation: isolate;
+}
+.airport::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at 82% 18%,
+      rgba(232, 199, 107, 0.32),
+      transparent 31%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 49%,
+      rgba(255, 255, 255, 0.05) 50%,
+      transparent 51%
+    );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card img {
+    transition: none;
+  }
+  .card:hover img,
+  .card:focus-visible img {
+    transform: none;
+  }
+}

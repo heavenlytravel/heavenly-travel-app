@@ -1,0 +1,22 @@
+/* Heavenly Travel — /landing/1
+   Dense page. The hero wash lives here. */
+
+.page {
+  --ink: #10201f;
+  --sea-deep: #0c3b3a;
+  --sea: #157a74;
+  --gold: #e4a93c;
+  color: var(--ink);
+  background: #f4f7f6;
+}
+
+.hero {
+  background:
+    linear-gradient(
+      to right,
+      rgba(12, 59, 58, 0.96) 0%,
+      rgba(12, 59, 58, 0.82) 55%,
+      rgba(21, 122, 116, 0.6) 100%
+    ),
+    url("/brand/cable-car.jpg") center / cover no-repeat;
+}

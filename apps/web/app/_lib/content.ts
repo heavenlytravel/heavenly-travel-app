@@ -1,8 +1,8 @@
 /**
  * Heavenly Travel's real offer (coach charter and cars with driver across
  * Malaysia) as content: fleet, destinations, services, reviews and steps.
- * Shared by the reimagined pages under /landing/fable/reimagined and the
- * concepts under /ideas, so each page differs in design, not in facts.
+ * Shared by the landing designs under /landing, so each page differs in
+ * design, not in facts.
  *
  * Prices are indicative placeholders so the layouts can be judged with real
  * numbers in them; every page says a quote confirms the final price.
@@ -92,6 +92,27 @@ export const FLEET: Vehicle[] = [
     perks: ["Toilet on board", "Wi-Fi", "Two drivers for long runs"],
     rating: 4.9,
     reviews: 176,
+  },
+];
+
+/** The fleet under the two main products, in the order pages show them. */
+export const FLEET_GROUPS: {
+  kind: Vehicle["kind"];
+  title: string;
+  text: string;
+  vehicles: Vehicle[];
+}[] = [
+  {
+    kind: "car",
+    title: "Car with driver",
+    text: "Sedans, MPVs and vans with a local driver, for a transfer, a day or the whole itinerary.",
+    vehicles: FLEET.filter((v) => v.kind === "car"),
+  },
+  {
+    kind: "coach",
+    title: "Coach charter",
+    text: "Minibuses and full-size coaches for tour groups, schools and companies.",
+    vehicles: FLEET.filter((v) => v.kind === "coach"),
   },
 ];
 

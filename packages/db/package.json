@@ -8,6 +8,7 @@
     "./server": "./src/server.ts"
   },
   "scripts": {
+    "build": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:push:prod": "node --import tsx scripts/with-production-db.ts prisma db push",

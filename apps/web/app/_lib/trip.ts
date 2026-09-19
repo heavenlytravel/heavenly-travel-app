@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { WHATSAPP_HREF } from "./content";
 
 export type ServiceKey = "car" | "coach" | "transfer" | "tour";
@@ -17,28 +14,22 @@ export type Trip = {
   from: string;
   to: string;
   date: string;
+  /** Pick-up time, HH:MM. */
+  time: string;
+  /** Hours booked when the driver is hired by the hour; empty for a one-way trip. */
+  hours: string;
   passengers: string;
 };
 
-const EMPTY: Trip = {
+export const EMPTY_TRIP: Trip = {
   service: "car",
   from: "",
   to: "",
   date: "",
+  time: "",
+  hours: "",
   passengers: "",
 };
-
-/**
- * One piece of state for every booking form on the reimagined and /ideas
- * pages. The forms look different (pill, tabbed box, sentence, seat plan) but
- * capture the same trip and hand it to WhatsApp as a pre-written message.
- */
-export function useTrip(initial: Partial<Trip> = {}) {
-  const [trip, setTrip] = useState<Trip>({ ...EMPTY, ...initial });
-  const set = <K extends keyof Trip>(key: K, value: Trip[K]) =>
-    setTrip((t) => ({ ...t, [key]: value }));
-  return { trip, set, whatsappHref: whatsappHrefFor(trip) };
-}
 
 export function whatsappHrefFor(trip: Trip) {
   const lines = [
@@ -46,7 +37,26 @@ export function whatsappHrefFor(trip: Trip) {
     trip.from && `From: ${trip.from}`,
     trip.to && `To: ${trip.to}`,
     trip.date && `Date: ${trip.date}`,
+    trip.time && `Pick-up time: ${trip.time}`,
+    trip.hours && `Duration: ${trip.hours} hours, driver stays with us`,
     trip.passengers && `Passengers: ${trip.passengers}`,
   ].filter(Boolean);
   return `${WHATSAPP_HREF}?text=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+/**
+ * The two main products. Transfers and tours are ways of using one of them,
+ * so forms that lead with the product offer only these.
+ */
+export const MAIN_SERVICES = ["car", "coach"] as const;
+export type MainService = (typeof MAIN_SERVICES)[number];
+
+export const MAIN_SERVICE_NOTES: Record<MainService, string> = {
+  car: "Sedan, MPV or van, up to 10 seats",
+  coach: "Minibus or coach, 26 to 44 seats",
+};
+
+/** Which of the two products a trip falls under; anything not a coach is a car. */
+export function mainServiceOf(service: ServiceKey): MainService {
+  return service === "coach" ? "coach" : "car";
 }

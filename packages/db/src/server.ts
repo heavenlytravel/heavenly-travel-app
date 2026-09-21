@@ -7,4 +7,6 @@ export {
   upsertUserFromClerk,
   deleteUserFromClerk,
 } from "./sync";
+export { listAdmins, setAdminLevel, revokeAdmin } from "./admins";
+export type { AdminWithUser, AdminChange } from "./admins";
 export * from "./roles";

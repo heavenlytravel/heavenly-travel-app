@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { PRODUCTS, searchHref, type Product } from "../../_lib/search";
 import { useSearch } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
@@ -20,18 +20,12 @@ const TABS: Product[] = [
 ];
 
 /**
- * Six services as tall icon tabs, then one joined row of fields that changes
- * with the service, and a deep green button at the end. `destination` fills in
- * where the trip starts or goes, and may change while the box is on screen.
- * `footer` sits under the fields, inside the card.
+ * Six services as a row of icon tabs, then one joined row of fields that
+ * changes with the service, and a deep green button of fixed width at the end.
+ * `destination` fills in where the trip starts or goes, and may change while
+ * the box is on screen.
  */
-export function ServiceTabsSearch({
-  destination,
-  footer,
-}: {
-  destination?: string;
-  footer?: ReactNode;
-}) {
+export function ServiceTabsSearch({ destination }: { destination?: string }) {
   const { product, setProduct, values, set } = useSearch(
     PRODUCTS.car.key,
     destination ? { from: destination, place: destination } : {},
@@ -73,13 +67,16 @@ export function ServiceTabsSearch({
               aria-selected={on}
               aria-controls="svc-panel"
               onClick={() => setProduct(p.key)}
-              className={`relative flex min-h-[88px] min-w-[125px] snap-start flex-col items-center justify-center gap-[7px] border-r border-[#edf0ef] px-2 py-[15px] text-[0.83rem] font-semibold last:border-r-0 sm:min-w-0 sm:text-base lg:min-h-[98px] ${
+              className={`relative flex min-h-[54px] shrink-0 snap-start items-center justify-center gap-2.5 border-r border-[#edf0ef] px-4 py-3 text-[0.83rem] font-semibold whitespace-nowrap last:border-r-0 sm:text-[0.95rem] lg:min-h-[58px] ${
                 on
                   ? "bg-[#e8f2ef] text-[#073c36]"
                   : "bg-white hover:bg-[#f5f9f7]"
               } ${focus}`}
             >
-              <ProductIcon service={p.key} className="h-7 w-7 stroke-[1.8]" />
+              <ProductIcon
+                service={p.key}
+                className="h-5 w-5 shrink-0 stroke-[1.8]"
+              />
               <span>{p.label}</span>
               {on && (
                 <span
@@ -97,7 +94,7 @@ export function ServiceTabsSearch({
         role="tabpanel"
         aria-labelledby={`svc-tab-${product.key}`}
         onSubmit={(e) => e.preventDefault()}
-        className="px-3.5 pt-[18px] pb-3.5 sm:px-[30px] sm:pt-[30px] sm:pb-[22px]"
+        className="px-3.5 py-[18px] sm:p-6"
       >
         <div className="grid gap-2.5 sm:grid-cols-2 lg:flex lg:gap-0">
           {product.fields.map((f, i) => {
@@ -105,7 +102,7 @@ export function ServiceTabsSearch({
             return (
               <div
                 key={f.key}
-                className={`min-h-[68px] min-w-0 rounded-xl border border-[#dce3e0] bg-white px-[18px] py-3 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] sm:min-h-[79px] lg:rounded-none ${
+                className={`min-h-[68px] min-w-0 rounded-xl border border-[#dce3e0] bg-white px-[18px] py-2.5 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
                   i === 0
                     ? "lg:flex-[2] lg:rounded-l-[14px]"
                     : "lg:-ml-px lg:flex-1"
@@ -122,7 +119,7 @@ export function ServiceTabsSearch({
                   id={id}
                   values={values}
                   onChange={(v) => set(f.key, v)}
-                  className="min-h-[38px] w-full border-0 bg-transparent px-0 pt-2 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b]"
+                  className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b]"
                 />
               </div>
             );
@@ -131,7 +128,7 @@ export function ServiceTabsSearch({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] lg:ml-3.5 lg:min-h-[73px] lg:flex-[1.2] ${focus}`}
+            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
           >
             {product.cta} &nbsp;→
           </a>
@@ -148,8 +145,6 @@ export function ServiceTabsSearch({
             Return to the same location
           </label>
         )}
-
-        {footer && <div className="mt-[18px]">{footer}</div>}
       </form>
     </div>
   );

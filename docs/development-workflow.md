@@ -2,16 +2,28 @@
 
 ## Environments
 
-| Environment | URL                               | Git branch          | Vercel environment         |
-| ----------- | --------------------------------- | ------------------- | -------------------------- |
-| Production  | https://new.heavenlytravel.my     | `main`              | Production                 |
-| Staging     | https://staging.heavenlytravel.my | `staging` (pointer) | Preview (branch `staging`) |
-| PR previews | Vercel preview URL per PR         | `feat/*`, `fix/*`   | Preview                    |
-| Local       | http://localhost:3000 (web)       | any                 | —                          |
+| Environment | URL                                         | Git branch          | Vercel environment         |
+| ----------- | ------------------------------------------- | ------------------- | -------------------------- |
+| Production  | https://new.heavenlytravel.my               | `main`              | Production                 |
+| Staging     | https://staging.heavenlytravel.my           | `staging` (pointer) | Preview (branch `staging`) |
+| PR previews | Vercel preview URL per PR                   | `feat/*`, `fix/*`   | Preview                    |
+| Local       | first free port from 3000, printed on start | any                 | —                          |
 
 Deploys are automatic. Vercel builds every push; pushes to `main` go to production,
 pushes to `staging` go to the staging domain, and every other branch gets a preview URL
 posted on its PR.
+
+### Opening a dev server from another machine
+
+Clerk's session cookies are `Secure`, so a browser only keeps them on `https://` or on
+`http://localhost`. Over plain `http://<machine>:<port>` the sign-in succeeds in the
+browser but the server never sees it, and the page flickers between `/` and `/sign-in`.
+Use the Tailscale HTTPS addresses instead, and pin the ports they proxy to:
+
+| App   | Start with                            | Open                                        |
+| ----- | ------------------------------------- | ------------------------------------------- |
+| web   | `pnpm --filter web dev --port 3000`   | https://akieez-h510m.tail4436c5.ts.net      |
+| admin | `pnpm --filter admin dev --port 3001` | https://akieez-h510m.tail4436c5.ts.net:8443 |
 
 ## Branch model
 

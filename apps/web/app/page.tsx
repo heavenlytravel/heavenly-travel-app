@@ -1,9 +1,10 @@
 /**
  * Heavenly Travel — home page
  * Route: /
- * One page: a pale photo hero, the booking card for all six services pulled up
- * over it, the locations we cover and a closing call. Choosing a location
- * fills it into the booking card. Its pieces live in ./_home.
+ * One page: a full-screen pale photo hero with the booking card for all six
+ * services resting on its floor, why to book with us, the locations we cover
+ * and a closing call. Choosing a location fills it into the booking card. Its
+ * pieces live in ./_home.
  */
 
 import type { Metadata } from "next";
@@ -13,7 +14,7 @@ import {
   DestinationCards,
   DestinationProvider,
 } from "./_home/DestinationPicker";
-import { Booking, Closing, SiteFooter, eyebrow } from "./_home/Sections";
+import { Booking, Closing, SiteFooter, Trust, eyebrow } from "./_home/Sections";
 import { SiteHeader } from "./_home/SiteHeader";
 import { fontVars } from "./_home/fonts";
 
@@ -35,25 +36,38 @@ export default function Page() {
         <main>
           <section
             aria-labelledby="hero-title"
-            className="relative h-[610px] overflow-hidden bg-[#dce9ec] sm:h-[690px]"
+            className="relative flex min-h-svh flex-col"
           >
-            <Photo
-              src="/brand/hero-langkawi.jpg"
-              alt="Eagle Square in Langkawi from the air"
-              className="absolute h-full w-full object-cover object-center"
-              loading="eager"
-            />
-            <div className={`${styles.heroWash} absolute inset-0`} />
-            <div className="relative z-[1] max-w-[650px] px-[22px] pt-[125px] sm:px-[clamp(24px,6vw,96px)] sm:pt-[150px]">
-              <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[4rem] leading-[0.75] text-[#071f1d] sm:text-[5.4rem]">
-                Travel
-              </p>
-              <h1
-                id="hero-title"
-                className="mt-[0.1em] mb-[0.25em] font-(family-name:--font-display) text-[3.75rem] leading-[0.9] text-[#082c29] sm:text-[clamp(3.6rem,6vw,6.5rem)]"
-              >
-                made simple.
-              </h1>
+            {/* From lg up the photo is fixed to the viewport, so it fills the
+                window the same at any zoom. The clip keeps it inside the hero
+                without clipping the booking card's menus. Below lg the stacked
+                card outgrows the screen, so the photo stops at the first one. */}
+            <div className="absolute inset-x-0 top-0 h-svh bg-[#dce9ec] [clip-path:inset(0)] lg:h-full">
+              <Photo
+                src="/brand/hero-langkawi.jpg"
+                alt="Eagle Square in Langkawi from the air"
+                className="absolute inset-0 h-full w-full object-cover object-center lg:fixed"
+                loading="eager"
+              />
+              <div className={`${styles.heroWash} absolute inset-0`} />
+            </div>
+            {/* The words sit in the middle of the room between the header and
+                the booking card. From sm up one type size follows the window's
+                height as well as its width, so the headline and the whole card
+                fit on one screen down to about 600px tall; the script word is
+                sized from it, so the pair keeps its proportions. */}
+            <div className="relative z-[1] flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
+              <div className="text-[3.75rem] sm:text-[clamp(3.75rem,min(9vw,12svh),6.5rem)]">
+                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-[#071f1d] sm:text-[0.83em]">
+                  Travel
+                </p>
+                <h1
+                  id="hero-title"
+                  className="mt-[0.1em] mb-[0.25em] font-(family-name:--font-display) text-[1em] leading-[0.9] text-[#082c29] sm:whitespace-nowrap"
+                >
+                  made simple.
+                </h1>
+              </div>
               <p className="max-w-[330px] text-[#334744] sm:max-w-[500px] sm:text-[1.18rem]">
                 Cars, drivers, coaches, stays and experiences—thoughtfully
                 brought together for your journey.
@@ -67,9 +81,11 @@ export default function Page() {
               <br />
               than a trip
             </p>
+
+            <Booking />
           </section>
 
-          <Booking />
+          <Trust />
 
           <section
             id="destinations"

@@ -35,9 +35,9 @@ export function DestinationProvider({ children }: { children: ReactNode }) {
 }
 
 /** The booking card, with whichever destination was last chosen filled in. */
-export function BookingSearch({ footer }: { footer: ReactNode }) {
+export function BookingSearch() {
   const { destination } = useContext(Destination);
-  return <ServiceTabsSearch destination={destination} footer={footer} />;
+  return <ServiceTabsSearch destination={destination} />;
 }
 
 export function DestinationCards() {

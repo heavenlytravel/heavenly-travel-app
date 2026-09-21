@@ -23,42 +23,48 @@ const TRUST = [
   },
 ];
 
-function TrustRow() {
+/** Why book with us: a quiet strip between the hero and the destinations. */
+export function Trust() {
   return (
-    <ul
+    <section
       id="why-us"
-      className="grid scroll-mt-24 border-t border-[#eef1ef] pt-2.5 sm:grid-cols-3 sm:pt-[19px]"
+      aria-label="Why Heavenly"
+      className="scroll-mt-8 border-b border-[#e6ebe9] px-5 py-7 sm:px-[clamp(20px,5vw,78px)] sm:py-9"
     >
-      {TRUST.map((t) => (
-        <li
-          key={t.title}
-          className="flex gap-[13px] border-b border-[#dce3e0] px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
-        >
-          <span aria-hidden className="text-[1.65rem] text-[#073c36]">
-            {t.icon}
-          </span>
-          <p>
-            <strong className="block">{t.title}</strong>
-            <small className="mt-0.5 block text-[0.83rem] text-[#67726f]">
-              {t.text}
-            </small>
-          </p>
-        </li>
-      ))}
-    </ul>
+      <ul className="mx-auto grid max-w-[1240px] sm:grid-cols-3">
+        {TRUST.map((t) => (
+          <li
+            key={t.title}
+            className="flex gap-[13px] border-b border-[#dce3e0] px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
+          >
+            <span aria-hidden className="text-[1.65rem] text-[#073c36]">
+              {t.icon}
+            </span>
+            <p>
+              <strong className="block">{t.title}</strong>
+              <small className="mt-0.5 block text-[0.83rem] text-[#67726f]">
+                {t.text}
+              </small>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
-/** The booking card, pulled up over the bottom of the hero. */
+/** The booking card, resting on the floor of the hero. */
 export function Booking() {
   return (
-    <section
+    // The hero is a full-height column; mt-auto rests the card on its floor.
+    <div
       id="booking"
+      role="search"
       aria-label="Travel booking search"
-      className="relative z-[3] mx-auto -mt-[145px] w-[calc(100%-24px)] max-w-[1460px] scroll-mt-24 sm:-mt-[180px] sm:w-[92%] lg:-mt-[235px]"
+      className="relative z-[3] mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1240px] scroll-mt-24 sm:mb-14 sm:w-[88%]"
     >
-      <BookingSearch footer={<TrustRow />} />
-    </section>
+      <BookingSearch />
+    </div>
   );
 }
 

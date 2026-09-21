@@ -50,7 +50,8 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 Full details in `docs/development-workflow.md`.
 
-- `apps/web` runs on port 3000, `apps/admin` on port 3001.
+- Dev ports are not pinned. Each app takes the first free port from 3000 and prints it;
+  pass `--port` (e.g. `pnpm --filter admin dev --port 3001`) when a fixed port matters.
 - `main` is production. It is protected: never commit or push to it directly.
 - Start work by branching from `main`: `feat/*`, `fix/*` or `chore/*`.
 - Run `pnpm lint` and `pnpm check-types` before pushing.

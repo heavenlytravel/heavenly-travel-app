@@ -77,5 +77,18 @@ pnpm --filter @repo/db db:promote-admin you@heavenlytravel.my SUPER
 pnpm --filter @repo/db db:promote-admin:prod you@heavenlytravel.my SUPER
 ```
 
-Levels: `SUPER`, `REGULAR`, `OPS` (`packages/db/src/roles.ts`). All levels currently have
-the same access; the level is stored for when that changes.
+Levels: `SUPER`, `REGULAR`, `OPS` (`packages/db/src/roles.ts`). All levels have the same
+access except that only `SUPER` manages other admins.
+
+## Admin access is invite-only
+
+The admin site (https://admin.heavenlytravel.my) has no sign-up. A person signs up as a
+customer on the web app, then a `SUPER` admin promotes them on the **Admins** page, which
+also changes levels and revokes access. The page and the `db:promote-admin` script share
+`setAdminLevel` / `revokeAdmin` in `packages/db/src/admins.ts`, which always keep at least
+one `SUPER` admin.
+
+Every admin page starts with `requireAdmin()` (`apps/admin/app/_lib/access.ts`):
+signed-out visitors go to `/sign-in`, signed-in users without an admin profile go to
+`/no-access`. Server actions check again with `getAdmin()`, because they can be called
+by direct POST.

@@ -11,12 +11,12 @@ const focus =
 
 /** All six services, in the order the tabs show them. */
 const TABS: Product[] = [
-  PRODUCTS.rental,
   PRODUCTS.car,
+  PRODUCTS.coach,
   PRODUCTS.attraction,
   PRODUCTS.hotel,
+  PRODUCTS.rental,
   PRODUCTS.package,
-  PRODUCTS.coach,
 ];
 
 /**
@@ -33,7 +33,7 @@ export function ServiceTabsSearch({
   footer?: ReactNode;
 }) {
   const { product, setProduct, values, set } = useSearch(
-    "rental",
+    PRODUCTS.car.key,
     destination ? { from: destination, place: destination } : {},
   );
   // A newly chosen destination overwrites the place, whatever was typed, and

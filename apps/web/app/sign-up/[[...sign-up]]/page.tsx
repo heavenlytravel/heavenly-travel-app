@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { SignUp } from "@clerk/nextjs";
+import { AuthPage } from "../../_components/AuthPage";
+
+export const metadata: Metadata = {
+  title: "Create an account | Heavenly Travel",
+};
 
 export default function SignUpPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 p-6">
+    <AuthPage>
       <SignUp />
-    </main>
+    </AuthPage>
   );
 }

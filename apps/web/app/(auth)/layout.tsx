@@ -1,18 +1,31 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import { AuthShell } from "@repo/ui/auth-shell";
+import { redirect } from "next/navigation";
+import { Photo } from "../_components/Brand";
 import { fontVars } from "../_home/fonts";
-import { Photo } from "./Brand";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
 
 /**
  * The customer site's sign-in and sign-up pages: the home page fonts, the
- * logo linking home, the Langkawi hero on the left from `lg` up and the form
- * on the right. The form is whatever is passed as children.
+ * logo above the form, the Langkawi hero on the left from `lg` up. Someone
+ * already signed in is sent on from the server, so the form never flashes.
  */
-export function AuthPage({ children }: { children: ReactNode }) {
+export default async function AuthLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { userId } = await auth();
+  if (userId) {
+    redirect(
+      process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL ?? "/",
+    );
+  }
+
   return (
     <div
       className={`${fontVars} font-(family-name:--font-body) leading-normal antialiased`}
@@ -23,7 +36,7 @@ export function AuthPage({ children }: { children: ReactNode }) {
             <Photo
               src="/brand/logo-blue.svg"
               alt="Heavenly, your travel engineer"
-              className="h-9 w-auto"
+              className="h-10 w-auto"
               loading="eager"
             />
           </Link>

@@ -3,8 +3,9 @@
  * prebuilt component (sign in, sign up, user button) matches. The palette is
  * the home page's (`docs/landing-designs.md`). The font is inherited from the
  * page, so the card takes the home page fonts on the customer site and Geist
- * on the admin console. `@repo/ui` does not depend on Clerk, so this is a
- * plain object; the apps type-check it when they pass it to the provider.
+ * on the admin console. The logo is drawn by `AuthShell`, not by Clerk.
+ * `@repo/ui` does not depend on Clerk, so this is a plain object; the apps
+ * type-check it when they pass it to the provider.
  */
 
 const deep = "#073c36";
@@ -14,6 +15,7 @@ const muted = "#4a5f5b";
 const line = "#d5dedb";
 
 export const clerkAppearance = {
+  options: { logoPlacement: "none" },
   variables: {
     colorPrimary: deep,
     colorPrimaryForeground: "#ffffff",
@@ -57,15 +59,10 @@ export const clerkAppearance = {
   },
 } as const;
 
-/** Layout for the admin sign-in: logo in the card, no sign-up link. */
+/** The admin sign-in: no sign-up link, and a deeper shadow for the dark page. */
 export const clerkAdminSignIn = {
-  options: {
-    logoPlacement: "inside",
-    logoImageUrl: "/brand/logo-blue.svg",
-  },
   elements: {
     footerAction: { display: "none" },
-    // A deeper shadow so the card sits on the dark green, not a pale halo.
     cardBox: { boxShadow: "0 22px 55px rgba(1, 23, 21, 0.5)" },
   },
 } as const;

@@ -28,13 +28,18 @@ resend, errors and the return URL. What changes is everything around and inside 
   and `fontFamily: inherit` so the card takes the fonts of the page it sits on. Both
   apps pass it to `ClerkProvider`, so `UserButton` and every other Clerk component
   match too.
-- **Web** wraps both pages in `AuthPage` (`apps/web/app/_components/AuthPage.tsx`):
-  the home page fonts, the logo linking home, the Langkawi hero photo with the
-  "Travel made simple." headline on the left, and a "Back to Heavenly Travel" link.
-  On mobile the photo panel is hidden and the logo sits above the form.
-- **Admin** uses the dark tone with the eyebrow "Admin portal", the logo inside the
-  card, no sign-up link and no footer. The `/no-access` page uses the same shell so a
-  signed-in customer who is not staff sees the same page family, not an error page.
+- **Both apps keep the pages in an `(auth)` route group** whose layout renders the
+  shell and, first, bounces anyone already signed in. It reads `auth()` on the server
+  and redirects to the app's `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL`, so the
+  form is never sent to the browser. Without this Clerk's component notices the
+  session on the client and redirects, which shows the form for a moment first.
+- **Web** (`apps/web/app/(auth)/layout.tsx`): the home page fonts, the logo centred
+  above the form and linking home, the Langkawi hero photo with the "Travel made
+  simple." headline on the left from `lg` up, and a "Back to Heavenly Travel" link.
+- **Admin** (`apps/admin/app/(auth)/layout.tsx`): the dark tone, the logo drawn white
+  above the "Admin portal" eyebrow, no sign-up link and no footer. The `/no-access`
+  page uses the same shell so a signed-in customer who is not staff sees the same page
+  family, not an error page.
 
 Not in scope: changing anything in `getAccess`, `requireAdmin` or the Clerk dashboard.
 

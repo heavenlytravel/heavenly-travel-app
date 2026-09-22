@@ -11,7 +11,9 @@
 - **Checks happen in pages, not in `proxy.ts` or layouts.** `clerkMiddleware()` in each
   app's `proxy.ts` only attaches the session. Pages call `getAccess(area)` from
   `@repo/db/server` and render each status themselves. The access matrix lives only
-  in that function:
+  in that function. The one exception is the reverse check: each app's `(auth)` layout
+  sends a signed-in visitor away from `/sign-in` and `/sign-up` on the server, so the
+  form never flashes before Clerk's own client-side redirect (see `auth-pages.md`).
 
   | Area      | Who gets in                            |
   | --------- | -------------------------------------- |

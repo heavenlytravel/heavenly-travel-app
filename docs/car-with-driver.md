@@ -154,7 +154,7 @@ VehicleClass    id, slug @unique, name, description, isActive, sortOrder,
 
 Booking         id, reference @unique, userId, status String (derived),
                 contactName, contactPhone,
-                priceTotalSen Int (sum of live items), currency "MYR",
+                priceTotalSen Int (sum of live items; kept once all are cancelled), currency "MYR",
                 startsAt DateTime (earliest live item, for sorting and cutoff),
                 cancelledAt?, cancelledBy? ("customer" | "admin"),
                 confirmedAt?, createdAt, updatedAt,
@@ -299,9 +299,11 @@ As built in step 4:
   the detail page uses the same result to render the button enabled, disabled with
   the cutoff hint, or not at all. `BOOKING_STATUS_LABELS` and `ITEM_STATUS_LABELS`
   are the display names for both apps.
-- The booking and account pages share one shell (`_components/SiteShell.tsx`) and
-  the same presentational pieces (`_components/Page.tsx`). Clerk's account menu
-  gains a My bookings entry ahead of the built-ins.
+- The booking and account pages live in the `(site)` route group with one layout:
+  the site header (links from `lg` up, a `Sheet` from `@repo/ui` below that) and
+  one centred column. Clerk's account menu gains My bookings and Account entries
+  ahead of the built-ins. `clerkUserButton` in `@repo/ui` undoes the sign-in card's
+  `rootBox` width for header buttons in both apps.
 - `BookingDetail` renders a booking for its owner on both the success page and the
   My bookings detail page; the pages differ only in title and the side panel's
   action. `requireOwnBooking` does the reference parsing, sign-in redirect and
@@ -309,8 +311,9 @@ As built in step 4:
 - Cancelling is two clicks: the button arms a confirmation with a red "Yes, cancel"
   and a "Keep the booking". The action re-checks ownership, status and cutoff in
   the transaction, then revalidates the list, the detail and the success page.
-- A cancelled booking hides its total: the stored total is the sum of live items,
-  so it is zero and would read as a refund. The cancellation time shows instead.
+- A fully cancelled booking keeps its last total (`refreshBooking` only recomputes
+  the sum while live items remain), so the record still says what the trip cost.
+  Customer pages show it with the cancellation time.
 - Customer pages show the booking status only, not per-item status; item status
   is an ops detail for the admin app.
 

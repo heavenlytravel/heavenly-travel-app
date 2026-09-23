@@ -1,13 +1,21 @@
 import { db } from "./client";
-import type { Zone } from "./generated/prisma/client";
+import type { Zone, ZoneDistrict } from "./generated/prisma/client";
 import type { Place } from "./place";
 
-export type { Zone };
+export type { Zone, ZoneDistrict };
 
 export function listActiveZones(): Promise<Zone[]> {
   return db.zone.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
+  });
+}
+
+/** Every district of every active zone, as Google spells them. */
+export function listActiveZoneDistricts(): Promise<ZoneDistrict[]> {
+  return db.zoneDistrict.findMany({
+    where: { zone: { isActive: true } },
+    orderBy: [{ state: "asc" }, { district: "asc" }],
   });
 }
 

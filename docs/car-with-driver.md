@@ -1,7 +1,7 @@
 # Car with driver: the first bookable product
 
-Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain) and 2 (places
-package) of the build order are built; the rest is not.
+Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain), 2 (places
+package) and 3 (web booking flow) of the build order are built; the rest is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -268,6 +268,28 @@ resolved places (place id plus label) with an autocomplete field in
 Pickup date and time are combined as `${date}T${time}:00+08:00`. Malaysia has no
 daylight saving, so no time zone library is needed. Clerk's `SignIn` honours a
 `redirect_url` query parameter, which carries the return to the confirm step.
+
+As built in step 3:
+
+- The whole trip lives in the URL. `apps/web/app/_lib/car-booking.ts` is the one
+  place that knows the parameter names: the card builds the options query, the
+  options page posts a plain GET form to the confirm page (search plus choices), and
+  the confirm form carries its own query string in a hidden field to the server
+  action, which parses, resolves and prices it again from scratch. The search card,
+  the options page, the confirm page and the action never trust each other.
+- `loadCarTrip` in `booking/car-with-driver/_lib/trip.ts` turns the parsed search
+  into a `CarTripRequest` (places resolved, instant computed, distance fetched). All
+  three server entry points start there.
+- An unresolved place field (text but no picked suggestion) does not submit. The card
+  shows "Choose the pick-up from the list" rather than guessing which place was meant.
+- The mode and hours are `choice` fields on the card, rendered as selects in the
+  joined row. Drop-off hides in hourly mode, hours hides in one-way mode.
+- The other five tabs are `bookable: false`: rendered, marked "Soon", disabled.
+- `prepareCarItem` also returns the chosen `vehicleClass` and typed `price`, so the
+  confirm page can show the breakdown without reading the item's JSON back.
+- `formatLocalDateTime` (booking-rules) and `normalizePhone` / `isValidPhone`
+  (phone.ts) were added to `@repo/db` for the pages; the admin app will reuse them.
+- The success page links home. `/account/bookings` arrives with step 4.
 
 ## Admin app
 

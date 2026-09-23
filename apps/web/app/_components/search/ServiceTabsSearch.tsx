@@ -50,11 +50,13 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
   );
 
   return (
-    <div className="overflow-hidden rounded-[18px] bg-white text-[#102825] shadow-[0_22px_55px_rgba(9,43,39,0.16)] sm:rounded-[22px]">
+    // No overflow clip on the card: the place fields open a suggestion list
+    // below themselves that must be free to hang past its bottom edge.
+    <div className="rounded-[18px] bg-white text-[#102825] shadow-[0_22px_55px_rgba(9,43,39,0.16)] sm:rounded-[22px]">
       <div
         role="tablist"
         aria-label="Choose a travel service"
-        className="flex snap-x snap-mandatory overflow-x-auto border-b border-[#dce3e0] [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-t-[inherit] border-b border-[#dce3e0] [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6"
       >
         {TABS.map((p) => {
           const on = p.key === product.key;
@@ -118,7 +120,7 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
                   def={f}
                   id={id}
                   values={values}
-                  onChange={(v) => set(f.key, v)}
+                  onChange={(v, placeId) => set(f.key, v, placeId)}
                   className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b]"
                 />
               </div>

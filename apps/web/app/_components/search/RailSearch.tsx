@@ -115,7 +115,7 @@ export function RailSearch() {
                       def={f}
                       id={id}
                       values={values}
-                      onChange={(v) => set(f.key, v)}
+                      onChange={(v, placeId) => set(f.key, v, placeId)}
                       className={input}
                     />
                   </>

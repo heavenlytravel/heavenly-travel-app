@@ -223,7 +223,20 @@ export const PRODUCT_LIST: Product[] = [
   PRODUCTS.hotel,
 ];
 
-export type SearchValues = Record<FieldKey, string>;
+/** The fields that name a place and can carry a resolved place id. */
+export type PlaceFieldKey = "from" | "to" | "place";
+
+export const isPlaceKey = (key: FieldKey): key is PlaceFieldKey =>
+  key === "from" || key === "to" || key === "place";
+
+/**
+ * What the person typed for every field, plus the place id behind each place
+ * field once it was picked from the autocomplete list. A place field with text
+ * but no id was typed freehand, or edited after picking, and is not resolved.
+ */
+export type SearchValues = Record<FieldKey, string> & {
+  placeIds: Partial<Record<PlaceFieldKey, string>>;
+};
 
 export const EMPTY_SEARCH: SearchValues = {
   from: "",
@@ -237,6 +250,7 @@ export const EMPTY_SEARCH: SearchValues = {
   people: "2",
   children: "0",
   rooms: "1",
+  placeIds: {},
 };
 
 /** Today plus a number of days, as the value a date input takes. */

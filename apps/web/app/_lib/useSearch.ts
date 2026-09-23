@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   EMPTY_SEARCH,
   PRODUCTS,
+  isPlaceKey,
   searchHref,
   type FieldKey,
   type ProductKey,
@@ -24,9 +25,16 @@ export function useSearchValues(preset: Partial<SearchValues> = {}) {
     ...EMPTY_SEARCH,
     ...preset,
   });
-  const set = (key: FieldKey, value: string) =>
+  /**
+   * Change one field. A place picked from the autocomplete list comes with
+   * its id; typing into the field afterwards drops the id again.
+   */
+  const set = (key: FieldKey, value: string, placeId?: string) =>
     setValues((v) => {
       const next = { ...v, [key]: value };
+      if (isPlaceKey(key)) {
+        next.placeIds = { ...v.placeIds, [key]: placeId };
+      }
       // An end date can never come before the start date.
       if (next.date && next.endDate && next.endDate < next.date)
         next.endDate = "";

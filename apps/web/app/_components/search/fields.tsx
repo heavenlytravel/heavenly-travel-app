@@ -1,6 +1,11 @@
 "use client";
 
-import type { FieldDef, SearchValues } from "../../_lib/search";
+import {
+  isPlaceKey,
+  type FieldDef,
+  type SearchValues,
+} from "../../_lib/search";
+import { PlaceInput } from "./PlaceInput";
 
 const MAX_COUNT = 99;
 
@@ -12,8 +17,10 @@ export function countOf(def: FieldDef, values: SearchValues) {
 }
 
 /**
- * The right native input for a field. Each search box styles it its own way,
- * but what a date, a time or a place needs from the browser stays the same.
+ * The right input for a field. Each search box styles it its own way, but
+ * what a date, a time or a place needs stays the same. A place field is an
+ * autocomplete: `onChange` gets the place id when a suggestion is picked and
+ * nothing when the text was typed.
  */
 export function FieldInput({
   def,
@@ -26,10 +33,23 @@ export function FieldInput({
   def: FieldDef;
   id: string;
   values: SearchValues;
-  onChange: (value: string) => void;
+  onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
   className?: string;
 }) {
+  if (def.kind === "place" && isPlaceKey(def.key)) {
+    return (
+      <PlaceInput
+        id={id}
+        value={values[def.key]}
+        placeId={values.placeIds[def.key]}
+        placeholder={def.placeholder}
+        onChange={onChange}
+        onFocus={onFocus}
+        className={className}
+      />
+    );
+  }
   const shared = {
     id,
     className,

@@ -162,7 +162,7 @@ export function GuidedSearch() {
                     def={f}
                     id={id}
                     values={values}
-                    onChange={(v) => set(f.key, v)}
+                    onChange={(v, placeId) => set(f.key, v, placeId)}
                     onFocus={() => setActiveKey(f.key)}
                     className={input}
                   />

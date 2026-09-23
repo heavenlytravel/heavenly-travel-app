@@ -95,7 +95,8 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
               />
               <span>{p.label}</span>
               {!p.bookable && (
-                <span className="rounded-full bg-[#f1f4f3] px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.08em] uppercase">
+                // Out of the flow, so it never widens the tab past its column.
+                <span className="absolute top-1.5 right-2 text-[0.55rem] leading-none font-bold tracking-[0.12em] text-[#caa243] uppercase">
                   Soon
                 </span>
               )}

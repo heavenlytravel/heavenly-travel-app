@@ -29,6 +29,7 @@ export {
   listBookingsForUser,
   getBookingForUser,
   listBookings,
+  countBookings,
   getBooking,
   advanceItem,
   cancelItem,
@@ -36,6 +37,7 @@ export {
   cancelBookingAsCustomer,
 } from "./bookings";
 export type {
+  BookingFilter,
   BookingWithItems,
   BookingItemWithDetails,
   PreparedItem,
@@ -51,3 +53,5 @@ export * from "./pricing";
 export * from "./references";
 export * from "./place";
 export * from "./phone";
+export * from "./car-trip-view";
+export * from "./names";

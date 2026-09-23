@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { carDetailRows, fullName } from "@repo/db";
 import { getAccess, prepareCarItem } from "@repo/db/server";
 import { redirect } from "next/navigation";
 import {
@@ -11,7 +12,7 @@ import {
 } from "../../../../_lib/car-booking";
 import { PageTitle, Panel, Stop } from "../../../_components/Page";
 import { PriceBreakdown } from "../../_components/PriceBreakdown";
-import { TripSummary, carDetailRows } from "../../_components/TripSummary";
+import { TripSummary } from "../../_components/TripSummary";
 import { loadCarTrip } from "../_lib/trip";
 import { ConfirmForm } from "./ConfirmForm";
 
@@ -105,9 +106,7 @@ export default async function ConfirmPage({
           </h2>
           <ConfirmForm
             trip={query}
-            defaultName={[user.firstName, user.lastName]
-              .filter(Boolean)
-              .join(" ")}
+            defaultName={fullName(user)}
             defaultPhone={user.phone ?? ""}
           />
         </Panel>

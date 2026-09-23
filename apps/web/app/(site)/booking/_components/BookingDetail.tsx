@@ -1,9 +1,14 @@
 import type { ReactNode } from "react";
-import { formatLocalDateTime, formatMyr } from "@repo/db";
+import {
+  carDetailRows,
+  formatLocalDateTime,
+  formatMyr,
+  tripViewOfItem,
+} from "@repo/db";
 import type { BookingWithItems } from "@repo/db/server";
 import { Panel, Rows } from "../../_components/Page";
 import { StatusBadge } from "./StatusBadge";
-import { TripSummary, carDetailRows, tripViewOfItem } from "./TripSummary";
+import { TripSummary } from "./TripSummary";
 
 /** One line under the title, per booking status, as the customer reads it. */
 export const BOOKING_STATUS_LINES: Record<string, string> = {

@@ -1,3 +1,4 @@
+import { fullName } from "@repo/db";
 import { listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
@@ -33,9 +34,7 @@ export default async function AdminsPage() {
           <tbody className="divide-y divide-neutral-100">
             {admins.map(({ user, level, createdAt }) => {
               const isSelf = user.id === admin.id;
-              const name = [user.firstName, user.lastName]
-                .filter(Boolean)
-                .join(" ");
+              const name = fullName(user);
               return (
                 <tr key={user.id}>
                   <td className="px-4 py-3 font-medium">

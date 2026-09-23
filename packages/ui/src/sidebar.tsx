@@ -133,24 +133,29 @@ export function Sidebar({
         </CollapsedContext.Provider>
         <SidebarRail />
       </aside>
+      {/* No display class on the dialog itself: closed, it must stay hidden. */}
       <Sheet
         open={openMobile}
         onOpenChange={setOpenMobile}
         side="left"
         title={title}
-        className="ui:flex ui:flex-col ui:text-neutral-900"
+        className="ui:text-neutral-900"
       >
-        <CollapsedContext.Provider value={false}>
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setOpenMobile(false)}
-            className="ui:absolute ui:top-3 ui:right-3 ui:rounded-md ui:p-1.5 ui:text-neutral-500 ui:hover:bg-neutral-100 ui:hover:text-neutral-900"
-          >
-            <XIcon />
-          </button>
-          {children}
-        </CollapsedContext.Provider>
+        <div className="ui:flex ui:min-h-full ui:flex-col">
+          <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setOpenMobile(false)}
+              className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:hover:bg-neutral-100 ui:hover:text-neutral-900"
+            >
+              <XIcon />
+            </button>
+          </div>
+          <CollapsedContext.Provider value={false}>
+            {children}
+          </CollapsedContext.Provider>
+        </div>
       </Sheet>
     </>
   );
@@ -321,7 +326,9 @@ export function SidebarMenuButton({
     MENU_SIZES[size],
     active &&
       "ui:bg-neutral-900 ui:text-white ui:hover:bg-neutral-900 ui:hover:text-white",
-    collapsed && "ui:size-8! ui:p-2!",
+    // Collapsed, every row is a square: padded around a 1rem icon, or edge
+    // to edge around a 2rem mark.
+    collapsed && (size === "lg" ? "ui:size-8! ui:p-0!" : "ui:size-8! ui:p-2!"),
     className,
   );
   const shared = {

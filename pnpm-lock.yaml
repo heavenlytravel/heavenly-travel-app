@@ -29,6 +29,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@repo/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -93,6 +96,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@repo/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@repo/places':
         specifier: workspace:*
         version: link:../../packages/places
@@ -194,6 +200,34 @@ importers:
       prisma:
         specifier: 7.10.0
         version: 7.10.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      tsx:
+        specifier: 4.23.13
+        version: 4.23.13
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/email:
+    dependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../db
+      server-only:
+        specifier: 0.0.1
+        version: 0.0.1
+    devDependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      eslint:
+        specifier: 10.8.1
+        version: 10.8.1(jiti@2.7.0)
       tsx:
         specifier: 4.23.13
         version: 4.23.13

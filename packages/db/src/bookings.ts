@@ -1,7 +1,6 @@
-import { isBeforeCancellationCutoff } from "./booking-rules";
 import {
   bookingStatusOf,
-  CUSTOMER_CANCELLABLE,
+  checkCustomerCancel,
   isLive,
   NEXT_ITEM_STATUS,
   type BookingStatus,
@@ -318,12 +317,8 @@ export function cancelBookingAsCustomer(
       where: { reference, userId },
     });
     if (!booking) return { ok: false, error: "Booking not found." };
-    if (!CUSTOMER_CANCELLABLE.includes(booking.status as BookingStatus)) {
-      return { ok: false, error: `Booking is already ${booking.status}.` };
-    }
-    if (!isBeforeCancellationCutoff(booking.startsAt, now)) {
-      return { ok: false, error: "Cannot cancel within 24 hours of pickup." };
-    }
+    const allowed = checkCustomerCancel(booking, now);
+    if (!allowed.ok) return { ok: false, error: allowed.message };
     return {
       ok: true,
       ...(await cancelAllItems(tx, booking.id, "customer", now)),

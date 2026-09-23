@@ -1,31 +1,29 @@
-import { UserButton } from "@clerk/nextjs";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
-import { SidebarNav } from "../_components/SidebarNav";
+import { SidebarInset, SidebarProvider } from "@repo/ui/sidebar";
+import { cookies } from "next/headers";
+import { AppSidebar } from "../_components/AppSidebar";
+import { ConsoleHeader } from "../_components/ConsoleHeader";
 
 // Chrome only. Access is checked by each page with `requireAdmin`, which
 // redirects before anything here reaches the browser.
-export default function ConsoleLayout({
+export default async function ConsoleLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // The sidebar remembers whether it was collapsed, read here so the first
+  // paint already matches.
+  const store = await cookies();
+  const defaultOpen = store.get("sidebar_state")?.value !== "false";
+
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[15rem_1fr]">
-      <aside className="flex items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 py-3 md:flex-col md:items-stretch md:justify-start md:border-r md:border-b-0 md:px-4 md:py-6">
-        <p className="px-3 text-sm font-semibold tracking-tight">
-          Heavenly Travel
-          <span className="ml-1.5 font-normal text-neutral-500">Admin</span>
-        </p>
-        <div className="md:mt-6 md:flex-1">
-          <SidebarNav />
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <AppSidebar />
+      <SidebarInset>
+        <ConsoleHeader />
+        <div className="mx-auto w-full max-w-5xl px-5 pt-8 pb-32 md:px-10 md:pt-10">
+          {children}
         </div>
-        <div className="md:px-3">
-          <UserButton appearance={clerkUserButton} />
-        </div>
-      </aside>
-      <main className="mx-auto w-full max-w-5xl px-5 pt-8 pb-32 md:px-10 md:pt-10">
-        {children}
-      </main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

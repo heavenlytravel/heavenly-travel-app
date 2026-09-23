@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
+import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import { SidebarNav } from "../_components/SidebarNav";
 
 // Chrome only. Access is checked by each page with `requireAdmin`, which
@@ -19,7 +20,7 @@ export default function ConsoleLayout({
           <SidebarNav />
         </div>
         <div className="md:px-3">
-          <UserButton />
+          <UserButton appearance={clerkUserButton} />
         </div>
       </aside>
       <main className="mx-auto w-full max-w-5xl px-5 pt-8 pb-32 md:px-10 md:pt-10">

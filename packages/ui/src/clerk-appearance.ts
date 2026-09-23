@@ -59,6 +59,18 @@ export const clerkAppearance = {
   },
 } as const;
 
+/**
+ * The user button in a header. The shared `rootBox` rule above sizes the
+ * sign-in card, and would stretch the button's box to 26rem too, pushing
+ * the avatar away from the header's edge; this undoes it.
+ */
+export const clerkUserButton = {
+  elements: {
+    rootBox: { width: "auto", maxWidth: "none" },
+    userButtonTrigger: { boxShadow: "none" },
+  },
+} as const;
+
 /** The admin sign-in: no sign-up link, and a deeper shadow for the dark page. */
 export const clerkAdminSignIn = {
   elements: {

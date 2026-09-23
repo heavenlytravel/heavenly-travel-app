@@ -190,7 +190,12 @@ async function refreshBooking(
     where: { id: bookingId },
     data: {
       status,
-      priceTotalSen: live.reduce((sum, i) => sum + i.priceTotalSen, 0),
+      // The total is what is owed for the live items. A fully cancelled
+      // booking keeps its last total, so the record still says what it was.
+      priceTotalSen:
+        live.length > 0
+          ? live.reduce((sum, i) => sum + i.priceTotalSen, 0)
+          : booking.priceTotalSen,
       startsAt: earliestStart(live) ?? booking.startsAt,
       confirmedAt:
         status !== "received" && booking.confirmedAt === null ? now : undefined,

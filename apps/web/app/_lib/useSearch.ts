@@ -5,7 +5,6 @@ import {
   EMPTY_SEARCH,
   PRODUCTS,
   isPlaceKey,
-  searchHref,
   type FieldKey,
   type ProductKey,
   type SearchValues,
@@ -50,12 +49,5 @@ export function useSearch(
 ) {
   const [key, setProduct] = useState<ProductKey>(initial);
   const { values, set } = useSearchValues(preset);
-  const product = PRODUCTS[key];
-  return {
-    product,
-    setProduct,
-    values,
-    set,
-    href: searchHref([product], product.fields, values),
-  };
+  return { product: PRODUCTS[key], setProduct, values, set };
 }

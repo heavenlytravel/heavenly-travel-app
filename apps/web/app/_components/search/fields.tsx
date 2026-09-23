@@ -48,7 +48,7 @@ export function FieldInput({
     className,
     onFocus,
     value: values[def.key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       onChange(e.target.value),
   };
   if (def.kind === "date")
@@ -61,6 +61,16 @@ export function FieldInput({
       />
     );
   if (def.kind === "time") return <input {...shared} type="time" />;
+  if (def.kind === "choice")
+    return (
+      <select {...shared}>
+        {def.options?.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
   if (def.kind === "count")
     return (
       <input

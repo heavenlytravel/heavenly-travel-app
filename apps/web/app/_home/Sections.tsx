@@ -1,4 +1,4 @@
-import { WHATSAPP_HREF } from "../_lib/content";
+import { CONTACT } from "@repo/db";
 import { BookingSearch } from "./DestinationPicker";
 
 /** Sections of the home page that need no state of their own. */
@@ -83,7 +83,7 @@ export function Closing() {
         </h2>
       </div>
       <a
-        href={WHATSAPP_HREF}
+        href={CONTACT.whatsappHref}
         target="_blank"
         rel="noopener noreferrer"
         className={`w-full rounded-full bg-white px-5 py-[15px] text-center font-bold whitespace-nowrap text-[#073c36] hover:bg-[#e8f2ef] sm:w-auto ${focus}`}

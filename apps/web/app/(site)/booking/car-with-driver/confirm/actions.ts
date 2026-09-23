@@ -2,7 +2,9 @@
 
 import { isValidPhone, normalizePhone } from "@repo/db";
 import { createBooking, getAccess, prepareCarItem } from "@repo/db/server";
+import { sendBookingEmail } from "@repo/email";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { parseCarOptions, parseCarSearch } from "../../../../_lib/car-booking";
 import { loadCarTrip } from "../_lib/trip";
 
@@ -14,7 +16,8 @@ const MAX_NAME_LENGTH = 80;
  * Creates the booking. The trip and the choices arrive as the confirm page's
  * own query string, so the same parsing, resolving and pricing run again
  * here: the price the customer saw is never trusted from the browser. On
- * success the customer is sent to the booking page.
+ * success the received emails go out once the response is sent, and the
+ * customer is sent to the booking page.
  */
 export async function createCarBookingAction(
   _previous: ConfirmState,
@@ -54,5 +57,6 @@ export async function createCarBookingAction(
     contactPhone,
     items: [prepared.item],
   });
+  after(() => sendBookingEmail("received", booking));
   redirect(`/booking/${booking.reference}`);
 }

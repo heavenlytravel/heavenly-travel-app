@@ -2,7 +2,9 @@
 
 import { isReference, normalizeReference } from "@repo/db";
 import { cancelBookingAsCustomer, getAccess } from "@repo/db/server";
+import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
@@ -14,7 +16,8 @@ export type CancelState = { error: string } | null;
 /**
  * The customer cancels their own booking. Ownership, status and the cutoff
  * are all checked again inside the transition, so a stale page cannot
- * cancel what it should not. The cancelled email arrives with step 6.
+ * cancel what it should not. The cancelled emails go out once the response
+ * is sent.
  */
 export async function cancelBookingAction(
   _previous: CancelState,
@@ -30,6 +33,7 @@ export async function cancelBookingAction(
 
   const result = await cancelBookingAsCustomer(reference, access.user.id);
   if (!result.ok) return { error: result.error };
+  after(() => sendBookingChangeEmail(result));
 
   revalidatePath(accountBookingHref(reference));
   revalidatePath(bookingHref(reference));

@@ -7,7 +7,9 @@ import {
   cancelItem,
   type BookingChange,
 } from "@repo/db/server";
+import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 
@@ -18,10 +20,11 @@ const FORBIDDEN: ActionState = { error: "Sign in as an admin to do this." };
 /**
  * Every transition re-checks the session (actions are reachable by direct
  * POST) and lets the booking core check the status. The result's `event`
- * is where the confirmed and cancelled emails hook in with step 6.
+ * sends the confirmed or cancelled emails once the response is out.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
   if (!result.ok) return { error: result.error };
+  after(() => sendBookingChangeEmail(result));
   revalidatePath(bookingHref(result.booking.id));
   revalidatePath(BOOKINGS_PATH);
   revalidatePath("/");

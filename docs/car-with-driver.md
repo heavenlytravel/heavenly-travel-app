@@ -1,8 +1,7 @@
 # Car with driver: the first bookable product
 
-Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain), 2 (places
-package), 3 (web booking flow), 4 (my bookings) and 5 (admin bookings) of the build
-order are built; step 6 (emails) is not.
+Status: built. All six steps of the build order landed on 2026-09-23: schema, seed and
+domain; places package; web booking flow; my bookings; admin bookings; emails.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -360,6 +359,31 @@ As built in step 5:
 Sent after the database write, never inside the transaction. A failed send is logged and
 does not fail the booking.
 
+As built in step 6:
+
+- `@repo/email` talks to Resend over its HTTP API with `fetch`. The SDK would pull in
+  React Email and its rendering stack for one POST. Each send carries an
+  `Idempotency-Key` made of the booking id, the event and the `updatedAt` of the write
+  that caused it, so a retried action cannot deliver an email twice.
+- The sender is chosen once per process from `RESEND_API_KEY`: Resend when set, else
+  the console. Without the key the emails print to the terminal, text body only.
+- Each email is described once as blocks (paragraph, rows, button, contact) and
+  rendered to HTML and to plain text from the same description. The rows are the
+  same `tripRows`, `carDetailRows` and price helpers the two apps render, from
+  `car-trip-view.ts`. Everything a customer typed is escaped in the HTML.
+- A customer cancel writes to the customer and to ops, so no driver is dispatched for
+  a trip that is off; the plan's table covered only admin cancels. An admin cancel of
+  one item in a booking that lives on sends "Booking updated" with every item and its
+  status.
+- Links point at `SITE_URL` and `ADMIN_URL`, defaulting to the production domains.
+  Staging sets both so a preview booking links to the preview.
+- `sendBookingChangeEmail(change)` takes a `BookingChange` straight from a transition
+  and sends nothing when it failed or changed nothing at booking level. The actions
+  call it inside `after()` from `next/server`, so the response goes out first and the
+  send runs once the write has committed. It never throws; a failed send is logged.
+- Ops contact details moved to `CONTACT` in `@repo/db`, shared by the home page and
+  the emails. The WhatsApp number is still a placeholder.
+
 ## Build order
 
 Each step is one PR into `main`, passing `pnpm lint` and `pnpm check-types`, and each
@@ -391,7 +415,9 @@ Owned by the developer, needed before the matching step goes to production.
 - **Resend** (before step 6): account, verify `heavenlytravel.my` (DKIM record, SPF on
   Resend's send subdomain, DMARC if none exists; none of these touch Google Workspace's
   records), API key as `RESEND_API_KEY` in both apps. Create `booking@` as a Google
-  Workspace group with a collaborative inbox so it can receive the ops copy.
+  Workspace group with a collaborative inbox so it can receive the ops copy. On the
+  staging Preview also set `SITE_URL` and `ADMIN_URL` to the staging domains in both
+  apps, so emails from a preview booking link to the preview.
 
 ## Future work, on record
 

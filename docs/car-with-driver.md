@@ -259,7 +259,7 @@ As built in step 2:
 | `/api/places/search`               | Autocomplete proxy, signed-in or not.                                                                                   |
 
 The home page renders `ServiceTabsSearch`, whose state is `SearchValues` from
-`_lib/search.ts` (via `useSearch`), not the `Trip` type used by the landing designs. The
+`_lib/search.ts` (via `useSearch`). The
 `car` product in `search.ts` gains a one-way or hourly mode and an hours field (hourly
 only, options from the business minimum upward). The `to` and `from` fields become
 resolved places (place id plus label) with an autocomplete field in

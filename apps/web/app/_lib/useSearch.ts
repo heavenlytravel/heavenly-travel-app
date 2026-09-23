@@ -12,7 +12,7 @@ import {
 } from "./search";
 
 /**
- * State for the search boxes. The products and everything computed from them
+ * State for the search card. The products and everything computed from them
  * live in ./search, which has no React in it so server pages can read it too.
  */
 
@@ -20,7 +20,7 @@ import {
  * Values shared by every product, so a date or a destination typed for a hotel
  * is still there when the guest switches to attractions.
  */
-export function useSearchValues(preset: Partial<SearchValues> = {}) {
+function useSearchValues(preset: Partial<SearchValues> = {}) {
   const [values, setValues] = useState<SearchValues>({
     ...EMPTY_SEARCH,
     ...preset,

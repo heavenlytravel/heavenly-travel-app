@@ -7,7 +7,7 @@ export default [
   {
     // CLI scripts are run by hand, never as cached turbo tasks, so their env
     // vars (e.g. DATABASE_URL_PRODUCTION) do not belong in turbo.json.
-    files: ["scripts/**"],
+    files: ["scripts/**", "prisma/**"],
     rules: { "turbo/no-undeclared-env-vars": "off" },
   },
 ];

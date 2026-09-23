@@ -25,6 +25,11 @@
 - **Users are synced by webhook** (`apps/web/app/api/webhooks/clerk/route.ts`) on
   `user.created`, `user.updated` and `user.deleted`. If a signed-in user has no row yet
   (webhook not registered or not delivered), `getSession` creates it on first request.
+- **Bookings live in the same package.** Zones, vehicle classes, pricing, business
+  rules and the booking core are modules in `packages/db/src`, shared by both apps.
+  The pure ones (`booking-rules.ts`, `pricing.ts`, `references.ts`, `booking-status.ts`)
+  are also exported from `@repo/db` for the browser and unit-tested with
+  `pnpm --filter @repo/db test`. See `car-with-driver.md`.
 
 ## Environments
 
@@ -54,6 +59,14 @@ which swaps in the production URL for that one command after the typed confirmat
 Push to development first, test, then push to production before merging the PR.
 
 `prisma generate` runs on install and on build.
+
+Reference data (vehicle classes, zones and their districts) comes from
+`packages/db/prisma/seed.ts`, which is idempotent:
+
+```sh
+pnpm --filter @repo/db db:seed         # development branch
+pnpm --filter @repo/db db:seed:prod    # production branch, typed confirmation
+```
 
 ## Webhook registration
 

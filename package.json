@@ -6,6 +6,7 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:push": "pnpm --filter @repo/db db:push",
     "db:push:prod": "pnpm --filter @repo/db db:push:prod",

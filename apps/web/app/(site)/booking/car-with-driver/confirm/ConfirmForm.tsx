@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { control, primaryButton } from "../../_components/Page";
+import { control, primaryButton } from "../../../_components/Page";
 import { createCarBookingAction, type ConfirmState } from "./actions";
 
 /**

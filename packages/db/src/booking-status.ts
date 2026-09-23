@@ -1,3 +1,4 @@
+import { BOOKING_RULES, isBeforeCancellationCutoff } from "./booking-rules";
 import { guardFor } from "./const-enum";
 
 /**
@@ -27,6 +28,13 @@ export const ITEM_STATUSES = [
 ] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
 export const isItemStatus = guardFor(ITEM_STATUSES);
+export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
+  received: "Received",
+  confirmed: "Confirmed",
+  assigned: "Driver assigned",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
 
 /** Summary of a booking's items, stored on the booking for list filtering. */
 export const BOOKING_STATUSES = [
@@ -37,6 +45,12 @@ export const BOOKING_STATUSES = [
 ] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 export const isBookingStatus = guardFor(BOOKING_STATUSES);
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
+  received: "Received",
+  confirmed: "Confirmed",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
 
 export const CANCELLERS = ["customer", "admin"] as const;
 export type Canceller = (typeof CANCELLERS)[number];
@@ -75,3 +89,33 @@ export const CUSTOMER_CANCELLABLE: readonly BookingStatus[] = [
   "received",
   "confirmed",
 ];
+
+export type CustomerCancelCheck =
+  { ok: true } | { ok: false; reason: "status" | "cutoff"; message: string };
+
+/**
+ * Whether the customer may cancel this booking right now: only while it is
+ * received or confirmed, and only before the cancellation cutoff measured
+ * from the earliest live item's start. The page uses this to decide what
+ * the cancel button says; the transition uses it to refuse.
+ */
+export function checkCustomerCancel(
+  booking: { status: string; startsAt: Date },
+  now: Date = new Date(),
+): CustomerCancelCheck {
+  if (!CUSTOMER_CANCELLABLE.includes(booking.status as BookingStatus)) {
+    return {
+      ok: false,
+      reason: "status",
+      message: `Booking is already ${booking.status}.`,
+    };
+  }
+  if (!isBeforeCancellationCutoff(booking.startsAt, now)) {
+    return {
+      ok: false,
+      reason: "cutoff",
+      message: `Cannot cancel within ${BOOKING_RULES.cancellationCutoffHours} hours of pickup.`,
+    };
+  }
+  return { ok: true };
+}

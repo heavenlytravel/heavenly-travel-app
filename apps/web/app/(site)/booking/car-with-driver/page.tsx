@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { quoteCarTrip } from "@repo/db/server";
-import { hiddenSearchFields, parseCarSearch } from "../../_lib/car-booking";
-import { PageTitle, Panel, Stop } from "../_components/Page";
+import { hiddenSearchFields, parseCarSearch } from "../../../_lib/car-booking";
+import { PageTitle, Panel, Stop } from "../../_components/Page";
 import { TripSummary } from "../_components/TripSummary";
 import { CarOptionsForm, type ClassOption } from "./CarOptionsForm";
 import { loadCarTrip } from "./_lib/trip";

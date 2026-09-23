@@ -1,7 +1,6 @@
-import { isBeforeCancellationCutoff } from "./booking-rules";
 import {
   bookingStatusOf,
-  CUSTOMER_CANCELLABLE,
+  checkCustomerCancel,
   isLive,
   NEXT_ITEM_STATUS,
   type BookingStatus,
@@ -191,7 +190,12 @@ async function refreshBooking(
     where: { id: bookingId },
     data: {
       status,
-      priceTotalSen: live.reduce((sum, i) => sum + i.priceTotalSen, 0),
+      // The total is what is owed for the live items. A fully cancelled
+      // booking keeps its last total, so the record still says what it was.
+      priceTotalSen:
+        live.length > 0
+          ? live.reduce((sum, i) => sum + i.priceTotalSen, 0)
+          : booking.priceTotalSen,
       startsAt: earliestStart(live) ?? booking.startsAt,
       confirmedAt:
         status !== "received" && booking.confirmedAt === null ? now : undefined,
@@ -318,12 +322,8 @@ export function cancelBookingAsCustomer(
       where: { reference, userId },
     });
     if (!booking) return { ok: false, error: "Booking not found." };
-    if (!CUSTOMER_CANCELLABLE.includes(booking.status as BookingStatus)) {
-      return { ok: false, error: `Booking is already ${booking.status}.` };
-    }
-    if (!isBeforeCancellationCutoff(booking.startsAt, now)) {
-      return { ok: false, error: "Cannot cancel within 24 hours of pickup." };
-    }
+    const allowed = checkCustomerCancel(booking, now);
+    if (!allowed.ok) return { ok: false, error: allowed.message };
     return {
       ok: true,
       ...(await cancelAllItems(tx, booking.id, "customer", now)),

@@ -6,7 +6,7 @@ import {
   type Place,
 } from "@repo/db";
 import type { BookingItemWithDetails } from "@repo/db/server";
-import { Rows } from "./Page";
+import { Rows } from "../../_components/Page";
 
 /** A car trip as every booking page describes it, before and after booking. */
 export type TripView = {
@@ -31,6 +31,14 @@ export function tripViewOfItem(item: BookingItemWithDetails): TripView | null {
     hours: details.hours,
     distanceKm: details.distanceKm,
   };
+}
+
+/** The trip in one line, for lists: "KLIA to Kuala Lumpur" or "Penang, 4 hours". */
+export function tripHeadline(trip: TripView) {
+  if (trip.dropoff) return `${trip.pickup.label} to ${trip.dropoff.label}`;
+  return trip.hours === null
+    ? trip.pickup.label
+    : `${trip.pickup.label}, ${trip.hours} hours`;
 }
 
 /** The rows after the trip: what was chosen on the options page. */

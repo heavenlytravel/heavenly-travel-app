@@ -11,9 +11,19 @@ export const eyebrow =
 
 export const primaryButton = `inline-flex min-h-[52px] items-center justify-center rounded-[14px] bg-[#073c36] px-6 text-[1rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] disabled:cursor-not-allowed disabled:opacity-50 ${focus}`;
 
+/** The quiet counterpart to `primaryButton`: an outlined button on white. */
+export const secondaryButton = `inline-flex min-h-[48px] items-center justify-center rounded-[14px] border border-[#dce3e0] bg-white px-5 text-[0.95rem] font-bold whitespace-nowrap text-[#073c36] hover:border-[#073c36] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#dce3e0] ${focus}`;
+
+/** A destructive action: filled red, used only after the customer confirms. */
+export const dangerButton = `inline-flex min-h-[48px] items-center justify-center rounded-[14px] bg-[#b3261e] px-5 text-[0.95rem] font-bold whitespace-nowrap text-white hover:bg-[#961d16] disabled:cursor-not-allowed disabled:opacity-50 ${focus}`;
+
 export const textLink = `font-semibold text-[#073c36] underline-offset-4 hover:underline ${focus}`;
 
 export const control = `w-full rounded-xl border border-[#dce3e0] bg-white px-4 py-3 text-[#082f2b] outline-none placeholder:text-[#64706d]/80 focus:border-[#073c36] ${focus}`;
+
+/** The white card with the home page's shadow, as a class for links and lists. */
+export const panel =
+  "rounded-[18px] bg-white p-5 shadow-[0_12px_35px_rgba(9,43,39,0.08)] sm:p-7";
 
 export function PageTitle({
   eyebrow: above,
@@ -47,13 +57,7 @@ export function Panel({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <section
-      className={`rounded-[18px] bg-white p-5 shadow-[0_12px_35px_rgba(9,43,39,0.08)] sm:p-7 ${className}`}
-    >
-      {children}
-    </section>
-  );
+  return <section className={`${panel} ${className}`}>{children}</section>;
 }
 
 /** Something stopped the flow: the reason and where to go instead. */

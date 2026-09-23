@@ -1,7 +1,8 @@
 # Car with driver: the first bookable product
 
 Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain), 2 (places
-package) and 3 (web booking flow) of the build order are built; the rest is not.
+package), 3 (web booking flow) and 4 (my bookings) of the build order are built; the
+rest is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -153,7 +154,7 @@ VehicleClass    id, slug @unique, name, description, isActive, sortOrder,
 
 Booking         id, reference @unique, userId, status String (derived),
                 contactName, contactPhone,
-                priceTotalSen Int (sum of live items), currency "MYR",
+                priceTotalSen Int (sum of live items; kept once all are cancelled), currency "MYR",
                 startsAt DateTime (earliest live item, for sorting and cutoff),
                 cancelledAt?, cancelledBy? ("customer" | "admin"),
                 confirmedAt?, createdAt, updatedAt,
@@ -289,7 +290,32 @@ As built in step 3:
   confirm page can show the breakdown without reading the item's JSON back.
 - `formatLocalDateTime` (booking-rules) and `normalizePhone` / `isValidPhone`
   (phone.ts) were added to `@repo/db` for the pages; the admin app will reuse them.
-- The success page links home. `/account/bookings` arrives with step 4.
+- The success page links home and to My bookings.
+
+As built in step 4:
+
+- `checkCustomerCancel(booking, now)` in `booking-status.ts` is the one place the
+  customer cancel rule lives: `cancelBookingAsCustomer` refuses with its message, and
+  the detail page uses the same result to render the button enabled, disabled with
+  the cutoff hint, or not at all. `BOOKING_STATUS_LABELS` and `ITEM_STATUS_LABELS`
+  are the display names for both apps.
+- The booking and account pages live in the `(site)` route group with one layout:
+  the site header (links from `lg` up, a `Sheet` from `@repo/ui` below that) and
+  one centred column. Clerk's account menu gains My bookings and Account entries
+  ahead of the built-ins. `clerkUserButton` in `@repo/ui` undoes the sign-in card's
+  `rootBox` width for header buttons in both apps.
+- `BookingDetail` renders a booking for its owner on both the success page and the
+  My bookings detail page; the pages differ only in title and the side panel's
+  action. `requireOwnBooking` does the reference parsing, sign-in redirect and
+  owner check for both.
+- Cancelling is two clicks: the button arms a confirmation with a red "Yes, cancel"
+  and a "Keep the booking". The action re-checks ownership, status and cutoff in
+  the transaction, then revalidates the list, the detail and the success page.
+- A fully cancelled booking keeps its last total (`refreshBooking` only recomputes
+  the sum while live items remain), so the record still says what the trip cost.
+  Customer pages show it with the cancellation time.
+- Customer pages show the booking status only, not per-item status; item status
+  is an ops detail for the admin app.
 
 ## Admin app
 

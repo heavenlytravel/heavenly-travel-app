@@ -125,7 +125,14 @@ export async function quoteCarTrip(
 }
 
 export type PrepareCarItemResult =
-  { ok: true; item: PreparedItem } | { ok: false; error: CarQuoteError };
+  | {
+      ok: true;
+      item: PreparedItem;
+      /** The same values as `item`, typed for display. */
+      vehicleClass: VehicleClass;
+      price: CarPriceBreakdown;
+    }
+  | { ok: false; error: CarQuoteError };
 
 /** A customer's choice, validated and priced, ready for `createBooking`. */
 export async function prepareCarItem(
@@ -160,6 +167,8 @@ export async function prepareCarItem(
 
   return {
     ok: true,
+    vehicleClass: chosen.vehicleClass,
+    price: chosen.price,
     item: {
       product: "car-with-driver",
       startsAt: request.startsAt,

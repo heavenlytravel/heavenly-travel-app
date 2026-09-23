@@ -1,10 +1,22 @@
-import { UserButton } from "@clerk/nextjs";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { getAccess } from "@repo/db/server";
 import { redirect } from "next/navigation";
+import { PageTitle, Panel, Rows, primaryButton } from "../_components/Page";
+import {
+  ACCOUNT_BOOKINGS_PATH,
+  ACCOUNT_PATH,
+  signInHref,
+} from "../_lib/routes";
 
+export const metadata: Metadata = {
+  title: "Account | Heavenly Travel",
+};
+
+/** Route: /account. Who is signed in and where their bookings are. */
 export default async function AccountPage() {
   const access = await getAccess("user");
-  if (access.status === "signed-out") redirect("/sign-in");
+  if (access.status === "signed-out") redirect(signInHref(ACCOUNT_PATH));
 
   const { user } = access;
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
@@ -16,27 +28,24 @@ export default async function AccountPage() {
   ].filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-sans text-neutral-900">
-      <main className="mx-auto max-w-3xl px-5 pt-16 pb-32">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold tracking-tight">Account</h1>
-          <UserButton />
-        </div>
-        <dl className="mt-10 divide-y divide-neutral-200 border-y border-neutral-200">
-          <div className="flex justify-between gap-4 py-4">
-            <dt className="text-neutral-500">Name</dt>
-            <dd>{name || "Not set"}</dd>
-          </div>
-          <div className="flex justify-between gap-4 py-4">
-            <dt className="text-neutral-500">Email</dt>
-            <dd>{user.email}</dd>
-          </div>
-          <div className="flex justify-between gap-4 py-4">
-            <dt className="text-neutral-500">Access</dt>
-            <dd>{roles.join(", ")}</dd>
-          </div>
-        </dl>
-      </main>
-    </div>
+    <>
+      <PageTitle eyebrow="Account" title="Your account." />
+      <Panel className="max-w-[560px]">
+        <Rows
+          rows={[
+            ["Name", name || "Not set"],
+            ["Email", user.email],
+            ["Phone", user.phone ?? "Not set"],
+            ["Access", roles.join(", ")],
+          ]}
+        />
+        <Link
+          href={ACCOUNT_BOOKINGS_PATH}
+          className={`${primaryButton} mt-6 w-full`}
+        >
+          My bookings
+        </Link>
+      </Panel>
+    </>
   );
 }

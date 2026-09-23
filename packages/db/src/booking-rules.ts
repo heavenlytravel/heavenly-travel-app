@@ -104,6 +104,22 @@ export function isBeforeCancellationCutoff(
   return now.getTime() < cancellationDeadline(startsAt).getTime();
 }
 
+const localDateTime = new Intl.DateTimeFormat("en-MY", {
+  timeZone: BOOKING_RULES.timeZone,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 09:30" in Malaysia. */
+export function formatLocalDateTime(instant: Date) {
+  return localDateTime.format(instant);
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 

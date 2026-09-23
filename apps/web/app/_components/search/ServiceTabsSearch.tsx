@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { PRODUCTS, searchHref, type Product } from "../../_lib/search";
+import { useRouter } from "next/navigation";
+import {
+  carBookingHref,
+  carSearchFromCard,
+  type CarSearchIssue,
+} from "../../_lib/car-booking";
+import { PRODUCTS, visibleFields, type Product } from "../../_lib/search";
 import { useSearch } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
 import { FieldInput } from "./fields";
@@ -22,10 +28,13 @@ const TABS: Product[] = [
 /**
  * Six services as a row of icon tabs, then one joined row of fields that
  * changes with the service, and a deep green button of fixed width at the end.
+ * Only car with driver can be sent: it goes to the options page with the
+ * search in the URL. The other tabs are disabled until their flows exist.
  * `destination` fills in where the trip starts or goes, and may change while
  * the box is on screen.
  */
 export function ServiceTabsSearch({ destination }: { destination?: string }) {
+  const router = useRouter();
   const { product, setProduct, values, set } = useSearch(
     PRODUCTS.car.key,
     destination ? { from: destination, place: destination } : {},
@@ -38,16 +47,19 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
     set("from", destination ?? "");
     set("place", destination ?? "");
   }
-  const [sameLocation, setSameLocation] = useState(true);
-  const rental = product.key === "rental";
-  const href = searchHref(
-    [product],
-    product.fields,
-    values,
-    rental
-      ? [`Return to the same location: ${sameLocation ? "yes" : "no"}`]
-      : [],
-  );
+  const [issues, setIssues] = useState<CarSearchIssue[]>([]);
+  const fields = visibleFields(product, values);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const result = carSearchFromCard(values);
+    if (!result.ok) {
+      setIssues(result.issues);
+      return;
+    }
+    setIssues([]);
+    router.push(carBookingHref(result.params));
+  }
 
   return (
     // No overflow clip on the card: the place fields open a suggestion list
@@ -68,11 +80,13 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
               id={`svc-tab-${p.key}`}
               aria-selected={on}
               aria-controls="svc-panel"
+              disabled={!p.bookable}
+              title={p.bookable ? undefined : "Coming soon"}
               onClick={() => setProduct(p.key)}
-              className={`relative flex min-h-[54px] shrink-0 snap-start items-center justify-center gap-2.5 border-r border-[#edf0ef] px-4 py-3 text-[0.83rem] font-semibold whitespace-nowrap last:border-r-0 sm:text-[0.95rem] lg:min-h-[58px] ${
+              className={`relative flex min-h-[54px] shrink-0 snap-start items-center justify-center gap-2.5 border-r border-[#edf0ef] px-4 py-3 text-[0.83rem] font-semibold whitespace-nowrap last:border-r-0 disabled:cursor-not-allowed disabled:text-[#64706d]/60 sm:text-[0.95rem] lg:min-h-[58px] ${
                 on
                   ? "bg-[#e8f2ef] text-[#073c36]"
-                  : "bg-white hover:bg-[#f5f9f7]"
+                  : "bg-white enabled:hover:bg-[#f5f9f7]"
               } ${focus}`}
             >
               <ProductIcon
@@ -80,6 +94,12 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
                 className="h-5 w-5 shrink-0 stroke-[1.8]"
               />
               <span>{p.label}</span>
+              {!p.bookable && (
+                // Out of the flow, so it never widens the tab past its column.
+                <span className="absolute top-1.5 right-2 text-[0.55rem] leading-none font-bold tracking-[0.12em] text-[#caa243] uppercase">
+                  Soon
+                </span>
+              )}
               {on && (
                 <span
                   aria-hidden
@@ -95,19 +115,22 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
         id="svc-panel"
         role="tabpanel"
         aria-labelledby={`svc-tab-${product.key}`}
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={submit}
+        noValidate
         className="px-3.5 py-[18px] sm:p-6"
       >
         <div className="grid gap-2.5 sm:grid-cols-2 lg:flex lg:gap-0">
-          {product.fields.map((f, i) => {
+          {fields.map((f, i) => {
             const id = `svc-${f.key}`;
+            const issue = issues.find((x) => x.field === f.key);
+            const wide = f.kind === "place";
             return (
               <div
                 key={f.key}
-                className={`min-h-[68px] min-w-0 rounded-xl border border-[#dce3e0] bg-white px-[18px] py-2.5 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
-                  i === 0
-                    ? "lg:flex-[2] lg:rounded-l-[14px]"
-                    : "lg:-ml-px lg:flex-1"
+                className={`min-h-[68px] min-w-0 rounded-xl border bg-white px-[18px] py-2.5 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
+                  issue ? "border-[#b3261e]" : "border-[#dce3e0]"
+                } ${i === 0 ? "lg:rounded-l-[14px]" : "lg:-ml-px"} ${
+                  wide ? "lg:flex-[2]" : "lg:flex-1"
                 }`}
               >
                 <label
@@ -126,26 +149,18 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
               </div>
             );
           })}
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="submit"
             className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
           >
             {product.cta} &nbsp;→
-          </a>
+          </button>
         </div>
 
-        {rental && (
-          <label className="mx-1 mt-3 flex items-center gap-[9px] text-[0.92rem] text-[#324844]">
-            <input
-              type="checkbox"
-              checked={sameLocation}
-              onChange={(e) => setSameLocation(e.target.checked)}
-              className={`h-[18px] w-[18px] accent-[#073c36] ${focus}`}
-            />
-            Return to the same location
-          </label>
+        {issues.length > 0 && (
+          <p role="alert" className="mx-1 mt-3 text-[0.92rem] text-[#b3261e]">
+            {issues.map((x) => x.message).join(" ")}
+          </p>
         )}
       </form>
     </div>

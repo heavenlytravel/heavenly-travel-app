@@ -7,4 +7,5 @@ export * from "./money";
 export * from "./pricing";
 export * from "./references";
 export * from "./place";
+export * from "./phone";
 export type { SessionUser, Access } from "./session";

@@ -12,6 +12,10 @@ export const isProduct = guardFor(PRODUCTS);
 export const CAR_MODES = ["oneway", "hourly"] as const;
 export type CarMode = (typeof CAR_MODES)[number];
 export const isCarMode = guardFor(CAR_MODES);
+export const CAR_MODE_LABELS: Record<CarMode, string> = {
+  oneway: "One-way",
+  hourly: "By the hour",
+};
 
 /** received -> confirmed -> assigned -> completed, or cancelled from any of them. */
 export const ITEM_STATUSES = [

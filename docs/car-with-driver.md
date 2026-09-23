@@ -1,7 +1,8 @@
 # Car with driver: the first bookable product
 
 Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain), 2 (places
-package) and 3 (web booking flow) of the build order are built; the rest is not.
+package), 3 (web booking flow) and 4 (my bookings) of the build order are built; the
+rest is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -289,7 +290,29 @@ As built in step 3:
   confirm page can show the breakdown without reading the item's JSON back.
 - `formatLocalDateTime` (booking-rules) and `normalizePhone` / `isValidPhone`
   (phone.ts) were added to `@repo/db` for the pages; the admin app will reuse them.
-- The success page links home. `/account/bookings` arrives with step 4.
+- The success page links home and to My bookings.
+
+As built in step 4:
+
+- `checkCustomerCancel(booking, now)` in `booking-status.ts` is the one place the
+  customer cancel rule lives: `cancelBookingAsCustomer` refuses with its message, and
+  the detail page uses the same result to render the button enabled, disabled with
+  the cutoff hint, or not at all. `BOOKING_STATUS_LABELS` and `ITEM_STATUS_LABELS`
+  are the display names for both apps.
+- The booking and account pages share one shell (`_components/SiteShell.tsx`) and
+  the same presentational pieces (`_components/Page.tsx`). Clerk's account menu
+  gains a My bookings entry ahead of the built-ins.
+- `BookingDetail` renders a booking for its owner on both the success page and the
+  My bookings detail page; the pages differ only in title and the side panel's
+  action. `requireOwnBooking` does the reference parsing, sign-in redirect and
+  owner check for both.
+- Cancelling is two clicks: the button arms a confirmation with a red "Yes, cancel"
+  and a "Keep the booking". The action re-checks ownership, status and cutoff in
+  the transaction, then revalidates the list, the detail and the success page.
+- A cancelled booking hides its total: the stored total is the sum of live items,
+  so it is zero and would read as a refund. The cancellation time shows instead.
+- Customer pages show the booking status only, not per-item status; item status
+  is an ops detail for the admin app.
 
 ## Admin app
 

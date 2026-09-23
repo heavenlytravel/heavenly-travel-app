@@ -17,12 +17,15 @@ model User {
   firstName String?
   lastName  String?
   imageUrl  String?
+  /// Ours, not Clerk's. Asked for at the confirm step and kept for next time.
+  phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   adminProfile   AdminProfile?
   driverProfile  DriverProfile?
   partnerProfile PartnerProfile?
+  bookings       Booking[]
 }
 
 /// Staff access. `level` is one of the AdminLevel values in src/roles.ts.
@@ -55,4 +58,144 @@ model PartnerProfile {
   activeAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Bookings. See docs/car-with-driver.md. Money is integer sen; statuses are
+// strings validated against the const arrays in src/booking-status.ts.
+// ---------------------------------------------------------------------------
+
+/// A service area where drivers and vehicles are based: a named set of
+/// districts. Never deleted, only deactivated.
+model Zone {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  isActive       Boolean  @default(true)
+  /// Applied to every price with a pickup in this zone. 1 means no change.
+  multiplier     Float    @default(1)
+  /// Overrides of the global rules in src/booking-rules.ts; null uses the default.
+  minLeadHours   Int?
+  maxHorizonDays Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  districts ZoneDistrict[]
+  items     BookingItem[]
+}
+
+/// One district that belongs to a zone. `state` and `district` are spelled as
+/// Google returns them in address components, so a geocode can be matched
+/// without any translation.
+model ZoneDistrict {
+  id       String @id @default(cuid())
+  zoneId   String
+  zone     Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  state    String
+  district String
+
+  @@unique([state, district])
+}
+
+/// A bookable class of car with driver and its rates. Never deleted, only
+/// deactivated, because bookings snapshot the name but keep the relation.
+model VehicleClass {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  name           String
+  description    String
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  minPassengers  Int
+  maxPassengers  Int
+  luggage        String
+  baseFareSen    Int
+  perKmSen       Int
+  hourlyRateSen  Int
+  minimumFareSen Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  carItems CarItemDetails[]
+}
+
+/// An order: one or more items, each one product on one day. `status` is
+/// derived from the items by `bookingStatusOf` and stored for filtering.
+model Booking {
+  id            String    @id @default(cuid())
+  /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
+  reference     String    @unique
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  status        String
+  contactName   String
+  contactPhone  String
+  /// Sum of the live (not cancelled) items.
+  priceTotalSen Int
+  currency      String    @default("MYR")
+  /// Earliest live item start, for sorting and the cancellation cutoff.
+  startsAt      DateTime
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  /// "customer" | "admin"
+  cancelledBy   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items BookingItem[]
+
+  @@index([userId, createdAt])
+  @@index([status, startsAt])
+}
+
+/// One product on one day inside a booking. Fulfilment happens here, because
+/// a driver is assigned to a car, not to a package. `product` says which
+/// details table to read; exactly one details row exists per item.
+model BookingItem {
+  id             String    @id @default(cuid())
+  bookingId      String
+  booking        Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// 1, 2, 3 within the booking; shown as "HT-7K3QZM item 2".
+  position       Int
+  /// "car-with-driver"; later "coach-charter", ...
+  product        String
+  status         String
+  startsAt       DateTime
+  zoneId         String?
+  zone           Zone?     @relation(fields: [zoneId], references: [id])
+  priceTotalSen  Int
+  /// The receipt: mode, rates used, distance or hours, multiplier.
+  priceBreakdown Json
+  confirmedAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  carDetails CarItemDetails?
+
+  @@unique([bookingId, position])
+  @@index([status, startsAt])
+}
+
+/// What a car-with-driver item asked for. Places are snapshots of Google
+/// records (place id, address, lat, lng, state, district), never queried by
+/// field, so they are JSON.
+model CarItemDetails {
+  id               String       @id @default(cuid())
+  itemId           String       @unique
+  item             BookingItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vehicleClassId   String
+  vehicleClass     VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  /// Snapshot, so a renamed or retired class never changes an old booking.
+  vehicleClassName String
+  /// "oneway" | "hourly"
+  mode             String
+  pickupPlace      Json
+  dropoffPlace     Json?
+  hours            Int?
+  distanceKm       Float?
+  passengers       Int
+  childSeats       Int          @default(0)
+  flightNumber     String?
+  notes            String?
 }

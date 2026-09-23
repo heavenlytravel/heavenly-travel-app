@@ -1,6 +1,7 @@
 # Car with driver: the first bookable product
 
-Status: plan, agreed on 2026-09-23. Nothing in this document is built yet.
+Status: plan, agreed on 2026-09-23. Step 1 of the build order (schema, seed, domain)
+is built; the rest is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -211,7 +212,7 @@ tests run under plain Node. Tests use Node's built-in runner through `tsx`
 | Module               | Responsibility                                                                                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `booking-rules.ts`   | Global constants and the window, cutoff and hours checks. Pure.                                                                                                                                                                                                                                         |
-| `zones.ts`           | `resolveZone(state, district)`, active zone list. Google's Malaysian address components often carry the district in `locality` and omit `administrative_area_level_2`, so the caller tries level 2 first and then locality; verified against real geocodes at the start of step 2.                    |
+| `zones.ts`           | `resolveZone(state, district)`, active zone list. Google's Malaysian address components often carry the district in `locality` and omit `administrative_area_level_2`, so the caller tries level 2 first and then locality; verified against real geocodes at the start of step 2.                      |
 | `vehicle-classes.ts` | Active classes, class lookup, passenger fit.                                                                                                                                                                                                                                                            |
 | `pricing.ts`         | `priceCarTrip(input) -> { total, breakdown }`. Pure, unit-testable.                                                                                                                                                                                                                                     |
 | `references.ts`      | Reference generation with collision retry.                                                                                                                                                                                                                                                              |

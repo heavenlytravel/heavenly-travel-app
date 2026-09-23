@@ -16,9 +16,12 @@
     "db:studio:prod": "node --import tsx scripts/with-production-db.ts prisma studio",
     "db:promote-admin": "node --env-file=.env --import tsx scripts/promote-admin.ts",
     "db:promote-admin:prod": "node --import tsx scripts/with-production-db.ts node --import tsx scripts/promote-admin.ts",
+    "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
+    "db:seed:prod": "node --import tsx scripts/with-production-db.ts node --import tsx prisma/seed.ts",
     "postinstall": "prisma generate",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src scripts --max-warnings 0"
+    "lint": "eslint src scripts prisma --max-warnings 0"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",

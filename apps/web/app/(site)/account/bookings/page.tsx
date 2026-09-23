@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { formatLocalDateTime, formatMyr } from "@repo/db";
+import {
+  formatLocalDateTime,
+  formatMyr,
+  tripHeadline,
+  tripViewOfItem,
+} from "@repo/db";
 import { getAccess, listBookingsForUser } from "@repo/db/server";
 import { redirect } from "next/navigation";
 import { PageTitle, Stop, focus, panel } from "../../_components/Page";
@@ -10,10 +15,6 @@ import {
   signInHref,
 } from "../../../_lib/routes";
 import { StatusBadge } from "../../booking/_components/StatusBadge";
-import {
-  tripHeadline,
-  tripViewOfItem,
-} from "../../booking/_components/TripSummary";
 
 export const metadata: Metadata = {
   title: "My bookings | Heavenly Travel",

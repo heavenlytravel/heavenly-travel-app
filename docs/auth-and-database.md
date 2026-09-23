@@ -97,7 +97,7 @@ access except that only `SUPER` manages other admins.
 
 ## Admin access is invite-only
 
-The admin site (https://admin.heavenlytravel.my) has no sign-up. A person signs up as a
+The admin site (https://manage.heavenlytravel.my) has no sign-up. A person signs up as a
 customer on the web app, then a `SUPER` admin promotes them on the **Admins** page, which
 also changes levels and revokes access. The page and the `db:promote-admin` script share
 `setAdminLevel` / `revokeAdmin` in `packages/db/src/admins.ts`, which always keep at least

@@ -1,4 +1,4 @@
-import type { CarMode } from "./booking-status";
+import { isCarMode, type CarMode } from "./booking-status";
 
 /**
  * Instant pricing for a car with driver. Pure and unit-tested; the server
@@ -70,4 +70,33 @@ export function priceCarTrip(input: CarPriceInput): CarPriceBreakdown {
     subtotalSen,
     totalSen: Math.round(subtotalSen * multiplier),
   };
+}
+
+function isCarRates(value: unknown): value is CarRates {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return (
+    typeof r.baseFareSen === "number" &&
+    typeof r.perKmSen === "number" &&
+    typeof r.hourlyRateSen === "number" &&
+    typeof r.minimumFareSen === "number"
+  );
+}
+
+/** Reads a stored `priceBreakdown` back from JSON. */
+export function isCarPriceBreakdown(
+  value: unknown,
+): value is CarPriceBreakdown {
+  if (typeof value !== "object" || value === null) return false;
+  const p = value as Record<string, unknown>;
+  const nullableNumber = (v: unknown) => v === null || typeof v === "number";
+  return (
+    isCarMode(p.mode) &&
+    isCarRates(p.rates) &&
+    typeof p.multiplier === "number" &&
+    nullableNumber(p.distanceKm) &&
+    nullableNumber(p.hours) &&
+    typeof p.subtotalSen === "number" &&
+    typeof p.totalSen === "number"
+  );
 }

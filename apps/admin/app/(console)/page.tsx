@@ -1,53 +1,23 @@
-import { listAdmins } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
+import Link from "next/link";
+import { countBookings, listAdmins, listBookings } from "@repo/db/server";
+import { BookingsTable } from "../_components/BookingsTable";
 import { PageHeader, PreviewNotice } from "../_components/PageHeader";
 import { requireAdmin } from "../_lib/access";
+import { bookingsHref } from "../_lib/routes";
 import { SAMPLE_LOCATIONS } from "./locations/sample-locations";
 
-// Sample figures until bookings exist in the database.
-const SAMPLE_BOOKINGS = [
-  {
-    ref: "HT-1042",
-    customer: "Nurul Aina",
-    route: "KLIA → Kuala Lumpur",
-    service: "Car with driver",
-    status: "Confirmed",
-  },
-  {
-    ref: "HT-1041",
-    customer: "Daniel Lim",
-    route: "Langkawi Airport → Pantai Cenang",
-    service: "Car with driver",
-    status: "Pending",
-  },
-  {
-    ref: "HT-1040",
-    customer: "SMK Seri Bintang",
-    route: "Kuala Lumpur → Pulau Pinang",
-    service: "Coach charter",
-    status: "Confirmed",
-  },
-  {
-    ref: "HT-1039",
-    customer: "Farah Izzati",
-    route: "Pulau Pinang → KLIA",
-    service: "Car with driver",
-    status: "Completed",
-  },
-] as const;
-
-const STATUS_TONE = {
-  Confirmed: "green",
-  Pending: "amber",
-  Completed: "neutral",
-} as const;
+const RECENT = 5;
 
 export default async function DashboardPage() {
   const admin = await requireAdmin();
-  const admins = await listAdmins();
+  const [admins, awaiting, recent] = await Promise.all([
+    listAdmins(),
+    countBookings({ status: "received" }),
+    listBookings({}, RECENT),
+  ]);
 
   const tiles = [
-    { label: "Bookings today", value: "12" },
+    { label: "Awaiting confirmation", value: String(awaiting) },
     {
       label: "Active locations",
       value: String(SAMPLE_LOCATIONS.filter((l) => l.isActive).length),
@@ -63,8 +33,7 @@ export default async function DashboardPage() {
         description={`Signed in as ${admin.email}, level ${admin.adminProfile.level}`}
       />
       <PreviewNotice>
-        Bookings, locations and drivers show sample data. Only the admin count
-        is live.
+        Locations and drivers show sample data. Bookings and admins are live.
       </PreviewNotice>
 
       <dl className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -82,42 +51,19 @@ export default async function DashboardPage() {
       </dl>
 
       <section className="mt-10">
-        <h2 className="text-base font-semibold tracking-tight">
-          Recent bookings
-        </h2>
-        <div className="mt-4 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-neutral-200 text-xs text-neutral-500">
-              <tr>
-                <th className="px-4 py-3 font-medium">Ref</th>
-                <th className="px-4 py-3 font-medium">Customer</th>
-                <th className="px-4 py-3 font-medium">Route</th>
-                <th className="px-4 py-3 font-medium">Service</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {SAMPLE_BOOKINGS.map((booking) => (
-                <tr key={booking.ref}>
-                  <td className="px-4 py-3 font-medium tabular-nums">
-                    {booking.ref}
-                  </td>
-                  <td className="px-4 py-3">{booking.customer}</td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {booking.route}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {booking.service}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={STATUS_TONE[booking.status]}>
-                      {booking.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-base font-semibold tracking-tight">
+            Recent bookings
+          </h2>
+          <Link
+            href={bookingsHref()}
+            className="text-sm font-medium text-neutral-600 underline-offset-4 hover:underline"
+          >
+            All bookings
+          </Link>
+        </div>
+        <div className="mt-4">
+          <BookingsTable bookings={recent} emptyMessage="No bookings yet." />
         </div>
       </section>
     </>

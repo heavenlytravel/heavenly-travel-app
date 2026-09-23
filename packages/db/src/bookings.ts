@@ -138,16 +138,27 @@ export function getBookingForUser(
   return db.booking.findFirst({ where: { reference, userId }, ...withItems });
 }
 
+export type BookingFilter = { status?: BookingStatus };
+
+function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
+  return filter.status ? { status: filter.status } : undefined;
+}
+
+/** Admin list, newest first. `take` caps it for the dashboard. */
 export function listBookings(
-  filter: {
-    status?: BookingStatus;
-  } = {},
+  filter: BookingFilter = {},
+  take?: number,
 ): Promise<BookingWithItems[]> {
   return db.booking.findMany({
-    where: filter.status ? { status: filter.status } : undefined,
+    where: whereOf(filter),
     orderBy: { createdAt: "desc" },
+    take,
     ...withItems,
   });
+}
+
+export function countBookings(filter: BookingFilter = {}): Promise<number> {
+  return db.booking.count({ where: whereOf(filter) });
 }
 
 export function getBooking(id: string): Promise<BookingWithItems | null> {

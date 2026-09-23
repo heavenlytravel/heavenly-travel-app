@@ -6,6 +6,7 @@ const TONES = {
   green: "ui:bg-emerald-50 ui:text-emerald-700",
   amber: "ui:bg-amber-50 ui:text-amber-800",
   blue: "ui:bg-blue-50 ui:text-blue-700",
+  red: "ui:bg-red-50 ui:text-red-700",
 } as const;
 
 export function Badge({

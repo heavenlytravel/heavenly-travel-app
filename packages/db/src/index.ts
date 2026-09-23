@@ -8,4 +8,6 @@ export * from "./pricing";
 export * from "./references";
 export * from "./place";
 export * from "./phone";
+export * from "./car-trip-view";
+export * from "./names";
 export type { SessionUser, Access } from "./session";

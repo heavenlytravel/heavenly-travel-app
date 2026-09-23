@@ -1,8 +1,8 @@
 # Car with driver: the first bookable product
 
 Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain), 2 (places
-package), 3 (web booking flow) and 4 (my bookings) of the build order are built; the
-rest is not.
+package), 3 (web booking flow), 4 (my bookings) and 5 (admin bookings) of the build
+order are built; step 6 (emails) is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -326,6 +326,28 @@ As built in step 4:
 
 All admin levels. The existing Locations screen keeps its sample data; wiring it to the
 `Zone` table is the later ops feature.
+
+As built in step 5:
+
+- The rows both apps print for a trip live in `car-trip-view.ts` in `@repo/db`:
+  `tripViewOfItem`, `tripHeadline`, `tripRows`, `carDetailRows` and `priceRows`
+  return data, and each app renders it in its own style (the customer site's
+  `TripSummary` and `PriceBreakdown`, the console's `Rows`). A place value in a row
+  carries the address as well as the label. `isCarPriceBreakdown` reads the stored
+  receipt back from JSON. `fullName` joins the two Clerk name fields for both apps.
+- The list takes `?status=` and shows one filter pill per booking status. Rows link
+  to the detail by id. The dashboard's recent bookings and its
+  "Awaiting confirmation" tile read the same table and `countBookings`; locations
+  and drivers stay sample data.
+- The detail shows each item with its status, trip, chosen options, zone, price
+  receipt and history (received, confirmed, cancelled times), then the booking
+  summary and the customer's contact details. Ops works per item: the forward
+  button names the next status (`NEXT_ITEM_STATUS`) and sends it with the form, so
+  a stale page fails instead of skipping a step. Cancel item and Cancel booking ask
+  for confirmation first. Every action re-checks the session with `getAdmin()` and
+  revalidates the detail, the list and the dashboard.
+- `BookingChange.event` from each transition is returned to the actions and
+  ignored for now; step 6 sends the confirmed and cancelled emails from there.
 
 ## Emails
 

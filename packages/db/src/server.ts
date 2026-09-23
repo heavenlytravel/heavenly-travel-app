@@ -9,8 +9,8 @@ export {
 } from "./sync";
 export { listAdmins, setAdminLevel, revokeAdmin } from "./admins";
 export type { AdminWithUser, AdminChange } from "./admins";
-export { listActiveZones, resolveZone } from "./zones";
-export type { Zone } from "./zones";
+export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
+export type { Zone, ZoneDistrict } from "./zones";
 export { listActiveVehicleClasses, fitsPassengers } from "./vehicle-classes";
 export type { VehicleClass } from "./vehicle-classes";
 export { quoteCarTrip, prepareCarItem } from "./car-with-driver";

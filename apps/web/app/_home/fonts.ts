@@ -2,8 +2,7 @@ import { DM_Sans, DM_Serif_Display, Oooh_Baby } from "next/font/google";
 
 /**
  * The home page's type: DM Serif Display for headlines, DM Sans for
- * everything else and Oooh Baby for the handwritten accents. It keeps the
- * variable names the landing designs use so shared pieces pick it up.
+ * everything else and Oooh Baby for the handwritten accents.
  */
 const display = DM_Serif_Display({
   subsets: ["latin"],

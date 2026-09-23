@@ -1,7 +1,7 @@
 # Car with driver: the first bookable product
 
-Status: plan, agreed on 2026-09-23. Step 1 of the build order (schema, seed, domain)
-is built; the rest is not.
+Status: plan, agreed on 2026-09-23. Steps 1 (schema, seed, domain) and 2 (places
+package) of the build order are built; the rest is not.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product
@@ -220,13 +220,32 @@ tests run under plain Node. Tests use Node's built-in runner through `tsx`
 
 Two new workspace packages:
 
-| Package           | Responsibility                                                                                                                                                                                                                                                        |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/places` | `searchPlaces(query)`, `resolvePlace(placeId)`, `roadDistanceKm(from, to)`. Google implementation behind one interface, Malaysia-only, one server-side key. A `null` provider for local development without a key keeps hourly working and marks one-way unavailable. |
-| `packages/email`  | Resend client and the three templates (received, confirmed, cancelled). Sender `booking@heavenlytravel.my`. Falls back to logging when the key is missing.                                                                                                            |
+| Package           | Responsibility                                                                                                                                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/places` | `searchPlaces(query)`, `resolvePlace(placeId)`, `roadDistance(from, to)` (km and minutes). Google implementation behind one interface, Malaysia-only, one server-side key. A `null` provider for local development without a key keeps hourly working and marks one-way unavailable. |
+| `packages/email`  | Resend client and the three templates (received, confirmed, cancelled). Sender `booking@heavenlytravel.my`. Falls back to logging when the key is missing.                                                                                                                           |
 
 Autocomplete calls go through a web app route handler so the Google key never reaches
 the browser. Responses are cached per query for a short time.
+
+As built in step 2:
+
+- `@repo/places` exports browser-safe types; `@repo/places/server` picks the provider
+  once per process from `GOOGLE_MAPS_SERVER_KEY`. Providers log upstream failures and
+  return empty results, never throw.
+- Google: Places API (New) autocomplete and details, Routes API for distance. Details
+  responses carry address components, so the Geocoding API is not needed. Results are
+  memoised in process: autocomplete one minute, details and routes ten minutes.
+- The null provider offers the seeded zone districts as places (`local:` ids, zero
+  coordinates), so a pickup resolves to a zone and hourly bookings work end to end
+  without a key. It cannot route.
+- The place field mints a Google autocomplete session token per selection and sends it
+  with every keystroke and the details call, so a session bills as one request.
+- `SearchValues` gained `placeIds`, filled only when a suggestion was picked. A place
+  field with text but no id is unresolved; step 3 decides what to do with it.
+- Zone resolution against real Google address components is still unverified; the key
+  did not exist when step 2 was built. Check the first real geocodes for Klang Valley,
+  Langkawi and Cameron Highlands against `ZoneDistrict` before step 3 ships.
 
 ## Web app
 
@@ -240,7 +259,7 @@ the browser. Responses are cached per query for a short time.
 | `/api/places/search`               | Autocomplete proxy, signed-in or not.                                                                                   |
 
 The home page renders `ServiceTabsSearch`, whose state is `SearchValues` from
-`_lib/search.ts` (via `useSearch`), not the `Trip` type used by the landing designs. The
+`_lib/search.ts` (via `useSearch`). The
 `car` product in `search.ts` gains a one-way or hourly mode and an hours field (hourly
 only, options from the business minimum upward). The `to` and `from` fields become
 resolved places (place id plus label) with an autocomplete field in
@@ -294,8 +313,8 @@ arrives, with no code change.
 
 Owned by the developer, needed before the matching step goes to production.
 
-- **Google Cloud** (account exists; before step 2): enable Places API (New),
-  Geocoding API and Routes API, one server key restricted to those APIs. Env var
+- **Google Cloud** (account exists; before step 3 goes to production): enable Places
+  API (New) and Routes API, one server key restricted to those APIs. Env var
   `GOOGLE_MAPS_SERVER_KEY` in `apps/web/.env.local` and Vercel Preview and Production.
   Every new env var is also listed in `globalEnv` in `turbo.json` and in each app's
   `.env.example`, otherwise turbo's build cache ignores it.

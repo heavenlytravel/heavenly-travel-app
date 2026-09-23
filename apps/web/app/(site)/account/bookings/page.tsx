@@ -8,7 +8,7 @@ import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
   signInHref,
-} from "../../_lib/routes";
+} from "../../../_lib/routes";
 import { StatusBadge } from "../../booking/_components/StatusBadge";
 import {
   tripHeadline,
@@ -69,11 +69,9 @@ export default async function BookingsPage() {
                         Pick-up {formatLocalDateTime(booking.startsAt)}
                       </p>
                     </div>
-                    {booking.status !== "cancelled" && (
-                      <p className="font-bold text-[#073c36]">
-                        {formatMyr(booking.priceTotalSen)}
-                      </p>
-                    )}
+                    <p className="font-bold text-[#073c36]">
+                      {formatMyr(booking.priceTotalSen)}
+                    </p>
                   </div>
                 </Link>
               </li>

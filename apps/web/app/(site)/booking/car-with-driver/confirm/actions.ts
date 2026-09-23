@@ -3,7 +3,7 @@
 import { isValidPhone, normalizePhone } from "@repo/db";
 import { createBooking, getAccess, prepareCarItem } from "@repo/db/server";
 import { redirect } from "next/navigation";
-import { parseCarOptions, parseCarSearch } from "../../../_lib/car-booking";
+import { parseCarOptions, parseCarSearch } from "../../../../_lib/car-booking";
 import { loadCarTrip } from "../_lib/trip";
 
 export type ConfirmState = { error: string } | null;

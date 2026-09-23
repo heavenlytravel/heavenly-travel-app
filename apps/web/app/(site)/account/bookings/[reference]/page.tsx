@@ -5,7 +5,7 @@ import { PageTitle, textLink } from "../../../_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
-} from "../../../_lib/routes";
+} from "../../../../_lib/routes";
 import {
   BOOKING_STATUS_LINES,
   BookingDetail,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageTitle, primaryButton, textLink } from "../../_components/Page";
-import { ACCOUNT_BOOKINGS_PATH, bookingHref } from "../../_lib/routes";
+import { ACCOUNT_BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 import {
   BOOKING_STATUS_LINES,
   BookingDetail,

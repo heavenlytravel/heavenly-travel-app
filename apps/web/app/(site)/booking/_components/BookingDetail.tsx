@@ -37,19 +37,14 @@ export function BookingDetail({
     ["Name", booking.contactName],
     ["Phone", booking.contactPhone],
   ];
-  if (booking.status === "cancelled") {
-    // The stored total is the sum of live items, so it is zero here and
-    // would read as a refund. The cancellation time says more.
-    if (booking.cancelledAt) {
-      rows.push(["Cancelled", formatLocalDateTime(booking.cancelledAt)]);
-    }
-  } else {
-    rows.push([
-      "Total",
-      <span key="total" className="text-[1.15rem] font-bold text-[#073c36]">
-        {formatMyr(booking.priceTotalSen)}
-      </span>,
-    ]);
+  rows.push([
+    "Total",
+    <span key="total" className="text-[1.15rem] font-bold text-[#073c36]">
+      {formatMyr(booking.priceTotalSen)}
+    </span>,
+  ]);
+  if (booking.cancelledAt) {
+    rows.push(["Cancelled", formatLocalDateTime(booking.cancelledAt)]);
   }
 
   return (

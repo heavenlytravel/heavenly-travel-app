@@ -9,7 +9,7 @@ import {
   MAX_FLIGHT_NUMBER_LENGTH,
   MAX_NOTES_LENGTH,
   MAX_PASSENGERS,
-} from "../../_lib/car-booking";
+} from "../../../_lib/car-booking";
 import { control, focus, primaryButton } from "../../_components/Page";
 
 /** One vehicle class as priced for this trip. Plain data, sent to the browser. */

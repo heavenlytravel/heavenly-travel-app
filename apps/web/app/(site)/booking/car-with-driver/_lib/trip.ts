@@ -2,7 +2,7 @@ import "server-only";
 import { pickupInstant, type Place } from "@repo/db";
 import type { CarTripRequest } from "@repo/db/server";
 import { resolvePlace, roadDistance } from "@repo/places/server";
-import type { CarSearch } from "../../../_lib/car-booking";
+import type { CarSearch } from "../../../../_lib/car-booking";
 
 /**
  * From the search in the URL to what the domain layer prices: places

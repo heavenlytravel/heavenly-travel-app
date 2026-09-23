@@ -7,7 +7,7 @@ import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
   bookingHref,
-} from "../../../_lib/routes";
+} from "../../../../_lib/routes";
 
 export type CancelState = { error: string } | null;
 

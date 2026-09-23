@@ -7,7 +7,7 @@ import {
   ACCOUNT_BOOKINGS_PATH,
   ACCOUNT_PATH,
   signInHref,
-} from "../_lib/routes";
+} from "../../_lib/routes";
 
 export const metadata: Metadata = {
   title: "Account | Heavenly Travel",
@@ -20,12 +20,6 @@ export default async function AccountPage() {
 
   const { user } = access;
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
-  const roles = [
-    "customer",
-    user.adminProfile && `admin (${user.adminProfile.level})`,
-    user.driverProfile && "driver",
-    user.partnerProfile && "partner",
-  ].filter(Boolean);
 
   return (
     <>
@@ -36,7 +30,6 @@ export default async function AccountPage() {
             ["Name", name || "Not set"],
             ["Email", user.email],
             ["Phone", user.phone ?? "Not set"],
-            ["Access", roles.join(", ")],
           ]}
         />
         <Link

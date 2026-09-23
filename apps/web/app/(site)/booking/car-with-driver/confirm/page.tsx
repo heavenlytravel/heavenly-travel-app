@@ -8,7 +8,7 @@ import {
   parseCarOptions,
   parseCarSearch,
   toParams,
-} from "../../../_lib/car-booking";
+} from "../../../../_lib/car-booking";
 import { PageTitle, Panel, Stop } from "../../../_components/Page";
 import { PriceBreakdown } from "../../_components/PriceBreakdown";
 import { TripSummary, carDetailRows } from "../../_components/TripSummary";

@@ -1,7 +1,7 @@
 import { isReference, normalizeReference } from "@repo/db";
 import { getAccess, getBookingForUser } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
-import { signInHref } from "../../_lib/routes";
+import { signInHref } from "../../../_lib/routes";
 
 /**
  * The booking behind a `[reference]` route segment, for its owner only. A

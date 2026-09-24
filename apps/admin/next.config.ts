@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     "akieez-h510m",
     "akieez-h510m.tail4436c5.ts.net",
   ],
-  transpilePackages: ["@repo/db"],
+  transpilePackages: ["@repo/db", "@repo/email"],
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -9,7 +9,9 @@
 - `apps/web`: Customer-facing site (landing page and customer app).
 - `apps/admin`: Internal admin side for running the app.
 - `packages/ui` (`@repo/ui`): Shared React component library used by both apps.
-- `packages/db` (`@repo/db`): Prisma schema, Neon client and the `getAccess` session/role helper. See `docs/auth-and-database.md`.
+- `packages/db` (`@repo/db`): Prisma schema, Neon client, the `getAccess` session/role helper and the booking domain. See `docs/auth-and-database.md` and `docs/car-with-driver.md`.
+- `packages/places` (`@repo/places`): Google Places and Routes behind one interface, with a keyless provider for local development.
+- `packages/email` (`@repo/email`): Booking emails over Resend, logged to the console when no key is set.
 - `packages/tailwind-config`: Shared Tailwind theme (`shared-styles.css`) and PostCSS config. Single source of truth for design tokens.
 - `packages/eslint-config`: Shared ESLint flat configs (`base`, `next-js`, `react-internal`).
 - `packages/typescript-config`: Shared `tsconfig.json` bases.

@@ -55,3 +55,4 @@ export * from "./place";
 export * from "./phone";
 export * from "./car-trip-view";
 export * from "./names";
+export * from "./contact";

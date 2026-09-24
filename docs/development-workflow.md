@@ -2,16 +2,17 @@
 
 ## Environments
 
-| Environment | URL                                         | Git branch          | Vercel environment         |
-| ----------- | ------------------------------------------- | ------------------- | -------------------------- |
-| Production  | https://new.heavenlytravel.my               | `main`              | Production                 |
-| Staging     | https://staging.heavenlytravel.my           | `staging` (pointer) | Preview (branch `staging`) |
-| PR previews | Vercel preview URL per PR                   | `feat/*`, `fix/*`   | Preview                    |
-| Local       | first free port from 3000, printed on start | any                 | —                          |
+| Environment | web                                         | admin                                    | Git branch          | Vercel environment         |
+| ----------- | ------------------------------------------- | ---------------------------------------- | ------------------- | -------------------------- |
+| Production  | https://new.heavenlytravel.my               | https://manage.heavenlytravel.my         | `main`              | Production                 |
+| Staging     | https://staging.heavenlytravel.my           | https://staging-manage.heavenlytravel.my | `staging` (pointer) | Preview (branch `staging`) |
+| PR previews | Vercel preview URL per PR                   | Vercel preview URL per PR                | `feat/*`, `fix/*`   | Preview                    |
+| Local       | first free port from 3000, printed on start | same                                     | any                 | —                          |
 
-Deploys are automatic. Vercel builds every push; pushes to `main` go to production,
-pushes to `staging` go to the staging domain, and every other branch gets a preview URL
-posted on its PR.
+`web` and `admin` are two Vercel projects on the same repository. Deploys are automatic.
+Vercel builds every push in both projects; pushes to `main` go to production, pushes to
+`staging` go to the staging domains, and every other branch gets a preview URL per
+project posted on its PR.
 
 ### Opening a dev server from another machine
 
@@ -28,18 +29,18 @@ Use the Tailscale HTTPS addresses instead, and pin the ports they proxy to:
 ## Branch model
 
 ```
-feat/xyz ──PR, squash──▶ main ──▶ new.heavenlytravel.my
+feat/xyz ──PR, squash──▶ main ──▶ new.heavenlytravel.my + manage.heavenlytravel.my
    │
-   └──force push──▶ staging ──▶ staging.heavenlytravel.my
+   └──force push──▶ staging ──▶ staging.heavenlytravel.my + staging-manage.heavenlytravel.my
 ```
 
 - `main`: what is live. Only changes through squash-merged PRs. Protected by a ruleset.
 - `feat/<name>`, `fix/<name>`, `chore/<name>`: short-lived work branches, always cut from `main`.
 - `staging`: **a review pointer, not a branch you work on.** It is force-pushed to whatever
-  branch the team should look at on the staging domain. Nothing is ever merged into it or out
+  branch the team should look at on the staging domains. Nothing is ever merged into it or out
   of it, and no PR is ever opened from it.
 
-The staging domain exists so reviewers can see a feature on a fixed URL without a Vercel
+The staging domains exist so reviewers can see a feature on a fixed URL without a Vercel
 account. Per-PR preview URLs also work, but they require a Vercel login.
 
 ## Day-to-day
@@ -81,11 +82,12 @@ pnpm staging
 ```
 
 This pushes the current branch to its own remote ref and then force-pushes it onto
-`staging`. Vercel rebuilds and https://staging.heavenlytravel.my shows the branch a minute
-later. Run it again after every review fix. Pushing a different branch replaces what is
-there.
+`staging`. Both Vercel projects rebuild, and a minute later the branch is live on
+https://staging.heavenlytravel.my (web) and https://staging-manage.heavenlytravel.my
+(admin). One push covers both apps; there is no separate admin command. Run it again
+after every review fix. Pushing a different branch replaces what is there.
 
-The domain shows one branch at a time. To review two features together, build a throwaway
+The domains show one branch at a time. To review two features together, build a throwaway
 branch and stage that:
 
 ```sh
@@ -135,14 +137,18 @@ No approvals are required, so a solo developer can merge their own PRs. Raise
 
 ## Vercel configuration
 
-Each Vercel project (`web`, and `admin` if deployed separately) needs:
+Both Vercel projects (`web` with root directory `apps/web`, `admin` with root directory
+`apps/admin`) need:
 
 1. **Settings → Git → Production Branch**: `main`.
 2. **Settings → Domains**:
-   - `new.heavenlytravel.my` → Production (no Git branch).
-   - `staging.heavenlytravel.my` → Preview, Git branch `staging`.
-3. **DNS** (at the `heavenlytravel.my` DNS provider): `CNAME` records for `new` and
-   `staging` pointing at the value Vercel shows (usually `cname.vercel-dns.com`).
+   - `web`: `new.heavenlytravel.my` → Production (no Git branch);
+     `staging.heavenlytravel.my` → Preview, Git branch `staging`.
+   - `admin`: `manage.heavenlytravel.my` → Production (no Git branch);
+     `staging-manage.heavenlytravel.my` → Preview, Git branch `staging`.
+3. **DNS** (at the `heavenlytravel.my` DNS provider): `CNAME` records for `new`,
+   `staging`, `manage` and `staging-manage` pointing at the value Vercel shows (usually
+   `cname.vercel-dns.com`).
 4. **Settings → Deployment Protection**: Vercel Authentication **Disabled**, so reviewers
    do not need a Vercel account to open the staging domain. Access control for staging
    belongs in the app instead (see below).
@@ -156,7 +162,8 @@ Which Clerk instance and Neon branch each scope uses is in `docs/auth-and-databa
 
 ## Gating the staging site
 
-Because Vercel Authentication is off, the staging domain is public until the app gates it.
+Because Vercel Authentication is off, the web staging domain is public until the app gates
+it. The admin app already gates itself: every page requires an admin session.
 The plan is a Clerk sign-in in `apps/web/proxy.ts`, enabled only when a staging-scoped
 environment variable is set, with Clerk sign-ups restricted to internal accounts.
 Production never has that variable, so the gate never appears on the live site.

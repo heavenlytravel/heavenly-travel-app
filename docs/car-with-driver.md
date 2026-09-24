@@ -375,8 +375,16 @@ As built in step 6:
   a trip that is off; the plan's table covered only admin cancels. An admin cancel of
   one item in a booking that lives on sends "Booking updated" with every item and its
   status.
-- Links point at `SITE_URL` and `ADMIN_URL`, defaulting to the production domains.
-  Staging sets both so a preview booking links to the preview.
+- What differs per environment comes from env vars with production defaults:
+  `EMAIL_FROM` (sender), `EMAIL_OPS_TO` (where the ops copies go), `SITE_URL` and
+  `ADMIN_URL` (link targets). Outside the Vercel Production deployment the subject
+  gets a `[Development] ` prefix, as Clerk does for its development instances.
+  Development and staging send from `dev+booking@heavenlytravel.my` to the
+  developer's own inbox, so a test booking never reaches the real ops inbox.
+- `pnpm --filter @repo/email preview` renders every message to
+  `packages/email/preview/` (ignored by git) for checking the design in a browser.
+  All seven messages share one layout in `render.ts`; per-event designs are future
+  work.
 - `sendBookingChangeEmail(change)` takes a `BookingChange` straight from a transition
   and sends nothing when it failed or changed nothing at booking level. The actions
   call it inside `after()` from `next/server`, so the response goes out first and the
@@ -414,10 +422,12 @@ Owned by the developer, needed before the matching step goes to production.
   `.env.example`, otherwise turbo's build cache ignores it.
 - **Resend** (before step 6): account, verify `heavenlytravel.my` (DKIM record, SPF on
   Resend's send subdomain, DMARC if none exists; none of these touch Google Workspace's
-  records), API key as `RESEND_API_KEY` in both apps. Create `booking@` as a Google
-  Workspace group with a collaborative inbox so it can receive the ops copy. On the
-  staging Preview also set `SITE_URL` and `ADMIN_URL` to the staging domains in both
-  apps, so emails from a preview booking link to the preview.
+  records), two API keys (production and development). Create `booking@` as a Google
+  Workspace group with a collaborative inbox that accepts external senders, so it
+  receives customer replies and the ops copies; `dev+booking@` lands there too. In
+  both Vercel projects: Production gets the production `RESEND_API_KEY` only; Preview
+  gets the development key plus `EMAIL_FROM`, `EMAIL_OPS_TO`, `SITE_URL` and
+  `ADMIN_URL` as in `.env.example`.
 
 ## Future work, on record
 

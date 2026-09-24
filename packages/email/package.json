@@ -8,8 +8,9 @@
   },
   "scripts": {
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "preview": "node --import tsx scripts/preview.ts",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src --max-warnings 0"
+    "lint": "eslint src scripts --max-warnings 0"
   },
   "dependencies": {
     "@repo/db": "workspace:*",

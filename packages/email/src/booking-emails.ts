@@ -1,6 +1,5 @@
 import {
   carDetailRows,
-  CONTACT,
   formatLocalDateTime,
   formatMyr,
   ITEM_STATUS_LABELS,
@@ -33,8 +32,17 @@ import type { EmailMessage } from "./types";
 /** The three moments a booking writes to someone. */
 export type BookingEmailEvent = "received" | BookingEvent;
 
-/** Where the links in an email point; the two apps live on their own domains. */
-export type EmailLinks = { siteUrl: string; adminUrl: string };
+/** What differs per environment: link targets, the ops inbox, the subject prefix. */
+export type EmailSettings = {
+  /** The customer site, for "View booking". */
+  siteUrl: string;
+  /** The admin console, for "Open in console". */
+  adminUrl: string;
+  /** Where the ops copies go. */
+  opsTo: string;
+  /** "[Development] " outside production, so the environment is obvious. */
+  subjectPrefix: string;
+};
 
 /** A message and the key that makes sending it twice harmless. */
 export type BookingEmail = { key: string; message: EmailMessage };
@@ -83,20 +91,23 @@ function customerBlock(booking: BookingWithItems): Block {
 
 function viewBookingButton(
   booking: BookingWithItems,
-  links: EmailLinks,
+  settings: EmailSettings,
 ): Block {
   return {
     type: "button",
     label: "View booking",
-    href: `${links.siteUrl}/booking/${booking.reference}`,
+    href: `${settings.siteUrl}/booking/${booking.reference}`,
   };
 }
 
-function consoleButton(booking: BookingWithItems, links: EmailLinks): Block {
+function consoleButton(
+  booking: BookingWithItems,
+  settings: EmailSettings,
+): Block {
   return {
     type: "button",
     label: "Open in console",
-    href: `${links.adminUrl}/bookings/${booking.id}`,
+    href: `${settings.adminUrl}/bookings/${booking.id}`,
   };
 }
 
@@ -106,12 +117,17 @@ function headline(booking: BookingWithItems) {
   return trip ? tripHeadline(trip) : booking.reference;
 }
 
-function email(to: string, key: string, content: EmailContent): BookingEmail {
+function email(
+  to: string,
+  key: string,
+  content: EmailContent,
+  settings: EmailSettings,
+): BookingEmail {
   return {
     key,
     message: {
       to,
-      subject: content.subject,
+      subject: `${settings.subjectPrefix}${content.subject}`,
       html: renderHtml(content),
       text: renderText(content),
     },
@@ -121,23 +137,24 @@ function email(to: string, key: string, content: EmailContent): BookingEmail {
 function toCustomer(
   booking: BookingWithItems,
   key: string,
+  settings: EmailSettings,
   content: EmailContent,
 ) {
-  return email(booking.user.email, `${key}:customer`, content);
+  return email(booking.user.email, `${key}:customer`, content, settings);
 }
 
-function toOps(key: string, content: EmailContent) {
-  return email(CONTACT.bookingEmail, `${key}:ops`, content);
+function toOps(key: string, settings: EmailSettings, content: EmailContent) {
+  return email(settings.opsTo, `${key}:ops`, content, settings);
 }
 
 function received(
   booking: BookingWithItems,
-  links: EmailLinks,
+  settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
   const ref = booking.reference;
   return [
-    toCustomer(booking, key, {
+    toCustomer(booking, key, settings, {
       subject: `Booking ${ref} received`,
       heading: "We have your booking",
       blocks: [
@@ -147,11 +164,11 @@ function received(
         },
         ...itemBlocks(booking),
         totalBlock(booking),
-        viewBookingButton(booking, links),
+        viewBookingButton(booking, settings),
         { type: "contact" },
       ],
     }),
-    toOps(key, {
+    toOps(key, settings, {
       subject: `New booking ${ref}`,
       heading: `New booking: ${headline(booking)}`,
       blocks: [
@@ -162,7 +179,7 @@ function received(
         customerBlock(booking),
         ...itemBlocks(booking),
         totalBlock(booking),
-        consoleButton(booking, links),
+        consoleButton(booking, settings),
       ],
     }),
   ];
@@ -170,12 +187,12 @@ function received(
 
 function confirmed(
   booking: BookingWithItems,
-  links: EmailLinks,
+  settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
   const ref = booking.reference;
   return [
-    toCustomer(booking, key, {
+    toCustomer(booking, key, settings, {
       subject: `Booking ${ref} confirmed`,
       heading: "Your booking is confirmed",
       blocks: [
@@ -185,7 +202,7 @@ function confirmed(
         },
         ...itemBlocks(booking),
         totalBlock(booking),
-        viewBookingButton(booking, links),
+        viewBookingButton(booking, settings),
         { type: "contact" },
       ],
     }),
@@ -194,7 +211,7 @@ function confirmed(
 
 function cancelled(
   booking: BookingWithItems,
-  links: EmailLinks,
+  settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
   const ref = booking.reference;
@@ -206,7 +223,7 @@ function cancelled(
 
   if (by === "customer") {
     return [
-      toCustomer(booking, key, {
+      toCustomer(booking, key, settings, {
         subject: `Booking ${ref} cancelled`,
         heading: "Your booking is cancelled",
         blocks: [
@@ -218,7 +235,7 @@ function cancelled(
           { type: "contact" },
         ],
       }),
-      toOps(key, {
+      toOps(key, settings, {
         subject: `Booking ${ref} cancelled by the customer`,
         heading: `Cancelled by the customer: ${headline(booking)}`,
         blocks: [
@@ -228,14 +245,14 @@ function cancelled(
           },
           customerBlock(booking),
           ...itemBlocks(booking),
-          consoleButton(booking, links),
+          consoleButton(booking, settings),
         ],
       }),
     ];
   }
 
   return [
-    toCustomer(booking, key, {
+    toCustomer(booking, key, settings, {
       subject: whole ? `Booking ${ref} cancelled` : `Booking ${ref} updated`,
       heading: whole
         ? "Your booking is cancelled"
@@ -250,7 +267,7 @@ function cancelled(
         ...itemBlocks(booking),
         ...(whole
           ? []
-          : [totalBlock(booking), viewBookingButton(booking, links)]),
+          : [totalBlock(booking), viewBookingButton(booking, settings)]),
         { type: "contact" },
       ],
     }),
@@ -265,15 +282,15 @@ function cancelled(
 export function bookingEmails(
   event: BookingEmailEvent,
   booking: BookingWithItems,
-  links: EmailLinks,
+  settings: EmailSettings,
 ): BookingEmail[] {
   const key = `${booking.id}:${event}:${booking.updatedAt.getTime()}`;
   switch (event) {
     case "received":
-      return received(booking, links, key);
+      return received(booking, settings, key);
     case "confirmed":
-      return confirmed(booking, links, key);
+      return confirmed(booking, settings, key);
     case "cancelled":
-      return cancelled(booking, links, key);
+      return cancelled(booking, settings, key);
   }
 }

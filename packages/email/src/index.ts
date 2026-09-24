@@ -4,7 +4,7 @@ import type { BookingChange, BookingWithItems } from "@repo/db/server";
 import {
   bookingEmails,
   type BookingEmailEvent,
-  type EmailLinks,
+  type EmailSettings,
 } from "./booking-emails";
 import { logSender } from "./log-sender";
 import { resendSender } from "./resend";
@@ -15,15 +15,25 @@ export type { BookingEmailEvent } from "./booking-emails";
 /**
  * Booking emails as the apps send them. The sender is chosen once per
  * process: Resend when `RESEND_API_KEY` is set, otherwise the console. The
- * links point at the two apps' production domains unless `SITE_URL` and
- * `ADMIN_URL` say otherwise, as they do on staging.
+ * links, the sender, the ops inbox and the subject prefix come from the
+ * environment, with production values as defaults. See
+ * docs/car-with-driver.md, "Emails".
  */
 
-const FROM = `Heavenly Travel <${CONTACT.bookingEmail}>`;
+const PRODUCTION_FROM = `Heavenly Travel <${CONTACT.bookingEmail}>`;
+
+/**
+ * Production is the Vercel Production deployment. Local development and the
+ * staging Preview send from the dev address to the developer, with a subject
+ * prefix, exactly as Clerk does with its development instances.
+ */
+const isProduction =
+  process.env.NODE_ENV === "production" &&
+  (process.env.VERCEL_ENV ?? "production") === "production";
 
 function pick(): EmailSender {
   const key = process.env.RESEND_API_KEY;
-  if (key) return resendSender(key, FROM);
+  if (key) return resendSender(key, process.env.EMAIL_FROM || PRODUCTION_FROM);
   if (process.env.NODE_ENV === "production") {
     console.warn(
       "[email] RESEND_API_KEY is not set; booking emails are logged, not sent",
@@ -37,9 +47,11 @@ function origin(value: string | undefined, fallback: string) {
 }
 
 const sender = pick();
-const links: EmailLinks = {
+const settings: EmailSettings = {
   siteUrl: origin(process.env.SITE_URL, "https://new.heavenlytravel.my"),
   adminUrl: origin(process.env.ADMIN_URL, "https://manage.heavenlytravel.my"),
+  opsTo: process.env.EMAIL_OPS_TO || CONTACT.bookingEmail,
+  subjectPrefix: isProduction ? "" : "[Development] ",
 };
 
 /**
@@ -52,7 +64,7 @@ export async function sendBookingEmail(
   booking: BookingWithItems,
 ): Promise<void> {
   const results = await Promise.allSettled(
-    bookingEmails(event, booking, links).map(({ key, message }) =>
+    bookingEmails(event, booking, settings).map(({ key, message }) =>
       sender.send(message, key),
     ),
   );

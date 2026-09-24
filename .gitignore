@@ -43,3 +43,6 @@ yarn-error.log*
 
 # ui
 dist/
+
+# email previews
+packages/email/preview/

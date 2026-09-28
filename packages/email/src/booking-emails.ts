@@ -1,8 +1,8 @@
 import {
-  carDetailRows,
   formatLocalDateTime,
   formatMyr,
   ITEM_STATUS_LABELS,
+  tripDetailRows,
   tripHeadline,
   tripRows,
   tripViewOfItem,
@@ -49,10 +49,10 @@ export type BookingEmail = { key: string; message: EmailMessage };
 
 function itemRows(item: BookingItemWithDetails): DetailRow[] {
   const trip = tripViewOfItem(item);
-  if (!trip || !item.carDetails) return [];
+  if (!trip || !item.tripDetails) return [];
   return [
     ...tripRows(trip),
-    ...carDetailRows(item.carDetails),
+    ...tripDetailRows(item.tripDetails),
     ["Price", formatMyr(item.priceTotalSen)],
   ];
 }

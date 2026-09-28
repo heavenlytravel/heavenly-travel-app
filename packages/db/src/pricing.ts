@@ -1,36 +1,37 @@
-import { isCarMode, type CarMode } from "./booking-status";
+import { isTripMode, type TripMode } from "./booking-status";
 
 /**
- * Instant pricing for a car with driver. Pure and unit-tested; the server
- * calls it and never trusts a price from the client. Money is integer sen.
- * See docs/car-with-driver.md, "Pricing".
+ * Instant pricing for a trip with a driver, car or coach. Pure and
+ * unit-tested; the server calls it and never trusts a price from the client.
+ * Money is integer sen. See docs/car-with-driver.md, "Pricing".
  *
  *   one-way: max(minimumFare, baseFare + perKm x distanceKm) x multiplier
  *   hourly:  hourlyRate x hours x multiplier
  */
 
 /** The rates of a vehicle class, as stored on `VehicleClass`. */
-export type CarRates = {
+export type TripRates = {
   baseFareSen: number;
   perKmSen: number;
   hourlyRateSen: number;
   minimumFareSen: number;
 };
 
-export type CarTrip =
+/** What a trip is priced by: the road distance, or the hours of the hire. */
+export type PricingBasis =
   { mode: "oneway"; distanceKm: number } | { mode: "hourly"; hours: number };
 
-export type CarPriceInput = {
-  trip: CarTrip;
-  rates: CarRates;
+export type TripPriceInput = {
+  trip: PricingBasis;
+  rates: TripRates;
   /** The pickup zone's multiplier; 1 means no change. */
   multiplier: number;
 };
 
 /** The receipt stored on the booking item: every input and the result. */
-export type CarPriceBreakdown = {
-  mode: CarMode;
-  rates: CarRates;
+export type TripPriceBreakdown = {
+  mode: TripMode;
+  rates: TripRates;
   multiplier: number;
   distanceKm: number | null;
   hours: number | null;
@@ -39,7 +40,7 @@ export type CarPriceBreakdown = {
   totalSen: number;
 };
 
-export function priceCarTrip(input: CarPriceInput): CarPriceBreakdown {
+export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   const { trip, rates, multiplier } = input;
   if (!(multiplier > 0)) throw new RangeError("multiplier must be positive");
 
@@ -72,7 +73,7 @@ export function priceCarTrip(input: CarPriceInput): CarPriceBreakdown {
   };
 }
 
-function isCarRates(value: unknown): value is CarRates {
+function isTripRates(value: unknown): value is TripRates {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;
   return (
@@ -84,15 +85,15 @@ function isCarRates(value: unknown): value is CarRates {
 }
 
 /** Reads a stored `priceBreakdown` back from JSON. */
-export function isCarPriceBreakdown(
+export function isTripPriceBreakdown(
   value: unknown,
-): value is CarPriceBreakdown {
+): value is TripPriceBreakdown {
   if (typeof value !== "object" || value === null) return false;
   const p = value as Record<string, unknown>;
   const nullableNumber = (v: unknown) => v === null || typeof v === "number";
   return (
-    isCarMode(p.mode) &&
-    isCarRates(p.rates) &&
+    isTripMode(p.mode) &&
+    isTripRates(p.rates) &&
     typeof p.multiplier === "number" &&
     nullableNumber(p.distanceKm) &&
     nullableNumber(p.hours) &&

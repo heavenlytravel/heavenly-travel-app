@@ -1,7 +1,7 @@
 # Coach charter: the second fleet on the transportation product
 
-Status: planned. Decisions agreed on 2026-09-25, reviewed against the code and refined
-on 2026-09-28. Nothing built yet.
+Status: in progress. Decisions agreed on 2026-09-25, reviewed against the code and
+refined on 2026-09-28. Step 1 of the build order (schema, seed, domain) is built.
 
 Coach charter is the second tab on the home page search card to become a real booking.
 It is not a second product. Car with driver and coach charter are the same trip: a

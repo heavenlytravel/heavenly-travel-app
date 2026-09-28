@@ -1,6 +1,6 @@
 import "server-only";
 import { pickupInstant, type Place } from "@repo/db";
-import type { CarTripRequest } from "@repo/db/server";
+import type { TripRequest } from "@repo/db/server";
 import { resolvePlace, roadDistance } from "@repo/places/server";
 import type { CarSearch } from "../../../../_lib/car-booking";
 
@@ -12,7 +12,7 @@ import type { CarSearch } from "../../../../_lib/car-booking";
  */
 
 export type LoadedTrip =
-  | { ok: true; request: CarTripRequest }
+  | { ok: true; request: TripRequest }
   | { ok: false; title: string; message: string };
 
 const stop = (title: string, message: string): LoadedTrip => ({

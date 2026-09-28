@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { quoteCarTrip } from "@repo/db/server";
-import { hiddenSearchFields, parseCarSearch } from "../../../_lib/car-booking";
+import { unavailableReason } from "@repo/db";
+import { quoteTrip } from "@repo/db/server";
+import {
+  CAR_CATEGORY,
+  hiddenSearchFields,
+  parseCarSearch,
+} from "../../../_lib/car-booking";
 import { PageTitle, Panel, Stop } from "../../_components/Page";
 import { TripSummary } from "../_components/TripSummary";
 import { CarOptionsForm, type ClassOption } from "./CarOptionsForm";
@@ -33,7 +38,7 @@ export default async function CarOptionsPage({
   const trip = await loadCarTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
-  const quoted = await quoteCarTrip(trip.request);
+  const quoted = await quoteTrip(CAR_CATEGORY, trip.request);
   if (!quoted.ok) {
     return (
       <Stop title="We cannot book this trip" message={quoted.error.message} />
@@ -48,6 +53,7 @@ export default async function CarOptionsPage({
     minPassengers: c.vehicleClass.minPassengers,
     maxPassengers: c.vehicleClass.maxPassengers,
     totalSen: c.price.totalSen,
+    unavailable: unavailableReason(c.availability),
   }));
 
   return (

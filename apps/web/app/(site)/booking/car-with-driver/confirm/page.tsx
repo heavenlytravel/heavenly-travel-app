@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { carDetailRows, fullName } from "@repo/db";
-import { getAccess, prepareCarItem } from "@repo/db/server";
+import { fullName, tripDetailRows } from "@repo/db";
+import { getAccess, prepareTripItem } from "@repo/db/server";
 import { redirect } from "next/navigation";
 import {
+  CAR_CATEGORY,
   CAR_CONFIRM_PATH,
   carBookingHref,
   carSearchParams,
@@ -53,7 +54,10 @@ export default async function ConfirmPage({
   const trip = await loadCarTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
-  const prepared = await prepareCarItem({ ...trip.request, ...options });
+  const prepared = await prepareTripItem(CAR_CATEGORY, {
+    ...trip.request,
+    ...options,
+  });
   if (!prepared.ok) {
     return (
       <Stop
@@ -66,7 +70,7 @@ export default async function ConfirmPage({
   }
 
   const { user } = access;
-  const extra = carDetailRows({
+  const extra = tripDetailRows({
     ...options,
     vehicleClassName: prepared.vehicleClass.name,
   });

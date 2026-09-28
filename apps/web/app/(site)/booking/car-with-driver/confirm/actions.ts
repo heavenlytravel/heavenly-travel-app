@@ -1,11 +1,15 @@
 "use server";
 
 import { isValidPhone, normalizePhone } from "@repo/db";
-import { createBooking, getAccess, prepareCarItem } from "@repo/db/server";
+import { createBooking, getAccess, prepareTripItem } from "@repo/db/server";
 import { sendBookingEmail } from "@repo/email";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { parseCarOptions, parseCarSearch } from "../../../../_lib/car-booking";
+import {
+  CAR_CATEGORY,
+  parseCarOptions,
+  parseCarSearch,
+} from "../../../../_lib/car-booking";
 import { loadCarTrip } from "../_lib/trip";
 
 export type ConfirmState = { error: string } | null;
@@ -48,7 +52,10 @@ export async function createCarBookingAction(
   const trip = await loadCarTrip(search);
   if (!trip.ok) return { error: trip.message };
 
-  const prepared = await prepareCarItem({ ...trip.request, ...options });
+  const prepared = await prepareTripItem(CAR_CATEGORY, {
+    ...trip.request,
+    ...options,
+  });
   if (!prepared.ok) return { error: prepared.error.message };
 
   const booking = await createBooking({

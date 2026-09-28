@@ -1,8 +1,8 @@
-import { formatMyr, priceRows, type CarPriceBreakdown } from "@repo/db";
+import { formatMyr, priceRows, type TripPriceBreakdown } from "@repo/db";
 import { Rows } from "../../_components/Page";
 
 /** The receipt behind a price: the rates used, the distance or hours, the multiplier. */
-export function PriceBreakdown({ price }: { price: CarPriceBreakdown }) {
+export function PriceBreakdown({ price }: { price: TripPriceBreakdown }) {
   const rows: [string, React.ReactNode][] = [
     ...priceRows(price),
     [

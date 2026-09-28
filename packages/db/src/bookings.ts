@@ -15,7 +15,7 @@ import { generateReference } from "./references";
 /**
  * The booking core, shared by every product: creation, lists, and the item
  * transitions that drive the booking's derived status. Product-specific
- * validation and pricing happen before this (see car-with-driver.ts) and
+ * validation and pricing happen before this (see transportation.ts) and
  * arrive here as a `PreparedItem`. See docs/car-with-driver.md.
  */
 
@@ -27,7 +27,7 @@ const withItems = {
     items: {
       orderBy: { position: "asc" },
       include: {
-        carDetails: true,
+        tripDetails: true,
         zone: { select: { id: true, slug: true, name: true } },
       },
     },
@@ -37,15 +37,38 @@ const withItems = {
 export type BookingWithItems = Prisma.BookingGetPayload<typeof withItems>;
 export type BookingItemWithDetails = BookingWithItems["items"][number];
 
-/** One product on one day, validated and priced, ready to be stored. */
-export type PreparedItem = {
-  product: Product;
+/**
+ * One product on one day, validated and priced, ready to be stored. Keyed by
+ * `product`: each product brings its own details row, so a new one joins
+ * `ProductDetails` and `detailsOf` without touching `createBooking`'s callers.
+ */
+export type PreparedItem = PreparedItemCore & ProductDetails;
+
+type ProductDetails = {
+  product: "transportation";
+  tripDetails: Prisma.TripItemDetailsCreateWithoutItemInput;
+};
+
+type PreparedItemCore = {
   startsAt: Date;
+  /** Null when the item has no set end, as a one-way trip. */
+  endsAt: Date | null;
+  /** The customer may cancel until this long before `startsAt`. */
+  cancellationCutoffHours: number;
   zoneId: string | null;
   priceTotalSen: number;
   priceBreakdown: Prisma.InputJsonValue;
-  carDetails: Prisma.CarItemDetailsCreateWithoutItemInput;
 };
+
+/** The nested create for the item's details row. */
+function detailsOf(
+  item: PreparedItem,
+): Pick<Prisma.BookingItemCreateWithoutBookingInput, "tripDetails"> {
+  switch (item.product) {
+    case "transportation":
+      return { tripDetails: { create: item.tripDetails } };
+  }
+}
 
 export type CreateBookingInput = {
   userId: string;
@@ -86,13 +109,15 @@ export async function createBooking(
     items: {
       create: input.items.map((item, index) => ({
         position: index + 1,
-        product: item.product,
+        product: item.product satisfies Product,
         status: "received" satisfies ItemStatus,
         startsAt: item.startsAt,
+        endsAt: item.endsAt,
+        cancellationCutoffHours: item.cancellationCutoffHours,
         zoneId: item.zoneId,
         priceTotalSen: item.priceTotalSen,
         priceBreakdown: item.priceBreakdown,
-        carDetails: { create: item.carDetails },
+        ...detailsOf(item),
       })),
     },
   };
@@ -321,7 +346,7 @@ export function cancelBookingAsAdmin(
 
 /**
  * The customer cancels their own booking: all or nothing, only while it is
- * received or confirmed, and only before the cancellation cutoff.
+ * received or confirmed, and only before the deadline its items' cutoffs set.
  */
 export function cancelBookingAsCustomer(
   reference: string,
@@ -331,6 +356,15 @@ export function cancelBookingAsCustomer(
   return db.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({
       where: { reference, userId },
+      include: {
+        items: {
+          select: {
+            status: true,
+            startsAt: true,
+            cancellationCutoffHours: true,
+          },
+        },
+      },
     });
     if (!booking) return { ok: false, error: "Booking not found." };
     const allowed = checkCustomerCancel(booking, now);

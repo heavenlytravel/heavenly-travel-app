@@ -1,13 +1,13 @@
 import Link from "next/link";
 import {
   BOOKING_STATUS_LABELS,
-  carDetailRows,
   formatLocalDateTime,
   formatMyr,
   fullName,
   isBookingStatus,
-  isCarPriceBreakdown,
+  isTripPriceBreakdown,
   priceRows,
+  tripDetailRows,
   tripRows,
   tripViewOfItem,
 } from "@repo/db";
@@ -25,7 +25,7 @@ import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
 
 const PRODUCT_NAMES: Record<string, string> = {
-  "car-with-driver": "Car with driver",
+  transportation: "Transportation",
 };
 
 function statusLabel(status: string) {
@@ -173,10 +173,10 @@ function ItemCard({
         typeof value === "string" ? value : <PlaceValue place={value} />,
       ])
     : [["Pick-up time", formatLocalDateTime(item.startsAt)]];
-  if (item.carDetails) rows.push(...carDetailRows(item.carDetails));
+  if (item.tripDetails) rows.push(...tripDetailRows(item.tripDetails));
   if (item.zone) rows.push(["Zone", item.zone.name]);
 
-  const price: [string, ReactNode][] = isCarPriceBreakdown(item.priceBreakdown)
+  const price: [string, ReactNode][] = isTripPriceBreakdown(item.priceBreakdown)
     ? priceRows(item.priceBreakdown)
     : [];
   price.push([

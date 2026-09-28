@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatMyr } from "@repo/db";
+import { fitsPassengers, formatMyr } from "@repo/db";
 import {
   CAR_CONFIRM_PATH,
   CAR_OPTION_FIELDS,
@@ -21,13 +21,16 @@ export type ClassOption = {
   minPassengers: number;
   maxPassengers: number;
   totalSen: number;
+  /** Why the class cannot take this trip, or null when it can. */
+  unavailable: string | null;
 };
 
 /**
  * Vehicle class, passengers, child seats, flight number and notes. A plain
  * GET form: the choices join the search in the confirm page's URL, so the
  * confirm step is shareable and survives the sign-in redirect. Classes the
- * passenger count does not fit are shown but cannot be chosen.
+ * passenger count does not fit, or whose rules refuse the trip, are shown
+ * with the reason but cannot be chosen.
  */
 export function CarOptionsForm({
   classes,
@@ -41,10 +44,10 @@ export function CarOptionsForm({
 }) {
   const [passengers, setPassengers] = useState(initialPassengers);
   const [chosen, setChosen] = useState<string | null>(null);
-  const fits = (c: ClassOption) =>
-    passengers >= c.minPassengers && passengers <= c.maxPassengers;
+  const choosable = (c: ClassOption) =>
+    c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
-  const canContinue = Boolean(selected && fits(selected));
+  const canContinue = Boolean(selected && choosable(selected));
 
   return (
     <form
@@ -61,7 +64,7 @@ export function CarOptionsForm({
           Choose your vehicle
         </legend>
         {classes.map((c) => {
-          const ok = fits(c);
+          const ok = choosable(c);
           const on = chosen === c.id && ok;
           return (
             <label
@@ -100,7 +103,9 @@ export function CarOptionsForm({
                     : `${c.minPassengers} to ${c.maxPassengers} passengers`}
                   {" · "}
                   {c.luggage}
-                  {!ok && " · Does not fit your group"}
+                  {c.unavailable
+                    ? ` · ${c.unavailable}`
+                    : !ok && " · Does not fit your group"}
                 </span>
               </span>
             </label>

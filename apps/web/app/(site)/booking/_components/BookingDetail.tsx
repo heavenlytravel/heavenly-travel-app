@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import {
-  carDetailRows,
   formatLocalDateTime,
   formatMyr,
+  tripDetailRows,
   tripViewOfItem,
 } from "@repo/db";
 import type { BookingWithItems } from "@repo/db/server";
@@ -62,7 +62,7 @@ export function BookingDetail({
             </h2>
             <TripSummary
               trip={trip}
-              extra={item.carDetails ? carDetailRows(item.carDetails) : []}
+              extra={item.tripDetails ? tripDetailRows(item.tripDetails) : []}
             />
           </Panel>
         ))}

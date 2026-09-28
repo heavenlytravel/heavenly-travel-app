@@ -1,4 +1,10 @@
-import { BOOKING_RULES, checkHours, isCarMode, type CarMode } from "@repo/db";
+import {
+  BOOKING_RULES,
+  checkHours,
+  isTripMode,
+  type TripCategory,
+  type TripMode,
+} from "@repo/db";
 import type { SearchValues } from "./search";
 
 /**
@@ -10,7 +16,10 @@ import type { SearchValues } from "./search";
  * one place that knows the parameter names. Browser-safe.
  */
 
-export const CAR_BOOKING_PATH = "/booking/car-with-driver";
+/** The vehicle category this flow books. */
+export const CAR_CATEGORY = "car-with-driver" satisfies TripCategory;
+
+export const CAR_BOOKING_PATH = `/booking/${CAR_CATEGORY}`;
 export const CAR_CONFIRM_PATH = `${CAR_BOOKING_PATH}/confirm`;
 
 export const MAX_PASSENGERS = 99;
@@ -20,7 +29,7 @@ export const MAX_NOTES_LENGTH = 500;
 
 /** What the search card asks. Place ids only; the server resolves them. */
 export type CarSearch = {
-  mode: CarMode;
+  mode: TripMode;
   pickupId: string;
   /** One-way only. */
   dropoffId: string | null;
@@ -82,7 +91,7 @@ type CarSearchFromCard =
  */
 export function carSearchFromCard(values: SearchValues): CarSearchFromCard {
   const issues: CarSearchIssue[] = [];
-  const mode = isCarMode(values.mode) ? values.mode : "oneway";
+  const mode = isTripMode(values.mode) ? values.mode : "oneway";
 
   if (!values.placeIds.from) {
     issues.push({
@@ -166,7 +175,7 @@ export function parseCarSearch(input: QueryInput): CarSearch | null {
   const hours = intIn(params.get(PARAM.hours), 1, BOOKING_RULES.maxHourlyHours);
   const passengers = intIn(params.get(PARAM.passengers), 1, MAX_PASSENGERS);
 
-  if (!isCarMode(mode) || !pickupId || !ID_RE.test(pickupId)) return null;
+  if (!isTripMode(mode) || !pickupId || !ID_RE.test(pickupId)) return null;
   if (!date || !DATE_RE.test(date) || !time || !TIME_RE.test(time)) return null;
   if (passengers === null) return null;
   if (mode === "oneway" && (!dropoffId || !ID_RE.test(dropoffId))) return null;

@@ -1,7 +1,7 @@
 /**
  * The customer site's account and booking paths, so no page spells a URL
- * or the sign-in return parameter by hand. The car flow's own paths live
- * in car-booking.ts next to the query they carry.
+ * or the sign-in return parameter by hand. The transportation flow's own
+ * paths live in transportation-booking.ts next to the query they carry.
  */
 
 export const ACCOUNT_PATH = "/account";

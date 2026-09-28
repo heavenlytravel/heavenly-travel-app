@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { fullName, tripDetailRows } from "@repo/db";
+import { fullName, TRIP_CATEGORY_LABELS, tripDetailRows } from "@repo/db";
 import { getAccess, prepareTripItem } from "@repo/db/server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { signInHref } from "../../../../../_lib/routes";
 import {
-  CAR_CATEGORY,
-  CAR_CONFIRM_PATH,
-  carBookingHref,
-  carSearchParams,
-  parseCarOptions,
-  parseCarSearch,
+  bookableCategory,
+  parseTripOptions,
+  parseTripSearch,
   toParams,
-} from "../../../../_lib/car-booking";
-import { PageTitle, Panel, Stop } from "../../../_components/Page";
-import { PriceBreakdown } from "../../_components/PriceBreakdown";
-import { TripSummary } from "../../_components/TripSummary";
-import { loadCarTrip } from "../_lib/trip";
+  tripBookingHref,
+  tripConfirmPath,
+  tripSearchParams,
+} from "../../../../../_lib/transportation-booking";
+import { PageTitle, Panel, Stop } from "../../../../_components/Page";
+import { PriceBreakdown } from "../../../_components/PriceBreakdown";
+import { TripSummary } from "../../../_components/TripSummary";
+import { loadTrip } from "../_lib/trip";
 import { ConfirmForm } from "./ConfirmForm";
 
 export const metadata: Metadata = {
@@ -22,39 +23,45 @@ export const metadata: Metadata = {
 };
 
 /**
- * Route: /booking/car-with-driver/confirm?mode=…&class=…
+ * Route: /booking/transportation/car-with-driver/confirm?mode=…&class=…
  * The last look before the booking exists: the trip, the class, the price
  * and the contact details. Needs a session; a signed-out visitor goes to
  * sign-in with this URL as the return, so the trip is never lost.
  */
 export default async function ConfirmPage({
+  params,
   searchParams,
-}: PageProps<"/booking/car-with-driver/confirm">) {
+}: PageProps<"/booking/transportation/[category]/confirm">) {
+  const category = bookableCategory((await params).category);
+  if (!category) notFound();
   const query = toParams(await searchParams).toString();
 
   const access = await getAccess("user");
   if (access.status === "signed-out") {
-    const returnTo = `${CAR_CONFIRM_PATH}?${query}`;
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(returnTo)}`);
+    redirect(signInHref(`${tripConfirmPath(category)}?${query}`));
   }
 
-  const search = parseCarSearch(query);
-  const options = parseCarOptions(query);
+  const search = parseTripSearch(query);
+  const options = parseTripOptions(query);
   if (!search || !options) {
     return (
       <Stop
         title="Start with a search"
         message="This link is missing part of the trip. Search again and we will price it."
-        linkLabel="Search for a car"
+        linkLabel="Search again"
       />
     );
   }
-  const back = carBookingHref(carSearchParams(search));
+  const back = tripBookingHref(
+    category,
+    tripSearchParams(search),
+    options.passengers,
+  );
 
-  const trip = await loadCarTrip(search);
+  const trip = await loadTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
-  const prepared = await prepareTripItem(CAR_CATEGORY, {
+  const prepared = await prepareTripItem(category, {
     ...trip.request,
     ...options,
   });
@@ -77,7 +84,10 @@ export default async function ConfirmPage({
 
   return (
     <>
-      <PageTitle eyebrow="Car with driver" title="Confirm your booking.">
+      <PageTitle
+        eyebrow={TRIP_CATEGORY_LABELS[category]}
+        title="Confirm your booking."
+      >
         Check the trip, tell us how to reach you, and we will take it from
         there.
       </PageTitle>
@@ -109,6 +119,7 @@ export default async function ConfirmPage({
             How to reach you
           </h2>
           <ConfirmForm
+            category={category}
             trip={query}
             defaultName={fullName(user)}
             defaultPhone={user.phone ?? ""}

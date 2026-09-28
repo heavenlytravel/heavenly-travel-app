@@ -2,7 +2,7 @@ import "server-only";
 import { pickupInstant, type Place } from "@repo/db";
 import type { TripRequest } from "@repo/db/server";
 import { resolvePlace, roadDistance } from "@repo/places/server";
-import type { CarSearch } from "../../../../_lib/car-booking";
+import type { TripSearch } from "../../../../../_lib/transportation-booking";
 
 /**
  * From the search in the URL to what the domain layer prices: places
@@ -21,7 +21,7 @@ const stop = (title: string, message: string): LoadedTrip => ({
   message,
 });
 
-export async function loadCarTrip(search: CarSearch): Promise<LoadedTrip> {
+export async function loadTrip(search: TripSearch): Promise<LoadedTrip> {
   const startsAt = pickupInstant(search.date, search.time);
   if (!startsAt) {
     return stop(

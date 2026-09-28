@@ -1,34 +1,54 @@
 import {
   BOOKING_RULES,
   checkHours,
+  isTripCategory,
   isTripMode,
   type TripCategory,
   type TripMode,
 } from "@repo/db";
-import type { SearchValues } from "./search";
+import { PRODUCTS, type SearchValues } from "./search";
 
 /**
- * The car-with-driver booking flow keeps the whole trip in the URL: the
+ * The transportation booking flow keeps the whole trip in the URL: the
  * search card links to the options page with the search, the options page
  * links to the confirm page with the search plus the choices, and the confirm
  * page carries the same query through the sign-in redirect. Nothing is lost
- * on the way and every step can be shared or reopened. This module is the
- * one place that knows the parameter names. Browser-safe.
+ * on the way and every step can be shared or reopened. The category is a
+ * path segment, the trip is the query. This module is the one place that
+ * knows the paths and the parameter names. Browser-safe.
  */
 
-/** The vehicle category this flow books. */
-export const CAR_CATEGORY = "car-with-driver" satisfies TripCategory;
+export const TRIP_BOOKING_ROOT = "/booking/transportation";
 
-export const CAR_BOOKING_PATH = `/booking/${CAR_CATEGORY}`;
-export const CAR_CONFIRM_PATH = `${CAR_BOOKING_PATH}/confirm`;
+/**
+ * The category behind a path segment, or null unless it is a known category
+ * whose search card tab is open. A category opens everywhere at once: the
+ * tab and the pages read the same flag.
+ */
+export function bookableCategory(segment: unknown): TripCategory | null {
+  return isTripCategory(segment) && PRODUCTS[segment].bookable ? segment : null;
+}
 
-export const MAX_PASSENGERS = 99;
-export const MAX_CHILD_SEATS = 4;
-export const MAX_FLIGHT_NUMBER_LENGTH = 12;
-export const MAX_NOTES_LENGTH = 500;
+export function tripBookingPath(category: TripCategory) {
+  return `${TRIP_BOOKING_ROOT}/${category}`;
+}
+
+export function tripConfirmPath(category: TripCategory) {
+  return `${tripBookingPath(category)}/confirm`;
+}
+
+export const TRIP_MAX_CHILD_SEATS = 4;
+export const TRIP_MAX_FLIGHT_NUMBER_LENGTH = 12;
+export const TRIP_MAX_NOTES_LENGTH = 500;
+
+/**
+ * Refuses nonsense in the URL. Not a seat number: whether a group fits is
+ * decided by the vehicle class.
+ */
+const MAX_HEAD_COUNT = 999;
 
 /** What the search card asks. Place ids only; the server resolves them. */
-export type CarSearch = {
+export type TripSearch = {
   mode: TripMode;
   pickupId: string;
   /** One-way only. */
@@ -39,11 +59,10 @@ export type CarSearch = {
   time: string;
   /** Hourly only. */
   hours: number | null;
-  passengers: number;
 };
 
 /** What the options page adds. */
-export type CarOptions = {
+export type TripOptions = {
   vehicleClassId: string;
   passengers: number;
   childSeats: number;
@@ -66,7 +85,7 @@ const PARAM = {
 } as const;
 
 /** The input names the options form posts, so they match what is parsed. */
-export const CAR_OPTION_FIELDS = {
+export const TRIP_OPTION_FIELDS = {
   vehicleClass: PARAM.vehicleClass,
   passengers: PARAM.passengers,
   childSeats: PARAM.childSeats,
@@ -75,22 +94,23 @@ export const CAR_OPTION_FIELDS = {
 } as const;
 
 /** One message per field the search card cannot send yet. */
-export type CarSearchIssue = {
+export type TripSearchIssue = {
   field: keyof SearchValues;
   message: string;
 };
 
-type CarSearchFromCard =
+type TripSearchFromCard =
   | { ok: true; params: URLSearchParams }
-  | { ok: false; issues: CarSearchIssue[] };
+  | { ok: false; issues: TripSearchIssue[] };
 
 /**
- * The search card's values as the options page query, or why they cannot be
- * sent. A place field with text but no id was typed freehand; the card asks
- * for a pick from the list rather than guessing which place was meant.
+ * The values of the search card, or of the trip editor, as the options page
+ * query, or why they cannot be sent. A place field with text but no id was
+ * typed freehand; the form asks for a pick from the list rather than
+ * guessing which place was meant.
  */
-export function carSearchFromCard(values: SearchValues): CarSearchFromCard {
-  const issues: CarSearchIssue[] = [];
+export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
+  const issues: TripSearchIssue[] = [];
   const mode = isTripMode(values.mode) ? values.mode : "oneway";
 
   if (!values.placeIds.from) {
@@ -117,10 +137,6 @@ export function carSearchFromCard(values: SearchValues): CarSearchFromCard {
   if (mode === "hourly" && !checkHours(hours).ok) {
     issues.push({ field: "hours", message: "Choose how many hours." });
   }
-  const passengers = Number(values.people);
-  if (!Number.isInteger(passengers) || passengers < 1) {
-    issues.push({ field: "people", message: "How many passengers?" });
-  }
   if (issues.length > 0) return { ok: false, issues };
 
   const params = new URLSearchParams({
@@ -128,15 +144,29 @@ export function carSearchFromCard(values: SearchValues): CarSearchFromCard {
     [PARAM.pickup]: values.placeIds.from!,
     [PARAM.date]: values.date,
     [PARAM.time]: values.time,
-    [PARAM.passengers]: String(Math.min(passengers, MAX_PASSENGERS)),
   });
   if (mode === "oneway") params.set(PARAM.dropoff, values.placeIds.to!);
   else params.set(PARAM.hours, String(hours));
   return { ok: true, params };
 }
 
-export function carBookingHref(params: URLSearchParams) {
-  return `${CAR_BOOKING_PATH}?${params}`;
+const isHeadCount = (n: number) =>
+  Number.isInteger(n) && n >= 1 && n <= MAX_HEAD_COUNT;
+
+/**
+ * The options page for a search. `passengers` carries a count already typed
+ * there over a changed trip; it is a starting value, not part of the search.
+ */
+export function tripBookingHref(
+  category: TripCategory,
+  search: URLSearchParams,
+  passengers?: number,
+) {
+  const params = new URLSearchParams(search);
+  if (passengers !== undefined && isHeadCount(passengers)) {
+    params.set(PARAM.passengers, String(passengers));
+  }
+  return `${tripBookingPath(category)}?${params}`;
 }
 
 /** Next's `searchParams` prop, or a query string, as one shape. */
@@ -164,20 +194,26 @@ const intIn = (raw: string | null, min: number, max: number) => {
   return n >= min && n <= max ? n : null;
 };
 
-/** The search behind a booking page URL, or null when it is not a full search. */
-export function parseCarSearch(input: QueryInput): CarSearch | null {
+/**
+ * The search behind a booking page URL, or null when it is not a full
+ * search. Hours run from the hourly floor to the maximum; the class's own
+ * minimum is an availability state on the options page.
+ */
+export function parseTripSearch(input: QueryInput): TripSearch | null {
   const params = toParams(input);
   const mode = params.get(PARAM.mode);
   const pickupId = params.get(PARAM.pickup);
   const dropoffId = params.get(PARAM.dropoff);
   const date = params.get(PARAM.date);
   const time = params.get(PARAM.time);
-  const hours = intIn(params.get(PARAM.hours), 1, BOOKING_RULES.maxHourlyHours);
-  const passengers = intIn(params.get(PARAM.passengers), 1, MAX_PASSENGERS);
+  const hours = intIn(
+    params.get(PARAM.hours),
+    BOOKING_RULES.hourlyFloorHours,
+    BOOKING_RULES.maxHourlyHours,
+  );
 
   if (!isTripMode(mode) || !pickupId || !ID_RE.test(pickupId)) return null;
   if (!date || !DATE_RE.test(date) || !time || !TIME_RE.test(time)) return null;
-  if (passengers === null) return null;
   if (mode === "oneway" && (!dropoffId || !ID_RE.test(dropoffId))) return null;
   if (mode === "hourly" && hours === null) return null;
 
@@ -188,8 +224,12 @@ export function parseCarSearch(input: QueryInput): CarSearch | null {
     date,
     time,
     hours: mode === "hourly" ? hours : null,
-    passengers,
   };
+}
+
+/** The passenger count in a URL, or null when there is none to start from. */
+export function parsePassengers(input: QueryInput): number | null {
+  return intIn(toParams(input).get(PARAM.passengers), 1, MAX_HEAD_COUNT);
 }
 
 const text = (raw: string | null, max: number) => {
@@ -198,11 +238,15 @@ const text = (raw: string | null, max: number) => {
 };
 
 /** The choices made on the options page, or null when a required one is missing. */
-export function parseCarOptions(input: QueryInput): CarOptions | null {
+export function parseTripOptions(input: QueryInput): TripOptions | null {
   const params = toParams(input);
   const vehicleClassId = params.get(PARAM.vehicleClass);
-  const passengers = intIn(params.get(PARAM.passengers), 1, MAX_PASSENGERS);
-  const childSeats = intIn(params.get(PARAM.childSeats), 0, MAX_CHILD_SEATS);
+  const passengers = parsePassengers(params);
+  const childSeats = intIn(
+    params.get(PARAM.childSeats),
+    0,
+    TRIP_MAX_CHILD_SEATS,
+  );
   if (!vehicleClassId || !ID_RE.test(vehicleClassId)) return null;
   if (passengers === null) return null;
   return {
@@ -212,20 +256,19 @@ export function parseCarOptions(input: QueryInput): CarOptions | null {
     flightNumber:
       text(
         params.get(PARAM.flightNumber),
-        MAX_FLIGHT_NUMBER_LENGTH,
+        TRIP_MAX_FLIGHT_NUMBER_LENGTH,
       )?.toUpperCase() ?? null,
-    notes: text(params.get(PARAM.notes), MAX_NOTES_LENGTH),
+    notes: text(params.get(PARAM.notes), TRIP_MAX_NOTES_LENGTH),
   };
 }
 
 /** The search parameters alone, for links back to the options page. */
-export function carSearchParams(search: CarSearch) {
+export function tripSearchParams(search: TripSearch) {
   const params = new URLSearchParams({
     [PARAM.mode]: search.mode,
     [PARAM.pickup]: search.pickupId,
     [PARAM.date]: search.date,
     [PARAM.time]: search.time,
-    [PARAM.passengers]: String(search.passengers),
   });
   if (search.dropoffId) params.set(PARAM.dropoff, search.dropoffId);
   if (search.hours !== null) params.set(PARAM.hours, String(search.hours));
@@ -233,9 +276,6 @@ export function carSearchParams(search: CarSearch) {
 }
 
 /** The search parameters as hidden inputs, so a GET form carries them on. */
-export function hiddenSearchFields(search: CarSearch) {
-  return Array.from(carSearchParams(search).entries()).filter(
-    // The options form asks passengers again, with its own input.
-    ([name]) => name !== PARAM.passengers,
-  );
+export function hiddenSearchFields(search: TripSearch) {
+  return Array.from(tripSearchParams(search).entries());
 }

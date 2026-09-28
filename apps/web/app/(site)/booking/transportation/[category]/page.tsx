@@ -1,48 +1,76 @@
 import type { Metadata } from "next";
-import { unavailableReason } from "@repo/db";
+import { TRIP_CATEGORY_LABELS, unavailableReason } from "@repo/db";
 import { quoteTrip } from "@repo/db/server";
+import { notFound } from "next/navigation";
 import {
-  CAR_CATEGORY,
-  hiddenSearchFields,
-  parseCarSearch,
-} from "../../../_lib/car-booking";
-import { PageTitle, Panel, Stop } from "../../_components/Page";
-import { TripSummary } from "../_components/TripSummary";
-import { CarOptionsForm, type ClassOption } from "./CarOptionsForm";
-import { loadCarTrip } from "./_lib/trip";
+  bookableCategory,
+  parsePassengers,
+  parseTripSearch,
+  toParams,
+  tripSearchParams,
+} from "../../../../_lib/transportation-booking";
+import { PageTitle, Stop } from "../../../_components/Page";
+import { TripBar } from "./TripBar";
+import { TripOptionsForm, type ClassOption } from "./TripOptionsForm";
+import { loadTrip } from "./_lib/trip";
 
-export const metadata: Metadata = {
-  title: "Car with driver | Heavenly Travel",
-};
+type Props = PageProps<"/booking/transportation/[category]">;
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const category = bookableCategory((await params).category);
+  if (!category) return {};
+  return { title: `${TRIP_CATEGORY_LABELS[category]} | Heavenly Travel` };
+}
 
 /**
- * Route: /booking/car-with-driver?mode=…&pickup=…
- * The options step. The search arrives in the URL from the home page card;
- * this page resolves it, prices every vehicle class on the server and asks
- * for the rest of the details. Nothing is stored until the confirm step.
+ * Route: /booking/transportation/car-with-driver?mode=…&pickup=…
+ * The options step, one page for every category; a segment that is not a
+ * bookable category is not found. The search arrives in the URL from the
+ * home page card, or from the trip bar on this page; this page resolves it,
+ * prices every vehicle class of the category on the server and asks for the
+ * rest of the details. Nothing is stored until the confirm step.
  */
-export default async function CarOptionsPage({
-  searchParams,
-}: PageProps<"/booking/car-with-driver">) {
-  const search = parseCarSearch(await searchParams);
+export default async function TripOptionsPage({ params, searchParams }: Props) {
+  const category = bookableCategory((await params).category);
+  if (!category) notFound();
+
+  const query = toParams(await searchParams);
+  const search = parseTripSearch(query);
   if (!search) {
     return (
       <Stop
         title="Start with a search"
-        message="Tell us where and when you need a car, and we will show you prices."
-        linkLabel="Search for a car"
+        message="Tell us where and when you need a driver, and we will show you prices."
+        linkLabel="Search for a trip"
       />
     );
   }
 
-  const trip = await loadCarTrip(search);
+  const trip = await loadTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
-  const quoted = await quoteTrip(CAR_CATEGORY, trip.request);
-  if (!quoted.ok) {
-    return (
-      <Stop title="We cannot book this trip" message={quoted.error.message} />
-    );
+  const passengers = parsePassengers(query) ?? 1;
+  // The trip itself resolved, so it stays on screen and can be changed.
+  const stop = (message: string) => (
+    <>
+      <TripBar
+        category={category}
+        search={search}
+        trip={trip.request}
+        passengers={passengers}
+      />
+      <Stop
+        title="We cannot book this trip"
+        message={message}
+        linkLabel="Start a new search"
+      />
+    </>
+  );
+
+  const quoted = await quoteTrip(category, trip.request);
+  if (!quoted.ok) return stop(quoted.error.message);
+  if (quoted.quote.classes.length === 0) {
+    return stop("We have no vehicle to offer for this trip right now.");
   }
 
   const classes: ClassOption[] = quoted.quote.classes.map((c) => ({
@@ -58,20 +86,21 @@ export default async function CarOptionsPage({
 
   return (
     <>
-      <PageTitle eyebrow="Car with driver" title="Your trip, priced.">
+      <PageTitle
+        eyebrow={TRIP_CATEGORY_LABELS[category]}
+        title="Your trip, priced."
+      >
         Prices include the driver and fuel. Pay nothing now: we confirm your
         booking first.
       </PageTitle>
-      <Panel className="mb-8">
-        <TripSummary
-          trip={trip.request}
-          extra={[["Area", quoted.quote.zone.name]]}
-        />
-      </Panel>
-      <CarOptionsForm
+      <TripOptionsForm
+        // A changed trip is a new form: the chosen vehicle is cleared.
+        key={tripSearchParams(search).toString()}
+        category={category}
+        search={search}
+        trip={trip.request}
         classes={classes}
-        initialPassengers={search.passengers}
-        hiddenFields={hiddenSearchFields(search)}
+        initialPassengers={passengers}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { CAR_MODES, CAR_MODE_LABELS, HOURLY_OPTIONS } from "@repo/db";
+import { HOURLY_OPTIONS, TRIP_MODE_LABELS, TRIP_MODES } from "@repo/db";
 
 /**
  * The products the home page search card can ask about, and the fields each
@@ -77,9 +77,9 @@ export const PRODUCTS: Record<ProductKey, Product> = {
         key: "mode",
         kind: "choice",
         label: "Trip",
-        options: CAR_MODES.map((mode) => ({
+        options: TRIP_MODES.map((mode) => ({
           value: mode,
-          label: CAR_MODE_LABELS[mode],
+          label: TRIP_MODE_LABELS[mode],
         })),
       },
       pickUp,

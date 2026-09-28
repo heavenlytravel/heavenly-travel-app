@@ -11,19 +11,19 @@ export { listAdmins, setAdminLevel, revokeAdmin } from "./admins";
 export type { AdminWithUser, AdminChange } from "./admins";
 export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
 export type { Zone, ZoneDistrict } from "./zones";
-export { listActiveVehicleClasses, fitsPassengers } from "./vehicle-classes";
+export { listActiveVehicleClasses } from "./vehicle-classes";
 export type { VehicleClass } from "./vehicle-classes";
-export { quoteCarTrip, prepareCarItem } from "./car-with-driver";
+export { quoteTrip, prepareTripItem } from "./transportation";
 export type {
-  CarTripRequest,
-  CarItemRequest,
-  CarQuote,
-  CarQuoteError,
-  CarQuoteErrorCode,
-  CarQuoteResult,
+  TripRequest,
+  TripItemRequest,
+  TripQuote,
+  TripQuoteError,
+  TripQuoteErrorCode,
+  TripQuoteResult,
   ClassQuote,
-  PrepareCarItemResult,
-} from "./car-with-driver";
+  PrepareTripItemResult,
+} from "./transportation";
 export {
   createBooking,
   listBookingsForUser,
@@ -53,6 +53,6 @@ export * from "./pricing";
 export * from "./references";
 export * from "./place";
 export * from "./phone";
-export * from "./car-trip-view";
+export * from "./trip-view";
 export * from "./names";
 export * from "./contact";

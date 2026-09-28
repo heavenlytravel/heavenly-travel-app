@@ -1,17 +1,17 @@
 import { formatLocalDateTime } from "./booking-rules";
-import { CAR_MODE_LABELS, type CarMode } from "./booking-status";
+import { TRIP_MODE_LABELS, type TripMode } from "./booking-status";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
-import type { CarPriceBreakdown } from "./pricing";
+import type { TripPriceBreakdown } from "./pricing";
 
 /**
- * A car trip as every screen describes it, before and after booking: the
+ * A trip as every screen describes it, before and after booking: the
  * customer's options and success pages, My bookings and the admin console
  * all read the same rows. Browser-safe: the rows are data, each app renders
  * them in its own style.
  */
 export type TripView = {
-  mode: CarMode;
+  mode: TripMode;
   pickup: Place;
   dropoff: Place | null;
   startsAt: Date;
@@ -20,9 +20,9 @@ export type TripView = {
 };
 
 /** The shape of a booking item this module reads; both apps' queries satisfy it. */
-export type CarItemLike = {
+export type TripItemLike = {
   startsAt: Date;
-  carDetails: {
+  tripDetails: {
     mode: string;
     pickupPlace: unknown;
     dropoffPlace: unknown;
@@ -31,9 +31,9 @@ export type CarItemLike = {
   } | null;
 };
 
-/** The trip stored on a car item, or null when the item is another product. */
-export function tripViewOfItem(item: CarItemLike): TripView | null {
-  const details = item.carDetails;
+/** The trip stored on a transportation item, or null for another product. */
+export function tripViewOfItem(item: TripItemLike): TripView | null {
+  const details = item.tripDetails;
   if (!details || !isPlace(details.pickupPlace)) return null;
   const mode = details.mode === "hourly" ? "hourly" : "oneway";
   return {
@@ -60,7 +60,7 @@ export type DetailRow = [label: string, value: string | Place];
 /** The trip itself: mode, places, time, duration or distance. */
 export function tripRows(trip: TripView): DetailRow[] {
   const rows: DetailRow[] = [
-    ["Trip", CAR_MODE_LABELS[trip.mode]],
+    ["Trip", TRIP_MODE_LABELS[trip.mode]],
     ["Pick-up", trip.pickup],
   ];
   if (trip.dropoff) rows.push(["Drop-off", trip.dropoff]);
@@ -73,7 +73,7 @@ export function tripRows(trip: TripView): DetailRow[] {
 }
 
 /** The rows after the trip: what was chosen on the options page. */
-export function carDetailRows(details: {
+export function tripDetailRows(details: {
   vehicleClassName: string;
   passengers: number;
   childSeats: number;
@@ -98,7 +98,7 @@ export function carDetailRows(details: {
  * emphasis.
  */
 export function priceRows(
-  price: CarPriceBreakdown,
+  price: TripPriceBreakdown,
 ): [label: string, value: string][] {
   const rows: [string, string][] = [];
   if (price.mode === "oneway" && price.distanceKm !== null) {

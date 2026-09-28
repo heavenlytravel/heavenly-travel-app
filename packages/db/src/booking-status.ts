@@ -1,19 +1,32 @@
-import { BOOKING_RULES, isBeforeCancellationCutoff } from "./booking-rules";
+import { cancellationDeadline, formatLocalDateTime } from "./booking-rules";
 import { guardFor } from "./const-enum";
 
 /**
  * Booking vocabulary shared by both apps. Browser-safe: no database access.
- * See docs/car-with-driver.md, "Booking lifecycle".
+ * See docs/car-with-driver.md, "Booking lifecycle", and docs/coach-charter.md.
  */
 
-export const PRODUCTS = ["car-with-driver"] as const;
+export const PRODUCTS = ["transportation"] as const;
 export type Product = (typeof PRODUCTS)[number];
 export const isProduct = guardFor(PRODUCTS);
 
-export const CAR_MODES = ["oneway", "hourly"] as const;
-export type CarMode = (typeof CAR_MODES)[number];
-export const isCarMode = guardFor(CAR_MODES);
-export const CAR_MODE_LABELS: Record<CarMode, string> = {
+/**
+ * The kinds of transportation, decided by the vehicle class. Spelled the
+ * same in `VehicleClass.category`, the URL, the booking snapshot and the
+ * search card tab.
+ */
+export const TRIP_CATEGORIES = ["car-with-driver", "coach-charter"] as const;
+export type TripCategory = (typeof TRIP_CATEGORIES)[number];
+export const isTripCategory = guardFor(TRIP_CATEGORIES);
+export const TRIP_CATEGORY_LABELS: Record<TripCategory, string> = {
+  "car-with-driver": "Car with driver",
+  "coach-charter": "Coach charter",
+};
+
+export const TRIP_MODES = ["oneway", "hourly"] as const;
+export type TripMode = (typeof TRIP_MODES)[number];
+export const isTripMode = guardFor(TRIP_MODES);
+export const TRIP_MODE_LABELS: Record<TripMode, string> = {
   oneway: "One-way",
   hourly: "By the hour",
 };
@@ -90,32 +103,63 @@ export const CUSTOMER_CANCELLABLE: readonly BookingStatus[] = [
   "confirmed",
 ];
 
+/** What the cancel rule reads of an item: its start and its snapshot cutoff. */
+export type CancellableItem = {
+  status: string;
+  startsAt: Date;
+  cancellationCutoffHours: number;
+};
+
+/**
+ * The last instant the customer may cancel: the earliest of each live item's
+ * start minus that item's cutoff. Null when no item is live.
+ */
+export function customerCancelDeadline(
+  items: readonly CancellableItem[],
+): Date | null {
+  return items
+    .filter(isLive)
+    .map((i) => cancellationDeadline(i.startsAt, i.cancellationCutoffHours))
+    .reduce<Date | null>(
+      (min, deadline) => (min === null || deadline < min ? deadline : min),
+      null,
+    );
+}
+
 export type CustomerCancelCheck =
-  { ok: true } | { ok: false; reason: "status" | "cutoff"; message: string };
+  | { ok: true; deadline: Date }
+  | { ok: false; reason: "status"; message: string }
+  | { ok: false; reason: "cutoff"; deadline: Date; message: string };
 
 /**
  * Whether the customer may cancel this booking right now: only while it is
- * received or confirmed, and only before the cancellation cutoff measured
- * from the earliest live item's start. The page uses this to decide what
- * the cancel button says; the transition uses it to refuse.
+ * received or confirmed, and only before the deadline set by its items'
+ * cutoffs. The page uses this to decide what the cancel button says; the
+ * transition uses it to refuse. The deadline is a date, never a number of
+ * hours, so it reads the same with one item or several.
  */
 export function checkCustomerCancel(
-  booking: { status: string; startsAt: Date },
+  booking: { status: string; items: readonly CancellableItem[] },
   now: Date = new Date(),
 ): CustomerCancelCheck {
-  if (!CUSTOMER_CANCELLABLE.includes(booking.status as BookingStatus)) {
+  const deadline = customerCancelDeadline(booking.items);
+  if (
+    !CUSTOMER_CANCELLABLE.includes(booking.status as BookingStatus) ||
+    deadline === null
+  ) {
     return {
       ok: false,
       reason: "status",
       message: `Booking is already ${booking.status}.`,
     };
   }
-  if (!isBeforeCancellationCutoff(booking.startsAt, now)) {
+  if (now.getTime() >= deadline.getTime()) {
     return {
       ok: false,
       reason: "cutoff",
-      message: `Cannot cancel within ${BOOKING_RULES.cancellationCutoffHours} hours of pickup.`,
+      deadline,
+      message: `Free cancellation ended on ${formatLocalDateTime(deadline)}.`,
     };
   }
-  return { ok: true };
+  return { ok: true, deadline };
 }

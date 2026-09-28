@@ -61,24 +61,22 @@ model PartnerProfile {
 }
 
 // ---------------------------------------------------------------------------
-// Bookings. See docs/car-with-driver.md. Money is integer sen; statuses are
-// strings validated against the const arrays in src/booking-status.ts.
+// Bookings. See docs/car-with-driver.md and docs/coach-charter.md. Money is
+// integer sen; statuses and categories are strings validated against the
+// const arrays in src/booking-status.ts.
 // ---------------------------------------------------------------------------
 
 /// A service area where drivers and vehicles are based: a named set of
 /// districts. Never deleted, only deactivated.
 model Zone {
-  id             String   @id @default(cuid())
-  slug           String   @unique
-  name           String
-  isActive       Boolean  @default(true)
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  isActive   Boolean  @default(true)
   /// Applied to every price with a pickup in this zone. 1 means no change.
-  multiplier     Float    @default(1)
-  /// Overrides of the global rules in src/booking-rules.ts; null uses the default.
-  minLeadHours   Int?
-  maxHorizonDays Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  multiplier Float    @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   districts ZoneDistrict[]
   items     BookingItem[]
@@ -97,26 +95,38 @@ model ZoneDistrict {
   @@unique([state, district])
 }
 
-/// A bookable class of car with driver and its rates. Never deleted, only
-/// deactivated, because bookings snapshot the name but keep the relation.
+/// A bookable class of vehicle with driver, its rates and its rules. Never
+/// deleted, only deactivated. A booking snapshots what it shows, so editing
+/// or retiring a class never changes one.
 model VehicleClass {
-  id             String   @id @default(cuid())
-  slug           String   @unique
-  name           String
-  description    String
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  minPassengers  Int
-  maxPassengers  Int
-  luggage        String
-  baseFareSen    Int
-  perKmSen       Int
-  hourlyRateSen  Int
-  minimumFareSen Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  slug                    String   @unique
+  /// "car-with-driver" | "coach-charter"
+  category                String
+  name                    String
+  description             String
+  isActive                Boolean  @default(true)
+  sortOrder               Int      @default(0)
+  /// Information only ("from 15 seats"): fit is by maxPassengers alone.
+  minPassengers           Int
+  maxPassengers           Int
+  luggage                 String
+  baseFareSen             Int
+  perKmSen                Int
+  hourlyRateSen           Int
+  minimumFareSen          Int
+  /// A pickup must be at least this far in the future.
+  minLeadHours            Int
+  /// Customers may cancel until this long before pickup.
+  cancellationCutoffHours Int
+  /// Shortest hourly hire; never below the hourly floor in src/booking-rules.ts.
+  minHourlyHours          Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
-  carItems CarItemDetails[]
+  tripItems TripItemDetails[]
+
+  @@index([category, isActive])
 }
 
 /// An order: one or more items, each one product on one day. `status` is
@@ -133,7 +143,7 @@ model Booking {
   /// Sum of the live (not cancelled) items.
   priceTotalSen Int
   currency      String    @default("MYR")
-  /// Earliest live item start, for sorting and the cancellation cutoff.
+  /// Earliest live item start, for sorting.
   startsAt      DateTime
   confirmedAt   DateTime?
   cancelledAt   DateTime?
@@ -149,53 +159,62 @@ model Booking {
 }
 
 /// One product on one day inside a booking. Fulfilment happens here, because
-/// a driver is assigned to a car, not to a package. `product` says which
+/// a driver is assigned to a vehicle, not to a package. `product` says which
 /// details table to read; exactly one details row exists per item.
 model BookingItem {
-  id             String    @id @default(cuid())
-  bookingId      String
-  booking        Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(cuid())
+  bookingId               String
+  booking                 Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   /// 1, 2, 3 within the booking; shown as "HT-7K3QZM item 2".
-  position       Int
-  /// "car-with-driver"; later "coach-charter", ...
-  product        String
-  status         String
-  startsAt       DateTime
-  zoneId         String?
-  zone           Zone?     @relation(fields: [zoneId], references: [id])
-  priceTotalSen  Int
+  position                Int
+  /// "transportation"; later "attraction", "hotel", ...
+  product                 String
+  status                  String
+  startsAt                DateTime
+  /// startsAt plus the hours of an hourly hire; null for one-way.
+  endsAt                  DateTime?
+  /// Snapshot of the class rule at booking: the customer may cancel until
+  /// this long before startsAt.
+  cancellationCutoffHours Int
+  zoneId                  String?
+  zone                    Zone?     @relation(fields: [zoneId], references: [id])
+  priceTotalSen           Int
   /// The receipt: mode, rates used, distance or hours, multiplier.
-  priceBreakdown Json
-  confirmedAt    DateTime?
-  cancelledAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  priceBreakdown          Json
+  confirmedAt             DateTime?
+  cancelledAt             DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
-  carDetails CarItemDetails?
+  tripDetails TripItemDetails?
 
   @@unique([bookingId, position])
   @@index([status, startsAt])
 }
 
-/// What a car-with-driver item asked for. Places are snapshots of Google
-/// records (place id, address, lat, lng, state, district), never queried by
-/// field, so they are JSON.
-model CarItemDetails {
-  id               String       @id @default(cuid())
-  itemId           String       @unique
-  item             BookingItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  vehicleClassId   String
-  vehicleClass     VehicleClass @relation(fields: [vehicleClassId], references: [id])
-  /// Snapshot, so a renamed or retired class never changes an old booking.
-  vehicleClassName String
+/// What a transportation item asked for, car or coach. Places are snapshots
+/// of Google records (place id, address, lat, lng, state, district), never
+/// queried by field, so they are JSON.
+model TripItemDetails {
+  id                   String       @id @default(cuid())
+  itemId               String       @unique
+  item                 BookingItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vehicleClassId       String
+  vehicleClass         VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  /// Snapshots, so a renamed, moved or retired class never changes an old
+  /// booking.
+  vehicleClassName     String
+  /// "car-with-driver" | "coach-charter"
+  vehicleClassCategory String
   /// "oneway" | "hourly"
-  mode             String
-  pickupPlace      Json
-  dropoffPlace     Json?
-  hours            Int?
-  distanceKm       Float?
-  passengers       Int
-  childSeats       Int          @default(0)
-  flightNumber     String?
-  notes            String?
+  mode                 String
+  pickupPlace          Json
+  dropoffPlace         Json?
+  hours                Int?
+  distanceKm           Float?
+  passengers           Int
+  /// Never asked for a coach.
+  childSeats           Int          @default(0)
+  flightNumber         String?
+  notes                String?
 }

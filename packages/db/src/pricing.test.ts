@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { priceCarTrip, type CarRates } from "./pricing";
+import { priceTrip, type TripRates } from "./pricing";
 
-const rates: CarRates = {
+const rates: TripRates = {
   baseFareSen: 3_000,
   perKmSen: 180,
   hourlyRateSen: 6_000,
   minimumFareSen: 6_000,
 };
 
-describe("priceCarTrip", () => {
+describe("priceTrip", () => {
   it("prices a one-way trip as base fare plus distance", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 50 },
       rates,
       multiplier: 1,
@@ -23,7 +23,7 @@ describe("priceCarTrip", () => {
   });
 
   it("applies the minimum fare to short one-way trips", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 2 },
       rates,
       multiplier: 1,
@@ -32,7 +32,7 @@ describe("priceCarTrip", () => {
   });
 
   it("rounds fractional kilometres to whole sen before the minimum", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 33.333 },
       rates,
       multiplier: 1,
@@ -42,7 +42,7 @@ describe("priceCarTrip", () => {
   });
 
   it("prices an hourly hire as rate times hours, with no minimum fare", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "hourly", hours: 4 },
       rates,
       multiplier: 1,
@@ -53,7 +53,7 @@ describe("priceCarTrip", () => {
   });
 
   it("applies the zone multiplier after the subtotal and rounds to sen", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
       rates,
       multiplier: 1.15,
@@ -63,9 +63,9 @@ describe("priceCarTrip", () => {
   });
 
   it("copies the rates it used into the breakdown", () => {
-    const price = priceCarTrip({
+    const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
-      rates: { ...rates, extra: true } as CarRates,
+      rates: { ...rates, extra: true } as TripRates,
       multiplier: 1,
     });
     assert.deepEqual(price.rates, rates);
@@ -73,21 +73,21 @@ describe("priceCarTrip", () => {
 
   it("rejects impossible inputs", () => {
     assert.throws(() =>
-      priceCarTrip({
+      priceTrip({
         trip: { mode: "oneway", distanceKm: -1 },
         rates,
         multiplier: 1,
       }),
     );
     assert.throws(() =>
-      priceCarTrip({
+      priceTrip({
         trip: { mode: "hourly", hours: 0 },
         rates,
         multiplier: 1,
       }),
     );
     assert.throws(() =>
-      priceCarTrip({
+      priceTrip({
         trip: { mode: "hourly", hours: 3 },
         rates,
         multiplier: 0,

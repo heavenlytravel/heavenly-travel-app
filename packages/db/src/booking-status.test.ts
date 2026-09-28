@@ -59,30 +59,61 @@ describe("status guards", () => {
 describe("checkCustomerCancel", () => {
   const now = new Date("2026-10-01T00:00:00Z");
   const hours = (n: number) => new Date(now.getTime() + n * 60 * 60 * 1000);
+  const item = (startsIn: number, cutoff: number, status = "received") => ({
+    status,
+    startsAt: hours(startsIn),
+    cancellationCutoffHours: cutoff,
+  });
+  const booking = (status: string, ...items: ReturnType<typeof item>[]) => ({
+    status,
+    items,
+  });
 
-  it("allows a received or confirmed booking before the cutoff", () => {
-    assert.deepEqual(
-      checkCustomerCancel({ status: "received", startsAt: hours(25) }, now),
-      { ok: true },
-    );
-    assert.deepEqual(
-      checkCustomerCancel({ status: "confirmed", startsAt: hours(25) }, now),
-      { ok: true },
+  it("allows a received or confirmed booking before the deadline", () => {
+    for (const status of ["received", "confirmed"]) {
+      assert.deepEqual(
+        checkCustomerCancel(booking(status, item(25, 24)), now),
+        {
+          ok: true,
+          deadline: hours(1),
+        },
+      );
+    }
+  });
+
+  it("refuses from the deadline on and names it as a date", () => {
+    const check = checkCustomerCancel(booking("received", item(24, 24)), now);
+    assert.equal(check.ok, false);
+    assert.equal(!check.ok && check.reason, "cutoff");
+    assert.equal(
+      !check.ok && check.message,
+      "Free cancellation ended on Thu, 1 Oct 2026, 08:00.",
     );
   });
 
-  it("refuses inside the cutoff", () => {
+  it("uses each item's own cutoff, earliest deadline wins", () => {
+    // A coach in 60 hours with a 48 hour cutoff closes before a car in
+    // 30 hours with a 24 hour cutoff.
+    const both = booking("confirmed", item(30, 24), item(60, 48));
+    assert.deepEqual(checkCustomerCancel(both, now), {
+      ok: true,
+      deadline: hours(6),
+    });
+    const later = hours(12);
+    assert.equal(checkCustomerCancel(both, later).ok, false);
+  });
+
+  it("ignores cancelled items", () => {
     const check = checkCustomerCancel(
-      { status: "received", startsAt: hours(23) },
+      booking("confirmed", item(2, 24, "cancelled"), item(100, 48)),
       now,
     );
-    assert.equal(check.ok, false);
-    assert.equal(!check.ok && check.reason, "cutoff");
+    assert.deepEqual(check, { ok: true, deadline: hours(52) });
   });
 
   it("refuses a completed or cancelled booking whatever the time", () => {
     for (const status of ["completed", "cancelled"]) {
-      const check = checkCustomerCancel({ status, startsAt: hours(100) }, now);
+      const check = checkCustomerCancel(booking(status, item(100, 24)), now);
       assert.equal(check.ok, false);
       assert.equal(!check.ok && check.reason, "status");
     }

@@ -20,8 +20,9 @@ export const metadata: Metadata = {
 /**
  * Route: /account/bookings/HT-7K3QZM
  * One booking under My bookings, with the customer's cancel action. The
- * button is offered while the booking is received or confirmed; inside
- * the cutoff it shows disabled with the reason; afterwards it is gone.
+ * button is offered while the booking is received or confirmed, with the
+ * deadline as a date under it; past the deadline it shows disabled with
+ * the date it ended; afterwards it is gone.
  */
 export default async function AccountBookingPage({
   params,
@@ -47,7 +48,8 @@ export default async function AccountBookingPage({
             <div className="mt-6">
               <CancelBooking
                 reference={booking.reference}
-                blocked={cancel.ok ? null : cancel.message}
+                blocked={!cancel.ok}
+                hint={cancel.message}
               />
             </div>
           ) : null

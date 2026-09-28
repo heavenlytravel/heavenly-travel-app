@@ -1,15 +1,22 @@
-import { HOURLY_OPTIONS, TRIP_MODE_LABELS, TRIP_MODES } from "@repo/db";
+import {
+  HOURLY_OPTIONS,
+  TRIP_CATEGORY_LABELS,
+  TRIP_MODE_LABELS,
+  TRIP_MODES,
+  type TripCategory,
+} from "@repo/db";
 
 /**
  * The products the home page search card can ask about, and the fields each
  * one needs. A hotel has no pick-up point and a car has no check-out, so the
  * card renders its fields from this list instead of hard-coding a trip form.
- * Only car with driver can be booked so far; the other tabs are shown but
- * disabled until their flows exist (docs/car-with-driver.md).
+ * The two transportation tabs are keyed by their category, spelled as it is
+ * everywhere else. Only car with driver can be booked so far; the other tabs
+ * are shown but disabled until their flows exist (docs/coach-charter.md).
  */
 
 export type ProductKey =
-  "rental" | "car" | "coach" | "attraction" | "hotel" | "package";
+  TripCategory | "rental" | "attraction" | "hotel" | "package";
 
 export type FieldKey =
   | "from"
@@ -65,43 +72,49 @@ const dropOff: FieldDef = {
   placeholder: "Where are you going?",
 };
 
+/**
+ * What a trip with a driver asks, on the home card and in the trip editor of
+ * the options page alike. Passengers is asked on the options page, where the
+ * vehicle classes are known.
+ */
+const TRIP_FIELDS: FieldDef[] = [
+  {
+    key: "mode",
+    kind: "choice",
+    label: "Trip",
+    options: TRIP_MODES.map((mode) => ({
+      value: mode,
+      label: TRIP_MODE_LABELS[mode],
+    })),
+  },
+  pickUp,
+  { ...dropOff, hidden: (v) => v.mode === "hourly" },
+  {
+    key: "hours",
+    kind: "choice",
+    label: "Hours",
+    options: HOURLY_OPTIONS.map((h) => ({
+      value: String(h),
+      label: `${h} hours`,
+    })),
+    hidden: (v) => v.mode !== "hourly",
+  },
+  { key: "date", kind: "date", label: "Date" },
+  { key: "time", kind: "time", label: "Pick-up time" },
+];
+
 export const PRODUCTS: Record<ProductKey, Product> = {
-  car: {
-    key: "car",
-    label: "Car with driver",
+  "car-with-driver": {
+    key: "car-with-driver",
+    label: TRIP_CATEGORY_LABELS["car-with-driver"],
     note: "Sedan, MPV or van, up to 10 seats",
     cta: "Get my price",
     bookable: true,
-    fields: [
-      {
-        key: "mode",
-        kind: "choice",
-        label: "Trip",
-        options: TRIP_MODES.map((mode) => ({
-          value: mode,
-          label: TRIP_MODE_LABELS[mode],
-        })),
-      },
-      pickUp,
-      { ...dropOff, hidden: (v) => v.mode === "hourly" },
-      {
-        key: "hours",
-        kind: "choice",
-        label: "Hours",
-        options: HOURLY_OPTIONS.map((h) => ({
-          value: String(h),
-          label: `${h} hours`,
-        })),
-        hidden: (v) => v.mode !== "hourly",
-      },
-      { key: "date", kind: "date", label: "Date" },
-      { key: "time", kind: "time", label: "Pick-up time" },
-      { key: "people", kind: "count", label: "Passengers" },
-    ],
+    fields: TRIP_FIELDS,
   },
-  coach: {
-    key: "coach",
-    label: "Coach charter",
+  "coach-charter": {
+    key: "coach-charter",
+    label: TRIP_CATEGORY_LABELS["coach-charter"],
     note: "Minibus or coach, 26 to 44 seats",
     cta: "Get my price",
     bookable: false,

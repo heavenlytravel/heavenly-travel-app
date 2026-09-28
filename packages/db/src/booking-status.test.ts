@@ -76,6 +76,7 @@ describe("checkCustomerCancel", () => {
         {
           ok: true,
           deadline: hours(1),
+          message: "Free cancellation until Thu, 1 Oct 2026, 09:00.",
         },
       );
     }
@@ -95,10 +96,8 @@ describe("checkCustomerCancel", () => {
     // A coach in 60 hours with a 48 hour cutoff closes before a car in
     // 30 hours with a 24 hour cutoff.
     const both = booking("confirmed", item(30, 24), item(60, 48));
-    assert.deepEqual(checkCustomerCancel(both, now), {
-      ok: true,
-      deadline: hours(6),
-    });
+    const check = checkCustomerCancel(both, now);
+    assert.equal(check.ok && check.deadline.getTime(), hours(6).getTime());
     const later = hours(12);
     assert.equal(checkCustomerCancel(both, later).ok, false);
   });
@@ -108,7 +107,7 @@ describe("checkCustomerCancel", () => {
       booking("confirmed", item(2, 24, "cancelled"), item(100, 48)),
       now,
     );
-    assert.deepEqual(check, { ok: true, deadline: hours(52) });
+    assert.equal(check.ok && check.deadline.getTime(), hours(52).getTime());
   });
 
   it("refuses a completed or cancelled booking whatever the time", () => {

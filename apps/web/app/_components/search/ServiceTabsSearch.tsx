@@ -1,14 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  carBookingHref,
-  carSearchFromCard,
-  type CarSearchIssue,
-} from "../../_lib/car-booking";
 import { PRODUCTS, visibleFields, type Product } from "../../_lib/search";
-import { useSearch } from "../../_lib/useSearch";
+import { bookableCategory } from "../../_lib/transportation-booking";
+import { useSearch, useTripSubmit } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
 import { FieldInput } from "./fields";
 
@@ -17,8 +12,8 @@ const focus =
 
 /** All six services, in the order the tabs show them. */
 const TABS: Product[] = [
-  PRODUCTS.car,
-  PRODUCTS.coach,
+  PRODUCTS["car-with-driver"],
+  PRODUCTS["coach-charter"],
   PRODUCTS.attraction,
   PRODUCTS.hotel,
   PRODUCTS.rental,
@@ -28,15 +23,14 @@ const TABS: Product[] = [
 /**
  * Six services as a row of icon tabs, then one joined row of fields that
  * changes with the service, and a deep green button of fixed width at the end.
- * Only car with driver can be sent: it goes to the options page with the
- * search in the URL. The other tabs are disabled until their flows exist.
- * `destination` fills in where the trip starts or goes, and may change while
- * the box is on screen.
+ * Only car with driver can be sent: it goes to the options page of its
+ * category with the search in the URL. The other tabs are disabled until
+ * their flows exist. `destination` fills in where the trip starts or goes,
+ * and may change while the box is on screen.
  */
 export function ServiceTabsSearch({ destination }: { destination?: string }) {
-  const router = useRouter();
   const { product, setProduct, values, set } = useSearch(
-    PRODUCTS.car.key,
+    "car-with-driver",
     destination ? { from: destination, place: destination } : {},
   );
   // A newly chosen destination overwrites the place, whatever was typed, and
@@ -47,18 +41,13 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
     set("from", destination ?? "");
     set("place", destination ?? "");
   }
-  const [issues, setIssues] = useState<CarSearchIssue[]>([]);
+  const { issues, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const result = carSearchFromCard(values);
-    if (!result.ok) {
-      setIssues(result.issues);
-      return;
-    }
-    setIssues([]);
-    router.push(carBookingHref(result.params));
+    const category = bookableCategory(product.key);
+    if (category) sendTrip(category, values);
   }
 
   return (

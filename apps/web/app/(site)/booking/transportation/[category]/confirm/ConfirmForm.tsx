@@ -1,31 +1,35 @@
 "use client";
 
 import { useActionState } from "react";
-import { control, primaryButton } from "../../../_components/Page";
-import { createCarBookingAction, type ConfirmState } from "./actions";
+import type { TripCategory } from "@repo/db";
+import { control, primaryButton } from "../../../../_components/Page";
+import { createTripBookingAction, type ConfirmState } from "./actions";
 
 /**
- * Name and phone, then the booking is created. The trip travels as one
- * hidden field holding the page's query string, so the action prices it
- * again from scratch.
+ * Name and phone, then the booking is created. The trip travels as the
+ * page's category and its query string in hidden fields, so the action
+ * prices it again from scratch.
  */
 export function ConfirmForm({
+  category,
   trip,
   defaultName,
   defaultPhone,
 }: {
+  category: TripCategory;
   /** The confirm page's query string. */
   trip: string;
   defaultName: string;
   defaultPhone: string;
 }) {
   const [state, action, pending] = useActionState<ConfirmState, FormData>(
-    createCarBookingAction,
+    createTripBookingAction,
     null,
   );
 
   return (
     <form action={action} className="grid gap-4">
+      <input type="hidden" name="category" value={category} />
       <input type="hidden" name="trip" value={trip} />
       <label className="block">
         <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">

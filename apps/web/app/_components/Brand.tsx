@@ -144,8 +144,8 @@ function SuitcaseIcon({ className = "h-5 w-5" }: { className?: string }) {
 const PRODUCT_ICONS = {
   rental: KeyIcon,
   package: SuitcaseIcon,
-  car: CarIcon,
-  coach: CoachIcon,
+  "car-with-driver": CarIcon,
+  "coach-charter": CoachIcon,
   attraction: TicketIcon,
   hotel: BedIcon,
 };

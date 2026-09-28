@@ -5,17 +5,19 @@ import { dangerButton, secondaryButton } from "../../../_components/Page";
 import { cancelBookingAction, type CancelState } from "./actions";
 
 /**
- * The cancel button and its confirmation. `blocked` is the reason the
- * booking cannot be cancelled right now (inside the cutoff): the button
- * shows disabled with that hint, so the customer learns the rule instead
- * of wondering where the button went.
+ * The cancel button and its confirmation. `hint` names the deadline as a
+ * date: until when the booking can be cancelled, or when that ended. Past
+ * the deadline the booking is `blocked` and the button shows disabled, so
+ * the customer learns the rule instead of wondering where the button went.
  */
 export function CancelBooking({
   reference,
-  blocked = null,
+  hint,
+  blocked = false,
 }: {
   reference: string;
-  blocked?: string | null;
+  hint: string;
+  blocked?: boolean;
 }) {
   const [armed, setArmed] = useState(false);
   const [state, action, pending] = useActionState<CancelState, FormData>(
@@ -23,28 +25,19 @@ export function CancelBooking({
     null,
   );
 
-  if (blocked) {
+  if (!armed || blocked) {
     return (
       <>
-        <button type="button" disabled className={`${secondaryButton} w-full`}>
+        <button
+          type="button"
+          disabled={blocked}
+          onClick={() => setArmed(true)}
+          className={`${secondaryButton} w-full`}
+        >
           Cancel booking
         </button>
-        <p className="mt-2 text-center text-[0.85rem] text-[#67726f]">
-          {blocked}
-        </p>
+        <p className="mt-2 text-center text-[0.85rem] text-[#67726f]">{hint}</p>
       </>
-    );
-  }
-
-  if (!armed) {
-    return (
-      <button
-        type="button"
-        onClick={() => setArmed(true)}
-        className={`${secondaryButton} w-full`}
-      >
-        Cancel booking
-      </button>
     );
   }
 

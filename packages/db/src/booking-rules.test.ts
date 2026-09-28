@@ -7,6 +7,7 @@ import {
   fitsPassengers,
   HOURLY_OPTIONS,
   isWithinHorizon,
+  largestGroup,
   latestPickup,
   pickupInstant,
   unavailableReason,
@@ -134,6 +135,23 @@ describe("fitsPassengers", () => {
     assert.equal(fitsPassengers(minibus, 25), false);
     assert.equal(fitsPassengers(minibus, 0), false);
     assert.equal(fitsPassengers(minibus, 2.5), false);
+  });
+});
+
+describe("largestGroup", () => {
+  it("is the largest maximum among the classes", () => {
+    assert.equal(
+      largestGroup([
+        { maxPassengers: 3 },
+        { maxPassengers: 10 },
+        { maxPassengers: 6 },
+      ]),
+      10,
+    );
+  });
+
+  it("is 0 when there is no class", () => {
+    assert.equal(largestGroup([]), 0);
   });
 });
 

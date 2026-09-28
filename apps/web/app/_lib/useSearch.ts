@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { TripCategory } from "@repo/db";
+import {
+  tripBookingHref,
+  tripSearchFromCard,
+  type TripSearchIssue,
+} from "./transportation-booking";
 import {
   EMPTY_SEARCH,
   PRODUCTS,
@@ -44,10 +51,35 @@ function useSearchValues(preset: Partial<SearchValues> = {}) {
 
 /** State for a search box that asks about one product at a time. */
 export function useSearch(
-  initial: ProductKey = "car",
+  initial: ProductKey = "car-with-driver",
   preset: Partial<SearchValues> = {},
 ) {
   const [key, setProduct] = useState<ProductKey>(initial);
   const { values, set } = useSearchValues(preset);
   return { product: PRODUCTS[key], setProduct, values, set };
+}
+
+/**
+ * Sends a trip to the options page of its category, or keeps the reasons it
+ * cannot be sent. The home card and the trip editor both send through here.
+ */
+export function useTripSubmit() {
+  const router = useRouter();
+  const [issues, setIssues] = useState<TripSearchIssue[]>([]);
+  // Pending until the options page has priced the trip and is on screen.
+  const [pending, startTransition] = useTransition();
+  /** True when the trip was sent. `passengers` is carried over, if given. */
+  function submit(
+    category: TripCategory,
+    values: SearchValues,
+    passengers?: number,
+  ) {
+    const result = tripSearchFromCard(values);
+    setIssues(result.ok ? [] : result.issues);
+    if (!result.ok) return false;
+    const href = tripBookingHref(category, result.params, passengers);
+    startTransition(() => router.push(href));
+    return true;
+  }
+  return { issues, pending, submit };
 }

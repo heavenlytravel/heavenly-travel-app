@@ -1,7 +1,8 @@
 # Coach charter: the second fleet on the transportation product
 
 Status: in progress. Decisions agreed on 2026-09-25, reviewed against the code and
-refined on 2026-09-28. Step 1 of the build order (schema, seed, domain) is built.
+refined on 2026-09-28. Steps 1 (schema, seed, domain) and 2 (web route and editable
+trip, cars only) of the build order are built.
 
 Coach charter is the second tab on the home page search card to become a real booking.
 It is not a second product. Car with driver and coach charter are the same trip: a
@@ -278,6 +279,22 @@ leaves the site working.
    hidden for coaches, the larger group line on both pages, tab notes reworded.
 4. **Admin and emails** (`feat`): item headings and rows from the snapshot category on
    every screen and email, a coach sample in the fixtures and previews.
+
+As built in step 2:
+
+- A category is open when its search card tab is `bookable`. `bookableCategory` in
+  `transportation-booking.ts` reads that flag for the route segment and for the create
+  action, so step 3 opens the coach tab and its pages with one change.
+- The passenger count is not part of the search, but the options page URL may carry
+  `passengers` as a starting value. The trip editor and the Change link on the confirm
+  page send it, which is how the count survives a changed trip.
+- The options form gets the trip as its React `key`, so a changed trip is a new form
+  and the chosen vehicle is cleared.
+- When the trip resolves but cannot be priced (area not served, too far ahead, no
+  route), the trip bar stays above the message so the trip can be changed in place.
+- The home card and the trip editor send through one hook, `useTripSubmit`.
+- The URL parser refuses a passenger count above 999 as nonsense. That is not a seat
+  number: the cap on the field is `largestGroup` of the classes the page loaded.
 
 ## Follow-up: ops screens
 

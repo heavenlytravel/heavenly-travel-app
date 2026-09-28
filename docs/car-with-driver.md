@@ -2,6 +2,9 @@
 
 Status: built. All six steps of the build order landed on 2026-09-23: schema, seed and
 domain; places package; web booking flow; my bookings; admin bookings; emails.
+Coach charter (`coach-charter.md`) then made cars one category of the `transportation`
+product and moved the notice, cutoff and minimum hours onto the vehicle class. Where
+the two documents differ, that one wins; the names and schema below are as first built.
 
 Car with driver is the first product on the home page search card to become a real
 booking instead of a WhatsApp message. The pieces that are the same for every product

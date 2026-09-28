@@ -36,7 +36,7 @@ export async function createTripBookingAction(
   const category = bookableCategory(formData.get("category"));
   const query = String(formData.get("trip") ?? "");
   const search = parseTripSearch(query);
-  const options = parseTripOptions(query);
+  const options = category && parseTripOptions(category, query);
   if (!category || !search || !options) {
     return { error: "This booking link is incomplete. Start a new search." };
   }

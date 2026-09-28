@@ -11,7 +11,7 @@ import {
  * one needs. A hotel has no pick-up point and a car has no check-out, so the
  * card renders its fields from this list instead of hard-coding a trip form.
  * The two transportation tabs are keyed by their category, spelled as it is
- * everywhere else. Only car with driver can be booked so far; the other tabs
+ * everywhere else and ask the same fields. They can be booked; the other tabs
  * are shown but disabled until their flows exist (docs/coach-charter.md).
  */
 
@@ -107,7 +107,7 @@ export const PRODUCTS: Record<ProductKey, Product> = {
   "car-with-driver": {
     key: "car-with-driver",
     label: TRIP_CATEGORY_LABELS["car-with-driver"],
-    note: "Sedan, MPV or van, up to 10 seats",
+    note: "Sedan, MPV or van",
     cta: "Get my price",
     bookable: true,
     fields: TRIP_FIELDS,
@@ -115,16 +115,10 @@ export const PRODUCTS: Record<ProductKey, Product> = {
   "coach-charter": {
     key: "coach-charter",
     label: TRIP_CATEGORY_LABELS["coach-charter"],
-    note: "Minibus or coach, 26 to 44 seats",
+    note: "Minibus or coach for groups",
     cta: "Get my price",
-    bookable: false,
-    fields: [
-      pickUp,
-      dropOff,
-      { key: "date", kind: "date", label: "Departure" },
-      { key: "endDate", kind: "date", label: "Return" },
-      { key: "people", kind: "count", label: "Group size" },
-    ],
+    bookable: true,
+    fields: TRIP_FIELDS,
   },
   attraction: {
     key: "attraction",

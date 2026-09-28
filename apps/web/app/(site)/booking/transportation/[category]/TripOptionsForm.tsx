@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
+  CONTACT,
   fitsPassengers,
   formatMyr,
   largestGroup,
+  offersChildSeats,
   type TripCategory,
   type TripView,
 } from "@repo/db";
@@ -14,10 +17,17 @@ import {
   TRIP_MAX_FLIGHT_NUMBER_LENGTH,
   TRIP_MAX_NOTES_LENGTH,
   TRIP_OPTION_FIELDS,
+  tripBookingHref,
   tripConfirmPath,
+  tripSearchParams,
   type TripSearch,
 } from "../../../../_lib/transportation-booking";
-import { control, focus, primaryButton } from "../../../_components/Page";
+import {
+  control,
+  focus,
+  primaryButton,
+  textLink,
+} from "../../../_components/Page";
 import { TripBar } from "./TripBar";
 
 /** One vehicle class as priced for this trip. Plain data, sent to the browser. */
@@ -34,8 +44,8 @@ export type ClassOption = {
 };
 
 /**
- * The trip bar, then vehicle class, passengers, child seats, flight number
- * and notes. A plain GET form: the choices join the search in the confirm
+ * The trip bar, then vehicle class, passengers, child seats where the
+ * category offers them, flight number and notes. A plain GET form: the choices join the search in the confirm
  * page's URL, so the confirm step is shareable and survives the sign-in
  * redirect. Classes the passenger count does not fit, or whose rules refuse
  * the trip, are shown with the reason but cannot be chosen. The passenger
@@ -166,26 +176,29 @@ export function TripOptionsForm({
               }
               className={control}
             />
-            <span className="mt-1.5 block text-[0.85rem] text-[#67726f]">
-              Up to {maxPassengers} passengers.
-            </span>
           </label>
-          <label className="block">
-            <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
-              Child seats
-            </span>
-            <select
-              name={TRIP_OPTION_FIELDS.childSeats}
-              defaultValue="0"
-              className={control}
-            >
-              {Array.from({ length: TRIP_MAX_CHILD_SEATS + 1 }, (_, n) => (
-                <option key={n} value={n}>
-                  {n === 0 ? "None" : n}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="-mt-2.5 text-[0.85rem] text-[#67726f]">
+            Up to {maxPassengers} passengers. Larger group?{" "}
+            <LargerGroupLink category={category} search={search} />
+          </p>
+          {offersChildSeats(category) && (
+            <label className="block">
+              <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+                Child seats
+              </span>
+              <select
+                name={TRIP_OPTION_FIELDS.childSeats}
+                defaultValue="0"
+                className={control}
+              >
+                {Array.from({ length: TRIP_MAX_CHILD_SEATS + 1 }, (_, n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "None" : n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="block">
             <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
               Flight number{" "}
@@ -224,5 +237,40 @@ export function TripOptionsForm({
         </div>
       </form>
     </>
+  );
+}
+
+/**
+ * Where a group too large for the category goes: from cars to the coach page
+ * with the same trip, from coaches to the team. The only bridge between the
+ * two categories. Outside the passengers label, so it is not part of the
+ * field's name.
+ */
+function LargerGroupLink({
+  category,
+  search,
+}: {
+  category: TripCategory;
+  search: TripSearch;
+}) {
+  if (category === "car-with-driver") {
+    return (
+      <Link
+        href={tripBookingHref("coach-charter", tripSearchParams(search))}
+        className={textLink}
+      >
+        See coach charter
+      </Link>
+    );
+  }
+  return (
+    <a
+      href={CONTACT.whatsappHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={textLink}
+    >
+      Contact us
+    </a>
   );
 }

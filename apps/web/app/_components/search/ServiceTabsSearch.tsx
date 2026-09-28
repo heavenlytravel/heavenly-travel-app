@@ -23,9 +23,9 @@ const TABS: Product[] = [
 /**
  * Six services as a row of icon tabs, then one joined row of fields that
  * changes with the service, and a deep green button of fixed width at the end.
- * Only car with driver can be sent: it goes to the options page of its
- * category with the search in the URL. The other tabs are disabled until
- * their flows exist. `destination` fills in where the trip starts or goes,
+ * Car with driver and coach charter can be sent: each goes to the options
+ * page of its category with the search in the URL. The other tabs are
+ * disabled until their flows exist. `destination` fills in where the trip starts or goes,
  * and may change while the box is on screen.
  */
 export function ServiceTabsSearch({ destination }: { destination?: string }) {

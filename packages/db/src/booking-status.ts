@@ -127,7 +127,7 @@ export function customerCancelDeadline(
 }
 
 export type CustomerCancelCheck =
-  | { ok: true; deadline: Date }
+  | { ok: true; deadline: Date; message: string }
   | { ok: false; reason: "status"; message: string }
   | { ok: false; reason: "cutoff"; deadline: Date; message: string };
 
@@ -135,8 +135,8 @@ export type CustomerCancelCheck =
  * Whether the customer may cancel this booking right now: only while it is
  * received or confirmed, and only before the deadline set by its items'
  * cutoffs. The page uses this to decide what the cancel button says; the
- * transition uses it to refuse. The deadline is a date, never a number of
- * hours, so it reads the same with one item or several.
+ * transition uses it to refuse. The message names the deadline as a date,
+ * never a number of hours, so it reads the same with one item or several.
  */
 export function checkCustomerCancel(
   booking: { status: string; items: readonly CancellableItem[] },
@@ -161,5 +161,9 @@ export function checkCustomerCancel(
       message: `Free cancellation ended on ${formatLocalDateTime(deadline)}.`,
     };
   }
-  return { ok: true, deadline };
+  return {
+    ok: true,
+    deadline,
+    message: `Free cancellation until ${formatLocalDateTime(deadline)}.`,
+  };
 }

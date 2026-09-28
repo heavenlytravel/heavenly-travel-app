@@ -122,6 +122,16 @@ export function fitsPassengers(
   );
 }
 
+/**
+ * The most passengers a list of classes accepts: the largest maximum among
+ * them, or 0 for an empty list. No seat number lives in code.
+ */
+export function largestGroup(
+  vehicleClasses: readonly { maxPassengers: number }[],
+) {
+  return vehicleClasses.reduce((max, c) => Math.max(max, c.maxPassengers), 0);
+}
+
 /** The last instant a customer may still cancel an item that starts then. */
 export function cancellationDeadline(
   startsAt: Date,

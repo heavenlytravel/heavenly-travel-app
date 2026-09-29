@@ -65,6 +65,22 @@ export function itemHeading(item: {
     : "Transportation";
 }
 
+/**
+ * What was booked in one line, for lists, where the heading and the vehicle
+ * row of a detail page do not fit: "Coach charter, Minibus".
+ */
+export function itemSummary(item: {
+  tripDetails: {
+    vehicleClassCategory: string;
+    vehicleClassName: string;
+  } | null;
+}) {
+  const heading = itemHeading(item);
+  return item.tripDetails
+    ? `${heading}, ${item.tripDetails.vehicleClassName}`
+    : heading;
+}
+
 /** The trip in one line, for lists: "KLIA to Kuala Lumpur" or "Penang, 4 hours". */
 export function tripHeadline(trip: TripView) {
   if (trip.dropoff) return `${trip.pickup.label} to ${trip.dropoff.label}`;

@@ -1,8 +1,9 @@
 # Coach charter: the second fleet on the transportation product
 
-Status: in progress. Decisions agreed on 2026-09-25, reviewed against the code and
-refined on 2026-09-28. Steps 1 (schema, seed, domain), 2 (web route and editable
-trip, cars only) and 3 (coach tab bookable) of the build order are built.
+Status: built. Decisions agreed on 2026-09-25, reviewed against the code and refined
+on 2026-09-28. All four steps of the build order are built: 1 (schema, seed, domain),
+2 (web route and editable trip, cars only), 3 (coach tab bookable) and 4 (admin and
+emails). The ops screens under "Follow-up" are next, in their own document.
 
 Coach charter is the second tab on the home page search card to become a real booking.
 It is not a second product. Car with driver and coach charter are the same trip: a
@@ -312,6 +313,19 @@ As built in step 3:
   than in step 4, and the customer's booking pages use it: a coach booking would
   otherwise read "Car with driver" from the day the tab opened. Step 4 moves the admin
   console and the emails onto it.
+
+As built in step 4:
+
+- The admin booking page heads each item with `itemHeading`. Its product name map is
+  gone, so no screen keeps its own copy of the names.
+- Lists have no room for a heading and a vehicle row, so `itemSummary` in
+  `trip-view.ts` gives both in one line, "Coach charter, Minibus". The admin bookings
+  table, the dashboard that shares it, and My bookings print it under each trip.
+- Every item block in an email is headed by its category, to the customer and to ops.
+  With several items the position and the status join it: "Item 2: Coach charter
+  (Cancelled)".
+- The email fixtures gain `sampleCoachItem`, a minibus by the hour. The previews gain a
+  coach booking, and the partly cancelled sample now holds a car and a coach.
 
 ## Follow-up: ops screens
 

@@ -6,6 +6,7 @@ import {
   fullName,
   isBookingStatus,
   isTripPriceBreakdown,
+  itemHeading,
   priceRows,
   tripDetailRows,
   tripRows,
@@ -23,10 +24,6 @@ import {
 import { requireAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
-
-const PRODUCT_NAMES: Record<string, string> = {
-  transportation: "Transportation",
-};
 
 function statusLabel(status: string) {
   return isBookingStatus(status) ? BOOKING_STATUS_LABELS[status] : status;
@@ -166,7 +163,6 @@ function ItemCard({
   showPosition: boolean;
 }) {
   const trip = tripViewOfItem(item);
-  const productName = PRODUCT_NAMES[item.product] ?? item.product;
   const rows: [string, ReactNode][] = trip
     ? tripRows(trip).map(([rowLabel, value]) => [
         rowLabel,
@@ -200,7 +196,7 @@ function ItemCard({
         <div className="flex items-center gap-2">
           <h2 className="text-base font-semibold tracking-tight">
             {showPosition ? `Item ${item.position}: ` : ""}
-            {productName}
+            {itemHeading(item)}
           </h2>
           <ItemStatusBadge status={item.status} />
         </div>

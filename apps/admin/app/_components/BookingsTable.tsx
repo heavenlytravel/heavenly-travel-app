@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   formatLocalDateTime,
   formatMyr,
+  itemSummary,
   tripHeadline,
   tripViewOfItem,
 } from "@repo/db";
@@ -42,9 +43,9 @@ export function BookingsTable({
             </tr>
           ) : (
             bookings.map((booking) => {
-              const headlines = booking.items.flatMap((item) => {
+              const trips = booking.items.flatMap((item) => {
                 const trip = tripViewOfItem(item);
-                return trip ? [tripHeadline(trip)] : [];
+                return trip ? [{ item, trip }] : [];
               });
               return (
                 <tr key={booking.id}>
@@ -63,9 +64,12 @@ export function BookingsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
-                    {headlines.map((headline, index) => (
-                      <span key={index} className="block">
-                        {headline}
+                    {trips.map(({ item, trip }) => (
+                      <span key={item.id} className="block">
+                        {tripHeadline(trip)}
+                        <span className="block text-xs text-neutral-500">
+                          {itemSummary(item)}
+                        </span>
                       </span>
                     ))}
                   </td>

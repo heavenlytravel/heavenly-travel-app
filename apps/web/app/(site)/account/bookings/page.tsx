@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   formatLocalDateTime,
   formatMyr,
+  itemSummary,
   tripHeadline,
   tripViewOfItem,
 } from "@repo/db";
@@ -45,7 +46,7 @@ export default async function BookingsPage() {
           {bookings.map((booking) => {
             const trips = booking.items.flatMap((item) => {
               const trip = tripViewOfItem(item);
-              return trip ? [trip] : [];
+              return trip ? [{ item, trip }] : [];
             });
             return (
               <li key={booking.id}>
@@ -61,10 +62,11 @@ export default async function BookingsPage() {
                   </div>
                   <div className="mt-3 grid gap-1 text-[0.95rem] sm:grid-cols-[1fr_auto] sm:items-end">
                     <div>
-                      {trips.map((trip, index) => (
-                        <p key={index} className="font-medium">
-                          {tripHeadline(trip)}
-                        </p>
+                      {trips.map(({ item, trip }) => (
+                        <div key={item.id}>
+                          <p className="font-medium">{tripHeadline(trip)}</p>
+                          <p className="text-[#67726f]">{itemSummary(item)}</p>
+                        </div>
                       ))}
                       <p className="text-[#67726f]">
                         Pick-up {formatLocalDateTime(booking.startsAt)}

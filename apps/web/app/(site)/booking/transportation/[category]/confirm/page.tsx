@@ -42,7 +42,7 @@ export default async function ConfirmPage({
   }
 
   const search = parseTripSearch(query);
-  const options = parseTripOptions(query);
+  const options = parseTripOptions(category, query);
   if (!search || !options) {
     return (
       <Stop

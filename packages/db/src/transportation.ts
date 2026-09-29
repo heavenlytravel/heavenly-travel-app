@@ -5,7 +5,11 @@ import {
   isWithinHorizon,
   type ClassAvailability,
 } from "./booking-rules";
-import type { TripCategory, TripMode } from "./booking-status";
+import {
+  offersChildSeats,
+  type TripCategory,
+  type TripMode,
+} from "./booking-status";
 import type { PreparedItem } from "./bookings";
 import { Prisma } from "./generated/prisma/client";
 import type { Place } from "./place";
@@ -225,7 +229,7 @@ export async function prepareTripItem(
         hours: basis.mode === "hourly" ? basis.hours : null,
         distanceKm: basis.mode === "oneway" ? basis.distanceKm : null,
         passengers: request.passengers,
-        childSeats: request.childSeats,
+        childSeats: offersChildSeats(category) ? request.childSeats : 0,
         flightNumber: request.flightNumber,
         notes: request.notes,
       },

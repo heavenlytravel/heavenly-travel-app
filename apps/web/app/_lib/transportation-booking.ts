@@ -3,6 +3,7 @@ import {
   checkHours,
   isTripCategory,
   isTripMode,
+  offersChildSeats,
   type TripCategory,
   type TripMode,
 } from "@repo/db";
@@ -237,16 +238,21 @@ const text = (raw: string | null, max: number) => {
   return value === "" ? null : value;
 };
 
-/** The choices made on the options page, or null when a required one is missing. */
-export function parseTripOptions(input: QueryInput): TripOptions | null {
+/**
+ * The choices made on the options page, or null when a required one is
+ * missing. Child seats in the URL of a category that does not offer them are
+ * dropped.
+ */
+export function parseTripOptions(
+  category: TripCategory,
+  input: QueryInput,
+): TripOptions | null {
   const params = toParams(input);
   const vehicleClassId = params.get(PARAM.vehicleClass);
   const passengers = parsePassengers(params);
-  const childSeats = intIn(
-    params.get(PARAM.childSeats),
-    0,
-    TRIP_MAX_CHILD_SEATS,
-  );
+  const childSeats = offersChildSeats(category)
+    ? intIn(params.get(PARAM.childSeats), 0, TRIP_MAX_CHILD_SEATS)
+    : null;
   if (!vehicleClassId || !ID_RE.test(vehicleClassId)) return null;
   if (passengers === null) return null;
   return {

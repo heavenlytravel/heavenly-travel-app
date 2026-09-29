@@ -23,6 +23,10 @@ export const TRIP_CATEGORY_LABELS: Record<TripCategory, string> = {
   "coach-charter": "Coach charter",
 };
 
+/** Child seats are fitted in a car. They are never asked for a coach. */
+export const offersChildSeats = (category: TripCategory) =>
+  category === "car-with-driver";
+
 export const TRIP_MODES = ["oneway", "hourly"] as const;
 export type TripMode = (typeof TRIP_MODES)[number];
 export const isTripMode = guardFor(TRIP_MODES);

@@ -6,9 +6,17 @@ import {
   isBookingStatus,
   isItemStatus,
   NEXT_ITEM_STATUS,
+  offersChildSeats,
 } from "./booking-status";
 
 const items = (...statuses: string[]) => statuses.map((status) => ({ status }));
+
+describe("offersChildSeats", () => {
+  it("offers them in a car and never in a coach", () => {
+    assert.equal(offersChildSeats("car-with-driver"), true);
+    assert.equal(offersChildSeats("coach-charter"), false);
+  });
+});
 
 describe("bookingStatusOf", () => {
   it("is received while any live item is received", () => {

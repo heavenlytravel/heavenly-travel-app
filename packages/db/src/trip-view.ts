@@ -1,5 +1,10 @@
 import { formatLocalDateTime } from "./booking-rules";
-import { TRIP_MODE_LABELS, type TripMode } from "./booking-status";
+import {
+  isTripCategory,
+  TRIP_CATEGORY_LABELS,
+  TRIP_MODE_LABELS,
+  type TripMode,
+} from "./booking-status";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
 import type { TripPriceBreakdown } from "./pricing";
@@ -44,6 +49,20 @@ export function tripViewOfItem(item: TripItemLike): TripView | null {
     hours: details.hours,
     distanceKm: details.distanceKm,
   };
+}
+
+/**
+ * What an item is, as its heading on every screen and email: "Car with
+ * driver" or "Coach charter", from the category snapshot on the booking. A
+ * booking is a receipt, so the class is never read for it.
+ */
+export function itemHeading(item: {
+  tripDetails: { vehicleClassCategory: string } | null;
+}) {
+  const category = item.tripDetails?.vehicleClassCategory;
+  return isTripCategory(category)
+    ? TRIP_CATEGORY_LABELS[category]
+    : "Transportation";
 }
 
 /** The trip in one line, for lists: "KLIA to Kuala Lumpur" or "Penang, 4 hours". */

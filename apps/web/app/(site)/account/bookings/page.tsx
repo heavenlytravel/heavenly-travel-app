@@ -38,7 +38,7 @@ export default async function BookingsPage() {
         <Stop
           title="No bookings yet"
           message="Your bookings will appear here once you have made one."
-          linkLabel="Book a car with driver"
+          linkLabel="Book a trip"
         />
       ) : (
         <ul className="grid gap-4">

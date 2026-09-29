@@ -1,8 +1,8 @@
 # Coach charter: the second fleet on the transportation product
 
 Status: in progress. Decisions agreed on 2026-09-25, reviewed against the code and
-refined on 2026-09-28. Steps 1 (schema, seed, domain) and 2 (web route and editable
-trip, cars only) of the build order are built.
+refined on 2026-09-28. Steps 1 (schema, seed, domain), 2 (web route and editable
+trip, cars only) and 3 (coach tab bookable) of the build order are built.
 
 Coach charter is the second tab on the home page search card to become a real booking.
 It is not a second product. Car with driver and coach charter are the same trip: a
@@ -295,6 +295,23 @@ As built in step 2:
 - The home card and the trip editor send through one hook, `useTripSubmit`.
 - The URL parser refuses a passenger count above 999 as nonsense. That is not a seat
   number: the cap on the field is `largestGroup` of the classes the page loaded.
+
+As built in step 3:
+
+- Both tabs share one field list, `TRIP_FIELDS` in `search.ts`, so the home card and
+  the trip editor cannot drift apart between the categories.
+- Whether a category asks for child seats is `offersChildSeats` in
+  `booking-status.ts`. The options form hides the field, the URL parser drops a
+  `childSeats` written by hand on a coach URL, and `prepareTripItem` stores 0, so the
+  three never disagree.
+- "See coach charter" carries the trip but not the passenger count: the car field
+  stops at its largest class, so the count typed there is never the size of the
+  larger group.
+- "Contact us" opens WhatsApp, from `CONTACT.whatsappHref`, as the home page does.
+- The shared heading function, `itemHeading` in `trip-view.ts`, arrived here rather
+  than in step 4, and the customer's booking pages use it: a coach booking would
+  otherwise read "Car with driver" from the day the tab opened. Step 4 moves the admin
+  console and the emails onto it.
 
 ## Follow-up: ops screens
 

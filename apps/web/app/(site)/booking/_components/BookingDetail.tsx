@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   formatLocalDateTime,
   formatMyr,
+  itemHeading,
   tripDetailRows,
   tripViewOfItem,
 } from "@repo/db";
@@ -58,7 +59,7 @@ export function BookingDetail({
         {trips.map(({ item, trip }) => (
           <Panel key={item.id}>
             <h2 className="mb-3 font-(family-name:--font-display) text-[1.5rem]">
-              Car with driver
+              {itemHeading(item)}
             </h2>
             <TripSummary
               trip={trip}

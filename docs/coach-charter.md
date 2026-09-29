@@ -308,6 +308,10 @@ As built in step 3:
   stops at its largest class, so the count typed there is never the size of the
   larger group.
 - "Contact us" opens WhatsApp, from `CONTACT.whatsappHref`, as the home page does.
+- The shared heading function, `itemHeading` in `trip-view.ts`, arrived here rather
+  than in step 4, and the customer's booking pages use it: a coach booking would
+  otherwise read "Car with driver" from the day the tab opened. Step 4 moves the admin
+  console and the emails onto it.
 
 ## Follow-up: ops screens
 

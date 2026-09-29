@@ -4,6 +4,7 @@ import { bookingEmails } from "./booking-emails";
 import {
   sampleBooking,
   sampleCases,
+  sampleCoachItem,
   sampleItem,
   sampleSettings,
 } from "./fixtures";
@@ -42,7 +43,7 @@ describe("bookingEmails", () => {
         subjectPrefix: "[Development] ",
       }).map((e) => e.message.subject),
     );
-    assert.equal(subjects.length, 7);
+    assert.equal(subjects.length, 9);
     for (const subject of subjects) assert.match(subject, /^\[Development\] /);
   });
 
@@ -120,14 +121,42 @@ describe("bookingEmails", () => {
         status: "confirmed",
         items: [
           sampleItem({ status: "confirmed" }),
-          sampleItem({ id: "item2", position: 2, status: "cancelled" }),
+          sampleCoachItem({ id: "item2", position: 2, status: "cancelled" }),
         ],
       }),
       settings,
     );
     assert.equal(emails.length, 1);
     assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM updated");
-    assert.match(emails[0]!.message.text, /ITEM 1: CONFIRMED/);
-    assert.match(emails[0]!.message.text, /ITEM 2: CANCELLED/);
+    assert.match(
+      emails[0]!.message.text,
+      /ITEM 1: CAR WITH DRIVER \(CONFIRMED\)/,
+    );
+    assert.match(
+      emails[0]!.message.text,
+      /ITEM 2: COACH CHARTER \(CANCELLED\)/,
+    );
+  });
+
+  it("heads the item with its category, to the customer and to ops", () => {
+    const car = bookingEmails("received", sampleBooking(), settings);
+    const coach = bookingEmails(
+      "received",
+      sampleBooking({ items: [sampleCoachItem()] }),
+      settings,
+    );
+    assert.equal(car.length, 2);
+    assert.equal(coach.length, 2);
+    for (const { message } of car) {
+      assert.match(message.text, /CAR WITH DRIVER\nTrip: One-way/);
+      assert.match(message.html, />Car with driver</);
+    }
+    for (const { message } of coach) {
+      assert.match(message.text, /COACH CHARTER\nTrip: By the hour/);
+      assert.match(message.html, />Coach charter</);
+      assert.match(message.text, /Vehicle: Minibus/);
+      assert.match(message.text, /Duration: 8 hours/);
+      assert.doesNotMatch(message.text, /Child seats|Drop-off|Flight/);
+    }
   });
 });

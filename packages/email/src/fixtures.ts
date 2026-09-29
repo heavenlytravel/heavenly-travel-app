@@ -4,8 +4,8 @@ import type { BookingEmailEvent, EmailSettings } from "./booking-emails";
 
 /**
  * A sample booking for the unit tests and the preview script: one sedan
- * from KLIA to Kuala Lumpur. Pass overrides to move it through the
- * lifecycle.
+ * from KLIA to Kuala Lumpur, and a minibus by the hour to put in its place.
+ * Pass overrides to move it through the lifecycle.
  */
 
 export const sampleSettings: EmailSettings = {
@@ -59,7 +59,7 @@ export function sampleItem(
       id: "d1",
       itemId: "item1",
       vehicleClassId: "vc1",
-      vehicleClassName: "Sedan",
+      vehicleClassName: "Executive sedan",
       vehicleClassCategory: "car-with-driver",
       mode: "oneway",
       pickupPlace: klia,
@@ -70,6 +70,35 @@ export function sampleItem(
       childSeats: 1,
       flightNumber: "MH123",
       notes: null,
+    },
+    ...overrides,
+  };
+}
+
+/** A coach item: a minibus for 8 hours from Kuala Lumpur, no child seats. */
+export function sampleCoachItem(
+  overrides: Partial<BookingItemWithDetails> = {},
+): BookingItemWithDetails {
+  const car = sampleItem();
+  return {
+    ...car,
+    endsAt: new Date(at.getTime() + 8 * 60 * 60 * 1000),
+    cancellationCutoffHours: 48,
+    priceTotalSen: 144000,
+    tripDetails: {
+      ...car.tripDetails!,
+      vehicleClassId: "vc4",
+      vehicleClassName: "Minibus",
+      vehicleClassCategory: "coach-charter",
+      mode: "hourly",
+      pickupPlace: kl,
+      dropoffPlace: null,
+      hours: 8,
+      distanceKm: null,
+      passengers: 20,
+      childSeats: 0,
+      flightNumber: null,
+      notes: "Company outing, two stops on the way.",
     },
     ...overrides,
   };
@@ -112,6 +141,14 @@ export const sampleCases: {
 }[] = [
   { name: "received", event: "received", booking: sampleBooking() },
   {
+    name: "received-coach",
+    event: "received",
+    booking: sampleBooking({
+      priceTotalSen: 144000,
+      items: [sampleCoachItem()],
+    }),
+  },
+  {
     name: "confirmed",
     event: "confirmed",
     booking: sampleBooking({
@@ -144,7 +181,7 @@ export const sampleCases: {
       status: "confirmed",
       items: [
         sampleItem({ status: "confirmed" }),
-        sampleItem({ id: "item2", position: 2, status: "cancelled" }),
+        sampleCoachItem({ id: "item2", position: 2, status: "cancelled" }),
       ],
     }),
   },

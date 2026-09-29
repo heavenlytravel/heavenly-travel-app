@@ -2,6 +2,7 @@ import {
   formatLocalDateTime,
   formatMyr,
   ITEM_STATUS_LABELS,
+  itemHeading,
   tripDetailRows,
   tripHeadline,
   tripRows,
@@ -57,14 +58,21 @@ function itemRows(item: BookingItemWithDetails): DetailRow[] {
   ];
 }
 
-/** One rows block per item; titled with position and status once there are several. */
+/**
+ * One rows block per item, titled with what the item is: "Coach charter".
+ * Once there are several, the position and the status join it: "Item 2:
+ * Coach charter (Cancelled)".
+ */
 function itemBlocks(booking: BookingWithItems): Block[] {
   const several = booking.items.length > 1;
   return booking.items.flatMap((item): Block[] => {
     const rows = itemRows(item);
     if (rows.length === 0) return [];
+    const heading = itemHeading(item);
     const status = ITEM_STATUS_LABELS[item.status as ItemStatus] ?? item.status;
-    const title = several ? `Item ${item.position}: ${status}` : null;
+    const title = several
+      ? `Item ${item.position}: ${heading} (${status})`
+      : heading;
     return [{ type: "rows", title, rows }];
   });
 }

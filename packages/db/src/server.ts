@@ -14,9 +14,32 @@ export { listActivityFor, listActivity } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export { dashboardCounts } from "./dashboard";
 export type { DashboardCounts } from "./dashboard";
-export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
-export type { Zone, ZoneDistrict } from "./zones";
-export { listActiveVehicleClasses } from "./vehicle-classes";
+export {
+  listActiveZones,
+  listActiveZoneDistricts,
+  resolveZone,
+  listZones,
+  getZone,
+  createZone,
+  updateZone,
+  addZoneDistrict,
+  removeZoneDistrict,
+} from "./zones";
+export type {
+  Zone,
+  ZoneDistrict,
+  ZoneMatch,
+  ZoneWithDistricts,
+  ZoneSummary,
+  ZonePatch,
+} from "./zones";
+export {
+  listActiveVehicleClasses,
+  listVehicleClasses,
+  getVehicleClass,
+  createVehicleClass,
+  updateVehicleClass,
+} from "./vehicle-classes";
 export type { VehicleClass } from "./vehicle-classes";
 export { quoteTrip, prepareTripItem } from "./transportation";
 export type {
@@ -63,3 +86,8 @@ export * from "./phone";
 export * from "./trip-view";
 export * from "./names";
 export * from "./contact";
+export * from "./change";
+export * from "./fields";
+export * from "./slug";
+export * from "./zone-input";
+export * from "./vehicle-class-input";

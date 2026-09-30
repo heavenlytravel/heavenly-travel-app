@@ -15,22 +15,17 @@
 // Melaka Tengah) match nothing and are not listed. Every name here resolved
 // at least one real place in the check on 2026-09-30:
 // `pnpm --filter @repo/places check-coverage`. See docs/260930-ops-screens.md.
+import { CATEGORY_RULE_DEFAULTS } from "../src/booking-rules";
 import type { TripCategory } from "../src/booking-status";
 import { db } from "../src/client";
 
-/** Each category's usual rules; a class may differ, it is only a row. */
-const CAR_RULES = {
-  category: "car-with-driver" satisfies TripCategory,
-  minLeadHours: 4,
-  cancellationCutoffHours: 24,
-  minHourlyHours: 3,
-};
-const COACH_RULES = {
-  category: "coach-charter" satisfies TripCategory,
-  minLeadHours: 24,
-  cancellationCutoffHours: 48,
-  minHourlyHours: 4,
-};
+/** Each category with its usual rules; a class may differ, it is only a row. */
+const rulesOf = (category: TripCategory) => ({
+  category,
+  ...CATEGORY_RULE_DEFAULTS[category],
+});
+const CAR_RULES = rulesOf("car-with-driver");
+const COACH_RULES = rulesOf("coach-charter");
 
 const VEHICLE_CLASSES = [
   {

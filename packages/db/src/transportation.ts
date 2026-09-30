@@ -97,7 +97,7 @@ export async function quoteTrip(
   request: TripRequest,
   now: Date = new Date(),
 ): Promise<TripQuoteResult> {
-  const zone = await resolveZone(request.pickup);
+  const zone = (await resolveZone(request.pickup))?.zone;
   if (!zone || !zone.isActive) {
     return fail("not-served", "We do not serve that pickup area yet.");
   }

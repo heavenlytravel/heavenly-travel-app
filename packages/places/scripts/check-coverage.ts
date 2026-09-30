@@ -427,8 +427,8 @@ for (const group of groups) {
     total += 1;
     const [suggestion] = await google.searchPlaces(query);
     const place = suggestion && (await google.resolvePlace(suggestion.placeId));
-    const zone = place ? await resolveZone(place) : null;
-    const got = zone?.slug ?? null;
+    const match = place ? await resolveZone(place) : null;
+    const got = match?.zone.slug ?? null;
     const ok = got === group.zone;
     let mark = "ok  ";
     if (!ok && group.knownGap) {

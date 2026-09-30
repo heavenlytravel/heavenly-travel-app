@@ -43,7 +43,8 @@ changes or retires the class a minute later. The item already snapshots the pric
 breakdown and the class name; it now also snapshots the class category and the
 cancellation cutoff that applied. Nothing on a booking is read back through the
 `VehicleClass` relation. Changing an existing booking is a conversation between the
-customer and the team; an admin amend feature is future work.
+customer and the team, after which staff amend it on the console (step 10 of
+`260930-admin-teams-and-access.md`).
 
 ### Customer flow
 
@@ -346,7 +347,5 @@ below the hourly floor.
 - Vehicle photos on the class cards and a route map on the options page.
 - A notice check on the home page card, read from the database through a cache, if the
   greyed-out rows on the options page prove too late a place to say it.
-- Amending an existing booking from the admin console, after the customer and the team
-  agree a change.
 - Per-category zone coverage, when a zone has no coach.
 - Everything listed under future work in `260923-car-with-driver.md`.

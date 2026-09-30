@@ -355,11 +355,12 @@ As built in step 5:
 
 ## Emails
 
-| Event              | To                                  | Content                                                                       |
-| ------------------ | ----------------------------------- | ----------------------------------------------------------------------------- |
-| received           | customer, booking@heavenlytravel.my | reference, trip, price, "we will confirm"; admin copy links to the admin page |
-| confirmed          | customer                            | reference, trip, pickup time, ops WhatsApp                                    |
-| cancelled by admin | customer                            | reference, reason if given, ops WhatsApp                                      |
+| Event              | To                                  | Content                                                                        |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------ |
+| received           | customer, booking@heavenlytravel.my | reference, trip, price, "we will confirm"; admin copy links to the admin page  |
+| confirmed          | customer                            | reference, trip, pickup time, ops WhatsApp                                     |
+| cancelled by admin | customer                            | reference, reason if given, ops WhatsApp                                       |
+| amended by admin   | customer                            | "Booking updated": every item and the new total (PR F of the admin teams plan) |
 
 Sent after the database write, never inside the transaction. A failed send is logged and
 does not fail the booking.

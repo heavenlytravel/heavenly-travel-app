@@ -6,8 +6,9 @@ import {
 } from "@repo/places";
 
 /**
- * The browser side of place autocomplete. Suggestions come from our own
- * route handler, which holds the Google key and caches per query.
+ * The browser side of place autocomplete. Suggestions come from the app's
+ * own route handler, which holds the Google key and caches per query. Both
+ * apps mount the handler at the same path.
  */
 
 export const PLACE_SEARCH_PATH = "/api/places/search";

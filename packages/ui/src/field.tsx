@@ -1,15 +1,16 @@
 import { type ComponentProps, type ReactNode } from "react";
 import { cx } from "./cx.js";
 
-const CONTROL =
+/** The classes of a text control, for inputs the package does not render itself. */
+export const inputClassName =
   "ui:h-10 ui:w-full ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:px-3 ui:text-sm ui:text-neutral-900 ui:placeholder:text-neutral-400 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-neutral-900 ui:disabled:bg-neutral-100 ui:disabled:text-neutral-500";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cx(CONTROL, className)} {...props} />;
+  return <input className={cx(inputClassName, className)} {...props} />;
 }
 
 export function Select({ className, ...props }: ComponentProps<"select">) {
-  return <select className={cx(CONTROL, className)} {...props} />;
+  return <select className={cx(inputClassName, className)} {...props} />;
 }
 
 /** A label above a control, with an optional hint below it. */

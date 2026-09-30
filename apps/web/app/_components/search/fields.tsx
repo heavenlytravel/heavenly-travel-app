@@ -5,7 +5,7 @@ import {
   type FieldDef,
   type SearchValues,
 } from "../../_lib/search";
-import { PlaceInput } from "./PlaceInput";
+import { PlaceInput } from "@repo/ui/place-input";
 
 const MAX_COUNT = 99;
 

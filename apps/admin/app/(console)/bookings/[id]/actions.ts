@@ -5,12 +5,14 @@ import {
   parsePriceOverride,
   PRICE_OVERRIDE_FIELDS,
   textOf,
+  tripItemParams,
   type PriceOverride,
 } from "@repo/db";
 import {
   addBookingNote,
   ADVANCE_PERMISSIONS,
   advanceItem,
+  amendItem,
   cancelBookingAsAdmin,
   cancelItem,
   isNextItemStatus,
@@ -19,6 +21,7 @@ import {
 } from "@repo/db/server";
 import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
 import {
@@ -27,6 +30,7 @@ import {
   type ActionState,
 } from "../../../_lib/action-state";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
+import { prepareFormItem } from "../_lib/trip-server";
 
 /**
  * Every transition re-checks the session and the permission (actions are
@@ -125,4 +129,33 @@ export async function overrideItemPriceAction(
     override = parsed.value;
   }
   return finish(await overrideItemPrice(actorOf(admin), itemId, override));
+}
+
+/**
+ * Replaces one item's trip, vehicle and details with the amend form's,
+ * priced again on the server. Reservation and Sales. The "Booking
+ * updated" email goes out through `finish`; on success the admin lands
+ * back on the booking.
+ */
+export async function amendItemAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  const itemId = textOf(formData.get("itemId"));
+  if (!bookingId || !itemId) return { error: "Missing item." };
+
+  const prepared = await prepareFormItem(tripItemParams(formData, 0));
+  if (!prepared.ok) return { error: prepared.error };
+  // An agreed price is its own permission, checked only when one is posted.
+  if (prepared.override && !(await getAdmin("bookings.create"))) {
+    return FORBIDDEN;
+  }
+  const result = await finish(
+    await amendItem(actorOf(admin), itemId, prepared),
+  );
+  if (result) return result;
+  redirect(bookingHref(bookingId));
 }

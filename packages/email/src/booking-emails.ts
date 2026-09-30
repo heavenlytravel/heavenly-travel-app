@@ -31,7 +31,7 @@ import type { EmailMessage } from "./types";
  * "Emails".
  */
 
-/** The three moments a booking writes to someone. */
+/** The moments a booking writes to someone. */
 export type BookingEmailEvent = "received" | BookingEvent;
 
 /** What differs per environment: link targets, the ops inbox, the subject prefix. */
@@ -263,25 +263,66 @@ function cancelled(
     ];
   }
 
+  if (!whole) {
+    return updated(
+      booking,
+      settings,
+      key,
+      "Part of your booking is cancelled",
+      `Hi ${booking.contactName}, we had to cancel part of booking ${ref}. The rest goes ahead as planned; the status of each item is below. Message us if you have questions.`,
+    );
+  }
   return toCustomer(booking, key, settings, {
-    subject: whole ? `Booking ${ref} cancelled` : `Booking ${ref} updated`,
-    heading: whole
-      ? "Your booking is cancelled"
-      : "Part of your booking is cancelled",
+    subject: `Booking ${ref} cancelled`,
+    heading: "Your booking is cancelled",
     blocks: [
       {
         type: "paragraph",
-        text: whole
-          ? `Hi ${booking.contactName}, we are sorry: we cannot provide this trip and have cancelled booking ${ref}. Message us and we will help you plan another.`
-          : `Hi ${booking.contactName}, we had to cancel part of booking ${ref}. The rest goes ahead as planned; the status of each item is below. Message us if you have questions.`,
+        text: `Hi ${booking.contactName}, we are sorry: we cannot provide this trip and have cancelled booking ${ref}. Message us and we will help you plan another.`,
       },
       ...itemBlocks(booking),
-      ...(whole
-        ? []
-        : [totalBlock(booking), viewBookingButton(booking, settings)]),
       { type: "contact" },
     ],
   });
+}
+
+/**
+ * "Booking updated", to the customer: every item with its status and the
+ * new total, after a change made by staff that leaves the booking live. A
+ * partial cancel and an amend both send it, each with its own words.
+ */
+function updated(
+  booking: BookingWithItems,
+  settings: EmailSettings,
+  key: string,
+  heading: string,
+  text: string,
+): BookingEmail[] {
+  return toCustomer(booking, key, settings, {
+    subject: `Booking ${booking.reference} updated`,
+    heading,
+    blocks: [
+      { type: "paragraph", text },
+      ...itemBlocks(booking),
+      totalBlock(booking),
+      viewBookingButton(booking, settings),
+      { type: "contact" },
+    ],
+  });
+}
+
+function amended(
+  booking: BookingWithItems,
+  settings: EmailSettings,
+  key: string,
+): BookingEmail[] {
+  return updated(
+    booking,
+    settings,
+    key,
+    "Your booking is updated",
+    `Hi ${booking.contactName}, we have updated booking ${booking.reference} as agreed. The trip is now as below; please check the pick-up time and place. Message us if anything is not right.`,
+  );
 }
 
 /**
@@ -302,5 +343,7 @@ export function bookingEmails(
       return confirmed(booking, settings, key);
     case "cancelled":
       return cancelled(booking, settings, key);
+    case "amended":
+      return amended(booking, settings, key);
   }
 }

@@ -210,9 +210,21 @@ export function pickupInstant(date: string, time: string): Date | null {
   if (!DATE_RE.test(date) || !TIME_RE.test(time)) return null;
   const instant = new Date(`${date}T${time}:00${BOOKING_RULES.utcOffset}`);
   if (Number.isNaN(instant.getTime())) return null;
+  const roundTrip = localDateTimeInputs(instant);
+  return roundTrip.date === date && roundTrip.time === time ? instant : null;
+}
+
+/**
+ * An instant as the values of a date input and a time input in Malaysian
+ * local time: the inverse of `pickupInstant`, for a form that starts from
+ * a stored trip.
+ */
+export function localDateTimeInputs(instant: Date): {
+  date: string;
+  time: string;
+} {
   const local = new Date(
     instant.getTime() + BOOKING_RULES.utcOffsetHours * HOUR_MS,
-  );
-  const roundTrip = `${local.toISOString().slice(0, 10)} ${local.toISOString().slice(11, 16)}`;
-  return roundTrip === `${date} ${time}` ? instant : null;
+  ).toISOString();
+  return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }

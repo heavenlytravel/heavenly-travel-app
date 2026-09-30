@@ -1,7 +1,8 @@
-import { logActivity } from "./activity";
+import { changedFields, logActivity } from "./activity";
 import {
   ITEM_ACTIONS,
   type Actor,
+  type AmendedFields,
   type CustomerActor,
 } from "./activity-actions";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
@@ -17,6 +18,7 @@ import {
 } from "./booking-status";
 import { db } from "./client";
 import { Prisma } from "./generated/prisma/client";
+import { isPlace } from "./place";
 import { isTripPriceBreakdown } from "./pricing";
 import { generateReference } from "./references";
 
@@ -255,8 +257,12 @@ export function getBooking(id: string): Promise<BookingWithItems | null> {
   return db.booking.findUnique({ where: { id }, ...withItems });
 }
 
-/** What changed at booking level, so the caller can send the matching email. */
-export type BookingEvent = "confirmed" | "cancelled";
+/**
+ * What changed at booking level, so the caller can send the matching email.
+ * An amend is one too: the customer is told in writing what the trip now
+ * is, whatever the status.
+ */
+export type BookingEvent = "confirmed" | "cancelled" | "amended";
 
 export type BookingChange =
   | { ok: true; booking: BookingWithItems; event: BookingEvent | null }
@@ -459,6 +465,138 @@ export function overrideItemPrice(
       ok: true,
       ...(await refreshBooking(tx, item.bookingId, null, now)),
     };
+  });
+}
+
+/** What an amend compares and logs, from a stored item or a prepared one. */
+function amendedFieldsOf(
+  item: { startsAt: Date; priceTotalSen: number },
+  details: {
+    mode: string;
+    pickupPlace: unknown;
+    dropoffPlace?: unknown;
+    hours?: number | null;
+    vehicleClassName: string;
+    passengers: number;
+    childSeats?: number;
+    flightNumber?: string | null;
+  },
+): AmendedFields {
+  return {
+    mode: details.mode,
+    pickup: isPlace(details.pickupPlace) ? details.pickupPlace.label : "",
+    dropoff: isPlace(details.dropoffPlace) ? details.dropoffPlace.label : null,
+    startsAt: item.startsAt.toISOString(),
+    hours: details.hours ?? null,
+    vehicleClassName: details.vehicleClassName,
+    passengers: details.passengers,
+    childSeats: details.childSeats ?? 0,
+    flightNumber: details.flightNumber ?? null,
+    priceTotalSen: item.priceTotalSen,
+  };
+}
+
+/** A trip priced again for an item that exists, with an agreed price or none. */
+export type AmendItemInput = {
+  item: PreparedItem;
+  override: PriceOverride | null;
+};
+
+/**
+ * Replaces one item's trip, dates, district and receipt with a trip priced
+ * again, in one transaction. Allowed while the item is received or
+ * confirmed; the status stays. The category cannot change. The override in
+ * force is dropped, because the quoted price changed; a new one may come
+ * with the amend and is logged as priced. Nothing is written when every
+ * value is already there.
+ */
+export function amendItem(
+  actor: Actor,
+  itemId: string,
+  input: AmendItemInput,
+  now: Date = new Date(),
+): Promise<BookingChange> {
+  if (input.override) {
+    const check = checkPriceOverride(input.override);
+    if (!check.ok) return Promise.resolve(check);
+  }
+  const next = { ...input.item, override: input.override };
+  return db.$transaction(async (tx) => {
+    const item = await tx.bookingItem.findUnique({
+      where: { id: itemId },
+      include: { tripDetails: true },
+    });
+    if (!item) return { ok: false, error: "Booking item not found." };
+    if (item.status !== "received" && item.status !== "confirmed") {
+      return {
+        ok: false,
+        error: `Item is ${item.status}, so it cannot be amended.`,
+      };
+    }
+    if (!item.tripDetails || item.product !== next.product) {
+      return { ok: false, error: "This item is not a trip." };
+    }
+    if (
+      item.tripDetails.vehicleClassCategory !==
+      next.tripDetails.vehicleClassCategory
+    ) {
+      return {
+        ok: false,
+        error: "The category of an item cannot change. Cancel it and add one.",
+      };
+    }
+
+    const before = amendedFieldsOf(item, item.tripDetails);
+    const after = amendedFieldsOf(
+      { startsAt: next.startsAt, priceTotalSen: chargedSen(next) },
+      next.tripDetails,
+    );
+    const changed = changedFields(before, after);
+    const same =
+      changed === null &&
+      (item.tripDetails.notes ?? null) === (next.tripDetails.notes ?? null) &&
+      item.priceOverrideReason === (next.override?.reason ?? null);
+    if (same) {
+      return {
+        ok: true,
+        ...(await refreshBooking(tx, item.bookingId, null, now)),
+      };
+    }
+
+    await tx.bookingItem.update({
+      where: { id: itemId },
+      data: {
+        startsAt: next.startsAt,
+        endsAt: next.endsAt,
+        cancellationCutoffHours: next.cancellationCutoffHours,
+        districtCode: next.districtCode,
+        priceTotalSen: chargedSen(next),
+        priceBreakdown: next.priceBreakdown,
+        priceOverrideSen: next.override?.totalSen ?? null,
+        priceOverrideReason: next.override?.reason ?? null,
+        tripDetails: { update: next.tripDetails },
+      },
+    });
+    await logActivity(tx, actor, {
+      action: "booking.item.amended",
+      entityId: item.bookingId,
+      before: { position: item.position, ...changed?.before },
+      after: { position: item.position, ...changed?.after },
+    });
+    if (next.override) {
+      await logActivity(tx, actor, {
+        action: "booking.item.priced",
+        entityId: item.bookingId,
+        before: { position: item.position, priceTotalSen: next.priceTotalSen },
+        after: {
+          position: item.position,
+          priceTotalSen: next.override.totalSen,
+          reason: next.override.reason,
+        },
+      });
+    }
+    const refreshed = await refreshBooking(tx, item.bookingId, null, now);
+    return { ok: true, booking: refreshed.booking, event: "amended" };
   });
 }
 

@@ -1,7 +1,7 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
-Status: steps 1 to 7 built; steps 8, 9 and 12 designed and built in PR E; steps 10
-and 11 designed, to be built in PR F. Decisions agreed on 2026-09-30. The ops
+Status: all twelve steps built; PR F (steps 10 and 11) built on 2026-10-01, see "As
+built in PR F". Decisions agreed on 2026-09-30. The ops
 screens of steps 6 and 7 are designed in `260930-ops-screens.md` and, for coverage,
 `260930-coverage.md`. Steps 8 to 12 are designed under "Staff booking tools" below,
 which wins over `260923-car-with-driver.md` and `260928-coach-charter.md` where they
@@ -411,6 +411,46 @@ schema" says.
 - The customer card always shows an "Account" row: the account's name or email, or
   "None, entered by staff" for a guest. The Bookings list shows the phone where a
   guest has no email.
+
+### Module changes for PR F
+
+| Module                                | Change                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `booking-rules.ts`                    | `localDateTimeInputs`, the inverse of `pickupInstant`, for a form that starts from a stored trip. Unit-tested.                                                           |
+| `trip-input.ts`                       | `tripSearchOf(trip)`, a stored trip back as its search; `tripItemField`, `tripItemIndexes` and `tripItemParams`, one form carrying several trips. Unit-tested.           |
+| `activity-actions.ts`                 | `booking.item.amended`, `customerVisible`; `AmendedFields` and their labels; the sentence "Changed the pick-up and the vehicle of item 2". Unit-tested.                  |
+| `bookings.ts`                         | `amendItem(actor, itemId, { item, override })`; `BookingEvent` gains `amended`.                                                                                          |
+| `@repo/email`                         | The `amended` event: "Booking updated" to the customer, sharing its shape with the partial cancel.                                                                       |
+| `apps/admin/.../bookings/_lib`        | `trip-form.ts`: the field names, the quote view and `ItemDraft`, browser-safe. `trip-server.ts`: `quoteTripView` and `prepareFormItem`. `quote-action.ts`: "Get prices". |
+| `apps/admin/.../bookings/_components` | `ItemEditor`: one vehicle's trip, priced list, details and agreed price, the part both forms share.                                                                      |
+| `apps/admin/.../bookings/new`         | One `ItemEditor` per vehicle and "Add another vehicle"; the create action prepares every item.                                                                           |
+| `apps/admin/.../bookings/[id]`        | "Amend" on an item card; `amendItemAction`; the amend page under `amend/[itemId]`.                                                                                       |
+
+### As built in PR F
+
+- The manual booking form of PR E is split into the parts the plan named: the
+  `ItemEditor` holds one vehicle's trip fields, "Get prices", the priced class list,
+  the details and the agreed price, and its state (`ItemDraft`) belongs to the form
+  around it, so the manual booking holds a list of them and the amend screen holds
+  one. Every input is named under the item's index (`item0.pickup`); the actions cut
+  one item's fields out with `tripItemParams` and read them with the website's
+  parsers, unchanged.
+- The amend page prices the stored trip on the server before it renders, so the class
+  list is there at once with the current class chosen when the list still offers it.
+  Where the stored place can no longer be resolved, the editor shows why and staff
+  pick the place again.
+- `amendItem` keeps the item's status: a confirmed item stays confirmed, and the
+  customer hears about the change through the "Booking updated" email whatever the
+  status. It compares the `AmendedFields`, the notes and the override, and writes
+  and logs nothing when everything is already there. A new agreed price with the
+  amend is logged as `booking.item.priced` after the amended entry, as at creation.
+- The category is posted by the form and checked against the item's on the server;
+  changing it is refused with "Cancel it and add one".
+- "Get prices" is one server action for both forms, open to `bookings.create` or
+  `bookings.manage`. The agreed price fields on the amend page show only with
+  `bookings.create`, and the amend action checks that permission again when one is
+  posted.
+- The website is unchanged: it still books one item at a time.
 
 ## Future work, on record
 

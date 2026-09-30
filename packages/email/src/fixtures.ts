@@ -188,4 +188,13 @@ export const sampleCases: {
       ],
     }),
   },
+  {
+    name: "amended",
+    event: "amended",
+    booking: sampleBooking({
+      status: "confirmed",
+      priceTotalSen: 21000,
+      items: [sampleItem({ status: "confirmed", priceTotalSen: 21000 })],
+    }),
+  },
 ];

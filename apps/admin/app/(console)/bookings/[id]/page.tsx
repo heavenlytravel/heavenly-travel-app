@@ -23,6 +23,7 @@ import {
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
+import { Card, CardTitle } from "../../../_components/Card";
 import { PageHeader } from "../../../_components/PageHeader";
 import { PlaceValue, Rows } from "../../../_components/Rows";
 import {
@@ -35,20 +36,6 @@ import { CancelBookingControl, ItemControls } from "./BookingControls";
 
 function statusLabel(status: string) {
   return isBookingStatus(status) ? BOOKING_STATUS_LABELS[status] : status;
-}
-
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-5">
-      {children}
-    </section>
-  );
-}
-
-function CardTitle({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="mb-3 text-base font-semibold tracking-tight">{children}</h2>
-  );
 }
 
 /**

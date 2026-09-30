@@ -24,3 +24,12 @@ export function bookingsHref(status?: BookingStatus) {
 export function bookingHref(id: string) {
   return `${BOOKINGS_PATH}/${id}`;
 }
+
+export const ZONES_PATH = "/zones";
+
+/** One zone's page, by id. */
+export function zoneHref(id: string) {
+  return `${ZONES_PATH}/${id}`;
+}
+
+export const VEHICLE_CLASSES_PATH = "/vehicle-classes";

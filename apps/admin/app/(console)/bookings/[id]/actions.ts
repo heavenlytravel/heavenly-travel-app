@@ -12,13 +12,8 @@ import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
+import { FORBIDDEN, type ActionState } from "../../../_lib/action-state";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
-
-export type ActionState = { error: string } | null;
-
-const FORBIDDEN: ActionState = {
-  error: "Your teams cannot do this. Ask a SUPER admin.",
-};
 
 /**
  * Every transition re-checks the session and the permission (actions are

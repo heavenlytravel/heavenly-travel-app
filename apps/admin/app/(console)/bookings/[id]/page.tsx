@@ -182,7 +182,12 @@ function ItemCard({
       ])
     : [["Pick-up time", formatLocalDateTime(item.startsAt)]];
   if (item.tripDetails) rows.push(...tripDetailRows(item.tripDetails));
-  if (item.zone) rows.push(["Zone", item.zone.name]);
+  if (item.district) {
+    rows.push([
+      "District",
+      `${item.district.name}, ${item.district.state.name}`,
+    ]);
+  }
 
   const price: [string, ReactNode][] = isTripPriceBreakdown(item.priceBreakdown)
     ? priceRows(item.priceBreakdown)

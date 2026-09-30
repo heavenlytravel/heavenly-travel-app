@@ -12,8 +12,8 @@ import {
   ACTIVITY_PATH,
   ADMINS_PATH,
   BOOKINGS_PATH,
+  COVERAGE_PATH,
   VEHICLE_CLASSES_PATH,
-  ZONES_PATH,
 } from "../_lib/routes";
 
 export type NavItem = {
@@ -44,8 +44,8 @@ export const NAV: NavGroup[] = [
         permission: "bookings.view",
       },
       {
-        href: ZONES_PATH,
-        label: "Zones",
+        href: COVERAGE_PATH,
+        label: "Coverage",
         icon: MapPinIcon,
         permission: "coverage.manage",
       },

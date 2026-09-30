@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
@@ -5,14 +6,13 @@ import {
   type TripCategory,
 } from "@repo/db";
 import { listVehicleClasses, type VehicleClass } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
+import { InfoTip } from "@repo/ui/info-tip";
 import { PageHeader } from "../../_components/PageHeader";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
-import { AddVehicleClassButton } from "./AddVehicleClassButton";
-import {
-  EditVehicleClassButton,
-  VehicleClassActiveSwitch,
-} from "./VehicleClassControls";
+import { NEW_VEHICLE_CLASS_PATH, vehicleClassHref } from "../../_lib/routes";
+import { VehicleClassActiveSwitch } from "./VehicleClassControls";
 
 /** "Notice 4 h · Cancel up to 24 h · Minimum 3 h" */
 function rulesText(vehicleClass: VehicleClass) {
@@ -39,11 +39,21 @@ function CategoryTable({
       <Table>
         <THead>
           <Th>Class</Th>
-          <Th>Active</Th>
+          <Th>
+            <span className="inline-flex items-center gap-1.5">
+              Active
+              <InfoTip text="Off hides the class from the options page and the search card. Bookings already made are not changed." />
+            </span>
+          </Th>
           <Th>Seats</Th>
           <Th>Luggage</Th>
           <Th>Rates</Th>
-          <Th>Rules</Th>
+          <Th>
+            <span className="inline-flex items-center gap-1.5">
+              Rules
+              <InfoTip text="Notice: hours before pickup a booking must be made. Cancel up to: hours before pickup a customer may still cancel. Minimum: the shortest hourly hire." />
+            </span>
+          </Th>
           <Th />
         </THead>
         <TBody>
@@ -60,7 +70,12 @@ function CategoryTable({
                 }
               >
                 <Td>
-                  <span className="block font-medium">{vehicleClass.name}</span>
+                  <Link
+                    href={vehicleClassHref(vehicleClass.id)}
+                    className="block font-medium underline-offset-4 hover:underline"
+                  >
+                    {vehicleClass.name}
+                  </Link>
                   <span className="block max-w-64 text-xs text-neutral-500">
                     {vehicleClass.description}
                   </span>
@@ -93,7 +108,12 @@ function CategoryTable({
                   {rulesText(vehicleClass)}
                 </Td>
                 <Td className="text-right">
-                  <EditVehicleClassButton vehicleClass={vehicleClass} />
+                  <Link
+                    href={vehicleClassHref(vehicleClass.id)}
+                    className="text-sm font-medium underline-offset-4 hover:underline"
+                  >
+                    Edit
+                  </Link>
                 </Td>
               </tr>
             ))
@@ -117,8 +137,12 @@ export default async function VehicleClassesPage() {
     <>
       <PageHeader
         title="Vehicle classes"
-        description="Each class carries its seats, its rates and its three rules. A rate change applies to new quotes at once; a booking keeps its receipt."
-        action={<AddVehicleClassButton />}
+        description="Each class carries its seats, its rates and its three rules."
+        action={
+          <Button asChild>
+            <Link href={NEW_VEHICLE_CLASS_PATH}>Add class</Link>
+          </Button>
+        }
       />
 
       <div className="mt-6 grid gap-8">

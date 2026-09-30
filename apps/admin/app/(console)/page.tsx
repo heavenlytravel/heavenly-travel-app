@@ -46,7 +46,7 @@ function groupsOf(counts: DashboardCounts): CardGroup[] {
       cards: [
         { label: "Pick-ups today", value: counts.pickupsToday },
         { label: "Awaiting driver", value: counts.awaitingDriver },
-        { label: "Active zones", value: counts.activeZones },
+        { label: "Districts served", value: counts.activeDistricts },
         { label: "Vehicle classes", value: counts.activeVehicleClasses },
       ],
     },

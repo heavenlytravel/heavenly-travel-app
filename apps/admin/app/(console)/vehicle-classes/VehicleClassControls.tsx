@@ -2,11 +2,9 @@
 
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { VehicleClass } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setVehicleClassActiveAction } from "./actions";
-import { VehicleClassSheet } from "./VehicleClassSheet";
 
 /**
  * The class's switch. Turning off the last active class of a category asks
@@ -56,28 +54,5 @@ export function VehicleClassActiveSwitch({
         </p>
       ) : null}
     </div>
-  );
-}
-
-/** "Edit" for one row, opening the sheet on that class. */
-export function EditVehicleClassButton({
-  vehicleClass,
-}: {
-  vehicleClass: VehicleClass;
-}) {
-  const [editing, setEditing] = useState(false);
-  return (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-        Edit
-      </Button>
-      <VehicleClassSheet
-        // A fresh form each time it opens, so a cancelled edit leaves nothing behind.
-        key={editing ? "open" : "closed"}
-        open={editing}
-        onOpenChange={setEditing}
-        vehicleClass={vehicleClass}
-      />
-    </>
   );
 }

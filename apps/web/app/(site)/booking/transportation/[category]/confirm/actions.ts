@@ -60,12 +60,15 @@ export async function createTripBookingAction(
   });
   if (!prepared.ok) return { error: prepared.error.message };
 
-  const booking = await createBooking({
-    userId: access.user.id,
-    contactName,
-    contactPhone,
-    items: [prepared.item],
-  });
+  const booking = await createBooking(
+    { kind: "customer", userId: access.user.id },
+    {
+      userId: access.user.id,
+      contactName,
+      contactPhone,
+      items: [prepared.item],
+    },
+  );
   after(() => sendBookingEmail("received", booking));
   redirect(bookingHref(booking.reference));
 }

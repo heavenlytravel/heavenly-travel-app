@@ -11,7 +11,7 @@ import {
 import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { getAdmin } from "../../../_lib/access";
+import { actorOf, getAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 
 export type ActionState = { error: string } | null;
@@ -22,8 +22,9 @@ const FORBIDDEN: ActionState = {
 
 /**
  * Every transition re-checks the session and the permission (actions are
- * reachable by direct POST) and lets the booking core check the status. The result's `event`
- * sends the confirmed or cancelled emails once the response is out.
+ * reachable by direct POST), passes the admin as the actor for the log and
+ * lets the booking core check the status. The result's `event` sends the
+ * confirmed or cancelled emails once the response is out.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
   if (!result.ok) return { error: result.error };
@@ -44,26 +45,29 @@ export async function advanceItemAction(
   if (!itemId || !isNextItemStatus(to)) {
     return { error: "Missing item or step." };
   }
-  if (!(await getAdmin(ADVANCE_PERMISSIONS[to]))) return FORBIDDEN;
-  return finish(await advanceItem(itemId, to));
+  const admin = await getAdmin(ADVANCE_PERMISSIONS[to]);
+  if (!admin) return FORBIDDEN;
+  return finish(await advanceItem(actorOf(admin), itemId, to));
 }
 
 export async function cancelItemAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await getAdmin("bookings.manage"))) return FORBIDDEN;
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
   const itemId = String(formData.get("itemId") ?? "");
   if (!itemId) return { error: "Missing item." };
-  return finish(await cancelItem(itemId));
+  return finish(await cancelItem(actorOf(admin), itemId));
 }
 
 export async function cancelBookingAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  if (!(await getAdmin("bookings.manage"))) return FORBIDDEN;
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) return { error: "Missing booking." };
-  return finish(await cancelBookingAsAdmin(bookingId));
+  return finish(await cancelBookingAsAdmin(actorOf(admin), bookingId));
 }

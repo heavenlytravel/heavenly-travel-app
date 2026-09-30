@@ -156,6 +156,22 @@ export function formatLocalDateTime(instant: Date) {
   return localDateTime.format(instant);
 }
 
+/**
+ * The Malaysian calendar day an instant falls in, as the UTC instants it
+ * starts at (inclusive) and ends at (exclusive), for "today" counts.
+ */
+export function localDayRange(instant: Date): { start: Date; end: Date } {
+  const offset = BOOKING_RULES.utcOffsetHours * HOUR_MS;
+  const local = new Date(instant.getTime() + offset);
+  const startLocal = Date.UTC(
+    local.getUTCFullYear(),
+    local.getUTCMonth(),
+    local.getUTCDate(),
+  );
+  const start = new Date(startLocal - offset);
+  return { start, end: new Date(start.getTime() + DAY_MS) };
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 

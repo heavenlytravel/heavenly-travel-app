@@ -9,6 +9,7 @@ import {
   isWithinHorizon,
   largestGroup,
   latestPickup,
+  localDayRange,
   pickupInstant,
   unavailableReason,
 } from "./booking-rules";
@@ -187,5 +188,20 @@ describe("pickupInstant", () => {
     assert.equal(pickupInstant("2026-02-31", "09:30"), null);
     assert.equal(pickupInstant("2026-10-12", "24:00"), null);
     assert.equal(pickupInstant("2026-10-12", "09:60"), null);
+  });
+});
+
+describe("localDayRange", () => {
+  it("bounds the Malaysian calendar day, not the UTC one", () => {
+    // 23:30 in Kuala Lumpur on 3 Oct is 15:30 UTC the same day.
+    const { start, end } = localDayRange(new Date("2026-10-03T15:30:00Z"));
+    assert.equal(start.toISOString(), "2026-10-02T16:00:00.000Z");
+    assert.equal(end.toISOString(), "2026-10-03T16:00:00.000Z");
+  });
+
+  it("puts an instant just after local midnight in the new day", () => {
+    // 00:10 in Kuala Lumpur on 4 Oct is 16:10 UTC on 3 Oct.
+    const { start } = localDayRange(new Date("2026-10-03T16:10:00Z"));
+    assert.equal(start.toISOString(), "2026-10-03T16:00:00.000Z");
   });
 });

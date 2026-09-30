@@ -9,7 +9,7 @@ import {
   type AdminChange,
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
-import { getAdmin } from "../../_lib/access";
+import { actorOf, getAdmin } from "../../_lib/access";
 import { ADMINS_PATH } from "../../_lib/routes";
 
 const FORBIDDEN: AdminChange = {
@@ -49,7 +49,7 @@ export async function setAdminAction(
     return { ok: false, error: "You cannot lower your own level." };
   }
 
-  const result = await setAdmin(email, level, teams);
+  const result = await setAdmin(actorOf(actor), email, level, teams);
   if (result.ok) revalidateAccess();
   return result;
 }
@@ -67,21 +67,22 @@ export async function revokeAdminAction(
     return { ok: false, error: "You cannot revoke your own access." };
   }
 
-  const result = await revokeAdmin(userId);
+  const result = await revokeAdmin(actorOf(actor), userId);
   if (result.ok) revalidatePath(ADMINS_PATH);
   return result;
 }
 
 /** Turns the wall between teams on or off for the whole app. */
 export async function setWallAction(wallActive: boolean): Promise<AdminChange> {
-  if (!(await getAdmin("wall.switch"))) {
+  const actor = await getAdmin("wall.switch");
+  if (!actor) {
     return { ok: false, error: "Only SUPER admins can switch the wall." };
   }
   if (typeof wallActive !== "boolean") {
     return { ok: false, error: "Choose on or off." };
   }
 
-  await setWallActive(wallActive);
+  await setWallActive(actorOf(actor), wallActive);
   revalidateAccess();
   return { ok: true };
 }

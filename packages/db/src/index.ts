@@ -2,6 +2,7 @@
 // lives in ./server.
 export * from "./roles";
 export * from "./permissions";
+export * from "./activity-actions";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";

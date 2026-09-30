@@ -1,12 +1,13 @@
 import type { Permission } from "@repo/db";
 import {
   CalendarCheckIcon,
+  HistoryIcon,
   LayoutDashboardIcon,
   MapPinIcon,
   ShieldCheckIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
-import { ADMINS_PATH, BOOKINGS_PATH } from "../_lib/routes";
+import { ACTIVITY_PATH, ADMINS_PATH, BOOKINGS_PATH } from "../_lib/routes";
 
 export type NavItem = {
   href: string;
@@ -51,6 +52,12 @@ export const NAV: NavGroup[] = [
         label: "Admins",
         icon: ShieldCheckIcon,
         permission: "admins.manage",
+      },
+      {
+        href: ACTIVITY_PATH,
+        label: "Activity",
+        icon: HistoryIcon,
+        permission: "activity.view",
       },
     ],
   },

@@ -31,7 +31,10 @@ export async function cancelBookingAction(
   const reference = normalizeReference(String(formData.get("reference") ?? ""));
   if (!isReference(reference)) return { error: "Booking not found." };
 
-  const result = await cancelBookingAsCustomer(reference, access.user.id);
+  const result = await cancelBookingAsCustomer(
+    { kind: "customer", userId: access.user.id },
+    reference,
+  );
   if (!result.ok) return { error: result.error };
   after(() => sendBookingChangeEmail(result));
 

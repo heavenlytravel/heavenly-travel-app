@@ -8,6 +8,7 @@ import {
   isAdminLevel,
   isAdminTeam,
 } from "../src/roles";
+import { SYSTEM_ACTOR } from "../src/activity-actions";
 import { setAdmin } from "../src/admins";
 import { db } from "../src/client";
 
@@ -20,7 +21,8 @@ if (!email || !isAdminLevel(levelArg) || !teamArgs.every(isAdminTeam)) {
   process.exit(1);
 }
 
-const result = await setAdmin(email, levelArg, teamArgs);
+// Run by the developer at a terminal, so the log names the system.
+const result = await setAdmin(SYSTEM_ACTOR, email, levelArg, teamArgs);
 await db.$disconnect();
 
 if (!result.ok) {

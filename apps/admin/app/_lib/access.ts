@@ -4,6 +4,7 @@ import {
   isWallActive,
   may,
   permissionsOf,
+  type AdminActor,
   type Permission,
   type SessionUser,
 } from "@repo/db/server";
@@ -13,6 +14,11 @@ import { RESTRICTED_PATH } from "./routes";
 export type AdminUser = SessionUser & {
   adminProfile: NonNullable<SessionUser["adminProfile"]>;
 };
+
+/** The admin as the activity log records them. */
+export function actorOf(admin: AdminUser): AdminActor {
+  return { kind: "admin", userId: admin.id };
+}
 
 async function signedInAdmin(): Promise<AdminUser | null> {
   const access = await getAccess("admin");

@@ -1,3 +1,9 @@
+import { logActivity } from "./activity";
+import {
+  ITEM_ACTIONS,
+  type Actor,
+  type CustomerActor,
+} from "./activity-actions";
 import {
   bookingStatusOf,
   checkCustomerCancel,
@@ -16,7 +22,9 @@ import { generateReference } from "./references";
  * The booking core, shared by every product: creation, lists, and the item
  * transitions that drive the booking's derived status. Product-specific
  * validation and pricing happen before this (see transportation.ts) and
- * arrive here as a `PreparedItem`. See docs/260923-car-with-driver.md.
+ * arrive here as a `PreparedItem`. Every change takes the actor and writes
+ * its activity entry in the same transaction. See
+ * docs/260923-car-with-driver.md.
  */
 
 const withItems = {
@@ -89,10 +97,13 @@ function isUniqueViolation(error: unknown, field: string) {
 
 /**
  * Creates a booking with its items in one transaction and remembers the
- * phone number on the user for next time. The reference is random, so a
- * collision is retried. Emails are the caller's job, after this returns.
+ * phone number on the user for next time. The actor is the customer on the
+ * website, or the admin entering a booking for them. The reference is
+ * random, so a collision is retried. Emails are the caller's job, after
+ * this returns.
  */
 export async function createBooking(
+  actor: Actor,
   input: CreateBookingInput,
 ): Promise<BookingWithItems> {
   if (input.items.length === 0) {
@@ -129,10 +140,20 @@ export async function createBooking(
           where: { id: input.userId },
           data: { phone: input.contactPhone },
         });
-        return tx.booking.create({
+        const booking = await tx.booking.create({
           data: { ...data, reference: generateReference() },
           ...withItems,
         });
+        await logActivity(tx, actor, {
+          action: "booking.created",
+          entityId: booking.id,
+          after: {
+            status: booking.status,
+            priceTotalSen: booking.priceTotalSen,
+            items: booking.items.length,
+          },
+        });
+        return booking;
       });
     } catch (error) {
       if (
@@ -266,6 +287,7 @@ async function refreshBooking(
  * of skipping a step.
  */
 export function advanceItem(
+  actor: Actor,
   itemId: string,
   to: ItemStatus,
   now: Date = new Date(),
@@ -273,7 +295,8 @@ export function advanceItem(
   return db.$transaction(async (tx) => {
     const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
     if (!item) return { ok: false, error: "Booking item not found." };
-    if (nextItemStatusOf(item.status) !== to) {
+    const next = nextItemStatusOf(item.status);
+    if (next === null || next !== to) {
       return {
         ok: false,
         error: `Item is ${item.status}, so it cannot become ${to}.`,
@@ -282,9 +305,15 @@ export function advanceItem(
     await tx.bookingItem.update({
       where: { id: itemId },
       data: {
-        status: to,
-        confirmedAt: to === "confirmed" ? now : undefined,
+        status: next,
+        confirmedAt: next === "confirmed" ? now : undefined,
       },
+    });
+    await logActivity(tx, actor, {
+      action: ITEM_ACTIONS[next],
+      entityId: item.bookingId,
+      before: { position: item.position, status: item.status },
+      after: { position: item.position, status: next },
     });
     return {
       ok: true,
@@ -295,6 +324,7 @@ export function advanceItem(
 
 /** Admin cancels one item. The booking stays live if other items remain. */
 export function cancelItem(
+  actor: Actor,
   itemId: string,
   now: Date = new Date(),
 ): Promise<BookingChange> {
@@ -308,6 +338,12 @@ export function cancelItem(
       where: { id: itemId },
       data: { status: "cancelled", cancelledAt: now },
     });
+    await logActivity(tx, actor, {
+      action: ITEM_ACTIONS.cancelled,
+      entityId: item.bookingId,
+      before: { position: item.position, status: item.status },
+      after: { position: item.position, status: "cancelled" },
+    });
     return {
       ok: true,
       ...(await refreshBooking(tx, item.bookingId, "admin", now)),
@@ -315,21 +351,34 @@ export function cancelItem(
   });
 }
 
+/** Cancels every open item, refreshes the booking and logs the one action. */
 async function cancelAllItems(
   tx: Prisma.TransactionClient,
-  bookingId: string,
+  actor: Actor,
+  booking: { id: string; status: string },
   by: Canceller,
   now: Date,
 ) {
   await tx.bookingItem.updateMany({
-    where: { bookingId, status: { notIn: ["cancelled", "completed"] } },
+    where: {
+      bookingId: booking.id,
+      status: { notIn: ["cancelled", "completed"] },
+    },
     data: { status: "cancelled", cancelledAt: now },
   });
-  return refreshBooking(tx, bookingId, by, now);
+  const refreshed = await refreshBooking(tx, booking.id, by, now);
+  await logActivity(tx, actor, {
+    action: "booking.cancelled",
+    entityId: booking.id,
+    before: { status: booking.status },
+    after: { status: refreshed.booking.status },
+  });
+  return refreshed;
 }
 
 /** Admin cancels the whole booking. Completed items stay completed. */
 export function cancelBookingAsAdmin(
+  actor: Actor,
   bookingId: string,
   now: Date = new Date(),
 ): Promise<BookingChange> {
@@ -339,7 +388,10 @@ export function cancelBookingAsAdmin(
     if (booking.status === "cancelled" || booking.status === "completed") {
       return { ok: false, error: `Booking is already ${booking.status}.` };
     }
-    return { ok: true, ...(await cancelAllItems(tx, bookingId, "admin", now)) };
+    return {
+      ok: true,
+      ...(await cancelAllItems(tx, actor, booking, "admin", now)),
+    };
   });
 }
 
@@ -348,13 +400,13 @@ export function cancelBookingAsAdmin(
  * received or confirmed, and only before the deadline its items' cutoffs set.
  */
 export function cancelBookingAsCustomer(
+  customer: CustomerActor,
   reference: string,
-  userId: string,
   now: Date = new Date(),
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({
-      where: { reference, userId },
+      where: { reference, userId: customer.userId },
       include: {
         items: {
           select: {
@@ -370,7 +422,7 @@ export function cancelBookingAsCustomer(
     if (!allowed.ok) return { ok: false, error: allowed.message };
     return {
       ok: true,
-      ...(await cancelAllItems(tx, booking.id, "customer", now)),
+      ...(await cancelAllItems(tx, customer, booking, "customer", now)),
     };
   });
 }

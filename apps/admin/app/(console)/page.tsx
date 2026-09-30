@@ -1,71 +1,127 @@
 import Link from "next/link";
-import { countBookings, listAdmins, listBookings } from "@repo/db/server";
-import { BookingsTable } from "../_components/BookingsTable";
-import { PageHeader, PreviewNotice } from "../_components/PageHeader";
-import { requireAdmin } from "../_lib/access";
+import {
+  ADMIN_TEAM_LABELS,
+  adminTeamsOf,
+  type BookingStatus,
+  type Permission,
+} from "@repo/db";
+import { dashboardCounts, type DashboardCounts } from "@repo/db/server";
+import { PageHeader } from "../_components/PageHeader";
+import { getPermissions, requireAdmin } from "../_lib/access";
 import { bookingsHref } from "../_lib/routes";
-import { SAMPLE_LOCATIONS } from "./locations/sample-locations";
 
-const RECENT = 5;
+type Card = {
+  label: string;
+  value: number;
+  /** Narrows the bookings list to what the card counts, when a filter fits. */
+  status?: BookingStatus;
+};
 
+type CardGroup = { team: string; cards: Card[] };
+
+/**
+ * The cards, grouped by the team whose work they count. Every admin sees
+ * every group: each team gets a short view of the others' work. Sales and
+ * Finance get groups when their features are built; no number is invented.
+ */
+function groupsOf(counts: DashboardCounts): CardGroup[] {
+  return [
+    {
+      team: ADMIN_TEAM_LABELS.RESERVATION,
+      cards: [
+        {
+          label: "Awaiting confirmation",
+          value: counts.awaitingConfirmation,
+          status: "received",
+        },
+        {
+          label: "Confirmed, upcoming",
+          value: counts.confirmedUpcoming,
+          status: "confirmed",
+        },
+      ],
+    },
+    {
+      team: ADMIN_TEAM_LABELS.OPERATION,
+      cards: [
+        { label: "Pick-ups today", value: counts.pickupsToday },
+        { label: "Awaiting driver", value: counts.awaitingDriver },
+        { label: "Active zones", value: counts.activeZones },
+        { label: "Vehicle classes", value: counts.activeVehicleClasses },
+      ],
+    },
+  ];
+}
+
+function whoAmI(admin: Awaited<ReturnType<typeof requireAdmin>>) {
+  const { level, teams } = admin.adminProfile;
+  const names = adminTeamsOf(teams).map((team) => ADMIN_TEAM_LABELS[team]);
+  const role = names.length > 0 ? `${level}, ${names.join(" and ")}` : level;
+  return `Signed in as ${admin.email}, ${role}.`;
+}
+
+/** Route: /. The same status cards for every admin, SUPER included. */
 export default async function DashboardPage() {
   const admin = await requireAdmin("dashboard.view");
-  const [admins, awaiting, recent] = await Promise.all([
-    listAdmins(),
-    countBookings({ status: "received" }),
-    listBookings({}, RECENT),
+  const [counts, permissions] = await Promise.all([
+    dashboardCounts(),
+    getPermissions(),
   ]);
-
-  const tiles = [
-    { label: "Awaiting confirmation", value: String(awaiting) },
-    {
-      label: "Active locations",
-      value: String(SAMPLE_LOCATIONS.filter((l) => l.isActive).length),
-    },
-    { label: "Drivers on duty", value: "8" },
-    { label: "Admins", value: String(admins.length) },
-  ];
 
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description={`Signed in as ${admin.email}, level ${admin.adminProfile.level}`}
-      />
-      <PreviewNotice>
-        Locations and drivers show sample data. Bookings and admins are live.
-      </PreviewNotice>
+      <PageHeader title="Dashboard" description={whoAmI(admin)} />
 
-      <dl className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map((tile) => (
-          <div
-            key={tile.label}
-            className="rounded-lg border border-neutral-200 bg-white p-5"
-          >
-            <dt className="text-sm text-neutral-600">{tile.label}</dt>
-            <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-              {tile.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <section className="mt-10">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-base font-semibold tracking-tight">
-            Recent bookings
+      {groupsOf(counts).map((group) => (
+        <section key={group.team} className="mt-8">
+          <h2 className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+            {group.team}
           </h2>
-          <Link
-            href={bookingsHref()}
-            className="text-sm font-medium text-neutral-600 underline-offset-4 hover:underline"
-          >
-            All bookings
-          </Link>
-        </div>
-        <div className="mt-4">
-          <BookingsTable bookings={recent} emptyMessage="No bookings yet." />
-        </div>
-      </section>
+          <dl className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {group.cards.map((card) => (
+              <StatCard
+                key={card.label}
+                card={card}
+                permissions={permissions}
+              />
+            ))}
+          </dl>
+        </section>
+      ))}
+
+      <p className="mt-8 text-sm text-neutral-500">
+        Sales and Finance cards arrive with their features. Nothing here is a
+        placeholder.
+      </p>
     </>
+  );
+}
+
+/** One number. It links to the matching bookings list when the admin may open it. */
+function StatCard({
+  card,
+  permissions,
+}: {
+  card: Card;
+  permissions: readonly Permission[];
+}) {
+  const body = (
+    <>
+      <dt className="text-sm text-neutral-600">{card.label}</dt>
+      <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+        {card.value}
+      </dd>
+    </>
+  );
+  const className = "block rounded-lg border border-neutral-200 bg-white p-5";
+  return card.status && permissions.includes("bookings.view") ? (
+    <Link
+      href={bookingsHref(card.status)}
+      className={`${className} transition-colors hover:border-neutral-300`}
+    >
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
   );
 }

@@ -1,6 +1,6 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
-Status: steps 1 and 2 built, the rest agreed. Decisions agreed on 2026-09-30. This is the implementation
+Status: steps 1 to 4 built, the rest agreed. Decisions agreed on 2026-09-30. This is the implementation
 plan for the first two phases of the internal operations roadmap, OP4 (staff booking
 tools) and OP1 (coverage and pricing setup). The roadmap, the task list and the decision
 record (AT-D1 to AT-D16) live in the `heavenly-travel-docs` repository under `plan/`.
@@ -162,8 +162,11 @@ unknown level as `REGULAR`, so nobody is locked out between the push and the scr
 | `scripts/promote-admin.ts`              | Takes the teams after the level. New `scripts/migrate-admin-levels.ts`.                                                                             |
 | `permissions.ts`, new (step 2)          | The map above as data, and one pure function that answers "may this admin do this, with the wall on or off". Unit-tested.                           |
 | `settings.ts`, new (step 2)             | Reads and writes the one `AppSetting` row. Read once per request.                                                                                   |
-| `activity.ts`, new (step 3)             | `logActivity(tx, entry)` and the readers for one record and for the full log.                                                                       |
+| `activity-actions.ts`, new (step 3)     | Browser-safe: the actor kinds, the actions with their record type and `customerVisible`, and `describeActivity`, the sentence an entry reads as.    |
+| `activity.ts`, new (step 3)             | `logActivity(tx, actor, entry)` and the readers for one record and for the full log, with actors and records named.                                 |
 | `bookings.ts` (step 3)                  | `advanceItem`, `cancelItem`, `cancelBookingAsAdmin`, `createBooking` and `cancelBookingAsCustomer` take the actor and log inside their transaction. |
+| `admins.ts`, `settings.ts` (step 3)     | `setAdmin`, `revokeAdmin` and `setWallActive` take the actor and log inside their transaction. A change to the same values logs nothing.            |
+| `dashboard.ts`, new (step 4)            | `dashboardCounts()`: the Dashboard's numbers, one count each.                                                                                       |
 | `apps/admin/app/_lib/access.ts`         | `requireAdmin` and `getAdmin` take the screen or action they guard. `requireAdmin` sends a blocked admin to `/restricted`.                          |
 | `apps/admin/app/_components/nav.ts`     | Each item names the permission it needs. The sidebar and header show only what the admin may open.                                                  |
 | `apps/admin/.../admins`                 | Teams shown and set per admin. The wall switch. Admins with no team flagged.                                                                        |

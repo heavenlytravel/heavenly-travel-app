@@ -10,6 +10,10 @@ export {
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
 export type { AdminWithUser, AdminChange } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
+export { listActivityFor, listActivity } from "./activity";
+export type { ActivityEntry, ActivityPage } from "./activity";
+export { dashboardCounts } from "./dashboard";
+export type { DashboardCounts } from "./dashboard";
 export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
 export type { Zone, ZoneDistrict } from "./zones";
 export { listActiveVehicleClasses } from "./vehicle-classes";
@@ -48,6 +52,7 @@ export type {
 } from "./bookings";
 export * from "./roles";
 export * from "./permissions";
+export * from "./activity-actions";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";

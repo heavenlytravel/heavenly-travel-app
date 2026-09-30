@@ -127,3 +127,21 @@ again with `getAdmin(permission)`, because they can be called by direct POST.
 
 The sidebar shows only the sections the admin may open, and a button the admin may not
 use is not rendered. Both read `getPermissions()`; neither is the check itself.
+
+## The activity log
+
+Decided in `260930-admin-teams-and-access.md`. Every change to a booking, an admin or a
+setting writes one `ActivityLog` row in the same transaction, so a change that is not
+logged does not happen. Rows are never edited or deleted.
+
+- Every mutation in `packages/db` takes the actor first: `{ kind: "admin", userId }`,
+  `{ kind: "customer", userId }` or `SYSTEM_ACTOR` for a script. Server actions build
+  it with `actorOf(admin)` from `apps/admin/app/_lib/access.ts`.
+- The vocabulary (actor kinds, actions, record types, `customerVisible`) is in
+  `packages/db/src/activity-actions.ts`, browser-safe. `logActivity` and the readers
+  are in `packages/db/src/activity.ts`. An item action logs against its booking.
+- The log holds user ids only, no relation, so a renamed or deleted user never rewrites
+  it. The readers name actors and records when they load a page.
+- One booking's history shows on its admin page to anyone who can open it. The full
+  log is `/activity`, `SUPER` only. Entries carry `customerVisible` for a future
+  customer page; nothing customer-facing reads the log yet.

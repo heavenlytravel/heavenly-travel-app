@@ -50,6 +50,34 @@ model AppSetting {
   updatedAt  DateTime @updatedAt
 }
 
+/// One admin, customer or system action, written in the same transaction
+/// as the change it records. Never edited or deleted. `action`,
+/// `actorKind` and `entityType` are the values in src/activity-actions.ts.
+/// An item action logs against its booking.
+model ActivityLog {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  /// The User who acted; null for the system. No relation, so an entry
+  /// outlives its user unchanged.
+  actorId         String?
+  /// "admin" | "customer" | "system"
+  actorKind       String
+  /// "booking.item.confirmed", "wall.switched", ...
+  action          String
+  /// "booking" | "zone" | "vehicle-class" | "admin" | "setting"
+  entityType      String
+  entityId        String
+  before          Json?
+  after           Json?
+  /// Whether a future customer page may show this entry. Staff names,
+  /// internal notes and override reasons never reach a customer.
+  customerVisible Boolean  @default(false)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+}
+
 /// Stub. Real driver fields (licence, vehicle links) arrive with that feature.
 model DriverProfile {
   id        String    @id @default(cuid())

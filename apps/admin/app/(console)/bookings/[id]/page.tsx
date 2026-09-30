@@ -15,9 +15,14 @@ import {
   tripViewOfItem,
   type Permission,
 } from "@repo/db";
-import { getBooking, type BookingItemWithDetails } from "@repo/db/server";
+import {
+  getBooking,
+  listActivityFor,
+  type BookingItemWithDetails,
+} from "@repo/db/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { PageHeader } from "../../../_components/PageHeader";
 import { PlaceValue, Rows } from "../../../_components/Rows";
 import {
@@ -48,18 +53,19 @@ function CardTitle({ children }: { children: ReactNode }) {
 
 /**
  * Route: /bookings/[id]. One booking for ops: each item with its trip,
- * price and controls on the left; the customer, the totals and the
- * booking-level cancel on the right. Every team opens it; the controls
- * follow what the admin may do.
+ * price and controls on the left; the customer, the totals, the
+ * booking-level cancel and the history on the right. Every team opens it;
+ * the controls follow what the admin may do.
  */
 export default async function BookingPage({
   params,
 }: PageProps<"/bookings/[id]">) {
   await requireAdmin("bookings.view");
   const { id } = await params;
-  const [booking, permissions] = await Promise.all([
+  const [booking, permissions, history] = await Promise.all([
     getBooking(id),
     getPermissions(),
+    listActivityFor("booking", id),
   ]);
   if (!booking) notFound();
   const canManage = permissions.includes("bookings.manage");
@@ -156,6 +162,13 @@ export default async function BookingPage({
             <CardTitle>Customer</CardTitle>
             <Rows rows={customer} />
           </Card>
+          <Card>
+            <CardTitle>History</CardTitle>
+            <ActivityHistory
+              entries={history}
+              emptyMessage="No activity recorded. This booking predates the log."
+            />
+          </Card>
         </div>
       </div>
     </>
@@ -192,14 +205,14 @@ function ItemCard({
     <strong key="t">{formatMyr(item.priceTotalSen)}</strong>,
   ]);
 
-  const history: [string, ReactNode][] = [
+  const dates: [string, ReactNode][] = [
     ["Received", formatLocalDateTime(item.createdAt)],
   ];
   if (item.confirmedAt) {
-    history.push(["Confirmed", formatLocalDateTime(item.confirmedAt)]);
+    dates.push(["Confirmed", formatLocalDateTime(item.confirmedAt)]);
   }
   if (item.cancelledAt) {
-    history.push(["Cancelled", formatLocalDateTime(item.cancelledAt)]);
+    dates.push(["Cancelled", formatLocalDateTime(item.cancelledAt)]);
   }
 
   return (
@@ -232,9 +245,9 @@ function ItemCard({
         </div>
         <div>
           <h3 className="mb-1 text-xs font-medium tracking-wide text-neutral-500 uppercase">
-            History
+            Dates
           </h3>
-          <Rows rows={history} />
+          <Rows rows={dates} />
         </div>
       </div>
     </Card>

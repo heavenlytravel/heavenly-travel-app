@@ -36,7 +36,9 @@ const withItems = {
       orderBy: { position: "asc" },
       include: {
         tripDetails: true,
-        zone: { select: { id: true, slug: true, name: true } },
+        district: {
+          select: { code: true, name: true, state: { select: { name: true } } },
+        },
       },
     },
   },
@@ -63,7 +65,7 @@ type PreparedItemCore = {
   endsAt: Date | null;
   /** The customer may cancel until this long before `startsAt`. */
   cancellationCutoffHours: number;
-  zoneId: string | null;
+  districtCode: string | null;
   priceTotalSen: number;
   priceBreakdown: Prisma.InputJsonValue;
 };
@@ -125,7 +127,7 @@ export async function createBooking(
         startsAt: item.startsAt,
         endsAt: item.endsAt,
         cancellationCutoffHours: item.cancellationCutoffHours,
-        zoneId: item.zoneId,
+        districtCode: item.districtCode,
         priceTotalSen: item.priceTotalSen,
         priceBreakdown: item.priceBreakdown,
         ...detailsOf(item),

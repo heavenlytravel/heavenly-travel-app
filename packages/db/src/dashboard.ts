@@ -17,7 +17,8 @@ export type DashboardCounts = {
   pickupsToday: number;
   /** Confirmed items ahead that Operation has not assigned a driver to. */
   awaitingDriver: number;
-  activeZones: number;
+  /** Districts switched on, across every state. */
+  activeDistricts: number;
   activeVehicleClasses: number;
 };
 
@@ -30,7 +31,7 @@ export async function dashboardCounts(
     confirmedUpcoming,
     pickupsToday,
     awaitingDriver,
-    activeZones,
+    activeDistricts,
     activeVehicleClasses,
   ] = await Promise.all([
     db.booking.count({
@@ -54,7 +55,7 @@ export async function dashboardCounts(
         startsAt: { gte: now },
       },
     }),
-    db.zone.count({ where: { isActive: true } }),
+    db.district.count({ where: { isActive: true } }),
     db.vehicleClass.count({ where: { isActive: true } }),
   ]);
   return {
@@ -62,7 +63,7 @@ export async function dashboardCounts(
     confirmedUpcoming,
     pickupsToday,
     awaitingDriver,
-    activeZones,
+    activeDistricts,
     activeVehicleClasses,
   };
 }

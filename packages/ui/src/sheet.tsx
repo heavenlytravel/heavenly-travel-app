@@ -3,6 +3,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { cx } from "./cx.js";
 
+const WIDTHS = {
+  md: "ui:w-[min(22rem,88vw)]",
+  lg: "ui:w-[min(32rem,92vw)]",
+} as const;
+
 const SIDES = {
   left: "ui:left-0 ui:right-auto",
   right: "ui:right-0 ui:left-auto",
@@ -18,6 +23,7 @@ export function Sheet({
   open,
   onOpenChange,
   side = "right",
+  width = "md",
   title,
   className,
   children,
@@ -25,6 +31,8 @@ export function Sheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   side?: keyof typeof SIDES;
+  /** "md" for a short form, "lg" for one with many fields. */
+  width?: keyof typeof WIDTHS;
   /** Read by screen readers as the dialog's name. */
   title: string;
   className?: string;
@@ -58,7 +66,8 @@ export function Sheet({
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:fixed ui:inset-y-0 ui:m-0 ui:h-full ui:max-h-none ui:w-[min(22rem,88vw)] ui:max-w-none ui:overflow-y-auto ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
+        "ui:fixed ui:inset-y-0 ui:m-0 ui:h-full ui:max-h-none ui:max-w-none ui:overflow-y-auto ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
+        WIDTHS[width],
         SIDES[side],
         className,
       )}

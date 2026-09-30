@@ -1,3 +1,5 @@
+import type { TripCategory } from "./booking-status";
+
 /**
  * Global business rules and the pure checks built on them. Pure: no database
  * and no `server-only`, so it runs in unit tests and in the browser. The
@@ -68,6 +70,30 @@ export const HOURLY_OPTIONS: readonly number[] = Array.from(
 export type ClassRules = {
   minLeadHours: number;
   minHourlyHours: number;
+};
+
+/** The three rules a class carries, as stored on `VehicleClass`. */
+export type VehicleClassRules = ClassRules & {
+  cancellationCutoffHours: number;
+};
+
+/**
+ * Each category's usual rules. A new class on the Vehicle classes screen
+ * starts with them and the seed's classes carry them; a class may differ,
+ * it is only a row. The coach values are placeholders until ops confirms
+ * them.
+ */
+export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, VehicleClassRules> = {
+  "car-with-driver": {
+    minLeadHours: 4,
+    cancellationCutoffHours: 24,
+    minHourlyHours: 3,
+  },
+  "coach-charter": {
+    minLeadHours: 24,
+    cancellationCutoffHours: 48,
+    minHourlyHours: 4,
+  },
 };
 
 /**

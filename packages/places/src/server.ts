@@ -1,6 +1,7 @@
 import "server-only";
 import { googleProvider } from "./google";
 import { nullProvider } from "./null-provider";
+import { placeSearchHandler } from "./route";
 import type { PlacesProvider } from "./types";
 
 export type { PlacesProvider, SearchOptions } from "./types";
@@ -24,6 +25,9 @@ function pick(): PlacesProvider {
 
 export const places: PlacesProvider = pick();
 
+/** True when Google answers; false when the null provider offers the seeded names. */
+export const hasGooglePlaces = places.name === "google";
+
 export const searchPlaces: PlacesProvider["searchPlaces"] = (query, options) =>
   places.searchPlaces(query, options);
 export const resolvePlace: PlacesProvider["resolvePlace"] = (
@@ -32,3 +36,6 @@ export const resolvePlace: PlacesProvider["resolvePlace"] = (
 ) => places.resolvePlace(placeId, options);
 export const roadDistance: PlacesProvider["roadDistance"] = (from, to) =>
   places.roadDistance(from, to);
+
+/** `export const GET = handlePlaceSearch;` in each app's `api/places/search/route.ts`. */
+export const handlePlaceSearch = placeSearchHandler(places);

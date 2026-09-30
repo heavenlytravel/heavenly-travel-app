@@ -1,41 +1,37 @@
-// Usage: pnpm --filter @repo/places check-coverage [zone-slug ...]
+// Usage: pnpm --filter @repo/places check-coverage [district-code ...]
 //
-// Geocodes real places through Google and reports the zone each resolves
-// to, so the district names in `ZoneDistrict` can be checked against how
-// Google actually spells Malaysian address components. Each place names the
-// zone ops expects; a place outside every zone expects none. Exits 1 when any
-// place lands somewhere else, except the known gaps, which are printed and
-// counted apart. Needs GOOGLE_MAPS_SERVER_KEY (apps/web/.env.local) and
-// DATABASE_URL (packages/db/.env); the package script loads both.
+// Geocodes real places through Google and reports the district each lands
+// in by its coordinates, next to the district it is known to sit in, so the
+// boundaries in data/malaysia-districts.json can be checked against where
+// Google puts real places. A group with no district holds places from
+// several districts and is reported only. Exits 1 on a miss. Needs
+// GOOGLE_MAPS_SERVER_KEY (apps/web/.env.local) and DATABASE_URL
+// (packages/db/.env); the package script loads both. Run it after a new
+// release of the boundary data, and when a customer reports a served place
+// as not served. Add a place here when one surprises.
 //
 // The db modules are imported by path: the package entry carries
 // `server-only`, which throws outside React, as the scripts in packages/db do.
 import { db } from "../../db/src/client";
-import { resolveZone } from "../../db/src/zones";
+import { resolveDistrict } from "../../db/src/coverage";
 import { googleProvider } from "../src/google";
 
 type Expectation = {
-  /** The zone slug the places should resolve to, or null for outside all. */
-  zone: string | null;
-  /** Why these places are grouped: the district or town they sit in. */
+  /** The district the places sit in, or null for a mixed group that is only reported. */
+  district: string | null;
+  /** Why these places are grouped. */
   area: string;
   places: string[];
-  /**
-   * Set when these places are known not to resolve and why, so the check
-   * still shows them without failing. See docs/260930-ops-screens.md.
-   */
-  knownGap?: string;
 };
 
 /**
- * Well-known places, grouped by the district they sit in. Every district a
- * zone lists gets a few, and the districts next to a zone get some too so a
- * gap shows up as a miss rather than a silence.
+ * Well-known places, grouped by the district they sit in. Every district
+ * served at launch gets a few, and the districts next to them get some too,
+ * so a boundary that is off shows up as a miss rather than a silence.
  */
 const EXPECTATIONS: Expectation[] = [
-  // Klang Valley
   {
-    zone: "klang-valley",
+    district: "Kuala Lumpur",
     area: "Kuala Lumpur",
     places: [
       "Pavilion Kuala Lumpur",
@@ -45,20 +41,21 @@ const EXPECTATIONS: Expectation[] = [
       "Cheras Leisure Mall",
       "Setapak Central",
       "Kepong Metro Prima",
-      "Bandar Sri Damansara",
       "Bukit Jalil Stadium",
       "Sentul KL",
     ],
   },
   {
-    zone: "klang-valley",
+    district: "Putrajaya",
     area: "Putrajaya",
-    places: ["IOI City Mall Putrajaya", "Putrajaya Sentral"],
+    places: ["Putrajaya Sentral"],
   },
   {
-    zone: "klang-valley",
+    district: "Petaling",
     area: "Petaling",
     places: [
+      "Bukit Rahman Putra",
+      "Bandar Sri Damansara",
       "Sunway Pyramid",
       "1 Utama Shopping Centre",
       "IOI Mall Puchong",
@@ -69,7 +66,6 @@ const EXPECTATIONS: Expectation[] = [
       "Kota Damansara MRT",
       "Setia City Mall",
       "Shah Alam Stadium",
-      "Kota Kemuning",
       "Ara Damansara LRT",
       "Bandar Kinrara",
       "Damansara Utama",
@@ -79,9 +75,10 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "klang-valley",
+    district: "Klang",
     area: "Klang",
     places: [
+      "Kota Kemuning",
       "AEON Bukit Tinggi Klang",
       "Port Klang",
       "Klang KTM Station",
@@ -91,7 +88,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "klang-valley",
+    district: "Gombak",
     area: "Gombak",
     places: [
       "Batu Caves",
@@ -100,11 +97,15 @@ const EXPECTATIONS: Expectation[] = [
       "Rawang KTM Station",
       "IIUM Gombak",
       "Bandar Tasik Puteri",
-      "Bukit Rahman Putra",
     ],
   },
   {
-    zone: "klang-valley",
+    district: "Gombak",
+    area: "Gombak, on the Kuala Lumpur line: the boundary data puts it here",
+    places: ["Gombak LRT Station"],
+  },
+  {
+    district: "Hulu Langat",
     area: "Hulu Langat",
     places: [
       "Kajang Stadium",
@@ -121,9 +122,10 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "klang-valley",
+    district: "Sepang",
     area: "Sepang",
     places: [
+      "IOI City Mall Putrajaya",
       "KLIA Terminal 1",
       "Tune Hotel klia2",
       "Sama-Sama Hotel KLIA",
@@ -135,22 +137,13 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "klang-valley",
-    area: "Sepang, no locality",
-    knownGap:
-      "Google returns no locality for the terminal itself or the arrival lane, only the postcode 43900.",
+    district: "Sepang",
+    area: "Sepang, the airport itself",
     places: ["KLIA Terminal 2", "klia2"],
   },
   {
-    zone: "klang-valley",
-    area: "Kuala Lumpur, no locality",
-    knownGap: "Google returns no locality, only the postcode 53100.",
-    places: ["Gombak LRT Station"],
-  },
-  // Selangor districts the zone does not list yet: ops decides
-  {
-    zone: null,
-    area: "Kuala Langat (not listed)",
+    district: "Kuala Langat",
+    area: "Kuala Langat",
     places: [
       "Banting",
       "Morib Beach",
@@ -160,24 +153,25 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: null,
-    area: "Hulu Selangor (not listed)",
+    district: "Hulu Selangor",
+    area: "Hulu Selangor",
     places: ["Kuala Kubu Bharu", "Batang Kali", "Serendah"],
   },
   {
-    zone: "klang-valley",
-    area: "Hulu Selangor, but Google says Rawang",
+    district: "Hulu Selangor",
+    area: "Hulu Selangor, near Rawang",
     places: ["Bukit Beruntung"],
   },
   {
-    zone: null,
-    area: "Kuala Selangor (not listed)",
-    places: ["Kuala Selangor Nature Park", "Sekinchan", "Puncak Alam", "Ijok"],
+    district: "Kuala Selangor",
+    area: "Kuala Selangor",
+    places: ["Kuala Selangor Nature Park", "Puncak Alam", "Ijok"],
   },
   {
-    zone: null,
-    area: "Outside Klang Valley",
+    district: null,
+    area: "Around the Klang Valley, several districts",
     places: [
+      "Sekinchan",
       "Nilai KTM Station",
       "Seremban",
       "Resorts World Genting",
@@ -187,9 +181,8 @@ const EXPECTATIONS: Expectation[] = [
       "Labuan Financial Park",
     ],
   },
-  // Langkawi
   {
-    zone: "langkawi",
+    district: "Langkawi",
     area: "Langkawi",
     places: [
       "Langkawi International Airport",
@@ -207,15 +200,13 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "langkawi",
-    area: "Langkawi, no locality",
-    knownGap:
-      "Beaches carry only the state and the postcode 07000. Hotels on the same beaches resolve.",
+    district: "Langkawi",
+    area: "Langkawi, the beaches themselves",
     places: ["Pantai Cenang", "Tanjung Rhu Beach"],
   },
   {
-    zone: null,
-    area: "Outside Langkawi",
+    district: null,
+    area: "Around Langkawi, several districts",
     places: [
       "Alor Setar",
       "Kuala Perlis Jetty",
@@ -223,9 +214,8 @@ const EXPECTATIONS: Expectation[] = [
       "Sungai Petani",
     ],
   },
-  // Penang
   {
-    zone: "penang",
+    district: "Timur Laut",
     area: "Timur Laut",
     places: [
       "KOMTAR",
@@ -240,21 +230,24 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "penang",
+    district: "Timur Laut",
+    area: "Timur Laut, on the Barat Daya line: the boundary data puts them here",
+    places: ["Queensbay Mall", "Sungai Ara"],
+  },
+  {
+    district: "Barat Daya",
     area: "Barat Daya",
     places: [
       "Penang International Airport",
-      "Queensbay Mall",
       "Bayan Baru",
       "Balik Pulau",
       "Teluk Bahang",
       "Teluk Kumbar",
-      "Sungai Ara",
       "Batu Maung",
     ],
   },
   {
-    zone: "penang",
+    district: "Seberang Perai Utara",
     area: "Seberang Perai Utara",
     places: [
       "Penang Sentral",
@@ -265,7 +258,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "penang",
+    district: "Seberang Perai Tengah",
     area: "Seberang Perai Tengah",
     places: [
       "Bukit Mertajam",
@@ -276,7 +269,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "penang",
+    district: "Seberang Perai Selatan",
     area: "Seberang Perai Selatan",
     places: [
       "IKEA Batu Kawan",
@@ -287,13 +280,12 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: null,
-    area: "Outside Penang",
+    district: null,
+    area: "Around Penang, several districts",
     places: ["Kulim", "Parit Buntar", "Bandar Baharu Kedah"],
   },
-  // Melaka
   {
-    zone: "melaka",
+    district: "Melaka Tengah",
     area: "Melaka Tengah",
     places: [
       "A Famosa Fort",
@@ -311,7 +303,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "melaka",
+    district: "Alor Gajah",
     area: "Alor Gajah",
     places: [
       "Alor Gajah",
@@ -322,14 +314,17 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "melaka",
+    district: "Jasin",
     area: "Jasin",
     places: ["Jasin", "Merlimau", "Bemban", "Selandar"],
   },
-  { zone: null, area: "Outside Melaka", places: ["Tampin", "Muar"] },
-  // Johor Bahru
   {
-    zone: "johor-bahru",
+    district: null,
+    area: "Around Melaka, several districts",
+    places: ["Tampin", "Muar"],
+  },
+  {
+    district: "Johor Bahru",
     area: "Johor Bahru",
     places: [
       "JB Sentral",
@@ -350,7 +345,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "johor-bahru",
+    district: "Johor Bahru",
     area: "Iskandar Puteri",
     places: [
       "Legoland Malaysia",
@@ -362,7 +357,7 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: "johor-bahru",
+    district: "Kulai",
     area: "Kulai",
     places: [
       "Senai International Airport",
@@ -372,13 +367,12 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: null,
-    area: "Outside Johor Bahru",
+    district: null,
+    area: "Around Johor Bahru, several districts",
     places: ["Pekan Nanas", "Pontian", "Kota Tinggi", "Desaru Coast", "Kluang"],
   },
-  // Cameron Highlands
   {
-    zone: "cameron-highlands",
+    district: "Cameron Highlands",
     area: "Cameron Highlands",
     places: [
       "Tanah Rata",
@@ -397,8 +391,8 @@ const EXPECTATIONS: Expectation[] = [
     ],
   },
   {
-    zone: null,
-    area: "Outside Cameron Highlands",
+    district: null,
+    area: "Around Cameron Highlands, several districts",
     places: ["Ipoh", "Simpang Pulai", "Gua Musang", "Lojing", "Tapah"],
   },
 ];
@@ -412,45 +406,36 @@ const google = googleProvider(key);
 
 const only = new Set(process.argv.slice(2));
 const groups = only.size
-  ? EXPECTATIONS.filter((e) => e.zone !== null && only.has(e.zone))
+  ? EXPECTATIONS.filter((e) => e.district !== null && only.has(e.district))
   : EXPECTATIONS;
 
 const pad = (s: string, n: number) => s.padEnd(n).slice(0, n);
 let misses = 0;
-let gaps = 0;
 let total = 0;
 
 for (const group of groups) {
-  console.log(`\n## ${group.area} -> ${group.zone ?? "(outside)"}`);
-  if (group.knownGap) console.log(`   Known gap: ${group.knownGap}`);
+  console.log(`\n## ${group.area} -> ${group.district ?? "(several)"}`);
   for (const query of group.places) {
     total += 1;
-    const [suggestion] = await google.searchPlaces(query);
+    const [suggestion] = await google.searchPlaces(query, {
+      includeAreas: true,
+    });
     const place = suggestion && (await google.resolvePlace(suggestion.placeId));
-    const zone = place ? await resolveZone(place) : null;
-    const got = zone?.slug ?? null;
-    const ok = got === group.zone;
-    let mark = "ok  ";
-    if (!ok && group.knownGap) {
-      gaps += 1;
-      mark = "GAP ";
-    } else if (!ok) {
-      misses += 1;
-      mark = "MISS";
-    }
-    const components = place
-      ? [place.state, place.district, place.locality]
-          .map((c) => c ?? "-")
-          .join(" | ")
+    const district = place ? await resolveDistrict(place) : null;
+    const got = district?.name ?? null;
+    const ok = group.district === null ? got !== null : got === group.district;
+    if (!ok) misses += 1;
+    const where = place
+      ? `${place.lat.toFixed(4)}, ${place.lng.toFixed(4)} | ${place.locality ?? "-"}`
       : "(Google found nothing)";
     console.log(
-      `${mark}  ${pad(query, 34)} ${pad(got ?? "-", 18)} ${components}`,
+      `${ok ? "ok  " : "MISS"}  ${pad(query, 34)} ${pad(got ?? "-", 24)} ${district ? (district.isActive ? "on " : "off") : "   "} ${where}`,
     );
   }
 }
 
 console.log(
-  `\n${total - misses - gaps} of ${total} places resolved as expected, ${gaps} known gaps, ${misses} misses.`,
+  `\n${total - misses} of ${total} places landed in the expected district, ${misses} misses.`,
 );
 await db.$disconnect();
 process.exit(misses ? 1 : 0);

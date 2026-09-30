@@ -1,4 +1,9 @@
-import { type ComponentProps } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  type ComponentProps,
+  type ReactElement,
+} from "react";
 import { cx } from "./cx.js";
 
 const VARIANTS = {
@@ -19,25 +24,34 @@ const SIZES = {
 export type ButtonProps = ComponentProps<"button"> & {
   variant?: keyof typeof VARIANTS;
   size?: keyof typeof SIZES;
+  /** Style the one child element (a `Link`) instead of rendering a button. */
+  asChild?: boolean;
 };
 
 export function Button({
   variant = "primary",
   size = "md",
   type = "button",
+  asChild = false,
   className,
+  children,
   ...props
 }: ButtonProps) {
+  const classes = cx(
+    "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-md ui:border ui:font-medium ui:whitespace-nowrap ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:disabled:pointer-events-none ui:disabled:opacity-50",
+    VARIANTS[variant],
+    SIZES[size],
+    className,
+  );
+  if (asChild && isValidElement(children)) {
+    const child = children as ReactElement<{ className?: string }>;
+    return cloneElement(child, {
+      className: cx(classes, child.props.className),
+    });
+  }
   return (
-    <button
-      type={type}
-      className={cx(
-        "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-md ui:border ui:font-medium ui:whitespace-nowrap ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:disabled:pointer-events-none ui:disabled:opacity-50",
-        VARIANTS[variant],
-        SIZES[size],
-        className,
-      )}
-      {...props}
-    />
+    <button type={type} className={classes} {...props}>
+      {children}
+    </button>
   );
 }

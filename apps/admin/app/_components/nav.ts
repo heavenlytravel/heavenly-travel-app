@@ -1,5 +1,6 @@
 import type { Permission } from "@repo/db";
 import {
+  BusIcon,
   CalendarCheckIcon,
   HistoryIcon,
   LayoutDashboardIcon,
@@ -7,7 +8,13 @@ import {
   ShieldCheckIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
-import { ACTIVITY_PATH, ADMINS_PATH, BOOKINGS_PATH } from "../_lib/routes";
+import {
+  ACTIVITY_PATH,
+  ADMINS_PATH,
+  BOOKINGS_PATH,
+  COVERAGE_PATH,
+  VEHICLE_CLASSES_PATH,
+} from "../_lib/routes";
 
 export type NavItem = {
   href: string;
@@ -37,9 +44,15 @@ export const NAV: NavGroup[] = [
         permission: "bookings.view",
       },
       {
-        href: "/locations",
-        label: "Locations",
+        href: COVERAGE_PATH,
+        label: "Coverage",
         icon: MapPinIcon,
+        permission: "coverage.manage",
+      },
+      {
+        href: VEHICLE_CLASSES_PATH,
+        label: "Vehicle classes",
+        icon: BusIcon,
         permission: "coverage.manage",
       },
     ],

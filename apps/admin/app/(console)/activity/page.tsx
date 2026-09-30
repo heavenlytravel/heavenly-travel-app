@@ -3,6 +3,7 @@ import { describeActivity, formatLocalDateTime } from "@repo/db";
 import { listActivity, type ActivityEntry } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { activityHref, bookingHref } from "../../_lib/routes";
 
@@ -35,44 +36,35 @@ export default async function ActivityPage({
         description="Every action on bookings, admins and settings, with who did it and when. Entries are never edited or deleted."
       />
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-neutral-200 text-xs text-neutral-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">When</th>
-              <th className="px-4 py-3 font-medium">Who</th>
-              <th className="px-4 py-3 font-medium">What</th>
-              <th className="px-4 py-3 font-medium">Record</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
+      <div className="mt-6">
+        <Table>
+          <THead>
+            <Th>When</Th>
+            <Th>Who</Th>
+            <Th>What</Th>
+            <Th>Record</Th>
+          </THead>
+          <TBody>
             {entries.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-4 py-8 text-center text-neutral-500"
-                >
-                  {before ? "No older activity." : "No activity yet."}
-                </td>
-              </tr>
+              <EmptyRow colSpan={4}>
+                {before ? "No older activity." : "No activity yet."}
+              </EmptyRow>
             ) : (
               entries.map((entry) => {
                 const href = entityLink(entry);
                 return (
                   <tr key={entry.id}>
-                    <td className="px-4 py-3 whitespace-nowrap text-neutral-600 tabular-nums">
+                    <Td className="whitespace-nowrap text-neutral-600 tabular-nums">
                       {formatLocalDateTime(entry.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
+                    </Td>
+                    <Td>
                       <span className="block">{entry.actorName}</span>
                       <span className="block text-xs text-neutral-500 capitalize">
                         {entry.actorKind}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      {describeActivity(entry)}
-                    </td>
-                    <td className="px-4 py-3">
+                    </Td>
+                    <Td className="font-medium">{describeActivity(entry)}</Td>
+                    <Td>
                       <span className="flex items-center gap-2">
                         <Badge>{entry.entityType}</Badge>
                         {href ? (
@@ -88,13 +80,13 @@ export default async function ActivityPage({
                           </span>
                         )}
                       </span>
-                    </td>
+                    </Td>
                   </tr>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
 
       <nav

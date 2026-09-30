@@ -19,7 +19,7 @@ import {
   type TripPriceBreakdown,
 } from "./pricing";
 import { listActiveVehicleClasses, type VehicleClass } from "./vehicle-classes";
-import { resolveZone, type Zone } from "./zones";
+import { resolveDistrict, type DistrictWithState } from "./coverage";
 
 /**
  * The transportation product, car with driver and coach charter alike: what
@@ -71,7 +71,8 @@ export type ClassQuote = {
 
 export type TripQuote = {
   category: TripCategory;
-  zone: Zone;
+  /** Where the pickup is, with the state whose multiplier priced it. */
+  district: DistrictWithState;
   basis: PricingBasis;
   classes: ClassQuote[];
 };
@@ -97,8 +98,8 @@ export async function quoteTrip(
   request: TripRequest,
   now: Date = new Date(),
 ): Promise<TripQuoteResult> {
-  const zone = await resolveZone(request.pickup);
-  if (!zone || !zone.isActive) {
+  const district = await resolveDistrict(request.pickup);
+  if (!district || !district.isActive) {
     return fail("not-served", "We do not serve that pickup area yet.");
   }
 
@@ -136,7 +137,7 @@ export async function quoteTrip(
       price: priceTrip({
         trip: basis,
         rates: vehicleClass,
-        multiplier: zone.multiplier,
+        multiplier: district.state.multiplier,
       }),
       availability: classAvailability(
         vehicleClass,
@@ -146,7 +147,7 @@ export async function quoteTrip(
     }),
   );
 
-  return { ok: true, quote: { category, zone, basis, classes } };
+  return { ok: true, quote: { category, district, basis, classes } };
 }
 
 export type PrepareTripItemResult =
@@ -171,7 +172,7 @@ export async function prepareTripItem(
 ): Promise<PrepareTripItemResult> {
   const quoted = await quoteTrip(category, request, now);
   if (!quoted.ok) return quoted;
-  const { zone, basis, classes } = quoted.quote;
+  const { district, basis, classes } = quoted.quote;
 
   const chosen = classes.find(
     (c) => c.vehicleClass.id === request.vehicleClassId,
@@ -213,7 +214,7 @@ export async function prepareTripItem(
           ? new Date(request.startsAt.getTime() + basis.hours * HOUR_MS)
           : null,
       cancellationCutoffHours: vehicleClass.cancellationCutoffHours,
-      zoneId: zone.id,
+      districtCode: district.code,
       priceTotalSen: price.totalSen,
       priceBreakdown: price,
       tripDetails: {

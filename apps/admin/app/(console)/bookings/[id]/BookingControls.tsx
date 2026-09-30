@@ -3,11 +3,11 @@
 import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { useActionState } from "react";
+import type { ActionState } from "../../../_lib/action-state";
 import {
   advanceItemAction,
   cancelBookingAction,
   cancelItemAction,
-  type ActionState,
 } from "./actions";
 
 /** What the forward button says for each step it would take. */

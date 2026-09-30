@@ -59,9 +59,47 @@ describe("describeActivity", () => {
     assert.equal(flip(false), "Turned the wall off");
   });
 
+  it("reads a state's multiplier and a district's switch from after", () => {
+    assert.equal(
+      describeActivity({
+        action: "state.updated",
+        before: { multiplier: 1 },
+        after: { multiplier: 1.2 },
+      }),
+      "Set the multiplier to ×1.20",
+    );
+    assert.equal(
+      describeActivity({
+        action: "district.updated",
+        before: { isActive: false },
+        after: { isActive: true },
+      }),
+      "Turned the district on",
+    );
+  });
+
+  it("lists the fields of a class that changed by their labels", () => {
+    assert.equal(
+      describeActivity({
+        action: "vehicle-class.updated",
+        before: { baseFareSen: 3000, perKmSen: 180, minLeadHours: 4 },
+        after: { baseFareSen: 3500, perKmSen: 200, minLeadHours: 6 },
+      }),
+      "Changed the base fare, the per km and the notice needed",
+    );
+    assert.equal(
+      describeActivity({
+        action: "vehicle-class.updated",
+        before: { isActive: true },
+        after: { isActive: false },
+      }),
+      "Turned the class off",
+    );
+  });
+
   it("falls back to the raw action for one it does not know", () => {
-    const entry = { action: "zone.updated", before: null, after: null };
-    assert.equal(describeActivity(entry), "zone.updated");
+    const entry = { action: "vehicle.washed", before: null, after: null };
+    assert.equal(describeActivity(entry), "vehicle.washed");
   });
 
   it("has a sentence for every action", () => {

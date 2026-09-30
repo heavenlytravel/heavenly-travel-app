@@ -24,3 +24,18 @@ export function bookingsHref(status?: BookingStatus) {
 export function bookingHref(id: string) {
   return `${BOOKINGS_PATH}/${id}`;
 }
+
+export const COVERAGE_PATH = "/coverage";
+
+/** One state's page, by its ISO code. */
+export function stateHref(code: string) {
+  return `${COVERAGE_PATH}/${code}`;
+}
+
+export const VEHICLE_CLASSES_PATH = "/vehicle-classes";
+
+/** One class's page, by id; "new" for the add page. */
+export function vehicleClassHref(id: string) {
+  return `${VEHICLE_CLASSES_PATH}/${id}`;
+}
+export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");

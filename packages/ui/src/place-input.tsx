@@ -2,16 +2,19 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { PlaceSuggestion } from "@repo/places";
-import { fetchPlaceSuggestions, isSearchableQuery } from "../../_lib/places";
+import { cx } from "./cx.js";
+import { fetchPlaceSuggestions, isSearchableQuery } from "./place-search.js";
 
 const DEBOUNCE_MS = 250;
 
 /**
- * A text input with a suggestion list underneath, fed by /api/places/search.
- * Picking a row reports the label and the place id; typing reports the text
- * alone, so the caller knows whether the place is resolved. One Google
- * autocomplete session token lives from the first keystroke to a pick, then
- * a new one is minted, which is how Google bills a session as one request.
+ * A text input with a suggestion list underneath, fed by the app's
+ * /api/places/search. Picking a row reports the label and the place id;
+ * typing reports the text alone, so the caller knows whether the place is
+ * resolved. One Google autocomplete session token lives from the first
+ * keystroke to a pick, then a new one is minted, which is how Google bills
+ * a session as one request. The input is unstyled: the caller passes the
+ * classes its form uses.
  */
 export function PlaceInput({
   id,
@@ -92,7 +95,7 @@ export function PlaceInput({
   return (
     <div
       ref={root}
-      className="relative"
+      className="ui:relative"
       // Closing on blur has to wait for a click on a row to land first.
       onBlur={(e) => {
         if (!root.current?.contains(e.relatedTarget as Node | null))
@@ -126,7 +129,7 @@ export function PlaceInput({
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-full left-0 z-20 mt-2 max-h-72 w-max max-w-[min(90vw,26rem)] min-w-full overflow-auto rounded-xl border border-[#dce3e0] bg-white py-1.5 text-left text-[#102825] shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
+          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-2 ui:max-h-72 ui:w-max ui:max-w-[min(90vw,26rem)] ui:min-w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-[#dce3e0] ui:bg-white ui:py-1.5 ui:text-left ui:text-[#102825] ui:shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
         >
           {suggestions.map((s, i) => (
             <li
@@ -138,15 +141,16 @@ export function PlaceInput({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => pick(s)}
               onMouseEnter={() => setActive(i)}
-              className={`cursor-pointer px-3.5 py-2 ${
-                i === active ? "bg-[#e8f2ef]" : ""
-              }`}
+              className={cx(
+                "ui:cursor-pointer ui:px-3.5 ui:py-2",
+                i === active && "ui:bg-[#e8f2ef]",
+              )}
             >
-              <span className="block text-[0.95rem] font-semibold text-[#082f2b]">
+              <span className="ui:block ui:text-[0.95rem] ui:font-semibold ui:text-[#082f2b]">
                 {s.label}
               </span>
               {s.detail && (
-                <span className="block text-[0.8rem] text-[#64706d]">
+                <span className="ui:block ui:text-[0.8rem] ui:text-[#64706d]">
                   {s.detail}
                 </span>
               )}

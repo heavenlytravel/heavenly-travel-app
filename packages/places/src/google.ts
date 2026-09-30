@@ -56,11 +56,11 @@ export function googleProvider(key: string): PlacesProvider {
   // The session token is not part of any cache key: a cached answer costs
   // nothing, and the token only matters on the calls that reach Google.
   const search = memoize(
-    (query: string, sessionToken?: string) =>
+    (query: string, sessionToken?: string, includeAreas?: boolean) =>
       call(key, `${PLACES}/places:autocomplete`, {
         method: "POST",
         fieldMask:
-          "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat",
+          "suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.types,suggestions.placePrediction.structuredFormat",
         body: {
           input: query,
           includedRegionCodes: [REGION],
@@ -68,8 +68,13 @@ export function googleProvider(key: string): PlacesProvider {
           regionCode: REGION,
           sessionToken,
         },
-      }).then(parseSuggestions),
-    { key: ([query]) => query, ttlMs: MINUTE, max: 1_000 },
+      }).then((body) => parseSuggestions(body, includeAreas)),
+    {
+      key: ([query, , includeAreas]) =>
+        `${includeAreas ? "areas:" : ""}${query}`,
+      ttlMs: MINUTE,
+      max: 1_000,
+    },
   );
 
   // Google's terms allow caching place ids indefinitely and other place data
@@ -116,7 +121,11 @@ export function googleProvider(key: string): PlacesProvider {
     name: "google",
     canRoute: true,
     searchPlaces: (query, options) =>
-      attempt("autocomplete", () => search(query, options?.sessionToken), []),
+      attempt(
+        "autocomplete",
+        () => search(query, options?.sessionToken, options?.includeAreas),
+        [],
+      ),
     resolvePlace: (placeId, options) =>
       attempt(
         "place details",

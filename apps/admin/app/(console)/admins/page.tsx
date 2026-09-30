@@ -2,6 +2,7 @@ import { ADMIN_TEAM_LABELS, adminTeamsOf, fullName, needsTeam } from "@repo/db";
 import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
+import { Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { AdminRowControls } from "./AdminRowControls";
 import { PromoteForm } from "./PromoteForm";
@@ -53,19 +54,17 @@ export default async function AdminsPage() {
 
       <PromoteForm />
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-neutral-200 text-xs text-neutral-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Level</th>
-              <th className="px-4 py-3 font-medium">Teams</th>
-              <th className="px-4 py-3 font-medium">Since</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
+      <div className="mt-6">
+        <Table>
+          <THead>
+            <Th>Name</Th>
+            <Th>Email</Th>
+            <Th>Level</Th>
+            <Th>Teams</Th>
+            <Th>Since</Th>
+            <Th />
+          </THead>
+          <TBody>
             {admins.map((profile) => {
               const { user, level, createdAt } = profile;
               const isSelf = user.id === admin.id;
@@ -73,21 +72,21 @@ export default async function AdminsPage() {
               const teams = adminTeamsOf(profile.teams);
               return (
                 <tr key={user.id}>
-                  <td className="px-4 py-3 font-medium">
+                  <Td className="font-medium">
                     {name || "—"}
                     {isSelf ? (
                       <span className="ml-2 text-xs font-normal text-neutral-500">
                         you
                       </span>
                     ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">{user.email}</td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td className="text-neutral-600">{user.email}</Td>
+                  <Td>
                     <Badge tone={level === "SUPER" ? "blue" : "neutral"}>
                       {level}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     {needsTeam(profile) ? (
                       <Badge tone="amber">No team</Badge>
                     ) : teams.length === 0 ? (
@@ -99,13 +98,13 @@ export default async function AdminsPage() {
                         ))}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600 tabular-nums">
+                  </Td>
+                  <Td className="text-neutral-600 tabular-nums">
                     {createdAt.toLocaleDateString("en-MY", {
                       dateStyle: "medium",
                     })}
-                  </td>
-                  <td className="px-4 py-3">
+                  </Td>
+                  <Td>
                     {isSelf ? null : (
                       <AdminRowControls
                         userId={user.id}
@@ -114,12 +113,12 @@ export default async function AdminsPage() {
                         teams={teams}
                       />
                     )}
-                  </td>
+                  </Td>
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </div>
     </>
   );

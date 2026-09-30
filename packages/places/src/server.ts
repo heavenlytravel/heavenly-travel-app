@@ -2,9 +2,11 @@ import "server-only";
 import { googleProvider } from "./google";
 import { nullProvider } from "./null-provider";
 import { placeSearchHandler } from "./route";
+import { tripResolver } from "./trip-request";
 import type { PlacesProvider } from "./types";
 
 export type { PlacesProvider, SearchOptions } from "./types";
+export type { ResolvedTrip } from "./trip-request";
 export * from "./index";
 
 /**
@@ -39,3 +41,9 @@ export const roadDistance: PlacesProvider["roadDistance"] = (from, to) =>
 
 /** `export const GET = handlePlaceSearch;` in each app's `api/places/search/route.ts`. */
 export const handlePlaceSearch = placeSearchHandler(places);
+
+/**
+ * A parsed trip search as a `TripRequest`, places resolved and distance
+ * fetched, or why it cannot be. See ./trip-request.
+ */
+export const resolveTrip = tripResolver(places);

@@ -30,7 +30,9 @@
   rules and the booking core are modules in `packages/db/src`, shared by both apps.
   The pure ones (`booking-rules.ts`, `pricing.ts`, `references.ts`, `booking-status.ts`)
   are also exported from `@repo/db` for the browser and unit-tested with
-  `pnpm --filter @repo/db test`. See `260923-car-with-driver.md`.
+  `pnpm --filter @repo/db test`. See `260923-car-with-driver.md`. A booking need not
+  belong to a `User`: staff enter bookings for guests, and the booking carries its own
+  contact email (`260930-admin-teams-and-access.md`, "A booking can belong to nobody").
 
 ## Environments
 

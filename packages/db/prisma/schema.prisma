@@ -26,6 +26,7 @@ model User {
   driverProfile  DriverProfile?
   partnerProfile PartnerProfile?
   bookings       Booking[]
+  bookingNotes   BookingNote[]
 }
 
 /// Staff access. `level` is one of the AdminLevel values and `teams` holds
@@ -177,15 +178,24 @@ model VehicleClass {
 
 /// An order: one or more items, each one product on one day. `status` is
 /// derived from the items by `bookingStatusOf` and stored for filtering.
+/// The contact fields are copies, so a later profile change never rewrites
+/// a booking. A booking entered by staff for a customer with no account
+/// has no user. See docs/260930-admin-teams-and-access.md, "A booking can
+/// belong to nobody".
 model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
   reference     String    @unique
-  userId        String
-  user          User      @relation(fields: [userId], references: [id])
+  /// The account the booking shows under; null for a guest.
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
   status        String
   contactName   String
   contactPhone  String
+  /// Where the customer's emails go; null when they gave none. Read through
+  /// `customerEmailOf`, which falls back to the account's email for
+  /// bookings made before this column existed.
+  contactEmail  String?
   /// Sum of the live (not cancelled) items.
   priceTotalSen Int
   currency      String    @default("MYR")
@@ -199,9 +209,25 @@ model Booking {
   updatedAt     DateTime  @updatedAt
 
   items BookingItem[]
+  notes BookingNote[]
 
   @@index([userId, createdAt])
   @@index([status, startsAt])
+}
+
+/// A note staff keep on a booking. Never shown to the customer, never
+/// edited or deleted: a wrong note is followed by a correcting one. The
+/// author is kept as an id that survives the user's deletion.
+model BookingNote {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
 }
 
 /// One product on one day inside a booking. Fulfilment happens here, because
@@ -225,9 +251,16 @@ model BookingItem {
   /// The district the pickup was placed in at booking.
   districtCode            String?
   district                District? @relation(fields: [districtCode], references: [code])
+  /// The override when one is set, otherwise the receipt's total.
   priceTotalSen           Int
-  /// The receipt: mode, rates used, distance or hours, multiplier.
+  /// The receipt: mode, rates used, distance or hours, multiplier. Never
+  /// changed by an override, so the quoted price stays on record.
   priceBreakdown          Json
+  /// An agreed price in place of the receipt's, with why. Both null when
+  /// the rates' price stands. Staff only; the reason never reaches a
+  /// customer.
+  priceOverrideSen        Int?
+  priceOverrideReason     String?
   confirmedAt             DateTime?
   cancelledAt             DateTime?
   createdAt               DateTime  @default(now())

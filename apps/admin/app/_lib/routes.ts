@@ -25,6 +25,9 @@ export function bookingHref(id: string) {
   return `${BOOKINGS_PATH}/${id}`;
 }
 
+/** Where staff enter a booking that arrived by phone, WhatsApp or email. */
+export const NEW_BOOKING_PATH = `${BOOKINGS_PATH}/new`;
+
 export const COVERAGE_PATH = "/coverage";
 
 /** One state's page, by its ISO code. */

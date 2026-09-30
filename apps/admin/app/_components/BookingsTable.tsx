@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  customerEmailOf,
   formatLocalDateTime,
   formatMyr,
   itemSummary,
@@ -51,7 +52,7 @@ export function BookingsTable({
                 <Td>
                   <span className="block">{booking.contactName}</span>
                   <span className="block text-xs text-neutral-500">
-                    {booking.user.email}
+                    {customerEmailOf(booking) ?? booking.contactPhone}
                   </span>
                 </Td>
                 <Td className="text-neutral-600">

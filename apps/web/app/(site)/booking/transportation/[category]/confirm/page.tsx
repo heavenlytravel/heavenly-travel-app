@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
-import { fullName, TRIP_CATEGORY_LABELS, tripDetailRows } from "@repo/db";
+import {
+  fullName,
+  parseTripOptions,
+  parseTripSearch,
+  toParams,
+  TRIP_CATEGORY_LABELS,
+  tripDetailRows,
+  tripSearchParams,
+} from "@repo/db";
 import { getAccess, prepareTripItem } from "@repo/db/server";
+import { resolveTrip } from "@repo/places/server";
 import { notFound, redirect } from "next/navigation";
 import { signInHref } from "../../../../../_lib/routes";
 import {
   bookableCategory,
-  parseTripOptions,
-  parseTripSearch,
-  toParams,
   tripBookingHref,
   tripConfirmPath,
-  tripSearchParams,
 } from "../../../../../_lib/transportation-booking";
 import { PageTitle, Panel, Stop } from "../../../../_components/Page";
 import { PriceBreakdown } from "../../../_components/PriceBreakdown";
 import { TripSummary } from "../../../_components/TripSummary";
-import { loadTrip } from "../_lib/trip";
 import { ConfirmForm } from "./ConfirmForm";
 
 export const metadata: Metadata = {
@@ -58,7 +62,7 @@ export default async function ConfirmPage({
     options.passengers,
   );
 
-  const trip = await loadTrip(search);
+  const trip = await resolveTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
   const prepared = await prepareTripItem(category, {

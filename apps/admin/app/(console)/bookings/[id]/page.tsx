@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ADVANCE_PERMISSIONS,
   BOOKING_STATUS_LABELS,
+  customerEmailOf,
   formatLocalDateTime,
   formatMyr,
   fullName,
@@ -18,6 +19,7 @@ import {
 import {
   getBooking,
   listActivityFor,
+  listBookingNotes,
   type BookingItemWithDetails,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
@@ -33,6 +35,8 @@ import {
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
+import { Notes } from "./Notes";
+import { PriceOverrideControl } from "./PriceOverride";
 
 function statusLabel(status: string) {
   return isBookingStatus(status) ? BOOKING_STATUS_LABELS[status] : status;
@@ -41,18 +45,19 @@ function statusLabel(status: string) {
 /**
  * Route: /bookings/[id]. One booking for ops: each item with its trip,
  * price and controls on the left; the customer, the totals, the
- * booking-level cancel and the history on the right. Every team opens it;
- * the controls follow what the admin may do.
+ * booking-level cancel, the internal notes and the history on the right.
+ * Every team opens it; the controls follow what the admin may do.
  */
 export default async function BookingPage({
   params,
 }: PageProps<"/bookings/[id]">) {
   await requireAdmin("bookings.view");
   const { id } = await params;
-  const [booking, permissions, history] = await Promise.all([
+  const [booking, permissions, history, notes] = await Promise.all([
     getBooking(id),
     getPermissions(),
     listActivityFor("booking", id),
+    listBookingNotes(id),
   ]);
   if (!booking) notFound();
   const canManage = permissions.includes("bookings.manage");
@@ -76,7 +81,7 @@ export default async function BookingPage({
     ]);
   }
 
-  const accountName = fullName(booking.user);
+  const email = customerEmailOf(booking);
   const customer: [string, ReactNode][] = [
     ["Name", booking.contactName],
     [
@@ -91,18 +96,33 @@ export default async function BookingPage({
     ],
     [
       "Email",
-      <a
-        key="e"
-        href={`mailto:${booking.user.email}`}
-        className="break-all hover:underline"
-      >
-        {booking.user.email}
-      </a>,
+      email ? (
+        <a
+          key="e"
+          href={`mailto:${email}`}
+          className="break-all hover:underline"
+        >
+          {email}
+        </a>
+      ) : (
+        <span key="e" className="font-normal text-neutral-500">
+          None given, no emails sent
+        </span>
+      ),
     ],
   ];
-  if (accountName && accountName !== booking.contactName) {
-    customer.push(["Account", accountName]);
-  }
+  // The account the booking shows under, when there is one: a guest
+  // entered by staff has none.
+  customer.push([
+    "Account",
+    booking.user ? (
+      fullName(booking.user) || booking.user.email
+    ) : (
+      <span key="a" className="font-normal text-neutral-500">
+        None, entered by staff
+      </span>
+    ),
+  ]);
 
   return (
     <>
@@ -149,6 +169,12 @@ export default async function BookingPage({
             <CardTitle>Customer</CardTitle>
             <Rows rows={customer} />
           </Card>
+          {permissions.includes("bookings.notes") ? (
+            <Card>
+              <CardTitle>Notes</CardTitle>
+              <Notes bookingId={booking.id} notes={notes} />
+            </Card>
+          ) : null}
           <Card>
             <CardTitle>History</CardTitle>
             <ActivityHistory
@@ -189,13 +215,36 @@ function ItemCard({
     ]);
   }
 
-  const price: [string, ReactNode][] = isTripPriceBreakdown(item.priceBreakdown)
-    ? priceRows(item.priceBreakdown)
-    : [];
+  // The receipt, then the agreed price when one replaces it. The receipt's
+  // total stays on record next to what is charged.
+  const receipt = isTripPriceBreakdown(item.priceBreakdown)
+    ? item.priceBreakdown
+    : null;
+  const override =
+    item.priceOverrideSen !== null && item.priceOverrideReason !== null
+      ? { totalSen: item.priceOverrideSen, reason: item.priceOverrideReason }
+      : null;
+  const price: [string, ReactNode][] = receipt ? priceRows(receipt) : [];
+  if (override) {
+    if (receipt) price.push(["Quoted price", formatMyr(receipt.totalSen)]);
+    price.push([
+      "Agreed price",
+      <span key="o">
+        <span className="block">{formatMyr(override.totalSen)}</span>
+        <span className="block text-xs font-normal text-neutral-500">
+          {override.reason}
+        </span>
+      </span>,
+    ]);
+  }
   price.push([
     "Total",
     <strong key="t">{formatMyr(item.priceTotalSen)}</strong>,
   ]);
+  const canPrice =
+    permissions.includes("bookings.create") &&
+    item.status !== "cancelled" &&
+    item.status !== "completed";
 
   const dates: [string, ReactNode][] = [
     ["Received", formatLocalDateTime(item.createdAt)],
@@ -234,6 +283,11 @@ function ItemCard({
             Price
           </h3>
           <Rows rows={price} />
+          {canPrice ? (
+            <div className="mt-3">
+              <PriceOverrideControl itemId={item.id} current={override} />
+            </div>
+          ) : null}
         </div>
         <div>
           <h3 className="mb-1 text-xs font-medium tracking-wide text-neutral-500 uppercase">

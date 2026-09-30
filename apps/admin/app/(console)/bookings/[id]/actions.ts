@@ -1,18 +1,31 @@
 "use server";
 
 import {
+  flagOf,
+  parsePriceOverride,
+  PRICE_OVERRIDE_FIELDS,
+  textOf,
+  type PriceOverride,
+} from "@repo/db";
+import {
+  addBookingNote,
   ADVANCE_PERMISSIONS,
   advanceItem,
   cancelBookingAsAdmin,
   cancelItem,
   isNextItemStatus,
+  overrideItemPrice,
   type BookingChange,
 } from "@repo/db/server";
 import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
-import { FORBIDDEN, type ActionState } from "../../../_lib/action-state";
+import {
+  FORBIDDEN,
+  stateOf,
+  type ActionState,
+} from "../../../_lib/action-state";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 
 /**
@@ -65,4 +78,51 @@ export async function cancelBookingAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) return { error: "Missing booking." };
   return finish(await cancelBookingAsAdmin(actorOf(admin), bookingId));
+}
+
+/** An internal note; every team may add one. Nothing is emailed. */
+export async function addNoteAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.notes");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return { error: "Missing booking." };
+  const result = await addBookingNote(
+    actorOf(admin),
+    bookingId,
+    String(formData.get("body") ?? ""),
+  );
+  if (result.ok) revalidatePath(bookingHref(bookingId));
+  return stateOf(result);
+}
+
+/**
+ * An agreed price on one item, or its removal when `remove` is posted.
+ * Reservation and Sales only. No email: the price was agreed outside the
+ * app, and the confirmed email carries the final total.
+ */
+export async function overrideItemPriceAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.create");
+  if (!admin) return FORBIDDEN;
+  const itemId = textOf(formData.get("itemId"));
+  if (!itemId) return { error: "Missing item." };
+
+  let override: PriceOverride | null = null;
+  if (!flagOf(formData.get("remove"))) {
+    const parsed = parsePriceOverride({
+      amount: formData.get(PRICE_OVERRIDE_FIELDS.amount),
+      reason: formData.get(PRICE_OVERRIDE_FIELDS.reason),
+    });
+    if (!parsed.ok) return { error: parsed.error };
+    if (!parsed.value) {
+      return { error: "Enter the agreed price and the reason." };
+    }
+    override = parsed.value;
+  }
+  return finish(await overrideItemPrice(actorOf(admin), itemId, override));
 }

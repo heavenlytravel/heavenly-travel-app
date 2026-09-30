@@ -10,10 +10,10 @@ It is not a second product. Car with driver and coach charter are the same trip:
 pickup, a drop-off or a number of hours, a vehicle class, a price from the same formula.
 The only thing that differs is which vehicle classes are offered, and that is decided by
 a category on the class. So the product becomes `transportation`, the vehicle class
-gains a category, and everything built for cars in `car-with-driver.md` serves coaches
+gains a category, and everything built for cars in `260923-car-with-driver.md` serves coaches
 without a fork.
 
-Where this document differs from `car-with-driver.md`, this one wins. That document
+Where this document differs from `260923-car-with-driver.md`, this one wins. That document
 still describes the pricing formula, the lifecycle and the module layout.
 
 ## Decisions
@@ -348,4 +348,4 @@ refuses a minimum below the hourly floor.
 - Amending an existing booking from the admin console, after the customer and the team
   agree a change.
 - Per-category zone coverage, when a zone has no coach.
-- Everything listed under future work in `car-with-driver.md`.
+- Everything listed under future work in `260923-car-with-driver.md`.

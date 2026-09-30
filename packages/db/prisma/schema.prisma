@@ -61,7 +61,7 @@ model PartnerProfile {
 }
 
 // ---------------------------------------------------------------------------
-// Bookings. See docs/car-with-driver.md and docs/coach-charter.md. Money is
+// Bookings. See docs/260923-car-with-driver.md and docs/260928-coach-charter.md. Money is
 // integer sen; statuses and categories are strings validated against the
 // const arrays in src/booking-status.ts.
 // ---------------------------------------------------------------------------

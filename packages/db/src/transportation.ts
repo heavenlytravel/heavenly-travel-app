@@ -26,7 +26,7 @@ import { resolveZone, type Zone } from "./zones";
  * a customer asks for, what it costs, and how it becomes a booking item. The
  * category only decides which vehicle classes are offered. Everything
  * product-specific lives here; the booking core in bookings.ts only sees a
- * `PreparedItem`. See docs/coach-charter.md.
+ * `PreparedItem`. See docs/260928-coach-charter.md.
  */
 
 export type TripRequest = {

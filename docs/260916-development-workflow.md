@@ -158,7 +158,7 @@ Both Vercel projects (`web` with root directory `apps/web`, `admin` with root di
      **Preview**, branch `staging`.
 
 After changing environment variables, redeploy the branch for them to take effect.
-Which Clerk instance and Neon branch each scope uses is in `docs/auth-and-database.md`.
+Which Clerk instance and Neon branch each scope uses is in `docs/260918-auth-and-database.md`.
 
 ## Gating the staging site
 

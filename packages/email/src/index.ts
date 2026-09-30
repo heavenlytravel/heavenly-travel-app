@@ -17,7 +17,7 @@ export type { BookingEmailEvent } from "./booking-emails";
  * process: Resend when `RESEND_API_KEY` is set, otherwise the console. The
  * links, the sender, the ops inbox and the subject prefix come from the
  * environment, with production values as defaults. See
- * docs/car-with-driver.md, "Emails".
+ * docs/260923-car-with-driver.md, "Emails".
  */
 
 const PRODUCTION_FROM = `Heavenly Travel <${CONTACT.bookingEmail}>`;

@@ -2,7 +2,7 @@ import {
   bookingStatusOf,
   checkCustomerCancel,
   isLive,
-  NEXT_ITEM_STATUS,
+  nextItemStatusOf,
   type BookingStatus,
   type Canceller,
   type ItemStatus,
@@ -273,8 +273,7 @@ export function advanceItem(
   return db.$transaction(async (tx) => {
     const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
     if (!item) return { ok: false, error: "Booking item not found." };
-    const next = NEXT_ITEM_STATUS[item.status as keyof typeof NEXT_ITEM_STATUS];
-    if (next !== to) {
+    if (nextItemStatusOf(item.status) !== to) {
       return {
         ok: false,
         error: `Item is ${item.status}, so it cannot become ${to}.`,

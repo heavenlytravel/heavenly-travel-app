@@ -7,8 +7,9 @@ export {
   upsertUserFromClerk,
   deleteUserFromClerk,
 } from "./sync";
-export { listAdmins, setAdminLevel, revokeAdmin } from "./admins";
+export { listAdmins, setAdmin, revokeAdmin } from "./admins";
 export type { AdminWithUser, AdminChange } from "./admins";
+export { isWallActive, setWallActive } from "./settings";
 export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
 export type { Zone, ZoneDistrict } from "./zones";
 export { listActiveVehicleClasses } from "./vehicle-classes";
@@ -46,6 +47,7 @@ export type {
   BookingEvent,
 } from "./bookings";
 export * from "./roles";
+export * from "./permissions";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";

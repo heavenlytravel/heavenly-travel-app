@@ -1,6 +1,6 @@
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
-import type { AdminLevel } from "./roles";
+import { adminTeamsOf, type AdminLevel, type AdminTeam } from "./roles";
 
 const withUser = {
   include: { user: true },
@@ -12,6 +12,7 @@ export type AdminChange = { ok: true } | { ok: false; error: string };
 
 const LAST_SUPER_ERROR =
   "This is the only SUPER admin. Promote another SUPER admin first.";
+const NO_TEAM_ERROR = "A REGULAR admin needs at least one team.";
 
 export function listAdmins(): Promise<AdminWithUser[]> {
   return db.adminProfile.findMany({
@@ -25,14 +26,21 @@ async function isLastSuper(tx: Prisma.TransactionClient) {
 }
 
 /**
- * Grants admin access to an existing user, or changes the level of an
- * existing admin. There is no sign-up for staff: a person becomes an admin
- * only by being promoted here. At least one SUPER admin always remains.
+ * Grants admin access to an existing user, or changes the level and teams
+ * of an existing admin. There is no sign-up for staff: a person becomes an
+ * admin only by being promoted here. At least one SUPER admin always
+ * remains, and a REGULAR admin always holds a team.
  */
-export function setAdminLevel(
+export async function setAdmin(
   email: string,
   level: AdminLevel,
+  teams: readonly AdminTeam[],
 ): Promise<AdminChange> {
+  const held = adminTeamsOf(teams);
+  if (level !== "SUPER" && held.length === 0) {
+    return { ok: false, error: NO_TEAM_ERROR };
+  }
+
   return db.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { email },
@@ -54,8 +62,8 @@ export function setAdminLevel(
 
     await tx.adminProfile.upsert({
       where: { userId: user.id },
-      update: { level },
-      create: { userId: user.id, level },
+      update: { level, teams: held },
+      create: { userId: user.id, level, teams: held },
     });
     return { ok: true };
   });

@@ -1,3 +1,4 @@
+import type { Permission } from "@repo/db";
 import {
   CalendarCheckIcon,
   LayoutDashboardIcon,
@@ -5,12 +6,14 @@ import {
   ShieldCheckIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
-import { BOOKINGS_PATH } from "../_lib/routes";
+import { ADMINS_PATH, BOOKINGS_PATH } from "../_lib/routes";
 
 export type NavItem = {
   href: string;
   label: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** What the page asks of `requireAdmin`. Without it the link is hidden. */
+  permission: Permission;
 };
 
 export type NavGroup = { label: string; items: NavItem[] };
@@ -20,16 +23,46 @@ export const NAV: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboardIcon },
-      { href: BOOKINGS_PATH, label: "Bookings", icon: CalendarCheckIcon },
-      { href: "/locations", label: "Locations", icon: MapPinIcon },
+      {
+        href: "/",
+        label: "Dashboard",
+        icon: LayoutDashboardIcon,
+        permission: "dashboard.view",
+      },
+      {
+        href: BOOKINGS_PATH,
+        label: "Bookings",
+        icon: CalendarCheckIcon,
+        permission: "bookings.view",
+      },
+      {
+        href: "/locations",
+        label: "Locations",
+        icon: MapPinIcon,
+        permission: "coverage.manage",
+      },
     ],
   },
   {
     label: "Access",
-    items: [{ href: "/admins", label: "Admins", icon: ShieldCheckIcon }],
+    items: [
+      {
+        href: ADMINS_PATH,
+        label: "Admins",
+        icon: ShieldCheckIcon,
+        permission: "admins.manage",
+      },
+    ],
   },
 ];
+
+/** The groups with only the sections the admin may open; empty groups go. */
+export function navFor(permissions: readonly Permission[]): NavGroup[] {
+  return NAV.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => permissions.includes(item.permission)),
+  })).filter((group) => group.items.length > 0);
+}
 
 export function isCurrentNav(item: NavItem, pathname: string) {
   return item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

@@ -15,7 +15,7 @@ import { bookingsHref } from "../../_lib/routes";
 export default async function BookingsPage({
   searchParams,
 }: PageProps<"/bookings">) {
-  await requireAdmin();
+  await requireAdmin("bookings.view");
   const { status } = await searchParams;
   const filter = isBookingStatus(status) ? status : undefined;
   const bookings = await listBookings({ status: filter });

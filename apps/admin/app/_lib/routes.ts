@@ -1,6 +1,10 @@
 import type { BookingStatus } from "@repo/db";
 
-/** The console's booking paths, so no page spells a URL by hand. */
+/** The console's paths, so no page spells a URL by hand. */
+
+export const ADMINS_PATH = "/admins";
+/** Where an admin lands when a screen belongs to another team. */
+export const RESTRICTED_PATH = "/restricted";
 
 export const BOOKINGS_PATH = "/bookings";
 

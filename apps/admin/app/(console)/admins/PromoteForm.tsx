@@ -1,13 +1,13 @@
 "use client";
 
-import { ADMIN_LEVELS } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Field, Input, Select } from "@repo/ui/field";
+import { Field, Input } from "@repo/ui/field";
 import { useActionState } from "react";
-import { setAdminLevelAction } from "./actions";
+import { AdminFields } from "./AdminFields";
+import { setAdminAction } from "./actions";
 
 export function PromoteForm() {
-  const [result, action, pending] = useActionState(setAdminLevelAction, null);
+  const [result, action, pending] = useActionState(setAdminAction, null);
 
   return (
     <form
@@ -16,10 +16,11 @@ export function PromoteForm() {
     >
       <h2 className="text-base font-semibold tracking-tight">Promote a user</h2>
       <p className="mt-1 text-sm text-neutral-600">
-        They must have signed in on the customer site at least once.
+        They must have signed in on the customer site at least once. A REGULAR
+        admin needs at least one team.
       </p>
 
-      <div className="mt-4 flex flex-wrap items-end gap-3">
+      <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-4">
         <Field label="Email" className="min-w-60 flex-1">
           <Input
             name="email"
@@ -29,15 +30,7 @@ export function PromoteForm() {
             placeholder="name@heavenlytravel.my"
           />
         </Field>
-        <Field label="Level" className="w-36">
-          <Select name="level" defaultValue="REGULAR">
-            {ADMIN_LEVELS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <AdminFields />
         <Button type="submit" disabled={pending}>
           {pending ? "Promoting…" : "Promote"}
         </Button>

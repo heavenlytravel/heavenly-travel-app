@@ -2,9 +2,11 @@ import { SidebarInset, SidebarProvider } from "@repo/ui/sidebar";
 import { cookies } from "next/headers";
 import { AppSidebar } from "../_components/AppSidebar";
 import { ConsoleHeader } from "../_components/ConsoleHeader";
+import { getPermissions } from "../_lib/access";
 
 // Chrome only. Access is checked by each page with `requireAdmin`, which
-// redirects before anything here reaches the browser.
+// redirects before anything here reaches the browser. The permissions read
+// here only choose which links the sidebar shows.
 export default async function ConsoleLayout({
   children,
 }: {
@@ -12,12 +14,12 @@ export default async function ConsoleLayout({
 }) {
   // The sidebar remembers whether it was collapsed, read here so the first
   // paint already matches.
-  const store = await cookies();
+  const [store, permissions] = await Promise.all([cookies(), getPermissions()]);
   const defaultOpen = store.get("sidebar_state")?.value !== "false";
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar />
+      <AppSidebar permissions={permissions} />
       <SidebarInset>
         <ConsoleHeader />
         <div className="mx-auto w-full max-w-5xl px-5 pt-8 pb-32 md:px-10 md:pt-10">

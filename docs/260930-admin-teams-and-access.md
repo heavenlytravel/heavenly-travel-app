@@ -1,6 +1,6 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
-Status: steps 1 to 5 built, the rest agreed. Decisions agreed on 2026-09-30. The ops
+Status: steps 1 to 7 built, the rest agreed. Decisions agreed on 2026-09-30. The ops
 screens of steps 6 and 7 are designed in `260930-ops-screens.md`. This is the implementation
 plan for the first two phases of the internal operations roadmap, OP4 (staff booking
 tools) and OP1 (coverage and pricing setup). The roadmap, the task list and the decision

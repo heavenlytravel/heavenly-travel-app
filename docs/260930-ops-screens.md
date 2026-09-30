@@ -1,9 +1,9 @@
 # Ops screens: Zones and Vehicle classes
 
-Status: proposed on 2026-09-30, for agreement before the screens are built. This is step
-5 of `260930-admin-teams-and-access.md` (PR C): the design of the two Operation screens
-that steps 6 and 7 build in PR D, the coverage check that step 5 ran against Google, and
-the seed rule that follows from it. Where this document differs from
+Status: agreed and built on 2026-09-30; the screens shipped in PR D, see "As built". This
+is step 5 of `260930-admin-teams-and-access.md` (PR C): the design of the two Operation
+screens that steps 6 and 7 built in PR D, the coverage check that step 5 ran against
+Google, and the seed rule that follows from it. Where this document differs from
 `260923-car-with-driver.md` or `260928-coach-charter.md`, this one wins.
 
 Today a change to a rate, a rule or a district is an edit to `prisma/seed.ts` and a
@@ -284,6 +284,45 @@ order within the PR:
    Locations screen removed.
 7. **Vehicle classes screen**: `CATEGORY_RULE_DEFAULTS`, the class writers and
    validation with tests, the log actions, the list and the sheet.
+
+## As built
+
+PR D built both screens as designed. Where the build settled a detail the design left
+open, or placed a module differently:
+
+- **Validation modules.** The pure checks live in `zone-input.ts` and
+  `vehicle-class-input.ts`, next to the writers rather than inside them: `zones.ts` and
+  `vehicle-classes.ts` import the Prisma client, which the unit tests cannot load. Each
+  has a `parse…Fields` for the form's strings and a `check…Fields` for typed values; the
+  server action parses, the writer checks again. `fields.ts` holds the readers the
+  parsers share (`textOf`, `numberOf`, `flagOf`); `slug.ts` derives slugs; `money.ts`
+  gained `parseRinggit` and `ringgitInputValue`. `change.ts` holds the `Change` and
+  `Created` answers every writer returns; `AdminChange` is the same shape.
+- **What an update logs.** `changedFields` in `activity.ts` compares a patch with the
+  row and returns the fields that differ, which is both what the update writes and what
+  it logs. A patch that changes nothing writes and logs nothing.
+- **`resolveZone`** returns a `ZoneMatch`, the zone and the district row that placed the
+  place there, or null. `quoteTrip` and `check-coverage` read `.zone`.
+- **The search route** is one handler, `handlePlaceSearch` in `@repo/places/server`,
+  exported as `GET` by both apps' `api/places/search/route.ts`. `hasGooglePlaces` says
+  whether Google or the null provider answers; the test tool shows a note when it is the
+  null provider.
+- **`PlaceInput`** is `@repo/ui/place-input`, with the fetch helper in
+  `@repo/ui/place-search`. The package now depends on `@repo/places` for the shared
+  types and query limits, and compiles with bundler module resolution, as the apps do,
+  so it can read that package's source. `@repo/ui/field` exports `inputClassName` for
+  inputs the package does not render itself.
+- **Adding a district** needs the state as well as the town, because `ZoneDistrict` is
+  unique on the pair. The test tool fills both from Google's result; the hand form asks
+  for both. Removing a zone's last district does not turn the zone off; nothing resolves
+  there until a district is added, and the switch refuses to turn a zone on without one.
+- **A place with no town** reads "Google gives no town for this place": `Place` carries
+  no postcode yet, so the postcode is not shown. It arrives with the postcode key if that
+  is chosen.
+- **The console's tables** share `_components/Table.tsx` and its cards share
+  `_components/Card.tsx`; the Admins, Activity and Bookings tables moved onto them.
+- **Turning a class off** is the same `updateVehicleClass` as the sheet, with a patch of
+  one field, so the switch and the form log the same way.
 
 ## Future work, on record
 

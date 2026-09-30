@@ -18,15 +18,19 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@repo/ui/sidebar";
-import { fullName } from "@repo/db";
-import { isCurrentNav, NAV } from "./nav";
+import { fullName, type Permission } from "@repo/db";
+import { isCurrentNav, navFor } from "./nav";
 
 /**
- * The console's sidebar: the brand mark on top, the sections in groups,
- * the signed-in admin at the bottom. Collapsed it is a rail of icons with
+ * The console's sidebar: the brand mark on top, the sections the admin may
+ * open in groups, the signed-in admin at the bottom. Collapsed it is a rail of icons with
  * the labels as tooltips; below `md` it opens as a sheet.
  */
-export function AppSidebar() {
+export function AppSidebar({
+  permissions,
+}: {
+  permissions: readonly Permission[];
+}) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { user } = useUser();
@@ -69,7 +73,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {NAV.map((group) => (
+        {navFor(permissions).map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarMenu>

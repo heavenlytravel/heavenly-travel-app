@@ -9,7 +9,7 @@ import { SAMPLE_LOCATIONS } from "./locations/sample-locations";
 const RECENT = 5;
 
 export default async function DashboardPage() {
-  const admin = await requireAdmin();
+  const admin = await requireAdmin("dashboard.view");
   const [admins, awaiting, recent] = await Promise.all([
     listAdmins(),
     countBookings({ status: "received" }),

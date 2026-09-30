@@ -28,14 +28,26 @@ model User {
   bookings       Booking[]
 }
 
-/// Staff access. `level` is one of the AdminLevel values in src/roles.ts.
+/// Staff access. `level` is one of the AdminLevel values and `teams` holds
+/// AdminTeam values, both in src/roles.ts. What each team reaches is in
+/// src/permissions.ts.
 model AdminProfile {
   id        String   @id @default(cuid())
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   level     String
+  teams     String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// App-wide settings, one row with the id "app". See src/settings.ts.
+model AppSetting {
+  id         String   @id
+  /// Off, every admin reaches every team screen and action. See
+  /// src/permissions.ts.
+  wallActive Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
 }
 
 /// Stub. Real driver fields (licence, vehicle links) arrive with that feature.

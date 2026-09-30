@@ -16,6 +16,8 @@
     "db:studio:prod": "node --import tsx scripts/with-production-db.ts prisma studio",
     "db:promote-admin": "node --env-file=.env --import tsx scripts/promote-admin.ts",
     "db:promote-admin:prod": "node --import tsx scripts/with-production-db.ts node --import tsx scripts/promote-admin.ts",
+    "db:migrate-admin-levels": "node --env-file=.env --import tsx scripts/migrate-admin-levels.ts",
+    "db:migrate-admin-levels:prod": "node --import tsx scripts/with-production-db.ts node --import tsx scripts/migrate-admin-levels.ts",
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
     "db:seed:prod": "node --import tsx scripts/with-production-db.ts node --import tsx prisma/seed.ts",
     "postinstall": "prisma generate",

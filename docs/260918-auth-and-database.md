@@ -11,16 +11,17 @@
 - **Checks happen in pages, not in `proxy.ts` or layouts.** `clerkMiddleware()` in each
   app's `proxy.ts` only attaches the session. Pages call `getAccess(area)` from
   `@repo/db/server` and render each status themselves. The access matrix lives only
-  in that function. The one exception is the reverse check: each app's `(auth)` layout
+  in that function. Inside the admin area, what each team reaches lives only in
+  `permissions.ts` (see "Levels, teams and the wall" below). The one exception is the reverse check: each app's `(auth)` layout
   sends a signed-in visitor away from `/sign-in` and `/sign-up` on the server, so the
   form never flashes before Clerk's own client-side redirect (see `260922-auth-pages.md`).
 
-  | Area      | Who gets in                            |
-  | --------- | -------------------------------------- |
-  | `user`    | any signed-in user                     |
-  | `driver`  | active driver profile, or any admin    |
-  | `partner` | active partner profile, or any admin   |
-  | `admin`   | admin profile (level stored, not used) |
+  | Area      | Who gets in                          |
+  | --------- | ------------------------------------ |
+  | `user`    | any signed-in user                   |
+  | `driver`  | active driver profile, or any admin  |
+  | `partner` | active partner profile, or any admin |
+  | `admin`   | admin profile                        |
 
 - **Users are synced by webhook** (`apps/web/app/api/webhooks/clerk/route.ts`) on
   `user.created`, `user.updated` and `user.deleted`. If a signed-in user has no row yet
@@ -90,20 +91,39 @@ Sign in once so the `User` row exists, then:
 pnpm --filter @repo/db db:promote-admin you@heavenlytravel.my SUPER
 # production: same arguments, asks for confirmation
 pnpm --filter @repo/db db:promote-admin:prod you@heavenlytravel.my SUPER
+# a REGULAR admin needs at least one team, named after the level
+pnpm --filter @repo/db db:promote-admin name@heavenlytravel.my REGULAR SALES RESERVATION
 ```
 
-Levels: `SUPER`, `REGULAR`, `OPS` (`packages/db/src/roles.ts`). All levels have the same
-access except that only `SUPER` manages other admins.
+## Levels, teams and the wall
+
+Decided in `260930-admin-teams-and-access.md`. The values are in
+`packages/db/src/roles.ts`.
+
+- The level is `SUPER` or `REGULAR` and says who manages staff. A level the code does
+  not know reads as `REGULAR`.
+- The teams are `OPERATION`, `RESERVATION`, `SALES` and `FINANCE` and say which work is
+  theirs. An admin can hold several. `SUPER` needs none; a `REGULAR` admin needs at
+  least one.
+- The wall is the map from teams to screens and actions. It lives only in
+  `packages/db/src/permissions.ts`, as data with one pure function, `may`.
+- The wall switch is the `wallActive` column of the one `AppSetting` row
+  (`packages/db/src/settings.ts`). Off, every admin reaches every team screen and
+  action. The Admins page and the switch are `SUPER` only in both states.
 
 ## Admin access is invite-only
 
 The admin site (https://manage.heavenlytravel.my) has no sign-up. A person signs up as a
 customer on the web app, then a `SUPER` admin promotes them on the **Admins** page, which
-also changes levels and revokes access. The page and the `db:promote-admin` script share
-`setAdminLevel` / `revokeAdmin` in `packages/db/src/admins.ts`, which always keep at least
-one `SUPER` admin.
+also sets levels and teams, revokes access and holds the wall switch. The page and the
+`db:promote-admin` script share `setAdmin` / `revokeAdmin` in
+`packages/db/src/admins.ts`, which always keep at least one `SUPER` admin.
 
-Every admin page starts with `requireAdmin()` (`apps/admin/app/_lib/access.ts`):
-signed-out visitors go to `/sign-in`, signed-in users without an admin profile go to
-`/no-access`. Server actions check again with `getAdmin()`, because they can be called
-by direct POST.
+Every admin page starts with `requireAdmin(permission)`
+(`apps/admin/app/_lib/access.ts`), naming the screen it guards: signed-out visitors go
+to `/sign-in`, signed-in users without an admin profile go to `/no-access`, and an
+admin whose teams do not reach the screen goes to `/restricted`. Server actions check
+again with `getAdmin(permission)`, because they can be called by direct POST.
+
+The sidebar shows only the sections the admin may open, and a button the admin may not
+use is not rendered. Both read `getPermissions()`; neither is the check itself.

@@ -1,6 +1,7 @@
 // Browser-safe exports only. Server code (Prisma client, session helpers)
 // lives in ./server.
 export * from "./roles";
+export * from "./permissions";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";
@@ -12,3 +13,4 @@ export * from "./trip-view";
 export * from "./names";
 export * from "./contact";
 export type { SessionUser, Access } from "./session";
+export type { AdminChange } from "./admins";

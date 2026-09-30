@@ -100,6 +100,17 @@ export const NEXT_ITEM_STATUS = {
   confirmed: "assigned",
   assigned: "completed",
 } as const satisfies Partial<Record<ItemStatus, ItemStatus>>;
+export type NextItemStatus =
+  (typeof NEXT_ITEM_STATUS)[keyof typeof NEXT_ITEM_STATUS];
+
+export const isNextItemStatus = guardFor(Object.values(NEXT_ITEM_STATUS));
+
+/** The step forward from a status, or null when there is none. */
+export function nextItemStatusOf(status: string): NextItemStatus | null {
+  return status in NEXT_ITEM_STATUS
+    ? NEXT_ITEM_STATUS[status as keyof typeof NEXT_ITEM_STATUS]
+    : null;
+}
 
 /** Statuses a customer may still cancel from; the cutoff is checked separately. */
 export const CUSTOMER_CANCELLABLE: readonly BookingStatus[] = [

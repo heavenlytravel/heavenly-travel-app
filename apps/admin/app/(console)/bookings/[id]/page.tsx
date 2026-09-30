@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ADVANCE_PERMISSIONS,
   BOOKING_STATUS_LABELS,
   formatLocalDateTime,
   formatMyr,
@@ -7,10 +8,12 @@ import {
   isBookingStatus,
   isTripPriceBreakdown,
   itemHeading,
+  nextItemStatusOf,
   priceRows,
   tripDetailRows,
   tripRows,
   tripViewOfItem,
+  type Permission,
 } from "@repo/db";
 import { getBooking, type BookingItemWithDetails } from "@repo/db/server";
 import { notFound } from "next/navigation";
@@ -21,7 +24,7 @@ import {
   BookingStatusBadge,
   ItemStatusBadge,
 } from "../../../_components/StatusBadges";
-import { requireAdmin } from "../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
 
@@ -46,15 +49,20 @@ function CardTitle({ children }: { children: ReactNode }) {
 /**
  * Route: /bookings/[id]. One booking for ops: each item with its trip,
  * price and controls on the left; the customer, the totals and the
- * booking-level cancel on the right. All admin levels.
+ * booking-level cancel on the right. Every team opens it; the controls
+ * follow what the admin may do.
  */
 export default async function BookingPage({
   params,
 }: PageProps<"/bookings/[id]">) {
-  await requireAdmin();
+  await requireAdmin("bookings.view");
   const { id } = await params;
-  const booking = await getBooking(id);
+  const [booking, permissions] = await Promise.all([
+    getBooking(id),
+    getPermissions(),
+  ]);
   if (!booking) notFound();
+  const canManage = permissions.includes("bookings.manage");
 
   const open = booking.status !== "cancelled" && booking.status !== "completed";
 
@@ -126,6 +134,7 @@ export default async function BookingPage({
               item={item}
               label={`${booking.reference} item ${item.position}`}
               showPosition={booking.items.length > 1}
+              permissions={permissions}
             />
           ))}
         </div>
@@ -134,7 +143,7 @@ export default async function BookingPage({
           <Card>
             <CardTitle>Booking</CardTitle>
             <Rows rows={summary} />
-            {open ? (
+            {open && canManage ? (
               <div className="mt-4">
                 <CancelBookingControl
                   bookingId={booking.id}
@@ -157,11 +166,14 @@ function ItemCard({
   item,
   label,
   showPosition,
+  permissions,
 }: {
   item: BookingItemWithDetails;
   label: string;
   showPosition: boolean;
+  permissions: readonly Permission[];
 }) {
+  const next = nextItemStatusOf(item.status);
   const trip = tripViewOfItem(item);
   const rows: [string, ReactNode][] = trip
     ? tripRows(trip).map(([rowLabel, value]) => [
@@ -200,7 +212,15 @@ function ItemCard({
           </h2>
           <ItemStatusBadge status={item.status} />
         </div>
-        <ItemControls itemId={item.id} status={item.status} label={label} />
+        <ItemControls
+          itemId={item.id}
+          status={item.status}
+          label={label}
+          canAdvance={
+            next !== null && permissions.includes(ADVANCE_PERMISSIONS[next])
+          }
+          canCancel={permissions.includes("bookings.manage")}
+        />
       </div>
       <Rows rows={rows} />
       <div className="mt-5 grid gap-5 sm:grid-cols-2">

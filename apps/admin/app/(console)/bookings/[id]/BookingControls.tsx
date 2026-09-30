@@ -1,6 +1,6 @@
 "use client";
 
-import { NEXT_ITEM_STATUS } from "@repo/db";
+import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { useActionState } from "react";
 import {
@@ -10,20 +10,12 @@ import {
   type ActionState,
 } from "./actions";
 
-type NextStep = (typeof NEXT_ITEM_STATUS)[keyof typeof NEXT_ITEM_STATUS];
-
 /** What the forward button says for each step it would take. */
-const ADVANCE_LABELS: Record<NextStep, string> = {
+const ADVANCE_LABELS: Record<NextItemStatus, string> = {
   confirmed: "Confirm",
   assigned: "Mark driver assigned",
   completed: "Mark completed",
 };
-
-function nextStepOf(status: string): NextStep | null {
-  return status in NEXT_ITEM_STATUS
-    ? NEXT_ITEM_STATUS[status as keyof typeof NEXT_ITEM_STATUS]
-    : null;
-}
 
 function ErrorLine({ state }: { state: ActionState }) {
   return state?.error ? (
@@ -34,19 +26,25 @@ function ErrorLine({ state }: { state: ActionState }) {
 }
 
 /**
- * The forward step and the cancel for one item. The next status travels
- * with the form, so a stale page that still shows "Confirm" on an item
- * already confirmed fails instead of skipping a step.
+ * The forward step and the cancel for one item, each shown only to an
+ * admin who may do it. The next status travels with the form, so a stale
+ * page that still shows "Confirm" on an item already confirmed fails
+ * instead of skipping a step.
  */
 export function ItemControls({
   itemId,
   status,
   label,
+  canAdvance,
+  canCancel,
 }: {
   itemId: string;
   status: string;
   /** How the confirm dialog names the item: "HT-7K3QZM item 1". */
   label: string;
+  /** Whether the admin may take the step that comes next. */
+  canAdvance: boolean;
+  canCancel: boolean;
 }) {
   const [advanceState, advance, advancing] = useActionState<
     ActionState,
@@ -56,8 +54,9 @@ export function ItemControls({
     ActionState,
     FormData
   >(cancelItemAction, null);
-  const next = nextStepOf(status);
-  const cancellable = status !== "cancelled" && status !== "completed";
+  const next = canAdvance ? nextItemStatusOf(status) : null;
+  const cancellable =
+    canCancel && status !== "cancelled" && status !== "completed";
   const pending = advancing || cancelling;
 
   if (!next && !cancellable) return null;

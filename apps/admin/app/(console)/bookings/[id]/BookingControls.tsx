@@ -2,6 +2,7 @@
 
 import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import Link from "next/link";
 import { useActionState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
 import {
@@ -26,9 +27,9 @@ function ErrorLine({ state }: { state: ActionState }) {
 }
 
 /**
- * The forward step and the cancel for one item, each shown only to an
- * admin who may do it. The next status travels with the form, so a stale
- * page that still shows "Confirm" on an item already confirmed fails
+ * The forward step, the amend and the cancel for one item, each shown only
+ * to an admin who may do it. The next status travels with the form, so a
+ * stale page that still shows "Confirm" on an item already confirmed fails
  * instead of skipping a step.
  */
 export function ItemControls({
@@ -37,6 +38,7 @@ export function ItemControls({
   label,
   canAdvance,
   canCancel,
+  amendHref,
 }: {
   itemId: string;
   status: string;
@@ -45,6 +47,8 @@ export function ItemControls({
   /** Whether the admin may take the step that comes next. */
   canAdvance: boolean;
   canCancel: boolean;
+  /** The amend form, or null when the admin may not or the item is past it. */
+  amendHref: string | null;
 }) {
   const [advanceState, advance, advancing] = useActionState<
     ActionState,
@@ -59,11 +63,16 @@ export function ItemControls({
     canCancel && status !== "cancelled" && status !== "completed";
   const pending = advancing || cancelling;
 
-  if (!next && !cancellable) return null;
+  if (!next && !cancellable && !amendHref) return null;
 
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
+        {amendHref ? (
+          <Button asChild variant="secondary" size="sm">
+            <Link href={amendHref}>Amend</Link>
+          </Button>
+        ) : null}
         {next ? (
           <form action={advance}>
             <input type="hidden" name="itemId" value={itemId} />

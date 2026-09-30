@@ -33,7 +33,7 @@ import {
   ItemStatusBadge,
 } from "../../../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
-import { BOOKINGS_PATH } from "../../../_lib/routes";
+import { amendItemHref, BOOKINGS_PATH } from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
 import { Notes } from "./Notes";
 import { PriceOverrideControl } from "./PriceOverride";
@@ -245,6 +245,11 @@ function ItemCard({
     permissions.includes("bookings.create") &&
     item.status !== "cancelled" &&
     item.status !== "completed";
+  // A trip can be amended until a driver is assigned to it.
+  const canAmend =
+    permissions.includes("bookings.manage") &&
+    trip !== null &&
+    (item.status === "received" || item.status === "confirmed");
 
   const dates: [string, ReactNode][] = [
     ["Received", formatLocalDateTime(item.createdAt)],
@@ -274,6 +279,7 @@ function ItemCard({
             next !== null && permissions.includes(ADVANCE_PERMISSIONS[next])
           }
           canCancel={permissions.includes("bookings.manage")}
+          amendHref={canAmend ? amendItemHref(item.bookingId, item.id) : null}
         />
       </div>
       <Rows rows={rows} />

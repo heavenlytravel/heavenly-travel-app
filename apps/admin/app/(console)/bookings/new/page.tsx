@@ -25,7 +25,7 @@ export default async function NewBookingPage() {
       </p>
       <PageHeader
         title="New booking"
-        description="Enter the trip and get prices, then choose the vehicle and fill in the customer. The booking is received until it is confirmed, like one from the site."
+        description="Enter the trip and get prices, then choose the vehicle and fill in the customer. Add another vehicle for a group that needs more than one. The booking is received until it is confirmed, like one from the site."
       />
       <div className="mt-6 max-w-3xl">
         <NewBookingForm hasGoogle={hasGooglePlaces} />

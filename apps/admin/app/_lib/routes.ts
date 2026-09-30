@@ -42,3 +42,8 @@ export function vehicleClassHref(id: string) {
   return `${VEHICLE_CLASSES_PATH}/${id}`;
 }
 export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");
+
+/** The form that amends one item of a booking: its trip, vehicle and details. */
+export function amendItemHref(bookingId: string, itemId: string) {
+  return `${bookingHref(bookingId)}/amend/${itemId}`;
+}

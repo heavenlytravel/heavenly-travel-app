@@ -12,6 +12,8 @@ export type { AdminWithUser, AdminChange } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
 export { listActivityFor, listActivity } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
+export { dashboardCounts } from "./dashboard";
+export type { DashboardCounts } from "./dashboard";
 export { listActiveZones, listActiveZoneDistricts, resolveZone } from "./zones";
 export type { Zone, ZoneDistrict } from "./zones";
 export { listActiveVehicleClasses } from "./vehicle-classes";

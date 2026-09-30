@@ -31,6 +31,38 @@ describe("parseSuggestions", () => {
     ]);
   });
 
+  it("drops suggestions that name an area rather than a spot", () => {
+    const body = {
+      suggestions: [
+        {
+          placePrediction: {
+            placeId: "town",
+            text: { text: "Puchong, Selangor, Malaysia" },
+            types: ["locality", "political"],
+          },
+        },
+        {
+          placePrediction: {
+            placeId: "road",
+            text: { text: "Jalan Puchong" },
+            types: ["route"],
+          },
+        },
+        {
+          placePrediction: {
+            placeId: "mall",
+            text: { text: "IOI Mall Puchong" },
+            types: ["shopping_mall", "establishment"],
+          },
+        },
+      ],
+    };
+    assert.deepEqual(
+      parseSuggestions(body).map((s) => s.placeId),
+      ["mall"],
+    );
+  });
+
   it("returns nothing for an empty body", () => {
     assert.deepEqual(parseSuggestions({}), []);
   });

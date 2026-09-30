@@ -23,6 +23,12 @@ export const PLACE_QUERY_MAX_LENGTH = 120;
 
 export type SearchOptions = {
   /**
+   * Keep suggestions that name an area (a town, a road, a state) rather
+   * than a spot. The fields drop them, because a pin in the middle of a town
+   * is no pickup point; the coverage check asks for them by name.
+   */
+  includeAreas?: boolean;
+  /**
    * Google bills an autocomplete session (keystrokes plus the final details
    * call) as one request when every call carries the same token. The field
    * mints one per selection.

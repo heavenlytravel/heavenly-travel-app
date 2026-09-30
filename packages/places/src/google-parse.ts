@@ -12,6 +12,7 @@ type AutocompleteResponse = {
     placePrediction?: {
       placeId?: string;
       text?: { text?: string };
+      types?: string[];
       structuredFormat?: {
         mainText?: { text?: string };
         secondaryText?: { text?: string };
@@ -20,10 +21,37 @@ type AutocompleteResponse = {
   }[];
 };
 
-export function parseSuggestions(body: unknown): PlaceSuggestion[] {
+/**
+ * Suggestion types that name an area, not a spot: a town, a state, a
+ * postcode, a whole road. Google puts a pin in the middle of these, which is
+ * no pickup point, so they are dropped before the customer sees them.
+ */
+const AREA_TYPES = new Set([
+  "locality",
+  "sublocality",
+  "sublocality_level_1",
+  "sublocality_level_2",
+  "neighborhood",
+  "administrative_area_level_1",
+  "administrative_area_level_2",
+  "administrative_area_level_3",
+  "postal_code",
+  "country",
+  "route",
+]);
+
+export function isAreaSuggestion(types: readonly string[] | undefined) {
+  return (types ?? []).some((type) => AREA_TYPES.has(type));
+}
+
+export function parseSuggestions(
+  body: unknown,
+  includeAreas = false,
+): PlaceSuggestion[] {
   const suggestions = (body as AutocompleteResponse).suggestions ?? [];
   return suggestions.flatMap(({ placePrediction: p }) => {
     if (!p?.placeId) return [];
+    if (!includeAreas && isAreaSuggestion(p.types)) return [];
     const label = p.structuredFormat?.mainText?.text ?? p.text?.text ?? "";
     if (!label) return [];
     return [

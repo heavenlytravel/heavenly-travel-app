@@ -20,7 +20,7 @@ export function Field({
   className,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   hint?: string;
   className?: string;
   children: ReactNode;

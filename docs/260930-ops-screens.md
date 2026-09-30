@@ -1,6 +1,8 @@
 # Ops screens: Zones and Vehicle classes
 
-Status: agreed and built on 2026-09-30; the screens shipped in PR D, see "As built". This
+Status: agreed on 2026-09-30 and built in PR D, then revised the same day: the Zones
+screen and the town list were replaced by `260930-coverage.md`, which wins where the two
+differ. The Vehicle classes screen stands, with the revisions noted there. This
 is step 5 of `260930-admin-teams-and-access.md` (PR C): the design of the two Operation
 screens that steps 6 and 7 built in PR D, the coverage check that step 5 ran against
 Google, and the seed rule that follows from it. Where this document differs from

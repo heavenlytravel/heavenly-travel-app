@@ -1,7 +1,8 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
 Status: steps 1 to 7 built, the rest agreed. Decisions agreed on 2026-09-30. The ops
-screens of steps 6 and 7 are designed in `260930-ops-screens.md`. This is the implementation
+screens of steps 6 and 7 are designed in `260930-ops-screens.md` and, for coverage,
+`260930-coverage.md`. This is the implementation
 plan for the first two phases of the internal operations roadmap, OP4 (staff booking
 tools) and OP1 (coverage and pricing setup). The roadmap, the task list and the decision
 record (AT-D1 to AT-D16) live in the `heavenly-travel-docs` repository under `plan/`.
@@ -46,7 +47,7 @@ The wall has two layers, screens and actions.
 | Manual booking and price override              |           | yes         | yes   |         |
 | Assign and complete                            | yes       |             |       |         |
 | Internal notes                                 | yes       | yes         | yes   | yes     |
-| Zones and Vehicle classes                      | yes       |             |       |         |
+| Coverage and Vehicle classes                   | yes       |             |       |         |
 | Payments (OP6, not in this plan)               |           |             |       | yes     |
 | Admins, the wall switch, the full activity log | `SUPER`   |             |       |         |
 
@@ -92,9 +93,9 @@ are built; no invented numbers are shown.
 
 ### Names
 
-- The screens are "Zones" and "Vehicle classes". `VehicleClass` stays in the code and
-  the database. Nothing is named "Fleet".
-- The sample Locations screen is removed. The Zones screen takes its place.
+- The screens are "Coverage" and "Vehicle classes". `VehicleClass` stays in the code and
+  the database. "Fleet", the vehicle units, is a later phase.
+- The sample Locations screen is removed. The Coverage screen takes its place.
 
 ### Driver and partner areas
 
@@ -211,8 +212,9 @@ The steps:
 5. **Ops screens design, coverage and seed** (`fix`): a dated design document for the
    ops screens, real addresses tested in every zone against Google, district names
    corrected, the seed fix.
-6. **Zones screen** (`feat(admin)`): switch a zone on or off, set its multiplier, edit
-   its districts, test an address. The sample Locations screen is removed.
+6. **Coverage screen** (`feat(admin)`): switch a district on or off, set a state's
+   multiplier, test an address. The sample Locations screen is removed. Designed in
+   `260930-coverage.md`.
 7. **Vehicle classes screen** (`feat(admin)`): name, category, seats, luggage, rates
    and the three rules.
 8. **Internal notes** (`feat`): notes on a booking that the customer never sees.

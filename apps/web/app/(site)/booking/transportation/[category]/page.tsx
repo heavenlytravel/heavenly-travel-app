@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { TRIP_CATEGORY_LABELS, unavailableReason } from "@repo/db";
-import { quoteTrip } from "@repo/db/server";
-import { notFound } from "next/navigation";
 import {
-  bookableCategory,
   parsePassengers,
   parseTripSearch,
   toParams,
+  TRIP_CATEGORY_LABELS,
   tripSearchParams,
-} from "../../../../_lib/transportation-booking";
+  unavailableReason,
+} from "@repo/db";
+import { quoteTrip } from "@repo/db/server";
+import { resolveTrip } from "@repo/places/server";
+import { notFound } from "next/navigation";
+import { bookableCategory } from "../../../../_lib/transportation-booking";
 import { PageTitle, Stop } from "../../../_components/Page";
 import { TripBar } from "./TripBar";
 import { TripOptionsForm, type ClassOption } from "./TripOptionsForm";
-import { loadTrip } from "./_lib/trip";
 
 type Props = PageProps<"/booking/transportation/[category]">;
 
@@ -46,7 +47,7 @@ export default async function TripOptionsPage({ params, searchParams }: Props) {
     );
   }
 
-  const trip = await loadTrip(search);
+  const trip = await resolveTrip(search);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
   const passengers = parsePassengers(query) ?? 1;

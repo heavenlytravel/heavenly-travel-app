@@ -4,6 +4,7 @@ import {
   type Actor,
   type CustomerActor,
 } from "./activity-actions";
+import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import {
   bookingStatusOf,
   checkCustomerCancel,
@@ -16,6 +17,7 @@ import {
 } from "./booking-status";
 import { db } from "./client";
 import { Prisma } from "./generated/prisma/client";
+import { isTripPriceBreakdown } from "./pricing";
 import { generateReference } from "./references";
 
 /**
@@ -24,7 +26,8 @@ import { generateReference } from "./references";
  * validation and pricing happen before this (see transportation.ts) and
  * arrive here as a `PreparedItem`. Every change takes the actor and writes
  * its activity entry in the same transaction. See
- * docs/260923-car-with-driver.md.
+ * docs/260923-car-with-driver.md and docs/260930-admin-teams-and-access.md,
+ * "Staff booking tools".
  */
 
 const withItems = {
@@ -66,9 +69,20 @@ type PreparedItemCore = {
   /** The customer may cancel until this long before `startsAt`. */
   cancellationCutoffHours: number;
   districtCode: string | null;
+  /** The rates' price, as the receipt says. */
   priceTotalSen: number;
   priceBreakdown: Prisma.InputJsonValue;
+  /** An agreed price in place of the rates', with why. Staff only. */
+  override?: PriceOverride | null;
 };
+
+/** What an item is charged: the override when one is set, else the receipt's. */
+function chargedSen(item: {
+  priceTotalSen: number;
+  override?: PriceOverride | null;
+}) {
+  return item.override ? item.override.totalSen : item.priceTotalSen;
+}
 
 /** The nested create for the item's details row. */
 function detailsOf(
@@ -81,9 +95,12 @@ function detailsOf(
 }
 
 export type CreateBookingInput = {
-  userId: string;
+  /** The account the booking shows under; null for a guest entered by staff. */
+  userId: string | null;
   contactName: string;
   contactPhone: string;
+  /** Null when a guest gave none: they get no email. */
+  contactEmail: string | null;
   items: PreparedItem[];
 };
 
@@ -98,11 +115,12 @@ function isUniqueViolation(error: unknown, field: string) {
 }
 
 /**
- * Creates a booking with its items in one transaction and remembers the
- * phone number on the user for next time. The actor is the customer on the
- * website, or the admin entering a booking for them. The reference is
- * random, so a collision is retried. Emails are the caller's job, after
- * this returns.
+ * Creates a booking with its items in one transaction and, when it belongs
+ * to an account, remembers the phone number on it for next time. The actor
+ * is the customer on the website, or the admin entering a booking for them.
+ * An item with an agreed price is charged that price and logged as priced,
+ * so it is never a special case later. The reference is random, so a
+ * collision is retried. Emails are the caller's job, after this returns.
  */
 export async function createBooking(
   actor: Actor,
@@ -111,13 +129,19 @@ export async function createBooking(
   if (input.items.length === 0) {
     throw new Error("A booking needs at least one item.");
   }
+  for (const item of input.items) {
+    if (!item.override) continue;
+    const check = checkPriceOverride(item.override);
+    if (!check.ok) throw new Error(check.error);
+  }
   const startsAt = earliestStart(input.items) ?? input.items[0]!.startsAt;
   const data = {
     userId: input.userId,
     status: "received" satisfies BookingStatus,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
-    priceTotalSen: input.items.reduce((sum, i) => sum + i.priceTotalSen, 0),
+    contactEmail: input.contactEmail,
+    priceTotalSen: input.items.reduce((sum, i) => sum + chargedSen(i), 0),
     startsAt,
     items: {
       create: input.items.map((item, index) => ({
@@ -128,8 +152,10 @@ export async function createBooking(
         endsAt: item.endsAt,
         cancellationCutoffHours: item.cancellationCutoffHours,
         districtCode: item.districtCode,
-        priceTotalSen: item.priceTotalSen,
+        priceTotalSen: chargedSen(item),
         priceBreakdown: item.priceBreakdown,
+        priceOverrideSen: item.override?.totalSen ?? null,
+        priceOverrideReason: item.override?.reason ?? null,
         ...detailsOf(item),
       })),
     },
@@ -138,10 +164,12 @@ export async function createBooking(
   for (let attempt = 1; ; attempt++) {
     try {
       return await db.$transaction(async (tx) => {
-        await tx.user.update({
-          where: { id: input.userId },
-          data: { phone: input.contactPhone },
-        });
+        if (input.userId) {
+          await tx.user.update({
+            where: { id: input.userId },
+            data: { phone: input.contactPhone },
+          });
+        }
         const booking = await tx.booking.create({
           data: { ...data, reference: generateReference() },
           ...withItems,
@@ -153,8 +181,22 @@ export async function createBooking(
             status: booking.status,
             priceTotalSen: booking.priceTotalSen,
             items: booking.items.length,
+            via: actor.kind === "admin" ? "console" : "website",
           },
         });
+        for (const [index, item] of input.items.entries()) {
+          if (!item.override) continue;
+          await logActivity(tx, actor, {
+            action: "booking.item.priced",
+            entityId: booking.id,
+            before: { position: index + 1, priceTotalSen: item.priceTotalSen },
+            after: {
+              position: index + 1,
+              priceTotalSen: item.override.totalSen,
+              reason: item.override.reason,
+            },
+          });
+        }
         return booking;
       });
     } catch (error) {
@@ -349,6 +391,73 @@ export function cancelItem(
     return {
       ok: true,
       ...(await refreshBooking(tx, item.bookingId, "admin", now)),
+    };
+  });
+}
+
+/**
+ * Sets an agreed price on one item in place of the rates', or removes it
+ * with null so the receipt's total stands again. The receipt is never
+ * changed. Allowed while the item is live and not yet completed. No
+ * booking-level event: the price is agreed with the customer outside the
+ * app.
+ */
+export function overrideItemPrice(
+  actor: Actor,
+  itemId: string,
+  override: PriceOverride | null,
+  now: Date = new Date(),
+): Promise<BookingChange> {
+  if (override) {
+    const check = checkPriceOverride(override);
+    if (!check.ok) return Promise.resolve(check);
+  }
+  return db.$transaction(async (tx) => {
+    const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
+    if (!item) return { ok: false, error: "Booking item not found." };
+    if (item.status === "cancelled" || item.status === "completed") {
+      return {
+        ok: false,
+        error: `Item is ${item.status}, so its price cannot change.`,
+      };
+    }
+    if (!isTripPriceBreakdown(item.priceBreakdown)) {
+      return { ok: false, error: "This item has no receipt to price from." };
+    }
+    const priceTotalSen = override
+      ? override.totalSen
+      : item.priceBreakdown.totalSen;
+    if (
+      priceTotalSen === item.priceTotalSen &&
+      (override?.reason ?? null) === item.priceOverrideReason
+    ) {
+      return {
+        ok: true,
+        ...(await refreshBooking(tx, item.bookingId, null, now)),
+      };
+    }
+
+    await tx.bookingItem.update({
+      where: { id: itemId },
+      data: {
+        priceTotalSen,
+        priceOverrideSen: override ? override.totalSen : null,
+        priceOverrideReason: override ? override.reason : null,
+      },
+    });
+    await logActivity(tx, actor, {
+      action: "booking.item.priced",
+      entityId: item.bookingId,
+      before: { position: item.position, priceTotalSen: item.priceTotalSen },
+      after: {
+        position: item.position,
+        priceTotalSen,
+        reason: override ? override.reason : null,
+      },
+    });
+    return {
+      ok: true,
+      ...(await refreshBooking(tx, item.bookingId, null, now)),
     };
   });
 }

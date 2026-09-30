@@ -37,6 +37,36 @@ describe("describeActivity", () => {
     assert.equal(describeActivity(three), "Made the booking with 3 items");
   });
 
+  it("says a booking was entered when staff made it on the console", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.created",
+        before: null,
+        after: { items: 1, via: "console" },
+      }),
+      "Entered the booking",
+    );
+  });
+
+  it("reads a price override and its removal from after", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.item.priced",
+        before: { position: 2, priceTotalSen: 25000 },
+        after: { position: 2, priceTotalSen: 30000, reason: "Agreed by phone" },
+      }),
+      "Set the price of item 2 to RM 300.00",
+    );
+    assert.equal(
+      describeActivity({
+        action: "booking.item.priced",
+        before: { position: 2, priceTotalSen: 30000 },
+        after: { position: 2, priceTotalSen: 25000, reason: null },
+      }),
+      "Reset the price of item 2 to RM 250.00",
+    );
+  });
+
   it("spells a level with its team labels", () => {
     assert.equal(
       describeActivity({
@@ -111,10 +141,21 @@ describe("describeActivity", () => {
 });
 
 describe("activityActionMeta", () => {
-  it("keeps staff and settings actions from customers", () => {
+  /** Booking actions whose entry carries something a customer must not see. */
+  const INTERNAL_BOOKING_ACTIONS: string[] = [
+    "booking.item.priced",
+    "booking.note.added",
+  ];
+
+  it("keeps staff, settings and internal booking actions from customers", () => {
     for (const action of ACTIVITY_ACTIONS) {
       const meta = activityActionMeta(action);
-      assert.equal(meta.customerVisible, action.startsWith("booking."));
+      assert.equal(
+        meta.customerVisible,
+        action.startsWith("booking.") &&
+          !INTERNAL_BOOKING_ACTIONS.includes(action),
+        action,
+      );
     }
   });
 });

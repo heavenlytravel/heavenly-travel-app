@@ -36,6 +36,32 @@ describe("bookingEmails", () => {
     assert.match(ops!.message.text, /https:\/\/admin\.test\/bookings\/b1/);
   });
 
+  it("writes only to ops for a guest who gave no email", () => {
+    const guest = sampleBooking({
+      userId: null,
+      user: null,
+      contactEmail: null,
+    });
+    const received = bookingEmails("received", guest, settings);
+    assert.equal(received.length, 1);
+    assert.equal(received[0]!.message.to, "ops@site.test");
+    assert.match(received[0]!.message.text, /Email: None given/);
+    assert.equal(
+      bookingEmails("confirmed", { ...guest, status: "confirmed" }, settings)
+        .length,
+      0,
+    );
+  });
+
+  it("reads the account's email for a booking made before contactEmail", () => {
+    const [customer] = bookingEmails(
+      "received",
+      sampleBooking({ contactEmail: null }),
+      settings,
+    );
+    assert.equal(customer!.message.to, "aina@example.com");
+  });
+
   it("prefixes every subject outside production", () => {
     const subjects = sampleCases.flatMap(({ event, booking }) =>
       bookingEmails(event, booking, {

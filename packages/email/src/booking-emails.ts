@@ -1,4 +1,5 @@
 import {
+  customerEmailOf,
   formatLocalDateTime,
   formatMyr,
   ITEM_STATUS_LABELS,
@@ -92,7 +93,7 @@ function customerBlock(booking: BookingWithItems): Block {
     rows: [
       ["Name", booking.contactName],
       ["Phone", booking.contactPhone],
-      ["Email", booking.user.email],
+      ["Email", customerEmailOf(booking) ?? "None given"],
     ],
   };
 }
@@ -142,13 +143,18 @@ function email(
   };
 }
 
+/**
+ * The customer's copy, or none for a guest who gave no email: the ops copy
+ * is then the only record, and the team reaches them by phone.
+ */
 function toCustomer(
   booking: BookingWithItems,
   key: string,
   settings: EmailSettings,
   content: EmailContent,
-) {
-  return email(booking.user.email, `${key}:customer`, content, settings);
+): BookingEmail[] {
+  const to = customerEmailOf(booking);
+  return to ? [email(to, `${key}:customer`, content, settings)] : [];
 }
 
 function toOps(key: string, settings: EmailSettings, content: EmailContent) {
@@ -162,7 +168,7 @@ function received(
 ): BookingEmail[] {
   const ref = booking.reference;
   return [
-    toCustomer(booking, key, settings, {
+    ...toCustomer(booking, key, settings, {
       subject: `Booking ${ref} received`,
       heading: "We have your booking",
       blocks: [
@@ -199,22 +205,20 @@ function confirmed(
   key: string,
 ): BookingEmail[] {
   const ref = booking.reference;
-  return [
-    toCustomer(booking, key, settings, {
-      subject: `Booking ${ref} confirmed`,
-      heading: "Your booking is confirmed",
-      blocks: [
-        {
-          type: "paragraph",
-          text: `Hi ${booking.contactName}, booking ${ref} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
-        },
-        ...itemBlocks(booking),
-        totalBlock(booking),
-        viewBookingButton(booking, settings),
-        { type: "contact" },
-      ],
-    }),
-  ];
+  return toCustomer(booking, key, settings, {
+    subject: `Booking ${ref} confirmed`,
+    heading: "Your booking is confirmed",
+    blocks: [
+      {
+        type: "paragraph",
+        text: `Hi ${booking.contactName}, booking ${ref} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
+      },
+      ...itemBlocks(booking),
+      totalBlock(booking),
+      viewBookingButton(booking, settings),
+      { type: "contact" },
+    ],
+  });
 }
 
 function cancelled(
@@ -231,7 +235,7 @@ function cancelled(
 
   if (by === "customer") {
     return [
-      toCustomer(booking, key, settings, {
+      ...toCustomer(booking, key, settings, {
         subject: `Booking ${ref} cancelled`,
         heading: "Your booking is cancelled",
         blocks: [
@@ -259,27 +263,25 @@ function cancelled(
     ];
   }
 
-  return [
-    toCustomer(booking, key, settings, {
-      subject: whole ? `Booking ${ref} cancelled` : `Booking ${ref} updated`,
-      heading: whole
-        ? "Your booking is cancelled"
-        : "Part of your booking is cancelled",
-      blocks: [
-        {
-          type: "paragraph",
-          text: whole
-            ? `Hi ${booking.contactName}, we are sorry: we cannot provide this trip and have cancelled booking ${ref}. Message us and we will help you plan another.`
-            : `Hi ${booking.contactName}, we had to cancel part of booking ${ref}. The rest goes ahead as planned; the status of each item is below. Message us if you have questions.`,
-        },
-        ...itemBlocks(booking),
-        ...(whole
-          ? []
-          : [totalBlock(booking), viewBookingButton(booking, settings)]),
-        { type: "contact" },
-      ],
-    }),
-  ];
+  return toCustomer(booking, key, settings, {
+    subject: whole ? `Booking ${ref} cancelled` : `Booking ${ref} updated`,
+    heading: whole
+      ? "Your booking is cancelled"
+      : "Part of your booking is cancelled",
+    blocks: [
+      {
+        type: "paragraph",
+        text: whole
+          ? `Hi ${booking.contactName}, we are sorry: we cannot provide this trip and have cancelled booking ${ref}. Message us and we will help you plan another.`
+          : `Hi ${booking.contactName}, we had to cancel part of booking ${ref}. The rest goes ahead as planned; the status of each item is below. Message us if you have questions.`,
+      },
+      ...itemBlocks(booking),
+      ...(whole
+        ? []
+        : [totalBlock(booking), viewBookingButton(booking, settings)]),
+      { type: "contact" },
+    ],
+  });
 }
 
 /**

@@ -1,6 +1,7 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { formatMultiplier } from "./coverage-input";
+import { formatMyr } from "./money";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
@@ -49,6 +50,10 @@ const ACTIONS = {
   "booking.item.completed": { entityType: "booking", customerVisible: true },
   "booking.item.cancelled": { entityType: "booking", customerVisible: true },
   "booking.cancelled": { entityType: "booking", customerVisible: true },
+  /** The reason is in `after`, so a customer never sees the entry. */
+  "booking.item.priced": { entityType: "booking", customerVisible: false },
+  /** The note's id only; the text stays in `BookingNote`. */
+  "booking.note.added": { entityType: "booking", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
@@ -165,10 +170,22 @@ export function describeActivity(entry: DescribableActivity): string {
   switch (entry.action) {
     case "booking.created": {
       const items = field(entry.after, "items");
+      // Staff enter a booking on the console; a customer makes one on the site.
+      const verb = field(entry.after, "via") === "console" ? "Entered" : "Made";
       return typeof items === "number" && items > 1
-        ? `Made the booking with ${items} items`
-        : "Made the booking";
+        ? `${verb} the booking with ${items} items`
+        : `${verb} the booking`;
     }
+    case "booking.item.priced": {
+      const price = field(entry.after, "priceTotalSen");
+      const name = itemName(entry.after);
+      if (typeof price !== "number") return `Changed the price of ${name}`;
+      return typeof field(entry.after, "reason") === "string"
+        ? `Set the price of ${name} to ${formatMyr(price)}`
+        : `Reset the price of ${name} to ${formatMyr(price)}`;
+    }
+    case "booking.note.added":
+      return "Added a note";
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;
     case "booking.item.assigned":

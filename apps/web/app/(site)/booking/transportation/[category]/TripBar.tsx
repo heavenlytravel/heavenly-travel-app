@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   formatLocalDateTime,
   type TripCategory,
+  type TripSearch,
   type TripView,
 } from "@repo/db";
 import { FieldInput } from "../../../../_components/search/fields";
@@ -12,10 +13,7 @@ import {
   visibleFields,
   type SearchValues,
 } from "../../../../_lib/search";
-import type {
-  TripSearch,
-  TripSearchIssue,
-} from "../../../../_lib/transportation-booking";
+import type { TripSearchIssue } from "../../../../_lib/transportation-booking";
 import { useSearch, useTripSubmit } from "../../../../_lib/useSearch";
 import {
   control,

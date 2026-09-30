@@ -60,6 +60,7 @@ export {
   getBooking,
   advanceItem,
   cancelItem,
+  overrideItemPrice,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
 } from "./bookings";
@@ -72,6 +73,9 @@ export type {
   BookingChange,
   BookingEvent,
 } from "./bookings";
+export { listBookingNotes, addBookingNote } from "./booking-notes";
+export type { BookingNoteEntry } from "./booking-notes";
+export { findUserByEmail } from "./users";
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";

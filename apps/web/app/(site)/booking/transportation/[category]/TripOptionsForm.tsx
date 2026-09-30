@@ -6,21 +6,21 @@ import {
   CONTACT,
   fitsPassengers,
   formatMyr,
+  hiddenSearchFields,
   largestGroup,
   offersChildSeats,
-  type TripCategory,
-  type TripView,
-} from "@repo/db";
-import {
-  hiddenSearchFields,
   TRIP_MAX_CHILD_SEATS,
   TRIP_MAX_FLIGHT_NUMBER_LENGTH,
   TRIP_MAX_NOTES_LENGTH,
   TRIP_OPTION_FIELDS,
+  tripSearchParams,
+  type TripCategory,
+  type TripSearch,
+  type TripView,
+} from "@repo/db";
+import {
   tripBookingHref,
   tripConfirmPath,
-  tripSearchParams,
-  type TripSearch,
 } from "../../../../_lib/transportation-booking";
 import {
   control,

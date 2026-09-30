@@ -6,10 +6,11 @@ import {
   type BookingStatus,
 } from "@repo/db";
 import { listBookings } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { BookingsTable } from "../../_components/BookingsTable";
 import { PageHeader } from "../../_components/PageHeader";
-import { requireAdmin } from "../../_lib/access";
-import { bookingsHref } from "../../_lib/routes";
+import { getPermissions, requireAdmin } from "../../_lib/access";
+import { bookingsHref, NEW_BOOKING_PATH } from "../../_lib/routes";
 
 /** Route: /bookings?status=received. Every booking, newest first. */
 export default async function BookingsPage({
@@ -18,13 +19,23 @@ export default async function BookingsPage({
   await requireAdmin("bookings.view");
   const { status } = await searchParams;
   const filter = isBookingStatus(status) ? status : undefined;
-  const bookings = await listBookings({ status: filter });
+  const [bookings, permissions] = await Promise.all([
+    listBookings({ status: filter }),
+    getPermissions(),
+  ]);
 
   return (
     <>
       <PageHeader
         title="Bookings"
-        description="Every booking made on the site. Open one to confirm it, mark it assigned or completed, or cancel it."
+        description="Every booking, made on the site or entered here. Open one to confirm it, mark it assigned or completed, or cancel it."
+        action={
+          permissions.includes("bookings.create") ? (
+            <Button asChild>
+              <Link href={NEW_BOOKING_PATH}>New booking</Link>
+            </Button>
+          ) : null
+        }
       />
 
       <nav aria-label="Filter by status" className="mt-6 flex flex-wrap gap-1">

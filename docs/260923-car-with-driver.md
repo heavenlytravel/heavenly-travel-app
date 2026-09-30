@@ -2,7 +2,7 @@
 
 Status: built. All six steps of the build order landed on 2026-09-23: schema, seed and
 domain; places package; web booking flow; my bookings; admin bookings; emails.
-Coach charter (`coach-charter.md`) then made cars one category of the `transportation`
+Coach charter (`260928-coach-charter.md`) then made cars one category of the `transportation`
 product and moved the notice, cutoff and minimum hours onto the vehicle class. Where
 the two documents differ, that one wins; the names and schema below are as first built.
 

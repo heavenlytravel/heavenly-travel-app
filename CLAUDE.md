@@ -9,7 +9,7 @@
 - `apps/web`: Customer-facing site (landing page and customer app).
 - `apps/admin`: Internal admin side for running the app.
 - `packages/ui` (`@repo/ui`): Shared React component library used by both apps.
-- `packages/db` (`@repo/db`): Prisma schema, Neon client, the `getAccess` session/role helper and the booking domain. See `docs/auth-and-database.md` and `docs/car-with-driver.md`.
+- `packages/db` (`@repo/db`): Prisma schema, Neon client, the `getAccess` session/role helper and the booking domain. See `docs/260918-auth-and-database.md` and `docs/260923-car-with-driver.md`.
 - `packages/places` (`@repo/places`): Google Places and Routes behind one interface, with a keyless provider for local development.
 - `packages/email` (`@repo/email`): Booking emails over Resend, logged to the console when no key is set.
 - `packages/tailwind-config`: Shared Tailwind theme (`shared-styles.css`) and PostCSS config. Single source of truth for design tokens.
@@ -50,7 +50,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 ## Development Workflow
 
-Full details in `docs/development-workflow.md`.
+Full details in `docs/260916-development-workflow.md`.
 
 - Dev ports are not pinned. Each app takes the first free port from 3000 and prints it;
   pass `--port` (e.g. `pnpm --filter admin dev --port 3001`) when a fixed port matters.

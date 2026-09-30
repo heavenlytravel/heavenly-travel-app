@@ -26,7 +26,7 @@ import type { EmailMessage } from "./types";
 
 /**
  * The booking emails, one function per event, as data. Pure: the sender and
- * the environment are the entry point's concern. See docs/car-with-driver.md,
+ * the environment are the entry point's concern. See docs/260923-car-with-driver.md,
  * "Emails".
  */
 

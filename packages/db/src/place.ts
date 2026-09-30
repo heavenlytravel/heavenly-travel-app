@@ -1,7 +1,7 @@
 /**
  * A resolved place as snapshotted onto a booking item: what Google told us
  * about it at booking time. Stored as JSON and never queried by field. The
- * places package (step 2 of docs/car-with-driver.md) produces these. Browser-safe.
+ * places package (step 2 of docs/260923-car-with-driver.md) produces these. Browser-safe.
  */
 export type Place = {
   /** Google place id. */

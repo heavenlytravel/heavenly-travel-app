@@ -3,7 +3,7 @@ import { isTripMode, type TripMode } from "./booking-status";
 /**
  * Instant pricing for a trip with a driver, car or coach. Pure and
  * unit-tested; the server calls it and never trusts a price from the client.
- * Money is integer sen. See docs/car-with-driver.md, "Pricing".
+ * Money is integer sen. See docs/260923-car-with-driver.md, "Pricing".
  *
  *   one-way: max(minimumFare, baseFare + perKm x distanceKm) x multiplier
  *   hourly:  hourlyRate x hours x multiplier

@@ -12,7 +12,7 @@ import {
  * card renders its fields from this list instead of hard-coding a trip form.
  * The two transportation tabs are keyed by their category, spelled as it is
  * everywhere else and ask the same fields. They can be booked; the other tabs
- * are shown but disabled until their flows exist (docs/coach-charter.md).
+ * are shown but disabled until their flows exist (docs/260928-coach-charter.md).
  */
 
 export type ProductKey =

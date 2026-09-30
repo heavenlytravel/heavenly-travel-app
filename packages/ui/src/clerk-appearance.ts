@@ -1,7 +1,7 @@
 /**
  * The one Clerk theme for both apps, passed to `ClerkProvider` so every
  * prebuilt component (sign in, sign up, user button) matches. The palette is
- * the home page's (`docs/landing-designs.md`). The font is inherited from the
+ * the home page's (`docs/260923-home-design.md`). The font is inherited from the
  * page, so the card takes the home page fonts on the customer site and Geist
  * on the admin console. The logo is drawn by `AuthShell`, not by Clerk.
  * `@repo/ui` does not depend on Clerk, so this is a plain object; the apps

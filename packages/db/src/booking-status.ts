@@ -3,7 +3,7 @@ import { guardFor } from "./const-enum";
 
 /**
  * Booking vocabulary shared by both apps. Browser-safe: no database access.
- * See docs/car-with-driver.md, "Booking lifecycle", and docs/coach-charter.md.
+ * See docs/260923-car-with-driver.md, "Booking lifecycle", and docs/260928-coach-charter.md.
  */
 
 export const PRODUCTS = ["transportation"] as const;

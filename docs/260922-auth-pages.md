@@ -1,7 +1,7 @@
 # Auth pages: sign in and sign up
 
 The plan for the sign-in and sign-up pages on both apps, and what is deferred.
-Read `auth-and-database.md` first for how sessions and access work.
+Read `260918-auth-and-database.md` first for how sessions and access work.
 
 ## Routes and methods
 
@@ -13,7 +13,7 @@ Read `auth-and-database.md` first for how sessions and access work.
 
 Email code (OTP) is the only method turned on in the Clerk dashboard. There is no
 password and no social login yet. Both apps share one Clerk instance, so an admin signs
-in with the same account they use as a customer (see `auth-and-database.md`).
+in with the same account they use as a customer (see `260918-auth-and-database.md`).
 
 ## PR 1: branded pages on Clerk's prebuilt components (this PR)
 

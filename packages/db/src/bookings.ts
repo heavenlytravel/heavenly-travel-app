@@ -16,7 +16,7 @@ import { generateReference } from "./references";
  * The booking core, shared by every product: creation, lists, and the item
  * transitions that drive the booking's derived status. Product-specific
  * validation and pricing happen before this (see transportation.ts) and
- * arrive here as a `PreparedItem`. See docs/car-with-driver.md.
+ * arrive here as a `PreparedItem`. See docs/260923-car-with-driver.md.
  */
 
 const withItems = {

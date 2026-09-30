@@ -5,7 +5,7 @@
 // Rates and the coach rules are placeholders until ops confirms them.
 // District names are as Google spells them in address components
 // (administrative_area_level_2 or locality); verify against real geocodes
-// when the places package lands. See docs/coach-charter.md, "Seed".
+// when the places package lands. See docs/260928-coach-charter.md, "Seed".
 import type { TripCategory } from "../src/booking-status";
 import { db } from "../src/client";
 

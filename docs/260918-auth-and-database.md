@@ -13,7 +13,7 @@
   `@repo/db/server` and render each status themselves. The access matrix lives only
   in that function. The one exception is the reverse check: each app's `(auth)` layout
   sends a signed-in visitor away from `/sign-in` and `/sign-up` on the server, so the
-  form never flashes before Clerk's own client-side redirect (see `auth-pages.md`).
+  form never flashes before Clerk's own client-side redirect (see `260922-auth-pages.md`).
 
   | Area      | Who gets in                            |
   | --------- | -------------------------------------- |
@@ -29,7 +29,7 @@
   rules and the booking core are modules in `packages/db/src`, shared by both apps.
   The pure ones (`booking-rules.ts`, `pricing.ts`, `references.ts`, `booking-status.ts`)
   are also exported from `@repo/db` for the browser and unit-tested with
-  `pnpm --filter @repo/db test`. See `car-with-driver.md`.
+  `pnpm --filter @repo/db test`. See `260923-car-with-driver.md`.
 
 ## Environments
 

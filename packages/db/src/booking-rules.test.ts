@@ -9,6 +9,7 @@ import {
   isWithinHorizon,
   largestGroup,
   latestPickup,
+  localDateTimeInputs,
   localDayRange,
   pickupInstant,
   unavailableReason,
@@ -203,5 +204,19 @@ describe("localDayRange", () => {
     // 00:10 in Kuala Lumpur on 4 Oct is 16:10 UTC on 3 Oct.
     const { start } = localDayRange(new Date("2026-10-03T16:10:00Z"));
     assert.equal(start.toISOString(), "2026-10-03T16:00:00.000Z");
+  });
+});
+
+describe("localDateTimeInputs", () => {
+  it("is the inverse of pickupInstant", () => {
+    const instant = pickupInstant("2026-10-03", "09:30")!;
+    assert.deepEqual(localDateTimeInputs(instant), {
+      date: "2026-10-03",
+      time: "09:30",
+    });
+    assert.deepEqual(localDateTimeInputs(new Date("2026-10-03T17:15:00Z")), {
+      date: "2026-10-04",
+      time: "01:15",
+    });
   });
 });

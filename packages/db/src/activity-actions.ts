@@ -50,6 +50,8 @@ const ACTIONS = {
   "booking.item.completed": { entityType: "booking", customerVisible: true },
   "booking.item.cancelled": { entityType: "booking", customerVisible: true },
   "booking.cancelled": { entityType: "booking", customerVisible: true },
+  /** The `AMENDED_FIELDS` that changed; the driver notes and the reason are not in it. */
+  "booking.item.amended": { entityType: "booking", customerVisible: true },
   /** The reason is in `after`, so a customer never sees the entry. */
   "booking.item.priced": { entityType: "booking", customerVisible: false },
   /** The note's id only; the text stays in `BookingNote`. */
@@ -91,6 +93,39 @@ export const ITEM_ACTIONS = {
 
 /** The id of the one `AppSetting` row, which setting entries log against. */
 export const APP_SETTING_ID = "app";
+
+/**
+ * What an amend logs, before and after, as scalars: places by their labels,
+ * the time as an ISO instant, the class by its name and the charged price.
+ * The driver notes and the override reason are left out, so the entry can
+ * be shown to the customer.
+ */
+export type AmendedFields = {
+  mode: string;
+  pickup: string;
+  dropoff: string | null;
+  startsAt: string;
+  hours: number | null;
+  vehicleClassName: string;
+  passengers: number;
+  childSeats: number;
+  flightNumber: string | null;
+  priceTotalSen: number;
+};
+
+/** How the sentence names each field: "Changed the pick-up and the vehicle". */
+export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
+  mode: "the trip type",
+  pickup: "the pick-up",
+  dropoff: "the drop-off",
+  startsAt: "the pick-up time",
+  hours: "the hours",
+  vehicleClassName: "the vehicle",
+  passengers: "the passengers",
+  childSeats: "the child seats",
+  flightNumber: "the flight",
+  priceTotalSen: "the price",
+};
 
 /** What `describeActivity` reads of an entry. `before` and `after` are JSON. */
 export type DescribableActivity = {
@@ -198,6 +233,19 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.item.cancelled":
       return `Cancelled ${itemName(entry.after)}`;
+    case "booking.item.amended": {
+      // In the vocabulary's order, not the stored one: jsonb reorders keys.
+      const present = new Set(keysOf(entry.after));
+      const changed = (
+        Object.keys(AMENDED_FIELD_LABELS) as (keyof AmendedFields)[]
+      )
+        .filter((key) => present.has(key))
+        .map((key) => AMENDED_FIELD_LABELS[key]);
+      const name = itemName(entry.after);
+      return changed.length > 0
+        ? `Changed ${listOf(changed)} of ${name}`
+        : `Amended ${name}`;
+    }
     case "booking.cancelled":
       return "Cancelled the booking";
     case "admin.promoted":

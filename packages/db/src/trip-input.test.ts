@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   hiddenSearchFields,
+  tripItemField,
+  tripItemIndexes,
+  tripItemParams,
+  tripSearchOf,
   parsePassengers,
   parseTripOptions,
   parseTripSearch,
@@ -120,5 +124,80 @@ describe("toParams and parsePassengers", () => {
     assert.equal(parsePassengers("passengers=1000"), null);
     assert.equal(parsePassengers("passengers=two"), null);
     assert.equal(parsePassengers(""), null);
+  });
+});
+
+describe("tripSearchOf", () => {
+  const klia = {
+    placeId: "p1",
+    label: "KLIA",
+    address: "KLIA",
+    lat: 2.7,
+    lng: 101.7,
+    state: null,
+    district: null,
+    locality: null,
+  };
+  const startsAt = new Date("2026-10-03T01:30:00Z");
+
+  it("turns a stored one-way trip back into its search", () => {
+    assert.deepEqual(
+      tripSearchOf({
+        mode: "oneway",
+        pickup: klia,
+        dropoff: { ...klia, placeId: "p2" },
+        startsAt,
+        hours: null,
+        distanceKm: 55.2,
+      }),
+      {
+        mode: "oneway",
+        pickupId: "p1",
+        dropoffId: "p2",
+        date: "2026-10-03",
+        time: "09:30",
+        hours: null,
+      },
+    );
+  });
+
+  it("keeps the hours of an hourly trip and drops the drop-off", () => {
+    const search = tripSearchOf({
+      mode: "hourly",
+      pickup: klia,
+      dropoff: null,
+      startsAt,
+      hours: 4,
+      distanceKm: null,
+    });
+    assert.equal(search.hours, 4);
+    assert.equal(search.dropoffId, null);
+    assert.notEqual(parseTripSearch(tripSearchParams(search)), null);
+  });
+});
+
+describe("several items in one form", () => {
+  const form = new FormData();
+  form.set(tripItemField(0, "mode"), "oneway");
+  form.set(tripItemField(0, "pickup"), "p1");
+  form.set(tripItemField(2, "mode"), "hourly");
+  form.set(tripItemField(2, "pickup"), "p3");
+  form.set("name", "Nurul");
+
+  it("names an item's field with its index", () => {
+    assert.equal(tripItemField(1, "pickup"), "item1.pickup");
+  });
+
+  it("finds the items a form carries, in order", () => {
+    assert.deepEqual(tripItemIndexes(form), [0, 2]);
+    assert.deepEqual(tripItemIndexes("name=Nurul"), []);
+  });
+
+  it("reads one item's fields under their plain names", () => {
+    const item = tripItemParams(form, 2);
+    assert.equal(item.get("mode"), "hourly");
+    assert.equal(item.get("pickup"), "p3");
+    assert.equal(item.get("name"), null);
+    assert.equal(tripItemParams(form, 1).size, 0);
   });
 });

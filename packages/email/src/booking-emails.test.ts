@@ -69,7 +69,7 @@ describe("bookingEmails", () => {
         subjectPrefix: "[Development] ",
       }).map((e) => e.message.subject),
     );
-    assert.equal(subjects.length, 9);
+    assert.equal(subjects.length, 10);
     for (const subject of subjects) assert.match(subject, /^\[Development\] /);
   });
 
@@ -161,6 +161,31 @@ describe("bookingEmails", () => {
     assert.match(
       emails[0]!.message.text,
       /ITEM 2: COACH CHARTER \(CANCELLED\)/,
+    );
+  });
+
+  it("an amend tells the customer what the trip now is, with the total", () => {
+    const emails = bookingEmails(
+      "amended",
+      sampleBooking({
+        status: "confirmed",
+        priceTotalSen: 21000,
+        items: [sampleItem({ status: "confirmed", priceTotalSen: 21000 })],
+      }),
+      settings,
+    );
+    assert.equal(emails.length, 1);
+    assert.equal(emails[0]!.message.to, "aina@example.com");
+    assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM updated");
+    assert.match(
+      emails[0]!.message.text,
+      /updated booking HT-7K3QZM as agreed/,
+    );
+    assert.match(emails[0]!.message.text, /Pick-up: KLIA Terminal 1/);
+    assert.match(emails[0]!.message.text, /Total: RM 210\.00/);
+    assert.match(
+      emails[0]!.message.text,
+      /https:\/\/site\.test\/booking\/HT-7K3QZM/,
     );
   });
 

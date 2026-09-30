@@ -67,6 +67,35 @@ describe("describeActivity", () => {
     );
   });
 
+  it("names the fields an amend changed, or just says amended", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.item.amended",
+        before: {
+          position: 2,
+          pickup: "KLIA Terminal 1",
+          startsAt: "2026-10-03T01:30:00.000Z",
+          vehicleClassName: "Executive sedan",
+        },
+        after: {
+          position: 2,
+          pickup: "KLIA Terminal 2",
+          startsAt: "2026-10-03T02:00:00.000Z",
+          vehicleClassName: "MPV",
+        },
+      }),
+      "Changed the pick-up, the pick-up time and the vehicle of item 2",
+    );
+    assert.equal(
+      describeActivity({
+        action: "booking.item.amended",
+        before: { position: 1 },
+        after: { position: 1 },
+      }),
+      "Amended item 1",
+    );
+  });
+
   it("spells a level with its team labels", () => {
     assert.equal(
       describeActivity({

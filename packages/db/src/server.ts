@@ -61,6 +61,7 @@ export {
   advanceItem,
   cancelItem,
   overrideItemPrice,
+  amendItem,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
 } from "./bookings";
@@ -70,6 +71,7 @@ export type {
   BookingItemWithDetails,
   PreparedItem,
   CreateBookingInput,
+  AmendItemInput,
   BookingChange,
   BookingEvent,
 } from "./bookings";

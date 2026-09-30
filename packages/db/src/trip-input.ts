@@ -1,10 +1,11 @@
-import { BOOKING_RULES } from "./booking-rules";
+import { BOOKING_RULES, localDateTimeInputs } from "./booking-rules";
 import {
   isTripMode,
   offersChildSeats,
   type TripCategory,
   type TripMode,
 } from "./booking-status";
+import type { TripView } from "./trip-view";
 
 /**
  * A trip as it travels between screens before it is a booking: the search
@@ -202,4 +203,52 @@ export function tripSearchParams(search: TripSearch) {
 /** The search as name and value pairs, for the hidden inputs of a form. */
 export function hiddenSearchFields(search: TripSearch) {
   return Array.from(tripSearchParams(search).entries());
+}
+
+/** The search a stored trip was made from, for a form that amends it. */
+export function tripSearchOf(trip: TripView): TripSearch {
+  const { date, time } = localDateTimeInputs(trip.startsAt);
+  return {
+    mode: trip.mode,
+    pickupId: trip.pickup.placeId,
+    dropoffId: trip.mode === "oneway" ? (trip.dropoff?.placeId ?? null) : null,
+    date,
+    time,
+    hours: trip.mode === "hourly" ? trip.hours : null,
+  };
+}
+
+/**
+ * A form that carries several trips, one per vehicle, names each one's
+ * inputs "item2.mode", "item2.pickup", so one parser reads every item.
+ * See "Step 11: Several vehicles in one booking" in the plan.
+ */
+const ITEM_FIELD_RE = /^item(\d+)\.(.+)$/;
+
+/** The input name of one field of one item. */
+export function tripItemField(index: number, name: string) {
+  return `item${index}.${name}`;
+}
+
+/** The indexes of the items a form carries, in order, each once. */
+export function tripItemIndexes(input: QueryInput): number[] {
+  const indexes = new Set<number>();
+  for (const key of toParams(input).keys()) {
+    const match = ITEM_FIELD_RE.exec(key);
+    if (match) indexes.add(Number(match[1]));
+  }
+  return [...indexes].sort((a, b) => a - b);
+}
+
+/** One item's fields under their plain names, as the parsers read them. */
+export function tripItemParams(
+  input: QueryInput,
+  index: number,
+): URLSearchParams {
+  const prefix = `item${index}.`;
+  const params = new URLSearchParams();
+  for (const [key, value] of toParams(input).entries()) {
+    if (key.startsWith(prefix)) params.set(key.slice(prefix.length), value);
+  }
+  return params;
 }

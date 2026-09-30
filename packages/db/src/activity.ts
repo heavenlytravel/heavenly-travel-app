@@ -19,7 +19,7 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, zone, class, admin user or setting the action touched. */
+  /** The booking, state or district code, class, admin user or setting the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
@@ -55,7 +55,7 @@ type Scalar = string | number | boolean | null;
  * undefined in the patch is not a change.
  */
 export function changedFields<P extends Record<string, Scalar>>(
-  current: { [K in keyof P]: Scalar },
+  current: NoInfer<{ [K in keyof P]: Scalar }> & Record<string, unknown>,
   patch: Partial<P>,
 ): { before: Partial<P>; after: Partial<P> } | null {
   const before: Partial<P> = {};
@@ -73,7 +73,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Klang Valley", the admin's email, "The wall"; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", the admin's email, "The wall"; the id when unknown. */
   entityLabel: string;
 };
 
@@ -103,28 +103,34 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   const userIds = new Set<string>(idsOf(rows, "admin"));
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
 
-  const [users, bookings, zones, vehicleClasses] = await Promise.all([
-    db.user.findMany({
-      where: { id: { in: [...userIds] } },
-      select: { id: true, email: true, firstName: true, lastName: true },
-    }),
-    db.booking.findMany({
-      where: { id: { in: idsOf(rows, "booking") } },
-      select: { id: true, reference: true },
-    }),
-    db.zone.findMany({
-      where: { id: { in: idsOf(rows, "zone") } },
-      select: { id: true, name: true },
-    }),
-    db.vehicleClass.findMany({
-      where: { id: { in: idsOf(rows, "vehicle-class") } },
-      select: { id: true, name: true },
-    }),
-  ]);
+  const [users, bookings, states, districts, vehicleClasses] =
+    await Promise.all([
+      db.user.findMany({
+        where: { id: { in: [...userIds] } },
+        select: { id: true, email: true, firstName: true, lastName: true },
+      }),
+      db.booking.findMany({
+        where: { id: { in: idsOf(rows, "booking") } },
+        select: { id: true, reference: true },
+      }),
+      db.state.findMany({
+        where: { code: { in: idsOf(rows, "state") } },
+        select: { code: true, name: true },
+      }),
+      db.district.findMany({
+        where: { code: { in: idsOf(rows, "district") } },
+        select: { code: true, name: true },
+      }),
+      db.vehicleClass.findMany({
+        where: { id: { in: idsOf(rows, "vehicle-class") } },
+        select: { id: true, name: true },
+      }),
+    ]);
   const userById = new Map(users.map((u) => [u.id, u]));
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, b.reference])),
-    zone: new Map(zones.map((z) => [z.id, z.name])),
+    state: new Map(states.map((s) => [s.code, s.name])),
+    district: new Map(districts.map((d) => [d.code, d.name])),
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
@@ -153,7 +159,8 @@ function entityLabelOf(
     case "setting":
       return "The wall";
     case "booking":
-    case "zone":
+    case "state":
+    case "district":
     case "vehicle-class":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:
@@ -162,12 +169,20 @@ function entityLabelOf(
 }
 
 /** The history of one record, oldest first, as a booking page shows it. */
-export async function listActivityFor(
+export function listActivityFor(
   entityType: ActivityEntityType,
   entityId: string,
 ): Promise<ActivityEntry[]> {
+  return listActivityForMany([{ entityType, entityId }]);
+}
+
+/** The history of several records together, oldest first: a state and its districts. */
+export async function listActivityForMany(
+  records: readonly { entityType: ActivityEntityType; entityId: string }[],
+): Promise<ActivityEntry[]> {
+  if (records.length === 0) return [];
   const rows = await db.activityLog.findMany({
-    where: { entityType, entityId },
+    where: { OR: records.map((r) => ({ ...r })) },
     orderBy: { createdAt: "asc" },
   });
   return decorate(rows);

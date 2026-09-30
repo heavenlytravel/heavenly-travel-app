@@ -59,33 +59,22 @@ describe("describeActivity", () => {
     assert.equal(flip(false), "Turned the wall off");
   });
 
-  it("spells a zone change from the fields that changed", () => {
-    const changed = (after: Record<string, unknown>) =>
-      describeActivity({ action: "zone.updated", before: {}, after });
-    assert.equal(changed({ multiplier: 1.2 }), "Set the multiplier to ×1.20");
-    assert.equal(
-      changed({ name: "Penang", isActive: true }),
-      "Renamed to Penang, turned the zone on",
-    );
-    assert.equal(changed({}), "Changed the zone");
-  });
-
-  it("names the district a zone gained or lost", () => {
+  it("reads a state's multiplier and a district's switch from after", () => {
     assert.equal(
       describeActivity({
-        action: "zone.district.added",
-        before: null,
-        after: { state: "Selangor", district: "Seri Kembangan" },
+        action: "state.updated",
+        before: { multiplier: 1 },
+        after: { multiplier: 1.2 },
       }),
-      "Added Seri Kembangan",
+      "Set the multiplier to ×1.20",
     );
     assert.equal(
       describeActivity({
-        action: "zone.district.removed",
-        before: { state: "Selangor", district: "Seri Kembangan" },
-        after: null,
+        action: "district.updated",
+        before: { isActive: false },
+        after: { isActive: true },
       }),
-      "Removed Seri Kembangan",
+      "Turned the district on",
     );
   });
 

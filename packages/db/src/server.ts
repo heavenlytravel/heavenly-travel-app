@@ -10,29 +10,28 @@ export {
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
 export type { AdminWithUser, AdminChange } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
-export { listActivityFor, listActivity } from "./activity";
+export { listActivityFor, listActivityForMany, listActivity } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export { dashboardCounts } from "./dashboard";
 export type { DashboardCounts } from "./dashboard";
 export {
-  listActiveZones,
-  listActiveZoneDistricts,
-  resolveZone,
-  listZones,
-  getZone,
-  createZone,
-  updateZone,
-  addZoneDistrict,
-  removeZoneDistrict,
-} from "./zones";
+  listStates,
+  getState,
+  listDistricts,
+  resolveDistrict,
+  listCoverageActivity,
+  setStateMultiplier,
+  setDistrictActive,
+} from "./coverage";
 export type {
-  Zone,
-  ZoneDistrict,
-  ZoneMatch,
-  ZoneWithDistricts,
-  ZoneSummary,
-  ZonePatch,
-} from "./zones";
+  State,
+  District,
+  StateWithDistricts,
+  StateSummary,
+  DistrictWithState,
+} from "./coverage";
+export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
+export type { StateShape, DistrictShape } from "./district-index";
 export {
   listActiveVehicleClasses,
   listVehicleClasses,
@@ -89,5 +88,6 @@ export * from "./contact";
 export * from "./change";
 export * from "./fields";
 export * from "./slug";
-export * from "./zone-input";
+export * from "./coverage-input";
+export * from "./geo";
 export * from "./vehicle-class-input";

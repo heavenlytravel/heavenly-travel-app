@@ -1,11 +1,11 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
+import { formatMultiplier } from "./coverage-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
   type VehicleClassField,
 } from "./vehicle-class-input";
-import { formatMultiplier } from "./zone-input";
 
 /**
  * The activity log's vocabulary, browser-safe: who can act, what an entry
@@ -26,7 +26,8 @@ export const SYSTEM_ACTOR: SystemActor = { kind: "system" };
 
 export const ACTIVITY_ENTITY_TYPES = [
   "booking",
-  "zone",
+  "state",
+  "district",
   "vehicle-class",
   "admin",
   "setting",
@@ -37,8 +38,9 @@ export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
 /**
  * Each action names the record type it logs against and whether a customer
  * may ever see it. Item actions log against their booking, with the item's
- * position in `before` and `after`. District actions log against their
- * zone. An update's `before` and `after` hold the changed fields only.
+ * position in `before` and `after`. State and district entries log against
+ * the row's code. An update's `before` and `after` hold the changed fields
+ * only.
  */
 const ACTIONS = {
   "booking.created": { entityType: "booking", customerVisible: true },
@@ -51,10 +53,8 @@ const ACTIONS = {
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
   "wall.switched": { entityType: "setting", customerVisible: false },
-  "zone.created": { entityType: "zone", customerVisible: false },
-  "zone.updated": { entityType: "zone", customerVisible: false },
-  "zone.district.added": { entityType: "zone", customerVisible: false },
-  "zone.district.removed": { entityType: "zone", customerVisible: false },
+  "state.updated": { entityType: "state", customerVisible: false },
+  "district.updated": { entityType: "district", customerVisible: false },
   "vehicle-class.created": {
     entityType: "vehicle-class",
     customerVisible: false,
@@ -119,12 +119,7 @@ function adminState(json: unknown) {
   return names.length > 0 ? `${levelName} (${names.join(", ")})` : levelName;
 }
 
-function districtName(json: unknown) {
-  const district = field(json, "district");
-  return typeof district === "string" ? district : "a district";
-}
-
-/** "Renamed to Penang, turned the zone on": the phrases as one sentence. */
+/** "Renamed to X, turned the class off": the phrases as one sentence. */
 function sentence(phrases: string[], fallback: string) {
   if (phrases.length === 0) return fallback;
   return phrases
@@ -138,21 +133,6 @@ function sentence(phrases: string[], fallback: string) {
 function listOf(items: string[]) {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
-}
-
-function zoneChanges(after: unknown) {
-  const phrases: string[] = [];
-  const name = field(after, "name");
-  if (typeof name === "string") phrases.push(`Renamed to ${name}`);
-  const multiplier = field(after, "multiplier");
-  if (typeof multiplier === "number") {
-    phrases.push(`Set the multiplier to ${formatMultiplier(multiplier)}`);
-  }
-  const isActive = field(after, "isActive");
-  if (typeof isActive === "boolean") {
-    phrases.push(isActive ? "Turned the zone on" : "Turned the zone off");
-  }
-  return sentence(phrases, "Changed the zone");
 }
 
 function vehicleClassChanges(after: unknown) {
@@ -177,7 +157,7 @@ function vehicleClassChanges(after: unknown) {
 
 /**
  * One entry as a short sentence without its actor or its record: "Confirmed
- * item 2", "Added Seri Kembangan", "Turned the wall on". The actor, the
+ * item 2", "Turned the district on", "Turned the wall on". The actor, the
  * record and the time are shown beside it.
  */
 export function describeActivity(entry: DescribableActivity): string {
@@ -213,14 +193,16 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "wallActive") === true
         ? "Turned the wall on"
         : "Turned the wall off";
-    case "zone.created":
-      return "Created the zone";
-    case "zone.updated":
-      return zoneChanges(entry.after);
-    case "zone.district.added":
-      return `Added ${districtName(entry.after)}`;
-    case "zone.district.removed":
-      return `Removed ${districtName(entry.before)}`;
+    case "state.updated": {
+      const multiplier = field(entry.after, "multiplier");
+      return typeof multiplier === "number"
+        ? `Set the multiplier to ${formatMultiplier(multiplier)}`
+        : "Changed the state";
+    }
+    case "district.updated":
+      return field(entry.after, "isActive") === true
+        ? "Turned the district on"
+        : "Turned the district off";
     case "vehicle-class.created":
       return "Created the class";
     case "vehicle-class.updated":

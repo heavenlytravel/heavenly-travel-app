@@ -1,23 +1,19 @@
-// Usage: pnpm --filter @repo/db db:seed [-- --replace-districts]
+// Usage: pnpm --filter @repo/db db:seed
 //
-// Creates the vehicle classes and zones a fresh database starts with. A
-// record that already exists (by slug) is left alone, districts and rates
-// included: once seeded, ops owns them and edits them in the console. For an
-// existing zone the script prints how its districts differ from this list;
-// `--replace-districts` makes every existing zone's districts this list,
-// for carrying a corrected list into a database seeded earlier. Rates are
-// never replaced.
+// Creates the vehicle classes a fresh database starts with, and keeps the
+// State and District rows in step with data/malaysia-districts.json. A
+// vehicle class that already exists (by slug) is left alone, rates included:
+// once seeded, ops owns it and edits it in the console. A state or district
+// that already exists keeps its multiplier and its switch; only its name and
+// state are refreshed from the data file. A district created here starts on
+// when it is in the list below, the coverage the site launched with.
 //
-// Rates and the coach rules are placeholders until ops confirms them.
-// District names are the `locality` Google returns for places in the zone.
-// Google never returns the administrative district (`administrative_area_level_2`)
-// for Malaysian places, so the real district names (Petaling, Timur Laut,
-// Melaka Tengah) match nothing and are not listed. Every name here resolved
-// at least one real place in the check on 2026-09-30:
-// `pnpm --filter @repo/places check-coverage`. See docs/260930-ops-screens.md.
+// Rates and the coach rules are placeholders until ops confirms them. See
+// docs/260930-coverage.md and docs/260930-ops-screens.md.
 import { CATEGORY_RULE_DEFAULTS } from "../src/booking-rules";
 import type { TripCategory } from "../src/booking-status";
 import { db } from "../src/client";
+import { DISTRICT_DATA } from "../src/district-index";
 
 /** Each category with its usual rules; a class may differ, it is only a row. */
 const rulesOf = (category: TripCategory) => ({
@@ -134,233 +130,74 @@ const VEHICLE_CLASSES = [
   },
 ];
 
-type ZoneSeed = {
-  slug: string;
-  name: string;
-  multiplier: number;
-  /**
-   * `state` is the English name Google uses most often; it varies ("Penang"
-   * and "Pulau Pinang", "Melaka" and "Malacca") and only breaks a tie when
-   * two zones list the same name. `names` are Google localities.
-   */
-  districts: { state: string; names: string[] }[];
-};
+/** The districts served at launch: Klang Valley, Langkawi, Penang, Melaka, Johor Bahru and Cameron Highlands. */
+const LAUNCH_DISTRICTS = new Set([
+  "kuala-lumpur",
+  "putrajaya",
+  "petaling",
+  "klang",
+  "gombak",
+  "hulu-langat",
+  "sepang",
+  "langkawi",
+  "timur-laut",
+  "barat-daya",
+  "seberang-perai-utara",
+  "seberang-perai-tengah",
+  "seberang-perai-selatan",
+  "melaka-tengah",
+  "alor-gajah",
+  "jasin",
+  "johor-bahru",
+  "kulai",
+  "cameron-highlands",
+]);
 
-const ZONES: ZoneSeed[] = [
-  {
-    slug: "klang-valley",
-    name: "Klang Valley",
-    multiplier: 1,
-    districts: [
-      {
-        state: "Wilayah Persekutuan Kuala Lumpur",
-        // Google names a few Kepong places' locality after the territory.
-        names: ["Kuala Lumpur", "Wilayah Persekutuan"],
-      },
-      { state: "Putrajaya", names: ["Putrajaya"] },
-      {
-        state: "Selangor",
-        names: [
-          // Petaling district
-          "Petaling Jaya",
-          "Subang Jaya",
-          "Subang",
-          "Shah Alam",
-          "Puchong",
-          "Seri Kembangan",
-          "Sungai Buloh",
-          // Klang district
-          "Klang",
-          "Port Klang",
-          "Kapar",
-          "Pulau Ketam",
-          // Gombak district; Rawang also covers Bukit Beruntung in Hulu Selangor
-          "Batu Caves",
-          "Rawang",
-          "Gombak",
-          // Hulu Langat district
-          "Kajang",
-          "Bangi",
-          "Bandar Baru Bangi",
-          "Semenyih",
-          "Balakong",
-          "Cheras",
-          "Ampang",
-          "Hulu Langat",
-          // Sepang district
-          "Sepang",
-          "KLIA",
-          "Cyberjaya",
-          "Dengkil",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "langkawi",
-    name: "Langkawi",
-    multiplier: 1,
-    districts: [{ state: "Kedah", names: ["Langkawi", "Kuah"] }],
-  },
-  {
-    slug: "penang",
-    name: "Penang",
-    multiplier: 1,
-    districts: [
-      {
-        state: "Penang",
-        names: [
-          // The island
-          "George Town",
-          "Bayan Lepas",
-          "Batu Ferringhi",
-          "Tanjung Bungah",
-          "Bukit Bendera",
-          "Air Itam",
-          "Jelutong",
-          "Gelugor",
-          "Balik Pulau",
-          // Seberang Perai
-          "Butterworth",
-          "Perai",
-          "Bukit Mertajam",
-          "Permatang Pauh",
-          "Kepala Batas",
-          "Tasek Gelugor",
-          "Simpang Ampat",
-          "Nibong Tebal",
-          "Sungai Jawi",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "melaka",
-    name: "Melaka",
-    multiplier: 1,
-    districts: [
-      {
-        state: "Melaka",
-        names: [
-          // Melaka Tengah district
-          "Melaka",
-          "Malacca",
-          "Ayer Keroh",
-          "Batu Berendam",
-          "Bukit Katil",
-          "Cheng",
-          "Tanjung Kling",
-          "Sungai Udang",
-          // Alor Gajah district
-          "Alor Gajah",
-          "Masjid Tanah",
-          "Durian Tunggal",
-          // Jasin district
-          "Jasin",
-          "Merlimau",
-          "Bemban",
-          "Selandar",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "johor-bahru",
-    name: "Johor Bahru",
-    multiplier: 1,
-    districts: [
-      {
-        state: "Johor",
-        names: [
-          // Johor Bahru district
-          "Johor Bahru",
-          "Skudai",
-          "Iskandar Puteri",
-          "Gelang Patah",
-          "Pasir Gudang",
-          "Masai",
-          "Ulu Tiram",
-          // Kulai district
-          "Kulai",
-          "Senai",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "cameron-highlands",
-    name: "Cameron Highlands",
-    multiplier: 1,
-    districts: [
-      { state: "Pahang", names: ["Tanah Rata", "Brinchang", "Ringlet"] },
-    ],
-  },
-];
+for (const code of LAUNCH_DISTRICTS) {
+  if (!DISTRICT_DATA.districts.some((d) => d.code === code)) {
+    throw new Error(`Launch district ${code} is not in the data file.`);
+  }
+}
 
-const REPLACE_FLAG = "--replace-districts";
-const replaceDistricts = process.argv.includes(REPLACE_FLAG);
-
-const lower = (names: Iterable<string>) =>
-  new Set(Array.from(names, (n) => n.toLowerCase()));
-const list = (names: string[]) => names.map((n) => `"${n}"`).join(", ");
-
-let created = 0;
-let kept = 0;
-
+let classesCreated = 0;
+let classesKept = 0;
 for (const { slug, ...fields } of VEHICLE_CLASSES) {
   const existing = await db.vehicleClass.findUnique({ where: { slug } });
   if (existing) {
-    kept += 1;
+    classesKept += 1;
     continue;
   }
   await db.vehicleClass.create({ data: { slug, ...fields } });
-  created += 1;
+  classesCreated += 1;
 }
 
-for (const { slug, districts, ...fields } of ZONES) {
-  const rows = districts.flatMap(({ state, names }) =>
-    names.map((district) => ({ state, district })),
-  );
-  const existing = await db.zone.findUnique({
-    where: { slug },
-    include: { districts: true },
+for (const { code, name } of DISTRICT_DATA.states) {
+  await db.state.upsert({
+    where: { code },
+    update: { name },
+    create: { code, name },
   });
-  if (!existing) {
-    await db.zone.create({
-      data: { slug, ...fields, districts: { create: rows } },
-    });
-    created += 1;
+}
+
+let districtsCreated = 0;
+for (const { code, name, stateCode } of DISTRICT_DATA.districts) {
+  const existing = await db.district.findUnique({ where: { code } });
+  if (existing) {
+    if (existing.name !== name || existing.stateCode !== stateCode) {
+      await db.district.update({ where: { code }, data: { name, stateCode } });
+    }
     continue;
   }
-
-  kept += 1;
-  const inSeed = lower(rows.map((r) => r.district));
-  const inDb = lower(existing.districts.map((r) => r.district));
-  const missing = rows
-    .filter((r) => !inDb.has(r.district.toLowerCase()))
-    .map((r) => r.district);
-  const extra = existing.districts
-    .filter((r) => !inSeed.has(r.district.toLowerCase()))
-    .map((r) => r.district);
-  if (missing.length === 0 && extra.length === 0) continue;
-
-  if (replaceDistricts) {
-    await db.$transaction([
-      db.zoneDistrict.deleteMany({ where: { zoneId: existing.id } }),
-      db.zoneDistrict.createMany({
-        data: rows.map((row) => ({ zoneId: existing.id, ...row })),
-      }),
-    ]);
-    console.log(`Zone "${slug}": districts replaced with this seed's list.`);
-    continue;
-  }
-  console.log(`Zone "${slug}" exists and was left alone.`);
-  if (missing.length) console.log(`  Not in the database: ${list(missing)}`);
-  if (extra.length) console.log(`  Not in this seed: ${list(extra)}`);
-  console.log(`  Edit them in the console, or run again with ${REPLACE_FLAG}.`);
+  await db.district.create({
+    data: { code, name, stateCode, isActive: LAUNCH_DISTRICTS.has(code) },
+  });
+  districtsCreated += 1;
 }
 
 console.log(
-  `${VEHICLE_CLASSES.length} vehicle classes and ${ZONES.length} zones: ${created} created, ${kept} already there.`,
+  `${VEHICLE_CLASSES.length} vehicle classes: ${classesCreated} created, ${classesKept} already there.`,
+);
+console.log(
+  `${DISTRICT_DATA.states.length} states and ${DISTRICT_DATA.districts.length} districts: ${districtsCreated} districts created, the rest refreshed.`,
 );
 await db.$disconnect();

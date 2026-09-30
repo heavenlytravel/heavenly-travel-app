@@ -18,5 +18,6 @@ export type { AdminChange } from "./admins";
 export * from "./change";
 export * from "./fields";
 export * from "./slug";
-export * from "./zone-input";
+export * from "./coverage-input";
+export * from "./geo";
 export * from "./vehicle-class-input";

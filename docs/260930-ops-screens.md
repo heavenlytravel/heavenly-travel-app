@@ -172,7 +172,7 @@ after, `entityType: "vehicle-class"`, `customerVisible` false.
 | `apps/admin/app/_components/nav.ts`           | "Zones" and "Vehicle classes" replace "Locations".                                                                                                                                                                 |
 | `apps/admin/app/_lib/routes.ts`               | `ZONES_PATH`, `zoneHref(id)`, `VEHICLE_CLASSES_PATH`.                                                                                                                                                              |
 
-No schema change, unless the postcode decision below is taken.
+No schema change.
 
 ## Coverage check
 
@@ -230,16 +230,24 @@ model can place them:
 
 Hotels and terminals resolve; natural features and road-level results do not. The one
 that matters is "klia2": an airport transfer company's most typed pickup returns a place
-with no town. Two ways to close it, for decision before PR D:
+with no town.
 
-- **Postcode as a second key** (recommended). `ZonePostcode` rows, `from` and `to`, per
-  zone; `Place` snapshots `postalCode`; `resolveZone` tries the locality first and the
-  postcode second. Malaysian postcodes are five digits with well-known ranges per town
-  (07000 Langkawi, 43900 KLIA, 39000 to 39200 Cameron Highlands), ops staff know them,
-  and Google returned one for nearly every place, including all five gaps. The Zones
-  screen gains a "Postcodes" list next to "Districts". It is one schema push in PR D.
-- **Leave it.** Customers pick the terminal's hotels or Terminal 1 instead, and the
-  known gaps stay listed in the check. No code.
+Decided on 2026-09-30: towns stay the key for now, and the known gaps stay listed in
+the check. Customers pick Terminal 1 or a hotel at the airport instead. Two ways to
+close the gaps are on record for later, to be chosen when the town list proves not
+enough:
+
+- **Postcode as a second key.** `ZonePostcode` rows, `from` and `to`, per zone;
+  `Place` snapshots `postalCode`; `resolveZone` tries the postcode first and the town
+  second. Malaysian postcodes are five digits with well-known ranges per town (07000
+  Langkawi, 43900 KLIA, 39000 to 39200 Cameron Highlands), ops staff know them, and
+  Google returned one for every establishment tested, including all five gaps. Area
+  names such as "Nusajaya" carry no postcode, which is why the towns would stay as the
+  fallback. About eight files in the packages, one schema push, and a "Postcodes" list
+  on the Zones screen.
+- **Polygons.** A drawn boundary per zone, matched by the place's coordinates. Covers
+  everything Google can locate, at the cost of a map editor on the Zones screen. Already
+  on record in `260923-car-with-driver.md`.
 
 A `sublocality` fallback was considered and dropped: it would cover Terminal 2 and the
 LRT station but not "klia2" or the beaches, and sublocalities are neighbourhoods,
@@ -273,8 +281,7 @@ order within the PR:
 6. **Zones screen**: `CATEGORY_RULE_DEFAULTS` is not needed here; the zone writers,
    their log actions and `describeActivity` sentences, `PlaceInput` moved to
    `packages/ui`, the admin search route and key, the two pages, the nav change, the
-   Locations screen removed. If the postcode decision is taken, its schema, snapshot
-   field and matcher change come here.
+   Locations screen removed.
 7. **Vehicle classes screen**: `CATEGORY_RULE_DEFAULTS`, the class writers and
    validation with tests, the log actions, the list and the sheet.
 
@@ -283,7 +290,7 @@ order within the PR:
 - Read-only views of both screens for the other teams, if a team asks (already in the
   admin teams plan).
 - Per-category coverage, when a zone has cars but no coach (already in the coach plan).
-- Polygons for a zone finer than a town (already in the car plan).
+- Postcodes or polygons as a second coverage key, see "Known gaps".
 - State aliases in `resolveZone`, if two zones ever need the same town name in two
   states.
 - Vehicle photos per class, when the class cards get photos.

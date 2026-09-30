@@ -246,9 +246,11 @@ As built in step 2:
   with every keystroke and the details call, so a session bills as one request.
 - `SearchValues` gained `placeIds`, filled only when a suggestion was picked. A place
   field with text but no id is unresolved; step 3 decides what to do with it.
-- Zone resolution against real Google address components is still unverified; the key
-  did not exist when step 2 was built. Check the first real geocodes for Klang Valley,
-  Langkawi and Cameron Highlands against `ZoneDistrict` before step 3 ships.
+- Zone resolution was verified against real Google address components on 2026-09-30,
+  with 208 places in and around the six zones. Google returns no
+  `administrative_area_level_2` for Malaysian places, so a `ZoneDistrict` row is in
+  practice a Google `locality`, a town name. The findings, the corrected names and the
+  known gaps are in `260930-ops-screens.md`, "Coverage check".
 
 ## Web app
 
@@ -326,8 +328,8 @@ As built in step 4:
 | `/bookings`      | Table, newest first, filter by status. Sidebar entry.                                                                                                 |
 | `/bookings/[id]` | Detail: trip, contact, price breakdown, timeline. Confirm, assign, complete and cancel actions with `getAdmin()` re-check, as in `admins/actions.ts`. |
 
-All admin levels. The existing Locations screen keeps its sample data; wiring it to the
-`Zone` table is the later ops feature.
+All admin levels. The existing Locations screen keeps its sample data until the Zones
+screen of `260930-ops-screens.md` replaces it.
 
 As built in step 5:
 

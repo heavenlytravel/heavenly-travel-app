@@ -1,6 +1,7 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
-Status: steps 1 to 4 built, the rest agreed. Decisions agreed on 2026-09-30. This is the implementation
+Status: steps 1 to 5 built, the rest agreed. Decisions agreed on 2026-09-30. The ops
+screens of steps 6 and 7 are designed in `260930-ops-screens.md`. This is the implementation
 plan for the first two phases of the internal operations roadmap, OP4 (staff booking
 tools) and OP1 (coverage and pricing setup). The roadmap, the task list and the decision
 record (AT-D1 to AT-D16) live in the `heavenly-travel-docs` repository under `plan/`.
@@ -155,25 +156,26 @@ unknown level as `REGULAR`, so nobody is locked out between the push and the scr
 
 ## Module changes
 
-| Module                                  | Change                                                                                                                                              |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roles.ts`                              | `ADMIN_LEVELS` is `SUPER`, `REGULAR`. Gains `ADMIN_TEAMS`, its guard and its labels.                                                                |
-| `admins.ts`                             | `setAdminLevel` becomes `setAdmin(email, level, teams)`. Refuses a `REGULAR` admin with no team. The last `SUPER` rule stays.                       |
-| `scripts/promote-admin.ts`              | Takes the teams after the level. New `scripts/migrate-admin-levels.ts`.                                                                             |
-| `permissions.ts`, new (step 2)          | The map above as data, and one pure function that answers "may this admin do this, with the wall on or off". Unit-tested.                           |
-| `settings.ts`, new (step 2)             | Reads and writes the one `AppSetting` row. Read once per request.                                                                                   |
-| `activity-actions.ts`, new (step 3)     | Browser-safe: the actor kinds, the actions with their record type and `customerVisible`, and `describeActivity`, the sentence an entry reads as.    |
-| `activity.ts`, new (step 3)             | `logActivity(tx, actor, entry)` and the readers for one record and for the full log, with actors and records named.                                 |
-| `bookings.ts` (step 3)                  | `advanceItem`, `cancelItem`, `cancelBookingAsAdmin`, `createBooking` and `cancelBookingAsCustomer` take the actor and log inside their transaction. |
-| `admins.ts`, `settings.ts` (step 3)     | `setAdmin`, `revokeAdmin` and `setWallActive` take the actor and log inside their transaction. A change to the same values logs nothing.            |
-| `dashboard.ts`, new (step 4)            | `dashboardCounts()`: the Dashboard's numbers, one count each.                                                                                       |
-| `apps/admin/app/_lib/access.ts`         | `requireAdmin` and `getAdmin` take the screen or action they guard. `requireAdmin` sends a blocked admin to `/restricted`.                          |
-| `apps/admin/app/_components/nav.ts`     | Each item names the permission it needs. The sidebar and header show only what the admin may open.                                                  |
-| `apps/admin/.../admins`                 | Teams shown and set per admin. The wall switch. Admins with no team flagged.                                                                        |
-| `apps/admin/.../bookings/[id]`          | Buttons shown by permission. The history section.                                                                                                   |
-| `apps/admin/.../activity`, new (step 3) | The full log, `SUPER` only.                                                                                                                         |
-| `apps/admin/.../locations`              | Removed in step 6. `zones` and `vehicle-classes` take its place.                                                                                    |
-| `prisma/seed.ts` (step 5)               | Stops replacing the districts and rates of a record that already exists.                                                                            |
+| Module                                  | Change                                                                                                                                                            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roles.ts`                              | `ADMIN_LEVELS` is `SUPER`, `REGULAR`. Gains `ADMIN_TEAMS`, its guard and its labels.                                                                              |
+| `admins.ts`                             | `setAdminLevel` becomes `setAdmin(email, level, teams)`. Refuses a `REGULAR` admin with no team. The last `SUPER` rule stays.                                     |
+| `scripts/promote-admin.ts`              | Takes the teams after the level. New `scripts/migrate-admin-levels.ts`.                                                                                           |
+| `permissions.ts`, new (step 2)          | The map above as data, and one pure function that answers "may this admin do this, with the wall on or off". Unit-tested.                                         |
+| `settings.ts`, new (step 2)             | Reads and writes the one `AppSetting` row. Read once per request.                                                                                                 |
+| `activity-actions.ts`, new (step 3)     | Browser-safe: the actor kinds, the actions with their record type and `customerVisible`, and `describeActivity`, the sentence an entry reads as.                  |
+| `activity.ts`, new (step 3)             | `logActivity(tx, actor, entry)` and the readers for one record and for the full log, with actors and records named.                                               |
+| `bookings.ts` (step 3)                  | `advanceItem`, `cancelItem`, `cancelBookingAsAdmin`, `createBooking` and `cancelBookingAsCustomer` take the actor and log inside their transaction.               |
+| `admins.ts`, `settings.ts` (step 3)     | `setAdmin`, `revokeAdmin` and `setWallActive` take the actor and log inside their transaction. A change to the same values logs nothing.                          |
+| `dashboard.ts`, new (step 4)            | `dashboardCounts()`: the Dashboard's numbers, one count each.                                                                                                     |
+| `apps/admin/app/_lib/access.ts`         | `requireAdmin` and `getAdmin` take the screen or action they guard. `requireAdmin` sends a blocked admin to `/restricted`.                                        |
+| `apps/admin/app/_components/nav.ts`     | Each item names the permission it needs. The sidebar and header show only what the admin may open.                                                                |
+| `apps/admin/.../admins`                 | Teams shown and set per admin. The wall switch. Admins with no team flagged.                                                                                      |
+| `apps/admin/.../bookings/[id]`          | Buttons shown by permission. The history section.                                                                                                                 |
+| `apps/admin/.../activity`, new (step 3) | The full log, `SUPER` only.                                                                                                                                       |
+| `apps/admin/.../locations`              | Removed in step 6. `zones` and `vehicle-classes` take its place.                                                                                                  |
+| `prisma/seed.ts` (step 5)               | Stops replacing the districts and rates of a record that already exists. Reports how an existing zone's districts differ; `--replace-districts` applies the list. |
+| `packages/places/scripts` (step 5)      | `check-coverage`: geocodes real places in and around every zone and reports the zone each resolves to.                                                            |
 
 ## Build order
 

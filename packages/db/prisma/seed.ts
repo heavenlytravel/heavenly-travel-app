@@ -1,11 +1,20 @@
-// Usage: pnpm --filter @repo/db db:seed
-// Idempotent: vehicle classes and zones are upserted by slug, districts are
-// replaced per zone. Runs against the DATABASE_URL in packages/db/.env.
+// Usage: pnpm --filter @repo/db db:seed [-- --replace-districts]
+//
+// Creates the vehicle classes and zones a fresh database starts with. A
+// record that already exists (by slug) is left alone, districts and rates
+// included: once seeded, ops owns them and edits them in the console. For an
+// existing zone the script prints how its districts differ from this list;
+// `--replace-districts` makes every existing zone's districts this list,
+// for carrying a corrected list into a database seeded earlier. Rates are
+// never replaced.
 //
 // Rates and the coach rules are placeholders until ops confirms them.
-// District names are as Google spells them in address components
-// (administrative_area_level_2 or locality); verify against real geocodes
-// when the places package lands. See docs/260928-coach-charter.md, "Seed".
+// District names are the `locality` Google returns for places in the zone.
+// Google never returns the administrative district (`administrative_area_level_2`)
+// for Malaysian places, so the real district names (Petaling, Timur Laut,
+// Melaka Tengah) match nothing and are not listed. Every name here resolved
+// at least one real place in the check on 2026-09-30:
+// `pnpm --filter @repo/places check-coverage`. See docs/260930-ops-screens.md.
 import type { TripCategory } from "../src/booking-status";
 import { db } from "../src/client";
 
@@ -134,6 +143,11 @@ type ZoneSeed = {
   slug: string;
   name: string;
   multiplier: number;
+  /**
+   * `state` is the English name Google uses most often; it varies ("Penang"
+   * and "Pulau Pinang", "Melaka" and "Malacca") and only breaks a tie when
+   * two zones list the same name. `names` are Google localities.
+   */
   districts: { state: string; names: string[] }[];
 };
 
@@ -144,25 +158,45 @@ const ZONES: ZoneSeed[] = [
     multiplier: 1,
     districts: [
       {
-        state: "Federal Territory of Kuala Lumpur",
-        names: ["Kuala Lumpur"],
+        state: "Wilayah Persekutuan Kuala Lumpur",
+        // Google names a few Kepong places' locality after the territory.
+        names: ["Kuala Lumpur", "Wilayah Persekutuan"],
       },
       { state: "Putrajaya", names: ["Putrajaya"] },
       {
         state: "Selangor",
         names: [
-          "Petaling",
-          "Klang",
-          "Gombak",
-          "Hulu Langat",
-          "Sepang",
+          // Petaling district
           "Petaling Jaya",
-          "Shah Alam",
           "Subang Jaya",
+          "Subang",
+          "Shah Alam",
           "Puchong",
+          "Seri Kembangan",
+          "Sungai Buloh",
+          // Klang district
+          "Klang",
+          "Port Klang",
+          "Kapar",
+          "Pulau Ketam",
+          // Gombak district; Rawang also covers Bukit Beruntung in Hulu Selangor
+          "Batu Caves",
+          "Rawang",
+          "Gombak",
+          // Hulu Langat district
           "Kajang",
+          "Bangi",
+          "Bandar Baru Bangi",
+          "Semenyih",
+          "Balakong",
+          "Cheras",
           "Ampang",
+          "Hulu Langat",
+          // Sepang district
+          "Sepang",
+          "KLIA",
           "Cyberjaya",
+          "Dengkil",
         ],
       },
     ],
@@ -181,14 +215,26 @@ const ZONES: ZoneSeed[] = [
       {
         state: "Penang",
         names: [
-          "Timur Laut",
-          "Barat Daya",
-          "Seberang Perai Utara",
-          "Seberang Perai Tengah",
-          "Seberang Perai Selatan",
+          // The island
           "George Town",
           "Bayan Lepas",
+          "Batu Ferringhi",
+          "Tanjung Bungah",
+          "Bukit Bendera",
+          "Air Itam",
+          "Jelutong",
+          "Gelugor",
+          "Balik Pulau",
+          // Seberang Perai
           "Butterworth",
+          "Perai",
+          "Bukit Mertajam",
+          "Permatang Pauh",
+          "Kepala Batas",
+          "Tasek Gelugor",
+          "Simpang Ampat",
+          "Nibong Tebal",
+          "Sungai Jawi",
         ],
       },
     ],
@@ -199,8 +245,27 @@ const ZONES: ZoneSeed[] = [
     multiplier: 1,
     districts: [
       {
-        state: "Malacca",
-        names: ["Melaka Tengah", "Alor Gajah", "Jasin", "Malacca", "Melaka"],
+        state: "Melaka",
+        names: [
+          // Melaka Tengah district
+          "Melaka",
+          "Malacca",
+          "Ayer Keroh",
+          "Batu Berendam",
+          "Bukit Katil",
+          "Cheng",
+          "Tanjung Kling",
+          "Sungai Udang",
+          // Alor Gajah district
+          "Alor Gajah",
+          "Masjid Tanah",
+          "Durian Tunggal",
+          // Jasin district
+          "Jasin",
+          "Merlimau",
+          "Bemban",
+          "Selandar",
+        ],
       },
     ],
   },
@@ -211,7 +276,19 @@ const ZONES: ZoneSeed[] = [
     districts: [
       {
         state: "Johor",
-        names: ["Johor Bahru", "Kulai", "Iskandar Puteri", "Skudai"],
+        names: [
+          // Johor Bahru district
+          "Johor Bahru",
+          "Skudai",
+          "Iskandar Puteri",
+          "Gelang Patah",
+          "Pasir Gudang",
+          "Masai",
+          "Ulu Tiram",
+          // Kulai district
+          "Kulai",
+          "Senai",
+        ],
       },
     ],
   },
@@ -220,38 +297,75 @@ const ZONES: ZoneSeed[] = [
     name: "Cameron Highlands",
     multiplier: 1,
     districts: [
-      {
-        state: "Pahang",
-        names: ["Cameron Highlands", "Tanah Rata", "Brinchang"],
-      },
+      { state: "Pahang", names: ["Tanah Rata", "Brinchang", "Ringlet"] },
     ],
   },
 ];
 
+const REPLACE_FLAG = "--replace-districts";
+const replaceDistricts = process.argv.includes(REPLACE_FLAG);
+
+const lower = (names: Iterable<string>) =>
+  new Set(Array.from(names, (n) => n.toLowerCase()));
+const list = (names: string[]) => names.map((n) => `"${n}"`).join(", ");
+
+let created = 0;
+let kept = 0;
+
 for (const { slug, ...fields } of VEHICLE_CLASSES) {
-  await db.vehicleClass.upsert({
-    where: { slug },
-    update: fields,
-    create: { slug, ...fields },
-  });
+  const existing = await db.vehicleClass.findUnique({ where: { slug } });
+  if (existing) {
+    kept += 1;
+    continue;
+  }
+  await db.vehicleClass.create({ data: { slug, ...fields } });
+  created += 1;
 }
 
 for (const { slug, districts, ...fields } of ZONES) {
-  const zone = await db.zone.upsert({
-    where: { slug },
-    update: fields,
-    create: { slug, ...fields },
-  });
   const rows = districts.flatMap(({ state, names }) =>
-    names.map((district) => ({ zoneId: zone.id, state, district })),
+    names.map((district) => ({ state, district })),
   );
-  await db.$transaction([
-    db.zoneDistrict.deleteMany({ where: { zoneId: zone.id } }),
-    db.zoneDistrict.createMany({ data: rows }),
-  ]);
+  const existing = await db.zone.findUnique({
+    where: { slug },
+    include: { districts: true },
+  });
+  if (!existing) {
+    await db.zone.create({
+      data: { slug, ...fields, districts: { create: rows } },
+    });
+    created += 1;
+    continue;
+  }
+
+  kept += 1;
+  const inSeed = lower(rows.map((r) => r.district));
+  const inDb = lower(existing.districts.map((r) => r.district));
+  const missing = rows
+    .filter((r) => !inDb.has(r.district.toLowerCase()))
+    .map((r) => r.district);
+  const extra = existing.districts
+    .filter((r) => !inSeed.has(r.district.toLowerCase()))
+    .map((r) => r.district);
+  if (missing.length === 0 && extra.length === 0) continue;
+
+  if (replaceDistricts) {
+    await db.$transaction([
+      db.zoneDistrict.deleteMany({ where: { zoneId: existing.id } }),
+      db.zoneDistrict.createMany({
+        data: rows.map((row) => ({ zoneId: existing.id, ...row })),
+      }),
+    ]);
+    console.log(`Zone "${slug}": districts replaced with this seed's list.`);
+    continue;
+  }
+  console.log(`Zone "${slug}" exists and was left alone.`);
+  if (missing.length) console.log(`  Not in the database: ${list(missing)}`);
+  if (extra.length) console.log(`  Not in this seed: ${list(extra)}`);
+  console.log(`  Edit them in the console, or run again with ${REPLACE_FLAG}.`);
 }
 
 console.log(
-  `Seeded ${VEHICLE_CLASSES.length} vehicle classes and ${ZONES.length} zones.`,
+  `${VEHICLE_CLASSES.length} vehicle classes and ${ZONES.length} zones: ${created} created, ${kept} already there.`,
 );
 await db.$disconnect();

@@ -124,7 +124,9 @@ model Zone {
 
 /// One district that belongs to a zone. `state` and `district` are spelled as
 /// Google returns them in address components, so a geocode can be matched
-/// without any translation.
+/// without any translation. In practice `district` is a Google `locality`
+/// (a town): Google returns no administrative district for Malaysian
+/// places. See docs/260930-ops-screens.md, "Coverage check".
 model ZoneDistrict {
   id       String @id @default(cuid())
   zoneId   String

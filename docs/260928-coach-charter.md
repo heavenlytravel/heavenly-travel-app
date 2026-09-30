@@ -329,12 +329,13 @@ As built in step 4:
 
 ## Follow-up: ops screens
 
-Its own short document and PR after step 4. Wire the admin Locations screen, today
-sample data in `LocationsManager.tsx`, to the `Zone` and `ZoneDistrict` tables, and add
-a Fleet screen for `VehicleClass`: name, category, seats, luggage, rates, and the three
-rules headed "Notice needed", "Cancel up to" and "Minimum hours". A new class is
-pre-filled with its category's usual values so ops can accept the defaults. The screen
-refuses a minimum below the hourly floor.
+Designed in `260930-ops-screens.md` and built as steps 6 and 7 of
+`260930-admin-teams-and-access.md`: a Zones screen on the `Zone` and `ZoneDistrict`
+tables in place of the sample Locations screen, and a Vehicle classes screen for
+`VehicleClass` with name, category, seats, luggage, rates, and the three rules headed
+"Notice needed", "Cancel up to" and "Minimum hours". A new class is pre-filled with its
+category's usual values so ops can accept the defaults. The screen refuses a minimum
+below the hourly floor.
 
 ## Future work, on record
 

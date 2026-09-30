@@ -1,10 +1,11 @@
 # Admin teams and access: levels, teams, the wall and the activity log
 
-Status: agreed, not built. Decisions agreed on 2026-09-30. This is the implementation
+Status: steps 1 and 2 built, the rest agreed. Decisions agreed on 2026-09-30. This is the implementation
 plan for the first two phases of the internal operations roadmap, OP4 (staff booking
 tools) and OP1 (coverage and pricing setup). The roadmap, the task list and the decision
 record (AT-D1 to AT-D16) live in the `heavenly-travel-docs` repository under `plan/`.
-The steps here are numbered 1 to 12 and are AT1 to AT12 there.
+The steps here are numbered 1 to 12 and are AT1 to AT12 there. They ship in six PRs,
+A to F, listed under "Build order".
 
 Today every admin opens every screen and does every action, and nothing records who did
 it. The team is five people in four departments: Sales, Reservation, Operation and
@@ -140,12 +141,13 @@ The developer does this by hand, development first, production right before the 
 Every change here only adds a column or a table, so no data is lost and the site stays
 up.
 
-| Step | Commands                                                                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `pnpm db:push`, then `pnpm --filter @repo/db db:migrate-admin-levels`. Production: `pnpm db:push:prod`, then `db:migrate-admin-levels:prod` |
-| 2    | `pnpm db:push`, `pnpm db:push:prod`                                                                                                         |
-| 3    | `pnpm db:push`, `pnpm db:push:prod`                                                                                                         |
-| 8    | `pnpm db:push`, `pnpm db:push:prod`                                                                                                         |
+One push for each PR that changes the schema, whatever number of steps it holds.
+
+| PR  | Steps | Commands                                                                                                                                    |
+| --- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | 1, 2  | `pnpm db:push`, then `pnpm --filter @repo/db db:migrate-admin-levels`. Production: `pnpm db:push:prod`, then `db:migrate-admin-levels:prod` |
+| B   | 3     | `pnpm db:push`, `pnpm db:push:prod`                                                                                                         |
+| E   | 8     | `pnpm db:push`, `pnpm db:push:prod`                                                                                                         |
 
 The step 1 script turns `OPS` into `REGULAR` with the team `OPERATION` and leaves the
 other rows alone. It can be run more than once. Until it runs, the code reads an
@@ -172,8 +174,25 @@ unknown level as `REGULAR`, so nobody is locked out between the push and the scr
 
 ## Build order
 
-Each step is one PR into `main`, passing `pnpm lint` and `pnpm check-types`, and each
-leaves both apps working. Twelve steps, twelve PRs.
+Twelve steps in six PRs into `main`. Each PR passes `pnpm lint` and
+`pnpm check-types` and leaves both apps working. Steps that change the same files, or
+that need the same schema push, share a PR.
+
+| PR  | Steps    | Title                                             | Type          |
+| --- | -------- | ------------------------------------------------- | ------------- |
+| A   | 1, 2     | Levels, teams and the wall                        | `feat`        |
+| B   | 3, 4     | Activity log and Dashboard cards                  | `feat`        |
+| C   | 5        | Ops screens design, coverage and seed             | `fix`         |
+| D   | 6, 7     | Zones and Vehicle classes screens                 | `feat(admin)` |
+| E   | 8, 9, 12 | Internal notes, manual booking and price override | `feat`        |
+| F   | 10, 11   | Amend a booking and several vehicles              | `feat`        |
+
+- A and B stay apart: A changes every page and server action, B changes every booking
+  transaction. Admin changes and wall flips made between the two merges are not logged.
+- C stays alone: its design document is agreed before the screens in D are built.
+- E and F may be grouped differently once steps 8 to 12 are designed.
+
+The steps:
 
 1. **Levels and teams** (`feat`): the schema change, `roles.ts`, `setAdmin`, the Admins
    page, the `promote-admin` script and the migration script. No access changes yet.
@@ -199,7 +218,7 @@ leaves both apps working. Twelve steps, twelve PRs.
 12. **Price override with a reason** (`feat`).
 
 Steps 1 to 7 are in a fixed order. Steps 8 to 12 are designed in this document, each
-in its own section, before they start, and their order may change then.
+in its own section, before they start, and their order and their PRs may change then.
 
 ## Future work, on record
 

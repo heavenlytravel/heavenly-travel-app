@@ -31,6 +31,23 @@ export type StateSummary = StateWithDistricts & {
   changedAt: Date | null;
 };
 
+const withLocations = {
+  include: {
+    districts: {
+      orderBy: { name: "asc" },
+      include: {
+        locations: {
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        },
+      },
+    },
+  },
+} satisfies Prisma.StateDefaultArgs;
+
+/** A state's page: its districts, each with the locations pinned in it. */
+export type StateWithLocations = Prisma.StateGetPayload<typeof withLocations>;
+
 const withState = {
   include: { state: true },
 } satisfies Prisma.DistrictDefaultArgs;
@@ -61,8 +78,8 @@ export async function listStates(): Promise<StateSummary[]> {
   }));
 }
 
-export function getState(code: string): Promise<StateWithDistricts | null> {
-  return db.state.findUnique({ where: { code }, ...withDistricts });
+export function getState(code: string): Promise<StateWithLocations | null> {
+  return db.state.findUnique({ where: { code }, ...withLocations });
 }
 
 /** Every district with its state, by state then name, for the null places provider. */

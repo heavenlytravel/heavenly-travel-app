@@ -1,0 +1,180 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { TRIP_CATEGORIES } from "./booking-status";
+import {
+  LOCATION_LIMITS,
+  RESERVED_SLUGS,
+  checkAddressNames,
+  checkLocationSlug,
+  isLocationState,
+  isSlugLocked,
+  parseAddressEntries,
+  parseLocationFields,
+} from "./location-input";
+
+const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
+  result.ok ? "" : result.error;
+
+describe("location states", () => {
+  it("are draft, preview, live and paused only", () => {
+    for (const state of ["draft", "preview", "live", "paused"]) {
+      assert.equal(isLocationState(state), true, state);
+    }
+    assert.equal(isLocationState("retired"), false);
+    assert.equal(isLocationState("Live"), false);
+  });
+});
+
+describe("checkLocationSlug", () => {
+  it("accepts what slugify makes", () => {
+    for (const slug of ["langkawi", "kuala-kubu-bharu", "area-51"]) {
+      assert.equal(checkLocationSlug(slug).ok, true, slug);
+    }
+  });
+
+  it("refuses anything that is not lower-case letters, digits and dashes", () => {
+    for (const slug of ["Langkawi", "kuala kubu", "-kl", "kl-", "a--b", "é"]) {
+      assert.match(errorOf(checkLocationSlug(slug)), /lower-case/, slug);
+    }
+    assert.match(errorOf(checkLocationSlug("")), /Enter the slug/);
+  });
+
+  it("refuses one longer than the limit", () => {
+    const slug = "a".repeat(LOCATION_LIMITS.slug + 1);
+    assert.match(errorOf(checkLocationSlug(slug)), /at most 60/);
+    assert.equal(checkLocationSlug("a".repeat(LOCATION_LIMITS.slug)).ok, true);
+  });
+
+  it("refuses the site's own paths, the products, the locales and the set-aside names", () => {
+    const reserved = [
+      ...["account", "booking", "preview", "sign-in", "sign-up", "api"],
+      ...TRIP_CATEGORIES,
+      ...["en", "ms", "zh"],
+      ...["admin", "search", "manage", "quote", "packages"],
+      ...["vehicles", "transfer", "driver", "sitemap", "robots"],
+    ];
+    for (const slug of reserved) {
+      assert.match(errorOf(checkLocationSlug(slug)), /something else/, slug);
+    }
+    assert.equal(RESERVED_SLUGS.size, reserved.length);
+  });
+});
+
+describe("isSlugLocked", () => {
+  it("locks the slug from the first time the location goes live", () => {
+    assert.equal(isSlugLocked({ wentLiveAt: null }), false);
+    assert.equal(isSlugLocked({ wentLiveAt: new Date() }), true);
+  });
+});
+
+describe("parseLocationFields", () => {
+  it("trims the text and reads an empty tagline as none", () => {
+    assert.deepEqual(
+      parseLocationFields({
+        name: " Langkawi ",
+        slug: "langkawi",
+        tagline: "  ",
+      }),
+      {
+        ok: true,
+        value: { name: "Langkawi", slug: "langkawi", tagline: null },
+      },
+    );
+    const parsed = parseLocationFields({
+      name: "Langkawi",
+      slug: "langkawi",
+      tagline: " Beaches and duty-free ",
+    });
+    assert.equal(parsed.ok && parsed.value.tagline, "Beaches and duty-free");
+  });
+
+  it("asks for a name and keeps each field in its limit", () => {
+    const base = { name: "Langkawi", slug: "langkawi", tagline: "" };
+    assert.match(
+      errorOf(parseLocationFields({ ...base, name: "" })),
+      /Enter the name/,
+    );
+    assert.match(
+      errorOf(parseLocationFields({ ...base, name: "a".repeat(61) })),
+      /name is at most 60/,
+    );
+    assert.match(
+      errorOf(parseLocationFields({ ...base, tagline: "a".repeat(81) })),
+      /tagline is at most 80/,
+    );
+    assert.match(
+      errorOf(parseLocationFields({ ...base, slug: "api" })),
+      /something else/,
+    );
+  });
+});
+
+describe("checkAddressNames", () => {
+  it("accepts an empty list: saved addresses have no minimum", () => {
+    assert.equal(checkAddressNames([]).ok, true);
+  });
+
+  it("asks for a name on every address, within the limit and used once", () => {
+    assert.match(errorOf(checkAddressNames(["Kuah Jetty", ""])), /every/);
+    assert.match(
+      errorOf(checkAddressNames(["a".repeat(61)])),
+      /at most 60 characters/,
+    );
+    assert.match(
+      errorOf(checkAddressNames(["Kuah Jetty", "kuah jetty"])),
+      /Two addresses are named kuah jetty/,
+    );
+  });
+
+  it("caps the list", () => {
+    const names = Array.from(
+      { length: LOCATION_LIMITS.addresses + 1 },
+      (_, i) => `Spot ${i}`,
+    );
+    assert.match(errorOf(checkAddressNames(names)), /at most 20/);
+    assert.equal(checkAddressNames(names.slice(1)).ok, true);
+  });
+});
+
+describe("parseAddressEntries", () => {
+  it("reads kept addresses by id and new ones by place id, in order", () => {
+    const rows = [
+      { id: "a1", name: " Langkawi Airport " },
+      { placeId: "ChIJ1", name: "Kuah Jetty" },
+    ];
+    assert.deepEqual(parseAddressEntries(rows), {
+      ok: true,
+      value: [
+        { id: "a1", name: "Langkawi Airport" },
+        { placeId: "ChIJ1", name: "Kuah Jetty" },
+      ],
+    });
+    assert.deepEqual(parseAddressEntries([]), { ok: true, value: [] });
+  });
+
+  it("refuses anything that is not the list it expects", () => {
+    const unreadable = [
+      undefined,
+      "[]",
+      {},
+      [1],
+      [{ name: "No place" }],
+      [
+        { id: "a1", name: "One" },
+        { id: "a1", name: "Two" },
+      ],
+    ];
+    for (const value of unreadable) {
+      assert.match(
+        errorOf(parseAddressEntries(value)),
+        /could not be read/,
+        JSON.stringify(value),
+      );
+    }
+  });
+
+  it("applies the name rules", () => {
+    const rows = [{ placeId: "ChIJ1", name: " " }];
+    assert.match(errorOf(parseAddressEntries(rows)), /every address a name/);
+  });
+});

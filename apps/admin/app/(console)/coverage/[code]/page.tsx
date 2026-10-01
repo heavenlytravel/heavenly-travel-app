@@ -14,7 +14,8 @@ import { MultiplierForm } from "./MultiplierForm";
 
 /**
  * Route: /coverage/[code]. One state for Operation: its districts with
- * their switches, its multiplier, and the history of both.
+ * their switches and the locations pinned in each, its multiplier, and the
+ * history of both.
  */
 export default async function StatePage({
   params,
@@ -52,6 +53,12 @@ export default async function StatePage({
                   <InfoTip text="Off means a pickup in this district is told the area is not served yet. Existing bookings are not changed." />
                 </span>
               </Th>
+              <Th>
+                <span className="inline-flex items-center gap-1.5">
+                  Locations
+                  <InfoTip text="The locations Marketing has pinned in this district. With the district off they stay destinations we drive to; only a pickup there is refused." />
+                </span>
+              </Th>
               <Th>Changed</Th>
             </THead>
             <TBody>
@@ -68,6 +75,11 @@ export default async function StatePage({
                       name={district.name}
                       active={district.isActive}
                     />
+                  </Td>
+                  <Td className="max-w-56">
+                    {district.locations.length > 0
+                      ? district.locations.map((l) => l.name).join(", ")
+                      : "—"}
                   </Td>
                   <Td className="text-neutral-600 tabular-nums">
                     {formatLocalDateTime(district.updatedAt)}

@@ -42,6 +42,11 @@ export const roadDistance: PlacesProvider["roadDistance"] = (from, to) =>
 /** `export const GET = handlePlaceSearch;` in each app's `api/places/search/route.ts`. */
 export const handlePlaceSearch = placeSearchHandler(places);
 
+/** The same for the admin console, where `areas=1` asks for areas too. */
+export const handleStaffPlaceSearch = placeSearchHandler(places, {
+  allowAreas: true,
+});
+
 /**
  * A parsed trip search as a `TripRequest`, places resolved and distance
  * fetched, or why it cannot be. See ./trip-request.

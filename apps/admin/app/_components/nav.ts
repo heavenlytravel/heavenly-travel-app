@@ -4,6 +4,7 @@ import {
   CalendarCheckIcon,
   HistoryIcon,
   LayoutDashboardIcon,
+  MapIcon,
   MapPinIcon,
   ShieldCheckIcon,
 } from "@repo/ui/icons";
@@ -13,6 +14,7 @@ import {
   ADMINS_PATH,
   BOOKINGS_PATH,
   COVERAGE_PATH,
+  LOCATIONS_PATH,
   VEHICLE_CLASSES_PATH,
 } from "../_lib/routes";
 
@@ -54,6 +56,17 @@ export const NAV: NavGroup[] = [
         label: "Vehicle classes",
         icon: BusIcon,
         permission: "coverage.manage",
+      },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      {
+        href: LOCATIONS_PATH,
+        label: "Locations",
+        icon: MapIcon,
+        permission: "locations.manage",
       },
     ],
   },

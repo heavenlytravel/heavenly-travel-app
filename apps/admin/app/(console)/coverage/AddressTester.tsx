@@ -4,8 +4,9 @@ import Link from "next/link";
 import { inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
+import type { PlaceCheck } from "../../_lib/place-check";
 import { stateHref } from "../../_lib/routes";
-import { testAddressAction, type AddressTest } from "./actions";
+import { testAddressAction } from "./actions";
 
 /**
  * The same autocomplete field the website uses. Picking a place shows its
@@ -20,7 +21,7 @@ export function AddressTester({
   const inputId = useId();
   const [value, setValue] = useState("");
   const [placeId, setPlaceId] = useState<string>();
-  const [result, setResult] = useState<AddressTest | null>(null);
+  const [result, setResult] = useState<PlaceCheck | null>(null);
   const [testing, startTest] = useTransition();
 
   return (

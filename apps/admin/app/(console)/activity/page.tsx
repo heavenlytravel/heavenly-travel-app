@@ -5,13 +5,15 @@ import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
-import { activityHref, bookingHref } from "../../_lib/routes";
+import { activityHref, bookingHref, locationHref } from "../../_lib/routes";
 
 const PAGE_SIZE = 50;
 
 /** Where the record's label leads, when it has a page. */
 function entityLink(entry: ActivityEntry) {
-  return entry.entityType === "booking" ? bookingHref(entry.entityId) : null;
+  if (entry.entityType === "booking") return bookingHref(entry.entityId);
+  if (entry.entityType === "location") return locationHref(entry.entityId);
+  return null;
 }
 
 /**

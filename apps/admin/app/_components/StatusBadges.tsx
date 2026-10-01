@@ -1,10 +1,13 @@
 import {
   BOOKING_STATUS_LABELS,
   ITEM_STATUS_LABELS,
+  LOCATION_STATE_LABELS,
   isBookingStatus,
   isItemStatus,
+  isLocationState,
   type BookingStatus,
   type ItemStatus,
+  type LocationState,
 } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 import type { ComponentProps } from "react";
@@ -38,4 +41,19 @@ export function BookingStatusBadge({ status }: { status: string }) {
 export function ItemStatusBadge({ status }: { status: string }) {
   if (!isItemStatus(status)) return <Badge>{status}</Badge>;
   return <Badge tone={ITEM_TONES[status]}>{ITEM_STATUS_LABELS[status]}</Badge>;
+}
+
+const LOCATION_TONES: Record<LocationState, Tone> = {
+  draft: "neutral",
+  preview: "blue",
+  live: "green",
+  paused: "amber",
+};
+
+/** What the public sees of a location: nothing yet, the pages, or the pages with a notice. */
+export function LocationStateBadge({ state }: { state: string }) {
+  if (!isLocationState(state)) return <Badge>{state}</Badge>;
+  return (
+    <Badge tone={LOCATION_TONES[state]}>{LOCATION_STATE_LABELS[state]}</Badge>
+  );
 }

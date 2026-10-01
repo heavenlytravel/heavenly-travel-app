@@ -22,6 +22,8 @@ const RULES = {
   "bookings.notes": ["OPERATION", "RESERVATION", "SALES", "FINANCE"],
   /** Zones and vehicle classes. */
   "coverage.manage": ["OPERATION"],
+  /** Locations, their saved addresses and their pages. */
+  "locations.manage": ["MARKETING"],
   "admins.manage": "super",
   "wall.switch": "super",
   "activity.view": "super",

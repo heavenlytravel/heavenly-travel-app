@@ -23,8 +23,9 @@ describe("admin levels", () => {
 });
 
 describe("admin teams", () => {
-  it("accept only the four departments", () => {
+  it("accept only the five departments", () => {
     assert.equal(isAdminTeam("FINANCE"), true);
+    assert.equal(isAdminTeam("MARKETING"), true);
     assert.equal(isAdminTeam("finance"), false);
     assert.equal(isAdminTeam("OPS"), false);
   });

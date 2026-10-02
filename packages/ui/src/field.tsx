@@ -13,6 +13,20 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
   return <select className={cx(inputClassName, className)} {...props} />;
 }
 
+/** A text control of several lines; `rows` sets its height. */
+export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
+  return (
+    <textarea
+      className={cx(
+        inputClassName,
+        "ui:block ui:h-auto ui:py-2 ui:leading-relaxed",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 /** A label above a control, with an optional hint below it. */
 export function Field({
   label,

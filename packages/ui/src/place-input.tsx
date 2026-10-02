@@ -14,15 +14,13 @@ const DEBOUNCE_MS = 250;
  * resolved. One Google autocomplete session token lives from the first
  * keystroke to a pick, then a new one is minted, which is how Google bills
  * a session as one request. The input is unstyled: the caller passes the
- * classes its form uses. `includeAreas` also offers towns and other areas,
- * for the admin's location search.
+ * classes its form uses.
  */
 export function PlaceInput({
   id,
   value,
   placeId,
   placeholder,
-  includeAreas = false,
   onChange,
   onFocus,
   className,
@@ -31,7 +29,6 @@ export function PlaceInput({
   value: string;
   placeId?: string;
   placeholder?: string;
-  includeAreas?: boolean;
   onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
   className?: string;
@@ -54,12 +51,7 @@ export function PlaceInput({
     if (!searchable) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetchPlaceSuggestions(
-        value,
-        sessionToken(),
-        controller.signal,
-        includeAreas,
-      )
+      fetchPlaceSuggestions(value, sessionToken(), controller.signal)
         .then((rows) => {
           setSuggestions(rows);
           setActive(-1);
@@ -72,7 +64,7 @@ export function PlaceInput({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value, searchable, includeAreas]);
+  }, [value, searchable]);
 
   function pick(s: PlaceSuggestion) {
     onChange(s.label, s.placeId);

@@ -2,10 +2,12 @@
 
 import {
   parseMultiplier,
+  resolveDistrict,
   setDistrictActive,
   setStateMultiplier,
   textOf,
 } from "@repo/db/server";
+import { resolvePlace } from "@repo/places/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
 import {
@@ -14,7 +16,6 @@ import {
   stateOf,
   type ActionState,
 } from "../../_lib/action-state";
-import { checkPlace, type PlaceCheck } from "../../_lib/place-check";
 import { COVERAGE_PATH, stateHref } from "../../_lib/routes";
 
 /**
@@ -62,9 +63,49 @@ export async function setDistrictActiveAction(
   return stateOf(result);
 }
 
-/** "Test an address": places a picked address as a booking would. */
-export async function testAddressAction(placeId: string): Promise<PlaceCheck> {
+/** What "Test an address" learns about a place the admin picked. */
+export type AddressTest =
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      address: string;
+      lat: number;
+      lng: number;
+      /** The district the point falls in, or null at sea or outside Malaysia. */
+      district: {
+        code: string;
+        name: string;
+        isActive: boolean;
+        stateCode: string;
+        stateName: string;
+      } | null;
+    };
+
+/** Places a picked address by its coordinates, exactly as a booking would. */
+export async function testAddressAction(placeId: string): Promise<AddressTest> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  return checkPlace(placeId);
+  if (typeof placeId !== "string" || !placeId) {
+    return { ok: false, error: "Pick a place from the list." };
+  }
+  const place = await resolvePlace(placeId);
+  if (!place) {
+    return { ok: false, error: "Google did not return that place." };
+  }
+  const district = await resolveDistrict(place);
+  return {
+    ok: true,
+    address: place.address,
+    lat: place.lat,
+    lng: place.lng,
+    district: district
+      ? {
+          code: district.code,
+          name: district.name,
+          isActive: district.isActive,
+          stateCode: district.state.code,
+          stateName: district.state.name,
+        }
+      : null,
+  };
 }

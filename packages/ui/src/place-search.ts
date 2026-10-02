@@ -22,14 +22,11 @@ export async function fetchPlaceSuggestions(
   query: string,
   sessionToken: string,
   signal?: AbortSignal,
-  /** Keep suggestions that name an area. Only the admin console's handler answers it. */
-  includeAreas = false,
 ): Promise<PlaceSuggestion[]> {
   const params = new URLSearchParams({
     q: query.trim().slice(0, PLACE_QUERY_MAX_LENGTH),
     session: sessionToken,
   });
-  if (includeAreas) params.set("areas", "1");
   const res = await fetch(`${PLACE_SEARCH_PATH}?${params}`, { signal });
   if (!res.ok) return [];
   const body = (await res.json()) as PlaceSearchResponse;

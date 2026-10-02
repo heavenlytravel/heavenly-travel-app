@@ -1,4 +1,9 @@
-import { changedFields, logActivity } from "./activity";
+import {
+  changedFields,
+  getActivityEntry,
+  logActivity,
+  type ActivityEntry,
+} from "./activity";
 import type { ActivityEntityType, Actor } from "./activity-actions";
 import type { Change, Created } from "./change";
 import { db } from "./client";
@@ -6,27 +11,51 @@ import { listDistricts, type DistrictWithState } from "./coverage";
 import type {
   Location,
   LocationAddress,
+  LocationPage,
   Prisma,
 } from "./generated/prisma/client";
 import {
   NEW_LOCATION_STATE,
+  TOP_CHOICE_CAP,
   checkAddressNames,
   checkLocationFields,
+  checkPageSwitch,
+  isLocationState,
   isSlugLocked,
+  stateMoveBlockers,
   type LocationFields,
+  type LocationState,
+  type PageStanding,
+  type TopChoiceChange,
 } from "./location-input";
+import {
+  LANDING_PAGE,
+  LOCATION_PAGES,
+  PAGE_LOCALE,
+  checkPageComplete,
+  checkPageLimits,
+  isLocationPageKey,
+  pageContentOf,
+  pageStatusOf,
+  samePageContent,
+  type LocationPageKey,
+  type PageContent,
+} from "./location-page-input";
 import { isPlace, type Place } from "./place";
 
 export type { Location, LocationAddress };
 
 /**
  * Locations: the places Marketing sells as destinations, each with the
- * districts it lies in and a list of saved addresses. The districts are
- * ticked by Marketing and kept as codes, as information: nothing ties a
- * location to coverage. The readers serve the Locations screens; the writers
- * are the screens', each taking the actor and logging inside its
- * transaction. Saved addresses arrive resolved: the caller asks Google, this
- * module never does. See docs/261001-locations-and-pages.md.
+ * districts it lies in, a list of saved addresses, a landing page and one
+ * page per product. The districts are ticked by Marketing and kept as codes,
+ * as information: nothing ties a location to coverage. A page has a working
+ * draft and a published copy; the location's state and each page's On
+ * switch decide what the public sees. The readers serve the Locations
+ * screens; the writers are the screens', each taking the actor and logging
+ * inside its transaction, except a draft save, which is not logged. Saved
+ * addresses arrive resolved: the caller asks Google, this module never does.
+ * See docs/261001-locations-and-pages.md.
  */
 
 const LOCATION: ActivityEntityType = "location";
@@ -47,24 +76,86 @@ const ADDRESSES_CHANGED: Refusal = {
     "The saved addresses were changed by someone else. Reload to see them.",
 };
 
+const PAGE_CHANGED: Refusal = {
+  ok: false,
+  error: "This page was changed by someone else. Reload to see it.",
+};
+
 /** The districts a location names, by state then name, each with its switch. */
 type WithDistricts = { districts: DistrictWithState[] };
 
 /** A row of the Locations list. */
 export type LocationSummary = Location &
   WithDistricts & {
+    /** The pages that are switched on, in the order of `LOCATION_PAGES`. */
+    pagesOn: LocationPageKey[];
     /** The newest logged change to the location; null when none is logged. */
     changedAt: Date | null;
   };
 
-/** A location with its districts and its saved addresses in order. */
-export type LocationWithDetails = Location &
-  WithDistricts & { addresses: LocationAddress[] };
+/** One page of a location as its screen lists it. */
+export type LocationPageSummary = PageStanding & {
+  publishedAt: Date | null;
+};
 
-/** Every location, by name, with its districts and its last change. */
+/** A saved address with the names of the landing page's highlights that point at it. */
+export type LocationAddressWithUses = LocationAddress & { usedBy: string[] };
+
+/**
+ * A location with its districts, its saved addresses in order and its
+ * pages, one per key of `LOCATION_PAGES` whether or not it has been written.
+ */
+export type LocationWithDetails = Location &
+  WithDistricts & {
+    addresses: LocationAddressWithUses[];
+    pages: LocationPageSummary[];
+  };
+
+/** The location's state as the rules read it. An unknown value reads as the first state. */
+function stateOf(location: { state: string }): LocationState {
+  return isLocationState(location.state) ? location.state : NEW_LOCATION_STATE;
+}
+
+function publishedOf(page: LocationPageKey, row: LocationPage) {
+  return row.published === null ? null : pageContentOf(page, row.published);
+}
+
+/** What the rules and the screens read of a page's row; a page never saved has none. */
+function standingOf(
+  page: LocationPageKey,
+  row: LocationPage | undefined,
+): LocationPageSummary {
+  return {
+    page,
+    isOn: row?.isOn ?? false,
+    status: row
+      ? pageStatusOf(pageContentOf(page, row.draft), publishedOf(page, row))
+      : "unpublished",
+    publishedAt: row?.publishedAt ?? null,
+  };
+}
+
+/** Every page of a location, written or not, in the order of `LOCATION_PAGES`. */
+function standingsOf(rows: readonly LocationPage[]): LocationPageSummary[] {
+  return LOCATION_PAGES.map((page) =>
+    standingOf(
+      page,
+      rows.find((row) => row.page === page),
+    ),
+  );
+}
+
+const pagesInLocale = { where: { locale: PAGE_LOCALE } };
+
+/** Every location, by name, with its districts, the pages it has on and its last change. */
 export async function listLocations(): Promise<LocationSummary[]> {
   const [locations, districts, changes] = await Promise.all([
-    db.location.findMany({ orderBy: { name: "asc" } }),
+    db.location.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        pages: { ...pagesInLocale, select: { page: true, isOn: true } },
+      },
+    }),
     listDistricts(),
     db.activityLog.groupBy({
       by: ["entityId"],
@@ -75,9 +166,12 @@ export async function listLocations(): Promise<LocationSummary[]> {
   const changedAt = new Map(
     changes.map((row) => [row.entityId, row._max.createdAt]),
   );
-  return locations.map((location) => ({
+  return locations.map(({ pages, ...location }) => ({
     ...location,
     districts: districts.filter((d) => location.districtCodes.includes(d.code)),
+    pagesOn: LOCATION_PAGES.filter((key) =>
+      pages.some((page) => page.page === key && page.isOn),
+    ),
     changedAt: changedAt.get(location.id) ?? null,
   }));
 }
@@ -85,14 +179,141 @@ export async function listLocations(): Promise<LocationSummary[]> {
 export async function getLocation(
   id: string,
 ): Promise<LocationWithDetails | null> {
-  const location = await db.location.findUnique({
+  const found = await db.location.findUnique({
     where: { id },
-    include: { addresses: { orderBy: { position: "asc" } } },
+    include: {
+      addresses: { orderBy: { position: "asc" } },
+      pages: pagesInLocale,
+    },
   });
-  if (!location) return null;
+  if (!found) return null;
+  const { pages, addresses, ...location } = found;
+
+  // A highlight of the landing page points at an address, in the draft, the
+  // published copy or both.
+  const landing = pages.find((row) => row.page === LANDING_PAGE);
+  const highlights = landing
+    ? [
+        ...pageContentOf(LANDING_PAGE, landing.draft).highlights,
+        ...(publishedOf(LANDING_PAGE, landing)?.highlights ?? []),
+      ]
+    : [];
   return {
     ...location,
     districts: await listDistricts(location.districtCodes),
+    addresses: addresses.map((address) => ({
+      ...address,
+      usedBy: [
+        ...new Set(
+          highlights
+            .filter((highlight) => highlight.addressId === address.id)
+            .map((highlight) => highlight.name || "an unnamed highlight"),
+        ),
+      ],
+    })),
+    pages: standingsOf(pages),
+  };
+}
+
+/** A location among the home page's top choices, as the control lists them. */
+export type TopChoice = Pick<Location, "id" | "name" | "state">;
+
+const topChoices = {
+  where: { topChoiceOrder: { not: null } },
+  orderBy: [{ topChoiceOrder: "asc" }, { name: "asc" }],
+} satisfies Prisma.LocationFindManyArgs;
+
+/**
+ * The top choices in their order, paused ones included: a paused top choice
+ * is left off the home page and keeps its place.
+ */
+export function listTopChoices(): Promise<TopChoice[]> {
+  return db.location.findMany({
+    ...topChoices,
+    select: { id: true, name: true, state: true },
+  });
+}
+
+/** One page of a location, as its editor opens it. */
+export type LocationPageDetails = {
+  location: Location & { addresses: LocationAddress[] };
+  page: LocationPageKey;
+  isOn: boolean;
+  draft: PageContent;
+  /** Null until the first publish. */
+  published: PageContent | null;
+  publishedAt: Date | null;
+  /**
+   * Names the stored content. A save hands it back, and is refused when the
+   * content has changed since. Null until the page is first saved.
+   */
+  version: string | null;
+};
+
+/** The content's version: when it last changed. The On switch does not move it. */
+function versionOf(row: LocationPage | null) {
+  return row ? row.updatedAt.toISOString() : null;
+}
+
+const pageKey = (locationId: string, page: LocationPageKey) => ({
+  locationId_page_locale: { locationId, page, locale: PAGE_LOCALE },
+});
+
+export async function getLocationPage(
+  locationId: string,
+  page: LocationPageKey,
+): Promise<LocationPageDetails | null> {
+  const [location, row] = await Promise.all([
+    db.location.findUnique({
+      where: { id: locationId },
+      include: { addresses: { orderBy: { position: "asc" } } },
+    }),
+    db.locationPage.findUnique({ where: pageKey(locationId, page) }),
+  ]);
+  if (!location) return null;
+  return {
+    location,
+    page,
+    isOn: row?.isOn ?? false,
+    draft: pageContentOf(page, row?.draft),
+    published: row ? publishedOf(page, row) : null,
+    publishedAt: row?.publishedAt ?? null,
+    version: versionOf(row),
+  };
+}
+
+/** One publish from the location's history: the page and its content before and after. */
+export type PagePublish = {
+  entry: ActivityEntry;
+  page: LocationPageKey;
+  /** Null on the page's first publish. */
+  before: PageContent | null;
+  after: PageContent;
+};
+
+/** The publish a history entry of the location records, or null when the entry is not one. */
+export async function getPagePublish(
+  locationId: string,
+  entryId: string,
+): Promise<PagePublish | null> {
+  const entry = await getActivityEntry(entryId);
+  if (
+    !entry ||
+    entry.entityType !== LOCATION ||
+    entry.entityId !== locationId ||
+    entry.action !== "location.page.published"
+  ) {
+    return null;
+  }
+  const after = entry.after as { page?: unknown; content?: unknown } | null;
+  const before = entry.before as { content?: unknown } | null;
+  const page = after?.page;
+  if (!isLocationPageKey(page)) return null;
+  return {
+    entry,
+    page,
+    before: before?.content ? pageContentOf(page, before.content) : null,
+    after: pageContentOf(page, after?.content),
   };
 }
 
@@ -235,9 +456,10 @@ function loggedAddress(address: { id: string; name: string; place: unknown }) {
 /**
  * Replaces the location's saved addresses with the list, in its order. A
  * kept address keeps its id, which a highlight may point at; one left out is
- * removed. `expected` is the ids the form was opened with, in order: when
- * the stored list is no longer that, someone else changed it and the save is
- * refused. Saving what is already there logs nothing.
+ * removed, and a highlight pointing at it then reads as having no address.
+ * `expected` is the ids the form was opened with, in order: when the stored
+ * list is no longer that, someone else changed it and the save is refused.
+ * Saving what is already there logs nothing.
  */
 export async function setLocationAddresses(
   actor: Actor,
@@ -310,6 +532,297 @@ export async function setLocationAddresses(
       before: { addresses: current.map(loggedAddress) },
       after: { addresses: after },
     });
+    return { ok: true };
+  });
+}
+
+/** A page write's answer: the content's new version, or why not. */
+export type PageSaved = { ok: true; version: string } | Refusal;
+
+/**
+ * Writes the page's content inside the caller's transaction, when the
+ * stored content is still the version the form was opened with. A highlight
+ * pointing at an address the location does not hold loses the pointer.
+ * `publish` also copies the content to the published copy. Answers the
+ * content as written and the row as it was, for the caller's log.
+ */
+async function writePageContent(
+  tx: Prisma.TransactionClient,
+  locationId: string,
+  page: LocationPageKey,
+  version: string | null,
+  content: PageContent,
+  publish: boolean,
+): Promise<
+  | Refusal
+  | {
+      ok: true;
+      version: string;
+      content: PageContent;
+      was: LocationPage | null;
+    }
+> {
+  const location = await tx.location.findUnique({
+    where: { id: locationId },
+    include: { addresses: { select: { id: true } } },
+  });
+  if (!location) return NOT_FOUND;
+  const was = await tx.locationPage.findUnique({
+    where: pageKey(locationId, page),
+  });
+  if (versionOf(was) !== version) return PAGE_CHANGED;
+
+  const addressIds = new Set(location.addresses.map((address) => address.id));
+  const clean: PageContent = {
+    ...content,
+    highlights: content.highlights.map((highlight) => ({
+      ...highlight,
+      addressId:
+        highlight.addressId !== null && addressIds.has(highlight.addressId)
+          ? highlight.addressId
+          : null,
+    })),
+  };
+
+  const now = new Date();
+  const data = {
+    draft: clean,
+    updatedAt: now,
+    ...(publish ? { published: clean, publishedAt: now } : {}),
+  };
+  // Conditional on the version read above, so two saves at once cannot both land.
+  const { count } = was
+    ? await tx.locationPage.updateMany({
+        where: { id: was.id, updatedAt: was.updatedAt },
+        data,
+      })
+    : await tx.locationPage.createMany({
+        data: [{ locationId, page, locale: PAGE_LOCALE, ...data }],
+        skipDuplicates: true,
+      });
+  if (count !== 1) return PAGE_CHANGED;
+  return { ok: true, version: now.toISOString(), content: clean, was };
+}
+
+/**
+ * Overwrites the page's working draft. Nothing changes in public, and
+ * nothing is logged. Only the length limits are checked: a draft may be
+ * incomplete.
+ */
+export async function saveLocationPageDraft(
+  locationId: string,
+  page: LocationPageKey,
+  version: string | null,
+  draft: PageContent,
+): Promise<PageSaved> {
+  const content = pageContentOf(page, draft);
+  const check = checkPageLimits(content);
+  if (!check.ok) return check;
+
+  return db.$transaction(async (tx) => {
+    const written = await writePageContent(
+      tx,
+      locationId,
+      page,
+      version,
+      content,
+      false,
+    );
+    return written.ok ? { ok: true, version: written.version } : written;
+  });
+}
+
+/**
+ * Saves the content as the page's draft and copies it to the published
+ * copy, when it is complete. It works in any location state; whether the
+ * public sees the page is the state's and the On switch's to say.
+ * Publishing what is already published logs nothing.
+ */
+export async function publishLocationPage(
+  actor: Actor,
+  locationId: string,
+  page: LocationPageKey,
+  version: string | null,
+  draft: PageContent,
+): Promise<PageSaved> {
+  const content = pageContentOf(page, draft);
+  const check = checkPageComplete(page, content);
+  if (!check.ok) return check;
+
+  return db.$transaction(async (tx) => {
+    const written = await writePageContent(
+      tx,
+      locationId,
+      page,
+      version,
+      content,
+      true,
+    );
+    if (!written.ok) return written;
+
+    const before = written.was ? publishedOf(page, written.was) : null;
+    if (!before || !samePageContent(before, written.content)) {
+      await logActivity(tx, actor, {
+        action: "location.page.published",
+        entityId: locationId,
+        before: { page, content: before },
+        after: { page, content: written.content },
+      });
+    }
+    return { ok: true, version: written.version };
+  });
+}
+
+/**
+ * Flips a page's On switch: whether the page exists for the public. Setting
+ * it to what it is logs nothing. The content's version is left as it is, so
+ * a form open on the page still saves.
+ */
+export async function setLocationPageOn(
+  actor: Actor,
+  locationId: string,
+  page: LocationPageKey,
+  isOn: boolean,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({
+      where: { id: locationId },
+    });
+    if (!location) return NOT_FOUND;
+    const row = await tx.locationPage.findUnique({
+      where: pageKey(locationId, page),
+    });
+    const standing = standingOf(page, row ?? undefined);
+    if (standing.isOn === isOn) return { ok: true };
+
+    const check = checkPageSwitch(stateOf(location), standing, isOn);
+    if (!check.ok) return check;
+    // A page with no row is not published, which the check has refused.
+    if (!row) return NOT_FOUND;
+
+    // Only while the content is the one read above: writing its version
+    // back over a save that landed meanwhile would hide that save.
+    const { count } = await tx.locationPage.updateMany({
+      where: { id: row.id, updatedAt: row.updatedAt },
+      data: { isOn, updatedAt: row.updatedAt },
+    });
+    if (count !== 1) {
+      return { ok: false, error: "The page was just saved. Try again." };
+    }
+    await logActivity(tx, actor, {
+      action: "location.page.updated",
+      entityId: locationId,
+      before: { page, isOn: !isOn },
+      after: { page, isOn },
+    });
+    return { ok: true };
+  });
+}
+
+/**
+ * Moves the location to another state, when its pages allow the move. The
+ * first move to `live` stamps `wentLiveAt`, which locks the slug. Moving to
+ * the state it is in logs nothing.
+ */
+export async function moveLocationState(
+  actor: Actor,
+  id: string,
+  to: LocationState,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({
+      where: { id },
+      include: { pages: pagesInLocale },
+    });
+    if (!location) return NOT_FOUND;
+    const from = stateOf(location);
+    if (from === to) return { ok: true };
+
+    const blockers = stateMoveBlockers(from, to, standingsOf(location.pages));
+    if (blockers.length > 0) {
+      return { ok: false, error: `${blockers.join(". ")}.` };
+    }
+
+    await tx.location.update({
+      where: { id },
+      data: {
+        state: to,
+        ...(to === "live" && !location.wentLiveAt
+          ? { wentLiveAt: new Date() }
+          : {}),
+      },
+    });
+    await logActivity(tx, actor, {
+      action: "location.state.changed",
+      entityId: id,
+      before: { state: from },
+      after: { state: to },
+    });
+    return { ok: true };
+  });
+}
+
+/**
+ * Adds the location to the home page's top choices, at the end, removes it,
+ * or moves it one place up or down. The places are kept as 1, 2, 3 with no
+ * gaps, so every location whose place changes is updated and logged. Only a
+ * live location is added; a paused one keeps the place it has.
+ */
+export async function changeTopChoice(
+  actor: Actor,
+  id: string,
+  change: TopChoiceChange,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({ where: { id } });
+    if (!location) return NOT_FOUND;
+    const current = await tx.location.findMany(topChoices);
+    const ids = current.map((choice) => choice.id);
+    const index = ids.indexOf(id);
+
+    if (change === "add") {
+      if (index >= 0) return { ok: true };
+      if (stateOf(location) !== "live") {
+        return {
+          ok: false,
+          error: "Only a live location can be made a top choice.",
+        };
+      }
+      if (ids.length >= TOP_CHOICE_CAP) {
+        return {
+          ok: false,
+          error: `The home page shows at most ${TOP_CHOICE_CAP} top choices. Remove one first.`,
+        };
+      }
+      ids.push(id);
+    } else if (index < 0) {
+      // Removing what is not there is done; moving it is a stale screen.
+      return change === "remove"
+        ? { ok: true }
+        : { ok: false, error: "This location is not a top choice." };
+    } else if (change === "remove") {
+      ids.splice(index, 1);
+    } else {
+      const other = index + (change === "up" ? -1 : 1);
+      if (other < 0 || other >= ids.length) return { ok: true };
+      ids.splice(index, 1);
+      ids.splice(other, 0, id);
+    }
+
+    for (const row of index < 0 ? [...current, location] : current) {
+      const place = ids.indexOf(row.id);
+      const changed = changedFields(row, {
+        topChoiceOrder: place < 0 ? null : place + 1,
+      });
+      if (!changed) continue;
+      await tx.location.update({ where: { id: row.id }, data: changed.after });
+      await logActivity(tx, actor, {
+        action: "location.updated",
+        entityId: row.id,
+        before: changed.before,
+        after: changed.after,
+      });
+    }
     return { ok: true };
   });
 }

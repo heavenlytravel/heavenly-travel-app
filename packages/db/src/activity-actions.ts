@@ -1,7 +1,8 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { formatMultiplier } from "./coverage-input";
-import { LOCATION_FIELD_LABELS } from "./location-input";
+import { LOCATION_FIELD_LABELS, isLocationState } from "./location-input";
+import { isLocationPageKey, pageNameOf } from "./location-page-input";
 import { formatMyr } from "./money";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
@@ -73,13 +74,28 @@ const ACTIONS = {
     customerVisible: false,
   },
   "location.created": { entityType: "location", customerVisible: false },
-  /** The districts are logged by their codes. */
+  /**
+   * The districts are logged by their codes, a top choice by its place on
+   * the home page: 1, 2 or 3, null for none.
+   */
   "location.updated": { entityType: "location", customerVisible: false },
   /** The whole list before and after, in its order: id, name and place label. */
   "location.addresses.updated": {
     entityType: "location",
     customerVisible: false,
   },
+  "location.state.changed": { entityType: "location", customerVisible: false },
+  /**
+   * The page's key and its whole content, before and after, so a publish
+   * can be read back and rolled back by hand. The content before is null on
+   * the first publish.
+   */
+  "location.page.published": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** The page's key and its On switch. */
+  "location.page.updated": { entityType: "location", customerVisible: false },
 } as const satisfies Record<
   string,
   { entityType: ActivityEntityType; customerVisible: boolean }
@@ -205,11 +221,21 @@ function vehicleClassChanges(after: unknown) {
   return sentence(phrases, "Changed the class");
 }
 
-function locationChanges(after: unknown) {
+function locationChanges(before: unknown, after: unknown) {
   const phrases: string[] = [];
   const name = field(after, "name");
   if (typeof name === "string") phrases.push(`Renamed to ${name}`);
   const present = new Set(keysOf(after));
+  if (present.has("topChoiceOrder")) {
+    const place = field(after, "topChoiceOrder");
+    if (typeof place !== "number") {
+      phrases.push("Removed from the top choices");
+    } else if (typeof field(before, "topChoiceOrder") === "number") {
+      phrases.push(`Moved to top choice ${place}`);
+    } else {
+      phrases.push(`Made top choice ${place}`);
+    }
+  }
   const others = (
     Object.keys(LOCATION_FIELD_LABELS) as (keyof typeof LOCATION_FIELD_LABELS)[]
   )
@@ -252,6 +278,29 @@ function addressChanges(before: unknown, after: unknown) {
   if (removed.length > 0) phrases.push(named("Removed", removed));
   if (renamed.length > 0) phrases.push(named("Renamed", renamed));
   return sentence(phrases, "Reordered the saved addresses");
+}
+
+/** "Went live", "Paused the location": the move by the state it reached. */
+function stateMove(before: unknown, after: unknown) {
+  const from = field(before, "state");
+  const to = field(after, "state");
+  if (!isLocationState(to)) return "Changed the state";
+  switch (to) {
+    case "draft":
+      return "Moved back to draft";
+    case "preview":
+      return "Moved to preview";
+    case "live":
+      return from === "paused" ? "Resumed the location" : "Went live";
+    case "paused":
+      return "Paused the location";
+  }
+}
+
+/** "the landing page", or "a page" when the entry names none we know. */
+function pageName(json: unknown) {
+  const page = field(json, "page");
+  return isLocationPageKey(page) ? pageNameOf(page) : "a page";
 }
 
 /**
@@ -334,8 +383,16 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.created":
       return "Created the location";
     case "location.updated":
-      return locationChanges(entry.after);
+      return locationChanges(entry.before, entry.after);
     case "location.addresses.updated":
       return addressChanges(entry.before, entry.after);
+    case "location.state.changed":
+      return stateMove(entry.before, entry.after);
+    case "location.page.published":
+      return `Published ${pageName(entry.after)}`;
+    case "location.page.updated":
+      return field(entry.after, "isOn") === true
+        ? `Turned ${pageName(entry.after)} on`
+        : `Turned ${pageName(entry.after)} off`;
   }
 }

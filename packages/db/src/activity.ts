@@ -174,6 +174,16 @@ function entityLabelOf(
   }
 }
 
+/** One entry by its id, for a page that shows what the entry holds. */
+export async function getActivityEntry(
+  id: string,
+): Promise<ActivityEntry | null> {
+  const row = await db.activityLog.findUnique({ where: { id } });
+  if (!row) return null;
+  const [entry] = await decorate([row]);
+  return entry ?? null;
+}
+
 /** The history of one record, oldest first, as a booking page shows it. */
 export function listActivityFor(
   entityType: ActivityEntityType,

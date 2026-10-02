@@ -125,7 +125,10 @@ Every admin page starts with `requireAdmin(permission)`
 (`apps/admin/app/_lib/access.ts`), naming the screen it guards: signed-out visitors go
 to `/sign-in`, signed-in users without an admin profile go to `/no-access`, and an
 admin whose teams do not reach the screen goes to `/restricted`. Server actions check
-again with `getAdmin(permission)`, because they can be called by direct POST.
+again with `getAdmin(permission)`, because they can be called by direct POST. Both ask
+`getAdminAccess(permission)` in `@repo/db/server`, which holds the check itself; the
+customer site's staff preview of a location asks the same function and answers a 404
+where the console redirects.
 
 The sidebar shows only the sections the admin may open, and a button the admin may not
 use is not rendered. Both read `getPermissions()`; neither is the check itself.

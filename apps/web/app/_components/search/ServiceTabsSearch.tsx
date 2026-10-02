@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { PRODUCTS, visibleFields, type Product } from "../../_lib/search";
 import { bookableCategory } from "../../_lib/transportation-booking";
-import { useSearch, useTripSubmit } from "../../_lib/useSearch";
+import { useTripSubmit } from "../../_lib/useSearch";
 import { ProductIcon } from "../Brand";
+import { useSearchCard } from "./SearchProvider";
 import { FieldInput } from "./fields";
 
 const focus =
@@ -25,22 +25,11 @@ const TABS: Product[] = [
  * changes with the service, and a deep green button of fixed width at the end.
  * Car with driver and coach charter can be sent: each goes to the options
  * page of its category with the search in the URL. The other tabs are
- * disabled until their flows exist. `destination` fills in where the trip starts or goes,
- * and may change while the box is on screen.
+ * disabled until their flows exist. Its state is the `SearchProvider`'s
+ * above it, which is how a card elsewhere on the page fills a place in.
  */
-export function ServiceTabsSearch({ destination }: { destination?: string }) {
-  const { product, setProduct, values, set } = useSearch(
-    "car-with-driver",
-    destination ? { from: destination, place: destination } : {},
-  );
-  // A newly chosen destination overwrites the place, whatever was typed, and
-  // leaves the service and the other fields alone.
-  const [applied, setApplied] = useState(destination);
-  if (destination !== applied) {
-    setApplied(destination);
-    set("from", destination ?? "");
-    set("place", destination ?? "");
-  }
+export function ServiceTabsSearch() {
+  const { product, setProduct, values, set, dropoffs } = useSearchCard();
   const { issues, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
 
@@ -132,6 +121,7 @@ export function ServiceTabsSearch({ destination }: { destination?: string }) {
                   def={f}
                   id={id}
                   values={values}
+                  presets={f.key === "to" ? dropoffs : undefined}
                   onChange={(v, placeId) => set(f.key, v, placeId)}
                   className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b]"
                 />

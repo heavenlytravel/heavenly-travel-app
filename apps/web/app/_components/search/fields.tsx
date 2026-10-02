@@ -5,7 +5,7 @@ import {
   type FieldDef,
   type SearchValues,
 } from "../../_lib/search";
-import { PlaceInput } from "@repo/ui/place-input";
+import { PlaceInput, type PlacePresets } from "@repo/ui/place-input";
 
 const MAX_COUNT = 99;
 
@@ -13,12 +13,14 @@ const MAX_COUNT = 99;
  * The right input for a field. Each search box styles it its own way, but
  * what a date, a time or a place needs stays the same. A place field is an
  * autocomplete: `onChange` gets the place id when a suggestion is picked and
- * nothing when the text was typed.
+ * nothing when the text was typed. `presets` are the places a place field
+ * offers before anything is typed.
  */
 export function FieldInput({
   def,
   id,
   values,
+  presets,
   onChange,
   onFocus,
   className,
@@ -26,6 +28,7 @@ export function FieldInput({
   def: FieldDef;
   id: string;
   values: SearchValues;
+  presets?: PlacePresets;
   onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
   className?: string;
@@ -37,6 +40,7 @@ export function FieldInput({
         value={values[def.key]}
         placeId={values.placeIds[def.key]}
         placeholder={def.placeholder}
+        presets={presets}
         onChange={onChange}
         onFocus={onFocus}
         className={className}

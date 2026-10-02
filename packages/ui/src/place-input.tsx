@@ -7,6 +7,12 @@ import { fetchPlaceSuggestions, isSearchableQuery } from "./place-search.js";
 
 const DEBOUNCE_MS = 250;
 
+/** Places a field offers before anything is typed, under a heading. */
+export type PlacePresets = {
+  heading: string;
+  options: PlaceSuggestion[];
+};
+
 /**
  * A text input with a suggestion list underneath, fed by the app's
  * /api/places/search. Picking a row reports the label and the place id;
@@ -14,13 +20,15 @@ const DEBOUNCE_MS = 250;
  * resolved. One Google autocomplete session token lives from the first
  * keystroke to a pick, then a new one is minted, which is how Google bills
  * a session as one request. The input is unstyled: the caller passes the
- * classes its form uses.
+ * classes its form uses. With `presets`, the field offers those places
+ * when it is opened empty; typing brings the search.
  */
 export function PlaceInput({
   id,
   value,
   placeId,
   placeholder,
+  presets,
   onChange,
   onFocus,
   className,
@@ -29,6 +37,7 @@ export function PlaceInput({
   value: string;
   placeId?: string;
   placeholder?: string;
+  presets?: PlacePresets;
   onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
   className?: string;
@@ -73,19 +82,22 @@ export function PlaceInput({
     session.current = undefined;
   }
 
-  const showing = open && searchable && suggestions.length > 0;
+  // The presets stand in for the search while the field is empty.
+  const offered = value === "" && presets?.options.length ? presets : null;
+  const rows = offered ? offered.options : searchable ? suggestions : [];
+  const showing = open && rows.length > 0;
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!showing) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((i) => (i + 1) % suggestions.length);
+      setActive((i) => (i + 1) % rows.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+      setActive((i) => (i <= 0 ? rows.length - 1 : i - 1));
     } else if (e.key === "Enter" && active >= 0) {
       e.preventDefault();
-      const chosen = suggestions[active];
+      const chosen = rows[active];
       if (chosen) pick(chosen);
     } else if (e.key === "Escape") {
       setOpen(false);
@@ -118,6 +130,7 @@ export function PlaceInput({
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
+          setActive(-1);
         }}
         onFocus={() => {
           setOpen(true);
@@ -129,9 +142,18 @@ export function PlaceInput({
         <ul
           id={listId}
           role="listbox"
+          aria-label={offered?.heading}
           className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-2 ui:max-h-72 ui:w-max ui:max-w-[min(90vw,26rem)] ui:min-w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-[#dce3e0] ui:bg-white ui:py-1.5 ui:text-left ui:text-[#102825] ui:shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
         >
-          {suggestions.map((s, i) => (
+          {offered && (
+            <li
+              role="presentation"
+              className="ui:px-3.5 ui:pt-1.5 ui:pb-1 ui:text-[0.7rem] ui:font-bold ui:tracking-[0.16em] ui:text-[#64706d] ui:uppercase"
+            >
+              {offered.heading}
+            </li>
+          )}
+          {rows.map((s, i) => (
             <li
               key={s.placeId}
               id={`${listId}-${i}`}

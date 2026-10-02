@@ -25,7 +25,7 @@ export default async function NewLocationPage() {
       </p>
       <PageHeader
         title="Add location"
-        description="Pick the place first. A new location is a draft: nothing is public until it goes live."
+        description="A new location is a draft: nothing is public until it goes live."
       />
 
       <div className="mt-6 max-w-2xl">

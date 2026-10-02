@@ -99,7 +99,7 @@ function placeIdOf(place: unknown) {
   return isPlace(place) ? place.placeId : null;
 }
 
-/** "Langkawi already has the slug langkawi." when another location holds it. */
+/** "slug:langkawi page already exist" when another location holds the slug. */
 async function slugTaken(
   tx: Prisma.TransactionClient,
   slug: string,
@@ -107,7 +107,7 @@ async function slugTaken(
 ): Promise<Refusal | null> {
   const taken = await tx.location.findUnique({ where: { slug } });
   if (!taken || taken.id === exceptId) return null;
-  return { ok: false, error: `${taken.name} already has the slug ${slug}.` };
+  return { ok: false, error: `slug:${slug} page already exist` };
 }
 
 /**

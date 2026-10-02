@@ -13,9 +13,10 @@ import { SlugField } from "../_components/SlugField";
 import { createLocationAction } from "../actions";
 
 /**
- * The form for a new location. The place comes first: its name fills the
- * name, and the name fills the slug, until Marketing types its own. A saved
- * location opens on its page, as a draft.
+ * The form for a new location. The name comes first and fills the slug
+ * until Marketing types its own; then the place, picked by search. A place
+ * picked while the name is still empty fills it. A saved location opens on
+ * its page, as a draft.
  */
 export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -24,7 +25,6 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
   );
   const [hasPlace, setHasPlace] = useState(false);
   const [name, setName] = useState("");
-  const [nameTyped, setNameTyped] = useState(false);
   const [slug, setSlug] = useState("");
   const [slugTyped, setSlugTyped] = useState(false);
   // Controlled, so a refused save does not clear what was typed.
@@ -38,27 +38,16 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
   return (
     <form action={action} className="grid gap-6">
       <section className="grid gap-4 rounded-lg border border-neutral-200 bg-white p-5">
-        <LocationPlaceField
-          hasGoogle={hasGoogle}
-          onPlace={(place) => {
-            setHasPlace(place !== null);
-            if (place && !nameTyped) {
-              fillName(place.label.slice(0, LOCATION_LIMITS.name));
-            }
-          }}
-        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">
             <Input
               name="name"
               required
+              autoFocus
               autoComplete="off"
               maxLength={LOCATION_LIMITS.name}
               value={name}
-              onChange={(event) => {
-                setNameTyped(true);
-                fillName(event.target.value);
-              }}
+              onChange={(event) => fillName(event.target.value)}
             />
           </Field>
           <SlugField
@@ -69,6 +58,15 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
             }}
           />
         </div>
+        <LocationPlaceField
+          hasGoogle={hasGoogle}
+          onPlace={(place) => {
+            setHasPlace(place !== null);
+            if (place && name.trim() === "") {
+              fillName(place.label.slice(0, LOCATION_LIMITS.name));
+            }
+          }}
+        />
         <Field
           label={
             <span className="inline-flex items-center gap-1.5">

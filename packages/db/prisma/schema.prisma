@@ -66,6 +66,7 @@ model ActivityLog {
   /// "booking.item.confirmed", "wall.switched", ...
   action          String
   /// "booking" | "state" | "district" | "vehicle-class" | "admin" | "setting"
+  /// | "location"
   entityType      String
   entityId        String
   before          Json?
@@ -134,6 +135,80 @@ model District {
   items BookingItem[]
 
   @@index([stateCode])
+}
+
+// ---------------------------------------------------------------------------
+// Locations. See docs/261001-locations-and-pages.md. A location is a place
+// Marketing sells as a destination, with a landing page and one page per
+// product on the customer site. States and page keys are strings validated
+// against the const arrays in src/location-input.ts.
+// ---------------------------------------------------------------------------
+
+/// A town, an island or an area of a city. Marketing ticks the districts it
+/// lies in, as information: no relation ties a location to coverage. Its
+/// state, not a district's switch, decides what the public sees.
+model Location {
+  id             String    @id @default(cuid())
+  /// The address of its pages: /langkawi. Locked the first time it goes live.
+  slug           String    @unique
+  name           String
+  /// The short line on a home page card.
+  tagline        String?
+  /// The `District` codes Marketing ticked, sorted; at least one.
+  districtCodes  String[]  @default([])
+  /// "draft" | "preview" | "live" | "paused"
+  state          String
+  /// Set once, the first time the location goes live.
+  wentLiveAt     DateTime?
+  /// Its place among the home page's top choices; null when it is not one.
+  topChoiceOrder Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  pages     LocationPage[]
+  addresses LocationAddress[]
+
+  @@index([state])
+}
+
+/// One page of a location in one locale: the landing page or a product's.
+/// Marketing edits `draft`; the public reads `published`.
+model LocationPage {
+  id          String    @id @default(cuid())
+  locationId  String
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// "landing" | "car-with-driver" | "coach-charter"
+  page        String
+  locale      String    @default("en")
+  /// Whether the page exists for the public. Not whether the product can be
+  /// booked there: that is the district's switch.
+  isOn        Boolean   @default(false)
+  /// The working copy.
+  draft       Json
+  /// What the public sees; null until the first publish.
+  published   Json?
+  publishedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([locationId, page, locale])
+}
+
+/// A place most customers go to in a location: "Kuah Jetty". The drop-off
+/// offers the list before anything is typed. An exact spot, never an area.
+model LocationAddress {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// What the customer reads.
+  name       String
+  /// An exact Google place, as `Place`.
+  place      Json
+  /// Its order in the list, from 0.
+  position   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([locationId])
 }
 
 // ---------------------------------------------------------------------------

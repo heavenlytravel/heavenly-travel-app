@@ -16,6 +16,7 @@ export const ADMIN_TEAMS = [
   "RESERVATION",
   "SALES",
   "FINANCE",
+  "MARKETING",
 ] as const;
 export type AdminTeam = (typeof ADMIN_TEAMS)[number];
 export const isAdminTeam = guardFor(ADMIN_TEAMS);
@@ -24,6 +25,7 @@ export const ADMIN_TEAM_LABELS: Record<AdminTeam, string> = {
   RESERVATION: "Reservation",
   SALES: "Sales",
   FINANCE: "Finance",
+  MARKETING: "Marketing",
 };
 
 /** The known teams among the values, once each, in `ADMIN_TEAMS` order. */

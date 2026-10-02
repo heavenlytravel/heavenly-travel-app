@@ -40,6 +40,20 @@ export {
   updateVehicleClass,
 } from "./vehicle-classes";
 export type { VehicleClass } from "./vehicle-classes";
+export {
+  listLocations,
+  getLocation,
+  createLocation,
+  updateLocation,
+  setLocationAddresses,
+} from "./locations";
+export type {
+  Location,
+  LocationAddress,
+  LocationWithDetails,
+  LocationSummary,
+  AddressWrite,
+} from "./locations";
 export { quoteTrip, prepareTripItem } from "./transportation";
 export type {
   TripRequest,
@@ -97,3 +111,4 @@ export * from "./slug";
 export * from "./coverage-input";
 export * from "./geo";
 export * from "./vehicle-class-input";
+export * from "./location-input";

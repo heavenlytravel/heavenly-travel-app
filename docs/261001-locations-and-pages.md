@@ -1,7 +1,9 @@
 # Locations and their pages: `/[location]/[product]`
 
-Status: decided on 2026-10-01, revised on 2026-10-02 after review, not built. Four PRs,
-listed under "Build order". The
+Status: decided on 2026-10-01, revised on 2026-10-02 after review, and again the same day
+while PR 2 was built: a location's districts are ticked by Marketing, not detected from a
+Google place, and the Coverage screen does not list locations. PR 1 and PR 2 are built.
+Four PRs, listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -19,34 +21,39 @@ the content differs.
 
 ## Decisions
 
-### A location is a pin in one district
+### A location names its districts
 
-- A location is a place Marketing picks by search: a town, an island, an area of a city.
-  It is stored with its Google place (id, label, address, coordinates).
-- `districtCodeAt` places the pin in exactly one district, as it places a pickup
-  (`260930-coverage.md`). Nobody types or chooses the district. A place that falls in no
-  district is refused.
+- A location is a town, an island or an area of a city. It is a name, a slug and the
+  districts it lies in. It has no Google place and no pin of its own.
+- Marketing ticks the districts: first the states the location is in, then the districts
+  of those states. At least one. "Penang" ticks Barat Daya and Timur Laut; "Kuala Kubu
+  Bharu" ticks Hulu Selangor.
+- A first build detected one district from the pin of a Google place. It was set aside
+  while PR 2 was built: a wide place has one arbitrary pin, and "Penang" landed in one
+  district of several.
+- The districts are information for the team. They are kept as a list of codes on the
+  location, with no relation to the `District` table: nothing ties a location to
+  coverage.
 - A district holds any number of locations: Kuala Lumpur is one district with Bukit
-  Bintang, KLCC and "Kuala Lumpur" itself. A location wider than a district, such as
-  "Penang", still has one pin and so one district. Custom polygons are future work.
+  Bintang, KLCC and "Kuala Lumpur" itself.
 - Locations are flat. `/bukit-bintang` is not under `/kuala-lumpur`.
-- Changing a location's place moves its pin and its district with it.
 
 ### The location's state decides what the public sees, not the district
 
 The district switch keeps the one meaning it has: whether a pickup there is served. It
 does not show or hide a page.
 
-- `quoteTrip` checks the pickup's district only; a drop-off can be anywhere. So a
-  location in a district that is off is still a destination we drive to. Its page says
+- `quoteTrip` checks the pickup's district only, from the pickup's own coordinates; a
+  drop-off can be anywhere. So a location whose districts are off is still a destination
+  we drive to. Its page says
   "come to Kuala Kubu Bharu by car or coach" and a customer books from an area we serve.
 - A customer who asks for a pickup in a district that is off gets the message the site
   already gives: "We do not serve that pickup area yet."
 - There is one page and one search card for both cases. Nothing on the page changes with
   the district switch.
-- The location's page in the admin shows its district and whether pickups there are on,
-  as information. The Coverage screen lists each district's locations, read-only, so
-  Operation sees what a switch touches.
+- The location's page in the admin lists its districts and whether pickups are on in
+  each, as information: "Timur Laut: on, Barat Daya: off". The Coverage screen does not
+  list locations, because a switch does not touch them.
 
 ### States
 
@@ -168,8 +175,8 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - The card is the home page's (`ServiceTabsSearch`). It is part of the location's shared
   frame, the `[location]` layout, so every page under a location shows it.
 - No area goes into a booking. The customer's place search offers exact spots only, and
-  a location is an area, so the location itself is never sent as the drop-off: the price
-  would be measured to its pin and the driver would have no address.
+  a location is an area with no address of its own, so the location itself is never sent
+  as the drop-off.
 - The drop-off starts empty. Opened with nothing typed, it offers the location's saved
   addresses under a heading such as "Popular in Langkawi"; one pick fills an exact
   place, ready to send. Typing brings the normal search for exact places.
@@ -199,8 +206,7 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - A fifth team, `MARKETING`, with one permission, `locations.manage`: add a location,
   keep its saved addresses, write and publish its pages, flip the On switch, change its
   state and mark the top choices.
-- Operation keeps the district switch. Operation sees the locations of a district on the
-  Coverage screen and cannot change them.
+- Operation keeps the district switch. It does not show, hide or change a location.
 - Any Marketing admin edits any location. There is no assignment per location; the
   history shows who did what.
 
@@ -248,21 +254,21 @@ built: no `/ms/...` routes, no language switch. Malay pages are future work.
 
 ## Where this departs from `04`
 
-| `04` and `05b`                                   | Here                                                   |
-| ------------------------------------------------ | ------------------------------------------------------ |
-| Five states, with `retired`                      | Four. `retired` waits for the redirect table           |
-| `preview` reached with a signed cookie           | A staff-only page, `/preview/[location]`               |
-| Two indexing tiers, a readiness gate for tier 1  | No indexing until cutover. Every page must be complete |
-| `robots.txt` disallow off the indexable host     | The noindex header alone, on every host, until cutover |
-| Similarity check between locations               | Not built                                              |
-| Sections that admins reorder and hide (D3)       | A fixed order of fixed fields                          |
-| Locale in the routing from the first commit (D1) | Locale in the data only                                |
-| Media on Vercel Blob (D10)                       | UploadThing                                            |
-| Product availability per location (D14)          | The page's On switch, which is not bookability         |
-| A content editor role scoped to locations (§9)   | The Marketing team, no scope                           |
-| Drizzle recommended (§3)                         | Prisma, as the app already uses                        |
-| Sitemap, redirect table, product hubs, packages  | Not in this plan                                       |
-| Nothing ties a location to coverage              | A location knows its district, as information          |
+| `04` and `05b`                                   | Here                                                    |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| Five states, with `retired`                      | Four. `retired` waits for the redirect table            |
+| `preview` reached with a signed cookie           | A staff-only page, `/preview/[location]`                |
+| Two indexing tiers, a readiness gate for tier 1  | No indexing until cutover. Every page must be complete  |
+| `robots.txt` disallow off the indexable host     | The noindex header alone, on every host, until cutover  |
+| Similarity check between locations               | Not built                                               |
+| Sections that admins reorder and hide (D3)       | A fixed order of fixed fields                           |
+| Locale in the routing from the first commit (D1) | Locale in the data only                                 |
+| Media on Vercel Blob (D10)                       | UploadThing                                             |
+| Product availability per location (D14)          | The page's On switch, which is not bookability          |
+| A content editor role scoped to locations (§9)   | The Marketing team, no scope                            |
+| Drizzle recommended (§3)                         | Prisma, as the app already uses                         |
+| Sitemap, redirect table, product hubs, packages  | Not in this plan                                        |
+| Nothing ties a location to coverage              | The same; a location names its districts as information |
 
 `STATUS.md` in the docs repository records KD-18 (the main sales page is
 `/[location]/[product]`, and no location pages exist). PR 4 closes it.
@@ -277,13 +283,11 @@ Location       id String @id @default(cuid())
                slug String @unique
                name String
                tagline String?          (the short line on a home page card)
-               place Json               (the Google place, as `Place`)
-               districtCode -> District (from the place's coordinates)
+               districtCodes String[]   (the districts Marketing ticked; no relation)
                state String             ("draft" | "preview" | "live" | "paused")
                wentLiveAt DateTime?     (set once; from then the slug is locked)
                topChoiceOrder Int?      (null: not on the home page)
                createdAt, updatedAt
-               @@index([districtCode])
                @@index([state])
 
 LocationPage   id String @id @default(cuid())
@@ -319,7 +323,7 @@ A new entity type, `location`. Every entry logs against the location's id and ha
 
 | Action                       | Logged                                                      |
 | ---------------------------- | ----------------------------------------------------------- |
-| `location.created`           | after: name, slug, district                                 |
+| `location.created`           | after: name, slug, district codes                           |
 | `location.updated`           | before and after of the changed fields, top choice included |
 | `location.addresses.updated` | before and after: the saved addresses, in their order       |
 | `location.state.changed`     | before and after: the state                                 |
@@ -332,15 +336,15 @@ Saving a draft is not logged. A change to the same values logs nothing, as elsew
 
 Sidebar group "Marketing", item "Locations", permission `locations.manage`.
 
-- **`/locations`**: one row per location with its name and slug, its district and state,
-  its state badge, which pages are on, its top-choice place and when it last changed.
-  "Add location" above the list.
-- **`/locations/new`**: the place search the Coverage screen uses, with areas allowed.
-  Picking a place shows the district and state it falls in and whether pickups there are
-  on. Then the name, filled from the place, the slug, filled from the name, and the
-  tagline.
+- **`/locations`**: one row per location with its name and slug, its districts and their
+  states, its state badge, which pages are on, its top-choice place and when it last
+  changed. "Add location" above the list.
+- **`/locations/new`**: the name, then the slug, filled from the name and editable, then
+  the states as checkboxes and under them the districts of each ticked state, each
+  marked when pickups there are off, then the tagline.
 - **`/locations/[id]`**:
-  - Details: name, slug (read-only once live), place and district, tagline.
+  - Details: name, slug (read-only once live), tagline, states and districts.
+  - Pickups: each district of the location and whether pickups there are on.
   - Saved addresses: the list in its order, each with its name and its place. "Add
     address" opens the place search for exact spots; an address can be renamed, moved
     and removed.
@@ -354,7 +358,6 @@ Sidebar group "Marketing", item "Locations", permission `locations.manage`.
 - **`/locations/[id]/pages/[page]`**: the fields above with their limits shown as they
   are typed, the image uploads, the saved address chosen on each highlight, a list of
   what is still missing, "Save draft" and "Publish".
-- **`/coverage/[code]`**: each district row names its locations.
 
 Explanations sit behind the info tooltip, as on the other screens.
 
@@ -401,7 +404,7 @@ site's cache by itself.
 | `location-input.ts`, new              | Browser-safe: the states and their moves, the page keys, the content shape, the limits, `missingFields`, the reserved slugs, the parsers. Unit-tested                                                                                                         |
 | `locations.ts`, new                   | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site                                 |
 | `activity-actions.ts`                 | The `location` entity type, the six actions and their sentences                                                                                                                                                                                               |
-| `coverage.ts`                         | The districts of a state come with their locations                                                                                                                                                                                                            |
+| `coverage.ts`                         | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                            |
 | `apps/admin/.../locations`, new       | The four screens, their server actions and the upload route                                                                                                                                                                                                   |
 | `apps/admin/app/_lib`                 | The call to the customer site's refresh route, and the address of the preview page. The "signed-in admin who holds this permission" check of `access.ts` moves to `@repo/db/server`, shared with the preview page                                             |
 | `apps/admin/.../vehicle-classes`      | Calls the refresh after a change                                                                                                                                                                                                                              |
@@ -418,12 +421,12 @@ site's cache by itself.
 Four PRs into `main`. Each passes `pnpm lint` and `pnpm check-types` and leaves both
 apps working.
 
-| PR  | Title                                       | Holds                                                                                                                                                                                                                                             |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `docs: add the locations plan`              | This document                                                                                                                                                                                                                                     |
-| 2   | `feat: locations in the admin`              | The schema, the Marketing team, the states and slugs of `location-input.ts`, creating and updating a location, their log actions, `/locations`, `/locations/new`, the details and saved addresses of `/locations/[id]`, the locations on Coverage |
-| 3   | `feat(admin): location page editor`         | The content shape and its limits, save and publish, the On switch, uploads, the saved address on a highlight, the state moves, the top choices, the rest of the log actions and the history                                                       |
-| 4   | `feat: location pages on the customer site` | The public pages, the preview page, the refresh route and the admin's calls to it, the noindex header, structured data, the search card with the saved addresses and "Take me here", the home page cards                                          |
+| PR  | Title                                       | Holds                                                                                                                                                                                                                  |
+| --- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs: add the locations plan`              | This document                                                                                                                                                                                                          |
+| 2   | `feat: locations in the admin`              | The schema, the Marketing team, the states and slugs of `location-input.ts`, creating and updating a location, their log actions, `/locations`, `/locations/new`, the details and saved addresses of `/locations/[id]` |
+| 3   | `feat(admin): location page editor`         | The content shape and its limits, save and publish, the On switch, uploads, the saved address on a highlight, the state moves, the top choices, the rest of the log actions and the history                            |
+| 4   | `feat: location pages on the customer site` | The public pages, the preview page, the refresh route and the admin's calls to it, the noindex header, structured data, the search card with the saved addresses and "Take me here", the home page cards               |
 
 What the developer does by hand:
 
@@ -457,7 +460,7 @@ and nothing is public yet. PR 4 makes them reachable.
 - Packages under a product page.
 - Parent and child locations, for breadcrumbs and "nearby" links.
 - The similarity check between locations, when there are enough to compare.
-- Custom polygons for a location wider or narrower than its district.
+- A boundary of its own for a location, if something ever has to place a point in one.
 - Per-product coverage, when a district has cars but no coach.
 - A version list with a restore button, if rolling back by hand proves too slow.
 - Clearing replaced images from UploadThing.

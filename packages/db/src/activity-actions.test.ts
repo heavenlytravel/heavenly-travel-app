@@ -156,6 +156,50 @@ describe("describeActivity", () => {
     );
   });
 
+  it("names what changed on a location", () => {
+    assert.equal(
+      describeActivity({
+        action: "location.updated",
+        before: { name: "Langkawi Island", tagline: null },
+        after: { name: "Langkawi", tagline: "Beaches and duty-free" },
+      }),
+      "Renamed to Langkawi, changed the tagline",
+    );
+    assert.equal(
+      describeActivity({
+        action: "location.updated",
+        before: { districtCodes: ["barat-daya"] },
+        after: { districtCodes: ["barat-daya", "timur-laut"] },
+      }),
+      "Changed the districts",
+    );
+  });
+
+  it("says which saved addresses were added, removed, renamed or reordered", () => {
+    const airport = { id: "a1", name: "Langkawi Airport", place: "LGK" };
+    const jetty = { id: "a2", name: "Kuah Jetty", place: "Kuah Jetty" };
+    const beach = { id: "a3", name: "Pantai Cenang", place: "Pantai Cenang" };
+    const change = (before: object[], after: object[]) =>
+      describeActivity({
+        action: "location.addresses.updated",
+        before: { addresses: before },
+        after: { addresses: after },
+      });
+
+    assert.equal(
+      change([airport], [airport, jetty, beach]),
+      "Added the addresses Kuah Jetty and Pantai Cenang",
+    );
+    assert.equal(
+      change([airport, jetty], [{ ...jetty, name: "Jetty Point" }]),
+      "Removed the address Langkawi Airport, renamed the address Kuah Jetty to Jetty Point",
+    );
+    assert.equal(
+      change([airport, jetty], [jetty, airport]),
+      "Reordered the saved addresses",
+    );
+  });
+
   it("falls back to the raw action for one it does not know", () => {
     const entry = { action: "vehicle.washed", before: null, after: null };
     assert.equal(describeActivity(entry), "vehicle.washed");

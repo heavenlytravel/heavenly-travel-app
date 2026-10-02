@@ -65,10 +65,16 @@ export function getState(code: string): Promise<StateWithDistricts | null> {
   return db.state.findUnique({ where: { code }, ...withDistricts });
 }
 
-/** Every district with its state, by state then name, for the null places provider. */
-export function listDistricts(): Promise<DistrictWithState[]> {
+/**
+ * Every district with its state, by state then name; only those with the
+ * codes when some are given.
+ */
+export function listDistricts(
+  codes?: readonly string[],
+): Promise<DistrictWithState[]> {
   return db.district.findMany({
     ...withState,
+    where: codes ? { code: { in: [...codes] } } : undefined,
     orderBy: [{ state: { name: "asc" } }, { name: "asc" }],
   });
 }

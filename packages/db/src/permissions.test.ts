@@ -23,12 +23,16 @@ const SHARED: Permission[] = [
   "bookings.notes",
 ];
 
-/** The wall table in docs/260930-admin-teams-and-access.md, row by row. */
+/**
+ * The wall table in docs/260930-admin-teams-and-access.md, row by row, and
+ * the Marketing team of docs/261001-locations-and-pages.md.
+ */
 const WALL: Record<AdminTeam, Permission[]> = {
   OPERATION: [...SHARED, "bookings.fulfil", "coverage.manage"],
   RESERVATION: [...SHARED, "bookings.manage", "bookings.create"],
   SALES: [...SHARED, "bookings.manage", "bookings.create"],
   FINANCE: SHARED,
+  MARKETING: ["dashboard.view", "locations.manage"],
 };
 
 const sorted = (permissions: Permission[]) => [...permissions].sort();

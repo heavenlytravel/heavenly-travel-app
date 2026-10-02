@@ -19,7 +19,7 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, state or district code, class, admin user or setting the action touched. */
+  /** The booking, state or district code, class, admin user, setting or location the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
@@ -73,7 +73,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", the admin's email, "The wall"; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall"; the id when unknown. */
   entityLabel: string;
 };
 
@@ -103,7 +103,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   const userIds = new Set<string>(idsOf(rows, "admin"));
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
 
-  const [users, bookings, states, districts, vehicleClasses] =
+  const [users, bookings, states, districts, vehicleClasses, locations] =
     await Promise.all([
       db.user.findMany({
         where: { id: { in: [...userIds] } },
@@ -125,6 +125,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
         where: { id: { in: idsOf(rows, "vehicle-class") } },
         select: { id: true, name: true },
       }),
+      db.location.findMany({
+        where: { id: { in: idsOf(rows, "location") } },
+        select: { id: true, name: true },
+      }),
     ]);
   const userById = new Map(users.map((u) => [u.id, u]));
   const labels: Record<ActivityEntityType, Map<string, string>> = {
@@ -134,6 +138,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
+    location: new Map(locations.map((l) => [l.id, l.name])),
   };
 
   return rows.map((row) => {
@@ -162,6 +167,7 @@ function entityLabelOf(
     case "state":
     case "district":
     case "vehicle-class":
+    case "location":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:
       return row.entityId;

@@ -1,6 +1,7 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { formatMultiplier } from "./coverage-input";
+import { LOCATION_FIELD_LABELS } from "./location-input";
 import { formatMyr } from "./money";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
@@ -32,6 +33,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "vehicle-class",
   "admin",
   "setting",
+  "location",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -40,8 +42,8 @@ export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
  * Each action names the record type it logs against and whether a customer
  * may ever see it. Item actions log against their booking, with the item's
  * position in `before` and `after`. State and district entries log against
- * the row's code. An update's `before` and `after` hold the changed fields
- * only.
+ * the row's code, location entries against the location's id. An update's
+ * `before` and `after` hold the changed fields only.
  */
 const ACTIONS = {
   "booking.created": { entityType: "booking", customerVisible: true },
@@ -68,6 +70,14 @@ const ACTIONS = {
   },
   "vehicle-class.updated": {
     entityType: "vehicle-class",
+    customerVisible: false,
+  },
+  "location.created": { entityType: "location", customerVisible: false },
+  /** The districts are logged by their codes. */
+  "location.updated": { entityType: "location", customerVisible: false },
+  /** The whole list before and after, in its order: id, name and place label. */
+  "location.addresses.updated": {
+    entityType: "location",
     customerVisible: false,
   },
 } as const satisfies Record<
@@ -195,6 +205,55 @@ function vehicleClassChanges(after: unknown) {
   return sentence(phrases, "Changed the class");
 }
 
+function locationChanges(after: unknown) {
+  const phrases: string[] = [];
+  const name = field(after, "name");
+  if (typeof name === "string") phrases.push(`Renamed to ${name}`);
+  const present = new Set(keysOf(after));
+  const others = (
+    Object.keys(LOCATION_FIELD_LABELS) as (keyof typeof LOCATION_FIELD_LABELS)[]
+  )
+    .filter((key) => key !== "name" && present.has(key))
+    .map((key) => LOCATION_FIELD_LABELS[key]);
+  if (others.length > 0) phrases.push(`Changed ${listOf(others)}`);
+  return sentence(phrases, "Changed the location");
+}
+
+/** The saved addresses an entry holds, as far as they can be read. */
+function addressesOf(json: unknown) {
+  const addresses = field(json, "addresses");
+  if (!Array.isArray(addresses)) return [];
+  return (addresses as unknown[]).flatMap((address) => {
+    const id = field(address, "id");
+    const name = field(address, "name");
+    return typeof id === "string" && typeof name === "string"
+      ? [{ id, name }]
+      : [];
+  });
+}
+
+/** "Added the address Kuah Jetty": what differs between the two lists. */
+function addressChanges(before: unknown, after: unknown) {
+  const was = addressesOf(before);
+  const now = addressesOf(after);
+  const wasById = new Map(was.map((address) => [address.id, address.name]));
+  const nowIds = new Set(now.map((address) => address.id));
+  const named = (verb: string, names: string[]) =>
+    `${verb} the ${names.length > 1 ? "addresses" : "address"} ${listOf(names)}`;
+
+  const added = now.filter((a) => !wasById.has(a.id)).map((a) => a.name);
+  const removed = was.filter((a) => !nowIds.has(a.id)).map((a) => a.name);
+  const renamed = now
+    .filter((a) => wasById.has(a.id) && wasById.get(a.id) !== a.name)
+    .map((a) => `${wasById.get(a.id)} to ${a.name}`);
+
+  const phrases: string[] = [];
+  if (added.length > 0) phrases.push(named("Added", added));
+  if (removed.length > 0) phrases.push(named("Removed", removed));
+  if (renamed.length > 0) phrases.push(named("Renamed", renamed));
+  return sentence(phrases, "Reordered the saved addresses");
+}
+
 /**
  * One entry as a short sentence without its actor or its record: "Confirmed
  * item 2", "Turned the district on", "Turned the wall on". The actor, the
@@ -272,5 +331,11 @@ export function describeActivity(entry: DescribableActivity): string {
       return "Created the class";
     case "vehicle-class.updated":
       return vehicleClassChanges(entry.after);
+    case "location.created":
+      return "Created the location";
+    case "location.updated":
+      return locationChanges(entry.after);
+    case "location.addresses.updated":
+      return addressChanges(entry.before, entry.after);
   }
 }

@@ -95,7 +95,7 @@ export function DistrictPicker({
                 .map((district) => (
                   <label
                     key={district.code}
-                    className="flex items-center gap-2 text-sm"
+                    className="flex items-start gap-2 text-sm"
                   >
                     <input
                       type="checkbox"
@@ -109,14 +109,13 @@ export function DistrictPicker({
                             : value.filter((code) => code !== district.code),
                         )
                       }
-                      className={checkboxClassName}
+                      className={`mt-0.5 ${checkboxClassName}`}
                     />
                     <span>
                       {district.name}
                       {district.isActive ? null : (
-                        <span className="text-xs text-neutral-500">
-                          {" "}
-                          · pickups off
+                        <span className="block text-xs text-neutral-500">
+                          Pickups off
                         </span>
                       )}
                     </span>

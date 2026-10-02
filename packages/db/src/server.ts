@@ -27,7 +27,6 @@ export type {
   State,
   District,
   StateWithDistricts,
-  StateWithLocations,
   StateSummary,
   DistrictWithState,
 } from "./coverage";

@@ -27,14 +27,9 @@ import { LOCATIONS_PATH, locationHref } from "../../_lib/routes";
  * asks Google for the places it was given by id, passes the admin as the
  * actor and lets the writer in @repo/db check the rest.
  */
-
-/** Every state's page of the Coverage screen, as a route pattern: a location shows on its district's row. */
-const STATE_PAGES = "/(console)/coverage/[code]";
-
 function revalidateLocation(id: string) {
   revalidatePath(locationHref(id));
   revalidatePath(LOCATIONS_PATH);
-  revalidatePath(STATE_PAGES, "page");
 }
 
 const NO_PLACE =

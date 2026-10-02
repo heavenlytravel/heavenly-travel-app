@@ -24,8 +24,10 @@ const LINKS = [
  * and the account button from `lg` up; below that the links fold into a
  * sheet opened by the menu button, with the account button staying put.
  * Signed out, the links give way to a sign-in button that comes back here.
+ * `signedIn` is null while a page that does not read the session on the
+ * server is still finding out; the header then shows neither.
  */
-export function SiteHeader({ signedIn }: { signedIn: boolean }) {
+export function SiteHeader({ signedIn }: { signedIn: boolean | null }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const close = () => setOpen(false);
@@ -49,7 +51,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
       </Link>
 
       <div className="flex items-center gap-3 sm:gap-6">
-        {signedIn ? (
+        {signedIn === null ? null : signedIn ? (
           <>
             <nav
               aria-label="Site"

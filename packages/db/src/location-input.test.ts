@@ -6,6 +6,7 @@ import {
   RESERVED_SLUGS,
   checkAddressNames,
   checkLocationSlug,
+  districtCodesOf,
   isLocationState,
   isSlugLocked,
   parseAddressEntries,
@@ -67,29 +68,71 @@ describe("isSlugLocked", () => {
   });
 });
 
+describe("districtCodesOf", () => {
+  it("keeps each code once, sorted, and drops what is not a code", () => {
+    assert.deepEqual(
+      districtCodesOf(["timur-laut", " barat-daya ", "timur-laut", "", 7]),
+      ["barat-daya", "timur-laut"],
+    );
+    assert.deepEqual(districtCodesOf("barat-daya"), []);
+    assert.deepEqual(districtCodesOf(undefined), []);
+  });
+});
+
 describe("parseLocationFields", () => {
+  const districts = ["langkawi"];
+
   it("trims the text and reads an empty tagline as none", () => {
     assert.deepEqual(
       parseLocationFields({
         name: " Langkawi ",
         slug: "langkawi",
         tagline: "  ",
+        districts,
       }),
       {
         ok: true,
-        value: { name: "Langkawi", slug: "langkawi", tagline: null },
+        value: {
+          name: "Langkawi",
+          slug: "langkawi",
+          tagline: null,
+          districtCodes: ["langkawi"],
+        },
       },
     );
     const parsed = parseLocationFields({
       name: "Langkawi",
       slug: "langkawi",
       tagline: " Beaches and duty-free ",
+      districts,
     });
     assert.equal(parsed.ok && parsed.value.tagline, "Beaches and duty-free");
   });
 
+  it("asks for at least one district", () => {
+    const base = { name: "Penang", slug: "penang", tagline: "" };
+    assert.match(errorOf(parseLocationFields(base)), /at least one district/);
+    assert.match(
+      errorOf(parseLocationFields({ ...base, districts: [] })),
+      /at least one district/,
+    );
+    const parsed = parseLocationFields({
+      ...base,
+      districts: ["timur-laut", "barat-daya"],
+    });
+    assert.deepEqual(parsed.ok && parsed.value.districtCodes, [
+      "barat-daya",
+      "timur-laut",
+    ]);
+  });
+
   it("asks for a name and keeps each field in its limit", () => {
-    const base = { name: "Langkawi", slug: "langkawi", tagline: "" };
+    const base = {
+      name: "Langkawi",
+      slug: "langkawi",
+      tagline: "",
+      districts,
+    };
     assert.match(
       errorOf(parseLocationFields({ ...base, name: "" })),
       /Enter the name/,

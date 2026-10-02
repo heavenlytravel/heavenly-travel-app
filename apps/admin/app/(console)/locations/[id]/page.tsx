@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { isPlace, isSlugLocked } from "@repo/db";
 import { getLocation } from "@repo/db/server";
-import { hasGooglePlaces } from "@repo/places/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../_components/Card";
@@ -10,22 +9,26 @@ import { Rows } from "../../../_components/Rows";
 import { LocationStateBadge } from "../../../_components/StatusBadges";
 import { requireAdmin } from "../../../_lib/access";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
+import { districtOptions } from "../_lib/district-options";
 import { LocationDetailsForm } from "./LocationDetailsForm";
 import { SavedAddresses, type SavedAddress } from "./SavedAddresses";
 
 /**
  * Route: /locations/[id]. One location for Marketing: its details, its
- * saved addresses, and the district its pin falls in, as information.
+ * saved addresses, and whether pickups are served in each of its districts,
+ * as information.
  */
 export default async function LocationPage({
   params,
 }: PageProps<"/locations/[id]">) {
   await requireAdmin("locations.manage");
   const { id } = await params;
-  const location = await getLocation(id);
+  const [location, districts] = await Promise.all([
+    getLocation(id),
+    districtOptions(),
+  ]);
   if (!location) notFound();
 
-  const place = isPlace(location.place) ? location.place : null;
   const addresses: SavedAddress[] = location.addresses.map((address) => {
     const spot = isPlace(address.place) ? address.place : null;
     return {
@@ -36,7 +39,6 @@ export default async function LocationPage({
       placeAddress: spot?.address ?? "",
     };
   });
-  const { district } = location;
 
   return (
     <>
@@ -63,10 +65,10 @@ export default async function LocationPage({
                 name: location.name,
                 slug: location.slug,
                 tagline: location.tagline,
+                districtCodes: location.districtCodes,
                 slugLocked: isSlugLocked(location),
-                place: place && { placeId: place.placeId, label: place.label },
               }}
-              hasGoogle={hasGooglePlaces}
+              districts={districts}
             />
           </Card>
           <Card>
@@ -80,22 +82,32 @@ export default async function LocationPage({
           </Card>
         </div>
 
-        <Card>
-          <CardTitle>
-            <span className="inline-flex items-center gap-1.5">
-              Where it is
-              <InfoTip text="The district is where the place's pin falls; nobody chooses it. Whether pickups there are served is Operation's switch on the Coverage screen. It does not show or hide the pages: with pickups off, the location is still a destination we drive to." />
-            </span>
-          </CardTitle>
-          <Rows
-            rows={[
-              ["State", <LocationStateBadge key="s" state={location.state} />],
-              ["Place", place?.label ?? "Unknown"],
-              ["District", `${district.name}, ${district.state.name}`],
-              ["Pickups there", district.isActive ? "On" : "Off"],
-            ]}
-          />
-        </Card>
+        <div className="grid gap-6">
+          <Card>
+            <CardTitle>State</CardTitle>
+            <LocationStateBadge state={location.state} />
+          </Card>
+          <Card>
+            <CardTitle>
+              <span className="inline-flex items-center gap-1.5">
+                Pickups
+                <InfoTip text="Whether a pickup is served in each district of this location. The switches are Operation's, on the Coverage screen. They do not show or hide the pages: with pickups off, the location is still a destination we drive to." />
+              </span>
+            </CardTitle>
+            {location.districts.length === 0 ? (
+              <p className="text-sm text-neutral-500">
+                No district ticked yet.
+              </p>
+            ) : (
+              <Rows
+                rows={location.districts.map((district) => [
+                  `${district.name}, ${district.state.name}`,
+                  district.isActive ? "On" : "Off",
+                ])}
+              />
+            )}
+          </Card>
+        </div>
       </div>
     </>
   );

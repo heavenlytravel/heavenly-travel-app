@@ -93,12 +93,14 @@ export function isSlugLocked(location: { wentLiveAt: Date | null }) {
   return location.wentLiveAt !== null;
 }
 
-/** What Marketing types about a location. Its place is picked, not typed. */
+/** What Marketing enters about a location. */
 export type LocationFields = {
   name: string;
   slug: string;
   /** The short line on a home page card; null when left empty. */
   tagline: string | null;
+  /** The codes of the districts it lies in, each once, sorted. At least one. */
+  districtCodes: string[];
 };
 
 /** How the activity log names each field: "Changed the slug and the tagline". */
@@ -106,7 +108,7 @@ export const LOCATION_FIELD_LABELS = {
   name: "the name",
   slug: "the slug",
   tagline: "the tagline",
-  place: "the place",
+  districtCodes: "the districts",
 } as const;
 
 export function checkLocationFields(fields: LocationFields): Change {
@@ -124,10 +126,23 @@ export function checkLocationFields(fields: LocationFields): Change {
       `The tagline is at most ${LOCATION_LIMITS.tagline} characters.`,
     );
   }
+  if (fields.districtCodes.length === 0) {
+    return fail("Tick at least one district.");
+  }
   return { ok: true };
 }
 
-/** The location form's `name`, `slug` and `tagline`, read and checked. */
+/** District codes as a location keeps them: each once, sorted. */
+export function districtCodesOf(values: unknown): string[] {
+  const codes = Array.isArray(values) ? values.map(textOf) : [];
+  return [...new Set(codes.filter((code) => code !== ""))].sort();
+}
+
+/**
+ * The location form's `name`, `slug` and `tagline`, and its ticked
+ * `districts` as a list, read and checked. Whether each code is a real
+ * district is the writer's check.
+ */
 export function parseLocationFields(
   values: Record<string, unknown>,
 ): Parsed<LocationFields> {
@@ -135,6 +150,7 @@ export function parseLocationFields(
     name: textOf(values.name),
     slug: textOf(values.slug),
     tagline: textOf(values.tagline) || null,
+    districtCodes: districtCodesOf(values.districts),
   };
   const check = checkLocationFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

@@ -168,10 +168,10 @@ describe("describeActivity", () => {
     assert.equal(
       describeActivity({
         action: "location.updated",
-        before: { place: "Kuala Lumpur", districtCode: "kuala-lumpur" },
-        after: { place: "Petaling Jaya", districtCode: "petaling" },
+        before: { districtCodes: ["barat-daya"] },
+        after: { districtCodes: ["barat-daya", "timur-laut"] },
       }),
-      "Changed the place",
+      "Changed the districts",
     );
   });
 

@@ -8,32 +8,33 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
-import { LocationPlaceField } from "../_components/LocationPlaceField";
+import {
+  DistrictPicker,
+  type DistrictOption,
+} from "../_components/DistrictPicker";
 import { SlugField } from "../_components/SlugField";
 import { createLocationAction } from "../actions";
 
 /**
  * The form for a new location. The name comes first and fills the slug
- * until Marketing types its own; then the place, picked by search. A place
- * picked while the name is still empty fills it. A saved location opens on
- * its page, as a draft.
+ * until Marketing types its own; then the states and districts it lies in.
+ * A saved location opens on its page, as a draft.
  */
-export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
+export function NewLocationForm({
+  districts,
+}: {
+  districts: DistrictOption[];
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     createLocationAction,
     null,
   );
-  const [hasPlace, setHasPlace] = useState(false);
+  // Controlled, so a refused save does not clear what was entered.
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTyped, setSlugTyped] = useState(false);
-  // Controlled, so a refused save does not clear what was typed.
+  const [districtCodes, setDistrictCodes] = useState<string[]>([]);
   const [tagline, setTagline] = useState("");
-
-  function fillName(next: string) {
-    setName(next);
-    if (!slugTyped) setSlug(slugify(next).slice(0, LOCATION_LIMITS.slug));
-  }
 
   return (
     <form action={action} className="grid gap-6">
@@ -47,7 +48,14 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
               autoComplete="off"
               maxLength={LOCATION_LIMITS.name}
               value={name}
-              onChange={(event) => fillName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (!slugTyped) {
+                  setSlug(
+                    slugify(event.target.value).slice(0, LOCATION_LIMITS.slug),
+                  );
+                }
+              }}
             />
           </Field>
           <SlugField
@@ -58,14 +66,10 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
             }}
           />
         </div>
-        <LocationPlaceField
-          hasGoogle={hasGoogle}
-          onPlace={(place) => {
-            setHasPlace(place !== null);
-            if (place && name.trim() === "") {
-              fillName(place.label.slice(0, LOCATION_LIMITS.name));
-            }
-          }}
+        <DistrictPicker
+          districts={districts}
+          value={districtCodes}
+          onChange={setDistrictCodes}
         />
         <Field
           label={
@@ -86,7 +90,7 @@ export function NewLocationForm({ hasGoogle }: { hasGoogle: boolean }) {
       </section>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending || !hasPlace}>
+        <Button type="submit" disabled={pending || districtCodes.length === 0}>
           {pending ? "Adding…" : "Add location"}
         </Button>
         <Link

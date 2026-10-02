@@ -11,7 +11,7 @@ import { NEW_LOCATION_PATH, locationHref } from "../../_lib/routes";
 
 /**
  * Route: /locations. The places the site sells as destinations, each with
- * the district its pin falls in and its state. Marketing's screen behind
+ * the districts it lies in and its state. Marketing's screen behind
  * `locations.manage`.
  */
 export default async function LocationsPage() {
@@ -36,8 +36,8 @@ export default async function LocationsPage() {
             <Th>Location</Th>
             <Th>
               <span className="inline-flex items-center gap-1.5">
-                District
-                <InfoTip text="Where the location's pin falls. Whether pickups there are served is Operation's switch on the Coverage screen; it does not show or hide a page." />
+                Districts
+                <InfoTip text="The districts Marketing ticked for the location. Whether pickups there are served is Operation's switch on the Coverage screen; it does not show or hide a page." />
               </span>
             </Th>
             <Th>
@@ -54,36 +54,47 @@ export default async function LocationsPage() {
                 No locations yet. Add the first one.
               </EmptyRow>
             ) : (
-              locations.map((location) => (
-                <tr key={location.id}>
-                  <Td>
-                    <Link
-                      href={locationHref(location.id)}
-                      className="block font-medium underline-offset-4 hover:underline"
-                    >
-                      {location.name}
-                    </Link>
-                    <span className="block text-xs text-neutral-500">
-                      /{location.slug}
-                    </span>
-                  </Td>
-                  <Td>
-                    <span className="block">{location.district.name}</span>
-                    <span className="block text-xs text-neutral-500">
-                      {location.district.state.name}
-                      {location.district.isActive ? "" : " · pickups off"}
-                    </span>
-                  </Td>
-                  <Td>
-                    <LocationStateBadge state={location.state} />
-                  </Td>
-                  <Td className="text-neutral-600 tabular-nums">
-                    {location.changedAt
-                      ? formatLocalDateTime(location.changedAt)
-                      : "—"}
-                  </Td>
-                </tr>
-              ))
+              locations.map((location) => {
+                const { districts } = location;
+                const stateNames = [
+                  ...new Set(districts.map((d) => d.state.name)),
+                ];
+                const on = districts.filter((d) => d.isActive).length;
+                return (
+                  <tr key={location.id}>
+                    <Td>
+                      <Link
+                        href={locationHref(location.id)}
+                        className="block font-medium underline-offset-4 hover:underline"
+                      >
+                        {location.name}
+                      </Link>
+                      <span className="block text-xs text-neutral-500">
+                        /{location.slug}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="block">
+                        {districts.map((d) => d.name).join(", ") || "—"}
+                      </span>
+                      <span className="block text-xs text-neutral-500">
+                        {stateNames.join(", ")}
+                        {on === districts.length
+                          ? ""
+                          : ` · pickups on in ${on} of ${districts.length}`}
+                      </span>
+                    </Td>
+                    <Td>
+                      <LocationStateBadge state={location.state} />
+                    </Td>
+                    <Td className="text-neutral-600 tabular-nums">
+                      {location.changedAt
+                        ? formatLocalDateTime(location.changedAt)
+                        : "—"}
+                    </Td>
+                  </tr>
+                );
+              })
             )}
           </TBody>
         </Table>

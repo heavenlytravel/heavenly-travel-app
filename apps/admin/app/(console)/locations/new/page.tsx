@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { hasGooglePlaces } from "@repo/places/server";
 import { PageHeader } from "../../../_components/PageHeader";
 import { requireAdmin } from "../../../_lib/access";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
+import { districtOptions } from "../_lib/district-options";
 import { NewLocationForm } from "./NewLocationForm";
 
 /**
- * Route: /locations/new. A place picked by search becomes a location, in
- * the district its pin falls in. Marketing's screen behind
- * `locations.manage`.
+ * Route: /locations/new. A name, a slug and the districts the place lies in
+ * make a location. Marketing's screen behind `locations.manage`.
  */
 export default async function NewLocationPage() {
   await requireAdmin("locations.manage");
+  const districts = await districtOptions();
 
   return (
     <>
@@ -29,7 +29,7 @@ export default async function NewLocationPage() {
       />
 
       <div className="mt-6 max-w-2xl">
-        <NewLocationForm hasGoogle={hasGooglePlaces} />
+        <NewLocationForm districts={districts} />
       </div>
     </>
   );

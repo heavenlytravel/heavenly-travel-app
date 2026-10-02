@@ -2,7 +2,7 @@ import { changedFields, logActivity } from "./activity";
 import type { ActivityEntityType, Actor } from "./activity-actions";
 import type { Change, Created } from "./change";
 import { db } from "./client";
-import { districtCodeAt } from "./district-index";
+import { listDistricts, type DistrictWithState } from "./coverage";
 import type {
   Location,
   LocationAddress,
@@ -20,12 +20,13 @@ import { isPlace, type Place } from "./place";
 export type { Location, LocationAddress };
 
 /**
- * Locations: the places Marketing sells as destinations, each a pin in one
- * district with a list of saved addresses. The readers serve the Locations
- * screens; the writers are the screens', each taking the actor and logging
- * inside its transaction. A location's place and its saved addresses arrive
- * resolved: the caller asks Google, this module never does. See
- * docs/261001-locations-and-pages.md.
+ * Locations: the places Marketing sells as destinations, each with the
+ * districts it lies in and a list of saved addresses. The districts are
+ * ticked by Marketing and kept as codes, as information: nothing ties a
+ * location to coverage. The readers serve the Locations screens; the writers
+ * are the screens', each taking the actor and logging inside its
+ * transaction. Saved addresses arrive resolved: the caller asks Google, this
+ * module never does. See docs/261001-locations-and-pages.md.
  */
 
 const LOCATION: ActivityEntityType = "location";
@@ -35,10 +36,9 @@ type Refusal = { ok: false; error: string };
 
 const NOT_FOUND: Refusal = { ok: false, error: "Location not found." };
 
-const NO_DISTRICT: Refusal = {
+const UNKNOWN_DISTRICT: Refusal = {
   ok: false,
-  error:
-    "That place is in no district: at sea, or outside Malaysia. Pick another.",
+  error: "One of the districts is not known. Reload and tick them again.",
 };
 
 const ADDRESSES_CHANGED: Refusal = {
@@ -47,30 +47,25 @@ const ADDRESSES_CHANGED: Refusal = {
     "The saved addresses were changed by someone else. Reload to see them.",
 };
 
-const withDistrict = {
-  include: { district: { include: { state: true } } },
-} satisfies Prisma.LocationDefaultArgs;
-
-const withDetails = {
-  include: {
-    ...withDistrict.include,
-    addresses: { orderBy: { position: "asc" } },
-  },
-} satisfies Prisma.LocationDefaultArgs;
-
-/** A location with its district, that district's state and its saved addresses in order. */
-export type LocationWithDetails = Prisma.LocationGetPayload<typeof withDetails>;
+/** The districts a location names, by state then name, each with its switch. */
+type WithDistricts = { districts: DistrictWithState[] };
 
 /** A row of the Locations list. */
-export type LocationSummary = Prisma.LocationGetPayload<typeof withDistrict> & {
-  /** The newest logged change to the location; null when none is logged. */
-  changedAt: Date | null;
-};
+export type LocationSummary = Location &
+  WithDistricts & {
+    /** The newest logged change to the location; null when none is logged. */
+    changedAt: Date | null;
+  };
 
-/** Every location, by name, with its district and its last change. */
+/** A location with its districts and its saved addresses in order. */
+export type LocationWithDetails = Location &
+  WithDistricts & { addresses: LocationAddress[] };
+
+/** Every location, by name, with its districts and its last change. */
 export async function listLocations(): Promise<LocationSummary[]> {
-  const [locations, changes] = await Promise.all([
-    db.location.findMany({ ...withDistrict, orderBy: { name: "asc" } }),
+  const [locations, districts, changes] = await Promise.all([
+    db.location.findMany({ orderBy: { name: "asc" } }),
+    listDistricts(),
     db.activityLog.groupBy({
       by: ["entityId"],
       where: { entityType: LOCATION },
@@ -82,21 +77,28 @@ export async function listLocations(): Promise<LocationSummary[]> {
   );
   return locations.map((location) => ({
     ...location,
+    districts: districts.filter((d) => location.districtCodes.includes(d.code)),
     changedAt: changedAt.get(location.id) ?? null,
   }));
 }
 
-export function getLocation(id: string): Promise<LocationWithDetails | null> {
-  return db.location.findUnique({ where: { id }, ...withDetails });
+export async function getLocation(
+  id: string,
+): Promise<LocationWithDetails | null> {
+  const location = await db.location.findUnique({
+    where: { id },
+    include: { addresses: { orderBy: { position: "asc" } } },
+  });
+  if (!location) return null;
+  return {
+    ...location,
+    districts: await listDistricts(location.districtCodes),
+  };
 }
 
 /** The stored place's label, as the log names a place. */
 function placeLabel(place: unknown) {
   return isPlace(place) ? place.label : "";
-}
-
-function placeIdOf(place: unknown) {
-  return isPlace(place) ? place.placeId : null;
 }
 
 /** Why the slug cannot be taken, when another location holds it. */
@@ -113,43 +115,53 @@ async function slugTaken(
   };
 }
 
-/**
- * A new location, in `draft`. Its district is where the place's coordinates
- * fall; a place in no district is refused.
- */
+/** True when every code is a district's. The codes hold each once. */
+async function districtsExist(
+  tx: Prisma.TransactionClient,
+  codes: readonly string[],
+) {
+  const known = await tx.district.count({
+    where: { code: { in: [...codes] } },
+  });
+  return known === codes.length;
+}
+
+const sameCodes = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((code, i) => code === b[i]);
+
+/** A new location, in `draft`. */
 export async function createLocation(
   actor: Actor,
   fields: LocationFields,
-  place: Place,
 ): Promise<Created> {
   const check = checkLocationFields(fields);
   if (!check.ok) return check;
-  const districtCode = districtCodeAt(place.lat, place.lng);
-  if (!districtCode) return NO_DISTRICT;
 
   return db.$transaction(async (tx) => {
-    const district = await tx.district.findUnique({
-      where: { code: districtCode },
-    });
-    if (!district) return NO_DISTRICT;
+    if (!(await districtsExist(tx, fields.districtCodes))) {
+      return UNKNOWN_DISTRICT;
+    }
     const taken = await slugTaken(tx, fields.slug);
     if (taken) return taken;
 
     const location = await tx.location.create({
-      data: { ...fields, place, districtCode, state: NEW_LOCATION_STATE },
+      data: { ...fields, state: NEW_LOCATION_STATE },
     });
     await logActivity(tx, actor, {
       action: "location.created",
       entityId: location.id,
-      after: { name: fields.name, slug: fields.slug, district: district.name },
+      after: {
+        name: fields.name,
+        slug: fields.slug,
+        districtCodes: fields.districtCodes,
+      },
     });
     return { ok: true, id: location.id };
   });
 }
 
 /**
- * Changes the name, the slug and the tagline, and the place when one is
- * given: a new place moves the pin and the district with it. The slug is
+ * Changes the name, the slug, the tagline and the districts. The slug is
  * locked once the location has been live. Saving what is already there logs
  * nothing.
  */
@@ -157,16 +169,16 @@ export async function updateLocation(
   actor: Actor,
   id: string,
   fields: LocationFields,
-  place?: Place,
 ): Promise<Change> {
   const check = checkLocationFields(fields);
   if (!check.ok) return check;
+  const { districtCodes, ...text } = fields;
 
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({ where: { id } });
     if (!location) return NOT_FOUND;
 
-    const changed = changedFields(location, fields);
+    const changed = changedFields(location, text);
     if (changed?.after.slug !== undefined) {
       if (isSlugLocked(location)) {
         return {
@@ -178,39 +190,26 @@ export async function updateLocation(
       if (taken) return taken;
     }
 
-    const moved =
-      place && place.placeId !== placeIdOf(location.place) ? place : null;
-    const districtCode = moved ? districtCodeAt(moved.lat, moved.lng) : null;
-    if (moved) {
-      const district = districtCode
-        ? await tx.district.findUnique({ where: { code: districtCode } })
-        : null;
-      if (!district) return NO_DISTRICT;
+    const moved = !sameCodes(location.districtCodes, districtCodes);
+    if (moved && !(await districtsExist(tx, districtCodes))) {
+      return UNKNOWN_DISTRICT;
     }
     if (!changed && !moved) return { ok: true };
 
     await tx.location.update({
       where: { id },
-      data: {
-        ...changed?.after,
-        ...(moved && districtCode ? { place: moved, districtCode } : {}),
-      },
+      data: { ...changed?.after, ...(moved ? { districtCodes } : {}) },
     });
     await logActivity(tx, actor, {
       action: "location.updated",
       entityId: id,
       before: {
         ...changed?.before,
-        ...(moved
-          ? {
-              place: placeLabel(location.place),
-              districtCode: location.districtCode,
-            }
-          : {}),
+        ...(moved ? { districtCodes: location.districtCodes } : {}),
       },
       after: {
         ...changed?.after,
-        ...(moved ? { place: moved.label, districtCode } : {}),
+        ...(moved ? { districtCodes } : {}),
       },
     });
     return { ok: true };

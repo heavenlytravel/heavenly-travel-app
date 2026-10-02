@@ -13,35 +13,25 @@ import { resolvePlace } from "@repo/places/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { actorOf, getAdmin } from "../../_lib/access";
-import {
-  FORBIDDEN,
-  FORBIDDEN_MESSAGE,
-  stateOf,
-  type ActionState,
-} from "../../_lib/action-state";
-import { checkPlace, type PlaceCheck } from "../../_lib/place-check";
+import { FORBIDDEN, stateOf, type ActionState } from "../../_lib/action-state";
 import { LOCATIONS_PATH, locationHref } from "../../_lib/routes";
 
 /**
  * The Locations screens' actions. Each checks `locations.manage` again,
- * asks Google for the places it was given by id, passes the admin as the
- * actor and lets the writer in @repo/db check the rest.
+ * passes the admin as the actor and lets the writer in @repo/db check the
+ * rest.
  */
 function revalidateLocation(id: string) {
   revalidatePath(locationHref(id));
   revalidatePath(LOCATIONS_PATH);
 }
 
-const NO_PLACE =
-  "Google did not return that place. Pick it from the list again.";
-
-/** The district a picked place falls in, shown before the location is saved. */
-export async function checkLocationPlaceAction(
-  placeId: string,
-): Promise<PlaceCheck> {
-  const admin = await getAdmin("locations.manage");
-  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  return checkPlace(placeId);
+/** The location form's values; the ticked districts arrive as one field each. */
+function locationValues(formData: FormData) {
+  return {
+    ...Object.fromEntries(formData),
+    districts: formData.getAll("districts"),
+  };
 }
 
 export async function createLocationAction(
@@ -50,20 +40,15 @@ export async function createLocationAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
-  const placeId = textOf(formData.get("placeId"));
-  if (!placeId) return { error: "Pick the place from the list." };
-  const parsed = parseLocationFields(Object.fromEntries(formData));
+  const parsed = parseLocationFields(locationValues(formData));
   if (!parsed.ok) return { error: parsed.error };
-  const place = await resolvePlace(placeId);
-  if (!place) return { error: NO_PLACE };
 
-  const result = await createLocation(actorOf(admin), parsed.value, place);
+  const result = await createLocation(actorOf(admin), parsed.value);
   if (!result.ok) return stateOf(result);
   revalidateLocation(result.id);
   redirect(locationHref(result.id));
 }
 
-/** The details form. `placeId` is sent only when another place was picked. */
 export async function updateLocationAction(
   _previous: ActionState,
   formData: FormData,
@@ -72,19 +57,17 @@ export async function updateLocationAction(
   if (!admin) return FORBIDDEN;
   const id = textOf(formData.get("id"));
   if (!id) return { error: "Missing location." };
-  const parsed = parseLocationFields(Object.fromEntries(formData));
+  const parsed = parseLocationFields(locationValues(formData));
   if (!parsed.ok) return { error: parsed.error };
-  const placeId = textOf(formData.get("placeId"));
-  const place = placeId ? await resolvePlace(placeId) : undefined;
-  if (place === null) return { error: NO_PLACE };
 
-  const result = await updateLocation(actorOf(admin), id, parsed.value, place);
+  const result = await updateLocation(actorOf(admin), id, parsed.value);
   if (result.ok) revalidateLocation(id);
   return stateOf(result);
 }
 
 /**
  * The saved addresses, as the form holds them: the whole list in its order.
+ * A new address arrives as a Google place id and is resolved here.
  * `expected` is the ids the form was opened with, so a list someone else
  * changed meanwhile is not overwritten.
  */

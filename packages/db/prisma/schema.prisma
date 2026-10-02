@@ -132,8 +132,7 @@ model District {
   isActive  Boolean  @default(false)
   updatedAt DateTime @updatedAt
 
-  items     BookingItem[]
-  locations Location[]
+  items BookingItem[]
 
   @@index([stateCode])
 }
@@ -145,9 +144,9 @@ model District {
 // against the const arrays in src/location-input.ts.
 // ---------------------------------------------------------------------------
 
-/// A town, an island or an area of a city, picked by search. Its pin places
-/// it in exactly one district, as a pickup is placed. Its state, not the
-/// district's switch, decides what the public sees.
+/// A town, an island or an area of a city. Marketing ticks the districts it
+/// lies in, as information: no relation ties a location to coverage. Its
+/// state, not a district's switch, decides what the public sees.
 model Location {
   id             String    @id @default(cuid())
   /// The address of its pages: /langkawi. Locked the first time it goes live.
@@ -155,11 +154,8 @@ model Location {
   name           String
   /// The short line on a home page card.
   tagline        String?
-  /// The Google place, as `Place`.
-  place          Json
-  /// Where the place's coordinates fall. Never typed or chosen.
-  districtCode   String
-  district       District  @relation(fields: [districtCode], references: [code])
+  /// The `District` codes Marketing ticked, sorted; at least one.
+  districtCodes  String[]  @default([])
   /// "draft" | "preview" | "live" | "paused"
   state          String
   /// Set once, the first time the location goes live.
@@ -172,7 +168,6 @@ model Location {
   pages     LocationPage[]
   addresses LocationAddress[]
 
-  @@index([districtCode])
   @@index([state])
 }
 

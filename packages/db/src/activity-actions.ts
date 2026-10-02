@@ -73,7 +73,7 @@ const ACTIONS = {
     customerVisible: false,
   },
   "location.created": { entityType: "location", customerVisible: false },
-  /** A place is logged by its label, with the district it moved to. */
+  /** The districts are logged by their codes. */
   "location.updated": { entityType: "location", customerVisible: false },
   /** The whole list before and after, in its order: id, name and place label. */
   "location.addresses.updated": {

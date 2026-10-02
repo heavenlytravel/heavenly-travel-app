@@ -22,6 +22,7 @@ export * from "./coverage-input";
 export * from "./geo";
 export * from "./vehicle-class-input";
 export * from "./location-input";
+export * from "./location-page-input";
 export * from "./trip-input";
 export * from "./booking-input";
 export * from "./booking-contact";

@@ -2,8 +2,8 @@
 
 Status: decided on 2026-10-01, revised on 2026-10-02 after review, and again the same day
 while PR 2 was built: a location's districts are ticked by Marketing, not detected from a
-Google place, and the Coverage screen does not list locations. PR 1 and PR 2 are built.
-Four PRs, listed under "Build order". The
+Google place, and the Coverage screen does not list locations. PR 1, PR 2 and PR 3 are
+built; what PR 3 settled is marked "PR 3" below. Four PRs, listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -69,12 +69,14 @@ The state is on the location. No Prisma enum: a string checked against a const a
 - `draft` is any location still being written. `preview` means every page that is on is
   complete and staff are checking the text and the image quality before it goes public.
 - A location moves to `preview` only when its landing page and at least one product page
-  are on. The same check runs again on the move to `live`.
-- The move to `live` is also refused while a page that is on has unpublished changes, so
-  what staff checked on the preview page is what goes public.
+  are on. The same check runs again on the move from `preview` to `live`.
+- The move from `preview` to `live` is also refused while a page that is on has
+  unpublished changes, so what staff checked on the preview page is what goes public.
 - These checks run on the moves and not afterwards. Marketing may switch off both product
   pages of a live location: its landing page then shows no product links and still
   carries the search card.
+- Resuming a paused location checks nothing (PR 3): its pages never stopped being public,
+  so there is nothing a check would protect.
 - A location that has been `live` never returns to `draft` or `preview`, so a public
   address never becomes a 404. `paused` is the way to stop selling a place for a while:
   a closed road, an off season.
@@ -123,6 +125,10 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - The image shared on social media is the hero image.
 - Every page must be complete before it can be published. The limits live in one module
   and are unit-tested.
+- The limits the table leaves open, chosen in PR 3. Characters: hero headline 80, hero
+  subheadline 160, intro 5,000, FAQ question 160, FAQ answer 1,000, highlight name 60,
+  highlight text 300, alt text 160. A page holds at most 12 FAQs and 8 highlights.
+- A new line starts a new paragraph, in the intro and in an FAQ answer.
 
 ### Editing: one draft, then Publish
 
@@ -133,9 +139,14 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - The editor shows whether the draft differs from what is published.
 - There is no version table. Every publish is written to the activity log with who,
   when, and the content before and after. To roll back, Marketing opens the entry in the
-  location's history, puts the old text back and publishes again.
+  location's history, puts the old text back and publishes again. The entry opens on a
+  page of its own that shows the content before and after, with the parts that differ
+  marked (PR 3).
+- "Publish" publishes what is in the form, saved or not: it saves the draft and copies it
+  in one step (PR 3).
 - Two admins on one page: a save is refused when the page changed since the form was
-  opened, with "This page was changed by someone else. Reload to see it."
+  opened, with "This page was changed by someone else. Reload to see it." Flipping the On
+  switch is not a change to the page: a form open on it still saves (PR 3).
 
 ### The preview page
 
@@ -214,6 +225,9 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 
 - Images are uploaded from the page editor to UploadThing. The content keeps the file's
   address and key, its width and height, and its alt text.
+- The file goes through the admin's server, which holds the token and sends it on
+  (`UTApi`), so no callback from UploadThing has to reach the app (PR 3). The server
+  reads the type and the size from the file's bytes, not from what the browser says.
 - Alt text is required on every image. JPEG, PNG and WebP, at most 4 MB each.
 - The upload route is in the admin app and checks `locations.manage`.
 - A file that is replaced stays in UploadThing; clearing unused files is future work.
@@ -242,6 +256,9 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - Marketing marks up to three live locations as top choices and sets their order. They
   take the place of the three hard-coded location cards. Each card shows the location's
   name, its tagline and the landing page's hero image, and opens the location's page.
+- The control is on the location's page (PR 3): "Add to the top choices" puts a live
+  location last, "Up" and "Down" move it one place, "Remove" takes it off. The places are
+  kept as 1, 2, 3 with no gaps, and every location whose place moves is logged.
 - The KLIA card stays as it is, hard-coded, filling the pickup into the search card.
 - A top choice that is `paused` is left off the home page. It keeps its place and comes
   back when the location is live again.
@@ -353,11 +370,13 @@ Sidebar group "Marketing", item "Locations", permission `locations.manage`.
     charter").
   - Pages: a row each for Landing, Car with driver and Coach charter, with "Not
     published", "Published" or "Unpublished changes", the On switch and "Edit".
-  - "Preview", a link to the preview page on the customer site, the top-choice control,
-    and the location's history.
+  - "Preview", a link to the preview page on the customer site (it arrives with the
+    preview page, in PR 4), the top-choice control, and the location's history.
 - **`/locations/[id]/pages/[page]`**: the fields above with their limits shown as they
   are typed, the image uploads, the saved address chosen on each highlight, a list of
   what is still missing, "Save draft" and "Publish".
+- **`/locations/[id]/history/[entryId]`**: one publish from the history, the page before
+  and after.
 
 Explanations sit behind the info tooltip, as on the other screens.
 
@@ -401,7 +420,8 @@ site's cache by itself.
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `roles.ts`                            | `ADMIN_TEAMS` gains `MARKETING` and its label                                                                                                                                                                                                                 |
 | `permissions.ts`                      | `locations.manage`, for `MARKETING`                                                                                                                                                                                                                           |
-| `location-input.ts`, new              | Browser-safe: the states and their moves, the page keys, the content shape, the limits, `missingFields`, the reserved slugs, the parsers. Unit-tested                                                                                                         |
+| `location-input.ts`, new              | Browser-safe: the states and their moves, the reserved slugs, the rule of the On switch, the parsers. Unit-tested                                                                                                                                             |
+| `location-page-input.ts`, new         | Browser-safe: the page keys, the content shape, the limits, `missingFields`, the image rules. Unit-tested                                                                                                                                                     |
 | `locations.ts`, new                   | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site                                 |
 | `activity-actions.ts`                 | The `location` entity type, the six actions and their sentences                                                                                                                                                                                               |
 | `coverage.ts`                         | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                            |
@@ -413,8 +433,8 @@ site's cache by itself.
 | `apps/web/app/_components/search`     | `ServiceTabsSearch` takes the saved addresses its drop-off offers before anything is typed, and opens on the tab of the product page it is on. The provider that lets a card fill it moves here from `_home` and carries a resolved place, for "Take me here" |
 | `apps/web/app/_home`                  | The destination cards read the top choices; `destinations.ts` keeps only KLIA                                                                                                                                                                                 |
 | `apps/web/next.config.ts`             | `X-Robots-Tag: noindex` on every response                                                                                                                                                                                                                     |
-| `next.config.ts`, both apps           | The UploadThing image host                                                                                                                                                                                                                                    |
-| `turbo.json`, both `.env.example`     | `UPLOADTHING_TOKEN` and `REVALIDATE_SECRET`                                                                                                                                                                                                                   |
+| `next.config.ts`, both apps           | The UploadThing image host: the admin's in PR 3, the customer site's in PR 4                                                                                                                                                                                  |
+| `turbo.json`, both `.env.example`     | `UPLOADTHING_TOKEN`, for the admin app only, in PR 3; `REVALIDATE_SECRET` in PR 4                                                                                                                                                                             |
 
 ## Build order
 
@@ -439,7 +459,8 @@ What the developer does by hand:
   The admin app already has `SITE_URL`.
 
 After PR 2 Marketing can add locations and their saved addresses. After PR 3 it can write and publish their pages,
-and nothing is public yet. PR 4 makes them reachable.
+and nothing is public yet: a location can be moved to `live` in the admin, but the
+customer site has no location pages until PR 4 makes them reachable.
 
 ## Future work, on record
 

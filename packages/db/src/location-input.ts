@@ -2,6 +2,12 @@ import { TRIP_CATEGORIES } from "./booking-status";
 import type { Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
+import {
+  LANDING_PAGE,
+  pageNameOf,
+  type LocationPageKey,
+  type PageStatus,
+} from "./location-page-input";
 import { slugify } from "./slug";
 
 /**
@@ -10,6 +16,8 @@ import { slugify } from "./slug";
  * apply the same checks before they write. See
  * docs/261001-locations-and-pages.md.
  */
+
+const fail = (error: string): Change => ({ ok: false, error });
 
 /** What the public sees of a location. The state is the location's, not its district's. */
 export const LOCATION_STATES = ["draft", "preview", "live", "paused"] as const;
@@ -24,6 +32,97 @@ export const LOCATION_STATE_LABELS: Record<LocationState, string> = {
 
 /** The state every new location starts in. */
 export const NEW_LOCATION_STATE: LocationState = "draft";
+
+/** The moves Marketing can make from each state, the usual one first. */
+export const LOCATION_STATE_MOVES: Record<
+  LocationState,
+  readonly LocationState[]
+> = {
+  draft: ["preview"],
+  preview: ["live", "draft"],
+  live: ["paused"],
+  paused: ["live"],
+};
+
+/** What the rules on a location's state and switches read of one of its pages. */
+export type PageStanding = {
+  page: LocationPageKey;
+  isOn: boolean;
+  status: PageStatus;
+};
+
+/**
+ * Why a location cannot make the move, as sentences that say what to do;
+ * empty when it can. Leaving `draft` and going public from `preview` both
+ * need the landing page and a product page on, and going public also needs
+ * every page that is on to be published as it is drafted, so what staff
+ * checked in preview is what goes public. Nothing is checked after the move:
+ * a paused location resumes as it is, since its pages never stopped being
+ * public.
+ */
+export function stateMoveBlockers(
+  from: LocationState,
+  to: LocationState,
+  pages: readonly PageStanding[],
+): string[] {
+  if (!LOCATION_STATE_MOVES[from].includes(to)) {
+    return [
+      `A ${LOCATION_STATE_LABELS[from].toLowerCase()} location cannot move to ${LOCATION_STATE_LABELS[to].toLowerCase()}.`,
+    ];
+  }
+  const leavesDraft = from === "draft" && to === "preview";
+  const goesPublic = from === "preview" && to === "live";
+  if (!leavesDraft && !goesPublic) return [];
+
+  const blockers: string[] = [];
+  const on = pages.filter((page) => page.isOn);
+  const landingOn = on.some((page) => page.page === LANDING_PAGE);
+  const productOn = on.some((page) => page.page !== LANDING_PAGE);
+  if (!landingOn && !productOn) {
+    blockers.push("Switch on the landing page and at least one product page");
+  } else if (!landingOn) {
+    blockers.push("Switch on the landing page");
+  } else if (!productOn) {
+    blockers.push("Switch on at least one product page");
+  }
+  if (goesPublic) {
+    for (const page of on) {
+      if (page.status === "changed") {
+        blockers.push(`Publish the changes on ${pageNameOf(page.page)}`);
+      }
+    }
+  }
+  return blockers;
+}
+
+/**
+ * Whether a page's On switch can be set. A page goes on once it has a
+ * published copy. The landing page stays on once the location has left
+ * `draft`; the product pages can go off at any time.
+ */
+export function checkPageSwitch(
+  state: LocationState,
+  page: Pick<PageStanding, "page" | "status">,
+  isOn: boolean,
+): Change {
+  if (isOn && page.status === "unpublished") {
+    return fail("Publish the page before switching it on.");
+  }
+  if (!isOn && page.page === LANDING_PAGE && state !== "draft") {
+    return fail(
+      "The landing page stays on once the location has left draft. Pause the location instead.",
+    );
+  }
+  return { ok: true };
+}
+
+/** How many locations the home page shows as top choices. */
+export const TOP_CHOICE_CAP = 3;
+
+/** What Marketing does to a location's place among the top choices. */
+export const TOP_CHOICE_CHANGES = ["add", "remove", "up", "down"] as const;
+export type TopChoiceChange = (typeof TOP_CHOICE_CHANGES)[number];
+export const isTopChoiceChange = guardFor(TOP_CHOICE_CHANGES);
 
 export const LOCATION_LIMITS = {
   /** Characters. */
@@ -68,8 +167,6 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   ...LOCALE_CODES,
   ...SET_ASIDE,
 ]);
-
-const fail = (error: string): Change => ({ ok: false, error });
 
 /** A slug is what `slugify` makes, within the limit and not reserved. */
 export function checkLocationSlug(slug: string): Change {

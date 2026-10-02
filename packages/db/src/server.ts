@@ -43,15 +43,29 @@ export type { VehicleClass } from "./vehicle-classes";
 export {
   listLocations,
   getLocation,
+  listTopChoices,
+  getLocationPage,
+  getPagePublish,
   createLocation,
   updateLocation,
   setLocationAddresses,
+  saveLocationPageDraft,
+  publishLocationPage,
+  setLocationPageOn,
+  moveLocationState,
+  changeTopChoice,
 } from "./locations";
 export type {
   Location,
   LocationAddress,
+  LocationAddressWithUses,
   LocationWithDetails,
   LocationSummary,
+  LocationPageSummary,
+  LocationPageDetails,
+  TopChoice,
+  PagePublish,
+  PageSaved,
   AddressWrite,
 } from "./locations";
 export { quoteTrip, prepareTripItem } from "./transportation";
@@ -112,3 +126,4 @@ export * from "./coverage-input";
 export * from "./geo";
 export * from "./vehicle-class-input";
 export * from "./location-input";
+export * from "./location-page-input";

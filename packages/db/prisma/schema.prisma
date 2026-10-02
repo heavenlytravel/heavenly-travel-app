@@ -188,6 +188,9 @@ model LocationPage {
   /// What the public sees; null until the first publish.
   published   Json?
   publishedAt DateTime?
+  /// When the draft or the published copy last changed. The On switch
+  /// leaves it, so it names the content a form was opened with: a save over
+  /// someone else's change is refused by it.
   updatedAt   DateTime  @updatedAt
 
   @@unique([locationId, page, locale])

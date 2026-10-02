@@ -1,4 +1,4 @@
-import type { BookingStatus } from "@repo/db";
+import type { BookingStatus, LocationPageKey } from "@repo/db";
 
 /** The console's paths, so no page spells a URL by hand. */
 
@@ -50,6 +50,19 @@ export function locationHref(id: string) {
   return `${LOCATIONS_PATH}/${id}`;
 }
 export const NEW_LOCATION_PATH = `${LOCATIONS_PATH}/new`;
+
+/** The editor of one page of a location: its landing page or a product's. */
+export function locationPageHref(id: string, page: LocationPageKey) {
+  return `${locationHref(id)}/pages/${page}`;
+}
+
+/** What one publish in a location's history put on a page, by the log entry's id. */
+export function locationPublishHref(id: string, entryId: string) {
+  return `${locationHref(id)}/history/${entryId}`;
+}
+
+/** Where the page editor posts an image; answers the stored file. */
+export const LOCATION_IMAGE_UPLOAD_PATH = "/api/uploads/location-image";
 
 /** The form that amends one item of a booking: its trip, vehicle and details. */
 export function amendItemHref(bookingId: string, itemId: string) {

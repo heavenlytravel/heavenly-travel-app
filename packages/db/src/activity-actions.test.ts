@@ -175,6 +175,51 @@ describe("describeActivity", () => {
     );
   });
 
+  it("says where a location stands among the top choices", () => {
+    const change = (before: number | null, after: number | null) =>
+      describeActivity({
+        action: "location.updated",
+        before: { topChoiceOrder: before },
+        after: { topChoiceOrder: after },
+      });
+    assert.equal(change(null, 2), "Made top choice 2");
+    assert.equal(change(2, 1), "Moved to top choice 1");
+    assert.equal(change(1, null), "Removed from the top choices");
+  });
+
+  it("names a state move by the state it reached", () => {
+    const move = (from: string, to: string) =>
+      describeActivity({
+        action: "location.state.changed",
+        before: { state: from },
+        after: { state: to },
+      });
+    assert.equal(move("draft", "preview"), "Moved to preview");
+    assert.equal(move("preview", "draft"), "Moved back to draft");
+    assert.equal(move("preview", "live"), "Went live");
+    assert.equal(move("live", "paused"), "Paused the location");
+    assert.equal(move("paused", "live"), "Resumed the location");
+  });
+
+  it("names the page a publish or a switch touched", () => {
+    assert.equal(
+      describeActivity({
+        action: "location.page.published",
+        before: { page: "landing", content: null },
+        after: { page: "landing", content: {} },
+      }),
+      "Published the landing page",
+    );
+    const flip = (isOn: boolean) =>
+      describeActivity({
+        action: "location.page.updated",
+        before: { page: "coach-charter", isOn: !isOn },
+        after: { page: "coach-charter", isOn },
+      });
+    assert.equal(flip(true), "Turned the Coach charter page on");
+    assert.equal(flip(false), "Turned the Coach charter page off");
+  });
+
   it("says which saved addresses were added, removed, renamed or reordered", () => {
     const airport = { id: "a1", name: "Langkawi Airport", place: "LGK" };
     const jetty = { id: "a2", name: "Kuah Jetty", place: "Kuah Jetty" };

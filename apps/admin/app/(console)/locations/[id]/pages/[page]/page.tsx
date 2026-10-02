@@ -1,20 +1,22 @@
 import Link from "next/link";
 import {
-  LANDING_PAGE,
   LOCATION_PAGE_LABELS,
   isLocationPageKey,
+  locationPagePath,
 } from "@repo/db";
 import { getLocationPage } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "../../../../../_components/PageHeader";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationHref } from "../../../../../_lib/routes";
+import { PreviewLink } from "../../../_components/PreviewLink";
 import { PageEditor } from "./PageEditor";
 
 /**
  * Route: /locations/[id]/pages/[page]. The editor of one page of a
  * location, the landing page or a product's: its fields, its images, what
- * it still needs, "Save draft" and "Publish".
+ * it still needs, "Save draft" and "Publish". "Preview" opens the saved
+ * draft on the customer site.
  */
 export default async function LocationPageEditorPage({
   params,
@@ -38,9 +40,14 @@ export default async function LocationPageEditorPage({
       </p>
       <PageHeader
         title={`${LOCATION_PAGE_LABELS[page]} page`}
-        description={`${location.name}. Its address on the customer site is /${location.slug}${
-          page === LANDING_PAGE ? "" : `/${page}`
-        }.`}
+        description={`${location.name}. Its address on the customer site is ${locationPagePath(location.slug, page)}.`}
+        action={
+          <PreviewLink
+            slug={location.slug}
+            page={page}
+            label="Preview the saved draft"
+          />
+        }
       />
 
       <div className="mt-6">

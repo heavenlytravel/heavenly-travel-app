@@ -8,6 +8,7 @@
       "outputs": ["dist/**"]
     },
     "build:components": {
+      "dependsOn": ["@repo/db#build"],
       "outputs": ["dist/**"]
     },
     "dev": {

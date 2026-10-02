@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Input, inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
+import { RowControls, movedRow } from "../_components/RowControls";
 import { setLocationAddressesAction } from "../actions";
 
 /** A saved address as the page hands it over. */
@@ -15,6 +16,8 @@ export type SavedAddress = {
   placeId: string;
   placeLabel: string;
   placeAddress: string;
+  /** The landing page's highlights whose "Take me here" goes to it, by name. */
+  usedBy: string[];
 };
 
 /** A row of the form: a saved address, or one picked and not saved yet. */
@@ -39,11 +42,18 @@ const rowOf = (address: SavedAddress): Row => ({
       : address.placeLabel,
 });
 
+/** "Eagle Square and Night market": the highlights as the question names them. */
+function namesOf(highlights: string[]) {
+  return highlights.length <= 1
+    ? highlights.join("")
+    : `${highlights.slice(0, -1).join(", ")} and ${highlights.at(-1)}`;
+}
+
 /**
  * The location's saved addresses: the places most customers go to there.
  * Marketing adds exact spots by search, renames them, sets their order and
  * removes them, then saves the whole list at once. Nothing changes for
- * customers until Save.
+ * customers until Save. Removing an address a highlight uses asks first.
  */
 export function SavedAddresses({
   locationId,
@@ -97,12 +107,26 @@ export function SavedAddresses({
     ]);
   }
 
-  function move(index: number, by: -1 | 1) {
-    const next = [...rows];
-    const [row] = next.splice(index, 1);
-    if (!row) return;
-    next.splice(index + by, 0, row);
-    edit(next);
+  /** The highlights that point at a row's address; none for a new one. */
+  function usedBy(row: Row) {
+    return addresses.find((address) => address.id === row.id)?.usedBy ?? [];
+  }
+
+  function remove(row: Row) {
+    const highlights = usedBy(row);
+    if (
+      highlights.length > 0 &&
+      !confirm(
+        `Remove ${row.name}? "Take me here" on ${namesOf(highlights)} goes to it. Once this is saved, ${
+          highlights.length > 1
+            ? "those highlights show"
+            : "that highlight shows"
+        } no button.`,
+      )
+    ) {
+      return;
+    }
+    edit(rows.filter((other) => other.key !== row.key));
   }
 
   function save() {
@@ -162,36 +186,20 @@ export function SavedAddresses({
                   {row.detail}
                   {row.id ? "" : " · new, not saved yet"}
                 </span>
+                {usedBy(row).length > 0 ? (
+                  <span className="mt-0.5 block text-xs text-neutral-500">
+                    “Take me here” on {namesOf(usedBy(row))}
+                  </span>
+                ) : null}
               </div>
-              <div className="flex items-center gap-1 pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === 0}
-                  aria-label={`Move ${row.name} up`}
-                  onClick={() => move(index, -1)}
-                >
-                  Up
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={index === rows.length - 1}
-                  aria-label={`Move ${row.name} down`}
-                  onClick={() => move(index, 1)}
-                >
-                  Down
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  aria-label={`Remove ${row.name}`}
-                  onClick={() =>
-                    edit(rows.filter((other) => other.key !== row.key))
-                  }
-                >
-                  Remove
-                </Button>
+              <div className="pt-1">
+                <RowControls
+                  name={row.name}
+                  isFirst={index === 0}
+                  isLast={index === rows.length - 1}
+                  onMove={(by) => edit(movedRow(rows, index, by))}
+                  onRemove={() => remove(row)}
+                />
               </div>
             </li>
           ))}

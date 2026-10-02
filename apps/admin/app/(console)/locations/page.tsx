@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatLocalDateTime } from "@repo/db";
+import { LOCATION_PAGE_LABELS, formatLocalDateTime } from "@repo/db";
 import { listLocations } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
@@ -11,7 +11,8 @@ import { NEW_LOCATION_PATH, locationHref } from "../../_lib/routes";
 
 /**
  * Route: /locations. The places the site sells as destinations, each with
- * the districts it lies in and its state. Marketing's screen behind
+ * the districts it lies in, its state, the pages it has on and its place
+ * among the home page's top choices. Marketing's screen behind
  * `locations.manage`.
  */
 export default async function LocationsPage() {
@@ -46,11 +47,23 @@ export default async function LocationsPage() {
                 <InfoTip text="Draft and Preview are not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
               </span>
             </Th>
+            <Th>
+              <span className="inline-flex items-center gap-1.5">
+                Pages on
+                <InfoTip text="The pages that are switched on. The public sees them once the location is Live or Paused." />
+              </span>
+            </Th>
+            <Th>
+              <span className="inline-flex items-center gap-1.5">
+                Top choice
+                <InfoTip text="Its place among the location cards on the home page. A paused top choice keeps its place and is left off the home page." />
+              </span>
+            </Th>
             <Th>Changed</Th>
           </THead>
           <TBody>
             {locations.length === 0 ? (
-              <EmptyRow colSpan={4}>
+              <EmptyRow colSpan={6}>
                 No locations yet. Add the first one.
               </EmptyRow>
             ) : (
@@ -86,6 +99,20 @@ export default async function LocationsPage() {
                     </Td>
                     <Td>
                       <LocationStateBadge state={location.state} />
+                    </Td>
+                    <Td>
+                      {location.pagesOn.length === 0 ? (
+                        <span className="text-neutral-500">None</span>
+                      ) : (
+                        location.pagesOn
+                          .map((page) => LOCATION_PAGE_LABELS[page])
+                          .join(", ")
+                      )}
+                    </Td>
+                    <Td className="tabular-nums">
+                      {location.topChoiceOrder ?? (
+                        <span className="text-neutral-500">—</span>
+                      )}
                     </Td>
                     <Td className="text-neutral-600 tabular-nums">
                       {location.changedAt

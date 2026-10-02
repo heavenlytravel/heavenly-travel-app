@@ -1,29 +1,26 @@
 import "server-only";
 import {
   getAccess,
+  getAdminAccess,
   isWallActive,
-  may,
   permissionsOf,
   type AdminActor,
+  type AdminUser,
   type Permission,
-  type SessionUser,
 } from "@repo/db/server";
 import { redirect } from "next/navigation";
 import { RESTRICTED_PATH } from "./routes";
 
-export type AdminUser = SessionUser & {
-  adminProfile: NonNullable<SessionUser["adminProfile"]>;
-};
+export type { AdminUser };
+
+/**
+ * How the console answers `getAdminAccess` of @repo/db, which holds the
+ * check itself and shares it with the customer site's staff preview.
+ */
 
 /** The admin as the activity log records them. */
 export function actorOf(admin: AdminUser): AdminActor {
   return { kind: "admin", userId: admin.id };
-}
-
-async function signedInAdmin(): Promise<AdminUser | null> {
-  const access = await getAccess("admin");
-  if (access.status !== "ok" || !access.user.adminProfile) return null;
-  return access.user as AdminUser;
 }
 
 /**
@@ -33,11 +30,8 @@ async function signedInAdmin(): Promise<AdminUser | null> {
 export async function getAdmin(
   permission: Permission,
 ): Promise<AdminUser | null> {
-  const admin = await signedInAdmin();
-  if (!admin) return null;
-  return may(admin.adminProfile, permission, await isWallActive())
-    ? admin
-    : null;
+  const access = await getAdminAccess(permission);
+  return access.status === "ok" ? access.admin : null;
 }
 
 /**
@@ -47,16 +41,11 @@ export async function getAdmin(
  * /restricted.
  */
 export async function requireAdmin(permission: Permission): Promise<AdminUser> {
-  const access = await getAccess("admin");
+  const access = await getAdminAccess(permission);
   if (access.status === "signed-out") redirect("/sign-in");
-  if (access.status !== "ok" || !access.user.adminProfile) {
-    redirect("/no-access");
-  }
-  const admin = access.user as AdminUser;
-  if (!may(admin.adminProfile, permission, await isWallActive())) {
-    redirect(RESTRICTED_PATH);
-  }
-  return admin;
+  if (access.status === "forbidden") redirect("/no-access");
+  if (access.status === "restricted") redirect(RESTRICTED_PATH);
+  return access.admin;
 }
 
 /**
@@ -64,7 +53,7 @@ export async function requireAdmin(permission: Permission): Promise<AdminUser> {
  * buttons to show. Empty when nobody is signed in as an admin.
  */
 export async function getPermissions(): Promise<Permission[]> {
-  const admin = await signedInAdmin();
-  if (!admin) return [];
-  return permissionsOf(admin.adminProfile, await isWallActive());
+  const access = await getAccess("admin");
+  if (access.status !== "ok" || !access.user.adminProfile) return [];
+  return permissionsOf(access.user.adminProfile, await isWallActive());
 }

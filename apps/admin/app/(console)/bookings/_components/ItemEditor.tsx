@@ -10,6 +10,7 @@ import {
   PRICE_OVERRIDE_FIELDS,
   PRICE_OVERRIDE_REASON_MAX_LENGTH,
   ringgitInputValue,
+  seatsLabel,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   TRIP_MAX_CHILD_SEATS,
@@ -367,9 +368,7 @@ export function ItemEditor({
                           {c.description}
                         </span>
                         <span className="text-xs text-neutral-500">
-                          {c.minPassengers === 1
-                            ? `Up to ${c.maxPassengers} passengers`
-                            : `${c.minPassengers} to ${c.maxPassengers} passengers`}
+                          {seatsLabel(c)}
                           {" · "}
                           {c.luggage}
                           {c.unavailable

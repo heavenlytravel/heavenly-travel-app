@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { priceTrip, type TripRates } from "./pricing";
+import { priceTrip, startingPriceSen, type TripRates } from "./pricing";
 
 const rates: TripRates = {
   baseFareSen: 3_000,
@@ -92,6 +92,19 @@ describe("priceTrip", () => {
         rates,
         multiplier: 0,
       }),
+    );
+  });
+});
+
+describe("startingPriceSen", () => {
+  it("is the minimum one-way fare when the shortest hire costs more", () => {
+    assert.equal(startingPriceSen({ ...rates, minHourlyHours: 4 }), 6_000);
+  });
+
+  it("is the shortest hourly hire when that costs less", () => {
+    assert.equal(
+      startingPriceSen({ ...rates, minimumFareSen: 30_000, minHourlyHours: 4 }),
+      24_000,
     );
   });
 });

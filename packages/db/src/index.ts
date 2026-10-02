@@ -23,6 +23,8 @@ export * from "./geo";
 export * from "./vehicle-class-input";
 export * from "./location-input";
 export * from "./location-page-input";
+export * from "./location-view";
+export * from "./cache-tags";
 export * from "./trip-input";
 export * from "./booking-input";
 export * from "./booking-contact";

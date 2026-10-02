@@ -1,6 +1,11 @@
 import "server-only";
 import { CONTACT } from "@repo/db";
-import type { BookingChange, BookingWithItems } from "@repo/db/server";
+import {
+  ADMIN_URL,
+  SITE_URL,
+  type BookingChange,
+  type BookingWithItems,
+} from "@repo/db/server";
 import {
   bookingEmails,
   type BookingEmailEvent,
@@ -42,14 +47,10 @@ function pick(): EmailSender {
   return logSender;
 }
 
-function origin(value: string | undefined, fallback: string) {
-  return (value || fallback).replace(/\/+$/, "");
-}
-
 const sender = pick();
 const settings: EmailSettings = {
-  siteUrl: origin(process.env.SITE_URL, "https://new.heavenlytravel.my"),
-  adminUrl: origin(process.env.ADMIN_URL, "https://manage.heavenlytravel.my"),
+  siteUrl: SITE_URL,
+  adminUrl: ADMIN_URL,
   opsTo: process.env.EMAIL_OPS_TO || CONTACT.bookingEmail,
   subjectPrefix: isProduction ? "" : "[Development] ",
 };

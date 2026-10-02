@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   checkVehicleClassFields,
   parseVehicleClassFields,
+  seatsLabel,
 } from "./vehicle-class-input";
 
 const FORM: Record<string, string> = {
@@ -108,5 +109,18 @@ describe("checkVehicleClassFields", () => {
       ok: true,
     });
     assert.equal(checkVehicleClassFields({ maxPassengers: 0 }).ok, false);
+  });
+});
+
+describe("seatsLabel", () => {
+  it("names the most a class seats, and the least when it is more than one", () => {
+    assert.equal(
+      seatsLabel({ minPassengers: 1, maxPassengers: 6 }),
+      "Up to 6 passengers",
+    );
+    assert.equal(
+      seatsLabel({ minPassengers: 15, maxPassengers: 44 }),
+      "15 to 44 passengers",
+    );
   });
 });

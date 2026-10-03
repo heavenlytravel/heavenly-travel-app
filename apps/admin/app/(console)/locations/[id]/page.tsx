@@ -3,6 +3,7 @@ import {
   LOCATION_MOVE_LABELS,
   LOCATION_PAGE_LABELS,
   LOCATION_STATE_MOVE,
+  hasBeenLive,
   isPlace,
   isSlugLocked,
   locationStateOf,
@@ -33,6 +34,7 @@ import {
 } from "../../../_lib/routes";
 import { PreviewLink } from "../_components/PreviewLink";
 import { districtOptions } from "../_lib/district-options";
+import { DeleteLocation } from "./DeleteLocation";
 import { LocationDetailsForm } from "./LocationDetailsForm";
 import { SavedAddresses, type SavedAddress } from "./SavedAddresses";
 import { StateMove } from "./StateMove";
@@ -56,7 +58,9 @@ function stateNote(state: LocationState, slug: string) {
  * header says what to do first. Below: its pages, each with its status,
  * its details with the districts it lies in, its saved addresses and its
  * history. A page is published and unpublished in its editor. The home
- * page's top choices are on the Home page screen.
+ * page's top choices are on the Home page screen. At the foot, the location
+ * can be deleted: on a plain yes while it has never been live, and by typing
+ * its slug once it has.
  */
 export default async function LocationPage({
   params,
@@ -183,6 +187,15 @@ export default async function LocationPage({
               </span>
             </CardTitle>
             <SavedAddresses locationId={location.id} addresses={addresses} />
+          </Card>
+          <Card>
+            <CardTitle>Delete</CardTitle>
+            <DeleteLocation
+              locationId={location.id}
+              name={location.name}
+              slug={location.slug}
+              hasBeenLive={hasBeenLive(location)}
+            />
           </Card>
         </div>
 

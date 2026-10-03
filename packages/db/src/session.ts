@@ -3,7 +3,9 @@ import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { may, type Permission } from "./permissions";
 import type { Area } from "./roles";
+import { isWallActive } from "./settings";
 import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
 
 const withProfiles = {
@@ -69,6 +71,38 @@ export async function getAccess(area: Area): Promise<Access> {
     case "partner":
       return gateProfile(user, isAdmin, user.partnerProfile);
   }
+}
+
+/** A signed-in user who holds an admin profile. */
+export type AdminUser = SessionUser & {
+  adminProfile: NonNullable<SessionUser["adminProfile"]>;
+};
+
+export type AdminAccess =
+  | { status: "signed-out" }
+  /** Signed in with no admin profile. */
+  | { status: "forbidden" }
+  /** An admin whose teams do not reach the permission. */
+  | { status: "restricted"; admin: AdminUser }
+  | { status: "ok"; admin: AdminUser };
+
+/**
+ * Whether the visitor is a signed-in admin who holds the permission. The
+ * console's screens and the customer site's staff preview both ask here,
+ * and each decides what the other statuses see.
+ */
+export async function getAdminAccess(
+  permission: Permission,
+): Promise<AdminAccess> {
+  const access = await getAccess("admin");
+  if (access.status === "signed-out") return { status: "signed-out" };
+  if (access.status !== "ok" || !access.user.adminProfile) {
+    return { status: "forbidden" };
+  }
+  const admin = access.user as AdminUser;
+  return may(admin.adminProfile, permission, await isWallActive())
+    ? { status: "ok", admin }
+    : { status: "restricted", admin };
 }
 
 function gateProfile(

@@ -3,20 +3,20 @@
  * Route: /
  * One page: a full-screen pale photo hero with the booking card for all six
  * services resting on its floor, why to book with us, the locations we cover
- * and a closing call. Choosing a location fills it into the booking card. Its
+ * and a closing call. The location cards are Marketing's top choices and open
+ * their pages; the airport card fills the pick-up into the booking card. Its
  * pieces live in ./_home.
  */
 
 import type { Metadata } from "next";
 import styles from "./_home/home.module.css";
 import { Photo } from "./_components/Brand";
-import {
-  DestinationCards,
-  DestinationProvider,
-} from "./_home/DestinationPicker";
+import { SearchProvider } from "./_components/search/SearchProvider";
+import { DestinationCards } from "./_home/DestinationCards";
 import { Booking, Closing, SiteFooter, Trust, eyebrow } from "./_home/Sections";
 import { SiteHeader } from "./_home/SiteHeader";
 import { fontVars } from "./_home/fonts";
+import { topChoiceCards } from "./_lib/locations";
 
 export const metadata: Metadata = {
   title: "Heavenly Travel — Travel made simple",
@@ -24,7 +24,8 @@ export const metadata: Metadata = {
     "Book car rental, chauffeured rides, coach rental, attractions, hotels and custom travel packages across Malaysia with Heavenly Travel.",
 };
 
-export default function Page() {
+export default async function Page() {
+  const choices = await topChoiceCards();
   return (
     <div
       id="top"
@@ -32,7 +33,7 @@ export default function Page() {
     >
       <SiteHeader />
 
-      <DestinationProvider>
+      <SearchProvider>
         <main>
           <section
             aria-labelledby="hero-title"
@@ -100,14 +101,14 @@ export default function Page() {
               Choose your destination
             </h2>
             <p className="mt-[13px] mb-[34px] text-[1.06rem] text-[#67726f]">
-              Start with where you are going. We’ll fill it into your booking.
+              Start with where you are going.
             </p>
-            <DestinationCards />
+            <DestinationCards choices={choices} />
           </section>
 
           <Closing />
         </main>
-      </DestinationProvider>
+      </SearchProvider>
 
       <SiteFooter />
     </div>

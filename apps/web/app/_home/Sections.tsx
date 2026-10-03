@@ -1,5 +1,6 @@
 import { CONTACT } from "@repo/db";
-import { BookingSearch } from "./DestinationPicker";
+import { SEARCH_CARD_ID } from "../_components/search/SearchProvider";
+import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 
 /** Sections of the home page that need no state of their own. */
 
@@ -58,12 +59,12 @@ export function Booking() {
   return (
     // The hero is a full-height column; mt-auto rests the card on its floor.
     <div
-      id="booking"
+      id={SEARCH_CARD_ID}
       role="search"
       aria-label="Travel booking search"
       className="relative z-[3] mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1240px] scroll-mt-24 sm:mb-14 sm:w-[88%]"
     >
-      <BookingSearch />
+      <ServiceTabsSearch />
     </div>
   );
 }

@@ -73,6 +73,22 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   };
 }
 
+/**
+ * The least a class can cost, before any state's multiplier: its minimum
+ * one-way fare, or its shortest hourly hire when that is less. For "from
+ * RM 80" where no trip is known yet.
+ */
+export function startingPriceSen(
+  vehicleClass: Pick<TripRates, "minimumFareSen" | "hourlyRateSen"> & {
+    minHourlyHours: number;
+  },
+) {
+  return Math.min(
+    vehicleClass.minimumFareSen,
+    vehicleClass.hourlyRateSen * vehicleClass.minHourlyHours,
+  );
+}
+
 function isTripRates(value: unknown): value is TripRates {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;

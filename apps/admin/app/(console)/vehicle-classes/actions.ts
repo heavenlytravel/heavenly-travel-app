@@ -10,15 +10,18 @@ import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
 import { FORBIDDEN, stateOf, type ActionState } from "../../_lib/action-state";
 import { VEHICLE_CLASSES_PATH } from "../../_lib/routes";
+import { refreshVehicleClassesAfter } from "../../_lib/site";
 
 /**
  * The Vehicle classes screen's actions. Each checks `coverage.manage`
  * again, passes the admin as the actor and lets the writer in @repo/db
- * check the rest. A class change moves the Dashboard's count too.
+ * check the rest. A class change moves the Dashboard's count too, and the
+ * classes the customer site's product pages list.
  */
 function revalidateClasses() {
   revalidatePath(VEHICLE_CLASSES_PATH);
   revalidatePath("/");
+  refreshVehicleClassesAfter();
 }
 
 export async function createVehicleClassAction(

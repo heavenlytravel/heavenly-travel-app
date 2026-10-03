@@ -19,6 +19,7 @@ import {
   TOP_CHOICE_CAP,
   checkAddressNames,
   checkLocationFields,
+  checkLocationSlug,
   checkPageSwitch,
   isLocationState,
   isSlugLocked,
@@ -41,6 +42,13 @@ import {
   type LocationPageKey,
   type PageContent,
 } from "./location-page-input";
+import {
+  previewLocationViewOf,
+  publicLocationViewOf,
+  topChoiceCardOf,
+  type LocationView,
+  type TopChoiceCard,
+} from "./location-view";
 import { isPlace, type Place } from "./place";
 
 export type { Location, LocationAddress };
@@ -52,9 +60,10 @@ export type { Location, LocationAddress };
  * as information: nothing ties a location to coverage. A page has a working
  * draft and a published copy; the location's state and each page's On
  * switch decide what the public sees. The readers serve the Locations
- * screens; the writers are the screens', each taking the actor and logging
- * inside its transaction, except a draft save, which is not logged. Saved
- * addresses arrive resolved: the caller asks Google, this module never does.
+ * screens and, as views (./location-view), the customer site; the writers
+ * are the screens', each taking the actor and logging inside its
+ * transaction, except a draft save, which is not logged. Saved addresses
+ * arrive resolved: the caller asks Google, this module never does.
  * See docs/261001-locations-and-pages.md.
  */
 
@@ -232,6 +241,68 @@ export function listTopChoices(): Promise<TopChoice[]> {
     ...topChoices,
     select: { id: true, name: true, state: true },
   });
+}
+
+const forSite = {
+  include: {
+    addresses: { orderBy: { position: "asc" } },
+    pages: pagesInLocale,
+  },
+} satisfies Prisma.LocationDefaultArgs;
+
+/**
+ * The location at the slug as the public sees it: null for a slug no
+ * location has, and for a location that is not public. A slug no location
+ * could have is refused without asking the database, since this reads
+ * whatever follows the customer site's first slash.
+ */
+export async function getPublicLocation(
+  slug: string,
+): Promise<LocationView | null> {
+  if (!checkLocationSlug(slug).ok) return null;
+  const location = await db.location.findUnique({
+    where: { slug },
+    ...forSite,
+  });
+  return location ? publicLocationViewOf(location) : null;
+}
+
+/** The location at the slug as staff preview it: the drafts, in any state. */
+export async function getLocationPreview(
+  slug: string,
+): Promise<LocationView | null> {
+  if (!checkLocationSlug(slug).ok) return null;
+  const location = await db.location.findUnique({
+    where: { slug },
+    ...forSite,
+  });
+  return location ? previewLocationViewOf(location) : null;
+}
+
+/**
+ * The home page's cards, in their order: the top choices that are live. A
+ * paused one is left off and keeps its place.
+ */
+export async function listTopChoiceCards(): Promise<TopChoiceCard[]> {
+  const locations = await db.location.findMany({
+    ...topChoices,
+    ...forSite,
+    where: { ...topChoices.where, state: "live" satisfies LocationState },
+    take: TOP_CHOICE_CAP,
+  });
+  return locations.flatMap((location) => {
+    const view = publicLocationViewOf(location);
+    return view ? [topChoiceCardOf(view)] : [];
+  });
+}
+
+/** The slug the location's pages are at now; the customer site caches them by it. */
+export async function getLocationSlug(id: string): Promise<string | null> {
+  const location = await db.location.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
+  return location?.slug ?? null;
 }
 
 /** One page of a location, as its editor opens it. */

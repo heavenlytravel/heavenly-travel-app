@@ -30,6 +30,11 @@ export const LOCATION_STATE_LABELS: Record<LocationState, string> = {
   paused: "Paused",
 };
 
+/** Whether the public sees the location's pages: it is live, or paused. */
+export function isPublicState(state: LocationState) {
+  return state === "live" || state === "paused";
+}
+
 /** The state every new location starts in. */
 export const NEW_LOCATION_STATE: LocationState = "draft";
 

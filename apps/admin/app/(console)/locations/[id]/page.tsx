@@ -4,6 +4,7 @@ import {
   LOCATION_STATE_MOVES,
   isLocationState,
   isPlace,
+  isPublicState,
   isSlugLocked,
   stateMoveBlockers,
   type LocationState,
@@ -31,6 +32,7 @@ import {
   locationPageHref,
   locationPublishHref,
 } from "../../../_lib/routes";
+import { PreviewLink } from "../_components/PreviewLink";
 import { districtOptions } from "../_lib/district-options";
 import { LocationDetailsForm } from "./LocationDetailsForm";
 import { PageSwitch } from "./PageSwitch";
@@ -52,6 +54,7 @@ const STATE_NOTES: Record<LocationState, string> = {
  * saved addresses, its pages with their switches, its state and the moves
  * it allows, its place among the home page's top choices, its history, and
  * whether pickups are served in each of its districts, as information.
+ * "Preview" opens its drafts on the customer site.
  */
 export default async function LocationPage({
   params,
@@ -79,7 +82,7 @@ export default async function LocationPage({
   });
 
   const state = isLocationState(location.state) ? location.state : "draft";
-  const isPublic = state === "live" || state === "paused";
+  const isPublic = isPublicState(state);
   const moves = LOCATION_STATE_MOVES[state].map((to) => ({
     to,
     blockers: stateMoveBlockers(state, to, location.pages),
@@ -102,6 +105,7 @@ export default async function LocationPage({
       <PageHeader
         title={location.name}
         description={`Its address on the customer site is /${location.slug}.`}
+        action={<PreviewLink slug={location.slug} />}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">

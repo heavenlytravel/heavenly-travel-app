@@ -2,8 +2,9 @@
 
 Status: decided on 2026-10-01, revised on 2026-10-02 after review, and again the same day
 while PR 2 was built: a location's districts are ticked by Marketing, not detected from a
-Google place, and the Coverage screen does not list locations. PR 1, PR 2 and PR 3 are
-built; what PR 3 settled is marked "PR 3" below. Four PRs, listed under "Build order". The
+Google place, and the Coverage screen does not list locations. All four PRs are built;
+what PR 3 and PR 4 settled while they were built is marked "PR 3" and "PR 4" below. The
+PRs are listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -97,6 +98,8 @@ The state is on the location. No Prisma enum: a string checked against a const a
 - The On switch says whether the page exists. It does not say whether the product can be
   booked there: coverage is one switch per district for every product, and per-product
   coverage is future work.
+- The redirect from a product page that is off is temporary (307), since the page can be
+  switched on again (PR 4).
 
 ### The content of a page
 
@@ -122,6 +125,12 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   search card, the links to the location's products on the landing page, and on a
   product page that product's active vehicle classes with seats, luggage and starting
   price from `VehicleClass`.
+- A class's starting price is the least it can cost before any state's multiplier: its
+  minimum one-way fare, or its shortest hourly hire when that is less (PR 4).
+- The order on a page (PR 4). Landing: the hero with the search card, the links to the
+  products, the intro, the highlights, the FAQs. Product: the hero with the search card,
+  the vehicle classes, the intro, the FAQs, then links to the landing page and the
+  location's other products. A part with nothing in it is left out.
 - The image shared on social media is the hero image.
 - Every page must be complete before it can be published. The limits live in one module
   and are unit-tested.
@@ -164,6 +173,16 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - "Preview" on the location's page in the admin is a plain link to it. There is no
   signed link and no Draft Mode.
 - The preview page is never cached.
+- Built in PR 4:
+  - The bar also names the location's state and whether the page shown is switched on,
+    and links the location's three pages, on or off. The links on the page itself follow
+    the public rule (the products that are on) and stay inside the preview.
+  - The page editor has its own link, "Preview the saved draft", to the preview of the
+    page being edited. The preview shows what was last saved, not what is in the form.
+  - The preview has no layout file. The access check is in each of its two pages, as on
+    every admin screen, and sign-in comes back to the page that was asked for.
+  - The address is checked before the session is read: the proxy attaches no session to
+    a path that looks like a file, and reading one there would be an error, not a 404.
 
 ### Saved addresses
 
@@ -185,6 +204,9 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 
 - The card is the home page's (`ServiceTabsSearch`). It is part of the location's shared
   frame, the `[location]` layout, so every page under a location shows it.
+- What the layout holds is the card's state (`SearchProvider`); each page places the card
+  on the floor of its hero, as the home page does. So what was typed stays while the
+  customer moves between a location's pages (PR 4).
 - No area goes into a booking. The customer's place search offers exact spots only, and
   a location is an area with no address of its own, so the location itself is never sent
   as the drop-off.
@@ -196,7 +218,8 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - "Take me here" on a highlight fills the drop-off with that highlight's saved address,
   ready to send, and brings the card into view, as the home page's KLIA card does. It
   sets the trip to one-way, since an hourly trip has no drop-off.
-- All the tabs stay. On a product page the card opens on that product's tab.
+- All the tabs stay. On a product page the card opens on that product's tab. Moving to
+  another product's page moves the tab; moving to the landing page leaves it (PR 4).
 - While the location is `paused`, a short notice takes the card's place and "Take me
   here" is not shown.
 
@@ -260,6 +283,8 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   location last, "Up" and "Down" move it one place, "Remove" takes it off. The places are
   kept as 1, 2, 3 with no gaps, and every location whose place moves is logged.
 - The KLIA card stays as it is, hard-coded, filling the pickup into the search card.
+- The row is centred, so fewer cards make a shorter row and not a gap. A location card
+  says "Explore this location" where the KLIA card says "Book for this location" (PR 4).
 - A top choice that is `paused` is left off the home page. It keeps its place and comes
   back when the location is live again.
 - With fewer than three top choices the row is shorter. The cap is one constant.
@@ -383,16 +408,25 @@ Explanations sit behind the info tooltip, as on the other screens.
 ## The customer site
 
 ```
-app/(site)/[location]/layout.tsx           the frame and the search card
-app/(site)/[location]/page.tsx             landing
-app/(site)/[location]/[product]/page.tsx   one file for every product
-app/(site)/preview/[location]/...          the same three files: the drafts, staff only
-app/api/revalidate/route.ts                refreshes cached pages
+app/(location)/[location]/layout.tsx           the frame and the search card's state
+app/(location)/[location]/page.tsx             landing
+app/(location)/[location]/[product]/page.tsx   one file for every product
+app/(location)/preview/[location]/...          the two pages again: the drafts, staff only
+app/_location/                                 the components and readers they share
+app/api/revalidate/route.ts                    refreshes cached pages
 ```
 
 - An unknown slug, a `draft` or `preview` location and an unknown product are a 404.
 - The public files and the preview files are thin: both render one set of page
   components, and differ only in the reader they call and in the preview's access check.
+- The pages are in a route group of their own, `(location)`, not in `(site)` (PR 4). The
+  `(site)` layout reads the session for its header and holds every page in one narrow
+  column. A location's address is whatever follows the first slash, so its routes also
+  receive every stray request (`/favicon.ico`, `/wp-login.php`), some of which the proxy
+  attaches no session to. So these pages do not read the session on the server: the
+  header asks the browser whether someone is signed in, and a stray request gets a 404.
+- A text that could not be a location's slug is turned away before the database or the
+  cache is asked (PR 4).
 - The pages are in the family of the home page (`260923-home-design.md`): its fonts,
   colours, header, closing call and footer. The page design is reviewed on staging in
   PR 4.
@@ -408,6 +442,19 @@ site's cache by itself.
 - After a publish, a switch, a state change, a saved address change, a top-choice change
   or a vehicle class change, the admin's server action calls the customer site's `/api/revalidate` with
   the tags and a shared secret.
+- As built in PR 4:
+  - The tags are `location:<slug>`, `top-choices` and `vehicle-classes`, named in
+    `cache-tags.ts` of `@repo/db` for both apps.
+  - A change to a location's name, tagline or districts refreshes too: the pages and the
+    home page card show the name and the tagline. Every location change also refreshes
+    the top choices, since a card shows the name, the tagline and the hero image.
+  - The call is made after the action has answered, so a slow customer site never slows
+    the admin. It carries the secret as a bearer token.
+  - A refreshed tag expires at once: the next visitor reads what was just saved.
+  - What is cached is the data, not the page. A location that is not public is cached as
+    "nothing here" like any other answer, and going live refreshes that too.
+  - Locally the admin's `SITE_URL` has to point at the customer site's dev server for
+    the refresh and the Preview links to reach it.
 - If that call fails the change is still saved, and a one-hour refresh behind the tags
   catches the page up.
 - One secret, `REVALIDATE_SECRET`, set to the same value in both apps, authorises this
@@ -416,25 +463,29 @@ site's cache by itself.
 
 ## Module changes
 
-| Module                                | Change                                                                                                                                                                                                                                                        |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roles.ts`                            | `ADMIN_TEAMS` gains `MARKETING` and its label                                                                                                                                                                                                                 |
-| `permissions.ts`                      | `locations.manage`, for `MARKETING`                                                                                                                                                                                                                           |
-| `location-input.ts`, new              | Browser-safe: the states and their moves, the reserved slugs, the rule of the On switch, the parsers. Unit-tested                                                                                                                                             |
-| `location-page-input.ts`, new         | Browser-safe: the page keys, the content shape, the limits, `missingFields`, the image rules. Unit-tested                                                                                                                                                     |
-| `locations.ts`, new                   | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site                                 |
-| `activity-actions.ts`                 | The `location` entity type, the six actions and their sentences                                                                                                                                                                                               |
-| `coverage.ts`                         | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                            |
-| `apps/admin/.../locations`, new       | The four screens, their server actions and the upload route                                                                                                                                                                                                   |
-| `apps/admin/app/_lib`                 | The call to the customer site's refresh route, and the address of the preview page. The "signed-in admin who holds this permission" check of `access.ts` moves to `@repo/db/server`, shared with the preview page                                             |
-| `apps/admin/.../vehicle-classes`      | Calls the refresh after a change                                                                                                                                                                                                                              |
-| `apps/web/app/(site)/[location]`, new | The layout and the two pages, with their metadata and structured data                                                                                                                                                                                         |
-| `apps/web/app/(site)/preview`, new    | The same layout and pages over the drafts, behind the access check                                                                                                                                                                                            |
-| `apps/web/app/_components/search`     | `ServiceTabsSearch` takes the saved addresses its drop-off offers before anything is typed, and opens on the tab of the product page it is on. The provider that lets a card fill it moves here from `_home` and carries a resolved place, for "Take me here" |
-| `apps/web/app/_home`                  | The destination cards read the top choices; `destinations.ts` keeps only KLIA                                                                                                                                                                                 |
-| `apps/web/next.config.ts`             | `X-Robots-Tag: noindex` on every response                                                                                                                                                                                                                     |
-| `next.config.ts`, both apps           | The UploadThing image host: the admin's in PR 3, the customer site's in PR 4                                                                                                                                                                                  |
-| `turbo.json`, both `.env.example`     | `UPLOADTHING_TOKEN`, for the admin app only, in PR 3; `REVALIDATE_SECRET` in PR 4                                                                                                                                                                             |
+| Module                                 | Change                                                                                                                                                                                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roles.ts`                             | `ADMIN_TEAMS` gains `MARKETING` and its label                                                                                                                                                                                                                 |
+| `permissions.ts`                       | `locations.manage`, for `MARKETING`                                                                                                                                                                                                                           |
+| `location-input.ts`, new               | Browser-safe: the states and their moves, the reserved slugs, the rule of the On switch, the parsers. Unit-tested                                                                                                                                             |
+| `location-page-input.ts`, new          | Browser-safe: the page keys, the content shape, the limits, `missingFields`, the image rules. Unit-tested                                                                                                                                                     |
+| `locations.ts`, new                    | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site                                 |
+| `location-view.ts`, new (PR 4)         | Browser-safe: a location as the customer site shows it, built from its rows as the public view or as the preview, the top choice card, and the paths of the pages. Unit-tested                                                                                |
+| `cache-tags.ts`, new (PR 4)            | Browser-safe: the tags the customer site caches under and the admin names, and the refresh route's path. Unit-tested                                                                                                                                          |
+| `session.ts`, `origins.ts` (PR 4)      | `getAdminAccess(permission)`, shared by the console and the preview. `SITE_URL` and `ADMIN_URL` read in one place, for the emails, the canonical address and the admin's calls                                                                                |
+| `pricing.ts`, `vehicle-class-input.ts` | `startingPriceSen` and `seatsLabel`, for the vehicle classes on a product page; the booking forms use the same seats wording (PR 4)                                                                                                                           |
+| `activity-actions.ts`                  | The `location` entity type, the six actions and their sentences                                                                                                                                                                                               |
+| `coverage.ts`                          | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                            |
+| `apps/admin/.../locations`, new        | The four screens, their server actions and the upload route                                                                                                                                                                                                   |
+| `apps/admin/app/_lib`                  | The call to the customer site's refresh route, and the address of the preview page. The "signed-in admin who holds this permission" check of `access.ts` moves to `@repo/db/server`, shared with the preview page                                             |
+| `apps/admin/.../vehicle-classes`       | Calls the refresh after a change                                                                                                                                                                                                                              |
+| `apps/web/app/(location)`, new         | The layout and the two pages, with their metadata and structured data, and under `preview` the two pages again over the drafts, behind the access check. Their shared components and readers are in `app/_location` and `app/_lib/locations.ts`               |
+| `packages/ui` `place-input.tsx`        | `PlaceInput` takes `presets`: the places an empty field offers when it is opened, under a heading (PR 4)                                                                                                                                                      |
+| `apps/web/app/_components/search`      | `ServiceTabsSearch` takes the saved addresses its drop-off offers before anything is typed, and opens on the tab of the product page it is on. The provider that lets a card fill it moves here from `_home` and carries a resolved place, for "Take me here" |
+| `apps/web/app/_home`                   | The destination cards read the top choices; `destinations.ts` keeps only KLIA                                                                                                                                                                                 |
+| `apps/web/next.config.ts`              | `X-Robots-Tag: noindex` on every response                                                                                                                                                                                                                     |
+| `next.config.ts`, both apps            | The UploadThing image host: the admin's in PR 3, the customer site's in PR 4                                                                                                                                                                                  |
+| `turbo.json`, both `.env.example`      | `UPLOADTHING_TOKEN`, for the admin app only, in PR 3; `REVALIDATE_SECRET` in PR 4                                                                                                                                                                             |
 
 ## Build order
 

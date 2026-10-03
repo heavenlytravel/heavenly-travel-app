@@ -34,16 +34,24 @@ import {
   locationHref,
   locationPageHref,
 } from "../../_lib/routes";
+import { refreshLocationAfter, refreshTopChoicesAfter } from "../../_lib/site";
 
 /**
  * The Locations screens' actions. Each checks `locations.manage` again,
  * passes the admin as the actor and lets the writer in @repo/db check the
  * rest. Arguments passed directly, not through a form, are checked for their
- * type here: an action is reachable by direct POST.
+ * type here: an action is reachable by direct POST. A change the public can
+ * see also refreshes the customer site.
  */
 function revalidateLocation(id: string) {
   revalidatePath(locationHref(id));
   revalidatePath(LOCATIONS_PATH);
+}
+
+/** After a change the public can see: this console's screens and the customer site's pages. */
+function revalidateEverywhere(id: string) {
+  revalidateLocation(id);
+  refreshLocationAfter(id);
 }
 
 const MISSING_LOCATION: ActionState = { error: "Missing location." };
@@ -83,7 +91,7 @@ export async function updateLocationAction(
   if (!parsed.ok) return { error: parsed.error };
 
   const result = await updateLocation(actorOf(admin), id, parsed.value);
-  if (result.ok) revalidateLocation(id);
+  if (result.ok) revalidateEverywhere(id);
   return stateOf(result);
 }
 
@@ -129,7 +137,7 @@ export async function setLocationAddressesAction(
     expected,
     entries,
   );
-  if (result.ok) revalidateLocation(locationId);
+  if (result.ok) revalidateEverywhere(locationId);
   return stateOf(result);
 }
 
@@ -169,6 +177,8 @@ async function writePage(
   if (result.ok) {
     revalidateLocation(locationId);
     revalidatePath(locationPageHref(locationId, page));
+    // A draft changes nothing in public.
+    if (publish) refreshLocationAfter(locationId);
   }
   return result;
 }
@@ -211,7 +221,7 @@ export async function setPageOnAction(
     page,
     isOn,
   );
-  if (result.ok) revalidateLocation(locationId);
+  if (result.ok) revalidateEverywhere(locationId);
   return stateOf(result);
 }
 
@@ -225,7 +235,7 @@ export async function moveLocationStateAction(
   if (!isLocationState(to)) return { error: "Choose a state." };
 
   const result = await moveLocationState(actorOf(admin), locationId, to);
-  if (result.ok) revalidateLocation(locationId);
+  if (result.ok) revalidateEverywhere(locationId);
   return stateOf(result);
 }
 
@@ -241,6 +251,9 @@ export async function changeTopChoiceAction(
 
   const result = await changeTopChoice(actorOf(admin), locationId, change);
   // The places of the other top choices move with it.
-  if (result.ok) revalidatePath(LOCATIONS_PATH, "layout");
+  if (result.ok) {
+    revalidatePath(LOCATIONS_PATH, "layout");
+    refreshTopChoicesAfter();
+  }
   return stateOf(result);
 }

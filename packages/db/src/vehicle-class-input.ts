@@ -51,6 +51,17 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   isActive: "Active",
 };
 
+/** How many a class seats, as a customer reads it: "Up to 6 passengers". */
+export function seatsLabel(vehicleClass: {
+  minPassengers: number;
+  maxPassengers: number;
+}) {
+  const { minPassengers, maxPassengers } = vehicleClass;
+  return minPassengers === 1
+    ? `Up to ${maxPassengers} passengers`
+    : `${minPassengers} to ${maxPassengers} passengers`;
+}
+
 /** The money fields, entered in ringgit under these form names. */
 export const VEHICLE_CLASS_MONEY_FIELDS = {
   baseFareSen: "baseFare",

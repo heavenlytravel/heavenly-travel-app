@@ -9,6 +9,7 @@ import {
   hiddenSearchFields,
   largestGroup,
   offersChildSeats,
+  seatsLabel,
   TRIP_MAX_CHILD_SEATS,
   TRIP_MAX_FLIGHT_NUMBER_LENGTH,
   TRIP_MAX_NOTES_LENGTH,
@@ -134,9 +135,7 @@ export function TripOptionsForm({
                     {c.description}
                   </span>
                   <span className="text-[0.85rem] text-[#67726f]">
-                    {c.minPassengers === 1
-                      ? `Up to ${c.maxPassengers} passengers`
-                      : `${c.minPassengers} to ${c.maxPassengers} passengers`}
+                    {seatsLabel(c)}
                     {" · "}
                     {c.luggage}
                     {c.unavailable

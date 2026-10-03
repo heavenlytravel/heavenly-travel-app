@@ -18,6 +18,8 @@ export type SavedAddress = {
   placeAddress: string;
   /** The landing page's highlights whose "Take me here" goes to it, by name. */
   usedBy: string[];
+  /** It lies outside the location's districts, where no new address may. */
+  isStray: boolean;
 };
 
 /** A row of the form: a saved address, or one picked and not saved yet. */
@@ -53,7 +55,10 @@ function namesOf(highlights: string[]) {
  * The location's saved addresses: the places most customers go to there.
  * Marketing adds exact spots by search, renames them, sets their order and
  * removes them, then saves the whole list at once. Nothing changes for
- * customers until Save. Removing an address a highlight uses asks first.
+ * customers until Save. An address has to be in one of the location's
+ * districts: Save refuses a new one that is not and says where it is, and a
+ * stored one left outside is marked. Removing an address a highlight uses
+ * asks first.
  */
 export function SavedAddresses({
   locationId,
@@ -107,9 +112,13 @@ export function SavedAddresses({
     ]);
   }
 
+  /** The stored address a row stands for; none for a new one. */
+  const storedOf = (row: Row) =>
+    addresses.find((address) => address.id === row.id);
+
   /** The highlights that point at a row's address; none for a new one. */
   function usedBy(row: Row) {
-    return addresses.find((address) => address.id === row.id)?.usedBy ?? [];
+    return storedOf(row)?.usedBy ?? [];
   }
 
   function remove(row: Row) {
@@ -189,6 +198,12 @@ export function SavedAddresses({
                 {usedBy(row).length > 0 ? (
                   <span className="mt-0.5 block text-xs text-neutral-500">
                     “Take me here” on {namesOf(usedBy(row))}
+                  </span>
+                ) : null}
+                {storedOf(row)?.isStray ? (
+                  <span className="mt-0.5 block text-xs text-amber-800">
+                    Outside this location’s districts. Remove it, or tick its
+                    district.
                   </span>
                 ) : null}
               </div>

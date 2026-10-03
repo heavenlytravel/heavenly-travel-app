@@ -47,7 +47,6 @@ export function ItemStatusBadge({ status }: { status: string }) {
 
 const LOCATION_TONES: Record<LocationState, Tone> = {
   draft: "neutral",
-  preview: "blue",
   live: "green",
   paused: "amber",
 };
@@ -66,7 +65,10 @@ const PAGE_TONES: Record<PageStatus, Tone> = {
   changed: "amber",
 };
 
-/** Where a location's page stands between its draft and its published copy. */
+/**
+ * Where a location's page stands: not published, published, or published
+ * with edits waiting in the draft. Published is what the public can see.
+ */
 export function PageStatusBadge({ status }: { status: PageStatus }) {
   return <Badge tone={PAGE_TONES[status]}>{PAGE_STATUS_LABELS[status]}</Badge>;
 }

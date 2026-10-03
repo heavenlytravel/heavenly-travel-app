@@ -51,6 +51,15 @@ export function locationHref(id: string) {
 }
 export const NEW_LOCATION_PATH = `${LOCATIONS_PATH}/new`;
 
+/** The id of the saved addresses card on a location's page, and the link that lands on it. */
+export const SAVED_ADDRESSES_ID = "saved-addresses";
+export function locationAddressesHref(id: string) {
+  return `${locationHref(id)}#${SAVED_ADDRESSES_ID}`;
+}
+
+/** What Marketing sets on the customer site's home page: the top choices. */
+export const HOME_PAGE_PATH = "/home-page";
+
 /** The editor of one page of a location: its landing page or a product's. */
 export function locationPageHref(id: string, page: LocationPageKey) {
   return `${locationHref(id)}/pages/${page}`;

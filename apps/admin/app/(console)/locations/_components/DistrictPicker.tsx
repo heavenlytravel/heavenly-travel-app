@@ -2,6 +2,7 @@
 
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
+import { PICKUP_DOT_TIP, PickupDot } from "./PickupDot";
 
 /** A district as the picker offers it. */
 export type DistrictOption = {
@@ -9,7 +10,7 @@ export type DistrictOption = {
   name: string;
   stateCode: string;
   stateName: string;
-  /** Whether pickups there are served, shown beside the name. */
+  /** Whether pickups there are served, shown as a dot beside the name. */
   isActive: boolean;
 };
 
@@ -19,7 +20,8 @@ const checkboxClassName = "size-4 accent-neutral-900";
  * Where a location lies: Marketing ticks its states first, then the
  * districts of those states. Penang is Barat Daya and Timur Laut. The form
  * receives each ticked district as `districts`. Unticking a state unticks
- * its districts.
+ * its districts. A dot beside each district says whether pickups are
+ * served there; the info tooltip says what the dots mean.
  */
 export function DistrictPicker({
   districts,
@@ -62,7 +64,9 @@ export function DistrictPicker({
         <legend className="mb-1.5 text-sm font-medium text-neutral-800">
           <span className="inline-flex items-center gap-1.5">
             States
-            <InfoTip text="Tick each state the location lies in, then its districts below. This is information for the team: it does not change what the public sees or where a pickup is served." />
+            <InfoTip
+              text={`Tick each state the location lies in, then its districts below. The location's saved addresses have to be in one of them. ${PICKUP_DOT_TIP} Ticking a district does not change what the public sees or where a pickup is served.`}
+            />
           </span>
         </legend>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
@@ -95,7 +99,7 @@ export function DistrictPicker({
                 .map((district) => (
                   <label
                     key={district.code}
-                    className="flex items-start gap-2 text-sm"
+                    className="flex items-center gap-2 text-sm"
                   >
                     <input
                       type="checkbox"
@@ -109,15 +113,14 @@ export function DistrictPicker({
                             : value.filter((code) => code !== district.code),
                         )
                       }
-                      className={`mt-0.5 ${checkboxClassName}`}
+                      className={checkboxClassName}
                     />
                     <span>
                       {district.name}
-                      {district.isActive ? null : (
-                        <span className="block text-xs text-neutral-500">
-                          Pickups off
-                        </span>
-                      )}
+                      <PickupDot
+                        on={district.isActive}
+                        className="ml-2 align-middle"
+                      />
                     </span>
                   </label>
                 ))}

@@ -158,6 +158,44 @@ One page of a live location, where v1, v2 and v3 are versions of its text:
 - The editor's preview link reads "Preview", as on the location's screen. It still opens
   the saved draft.
 
+### Delete
+
+Decided on 2026-10-03, after the flow above merged (#35), and built as its own PR,
+`feat(admin): delete a location`. The first decision was to delete only a location
+that had never been live; on review the same day it became any location, behind a
+stronger gate once the location has been live.
+
+- Any location can be deleted, with its pages and its saved addresses.
+- One that has never been live (`wentLiveAt` is null) goes on a plain question: "Delete
+  Langkawi? Its pages and saved addresses are deleted with it. This cannot be undone."
+  Nothing of it was public. It is how a test or a mistaken draft is cleared.
+- One that has been live has a public address, and the delete turns it into a 404. So
+  the card says what that costs, and the button works only once the admin has typed the
+  location's slug. The server checks the typed slug again.
+- What it costs, as the card says it:
+  - Every link and shared address to the location breaks.
+  - Search engines drop a page that answers 404. Adding the location again at the same
+    address starts its ranking almost from nothing.
+  - A paused location keeps answering with its content, so it stays listed however
+    long it is paused. Pausing is the way to stop selling a place for a while.
+- The slug stays locked once the location has been live; there is no rename. A wrong
+  slug is put right by deleting the location and adding it again, at the cost above. A
+  rename that forwards the old address was considered and set aside: the delete covers
+  the case, which is expected within days of going live, when little is lost.
+- A draft is never listed by a search engine: it is a 404 to the public, and the
+  preview is for staff and marked not to be indexed. The card says so: to try something
+  out, keep the location in draft and use Preview.
+- A top choice leaves the home page with the delete, and the places after it close up.
+- The customer site is refreshed: the location's pages become a 404 and its card leaves
+  the home page.
+- "Delete" is a card at the foot of the location's screen. A deleted location opens the
+  list.
+- The log: one entry, `location.deleted`, holding the name, the slug, the district
+  codes and the state the location had. Its earlier entries stay. The Activity screen
+  names them "Langkawi (deleted)", from that entry, and no longer links them to a page.
+- The images its pages uploaded stay in UploadThing, as replaced images do.
+- Until the site is opened to search engines at cutover, a delete costs links only.
+
 ## As built
 
 Choices made while the PR was built, where the decisions above left room or where
@@ -178,9 +216,9 @@ following them to the letter would have told the admin something untrue:
 
 ## Not in this PR, on record
 
-- Delete for a location that has never been live (`wentLiveAt` null), logged. Proposed
-  on 2026-10-02, not decided. A location that has been live ends in `retired`, with the
-  redirect table at cutover.
+- `retired`, for a location that has been live and must go without losing its
+  ranking: a permanent redirect, with the redirect table at cutover. Renaming a live
+  slug with the old address forwarded waits for the same table.
 - Caching the location pages as static HTML. They read no session, so it is possible,
   and it would help the latency of functions in `iad1` reading Neon in Singapore. The
   data cache and the refresh route stay as they are either way.

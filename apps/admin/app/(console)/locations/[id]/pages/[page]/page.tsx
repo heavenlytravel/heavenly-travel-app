@@ -3,6 +3,7 @@ import {
   LOCATION_PAGE_LABELS,
   isLocationPageKey,
   locationPagePath,
+  locationStateOf,
 } from "@repo/db";
 import { getLocationPage } from "@repo/db/server";
 import { notFound } from "next/navigation";
@@ -15,8 +16,8 @@ import { PageEditor } from "./PageEditor";
 /**
  * Route: /locations/[id]/pages/[page]. The editor of one page of a
  * location, the landing page or a product's: its fields, its images, what
- * it still needs, "Save draft" and "Publish". "Preview" opens the saved
- * draft on the customer site.
+ * it still needs, "Save draft", "Publish" and "Unpublish". "Preview" opens
+ * the saved draft on the customer site.
  */
 export default async function LocationPageEditorPage({
   params,
@@ -27,6 +28,7 @@ export default async function LocationPageEditorPage({
   const details = await getLocationPage(id, page);
   if (!details) notFound();
   const { location } = details;
+  const state = locationStateOf(location.state);
 
   return (
     <>
@@ -41,24 +43,18 @@ export default async function LocationPageEditorPage({
       <PageHeader
         title={`${LOCATION_PAGE_LABELS[page]} page`}
         description={`${location.name}. Its address on the customer site is ${locationPagePath(location.slug, page)}.`}
-        action={
-          <PreviewLink
-            slug={location.slug}
-            page={page}
-            label="Preview the saved draft"
-          />
-        }
+        action={<PreviewLink slug={location.slug} page={page} />}
       />
 
       <div className="mt-6">
         <PageEditor
           locationId={location.id}
+          locationState={state}
           page={page}
           draft={details.draft}
           published={details.published}
           publishedAt={details.publishedAt}
           version={details.version}
-          isOn={details.isOn}
           addresses={location.addresses.map(({ id, name }) => ({ id, name }))}
         />
       </div>

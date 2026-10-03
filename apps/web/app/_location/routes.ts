@@ -36,7 +36,8 @@ export async function publicLocationAt(slug: string): Promise<LocationView> {
 
 /**
  * The public page at the address. An unknown product is a 404; a product
- * whose page is off sends the visitor to the location's landing page.
+ * whose page is not published sends the visitor to the location's landing
+ * page.
  */
 export async function publicPageAt(
   slug: string,

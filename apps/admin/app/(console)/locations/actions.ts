@@ -1,11 +1,9 @@
 "use server";
 
 import {
-  changeTopChoice,
   createLocation,
   isLocationPageKey,
   isLocationState,
-  isTopChoiceChange,
   moveLocationState,
   pageContentOf,
   parseAddressEntries,
@@ -13,8 +11,8 @@ import {
   publishLocationPage,
   saveLocationPageDraft,
   setLocationAddresses,
-  setLocationPageOn,
   textOf,
+  unpublishLocationPage,
   updateLocation,
   type AddressWrite,
   type PageSaved,
@@ -34,14 +32,15 @@ import {
   locationHref,
   locationPageHref,
 } from "../../_lib/routes";
-import { refreshLocationAfter, refreshTopChoicesAfter } from "../../_lib/site";
+import { refreshLocationAfter } from "../../_lib/site";
 
 /**
  * The Locations screens' actions. Each checks `locations.manage` again,
  * passes the admin as the actor and lets the writer in @repo/db check the
  * rest. Arguments passed directly, not through a form, are checked for their
  * type here: an action is reachable by direct POST. A change the public can
- * see also refreshes the customer site.
+ * see also refreshes the customer site. The top choices are the Home page
+ * screen's, in ../home-page/actions.
  */
 function revalidateLocation(id: string) {
   revalidatePath(locationHref(id));
@@ -193,7 +192,7 @@ export async function savePageDraftAction(
   return writePage(locationId, page, version, content, false);
 }
 
-/** Saves the content and makes it the page's published copy, when it is complete. */
+/** Saves the content and makes it the page's public copy, when it is complete. */
 export async function publishPageAction(
   locationId: string,
   page: string,
@@ -203,25 +202,22 @@ export async function publishPageAction(
   return writePage(locationId, page, version, content, true);
 }
 
-export async function setPageOnAction(
+/** Takes the page from the public and keeps its text. */
+export async function unpublishPageAction(
   locationId: string,
   page: string,
-  isOn: boolean,
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string" || !isLocationPageKey(page)) {
     return { error: "Missing page." };
   }
-  if (typeof isOn !== "boolean") return { error: "Choose on or off." };
 
-  const result = await setLocationPageOn(
-    actorOf(admin),
-    locationId,
-    page,
-    isOn,
-  );
-  if (result.ok) revalidateEverywhere(locationId);
+  const result = await unpublishLocationPage(actorOf(admin), locationId, page);
+  if (result.ok) {
+    revalidateEverywhere(locationId);
+    revalidatePath(locationPageHref(locationId, page));
+  }
   return stateOf(result);
 }
 
@@ -236,24 +232,5 @@ export async function moveLocationStateAction(
 
   const result = await moveLocationState(actorOf(admin), locationId, to);
   if (result.ok) revalidateEverywhere(locationId);
-  return stateOf(result);
-}
-
-/** Adds, removes or moves the location among the home page's top choices. */
-export async function changeTopChoiceAction(
-  locationId: string,
-  change: string,
-): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
-  if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string") return MISSING_LOCATION;
-  if (!isTopChoiceChange(change)) return { error: "Choose a change." };
-
-  const result = await changeTopChoice(actorOf(admin), locationId, change);
-  // The places of the other top choices move with it.
-  if (result.ok) {
-    revalidatePath(LOCATIONS_PATH, "layout");
-    refreshTopChoicesAfter();
-  }
   return stateOf(result);
 }

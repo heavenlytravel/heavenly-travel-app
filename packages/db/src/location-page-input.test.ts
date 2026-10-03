@@ -9,12 +9,14 @@ import {
   checkPageComplete,
   checkPageLimits,
   isLocationPageKey,
+  isPagePublished,
   isUploadUrl,
   missingFields,
   pageContentOf,
   pageNameOf,
   pageStatusOf,
   paragraphsOf,
+  publicCopyOf,
   samePageContent,
   wordCount,
   type PageContent,
@@ -397,5 +399,33 @@ describe("pageStatusOf", () => {
       pageStatusOf({ ...published, heroHeadline: "New" }, published),
       "changed",
     );
+  });
+});
+
+describe("publicCopyOf", () => {
+  it("is the copy last published while the page is published, and nothing once it is unpublished", () => {
+    const published = complete("car-with-driver");
+    assert.deepEqual(
+      publicCopyOf("car-with-driver", { isOn: true, published }),
+      published,
+    );
+    assert.equal(
+      publicCopyOf("car-with-driver", { isOn: false, published }),
+      null,
+    );
+    assert.equal(
+      publicCopyOf("car-with-driver", { isOn: false, published: null }),
+      null,
+    );
+  });
+
+  it("makes an unpublished page read as not published, whatever it once showed", () => {
+    const published = complete("landing");
+    const row = { isOn: false, published };
+    const status = pageStatusOf(published, publicCopyOf("landing", row));
+    assert.equal(status, "unpublished");
+    assert.equal(isPagePublished(status), false);
+    assert.equal(isPagePublished("published"), true);
+    assert.equal(isPagePublished("changed"), true);
   });
 });

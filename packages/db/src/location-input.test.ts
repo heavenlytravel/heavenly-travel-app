@@ -3,12 +3,13 @@ import { describe, it } from "node:test";
 import { TRIP_CATEGORIES } from "./booking-status";
 import {
   LOCATION_LIMITS,
+  LOCATION_MOVE_LABELS,
   LOCATION_STATES,
-  LOCATION_STATE_MOVES,
+  LOCATION_STATE_MOVE,
   RESERVED_SLUGS,
   checkAddressNames,
   checkLocationSlug,
-  checkPageSwitch,
+  checkPageUnpublish,
   districtCodesOf,
   isLocationState,
   isSlugLocked,
@@ -22,34 +23,28 @@ const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
   result.ok ? "" : result.error;
 
 describe("location states", () => {
-  it("are draft, preview, live and paused only", () => {
-    for (const state of ["draft", "preview", "live", "paused"]) {
+  it("are draft, live and paused only", () => {
+    for (const state of ["draft", "live", "paused"]) {
       assert.equal(isLocationState(state), true, state);
     }
+    assert.equal(isLocationState("preview"), false);
     assert.equal(isLocationState("retired"), false);
     assert.equal(isLocationState("Live"), false);
   });
 });
 
-/** The three pages, each on and published unless the patch says otherwise. */
+/** The three pages, each published as drafted unless the patch says otherwise. */
 function pages(
-  patch: Partial<Record<PageStanding["page"], Partial<PageStanding>>> = {},
+  patch: Partial<Record<PageStanding["page"], PageStanding["status"]>> = {},
 ): PageStanding[] {
   return (["landing", "car-with-driver", "coach-charter"] as const).map(
-    (page) => ({ page, isOn: true, status: "published", ...patch[page] }),
+    (page) => ({ page, status: patch[page] ?? "published" }),
   );
 }
 
-const off = { isOn: false };
-
 describe("stateMoveBlockers", () => {
-  it("allows only the moves of each state", () => {
-    const allowed = new Set(
-      ["draft>preview", "preview>live", "preview>draft"].concat(
-        "live>paused",
-        "paused>live",
-      ),
-    );
+  it("allows only the one move of each state", () => {
+    const allowed = new Set(["draft>live", "live>paused", "paused>live"]);
     for (const from of LOCATION_STATES) {
       for (const to of LOCATION_STATES) {
         if (from === to) continue;
@@ -60,7 +55,7 @@ describe("stateMoveBlockers", () => {
           `${from}>${to}`,
         );
         assert.equal(
-          LOCATION_STATE_MOVES[from].includes(to),
+          LOCATION_STATE_MOVE[from] === to,
           allowed.has(`${from}>${to}`),
         );
       }
@@ -68,87 +63,81 @@ describe("stateMoveBlockers", () => {
     assert.deepEqual(stateMoveBlockers("live", "draft", pages()), [
       "A live location cannot move to draft.",
     ]);
+    assert.deepEqual(stateMoveBlockers("draft", "paused", pages()), [
+      "A draft location cannot move to paused.",
+    ]);
   });
 
-  it("needs the landing page and a product page on to leave draft", () => {
+  it("names each state's move for its button", () => {
+    assert.deepEqual(LOCATION_MOVE_LABELS, {
+      draft: "Go live",
+      live: "Pause",
+      paused: "Resume",
+    });
+  });
+
+  it("needs only the landing page published to go live", () => {
     const move = (patch: Parameters<typeof pages>[0]) =>
-      stateMoveBlockers("draft", "preview", pages(patch));
+      stateMoveBlockers("draft", "live", pages(patch));
     assert.deepEqual(
-      move({ landing: off, "car-with-driver": off, "coach-charter": off }),
-      ["Switch on the landing page and at least one product page"],
+      move({
+        "car-with-driver": "unpublished",
+        "coach-charter": "unpublished",
+      }),
+      [],
     );
-    assert.deepEqual(move({ landing: off }), ["Switch on the landing page"]);
-    assert.deepEqual(move({ "car-with-driver": off, "coach-charter": off }), [
-      "Switch on at least one product page",
+    assert.deepEqual(move({ landing: "unpublished" }), [
+      "Publish the landing page",
     ]);
-    assert.deepEqual(move({ "coach-charter": off }), []);
-  });
-
-  it("lets unpublished changes into preview but not out to live", () => {
-    const changed = { status: "changed" } as const;
-    const patch = { landing: changed, "coach-charter": changed };
-    assert.deepEqual(stateMoveBlockers("draft", "preview", pages(patch)), []);
-    assert.deepEqual(stateMoveBlockers("preview", "live", pages(patch)), [
-      "Publish the changes on the landing page",
-      "Publish the changes on the Coach charter page",
+    assert.deepEqual(stateMoveBlockers("draft", "live", []), [
+      "Publish the landing page",
     ]);
   });
 
-  it("ignores the changes of a page that is off", () => {
-    const patch = {
-      "coach-charter": { isOn: false, status: "changed" },
-    } as const;
-    assert.deepEqual(stateMoveBlockers("preview", "live", pages(patch)), []);
-  });
-
-  it("runs the page check again on the move to live", () => {
+  it("does not go live while a published page has edits waiting", () => {
     assert.deepEqual(
       stateMoveBlockers(
-        "preview",
+        "draft",
         "live",
-        pages({ "car-with-driver": off, "coach-charter": off }),
+        pages({ landing: "changed", "coach-charter": "changed" }),
       ),
-      ["Switch on at least one product page"],
+      [
+        "Publish the changes on the landing page",
+        "Publish the changes on the Coach charter page",
+      ],
     );
   });
 
-  it("checks nothing on the moves that keep the pages public or hide them", () => {
+  it("checks nothing on the moves that keep the pages public", () => {
     const bare = pages({
-      "car-with-driver": off,
-      "coach-charter": off,
-      landing: { status: "changed" },
+      "car-with-driver": "unpublished",
+      "coach-charter": "unpublished",
+      landing: "changed",
     });
     assert.deepEqual(stateMoveBlockers("live", "paused", bare), []);
     assert.deepEqual(stateMoveBlockers("paused", "live", bare), []);
-    assert.deepEqual(stateMoveBlockers("preview", "draft", bare), []);
   });
 });
 
-describe("checkPageSwitch", () => {
-  it("switches a page on only once it is published", () => {
-    const on = (status: PageStanding["status"]) =>
-      checkPageSwitch("draft", { page: "coach-charter", status }, true);
-    assert.match(errorOf(on("unpublished")), /Publish the page before/);
-    assert.equal(on("published").ok, true);
-    assert.equal(on("changed").ok, true);
-  });
-
-  it("keeps the landing page on once the location has left draft", () => {
-    const landing = { page: "landing", status: "published" } as const;
-    assert.equal(checkPageSwitch("draft", landing, false).ok, true);
-    for (const state of ["preview", "live", "paused"] as const) {
+describe("checkPageUnpublish", () => {
+  it("keeps the landing page published once the location has left draft", () => {
+    assert.equal(checkPageUnpublish("draft", "landing").ok, true);
+    for (const state of ["live", "paused"] as const) {
       assert.match(
-        errorOf(checkPageSwitch(state, landing, false)),
-        /stays on/,
+        errorOf(checkPageUnpublish(state, "landing")),
+        /stays published/,
         state,
       );
     }
   });
 
-  it("lets a product page go off in any state", () => {
-    const product = { page: "car-with-driver", status: "published" } as const;
+  it("lets a product page be unpublished in any state", () => {
     for (const state of LOCATION_STATES) {
-      assert.equal(checkPageSwitch(state, product, false).ok, true, state);
+      assert.equal(
+        checkPageUnpublish(state, "car-with-driver").ok,
+        true,
+        state,
+      );
     }
   });
 });

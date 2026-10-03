@@ -4,13 +4,18 @@ import {
   LANDING_PAGE,
   PAGE_LIMITS,
   checkPageLimits,
+  checkPageUnpublish,
   formatLocalDateTime,
+  isPagePublished,
+  isPublicState,
   missingFields,
   pageContentOf,
+  pageNameOf,
   pageStatusOf,
   samePageContent,
   wordCount,
   type LocationPageKey,
+  type LocationState,
   type PageContent,
   type PageFaq,
   type PageHighlight,
@@ -19,12 +24,25 @@ import { Button } from "@repo/ui/button";
 import { Field, Input, Select, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type MouseEvent,
+} from "react";
 import { Card, CardTitle } from "../../../../../_components/Card";
 import { PageStatusBadge } from "../../../../../_components/StatusBadges";
-import { locationHref } from "../../../../../_lib/routes";
+import {
+  locationAddressesHref,
+  locationHref,
+} from "../../../../../_lib/routes";
 import { RowControls, movedRow } from "../../../_components/RowControls";
-import { publishPageAction, savePageDraftAction } from "../../../actions";
+import {
+  publishPageAction,
+  savePageDraftAction,
+  unpublishPageAction,
+} from "../../../actions";
 import { Count } from "./Count";
 import { ImageField } from "./ImageField";
 
@@ -68,26 +86,29 @@ function Counted({
  * The editor of one page of a location: the fields in their fixed order,
  * each with its limit counted as it is typed, and what the page still needs
  * before it can be published. "Save draft" changes nothing in public;
- * "Publish" saves and makes the content the published copy. A save is
- * refused when someone else changed the page since the form was opened.
+ * "Publish" saves and makes the content what the public sees, once the
+ * location is live; "Unpublish" takes the page from the public and keeps
+ * its text. On a location that is public, both ask first. A save is refused
+ * when someone else changed the page since the form was opened.
  */
 export function PageEditor({
   locationId,
+  locationState,
   page,
   draft,
   published: publishedAtOpen,
   publishedAt: publishedAtAtOpen,
   version: versionAtOpen,
-  isOn,
   addresses,
 }: {
   locationId: string;
+  locationState: LocationState;
   page: LocationPageKey;
   draft: PageContent;
+  /** The copy the public is shown; null while the page is not published. */
   published: PageContent | null;
   publishedAt: Date | null;
   version: string | null;
-  isOn: boolean;
   /** The location's saved addresses, which a highlight may point at. */
   addresses: { id: string; name: string }[];
 }) {
@@ -110,6 +131,18 @@ export function PageEditor({
   const missing = missingFields(page, normal);
   const dirty = !samePageContent(normal, saved);
   const status = pageStatusOf(normal, published);
+  const isPublic = isPublicState(locationState);
+  const canUnpublish = checkPageUnpublish(locationState, page);
+  // What the status means for the public, under the badge.
+  const publishedOn = publishedAt ? formatLocalDateTime(publishedAt) : "";
+  const standingNote =
+    status === "unpublished"
+      ? "Not published: the public does not see this page."
+      : status === "published"
+        ? `Published ${publishedOn}.${isPublic ? "" : " The public sees it once the location is live."}`
+        : isPublic
+          ? `The public still sees the copy published ${publishedOn}. Publish to replace it.`
+          : `The copy published ${publishedOn} is older than this draft. Publish to replace it.`;
   const words = wordCount(normal.intro);
 
   useEffect(() => {
@@ -143,7 +176,17 @@ export function PageEditor({
 
   const newKey = () => `new-${nextKey.current++}`;
 
+  /** Asks before a link leaves the form with edits that are not saved. */
+  function confirmLeave(event: MouseEvent) {
+    if (dirty && !confirm("Leave the page? Your unsaved edits will be lost.")) {
+      event.preventDefault();
+    }
+  }
+
   function write(publish: boolean) {
+    if (publish && isPublic && !confirm("Publish? This goes public at once.")) {
+      return;
+    }
     startTransition(async () => {
       const result = await (publish ? publishPageAction : savePageDraftAction)(
         locationId,
@@ -164,6 +207,29 @@ export function PageEditor({
       }
       setError(null);
       setNotice(publish ? "Published." : "Draft saved.");
+    });
+  }
+
+  function unpublish() {
+    if (
+      isPublic &&
+      !confirm(
+        `Unpublish ${pageNameOf(page)}? Visitors to it are sent to the location's landing page.`,
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await unpublishPageAction(locationId, page);
+      if (result) {
+        setError(result.error);
+        setNotice(null);
+        return;
+      }
+      setPublished(null);
+      setPublishedAt(null);
+      setError(null);
+      setNotice("Unpublished. Your text is kept.");
     });
   }
 
@@ -481,9 +547,15 @@ export function PageEditor({
                           </span>
                         }
                         hint={
-                          addresses.length === 0
-                            ? "This location has no saved addresses yet."
-                            : undefined
+                          addresses.length === 0 ? (
+                            <Link
+                              href={locationAddressesHref(locationId)}
+                              className="underline underline-offset-4 hover:text-neutral-900"
+                              onClick={confirmLeave}
+                            >
+                              Add saved addresses on the location first
+                            </Link>
+                          ) : undefined
                         }
                       >
                         <Select
@@ -548,7 +620,7 @@ export function PageEditor({
           <CardTitle>
             <span className="inline-flex items-center gap-1.5">
               Publishing
-              <InfoTip text="Save draft keeps your work and changes nothing in public. Publish makes this content the page's published copy. Whether the public sees the page is the location's state and the page's On switch." />
+              <InfoTip text="Save draft keeps your work and changes nothing in public. Publish makes this content what the public sees, once the location is live. Unpublish takes the page from the public and keeps your text." />
             </span>
           </CardTitle>
           <div className="grid gap-3">
@@ -558,12 +630,7 @@ export function PageEditor({
                 <span className="text-xs text-neutral-500">Unsaved edits</span>
               ) : null}
             </div>
-            <p className="text-xs text-neutral-600">
-              {publishedAt
-                ? `Last published ${formatLocalDateTime(publishedAt)}.`
-                : "Never published."}{" "}
-              The page is switched {isOn ? "on" : "off"}.
-            </p>
+            <p className="text-xs text-neutral-600">{standingNote}</p>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
@@ -583,7 +650,19 @@ export function PageEditor({
               >
                 Publish
               </Button>
+              {isPagePublished(status) ? (
+                <Button
+                  variant="danger"
+                  disabled={pending || !canUnpublish.ok}
+                  onClick={unpublish}
+                >
+                  Unpublish
+                </Button>
+              ) : null}
             </div>
+            {isPagePublished(status) && !canUnpublish.ok ? (
+              <p className="text-xs text-neutral-500">{canUnpublish.error}</p>
+            ) : null}
             <p aria-live="polite" className="text-sm empty:hidden">
               {pending ? (
                 <span className="text-neutral-500">Saving…</span>
@@ -617,14 +696,7 @@ export function PageEditor({
           <Link
             href={locationHref(locationId)}
             className="text-neutral-600 underline-offset-4 hover:underline"
-            onClick={(event) => {
-              if (
-                dirty &&
-                !confirm("Leave the page? Your unsaved edits will be lost.")
-              ) {
-                event.preventDefault();
-              }
-            }}
+            onClick={confirmLeave}
           >
             Back to the location
           </Link>

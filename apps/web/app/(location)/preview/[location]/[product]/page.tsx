@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * Route: /preview/langkawi/car-with-driver. A product's page of a location
- * as drafted, on or off, for staff who hold `locations.manage`. The access
+ * as drafted, published or not, for staff who hold `locations.manage`. The access
  * check is `previewPageAt`'s.
  */
 export default async function LocationProductPreview({ params }: Props) {

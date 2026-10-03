@@ -47,7 +47,7 @@ export function LocationFrame({
 /**
  * The bar on top of a staff preview: that this is a preview, the
  * location's state, where the page shown stands against its published
- * copy, and the way to the location's other pages, on or off.
+ * copy, and the way to the location's other pages, published or not.
  */
 function PreviewBar({
   location,
@@ -64,7 +64,7 @@ function PreviewBar({
       <p>
         <strong className="mr-2.5 tracking-[0.16em] uppercase">Preview</strong>
         {location.name} · {LOCATION_STATE_LABELS[location.state]} · This page:{" "}
-        {PAGE_STATUS_LABELS[shown.status]}, switched {shown.isOn ? "on" : "off"}
+        {PAGE_STATUS_LABELS[shown.status]}
       </p>
       <nav aria-label="Pages of this location" className="flex gap-x-5">
         {location.pages.map(({ page }) => (

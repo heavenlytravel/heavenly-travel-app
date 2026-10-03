@@ -4,6 +4,7 @@ import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
 import {
   LANDING_PAGE,
+  isPagePublished,
   pageNameOf,
   type LocationPageKey,
   type PageStatus,
@@ -14,18 +15,17 @@ import { slugify } from "./slug";
  * What the Locations screens edit and the rules they check, pure and
  * browser-safe: the forms display the messages, the writers in ./locations
  * apply the same checks before they write. See
- * docs/261001-locations-and-pages.md.
+ * docs/261001-locations-and-pages.md and docs/261003-location-flow.md.
  */
 
 const fail = (error: string): Change => ({ ok: false, error });
 
 /** What the public sees of a location. The state is the location's, not its district's. */
-export const LOCATION_STATES = ["draft", "preview", "live", "paused"] as const;
+export const LOCATION_STATES = ["draft", "live", "paused"] as const;
 export type LocationState = (typeof LOCATION_STATES)[number];
 export const isLocationState = guardFor(LOCATION_STATES);
 export const LOCATION_STATE_LABELS: Record<LocationState, string> = {
   draft: "Draft",
-  preview: "Preview",
   live: "Live",
   paused: "Paused",
 };
@@ -38,84 +38,81 @@ export function isPublicState(state: LocationState) {
 /** The state every new location starts in. */
 export const NEW_LOCATION_STATE: LocationState = "draft";
 
-/** The moves Marketing can make from each state, the usual one first. */
-export const LOCATION_STATE_MOVES: Record<
-  LocationState,
-  readonly LocationState[]
-> = {
-  draft: ["preview"],
-  preview: ["live", "draft"],
-  live: ["paused"],
-  paused: ["live"],
+/** A stored state as the rules read it. A value that is not a state reads as the first one. */
+export function locationStateOf(value: string): LocationState {
+  return isLocationState(value) ? value : NEW_LOCATION_STATE;
+}
+
+/**
+ * The one move Marketing can make from each state. A location that has been
+ * live never returns to `draft`: it is paused and resumed.
+ */
+export const LOCATION_STATE_MOVE: Record<LocationState, LocationState> = {
+  draft: "live",
+  live: "paused",
+  paused: "live",
 };
 
-/** What the rules on a location's state and switches read of one of its pages. */
+/** What the button of each state's move says. */
+export const LOCATION_MOVE_LABELS: Record<LocationState, string> = {
+  draft: "Go live",
+  live: "Pause",
+  paused: "Resume",
+};
+
+/** What the rules on a location's state read of one of its pages. */
 export type PageStanding = {
   page: LocationPageKey;
-  isOn: boolean;
   status: PageStatus;
 };
 
 /**
  * Why a location cannot make the move, as sentences that say what to do;
- * empty when it can. Leaving `draft` and going public from `preview` both
- * need the landing page and a product page on, and going public also needs
- * every page that is on to be published as it is drafted, so what staff
- * checked in preview is what goes public. Nothing is checked after the move:
- * a paused location resumes as it is, since its pages never stopped being
- * public.
+ * empty when it can. Going live from `draft` needs the landing page
+ * published, and no published page with edits waiting, so what staff
+ * checked on the preview page is what goes public. No product page is
+ * needed: a landing page with none published shows no product links and
+ * still carries the search card. Nothing is checked after the move: a paused
+ * location resumes as it is, since its pages never stopped being public.
  */
 export function stateMoveBlockers(
   from: LocationState,
   to: LocationState,
   pages: readonly PageStanding[],
 ): string[] {
-  if (!LOCATION_STATE_MOVES[from].includes(to)) {
+  if (LOCATION_STATE_MOVE[from] !== to) {
     return [
       `A ${LOCATION_STATE_LABELS[from].toLowerCase()} location cannot move to ${LOCATION_STATE_LABELS[to].toLowerCase()}.`,
     ];
   }
-  const leavesDraft = from === "draft" && to === "preview";
-  const goesPublic = from === "preview" && to === "live";
-  if (!leavesDraft && !goesPublic) return [];
+  if (from !== "draft") return [];
 
   const blockers: string[] = [];
-  const on = pages.filter((page) => page.isOn);
-  const landingOn = on.some((page) => page.page === LANDING_PAGE);
-  const productOn = on.some((page) => page.page !== LANDING_PAGE);
-  if (!landingOn && !productOn) {
-    blockers.push("Switch on the landing page and at least one product page");
-  } else if (!landingOn) {
-    blockers.push("Switch on the landing page");
-  } else if (!productOn) {
-    blockers.push("Switch on at least one product page");
+  const landing = pages.find((page) => page.page === LANDING_PAGE);
+  if (!landing || !isPagePublished(landing.status)) {
+    blockers.push("Publish the landing page");
   }
-  if (goesPublic) {
-    for (const page of on) {
-      if (page.status === "changed") {
-        blockers.push(`Publish the changes on ${pageNameOf(page.page)}`);
-      }
+  for (const page of pages) {
+    if (page.status === "changed") {
+      blockers.push(`Publish the changes on ${pageNameOf(page.page)}`);
     }
   }
   return blockers;
 }
 
 /**
- * Whether a page's On switch can be set. A page goes on once it has a
- * published copy. The landing page stays on once the location has left
- * `draft`; the product pages can go off at any time.
+ * Whether a page can be unpublished: taken from the public, its text kept.
+ * The landing page stays published once the location has left `draft`,
+ * since the location's address must not become a 404; the product pages can
+ * be unpublished at any time.
  */
-export function checkPageSwitch(
+export function checkPageUnpublish(
   state: LocationState,
-  page: Pick<PageStanding, "page" | "status">,
-  isOn: boolean,
+  page: LocationPageKey,
 ): Change {
-  if (isOn && page.status === "unpublished") {
-    return fail("Publish the page before switching it on.");
-  }
-  if (!isOn && page.page === LANDING_PAGE && state !== "draft") {
+  if (page === LANDING_PAGE && state !== "draft") {
     return fail(
-      "The landing page stays on once the location has left draft. Pause the location instead.",
+      "The landing page stays published once the location has left draft. Pause the location instead.",
     );
   }
   return { ok: true };

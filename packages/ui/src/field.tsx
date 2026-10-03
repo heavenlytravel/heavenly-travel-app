@@ -35,7 +35,7 @@ export function Field({
   children,
 }: {
   label: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {

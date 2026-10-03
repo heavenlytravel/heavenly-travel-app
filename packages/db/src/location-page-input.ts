@@ -362,23 +362,44 @@ export function checkPageComplete(
 }
 
 /**
- * Where a page stands between its draft and its published copy: never
- * published, published as it is drafted, or published with newer changes in
- * the draft.
+ * Where a page stands between its draft and its public copy: not published,
+ * published as it is drafted, or published with newer edits waiting in the
+ * draft. Published means the public can see the page, once its location is
+ * live: there is no switch beside it. A page that was unpublished reads as
+ * not published, whatever it once showed.
  */
 export const PAGE_STATUSES = ["unpublished", "published", "changed"] as const;
 export type PageStatus = (typeof PAGE_STATUSES)[number];
 export const PAGE_STATUS_LABELS: Record<PageStatus, string> = {
   unpublished: "Not published",
   published: "Published",
-  changed: "Unpublished changes",
+  changed: "Published, edits waiting",
 };
 
-/** `published` is null until the first publish. */
+/**
+ * The copy the public is shown of a page, from its stored row: null while
+ * the page is not published. `isOn` is true from a publish until the page
+ * is unpublished; `published` keeps the copy last published either way.
+ */
+export function publicCopyOf(
+  page: LocationPageKey,
+  row: { isOn: boolean; published: unknown },
+): PageContent | null {
+  return row.isOn && row.published != null
+    ? pageContentOf(page, row.published)
+    : null;
+}
+
+/** `publicCopy` is what the public is shown: null while the page is not published. */
 export function pageStatusOf(
   draft: PageContent,
-  published: PageContent | null,
+  publicCopy: PageContent | null,
 ): PageStatus {
-  if (!published) return "unpublished";
-  return samePageContent(draft, published) ? "published" : "changed";
+  if (!publicCopy) return "unpublished";
+  return samePageContent(draft, publicCopy) ? "published" : "changed";
+}
+
+/** Whether the page has a public copy: it is published, with or without edits waiting. */
+export function isPagePublished(status: PageStatus) {
+  return status !== "unpublished";
 }

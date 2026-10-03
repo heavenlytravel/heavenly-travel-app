@@ -44,19 +44,19 @@ export default async function LocationsPage() {
             <Th>
               <span className="inline-flex items-center gap-1.5">
                 State
-                <InfoTip text="Draft and Preview are not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
+                <InfoTip text="Draft is not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
               </span>
             </Th>
             <Th>
               <span className="inline-flex items-center gap-1.5">
-                Pages on
-                <InfoTip text="The pages that are switched on. The public sees them once the location is Live or Paused." />
+                Published
+                <InfoTip text="The pages that are published. The public sees them once the location is Live or Paused." />
               </span>
             </Th>
             <Th>
               <span className="inline-flex items-center gap-1.5">
                 Top choice
-                <InfoTip text="Its place among the location cards on the home page. A paused top choice keeps its place and is left off the home page." />
+                <InfoTip text="Its place among the location cards on the home page, set on the Home page screen. A paused top choice keeps its place and is left off the home page." />
               </span>
             </Th>
             <Th>Changed</Th>
@@ -101,10 +101,10 @@ export default async function LocationsPage() {
                       <LocationStateBadge state={location.state} />
                     </Td>
                     <Td>
-                      {location.pagesOn.length === 0 ? (
+                      {location.pagesPublished.length === 0 ? (
                         <span className="text-neutral-500">None</span>
                       ) : (
-                        location.pagesOn
+                        location.pagesPublished
                           .map((page) => LOCATION_PAGE_LABELS[page])
                           .join(", ")
                       )}

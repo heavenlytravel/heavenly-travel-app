@@ -5,11 +5,11 @@
       "dependsOn": ["build:styles", "build:components"]
     },
     "build:styles": {
-      "outputs": ["dist/**"]
+      "outputs": ["dist/index.css"]
     },
     "build:components": {
       "dependsOn": ["@repo/db#build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "!dist/index.css"]
     },
     "dev": {
       "with": ["dev:styles", "dev:components"]

@@ -75,6 +75,8 @@ export type ActivityEntry = ActivityLog & {
   actorName: string;
   /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall"; the id when unknown. */
   entityLabel: string;
+  /** The record was deleted since: its label is the name it last had, and it has no page to open. */
+  isDeleted: boolean;
 };
 
 const FORMER: Record<"admin" | "customer", string> = {
@@ -131,6 +133,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       }),
     ]);
   const userById = new Map(users.map((u) => [u.id, u]));
+  const deleted = await deletedLocationNames(
+    idsOf(rows, "location"),
+    new Set(locations.map((l) => l.id)),
+  );
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, b.reference])),
     state: new Map(states.map((s) => [s.code, s.name])),
@@ -138,7 +144,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
-    location: new Map(locations.map((l) => [l.id, l.name])),
+    location: new Map([
+      ...locations.map((l) => [l.id, l.name] as const),
+      ...[...deleted].map(([id, name]) => [id, `${name} (deleted)`] as const),
+    ]),
   };
 
   return rows.map((row) => {
@@ -149,8 +158,38 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       : kind === "system"
         ? "System"
         : FORMER[kind];
-    return { ...row, actorName, entityLabel: entityLabelOf(row, labels) };
+    return {
+      ...row,
+      actorName,
+      entityLabel: entityLabelOf(row, labels),
+      isDeleted: row.entityType === "location" && deleted.has(row.entityId),
+    };
   });
+}
+
+/**
+ * The names of the locations among the ids that no longer exist, from the
+ * entry their deletion logged. Asked only when one is missing.
+ */
+async function deletedLocationNames(
+  ids: readonly string[],
+  existing: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  const missing = [...new Set(ids)].filter((id) => !existing.has(id));
+  if (missing.length === 0) return new Map();
+  const entries = await db.activityLog.findMany({
+    where: {
+      action: "location.deleted" satisfies ActivityAction,
+      entityId: { in: missing },
+    },
+    select: { entityId: true, before: true },
+  });
+  return new Map(
+    entries.flatMap(({ entityId, before }) => {
+      const name = (before as { name?: unknown } | null)?.name;
+      return typeof name === "string" ? [[entityId, name] as const] : [];
+    }),
+  );
 }
 
 function entityLabelOf(

@@ -8,8 +8,10 @@ import {
   LOCATION_STATE_MOVE,
   RESERVED_SLUGS,
   checkAddressNames,
+  checkLocationDelete,
   checkLocationSlug,
   checkPageUnpublish,
+  hasBeenLive,
   districtCodesOf,
   isLocationState,
   isSlugLocked,
@@ -174,6 +176,27 @@ describe("checkLocationSlug", () => {
       assert.match(errorOf(checkLocationSlug(slug)), /something else/, slug);
     }
     assert.equal(RESERVED_SLUGS.size, reserved.length);
+  });
+});
+
+describe("checkLocationDelete", () => {
+  it("lets go of a location that has never been live on a plain yes", () => {
+    const draft = { slug: "penang-test", wentLiveAt: null };
+    assert.equal(hasBeenLive(draft), false);
+    assert.equal(checkLocationDelete(draft, null).ok, true);
+  });
+
+  it("asks for the slug, typed exactly, once the location has been live", () => {
+    const live = { slug: "penang", wentLiveAt: new Date() };
+    assert.equal(hasBeenLive(live), true);
+    assert.match(
+      errorOf(checkLocationDelete(live, null)),
+      /Type the slug, penang, to delete/,
+    );
+    for (const typed of ["", "Penang", "penang ", "penan"]) {
+      assert.equal(checkLocationDelete(live, typed).ok, false, typed);
+    }
+    assert.equal(checkLocationDelete(live, "penang").ok, true);
   });
 });
 

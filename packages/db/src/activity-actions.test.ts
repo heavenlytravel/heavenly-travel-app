@@ -187,6 +187,17 @@ describe("describeActivity", () => {
     assert.equal(change(1, null), "Removed from the top choices");
   });
 
+  it("says a location was deleted", () => {
+    assert.equal(
+      describeActivity({
+        action: "location.deleted",
+        before: { name: "Test", slug: "test", districtCodes: ["langkawi"] },
+        after: null,
+      }),
+      "Deleted the location",
+    );
+  });
+
   it("names a state move by the state it reached", () => {
     const move = (from: string, to: string) =>
       describeActivity({

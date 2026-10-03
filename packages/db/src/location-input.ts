@@ -187,9 +187,35 @@ export function checkLocationSlug(slug: string): Change {
   return { ok: true };
 }
 
-/** The slug is Marketing's to change until the location first goes live. */
-export function isSlugLocked(location: { wentLiveAt: Date | null }) {
+/** Whether the location has ever been public: live now, paused, or once either. */
+export function hasBeenLive(location: { wentLiveAt: Date | null }) {
   return location.wentLiveAt !== null;
+}
+
+/**
+ * The slug is Marketing's to change until the location first goes live. A
+ * slug that is wrong after that is put right by deleting the location and
+ * adding it again.
+ */
+export function isSlugLocked(location: { wentLiveAt: Date | null }) {
+  return hasBeenLive(location);
+}
+
+/**
+ * Whether a location can be deleted. One that has never been live goes on a
+ * plain yes: nothing of it was public. One that has been live has a public
+ * address, which the delete turns into a 404 that links break on and search
+ * engines drop, so the admin types its slug to say they mean it. `typed`
+ * is what they typed; null when nothing was asked.
+ */
+export function checkLocationDelete(
+  location: { slug: string; wentLiveAt: Date | null },
+  typed: string | null,
+): Change {
+  if (!hasBeenLive(location) || typed === location.slug) return { ok: true };
+  return fail(
+    `Type the slug, ${location.slug}, to delete a location that has been live.`,
+  );
 }
 
 /** What Marketing enters about a location. */

@@ -71,6 +71,14 @@ export function refreshLocationAfter(locationId: string) {
   });
 }
 
+/**
+ * The same refresh for a location that was just deleted, by the slug it
+ * had: its pages become a 404 and its card leaves the home page.
+ */
+export function refreshDeletedLocationAfter(slug: string) {
+  after(() => refreshSite([locationTag(slug), TOP_CHOICES_TAG]));
+}
+
 /** Refreshes the home page's cards alone: their order changed. */
 export function refreshTopChoicesAfter() {
   after(() => refreshSite([TOP_CHOICES_TAG]));

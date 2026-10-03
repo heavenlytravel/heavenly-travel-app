@@ -11,6 +11,7 @@ const PAGE_SIZE = 50;
 
 /** Where the record's label leads, when it has a page. */
 function entityLink(entry: ActivityEntry) {
+  if (entry.isDeleted) return null;
   if (entry.entityType === "booking") return bookingHref(entry.entityId);
   if (entry.entityType === "location") return locationHref(entry.entityId);
   return null;

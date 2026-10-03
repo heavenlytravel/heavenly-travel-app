@@ -6,7 +6,8 @@ import { InfoTip } from "@repo/ui/info-tip";
 /**
  * The slug of a location, with where its pages will be, or what is wrong
  * with it, said underneath as it is typed. Read-only once the location has
- * been live. The form receives it as `slug` either way.
+ * been live: from then a wrong slug is put right by deleting the location
+ * and adding it again. The form receives it as `slug` either way.
  */
 export function SlugField({
   value,
@@ -25,7 +26,7 @@ export function SlugField({
       label={
         <span className="inline-flex items-center gap-1.5">
           Slug
-          <InfoTip text="The address of the location's pages. It can be changed until the location first goes live, and is locked from then." />
+          <InfoTip text="The address of the location's pages. It can be changed until the location first goes live, and is locked from then. A slug that is wrong after that is put right by deleting the location and adding it again." />
         </span>
       }
     >
@@ -48,7 +49,7 @@ export function SlugField({
         )}
       >
         {locked
-          ? "Locked: the location has been live."
+          ? "Locked: the location has been live. To change it, delete the location and add it again."
           : value === ""
             ? "Lower-case letters, digits and dashes."
             : check.ok

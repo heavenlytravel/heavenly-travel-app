@@ -2,6 +2,7 @@
 
 import {
   createLocation,
+  deleteLocation,
   isLocationPageKey,
   isLocationState,
   moveLocationState,
@@ -28,11 +29,15 @@ import {
   type ActionState,
 } from "../../_lib/action-state";
 import {
+  HOME_PAGE_PATH,
   LOCATIONS_PATH,
   locationHref,
   locationPageHref,
 } from "../../_lib/routes";
-import { refreshLocationAfter } from "../../_lib/site";
+import {
+  refreshDeletedLocationAfter,
+  refreshLocationAfter,
+} from "../../_lib/site";
 
 /**
  * The Locations screens' actions. Each checks `locations.manage` again,
@@ -219,6 +224,31 @@ export async function unpublishPageAction(
     revalidatePath(locationPageHref(locationId, page));
   }
   return stateOf(result);
+}
+
+/**
+ * Deletes a location and opens the list. `typedSlug` is what the admin
+ * typed to confirm, which a location that has been live asks for; null
+ * when nothing was asked. The customer site drops the pages and the home
+ * page card it may have shown.
+ */
+export async function deleteLocationAction(
+  locationId: string,
+  typedSlug: string | null,
+): Promise<ActionState> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return FORBIDDEN;
+  if (typeof locationId !== "string") return MISSING_LOCATION;
+  if (typedSlug !== null && typeof typedSlug !== "string") {
+    return { error: "Type the slug to confirm." };
+  }
+
+  const result = await deleteLocation(actorOf(admin), locationId, typedSlug);
+  if (!result.ok) return stateOf(result);
+  revalidatePath(LOCATIONS_PATH);
+  revalidatePath(HOME_PAGE_PATH);
+  refreshDeletedLocationAfter(result.slug);
+  redirect(LOCATIONS_PATH);
 }
 
 export async function moveLocationStateAction(

@@ -94,8 +94,13 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
-  /** The page's key and its On switch. */
+  /** The page's key and whether it is published. */
   "location.page.updated": { entityType: "location", customerVisible: false },
+  /**
+   * The name, the slug, the district codes and the state it had, in
+   * `before`: the row is gone, and its other entries are named from this one.
+   */
+  "location.deleted": { entityType: "location", customerVisible: false },
 } as const satisfies Record<
   string,
   { entityType: ActivityEntityType; customerVisible: boolean }
@@ -392,6 +397,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return addressChanges(entry.before, entry.after);
     case "location.state.changed":
       return stateMove(entry.before, entry.after);
+    case "location.deleted":
+      return "Deleted the location";
     case "location.page.published":
       return `Published ${pageName(entry.after)}`;
     case "location.page.updated":

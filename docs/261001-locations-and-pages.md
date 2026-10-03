@@ -5,8 +5,8 @@ while PR 2 was built: a location's districts are ticked by Marketing, not detect
 Google place, and the Coverage screen does not list locations. All four PRs are built;
 what PR 3 and PR 4 settled while they were built is marked "PR 3" and "PR 4" below. A
 fifth PR then made the flow simpler, as decided in `261003-location-flow.md`: three
-states, a first publish that switches the page on, and a Home page screen. What it
-changed is marked "PR 5". The PRs are listed under "Build order". The
+states, pages that are published or not with no switch, and a Home page screen. What it
+changed is marked "PR 5". A sixth added Delete for a location, marked "PR 6". The PRs are listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -90,6 +90,11 @@ The state is on the location. No Prisma enum: a string checked against a const a
 - A location that has been `live` never returns to `draft`, so a public address never
   becomes a 404. `paused` is the way to stop selling a place for a while: a closed road,
   an off season.
+- A location can be deleted, with its pages and saved addresses (PR 6). One that has
+  never been live goes on a plain question. One that has been live has a public
+  address, which the delete turns into a 404 that links break on and search engines
+  drop, so the admin types its slug to confirm. The reasons are in
+  `261003-location-flow.md`.
 - Marketing makes every move. Going live on the CEO's word is a working rule, not a
   check in code; restricting it to `SUPER` is future work.
 - `retired` (a permanent redirect) waits for the redirect table at cutover.
@@ -253,7 +258,8 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - Suggested from the name by `slugify`, and editable by Marketing while the location is
   `draft`.
 - Locked the first time the location goes live. Renaming a live slug needs the redirect
-  table and waits for it.
+  table and waits for it. Until then a wrong slug is put right by deleting the location
+  and adding it again (PR 6).
 - Reserved words are refused, from one list: the site's own top-level paths (`account`,
   `booking`, `preview`, `sign-in`, `sign-up`, `api`), the product slugs, the locale codes (`en`,
   `ms`, `zh`), and the names `04` sets aside (`admin`, `search`, `manage`, `quote`,
@@ -397,6 +403,7 @@ A new entity type, `location`. Every entry logs against the location's id and ha
 | `location.state.changed`     | before and after: the state                                 |
 | `location.page.published`    | the page, and its content before and after                  |
 | `location.page.updated`      | the page, and whether it is published, before and after     |
+| `location.deleted` (PR 6)    | before: the name, the slug, the districts and the state     |
 
 Saving a draft is not logged. A change to the same values logs nothing, as elsewhere.
 A publish is one entry, and an unpublish is `location.page.updated`, read as
@@ -431,6 +438,8 @@ Sidebar group "Marketing", items "Locations" and "Home page", permission
     address" opens the place search for exact spots; an address can be renamed, moved
     and removed. One outside the location's districts is refused on Save.
   - The location's history.
+  - Delete (PR 6): on a plain question while the location has never been live. Once
+    it has, the card says what the delete costs and asks for the slug to be typed.
 - **`/locations/[id]/pages/[page]`**: the fields above with their limits shown as they
   are typed, the image uploads, the saved address chosen on each highlight, a list of
   what is still missing, "Save draft", "Publish" and, once the page is published,
@@ -532,7 +541,7 @@ site's cache by itself.
 
 ## Build order
 
-Five PRs into `main`. Each passes `pnpm lint` and `pnpm check-types` and leaves both
+Six PRs into `main`. Each passes `pnpm lint` and `pnpm check-types` and leaves both
 apps working.
 
 | PR  | Title                                       | Holds                                                                                                                                                                                                                  |
@@ -542,6 +551,7 @@ apps working.
 | 3   | `feat(admin): location page editor`         | The content shape and its limits, save and publish, the On switch, uploads, the saved address on a highlight, the state moves, the top choices, the rest of the log actions and the history                            |
 | 4   | `feat: location pages on the customer site` | The public pages, the preview page, the refresh route and the admin's calls to it, the noindex header, structured data, the search card with the saved addresses and "Take me here", the home page cards               |
 | 5   | `feat(admin): simpler location flow`        | `261003-location-flow.md`: three states, pages published or not with no switch, the state and its move in the location's header, the districts in Details, the Home page screen, the editor's hint for saved addresses |
+| 6   | `feat(admin): delete a location`            | Delete for any location, gated by typing its slug once it has been live, its log entry, and the name the log keeps for a deleted location                                                                              |
 
 What the developer does by hand:
 

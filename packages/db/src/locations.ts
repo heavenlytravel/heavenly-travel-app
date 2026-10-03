@@ -18,6 +18,7 @@ import {
   NEW_LOCATION_STATE,
   TOP_CHOICE_CAP,
   checkAddressNames,
+  checkLocationDelete,
   checkLocationFields,
   checkLocationSlug,
   checkPageUnpublish,
@@ -839,6 +840,46 @@ export async function unpublishLocationPage(
   });
 }
 
+/** A delete's answer: the slug the location had, for the customer site's refresh, or why not. */
+export type LocationDeleted = { ok: true; slug: string } | Refusal;
+
+/**
+ * Deletes a location, with its pages and its saved addresses. One that has
+ * been live is deleted only when `typedSlug` is its slug: its address is
+ * public and becomes a 404. A top choice leaves the home page first, so the
+ * places after it close up. What the location was is logged, and its
+ * earlier entries stay in the log under the name it had. The images its
+ * pages uploaded stay in storage.
+ */
+export async function deleteLocation(
+  actor: Actor,
+  id: string,
+  typedSlug: string | null,
+): Promise<LocationDeleted> {
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({ where: { id } });
+    if (!location) return NOT_FOUND;
+    const check = checkLocationDelete(location, typedSlug);
+    if (!check.ok) return check;
+
+    const left = await changeTopChoiceIn(tx, actor, id, "remove");
+    if (!left.ok) return left;
+    // Its pages and saved addresses go with it, by the schema's cascade.
+    await tx.location.delete({ where: { id } });
+    await logActivity(tx, actor, {
+      action: "location.deleted",
+      entityId: id,
+      before: {
+        name: location.name,
+        slug: location.slug,
+        districtCodes: location.districtCodes,
+        state: locationStateOf(location.state),
+      },
+    });
+    return { ok: true, slug: location.slug };
+  });
+}
+
 /**
  * Moves the location to another state, when its pages allow the move: a
  * draft goes live, a live one is paused, a paused one resumes. The first
@@ -894,56 +935,64 @@ export async function changeTopChoice(
   id: string,
   change: TopChoiceChange,
 ): Promise<Change> {
-  return db.$transaction(async (tx) => {
-    const location = await tx.location.findUnique({ where: { id } });
-    if (!location) return NOT_FOUND;
-    const current = await tx.location.findMany(topChoices);
-    const ids = current.map((choice) => choice.id);
-    const index = ids.indexOf(id);
+  return db.$transaction((tx) => changeTopChoiceIn(tx, actor, id, change));
+}
 
-    if (change === "add") {
-      if (index >= 0) return { ok: true };
-      if (locationStateOf(location.state) !== "live") {
-        return {
-          ok: false,
-          error: "Only a live location can be made a top choice.",
-        };
-      }
-      if (ids.length >= TOP_CHOICE_CAP) {
-        return {
-          ok: false,
-          error: `The home page shows at most ${TOP_CHOICE_CAP} top choices. Remove one first.`,
-        };
-      }
-      ids.push(id);
-    } else if (index < 0) {
-      // Removing what is not there is done; moving it is a stale screen.
-      return change === "remove"
-        ? { ok: true }
-        : { ok: false, error: "This location is not a top choice." };
-    } else if (change === "remove") {
-      ids.splice(index, 1);
-    } else {
-      const other = index + (change === "up" ? -1 : 1);
-      if (other < 0 || other >= ids.length) return { ok: true };
-      ids.splice(index, 1);
-      ids.splice(other, 0, id);
-    }
+/** `changeTopChoice` inside the caller's transaction: a delete takes its location off the home page with it. */
+async function changeTopChoiceIn(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  id: string,
+  change: TopChoiceChange,
+): Promise<Change> {
+  const location = await tx.location.findUnique({ where: { id } });
+  if (!location) return NOT_FOUND;
+  const current = await tx.location.findMany(topChoices);
+  const ids = current.map((choice) => choice.id);
+  const index = ids.indexOf(id);
 
-    for (const row of index < 0 ? [...current, location] : current) {
-      const place = ids.indexOf(row.id);
-      const changed = changedFields(row, {
-        topChoiceOrder: place < 0 ? null : place + 1,
-      });
-      if (!changed) continue;
-      await tx.location.update({ where: { id: row.id }, data: changed.after });
-      await logActivity(tx, actor, {
-        action: "location.updated",
-        entityId: row.id,
-        before: changed.before,
-        after: changed.after,
-      });
+  if (change === "add") {
+    if (index >= 0) return { ok: true };
+    if (locationStateOf(location.state) !== "live") {
+      return {
+        ok: false,
+        error: "Only a live location can be made a top choice.",
+      };
     }
-    return { ok: true };
-  });
+    if (ids.length >= TOP_CHOICE_CAP) {
+      return {
+        ok: false,
+        error: `The home page shows at most ${TOP_CHOICE_CAP} top choices. Remove one first.`,
+      };
+    }
+    ids.push(id);
+  } else if (index < 0) {
+    // Removing what is not there is done; moving it is a stale screen.
+    return change === "remove"
+      ? { ok: true }
+      : { ok: false, error: "This location is not a top choice." };
+  } else if (change === "remove") {
+    ids.splice(index, 1);
+  } else {
+    const other = index + (change === "up" ? -1 : 1);
+    if (other < 0 || other >= ids.length) return { ok: true };
+    ids.splice(index, 1);
+    ids.splice(other, 0, id);
+  }
+
+  for (const row of index < 0 ? [...current, location] : current) {
+    const place = ids.indexOf(row.id);
+    const changed = changedFields(row, {
+      topChoiceOrder: place < 0 ? null : place + 1,
+    });
+    if (!changed) continue;
+    await tx.location.update({ where: { id: row.id }, data: changed.after });
+    await logActivity(tx, actor, {
+      action: "location.updated",
+      entityId: row.id,
+      before: changed.before,
+      after: changed.after,
+    });
+  }
+  return { ok: true };
 }

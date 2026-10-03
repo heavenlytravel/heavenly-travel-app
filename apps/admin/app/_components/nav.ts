@@ -3,6 +3,7 @@ import {
   BusIcon,
   CalendarCheckIcon,
   HistoryIcon,
+  HouseIcon,
   LayoutDashboardIcon,
   MapIcon,
   MapPinIcon,
@@ -14,6 +15,7 @@ import {
   ADMINS_PATH,
   BOOKINGS_PATH,
   COVERAGE_PATH,
+  HOME_PAGE_PATH,
   LOCATIONS_PATH,
   VEHICLE_CLASSES_PATH,
 } from "../_lib/routes";
@@ -66,6 +68,12 @@ export const NAV: NavGroup[] = [
         href: LOCATIONS_PATH,
         label: "Locations",
         icon: MapIcon,
+        permission: "locations.manage",
+      },
+      {
+        href: HOME_PAGE_PATH,
+        label: "Home page",
+        icon: HouseIcon,
         permission: "locations.manage",
       },
     ],

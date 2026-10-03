@@ -194,14 +194,25 @@ describe("describeActivity", () => {
         before: { state: from },
         after: { state: to },
       });
+    assert.equal(move("draft", "live"), "Went live");
+    assert.equal(move("live", "paused"), "Paused the location");
+    assert.equal(move("paused", "live"), "Resumed the location");
+    assert.equal(move("live", "retired"), "Changed the state");
+  });
+
+  it("still reads the moves logged while locations had a preview state", () => {
+    const move = (from: string, to: string) =>
+      describeActivity({
+        action: "location.state.changed",
+        before: { state: from },
+        after: { state: to },
+      });
     assert.equal(move("draft", "preview"), "Moved to preview");
     assert.equal(move("preview", "draft"), "Moved back to draft");
     assert.equal(move("preview", "live"), "Went live");
-    assert.equal(move("live", "paused"), "Paused the location");
-    assert.equal(move("paused", "live"), "Resumed the location");
   });
 
-  it("names the page a publish or a switch touched", () => {
+  it("names the page a publish or an unpublish touched", () => {
     assert.equal(
       describeActivity({
         action: "location.page.published",
@@ -216,8 +227,9 @@ describe("describeActivity", () => {
         before: { page: "coach-charter", isOn: !isOn },
         after: { page: "coach-charter", isOn },
       });
+    assert.equal(flip(false), "Unpublished the Coach charter page");
+    // Logged while a page still had a switch beside its publish.
     assert.equal(flip(true), "Turned the Coach charter page on");
-    assert.equal(flip(false), "Turned the Coach charter page off");
   });
 
   it("says which saved addresses were added, removed, renamed or reordered", () => {

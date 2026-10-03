@@ -1,7 +1,7 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { formatMultiplier } from "./coverage-input";
-import { LOCATION_FIELD_LABELS, isLocationState } from "./location-input";
+import { LOCATION_FIELD_LABELS } from "./location-input";
 import { isLocationPageKey, pageNameOf } from "./location-page-input";
 import { formatMyr } from "./money";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
@@ -280,20 +280,24 @@ function addressChanges(before: unknown, after: unknown) {
   return sentence(phrases, "Reordered the saved addresses");
 }
 
-/** "Went live", "Paused the location": the move by the state it reached. */
+/**
+ * "Went live", "Paused the location": the move by the state it reached. The
+ * log is never rewritten, so the moves of the `preview` state, which
+ * locations had until docs/261003-location-flow.md, keep their sentences.
+ */
 function stateMove(before: unknown, after: unknown) {
   const from = field(before, "state");
-  const to = field(after, "state");
-  if (!isLocationState(to)) return "Changed the state";
-  switch (to) {
-    case "draft":
-      return "Moved back to draft";
-    case "preview":
-      return "Moved to preview";
+  switch (field(after, "state")) {
     case "live":
       return from === "paused" ? "Resumed the location" : "Went live";
     case "paused":
       return "Paused the location";
+    case "preview":
+      return "Moved to preview";
+    case "draft":
+      return "Moved back to draft";
+    default:
+      return "Changed the state";
   }
 }
 
@@ -391,8 +395,10 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.page.published":
       return `Published ${pageName(entry.after)}`;
     case "location.page.updated":
+      // A page is unpublished; until docs/261003-location-flow.md it was a
+      // switch, and the entries of it being turned on keep their sentence.
       return field(entry.after, "isOn") === true
         ? `Turned ${pageName(entry.after)} on`
-        : `Turned ${pageName(entry.after)} off`;
+        : `Unpublished ${pageName(entry.after)}`;
   }
 }

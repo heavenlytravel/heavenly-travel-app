@@ -20,8 +20,8 @@ import {
   checkAddressNames,
   checkLocationFields,
   checkLocationSlug,
-  checkPageSwitch,
-  isLocationState,
+  checkPageUnpublish,
+  locationStateOf,
   isSlugLocked,
   stateMoveBlockers,
   type LocationFields,
@@ -38,10 +38,16 @@ import {
   isLocationPageKey,
   pageContentOf,
   pageStatusOf,
+  publicCopyOf,
   samePageContent,
   type LocationPageKey,
   type PageContent,
 } from "./location-page-input";
+import {
+  isInDistricts,
+  strayAddresses,
+  strayAddressesPhrase,
+} from "./location-places";
 import {
   previewLocationViewOf,
   publicLocationViewOf,
@@ -58,13 +64,15 @@ export type { Location, LocationAddress };
  * districts it lies in, a list of saved addresses, a landing page and one
  * page per product. The districts are ticked by Marketing and kept as codes,
  * as information: nothing ties a location to coverage. A page has a working
- * draft and a published copy; the location's state and each page's On
- * switch decide what the public sees. The readers serve the Locations
+ * draft and, once published, a public copy; the location's state and
+ * whether each page is published decide what the public sees. The row's
+ * `isOn` is that: true from a publish until the page is unpublished, with
+ * `published` holding the copy last published. The readers serve the Locations
  * screens and, as views (./location-view), the customer site; the writers
  * are the screens', each taking the actor and logging inside its
  * transaction, except a draft save, which is not logged. Saved addresses
  * arrive resolved: the caller asks Google, this module never does.
- * See docs/261001-locations-and-pages.md.
+ * See docs/261001-locations-and-pages.md and docs/261003-location-flow.md.
  */
 
 const LOCATION: ActivityEntityType = "location";
@@ -85,6 +93,10 @@ const ADDRESSES_CHANGED: Refusal = {
     "The saved addresses were changed by someone else. Reload to see them.",
 };
 
+/** The rule a refused address or a refused change of districts ends on. */
+const ADDRESS_RULE =
+  "A saved address has to be in one of the location's districts.";
+
 const PAGE_CHANGED: Refusal = {
   ok: false,
   error: "This page was changed by someone else. Reload to see it.",
@@ -96,19 +108,18 @@ type WithDistricts = { districts: DistrictWithState[] };
 /** A row of the Locations list. */
 export type LocationSummary = Location &
   WithDistricts & {
-    /** The pages that are switched on, in the order of `LOCATION_PAGES`. */
-    pagesOn: LocationPageKey[];
+    /** The pages that are published, in the order of `LOCATION_PAGES`. */
+    pagesPublished: LocationPageKey[];
     /** The newest logged change to the location; null when none is logged. */
     changedAt: Date | null;
   };
 
-/** One page of a location as its screen lists it. */
-export type LocationPageSummary = PageStanding & {
-  publishedAt: Date | null;
-};
-
 /** A saved address with the names of the landing page's highlights that point at it. */
-export type LocationAddressWithUses = LocationAddress & { usedBy: string[] };
+export type LocationAddressWithUses = LocationAddress & {
+  usedBy: string[];
+  /** It lies outside the location's districts: saved before the rule, or before the districts changed. */
+  isStray: boolean;
+};
 
 /**
  * A location with its districts, its saved addresses in order and its
@@ -117,14 +128,10 @@ export type LocationAddressWithUses = LocationAddress & { usedBy: string[] };
 export type LocationWithDetails = Location &
   WithDistricts & {
     addresses: LocationAddressWithUses[];
-    pages: LocationPageSummary[];
+    pages: PageStanding[];
   };
 
-/** The location's state as the rules read it. An unknown value reads as the first state. */
-function stateOf(location: { state: string }): LocationState {
-  return isLocationState(location.state) ? location.state : NEW_LOCATION_STATE;
-}
-
+/** The copy last published, kept when the page is unpublished; null before the first publish. */
 function publishedOf(page: LocationPageKey, row: LocationPage) {
   return row.published === null ? null : pageContentOf(page, row.published);
 }
@@ -133,19 +140,17 @@ function publishedOf(page: LocationPageKey, row: LocationPage) {
 function standingOf(
   page: LocationPageKey,
   row: LocationPage | undefined,
-): LocationPageSummary {
+): PageStanding {
   return {
     page,
-    isOn: row?.isOn ?? false,
     status: row
-      ? pageStatusOf(pageContentOf(page, row.draft), publishedOf(page, row))
+      ? pageStatusOf(pageContentOf(page, row.draft), publicCopyOf(page, row))
       : "unpublished",
-    publishedAt: row?.publishedAt ?? null,
   };
 }
 
 /** Every page of a location, written or not, in the order of `LOCATION_PAGES`. */
-function standingsOf(rows: readonly LocationPage[]): LocationPageSummary[] {
+function standingsOf(rows: readonly LocationPage[]): PageStanding[] {
   return LOCATION_PAGES.map((page) =>
     standingOf(
       page,
@@ -156,7 +161,7 @@ function standingsOf(rows: readonly LocationPage[]): LocationPageSummary[] {
 
 const pagesInLocale = { where: { locale: PAGE_LOCALE } };
 
-/** Every location, by name, with its districts, the pages it has on and its last change. */
+/** Every location, by name, with its districts, the pages it has published and its last change. */
 export async function listLocations(): Promise<LocationSummary[]> {
   const [locations, districts, changes] = await Promise.all([
     db.location.findMany({
@@ -178,7 +183,7 @@ export async function listLocations(): Promise<LocationSummary[]> {
   return locations.map(({ pages, ...location }) => ({
     ...location,
     districts: districts.filter((d) => location.districtCodes.includes(d.code)),
-    pagesOn: LOCATION_PAGES.filter((key) =>
+    pagesPublished: LOCATION_PAGES.filter((key) =>
       pages.some((page) => page.page === key && page.isOn),
     ),
     changedAt: changedAt.get(location.id) ?? null,
@@ -199,12 +204,12 @@ export async function getLocation(
   const { pages, addresses, ...location } = found;
 
   // A highlight of the landing page points at an address, in the draft, the
-  // published copy or both.
+  // public copy or both.
   const landing = pages.find((row) => row.page === LANDING_PAGE);
   const highlights = landing
     ? [
         ...pageContentOf(LANDING_PAGE, landing.draft).highlights,
-        ...(publishedOf(LANDING_PAGE, landing)?.highlights ?? []),
+        ...(publicCopyOf(LANDING_PAGE, landing)?.highlights ?? []),
       ]
     : [];
   return {
@@ -219,13 +224,16 @@ export async function getLocation(
             .map((highlight) => highlight.name || "an unnamed highlight"),
         ),
       ],
+      isStray:
+        isPlace(address.place) &&
+        !isInDistricts(address.place, location.districtCodes),
     })),
     pages: standingsOf(pages),
   };
 }
 
-/** A location among the home page's top choices, as the control lists them. */
-export type TopChoice = Pick<Location, "id" | "name" | "state">;
+/** A location among the home page's top choices, as the Home page screen lists them. */
+export type TopChoice = Pick<Location, "id" | "name" | "tagline" | "state">;
 
 const topChoices = {
   where: { topChoiceOrder: { not: null } },
@@ -239,7 +247,19 @@ const topChoices = {
 export function listTopChoices(): Promise<TopChoice[]> {
   return db.location.findMany({
     ...topChoices,
-    select: { id: true, name: true, state: true },
+    select: { id: true, name: true, tagline: true, state: true },
+  });
+}
+
+/** A location that can be added to the top choices. */
+export type TopChoiceCandidate = Pick<Location, "id" | "name">;
+
+/** The live locations that are not top choices yet, by name. */
+export function listTopChoiceCandidates(): Promise<TopChoiceCandidate[]> {
+  return db.location.findMany({
+    where: { state: "live" satisfies LocationState, topChoiceOrder: null },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
   });
 }
 
@@ -309,10 +329,10 @@ export async function getLocationSlug(id: string): Promise<string | null> {
 export type LocationPageDetails = {
   location: Location & { addresses: LocationAddress[] };
   page: LocationPageKey;
-  isOn: boolean;
   draft: PageContent;
-  /** Null until the first publish. */
+  /** The copy the public is shown; null while the page is not published. */
   published: PageContent | null;
+  /** When that copy was published; null while the page is not published. */
   publishedAt: Date | null;
   /**
    * Names the stored content. A save hands it back, and is refused when the
@@ -321,7 +341,7 @@ export type LocationPageDetails = {
   version: string | null;
 };
 
-/** The content's version: when it last changed. The On switch does not move it. */
+/** The content's version: when it last changed. Unpublishing does not move it. */
 function versionOf(row: LocationPage | null) {
   return row ? row.updatedAt.toISOString() : null;
 }
@@ -345,10 +365,9 @@ export async function getLocationPage(
   return {
     location,
     page,
-    isOn: row?.isOn ?? false,
     draft: pageContentOf(page, row?.draft),
-    published: row ? publishedOf(page, row) : null,
-    publishedAt: row?.publishedAt ?? null,
+    published: row ? publicCopyOf(page, row) : null,
+    publishedAt: row?.isOn ? row.publishedAt : null,
     version: versionOf(row),
   };
 }
@@ -454,8 +473,9 @@ export async function createLocation(
 
 /**
  * Changes the name, the slug, the tagline and the districts. The slug is
- * locked once the location has been live. Saving what is already there logs
- * nothing.
+ * locked once the location has been live. The districts cannot change so
+ * that a saved address is left outside them. Saving what is already there
+ * logs nothing.
  */
 export async function updateLocation(
   actor: Actor,
@@ -467,7 +487,10 @@ export async function updateLocation(
   const { districtCodes, ...text } = fields;
 
   return db.$transaction(async (tx) => {
-    const location = await tx.location.findUnique({ where: { id } });
+    const location = await tx.location.findUnique({
+      where: { id },
+      include: { addresses: { orderBy: { position: "asc" } } },
+    });
     if (!location) return NOT_FOUND;
 
     const changed = changedFields(location, text);
@@ -485,6 +508,17 @@ export async function updateLocation(
     const moved = !sameCodes(location.districtCodes, districtCodes);
     if (moved && !(await districtsExist(tx, districtCodes))) {
       return UNKNOWN_DISTRICT;
+    }
+    if (moved) {
+      const stray = strayAddresses(location.addresses, districtCodes);
+      if (stray.length > 0) {
+        return {
+          ok: false,
+          error: `${strayAddressesPhrase(stray)}. ${ADDRESS_RULE} Remove ${
+            stray.length > 1 ? "those addresses" : "that address"
+          } first, or keep the district ticked.`,
+        };
+      }
     }
     if (!changed && !moved) return { ok: true };
 
@@ -530,7 +564,9 @@ function loggedAddress(address: { id: string; name: string; place: unknown }) {
  * removed, and a highlight pointing at it then reads as having no address.
  * `expected` is the ids the form was opened with, in order: when the stored
  * list is no longer that, someone else changed it and the save is refused.
- * Saving what is already there logs nothing.
+ * A new address has to lie in one of the location's districts, placed by
+ * its coordinates; every one that does not is named in the refusal. Saving
+ * what is already there logs nothing.
  */
 export async function setLocationAddresses(
   actor: Actor,
@@ -564,6 +600,16 @@ export async function setLocationAddresses(
         return ADDRESSES_CHANGED;
       }
       keptIds.add(entry.id);
+    }
+    const stray = strayAddresses(
+      entries.filter((entry) => "place" in entry),
+      location.districtCodes,
+    );
+    if (stray.length > 0) {
+      return {
+        ok: false,
+        error: `${strayAddressesPhrase(stray)}. ${ADDRESS_RULE}`,
+      };
     }
 
     const same =
@@ -614,7 +660,7 @@ export type PageSaved = { ok: true; version: string } | Refusal;
  * Writes the page's content inside the caller's transaction, when the
  * stored content is still the version the form was opened with. A highlight
  * pointing at an address the location does not hold loses the pointer.
- * `publish` also copies the content to the published copy. Answers the
+ * `publish` also makes the content the page's public copy. Answers the
  * content as written and the row as it was, for the caller's log.
  */
 async function writePageContent(
@@ -659,7 +705,7 @@ async function writePageContent(
   const data = {
     draft: clean,
     updatedAt: now,
-    ...(publish ? { published: clean, publishedAt: now } : {}),
+    ...(publish ? { published: clean, publishedAt: now, isOn: true } : {}),
   };
   // Conditional on the version read above, so two saves at once cannot both land.
   const { count } = was
@@ -704,10 +750,10 @@ export async function saveLocationPageDraft(
 }
 
 /**
- * Saves the content as the page's draft and copies it to the published
- * copy, when it is complete. It works in any location state; whether the
- * public sees the page is the state's and the On switch's to say.
- * Publishing what is already published logs nothing.
+ * Saves the content as the page's draft and makes it the page's public
+ * copy, when it is complete. A published page is one the public can see,
+ * once the location is live: there is no switch beside it. It works in any
+ * location state. Publishing what is already public logs nothing.
  */
 export async function publishLocationPage(
   actor: Actor,
@@ -731,8 +777,14 @@ export async function publishLocationPage(
     );
     if (!written.ok) return written;
 
+    // The copy last published, which the diff in the history reads; a page
+    // that was unpublished since is published again, and that is logged too.
     const before = written.was ? publishedOf(page, written.was) : null;
-    if (!before || !samePageContent(before, written.content)) {
+    if (
+      !written.was?.isOn ||
+      !before ||
+      !samePageContent(before, written.content)
+    ) {
       await logActivity(tx, actor, {
         action: "location.page.published",
         entityId: locationId,
@@ -745,15 +797,15 @@ export async function publishLocationPage(
 }
 
 /**
- * Flips a page's On switch: whether the page exists for the public. Setting
- * it to what it is logs nothing. The content's version is left as it is, so
- * a form open on the page still saves.
+ * Unpublishes a page: the public no longer sees it, and its draft and the
+ * copy last published are kept. Unpublishing a page that is not published
+ * logs nothing. The content's version is left as it is, so a form open on
+ * the page still saves.
  */
-export async function setLocationPageOn(
+export async function unpublishLocationPage(
   actor: Actor,
   locationId: string,
   page: LocationPageKey,
-  isOn: boolean,
 ): Promise<Change> {
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
@@ -763,19 +815,16 @@ export async function setLocationPageOn(
     const row = await tx.locationPage.findUnique({
       where: pageKey(locationId, page),
     });
-    const standing = standingOf(page, row ?? undefined);
-    if (standing.isOn === isOn) return { ok: true };
+    if (!row?.isOn) return { ok: true };
 
-    const check = checkPageSwitch(stateOf(location), standing, isOn);
+    const check = checkPageUnpublish(locationStateOf(location.state), page);
     if (!check.ok) return check;
-    // A page with no row is not published, which the check has refused.
-    if (!row) return NOT_FOUND;
 
     // Only while the content is the one read above: writing its version
     // back over a save that landed meanwhile would hide that save.
     const { count } = await tx.locationPage.updateMany({
       where: { id: row.id, updatedAt: row.updatedAt },
-      data: { isOn, updatedAt: row.updatedAt },
+      data: { isOn: false, updatedAt: row.updatedAt },
     });
     if (count !== 1) {
       return { ok: false, error: "The page was just saved. Try again." };
@@ -783,17 +832,18 @@ export async function setLocationPageOn(
     await logActivity(tx, actor, {
       action: "location.page.updated",
       entityId: locationId,
-      before: { page, isOn: !isOn },
-      after: { page, isOn },
+      before: { page, isOn: true },
+      after: { page, isOn: false },
     });
     return { ok: true };
   });
 }
 
 /**
- * Moves the location to another state, when its pages allow the move. The
- * first move to `live` stamps `wentLiveAt`, which locks the slug. Moving to
- * the state it is in logs nothing.
+ * Moves the location to another state, when its pages allow the move: a
+ * draft goes live, a live one is paused, a paused one resumes. The first
+ * move to `live` stamps `wentLiveAt`, which locks the slug. Moving to the
+ * state it is in logs nothing.
  */
 export async function moveLocationState(
   actor: Actor,
@@ -806,7 +856,7 @@ export async function moveLocationState(
       include: { pages: pagesInLocale },
     });
     if (!location) return NOT_FOUND;
-    const from = stateOf(location);
+    const from = locationStateOf(location.state);
     if (from === to) return { ok: true };
 
     const blockers = stateMoveBlockers(from, to, standingsOf(location.pages));
@@ -853,7 +903,7 @@ export async function changeTopChoice(
 
     if (change === "add") {
       if (index >= 0) return { ok: true };
-      if (stateOf(location) !== "live") {
+      if (locationStateOf(location.state) !== "live") {
         return {
           ok: false,
           error: "Only a live location can be made a top choice.",

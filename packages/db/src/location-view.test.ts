@@ -68,7 +68,7 @@ function rows(over: Partial<LocationRows> = {}): LocationRows {
 }
 
 describe("the public view of a location", () => {
-  it("holds the published copy of every page that is on, in order", () => {
+  it("holds the public copy of every page that is published, in order", () => {
     const view = publicLocationViewOf(rows());
     assert.ok(view);
     assert.deepEqual(
@@ -98,7 +98,7 @@ describe("the public view of a location", () => {
     assert.equal(publicLocationViewOf(rows({ state: "unknown" })), null);
   });
 
-  it("is null when the landing page is off or was never published", () => {
+  it("is null when the landing page was unpublished or never published", () => {
     const [coach, landing, car] = rows().pages;
     assert.equal(
       publicLocationViewOf(
@@ -148,19 +148,19 @@ describe("the public view of a location", () => {
 });
 
 describe("the preview of a location", () => {
-  it("holds the draft of every page, whatever the state and the switches say", () => {
+  it("holds the draft of every page, whatever the state and whether it is published", () => {
     const view = previewLocationViewOf(rows({ state: "draft" }));
     assert.deepEqual(
       view.pages.map((page) => [
         page.page,
         page.content.heroHeadline,
-        page.isOn,
         page.status,
       ]),
       [
-        ["landing", "Landing, drafted", true, "changed"],
-        ["car-with-driver", "Car, published", true, "published"],
-        ["coach-charter", "Coach, drafted", false, "changed"],
+        ["landing", "Landing, drafted", "changed"],
+        ["car-with-driver", "Car, published", "published"],
+        // Unpublished since: the copy it once showed does not count.
+        ["coach-charter", "Coach, drafted", "unpublished"],
       ],
     );
   });
@@ -170,11 +170,10 @@ describe("the preview of a location", () => {
     assert.equal(view.pages.length, 3);
     const landing = pageOfView(view, "landing");
     assert.equal(landing?.content.heroHeadline, "");
-    assert.equal(landing?.isOn, false);
     assert.equal(landing?.status, "unpublished");
   });
 
-  it("links only the product pages that are on", () => {
+  it("links only the product pages that are published", () => {
     assert.deepEqual(
       productPagesOf(previewLocationViewOf(rows())).map((page) => page.page),
       ["car-with-driver"],

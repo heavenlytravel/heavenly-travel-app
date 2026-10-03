@@ -199,7 +199,8 @@ export async function listActivityForMany(
   if (records.length === 0) return [];
   const rows = await db.activityLog.findMany({
     where: { OR: records.map((r) => ({ ...r })) },
-    orderBy: { createdAt: "asc" },
+    // Entries written by one transaction share a time; the id keeps their order.
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   return decorate(rows);
 }

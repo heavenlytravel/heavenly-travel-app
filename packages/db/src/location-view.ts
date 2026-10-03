@@ -1,15 +1,16 @@
 import type { TripCategory } from "./booking-status";
 import {
-  NEW_LOCATION_STATE,
-  isLocationState,
   isPublicState,
+  locationStateOf,
   type LocationState,
 } from "./location-input";
 import {
   LANDING_PAGE,
   LOCATION_PAGES,
+  isPagePublished,
   pageContentOf,
   pageStatusOf,
+  publicCopyOf,
   type LocationPageKey,
   type PageContent,
   type PageImage,
@@ -40,9 +41,7 @@ export type LocationViewAddress = {
 export type LocationViewPage = {
   page: LocationPageKey;
   content: PageContent;
-  /** Always true in the public view, which holds no page that is off. */
-  isOn: boolean;
-  /** Always "published" in the public view, which shows published copies. */
+  /** Always "published" in the public view, which holds only published pages. */
   status: PageStatus;
 };
 
@@ -110,7 +109,7 @@ function viewOf(
     slug: rows.slug,
     name: rows.name,
     tagline: rows.tagline,
-    state: isLocationState(rows.state) ? rows.state : NEW_LOCATION_STATE,
+    state: locationStateOf(rows.state),
     addresses,
     pages: LOCATION_PAGES.flatMap((page) => {
       const shown = pageOf(
@@ -131,20 +130,15 @@ function viewOf(
 }
 
 /**
- * What the public sees of a location: the published copy of every page that
- * is on. Null when the public sees nothing: the location is not live or
- * paused, or its landing page is off.
+ * What the public sees of a location: the public copy of every page that is
+ * published. Null when the public sees nothing: the location is not live or
+ * paused, or its landing page is not published.
  */
 export function publicLocationViewOf(rows: LocationRows): LocationView | null {
-  const view = viewOf(rows, (page, row) =>
-    row?.isOn && row.published != null
-      ? {
-          content: pageContentOf(page, row.published),
-          isOn: true,
-          status: "published",
-        }
-      : null,
-  );
+  const view = viewOf(rows, (page, row) => {
+    const content = row ? publicCopyOf(page, row) : null;
+    return content ? { content, status: "published" } : null;
+  });
   return isPublicState(view.state) && pageOfView(view, LANDING_PAGE)
     ? view
     : null;
@@ -152,19 +146,15 @@ export function publicLocationViewOf(rows: LocationRows): LocationView | null {
 
 /**
  * What staff check before a publish: the working draft of every page,
- * whatever the location's state and the On switches say. A page never
- * written reads as an empty one.
+ * whatever the location's state and whether the page is published. A page
+ * never written reads as an empty one.
  */
 export function previewLocationViewOf(rows: LocationRows): LocationView {
   return viewOf(rows, (page, row) => {
     const draft = pageContentOf(page, row?.draft);
     return {
       content: draft,
-      isOn: row?.isOn ?? false,
-      status: pageStatusOf(
-        draft,
-        row?.published != null ? pageContentOf(page, row.published) : null,
-      ),
+      status: pageStatusOf(draft, row ? publicCopyOf(page, row) : null),
     };
   });
 }
@@ -183,9 +173,11 @@ export function isProductPage(
   return entry.page !== LANDING_PAGE;
 }
 
-/** The product pages the landing page links to: those that are on. */
+/** The product pages the landing page links to: those that are published. */
 export function productPagesOf(view: LocationView): LocationProductPage[] {
-  return view.pages.filter(isProductPage).filter((entry) => entry.isOn);
+  return view.pages
+    .filter(isProductPage)
+    .filter((entry) => isPagePublished(entry.status));
 }
 
 /** A top choice as the home page shows it on a card. */

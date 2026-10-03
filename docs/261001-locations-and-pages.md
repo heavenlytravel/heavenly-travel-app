@@ -3,8 +3,10 @@
 Status: decided on 2026-10-01, revised on 2026-10-02 after review, and again the same day
 while PR 2 was built: a location's districts are ticked by Marketing, not detected from a
 Google place, and the Coverage screen does not list locations. All four PRs are built;
-what PR 3 and PR 4 settled while they were built is marked "PR 3" and "PR 4" below. The
-PRs are listed under "Build order". The
+what PR 3 and PR 4 settled while they were built is marked "PR 3" and "PR 4" below. A
+fifth PR then made the flow simpler, as decided in `261003-location-flow.md`: three
+states, a first publish that switches the page on, and a Home page screen. What it
+changed is marked "PR 5". The PRs are listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -52,35 +54,42 @@ does not show or hide a page.
   already gives: "We do not serve that pickup area yet."
 - There is one page and one search card for both cases. Nothing on the page changes with
   the district switch.
-- The location's page in the admin lists its districts and whether pickups are on in
-  each, as information: "Timur Laut: on, Barat Daya: off". The Coverage screen does not
-  list locations, because a switch does not touch them.
+- The location's page in the admin lists its districts, each with a dot that says
+  whether pickups are on there, as information: a green dot for Timur Laut, a grey ring
+  for Barat Daya. The Coverage screen does not list locations, because a switch does not
+  touch them.
 
 ### States
 
 The state is on the location. No Prisma enum: a string checked against a const array.
 
-| State     | The public sees                               | Moves to                |
-| --------- | --------------------------------------------- | ----------------------- |
-| `draft`   | 404                                           | `preview`               |
-| `preview` | 404. Staff see it on the preview page         | `live`, or back `draft` |
-| `live`    | The pages                                     | `paused`                |
-| `paused`  | The pages, with a notice in place of the card | `live`                  |
+| State    | The public sees                               | Moves to |
+| -------- | --------------------------------------------- | -------- |
+| `draft`  | 404. Staff see the drafts on the preview page | `live`   |
+| `live`   | The pages                                     | `paused` |
+| `paused` | The pages, with a notice in place of the card | `live`   |
 
-- `draft` is any location still being written. `preview` means every page that is on is
-  complete and staff are checking the text and the image quality before it goes public.
-- A location moves to `preview` only when its landing page and at least one product page
-  are on. The same check runs again on the move from `preview` to `live`.
-- The move from `preview` to `live` is also refused while a page that is on has
-  unpublished changes, so what staff checked on the preview page is what goes public.
-- These checks run on the moves and not afterwards. Marketing may switch off both product
+- There are three states (PR 5). A fourth, `preview`, stood between `draft` and `live`
+  until then; it went because the preview page shows the drafts in every state, so the
+  move to it meant nothing to Marketing. A stored state the code does not know reads as
+  `draft`.
+- `draft` is any location still being written. Each state has one move.
+- A location goes live only when its landing page is published. No product page is
+  needed (PR 5; one was until then): the landing page alone carries the search card, and
+  with no product page published it shows no product links.
+- Going live is also refused while a published page has edits waiting in its draft, so
+  what staff checked on the preview page is what goes public.
+- While a check fails, "Go live" is disabled and the location's screen says what to do
+  first: "Publish the landing page", "Publish the changes on the Coach charter page"
+  (PR 5).
+- These checks run on the move and not afterwards. Marketing may unpublish both product
   pages of a live location: its landing page then shows no product links and still
   carries the search card.
 - Resuming a paused location checks nothing (PR 3): its pages never stopped being public,
   so there is nothing a check would protect.
-- A location that has been `live` never returns to `draft` or `preview`, so a public
-  address never becomes a 404. `paused` is the way to stop selling a place for a while:
-  a closed road, an off season.
+- A location that has been `live` never returns to `draft`, so a public address never
+  becomes a 404. `paused` is the way to stop selling a place for a while: a closed road,
+  an off season.
 - Marketing makes every move. Going live on the CEO's word is a working rule, not a
   check in code; restricting it to `SUPER` is future work.
 - `retired` (a permanent redirect) waits for the redirect table at cutover.
@@ -88,18 +97,22 @@ The state is on the location. No Prisma enum: a string checked against a const a
 ### The pages of a location
 
 - `/[location]` is the landing page. It introduces the place and links to the product
-  pages that are on.
+  pages that are published.
 - `/[location]/[product]` is one page per product. The products are the list in code,
   `car-with-driver` and `coach-charter` today. A new product is a code change, and it
   then appears as a page on every location.
-- Each page has one switch, **On**. A page can be switched on once it has a published
-  copy. A product page that is off sends the visitor to the location's landing page. The
-  landing page cannot be switched off once the location has left `draft`.
-- The On switch says whether the page exists. It does not say whether the product can be
-  booked there: coverage is one switch per district for every product, and per-product
-  coverage is future work.
-- The redirect from a product page that is off is temporary (307), since the page can be
-  switched on again (PR 4).
+- A page is published or it is not (PR 5). Until then each page also had a switch,
+  **On**, beside its publish; the two had nearly the same states, so the switch went.
+  The statuses are "Not published", "Published" and "Published, edits waiting": the
+  public still sees the copy last published, and the draft holds newer edits.
+- "Unpublish" takes a page from the public and keeps its text; "Publish" brings it back.
+  A product page that is not published sends the visitor to the location's landing
+  page. The landing page cannot be unpublished once the location has left `draft`.
+- Whether a page is published says whether the page exists. It does not say whether the
+  product can be booked there: coverage is one switch per district for every product,
+  and per-product coverage is future work.
+- The redirect from a product page that is not published is temporary (307), since the
+  page can be published again (PR 4).
 
 ### The content of a page
 
@@ -145,7 +158,12 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   and changes nothing in public. It checks nothing but the length limits.
 - "Publish" checks the draft is complete, copies it to the published copy and refreshes
   the public page. It works in any location state.
-- The editor shows whether the draft differs from what is published.
+- On a location that is `live` or `paused`, publishing asks first, "Publish? This goes
+  public at once.", and so does unpublishing (PR 5). A draft location's page does both
+  without a question.
+- The editor shows whether the draft differs from what is published, and says what the
+  public sees: "The public still sees the copy published 3 Oct 2026. Publish to replace
+  it." (PR 5).
 - There is no version table. Every publish is written to the activity log with who,
   when, and the content before and after. To roll back, Marketing opens the entry in the
   location's history, puts the old text back and publishes again. The entry opens on a
@@ -154,8 +172,9 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - "Publish" publishes what is in the form, saved or not: it saves the draft and copies it
   in one step (PR 3).
 - Two admins on one page: a save is refused when the page changed since the form was
-  opened, with "This page was changed by someone else. Reload to see it." Flipping the On
-  switch is not a change to the page: a form open on it still saves (PR 3).
+  opened, with "This page was changed by someone else. Reload to see it." Unpublishing
+  is not a change to the page's content: a form open on it still saves (PR 3, for the
+  switch a page had then).
 
 ### The preview page
 
@@ -163,9 +182,10 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   `/preview/[location]` and `/preview/[location]/[product]`. The public pages stay at
   `/[location]`; there is no `/live/...`.
 - The preview page is the public page's own components, fed the working drafts in place
-  of the published copies. It shows them whatever the state and the On switches say, so
-  it also serves to check an edit to a live page before publishing it. A bar on top says
-  "Preview" and whether the draft differs from what is published.
+  of the published copies. It shows them whatever the state and whether a page is published, so
+  it is where staff check a draft location before it goes live, with no state of its own
+  for that (PR 5), and it also serves to check an edit to a live page before publishing
+  it. A bar on top says "Preview" and whether the draft differs from what is published.
 - It opens only for a signed-in admin who holds `locations.manage`, asked the way every
   admin screen asks. A signed-out visitor is sent to sign in; anyone else gets a 404.
   Both apps use one Clerk application, so at worst an admin signs in once on the
@@ -174,11 +194,12 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   signed link and no Draft Mode.
 - The preview page is never cached.
 - Built in PR 4:
-  - The bar also names the location's state and whether the page shown is switched on,
-    and links the location's three pages, on or off. The links on the page itself follow
-    the public rule (the products that are on) and stay inside the preview.
-  - The page editor has its own link, "Preview the saved draft", to the preview of the
-    page being edited. The preview shows what was last saved, not what is in the form.
+  - The bar also names the location's state and the status of the page shown, and links
+    the location's three pages, published or not. The links on the page itself follow
+    the public rule (the products that are published) and stay inside the preview.
+  - The page editor has its own link, "Preview" (PR 5; "Preview the saved draft" until
+    then), to the preview of the page being edited. The preview shows what was last
+    saved, not what is in the form.
   - The preview has no layout file. The access check is in each of its two pages, as on
     every admin screen, and sign-in comes back to the page that was asked for.
   - The address is checked before the session is read: the proxy attaches no session to
@@ -190,6 +211,10 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   go to there, such as "Langkawi Airport", "Kuah Jetty" or "Pantai Cenang".
 - Each is a name and an exact Google place, picked by search: a spot, never an area. The
   name is filled from the place and can be changed. Marketing sets the order.
+- An address has to be in one of the location's districts, placed by its coordinates
+  (PR 5). Saving refuses a new one that is not and says where it lies, and the districts
+  cannot be changed so that a stored address is left outside. One stored before the rule
+  stays and is marked in the list.
 - The list is a shortcut, not a limit. A customer going anywhere else, a hotel or a
   homestay, searches for it as on the home page. So the list does not have to be
   complete, and there is no minimum: a location with none shows the normal search.
@@ -226,7 +251,7 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 ### Slugs
 
 - Suggested from the name by `slugify`, and editable by Marketing while the location is
-  `draft` or `preview`.
+  `draft`.
 - Locked the first time the location goes live. Renaming a live slug needs the redirect
   table and waits for it.
 - Reserved words are refused, from one list: the site's own top-level paths (`account`,
@@ -238,7 +263,7 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 ### Who does it
 
 - A fifth team, `MARKETING`, with one permission, `locations.manage`: add a location,
-  keep its saved addresses, write and publish its pages, flip the On switch, change its
+  keep its saved addresses, write, publish and unpublish its pages, change its
   state and mark the top choices.
 - Operation keeps the district switch. It does not show, hide or change a location.
 - Any Marketing admin edits any location. There is no assignment per location; the
@@ -279,9 +304,10 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 - Marketing marks up to three live locations as top choices and sets their order. They
   take the place of the three hard-coded location cards. Each card shows the location's
   name, its tagline and the landing page's hero image, and opens the location's page.
-- The control is on the location's page (PR 3): "Add to the top choices" puts a live
-  location last, "Up" and "Down" move it one place, "Remove" takes it off. The places are
-  kept as 1, 2, 3 with no gaps, and every location whose place moves is logged.
+- The control is on the Home page screen, `/home-page` (PR 5; it was on each location's
+  page from PR 3): the three slots in order, "Add" puts a live location not yet chosen
+  last, "Up" and "Down" move one a place, "Remove" takes it off. The places are kept as
+  1, 2, 3 with no gaps, and every location whose place moves is logged.
 - The KLIA card stays as it is, hard-coded, filling the pickup into the search card.
 - The row is centred, so fewer cards make a shorter row and not a gap. A location card
   says "Explore this location" where the KLIA card says "Book for this location" (PR 4).
@@ -298,7 +324,7 @@ built: no `/ms/...` routes, no language switch. Malay pages are future work.
 
 | `04` and `05b`                                   | Here                                                    |
 | ------------------------------------------------ | ------------------------------------------------------- |
-| Five states, with `retired`                      | Four. `retired` waits for the redirect table            |
+| Five states, with `retired`                      | Three. `retired` waits for the redirect table           |
 | `preview` reached with a signed cookie           | A staff-only page, `/preview/[location]`                |
 | Two indexing tiers, a readiness gate for tier 1  | No indexing until cutover. Every page must be complete  |
 | `robots.txt` disallow off the indexable host     | The noindex header alone, on every host, until cutover  |
@@ -306,7 +332,7 @@ built: no `/ms/...` routes, no language switch. Malay pages are future work.
 | Sections that admins reorder and hide (D3)       | A fixed order of fixed fields                           |
 | Locale in the routing from the first commit (D1) | Locale in the data only                                 |
 | Media on Vercel Blob (D10)                       | UploadThing                                             |
-| Product availability per location (D14)          | The page's On switch, which is not bookability          |
+| Product availability per location (D14)          | Whether the page is published, which is not bookability |
 | A content editor role scoped to locations (§9)   | The Marketing team, no scope                            |
 | Drizzle recommended (§3)                         | Prisma, as the app already uses                         |
 | Sitemap, redirect table, product hubs, packages  | Not in this plan                                        |
@@ -326,7 +352,7 @@ Location       id String @id @default(cuid())
                name String
                tagline String?          (the short line on a home page card)
                districtCodes String[]   (the districts Marketing ticked; no relation)
-               state String             ("draft" | "preview" | "live" | "paused")
+               state String             ("draft" | "live" | "paused")
                wentLiveAt DateTime?     (set once; from then the slug is locked)
                topChoiceOrder Int?      (null: not on the home page)
                createdAt, updatedAt
@@ -370,36 +396,51 @@ A new entity type, `location`. Every entry logs against the location's id and ha
 | `location.addresses.updated` | before and after: the saved addresses, in their order       |
 | `location.state.changed`     | before and after: the state                                 |
 | `location.page.published`    | the page, and its content before and after                  |
-| `location.page.updated`      | the page, and the On switch before and after                |
+| `location.page.updated`      | the page, and whether it is published, before and after     |
 
 Saving a draft is not logged. A change to the same values logs nothing, as elsewhere.
+A publish is one entry, and an unpublish is `location.page.updated`, read as
+"Unpublished the Coach charter page" (PR 5). An entry from before PR 5 keeps its
+sentence, since the log is never rewritten: one that names the `preview` state, or one
+of a page being turned on by the switch it had.
 
 ## The admin screens
 
-Sidebar group "Marketing", item "Locations", permission `locations.manage`.
+Sidebar group "Marketing", items "Locations" and "Home page", permission
+`locations.manage`. The location screen and the picker are as PR 5 left them.
 
 - **`/locations`**: one row per location with its name and slug, its districts and their
-  states, its state badge, which pages are on, its top-choice place and when it last
+  states, its state badge, which pages are published, its top-choice place and when it last
   changed. "Add location" above the list.
 - **`/locations/new`**: the name, then the slug, filled from the name and editable, then
-  the states as checkboxes and under them the districts of each ticked state, each
-  marked when pickups there are off, then the tagline.
+  the states as checkboxes and under them the districts of each ticked state, then the
+  tagline. A dot beside each district says whether pickups are on there, green for on
+  and a grey ring for off; the info tooltip says what the dots mean.
 - **`/locations/[id]`**:
-  - Details: name, slug (read-only once live), tagline, states and districts.
-  - Pickups: each district of the location and whether pickups there are on.
+  - The header: the state badge beside the name, and beside "Preview" (a link to the
+    preview page on the customer site) the one move the state allows: "Go live", "Pause"
+    or "Resume". While the move is blocked its button is disabled and one line under the
+    header says what to do first ("Publish the landing page", "Publish the changes on
+    the Coach charter page"). There is no State card.
+  - Pages: a row each for Landing, Car with driver and Coach charter, with its status
+    ("Not published", "Published", "Published, edits waiting") and "Edit".
+  - Details: name, slug (read-only once live), tagline, and the ticked districts as a
+    list, each with the picker's dot. "Edit districts" opens the picker in the list's
+    place. There is no Pickups card.
   - Saved addresses: the list in its order, each with its name and its place. "Add
     address" opens the place search for exact spots; an address can be renamed, moved
-    and removed.
-  - State: the current state, the move it allows and what blocks it ("Switch on the
-    landing page and at least one product page", "Publish the changes on Coach
-    charter").
-  - Pages: a row each for Landing, Car with driver and Coach charter, with "Not
-    published", "Published" or "Unpublished changes", the On switch and "Edit".
-  - "Preview", a link to the preview page on the customer site (it arrives with the
-    preview page, in PR 4), the top-choice control, and the location's history.
+    and removed. One outside the location's districts is refused on Save.
+  - The location's history.
 - **`/locations/[id]/pages/[page]`**: the fields above with their limits shown as they
   are typed, the image uploads, the saved address chosen on each highlight, a list of
-  what is still missing, "Save draft" and "Publish".
+  what is still missing, "Save draft", "Publish" and, once the page is published,
+  "Unpublish" (PR 5). Where the location has no saved address, a highlight
+  says "Add saved addresses on the location first", a link to the location's list
+  (PR 5).
+- **`/home-page`** (PR 5): the top choices, as three slots in order, each with the
+  location's name, tagline and state, "Up", "Down" and "Remove", and "Add" from the live
+  locations not yet chosen. Anything else the home page comes to need from Marketing
+  lives on this screen.
 - **`/locations/[id]/history/[entryId]`**: one publish from the history, the page before
   and after.
 
@@ -416,7 +457,7 @@ app/_location/                                 the components and readers they s
 app/api/revalidate/route.ts                    refreshes cached pages
 ```
 
-- An unknown slug, a `draft` or `preview` location and an unknown product are a 404.
+- An unknown slug, a `draft` location and an unknown product are a 404.
 - The public files and the preview files are thin: both render one set of page
   components, and differ only in the reader they call and in the preview's access check.
 - The pages are in a route group of their own, `(location)`, not in `(site)` (PR 4). The
@@ -439,7 +480,7 @@ site's cache by itself.
 
 - The customer site reads published locations through a cached reader, tagged per
   location, with tags for the home page's top choices and for the vehicle classes.
-- After a publish, a switch, a state change, a saved address change, a top-choice change
+- After a publish, an unpublish, a state change, a saved address change, a top-choice change
   or a vehicle class change, the admin's server action calls the customer site's `/api/revalidate` with
   the tags and a shared secret.
 - As built in PR 4:
@@ -463,33 +504,35 @@ site's cache by itself.
 
 ## Module changes
 
-| Module                                 | Change                                                                                                                                                                                                                                                        |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roles.ts`                             | `ADMIN_TEAMS` gains `MARKETING` and its label                                                                                                                                                                                                                 |
-| `permissions.ts`                       | `locations.manage`, for `MARKETING`                                                                                                                                                                                                                           |
-| `location-input.ts`, new               | Browser-safe: the states and their moves, the reserved slugs, the rule of the On switch, the parsers. Unit-tested                                                                                                                                             |
-| `location-page-input.ts`, new          | Browser-safe: the page keys, the content shape, the limits, `missingFields`, the image rules. Unit-tested                                                                                                                                                     |
-| `locations.ts`, new                    | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site                                 |
-| `location-view.ts`, new (PR 4)         | Browser-safe: a location as the customer site shows it, built from its rows as the public view or as the preview, the top choice card, and the paths of the pages. Unit-tested                                                                                |
-| `cache-tags.ts`, new (PR 4)            | Browser-safe: the tags the customer site caches under and the admin names, and the refresh route's path. Unit-tested                                                                                                                                          |
-| `session.ts`, `origins.ts` (PR 4)      | `getAdminAccess(permission)`, shared by the console and the preview. `SITE_URL` and `ADMIN_URL` read in one place, for the emails, the canonical address and the admin's calls                                                                                |
-| `pricing.ts`, `vehicle-class-input.ts` | `startingPriceSen` and `seatsLabel`, for the vehicle classes on a product page; the booking forms use the same seats wording (PR 4)                                                                                                                           |
-| `activity-actions.ts`                  | The `location` entity type, the six actions and their sentences                                                                                                                                                                                               |
-| `coverage.ts`                          | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                            |
-| `apps/admin/.../locations`, new        | The four screens, their server actions and the upload route                                                                                                                                                                                                   |
-| `apps/admin/app/_lib`                  | The call to the customer site's refresh route, and the address of the preview page. The "signed-in admin who holds this permission" check of `access.ts` moves to `@repo/db/server`, shared with the preview page                                             |
-| `apps/admin/.../vehicle-classes`       | Calls the refresh after a change                                                                                                                                                                                                                              |
-| `apps/web/app/(location)`, new         | The layout and the two pages, with their metadata and structured data, and under `preview` the two pages again over the drafts, behind the access check. Their shared components and readers are in `app/_location` and `app/_lib/locations.ts`               |
-| `packages/ui` `place-input.tsx`        | `PlaceInput` takes `presets`: the places an empty field offers when it is opened, under a heading (PR 4)                                                                                                                                                      |
-| `apps/web/app/_components/search`      | `ServiceTabsSearch` takes the saved addresses its drop-off offers before anything is typed, and opens on the tab of the product page it is on. The provider that lets a card fill it moves here from `_home` and carries a resolved place, for "Take me here" |
-| `apps/web/app/_home`                   | The destination cards read the top choices; `destinations.ts` keeps only KLIA                                                                                                                                                                                 |
-| `apps/web/next.config.ts`              | `X-Robots-Tag: noindex` on every response                                                                                                                                                                                                                     |
-| `next.config.ts`, both apps            | The UploadThing image host: the admin's in PR 3, the customer site's in PR 4                                                                                                                                                                                  |
-| `turbo.json`, both `.env.example`      | `UPLOADTHING_TOKEN`, for the admin app only, in PR 3; `REVALIDATE_SECRET` in PR 4                                                                                                                                                                             |
+| Module                                 | Change                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roles.ts`                             | `ADMIN_TEAMS` gains `MARKETING` and its label                                                                                                                                                                                                                                                                                                                        |
+| `permissions.ts`                       | `locations.manage`, for `MARKETING`                                                                                                                                                                                                                                                                                                                                  |
+| `location-input.ts`, new               | Browser-safe: the states and their moves, the reserved slugs, the rule of the On switch, the parsers. Unit-tested. PR 5: three states with one move each, and the rule of unpublishing in place of the switch's                                                                                                                                                      |
+| `location-page-input.ts`, new          | Browser-safe: the page keys, the content shape, the limits, `missingFields`, the image rules. Unit-tested                                                                                                                                                                                                                                                            |
+| `location-places.ts`, new (PR 5)       | Server only: whether a saved address lies in the location's districts, placed by its coordinates, and the sentence that says where one outside lies. Unit-tested                                                                                                                                                                                                     |
+| `locations.ts`, new                    | Create and update a location, keep its saved addresses, change its state, save and publish a page, flip a switch, set top choices; every write logged in its transaction. The readers for the admin and for the customer site. PR 5: `unpublishLocationPage` in place of the switch's writer, and a reader lists the live locations that can be added as top choices |
+| `location-view.ts`, new (PR 4)         | Browser-safe: a location as the customer site shows it, built from its rows as the public view or as the preview, the top choice card, and the paths of the pages. Unit-tested                                                                                                                                                                                       |
+| `cache-tags.ts`, new (PR 4)            | Browser-safe: the tags the customer site caches under and the admin names, and the refresh route's path. Unit-tested                                                                                                                                                                                                                                                 |
+| `session.ts`, `origins.ts` (PR 4)      | `getAdminAccess(permission)`, shared by the console and the preview. `SITE_URL` and `ADMIN_URL` read in one place, for the emails, the canonical address and the admin's calls                                                                                                                                                                                       |
+| `pricing.ts`, `vehicle-class-input.ts` | `startingPriceSen` and `seatsLabel`, for the vehicle classes on a product page; the booking forms use the same seats wording (PR 4)                                                                                                                                                                                                                                  |
+| `activity-actions.ts`                  | The `location` entity type, the six actions and their sentences                                                                                                                                                                                                                                                                                                      |
+| `coverage.ts`                          | `listDistricts` reads the districts of the codes it is given, for a location's own                                                                                                                                                                                                                                                                                   |
+| `apps/admin/.../locations`, new        | The four screens, their server actions and the upload route                                                                                                                                                                                                                                                                                                          |
+| `apps/admin/.../home-page`, new (PR 5) | The Home page screen: `TopChoiceControl` over the whole list, and its action. `nav.ts` lists it under Marketing                                                                                                                                                                                                                                                      |
+| `apps/admin/app/_lib`                  | The call to the customer site's refresh route, and the address of the preview page. The "signed-in admin who holds this permission" check of `access.ts` moves to `@repo/db/server`, shared with the preview page                                                                                                                                                    |
+| `apps/admin/.../vehicle-classes`       | Calls the refresh after a change                                                                                                                                                                                                                                                                                                                                     |
+| `apps/web/app/(location)`, new         | The layout and the two pages, with their metadata and structured data, and under `preview` the two pages again over the drafts, behind the access check. Their shared components and readers are in `app/_location` and `app/_lib/locations.ts`                                                                                                                      |
+| `packages/ui` `place-input.tsx`        | `PlaceInput` takes `presets`: the places an empty field offers when it is opened, under a heading (PR 4)                                                                                                                                                                                                                                                             |
+| `apps/web/app/_components/search`      | `ServiceTabsSearch` takes the saved addresses its drop-off offers before anything is typed, and opens on the tab of the product page it is on. The provider that lets a card fill it moves here from `_home` and carries a resolved place, for "Take me here"                                                                                                        |
+| `apps/web/app/_home`                   | The destination cards read the top choices; `destinations.ts` keeps only KLIA                                                                                                                                                                                                                                                                                        |
+| `apps/web/next.config.ts`              | `X-Robots-Tag: noindex` on every response                                                                                                                                                                                                                                                                                                                            |
+| `next.config.ts`, both apps            | The UploadThing image host: the admin's in PR 3, the customer site's in PR 4                                                                                                                                                                                                                                                                                         |
+| `turbo.json`, both `.env.example`      | `UPLOADTHING_TOKEN`, for the admin app only, in PR 3; `REVALIDATE_SECRET` in PR 4                                                                                                                                                                                                                                                                                    |
 
 ## Build order
 
-Four PRs into `main`. Each passes `pnpm lint` and `pnpm check-types` and leaves both
+Five PRs into `main`. Each passes `pnpm lint` and `pnpm check-types` and leaves both
 apps working.
 
 | PR  | Title                                       | Holds                                                                                                                                                                                                                  |
@@ -498,6 +541,7 @@ apps working.
 | 2   | `feat: locations in the admin`              | The schema, the Marketing team, the states and slugs of `location-input.ts`, creating and updating a location, their log actions, `/locations`, `/locations/new`, the details and saved addresses of `/locations/[id]` |
 | 3   | `feat(admin): location page editor`         | The content shape and its limits, save and publish, the On switch, uploads, the saved address on a highlight, the state moves, the top choices, the rest of the log actions and the history                            |
 | 4   | `feat: location pages on the customer site` | The public pages, the preview page, the refresh route and the admin's calls to it, the noindex header, structured data, the search card with the saved addresses and "Take me here", the home page cards               |
+| 5   | `feat(admin): simpler location flow`        | `261003-location-flow.md`: three states, pages published or not with no switch, the state and its move in the location's header, the districts in Details, the Home page screen, the editor's hint for saved addresses |
 
 What the developer does by hand:
 
@@ -508,6 +552,8 @@ What the developer does by hand:
   key is for the older SDK.
 - PR 4: set `REVALIDATE_SECRET` to the same value in both apps, locally and on Vercel.
   The admin app already has `SITE_URL`.
+- PR 5: before the merge, move any location still in `preview` to `live` or back to
+  `draft`, in both databases. There is no schema change and no push.
 
 After PR 2 Marketing can add locations and their saved addresses. After PR 3 it can write and publish their pages,
 and nothing is public yet: a location can be moved to `live` in the admin, but the

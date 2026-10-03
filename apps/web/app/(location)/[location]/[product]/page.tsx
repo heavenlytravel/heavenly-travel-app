@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /**
  * Route: /langkawi/car-with-driver. One file for every product's page of a
  * location, as published. An unknown product is a 404; a product whose page
- * is off sends the visitor to the location's landing page.
+ * is not published sends the visitor to the location's landing page.
  */
 export default async function LocationProductPage({ params }: Props) {
   const { location: slug, product } = await params;

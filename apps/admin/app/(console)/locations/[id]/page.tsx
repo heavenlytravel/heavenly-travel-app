@@ -22,6 +22,12 @@ import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { Card, CardTitle } from "../../../_components/Card";
 import { PageHeader } from "../../../_components/PageHeader";
 import {
+  CardSkeleton,
+  DetailSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../_components/Skeleton";
+import {
   LocationStateBadge,
   PageStatusBadge,
 } from "../../../_components/StatusBadges";
@@ -67,6 +73,42 @@ export default async function LocationPage({
 }: PageProps<"/locations/[id]">) {
   await requireAdmin("locations.manage");
   const { id } = await params;
+
+  return (
+    <>
+      <p className="mb-4 text-sm">
+        <Link
+          href={LOCATIONS_PATH}
+          className="text-neutral-600 underline-offset-4 hover:underline"
+        >
+          All locations
+        </Link>
+      </p>
+      <Streamed
+        fallback={
+          <>
+            <HeaderSkeleton />
+            <DetailSkeleton
+              main={
+                <>
+                  <CardSkeleton rows={4} />
+                  <CardSkeleton rows={5} />
+                  <CardSkeleton rows={3} />
+                </>
+              }
+              side={<CardSkeleton rows={6} />}
+            />
+          </>
+        }
+      >
+        {() => locationDetails({ id })}
+      </Streamed>
+    </>
+  );
+}
+
+/** The location under its name: its pages, details, addresses and history. */
+async function locationDetails({ id }: { id: string }) {
   const [location, districts, history] = await Promise.all([
     getLocation(id),
     districtOptions(),
@@ -100,14 +142,6 @@ export default async function LocationPage({
 
   return (
     <>
-      <p className="mb-4 text-sm">
-        <Link
-          href={LOCATIONS_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
-        >
-          All locations
-        </Link>
-      </p>
       <PageHeader
         title={location.name}
         badge={<LocationStateBadge state={state} />}

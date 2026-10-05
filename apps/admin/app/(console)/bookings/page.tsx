@@ -9,6 +9,7 @@ import { listBookings } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { BookingsTable } from "../../_components/BookingsTable";
 import { PageHeader } from "../../_components/PageHeader";
+import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { bookingsHref, NEW_BOOKING_PATH } from "../../_lib/routes";
 
@@ -19,10 +20,7 @@ export default async function BookingsPage({
   await requireAdmin("bookings.view");
   const { status } = await searchParams;
   const filter = isBookingStatus(status) ? status : undefined;
-  const [bookings, permissions] = await Promise.all([
-    listBookings({ status: filter }),
-    getPermissions(),
-  ]);
+  const permissions = await getPermissions();
 
   return (
     <>
@@ -50,16 +48,31 @@ export default async function BookingsPage({
       </nav>
 
       <div className="mt-4">
-        <BookingsTable
-          bookings={bookings}
-          emptyMessage={
-            filter
-              ? `No ${BOOKING_STATUS_LABELS[filter].toLowerCase()} bookings.`
-              : "No bookings yet."
-          }
-        />
+        {/* Keyed by the filter, so another filter shows the skeleton, not
+            the rows of the one before. */}
+        <Streamed
+          key={filter ?? "all"}
+          fallback={<TableSkeleton columns={6} />}
+        >
+          {() => bookingsList({ filter })}
+        </Streamed>
       </div>
     </>
+  );
+}
+
+/** The bookings the filter leaves, newest first. */
+async function bookingsList({ filter }: { filter: BookingStatus | undefined }) {
+  const bookings = await listBookings({ status: filter });
+  return (
+    <BookingsTable
+      bookings={bookings}
+      emptyMessage={
+        filter
+          ? `No ${BOOKING_STATUS_LABELS[filter].toLowerCase()} bookings.`
+          : "No bookings yet."
+      }
+    />
   );
 }
 

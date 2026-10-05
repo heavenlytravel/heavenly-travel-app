@@ -11,6 +11,12 @@ import { getBooking } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "../../../../../_components/PageHeader";
+import {
+  BackLinkSkeleton,
+  FormSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../../_lib/access";
 import { bookingHref } from "../../../../../_lib/routes";
 import { itemDraftOf } from "../../../_lib/trip-form";
@@ -27,6 +33,26 @@ export default async function AmendItemPage({
 }: PageProps<"/bookings/[id]/amend/[itemId]">) {
   await requireAdmin("bookings.manage");
   const { id, itemId } = await params;
+
+  return (
+    <Streamed
+      fallback={
+        <>
+          <BackLinkSkeleton />
+          <HeaderSkeleton />
+          <div className="mt-6 max-w-3xl">
+            <FormSkeleton fields={6} />
+          </div>
+        </>
+      }
+    >
+      {() => amendItem({ id, itemId })}
+    </Streamed>
+  );
+}
+
+/** The item in the editor, or why it cannot be amended. */
+async function amendItem({ id, itemId }: { id: string; itemId: string }) {
   const [booking, permissions] = await Promise.all([
     getBooking(id),
     getPermissions(),

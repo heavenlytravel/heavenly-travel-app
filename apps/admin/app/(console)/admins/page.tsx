@@ -2,6 +2,11 @@ import { ADMIN_TEAM_LABELS, adminTeamsOf, fullName, needsTeam } from "@repo/db";
 import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
+import {
+  CardSkeleton,
+  Streamed,
+  TableSkeleton,
+} from "../../_components/Skeleton";
 import { Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { AdminRowControls } from "./AdminRowControls";
@@ -11,11 +16,6 @@ import { WallSwitch } from "./WallSwitch";
 /** Route: /admins. Who is staff, their level and teams, and the wall. SUPER only. */
 export default async function AdminsPage() {
   const admin = await requireAdmin("admins.manage");
-  const [admins, wallActive] = await Promise.all([
-    listAdmins(),
-    isWallActive(),
-  ]);
-  const withoutTeam = admins.filter(needsTeam).length;
 
   return (
     <>
@@ -24,6 +24,37 @@ export default async function AdminsPage() {
         description="Staff access is invite-only. A SUPER admin promotes an existing customer account and sets its teams."
       />
 
+      <Streamed
+        fallback={
+          <>
+            <div className="mt-6">
+              <CardSkeleton rows={1} />
+            </div>
+            <div className="mt-6">
+              <CardSkeleton rows={1} />
+            </div>
+            <div className="mt-6">
+              <TableSkeleton columns={6} rows={5} />
+            </div>
+          </>
+        }
+      >
+        {() => adminsList({ selfId: admin.id })}
+      </Streamed>
+    </>
+  );
+}
+
+/** The wall, the promote form and every admin with their level and teams. */
+async function adminsList({ selfId }: { selfId: string }) {
+  const [admins, wallActive] = await Promise.all([
+    listAdmins(),
+    isWallActive(),
+  ]);
+  const withoutTeam = admins.filter(needsTeam).length;
+
+  return (
+    <>
       <section className="mt-6 rounded-lg border border-neutral-200 bg-white p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -67,7 +98,7 @@ export default async function AdminsPage() {
           <TBody>
             {admins.map((profile) => {
               const { user, level, createdAt } = profile;
-              const isSelf = user.id === admin.id;
+              const isSelf = user.id === selfId;
               const name = fullName(user);
               const teams = adminTeamsOf(profile.teams);
               return (

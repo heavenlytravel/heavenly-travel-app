@@ -3,6 +3,7 @@ import { describeActivity, formatLocalDateTime } from "@repo/db";
 import { listActivity, type ActivityEntry } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
+import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { activityHref, bookingHref, locationHref } from "../../_lib/routes";
@@ -26,11 +27,8 @@ export default async function ActivityPage({
   searchParams,
 }: PageProps<"/activity">) {
   await requireAdmin("activity.view");
-  const { before } = await searchParams;
-  const { entries, nextCursor } = await listActivity({
-    before: typeof before === "string" && before ? before : undefined,
-    take: PAGE_SIZE,
-  });
+  const { before: cursor } = await searchParams;
+  const before = typeof cursor === "string" && cursor ? cursor : undefined;
 
   return (
     <>
@@ -39,6 +37,29 @@ export default async function ActivityPage({
         description="Every action on bookings, admins and settings, with who did it and when. Entries are never edited or deleted."
       />
 
+      <Streamed
+        key={before ?? "newest"}
+        fallback={
+          <div className="mt-6">
+            <TableSkeleton columns={4} rows={10} />
+          </div>
+        }
+      >
+        {() => activityList({ before })}
+      </Streamed>
+    </>
+  );
+}
+
+/** One page of the log, and the links to the pages around it. */
+async function activityList({ before }: { before: string | undefined }) {
+  const { entries, nextCursor } = await listActivity({
+    before,
+    take: PAGE_SIZE,
+  });
+
+  return (
+    <>
       <div className="mt-6">
         <Table>
           <THead>

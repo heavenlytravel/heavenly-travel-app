@@ -6,6 +6,13 @@ import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { Card, CardTitle } from "../../../_components/Card";
 import { PageHeader } from "../../../_components/PageHeader";
+import {
+  CardSkeleton,
+  DetailSkeleton,
+  HeaderSkeleton,
+  Streamed,
+  TableSkeleton,
+} from "../../../_components/Skeleton";
 import { Table, TBody, Td, Th, THead } from "../../../_components/Table";
 import { requireAdmin } from "../../../_lib/access";
 import { COVERAGE_PATH } from "../../../_lib/routes";
@@ -21,10 +28,6 @@ export default async function StatePage({
 }: PageProps<"/coverage/[code]">) {
   await requireAdmin("coverage.manage");
   const { code } = await params;
-  const state = await getState(code);
-  if (!state) notFound();
-  const history = await listCoverageActivity(state);
-  const on = state.districts.filter((d) => d.isActive).length;
 
   return (
     <>
@@ -36,6 +39,37 @@ export default async function StatePage({
           All states
         </Link>
       </p>
+      <Streamed
+        fallback={
+          <>
+            <HeaderSkeleton />
+            <DetailSkeleton
+              main={<TableSkeleton columns={3} rows={8} />}
+              side={
+                <>
+                  <CardSkeleton rows={1} />
+                  <CardSkeleton rows={4} />
+                </>
+              }
+            />
+          </>
+        }
+      >
+        {() => stateDetails({ code })}
+      </Streamed>
+    </>
+  );
+}
+
+/** The state under its name: its districts, its multiplier and its history. */
+async function stateDetails({ code }: { code: string }) {
+  const state = await getState(code);
+  if (!state) notFound();
+  const history = await listCoverageActivity(state);
+  const on = state.districts.filter((d) => d.isActive).length;
+
+  return (
+    <>
       <PageHeader
         title={state.name}
         description={`${on} of ${state.districts.length} districts on.`}

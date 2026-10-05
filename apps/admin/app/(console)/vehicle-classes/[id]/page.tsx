@@ -1,9 +1,21 @@
 import Link from "next/link";
-import { getVehicleClass, listActivityFor } from "@repo/db/server";
+import {
+  getVehicleClass,
+  listActivityFor,
+  type ActivityEntry,
+  type VehicleClass,
+} from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { Card, CardTitle } from "../../../_components/Card";
 import { PageHeader } from "../../../_components/PageHeader";
+import {
+  CardSkeleton,
+  DetailSkeleton,
+  FormSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { VEHICLE_CLASSES_PATH } from "../../../_lib/routes";
 import { VehicleClassForm } from "../VehicleClassForm";
@@ -17,14 +29,6 @@ export default async function VehicleClassPage({
 }: PageProps<"/vehicle-classes/[id]">) {
   await requireAdmin("coverage.manage");
   const { id } = await params;
-  const isNew = id === "new";
-  const [vehicleClass, history] = isNew
-    ? [null, []]
-    : await Promise.all([
-        getVehicleClass(id),
-        listActivityFor("vehicle-class", id),
-      ]);
-  if (!isNew && !vehicleClass) notFound();
 
   return (
     <>
@@ -36,6 +40,48 @@ export default async function VehicleClassPage({
           All vehicle classes
         </Link>
       </p>
+      {id === "new" ? (
+        <VehicleClassScreen />
+      ) : (
+        <Streamed
+          fallback={
+            <>
+              <HeaderSkeleton />
+              <DetailSkeleton
+                main={<FormSkeleton sections={3} fields={4} />}
+                side={<CardSkeleton rows={4} />}
+              />
+            </>
+          }
+        >
+          {() => existingVehicleClass({ id })}
+        </Streamed>
+      )}
+    </>
+  );
+}
+
+/** A class that exists, read with its history. */
+async function existingVehicleClass({ id }: { id: string }) {
+  const [vehicleClass, history] = await Promise.all([
+    getVehicleClass(id),
+    listActivityFor("vehicle-class", id),
+  ]);
+  if (!vehicleClass) notFound();
+  return <VehicleClassScreen vehicleClass={vehicleClass} history={history} />;
+}
+
+/** The form under its header, beside the history when the class exists. */
+function VehicleClassScreen({
+  vehicleClass,
+  history = [],
+}: {
+  /** Left out for a class that does not exist yet. */
+  vehicleClass?: VehicleClass;
+  history?: ActivityEntry[];
+}) {
+  return (
+    <>
       <PageHeader
         title={vehicleClass ? vehicleClass.name : "Add class"}
         description={
@@ -48,7 +94,7 @@ export default async function VehicleClassPage({
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <VehicleClassForm
           key={vehicleClass?.id ?? "new"}
-          vehicleClass={vehicleClass ?? undefined}
+          vehicleClass={vehicleClass}
         />
         {vehicleClass ? (
           <Card>

@@ -7,6 +7,7 @@ import {
 } from "@repo/db";
 import { dashboardCounts, type DashboardCounts } from "@repo/db/server";
 import { PageHeader } from "../_components/PageHeader";
+import { Bone, Streamed } from "../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../_lib/access";
 import { bookingsHref } from "../_lib/routes";
 
@@ -63,6 +64,25 @@ function whoAmI(admin: Awaited<ReturnType<typeof requireAdmin>>) {
 /** Route: /. The same status cards for every admin, SUPER included. */
 export default async function DashboardPage() {
   const admin = await requireAdmin("dashboard.view");
+
+  return (
+    <>
+      <PageHeader title="Dashboard" description={whoAmI(admin)} />
+
+      <Streamed fallback={<StatusCardsSkeleton />}>
+        {() => statusCards()}
+      </Streamed>
+
+      <p className="mt-8 text-sm text-neutral-500">
+        Sales and Finance cards arrive with their features. Nothing here is a
+        placeholder.
+      </p>
+    </>
+  );
+}
+
+/** The cards with their numbers, a group per team. */
+async function statusCards() {
   const [counts, permissions] = await Promise.all([
     dashboardCounts(),
     getPermissions(),
@@ -70,8 +90,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description={whoAmI(admin)} />
-
       {groupsOf(counts).map((group) => (
         <section key={group.team} className="mt-8">
           <h2 className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
@@ -88,11 +106,30 @@ export default async function DashboardPage() {
           </dl>
         </section>
       ))}
+    </>
+  );
+}
 
-      <p className="mt-8 text-sm text-neutral-500">
-        Sales and Finance cards arrive with their features. Nothing here is a
-        placeholder.
-      </p>
+/** The two groups of cards, before their numbers. */
+function StatusCardsSkeleton() {
+  return (
+    <>
+      {[2, 4].map((cards, group) => (
+        <section key={group} className="mt-8">
+          <Bone className="h-4 w-24" />
+          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {Array.from({ length: cards }, (_, card) => (
+              <div
+                key={card}
+                className="rounded-lg border border-neutral-200 bg-white p-5"
+              >
+                <Bone className="h-5 w-28" />
+                <Bone className="mt-2 h-9 w-10" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

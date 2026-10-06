@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.ufs.sh", pathname: "/f/**" },
     ],
   },
+  // The admin never belongs in search engines, on any host. Unlike the
+  // customer site's header, this one stays after the move to
+  // heavenlytravel.my. A header, not robots.txt: a crawler kept out by
+  // robots.txt never fetches the page, so never sees the noindex.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -9,6 +9,7 @@ import { listVehicleClasses, type VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { PageHeader } from "../../_components/PageHeader";
+import { Bone, Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { NEW_VEHICLE_CLASS_PATH, vehicleClassHref } from "../../_lib/routes";
@@ -124,6 +125,22 @@ function CategoryTable({
   );
 }
 
+/** Every class, in a table per category. */
+async function categoryTables() {
+  const classes = await listVehicleClasses();
+  return (
+    <div className="mt-6 grid gap-8">
+      {TRIP_CATEGORIES.map((category) => (
+        <CategoryTable
+          key={category}
+          category={category}
+          classes={classes.filter((c) => c.category === category)}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * Route: /vehicle-classes. What the site sells, by category. Operation's
  * screen behind `coverage.manage`. Classes are never deleted, only turned
@@ -131,7 +148,6 @@ function CategoryTable({
  */
 export default async function VehicleClassesPage() {
   await requireAdmin("coverage.manage");
-  const classes = await listVehicleClasses();
 
   return (
     <>
@@ -145,15 +161,20 @@ export default async function VehicleClassesPage() {
         }
       />
 
-      <div className="mt-6 grid gap-8">
-        {TRIP_CATEGORIES.map((category) => (
-          <CategoryTable
-            key={category}
-            category={category}
-            classes={classes.filter((c) => c.category === category)}
-          />
-        ))}
-      </div>
+      <Streamed
+        fallback={
+          <div className="mt-6 grid gap-8">
+            {TRIP_CATEGORIES.map((category) => (
+              <div key={category}>
+                <Bone className="mb-3 h-6 w-40" />
+                <TableSkeleton columns={7} rows={3} />
+              </div>
+            ))}
+          </div>
+        }
+      >
+        {() => categoryTables()}
+      </Streamed>
     </>
   );
 }

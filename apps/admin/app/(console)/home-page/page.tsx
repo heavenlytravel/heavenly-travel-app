@@ -2,6 +2,7 @@ import { listTopChoiceCandidates, listTopChoices } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Card, CardTitle } from "../../_components/Card";
 import { PageHeader } from "../../_components/PageHeader";
+import { RowsSkeleton, Streamed } from "../../_components/Skeleton";
 import { requireAdmin } from "../../_lib/access";
 import { TopChoiceControl } from "./TopChoiceControl";
 
@@ -13,10 +14,6 @@ import { TopChoiceControl } from "./TopChoiceControl";
  */
 export default async function HomePageScreen() {
   await requireAdmin("locations.manage");
-  const [choices, candidates] = await Promise.all([
-    listTopChoices(),
-    listTopChoiceCandidates(),
-  ]);
 
   return (
     <>
@@ -33,9 +30,20 @@ export default async function HomePageScreen() {
               <InfoTip text="The location cards on the home page, in this order, after the airport card. Each card shows the location's name, its tagline and the landing page's hero image, and opens the location's page." />
             </span>
           </CardTitle>
-          <TopChoiceControl choices={choices} candidates={candidates} />
+          <Streamed fallback={<RowsSkeleton rows={4} />}>
+            {() => topChoices()}
+          </Streamed>
         </Card>
       </div>
     </>
   );
+}
+
+/** The top choices and the locations that could join them. */
+async function topChoices() {
+  const [choices, candidates] = await Promise.all([
+    listTopChoices(),
+    listTopChoiceCandidates(),
+  ]);
+  return <TopChoiceControl choices={choices} candidates={candidates} />;
 }

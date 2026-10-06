@@ -29,6 +29,12 @@ import { Card, CardTitle } from "../../../_components/Card";
 import { PageHeader } from "../../../_components/PageHeader";
 import { PlaceValue, Rows } from "../../../_components/Rows";
 import {
+  CardSkeleton,
+  DetailSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../_components/Skeleton";
+import {
   BookingStatusBadge,
   ItemStatusBadge,
 } from "../../../_components/StatusBadges";
@@ -53,6 +59,42 @@ export default async function BookingPage({
 }: PageProps<"/bookings/[id]">) {
   await requireAdmin("bookings.view");
   const { id } = await params;
+
+  return (
+    <>
+      <p className="mb-4 text-sm">
+        <Link
+          href={BOOKINGS_PATH}
+          className="text-neutral-600 underline-offset-4 hover:underline"
+        >
+          All bookings
+        </Link>
+      </p>
+      <Streamed
+        fallback={
+          <>
+            <HeaderSkeleton />
+            <DetailSkeleton
+              main={<CardSkeleton rows={9} />}
+              side={
+                <>
+                  <CardSkeleton rows={3} />
+                  <CardSkeleton rows={4} />
+                  <CardSkeleton rows={3} />
+                </>
+              }
+            />
+          </>
+        }
+      >
+        {() => bookingDetails({ id })}
+      </Streamed>
+    </>
+  );
+}
+
+/** The booking under its reference: its items, and the cards beside them. */
+async function bookingDetails({ id }: { id: string }) {
   const [booking, permissions, history, notes] = await Promise.all([
     getBooking(id),
     getPermissions(),
@@ -126,14 +168,6 @@ export default async function BookingPage({
 
   return (
     <>
-      <p className="mb-4 text-sm">
-        <Link
-          href={BOOKINGS_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
-        >
-          All bookings
-        </Link>
-      </p>
       <PageHeader
         title={booking.reference}
         description={`${statusLabel(booking.status)}. Pick-up ${formatLocalDateTime(booking.startsAt)}.`}

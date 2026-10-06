@@ -4,10 +4,18 @@ import {
   isLocationPageKey,
   locationPagePath,
   locationStateOf,
+  type LocationPageKey,
 } from "@repo/db";
 import { getLocationPage } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "../../../../../_components/PageHeader";
+import {
+  BackLinkSkeleton,
+  CardSkeleton,
+  DetailSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationHref } from "../../../../../_lib/routes";
 import { PreviewLink } from "../../../_components/PreviewLink";
@@ -25,6 +33,39 @@ export default async function LocationPageEditorPage({
   await requireAdmin("locations.manage");
   const { id, page } = await params;
   if (!isLocationPageKey(page)) notFound();
+
+  return (
+    <Streamed
+      fallback={
+        <>
+          <BackLinkSkeleton />
+          <HeaderSkeleton />
+          <DetailSkeleton
+            main={
+              <>
+                <CardSkeleton rows={3} />
+                <CardSkeleton rows={5} />
+                <CardSkeleton rows={4} />
+              </>
+            }
+            side={<CardSkeleton rows={4} />}
+          />
+        </>
+      }
+    >
+      {() => pageEditorDetails({ id, page })}
+    </Streamed>
+  );
+}
+
+/** The page in its editor, under the location it belongs to. */
+async function pageEditorDetails({
+  id,
+  page,
+}: {
+  id: string;
+  page: LocationPageKey;
+}) {
   const details = await getLocationPage(id, page);
   if (!details) notFound();
   const { location } = details;

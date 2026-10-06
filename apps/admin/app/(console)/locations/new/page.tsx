@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "../../../_components/PageHeader";
+import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
 import { districtOptions } from "../_lib/district-options";
@@ -11,7 +12,6 @@ import { NewLocationForm } from "./NewLocationForm";
  */
 export default async function NewLocationPage() {
   await requireAdmin("locations.manage");
-  const districts = await districtOptions();
 
   return (
     <>
@@ -29,8 +29,15 @@ export default async function NewLocationPage() {
       />
 
       <div className="mt-6 max-w-2xl">
-        <NewLocationForm districts={districts} />
+        <Streamed fallback={<FormSkeleton fields={4} />}>
+          {() => newLocation()}
+        </Streamed>
       </div>
     </>
   );
+}
+
+/** The form, with the districts a location can lie in. */
+async function newLocation() {
+  return <NewLocationForm districts={await districtOptions()} />;
 }

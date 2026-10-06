@@ -4,6 +4,7 @@ import { listLocations } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { PageHeader } from "../../_components/PageHeader";
+import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { LocationStateBadge } from "../../_components/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
@@ -17,7 +18,6 @@ import { NEW_LOCATION_PATH, locationHref } from "../../_lib/routes";
  */
 export default async function LocationsPage() {
   await requireAdmin("locations.manage");
-  const locations = await listLocations();
 
   return (
     <>
@@ -32,100 +32,107 @@ export default async function LocationsPage() {
       />
 
       <div className="mt-6">
-        <Table>
-          <THead>
-            <Th>Location</Th>
-            <Th>
-              <span className="inline-flex items-center gap-1.5">
-                Districts
-                <InfoTip text="The districts Marketing ticked for the location. Whether pickups there are served is Operation's switch on the Coverage screen; it does not show or hide a page." />
-              </span>
-            </Th>
-            <Th>
-              <span className="inline-flex items-center gap-1.5">
-                State
-                <InfoTip text="Draft is not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
-              </span>
-            </Th>
-            <Th>
-              <span className="inline-flex items-center gap-1.5">
-                Published
-                <InfoTip text="The pages that are published. The public sees them once the location is Live or Paused." />
-              </span>
-            </Th>
-            <Th>
-              <span className="inline-flex items-center gap-1.5">
-                Top choice
-                <InfoTip text="Its place among the location cards on the home page, set on the Home page screen. A paused top choice keeps its place and is left off the home page." />
-              </span>
-            </Th>
-            <Th>Changed</Th>
-          </THead>
-          <TBody>
-            {locations.length === 0 ? (
-              <EmptyRow colSpan={6}>
-                No locations yet. Add the first one.
-              </EmptyRow>
-            ) : (
-              locations.map((location) => {
-                const { districts } = location;
-                const stateNames = [
-                  ...new Set(districts.map((d) => d.state.name)),
-                ];
-                const on = districts.filter((d) => d.isActive).length;
-                return (
-                  <tr key={location.id}>
-                    <Td>
-                      <Link
-                        href={locationHref(location.id)}
-                        className="block font-medium underline-offset-4 hover:underline"
-                      >
-                        {location.name}
-                      </Link>
-                      <span className="block text-xs text-neutral-500">
-                        /{location.slug}
-                      </span>
-                    </Td>
-                    <Td>
-                      <span className="block">
-                        {districts.map((d) => d.name).join(", ") || "—"}
-                      </span>
-                      <span className="block text-xs text-neutral-500">
-                        {stateNames.join(", ")}
-                        {on === districts.length
-                          ? ""
-                          : ` · pickups on in ${on} of ${districts.length}`}
-                      </span>
-                    </Td>
-                    <Td>
-                      <LocationStateBadge state={location.state} />
-                    </Td>
-                    <Td>
-                      {location.pagesPublished.length === 0 ? (
-                        <span className="text-neutral-500">None</span>
-                      ) : (
-                        location.pagesPublished
-                          .map((page) => LOCATION_PAGE_LABELS[page])
-                          .join(", ")
-                      )}
-                    </Td>
-                    <Td className="tabular-nums">
-                      {location.topChoiceOrder ?? (
-                        <span className="text-neutral-500">—</span>
-                      )}
-                    </Td>
-                    <Td className="text-neutral-600 tabular-nums">
-                      {location.changedAt
-                        ? formatLocalDateTime(location.changedAt)
-                        : "—"}
-                    </Td>
-                  </tr>
-                );
-              })
-            )}
-          </TBody>
-        </Table>
+        <Streamed fallback={<TableSkeleton columns={6} rows={5} />}>
+          {() => locationsTable()}
+        </Streamed>
       </div>
     </>
+  );
+}
+
+/** Every location with its districts, its state and its pages. */
+async function locationsTable() {
+  const locations = await listLocations();
+
+  return (
+    <Table>
+      <THead>
+        <Th>Location</Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Districts
+            <InfoTip text="The districts Marketing ticked for the location. Whether pickups there are served is Operation's switch on the Coverage screen; it does not show or hide a page." />
+          </span>
+        </Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            State
+            <InfoTip text="Draft is not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
+          </span>
+        </Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Published
+            <InfoTip text="The pages that are published. The public sees them once the location is Live or Paused." />
+          </span>
+        </Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Top choice
+            <InfoTip text="Its place among the location cards on the home page, set on the Home page screen. A paused top choice keeps its place and is left off the home page." />
+          </span>
+        </Th>
+        <Th>Changed</Th>
+      </THead>
+      <TBody>
+        {locations.length === 0 ? (
+          <EmptyRow colSpan={6}>No locations yet. Add the first one.</EmptyRow>
+        ) : (
+          locations.map((location) => {
+            const { districts } = location;
+            const stateNames = [...new Set(districts.map((d) => d.state.name))];
+            const on = districts.filter((d) => d.isActive).length;
+            return (
+              <tr key={location.id}>
+                <Td>
+                  <Link
+                    href={locationHref(location.id)}
+                    className="block font-medium underline-offset-4 hover:underline"
+                  >
+                    {location.name}
+                  </Link>
+                  <span className="block text-xs text-neutral-500">
+                    /{location.slug}
+                  </span>
+                </Td>
+                <Td>
+                  <span className="block">
+                    {districts.map((d) => d.name).join(", ") || "—"}
+                  </span>
+                  <span className="block text-xs text-neutral-500">
+                    {stateNames.join(", ")}
+                    {on === districts.length
+                      ? ""
+                      : ` · pickups on in ${on} of ${districts.length}`}
+                  </span>
+                </Td>
+                <Td>
+                  <LocationStateBadge state={location.state} />
+                </Td>
+                <Td>
+                  {location.pagesPublished.length === 0 ? (
+                    <span className="text-neutral-500">None</span>
+                  ) : (
+                    location.pagesPublished
+                      .map((page) => LOCATION_PAGE_LABELS[page])
+                      .join(", ")
+                  )}
+                </Td>
+                <Td className="tabular-nums">
+                  {location.topChoiceOrder ?? (
+                    <span className="text-neutral-500">—</span>
+                  )}
+                </Td>
+                <Td className="text-neutral-600 tabular-nums">
+                  {location.changedAt
+                    ? formatLocalDateTime(location.changedAt)
+                    : "—"}
+                </Td>
+              </tr>
+            );
+          })
+        )}
+      </TBody>
+    </Table>
   );
 }

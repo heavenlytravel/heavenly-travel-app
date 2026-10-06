@@ -5,6 +5,12 @@ import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../../_components/Card";
 import { PageHeader } from "../../../../../_components/PageHeader";
+import {
+  BackLinkSkeleton,
+  CardSkeleton,
+  HeaderSkeleton,
+  Streamed,
+} from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationHref, locationPageHref } from "../../../../../_lib/routes";
 import { PageContentView } from "../../../_components/PageContentView";
@@ -20,6 +26,33 @@ export default async function LocationPublishPage({
 }: PageProps<"/locations/[id]/history/[entryId]">) {
   await requireAdmin("locations.manage");
   const { id, entryId } = await params;
+
+  return (
+    <Streamed
+      fallback={
+        <>
+          <BackLinkSkeleton />
+          <HeaderSkeleton />
+          <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
+            <CardSkeleton rows={7} />
+            <CardSkeleton rows={7} />
+          </div>
+        </>
+      }
+    >
+      {() => publishDetails({ id, entryId })}
+    </Streamed>
+  );
+}
+
+/** The publish under its sentence: the page before and after. */
+async function publishDetails({
+  id,
+  entryId,
+}: {
+  id: string;
+  entryId: string;
+}) {
   const [location, publish] = await Promise.all([
     getLocation(id),
     getPagePublish(id, entryId),

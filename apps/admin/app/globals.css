@@ -5,3 +5,32 @@ body {
   background: var(--color-neutral-50);
   color: var(--color-neutral-900);
 }
+
+/*
+ * The line along the top of the console while the next page is on its way,
+ * in the logo's navy and blue. `NavigationProgress` moves it through its
+ * phases: it creeps while the page loads, then fills and fades.
+ */
+.nav-progress {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+  background: linear-gradient(90deg, #00283e, #0f86ce);
+  pointer-events: none;
+}
+
+.nav-progress[data-phase="running"] {
+  transform: scaleX(0.85);
+  opacity: 1;
+  transition: transform 8s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+
+.nav-progress[data-phase="done"] {
+  transform: scaleX(1);
+  transition:
+    transform 200ms ease-out,
+    opacity 300ms ease 200ms;
+}

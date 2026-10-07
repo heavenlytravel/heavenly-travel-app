@@ -156,7 +156,7 @@ model Location {
   tagline        String?
   /// The `District` codes Marketing ticked, sorted; at least one.
   districtCodes  String[]  @default([])
-  /// "draft" | "preview" | "live" | "paused"
+  /// "draft" | "live" | "paused"
   state          String
   /// Set once, the first time the location goes live.
   wentLiveAt     DateTime?
@@ -180,16 +180,18 @@ model LocationPage {
   /// "landing" | "car-with-driver" | "coach-charter"
   page        String
   locale      String    @default("en")
-  /// Whether the page exists for the public. Not whether the product can be
-  /// booked there: that is the district's switch.
+  /// Whether the page is published: true from a publish until it is
+  /// unpublished. Not whether the product can be booked there: that is the
+  /// district's switch.
   isOn        Boolean   @default(false)
   /// The working copy.
   draft       Json
-  /// What the public sees; null until the first publish.
+  /// What the public sees; kept through an unpublish, null until the first
+  /// publish.
   published   Json?
   publishedAt DateTime?
-  /// When the draft or the published copy last changed. The On switch
-  /// leaves it, so it names the content a form was opened with: a save over
+  /// When the draft or the published copy last changed. An unpublish leaves
+  /// it, so it names the content a form was opened with: a save over
   /// someone else's change is refused by it.
   updatedAt   DateTime  @updatedAt
 

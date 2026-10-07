@@ -5,6 +5,11 @@ import { locationMetadata } from "../../../_location/seo";
 
 type Props = PageProps<"/[location]/[product]">;
 
+/** Static, rendered on demand, as the landing page; see the note there. */
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { location: slug, product } = await params;
   const { location, page } = await publicPageAt(slug, product);

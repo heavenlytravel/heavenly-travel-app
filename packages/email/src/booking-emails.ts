@@ -1,9 +1,12 @@
 import {
+  accountBookingPath,
+  bookingPath,
   customerEmailOf,
   formatLocalDateTime,
   formatMyr,
   ITEM_STATUS_LABELS,
   itemHeading,
+  signUpPath,
   tripDetailRows,
   tripHeadline,
   tripRows,
@@ -36,7 +39,7 @@ export type BookingEmailEvent = "received" | BookingEvent;
 
 /** What differs per environment: link targets, the ops inbox, the subject prefix. */
 export type EmailSettings = {
-  /** The customer site, for "View booking". */
+  /** The customer site, for "View booking" and "Manage booking online". */
   siteUrl: string;
   /** The admin console, for "Open in console". */
   adminUrl: string;
@@ -98,16 +101,45 @@ function customerBlock(booking: BookingWithItems): Block {
   };
 }
 
-function viewBookingButton(
+/** The one line that offers a guest an account, never more. */
+const ACCOUNT_OFFER =
+  "Verify your email once to see updates and cancel online.";
+
+/**
+ * Where the customer goes from the email: an account holder to the booking
+ * page; a guest to sign-up with their email filled in, which claims the
+ * booking and lands under My bookings, with the account offer above it.
+ * See docs/261008-guest-booking.md, "The account offer".
+ */
+function bookingButton(
   booking: BookingWithItems,
   settings: EmailSettings,
-): Block {
-  return {
-    type: "button",
-    label: "View booking",
-    href: `${settings.siteUrl}/booking/${booking.reference}`,
-  };
+): Block[] {
+  const email = customerEmailOf(booking);
+  if (booking.userId === null && email) {
+    return [
+      { type: "paragraph", text: ACCOUNT_OFFER },
+      {
+        type: "button",
+        label: "Manage booking online",
+        href: `${settings.siteUrl}${signUpPath(email, accountBookingPath(booking.reference))}`,
+      },
+    ];
+  }
+  return [
+    {
+      type: "button",
+      label: "View booking",
+      href: `${settings.siteUrl}${bookingPath(booking.reference)}`,
+    },
+  ];
 }
+
+/** On every received email: an address nobody booked with can get it removed. */
+const NOT_YOU: Block = {
+  type: "note",
+  text: "Didn't make this booking? Reply to this email and we will remove it.",
+};
 
 function consoleButton(
   booking: BookingWithItems,
@@ -178,8 +210,9 @@ function received(
         },
         ...itemBlocks(booking),
         totalBlock(booking),
-        viewBookingButton(booking, settings),
+        ...bookingButton(booking, settings),
         { type: "contact" },
+        NOT_YOU,
       ],
     }),
     toOps(key, settings, {
@@ -215,7 +248,7 @@ function confirmed(
       },
       ...itemBlocks(booking),
       totalBlock(booking),
-      viewBookingButton(booking, settings),
+      ...bookingButton(booking, settings),
       { type: "contact" },
     ],
   });
@@ -305,7 +338,7 @@ function updated(
       { type: "paragraph", text },
       ...itemBlocks(booking),
       totalBlock(booking),
-      viewBookingButton(booking, settings),
+      ...bookingButton(booking, settings),
       { type: "contact" },
     ],
   });

@@ -36,7 +36,7 @@ describe("bookingEmails", () => {
     assert.match(ops!.message.text, /https:\/\/admin\.test\/bookings\/b1/);
   });
 
-  it("writes only to ops for a guest who gave no email", () => {
+  it("writes only to ops for an old guest booking with no email", () => {
     const guest = sampleBooking({
       userId: null,
       user: null,
@@ -51,6 +51,67 @@ describe("bookingEmails", () => {
         .length,
       0,
     );
+  });
+
+  it("offers a guest an account once, above a sign-up link that claims the booking", () => {
+    const guest = sampleBooking({
+      userId: null,
+      user: null,
+      contactEmail: "aina@gmail.com",
+    });
+    const [customer] = bookingEmails("received", guest, settings);
+    assert.equal(customer!.message.to, "aina@gmail.com");
+    assert.match(
+      customer!.message.text,
+      /Verify your email once to see updates and cancel online\.\n\nManage booking online: https:\/\/site\.test\/sign-up\?email=aina%40gmail\.com&redirect_url=%2Faccount%2Fbookings%2FHT-7K3QZM/,
+    );
+    assert.doesNotMatch(customer!.message.text, /View booking/);
+    assert.equal(customer!.message.text.split("Verify your email").length, 2);
+
+    const [confirmed] = bookingEmails(
+      "confirmed",
+      { ...guest, status: "confirmed" },
+      settings,
+    );
+    assert.match(confirmed!.message.text, /Manage booking online: /);
+  });
+
+  it("keeps the account holder's button and never offers them an account", () => {
+    for (const event of ["received", "confirmed", "amended"] as const) {
+      const [customer] = bookingEmails(
+        event,
+        sampleBooking({
+          status: event === "received" ? "received" : "confirmed",
+        }),
+        settings,
+      );
+      assert.match(
+        customer!.message.text,
+        /View booking: https:\/\/site\.test\/booking\/HT-7K3QZM/,
+      );
+      assert.doesNotMatch(customer!.message.text, /Verify your email|sign-up/);
+    }
+  });
+
+  it("tells every received customer how to disown the booking, and ops never", () => {
+    const line =
+      /Didn't make this booking\? Reply to this email and we will remove it\./;
+    const [holder, ops] = bookingEmails("received", sampleBooking(), settings);
+    assert.match(holder!.message.text, line);
+    assert.match(holder!.message.html, /Didn&#39;t make this booking\?/);
+    assert.doesNotMatch(ops!.message.text, line);
+    const [guest] = bookingEmails(
+      "received",
+      sampleBooking({ userId: null, user: null }),
+      settings,
+    );
+    assert.match(guest!.message.text, line);
+    const [confirmed] = bookingEmails(
+      "confirmed",
+      sampleBooking({ status: "confirmed" }),
+      settings,
+    );
+    assert.doesNotMatch(confirmed!.message.text, line);
   });
 
   it("reads the account's email for a booking made before contactEmail", () => {
@@ -69,7 +130,7 @@ describe("bookingEmails", () => {
         subjectPrefix: "[Development] ",
       }).map((e) => e.message.subject),
     );
-    assert.equal(subjects.length, 10);
+    assert.equal(subjects.length, 12);
     for (const subject of subjects) assert.match(subject, /^\[Development\] /);
   });
 

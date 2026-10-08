@@ -128,3 +128,12 @@ export function HouseIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** A turning arc for a button that is waiting on its action. */
+export function SpinnerIcon({ className, ...props }: IconProps) {
+  return (
+    <Icon className={cx("ui:animate-spin", className)} {...props}>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </Icon>
+  );
+}

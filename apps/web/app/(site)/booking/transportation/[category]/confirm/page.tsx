@@ -10,7 +10,7 @@ import {
 } from "@repo/db";
 import { getAccess, prepareTripItem } from "@repo/db/server";
 import { resolveTrip } from "@repo/places/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { signInHref } from "../../../../../_lib/routes";
 import {
   bookableCategory,
@@ -29,8 +29,9 @@ export const metadata: Metadata = {
 /**
  * Route: /booking/transportation/car-with-driver/confirm?mode=…&class=…
  * The last look before the booking exists: the trip, the class, the price
- * and the contact details. Needs a session; a signed-out visitor goes to
- * sign-in with this URL as the return, so the trip is never lost.
+ * and the contact details. No account is needed. A signed-in customer gets
+ * the details filled in; a visitor is offered sign-in, which comes back
+ * here with the trip intact. See docs/261008-guest-booking.md.
  */
 export default async function ConfirmPage({
   params,
@@ -39,11 +40,6 @@ export default async function ConfirmPage({
   const category = bookableCategory((await params).category);
   if (!category) notFound();
   const query = toParams(await searchParams).toString();
-
-  const access = await getAccess("user");
-  if (access.status === "signed-out") {
-    redirect(signInHref(`${tripConfirmPath(category)}?${query}`));
-  }
 
   const search = parseTripSearch(query);
   const options = parseTripOptions(category, query);
@@ -62,7 +58,10 @@ export default async function ConfirmPage({
     options.passengers,
   );
 
-  const trip = await resolveTrip(search);
+  const [access, trip] = await Promise.all([
+    getAccess("user"),
+    resolveTrip(search),
+  ]);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
   const prepared = await prepareTripItem(category, {
@@ -80,7 +79,7 @@ export default async function ConfirmPage({
     );
   }
 
-  const { user } = access;
+  const user = access.status === "ok" ? access.user : null;
   const extra = tripDetailRows({
     ...options,
     vehicleClassName: prepared.vehicleClass.name,
@@ -125,8 +124,12 @@ export default async function ConfirmPage({
           <ConfirmForm
             category={category}
             trip={query}
-            defaultName={fullName(user)}
-            defaultPhone={user.phone ?? ""}
+            defaultName={user ? fullName(user) : ""}
+            defaultPhone={user?.phone ?? ""}
+            accountEmail={user?.email ?? null}
+            signInHref={
+              user ? null : signInHref(`${tripConfirmPath(category)}?${query}`)
+            }
           />
         </Panel>
       </div>

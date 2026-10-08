@@ -58,12 +58,11 @@ export async function createManualBookingAction(
     items.push({ ...result.item, override: result.override });
   }
 
-  const account = contact.value.contactEmail
-    ? await findUserByEmail(contact.value.contactEmail)
-    : null;
+  const account = await findUserByEmail(contact.value.contactEmail);
   const booking = await createBooking(actorOf(admin), {
     userId: account?.id ?? null,
     ...contact.value,
+    createdIp: null,
     items,
   });
   after(() => sendBookingEmail("received", booking));

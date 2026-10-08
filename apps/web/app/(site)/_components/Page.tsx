@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { SpinnerIcon } from "@repo/ui/icons";
 
 /** Presentational pieces the booking pages share. */
 
@@ -16,6 +17,16 @@ export const secondaryButton = `inline-flex min-h-[48px] items-center justify-ce
 
 /** A destructive action: filled red, used only after the customer confirms. */
 export const dangerButton = `inline-flex min-h-[48px] items-center justify-center rounded-[14px] bg-[#b3261e] px-5 text-[0.95rem] font-bold whitespace-nowrap text-white hover:bg-[#961d16] disabled:cursor-not-allowed disabled:opacity-50 ${focus}`;
+
+/** What a button shows while it waits: a spinner and what it is doing. */
+export function Pending({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <SpinnerIcon className="mr-2.5" />
+      {children}
+    </>
+  );
+}
 
 export const textLink = `font-semibold text-[#073c36] underline-offset-4 hover:underline ${focus}`;
 

@@ -3,7 +3,12 @@
 import { useActionState, useState } from "react";
 import { CONTACT_NAME_MAX_LENGTH, type TripCategory } from "@repo/db";
 import Link from "next/link";
-import { control, primaryButton, textLink } from "../../../../_components/Page";
+import {
+  control,
+  Pending,
+  primaryButton,
+  textLink,
+} from "../../../../_components/Page";
 import { createTripBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
@@ -125,7 +130,7 @@ export function ConfirmForm({
         </p>
       )}
       <button type="submit" disabled={pending} className={primaryButton}>
-        {pending ? "Booking…" : "Confirm booking"}
+        {pending ? <Pending>Booking…</Pending> : "Confirm booking"}
       </button>
       <p className="text-[0.85rem] text-[#67726f]">
         No payment now. We will confirm your booking by email.

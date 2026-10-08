@@ -23,9 +23,11 @@ import {
   tripBookingHref,
   tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
+import { useNavigate } from "../../../../_lib/useNavigate";
 import {
   control,
   focus,
+  Pending,
   primaryButton,
   textLink,
 } from "../../../_components/Page";
@@ -46,10 +48,14 @@ export type ClassOption = {
 
 /**
  * The trip bar, then vehicle class, passengers, child seats where the
- * category offers them, flight number and notes. A plain GET form: the choices join the search in the confirm
- * page's URL, so the confirm step is shareable and survives the sign-in
- * redirect. Classes the passenger count does not fit, or whose rules refuse
- * the trip, are shown with the reason but cannot be chosen. The passenger
+ * category offers them, flight number and notes. A GET form: the choices
+ * join the search in the confirm page's URL, so the confirm step is
+ * shareable and survives the sign-in redirect. The browser opens that URL
+ * through the router, so the button can say so while the confirm page
+ * prices the trip; the form's own action is the same URL, for a click
+ * before the page has hydrated. Classes the passenger count does not fit,
+ * or whose rules refuse the trip, are shown with the reason but cannot be
+ * chosen. The passenger
  * count lives here so the trip bar can carry it over a changed trip; the
  * page gives this form the trip as its key, so a changed trip clears the
  * chosen vehicle.
@@ -78,18 +84,28 @@ export function TripOptionsForm({
     c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
+  const { pending, go } = useNavigate();
+
+  function continueToConfirm(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const query = new URLSearchParams();
+    new FormData(e.currentTarget).forEach((value, name) =>
+      query.append(name, String(value)),
+    );
+    go(`${tripConfirmPath(category)}?${query}`);
+  }
 
   return (
-    <>
-      <TripBar
-        category={category}
-        search={search}
-        trip={trip}
-        passengers={passengers}
-      />
+    <TripBar
+      category={category}
+      search={search}
+      trip={trip}
+      passengers={passengers}
+    >
       <form
         method="get"
         action={tripConfirmPath(category)}
+        onSubmit={continueToConfirm}
         className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start"
       >
         {hiddenSearchFields(search).map(([name, value]) => (
@@ -226,16 +242,20 @@ export function TripOptionsForm({
           </label>
           <button
             type="submit"
-            disabled={!canContinue}
+            disabled={!canContinue || pending}
             className={`${primaryButton} mt-2`}
           >
-            {selected && canContinue
-              ? `Continue · ${formatMyr(selected.totalSen)}`
-              : "Choose a vehicle to continue"}
+            {pending ? (
+              <Pending>Preparing your booking…</Pending>
+            ) : selected && canContinue ? (
+              `Continue · ${formatMyr(selected.totalSen)}`
+            ) : (
+              "Choose a vehicle to continue"
+            )}
           </button>
         </div>
       </form>
-    </>
+    </TripBar>
   );
 }
 

@@ -1,7 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { dangerButton, secondaryButton } from "../../../_components/Page";
+import {
+  dangerButton,
+  Pending,
+  secondaryButton,
+} from "../../../_components/Page";
 import { cancelBookingAction, type CancelState } from "./actions";
 
 /**
@@ -48,7 +52,7 @@ export function CancelBooking({
         Cancel booking {reference}? This cannot be undone.
       </p>
       <button type="submit" disabled={pending} className={dangerButton}>
-        {pending ? "Cancelling…" : "Yes, cancel this booking"}
+        {pending ? <Pending>Cancelling…</Pending> : "Yes, cancel this booking"}
       </button>
       <button
         type="button"

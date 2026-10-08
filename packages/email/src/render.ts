@@ -10,7 +10,9 @@ export type Block =
   | { type: "paragraph"; text: string }
   | { type: "rows"; title: string | null; rows: DetailRow[] }
   | { type: "button"; label: string; href: string }
-  | { type: "contact" };
+  | { type: "contact" }
+  /** A quiet line at the end, in the contact line's size and colour. */
+  | { type: "note"; text: string };
 
 export type EmailContent = {
   subject: string;
@@ -63,6 +65,8 @@ function blockHtml(block: Block): string {
       return `<p style="margin:24px 0"><a href="${escapeHtml(block.href)}" style="display:inline-block;background:${GREEN};color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:999px">${escapeHtml(block.label)}</a></p>`;
     case "contact":
       return `<p style="margin:24px 0 0;font-size:14px;line-height:1.5;color:${MUTED}">Questions? <a href="${escapeHtml(CONTACT.whatsappHref)}" style="color:${GREEN}">WhatsApp us on ${escapeHtml(CONTACT.whatsappNumber)}</a> or reply to this email.</p>`;
+    case "note":
+      return `<p style="margin:16px 0 0;font-size:14px;line-height:1.5;color:${MUTED}">${escapeHtml(block.text)}</p>`;
   }
 }
 
@@ -80,6 +84,8 @@ function blockText(block: Block): string {
       return `${block.label}: ${block.href}`;
     case "contact":
       return `Questions? WhatsApp us on ${CONTACT.whatsappNumber} (${CONTACT.whatsappHref}) or reply to this email.`;
+    case "note":
+      return block.text;
   }
 }
 

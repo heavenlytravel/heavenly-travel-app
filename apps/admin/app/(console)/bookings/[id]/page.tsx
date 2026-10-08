@@ -153,15 +153,16 @@ async function bookingDetails({ id }: { id: string }) {
       ),
     ],
   ];
-  // The account the booking shows under, when there is one: a guest
-  // entered by staff has none.
+  // The account the booking shows under, when there is one. A guest has
+  // none, whether they booked on the website or staff entered it; the
+  // activity log says which.
   customer.push([
     "Account",
     booking.user ? (
       fullName(booking.user) || booking.user.email
     ) : (
       <span key="a" className="font-normal text-neutral-500">
-        None, entered by staff
+        None, booked as a guest
       </span>
     ),
   ]);

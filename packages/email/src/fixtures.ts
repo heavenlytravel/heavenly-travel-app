@@ -123,6 +123,7 @@ export function sampleBooking(
     contactName: "Nurul Aina",
     contactPhone: "+60123456789",
     contactEmail: "aina@example.com",
+    createdIp: null,
     priceTotalSen: 18000,
     currency: "MYR",
     startsAt: at,
@@ -143,6 +144,11 @@ export const sampleCases: {
   booking: BookingWithItems;
 }[] = [
   { name: "received", event: "received", booking: sampleBooking() },
+  {
+    name: "received-guest",
+    event: "received",
+    booking: sampleBooking({ userId: null, user: null }),
+  },
   {
     name: "received-coach",
     event: "received",

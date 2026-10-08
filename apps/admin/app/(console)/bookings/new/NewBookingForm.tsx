@@ -94,7 +94,7 @@ export function NewBookingForm({
       </div>
 
       <Card>
-        <CardTitle description="An email that belongs to an account links the booking to it. Leave it blank if they gave none: they then get no emails.">
+        <CardTitle description="The booking emails go to this address. An email that belongs to an account links the booking to it; otherwise the booking joins the account the customer later creates with it.">
           Customer
         </CardTitle>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -115,10 +115,11 @@ export function NewBookingForm({
               autoComplete="off"
             />
           </Field>
-          <Field label="Email" hint="Optional.">
+          <Field label="Email">
             <Input
               name={CONTACT_FIELDS.email}
               type="email"
+              required
               autoComplete="off"
             />
           </Field>

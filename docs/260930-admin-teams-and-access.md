@@ -247,7 +247,10 @@ blank, in which case the customer gets no email and the ops copy is the only one
 
 - When staff enter an email that belongs to an existing account, the booking is
   linked to that account, so it appears under My bookings. A guest who signs up later
-  with the same email does not inherit their old bookings; that is future work.
+  with the same email inherits their old bookings: the claim runs once, when the
+  `User` row is created, by `contactEmail`. See `261008-guest-booking.md`, which also
+  makes the email required of every new booking and lets a visitor book on the
+  website without an account.
 - Every reader that named the customer through the account (`booking.user.email`)
   reads `customerEmailOf(booking)` instead: the contact email, then the account's
   email for bookings made before the column existed, then null.

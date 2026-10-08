@@ -1,5 +1,6 @@
 import {
   activityActionMeta,
+  ANONYMOUS_ACTOR_NAMES,
   isActorKind,
   type ActivityAction,
   type ActivityEntityType,
@@ -34,7 +35,7 @@ export function logActivity(
   const meta = activityActionMeta(entry.action);
   return tx.activityLog.create({
     data: {
-      actorId: actor.kind === "system" ? null : actor.userId,
+      actorId: "userId" in actor ? actor.userId : null,
       actorKind: actor.kind,
       action: entry.action,
       entityType: meta.entityType,
@@ -71,17 +72,12 @@ export function changedFields<P extends Record<string, Scalar>>(
 
 /** An entry with its actor and record named, ready to show. */
 export type ActivityEntry = ActivityLog & {
-  /** "Nurul Aina", the email when there is no name, "System", or "Former staff". */
+  /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
   /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall"; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
-};
-
-const FORMER: Record<"admin" | "customer", string> = {
-  admin: "Former staff",
-  customer: "Former customer",
 };
 
 function nameOf(user: {
@@ -153,11 +149,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   return rows.map((row) => {
     const actor = row.actorId ? userById.get(row.actorId) : undefined;
     const kind = isActorKind(row.actorKind) ? row.actorKind : "system";
-    const actorName = actor
-      ? nameOf(actor)
-      : kind === "system"
-        ? "System"
-        : FORMER[kind];
+    const actorName = actor ? nameOf(actor) : ANONYMOUS_ACTOR_NAMES[kind];
     return {
       ...row,
       actorName,

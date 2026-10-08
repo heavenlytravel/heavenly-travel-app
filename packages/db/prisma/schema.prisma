@@ -61,7 +61,7 @@ model ActivityLog {
   /// The User who acted; null for the system. No relation, so an entry
   /// outlives its user unchanged.
   actorId         String?
-  /// "admin" | "customer" | "system"
+  /// "admin" | "customer" | "guest" | "system"
   actorKind       String
   /// "booking.item.confirmed", "wall.switched", ...
   action          String
@@ -259,9 +259,9 @@ model VehicleClass {
 /// An order: one or more items, each one product on one day. `status` is
 /// derived from the items by `bookingStatusOf` and stored for filtering.
 /// The contact fields are copies, so a later profile change never rewrites
-/// a booking. A booking entered by staff for a customer with no account
-/// has no user. See docs/260930-admin-teams-and-access.md, "A booking can
-/// belong to nobody".
+/// a booking. A booking made by a signed-out visitor, or entered by staff
+/// for a customer with no account, has no user; it joins an account when
+/// one is first created with its email. See docs/261008-guest-booking.md.
 model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
@@ -272,10 +272,14 @@ model Booking {
   status        String
   contactName   String
   contactPhone  String
-  /// Where the customer's emails go; null when they gave none. Read through
+  /// Where the customer's emails go. Required of every new booking since
+  /// docs/261008-guest-booking.md; null on older rows. Read through
   /// `customerEmailOf`, which falls back to the account's email for
   /// bookings made before this column existed.
   contactEmail  String?
+  /// The address a website booking came from. Only for the rate limit;
+  /// never shown. Null for bookings entered by staff.
+  createdIp     String?
   /// Sum of the live (not cancelled) items.
   priceTotalSen Int
   currency      String    @default("MYR")
@@ -293,6 +297,8 @@ model Booking {
 
   @@index([userId, createdAt])
   @@index([status, startsAt])
+  @@index([contactEmail, createdAt])
+  @@index([createdIp, createdAt])
 }
 
 /// A note staff keep on a booking. Never shown to the customer, never

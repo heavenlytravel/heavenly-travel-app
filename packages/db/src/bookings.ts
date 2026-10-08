@@ -6,6 +6,7 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
+import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import {
   bookingStatusOf,
   checkCustomerCancel,
@@ -20,6 +21,7 @@ import { db } from "./client";
 import { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
 import { isTripPriceBreakdown } from "./pricing";
+import { isUniqueViolation } from "./prisma-errors";
 import { generateReference } from "./references";
 
 /**
@@ -97,32 +99,29 @@ function detailsOf(
 }
 
 export type CreateBookingInput = {
-  /** The account the booking shows under; null for a guest entered by staff. */
+  /**
+   * The account the booking shows under; null for a guest, whether on the
+   * website or entered by staff.
+   */
   userId: string | null;
   contactName: string;
   contactPhone: string;
-  /** Null when a guest gave none: they get no email. */
-  contactEmail: string | null;
+  contactEmail: string;
+  /** The website visitor's address, for the rate limit; null from the console. */
+  createdIp: string | null;
   items: PreparedItem[];
 };
 
 const REFERENCE_ATTEMPTS = 5;
 
-function isUniqueViolation(error: unknown, field: string) {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002" &&
-    JSON.stringify(error.meta?.target ?? "").includes(field)
-  );
-}
-
 /**
  * Creates a booking with its items in one transaction and, when it belongs
  * to an account, remembers the phone number on it for next time. The actor
- * is the customer on the website, or the admin entering a booking for them.
- * An item with an agreed price is charged that price and logged as priced,
- * so it is never a special case later. The reference is random, so a
- * collision is retried. Emails are the caller's job, after this returns.
+ * is the customer or the guest on the website, or the admin entering a
+ * booking for them. An item with an agreed price is charged that price and
+ * logged as priced, so it is never a special case later. The reference is
+ * random, so a collision is retried. Emails are the caller's job, after
+ * this returns.
  */
 export async function createBooking(
   actor: Actor,
@@ -143,6 +142,7 @@ export async function createBooking(
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail,
+    createdIp: input.createdIp,
     priceTotalSen: input.items.reduce((sum, i) => sum + chargedSen(i), 0),
     startsAt,
     items: {
@@ -210,6 +210,33 @@ export async function createBooking(
       }
     }
   }
+}
+
+/** How many bookings one email, or one address, has made since an instant. */
+export function countRecentBookings(
+  key: { contactEmail: string } | { createdIp: string },
+  since: Date,
+): Promise<number> {
+  return db.booking.count({ where: { ...key, createdAt: { gte: since } } });
+}
+
+/**
+ * Whether the website may take one more booking from this contact email
+ * and this address. Counted from the bookings themselves, so no other
+ * store is needed; signed-in customers count too.
+ */
+export async function isBookingRateLimited(
+  key: { contactEmail: string; createdIp: string | null },
+  now: Date = new Date(),
+): Promise<boolean> {
+  const windows = rateLimitWindows(now);
+  const [email, ip] = await Promise.all([
+    countRecentBookings({ contactEmail: key.contactEmail }, windows.email),
+    key.createdIp === null
+      ? undefined
+      : countRecentBookings({ createdIp: key.createdIp }, windows.ip),
+  ]);
+  return !rateLimitDecision({ email, ip });
 }
 
 export function listBookingsForUser(

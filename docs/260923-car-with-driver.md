@@ -22,10 +22,14 @@ screen, pricing) are built for cars only.
    the sign-in redirect.
 2. **Options**: vehicle classes with an instant price each, passengers, hours (hourly
    only), flight number, child seats, notes to the driver.
-3. **Proceed** requires a session. Signed-out visitors go to sign-in (or sign-up) with a
-   return URL back to the confirm step. The trip is never lost.
-4. **Confirm** shows the snapshot price, asks for a phone number if the user has none,
-   and creates the booking. The customer lands on a success page with the reference.
+3. **Proceed** needs no session since `261008-guest-booking.md`: the confirm step is
+   open to everyone. A signed-out visitor sees a "Have an account? Sign in" line, whose
+   return URL brings them back to the confirm step. The trip is never lost. (Until
+   2026-10-08 this step was an auth gate.)
+4. **Confirm** shows the snapshot price, asks for name, phone and email (prefilled and
+   the email locked for an account holder) and creates the booking. An account holder
+   lands on a success page with the reference; a guest on the received page, which
+   shows the reference and the masked email only.
 5. **My bookings** under `/account/bookings` lists the user's bookings with status.
    Self-service cancel is allowed while the booking is `received` or `confirmed` and the
    pickup is further away than the cancellation cutoff. Inside the cutoff the page shows
@@ -258,8 +262,8 @@ As built in step 2:
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `/`                                | Search card submits to `/booking/car-with-driver`. Other product tabs disabled.                                         |
 | `/booking/car-with-driver`         | Options: resolves places and zone, lists classes with prices. Server component; price computed per class on the server. |
-| `/booking/car-with-driver/confirm` | Requires session (`getAccess("user")`, redirect with return URL). Phone, final price, create.                           |
-| `/booking/[reference]`             | Success page. Owner only.                                                                                               |
+| `/booking/car-with-driver/confirm` | Open to everyone since `261008-guest-booking.md`; `getAccess("user")` only prefills. Name, phone, email, price, create. |
+| `/booking/[reference]`             | Success page. Owner only. A guest lands on `/booking/received/[reference]` instead.                                     |
 | `/account/bookings`                | List. `/account/bookings/[reference]` detail with cancel action.                                                        |
 | `/api/places/search`               | Autocomplete proxy, signed-in or not.                                                                                   |
 

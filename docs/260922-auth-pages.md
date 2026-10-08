@@ -57,7 +57,11 @@ Either way the swap happens inside `AuthShell`'s children only. The shell, the
 palette and the page copy from PR 1 stay. Things a custom flow must keep:
 
 - Email code as the only first factor, with resend and an "edit email" step.
-- The return URL (`redirect_url`) so a customer lands back where they started.
+- The return URL (`redirect_url`) so a customer lands back where they started. Since
+  `261008-guest-booking.md` it serves the confirm page's "Sign in" line, My bookings
+  and the "Manage booking online" link in a guest's emails, which also passes the
+  guest's `email` to sign-up as the initial value; the confirm step itself no longer
+  redirects.
 - The second-factor step, if MFA is later required for admins.
 - Sign-up on the web only; admin stays invite-only.
 - Bot protection (Clerk's prebuilt components include it; a custom form must add it).

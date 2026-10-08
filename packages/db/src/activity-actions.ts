@@ -16,16 +16,27 @@ import {
  * ./activity. See docs/260930-admin-teams-and-access.md, "The activity log".
  */
 
-export const ACTOR_KINDS = ["admin", "customer", "system"] as const;
+export const ACTOR_KINDS = ["admin", "customer", "guest", "system"] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
 export const isActorKind = guardFor(ACTOR_KINDS);
 
 export type AdminActor = { kind: "admin"; userId: string };
 export type CustomerActor = { kind: "customer"; userId: string };
+/** A signed-out visitor booking on the website. See docs/261008-guest-booking.md. */
+export type GuestActor = { kind: "guest" };
 export type SystemActor = { kind: "system" };
 /** Who is doing the change. Every mutation takes one and logs it. */
-export type Actor = AdminActor | CustomerActor | SystemActor;
+export type Actor = AdminActor | CustomerActor | GuestActor | SystemActor;
+export const GUEST_ACTOR: GuestActor = { kind: "guest" };
 export const SYSTEM_ACTOR: SystemActor = { kind: "system" };
+
+/** The log's "who" for an entry whose actor has no account, or none any more. */
+export const ANONYMOUS_ACTOR_NAMES: Record<ActorKind, string> = {
+  admin: "Former staff",
+  customer: "Former customer",
+  guest: "Guest",
+  system: "System",
+};
 
 export const ACTIVITY_ENTITY_TYPES = [
   "booking",

@@ -5,7 +5,7 @@ import { isValidPhone, normalizePhone } from "./phone";
  * Where a booking's customer is reached. A booking copies the contact
  * details it was made with; the account behind it, when there is one, is
  * only for showing the booking under My bookings. Browser-safe. See
- * docs/260930-admin-teams-and-access.md, "A booking can belong to nobody".
+ * docs/261008-guest-booking.md.
  */
 
 /** What this module reads of a booking; both apps' queries satisfy it. */
@@ -35,24 +35,37 @@ export function isValidEmail(normalized: string) {
   );
 }
 
+/**
+ * "a***@gmail.com": enough of an address for its owner to recognise it on
+ * a page anyone could open, and nothing for anyone else.
+ */
+export function maskEmail(email: string) {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return "***";
+  return `${email[0]}***${email.slice(at)}`;
+}
+
 export const CONTACT_NAME_MAX_LENGTH = 80;
 
 /** The contact a booking is made with, as `createBooking` stores it. */
 export type ContactFields = {
   contactName: string;
   contactPhone: string;
-  contactEmail: string | null;
+  contactEmail: string;
 };
+
+export const EMAIL_REQUIRED_MESSAGE =
+  "We need your email to send your booking confirmation.";
 
 /**
  * The contact block of a booking form, read and checked. The email is
- * optional here: the website supplies the account's instead, and a guest
- * on the phone may have none.
+ * required: it is where the booking's emails go, and the one thing that
+ * later ties a guest booking to an account.
  */
 export function parseContact(values: {
   name: unknown;
   phone: unknown;
-  email?: unknown;
+  email: unknown;
 }): Parsed<ContactFields> {
   const contactName = textOf(values.name).slice(0, CONTACT_NAME_MAX_LENGTH);
   if (!contactName) {
@@ -62,15 +75,10 @@ export function parseContact(values: {
   if (!isValidPhone(contactPhone)) {
     return { ok: false, error: "Enter a phone number the driver can call." };
   }
-  const email = normalizeEmail(textOf(values.email));
-  if (email && !isValidEmail(email)) {
-    return {
-      ok: false,
-      error: "Enter a valid email address, or leave it blank.",
-    };
+  const contactEmail = normalizeEmail(textOf(values.email));
+  if (!contactEmail) return { ok: false, error: EMAIL_REQUIRED_MESSAGE };
+  if (!isValidEmail(contactEmail)) {
+    return { ok: false, error: "Enter a valid email address." };
   }
-  return {
-    ok: true,
-    value: { contactName, contactPhone, contactEmail: email || null },
-  };
+  return { ok: true, value: { contactName, contactPhone, contactEmail } };
 }

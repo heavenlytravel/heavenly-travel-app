@@ -89,6 +89,8 @@ export type {
 } from "./transportation";
 export {
   createBooking,
+  countRecentBookings,
+  isBookingRateLimited,
   listBookingsForUser,
   getBookingForUser,
   listBookings,

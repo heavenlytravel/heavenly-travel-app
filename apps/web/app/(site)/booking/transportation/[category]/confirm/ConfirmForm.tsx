@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { CONTACT_NAME_MAX_LENGTH, type TripCategory } from "@repo/db";
 import Link from "next/link";
 import { control, primaryButton, textLink } from "../../../../_components/Page";
@@ -15,7 +15,9 @@ const hint = "mt-1.5 block text-[0.85rem] text-[#67726f]";
  * the page's category and its query string in hidden fields, so the action
  * prices it again from scratch. Signed in, the email is the account's and
  * cannot be edited here; signed out, a line offers sign-in, which comes
- * back to this page.
+ * back to this page. The fields are controlled: React resets a form once
+ * its action returns, and an answer that is an error must not wipe what
+ * the customer typed.
  */
 export function ConfirmForm({
   category,
@@ -39,6 +41,10 @@ export function ConfirmForm({
     createTripBookingAction,
     null,
   );
+  const [name, setName] = useState(defaultName);
+  const [phone, setPhone] = useState(defaultPhone);
+  const [email, setEmail] = useState(accountEmail ?? "");
+  const locked = accountEmail !== null;
 
   return (
     <form action={action} className="grid gap-4">
@@ -58,7 +64,8 @@ export function ConfirmForm({
           name={CONFIRM_FIELDS.name}
           required
           maxLength={CONTACT_NAME_MAX_LENGTH}
-          defaultValue={defaultName}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           autoComplete="name"
           className={control}
         />
@@ -69,7 +76,8 @@ export function ConfirmForm({
           name={CONFIRM_FIELDS.phone}
           type="tel"
           required
-          defaultValue={defaultPhone}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           placeholder="+60 12 345 6789"
           autoComplete="tel"
           className={control}
@@ -84,13 +92,14 @@ export function ConfirmForm({
           name={CONFIRM_FIELDS.email}
           type="email"
           required
-          defaultValue={accountEmail ?? ""}
-          readOnly={accountEmail !== null}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          readOnly={locked}
           autoComplete="email"
-          className={`${control} ${accountEmail !== null ? "bg-[#f3f6f5] text-[#324844]" : ""}`}
+          className={`${control} ${locked ? "bg-[#f3f6f5] text-[#324844]" : ""}`}
         />
         <span className={hint}>
-          {accountEmail !== null
+          {locked
             ? "From your account. Your booking emails go here."
             : "We need your email to send your booking confirmation."}
         </span>

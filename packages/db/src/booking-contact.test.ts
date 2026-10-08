@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   customerEmailOf,
   EMAIL_REQUIRED_MESSAGE,
+  isMaskedEmail,
   maskEmail,
   parseContact,
 } from "./booking-contact";
@@ -32,6 +33,19 @@ describe("maskEmail", () => {
   it("shows nothing of a string that is not an address", () => {
     assert.equal(maskEmail("@example.com"), "***");
     assert.equal(maskEmail("nothing"), "***");
+  });
+});
+
+describe("isMaskedEmail", () => {
+  it("recognises only what maskEmail makes", () => {
+    assert.equal(isMaskedEmail(maskEmail("aina@gmail.com")), true);
+    assert.equal(isMaskedEmail("f***@example.com"), true);
+    assert.equal(isMaskedEmail("f*2*@example.com"), false);
+    assert.equal(isMaskedEmail("aina@gmail.com"), false);
+    assert.equal(isMaskedEmail("***"), false);
+    assert.equal(isMaskedEmail("a***@gmail"), false);
+    assert.equal(isMaskedEmail("<b>***@x.com"), false);
+    assert.equal(isMaskedEmail(undefined), false);
   });
 });
 

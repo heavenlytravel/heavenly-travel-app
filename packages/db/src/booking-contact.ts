@@ -45,6 +45,17 @@ export function maskEmail(email: string) {
   return `${email[0]}***${email.slice(at)}`;
 }
 
+/**
+ * Whether a string is what `maskEmail` makes, so a page that takes the
+ * masked email from its URL shows nothing else that was put there.
+ */
+export function isMaskedEmail(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[^@\s*]\*\*\*@[^@\s*]+\.[^@\s*]+$/.test(value)
+  );
+}
+
 export const CONTACT_NAME_MAX_LENGTH = 80;
 
 /** The contact a booking is made with, as `createBooking` stores it. */

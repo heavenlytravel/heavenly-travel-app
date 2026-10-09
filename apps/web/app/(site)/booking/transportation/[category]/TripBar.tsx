@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   formatLocalDateTime,
   type TripCategory,
@@ -18,6 +18,7 @@ import { useSearch, useTripSubmit } from "../../../../_lib/useSearch";
 import {
   control,
   panel,
+  Pending,
   primaryButton,
   secondaryButton,
 } from "../../../_components/Page";
@@ -30,6 +31,8 @@ type Props = {
   trip: TripView;
   /** The passenger count typed so far, carried over a changed trip. */
   passengers?: number;
+  /** What depends on the trip's prices: dimmed and inert while they are updated. */
+  children?: ReactNode;
 };
 
 /**
@@ -38,8 +41,16 @@ type Props = {
  * the same field definitions and inputs, filled in with the current trip.
  * Saving loads the options page again with the new trip in the URL, so the
  * server prices every class again. The category cannot be changed here.
+ * Until the new prices are on screen the bar says so, and the children,
+ * the options priced for the old trip, are dimmed and cannot be used.
  */
-export function TripBar({ category, search, trip, passengers }: Props) {
+export function TripBar({
+  category,
+  search,
+  trip,
+  passengers,
+  children,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const { issues, pending, submit } = useTripSubmit();
 
@@ -52,38 +63,49 @@ export function TripBar({ category, search, trip, passengers }: Props) {
   ];
 
   return (
-    <section className={`${panel} mb-8`} aria-label="Your trip">
-      {editing ? (
-        <TripEditor
-          category={category}
-          preset={presetOf(search, trip)}
-          issues={issues}
-          onCancel={() => setEditing(false)}
-          onSave={(values) => {
-            if (submit(category, values, passengers)) setEditing(false);
-          }}
-        />
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-          <dl className="grid flex-1 gap-x-8 gap-y-3 sm:grid-cols-3">
-            {facts.map(([label, value]) => (
-              <div key={label} className="min-w-0">
-                <dt className="text-[0.8rem] text-[#67726f]">{label}</dt>
-                <dd className="font-semibold text-[#082f2b]">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setEditing(true)}
-            className={secondaryButton}
-          >
-            {pending ? "Updating prices…" : "Edit"}
-          </button>
+    <>
+      <section className={`${panel} mb-8`} aria-label="Your trip">
+        {editing ? (
+          <TripEditor
+            category={category}
+            preset={presetOf(search, trip)}
+            issues={issues}
+            onCancel={() => setEditing(false)}
+            onSave={(values) => {
+              if (submit(category, values, passengers)) setEditing(false);
+            }}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+            <dl className="grid flex-1 gap-x-8 gap-y-3 sm:grid-cols-3">
+              {facts.map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-[0.8rem] text-[#67726f]">{label}</dt>
+                  <dd className="font-semibold text-[#082f2b]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setEditing(true)}
+              className={secondaryButton}
+            >
+              {pending ? <Pending>Updating prices…</Pending> : "Edit"}
+            </button>
+          </div>
+        )}
+      </section>
+      {children && (
+        <div
+          inert={pending}
+          aria-busy={pending}
+          className={`transition-opacity ${pending ? "opacity-40" : ""}`}
+        >
+          {children}
         </div>
       )}
-    </section>
+    </>
   );
 }
 

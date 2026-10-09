@@ -29,9 +29,9 @@ page: `sin1::sin1::…` is right, `sin1::iad1::…` is the old default.
 
 ### 2. The loading line
 
-`NavigationProgress` (in `apps/admin/app/_components`) draws a thin line in the logo's
-navy and blue along the top of the console while the next page is on its way. The page
-on screen stays until then.
+`NavigationProgress` (in `@repo/ui`, shared with the customer site since 2026-10-09; see
+`docs/261009-web-loading.md`) draws a thin line in the logo's navy and blue along the top
+of the console while the next page is on its way. The page on screen stays until then.
 
 - It listens for clicks on links at the document, so no link has to report anything and
   a new screen is covered without doing anything.

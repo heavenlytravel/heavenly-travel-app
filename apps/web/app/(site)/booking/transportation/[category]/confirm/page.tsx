@@ -10,6 +10,7 @@ import {
 } from "@repo/db";
 import { getAccess, prepareTripItem } from "@repo/db/server";
 import { resolveTrip } from "@repo/places/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { signInHref } from "../../../../../_lib/routes";
 import {
@@ -17,7 +18,7 @@ import {
   tripBookingHref,
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
-import { PageTitle, Panel, Stop } from "../../../../_components/Page";
+import { PageTitle, Panel, Stop, textLink } from "../../../../_components/Page";
 import { PriceBreakdown } from "../../../_components/PriceBreakdown";
 import { TripSummary } from "../../../_components/TripSummary";
 import { ConfirmForm } from "./ConfirmForm";
@@ -101,12 +102,9 @@ export default async function ConfirmPage({
               <h2 className="font-(family-name:--font-display) text-[1.5rem]">
                 Your trip
               </h2>
-              <a
-                href={back}
-                className="text-[0.9rem] font-semibold text-[#073c36] underline-offset-4 hover:underline"
-              >
+              <Link href={back} className={`text-[0.9rem] ${textLink}`}>
                 Change
-              </a>
+              </Link>
             </div>
             <TripSummary trip={trip.request} extra={extra} />
           </Panel>

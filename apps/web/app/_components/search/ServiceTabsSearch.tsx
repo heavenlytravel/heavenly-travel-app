@@ -3,6 +3,7 @@
 import { PRODUCTS, visibleFields, type Product } from "../../_lib/search";
 import { bookableCategory } from "../../_lib/transportation-booking";
 import { useTripSubmit } from "../../_lib/useSearch";
+import { Pending } from "../../(site)/_components/Page";
 import { ProductIcon } from "../Brand";
 import { useSearchCard } from "./SearchProvider";
 import { FieldInput } from "./fields";
@@ -27,10 +28,12 @@ const TABS: Product[] = [
  * page of its category with the search in the URL. The other tabs are
  * disabled until their flows exist. Its state is the `SearchProvider`'s
  * above it, which is how a card elsewhere on the page fills a place in.
+ * The button says so while the options page prices the trip, which is
+ * the longest wait on the site.
  */
 export function ServiceTabsSearch() {
   const { product, setProduct, values, set, dropoffs } = useSearchCard();
-  const { issues, submit: sendTrip } = useTripSubmit();
+  const { issues, pending, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
 
   function submit(e: React.FormEvent) {
@@ -130,9 +133,14 @@ export function ServiceTabsSearch() {
           })}
           <button
             type="submit"
-            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
+            disabled={pending}
+            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] disabled:cursor-wait disabled:opacity-70 lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
           >
-            {product.cta} &nbsp;→
+            {pending ? (
+              <Pending>Finding prices…</Pending>
+            ) : (
+              <>{product.cta} &nbsp;→</>
+            )}
           </button>
         </div>
 

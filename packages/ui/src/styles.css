@@ -1,3 +1,35 @@
 /* Component-level styles for the UI package */
 @import "tailwindcss" prefix(ui);
 @import "@repo/tailwind-config";
+
+/*
+ * The line along the top of an app while the next page is on its way.
+ * `NavigationProgress` moves it through its phases: it creeps while the
+ * page loads, then fills and fades. The caller positions it and sets its
+ * two colours.
+ */
+.ui-nav-progress {
+  height: 3px;
+  transform-origin: left;
+  transform: scaleX(0);
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    var(--ui-progress-from),
+    var(--ui-progress-to)
+  );
+  pointer-events: none;
+}
+
+.ui-nav-progress[data-phase="running"] {
+  transform: scaleX(0.85);
+  opacity: 1;
+  transition: transform 8s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+
+.ui-nav-progress[data-phase="done"] {
+  transform: scaleX(1);
+  transition:
+    transform 200ms ease-out,
+    opacity 300ms ease 200ms;
+}

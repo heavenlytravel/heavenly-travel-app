@@ -16,23 +16,23 @@ const SUPER_ONLY: Permission[] = [
   "admins.manage",
   "wall.switch",
   "activity.view",
+  "locations.activate",
 ];
-const SHARED: Permission[] = [
-  "dashboard.view",
-  "bookings.view",
-  "bookings.notes",
-];
+/** What every admin holds, team or not: the home and the locations' overviews. */
+const ANYONE: Permission[] = ["dashboard.view", "locations.view"];
+const SHARED: Permission[] = [...ANYONE, "bookings.view", "bookings.notes"];
 
 /**
- * The wall table in docs/260930-admin-teams-and-access.md, row by row, and
- * the Marketing team of docs/261001-locations-and-pages.md.
+ * The wall table in docs/260930-admin-teams-and-access.md, row by row, the
+ * Marketing team of docs/261001-locations-and-pages.md, and the two
+ * location permissions of docs/261015-locations-as-operation-areas.md.
  */
 const WALL: Record<AdminTeam, Permission[]> = {
   OPERATION: [...SHARED, "bookings.fulfil", "coverage.manage"],
   RESERVATION: [...SHARED, "bookings.manage", "bookings.create"],
   SALES: [...SHARED, "bookings.manage", "bookings.create"],
   FINANCE: SHARED,
-  MARKETING: ["dashboard.view", "locations.manage"],
+  MARKETING: [...ANYONE, "locations.manage"],
 };
 
 const sorted = (permissions: Permission[]) => [...permissions].sort();
@@ -53,13 +53,13 @@ describe("may, with the wall on", () => {
     assert.equal(may(both, "bookings.manage", true), true);
   });
 
-  it("leaves an admin with no team the Dashboard only", () => {
-    assert.deepEqual(permissionsOf(regular(), true), ["dashboard.view"]);
+  it("leaves an admin with no team the home and the overviews only", () => {
+    assert.deepEqual(sorted(permissionsOf(regular(), true)), sorted(ANYONE));
   });
 
   it("ignores a team it does not know", () => {
     const admin = { level: "REGULAR", teams: ["OPS"] };
-    assert.deepEqual(permissionsOf(admin, true), ["dashboard.view"]);
+    assert.deepEqual(sorted(permissionsOf(admin, true)), sorted(ANYONE));
   });
 });
 

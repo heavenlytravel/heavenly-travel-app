@@ -1,14 +1,15 @@
 // Usage: pnpm --filter @repo/db db:seed
 //
-// Creates the vehicle classes a fresh database starts with, and keeps the
-// State and District rows in step with data/malaysia-districts.json. A
-// vehicle class that already exists (by slug) is left alone, rates included:
-// once seeded, ops owns it and edits it in the console. A state or district
-// that already exists keeps its multiplier and its switch; only its name and
-// state are refreshed from the data file. A district created here starts on
-// when it is in the list below, the coverage the site launched with.
+// Creates the catalogue of vehicle classes a fresh database starts with, and
+// keeps the State and District rows in step with data/malaysia-districts.json.
+// A vehicle class that already exists (by slug) is left alone: once seeded,
+// ops owns it and edits it in the console. A district that already exists
+// has only its name and state refreshed from the data file. Districts place
+// an address; coverage is a location's zones, drawn in the console, as
+// docs/261015-locations-as-operation-areas.md describes. Rates are set per
+// location on its Vehicle classes tab, so none are seeded.
 //
-// Rates and the coach rules are placeholders until ops confirms them. See
+// The coach rules are placeholders until ops confirms them. See
 // docs/260930-coverage.md and docs/260930-ops-screens.md.
 import { CATEGORY_RULE_DEFAULTS } from "../src/booking-rules";
 import type { TripCategory } from "../src/booking-status";
@@ -34,10 +35,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 1,
     maxPassengers: 3,
     luggage: "2 large bags",
-    baseFareSen: 3_000,
-    perKmSen: 180,
-    hourlyRateSen: 6_000,
-    minimumFareSen: 6_000,
   },
   {
     ...CAR_RULES,
@@ -49,10 +46,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 1,
     maxPassengers: 6,
     luggage: "5 large bags",
-    baseFareSen: 4_500,
-    perKmSen: 250,
-    hourlyRateSen: 9_000,
-    minimumFareSen: 9_000,
   },
   {
     ...CAR_RULES,
@@ -63,10 +56,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 1,
     maxPassengers: 10,
     luggage: "8 large bags",
-    baseFareSen: 6_000,
-    perKmSen: 320,
-    hourlyRateSen: 12_000,
-    minimumFareSen: 12_000,
   },
   {
     ...COACH_RULES,
@@ -78,10 +67,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 15,
     maxPassengers: 24,
     luggage: "15 large bags",
-    baseFareSen: 15_000,
-    perKmSen: 450,
-    hourlyRateSen: 18_000,
-    minimumFareSen: 30_000,
   },
   {
     ...COACH_RULES,
@@ -93,10 +78,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 25,
     maxPassengers: 30,
     luggage: "25 large bags",
-    baseFareSen: 20_000,
-    perKmSen: 550,
-    hourlyRateSen: 22_000,
-    minimumFareSen: 40_000,
   },
   {
     ...COACH_RULES,
@@ -108,10 +89,6 @@ const VEHICLE_CLASSES = [
     minPassengers: 31,
     maxPassengers: 44,
     luggage: "40 large bags",
-    baseFareSen: 25_000,
-    perKmSen: 650,
-    hourlyRateSen: 28_000,
-    minimumFareSen: 50_000,
   },
   {
     ...COACH_RULES,
@@ -123,41 +100,8 @@ const VEHICLE_CLASSES = [
     minPassengers: 15,
     maxPassengers: 27,
     luggage: "25 large bags",
-    baseFareSen: 30_000,
-    perKmSen: 800,
-    hourlyRateSen: 35_000,
-    minimumFareSen: 60_000,
   },
 ];
-
-/** The districts served at launch: Klang Valley, Langkawi, Penang, Melaka, Johor Bahru and Cameron Highlands. */
-const LAUNCH_DISTRICTS = new Set([
-  "kuala-lumpur",
-  "putrajaya",
-  "petaling",
-  "klang",
-  "gombak",
-  "hulu-langat",
-  "sepang",
-  "langkawi",
-  "timur-laut",
-  "barat-daya",
-  "seberang-perai-utara",
-  "seberang-perai-tengah",
-  "seberang-perai-selatan",
-  "melaka-tengah",
-  "alor-gajah",
-  "jasin",
-  "johor-bahru",
-  "kulai",
-  "cameron-highlands",
-]);
-
-for (const code of LAUNCH_DISTRICTS) {
-  if (!DISTRICT_DATA.districts.some((d) => d.code === code)) {
-    throw new Error(`Launch district ${code} is not in the data file.`);
-  }
-}
 
 let classesCreated = 0;
 let classesKept = 0;
@@ -189,7 +133,7 @@ for (const { code, name, stateCode } of DISTRICT_DATA.districts) {
     continue;
   }
   await db.district.create({
-    data: { code, name, stateCode, isActive: LAUNCH_DISTRICTS.has(code) },
+    data: { code, name, stateCode },
   });
   districtsCreated += 1;
 }

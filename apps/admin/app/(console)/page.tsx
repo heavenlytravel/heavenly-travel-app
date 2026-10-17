@@ -2,57 +2,23 @@ import Link from "next/link";
 import {
   ADMIN_TEAM_LABELS,
   adminTeamsOf,
-  type BookingStatus,
-  type Permission,
+  andList,
+  formatLocalDateTime,
+  setupProgress,
+  setupSteps,
 } from "@repo/db";
-import { dashboardCounts, type DashboardCounts } from "@repo/db/server";
+import { listLocationOverviews } from "@repo/db/server";
+import { hasGooglePlaces } from "@repo/places/server";
+import { Button } from "@repo/ui/button";
+import { InfoTip } from "@repo/ui/info-tip";
+import { AddressTester } from "../_components/AddressTester";
+import { Card, CardTitle } from "../_components/Card";
 import { PageHeader } from "../_components/PageHeader";
-import { Bone, Streamed } from "../_components/Skeleton";
+import { Streamed, TableSkeleton } from "../_components/Skeleton";
+import { LocationStateBadge } from "../_components/StatusBadges";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "../_components/Table";
 import { getPermissions, requireAdmin } from "../_lib/access";
-import { bookingsHref } from "../_lib/routes";
-
-type Card = {
-  label: string;
-  value: number;
-  /** Narrows the bookings list to what the card counts, when a filter fits. */
-  status?: BookingStatus;
-};
-
-type CardGroup = { team: string; cards: Card[] };
-
-/**
- * The cards, grouped by the team whose work they count. Every admin sees
- * every group: each team gets a short view of the others' work. Sales and
- * Finance get groups when their features are built; no number is invented.
- */
-function groupsOf(counts: DashboardCounts): CardGroup[] {
-  return [
-    {
-      team: ADMIN_TEAM_LABELS.RESERVATION,
-      cards: [
-        {
-          label: "Awaiting confirmation",
-          value: counts.awaitingConfirmation,
-          status: "received",
-        },
-        {
-          label: "Confirmed, upcoming",
-          value: counts.confirmedUpcoming,
-          status: "confirmed",
-        },
-      ],
-    },
-    {
-      team: ADMIN_TEAM_LABELS.OPERATION,
-      cards: [
-        { label: "Pick-ups today", value: counts.pickupsToday },
-        { label: "Awaiting driver", value: counts.awaitingDriver },
-        { label: "Districts served", value: counts.activeDistricts },
-        { label: "Vehicle classes", value: counts.activeVehicleClasses },
-      ],
-    },
-  ];
-}
+import { NEW_LOCATION_PATH, locationHref } from "../_lib/routes";
 
 function whoAmI(admin: Awaited<ReturnType<typeof requireAdmin>>) {
   const { level, teams } = admin.adminProfile;
@@ -61,104 +27,138 @@ function whoAmI(admin: Awaited<ReturnType<typeof requireAdmin>>) {
   return `Signed in as ${admin.email}, ${role}.`;
 }
 
-/** Route: /. The same status cards for every admin, SUPER included. */
-export default async function DashboardPage() {
+/**
+ * Route: /. The console's home for every admin: the locations, each with
+ * its numbers, and a field that places an address as a booking would.
+ * Every team works inside a location; this is where they pick one. See
+ * docs/261015-locations-as-operation-areas.md.
+ */
+export default async function LocationsPage() {
   const admin = await requireAdmin("dashboard.view");
+  const permissions = await getPermissions();
 
   return (
     <>
-      <PageHeader title="Dashboard" description={whoAmI(admin)} />
+      <PageHeader
+        title="Locations"
+        description={whoAmI(admin)}
+        action={
+          permissions.includes("locations.manage") ? (
+            <Button asChild>
+              <Link href={NEW_LOCATION_PATH}>Add location</Link>
+            </Button>
+          ) : null
+        }
+      />
 
-      <Streamed fallback={<StatusCardsSkeleton />}>
-        {() => statusCards()}
-      </Streamed>
+      <div className="mt-6">
+        <Streamed fallback={<TableSkeleton columns={8} rows={4} />}>
+          {() => locationsTable()}
+        </Streamed>
+      </div>
 
-      <p className="mt-8 text-sm text-neutral-500">
-        Sales and Finance cards arrive with their features. Nothing here is a
-        placeholder.
-      </p>
+      <Card className="mt-6">
+        <CardTitle description="Pick a real place to see the zone its coordinates fall in and the location that serves it, as a booking would.">
+          Test an address
+        </CardTitle>
+        <AddressTester hasGoogle={hasGooglePlaces} />
+      </Card>
     </>
   );
 }
 
-/** The cards with their numbers, a group per team. */
-async function statusCards() {
-  const [counts, permissions] = await Promise.all([
-    dashboardCounts(),
-    getPermissions(),
-  ]);
+/** Every location with its numbers. */
+async function locationsTable() {
+  const locations = await listLocationOverviews();
 
   return (
-    <>
-      {groupsOf(counts).map((group) => (
-        <section key={group.team} className="mt-8">
-          <h2 className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
-            {group.team}
-          </h2>
-          <dl className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {group.cards.map((card) => (
-              <StatCard
-                key={card.label}
-                card={card}
-                permissions={permissions}
-              />
-            ))}
-          </dl>
-        </section>
-      ))}
-    </>
-  );
-}
-
-/** The two groups of cards, before their numbers. */
-function StatusCardsSkeleton() {
-  return (
-    <>
-      {[2, 4].map((cards, group) => (
-        <section key={group} className="mt-8">
-          <Bone className="h-4 w-24" />
-          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {Array.from({ length: cards }, (_, card) => (
-              <div
-                key={card}
-                className="rounded-lg border border-neutral-200 bg-white p-5"
-              >
-                <Bone className="h-5 w-28" />
-                <Bone className="mt-2 h-9 w-10" />
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
-    </>
-  );
-}
-
-/** One number. It links to the matching bookings list when the admin may open it. */
-function StatCard({
-  card,
-  permissions,
-}: {
-  card: Card;
-  permissions: readonly Permission[];
-}) {
-  const body = (
-    <>
-      <dt className="text-sm text-neutral-600">{card.label}</dt>
-      <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-        {card.value}
-      </dd>
-    </>
-  );
-  const className = "block rounded-lg border border-neutral-200 bg-white p-5";
-  return card.status && permissions.includes("bookings.view") ? (
-    <Link
-      href={bookingsHref(card.status)}
-      className={`${className} transition-colors hover:border-neutral-300`}
-    >
-      {body}
-    </Link>
-  ) : (
-    <div className={className}>{body}</div>
+    <Table>
+      <THead>
+        <Th>Location</Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            State
+            <InfoTip text="Draft is not public. Live shows the pages. Paused shows them with a notice in place of the search card." />
+          </span>
+        </Th>
+        <Th>State</Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Zones
+            <InfoTip text="The areas the location serves and prices. A pickup outside every zone is not served." />
+          </span>
+        </Th>
+        <Th>Classes on sale</Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Awaiting confirmation
+            <InfoTip text="Bookings with a pickup here that Reservation has not confirmed." />
+          </span>
+        </Th>
+        <Th>Pick-ups today</Th>
+        <Th>
+          <span className="inline-flex items-center gap-1.5">
+            Set up
+            <InfoTip text="The four steps that set a location up, done of all: details, vehicle classes, coverage and rates, pages. A draft goes live once every step is done; the Overview tab lists them." />
+          </span>
+        </Th>
+        <Th>Changed</Th>
+      </THead>
+      <TBody>
+        {locations.length === 0 ? (
+          <EmptyRow colSpan={9}>No locations yet. Add the first one.</EmptyRow>
+        ) : (
+          locations.map((location) => {
+            const progress = setupProgress(
+              setupSteps(location.pages, location),
+            );
+            return (
+              <tr key={location.id}>
+                <Td>
+                  <Link
+                    href={locationHref(location.id)}
+                    className="block font-medium underline-offset-4 hover:underline"
+                  >
+                    {location.name}
+                  </Link>
+                  <span className="block text-xs text-neutral-500">
+                    /{location.slug}
+                  </span>
+                </Td>
+                <Td>
+                  <LocationStateBadge state={location.state} />
+                </Td>
+                <Td className="text-neutral-600">
+                  {andList(location.stateNames) || "—"}
+                </Td>
+                <Td className="tabular-nums">{location.zones}</Td>
+                <Td className="tabular-nums">{location.classesOnSale}</Td>
+                <Td className="tabular-nums">
+                  {location.awaitingConfirmation}
+                </Td>
+                <Td className="tabular-nums">{location.pickupsToday}</Td>
+                <Td className="tabular-nums">
+                  {progress.next ? (
+                    <>
+                      {progress.done} of {progress.total}
+                      <span className="block text-xs text-neutral-500">
+                        Next: {progress.next.title}
+                      </span>
+                    </>
+                  ) : (
+                    "Done"
+                  )}
+                </Td>
+                <Td className="text-neutral-600 tabular-nums">
+                  {location.changedAt
+                    ? formatLocalDateTime(location.changedAt)
+                    : "—"}
+                </Td>
+              </tr>
+            );
+          })
+        )}
+      </TBody>
+    </Table>
   );
 }

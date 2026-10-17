@@ -50,9 +50,14 @@ export type TripQuoteView =
       startsAt: string;
       hours: number | null;
       distanceKm: number | null;
-      /** "Petaling, Selangor" */
-      district: string;
-      multiplier: number;
+      /** "Petaling, Selangor", for the record; null at sea. */
+      district: string | null;
+      /** The location whose rates price the trip: the one whose zone the pickup is in. */
+      location: string;
+      /** "Langkawi Airport to Cenang" when both ends are in a zone; null when metered. */
+      route: string | null;
+      /** The odd-hours percentage that applies, or null. */
+      surchargePercent: number | null;
       classes: ClassQuoteView[];
     }
   | { ok: false; error: string };

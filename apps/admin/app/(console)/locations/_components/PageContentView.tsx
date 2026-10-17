@@ -98,6 +98,11 @@ export function PageContentView({
       <Part label="Meta description" changed={changed("metaDescription")}>
         {content.metaDescription || NONE}
       </Part>
+      {page === LANDING_PAGE ? (
+        <Part label="Tagline" changed={changed("tagline")}>
+          {content.tagline || NONE}
+        </Part>
+      ) : null}
       <Part label="Hero headline" changed={changed("heroHeadline")}>
         {content.heroHeadline || NONE}
       </Part>

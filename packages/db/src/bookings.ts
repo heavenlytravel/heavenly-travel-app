@@ -7,6 +7,7 @@ import {
 } from "./activity-actions";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
+import { localDayRange } from "./booking-rules";
 import {
   bookingStatusOf,
   checkCustomerCancel,
@@ -20,7 +21,7 @@ import {
 import { db } from "./client";
 import { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
-import { isTripPriceBreakdown } from "./pricing";
+import { priceBreakdownOf } from "./pricing";
 import { isUniqueViolation } from "./prisma-errors";
 import { generateReference } from "./references";
 
@@ -46,6 +47,7 @@ const withItems = {
         district: {
           select: { code: true, name: true, state: { select: { name: true } } },
         },
+        location: { select: { id: true, name: true } },
       },
     },
   },
@@ -73,6 +75,8 @@ type PreparedItemCore = {
   /** The customer may cancel until this long before `startsAt`. */
   cancellationCutoffHours: number;
   districtCode: string | null;
+  /** The location whose rates priced the item: the pickup's. */
+  locationId: string | null;
   /** The rates' price, as the receipt says. */
   priceTotalSen: number;
   priceBreakdown: Prisma.InputJsonValue;
@@ -154,6 +158,7 @@ export async function createBooking(
         endsAt: item.endsAt,
         cancellationCutoffHours: item.cancellationCutoffHours,
         districtCode: item.districtCode,
+        locationId: item.locationId,
         priceTotalSen: chargedSen(item),
         priceBreakdown: item.priceBreakdown,
         priceOverrideSen: item.override?.totalSen ?? null,
@@ -257,20 +262,50 @@ export function getBookingForUser(
   return db.booking.findFirst({ where: { reference, userId }, ...withItems });
 }
 
-export type BookingFilter = { status?: BookingStatus };
+/**
+ * What the admin lists are narrowed to: a status, a location, the day an
+ * item picks up (Malaysian time, cancelled items aside), or any of them
+ * together.
+ */
+export type BookingFilter = {
+  status?: BookingStatus;
+  locationId?: string;
+  pickupOn?: Date;
+};
 
 function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
-  return filter.status ? { status: filter.status } : undefined;
+  const where: Prisma.BookingWhereInput = {};
+  if (filter.status) where.status = filter.status;
+  // A booking is the location's when one of its items picks up there, and
+  // the day's when one of its live items starts in it; both at once when
+  // the same item does.
+  const item: Prisma.BookingItemWhereInput = {};
+  if (filter.locationId) item.locationId = filter.locationId;
+  if (filter.pickupOn) {
+    const day = localDayRange(filter.pickupOn);
+    item.startsAt = { gte: day.start, lt: day.end };
+    item.status = { not: "cancelled" satisfies ItemStatus };
+  }
+  if (Object.keys(item).length > 0) where.items = { some: item };
+  return Object.keys(where).length > 0 ? where : undefined;
 }
 
-/** Admin list, newest first. `take` caps it for the dashboard. */
+/** How an admin list is ordered: by when it was made, or by when it picks up. */
+export type BookingOrder = "newest" | "soonest";
+
+const ORDERS: Record<BookingOrder, Prisma.BookingOrderByWithRelationInput> = {
+  newest: { createdAt: "desc" },
+  soonest: { startsAt: "asc" },
+};
+
+/** Admin list, newest first unless told otherwise. `take` caps it for an overview. */
 export function listBookings(
   filter: BookingFilter = {},
-  take?: number,
+  { order = "newest", take }: { order?: BookingOrder; take?: number } = {},
 ): Promise<BookingWithItems[]> {
   return db.booking.findMany({
     where: whereOf(filter),
-    orderBy: { createdAt: "desc" },
+    orderBy: ORDERS[order],
     take,
     ...withItems,
   });
@@ -454,12 +489,11 @@ export function overrideItemPrice(
         error: `Item is ${item.status}, so its price cannot change.`,
       };
     }
-    if (!isTripPriceBreakdown(item.priceBreakdown)) {
+    const receipt = priceBreakdownOf(item.priceBreakdown);
+    if (!receipt) {
       return { ok: false, error: "This item has no receipt to price from." };
     }
-    const priceTotalSen = override
-      ? override.totalSen
-      : item.priceBreakdown.totalSen;
+    const priceTotalSen = override ? override.totalSen : receipt.totalSen;
     if (
       priceTotalSen === item.priceTotalSen &&
       (override?.reason ?? null) === item.priceOverrideReason
@@ -597,6 +631,7 @@ export function amendItem(
         endsAt: next.endsAt,
         cancellationCutoffHours: next.cancellationCutoffHours,
         districtCode: next.districtCode,
+        locationId: next.locationId,
         priceTotalSen: chargedSen(next),
         priceBreakdown: next.priceBreakdown,
         priceOverrideSen: next.override?.totalSen ?? null,

@@ -5,6 +5,7 @@ import {
   TOP_CHOICES_TAG,
   VEHICLE_CLASSES_TAG,
   getLocationSlug,
+  locationPagePath,
   locationPreviewPath,
   locationTag,
   type LocationPageKey,
@@ -21,6 +22,11 @@ import { after } from "next/server";
 /** Where staff preview a page of a location on the customer site. */
 export function locationPreviewUrl(slug: string, page?: LocationPageKey) {
   return SITE_URL + locationPreviewPath(slug, page);
+}
+
+/** Where the public reads a location's landing page, once it is live. */
+export function locationPublicUrl(slug: string) {
+  return SITE_URL + locationPagePath(slug);
 }
 
 /** How long the refresh may take before it is given up. */
@@ -62,7 +68,8 @@ async function refreshSite(tags: string[]) {
 /**
  * Refreshes a location's pages on the customer site once the action has
  * answered, and the home page's cards with them: a card shows the
- * location's name, tagline and hero image, and leaves when it is paused.
+ * location's name and its landing page's tagline and hero image, and leaves
+ * when it is paused.
  */
 export function refreshLocationAfter(locationId: string) {
   after(async () => {

@@ -125,6 +125,7 @@ describe("pageContentOf", () => {
     const empty = {
       metaTitle: "",
       metaDescription: "",
+      tagline: "",
       heroHeadline: "",
       heroSubheadline: "",
       heroImage: null,

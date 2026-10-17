@@ -86,8 +86,8 @@ function VehicleClassScreen({
         title={vehicleClass ? vehicleClass.name : "Add class"}
         description={
           vehicleClass
-            ? "A rate change applies to new quotes at once; a booking keeps its receipt."
-            : "The slug is derived from the name and never changes after."
+            ? "The class as every location sells it. Its rates are each location's own, on the location's Vehicle classes tab."
+            : "The slug is derived from the name and never changes after. A location sells the class once it offers it, at its own rates."
         }
       />
 

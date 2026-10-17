@@ -60,6 +60,12 @@ export type PageHighlight = {
 export type PageContent = {
   metaTitle: string;
   metaDescription: string;
+  /**
+   * The landing page's only; empty on a product page. The short line over
+   * the headline and under the name on a home page card: "Island escape".
+   * Optional.
+   */
+  tagline: string;
   heroHeadline: string;
   heroSubheadline: string;
   heroImage: PageImage | null;
@@ -74,6 +80,7 @@ export const PAGE_LIMITS = {
   /** Characters. */
   metaTitle: 60,
   metaDescription: 160,
+  tagline: 80,
   heroHeadline: 80,
   heroSubheadline: 160,
   imageAlt: 160,
@@ -180,6 +187,7 @@ export function pageContentOf(
   return {
     metaTitle: lineOf(raw.metaTitle),
     metaDescription: lineOf(raw.metaDescription),
+    tagline: page === LANDING_PAGE ? lineOf(raw.tagline) : "",
     heroHeadline: lineOf(raw.heroHeadline),
     heroSubheadline: lineOf(raw.heroSubheadline),
     heroImage: imageOf(raw.heroImage),
@@ -225,6 +233,9 @@ export function checkPageLimits(content: PageContent): Change {
     return fail(
       `The meta description is at most ${L.metaDescription} characters.`,
     );
+  }
+  if (over(content.tagline, L.tagline)) {
+    return fail(`The tagline is at most ${L.tagline} characters.`);
   }
   if (over(content.heroHeadline, L.heroHeadline)) {
     return fail(`The hero headline is at most ${L.heroHeadline} characters.`);

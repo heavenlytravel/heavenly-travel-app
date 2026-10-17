@@ -28,16 +28,22 @@ export function Card({
 export function CardTitle({
   children,
   description,
+  action,
 }: {
   children: ReactNode;
   description?: string;
+  /** What stands at the right of the title: the card's one button. */
+  action?: ReactNode;
 }) {
   return (
-    <div className="mb-3">
-      <h2 className="text-base font-semibold tracking-tight">{children}</h2>
-      {description ? (
-        <p className="mt-1 text-sm text-neutral-600">{description}</p>
-      ) : null}
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight">{children}</h2>
+        {description ? (
+          <p className="mt-1 text-sm text-neutral-600">{description}</p>
+        ) : null}
+      </div>
+      {action}
     </div>
   );
 }

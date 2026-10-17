@@ -38,19 +38,17 @@ import {
   refreshDeletedLocationAfter,
   refreshLocationAfter,
 } from "../../_lib/site";
+import { revalidateLocation, revalidateLocations } from "./_lib/revalidate";
 
 /**
- * The Locations screens' actions. Each checks `locations.manage` again,
- * passes the admin as the actor and lets the writer in @repo/db check the
- * rest. Arguments passed directly, not through a form, are checked for their
- * type here: an action is reachable by direct POST. A change the public can
- * see also refreshes the customer site. The top choices are the Home page
- * screen's, in ../home-page/actions.
+ * The Locations screens' actions. Each checks `locations.manage` again, or
+ * `locations.activate` for the state move and the delete, passes the admin
+ * as the actor and lets the writer in @repo/db check the rest. Arguments
+ * passed directly, not through a form, are checked for their type here: an
+ * action is reachable by direct POST. A change the public can see also
+ * refreshes the customer site. The top choices are the Home page screen's,
+ * in ../home-page/actions.
  */
-function revalidateLocation(id: string) {
-  revalidatePath(locationHref(id));
-  revalidatePath(LOCATIONS_PATH);
-}
 
 /** After a change the public can see: this console's screens and the customer site's pages. */
 function revalidateEverywhere(id: string) {
@@ -60,11 +58,11 @@ function revalidateEverywhere(id: string) {
 
 const MISSING_LOCATION: ActionState = { error: "Missing location." };
 
-/** The location form's values; the ticked districts arrive as one field each. */
+/** The location form's values; the ticked states arrive as one field each. */
 function locationValues(formData: FormData) {
   return {
     ...Object.fromEntries(formData),
-    districts: formData.getAll("districts"),
+    states: formData.getAll("states"),
   };
 }
 
@@ -236,7 +234,7 @@ export async function deleteLocationAction(
   locationId: string,
   typedSlug: string | null,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string") return MISSING_LOCATION;
   if (typedSlug !== null && typeof typedSlug !== "string") {
@@ -245,7 +243,7 @@ export async function deleteLocationAction(
 
   const result = await deleteLocation(actorOf(admin), locationId, typedSlug);
   if (!result.ok) return stateOf(result);
-  revalidatePath(LOCATIONS_PATH);
+  revalidateLocations();
   revalidatePath(HOME_PAGE_PATH);
   refreshDeletedLocationAfter(result.slug);
   redirect(LOCATIONS_PATH);
@@ -255,7 +253,7 @@ export async function moveLocationStateAction(
   locationId: string,
   to: string,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string") return MISSING_LOCATION;
   if (!isLocationState(to)) return { error: "Choose a state." };

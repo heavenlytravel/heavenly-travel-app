@@ -2,11 +2,11 @@ import { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
 import { isPlace } from "./place";
 
 /**
- * Where a location's saved addresses lie against the districts Marketing
+ * Where a location's saved addresses lie against the states Marketing
  * ticked for it. A saved address is a place in the location, so it lies in
- * one of those districts, placed by its coordinates as a pickup is. Reads
- * the district shapes, so it stays on the server. See
- * docs/261003-location-flow.md.
+ * one of those states, placed by its coordinates as a pickup is: in a
+ * district, whose state is read off the boundary data. Reads the district
+ * shapes, so it stays on the server. See docs/261003-location-flow.md.
  */
 
 const stateNames = new Map(
@@ -21,34 +21,40 @@ function districtLabel(code: string) {
     : code;
 }
 
-/** A saved address that lies outside its location's districts. */
+/** The state of the place, by the district its coordinates fall in; null in no district. */
+function stateCodeAt(place: { lat: number; lng: number }) {
+  const code = districtCodeAt(place.lat, place.lng);
+  return code === null ? null : (districtShape(code)?.stateCode ?? null);
+}
+
+/** A saved address that lies outside its location's states. */
 export type StrayAddress = {
   name: string;
   /** Where it lies instead, "Langkawi, Kedah"; null when it is in no district. */
   district: string | null;
 };
 
-/** Whether the place lies in one of the districts. */
-export function isInDistricts(
+/** Whether the place lies in one of the states. */
+export function isInStates(
   place: { lat: number; lng: number },
-  districtCodes: readonly string[],
+  stateCodes: readonly string[],
 ) {
-  const code = districtCodeAt(place.lat, place.lng);
-  return code !== null && districtCodes.includes(code);
+  const code = stateCodeAt(place);
+  return code !== null && stateCodes.includes(code);
 }
 
 /**
- * The addresses that lie outside the districts, in their order. An address
+ * The addresses that lie outside the states, in their order. An address
  * whose stored place cannot be read is not judged.
  */
 export function strayAddresses(
   addresses: readonly { name: string; place: unknown }[],
-  districtCodes: readonly string[],
+  stateCodes: readonly string[],
 ): StrayAddress[] {
   return addresses.flatMap(({ name, place }) => {
     if (!isPlace(place)) return [];
+    if (isInStates(place, stateCodes)) return [];
     const code = districtCodeAt(place.lat, place.lng);
-    if (code !== null && districtCodes.includes(code)) return [];
     return [{ name, district: code === null ? null : districtLabel(code) }];
   });
 }

@@ -103,10 +103,12 @@ model PartnerProfile {
 }
 
 // ---------------------------------------------------------------------------
-// Coverage. See docs/260930-coverage.md. The rows are Malaysia's fixed
+// Coverage. See docs/260930-coverage.md and
+// docs/261015-locations-as-operation-areas.md. The rows are Malaysia's fixed
 // states and districts, seeded from data/malaysia-districts.json and keyed
-// by its codes; the boundaries stay in that file. Ops flips a district's
-// switch and sets a state's multiplier, nothing more.
+// by its codes; the boundaries stay in that file. A district belongs to at
+// most one location, and Operation flips its switch on the location's
+// Coverage tab.
 // ---------------------------------------------------------------------------
 
 /// One of the 13 states and 3 federal territories. `code` is ISO 3166-2,
@@ -114,21 +116,32 @@ model PartnerProfile {
 model State {
   code       String   @id
   name       String
-  /// Applied to every price with a pickup in this state. 1 means no change.
+  /// No longer read: rates are set per location since
+  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
+  /// script has run on every database; dropped in a follow-up.
   multiplier Float    @default(1)
   updatedAt  DateTime @updatedAt
 
   districts District[]
+  /// The locations that lie in it: a location ticks its states, and its
+  /// zones are drawn within them.
+  locations Location[]
 }
 
 /// One administrative district. `code` is the slug of its name, the key in
 /// data/malaysia-districts.json. Off means pickups there are told the area
-/// is not served yet.
+/// is not served yet. A district with no location is off: a pickup is
+/// priced by its location.
+/// Malaysia's districts, for placing an address: a booking records the
+/// district its pickup fell in, and the zone maker draws the district
+/// outlines under the zones. Coverage is the zones', not the districts'.
 model District {
   code      String   @id
   name      String
   stateCode String
   state     State    @relation(fields: [stateCode], references: [code])
+  /// No longer read: coverage is the location's zones since
+  /// docs/261015-locations-as-operation-areas.md. Dropped in a follow-up.
   isActive  Boolean  @default(false)
   updatedAt DateTime @updatedAt
 
@@ -138,37 +151,120 @@ model District {
 }
 
 // ---------------------------------------------------------------------------
-// Locations. See docs/261001-locations-and-pages.md. A location is a place
-// Marketing sells as a destination, with a landing page and one page per
-// product on the customer site. States and page keys are strings validated
-// against the const arrays in src/location-input.ts.
+// Locations. See docs/261001-locations-and-pages.md and
+// docs/261015-locations-as-operation-areas.md. A location is an operation
+// area: the districts it owns, the classes it sells at its own rates, its
+// zones and their rates, and its bookings, with a landing page and one page
+// per product on the customer site. States and page keys are strings
+// validated against the const arrays in src/location-input.ts.
 // ---------------------------------------------------------------------------
 
-/// A town, an island or an area of a city. Marketing ticks the districts it
-/// lies in, as information: no relation ties a location to coverage. Its
-/// state, not a district's switch, decides what the public sees.
+/// A town, an island, a city or a state, with the districts it owns. Its
+/// state, not a district's switch, decides what the public sees; the
+/// district's switch decides whether a pickup there is served.
 model Location {
-  id             String    @id @default(cuid())
+  id                 String    @id @default(cuid())
   /// The address of its pages: /langkawi. Locked the first time it goes live.
-  slug           String    @unique
-  name           String
-  /// The short line on a home page card.
-  tagline        String?
-  /// The `District` codes Marketing ticked, sorted; at least one.
-  districtCodes  String[]  @default([])
+  slug               String    @unique
+  name               String
+  /// No longer read: the tagline is on the landing page's content since
+  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
+  /// script has run on every database; dropped in a follow-up.
+  tagline            String?
+  /// No longer read: coverage is the location's zones. Kept until the copy
+  /// script has run on every database; dropped in a follow-up.
+  districtCodes      String[]  @default([])
   /// "draft" | "live" | "paused"
-  state          String
+  state              String
   /// Set once, the first time the location goes live.
-  wentLiveAt     DateTime?
+  wentLiveAt         DateTime?
   /// Its place among the home page's top choices; null when it is not one.
-  topChoiceOrder Int?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  topChoiceOrder     Int?
+  /// Where a one-way trip may end: "anywhere" | "zones" (inside one of the
+  /// location's zones) | "grid" (only a route priced on the rate grid, for
+  /// the class chosen). See DROPOFF_RULES in src/rates-input.ts.
+  dropoffRule        String    @default("anywhere")
+  /// The odd-hours surcharge: a window as minutes of the local day (23:00
+  /// is 1380, 07:00 is 420) and a percentage. All null when there is none.
+  oddHoursFromMinute Int?
+  oddHoursToMinute   Int?
+  oddHoursPercent    Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   pages     LocationPage[]
   addresses LocationAddress[]
+  /// The states it lies in. Its saved addresses are in them, and its zones
+  /// are drawn within them.
+  states    State[]
+  offerings LocationVehicleClass[]
+  zones     Zone[]
+  zoneRates ZoneRate[]
+  items     BookingItem[]
 
   @@index([state])
+}
+
+/// A class a location sells, at the location's rates. Langkawi's Sedan and
+/// Penang's Sedan are one catalogue class with two offerings. Off hides the
+/// class from the location's options page; a booking keeps its snapshot.
+model LocationVehicleClass {
+  id             String       @id @default(cuid())
+  locationId     String
+  location       Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicleClassId String
+  vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  isActive       Boolean      @default(true)
+  baseFareSen    Int
+  perKmSen       Int
+  hourlyRateSen  Int
+  minimumFareSen Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([locationId, vehicleClassId])
+}
+
+/// A line on a location's price list: an area the admin drew on a map, or a
+/// circle around a place. A zone may lie outside the location's districts:
+/// an outstation destination is a zone too. Coverage is the district's.
+model Zone {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int      @default(0)
+  /// One closed ring of [lng, lat], as src/geo.ts reads it.
+  shape      Json
+  /// `{ placeId, label, radiusM }` when drawn as a circle around a place,
+  /// so the editor can show and redo it; null for a drawn polygon.
+  drawnFrom  Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  ratesFrom ZoneRate[] @relation("from")
+  ratesTo   ZoneRate[] @relation("to")
+
+  @@index([locationId, sortOrder])
+}
+
+/// One cell of a location's rate grid: the fixed price of a class between
+/// two zones. Read both ways: (from, to), then (to, from).
+model ZoneRate {
+  id             String       @id @default(cuid())
+  locationId     String
+  location       Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  fromZoneId     String
+  fromZone       Zone         @relation("from", fields: [fromZoneId], references: [id], onDelete: Cascade)
+  toZoneId       String
+  toZone         Zone         @relation("to", fields: [toZoneId], references: [id], onDelete: Cascade)
+  vehicleClassId String
+  vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  priceSen       Int
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([fromZoneId, toZoneId, vehicleClassId])
+  @@index([locationId])
 }
 
 /// One page of a location in one locale: the landing page or a product's.
@@ -222,9 +318,11 @@ model LocationAddress {
 // const arrays in src/booking-status.ts.
 // ---------------------------------------------------------------------------
 
-/// A bookable class of vehicle with driver, its rates and its rules. Never
-/// deleted, only deactivated. A booking snapshots what it shows, so editing
-/// or retiring a class never changes one.
+/// The catalogue: a class of vehicle with driver, its seats, its luggage
+/// and its rules. A location sells it through a `LocationVehicleClass`,
+/// which carries the rates. Never deleted, only deactivated. A booking
+/// snapshots what it shows, so editing or retiring a class never changes
+/// one.
 model VehicleClass {
   id                      String   @id @default(cuid())
   slug                    String   @unique
@@ -238,10 +336,13 @@ model VehicleClass {
   minPassengers           Int
   maxPassengers           Int
   luggage                 String
-  baseFareSen             Int
-  perKmSen                Int
-  hourlyRateSen           Int
-  minimumFareSen          Int
+  /// No longer read: rates are on the location's offering since
+  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
+  /// script has run on every database; dropped in a follow-up.
+  baseFareSen             Int      @default(0)
+  perKmSen                Int      @default(0)
+  hourlyRateSen           Int      @default(0)
+  minimumFareSen          Int      @default(0)
   /// A pickup must be at least this far in the future.
   minLeadHours            Int
   /// Customers may cancel until this long before pickup.
@@ -252,6 +353,8 @@ model VehicleClass {
   updatedAt               DateTime @updatedAt
 
   tripItems TripItemDetails[]
+  offerings LocationVehicleClass[]
+  zoneRates ZoneRate[]
 
   @@index([category, isActive])
 }
@@ -334,13 +437,19 @@ model BookingItem {
   /// Snapshot of the class rule at booking: the customer may cancel until
   /// this long before startsAt.
   cancellationCutoffHours Int
-  /// The district the pickup was placed in at booking.
+  /// The district the pickup was placed in at booking, for the record.
   districtCode            String?
   district                District? @relation(fields: [districtCode], references: [code])
+  /// The location whose zone the pickup fell in at booking, whose rates
+  /// priced the item. A zone redrawn later does not rewrite it. Null on
+  /// items booked before locations priced trips.
+  locationId              String?
+  location                Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   /// The override when one is set, otherwise the receipt's total.
   priceTotalSen           Int
-  /// The receipt: mode, rates used, distance or hours, multiplier. Never
-  /// changed by an override, so the quoted price stays on record.
+  /// The receipt: mode, rates used, distance or hours, the route's fixed
+  /// rate or the surcharge. Never changed by an override, so the quoted
+  /// price stays on record.
   priceBreakdown          Json
   /// An agreed price in place of the receipt's, with why. Both null when
   /// the rates' price stands. Staff only; the reason never reaches a
@@ -356,6 +465,7 @@ model BookingItem {
 
   @@unique([bookingId, position])
   @@index([status, startsAt])
+  @@index([locationId, startsAt])
 }
 
 /// What a transportation item asked for, car or coach. Places are snapshots

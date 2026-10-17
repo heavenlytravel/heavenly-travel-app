@@ -66,14 +66,18 @@ function tripInput(trip: TripValues): Record<string, string> {
   };
 }
 
-/** "Petaling, Selangor · 55.2 km by road · area rate ×1.2" */
+/** "Klang Valley rates · Petaling, Selangor · 55.2 km by road · odd hours +50%" */
 function quoteSummary(quote: PricedTrip) {
-  const parts = [quote.district];
+  const parts = [`${quote.location} rates`];
+  if (quote.district) parts.push(quote.district);
+  if (quote.route) parts.push(`fixed rate, ${quote.route}`);
   if (quote.distanceKm !== null) {
     parts.push(`${quote.distanceKm.toFixed(1)} km by road`);
   }
   if (quote.hours !== null) parts.push(`${quote.hours} hours`);
-  if (quote.multiplier !== 1) parts.push(`area rate ×${quote.multiplier}`);
+  if (quote.surchargePercent !== null) {
+    parts.push(`odd hours +${quote.surchargePercent}%`);
+  }
   return parts.join(" · ");
 }
 

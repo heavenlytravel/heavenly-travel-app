@@ -4,7 +4,7 @@ import { getLocation, getPagePublish } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../../_components/Card";
-import { PageHeader } from "../../../../../_components/PageHeader";
+import { SectionHeader } from "../../../../../_components/SectionHeader";
 import {
   BackLinkSkeleton,
   CardSkeleton,
@@ -71,10 +71,10 @@ async function publishDetails({
           href={locationHref(location.id)}
           className="text-neutral-600 underline-offset-4 hover:underline"
         >
-          {location.name}
+          Overview
         </Link>
       </p>
-      <PageHeader
+      <SectionHeader
         title={describeActivity(entry)}
         description={`${entry.actorName}, ${formatLocalDateTime(entry.createdAt)}. To roll back, copy the old text into the editor and publish again.`}
         action={

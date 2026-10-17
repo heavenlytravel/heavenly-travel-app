@@ -2,16 +2,16 @@ import { BOOKING_RULES } from "./booking-rules";
 import { isTripCategory, type TripCategory } from "./booking-status";
 import type { Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
-import { parseRinggit } from "./money";
 
 /**
- * What the Vehicle classes screen edits and the rules it checks, pure and
- * browser-safe: the form displays the messages, the writers in
- * ./vehicle-classes apply the same checks before they write. See
- * docs/260930-ops-screens.md, "The Vehicle classes screen".
+ * What the Vehicle classes screen edits of a catalogue class and the rules
+ * it checks, pure and browser-safe: the form displays the messages, the
+ * writers in ./vehicle-classes apply the same checks before they write.
+ * The rates a location sells a class at are ./offering-input. See
+ * docs/261015-locations-as-operation-areas.md, "Vehicle classes".
  */
 
-/** Every editable column of `VehicleClass`. Money is sen. */
+/** Every editable column of `VehicleClass`. */
 export type VehicleClassFields = {
   name: string;
   description: string;
@@ -20,10 +20,6 @@ export type VehicleClassFields = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  baseFareSen: number;
-  perKmSen: number;
-  hourlyRateSen: number;
-  minimumFareSen: number;
   minLeadHours: number;
   cancellationCutoffHours: number;
   minHourlyHours: number;
@@ -41,10 +37,6 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
-  baseFareSen: "Base fare",
-  perKmSen: "Per km",
-  hourlyRateSen: "Per hour",
-  minimumFareSen: "Minimum fare",
   minLeadHours: "Notice needed",
   cancellationCutoffHours: "Cancel up to",
   minHourlyHours: "Minimum hours",
@@ -61,17 +53,6 @@ export function seatsLabel(vehicleClass: {
     ? `Up to ${maxPassengers} passengers`
     : `${minPassengers} to ${maxPassengers} passengers`;
 }
-
-/** The money fields, entered in ringgit under these form names. */
-export const VEHICLE_CLASS_MONEY_FIELDS = {
-  baseFareSen: "baseFare",
-  perKmSen: "perKm",
-  hourlyRateSen: "hourlyRate",
-  minimumFareSen: "minimumFare",
-} as const satisfies Partial<Record<VehicleClassField, string>>;
-
-type MoneyField = keyof typeof VEHICLE_CLASS_MONEY_FIELDS;
-const MONEY_FIELDS = Object.keys(VEHICLE_CLASS_MONEY_FIELDS) as MoneyField[];
 
 const TEXT_FIELDS = ["name", "description", "luggage"] as const;
 const HOUR_FIELDS = ["minLeadHours", "cancellationCutoffHours"] as const;
@@ -112,14 +93,6 @@ export function checkVehicleClassFields(
   ) {
     return fail("Seats to is at least seats from.");
   }
-  for (const key of MONEY_FIELDS) {
-    const value = fields[key];
-    if (value !== undefined && (!isWhole(value) || value < 0)) {
-      return fail(
-        `Enter the ${lowerLabel(key)} in RM, with at most two decimals.`,
-      );
-    }
-  }
   for (const key of HOUR_FIELDS) {
     const value = fields[key];
     if (value !== undefined && (!isWhole(value) || value < 0)) {
@@ -140,24 +113,10 @@ export function checkVehicleClassFields(
   return { ok: true };
 }
 
-/**
- * The class form's values, read and checked. Money arrives in ringgit under
- * the `VEHICLE_CLASS_MONEY_FIELDS` names; `isActive` is a checkbox.
- */
+/** The class form's values, read and checked. `isActive` is a checkbox. */
 export function parseVehicleClassFields(
   values: Record<string, unknown>,
 ): Parsed<VehicleClassFields> {
-  const money = {} as Record<MoneyField, number>;
-  for (const key of MONEY_FIELDS) {
-    const sen = parseRinggit(textOf(values[VEHICLE_CLASS_MONEY_FIELDS[key]]));
-    if (sen === null) {
-      return {
-        ok: false,
-        error: `Enter the ${lowerLabel(key)} in RM, with at most two decimals.`,
-      };
-    }
-    money[key] = sen;
-  }
   const category = textOf(values.category);
   if (!isTripCategory(category)) {
     return { ok: false, error: "Choose a category." };
@@ -171,7 +130,6 @@ export function parseVehicleClassFields(
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),
-    ...money,
     minLeadHours: numberOf(values.minLeadHours),
     cancellationCutoffHours: numberOf(values.cancellationCutoffHours),
     minHourlyHours: numberOf(values.minHourlyHours),

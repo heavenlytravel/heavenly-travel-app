@@ -5,7 +5,7 @@ import {
   checkLocationSlug,
   getLocationPreview,
   getPublicLocation,
-  listActiveVehicleClasses,
+  listActiveOfferingsAt,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
@@ -56,7 +56,7 @@ export const topChoiceCards = unstable_cache(
   { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
 );
 
-/** An active vehicle class as a product page lists it. */
+/** A class a location sells, as its product page lists it. */
 export type VehicleClassCard = {
   id: string;
   name: string;
@@ -64,24 +64,38 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** The least it can cost, in sen. */
+  /** The least it can cost there, in sen. */
   fromSen: number;
 };
 
-/** The active classes of a product, in their order. */
-export const vehicleClassCards = unstable_cache(
-  async (category: TripCategory): Promise<VehicleClassCard[]> => {
-    const classes = await listActiveVehicleClasses(category);
-    return classes.map((vehicleClass) => ({
-      id: vehicleClass.id,
-      name: vehicleClass.name,
-      description: vehicleClass.description,
-      minPassengers: vehicleClass.minPassengers,
-      maxPassengers: vehicleClass.maxPassengers,
-      luggage: vehicleClass.luggage,
-      fromSen: startingPriceSen(vehicleClass),
-    }));
-  },
-  ["vehicle-class-cards"],
-  { tags: [VEHICLE_CLASSES_TAG], revalidate: REFRESH_SECONDS },
+/**
+ * The classes a location sells in a product, in their order, at the
+ * location's rates. Tagged with the location, which the admin refreshes
+ * after a change to what it sells, and with the catalogue, which it
+ * refreshes after a change to a class.
+ */
+export const vehicleClassCards = cache(
+  (slug: string, category: TripCategory): Promise<VehicleClassCard[]> =>
+    unstable_cache(
+      async () => {
+        const offerings = await listActiveOfferingsAt(slug, category);
+        return offerings.map(({ vehicleClass, ...offering }) => ({
+          id: vehicleClass.id,
+          name: vehicleClass.name,
+          description: vehicleClass.description,
+          minPassengers: vehicleClass.minPassengers,
+          maxPassengers: vehicleClass.maxPassengers,
+          luggage: vehicleClass.luggage,
+          fromSen: startingPriceSen({
+            ...offering,
+            minHourlyHours: vehicleClass.minHourlyHours,
+          }),
+        }));
+      },
+      ["vehicle-class-cards", slug, category],
+      {
+        tags: [locationTag(slug), VEHICLE_CLASSES_TAG],
+        revalidate: REFRESH_SECONDS,
+      },
+    )(),
 );

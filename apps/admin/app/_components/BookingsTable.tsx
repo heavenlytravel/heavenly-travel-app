@@ -12,27 +12,47 @@ import { bookingHref } from "../_lib/routes";
 import { BookingStatusBadge } from "./StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
 
-/** The bookings table, shared by the dashboard and the bookings list. */
+/** "Langkawi", or "Langkawi, Penang" for a booking whose items pick up in two. */
+function locationsOf(booking: BookingWithItems) {
+  const names = [
+    ...new Set(
+      booking.items.flatMap((item) =>
+        item.location ? [item.location.name] : [],
+      ),
+    ),
+  ];
+  return names.join(", ");
+}
+
+/**
+ * The bookings table, shared by the queue across locations and a location's
+ * own list. `showLocation` adds the column the queue needs and a location's
+ * list does not.
+ */
 export function BookingsTable({
   bookings,
+  showLocation = false,
   emptyMessage,
 }: {
   bookings: BookingWithItems[];
+  showLocation?: boolean;
   emptyMessage: string;
 }) {
+  const columns = showLocation ? 7 : 6;
   return (
     <Table>
       <THead>
         <Th>Ref</Th>
         <Th>Customer</Th>
         <Th>Trip</Th>
+        {showLocation ? <Th>Location</Th> : null}
         <Th>Pick-up</Th>
         <Th align="right">Total</Th>
         <Th>Status</Th>
       </THead>
       <TBody>
         {bookings.length === 0 ? (
-          <EmptyRow colSpan={6}>{emptyMessage}</EmptyRow>
+          <EmptyRow colSpan={columns}>{emptyMessage}</EmptyRow>
         ) : (
           bookings.map((booking) => {
             const trips = booking.items.flatMap((item) => {
@@ -65,6 +85,13 @@ export function BookingsTable({
                     </span>
                   ))}
                 </Td>
+                {showLocation ? (
+                  <Td className="text-neutral-600">
+                    {locationsOf(booking) || (
+                      <span className="text-neutral-500">—</span>
+                    )}
+                  </Td>
+                ) : null}
                 <Td className="text-neutral-600 tabular-nums">
                   {formatLocalDateTime(booking.startsAt)}
                 </Td>

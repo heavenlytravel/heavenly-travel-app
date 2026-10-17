@@ -15,7 +15,7 @@ import { refreshVehicleClassesAfter } from "../../_lib/site";
 /**
  * The Vehicle classes screen's actions. Each checks `coverage.manage`
  * again, passes the admin as the actor and lets the writer in @repo/db
- * check the rest. A class change moves the Dashboard's count too, and the
+ * check the rest. A class change moves the home's counts too, and the
  * classes the customer site's product pages list.
  */
 function revalidateClasses() {

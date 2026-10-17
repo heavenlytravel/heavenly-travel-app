@@ -8,7 +8,7 @@ import {
 } from "@repo/db";
 import { getLocationPage } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { PageHeader } from "../../../../../_components/PageHeader";
+import { SectionHeader } from "../../../../../_components/SectionHeader";
 import {
   BackLinkSkeleton,
   CardSkeleton,
@@ -17,7 +17,7 @@ import {
   Streamed,
 } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
-import { locationHref } from "../../../../../_lib/routes";
+import { locationTabHref } from "../../../../../_lib/routes";
 import { PreviewLink } from "../../../_components/PreviewLink";
 import { PageEditor } from "./PageEditor";
 
@@ -75,13 +75,13 @@ async function pageEditorDetails({
     <>
       <p className="mb-4 text-sm">
         <Link
-          href={locationHref(location.id)}
+          href={locationTabHref(location.id, "pages")}
           className="text-neutral-600 underline-offset-4 hover:underline"
         >
-          {location.name}
+          All pages
         </Link>
       </p>
-      <PageHeader
+      <SectionHeader
         title={`${LOCATION_PAGE_LABELS[page]} page`}
         description={`${location.name}. Its address on the customer site is ${locationPagePath(location.slug, page)}.`}
         action={<PreviewLink slug={location.slug} page={page} />}

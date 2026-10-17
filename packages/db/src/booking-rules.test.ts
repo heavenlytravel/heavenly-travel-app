@@ -115,6 +115,10 @@ describe("classAvailability", () => {
   it("says why in the options page's words", () => {
     assert.equal(unavailableReason({ ok: true }), null);
     assert.equal(
+      unavailableReason({ ok: false, reason: "not-on-route" }),
+      "Not offered on this route",
+    );
+    assert.equal(
       unavailableReason({
         ok: false,
         reason: "too-few-hours",

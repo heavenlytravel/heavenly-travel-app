@@ -1,6 +1,8 @@
 import { cx } from "@repo/ui/cx";
+import { SidebarPanel } from "@repo/ui/sidebar";
 import { Suspense, type ReactNode } from "react";
 import { Card } from "./Card";
+import { WhenCollapsed, WhenExpanded } from "./PanelVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
 /**
@@ -159,6 +161,55 @@ export function DetailSkeleton({
       <div className="grid gap-6">{main}</div>
       <div className="grid gap-6">{side}</div>
     </div>
+  );
+}
+
+/**
+ * The panel beside a location's page while the location loads: its header
+ * line and the two-line rows of its sections. `title` and `placement` are
+ * the panel's own, so the skeleton stands exactly where it will.
+ */
+export function PanelSkeleton({
+  title,
+  placement,
+}: {
+  title: string;
+  placement: string;
+}) {
+  return (
+    <SidebarPanel title={title} className={placement}>
+      <WhenExpanded>
+        <div className="flex items-center gap-3 border-b border-neutral-200 p-4">
+          <Bone className="size-8 rounded-full" />
+          <div className="grid flex-1 gap-1.5">
+            <Bone className="h-4 w-28" />
+            <Bone className="h-3 w-16" />
+          </div>
+        </div>
+        <div className="grid gap-3 p-4">
+          {Array.from({ length: 6 }, (_, row) => (
+            <div key={row} className="flex items-center gap-3">
+              <Bone className="size-4 rounded-full" />
+              <div className="grid flex-1 gap-1.5">
+                <Bone className="h-4 w-32" />
+                <Bone className="h-3 w-40" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </WhenExpanded>
+      {/* Collapsed to a rail: the marks alone. */}
+      <WhenCollapsed>
+        <div className="grid justify-items-center gap-3 py-3">
+          {Array.from({ length: 7 }, (_, row) => (
+            <Bone
+              key={row}
+              className={row === 0 ? "size-8 rounded-full" : "size-4 rounded"}
+            />
+          ))}
+        </div>
+      </WhenCollapsed>
+    </SidebarPanel>
   );
 }
 

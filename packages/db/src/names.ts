@@ -5,3 +5,9 @@ export function fullName(user: {
 }) {
   return [user.firstName, user.lastName].filter(Boolean).join(" ");
 }
+
+/** A list as a sentence names it: "Kedah", "Kedah and Perlis", "Kedah, Perlis and Penang". */
+export function andList(items: readonly string[]) {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}

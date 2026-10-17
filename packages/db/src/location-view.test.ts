@@ -30,6 +30,7 @@ const image = {
 };
 
 const content = (heroHeadline: string, addressId: string | null = null) => ({
+  tagline: "Island escape",
   heroHeadline,
   heroImage: image,
   highlights: [{ name: "The jetty", text: "Boats.", image, addressId }],
@@ -40,7 +41,6 @@ function rows(over: Partial<LocationRows> = {}): LocationRows {
   return {
     slug: "langkawi",
     name: "Langkawi",
-    tagline: "Island escape",
     state: "live",
     addresses: [{ id: "a1", name: "Kuah Jetty", place: place("p1") }],
     pages: [
@@ -182,12 +182,26 @@ describe("the preview of a location", () => {
 });
 
 describe("a top choice card", () => {
-  it("shows the name, the tagline and the landing page's hero image", () => {
+  it("shows the name, and the landing page's tagline and hero image", () => {
     assert.deepEqual(topChoiceCardOf(publicLocationViewOf(rows())!), {
       slug: "langkawi",
       name: "Langkawi",
       tagline: "Island escape",
       image,
     });
+  });
+
+  it("has no tagline when the landing page has none", () => {
+    const [coach, landing, car] = rows().pages;
+    const view = publicLocationViewOf(
+      rows({
+        pages: [
+          coach!,
+          { ...landing!, published: { ...content("Landing"), tagline: "" } },
+          car!,
+        ],
+      }),
+    );
+    assert.equal(topChoiceCardOf(view!).tagline, null);
   });
 });

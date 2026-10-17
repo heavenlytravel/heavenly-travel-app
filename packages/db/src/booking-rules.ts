@@ -104,7 +104,9 @@ export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, VehicleClassRules> = {
 export type ClassAvailability =
   | { ok: true }
   | { ok: false; reason: "too-soon"; minLeadHours: number }
-  | { ok: false; reason: "too-few-hours"; minHourlyHours: number };
+  | { ok: false; reason: "too-few-hours"; minHourlyHours: number }
+  /** The location only serves the routes on its grid, and this class has no price on this one. */
+  | { ok: false; reason: "not-on-route" };
 
 export function classAvailability(
   rules: ClassRules,
@@ -131,9 +133,14 @@ export function classAvailability(
 /** Why a class cannot take the trip, as the options page says it. */
 export function unavailableReason(availability: ClassAvailability) {
   if (availability.ok) return null;
-  return availability.reason === "too-soon"
-    ? `Needs ${availability.minLeadHours} hours notice`
-    : `Minimum ${availability.minHourlyHours} hours`;
+  switch (availability.reason) {
+    case "too-soon":
+      return `Needs ${availability.minLeadHours} hours notice`;
+    case "too-few-hours":
+      return `Minimum ${availability.minHourlyHours} hours`;
+    case "not-on-route":
+      return "Not offered on this route";
+  }
 }
 
 /** Whether a group fits a class. Only the maximum counts. */
@@ -176,6 +183,22 @@ const localDateTime = new Intl.DateTimeFormat("en-MY", {
   minute: "2-digit",
   hour12: false,
 });
+
+const localClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: BOOKING_RULES.timeZone,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** The minute of the Malaysian day an instant falls in: 23:30 is 1410. */
+export function localMinuteOfDay(instant: Date) {
+  const parts = localClock.formatToParts(instant);
+  const read = (type: "hour" | "minute") =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  // Some runtimes spell midnight "24".
+  return (read("hour") % 24) * 60 + read("minute");
+}
 
 /** An instant as customers and ops read it: "Sat, 3 Oct 2026, 09:30" in Malaysia. */
 export function formatLocalDateTime(instant: Date) {

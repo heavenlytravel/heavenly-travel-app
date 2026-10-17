@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
-  formatMyr,
   type TripCategory,
 } from "@repo/db";
 import { listVehicleClasses, type VehicleClass } from "@repo/db/server";
@@ -13,16 +12,8 @@ import { Bone, Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { NEW_VEHICLE_CLASS_PATH, vehicleClassHref } from "../../_lib/routes";
+import { rulesText, seatsText } from "./_lib/class-text";
 import { VehicleClassActiveSwitch } from "./VehicleClassControls";
-
-/** "Notice 4 h · Cancel up to 24 h · Minimum 3 h" */
-function rulesText(vehicleClass: VehicleClass) {
-  return [
-    `Notice ${vehicleClass.minLeadHours} h`,
-    `Cancel up to ${vehicleClass.cancellationCutoffHours} h`,
-    `Minimum ${vehicleClass.minHourlyHours} h`,
-  ].join(" · ");
-}
 
 function CategoryTable({
   category,
@@ -43,12 +34,11 @@ function CategoryTable({
           <Th>
             <span className="inline-flex items-center gap-1.5">
               Active
-              <InfoTip text="Off hides the class from the options page and the search card. Bookings already made are not changed." />
+              <InfoTip text="Off hides the class from every location's options page and search card. Bookings already made are not changed." />
             </span>
           </Th>
           <Th>Seats</Th>
           <Th>Luggage</Th>
-          <Th>Rates</Th>
           <Th>
             <span className="inline-flex items-center gap-1.5">
               Rules
@@ -59,7 +49,7 @@ function CategoryTable({
         </THead>
         <TBody>
           {classes.length === 0 ? (
-            <EmptyRow colSpan={7}>
+            <EmptyRow colSpan={6}>
               No classes in this category. The tab has nothing to sell.
             </EmptyRow>
           ) : (
@@ -90,21 +80,9 @@ function CategoryTable({
                   />
                 </Td>
                 <Td className="whitespace-nowrap tabular-nums">
-                  {vehicleClass.minPassengers === vehicleClass.maxPassengers
-                    ? vehicleClass.maxPassengers
-                    : `${vehicleClass.minPassengers} to ${vehicleClass.maxPassengers}`}
+                  {seatsText(vehicleClass)}
                 </Td>
                 <Td>{vehicleClass.luggage}</Td>
-                <Td className="whitespace-nowrap tabular-nums">
-                  <span className="block">
-                    Base {formatMyr(vehicleClass.baseFareSen)} ·{" "}
-                    {formatMyr(vehicleClass.perKmSen)}/km
-                  </span>
-                  <span className="block text-xs text-neutral-500">
-                    {formatMyr(vehicleClass.hourlyRateSen)}/h · Min{" "}
-                    {formatMyr(vehicleClass.minimumFareSen)}
-                  </span>
-                </Td>
                 <Td className="text-xs whitespace-nowrap text-neutral-600">
                   {rulesText(vehicleClass)}
                 </Td>
@@ -142,9 +120,11 @@ async function categoryTables() {
 }
 
 /**
- * Route: /vehicle-classes. What the site sells, by category. Operation's
- * screen behind `coverage.manage`. Classes are never deleted, only turned
- * off; a booking keeps its snapshot of the class.
+ * Route: /vehicle-classes. The catalogue: every class, by category, with
+ * its seats, luggage and rules. What a location sells, and at what rates,
+ * is on the location's Vehicle classes tab. Operation's screen behind
+ * `coverage.manage`. Classes are never deleted, only turned off; a booking
+ * keeps its snapshot of the class.
  */
 export default async function VehicleClassesPage() {
   await requireAdmin("coverage.manage");
@@ -153,7 +133,7 @@ export default async function VehicleClassesPage() {
     <>
       <PageHeader
         title="Vehicle classes"
-        description="Each class carries its seats, its rates and its three rules."
+        description="The catalogue. Each class carries its seats, its luggage and its three rules; each location sells the classes it offers at its own rates."
         action={
           <Button asChild>
             <Link href={NEW_VEHICLE_CLASS_PATH}>Add class</Link>
@@ -167,7 +147,7 @@ export default async function VehicleClassesPage() {
             {TRIP_CATEGORIES.map((category) => (
               <div key={category}>
                 <Bone className="mb-3 h-6 w-40" />
-                <TableSkeleton columns={7} rows={3} />
+                <TableSkeleton columns={6} rows={3} />
               </div>
             ))}
           </div>

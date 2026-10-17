@@ -7,7 +7,7 @@ import {
   formatMyr,
   fullName,
   isBookingStatus,
-  isTripPriceBreakdown,
+  priceBreakdownOf,
   itemHeading,
   nextItemStatusOf,
   priceRows,
@@ -249,12 +249,11 @@ function ItemCard({
       `${item.district.name}, ${item.district.state.name}`,
     ]);
   }
+  if (item.location) rows.push(["Location", item.location.name]);
 
   // The receipt, then the agreed price when one replaces it. The receipt's
   // total stays on record next to what is charged.
-  const receipt = isTripPriceBreakdown(item.priceBreakdown)
-    ? item.priceBreakdown
-    : null;
+  const receipt = priceBreakdownOf(item.priceBreakdown);
   const override =
     item.priceOverrideSen !== null && item.priceOverrideReason !== null
       ? { totalSen: item.priceOverrideSen, reason: item.priceOverrideReason }

@@ -78,7 +78,8 @@ async function adminsList({ selfId }: { selfId: string }) {
             {withoutTeam === 1
               ? "1 admin has no team."
               : `${withoutTeam} admins have no team.`}{" "}
-            With the wall on they reach only the Dashboard.
+            With the wall on they reach only the home and the locations'
+            overviews.
           </p>
         ) : null}
       </section>

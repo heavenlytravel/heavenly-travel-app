@@ -68,12 +68,11 @@ export function TopChoiceControl({
                     </Link>
                     <LocationStateBadge state={choice.state} />
                   </span>
-                  <span className="mt-0.5 block text-xs text-neutral-500">
-                    {choice.tagline ?? "No tagline"}
-                    {choice.state === "paused"
-                      ? " · Left off the home page while paused"
-                      : null}
-                  </span>
+                  {choice.state === "paused" ? (
+                    <span className="mt-0.5 block text-xs text-neutral-500">
+                      Left off the home page while paused
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-1">
                   <Button

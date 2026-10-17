@@ -27,7 +27,7 @@ export default async function HomePageScreen() {
           <CardTitle>
             <span className="inline-flex items-center gap-1.5">
               Top choices
-              <InfoTip text="The location cards on the home page, in this order, after the airport card. Each card shows the location's name, its tagline and the landing page's hero image, and opens the location's page." />
+              <InfoTip text="The location cards on the home page, in this order, after the airport card. Each card shows the location's name and the landing page's tagline and hero image, and opens the location's page." />
             </span>
           </CardTitle>
           <Streamed fallback={<RowsSkeleton rows={4} />}>

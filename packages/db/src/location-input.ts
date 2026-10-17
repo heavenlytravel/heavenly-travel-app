@@ -9,6 +9,7 @@ import {
   type LocationPageKey,
   type PageStatus,
 } from "./location-page-input";
+import { andList } from "./names";
 import { slugify } from "./slug";
 
 /**
@@ -67,18 +68,163 @@ export type PageStanding = {
 };
 
 /**
+ * What the rules on a location's state read of its operation: where it
+ * lies, what it sells, what it covers and how it prices.
+ */
+export type OperationStanding = {
+  /** The names of the states it lies in, by name. */
+  stateNames: string[];
+  /** Offerings on sale. */
+  classesOnSale: number;
+  /** Zones, which are the coverage, and routes between them with a price. */
+  zones: number;
+  routesPriced: number;
+};
+
+/**
+ * The steps that set a location up, in the order the console walks an
+ * admin through them: the classes come before the coverage because the
+ * rate grid's columns are the classes on sale. Each is a tab of the
+ * location's page, and a location goes live once every step is done. See
+ * docs/261015-locations-as-operation-areas.md, "Setting a location up".
+ */
+export const SETUP_STEPS = [
+  "details",
+  "vehicle-classes",
+  "coverage",
+  "pages",
+] as const;
+export type SetupStepKey = (typeof SETUP_STEPS)[number];
+
+export const SETUP_STEP_LABELS: Record<SetupStepKey, string> = {
+  details: "Details",
+  "vehicle-classes": "Vehicle classes",
+  coverage: "Coverage",
+  pages: "Pages",
+};
+
+/** One step of a location's setup, as the checklist shows it. */
+export type SetupStep = {
+  key: SetupStepKey;
+  /** The tab's name. */
+  title: string;
+  /** What is there now, one line: "1 of 2 districts on". */
+  status: string;
+  /** What to do before the location can go live; empty when the step is done. */
+  todos: string[];
+  done: boolean;
+};
+
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${n} ${n === 1 ? one : many}`;
+
+/**
+ * Where each step of the setup stands. Going live needs the landing page
+ * published and no published page with edits waiting, so what staff checked
+ * on the preview page is what goes public; a class on sale, so the search
+ * card has something to sell; and a zone, since the zones are the
+ * coverage and a location with none serves no pickup. A route on the grid
+ * is not required: a trip inside a zone with no row is metered at the
+ * class's rates. No product page is needed: a landing page with none
+ * published shows no product links and still carries the search card.
+ */
+export function setupSteps(
+  pages: readonly PageStanding[],
+  operation: OperationStanding,
+): SetupStep[] {
+  const step = (
+    key: SetupStepKey,
+    status: string,
+    todos: string[],
+  ): SetupStep => ({
+    key,
+    title: SETUP_STEP_LABELS[key],
+    status,
+    todos,
+    done: todos.length === 0,
+  });
+
+  const landing = pages.find((page) => page.page === LANDING_PAGE);
+  const landingOn = landing !== undefined && isPagePublished(landing.status);
+  const productsOn = pages.filter(
+    (page) => page.page !== LANDING_PAGE && isPagePublished(page.status),
+  ).length;
+  const pageTodos: string[] = [];
+  if (!landingOn) pageTodos.push("Publish the landing page");
+  for (const page of pages) {
+    if (page.status === "changed") {
+      pageTodos.push(`Publish the changes on ${pageNameOf(page.page)}`);
+    }
+  }
+
+  return [
+    step(
+      "details",
+      operation.stateNames.length === 0
+        ? "No state yet"
+        : andList(operation.stateNames),
+      operation.stateNames.length === 0
+        ? ["Tick at least one state on the Details tab"]
+        : [],
+    ),
+    step(
+      "vehicle-classes",
+      operation.classesOnSale === 0
+        ? "Nothing on sale yet"
+        : `${plural(operation.classesOnSale, "class", "classes")} on sale`,
+      operation.classesOnSale === 0
+        ? [
+            "Put at least one vehicle class on sale, with its rates, on the Vehicle classes tab",
+          ]
+        : [],
+    ),
+    step(
+      "coverage",
+      operation.zones === 0 ? "No zones yet" : plural(operation.zones, "zone"),
+      operation.zones === 0
+        ? [
+            "Draw at least one zone on the Coverage tab; the zones are what the location serves",
+          ]
+        : [],
+    ),
+    step(
+      "pages",
+      [
+        landingOn ? "Landing page published" : "Landing page not published",
+        productsOn > 0
+          ? `${plural(productsOn, "product page")} published`
+          : null,
+        pageTodos.some((todo) => todo.startsWith("Publish the changes"))
+          ? "edits waiting"
+          : null,
+      ]
+        .filter((part) => part !== null)
+        .join(", "),
+      pageTodos,
+    ),
+  ];
+}
+
+/** How far the setup has come: the steps done, of all, and the first not done. */
+export function setupProgress(steps: readonly SetupStep[]) {
+  return {
+    done: steps.filter((step) => step.done).length,
+    total: steps.length,
+    next: steps.find((step) => !step.done) ?? null,
+  };
+}
+
+/**
  * Why a location cannot make the move, as sentences that say what to do;
- * empty when it can. Going live from `draft` needs the landing page
- * published, and no published page with edits waiting, so what staff
- * checked on the preview page is what goes public. No product page is
- * needed: a landing page with none published shows no product links and
- * still carries the search card. Nothing is checked after the move: a paused
- * location resumes as it is, since its pages never stopped being public.
+ * empty when it can. Going live from `draft` needs every setup step done.
+ * Nothing is checked after the move: a paused location resumes as it is,
+ * since its pages never stopped being public.
  */
 export function stateMoveBlockers(
   from: LocationState,
   to: LocationState,
   pages: readonly PageStanding[],
+  operation: OperationStanding,
 ): string[] {
   if (LOCATION_STATE_MOVE[from] !== to) {
     return [
@@ -86,18 +232,7 @@ export function stateMoveBlockers(
     ];
   }
   if (from !== "draft") return [];
-
-  const blockers: string[] = [];
-  const landing = pages.find((page) => page.page === LANDING_PAGE);
-  if (!landing || !isPagePublished(landing.status)) {
-    blockers.push("Publish the landing page");
-  }
-  for (const page of pages) {
-    if (page.status === "changed") {
-      blockers.push(`Publish the changes on ${pageNameOf(page.page)}`);
-    }
-  }
-  return blockers;
+  return setupSteps(pages, operation).flatMap((step) => step.todos);
 }
 
 /**
@@ -130,7 +265,6 @@ export const LOCATION_LIMITS = {
   /** Characters. */
   name: 60,
   slug: 60,
-  tagline: 80,
   addressName: 60,
   /** Saved addresses per location. The list is a shortcut, not a directory. */
   addresses: 20,
@@ -218,22 +352,22 @@ export function checkLocationDelete(
   );
 }
 
-/** What Marketing enters about a location. */
+/**
+ * What Marketing enters about a location: the three things only a person
+ * can say. The tagline is on the landing page, with the rest of its copy.
+ */
 export type LocationFields = {
   name: string;
   slug: string;
-  /** The short line on a home page card; null when left empty. */
-  tagline: string | null;
-  /** The codes of the districts it lies in, each once, sorted. At least one. */
-  districtCodes: string[];
+  /** The codes of the states it lies in, each once, sorted. At least one. */
+  stateCodes: string[];
 };
 
-/** How the activity log names each field: "Changed the slug and the tagline". */
+/** How the activity log names each field: "Changed the slug and the states". */
 export const LOCATION_FIELD_LABELS = {
   name: "the name",
   slug: "the slug",
-  tagline: "the tagline",
-  districtCodes: "the districts",
+  stateCodes: "the states",
 } as const;
 
 export function checkLocationFields(fields: LocationFields): Change {
@@ -243,30 +377,22 @@ export function checkLocationFields(fields: LocationFields): Change {
   }
   const slug = checkLocationSlug(fields.slug);
   if (!slug.ok) return slug;
-  if (
-    fields.tagline !== null &&
-    fields.tagline.length > LOCATION_LIMITS.tagline
-  ) {
-    return fail(
-      `The tagline is at most ${LOCATION_LIMITS.tagline} characters.`,
-    );
-  }
-  if (fields.districtCodes.length === 0) {
-    return fail("Tick at least one district.");
+  if (fields.stateCodes.length === 0) {
+    return fail("Tick at least one state.");
   }
   return { ok: true };
 }
 
-/** District codes as a location keeps them: each once, sorted. */
-export function districtCodesOf(values: unknown): string[] {
+/** State codes as a location keeps them: each once, sorted. */
+export function stateCodesOf(values: unknown): string[] {
   const codes = Array.isArray(values) ? values.map(textOf) : [];
   return [...new Set(codes.filter((code) => code !== ""))].sort();
 }
 
 /**
- * The location form's `name`, `slug` and `tagline`, and its ticked
- * `districts` as a list, read and checked. Whether each code is a real
- * district is the writer's check.
+ * The location form's `name` and `slug`, and its ticked `states` as a
+ * list, read and checked. Whether each code is a real state is the
+ * writer's check.
  */
 export function parseLocationFields(
   values: Record<string, unknown>,
@@ -274,8 +400,7 @@ export function parseLocationFields(
   const fields: LocationFields = {
     name: textOf(values.name),
     slug: textOf(values.slug),
-    tagline: textOf(values.tagline) || null,
-    districtCodes: districtCodesOf(values.districts),
+    stateCodes: stateCodesOf(values.states),
   };
   const check = checkLocationFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

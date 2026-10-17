@@ -1,9 +1,11 @@
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
-import { formatMultiplier } from "./coverage-input";
 import { LOCATION_FIELD_LABELS } from "./location-input";
+import { andList } from "./names";
 import { isLocationPageKey, pageNameOf } from "./location-page-input";
 import { formatMyr } from "./money";
+import { OFFERING_FIELD_LABELS, type OfferingField } from "./offering-input";
+import { dropoffRuleLabel, isDropoffRule, oddHoursLabel } from "./rates-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
@@ -86,7 +88,7 @@ const ACTIONS = {
   },
   "location.created": { entityType: "location", customerVisible: false },
   /**
-   * The districts are logged by their codes, a top choice by its place on
+   * The states are logged by their codes, a top choice by its place on
    * the home page: 1, 2 or 3, null for none.
    */
   "location.updated": { entityType: "location", customerVisible: false },
@@ -108,10 +110,36 @@ const ACTIONS = {
   /** The page's key and whether it is published. */
   "location.page.updated": { entityType: "location", customerVisible: false },
   /**
-   * The name, the slug, the district codes and the state it had, in
+   * The name, the slug, the state codes and the state it had, in
    * `before`: the row is gone, and its other entries are named from this one.
    */
   "location.deleted": { entityType: "location", customerVisible: false },
+  /** The class's name and the rates, in `after`. */
+  "location.offering.created": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** The class's name and the changed fields, before and after. */
+  "location.offering.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** The zone's name; its shape stays on the row. */
+  "location.zone.created": { entityType: "location", customerVisible: false },
+  "location.zone.updated": { entityType: "location", customerVisible: false },
+  "location.zone.deleted": { entityType: "location", customerVisible: false },
+  /** The changed cells, each named by its zones and class, before and after. */
+  "location.rates.updated": { entityType: "location", customerVisible: false },
+  /** The window and percentage, before and after; null for none. */
+  "location.surcharge.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** `dropoffRule`, before and after. */
+  "location.dropoff.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
 } as const satisfies Record<
   string,
   { entityType: ActivityEntityType; customerVisible: boolean }
@@ -211,12 +239,6 @@ function sentence(phrases: string[], fallback: string) {
     .join(", ");
 }
 
-/** "the base fare, the per km and the notice needed" */
-function listOf(items: string[]) {
-  if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
-}
-
 function vehicleClassChanges(after: unknown) {
   const phrases: string[] = [];
   const name = field(after, "name");
@@ -225,16 +247,75 @@ function vehicleClassChanges(after: unknown) {
   if (typeof isActive === "boolean") {
     phrases.push(isActive ? "Turned the class on" : "Turned the class off");
   }
+  // Entries from before rates moved to the location's offering name the
+  // class's old rate fields, which the offering's labels still spell.
+  const labelOf = (key: string) =>
+    key in VEHICLE_CLASS_FIELD_LABELS
+      ? VEHICLE_CLASS_FIELD_LABELS[key as VehicleClassField]
+      : key in OFFERING_FIELD_LABELS
+        ? OFFERING_FIELD_LABELS[key as OfferingField]
+        : null;
+  const others = keysOf(after)
+    .filter((key) => key !== "name" && key !== "isActive")
+    .flatMap((key) => {
+      const label = labelOf(key);
+      return label ? [`the ${label.toLowerCase()}`] : [];
+    });
+  if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
+  return sentence(phrases, "Changed the class");
+}
+
+/** "Executive sedan", or "the class" when the entry names none. */
+function className(json: unknown) {
+  const name = field(json, "vehicleClassName");
+  return typeof name === "string" ? name : "the class";
+}
+
+/** "Put Executive sedan on sale, changed the base fare and the per km" */
+function offeringChanges(after: unknown) {
+  const name = className(after);
+  const phrases: string[] = [];
+  const isActive = field(after, "isActive");
+  if (typeof isActive === "boolean") {
+    phrases.push(isActive ? `Put ${name} on sale` : `Took ${name} off sale`);
+  }
   const others = keysOf(after)
     .filter(
-      (key): key is VehicleClassField =>
-        key in VEHICLE_CLASS_FIELD_LABELS &&
-        key !== "name" &&
-        key !== "isActive",
+      (key): key is OfferingField =>
+        key in OFFERING_FIELD_LABELS && key !== "isActive",
     )
-    .map((key) => `the ${VEHICLE_CLASS_FIELD_LABELS[key].toLowerCase()}`);
-  if (others.length > 0) phrases.push(`Changed ${listOf(others)}`);
-  return sentence(phrases, "Changed the class");
+    .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`);
+  if (others.length > 0) {
+    phrases.push(
+      phrases.length > 0
+        ? `Changed ${andList(others)}`
+        : `Changed ${andList(others)} of ${name}`,
+    );
+  }
+  return sentence(phrases, `Changed the rates of ${name}`);
+}
+
+/** "the zone Langkawi Airport", or "a zone". */
+function zoneName(json: unknown) {
+  const name = field(json, "name");
+  return typeof name === "string" ? `the zone ${name}` : "a zone";
+}
+
+/** The odd-hours window an entry holds, as the rules read it; null for none. */
+function oddHoursIn(json: unknown) {
+  const fromMinute = field(json, "fromMinute");
+  const toMinute = field(json, "toMinute");
+  const percent = field(json, "percent");
+  return typeof fromMinute === "number" &&
+    typeof toMinute === "number" &&
+    typeof percent === "number"
+    ? { fromMinute, toMinute, percent }
+    : null;
+}
+
+/** 1.2 -> "×1.20": the multiplier of entries from before rates were set per location. */
+function formatMultiplier(multiplier: number) {
+  return `×${multiplier.toFixed(2)}`;
 }
 
 function locationChanges(before: unknown, after: unknown) {
@@ -257,7 +338,7 @@ function locationChanges(before: unknown, after: unknown) {
   )
     .filter((key) => key !== "name" && present.has(key))
     .map((key) => LOCATION_FIELD_LABELS[key]);
-  if (others.length > 0) phrases.push(`Changed ${listOf(others)}`);
+  if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
   return sentence(phrases, "Changed the location");
 }
 
@@ -281,7 +362,7 @@ function addressChanges(before: unknown, after: unknown) {
   const wasById = new Map(was.map((address) => [address.id, address.name]));
   const nowIds = new Set(now.map((address) => address.id));
   const named = (verb: string, names: string[]) =>
-    `${verb} the ${names.length > 1 ? "addresses" : "address"} ${listOf(names)}`;
+    `${verb} the ${names.length > 1 ? "addresses" : "address"} ${andList(names)}`;
 
   const added = now.filter((a) => !wasById.has(a.id)).map((a) => a.name);
   const removed = was.filter((a) => !nowIds.has(a.id)).map((a) => a.name);
@@ -371,7 +452,7 @@ export function describeActivity(entry: DescribableActivity): string {
         .map((key) => AMENDED_FIELD_LABELS[key]);
       const name = itemName(entry.after);
       return changed.length > 0
-        ? `Changed ${listOf(changed)} of ${name}`
+        ? `Changed ${andList(changed)} of ${name}`
         : `Amended ${name}`;
     }
     case "booking.cancelled":
@@ -418,5 +499,37 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "isOn") === true
         ? `Turned ${pageName(entry.after)} on`
         : `Unpublished ${pageName(entry.after)}`;
+    case "location.offering.created":
+      return `Started selling ${className(entry.after)}`;
+    case "location.offering.updated":
+      return offeringChanges(entry.after);
+    case "location.zone.created":
+      return `Added ${zoneName(entry.after)}`;
+    case "location.zone.updated": {
+      const was = field(entry.before, "name");
+      const now = field(entry.after, "name");
+      return typeof was === "string" && typeof now === "string" && was !== now
+        ? `Renamed the zone ${was} to ${now}`
+        : `Redrew ${zoneName(entry.after)}`;
+    }
+    case "location.zone.deleted":
+      return `Removed ${zoneName(entry.before)}`;
+    case "location.rates.updated": {
+      const cells = field(entry.after, "cells");
+      const count = Array.isArray(cells) ? cells.length : 0;
+      return count === 1
+        ? "Changed a rate on the grid"
+        : `Changed ${count} rates on the grid`;
+    }
+    case "location.surcharge.updated": {
+      const window = oddHoursIn(entry.after);
+      return window
+        ? `Set the odd-hours surcharge to ${oddHoursLabel(window)}`
+        : "Removed the odd-hours surcharge";
+    }
+    case "location.dropoff.updated": {
+      const rule = field(entry.after, "dropoffRule");
+      return `Set ${dropoffRuleLabel(isDropoffRule(rule) ? rule : "anywhere").toLowerCase()}`;
+    }
   }
 }

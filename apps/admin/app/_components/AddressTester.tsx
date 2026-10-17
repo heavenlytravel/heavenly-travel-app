@@ -4,12 +4,13 @@ import Link from "next/link";
 import { inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
-import { stateHref } from "../../_lib/routes";
-import { testAddressAction, type AddressTest } from "./actions";
+import { testAddressAction, type AddressTest } from "../(console)/actions";
+import { locationHref } from "../_lib/routes";
 
 /**
  * The same autocomplete field the website uses. Picking a place shows its
- * coordinates, the district they fall in and whether it is on.
+ * coordinates, the zone they fall in and the location that serves it, or
+ * that no location does, with the district for the record.
  */
 export function AddressTester({
   hasGoogle,
@@ -70,24 +71,27 @@ export function AddressTester({
           <p className="text-neutral-500 tabular-nums">
             {result.lat.toFixed(5)}, {result.lng.toFixed(5)}
           </p>
-          {result.district ? (
+          {result.served ? (
             <p className="font-medium">
-              {result.district.name},{" "}
+              Served: in the zone {result.served.zone} of{" "}
               <Link
-                href={stateHref(result.district.stateCode)}
+                href={locationHref(result.served.location.id)}
                 className="underline-offset-4 hover:underline"
               >
-                {result.district.stateName}
+                {result.served.location.name}
               </Link>
-              {result.district.isActive
-                ? ": served"
-                : ": not served, the district is off"}
+              .
             </p>
           ) : (
             <p className="font-medium">
-              In no district: at sea, or outside Malaysia.
+              Not served: in no zone of a live location.
             </p>
           )}
+          <p className="text-neutral-600">
+            {result.district
+              ? `${result.district.name}, ${result.district.stateName}.`
+              : "In no district: at sea, or outside Malaysia."}
+          </p>
         </div>
       )}
     </div>

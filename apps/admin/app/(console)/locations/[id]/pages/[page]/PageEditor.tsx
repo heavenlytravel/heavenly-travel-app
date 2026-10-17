@@ -35,7 +35,7 @@ import { Card, CardTitle } from "../../../../../_components/Card";
 import { PageStatusBadge } from "../../../../../_components/StatusBadges";
 import {
   locationAddressesHref,
-  locationHref,
+  locationTabHref,
 } from "../../../../../_lib/routes";
 import { RowControls, movedRow } from "../../../_components/RowControls";
 import {
@@ -281,6 +281,28 @@ export function PageEditor({
             Hero
           </CardTitle>
           <div className="grid gap-4">
+            {page === LANDING_PAGE ? (
+              <Field
+                label={
+                  <Counted
+                    label="Tagline"
+                    value={normal.tagline}
+                    limit={PAGE_LIMITS.tagline}
+                  />
+                }
+              >
+                <Input
+                  autoComplete="off"
+                  placeholder="Island escape"
+                  value={content.tagline}
+                  onChange={(event) => edit({ tagline: event.target.value })}
+                />
+                <p className="mt-1 text-xs text-neutral-500">
+                  The short line over the headline, and under the name on a home
+                  page card. Optional.
+                </p>
+              </Field>
+            ) : null}
             <Field
               label={
                 <Counted
@@ -694,11 +716,11 @@ export function PageEditor({
 
         <p className="text-sm">
           <Link
-            href={locationHref(locationId)}
+            href={locationTabHref(locationId, "pages")}
             className="text-neutral-600 underline-offset-4 hover:underline"
             onClick={confirmLeave}
           >
-            Back to the location
+            Back to the pages
           </Link>
         </p>
       </div>

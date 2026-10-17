@@ -1,88 +1,44 @@
-import { changedFields, listActivityForMany, logActivity } from "./activity";
-import type { ActivityEntityType, Actor } from "./activity-actions";
-import type { Change } from "./change";
 import { db } from "./client";
-import { checkMultiplier } from "./coverage-input";
 import { districtCodeAt } from "./district-index";
 import type { District, Prisma, State } from "./generated/prisma/client";
+import { isPublicState, locationStateOf } from "./location-input";
+import { zoneAt, zoneShapeArea, type ZoneShape } from "./zone-match";
 
 export type { District, State };
 
 /**
- * Coverage: which of Malaysia's districts the site serves, and the price
- * multiplier of each state. The rows are Malaysia's fixed list, seeded from
- * data/malaysia-districts.json and keyed by the same codes; ops only flips
- * a district's switch and sets a state's multiplier. A pickup is placed by
- * its coordinates in a district boundary. See docs/260930-coverage.md.
+ * Coverage: where the site serves a pickup. A location draws its zones,
+ * and a pickup is served when it falls in a zone of a location that is
+ * public; that location's offerings, zones and rates price the trip.
+ * Malaysia's states and districts are a fixed list, seeded from
+ * data/malaysia-districts.json: a location ticks the states it lies in,
+ * and a booking records the district its pickup fell in. See
+ * docs/261015-locations-as-operation-areas.md, "Coverage is the zones".
  */
 
-const STATE: ActivityEntityType = "state";
-const DISTRICT: ActivityEntityType = "district";
-
-const withDistricts = {
-  include: { districts: { orderBy: { name: "asc" } } },
-} satisfies Prisma.StateDefaultArgs;
-
-export type StateWithDistricts = Prisma.StateGetPayload<typeof withDistricts>;
-
-/** A row of the Coverage list: the state, its districts, and its last change. */
-export type StateSummary = StateWithDistricts & {
-  /** The newest change to the state or any of its districts; null when none is logged. */
-  changedAt: Date | null;
-};
+/** Every state, by name, for the location form's picker. */
+export function listStates(): Promise<State[]> {
+  return db.state.findMany({ orderBy: { name: "asc" } });
+}
 
 const withState = {
   include: { state: true },
 } satisfies Prisma.DistrictDefaultArgs;
 
+/** A district with its state. */
 export type DistrictWithState = Prisma.DistrictGetPayload<typeof withState>;
 
-/** Every state, by name, with its districts and its last change. */
-export async function listStates(): Promise<StateSummary[]> {
-  const [states, changes] = await Promise.all([
-    db.state.findMany({ ...withDistricts, orderBy: { name: "asc" } }),
-    db.activityLog.groupBy({
-      by: ["entityId"],
-      where: { entityType: { in: [STATE, DISTRICT] } },
-      _max: { createdAt: true },
-    }),
-  ]);
-  const changedAt = new Map(
-    changes.map((row) => [row.entityId, row._max.createdAt]),
-  );
-  return states.map((state) => ({
-    ...state,
-    changedAt: [state.code, ...state.districts.map((d) => d.code)]
-      .map((code) => changedAt.get(code) ?? null)
-      .reduce<Date | null>(
-        (latest, at) => (at && (!latest || at > latest) ? at : latest),
-        null,
-      ),
-  }));
-}
-
-export function getState(code: string): Promise<StateWithDistricts | null> {
-  return db.state.findUnique({ where: { code }, ...withDistricts });
-}
-
-/**
- * Every district with its state, by state then name; only those with the
- * codes when some are given.
- */
-export function listDistricts(
-  codes?: readonly string[],
-): Promise<DistrictWithState[]> {
+/** Every district with its state, by state then name. */
+export function listDistricts(): Promise<DistrictWithState[]> {
   return db.district.findMany({
     ...withState,
-    where: codes ? { code: { in: [...codes] } } : undefined,
     orderBy: [{ state: { name: "asc" } }, { name: "asc" }],
   });
 }
 
 /**
- * The district a place falls in, served or not (callers decide what an
- * inactive district means), or null when the point is in no district: at
- * sea, or a place the seed has not created yet.
+ * The district a place falls in, for the record, or null when the point
+ * is in no district: at sea, or a place the seed has not created yet.
  */
 export async function resolveDistrict(place: {
   lat: number;
@@ -93,60 +49,45 @@ export async function resolveDistrict(place: {
   return db.district.findUnique({ where: { code }, ...withState });
 }
 
-/** The state's own entries and its districts', oldest first. */
-export async function listCoverageActivity(state: StateWithDistricts) {
-  return listActivityForMany([
-    { entityType: STATE, entityId: state.code },
-    ...state.districts.map((d) => ({
-      entityType: DISTRICT,
-      entityId: d.code,
-    })),
-  ]);
-}
+/** What pricing reads of a location: its zones, its grid and its rules. */
+export const forQuote = {
+  include: {
+    zones: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+    zoneRates: true,
+  },
+} satisfies Prisma.LocationDefaultArgs;
 
-/** Sets the state's multiplier. Saving what is already there logs nothing. */
-export async function setStateMultiplier(
-  actor: Actor,
-  code: string,
-  multiplier: number,
-): Promise<Change> {
-  const check = checkMultiplier(multiplier);
-  if (!check.ok) return check;
+export type LocationForQuote = Prisma.LocationGetPayload<typeof forQuote>;
 
-  return db.$transaction(async (tx) => {
-    const state = await tx.state.findUnique({ where: { code } });
-    if (!state) return { ok: false, error: "State not found." };
-    const changed = changedFields(state, { multiplier });
-    if (!changed) return { ok: true };
-    await tx.state.update({ where: { code }, data: changed.after });
-    await logActivity(tx, actor, {
-      action: "state.updated",
-      entityId: code,
-      before: changed.before,
-      after: changed.after,
-    });
-    return { ok: true };
-  });
-}
+/** A served pickup: the zone it fell in and the location that zone is. */
+export type ServedAt = {
+  location: LocationForQuote;
+  zone: LocationForQuote["zones"][number];
+};
 
-/** Turns a district on or off. Setting it to what it is logs nothing. */
-export async function setDistrictActive(
-  actor: Actor,
-  code: string,
-  isActive: boolean,
-): Promise<Change> {
-  return db.$transaction(async (tx) => {
-    const district = await tx.district.findUnique({ where: { code } });
-    if (!district) return { ok: false, error: "District not found." };
-    const changed = changedFields(district, { isActive });
-    if (!changed) return { ok: true };
-    await tx.district.update({ where: { code }, data: changed.after });
-    await logActivity(tx, actor, {
-      action: "district.updated",
-      entityId: code,
-      before: changed.before,
-      after: changed.after,
-    });
-    return { ok: true };
-  });
+/**
+ * The location that serves a pickup at the place: the one whose zone the
+ * point falls in, among the locations that are public. Of zones that
+ * overlap, the smallest wins, as it does within one location. Null when
+ * no zone holds the point: the area is not served.
+ */
+export async function locationAt(place: {
+  lat: number;
+  lng: number;
+}): Promise<ServedAt | null> {
+  const locations = await db.location.findMany(forQuote);
+  let served: ServedAt | null = null;
+  let servedArea = Infinity;
+  for (const location of locations) {
+    if (!isPublicState(locationStateOf(location.state))) continue;
+    const zone = zoneAt(location.zones, place);
+    if (!zone) continue;
+    // `zoneAt` answered the zone, so its shape is a shape.
+    const area = zoneShapeArea(zone.shape as ZoneShape);
+    if (area < servedArea) {
+      served = { location, zone };
+      servedArea = area;
+    }
+  }
+  return served;
 }

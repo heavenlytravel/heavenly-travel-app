@@ -48,6 +48,7 @@ export type LocationViewPage = {
 export type LocationView = {
   slug: string;
   name: string;
+  /** The landing page's tagline, from the copy the view holds; null when it has none. */
   tagline: string | null;
   state: LocationState;
   /** The saved addresses, in Marketing's order. */
@@ -60,7 +61,6 @@ export type LocationView = {
 export type LocationRows = {
   slug: string;
   name: string;
-  tagline: string | null;
   state: string;
   addresses: readonly { id: string; name: string; place: unknown }[];
   pages: readonly {
@@ -105,27 +105,29 @@ function viewOf(
   ) => Omit<LocationViewPage, "page"> | null,
 ): LocationView {
   const addresses = addressesOf(rows);
+  const pages = LOCATION_PAGES.flatMap((page) => {
+    const shown = pageOf(
+      page,
+      rows.pages.find((row) => row.page === page),
+    );
+    return shown
+      ? [
+          {
+            ...shown,
+            page,
+            content: withKnownAddresses(shown.content, addresses),
+          },
+        ]
+      : [];
+  });
+  const landing = pages.find((entry) => entry.page === LANDING_PAGE);
   return {
     slug: rows.slug,
     name: rows.name,
-    tagline: rows.tagline,
+    tagline: landing?.content.tagline || null,
     state: locationStateOf(rows.state),
     addresses,
-    pages: LOCATION_PAGES.flatMap((page) => {
-      const shown = pageOf(
-        page,
-        rows.pages.find((row) => row.page === page),
-      );
-      return shown
-        ? [
-            {
-              ...shown,
-              page,
-              content: withKnownAddresses(shown.content, addresses),
-            },
-          ]
-        : [];
-    }),
+    pages,
   };
 }
 

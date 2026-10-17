@@ -1,252 +1,347 @@
 import Link from "next/link";
 import {
-  LOCATION_MOVE_LABELS,
+  BOOKING_STATUS_LABELS,
   LOCATION_PAGE_LABELS,
-  LOCATION_STATE_MOVE,
-  hasBeenLive,
-  isPlace,
-  isSlugLocked,
+  PAGE_STATUS_LABELS,
+  describeActivity,
+  formatLocalDateTime,
   locationStateOf,
-  stateMoveBlockers,
-  type LocationState,
+  setupSteps,
+  type BookingStatus,
+  type PageStanding,
+  type PageStatus,
+  type Permission,
+  type SetupStep,
 } from "@repo/db";
 import {
-  getLocation,
-  listActivityFor,
+  listActivityForMany,
+  listBookings,
   type ActivityEntry,
+  type BookingWithItems,
+  type LocationOverview,
 } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
-import { InfoTip } from "@repo/ui/info-tip";
+import { cx } from "@repo/ui/cx";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
+import { BookingsTable } from "../../../_components/BookingsTable";
 import { Card, CardTitle } from "../../../_components/Card";
-import { PageHeader } from "../../../_components/PageHeader";
+import { HistorySheet } from "../../../_components/HistorySheet";
+import { SectionHeader } from "../../../_components/SectionHeader";
 import {
+  Bone,
   CardSkeleton,
-  DetailSkeleton,
-  HeaderSkeleton,
   Streamed,
+  TableSkeleton,
 } from "../../../_components/Skeleton";
+import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
-  LocationStateBadge,
-  PageStatusBadge,
-} from "../../../_components/StatusBadges";
-import { requireAdmin } from "../../../_lib/access";
-import {
-  LOCATIONS_PATH,
-  SAVED_ADDRESSES_ID,
+  locationBookingsHref,
   locationPageHref,
   locationPublishHref,
+  locationTabHref,
+  setupStepTab,
 } from "../../../_lib/routes";
-import { PreviewLink } from "../_components/PreviewLink";
-import { districtOptions } from "../_lib/district-options";
-import { DeleteLocation } from "./DeleteLocation";
-import { LocationDetailsForm } from "./LocationDetailsForm";
-import { SavedAddresses, type SavedAddress } from "./SavedAddresses";
-import { StateMove } from "./StateMove";
+import { locationDetails, locationOverview } from "../_lib/location-data";
+import { SetupChecklist } from "./SetupChecklist";
 
-/** What each state means for the public, under the name. */
-function stateNote(state: LocationState, slug: string) {
-  switch (state) {
-    case "draft":
-      return `Not public yet. Its address on the customer site will be /${slug}.`;
-    case "live":
-      return `Public at /${slug} on the customer site.`;
-    case "paused":
-      return `Public at /${slug} on the customer site, with a notice in place of the search card. Not sold for now.`;
-  }
-}
+type Figure = { label: string; value: number; href: string };
+
+/** How many of today's pick-ups and of the bookings awaiting confirmation the overview lists. */
+const PICKUPS_SHOWN = 6;
+const RECEIVED_SHOWN = 5;
+
+const PAGE_DOTS: Record<PageStatus, string> = {
+  unpublished: "bg-neutral-300",
+  published: "bg-emerald-500",
+  changed: "bg-amber-500",
+};
 
 /**
- * Route: /locations/[id]. One location for Marketing. The header carries
- * its state, the one move the state allows and "Preview", which opens its
- * drafts on the customer site; while the move is blocked, a line under the
- * header says what to do first. Below: its pages, each with its status,
- * its details with the districts it lies in, its saved addresses and its
- * history. A page is published and unpublished in its editor. The home
- * page's top choices are on the Home page screen. At the foot, the location
- * can be deleted: on a plain yes while it has never been live, and by typing
- * its slug once it has.
+ * Route: /locations/[id]. The Overview tab, for every team. A draft
+ * location opens on its setup checklist: the four steps, where each
+ * stands, and what to do next. A live or paused one opens on the day's
+ * operation: its queue in numbers, today's pick-ups and the bookings
+ * awaiting confirmation for the teams that work the queue, its pages for
+ * Marketing. The history is behind a button at the foot.
  */
-export default async function LocationPage({
+export default async function LocationOverviewPage({
   params,
 }: PageProps<"/locations/[id]">) {
-  await requireAdmin("locations.manage");
+  await requireAdmin("locations.view");
   const { id } = await params;
 
   return (
+    <Streamed
+      fallback={
+        <div className="grid gap-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div
+                key={i}
+                className="rounded-lg border border-neutral-200 bg-white p-4 sm:p-5"
+              >
+                <Bone className="h-4 w-20 sm:h-5 sm:w-28" />
+                <Bone className="mt-2 h-8 w-10 sm:h-9" />
+              </div>
+            ))}
+          </div>
+          <TableSkeleton columns={6} rows={4} />
+          <CardSkeleton rows={3} />
+        </div>
+      }
+    >
+      {() => overview({ id })}
+    </Streamed>
+  );
+}
+
+async function overview({ id }: { id: string }) {
+  const [location, numbers, permissions, history] = await Promise.all([
+    locationDetails(id),
+    locationOverview(id),
+    getPermissions(),
+    listActivityForMany([{ entityType: "location", entityId: id }]),
+  ]);
+  if (!location || !numbers) notFound();
+
+  const may = (permission: Permission) => permissions.includes(permission);
+  const state = locationStateOf(location.state);
+  const publishHref = (entry: ActivityEntry) =>
+    may("locations.manage") && entry.action === "location.page.published"
+      ? locationPublishHref(id, entry.id)
+      : null;
+
+  let main: ReactNode;
+  if (state === "draft") {
+    const steps = setupSteps(location.pages, numbers);
+    const hrefOf = (step: SetupStep) => {
+      const tab = setupStepTab(step.key);
+      return may(tab.permission) ? locationTabHref(id, tab.key) : null;
+    };
+    main = (
+      <SetupChecklist
+        title={`Set up ${location.name}`}
+        steps={steps}
+        hrefOf={hrefOf}
+      />
+    );
+  } else {
+    const worksQueue = may("bookings.view");
+    const [pickups, received] = worksQueue
+      ? await Promise.all([
+          listBookings(
+            { locationId: id, pickupOn: new Date() },
+            { order: "soonest", take: PICKUPS_SHOWN },
+          ),
+          numbers.awaitingConfirmation > 0
+            ? listBookings(
+                { locationId: id, status: "received" },
+                { take: RECEIVED_SHOWN },
+              )
+            : [],
+        ])
+      : [[], []];
+    main = (
+      <>
+        {worksQueue ? (
+          <Operation
+            id={id}
+            numbers={numbers}
+            pickups={pickups}
+            received={received}
+          />
+        ) : null}
+        {may("locations.manage") ? (
+          <PagesCard id={id} pages={numbers.pages} />
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <div className="grid gap-6">
+      {main}
+      <HistoryLine
+        name={location.name}
+        history={history}
+        hrefOf={publishHref}
+      />
+    </div>
+  );
+}
+
+/** The day's work in a live location: the queue in numbers and the bookings behind them. */
+function Operation({
+  id,
+  numbers,
+  pickups,
+  received,
+}: {
+  id: string;
+  numbers: LocationOverview;
+  pickups: BookingWithItems[];
+  received: BookingWithItems[];
+}) {
+  const queue = (status?: BookingStatus) => locationBookingsHref(id, status);
+  const figures: Figure[] = [
+    {
+      label: BOOKING_STATUS_LABELS.received,
+      value: numbers.awaitingConfirmation,
+      href: queue("received"),
+    },
+    { label: "Pick-ups today", value: numbers.pickupsToday, href: queue() },
+    {
+      label: "Awaiting driver",
+      value: numbers.awaitingDriver,
+      href: queue("confirmed"),
+    },
+  ];
+  const more = (shown: number, total: number) =>
+    total > shown ? `${shown} of ${total} shown.` : null;
+
+  return (
     <>
-      <p className="mb-4 text-sm">
-        <Link
-          href={LOCATIONS_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
-        >
-          All locations
-        </Link>
-      </p>
-      <Streamed
-        fallback={
-          <>
-            <HeaderSkeleton />
-            <DetailSkeleton
-              main={
-                <>
-                  <CardSkeleton rows={4} />
-                  <CardSkeleton rows={5} />
-                  <CardSkeleton rows={3} />
-                </>
-              }
-              side={<CardSkeleton rows={6} />}
-            />
-          </>
-        }
-      >
-        {() => locationDetails({ id })}
-      </Streamed>
+      <dl className="grid grid-cols-3 gap-3 sm:gap-4">
+        {figures.map((figure) => (
+          <Link
+            key={figure.label}
+            href={figure.href}
+            className="block min-w-0 rounded-lg border border-neutral-200 bg-white p-4 transition-colors hover:border-neutral-300 sm:p-5"
+          >
+            <dt className="text-xs text-neutral-600 sm:text-sm">
+              {figure.label}
+            </dt>
+            <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:mt-2 sm:text-3xl">
+              {figure.value}
+            </dd>
+          </Link>
+        ))}
+      </dl>
+
+      <section className="grid gap-3">
+        <SectionHeader
+          title="Today's pick-ups"
+          description={
+            more(pickups.length, numbers.pickupsToday) ??
+            "Every booking with a live item picking up here today, soonest first."
+          }
+          action={<AllBookingsLink href={queue()} />}
+        />
+        <BookingsTable bookings={pickups} emptyMessage="No pick-ups today." />
+      </section>
+
+      {received.length > 0 ? (
+        <section className="grid gap-3">
+          <SectionHeader
+            title="Awaiting confirmation"
+            description={
+              more(received.length, numbers.awaitingConfirmation) ??
+              "Bookings that have come in and wait for Reservation, newest first."
+            }
+            action={<AllBookingsLink href={queue("received")} />}
+          />
+          <BookingsTable
+            bookings={received}
+            emptyMessage="Nothing awaiting confirmation."
+          />
+        </section>
+      ) : null}
     </>
   );
 }
 
-/** The location under its name: its pages, details, addresses and history. */
-async function locationDetails({ id }: { id: string }) {
-  const [location, districts, history] = await Promise.all([
-    getLocation(id),
-    districtOptions(),
-    listActivityFor("location", id),
-  ]);
-  if (!location) notFound();
-
-  const addresses: SavedAddress[] = location.addresses.map((address) => {
-    const spot = isPlace(address.place) ? address.place : null;
-    return {
-      id: address.id,
-      name: address.name,
-      placeId: spot?.placeId ?? "",
-      placeLabel: spot?.label ?? "",
-      placeAddress: spot?.address ?? "",
-      usedBy: address.usedBy,
-      isStray: address.isStray,
-    };
-  });
-
-  const state = locationStateOf(location.state);
-  const blockers = stateMoveBlockers(
-    state,
-    LOCATION_STATE_MOVE[state],
-    location.pages,
-  );
-  const publishHref = (entry: ActivityEntry) =>
-    entry.action === "location.page.published"
-      ? locationPublishHref(location.id, entry.id)
-      : null;
-
+function AllBookingsLink({ href }: { href: string }) {
   return (
-    <>
-      <PageHeader
-        title={location.name}
-        badge={<LocationStateBadge state={state} />}
-        description={stateNote(state, location.slug)}
-        action={
-          <div className="flex flex-wrap items-start gap-2">
-            <PreviewLink slug={location.slug} />
-            <StateMove
-              locationId={location.id}
-              name={location.name}
-              state={state}
-              blocked={blockers.length > 0}
-            />
-          </div>
-        }
-      />
-      {blockers.length > 0 ? (
-        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <span className="font-medium">
-            Before “{LOCATION_MOVE_LABELS[state]}”:
-          </span>{" "}
-          {blockers.join(". ")}.
-        </p>
-      ) : null}
+    <Link
+      href={href}
+      className="text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline"
+    >
+      All bookings
+    </Link>
+  );
+}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-        <div className="grid gap-6">
-          <Card>
-            <CardTitle>
-              <span className="inline-flex items-center gap-1.5">
-                Pages
-                <InfoTip text="A published page is one the public can see, once the location is live. “Published, edits waiting” means the public still sees the copy last published, and the draft holds newer edits. Only the landing page is needed to go live: a product page is an extra page about one product, and the search card offers every product either way. Publish and unpublish a page in its editor." />
-              </span>
-            </CardTitle>
-            <ul className="divide-y divide-neutral-100">
-              {location.pages.map((page) => (
-                <li
-                  key={page.page}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3"
-                >
-                  <div className="min-w-40 flex-1">
-                    <span className="block text-sm font-medium">
-                      {LOCATION_PAGE_LABELS[page.page]}
-                    </span>
-                    <span className="mt-1 block">
-                      <PageStatusBadge status={page.status} />
-                    </span>
-                  </div>
-                  <Button asChild variant="secondary" size="sm">
-                    <Link href={locationPageHref(location.id, page.page)}>
-                      Edit
-                    </Link>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card>
-            <CardTitle>Details</CardTitle>
-            <LocationDetailsForm
-              location={{
-                id: location.id,
-                name: location.name,
-                slug: location.slug,
-                tagline: location.tagline,
-                districtCodes: location.districtCodes,
-                slugLocked: isSlugLocked(location),
-              }}
-              districts={districts}
+/** Marketing's part of a live location: its pages and where each stands. */
+function PagesCard({
+  id,
+  pages,
+}: {
+  id: string;
+  pages: readonly PageStanding[];
+}) {
+  return (
+    <Card>
+      <CardTitle description="What the public reads; edits wait until they are published.">
+        Pages
+      </CardTitle>
+      <ul className="divide-y divide-neutral-100">
+        {pages.map((page) => (
+          <li
+            key={page.page}
+            className="flex items-center gap-3 py-2.5 text-sm"
+          >
+            <span
+              aria-hidden="true"
+              className={cx(
+                "size-2 shrink-0 rounded-full",
+                PAGE_DOTS[page.status],
+              )}
             />
-          </Card>
-          <Card id={SAVED_ADDRESSES_ID} className="scroll-mt-6">
-            <CardTitle>
-              <span className="inline-flex items-center gap-1.5">
-                Saved addresses
-                <InfoTip text="The places most customers go to here. The drop-off offers them before anything is typed; typing still searches any exact place. Exact spots only, never an area, each in one of the districts ticked above." />
-              </span>
-            </CardTitle>
-            <SavedAddresses locationId={location.id} addresses={addresses} />
-          </Card>
-          <Card>
-            <CardTitle>Delete</CardTitle>
-            <DeleteLocation
-              locationId={location.id}
-              name={location.name}
-              slug={location.slug}
-              hasBeenLive={hasBeenLive(location)}
-            />
-          </Card>
-        </div>
-
-        <Card>
-          <CardTitle>
-            <span className="inline-flex items-center gap-1.5">
-              History
-              <InfoTip text="Open a publish to read the page as it was before and after, and to copy the old text back." />
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {LOCATION_PAGE_LABELS[page.page]}
             </span>
-          </CardTitle>
+            <span className="truncate text-neutral-500">
+              {PAGE_STATUS_LABELS[page.status]}
+            </span>
+            <Link
+              href={locationPageHref(id, page.page)}
+              className="font-medium whitespace-nowrap underline-offset-4 hover:underline"
+            >
+              Open
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** The foot of the overview: the last change in a line, the whole history behind a button. */
+function HistoryLine({
+  name,
+  history,
+  hrefOf,
+}: {
+  name: string;
+  history: ActivityEntry[];
+  hrefOf: (entry: ActivityEntry) => string | null;
+}) {
+  const last = history.at(-1);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-neutral-200 pt-4 text-sm text-neutral-600">
+      {last ? (
+        <p className="min-w-0">
+          Last change: {describeActivity(last)}.{" "}
+          <span className="text-neutral-500">
+            {last.actorName}, {formatLocalDateTime(last.createdAt)}.
+          </span>
+        </p>
+      ) : (
+        <p>No changes recorded for this location.</p>
+      )}
+      {history.length > 0 ? (
+        <HistorySheet
+          title={`History of ${name}`}
+          description="The location's changes, oldest first: its details, its zones and rates, its classes, its pages and its state. Open a publish to read the page as it was before and after."
+        >
           <ActivityHistory
             entries={history}
             emptyMessage="No changes recorded for this location."
-            hrefOf={publishHref}
+            hrefOf={hrefOf}
           />
-        </Card>
-      </div>
-    </>
+        </HistorySheet>
+      ) : null}
+    </div>
   );
 }

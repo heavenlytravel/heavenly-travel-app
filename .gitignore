@@ -7,8 +7,9 @@ node_modules
 
 # testing
 coverage
-# The Coverage screen is a route, not test output.
-!apps/admin/app/(console)/coverage/
+# A location's Coverage tab is a route, not test output. The brackets are
+# escaped: unescaped, [id] would match one letter.
+!apps/admin/app/(console)/locations/\[id\]/coverage/
 
 # next.js
 .next/

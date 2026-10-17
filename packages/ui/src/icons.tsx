@@ -36,6 +36,25 @@ export function PanelLeftIcon(props: IconProps) {
   );
 }
 
+export function PanelRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M15 3v18" />
+    </Icon>
+  );
+}
+
+export function BanknoteIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect width="20" height="12" x="2" y="6" rx="2" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M6 12h.01M18 12h.01" />
+    </Icon>
+  );
+}
+
 export function LayoutDashboardIcon(props: IconProps) {
   return (
     <Icon {...props}>
@@ -130,6 +149,28 @@ export function HouseIcon(props: IconProps) {
 }
 
 /** A turning arc for a button that is waiting on its action. */
+export function FileTextIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </Icon>
+  );
+}
+
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </Icon>
+  );
+}
+
 export function SpinnerIcon({ className, ...props }: IconProps) {
   return (
     <Icon className={cx("ui:animate-spin", className)} {...props}>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { cx } from "@repo/ui/cx";
 import {
   locationTabHref,
@@ -13,7 +14,9 @@ import {
  * The location's tabs as a strip under its header, on screens too narrow
  * for the panel's column, where the panel is a sheet: the sections stay
  * one tap away. From `xl` up the panel lists them and the strip is
- * hidden. The tab of the path on screen is marked.
+ * hidden. The tab of the path on screen is marked. The strip scrolls
+ * sideways with no bar, as the customer site's service tabs do, and keeps
+ * the marked tab in view.
  */
 export function LocationTabs({
   slug,
@@ -25,10 +28,26 @@ export function LocationTabs({
   tabs: readonly { key: LocationTab; label: string }[];
 }) {
   const active = locationTabOf(slug, usePathname());
+  const strip = useRef<HTMLUListElement>(null);
+
+  // Only the strip scrolls, not the page, so the console's own scroll to
+  // the top of a new tab stands.
+  useEffect(() => {
+    const list = strip.current;
+    const tab = list?.querySelector('[aria-current="page"]');
+    if (!list || !tab) return;
+    const view = list.getBoundingClientRect();
+    const box = tab.getBoundingClientRect();
+    if (box.left < view.left) list.scrollLeft -= view.left - box.left;
+    else if (box.right > view.right) list.scrollLeft += box.right - view.right;
+  }, [active]);
 
   return (
     <nav aria-label="Location tabs" className="mt-6 xl:hidden">
-      <ul className="-mx-5 flex gap-1 overflow-x-auto border-b border-neutral-200 px-5 md:mx-0 md:px-0">
+      <ul
+        ref={strip}
+        className="-mx-5 flex gap-1 overflow-x-auto border-b border-neutral-200 px-5 [scrollbar-width:none] md:mx-0 md:px-0"
+      >
         {tabs.map((tab) => {
           const current = tab.key === active;
           return (

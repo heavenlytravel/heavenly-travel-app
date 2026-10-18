@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { RemoveScroll } from "react-remove-scroll";
 import { cx } from "./cx.js";
 import { useModal } from "./modal.js";
 
@@ -43,15 +44,6 @@ export function Sheet({
 }) {
   const ref = useModal(open);
 
-  useEffect(() => {
-    if (!open) return;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflow;
-    };
-  }, [open]);
-
   return (
     <dialog
       ref={ref}
@@ -62,13 +54,24 @@ export function Sheet({
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:fixed ui:m-0 ui:max-w-none ui:overflow-y-auto ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
+        "ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
         side !== "bottom" && WIDTHS[width],
         SIDES[side],
         className,
       )}
     >
-      {children}
+      {/* While it is open the page under it holds still, as under Radix's
+          own dialogs: the wheel and touch outside this layer are stopped, the
+          backdrop's too, and the sheet scrolls in it. The page keeps its
+          scroll bar, so nothing on it changes width or moves. */}
+      <RemoveScroll
+        enabled={open}
+        allowPinchZoom
+        removeScrollBar={false}
+        className="ui:h-full ui:max-h-[inherit] ui:overflow-y-auto"
+      >
+        {children}
+      </RemoveScroll>
     </dialog>
   );
 }

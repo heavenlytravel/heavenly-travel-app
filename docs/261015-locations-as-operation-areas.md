@@ -112,22 +112,39 @@ The partner grid, as data:
   location's districts in outline, from the same geoBoundaries shapes coverage uses,
   so a zone is drawn in context; a district outline is coverage, a zone is a line on
   the price list, and the two stay separate.
-  Google's own drawing library is deprecated, so the zone maker draws with the map's
-  clicks: each click adds a corner to a line, "Finish shape" closes it, and the corners
-  can then be dragged. Three ways to make a zone: "a district, as it is", picked from
-  the list of Malaysia's districts (the location's own states first), which takes the
-  district's boundary from the same geoBoundaries data, islands included, for a whole
-  district such as Langkawi or Timur Laut; "a circle around a place", which searches a
-  place with the autocomplete the saved addresses use and draws a circle of the given
-  radius around it, for an airport or a ferry terminal; or a polygon, corner by corner,
-  for an area such as the Cenang strip or Pantai Kok. The first two work without the
-  map, so a server without the browser key still makes zones. A drawn zone and a circle
-  are stored as one closed ring; a district as its polygons, so the quote has one test,
-  `zoneAt` in `zone-match.ts`, over both: `pointInRing` for a ring, `pointInMultiPolygon`
-  for a district. The server reads a circle's and a district's shape again from the
-  place or the code when saving; the browser's preview is never the stored shape. The
-  map shows the location's districts in outline and its other zones, so a new one is
-  made in context.
+  A zone starts one of three ways and is reshaped from there; no corner is clicked out
+  by hand (revised 2026-10-17, after the first try at corner-by-corner drawing):
+  - **A district**, picked from the list of Malaysia's districts (the location's own
+    states first): its official boundary from the same geoBoundaries data, islands
+    included, for a whole district such as Langkawi or Timur Laut. It stays the
+    boundary as it is (`drawnFrom: { districtCode, label }`), read again from the code
+    on every save so it never drifts from the data, until "Reshape by hand" frees it
+    (`{ reshapedFrom, label }`, the district a reference only). The boundaries are
+    simplified already: 136 corners for the median district, 653 for Kudat, the most.
+  - **An address**, searched with the autocomplete the saved addresses use: a circle
+    of the given radius around it, for an airport or a ferry terminal, then reshaped
+    like any other. The place and the radius are a reference only
+    (`{ placeId, label, radiusM }`); a new radius redraws the circle while it is
+    untouched.
+  - **Draw**: a circle or a square in the middle of the map's view, to move and reshape
+    into a beach strip or a town (`drawnFrom: null`).
+
+  On the map the zone has two tools. "Edit shape" holds the map still, so a drag never
+  pans it: drag a corner to move it, the mark halfway along an edge to add a corner,
+  or the inside to move the whole zone; right-click a corner to remove it. "Move map"
+  pans and zooms with the zone left alone. Undo steps back through the changes. A
+  district as it is works without the map, so a server without the browser key still
+  makes zones. A zone is stored as one closed ring or, a district's islands, as
+  polygons, at most 1,000 corners in all, so the quote has one test, `zoneAt` in
+  `zone-match.ts`, over both. Only a district as it is has its shape read again by the
+  server; every other shape is the admin's drawing and is stored as posted. The map
+  shows the location's districts in outline and its other zones, so a new one is made
+  in context.
+
+- The Coverage tab draws every zone in its own colour on the map and lists them beside
+  it, each row with its colour, how it was made and the priced routes it is an end
+  of. Pointing at a zone on the map names it beside the pointer and lights its row;
+  pointing at a row lights the zone; a click on either opens the zone maker.
 - A zone may lie anywhere, inside the location's districts or far outside them. A zone
   is a line on the price list, not coverage. Penang can have a zone "Kuala Lumpur" and
   a row "Penang Airport to Kuala Lumpur" on its grid: outstation prices are the same
@@ -138,8 +155,18 @@ The partner grid, as data:
   grid, one row per route and one column per offered class, as in the contract. A route
   is read both ways: the quote looks up (from, to), then (to, from). A cell left empty
   means no fixed price for that route and class.
-- An **odd-hours surcharge** is set on the location: a window (23:00 to 07:00) and a
-  percentage. It applies to every trip that starts in the window.
+- The grid is edited as a spreadsheet, so a contract goes in as it is: the classes
+  grouped under their category, the route column held in view while they scroll, the
+  arrow keys and Enter moving between cells, and a block copied from a spreadsheet
+  pasted from the cell it lands in ("RM 1,020" reads as 1020.00). A cell that is not
+  a price is marked, changed cells are shaded until saved, one bar at the foot counts,
+  saves or discards the changes, and leaving with any unsaved asks first. "Add route"
+  opens a dialog: the two zones, only the pairs not on the grid yet so a pair has one
+  row, then the route's price per class; it saves the route at once.
+- An **odd-hours surcharge** is set on the location: a window (23:00 to 07:00) and
+  what it adds, either a percentage of the trip's price or a flat amount in RM
+  (`oddHoursPercent` or `oddHoursFlatSen`, exactly one). It applies to every trip
+  that starts in the window.
 - "Driver tipping, bus only" is a flat add-on per class. Not in this plan; a later
   `addOnSen` on the offering when a contract needs it.
 
@@ -205,38 +232,52 @@ location's choice.
 The location page is split into tabs, each its own route with its own single permission
 check, as every console page has today.
 
-| Tab             | Route                             | Permission         | Team                     |
-| --------------- | --------------------------------- | ------------------ | ------------------------ |
-| Overview        | `/locations/[id]`                 | `locations.view`   | Every team               |
-| Details         | `/locations/[id]/details`         | `locations.manage` | Marketing                |
-| Vehicle classes | `/locations/[id]/vehicle-classes` | `coverage.manage`  | Operation                |
-| Coverage        | `/locations/[id]/coverage`        | `coverage.manage`  | Operation                |
-| Rates           | `/locations/[id]/rates`           | `coverage.manage`  | Operation                |
-| Pages           | `/locations/[id]/pages`           | `locations.manage` | Marketing                |
-| Bookings        | `/locations/[id]/bookings`        | `bookings.view`    | Ops, Res, Sales, Finance |
+| Tab             | Route                               | Permission         | Team                     |
+| --------------- | ----------------------------------- | ------------------ | ------------------------ |
+| Overview        | `/locations/[slug]`                 | `locations.view`   | Every team               |
+| Details         | `/locations/[slug]/details`         | `locations.manage` | Marketing                |
+| Vehicle classes | `/locations/[slug]/vehicle-classes` | `coverage.manage`  | Operation                |
+| Coverage        | `/locations/[slug]/coverage`        | `coverage.manage`  | Operation                |
+| Rates           | `/locations/[slug]/rates`           | `coverage.manage`  | Operation                |
+| Pages           | `/locations/[slug]/pages`           | `locations.manage` | Marketing                |
+| Bookings        | `/locations/[slug]/bookings`        | `bookings.view`    | Ops, Res, Sales, Finance |
+| History         | `/locations/[slug]/history`         | `locations.view`   | Every team               |
+
+A location's address in the console is its slug, the same as its public page:
+`/locations/langkawi/rates`. A draft's slug can still change; saving the new one moves
+the admin to the new address. `new` is set aside, since `/locations/new` adds one.
 
 The tabs are in the order a location is set up (next section), with the rates right
-after the coverage whose zones they price and the bookings last. Coverage is the zones
+after the coverage whose zones they price, then the bookings and the history. Coverage is the zones
 on the map; Rates is the grid between them, which grows with the zones and the classes
-on sale and needs the page's whole width, with the odd-hours surcharge and the drop-off
-rule under it. Rates is not a setup step: a location with no row on the grid is metered.
+on sale and needs the page's whole width, with the drop-off rule under it, since the
+rule decides what an empty cell means, then the odd-hours surcharge. Rates is not a
+setup step: a location with no row on the grid is metered.
 
 - `locations.view` is new: any team. The overview of a draft is its setup checklist; of
   a live or paused location, the day's operation: bookings awaiting confirmation,
   pick-ups today and awaiting a driver in numbers, then today's pick-ups and the
-  bookings awaiting confirmation as lists for the teams that work the queue, and the
-  pages with their standing for Marketing. The history is behind a "History" button at
-  the foot, in a sheet. Tabs the admin may not open are not shown.
+  bookings awaiting confirmation as lists for the teams that work the queue. Under
+  either, "At a glance": a card for each other tab the admin may open, with what it
+  holds in a line or two (the states and addresses, the classes on sale, the zones,
+  the priced pairs and the rules, the pages, the latest three changes) and a link in.
+  The whole history is its own tab, newest first by day, narrowed by part of the
+  location. Tabs the admin may not open are not shown.
 - `locations.activate` is new: `super`. The state move (draft to live, live to paused,
   paused to live) and Delete belong to SUPER. Marketing prepares the pages and Operation
   the classes, the coverage and the rates inside a draft location; SUPER flips it, once
   every setup step is done.
 - Adding a location stays Marketing's (`locations.manage`): the name, slug and state.
   Operation takes it from there. Both teams see it in draft.
-- The console home (`/`) is the locations overview, behind `dashboard.view`: one row per
-  location with its state, its states, its zones, its classes on sale, its queue, how
-  far its setup has come, "Add location" for Marketing, "Test an address" below. The
-  Dashboard cards go; every number they held is now a column.
+- The console home (`/`) is the locations overview, behind `dashboard.view`: one card per
+  location with its main page's hero image, its state, its states, its zones, its classes
+  on sale, its queue, how far its setup has come, "Add location" for Marketing, "Test an
+  address" below. The Dashboard cards go; every number they held is now on the cards. The
+  count awaiting confirmation links to those bookings only for an admin with
+  `bookings.view`; for the others it is a number.
+- The console's place search (`/api/places/search`), behind "Test an address", the zone
+  maker and the saved addresses, answers a signed-in admin only (`locations.view`). The
+  customer site's copy of the same handler stays open to everyone.
 - Sidebar: the admin picks a location first and works inside it. The first group is
   Locations: "All locations" (the home) at its head, then every location, one name per
   row with a disc coloured by its state, and "Add location" at its foot for Marketing.
@@ -246,18 +287,25 @@ rule under it. Rates is not a setup step: a location with no row on the grid is 
 - Location panel: inside a location a second column sits on the page's right, after
   shadcn's sidebar-15. On top, the location's name, slug and state. Then its sections
   (the tabs the admin may open), each with one line on where it stands ("2 classes on
-  sale", "3 zones, 4 routes priced", "Landing page published"), numbered and ticked
-  while the location is a draft; its queue in numbers; how far its setup has come,
-  with what to do next; its pages with their standing, for Marketing; and the facts
-  about it (states, saved addresses, top choice, went live, last change). At the foot,
-  the public page once it is live. The column collapses to a rail of the section icons
+  sale", "3 zones, 4 routes priced", "Landing page published", "1 awaiting
+  confirmation", "2 pick-ups today"), numbered and ticked while the location is a
+  draft; how far its setup has come, with what to do next; and the facts about it
+  (states, saved addresses, top choice, went live, last change). The queue and the
+  pages are on those rows and in full on the overview, so the panel does not repeat
+  them in groups of their own (it did at first, and the overview showed them twice
+  beside each other). A section with something to list has a chevron that opens it
+  as a submenu: Vehicle classes its classes, on sale or off, and "Add class";
+  Coverage its zones and "Add zone"; Rates its grid, drop-offs and odd hours, each
+  with where it stands; Pages each page with its standing; Bookings each status. The
+  section on screen opens by itself; one opened or closed by hand stays so while the
+  admin moves around the location. At the foot, the public page once it is live. The column collapses to a rail of the section icons
   by its own toggle or its edge, remembered in its own cookie (`panel_state`) apart
   from the sidebar's, so one can be open while the other is a rail; the rail keeps the
   sections and the public page, with each row's words as its tooltip, and the numbers
   and facts come back with the width. The panel is a column from `xl` up; below that the
   same panel opens as a sheet from the right, from a button at the right end of the
-  console header, and closes on a move to another path, so the sections are never out
-  of reach on a tablet or a phone.
+  console header, and closes on a move to another path; there a strip of the tabs
+  under the location's header keeps the sections one tap away on a tablet or a phone.
 
 ### Setting a location up
 
@@ -296,7 +344,8 @@ Location
   + states             State[]   the states it lies in; implicit many-to-many
   + oddHoursFromMinute Int?      23:00 as 1380; both null when no surcharge
   + oddHoursToMinute   Int?      07:00 as 420
-  + oddHoursPercent    Int?
+  + oddHoursPercent    Int?      what it adds: a percentage, or
+  + oddHoursFlatSen    Int?      a flat amount; exactly one with the window
   + dropoffWithin      Boolean   default false: drop-offs anywhere
   - districtCodes                (after the one-off copy below)
   - tagline                      (after the copy: it is on the landing page's content)
@@ -317,9 +366,11 @@ LocationVehicleClass            an offering
 
 Zone
   id, locationId, name, sortOrder
-  shape Json                    one polygon ring of [lng, lat], as geo.ts reads
-  drawnFrom Json?               { placeId, label, radiusM } when drawn as a circle,
-                                so the editor can show and redo it
+  shape Json                    one closed ring of [lng, lat], or a district's polygons
+  drawnFrom Json?               where it started: { districtCode, label } a district
+                                as it is; { reshapedFrom, label } a district reshaped;
+                                { placeId, label, radiusM } a circle around an address;
+                                null a circle or square drawn on the map
 
 ZoneRate
   id, locationId, fromZoneId, toZoneId, vehicleClassId, priceSen

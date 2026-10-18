@@ -30,7 +30,7 @@ export function Pending({ children }: { children: ReactNode }) {
 
 export const textLink = `font-semibold text-[#073c36] underline-offset-4 hover:underline ${focus}`;
 
-export const control = `w-full rounded-xl border border-[#dce3e0] bg-white px-4 py-3 text-[#082f2b] outline-none placeholder:text-[#64706d]/80 focus:border-[#073c36] aria-invalid:border-[#b3261e] ${focus}`;
+export const control = `w-full rounded-xl border border-[#dce3e0] bg-white px-4 py-3 text-[#082f2b] outline-none placeholder:text-[#64706d]/80 focus:border-[#073c36] aria-invalid:border-[#b3261e] data-placeholder:text-[#64706d]/80 ${focus}`;
 
 /** The white card with the home page's shadow, as a class for links and lists. */
 export const panel =

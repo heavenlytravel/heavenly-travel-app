@@ -9,6 +9,7 @@ import {
 } from "@repo/db";
 import { FieldInput } from "../../../../_components/search/fields";
 import {
+  fieldKeys,
   PRODUCTS,
   visibleFields,
   type SearchValues,
@@ -156,7 +157,8 @@ function TripEditor({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((f) => {
           const id = `trip-${f.key}`;
-          const issue = issues.some((x) => x.field === f.key);
+          const keys = fieldKeys(f);
+          const issue = issues.some((x) => keys.includes(x.field));
           return (
             <div key={f.key} className="min-w-0">
               <label
@@ -169,7 +171,7 @@ function TripEditor({
                 def={f}
                 id={id}
                 values={values}
-                onChange={(v, placeId) => set(f.key, v, placeId)}
+                onChange={set}
                 className={`${control} ${issue ? "border-[#b3261e]" : ""}`}
               />
             </div>

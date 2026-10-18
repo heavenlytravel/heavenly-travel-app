@@ -10,13 +10,16 @@ import { MinusIcon, PlusIcon } from "./icons.js";
  * spinner arrows, which are tiny and hard to hit. The field is the
  * browser's own number field without its arrows, so typing, `min`, `max`,
  * `step` and `required` work as before, controlled or not. The buttons step
- * it and fire the same change typing would.
+ * it and fire the same change typing would. `bare` drops the box and
+ * draws the buttons as rings, for a field whose box is drawn around it;
+ * `className` is the box either way.
  */
 export function NumberField({
   className,
   disabled,
+  bare = false,
   ...props
-}: Omit<ComponentProps<"input">, "type">) {
+}: Omit<ComponentProps<"input">, "type"> & { bare?: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
 
   function step(by: 1 | -1) {
@@ -37,8 +40,12 @@ export function NumberField({
     input.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  const button =
-    "ui:inline-flex ui:size-10 ui:shrink-0 ui:items-center ui:justify-center ui:text-neutral-600 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-neutral-900 ui:disabled:pointer-events-none ui:disabled:opacity-40";
+  const button = cx(
+    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-neutral-600 ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:focus-visible:outline-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-40",
+    bare
+      ? "ui:size-8 ui:self-center ui:rounded-full ui:border ui:border-line"
+      : "ui:size-10",
+  );
 
   // The field comes first in the markup and the minus is drawn before it:
   // a label around the whole clicks its first control, which must be the
@@ -46,7 +53,9 @@ export function NumberField({
   return (
     <span
       className={cx(
-        "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:has-[input:disabled]:bg-neutral-100 ui:has-[input[aria-invalid=true]]:border-red-500",
+        bare
+          ? "ui:flex ui:w-full ui:items-center ui:gap-2"
+          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:has-[input:disabled]:bg-neutral-100 ui:has-[input[aria-invalid=true]]:border-red-500",
         className,
       )}
     >
@@ -56,8 +65,10 @@ export function NumberField({
         inputMode="numeric"
         disabled={disabled}
         className={cx(
-          inputClassName,
-          "ui:order-2 ui:h-10 ui:min-w-0 ui:flex-1 ui:rounded-none ui:border-0 ui:text-center ui:tabular-nums ui:[appearance:textfield] ui:[&::-webkit-inner-spin-button]:appearance-none ui:[&::-webkit-outer-spin-button]:appearance-none",
+          bare
+            ? "ui:min-w-0 ui:bg-transparent ui:outline-none"
+            : cx(inputClassName, "ui:h-10 ui:rounded-none ui:border-0"),
+          "ui:order-2 ui:min-w-0 ui:flex-1 ui:text-center ui:tabular-nums ui:[appearance:textfield] ui:[&::-webkit-inner-spin-button]:appearance-none ui:[&::-webkit-outer-spin-button]:appearance-none",
         )}
         {...props}
       />
@@ -67,7 +78,11 @@ export function NumberField({
         aria-label="Less"
         disabled={disabled}
         onClick={() => step(-1)}
-        className={cx(button, "ui:order-1 ui:border-r ui:border-neutral-200")}
+        className={cx(
+          button,
+          "ui:order-1",
+          !bare && "ui:border-r ui:border-neutral-200",
+        )}
       >
         <MinusIcon />
       </button>
@@ -77,7 +92,11 @@ export function NumberField({
         aria-label="More"
         disabled={disabled}
         onClick={() => step(1)}
-        className={cx(button, "ui:order-3 ui:border-l ui:border-neutral-200")}
+        className={cx(
+          button,
+          "ui:order-3",
+          !bare && "ui:border-l ui:border-neutral-200",
+        )}
       >
         <PlusIcon />
       </button>

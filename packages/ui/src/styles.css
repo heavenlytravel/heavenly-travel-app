@@ -3,6 +3,24 @@
 @import "@repo/tailwind-config";
 
 /*
+ * The colours of the form controls, after shadcn's tokens. The console keeps
+ * the defaults; the customer site sets the `--ui-*` variables to its green
+ * and gold. Inline, so each is read where it is used.
+ */
+@theme inline {
+  --color-primary: var(--ui-primary, #171717);
+  --color-primary-foreground: var(--ui-primary-foreground, #ffffff);
+  --color-accent: var(--ui-accent, #f5f5f5);
+  --color-accent-foreground: var(--ui-accent-foreground, #171717);
+  --color-ring: var(--ui-ring, #171717);
+  --color-line: var(--ui-line, #d4d4d4);
+  --color-popover: var(--ui-popover, #ffffff);
+  --color-popover-foreground: var(--ui-popover-foreground, #171717);
+  --color-popover-line: var(--ui-popover-line, #e5e5e5);
+  --radius-popover: var(--ui-popover-radius, 0.75rem);
+}
+
+/*
  * The line along the top of an app while the next page is on its way.
  * `NavigationProgress` moves it through its phases: it creeps while the
  * page loads, then fills and fades. The caller positions it and sets its

@@ -11,7 +11,7 @@ import { useFieldError } from "./validation.js";
  * is changed.
  */
 export const inputClassName =
-  "ui:h-10 ui:w-full ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:px-3 ui:text-sm ui:text-neutral-900 ui:placeholder:text-neutral-400 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-neutral-900 ui:disabled:bg-neutral-100 ui:disabled:text-neutral-500 ui:aria-invalid:border-red-500 ui:aria-invalid:focus-visible:outline-red-600";
+  "ui:h-10 ui:w-full ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:px-3 ui:text-sm ui:text-neutral-900 ui:placeholder:text-neutral-400 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-ring ui:disabled:bg-neutral-100 ui:disabled:text-neutral-500 ui:aria-invalid:border-red-500 ui:aria-invalid:focus-visible:outline-red-600";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cx(inputClassName, className)} {...props} />;
@@ -118,12 +118,12 @@ export function Checkbox({
     >
       <input
         type="checkbox"
-        className="ui:peer ui:size-4 ui:shrink-0 ui:cursor-pointer ui:appearance-none ui:rounded-[4px] ui:border ui:border-neutral-300 ui:bg-white ui:transition-colors ui:checked:border-neutral-900 ui:checked:bg-neutral-900 ui:aria-invalid:border-red-500 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:disabled:cursor-not-allowed ui:disabled:opacity-50"
+        className="ui:peer ui:size-4 ui:shrink-0 ui:cursor-pointer ui:appearance-none ui:rounded-[4px] ui:border ui:border-line ui:bg-white ui:transition-colors ui:checked:border-primary ui:checked:bg-primary ui:aria-invalid:border-red-500 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:cursor-not-allowed ui:disabled:opacity-50"
         {...props}
       />
       <CheckIcon
         strokeWidth={3}
-        className="ui:pointer-events-none ui:absolute ui:inset-0 ui:m-auto ui:hidden ui:size-3 ui:text-white ui:peer-checked:block"
+        className="ui:pointer-events-none ui:absolute ui:inset-0 ui:m-auto ui:hidden ui:size-3 ui:text-primary-foreground ui:peer-checked:block"
       />
     </span>
   );
@@ -141,7 +141,7 @@ export function Radio({
     <input
       type="radio"
       className={cx(
-        "ui:size-4 ui:shrink-0 ui:cursor-pointer ui:appearance-none ui:rounded-full ui:border ui:border-neutral-300 ui:bg-white ui:transition-colors ui:checked:border-neutral-900 ui:checked:bg-neutral-900 ui:checked:shadow-[inset_0_0_0_3px_white] ui:aria-invalid:border-red-500 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:disabled:cursor-not-allowed ui:disabled:opacity-50",
+        "ui:size-4 ui:shrink-0 ui:cursor-pointer ui:appearance-none ui:rounded-full ui:border ui:border-line ui:bg-white ui:transition-colors ui:checked:border-primary ui:checked:bg-primary ui:checked:shadow-[inset_0_0_0_3px_white] ui:aria-invalid:border-red-500 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:cursor-not-allowed ui:disabled:opacity-50",
         className,
       )}
       {...props}

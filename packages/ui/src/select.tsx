@@ -28,7 +28,8 @@ const isGroup = (entry: SelectOption | SelectGroup): entry is SelectGroup =>
  * console's own list in place of the browser's, typed into to jump, with
  * the arrows and Enter. Controlled with `value` and `onValueChange`, or
  * left to itself with `defaultValue`. With `name` it posts with its form,
- * and `required` refuses an empty choice as a text field would.
+ * and `required` refuses an empty choice as a text field would. `bare`
+ * drops the box, for a search card whose field draws its own.
  */
 export function Select({
   id,
@@ -40,6 +41,7 @@ export function Select({
   placeholder = "Choose…",
   disabled,
   required,
+  bare,
   className,
   "aria-label": ariaLabel,
 }: {
@@ -52,6 +54,7 @@ export function Select({
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
+  bare?: boolean;
   className?: string;
   "aria-label"?: string;
 }) {
@@ -64,7 +67,7 @@ export function Select({
       key={option.value}
       value={inner(option.value)}
       disabled={option.disabled}
-      className="ui:relative ui:flex ui:w-full ui:cursor-default ui:items-center ui:rounded-sm ui:py-1.5 ui:pr-8 ui:pl-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-disabled:pointer-events-none ui:data-disabled:opacity-50 ui:data-highlighted:bg-neutral-100"
+      className="ui:relative ui:flex ui:w-full ui:cursor-default ui:items-center ui:rounded-sm ui:py-1.5 ui:pr-8 ui:pl-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-disabled:pointer-events-none ui:data-disabled:opacity-50 ui:data-highlighted:bg-accent ui:data-highlighted:text-accent-foreground"
     >
       <Primitive.ItemText>{option.label}</Primitive.ItemText>
       <span className="ui:absolute ui:right-2 ui:flex ui:size-4 ui:items-center ui:justify-center">
@@ -91,8 +94,12 @@ export function Select({
           id={id}
           aria-label={ariaLabel}
           className={cx(
-            inputClassName,
-            "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-neutral-400",
+            bare
+              ? "ui:flex ui:w-full ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:outline-none"
+              : cx(
+                  inputClassName,
+                  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-neutral-400",
+                ),
             className,
           )}
         >
@@ -108,7 +115,7 @@ export function Select({
             position="popper"
             sideOffset={4}
             collisionPadding={8}
-            className="ui:z-50 ui:max-h-[min(var(--radix-select-content-available-height),20rem)] ui:min-w-[var(--radix-select-trigger-width)] ui:overflow-hidden ui:rounded-md ui:border ui:border-neutral-200 ui:bg-white ui:text-neutral-900 ui:shadow-lg"
+            className="ui:z-50 ui:max-h-[min(var(--radix-select-content-available-height),20rem)] ui:min-w-[var(--radix-select-trigger-width)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg"
           >
             <Primitive.ScrollUpButton className="ui:flex ui:h-6 ui:items-center ui:justify-center ui:text-neutral-500">
               <ChevronUpIcon />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type SyntheticEvent } from "react";
+import { useRef, useState, type FormEvent, type SyntheticEvent } from "react";
 
 /** A control the browser checks: what `required`, `type`, `min` and the rest are on. */
 type Checked = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -9,6 +9,7 @@ type Checked = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 export function validityMessage(control: Checked): string {
   const v = control.validity;
   if (v.valueMissing) {
+    if (control.dataset.missing) return control.dataset.missing;
     if (control instanceof HTMLSelectElement) return "Choose one.";
     if (control.type === "checkbox") return "Tick this to go on.";
     if (control.type === "radio") return "Choose one.";
@@ -85,9 +86,20 @@ function cleared(event: SyntheticEvent) {
  */
 export function useFieldError() {
   const [error, setError] = useState<string | null>(null);
+  // A field of two values, a day and a time, hears both refused at once:
+  // the first one's message stands until the submit is over.
+  const answered = useRef(false);
   return {
     error,
-    onInvalid: (event: FormEvent) => setError(refuse(event)),
+    onInvalid: (event: FormEvent) => {
+      const message = refuse(event);
+      if (answered.current) return;
+      answered.current = true;
+      setTimeout(() => {
+        answered.current = false;
+      });
+      setError(message);
+    },
     onInput: (event: FormEvent) => {
       cleared(event);
       setError(null);

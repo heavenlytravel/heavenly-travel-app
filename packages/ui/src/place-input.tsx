@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { PlaceSuggestion } from "@repo/places";
+import type { Bounds, PlaceSuggestion } from "@repo/places";
 import { cx } from "./cx.js";
 import { fetchPlaceSuggestions, isSearchableQuery } from "./place-search.js";
 
@@ -21,7 +21,8 @@ export type PlacePresets = {
  * keystroke to a pick, then a new one is minted, which is how Google bills
  * a session as one request. The input is unstyled: the caller passes the
  * classes its form uses. With `presets`, the field offers those places
- * when it is opened empty; typing brings the search.
+ * when it is opened empty; typing brings the search. With `within`, a box,
+ * it suggests places inside it only.
  */
 export function PlaceInput({
   id,
@@ -31,6 +32,7 @@ export function PlaceInput({
   presets,
   onChange,
   onFocus,
+  within,
   className,
 }: {
   id: string;
@@ -40,6 +42,7 @@ export function PlaceInput({
   presets?: PlacePresets;
   onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
+  within?: Bounds;
   className?: string;
 }) {
   const listId = useId();
@@ -54,13 +57,18 @@ export function PlaceInput({
   // A resolved value (one with a place id) is what was just picked, and a
   // short one is not worth asking about: neither fetches nor shows a list.
   const searchable = !placeId && isSearchableQuery(value);
+  // The box as text, so a new array with the same corners is the same box.
+  const withinKey = within?.join(",");
 
   // Fetch while typing, debounced and cancellable.
   useEffect(() => {
     if (!searchable) return;
+    const box = withinKey
+      ? (withinKey.split(",").map(Number) as Bounds)
+      : undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetchPlaceSuggestions(value, sessionToken(), controller.signal)
+      fetchPlaceSuggestions(value, sessionToken(), controller.signal, box)
         .then((rows) => {
           setSuggestions(rows);
           setActive(-1);
@@ -73,7 +81,7 @@ export function PlaceInput({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value, searchable]);
+  }, [value, searchable, withinKey]);
 
   function pick(s: PlaceSuggestion) {
     onChange(s.label, s.placeId);

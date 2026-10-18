@@ -1,7 +1,7 @@
 import type { Place } from "@repo/db";
 import { memoize } from "./cache";
 import { parsePlace, parseRoute, parseSuggestions } from "./google-parse";
-import type { PlacesProvider } from "./types";
+import type { Bounds, PlacesProvider } from "./types";
 
 /**
  * Google behind the `PlacesProvider` interface: Places API (New) for
@@ -56,7 +56,12 @@ export function googleProvider(key: string): PlacesProvider {
   // The session token is not part of any cache key: a cached answer costs
   // nothing, and the token only matters on the calls that reach Google.
   const search = memoize(
-    (query: string, sessionToken?: string, includeAreas?: boolean) =>
+    (
+      query: string,
+      sessionToken?: string,
+      includeAreas?: boolean,
+      within?: Bounds,
+    ) =>
       call(key, `${PLACES}/places:autocomplete`, {
         method: "POST",
         fieldMask:
@@ -67,11 +72,19 @@ export function googleProvider(key: string): PlacesProvider {
           languageCode: LANGUAGE,
           regionCode: REGION,
           sessionToken,
+          locationRestriction: within
+            ? {
+                rectangle: {
+                  low: { latitude: within[1], longitude: within[0] },
+                  high: { latitude: within[3], longitude: within[2] },
+                },
+              }
+            : undefined,
         },
       }).then((body) => parseSuggestions(body, includeAreas)),
     {
-      key: ([query, , includeAreas]) =>
-        `${includeAreas ? "areas:" : ""}${query}`,
+      key: ([query, , includeAreas, within]) =>
+        `${includeAreas ? "areas:" : ""}${within ? `${within.join(",")}:` : ""}${query}`,
       ttlMs: MINUTE,
       max: 1_000,
     },
@@ -123,7 +136,13 @@ export function googleProvider(key: string): PlacesProvider {
     searchPlaces: (query, options) =>
       attempt(
         "autocomplete",
-        () => search(query, options?.sessionToken, options?.includeAreas),
+        () =>
+          search(
+            query,
+            options?.sessionToken,
+            options?.includeAreas,
+            options?.within,
+          ),
         [],
       ),
     resolvePlace: (placeId, options) =>

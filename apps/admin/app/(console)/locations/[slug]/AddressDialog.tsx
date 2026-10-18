@@ -1,14 +1,16 @@
 "use client";
 
-import { LOCATION_LIMITS } from "@repo/db";
+import { LOCATION_LIMITS, andList } from "@repo/db";
+import type { Bounds } from "@repo/places";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { Field, Input, inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, useTransition, type FormEvent } from "react";
+import { checkAddressPlaceAction } from "../actions";
 
-/** The place an address stands for, as the search picked it. */
-export type PickedPlace = { placeId: string; label: string };
+/** The place an address stands for: as the search picked it, with its address. */
+export type PickedPlace = { placeId: string; label: string; detail: string };
 
 /** What the dialog is for: a new address, or a new name for one in the list. */
 export type AddressDialogMode =
@@ -17,22 +19,33 @@ export type AddressDialogMode =
 
 /**
  * The dialog behind "Add address" and a row's rename. Adding searches an
- * exact place, then names it, the place's own name to start with; a place
- * already in the list is refused here. Renaming changes the name alone.
- * Either goes into the list, which is saved with the list's own button.
+ * exact place inside the box around the location's states, then checks the
+ * picked place at once: one outside the states, or already in the list, is
+ * refused here, with where it lies. The place is then named, its own name
+ * to start with. Renaming changes the name alone. Either goes into the
+ * list, which is saved with the list's own button.
  */
 export function AddressDialog({
+  locationId,
+  stateNames,
+  within,
   mode,
   onClose,
   onAdd,
   onRename,
 }: {
+  locationId: string;
+  /** The location's states, by name, for the line under the title. */
+  stateNames: readonly string[];
+  /** The box around the states, which the search keeps to; null for none. */
+  within: Bounds | null;
   /** Open while set. */
   mode: AddressDialogMode | null;
   onClose: () => void;
   onAdd: (place: PickedPlace, name: string) => void;
   onRename: (name: string) => void;
 }) {
+  const where = andList([...stateNames]);
   return (
     <Dialog
       open={mode !== null}
@@ -43,12 +56,14 @@ export function AddressDialog({
       description={
         mode?.kind === "rename"
           ? "The name customers see in the drop-off's list. The place stays the same."
-          : "An exact place customers often go to here: an airport, a jetty, a hotel or a mall. It has to be in one of this location's states."
+          : `An exact place customers often go to here: an airport, a jetty, a hotel or a mall${where ? `, in ${where}` : ""}.`
       }
       width="md"
     >
       {mode ? (
         <AddressForm
+          locationId={locationId}
+          within={within}
           mode={mode}
           onCancel={onClose}
           onAdd={onAdd}
@@ -61,11 +76,15 @@ export function AddressDialog({
 
 /** The fields, mounted afresh each time the dialog opens. */
 function AddressForm({
+  locationId,
+  within,
   mode,
   onCancel,
   onAdd,
   onRename,
 }: {
+  locationId: string;
+  within: Bounds | null;
   mode: AddressDialogMode;
   onCancel: () => void;
   onAdd: (place: PickedPlace, name: string) => void;
@@ -76,6 +95,7 @@ function AddressForm({
   const [place, setPlace] = useState<PickedPlace | null>(null);
   const [name, setName] = useState(mode.kind === "rename" ? mode.name : "");
   const [error, setError] = useState<string | null>(null);
+  const [checking, startCheck] = useTransition();
   const trimmed = name.trim();
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -86,6 +106,23 @@ function AddressForm({
     } else if (place) {
       onAdd(place, trimmed);
     }
+  }
+
+  /** A place picked from the list: refused at once when taken or outside the states. */
+  function pick(label: string, placeId: string, taken: readonly string[]) {
+    if (taken.includes(placeId)) {
+      setError(`${label} is already in the list.`);
+      return;
+    }
+    startCheck(async () => {
+      const result = await checkAddressPlaceAction(locationId, placeId, label);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPlace({ placeId, label, detail: result.detail });
+      setName(label.slice(0, LOCATION_LIMITS.addressName));
+    });
   }
 
   return (
@@ -103,26 +140,24 @@ function AddressForm({
             value={search}
             placeholder="Start typing an airport, a jetty, a hotel or a mall"
             className={inputClassName}
+            within={within ?? undefined}
             onChange={(next, placeId) => {
               setSearch(next);
               setError(null);
-              if (!placeId) {
-                setPlace(null);
-                return;
-              }
-              if (mode.takenPlaceIds.includes(placeId)) {
-                setPlace(null);
-                setError(`${next} is already in the list.`);
-                return;
-              }
-              setPlace({ placeId, label: next });
-              setName(next.slice(0, LOCATION_LIMITS.addressName));
+              setPlace(null);
+              if (placeId) pick(next, placeId, mode.takenPlaceIds);
             }}
           />
-          {error ? (
+          {checking ? (
+            <p aria-live="polite" className="text-xs text-neutral-500">
+              Checking where it is…
+            </p>
+          ) : error ? (
             <p aria-live="polite" className="text-xs text-red-700">
               {error}
             </p>
+          ) : place ? (
+            <p className="text-xs text-neutral-500">{place.detail}</p>
           ) : null}
         </div>
       ) : (
@@ -147,7 +182,7 @@ function AddressForm({
         </Button>
         <Button
           type="submit"
-          disabled={!trimmed || (mode.kind === "add" && !place)}
+          disabled={!trimmed || checking || (mode.kind === "add" && !place)}
         >
           {mode.kind === "rename" ? "Rename" : "Add to the list"}
         </Button>

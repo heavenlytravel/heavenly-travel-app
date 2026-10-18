@@ -21,6 +21,9 @@ export type RoadDistance = {
 export const PLACE_QUERY_MIN_LENGTH = 2;
 export const PLACE_QUERY_MAX_LENGTH = 120;
 
+/** A box on the map, [west, south, east, north] in degrees. */
+export type Bounds = [west: number, south: number, east: number, north: number];
+
 export type SearchOptions = {
   /**
    * Keep suggestions that name an area (a town, a road, a state) rather
@@ -34,6 +37,11 @@ export type SearchOptions = {
    * mints one per selection.
    */
   sessionToken?: string;
+  /**
+   * Suggest only places inside this box: a location's saved addresses
+   * search the box around its states.
+   */
+  within?: Bounds;
 };
 
 /**

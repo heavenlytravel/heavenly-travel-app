@@ -1,4 +1,5 @@
 import { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
+import type { BBox } from "./geo";
 import { isPlace } from "./place";
 
 /**
@@ -33,6 +34,38 @@ export type StrayAddress = {
   /** Where it lies instead, "Langkawi, Kedah"; null when it is in no district. */
   district: string | null;
 };
+
+/**
+ * How far past the states' districts a search reaches, in degrees (about
+ * 5 km): a jetty or a beach hotel sits past the shoreline the boundary data
+ * draws, as `COAST_KM` allows for a pickup.
+ */
+const BOUNDS_MARGIN = 0.05;
+
+/**
+ * The box around the states' districts, [west, south, east, north], for a
+ * place search that keeps to them: the saved addresses' search. A box, so
+ * a corner of a neighbouring state is in it; the check on the place itself
+ * is `isInStates`. Null for no state.
+ */
+export function statesBounds(stateCodes: readonly string[]): BBox | null {
+  const boxes = DISTRICT_DATA.districts
+    .filter((district) => stateCodes.includes(district.stateCode))
+    .map((district) => district.bbox);
+  if (boxes.length === 0) return null;
+  const [west, south, east, north] = boxes.reduce((all, box) => [
+    Math.min(all[0], box[0]),
+    Math.min(all[1], box[1]),
+    Math.max(all[2], box[2]),
+    Math.max(all[3], box[3]),
+  ]);
+  return [
+    west - BOUNDS_MARGIN,
+    south - BOUNDS_MARGIN,
+    east + BOUNDS_MARGIN,
+    north + BOUNDS_MARGIN,
+  ];
+}
 
 /** Whether the place lies in one of the states. */
 export function isInStates(

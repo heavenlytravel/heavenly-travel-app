@@ -26,6 +26,7 @@ export {
 } from "./coverage";
 export type { State, District, DistrictWithState, ServedAt } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
+export { statesBounds } from "./location-places";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,
@@ -75,6 +76,7 @@ export {
   createLocation,
   updateLocation,
   deleteLocation,
+  savedAddressRefusal,
   setLocationAddresses,
   saveLocationPageDraft,
   publishLocationPage,

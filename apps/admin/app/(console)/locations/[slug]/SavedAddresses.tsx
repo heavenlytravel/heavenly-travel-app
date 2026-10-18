@@ -1,11 +1,14 @@
 "use client";
 
 import { LOCATION_LIMITS, checkAddressNames } from "@repo/db";
+import type { Bounds } from "@repo/places";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { Tooltip } from "@repo/ui/tooltip";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { PencilIcon, PlusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
+import { toast } from "@repo/ui/toast";
 import { useState, useTransition } from "react";
 import { Card, CardTitle } from "../../../_components/Card";
 import { RowControls, movedRow } from "../_components/RowControls";
@@ -69,11 +72,17 @@ function namesOf(highlights: string[]) {
 export function SavedAddresses({
   id,
   locationId,
+  stateNames,
+  within,
   addresses,
 }: {
   /** The card's id, which links to the list land on. */
   id: string;
   locationId: string;
+  /** The location's states, by name. */
+  stateNames: readonly string[];
+  /** The box around the states, which the address search keeps to. */
+  within: Bounds | null;
   addresses: SavedAddress[];
 }) {
   const [rows, setRows] = useState(() => addresses.map(rowOf));
@@ -85,7 +94,6 @@ export function SavedAddresses({
     setRows(addresses.map(rowOf));
   }
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [saving, startSave] = useTransition();
   const [dialog, confirm] = useConfirm();
   const [editing, setEditing] = useState<{
@@ -104,7 +112,6 @@ export function SavedAddresses({
   function edit(next: Row[]) {
     setRows(next);
     setError(null);
-    setSaved(false);
   }
 
   /** The stored address a row stands for; none for a new one. */
@@ -150,7 +157,7 @@ export function SavedAddresses({
         ),
       );
       setError(result?.error ?? null);
-      setSaved(result === null);
+      if (result === null) toast.success("Saved addresses saved.");
     });
   }
 
@@ -159,28 +166,31 @@ export function SavedAddresses({
       <CardTitle
         inset
         action={
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={full}
-            title={
+          <Tooltip
+            content={
               full
                 ? `The list is full at ${LOCATION_LIMITS.addresses} addresses. Remove one to add another.`
-                : undefined
-            }
-            onClick={() =>
-              setEditing({
-                mode: {
-                  kind: "add",
-                  takenPlaceIds: rows.map((row) => row.placeId),
-                },
-                rowKey: null,
-              })
+                : null
             }
           >
-            <PlusIcon />
-            Add address
-          </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={full}
+              onClick={() =>
+                setEditing({
+                  mode: {
+                    kind: "add",
+                    takenPlaceIds: rows.map((row) => row.placeId),
+                  },
+                  rowKey: null,
+                })
+              }
+            >
+              <PlusIcon />
+              Add address
+            </Button>
+          </Tooltip>
         }
       >
         <span className="inline-flex items-center gap-1.5">
@@ -224,25 +234,26 @@ export function SavedAddresses({
                 ) : null}
               </div>
               <div className="flex items-center gap-0.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Rename ${row.name}`}
-                  title="Rename"
-                  className="w-8 px-0"
-                  onClick={() =>
-                    setEditing({
-                      mode: {
-                        kind: "rename",
-                        name: row.name,
-                        detail: row.detail,
-                      },
-                      rowKey: row.key,
-                    })
-                  }
-                >
-                  <PencilIcon />
-                </Button>
+                <Tooltip content="Rename">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Rename ${row.name}`}
+                    className="w-8 px-0"
+                    onClick={() =>
+                      setEditing({
+                        mode: {
+                          kind: "rename",
+                          name: row.name,
+                          detail: row.detail,
+                        },
+                        rowKey: row.key,
+                      })
+                    }
+                  >
+                    <PencilIcon />
+                  </Button>
+                </Tooltip>
                 <RowControls
                   name={row.name}
                   isFirst={index === 0}
@@ -256,15 +267,11 @@ export function SavedAddresses({
         </ol>
       )}
 
-      {changed || error || saved ? (
+      {changed || error ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-neutral-200 bg-neutral-50/70 px-6 py-3">
           {error ? (
             <p aria-live="polite" className="text-sm text-red-700">
               {error}
-            </p>
-          ) : saved && !changed ? (
-            <p aria-live="polite" className="text-sm text-emerald-700">
-              Saved.
             </p>
           ) : (
             <p className="text-sm text-neutral-600">
@@ -289,6 +296,9 @@ export function SavedAddresses({
       ) : null}
 
       <AddressDialog
+        locationId={locationId}
+        stateNames={stateNames}
+        within={within}
         mode={editing?.mode ?? null}
         onClose={() => setEditing(null)}
         onAdd={(place, name) => {
@@ -298,7 +308,7 @@ export function SavedAddresses({
               key: place.placeId,
               placeId: place.placeId,
               name,
-              detail: place.label,
+              detail: place.detail,
             },
           ]);
           setEditing(null);

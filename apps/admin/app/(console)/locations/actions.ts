@@ -11,6 +11,7 @@ import {
   parseLocationFields,
   publishLocationPage,
   saveLocationPageDraft,
+  savedAddressRefusal,
   setLocationAddresses,
   textOf,
   unpublishLocationPage,
@@ -146,6 +147,40 @@ export async function setLocationAddressesAction(
   );
   if (result.ok) revalidateEverywhere(locationId);
   return stateOf(result);
+}
+
+/** What the saved address dialog hears of a picked place. */
+export type AddressPlaceCheck =
+  { ok: true; detail: string } | { ok: false; error: string };
+
+/**
+ * Checks a place the moment it is picked in the saved address dialog,
+ * before it joins the list: it has to lie in one of the location's states.
+ * Answers the place's address for the line under its name, or the sentence
+ * that says where it lies instead. Saving the list checks again.
+ */
+export async function checkAddressPlaceAction(
+  locationId: string,
+  placeId: string,
+  label: string,
+): Promise<AddressPlaceCheck> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  if (typeof locationId !== "string" || typeof placeId !== "string") {
+    return { ok: false, error: "Missing location." };
+  }
+  const name = String(label).slice(0, 200);
+  const place = await resolvePlace(placeId);
+  if (!place) {
+    return { ok: false, error: `Google did not return the place of ${name}.` };
+  }
+  const refusal = await savedAddressRefusal(locationId, name, place);
+  if (refusal) return { ok: false, error: refusal };
+  return {
+    ok: true,
+    detail:
+      place.address && place.address !== name ? place.address : place.label,
+  };
 }
 
 /**

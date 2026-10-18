@@ -597,6 +597,28 @@ function loggedAddress(address: { id: string; name: string; place: unknown }) {
 }
 
 /**
+ * Whether a place may become one of the location's saved addresses, asked
+ * the moment it is picked: null when it lies in one of the location's
+ * states, else the sentence that says where it lies. `setLocationAddresses`
+ * asks again on save.
+ */
+export async function savedAddressRefusal(
+  locationId: string,
+  name: string,
+  place: Place,
+): Promise<string | null> {
+  const location = await db.location.findUnique({
+    where: { id: locationId },
+    select: { states: { select: { code: true } } },
+  });
+  if (!location) return NOT_FOUND.error;
+  const stray = strayAddresses([{ name, place }], codesOf(location.states));
+  return stray.length === 0
+    ? null
+    : `${strayAddressesPhrase(stray)}. ${ADDRESS_RULE}`;
+}
+
+/**
  * Replaces the location's saved addresses with the list, in its order. A
  * kept address keeps its id, which a highlight may point at; one left out is
  * removed, and a highlight pointing at it then reads as having no address.

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { inBBox } from "./geo";
 import {
   isInStates,
+  statesBounds,
   strayAddresses,
   strayAddressesPhrase,
 } from "./location-places";
@@ -34,6 +36,24 @@ describe("isInStates", () => {
     assert.equal(isInStates(georgeTown, [PENANG, KEDAH]), true);
     assert.equal(isInStates(georgeTown, [KEDAH]), false);
     assert.equal(isInStates(straits, [KEDAH]), false);
+  });
+});
+
+describe("statesBounds", () => {
+  it("boxes the states' districts, with the coast", () => {
+    const kedah = statesBounds([KEDAH])!;
+    assert.equal(inBBox([cenang.lng, cenang.lat], kedah), true);
+    assert.equal(inBBox([klcc.lng, klcc.lat], kedah), false);
+  });
+
+  it("widens to every state given", () => {
+    const both = statesBounds([KEDAH, PENANG])!;
+    assert.equal(inBBox([cenang.lng, cenang.lat], both), true);
+    assert.equal(inBBox([georgeTown.lng, georgeTown.lat], both), true);
+  });
+
+  it("is null for no state", () => {
+    assert.equal(statesBounds([]), null);
   });
 });
 

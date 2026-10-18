@@ -1,4 +1,5 @@
 import { hasBeenLive, isPlace, isSlugLocked } from "@repo/db";
+import { statesBounds } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
@@ -77,6 +78,8 @@ async function details({ id }: { id: string }) {
       <SavedAddresses
         id={SAVED_ADDRESSES_ID}
         locationId={location.id}
+        stateNames={location.states.map((state) => state.name)}
+        within={statesBounds(location.states.map((state) => state.code))}
         addresses={addresses}
       />
       {permissions.includes("locations.activate") ? (

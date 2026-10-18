@@ -1,3 +1,4 @@
+import { formatClock } from "./booking-rules";
 import type { Change } from "./change";
 import { numberOf, textOf, type Parsed } from "./fields";
 import type { Ring } from "./geo";
@@ -300,7 +301,7 @@ export function minuteOfDay(time: string): number | null {
   return hours * 60 + minutes;
 }
 
-/** 1380 -> "23:00", for the form's inputs and the sentences. */
+/** 1380 -> "23:00", the value of the form's time fields. */
 export function timeOfMinute(minute: number): string {
   const hours = Math.floor(minute / 60);
   const minutes = minute % 60;
@@ -314,9 +315,9 @@ export function surchargeLabel(charge: SurchargeCharge) {
     : `+${formatMyr(charge.flatSen)}`;
 }
 
-/** "23:00 to 07:00, +50%" or "23:00 to 07:00, +RM 30.00" */
+/** "11:00 PM to 7:00 AM, +50%" or "11:00 PM to 7:00 AM, +RM 30.00" */
 export function oddHoursLabel(window: OddHours) {
-  return `${timeOfMinute(window.fromMinute)} to ${timeOfMinute(window.toMinute)}, ${surchargeLabel(window)}`;
+  return `${formatClock(window.fromMinute)} to ${formatClock(window.toMinute)}, ${surchargeLabel(window)}`;
 }
 
 /**
@@ -335,7 +336,9 @@ export function isInOddHours(window: OddHours, minute: number) {
 export function checkOddHours(window: OddHours): Change {
   for (const minute of [window.fromMinute, window.toMinute]) {
     if (!Number.isInteger(minute) || minute < 0 || minute >= MINUTES_PER_DAY) {
-      return fail("Enter the window as times of day, such as 23:00 to 07:00.");
+      return fail(
+        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+      );
     }
   }
   if (window.fromMinute === window.toMinute) {
@@ -384,7 +387,8 @@ export function parseOddHoursFields(
   if (fromMinute === null || toMinute === null) {
     return {
       ok: false,
-      error: "Enter the window as times of day, such as 23:00 to 07:00.",
+      error:
+        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
     };
   }
   let window: OddHours;

@@ -173,17 +173,6 @@ export function cancellationDeadline(
   return hoursAfter(startsAt, -cancellationCutoffHours);
 }
 
-const localDateTime = new Intl.DateTimeFormat("en-MY", {
-  timeZone: BOOKING_RULES.timeZone,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
 const localClock = new Intl.DateTimeFormat("en-GB", {
   timeZone: BOOKING_RULES.timeZone,
   hour: "2-digit",
@@ -200,9 +189,19 @@ export function localMinuteOfDay(instant: Date) {
   return (read("hour") % 24) * 60 + read("minute");
 }
 
-/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 09:30" in Malaysia. */
+/**
+ * A minute of the day as every page, email and picker shows a time:
+ * 570 is "9:30 AM", 0 is "12:00 AM", 1410 is "11:30 PM".
+ */
+export function formatClock(minute: number) {
+  const hours = Math.floor(minute / 60);
+  const minutes = String(minute % 60).padStart(2, "0");
+  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+}
+
+/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 9:30 AM" in Malaysia. */
 export function formatLocalDateTime(instant: Date) {
-  return localDateTime.format(instant);
+  return `${formatLocalDate(instant)}, ${formatLocalTime(instant)}`;
 }
 
 const localDate = new Intl.DateTimeFormat("en-MY", {
@@ -218,11 +217,9 @@ export function formatLocalDate(instant: Date) {
   return localDate.format(instant);
 }
 
-/** The time alone, "09:30" in Malaysia, from the same minute the rules read. */
+/** The time alone, "9:30 AM" in Malaysia, from the same minute the rules read. */
 export function formatLocalTime(instant: Date) {
-  const minute = localMinuteOfDay(instant);
-  const two = (n: number) => String(n).padStart(2, "0");
-  return `${two(Math.floor(minute / 60))}:${two(minute % 60)}`;
+  return formatClock(localMinuteOfDay(instant));
 }
 
 /**

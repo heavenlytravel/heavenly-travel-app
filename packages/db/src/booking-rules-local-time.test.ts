@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  formatClock,
   formatLocalDate,
+  formatLocalDateTime,
   formatLocalTime,
   localMinuteOfDay,
 } from "./booking-rules";
@@ -22,6 +24,17 @@ describe("formatLocalDate and formatLocalTime", () => {
     // 16:30 UTC on the 15th is 00:30 on the 16th in Kuala Lumpur.
     const instant = new Date("2026-10-15T16:30:00Z");
     assert.equal(formatLocalDate(instant), "Fri, 16 Oct 2026");
-    assert.equal(formatLocalTime(instant), "00:30");
+    assert.equal(formatLocalTime(instant), "12:30 AM");
+    assert.equal(formatLocalDateTime(instant), "Fri, 16 Oct 2026, 12:30 AM");
+  });
+});
+
+describe("formatClock", () => {
+  it("writes a minute of the day in 12-hour time", () => {
+    assert.equal(formatClock(0), "12:00 AM");
+    assert.equal(formatClock(570), "9:30 AM");
+    assert.equal(formatClock(720), "12:00 PM");
+    assert.equal(formatClock(765), "12:45 PM");
+    assert.equal(formatClock(1410), "11:30 PM");
   });
 });

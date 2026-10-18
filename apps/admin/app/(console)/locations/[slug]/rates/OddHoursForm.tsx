@@ -25,8 +25,8 @@ function amountOf(window: OddHours | null) {
 }
 
 /**
- * The surcharge as one sentence: "Trips that start between 23:00 and
- * 07:00 cost 20 % more", or "RM 30 more" with the switch beside the
+ * The surcharge as one sentence: "Trips that start between 11:00 PM and
+ * 7:00 AM cost 20 % more", or "RM 30 more" with the switch beside the
  * amount on RM. The window and the amount are saved together; all of them
  * empty removes the surcharge, which "Clear" then "Remove surcharge" does.
  */
@@ -82,6 +82,7 @@ export function OddHoursForm({
         <TimeField
           name="from"
           aria-label="Window starts at"
+          className="w-36"
           value={from}
           onChange={setFrom}
         />
@@ -89,6 +90,7 @@ export function OddHoursForm({
         <TimeField
           name="to"
           aria-label="Window ends at"
+          className="w-36"
           value={to}
           onChange={setTo}
         />
@@ -167,8 +169,8 @@ export function OddHoursForm({
         {kind === "percent"
           ? `A whole percentage of the trip's price, up to ${ODD_HOURS.maxPercent}%.`
           : "One amount added to every trip in the window, whatever its price."}{" "}
-        A window that ends before it starts runs past midnight: 23:00 to 07:00
-        holds 23:30 and 06:00.
+        A window that ends before it starts runs past midnight: 11:00 PM to 7:00
+        AM holds 11:30 PM and 6:00 AM.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending || unchanged}>

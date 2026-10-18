@@ -84,7 +84,7 @@ describe("checkCustomerCancel", () => {
         {
           ok: true,
           deadline: hours(1),
-          message: "Free cancellation until Thu, 1 Oct 2026, 09:00.",
+          message: "Free cancellation until Thu, 1 Oct 2026, 9:00 AM.",
         },
       );
     }
@@ -96,7 +96,7 @@ describe("checkCustomerCancel", () => {
     assert.equal(!check.ok && check.reason, "cutoff");
     assert.equal(
       !check.ok && check.message,
-      "Free cancellation ended on Thu, 1 Oct 2026, 08:00.",
+      "Free cancellation ended on Thu, 1 Oct 2026, 8:00 AM.",
     );
   });
 

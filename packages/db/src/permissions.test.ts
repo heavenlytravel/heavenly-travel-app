@@ -24,13 +24,19 @@ const SHARED: Permission[] = [...ANYONE, "bookings.view", "bookings.notes"];
 
 /**
  * The wall table in docs/260930-admin-teams-and-access.md, row by row, the
- * Marketing team of docs/261001-locations-and-pages.md, and the two
- * location permissions of docs/261015-locations-as-operation-areas.md.
+ * Marketing team of docs/261001-locations-and-pages.md, the two location
+ * permissions of docs/261015-locations-as-operation-areas.md, and the
+ * read-only classes, coverage and rates for Reservation and Sales.
  */
 const WALL: Record<AdminTeam, Permission[]> = {
-  OPERATION: [...SHARED, "bookings.fulfil", "coverage.manage"],
-  RESERVATION: [...SHARED, "bookings.manage", "bookings.create"],
-  SALES: [...SHARED, "bookings.manage", "bookings.create"],
+  OPERATION: [...SHARED, "bookings.fulfil", "coverage.manage", "coverage.view"],
+  RESERVATION: [
+    ...SHARED,
+    "bookings.manage",
+    "bookings.create",
+    "coverage.view",
+  ],
+  SALES: [...SHARED, "bookings.manage", "bookings.create", "coverage.view"],
   FINANCE: SHARED,
   MARKETING: [...ANYONE, "locations.manage"],
 };

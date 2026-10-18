@@ -58,7 +58,7 @@ export const NAV: NavGroup[] = [
         href: VEHICLE_CLASSES_PATH,
         label: "Vehicle classes",
         icon: BusIcon,
-        permission: "coverage.manage",
+        permission: "coverage.view",
       },
     ],
   },

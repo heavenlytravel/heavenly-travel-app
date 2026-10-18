@@ -22,18 +22,22 @@ export type CoverageZone = MappedZone & {
  * The Coverage tab's map and list as one: every zone in its colour on the
  * map and in a row of the list, the zone pointed at in either lit in both.
  * A click on the map or the zone's name opens its editor. Without the
- * browser key the list stands alone.
+ * browser key the list stands alone. Read only, there is no editor and no
+ * way to remove a zone.
  */
 export function CoverageZones({
   locationId,
   mapKey,
   districts,
   zones,
+  editable,
 }: {
   locationId: string;
   mapKey: string | null;
   districts: DistrictOutline[];
   zones: CoverageZone[];
+  /** Operation: each zone opens its editor and can be removed. */
+  editable: boolean;
 }) {
   const router = useRouter();
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export function CoverageZones({
           onHighlight={setHighlighted}
           onOpen={(id) => {
             const zone = zones.find((entry) => entry.id === id);
-            if (zone) router.push(zone.href);
+            if (zone && editable) router.push(zone.href);
           }}
         />
       ) : (
@@ -88,12 +92,16 @@ export function CoverageZones({
                   }}
                 />
                 <div className="min-w-40 flex-1">
-                  <Link
-                    href={zone.href}
-                    className="text-sm font-medium underline-offset-4 hover:underline"
-                  >
-                    {zone.name}
-                  </Link>
+                  {editable ? (
+                    <Link
+                      href={zone.href}
+                      className="text-sm font-medium underline-offset-4 hover:underline"
+                    >
+                      {zone.name}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium">{zone.name}</span>
+                  )}
                   <span className="block text-xs text-neutral-500">
                     {zone.drawnAs}
                   </span>
@@ -103,18 +111,22 @@ export function CoverageZones({
                     ? "No priced route"
                     : plural(zone.routes, "priced route")}
                 </span>
-                <Link
-                  href={zone.href}
-                  className="text-sm font-medium underline-offset-4 hover:underline"
-                >
-                  Edit
-                </Link>
-                <ZoneList
-                  locationId={locationId}
-                  zoneId={zone.id}
-                  name={zone.name}
-                  routes={zone.routes}
-                />
+                {editable ? (
+                  <>
+                    <Link
+                      href={zone.href}
+                      className="text-sm font-medium underline-offset-4 hover:underline"
+                    >
+                      Edit
+                    </Link>
+                    <ZoneList
+                      locationId={locationId}
+                      zoneId={zone.id}
+                      name={zone.name}
+                      routes={zone.routes}
+                    />
+                  </>
+                ) : null}
               </li>
             );
           })}

@@ -33,6 +33,7 @@ import {
   SidebarPanelToggle,
   SidebarSeparator,
 } from "@repo/ui/sidebar";
+import { Tooltip } from "@repo/ui/tooltip";
 import { LocationMark } from "../../../_components/LocationMark";
 import {
   WhenCollapsed,
@@ -144,6 +145,8 @@ export function LocationPanel({
       : `${today}, ${overview.awaitingDriver} awaiting a driver`;
   };
   const surcharge = oddHoursOf(location);
+  // Adding a class or a zone is Operation's; the teams that read see the tab.
+  const adds = may("coverage.manage");
   const itemsOf = (tab: LocationTab): PanelItem[] => {
     switch (tab) {
       case "vehicle-classes":
@@ -155,11 +158,15 @@ export function LocationPanel({
             dot: offering.onSale ? ("green" as const) : ("grey" as const),
             note: offering.onSale ? undefined : "Off sale",
           })),
-          {
-            key: "new",
-            label: "Add class",
-            href: newLocationOfferingHref(slug),
-          },
+          ...(adds
+            ? [
+                {
+                  key: "new",
+                  label: "Add class",
+                  href: newLocationOfferingHref(slug),
+                },
+              ]
+            : []),
         ];
       case "coverage":
         return [
@@ -168,7 +175,15 @@ export function LocationPanel({
             label: zone.name,
             href: locationZoneHref(slug, zone.id),
           })),
-          { key: "new", label: "Add zone", href: newLocationZoneHref(slug) },
+          ...(adds
+            ? [
+                {
+                  key: "new",
+                  label: "Add zone",
+                  href: newLocationZoneHref(slug),
+                },
+              ]
+            : []),
         ];
       case "rates":
         return [
@@ -285,11 +300,12 @@ export function LocationPanel({
         <WhenCollapsed>
           <div className="grid justify-items-center gap-2 py-1">
             <SidebarPanelToggle />
-            <span
-              title={`${location.name}, ${LOCATION_STATE_LABELS[state].toLowerCase()}`}
+            <Tooltip
+              content={`${location.name}, ${LOCATION_STATE_LABELS[state].toLowerCase()}`}
+              side="right"
             >
               <LocationMark name={location.name} state={state} size="lg" />
-            </span>
+            </Tooltip>
           </div>
         </WhenCollapsed>
       </SidebarHeader>

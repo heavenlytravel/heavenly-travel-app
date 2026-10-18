@@ -6,6 +6,7 @@ import {
   type TripCategory,
 } from "@repo/db";
 import { listOfferings, type Offering } from "@repo/db/server";
+import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import {
@@ -20,7 +21,7 @@ import {
   Streamed,
   TileGridSkeleton,
 } from "../../../../_components/Skeleton";
-import { requireAdmin } from "../../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   VEHICLE_CLASSES_PATH,
   locationOfferingHref,
@@ -35,14 +36,17 @@ import { OfferingActiveSwitch } from "./OfferingControls";
  * setup: the classes the location sells, by category, a card each with
  * its seats, luggage and notice, which are the catalogue's, its four rates
  * at this location, its switch, and its editor. The rest of the catalogue
- * is on its own screen.
+ * is on its own screen. Operation changes them (`coverage.manage`);
+ * Reservation and Sales read them, without the switch or the editor
+ * (`coverage.view`).
  */
 export default async function LocationVehicleClassesPage({
   params,
 }: PageProps<"/locations/[slug]/vehicle-classes">) {
-  await requireAdmin("coverage.manage");
+  await requireAdmin("coverage.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
+  const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
     <>
@@ -50,9 +54,11 @@ export default async function LocationVehicleClassesPage({
         title="Vehicle classes"
         description="What this location sells, at this location's own metered rates. A route with a price on the rate grid costs that price instead."
         action={
-          <Button asChild>
-            <Link href={newLocationOfferingHref(slug)}>Add class</Link>
-          </Button>
+          manages ? (
+            <Button asChild>
+              <Link href={newLocationOfferingHref(slug)}>Add class</Link>
+            </Button>
+          ) : null
         }
       />
       <Streamed
@@ -67,7 +73,7 @@ export default async function LocationVehicleClassesPage({
           </div>
         }
       >
-        {() => categories({ id, slug })}
+        {() => categories({ id, slug, manages })}
       </Streamed>
       <p className="mt-8 text-sm text-neutral-600">
         Seats, luggage and booking rules are the same everywhere, set in the{" "}
@@ -83,7 +89,15 @@ export default async function LocationVehicleClassesPage({
   );
 }
 
-async function categories({ id, slug }: { id: string; slug: string }) {
+async function categories({
+  id,
+  slug,
+  manages,
+}: {
+  id: string;
+  slug: string;
+  manages: boolean;
+}) {
   const offerings = await listOfferings(id);
   return (
     <div className="mt-6 grid gap-8">
@@ -92,6 +106,7 @@ async function categories({ id, slug }: { id: string; slug: string }) {
           key={category}
           slug={slug}
           category={category}
+          manages={manages}
           offerings={offerings.filter(
             (o) => o.vehicleClass.category === category,
           )}
@@ -105,10 +120,12 @@ async function categories({ id, slug }: { id: string; slug: string }) {
 function Category({
   slug,
   category,
+  manages,
   offerings,
 }: {
   slug: string;
   category: TripCategory;
+  manages: boolean;
   offerings: Offering[];
 }) {
   const onSale = offerings.filter((o) => o.isActive).length;
@@ -133,6 +150,7 @@ function Category({
               key={offering.id}
               slug={slug}
               offering={offering}
+              manages={manages}
               lastOnSale={offering.isActive && onSale === 1}
             />
           ))}
@@ -146,14 +164,17 @@ function Category({
  * One class at this location: its name over the catalogue's seats,
  * luggage and notice, the switch that puts it on sale here, its four rates,
  * and its editor. The whole card opens the editor; off, it is in grey.
+ * Read only, the switch is a badge and there is no editor.
  */
 function OfferingCard({
   slug,
   offering,
+  manages,
   lastOnSale,
 }: {
   slug: string;
   offering: Offering;
+  manages: boolean;
   /** It is the last of its category on sale here, so turning it off asks first. */
   lastOnSale: boolean;
 }) {
@@ -175,9 +196,13 @@ function OfferingCard({
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
           <h4 className="truncate text-base font-semibold tracking-tight">
-            <Link href={href} className={TILE_LINK}>
-              {vehicleClass.name}
-            </Link>
+            {manages ? (
+              <Link href={href} className={TILE_LINK}>
+                {vehicleClass.name}
+              </Link>
+            ) : (
+              vehicleClass.name
+            )}
           </h4>
           <p className="text-xs text-neutral-500">
             {seatsText(vehicleClass)} passengers · {vehicleClass.luggage} ·{" "}
@@ -186,10 +211,16 @@ function OfferingCard({
         </div>
         {/* Above the card's link, so it switches instead of opening. */}
         <div className="relative z-1 shrink-0">
-          <OfferingActiveSwitch
-            offering={offering}
-            lastOnSaleInCategory={lastOnSale}
-          />
+          {manages ? (
+            <OfferingActiveSwitch
+              offering={offering}
+              lastOnSaleInCategory={lastOnSale}
+            />
+          ) : (
+            <Badge tone={offering.isActive ? "green" : "neutral"}>
+              {offering.isActive ? "On sale" : "Off sale"}
+            </Badge>
+          )}
         </div>
       </div>
       {!vehicleClass.isActive ? (
@@ -212,14 +243,16 @@ function OfferingCard({
           </div>
         ))}
       </dl>
-      <TileFoot>
-        <Button asChild variant="secondary" size="sm">
-          <Link href={href}>Edit rates</Link>
-        </Button>
-        <span className="ml-auto text-xs text-neutral-500">
-          {offering.isActive ? "On sale" : "Off sale"}
-        </span>
-      </TileFoot>
+      {manages ? (
+        <TileFoot>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={href}>Edit rates</Link>
+          </Button>
+          <span className="ml-auto text-xs text-neutral-500">
+            {offering.isActive ? "On sale" : "Off sale"}
+          </span>
+        </TileFoot>
+      ) : null}
     </Tile>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  DROPOFF_RULE_LABELS,
   TRIP_CATEGORY_LABELS,
   dropoffRuleOf,
   isTripCategory,
@@ -13,10 +14,11 @@ import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
-import { requireAdmin } from "../../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import { RATES_PARTS, locationTabHref } from "../../../../_lib/routes";
 import { locationDetails, locationKey } from "../../_lib/location-data";
 import { DropoffRuleForm } from "./DropoffRuleForm";
+import { dropoffRuleNote } from "./dropoff-note";
 import { OddHoursForm } from "./OddHoursForm";
 import { RateGrid } from "./RateGrid";
 
@@ -26,15 +28,19 @@ import { RateGrid } from "./RateGrid";
  * one row per route and one column per class on sale, runs to its card's
  * edges; under it, where a drop-off may be, which decides what an empty
  * cell means, then the odd-hours surcharge. The zones themselves are drawn
- * on the Coverage tab. See docs/261015-locations-as-operation-areas.md,
- * "Zones and zone-to-zone rates".
+ * on the Coverage tab. Operation changes them (`coverage.manage`);
+ * Reservation and Sales read the grid and the two rules, for quoting a
+ * customer (`coverage.view`). See
+ * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
+ * rates".
  */
 export default async function LocationRatesPage({
   params,
 }: PageProps<"/locations/[slug]/rates">) {
-  await requireAdmin("coverage.manage");
+  await requireAdmin("coverage.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
+  const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
     <>
@@ -52,14 +58,22 @@ export default async function LocationRatesPage({
             </div>
           }
         >
-          {() => rates({ id, slug })}
+          {() => rates({ id, slug, manages })}
         </Streamed>
       </div>
     </>
   );
 }
 
-async function rates({ id, slug }: { id: string; slug: string }) {
+async function rates({
+  id,
+  slug,
+  manages,
+}: {
+  id: string;
+  slug: string;
+  manages: boolean;
+}) {
   const [location, zones, cells, offerings] = await Promise.all([
     locationDetails(id),
     listZones(id),
@@ -80,12 +94,14 @@ async function rates({ id, slug }: { id: string; slug: string }) {
           inset
           description="Prices in RM for the whole vehicle, one row per pair of zones."
           action={
-            <Link
-              href={locationTabHref(slug, "coverage")}
-              className="text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline"
-            >
-              Edit zones
-            </Link>
+            manages ? (
+              <Link
+                href={locationTabHref(slug, "coverage")}
+                className="text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline"
+              >
+                Edit zones
+              </Link>
+            ) : null
           }
         >
           <span className="inline-flex items-center gap-1.5">
@@ -111,6 +127,7 @@ async function rates({ id, slug }: { id: string; slug: string }) {
             priceSen: cell.priceSen,
           }))}
           rule={rule}
+          readOnly={!manages}
         />
       </Card>
 
@@ -120,11 +137,22 @@ async function rates({ id, slug }: { id: string; slug: string }) {
         >
           Drop-offs
         </CardTitle>
-        <DropoffRuleForm
-          locationId={id}
-          locationName={location.name}
-          rule={rule}
-        />
+        {manages ? (
+          <DropoffRuleForm
+            locationId={id}
+            locationName={location.name}
+            rule={rule}
+          />
+        ) : (
+          <p className="text-sm">
+            <span className="font-medium text-neutral-900">
+              {DROPOFF_RULE_LABELS[rule]}.
+            </span>{" "}
+            <span className="text-neutral-600">
+              {dropoffRuleNote(rule, location.name)}
+            </span>
+          </p>
+        )}
       </Card>
 
       <Card id={RATES_PARTS.oddHours}>
@@ -138,7 +166,15 @@ async function rates({ id, slug }: { id: string; slug: string }) {
             )}
           </span>
         </CardTitle>
-        <OddHoursForm locationId={id} window={window} />
+        {manages ? (
+          <OddHoursForm locationId={id} window={window} />
+        ) : (
+          <p className="text-sm text-neutral-600">
+            {window
+              ? `Trips that start from ${oddHoursLabel(window)}.`
+              : "No surcharge: a trip costs its grid or metered price at any hour."}
+          </p>
+        )}
       </Card>
     </>
   );

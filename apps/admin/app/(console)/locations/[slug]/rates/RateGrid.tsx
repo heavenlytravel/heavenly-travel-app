@@ -8,8 +8,10 @@ import {
   type DropoffRule,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
 import { PlusIcon, XIcon } from "@repo/ui/icons";
+import { toast } from "@repo/ui/toast";
 import {
   useEffect,
   useRef,
@@ -133,6 +135,7 @@ export function RateGrid({
   classes,
   cells,
   rule,
+  readOnly = false,
 }: {
   locationId: string;
   /** The location's slug, its address, for the links to the other tabs. */
@@ -141,6 +144,8 @@ export function RateGrid({
   classes: ClassColumn[];
   cells: Cell[];
   rule: DropoffRule;
+  /** For the teams that read the rates: the prices as text, nothing to change. */
+  readOnly?: boolean;
 }) {
   const [saved, setSaved] = useState<Saved>(() => savedOf(cells, zones));
   const [routes, setRoutes] = useState<Route[]>(saved.routes);
@@ -385,10 +390,8 @@ export function RateGrid({
     }));
     setAdding(false);
     const [a, b] = endsOf(route);
-    setNotice({
-      tone: "done",
-      text: `Added the route ${nameOf(a)} ↔ ${nameOf(b)}.`,
-    });
+    setNotice(null);
+    toast.success(`Added the route ${nameOf(a)} ↔ ${nameOf(b)}.`);
     return null;
   }
 
@@ -456,7 +459,8 @@ export function RateGrid({
       const next = { routes, prices };
       setSaved(next);
       setValues(valuesOf(next));
-      setNotice({ tone: "done", text: "Rates saved." });
+      setNotice(null);
+      toast.success("Rates saved.");
     });
   }
 
@@ -568,34 +572,39 @@ export function RateGrid({
                       >
                         {/* One line from `sm` up; on a phone the two zones stack, so the prices keep the width. */}
                         <div className="flex min-h-10 items-center gap-2 py-1.5 sm:py-0">
-                          <span
-                            title={`${nameOf(a)} ↔ ${nameOf(b)}`}
-                            className="min-w-0 flex-1 font-medium text-neutral-900 sm:block sm:max-w-64 sm:truncate"
+                          <Tooltip
+                            content={`${nameOf(a)} ↔ ${nameOf(b)}`}
+                            className="min-w-0 flex-1"
                           >
-                            <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                              {nameOf(a)}
+                            <span className="min-w-0 flex-1 font-medium text-neutral-900 sm:block sm:max-w-64 sm:truncate">
+                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
+                                {nameOf(a)}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className="mx-1.5 hidden text-neutral-400 sm:inline"
+                              >
+                                ↔
+                              </span>
+                              <span className="sr-only"> and </span>
+                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
+                                {nameOf(b)}
+                              </span>
                             </span>
-                            <span
-                              aria-hidden="true"
-                              className="mx-1.5 hidden text-neutral-400 sm:inline"
-                            >
-                              ↔
-                            </span>
-                            <span className="sr-only"> and </span>
-                            <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                              {nameOf(b)}
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => removeRoute(route)}
-                            aria-label={`Remove the route between ${label}`}
-                            title="Remove route"
-                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-200/70 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:opacity-50"
-                          >
-                            <XIcon />
-                          </button>
+                          </Tooltip>
+                          {readOnly ? null : (
+                            <Tooltip content="Remove route">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => removeRoute(route)}
+                                aria-label={`Remove the route between ${label}`}
+                                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-200/70 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:opacity-50"
+                              >
+                                <XIcon />
+                              </button>
+                            </Tooltip>
+                          )}
                         </div>
                       </th>
                       {classes.map((column, col) => {
@@ -615,34 +624,52 @@ export function RateGrid({
                                   : "group-hover:bg-neutral-50",
                             )}
                           >
-                            <input
-                              data-cell={`${row}:${col}`}
-                              aria-label={`${label}, ${column.name}, price in RM`}
-                              aria-invalid={bad || undefined}
-                              inputMode="decimal"
-                              autoComplete="off"
-                              spellCheck={false}
-                              readOnly={pending}
-                              placeholder={emptyMeans}
-                              value={values[key] ?? ""}
-                              onChange={(event) =>
-                                edit(key, event.target.value)
-                              }
-                              onFocus={(event) => {
-                                valueAtFocus.current = event.target.value;
-                                event.target.select();
-                              }}
-                              onBlur={(event) => {
-                                const text = tidy(event.target.value);
-                                if (text !== event.target.value)
-                                  edit(key, text);
-                              }}
-                              onKeyDown={(event) =>
-                                onCellKeyDown(event, row, col, key)
-                              }
-                              onPaste={(event) => onCellPaste(event, row, col)}
-                              className={cx(CELL_INPUT, bad && "text-red-700")}
-                            />
+                            {readOnly ? (
+                              <span
+                                aria-label={`${label}, ${column.name}, price in RM`}
+                                className="block h-10 min-w-24 px-3 text-right text-sm leading-10 tabular-nums"
+                              >
+                                {values[key] || (
+                                  <span className="text-xs text-neutral-400">
+                                    {emptyMeans}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              <input
+                                data-cell={`${row}:${col}`}
+                                aria-label={`${label}, ${column.name}, price in RM`}
+                                aria-invalid={bad || undefined}
+                                inputMode="decimal"
+                                autoComplete="off"
+                                spellCheck={false}
+                                readOnly={pending}
+                                placeholder={emptyMeans}
+                                value={values[key] ?? ""}
+                                onChange={(event) =>
+                                  edit(key, event.target.value)
+                                }
+                                onFocus={(event) => {
+                                  valueAtFocus.current = event.target.value;
+                                  event.target.select();
+                                }}
+                                onBlur={(event) => {
+                                  const text = tidy(event.target.value);
+                                  if (text !== event.target.value)
+                                    edit(key, text);
+                                }}
+                                onKeyDown={(event) =>
+                                  onCellKeyDown(event, row, col, key)
+                                }
+                                onPaste={(event) =>
+                                  onCellPaste(event, row, col)
+                                }
+                                className={cx(
+                                  CELL_INPUT,
+                                  bad && "text-red-700",
+                                )}
+                              />
+                            )}
                           </td>
                         );
                       })}
@@ -663,7 +690,9 @@ export function RateGrid({
 
       <div className="grid gap-3 px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          {freePairs > 0 ? (
+          {readOnly ? (
+            <span />
+          ) : freePairs > 0 ? (
             <Button
               variant="secondary"
               disabled={pending}
@@ -685,59 +714,64 @@ export function RateGrid({
           {rule === "grid"
             ? "An empty cell means the class is not offered on that route."
             : "An empty cell is metered at the class's rates."}{" "}
-          A route costs the same both ways. Paste a block of prices copied from
-          a spreadsheet into any cell; Enter moves down a row, Escape undoes the
-          cell.
+          A route costs the same both ways.
+          {readOnly
+            ? null
+            : " Paste a block of prices copied from a spreadsheet into any cell; Enter moves down a row, Escape undoes the cell."}
         </p>
       </div>
 
-      {leaveDialog}
-      <AddRouteDialog
-        open={adding}
-        onOpenChange={setAdding}
-        zones={zones}
-        classes={classes}
-        paired={paired}
-        rule={rule}
-        onAdd={addRoute}
-      />
+      {readOnly ? null : (
+        <>
+          {leaveDialog}
+          <AddRouteDialog
+            open={adding}
+            onOpenChange={setAdding}
+            zones={zones}
+            classes={classes}
+            paired={paired}
+            rule={rule}
+            onAdd={addRoute}
+          />
 
-      <div className="sticky bottom-0 z-2 flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-neutral-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
-        <p
-          aria-live="polite"
-          className={cx(
-            "flex min-w-0 items-center gap-2 text-sm",
-            status.tone === "error"
-              ? "text-red-700"
-              : status.tone === "done"
-                ? "text-emerald-700"
-                : status.tone === "idle"
-                  ? "text-neutral-500"
-                  : "text-neutral-800",
-          )}
-        >
-          {status.tone === "dirty" ? (
-            <span
-              aria-hidden="true"
-              className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
-            />
-          ) : null}
-          {status.text}
-        </p>
-        <div className="flex items-center gap-2">
-          {dirty ? (
-            <Button variant="ghost" disabled={pending} onClick={discard}>
-              Discard
-            </Button>
-          ) : null}
-          <Button
-            disabled={pending || !dirty || invalid.size > 0}
-            onClick={save}
-          >
-            {pending ? "Saving…" : "Save rates"}
-          </Button>
-        </div>
-      </div>
+          <div className="sticky bottom-0 z-2 flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-neutral-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
+            <p
+              aria-live="polite"
+              className={cx(
+                "flex min-w-0 items-center gap-2 text-sm",
+                status.tone === "error"
+                  ? "text-red-700"
+                  : status.tone === "done"
+                    ? "text-emerald-700"
+                    : status.tone === "idle"
+                      ? "text-neutral-500"
+                      : "text-neutral-800",
+              )}
+            >
+              {status.tone === "dirty" ? (
+                <span
+                  aria-hidden="true"
+                  className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
+                />
+              ) : null}
+              {status.text}
+            </p>
+            <div className="flex items-center gap-2">
+              {dirty ? (
+                <Button variant="ghost" disabled={pending} onClick={discard}>
+                  Discard
+                </Button>
+              ) : null}
+              <Button
+                disabled={pending || !dirty || invalid.size > 0}
+                onClick={save}
+              >
+                {pending ? "Saving…" : "Save rates"}
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

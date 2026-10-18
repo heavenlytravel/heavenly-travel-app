@@ -111,7 +111,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   const may = (permission: Permission) => permissions.includes(permission);
   const state = locationStateOf(location.state);
   const worksQueue = state !== "draft" && may("bookings.view");
-  const operates = may("coverage.manage");
+  const operates = may("coverage.view");
   const [zones, offerings, pickups, received] = await Promise.all([
     operates ? listZones(id) : [],
     operates ? listOfferings(id) : [],

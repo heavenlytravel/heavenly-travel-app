@@ -93,10 +93,11 @@ export type LocationTabDef = {
 };
 
 /** Which team's permission each setup step's tab is behind. */
+/** What opening each setup step's tab asks; changing the classes or the coverage asks `coverage.manage`. */
 const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
   details: "locations.manage",
-  "vehicle-classes": "coverage.manage",
-  coverage: "coverage.manage",
+  "vehicle-classes": "coverage.view",
+  coverage: "coverage.view",
   pages: "locations.manage",
 };
 
@@ -127,7 +128,7 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
           {
             key: "rates" as const,
             label: "Rates",
-            permission: "coverage.manage" as const,
+            permission: "coverage.view" as const,
             step: null,
           },
         ]

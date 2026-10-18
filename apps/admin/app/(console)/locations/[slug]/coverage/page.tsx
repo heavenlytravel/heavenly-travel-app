@@ -15,7 +15,7 @@ import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
-import { requireAdmin } from "../../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   locationTabHref,
   locationZoneHref,
@@ -32,15 +32,18 @@ import { zoneColor } from "./zones/zone-colors";
  * served when it falls in one, and the same zones are the rows of the
  * price list on the Rates tab. The zones on a map of the location's
  * states, each in its own colour, and the list of them beside it; pointing
- * at a zone in either lights it in both. See
- * docs/261015-locations-as-operation-areas.md, "Coverage is the zones".
+ * at a zone in either lights it in both. Operation adds, edits and removes
+ * zones (`coverage.manage`); Reservation and Sales read the map and the list
+ * (`coverage.view`). See docs/261015-locations-as-operation-areas.md,
+ * "Coverage is the zones".
  */
 export default async function LocationCoveragePage({
   params,
 }: PageProps<"/locations/[slug]/coverage">) {
-  await requireAdmin("coverage.manage");
+  await requireAdmin("coverage.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
+  const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
     <>
@@ -50,7 +53,7 @@ export default async function LocationCoveragePage({
       />
       <div className="mt-6 grid gap-6">
         <Streamed fallback={<CardSkeleton rows={6} />}>
-          {() => coverage({ id, slug })}
+          {() => coverage({ id, slug, manages })}
         </Streamed>
       </div>
     </>
@@ -80,7 +83,15 @@ function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
   return corners > 0 ? `Drawn, ${plural(corners, "corner")}` : "Drawn";
 }
 
-async function coverage({ id, slug }: { id: string; slug: string }) {
+async function coverage({
+  id,
+  slug,
+  manages,
+}: {
+  id: string;
+  slug: string;
+  manages: boolean;
+}) {
   const [location, zones, rates] = await Promise.all([
     locationDetails(id),
     listZones(id),
@@ -123,13 +134,17 @@ async function coverage({ id, slug }: { id: string; slug: string }) {
       <CardTitle
         description={
           zones.length === 0
-            ? `Nothing is served yet. Add the first zone: a whole district of ${stateNames || "the state"}, a circle around the airport or the jetty, or an area you shape on the map.`
-            : `${plural(zones.length, "zone")} within ${stateNames || "its states"}, each in its colour. Point at one, on the map or in the list, to find it in the other; click it to edit.`
+            ? manages
+              ? `Nothing is served yet. Add the first zone: a whole district of ${stateNames || "the state"}, a circle around the airport or the jetty, or an area you shape on the map.`
+              : "Nothing is served yet. Operation draws the zones."
+            : `${plural(zones.length, "zone")} within ${stateNames || "its states"}, each in its colour. Point at one, on the map or in the list, to find it in the other${manages ? "; click it to edit" : ""}.`
         }
         action={
-          <Button asChild size="sm">
-            <Link href={newLocationZoneHref(slug)}>Add zone</Link>
-          </Button>
+          manages ? (
+            <Button asChild size="sm">
+              <Link href={newLocationZoneHref(slug)}>Add zone</Link>
+            </Button>
+          ) : null
         }
       >
         <span className="inline-flex items-center gap-1.5">
@@ -142,6 +157,7 @@ async function coverage({ id, slug }: { id: string; slug: string }) {
         mapKey={mapKey}
         districts={stateOutlines(location.states.map((s) => s.code))}
         zones={listed}
+        editable={manages}
       />
       {zones.length > 1 ? (
         <p className="mt-4 text-sm text-neutral-600">

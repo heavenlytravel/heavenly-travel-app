@@ -5,12 +5,13 @@ import {
   type TripCategory,
 } from "@repo/db";
 import { listVehicleClasses, type VehicleClass } from "@repo/db/server";
+import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { PageHeader } from "../../_components/PageHeader";
 import { Bone, Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
-import { requireAdmin } from "../../_lib/access";
+import { getPermissions, requireAdmin } from "../../_lib/access";
 import { NEW_VEHICLE_CLASS_PATH, vehicleClassHref } from "../../_lib/routes";
 import { rulesText, seatsText } from "./_lib/class-text";
 import { VehicleClassActiveSwitch } from "./VehicleClassControls";
@@ -18,9 +19,12 @@ import { VehicleClassActiveSwitch } from "./VehicleClassControls";
 function CategoryTable({
   category,
   classes,
+  manages,
 }: {
   category: TripCategory;
   classes: VehicleClass[];
+  /** Operation: the switch and the editor. The other teams read. */
+  manages: boolean;
 }) {
   const activeCount = classes.filter((c) => c.isActive).length;
   return (
@@ -61,23 +65,35 @@ function CategoryTable({
                 }
               >
                 <Td>
-                  <Link
-                    href={vehicleClassHref(vehicleClass.id)}
-                    className="block font-medium underline-offset-4 hover:underline"
-                  >
-                    {vehicleClass.name}
-                  </Link>
+                  {manages ? (
+                    <Link
+                      href={vehicleClassHref(vehicleClass.id)}
+                      className="block font-medium underline-offset-4 hover:underline"
+                    >
+                      {vehicleClass.name}
+                    </Link>
+                  ) : (
+                    <span className="block font-medium">
+                      {vehicleClass.name}
+                    </span>
+                  )}
                   <span className="block max-w-64 text-xs text-neutral-500">
                     {vehicleClass.description}
                   </span>
                 </Td>
                 <Td>
-                  <VehicleClassActiveSwitch
-                    vehicleClass={vehicleClass}
-                    lastActiveInCategory={
-                      vehicleClass.isActive && activeCount === 1
-                    }
-                  />
+                  {manages ? (
+                    <VehicleClassActiveSwitch
+                      vehicleClass={vehicleClass}
+                      lastActiveInCategory={
+                        vehicleClass.isActive && activeCount === 1
+                      }
+                    />
+                  ) : (
+                    <Badge tone={vehicleClass.isActive ? "green" : "neutral"}>
+                      {vehicleClass.isActive ? "Active" : "Off"}
+                    </Badge>
+                  )}
                 </Td>
                 <Td className="whitespace-nowrap tabular-nums">
                   {seatsText(vehicleClass)}
@@ -87,12 +103,14 @@ function CategoryTable({
                   {rulesText(vehicleClass)}
                 </Td>
                 <Td className="text-right">
-                  <Link
-                    href={vehicleClassHref(vehicleClass.id)}
-                    className="text-sm font-medium underline-offset-4 hover:underline"
-                  >
-                    Edit
-                  </Link>
+                  {manages ? (
+                    <Link
+                      href={vehicleClassHref(vehicleClass.id)}
+                      className="text-sm font-medium underline-offset-4 hover:underline"
+                    >
+                      Edit
+                    </Link>
+                  ) : null}
                 </Td>
               </tr>
             ))
@@ -104,7 +122,7 @@ function CategoryTable({
 }
 
 /** Every class, in a table per category. */
-async function categoryTables() {
+async function categoryTables({ manages }: { manages: boolean }) {
   const classes = await listVehicleClasses();
   return (
     <div className="mt-6 grid gap-8">
@@ -113,6 +131,7 @@ async function categoryTables() {
           key={category}
           category={category}
           classes={classes.filter((c) => c.category === category)}
+          manages={manages}
         />
       ))}
     </div>
@@ -122,12 +141,14 @@ async function categoryTables() {
 /**
  * Route: /vehicle-classes. The catalogue: every class, by category, with
  * its seats, luggage and rules. What a location sells, and at what rates,
- * is on the location's Vehicle classes tab. Operation's screen behind
- * `coverage.manage`. Classes are never deleted, only turned off; a booking
- * keeps its snapshot of the class.
+ * is on the location's Vehicle classes tab. Operation's screen, behind
+ * `coverage.manage` for adding, editing and the switch; Reservation and
+ * Sales read it behind `coverage.view`. Classes are never deleted, only
+ * turned off; a booking keeps its snapshot of the class.
  */
 export default async function VehicleClassesPage() {
-  await requireAdmin("coverage.manage");
+  await requireAdmin("coverage.view");
+  const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
     <>
@@ -135,9 +156,11 @@ export default async function VehicleClassesPage() {
         title="Vehicle classes"
         description="The catalogue. Each class carries its seats, its luggage and its three rules; each location sells the classes it offers at its own rates."
         action={
-          <Button asChild>
-            <Link href={NEW_VEHICLE_CLASS_PATH}>Add class</Link>
-          </Button>
+          manages ? (
+            <Button asChild>
+              <Link href={NEW_VEHICLE_CLASS_PATH}>Add class</Link>
+            </Button>
+          ) : null
         }
       />
 
@@ -153,7 +176,7 @@ export default async function VehicleClassesPage() {
           </div>
         }
       >
-        {() => categoryTables()}
+        {() => categoryTables({ manages })}
       </Streamed>
     </>
   );

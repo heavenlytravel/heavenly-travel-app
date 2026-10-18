@@ -7,7 +7,7 @@ import { SidebarPanelTrigger, SidebarTrigger } from "@repo/ui/sidebar";
 import {
   LOCATION_TABS,
   locationHref,
-  locationIdOf,
+  locationSlugOf,
   locationTabOf,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
@@ -27,9 +27,9 @@ export function ConsoleHeader({
 }) {
   const pathname = usePathname();
   const section = currentNav(pathname);
-  const id = locationIdOf(pathname);
-  const location = id ? locations.find((entry) => entry.id === id) : null;
-  const tab = id ? locationTabOf(id, pathname) : null;
+  const slug = locationSlugOf(pathname);
+  const location = slug ? locations.find((entry) => entry.slug === slug) : null;
+  const tab = slug ? locationTabOf(slug, pathname) : null;
   const tabLabel =
     tab && tab !== "overview"
       ? LOCATION_TABS.find((entry) => entry.key === tab)?.label
@@ -39,7 +39,7 @@ export function ConsoleHeader({
     { label: section?.label ?? "Console", href: section?.href },
   ];
   if (location) {
-    trail.push({ label: location.name, href: locationHref(location.id) });
+    trail.push({ label: location.name, href: locationHref(location.slug) });
   }
   if (tabLabel) trail.push({ label: tabLabel });
 
@@ -86,7 +86,7 @@ export function ConsoleHeader({
           );
         })}
       </nav>
-      {id ? (
+      {slug ? (
         <SidebarPanelTrigger
           aria-label="Toggle location panel"
           className="-mr-1 ml-auto"

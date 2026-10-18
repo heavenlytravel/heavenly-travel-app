@@ -1,10 +1,12 @@
 "use client";
 
 import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
 import { useActionState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
+import { confirmedSubmit } from "../../../_lib/confirmed-submit";
 import {
   advanceItemAction,
   cancelBookingAction,
@@ -42,7 +44,7 @@ export function ItemControls({
 }: {
   itemId: string;
   status: string;
-  /** How the confirm dialog names the item: "HT-7K3QZM item 1". */
+  /** How the cancel's question names the item: "HT-7K3QZM item 1". */
   label: string;
   /** Whether the admin may take the step that comes next. */
   canAdvance: boolean;
@@ -58,6 +60,7 @@ export function ItemControls({
     ActionState,
     FormData
   >(cancelItemAction, null);
+  const [dialog, confirm] = useConfirm();
   const next = canAdvance ? nextItemStatusOf(status) : null;
   const cancellable =
     canCancel && status !== "cancelled" && status !== "completed";
@@ -85,11 +88,17 @@ export function ItemControls({
         {cancellable ? (
           <form
             action={cancel}
-            onSubmit={(event) => {
-              if (!confirm(`Cancel ${label}? The customer will be told.`)) {
-                event.preventDefault();
-              }
-            }}
+            onSubmit={confirmedSubmit(
+              confirm,
+              {
+                title: `Cancel ${label}?`,
+                description: "The customer will be told.",
+                action: "Cancel item",
+                cancel: "Keep it",
+                danger: true,
+              },
+              cancel,
+            )}
           >
             <input type="hidden" name="itemId" value={itemId} />
             <Button type="submit" variant="danger" size="sm" disabled={pending}>
@@ -99,6 +108,7 @@ export function ItemControls({
         ) : null}
       </div>
       <ErrorLine state={advanceState ?? cancelState} />
+      {dialog}
     </div>
   );
 }
@@ -115,20 +125,23 @@ export function CancelBookingControl({
     cancelBookingAction,
     null,
   );
+  const [dialog, confirm] = useConfirm();
 
   return (
     <form
       action={action}
       className="grid gap-1.5"
-      onSubmit={(event) => {
-        if (
-          !confirm(
-            `Cancel booking ${reference}? Every open item is cancelled and the customer is told.`,
-          )
-        ) {
-          event.preventDefault();
-        }
-      }}
+      onSubmit={confirmedSubmit(
+        confirm,
+        {
+          title: `Cancel booking ${reference}?`,
+          description: "Every open item is cancelled and the customer is told.",
+          action: "Cancel booking",
+          cancel: "Keep it",
+          danger: true,
+        },
+        action,
+      )}
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <Button
@@ -140,6 +153,7 @@ export function CancelBookingControl({
         {pending ? "Cancelling…" : "Cancel booking"}
       </Button>
       <ErrorLine state={state} />
+      {dialog}
     </form>
   );
 }

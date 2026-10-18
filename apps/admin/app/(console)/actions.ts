@@ -16,7 +16,10 @@ export type AddressTest =
       /** The district the point falls in, for the record; null at sea or outside Malaysia. */
       district: { name: string; stateName: string } | null;
       /** The zone the point falls in and the location it is, or null when no public location serves it. */
-      served: { location: { id: string; name: string }; zone: string } | null;
+      served: {
+        location: { id: string; name: string; slug: string };
+        zone: string;
+      } | null;
     };
 
 /**
@@ -48,7 +51,11 @@ export async function testAddressAction(placeId: string): Promise<AddressTest> {
       : null,
     served: served
       ? {
-          location: { id: served.location.id, name: served.location.name },
+          location: {
+            id: served.location.id,
+            name: served.location.name,
+            slug: served.location.slug,
+          },
           zone: served.zone.name,
         }
       : null,

@@ -2,13 +2,14 @@
 
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { VehicleClass } from "@repo/db/server";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setVehicleClassActiveAction } from "./actions";
 
 /**
  * The class's switch. Turning off the last active class of a category asks
- * first: the category's tab then has nothing to sell.
+ * first, in an alert dialog: the category's tab then has nothing to sell.
  */
 export function VehicleClassActiveSwitch({
   vehicleClass,
@@ -19,6 +20,7 @@ export function VehicleClassActiveSwitch({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [dialog, confirm] = useConfirm();
   const categoryLabel = isTripCategory(vehicleClass.category)
     ? TRIP_CATEGORY_LABELS[vehicleClass.category]
     : vehicleClass.category;
@@ -29,13 +31,15 @@ export function VehicleClassActiveSwitch({
         checked={vehicleClass.isActive}
         disabled={pending}
         label={`${vehicleClass.name} is active`}
-        onCheckedChange={(next) => {
+        onCheckedChange={async (next) => {
           if (
             !next &&
             lastActiveInCategory &&
-            !confirm(
-              `${vehicleClass.name} is the last active class of ${categoryLabel}. With it off the ${categoryLabel} tab has nothing to sell. Turn it off?`,
-            )
+            !(await confirm({
+              title: `Turn ${vehicleClass.name} off?`,
+              description: `It is the last active class of ${categoryLabel}. With it off, the ${categoryLabel} tab has nothing to sell.`,
+              action: "Turn off",
+            }))
           ) {
             return;
           }
@@ -53,6 +57,7 @@ export function VehicleClassActiveSwitch({
           {error}
         </p>
       ) : null}
+      {dialog}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import {
   SETUP_STEPS,
   SETUP_STEP_LABELS,
   type BookingStatus,
+  type LocationHistoryKind,
   type LocationPageKey,
   type Permission,
   type SetupStepKey,
@@ -61,20 +62,27 @@ const LOCATION_PATH = "/locations";
 
 export const NEW_LOCATION_PATH = `${LOCATION_PATH}/new`;
 
-/** One location's overview, by id. */
-export function locationHref(id: string) {
-  return `${LOCATION_PATH}/${id}`;
+/**
+ * One location's overview, by its slug: the console's address for a
+ * location is the one its public page has, /locations/langkawi.
+ */
+export function locationHref(slug: string) {
+  return `${LOCATION_PATH}/${slug}`;
 }
 
-/** The id of the location a path is inside, or null off a location's page (the add form included). */
-export function locationIdOf(pathname: string): string | null {
+/** The route of every location's pages, for revalidating them all at once. */
+export const LOCATION_ROUTE = "/(console)/locations/[slug]";
+
+/** The slug of the location a path is inside, or null off a location's page (the add form included). */
+export function locationSlugOf(pathname: string): string | null {
   if (!pathname.startsWith(`${LOCATION_PATH}/`)) return null;
-  const id = pathname.slice(LOCATION_PATH.length + 1).split("/")[0] ?? "";
-  return id === "" || id === "new" ? null : id;
+  const slug = pathname.slice(LOCATION_PATH.length + 1).split("/")[0] ?? "";
+  return slug === "" || slug === "new" ? null : decodeURIComponent(slug);
 }
 
-/** A tab of a location's page: the overview, one of the setup steps, the rates, or the bookings. */
-export type LocationTab = "overview" | SetupStepKey | "rates" | "bookings";
+/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings or the history. */
+export type LocationTab =
+  "overview" | SetupStepKey | "rates" | "bookings" | "history";
 
 export type LocationTabDef = {
   key: LocationTab;
@@ -95,7 +103,7 @@ const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
 /**
  * The tabs of a location's page, in order: the overview, then the four
  * setup steps in the order an admin walks them, with the rates right after
- * the coverage whose zones they price, then the bookings. Each is its own
+ * the coverage whose zones they price, then the bookings and the history. Each is its own
  * route behind its own permission, as every console page is; the panel
  * beside the location's page lists the tabs the admin may open. See
  * docs/261015-locations-as-operation-areas.md, "Who may do what".
@@ -131,6 +139,12 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     permission: "bookings.view",
     step: null,
   },
+  {
+    key: "history",
+    label: "History",
+    permission: "locations.view",
+    step: null,
+  },
 ];
 
 /** The tab of a setup step. */
@@ -138,58 +152,79 @@ export function setupStepTab(step: SetupStepKey): LocationTabDef {
   return LOCATION_TABS.find((tab) => tab.step === step)!;
 }
 
-/** One tab of a location's page. The overview is the location's own address. */
-export function locationTabHref(id: string, tab: LocationTab) {
-  return tab === "overview" ? locationHref(id) : `${locationHref(id)}/${tab}`;
+/** One tab of a location's page, by the location's slug. The overview is the location's own address. */
+export function locationTabHref(slug: string, tab: LocationTab) {
+  return tab === "overview"
+    ? locationHref(slug)
+    : `${locationHref(slug)}/${tab}`;
 }
 
 /** The tab a path under a location's page is on: the editor of a page is on Pages, a publish in the history on Overview. */
-export function locationTabOf(id: string, pathname: string): LocationTab {
-  const rest = pathname.slice(locationHref(id).length);
+export function locationTabOf(slug: string, pathname: string): LocationTab {
+  const rest = pathname.slice(locationHref(slug).length);
   const segment = rest.split("/")[1];
   const tab = LOCATION_TABS.find((t) => t.key === segment);
   return tab?.key ?? "overview";
 }
 
+/** The ids of the Rates tab's three cards, and the link that lands on each. */
+export const RATES_PARTS = {
+  grid: "rate-grid",
+  dropoffs: "dropoffs",
+  oddHours: "odd-hours",
+} as const;
+export function locationRatesPartHref(
+  slug: string,
+  part: keyof typeof RATES_PARTS,
+) {
+  return `${locationTabHref(slug, "rates")}#${RATES_PARTS[part]}`;
+}
+
 /** The id of the saved addresses card on a location's Details tab, and the link that lands on it. */
 export const SAVED_ADDRESSES_ID = "saved-addresses";
-export function locationAddressesHref(id: string) {
-  return `${locationTabHref(id, "details")}#${SAVED_ADDRESSES_ID}`;
+export function locationAddressesHref(slug: string) {
+  return `${locationTabHref(slug, "details")}#${SAVED_ADDRESSES_ID}`;
 }
 
 /** What Marketing sets on the customer site's home page: the top choices. */
 export const HOME_PAGE_PATH = "/home-page";
 
 /** The editor of one page of a location: its landing page or a product's. */
-export function locationPageHref(id: string, page: LocationPageKey) {
-  return `${locationTabHref(id, "pages")}/${page}`;
+export function locationPageHref(slug: string, page: LocationPageKey) {
+  return `${locationTabHref(slug, "pages")}/${page}`;
+}
+
+/** A location's history, optionally narrowed to one part of it. */
+export function locationHistoryHref(slug: string, kind?: LocationHistoryKind) {
+  const base = locationTabHref(slug, "history");
+  return kind ? `${base}?kind=${kind}` : base;
 }
 
 /** What one publish in a location's history put on a page, by the log entry's id. */
-export function locationPublishHref(id: string, entryId: string) {
-  return `${locationHref(id)}/history/${entryId}`;
+export function locationPublishHref(slug: string, entryId: string) {
+  return `${locationHref(slug)}/history/${entryId}`;
 }
 
 /** A location's bookings, optionally narrowed to one status. */
-export function locationBookingsHref(id: string, status?: BookingStatus) {
-  const base = locationTabHref(id, "bookings");
+export function locationBookingsHref(slug: string, status?: BookingStatus) {
+  const base = locationTabHref(slug, "bookings");
   return status ? `${base}?status=${status}` : base;
 }
 
 /** One offering of a location: the rates it sells a class at; "new" for the add page. */
-export function locationOfferingHref(id: string, offeringId: string) {
-  return `${locationTabHref(id, "vehicle-classes")}/${offeringId}`;
+export function locationOfferingHref(slug: string, offeringId: string) {
+  return `${locationTabHref(slug, "vehicle-classes")}/${offeringId}`;
 }
-export function newLocationOfferingHref(id: string) {
-  return locationOfferingHref(id, "new");
+export function newLocationOfferingHref(slug: string) {
+  return locationOfferingHref(slug, "new");
 }
 
 /** The editor of one zone of a location; "new" for the add page. */
-export function locationZoneHref(id: string, zoneId: string) {
-  return `${locationTabHref(id, "coverage")}/zones/${zoneId}`;
+export function locationZoneHref(slug: string, zoneId: string) {
+  return `${locationTabHref(slug, "coverage")}/zones/${zoneId}`;
 }
-export function newLocationZoneHref(id: string) {
-  return locationZoneHref(id, "new");
+export function newLocationZoneHref(slug: string) {
+  return locationZoneHref(slug, "new");
 }
 
 /** Where the page editor posts an image; answers the stored file. */

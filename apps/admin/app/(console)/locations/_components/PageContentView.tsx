@@ -98,6 +98,13 @@ export function PageContentView({
       <Part label="Meta description" changed={changed("metaDescription")}>
         {content.metaDescription || NONE}
       </Part>
+      <Part label="Share image" changed={changed("shareImage")}>
+        {content.shareImage ? (
+          <Picture image={content.shareImage} />
+        ) : (
+          <span className="text-neutral-500">The hero image</span>
+        )}
+      </Part>
       {page === LANDING_PAGE ? (
         <Part label="Tagline" changed={changed("tagline")}>
           {content.tagline || NONE}

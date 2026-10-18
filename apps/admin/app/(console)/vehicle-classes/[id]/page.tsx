@@ -7,8 +7,9 @@ import {
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
-import { Card, CardTitle } from "../../../_components/Card";
+import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
+import { Card, CardTitle } from "../../../_components/Card";
 import {
   CardSkeleton,
   DetailSkeleton,
@@ -91,21 +92,25 @@ function VehicleClassScreen({
         }
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-        <VehicleClassForm
-          key={vehicleClass?.id ?? "new"}
-          vehicleClass={vehicleClass}
-        />
-        {vehicleClass ? (
-          <Card>
-            <CardTitle>History</CardTitle>
-            <ActivityHistory
-              entries={history}
-              emptyMessage="No activity recorded. This class was seeded before the log."
-            />
-          </Card>
-        ) : null}
-      </div>
+      <DetailColumns
+        main={
+          <VehicleClassForm
+            key={vehicleClass?.id ?? "new"}
+            vehicleClass={vehicleClass}
+          />
+        }
+        side={
+          vehicleClass ? (
+            <Card>
+              <CardTitle>History</CardTitle>
+              <ActivityHistory
+                entries={history}
+                emptyMessage="No activity recorded. This class was seeded before the log."
+              />
+            </Card>
+          ) : null
+        }
+      />
     </>
   );
 }

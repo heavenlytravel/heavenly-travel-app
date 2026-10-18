@@ -75,7 +75,7 @@ export function AddressTester({
             <p className="font-medium">
               Served: in the zone {result.served.zone} of{" "}
               <Link
-                href={locationHref(result.served.location.id)}
+                href={locationHref(result.served.location.slug)}
                 className="underline-offset-4 hover:underline"
               >
                 {result.served.location.name}

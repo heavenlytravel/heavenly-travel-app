@@ -1,24 +1,34 @@
-import type { LocationPageKey } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { locationPreviewUrl } from "../../../_lib/site";
+import { ExternalLinkIcon } from "@repo/ui/icons";
 
 /**
- * Opens a page of a location as staff preview it on the customer site: the
- * saved draft, whatever the location's state and whether the page is
- * published. A plain link in a new tab; the customer site checks `locations.manage`.
+ * "Preview": opens a page of a location as staff preview it on the
+ * customer site, the saved draft whatever the location's state and
+ * whether the page is published. A plain link in a new tab, from
+ * `locationPreviewUrl`; the customer site checks `locations.manage`.
  */
 export function PreviewLink({
-  slug,
-  page,
+  href,
+  size = "md",
+  title = "Opens the saved draft on the customer site.",
+  className,
 }: {
-  slug: string;
-  /** The landing page when left out. */
-  page?: LocationPageKey;
+  href: string;
+  size?: "sm" | "md";
+  title?: string;
+  className?: string;
 }) {
   return (
-    <Button asChild variant="secondary">
-      <a href={locationPreviewUrl(slug, page)} target="_blank" rel="noreferrer">
+    <Button asChild variant="secondary" size={size}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        title={title}
+        className={className}
+      >
         Preview
+        <ExternalLinkIcon />
       </a>
     </Button>
   );

@@ -75,9 +75,7 @@ function quoteSummary(quote: PricedTrip) {
     parts.push(`${quote.distanceKm.toFixed(1)} km by road`);
   }
   if (quote.hours !== null) parts.push(`${quote.hours} hours`);
-  if (quote.surchargePercent !== null) {
-    parts.push(`odd hours +${quote.surchargePercent}%`);
-  }
+  if (quote.surcharge !== null) parts.push(`odd hours ${quote.surcharge}`);
   return parts.join(" · ");
 }
 

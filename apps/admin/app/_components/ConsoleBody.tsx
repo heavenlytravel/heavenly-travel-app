@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { locationIdOf } from "../_lib/routes";
+import { locationSlugOf } from "../_lib/routes";
 import { PageColumn } from "./PageColumn";
 
 /**
@@ -13,7 +13,7 @@ import { PageColumn } from "./PageColumn";
  */
 export function ConsoleBody({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  if (locationIdOf(pathname) !== null) {
+  if (locationSlugOf(pathname) !== null) {
     return <div className="flex flex-1 items-start">{children}</div>;
   }
   return <PageColumn>{children}</PageColumn>;

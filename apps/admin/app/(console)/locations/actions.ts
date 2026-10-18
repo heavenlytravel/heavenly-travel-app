@@ -32,7 +32,7 @@ import {
   HOME_PAGE_PATH,
   LOCATIONS_PATH,
   locationHref,
-  locationPageHref,
+  locationTabHref,
 } from "../../_lib/routes";
 import {
   refreshDeletedLocationAfter,
@@ -52,7 +52,7 @@ import { revalidateLocation, revalidateLocations } from "./_lib/revalidate";
 
 /** After a change the public can see: this console's screens and the customer site's pages. */
 function revalidateEverywhere(id: string) {
-  revalidateLocation(id);
+  revalidateLocation();
   refreshLocationAfter(id);
 }
 
@@ -77,8 +77,8 @@ export async function createLocationAction(
 
   const result = await createLocation(actorOf(admin), parsed.value);
   if (!result.ok) return stateOf(result);
-  revalidateLocation(result.id);
-  redirect(locationHref(result.id));
+  revalidateLocation();
+  redirect(locationHref(parsed.value.slug));
 }
 
 export async function updateLocationAction(
@@ -93,8 +93,13 @@ export async function updateLocationAction(
   if (!parsed.ok) return { error: parsed.error };
 
   const result = await updateLocation(actorOf(admin), id, parsed.value);
-  if (result.ok) revalidateEverywhere(id);
-  return stateOf(result);
+  if (!result.ok) return stateOf(result);
+  revalidateEverywhere(id);
+  // A draft's new slug is its new address in the console too.
+  if (parsed.value.slug !== textOf(formData.get("previousSlug"))) {
+    redirect(locationTabHref(parsed.value.slug, "details"));
+  }
+  return null;
 }
 
 /**
@@ -177,8 +182,7 @@ async function writePage(
       )
     : await saveLocationPageDraft(locationId, page, version, draft);
   if (result.ok) {
-    revalidateLocation(locationId);
-    revalidatePath(locationPageHref(locationId, page));
+    revalidateLocation();
     // A draft changes nothing in public.
     if (publish) refreshLocationAfter(locationId);
   }
@@ -219,7 +223,6 @@ export async function unpublishPageAction(
   const result = await unpublishLocationPage(actorOf(admin), locationId, page);
   if (result.ok) {
     revalidateEverywhere(locationId);
-    revalidatePath(locationPageHref(locationId, page));
   }
   return stateOf(result);
 }

@@ -62,7 +62,7 @@ export default async function BookingsPage({
             the rows of the one before. */}
         <Streamed
           key={`${filter ?? "all"}:${locationId ?? "all"}`}
-          fallback={<TableSkeleton columns={7} />}
+          fallback={<TableSkeleton columns={6} />}
         >
           {() => bookingsList({ filter, locationId })}
         </Streamed>

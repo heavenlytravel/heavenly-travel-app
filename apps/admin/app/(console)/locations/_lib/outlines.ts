@@ -3,7 +3,7 @@ import { DISTRICT_DATA } from "@repo/db/server";
 import type {
   DistrictChoice,
   DistrictOutline,
-} from "../[id]/coverage/zones/ZoneMap";
+} from "../[slug]/coverage/zones/map-shapes";
 
 /**
  * The district outlines of the states, for the map under a location's

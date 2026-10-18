@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import { Card } from "../../../_components/Card";
 import type { ActionState } from "../../../_lib/action-state";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
 import { SlugField } from "../_components/SlugField";
@@ -30,7 +31,7 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
 
   return (
     <form action={action} className="grid gap-6">
-      <section className="grid gap-4 rounded-lg border border-neutral-200 bg-white p-5">
+      <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">
             <Input
@@ -64,7 +65,7 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
           value={stateCodes}
           onChange={setStateCodes}
         />
-      </section>
+      </Card>
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending || stateCodes.length === 0}>

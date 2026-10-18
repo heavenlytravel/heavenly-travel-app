@@ -15,6 +15,7 @@ import type { VehicleClass } from "@repo/db/server";
 import { Field, Input, Select } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
+import { Card } from "../../_components/Card";
 
 const DEFAULT_CATEGORY: TripCategory = "car-with-driver";
 
@@ -88,9 +89,6 @@ function WholeNumberInput({
   );
 }
 
-export const sectionClassName =
-  "grid gap-4 rounded-lg border border-neutral-200 bg-white p-5";
-
 /**
  * The fields of a catalogue class, as three sections of a form: what it
  * is, its seats and luggage, its rules. Choosing a category on a new class
@@ -125,7 +123,7 @@ export function VehicleClassFieldset({
 
   return (
     <>
-      <section className={sectionClassName}>
+      <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={<ClassFieldLabel field="name" />}>
             <Input
@@ -188,10 +186,10 @@ export function VehicleClassFieldset({
             <ClassFieldLabel field="isActive" />
           </label>
         ) : null}
-      </section>
+      </Card>
 
-      <section className={sectionClassName}>
-        <h2 className="text-base font-semibold tracking-tight">
+      <Card className="grid gap-4">
+        <h2 className="text-xl font-semibold tracking-tight">
           Seats and luggage
         </h2>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -219,10 +217,10 @@ export function VehicleClassFieldset({
             />
           </Field>
         </div>
-      </section>
+      </Card>
 
-      <section className={sectionClassName}>
-        <h2 className="text-base font-semibold tracking-tight">Rules</h2>
+      <Card className="grid gap-4">
+        <h2 className="text-xl font-semibold tracking-tight">Rules</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {RULE_FIELDS.map((field) => (
             <Field
@@ -249,7 +247,7 @@ export function VehicleClassFieldset({
             </Field>
           ))}
         </div>
-      </section>
+      </Card>
     </>
   );
 }

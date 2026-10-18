@@ -56,8 +56,8 @@ export type TripQuoteView =
       location: string;
       /** "Langkawi Airport to Cenang" when both ends are in a zone; null when metered. */
       route: string | null;
-      /** The odd-hours percentage that applies, or null. */
-      surchargePercent: number | null;
+      /** The odd-hours surcharge that applies, "+20%" or "+RM 30.00"; null for none. */
+      surcharge: string | null;
       classes: ClassQuoteView[];
     }
   | { ok: false; error: string };

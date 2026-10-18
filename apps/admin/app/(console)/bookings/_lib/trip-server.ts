@@ -6,6 +6,7 @@ import {
   parseTripOptions,
   parseTripSearch,
   PRICE_OVERRIDE_FIELDS,
+  surchargeLabel,
   textOf,
   unavailableReason,
   type PriceOverride,
@@ -51,7 +52,7 @@ export async function quoteTripView(
       quote.pickupZone && quote.dropoffZone
         ? `${quote.pickupZone} to ${quote.dropoffZone}`
         : null,
-    surchargePercent: quote.surchargePercent,
+    surcharge: quote.surcharge ? surchargeLabel(quote.surcharge) : null,
     classes: quote.classes.map((c) => ({
       id: c.vehicleClass.id,
       name: c.vehicleClass.name,

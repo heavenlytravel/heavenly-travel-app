@@ -1,7 +1,8 @@
 import { cx } from "@repo/ui/cx";
 import { SidebarPanel } from "@repo/ui/sidebar";
-import { Suspense, type ReactNode } from "react";
-import { Card } from "./Card";
+import { Suspense, type ComponentProps, type ReactNode } from "react";
+import { Card, Frame, TileGrid } from "./Card";
+import { DetailColumns } from "./PageColumn";
 import { WhenCollapsed, WhenExpanded } from "./PanelVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
@@ -142,13 +143,43 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
 export function CardSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <Card>
-      <Bone className="mb-3 h-6 w-28" />
+      <Bone className="mb-5 h-7 w-32" />
       <RowsSkeleton rows={rows} />
     </Card>
   );
 }
 
-/** The detail pages' grid: the record on the left, a narrow column beside it. */
+/** A grid of tiles, each with its picture when `image`, as `TileGrid` lays them out. */
+export function TileGridSkeleton({
+  tiles = 3,
+  image = true,
+  min,
+}: {
+  tiles?: number;
+  image?: boolean;
+  min?: ComponentProps<typeof TileGrid>["min"];
+}) {
+  return (
+    <TileGrid min={min}>
+      {Array.from({ length: tiles }, (_, tile) => (
+        <li key={tile}>
+          <Frame className="overflow-hidden">
+            {image ? (
+              <Bone className="aspect-[16/9] w-full rounded-none" />
+            ) : null}
+            <div className="grid gap-2.5 p-4">
+              <Bone className="h-5 w-28" />
+              <Bone className="h-4 w-40" />
+              <Bone className="h-9 w-full" />
+            </div>
+          </Frame>
+        </li>
+      ))}
+    </TileGrid>
+  );
+}
+
+/** The detail pages' columns: the record on the left, a narrow column beside it. */
 export function DetailSkeleton({
   main,
   side,
@@ -156,12 +187,7 @@ export function DetailSkeleton({
   main: ReactNode;
   side: ReactNode;
 }) {
-  return (
-    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-      <div className="grid gap-6">{main}</div>
-      <div className="grid gap-6">{side}</div>
-    </div>
-  );
+  return <DetailColumns main={main} side={side} />;
 }
 
 /**

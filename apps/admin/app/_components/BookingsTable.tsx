@@ -1,7 +1,8 @@
 import Link from "next/link";
 import {
   customerEmailOf,
-  formatLocalDateTime,
+  formatLocalDate,
+  formatLocalTime,
   formatMyr,
   itemSummary,
   tripHeadline,
@@ -27,28 +28,29 @@ function locationsOf(booking: BookingWithItems) {
 /**
  * The bookings table, shared by the queue across locations and a location's
  * own list. `showLocation` adds the column the queue needs and a location's
- * list does not.
+ * list does not; `bare` is for the table inside a `flush` card.
  */
 export function BookingsTable({
   bookings,
   showLocation = false,
+  bare = false,
   emptyMessage,
 }: {
   bookings: BookingWithItems[];
   showLocation?: boolean;
+  bare?: boolean;
   emptyMessage: string;
 }) {
-  const columns = showLocation ? 7 : 6;
+  const columns = showLocation ? 6 : 5;
   return (
-    <Table>
+    <Table bare={bare}>
       <THead>
-        <Th>Ref</Th>
+        <Th>Booking</Th>
         <Th>Customer</Th>
         <Th>Trip</Th>
         {showLocation ? <Th>Location</Th> : null}
         <Th>Pick-up</Th>
         <Th align="right">Total</Th>
-        <Th>Status</Th>
       </THead>
       <TBody>
         {bookings.length === 0 ? (
@@ -61,21 +63,24 @@ export function BookingsTable({
             });
             return (
               <tr key={booking.id}>
-                <Td className="font-medium tabular-nums">
+                <Td className="font-medium whitespace-nowrap tabular-nums">
                   <Link
                     href={bookingHref(booking.id)}
                     className="underline-offset-4 hover:underline"
                   >
                     {booking.reference}
                   </Link>
+                  <span className="mt-1 block">
+                    <BookingStatusBadge status={booking.status} />
+                  </span>
                 </Td>
                 <Td>
                   <span className="block">{booking.contactName}</span>
-                  <span className="block text-xs text-neutral-500">
+                  <span className="block max-w-48 truncate text-xs text-neutral-500">
                     {customerEmailOf(booking) ?? booking.contactPhone}
                   </span>
                 </Td>
-                <Td className="text-neutral-600">
+                <Td className="min-w-48 text-neutral-600">
                   {trips.map(({ item, trip }) => (
                     <span key={item.id} className="block">
                       {tripHeadline(trip)}
@@ -86,20 +91,22 @@ export function BookingsTable({
                   ))}
                 </Td>
                 {showLocation ? (
-                  <Td className="text-neutral-600">
+                  <Td className="whitespace-nowrap text-neutral-600">
                     {locationsOf(booking) || (
                       <span className="text-neutral-500">—</span>
                     )}
                   </Td>
                 ) : null}
-                <Td className="text-neutral-600 tabular-nums">
-                  {formatLocalDateTime(booking.startsAt)}
+                <Td className="whitespace-nowrap text-neutral-600 tabular-nums">
+                  <span className="block">
+                    {formatLocalDate(booking.startsAt)}
+                  </span>
+                  <span className="block text-xs text-neutral-500">
+                    {formatLocalTime(booking.startsAt)}
+                  </span>
                 </Td>
-                <Td className="text-right font-medium tabular-nums">
+                <Td className="text-right font-medium whitespace-nowrap tabular-nums">
                   {formatMyr(booking.priceTotalSen)}
-                </Td>
-                <Td>
-                  <BookingStatusBadge status={booking.status} />
                 </Td>
               </tr>
             );

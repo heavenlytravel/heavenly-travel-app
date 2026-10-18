@@ -23,13 +23,18 @@ import {
   LOCATIONS_PATH,
   NEW_LOCATION_PATH,
   locationHref,
-  locationIdOf,
+  locationSlugOf,
 } from "../_lib/routes";
 import { LocationMark } from "./LocationMark";
 import { LOCATIONS_NAV, isCurrentNav, navFor } from "./nav";
 
 /** A location as the sidebar lists it. */
-export type SidebarLocation = { id: string; name: string; state: string };
+export type SidebarLocation = {
+  id: string;
+  name: string;
+  slug: string;
+  state: string;
+};
 
 /**
  * The console's sidebar: the brand mark on top, the locations first, then
@@ -57,7 +62,7 @@ export function AppSidebar({
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const close = () => setOpenMobile(false);
 
-  const currentId = locationIdOf(pathname);
+  const currentSlug = locationSlugOf(pathname);
   const mayAdd = permissions.includes("locations.manage");
 
   return (
@@ -114,10 +119,10 @@ export function AppSidebar({
                 <SidebarMenuItem key={location.id}>
                   <SidebarMenuButton
                     asChild
-                    active={location.id === currentId}
+                    active={location.slug === currentSlug}
                     tooltip={location.name}
                   >
-                    <Link href={locationHref(location.id)} onClick={close}>
+                    <Link href={locationHref(location.slug)} onClick={close}>
                       <LocationMark
                         name={location.name}
                         state={location.state}

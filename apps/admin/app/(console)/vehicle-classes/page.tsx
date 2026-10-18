@@ -24,7 +24,7 @@ function CategoryTable({
 }) {
   const activeCount = classes.filter((c) => c.isActive).length;
   return (
-    <section>
+    <section className="min-w-0">
       <h2 className="mb-3 text-base font-semibold tracking-tight">
         {TRIP_CATEGORY_LABELS[category]}
       </h2>

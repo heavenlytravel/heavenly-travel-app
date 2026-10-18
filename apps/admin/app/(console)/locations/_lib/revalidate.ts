@@ -1,14 +1,16 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import { LOCATIONS_PATH, locationHref } from "../../../_lib/routes";
+import { LOCATIONS_PATH, LOCATION_ROUTE } from "../../../_lib/routes";
 
 /**
  * What every action on a location drops from the console's cache: the
- * location's header and every tab under it, the home's row for it, and the
- * console's chrome, whose sidebar lists every location by name and state.
+ * locations' headers and every tab under them (by the route, since an
+ * action knows the location's id and its address is its slug), the home's
+ * rows, and the console's chrome, whose sidebar lists every location by
+ * name and state. Each is read again on its next visit only.
  */
-export function revalidateLocation(id: string) {
-  revalidatePath(locationHref(id), "layout");
+export function revalidateLocation() {
+  revalidatePath(LOCATION_ROUTE, "layout");
   revalidateLocations();
 }
 

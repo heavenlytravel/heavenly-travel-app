@@ -24,9 +24,9 @@ export function locationPreviewUrl(slug: string, page?: LocationPageKey) {
   return SITE_URL + locationPreviewPath(slug, page);
 }
 
-/** Where the public reads a location's landing page, once it is live. */
-export function locationPublicUrl(slug: string) {
-  return SITE_URL + locationPagePath(slug);
+/** Where the public reads a location's page, its main page when left out, once it is live. */
+export function locationPublicUrl(slug: string, page?: LocationPageKey) {
+  return SITE_URL + locationPagePath(slug, page);
 }
 
 /** How long the refresh may take before it is given up. */

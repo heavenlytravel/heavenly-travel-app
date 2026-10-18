@@ -11,7 +11,8 @@ import {
 } from "@repo/db";
 import type { Offering, VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { Field, Input, Select } from "@repo/ui/field";
+import { Checkbox, Field, Input, Radio } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -111,14 +112,12 @@ export function OfferingForm({
                 Which class
               </legend>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
+                <Radio
                   name={SOURCE_FIELD}
                   value={SOURCES.catalogue}
                   checked={source === SOURCES.catalogue}
                   disabled={candidates.length === 0}
                   onChange={() => setSource(SOURCES.catalogue)}
-                  className="accent-neutral-900"
                 />
                 One from the catalogue
                 {candidates.length === 0 ? (
@@ -128,29 +127,28 @@ export function OfferingForm({
                 ) : null}
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
+                <Radio
                   name={SOURCE_FIELD}
                   value={SOURCES.new}
                   checked={source === SOURCES.new}
                   onChange={() => setSource(SOURCES.new)}
-                  className="accent-neutral-900"
                 />
                 A new class, added to the catalogue
               </label>
             </fieldset>
             {source === SOURCES.catalogue ? (
               <Field label="Class">
-                <Select name="vehicleClassId" required>
-                  {candidates.map((vehicleClass) => (
-                    <option key={vehicleClass.id} value={vehicleClass.id}>
-                      {vehicleClass.name}
-                      {isTripCategory(vehicleClass.category)
-                        ? ` (${TRIP_CATEGORY_LABELS[vehicleClass.category]})`
-                        : ""}
-                    </option>
-                  ))}
-                </Select>
+                <Select
+                  name="vehicleClassId"
+                  required
+                  defaultValue={candidates[0]?.id}
+                  options={candidates.map((vehicleClass) => ({
+                    value: vehicleClass.id,
+                    label: isTripCategory(vehicleClass.category)
+                      ? `${vehicleClass.name} (${TRIP_CATEGORY_LABELS[vehicleClass.category]})`
+                      : vehicleClass.name,
+                  }))}
+                />
               </Field>
             ) : null}
           </Card>
@@ -198,11 +196,9 @@ export function OfferingForm({
           </p>
         ) : null}
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+          <Checkbox
             name="isActive"
             defaultChecked={offering?.isActive ?? true}
-            className="size-4 accent-neutral-900"
           />
           <span className="inline-flex items-center gap-1.5">
             {OFFERING_FIELD_LABELS.isActive}

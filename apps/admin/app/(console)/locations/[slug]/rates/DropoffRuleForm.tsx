@@ -2,25 +2,17 @@
 
 import { DROPOFF_RULES, DROPOFF_RULE_LABELS, type DropoffRule } from "@repo/db";
 import { cx } from "@repo/ui/cx";
+import { Radio } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
 import { useOptimistic, useState, useTransition } from "react";
 import { setDropoffRuleAction } from "./actions";
-
-/** What each rule means for a trip from the location, under its label. */
-function noteOf(rule: DropoffRule, locationName: string) {
-  switch (rule) {
-    case "anywhere":
-      return "A trip may end anywhere in Malaysia: at the grid price where the route has one, metered otherwise.";
-    case "zones":
-      return `The drop-off must be in one of ${locationName}'s zones: at the grid price where the route has one, metered otherwise. Any other drop-off is refused.`;
-    case "grid":
-      return "Only a route with a price on the grid can be booked, and only in the classes priced on it. Nothing is metered.";
-  }
-}
+import { dropoffRuleNote } from "./dropoff-note";
 
 /**
  * Where a one-way trip from the location may end: the three rules as
  * cards, the one in force marked. Choosing one saves it at once; the mark
- * moves straight away and the line under the cards says when it is saved.
+ * moves straight away, a toast says it is saved, and a refusal stays under
+ * the cards.
  */
 export function DropoffRuleForm({
   locationId,
@@ -33,14 +25,18 @@ export function DropoffRuleForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(rule);
-  const [outcome, setOutcome] = useState<{ error: string | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function choose(option: DropoffRule) {
-    setOutcome(null);
+    setError(null);
     startTransition(async () => {
       setShown(option);
       const result = await setDropoffRuleAction(locationId, option);
-      setOutcome({ error: result?.error ?? null });
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        toast.success(`Drop-offs: ${DROPOFF_RULE_LABELS[option]}.`);
+      }
     });
   }
 
@@ -61,45 +57,36 @@ export function DropoffRuleForm({
                 pending ? "cursor-wait" : "cursor-pointer",
               )}
             >
-              <input
-                type="radio"
+              <Radio
                 name="dropoffRule"
                 value={option}
                 checked={checked}
                 onChange={() => choose(option)}
-                className="mt-0.5 size-4 shrink-0 accent-neutral-900"
+                className="mt-0.5"
               />
               <span className="grid gap-0.5">
                 <span className="font-medium text-neutral-900">
                   {DROPOFF_RULE_LABELS[option]}
                 </span>
                 <span className="text-neutral-600">
-                  {noteOf(option, locationName)}
+                  {dropoffRuleNote(option, locationName)}
                 </span>
               </span>
             </label>
           );
         })}
       </div>
-      <p
-        aria-live="polite"
-        className={cx(
-          "mt-3 min-h-5 text-sm",
-          pending
-            ? "text-neutral-500"
-            : outcome?.error
-              ? "text-red-700"
-              : "text-emerald-700",
-        )}
-      >
-        {pending
-          ? "Saving…"
-          : outcome?.error
-            ? outcome.error
-            : outcome
-              ? "Saved."
-              : null}
-      </p>
+      {pending || error ? (
+        <p
+          aria-live="polite"
+          className={cx(
+            "mt-3 text-sm",
+            error ? "text-red-700" : "text-neutral-500",
+          )}
+        >
+          {error ?? "Saving…"}
+        </p>
+      ) : null}
     </fieldset>
   );
 }

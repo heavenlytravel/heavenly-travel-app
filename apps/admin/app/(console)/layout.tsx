@@ -4,6 +4,7 @@ import {
   SidebarPanelProvider,
   SidebarProvider,
 } from "@repo/ui/sidebar";
+import { Toaster } from "@repo/ui/toast";
 import { cookies } from "next/headers";
 import { AppSidebar } from "../_components/AppSidebar";
 import { ConsoleBody } from "../_components/ConsoleBody";
@@ -40,6 +41,8 @@ export default async function ConsoleLayout({
           <ConsoleBody>{children}</ConsoleBody>
         </SidebarPanelProvider>
       </SidebarInset>
+      {/* The console's one place for "Saved" and the like, at the corner. */}
+      <Toaster />
     </SidebarProvider>
   );
 }

@@ -6,6 +6,7 @@ import {
   type LocationState,
 } from "@repo/db";
 import { useConfirm, type ConfirmRequest } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { moveLocationStateAction } from "../actions";
@@ -64,6 +65,15 @@ export function StateMove({
         LOCATION_STATE_MOVE[state],
       );
       setError(result?.error ?? null);
+      if (!result?.error) {
+        toast.success(
+          state === "draft"
+            ? `${name} is live.`
+            : state === "live"
+              ? `${name} is paused.`
+              : `${name} is live again.`,
+        );
+      }
     });
   }
 

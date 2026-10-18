@@ -24,9 +24,12 @@ import {
   type PageHighlight,
 } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { Tooltip } from "@repo/ui/tooltip";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Field, Input, Select, Textarea } from "@repo/ui/field";
+import { Field, Input, Textarea } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
+import { toast } from "@repo/ui/toast";
 import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
 import {
@@ -200,7 +203,6 @@ export function PageEditor({
   const [publishedAt, setPublishedAt] = useState(publishedAtAtOpen);
   const [version, setVersion] = useState(versionAtOpen);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<PageEditorTab>("content");
   const [publishing, setPublishing] = useState(false);
@@ -242,7 +244,6 @@ export function PageEditor({
   function edit(patch: Partial<FormContent>) {
     setContent((current) => ({ ...current, ...patch }));
     setError(null);
-    setNotice(null);
   }
 
   function editFaq(key: string, patch: Partial<PageFaq>) {
@@ -284,7 +285,6 @@ export function PageEditor({
       );
       if (!result.ok) {
         setError(result.error);
-        setNotice(null);
         return;
       }
       setVersion(result.version);
@@ -295,7 +295,7 @@ export function PageEditor({
         setPublishing(false);
       }
       setError(null);
-      setNotice(publish ? "Published." : "Draft saved.");
+      toast.success(publish ? "Published." : "Draft saved.");
     });
   }
 
@@ -315,13 +315,12 @@ export function PageEditor({
       const result = await unpublishPageAction(locationId, page);
       if (result) {
         setError(result.error);
-        setNotice(null);
         return;
       }
       setPublished(null);
       setPublishedAt(null);
       setError(null);
-      setNotice("Unpublished. Your text is kept.");
+      toast.success("Unpublished. Your text is kept.");
     });
   }
 
@@ -349,8 +348,6 @@ export function PageEditor({
     <span className="text-red-700">{error}</span>
   ) : !limits.ok ? (
     <span className="text-red-700">{limits.error}</span>
-  ) : notice ? (
-    <span className="text-emerald-700">{notice}</span>
   ) : (
     <span className="text-neutral-600">{standingNote}</span>
   );
@@ -398,7 +395,7 @@ export function PageEditor({
             <PreviewLink
               size="sm"
               href={previewUrl}
-              title={
+              hint={
                 dirty
                   ? "Shows the saved draft: save first to see your latest edits."
                   : undefined
@@ -412,18 +409,21 @@ export function PageEditor({
             >
               Save draft
             </Button>
-            <Button
-              size="sm"
-              disabled={pending || status === "published"}
-              title={
+            <Tooltip
+              content={
                 status === "published"
                   ? "The public sees this draft already."
-                  : undefined
+                  : null
               }
-              onClick={() => setPublishing(true)}
             >
-              Publish
-            </Button>
+              <Button
+                size="sm"
+                disabled={pending || status === "published"}
+                onClick={() => setPublishing(true)}
+              >
+                Publish
+              </Button>
+            </Tooltip>
           </div>
         </div>
         <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
@@ -461,12 +461,11 @@ export function PageEditor({
             >
               {entry.label}
               {missing > 0 ? (
-                <span
-                  title={`${missing} to do before publishing`}
-                  className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums"
-                >
-                  {missing}
-                </span>
+                <Tooltip content={`${missing} to do before publishing`}>
+                  <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
+                    {missing}
+                  </span>
+                </Tooltip>
               ) : null}
             </button>
           );
@@ -791,19 +790,19 @@ export function PageEditor({
                                 : ""
                             }
                             disabled={addresses.length === 0}
-                            onChange={(event) =>
+                            onValueChange={(next) =>
                               editHighlight(highlight.key, {
-                                addressId: event.target.value || null,
+                                addressId: next || null,
                               })
                             }
-                          >
-                            <option value="">No address</option>
-                            {addresses.map((address) => (
-                              <option key={address.id} value={address.id}>
-                                {address.name}
-                              </option>
-                            ))}
-                          </Select>
+                            options={[
+                              { value: "", label: "No address" },
+                              ...addresses.map((address) => ({
+                                value: address.id,
+                                label: address.name,
+                              })),
+                            ]}
+                          />
                         </Field>
                       </li>
                     ))}

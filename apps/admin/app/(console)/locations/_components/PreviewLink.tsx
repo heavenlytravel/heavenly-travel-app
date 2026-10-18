@@ -1,5 +1,6 @@
 import { Button } from "@repo/ui/button";
 import { ExternalLinkIcon } from "@repo/ui/icons";
+import { Tooltip } from "@repo/ui/tooltip";
 
 /**
  * "Preview": opens a page of a location as staff preview it on the
@@ -10,26 +11,23 @@ import { ExternalLinkIcon } from "@repo/ui/icons";
 export function PreviewLink({
   href,
   size = "md",
-  title = "Opens the saved draft on the customer site.",
+  hint = "Opens the saved draft on the customer site.",
   className,
 }: {
   href: string;
   size?: "sm" | "md";
-  title?: string;
+  /** The tooltip. */
+  hint?: string;
   className?: string;
 }) {
   return (
-    <Button asChild variant="secondary" size={size}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        title={title}
-        className={className}
-      >
-        Preview
-        <ExternalLinkIcon />
-      </a>
-    </Button>
+    <Tooltip content={hint}>
+      <Button asChild variant="secondary" size={size}>
+        <a href={href} target="_blank" rel="noreferrer" className={className}>
+          Preview
+          <ExternalLinkIcon />
+        </a>
+      </Button>
+    </Tooltip>
   );
 }

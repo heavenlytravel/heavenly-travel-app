@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 
 /** A state as the picker offers it. */
@@ -33,8 +34,7 @@ export function StatePicker({
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
         {states.map((state) => (
           <label key={state.code} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               name="states"
               value={state.code}
               checked={value.includes(state.code)}
@@ -45,7 +45,6 @@ export function StatePicker({
                     : value.filter((code) => code !== state.code),
                 )
               }
-              className="size-4 accent-neutral-900"
             />
             {state.name}
           </label>

@@ -1,4 +1,5 @@
 import { Button } from "@repo/ui/button";
+import { Tooltip } from "@repo/ui/tooltip";
 import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
 
 /**
@@ -21,28 +22,30 @@ export function RowControls({
 }) {
   return (
     <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={isFirst}
-        aria-label={`Move ${name} up`}
-        title="Move up"
-        className="w-8 px-0"
-        onClick={() => onMove(-1)}
-      >
-        <ArrowUpIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={isLast}
-        aria-label={`Move ${name} down`}
-        title="Move down"
-        className="w-8 px-0"
-        onClick={() => onMove(1)}
-      >
-        <ArrowDownIcon />
-      </Button>
+      <Tooltip content="Move up">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isFirst}
+          aria-label={`Move ${name} up`}
+          className="w-8 px-0"
+          onClick={() => onMove(-1)}
+        >
+          <ArrowUpIcon />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Move down">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isLast}
+          aria-label={`Move ${name} down`}
+          className="w-8 px-0"
+          onClick={() => onMove(1)}
+        >
+          <ArrowDownIcon />
+        </Button>
+      </Tooltip>
       <Button
         variant="ghost"
         size="sm"

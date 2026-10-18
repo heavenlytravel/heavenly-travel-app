@@ -12,8 +12,11 @@ import {
   type ZoneShape,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
-import { Field, Input, inputClassName } from "@repo/ui/field";
+import { Field, Input, Radio, inputClassName } from "@repo/ui/field";
+import { NumberField } from "@repo/ui/number-field";
+import { Select } from "@repo/ui/select";
 import { PlaceInput } from "@repo/ui/place-input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -259,6 +262,9 @@ export function ZoneEditor({
         setError(result.error);
         return;
       }
+      toast.success(
+        zone ? `Saved the zone ${name}.` : `Added the zone ${name}.`,
+      );
       router.push(locationTabHref(locationSlug, "coverage"));
     });
   }
@@ -300,8 +306,7 @@ export function ZoneEditor({
                       : !chosen && "cursor-pointer hover:border-neutral-300",
                   )}
                 >
-                  <input
-                    type="radio"
+                  <Radio
                     name="source"
                     checked={chosen}
                     disabled={unavailable}
@@ -309,7 +314,7 @@ export function ZoneEditor({
                       setSource(option.key);
                       setError(null);
                     }}
-                    className="mt-0.5 size-4 shrink-0 accent-neutral-900"
+                    className="mt-0.5"
                   />
                   <span className="grid gap-0.5">
                     <span className="font-medium text-neutral-900">
@@ -336,23 +341,19 @@ export function ZoneEditor({
               >
                 District
               </label>
-              <select
+              <Select
                 id={districtSelectId}
                 value={district?.code ?? ""}
-                onChange={(event) => pickDistrict(event.target.value)}
-                className={inputClassName}
-              >
-                <option value="">Pick a district</option>
-                {choices.map((group) => (
-                  <optgroup key={group.state} label={group.state}>
-                    {group.districts.map((entry) => (
-                      <option key={entry.code} value={entry.code}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                onValueChange={pickDistrict}
+                placeholder="Pick a district"
+                options={choices.map((group) => ({
+                  label: group.state,
+                  options: group.districts.map((entry) => ({
+                    value: entry.code,
+                    label: entry.name,
+                  })),
+                }))}
+              />
               <p className="text-xs text-neutral-500">
                 The location&apos;s own states come first; any district may be a
                 zone, for an outstation destination.
@@ -432,9 +433,7 @@ export function ZoneEditor({
                 ) : undefined
               }
             >
-              <Input
-                type="number"
-                inputMode="numeric"
+              <NumberField
                 min={ZONE_LIMITS.radiusM.min}
                 max={ZONE_LIMITS.radiusM.max}
                 step={100}

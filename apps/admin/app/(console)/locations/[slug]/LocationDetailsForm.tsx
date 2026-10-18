@@ -3,6 +3,7 @@
 import { LOCATION_LIMITS } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
 import { useActionState, useState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
 import { SlugField } from "../_components/SlugField";
@@ -26,11 +27,10 @@ export function LocationDetailsForm({
   };
   states: StateOption[];
 }) {
-  const [saved, setSaved] = useState(false);
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (previous, formData) => {
       const result = await updateLocationAction(previous, formData);
-      setSaved(result === null);
+      if (result === null) toast.success("Details saved.");
       return result;
     },
     null,
@@ -41,11 +41,7 @@ export function LocationDetailsForm({
   const [stateCodes, setStateCodes] = useState(location.stateCodes);
 
   return (
-    <form
-      action={action}
-      className="grid gap-4"
-      onChange={() => setSaved(false)}
-    >
+    <form action={action} className="grid gap-4">
       <input type="hidden" name="id" value={location.id} />
       <input type="hidden" name="previousSlug" value={location.slug} />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -81,10 +77,6 @@ export function LocationDetailsForm({
           </p>
         ) : stateCodes.length === 0 ? (
           <p className="text-sm text-neutral-500">Tick at least one state.</p>
-        ) : saved ? (
-          <p aria-live="polite" className="text-sm text-emerald-700">
-            Saved.
-          </p>
         ) : null}
       </div>
     </form>

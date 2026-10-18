@@ -9,7 +9,9 @@ import {
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
+import { TimeField } from "@repo/ui/date-field";
 import { Input } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
 import { useActionState, useState } from "react";
 import type { ActionState } from "../../../../_lib/action-state";
 import { setOddHoursAction } from "./actions";
@@ -36,11 +38,15 @@ export function OddHoursForm({
   /** The surcharge in force; null for none. */
   window: OddHours | null;
 }) {
-  const [saved, setSaved] = useState(false);
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (previous, formData) => {
       const result = await setOddHoursAction(previous, formData);
-      setSaved(result === null);
+      if (result === null) {
+        const removed = ["from", "to", "amount"].every(
+          (field) => !String(formData.get(field) ?? "").trim(),
+        );
+        toast.success(removed ? "Surcharge removed." : "Surcharge saved.");
+      }
       return result;
     },
     null,
@@ -65,35 +71,26 @@ export function OddHoursForm({
     setFrom("");
     setTo("");
     setAmount("");
-    setSaved(false);
   }
 
   return (
-    <form
-      action={action}
-      className="grid gap-4"
-      onChange={() => setSaved(false)}
-    >
+    <form action={action} className="grid gap-4">
       <input type="hidden" name="locationId" value={locationId} />
       <input type="hidden" name="kind" value={kind} />
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-sm text-neutral-700">
         <span>Trips that start between</span>
-        <Input
+        <TimeField
           name="from"
-          type="time"
           aria-label="Window starts at"
           value={from}
-          onChange={(event) => setFrom(event.target.value)}
-          className="w-32"
+          onChange={setFrom}
         />
         <span>and</span>
-        <Input
+        <TimeField
           name="to"
-          type="time"
           aria-label="Window ends at"
           value={to}
-          onChange={(event) => setTo(event.target.value)}
-          className="w-32"
+          onChange={setTo}
         />
         <span>cost</span>
         <span className="relative">
@@ -151,7 +148,6 @@ export function OddHoursForm({
               onClick={() => {
                 setKind(value);
                 setAmount("");
-                setSaved(false);
               }}
               className={cx(
                 "h-10 px-3 text-sm font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-neutral-900",
@@ -186,10 +182,6 @@ export function OddHoursForm({
         {state?.error ? (
           <p aria-live="polite" className="text-sm text-red-700">
             {state.error}
-          </p>
-        ) : saved ? (
-          <p aria-live="polite" className="text-sm text-emerald-700">
-            Saved.
           </p>
         ) : null}
       </div>

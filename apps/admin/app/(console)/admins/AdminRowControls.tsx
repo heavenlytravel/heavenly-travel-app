@@ -2,6 +2,7 @@
 
 import type { AdminChange, AdminTeam } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { Sheet } from "@repo/ui/sheet";
 import { useActionState, useState } from "react";
@@ -25,13 +26,20 @@ export function AdminRowControls({
   const [editResult, editAction, editPending] = useActionState(
     async (previous: AdminChange | null, formData: FormData) => {
       const result = await setAdminAction(previous, formData);
-      if (result.ok) setEditing(false);
+      if (result.ok) {
+        setEditing(false);
+        toast.success(`Saved the level and teams of ${email}.`);
+      }
       return result;
     },
     null,
   );
   const [revokeResult, revokeAction, revokePending] = useActionState(
-    revokeAdminAction,
+    async (previous: AdminChange | null, formData: FormData) => {
+      const result = await revokeAdminAction(previous, formData);
+      if (result.ok) toast.success(`Removed admin access for ${email}.`);
+      return result;
+    },
     null,
   );
   const [dialog, confirm] = useConfirm();

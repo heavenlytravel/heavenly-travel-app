@@ -3,7 +3,8 @@
 import { parseRinggit, type DropoffRule } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
-import { Field, Select } from "@repo/ui/field";
+import { Field } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
 import { useState, useTransition, type FormEvent } from "react";
 
 type Zone = { id: string; name: string };
@@ -129,39 +130,35 @@ function RouteForm({
         <Field label="From">
           <Select
             value={from}
-            onChange={(event) => {
-              setFrom(event.target.value);
+            onValueChange={(next) => {
+              setFrom(next);
               setTo("");
             }}
-          >
-            {zones.map((zone) => (
-              <option
-                key={zone.id}
-                value={zone.id}
-                disabled={partnersOf(zone.id).length === 0}
-              >
-                {zone.name}
-              </option>
-            ))}
-          </Select>
+            options={zones.map((zone) => ({
+              value: zone.id,
+              label: zone.name,
+              disabled: partnersOf(zone.id).length === 0,
+            }))}
+          />
         </Field>
         <span aria-hidden="true" className="pb-2.5 text-neutral-400">
           ↔
         </span>
         <Field label="To">
-          <Select value={toId} onChange={(event) => setTo(event.target.value)}>
-            {zones
+          <Select
+            value={toId}
+            onValueChange={setTo}
+            options={zones
               .filter((zone) => zone.id !== from)
               .map((zone) => {
                 const taken = paired.has(pairKey(from, zone.id));
-                return (
-                  <option key={zone.id} value={zone.id} disabled={taken}>
-                    {zone.name}
-                    {taken ? " (on the grid)" : ""}
-                  </option>
-                );
+                return {
+                  value: zone.id,
+                  label: taken ? `${zone.name} (on the grid)` : zone.name,
+                  disabled: taken,
+                };
               })}
-          </Select>
+          />
         </Field>
       </div>
 

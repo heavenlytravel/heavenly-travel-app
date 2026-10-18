@@ -7,6 +7,7 @@ import {
   type PriceOverride,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { toast } from "@repo/ui/toast";
 import { Field, Input } from "@repo/ui/field";
 import { useActionState, useState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
@@ -30,7 +31,10 @@ export function PriceOverrideControl({
   const [state, action, pending] = useActionState<ActionState, FormData>(
     async (previous, formData) => {
       const result = await overrideItemPriceAction(previous, formData);
-      if (result === null) setOpen(false);
+      if (result === null) {
+        setOpen(false);
+        toast.success("Agreed price saved.");
+      }
       return result;
     },
     null,

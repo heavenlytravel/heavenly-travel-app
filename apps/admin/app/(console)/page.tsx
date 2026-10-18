@@ -11,6 +11,7 @@ import {
 import { listLocationOverviews, type LocationOverview } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { Button } from "@repo/ui/button";
+import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { AddressTester } from "../_components/AddressTester";
@@ -167,17 +168,18 @@ function LocationCard({
             value={
               location.awaitingConfirmation > 0 && opensBookings ? (
                 // Above the card's link, so it opens the bookings instead.
-                <Link
-                  href={locationBookingsHref(location.slug, "received")}
-                  title="Bookings awaiting confirmation"
-                  className="relative z-1 inline-flex items-center gap-1.5 align-top text-amber-800 underline-offset-4 hover:underline"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 rounded-full bg-amber-500"
-                  />
-                  {location.awaitingConfirmation}
-                </Link>
+                <Tooltip content="Bookings awaiting confirmation">
+                  <Link
+                    href={locationBookingsHref(location.slug, "received")}
+                    className="relative z-1 inline-flex items-center gap-1.5 align-top text-amber-800 underline-offset-4 hover:underline"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="size-1.5 rounded-full bg-amber-500"
+                    />
+                    {location.awaitingConfirmation}
+                  </Link>
+                </Tooltip>
               ) : (
                 location.awaitingConfirmation
               )

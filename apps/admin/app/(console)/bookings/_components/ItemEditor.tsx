@@ -23,7 +23,16 @@ import {
   tripItemField,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Field, Input, inputClassName, Select } from "@repo/ui/field";
+import { DateField, TimeField } from "@repo/ui/date-field";
+import {
+  Field,
+  FieldGroup,
+  Input,
+  inputClassName,
+  Radio,
+} from "@repo/ui/field";
+import { NumberField } from "@repo/ui/number-field";
+import { Select } from "@repo/ui/select";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useTransition } from "react";
 import { Card, CardTitle } from "../../../_components/Card";
@@ -201,35 +210,28 @@ export function ItemEditor({
               <Select
                 name={name(CATEGORY_FIELD)}
                 value={trip.category}
-                onChange={(e) => {
-                  if (isTripCategory(e.target.value)) {
-                    setTrip({ category: e.target.value });
-                  }
+                onValueChange={(next) => {
+                  if (isTripCategory(next)) setTrip({ category: next });
                 }}
-              >
-                {TRIP_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {TRIP_CATEGORY_LABELS[category]}
-                  </option>
-                ))}
-              </Select>
+                options={TRIP_CATEGORIES.map((category) => ({
+                  value: category,
+                  label: TRIP_CATEGORY_LABELS[category],
+                }))}
+              />
             )}
           </Field>
           <Field label="Trip">
             <Select
               name={name(TRIP_PARAM.mode)}
               value={trip.mode}
-              onChange={(e) => {
-                if (isTripMode(e.target.value))
-                  setTrip({ mode: e.target.value });
+              onValueChange={(next) => {
+                if (isTripMode(next)) setTrip({ mode: next });
               }}
-            >
-              {TRIP_MODES.map((mode) => (
-                <option key={mode} value={mode}>
-                  {TRIP_MODE_LABELS[mode]}
-                </option>
-              ))}
-            </Select>
+              options={TRIP_MODES.map((mode) => ({
+                value: mode,
+                label: TRIP_MODE_LABELS[mode],
+              }))}
+            />
           </Field>
           <div className="grid gap-1.5">
             <label
@@ -268,33 +270,30 @@ export function ItemEditor({
             <Field label="Hours">
               <Select
                 name={name(TRIP_PARAM.hours)}
-                value={trip.hours}
-                onChange={(e) => setTrip({ hours: e.target.value })}
-              >
-                {HOURLY_OPTIONS.map((h) => (
-                  <option key={h} value={h}>
-                    {h} hours
-                  </option>
-                ))}
-              </Select>
+                value={String(trip.hours)}
+                onValueChange={(next) => setTrip({ hours: next })}
+                options={HOURLY_OPTIONS.map((h) => ({
+                  value: String(h),
+                  label: `${h} hours`,
+                }))}
+              />
             </Field>
           )}
           <Field label="Date">
-            <Input
+            <DateField
               name={name(TRIP_PARAM.date)}
-              type="date"
               required
               value={trip.date}
-              onChange={(e) => setTrip({ date: e.target.value })}
+              onChange={(date) => setTrip({ date })}
             />
           </Field>
           <Field label="Pick-up time">
-            <Input
+            <TimeField
               name={name(TRIP_PARAM.time)}
-              type="time"
+              aria-label="Pick-up time"
               required
               value={trip.time}
-              onChange={(e) => setTrip({ time: e.target.value })}
+              onChange={(time) => setTrip({ time })}
             />
           </Field>
         </div>
@@ -336,7 +335,7 @@ export function ItemEditor({
                 classes first.
               </p>
             ) : (
-              <div className="grid gap-2">
+              <FieldGroup className="grid gap-2">
                 {quote.classes.map((c) => {
                   const ok = isChoosable(c, passengers);
                   const on = draft.vehicleClassId === c.id && ok;
@@ -349,15 +348,14 @@ export function ItemEditor({
                           : "border-neutral-200"
                       } ${ok ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
                     >
-                      <input
-                        type="radio"
+                      <Radio
                         name={name(TRIP_OPTION_FIELDS.vehicleClass)}
                         value={c.id}
                         checked={on}
                         disabled={!ok}
                         required
                         onChange={() => onChange({ vehicleClassId: c.id })}
-                        className="mt-0.5 size-4 accent-neutral-900"
+                        className="mt-0.5"
                       />
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="flex flex-wrap items-baseline justify-between gap-x-4">
@@ -383,7 +381,7 @@ export function ItemEditor({
                     </label>
                   );
                 })}
-              </div>
+              </FieldGroup>
             )}
           </Card>
 
@@ -394,10 +392,8 @@ export function ItemEditor({
                 label="Passengers"
                 hint={`Up to ${maxPassengers} in this category.`}
               >
-                <Input
+                <NumberField
                   name={name(TRIP_OPTION_FIELDS.passengers)}
-                  type="number"
-                  inputMode="numeric"
                   min={1}
                   max={maxPassengers}
                   required
@@ -416,18 +412,16 @@ export function ItemEditor({
                 <Field label="Child seats">
                   <Select
                     name={name(TRIP_OPTION_FIELDS.childSeats)}
-                    value={draft.childSeats}
-                    onChange={(e) => onChange({ childSeats: e.target.value })}
-                  >
-                    {Array.from(
+                    value={String(draft.childSeats)}
+                    onValueChange={(next) => onChange({ childSeats: next })}
+                    options={Array.from(
                       { length: TRIP_MAX_CHILD_SEATS + 1 },
-                      (_, n) => (
-                        <option key={n} value={n}>
-                          {n === 0 ? "None" : n}
-                        </option>
-                      ),
+                      (_, n) => ({
+                        value: String(n),
+                        label: n === 0 ? "None" : String(n),
+                      }),
                     )}
-                  </Select>
+                  />
                 </Field>
               ) : null}
               <Field label="Flight number" hint="Optional.">

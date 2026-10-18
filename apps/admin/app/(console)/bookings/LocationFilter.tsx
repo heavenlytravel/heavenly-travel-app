@@ -1,7 +1,7 @@
 "use client";
 
 import type { BookingStatus, LocationName } from "@repo/db/server";
-import { Select } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
 import { useRouter } from "next/navigation";
 import { useId } from "react";
 import { bookingsHref } from "../../_lib/routes";
@@ -29,20 +29,18 @@ export function LocationFilter({
       <Select
         id={id}
         value={value}
-        onChange={(event) =>
-          router.push(
-            bookingsHref({ status, location: event.target.value || undefined }),
-          )
+        onValueChange={(next) =>
+          router.push(bookingsHref({ status, location: next || undefined }))
         }
+        options={[
+          { value: "", label: "All locations" },
+          ...locations.map((location) => ({
+            value: location.id,
+            label: location.name,
+          })),
+        ]}
         className="w-auto min-w-40"
-      >
-        <option value="">All locations</option>
-        {locations.map((location) => (
-          <option key={location.id} value={location.id}>
-            {location.name}
-          </option>
-        ))}
-      </Select>
+      />
     </label>
   );
 }

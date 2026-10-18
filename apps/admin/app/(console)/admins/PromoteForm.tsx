@@ -1,14 +1,23 @@
 "use client";
 
+import type { AdminChange } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
 import { useActionState } from "react";
 import { Card } from "../../_components/Card";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
 
 export function PromoteForm() {
-  const [result, action, pending] = useActionState(setAdminAction, null);
+  const [result, action, pending] = useActionState(
+    async (previous: AdminChange | null, formData: FormData) => {
+      const next = await setAdminAction(previous, formData);
+      if (next.ok) toast.success("Admin access granted.");
+      return next;
+    },
+    null,
+  );
 
   return (
     <Card className="mt-6">
@@ -35,13 +44,11 @@ export function PromoteForm() {
           </Button>
         </div>
 
-        <p aria-live="polite" className="mt-3 min-h-5 text-sm">
-          {result?.ok === false ? (
-            <span className="text-red-700">{result.error}</span>
-          ) : result?.ok ? (
-            <span className="text-emerald-700">Admin access granted.</span>
-          ) : null}
-        </p>
+        {result?.ok === false ? (
+          <p aria-live="polite" className="mt-3 text-sm text-red-700">
+            {result.error}
+          </p>
+        ) : null}
       </form>
     </Card>
   );

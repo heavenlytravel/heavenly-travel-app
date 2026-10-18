@@ -5,7 +5,8 @@ import {
   adminLevelOf,
   type AdminTeam,
 } from "@repo/db";
-import { Field, Select } from "@repo/ui/field";
+import { Checkbox, Field } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
 
 /**
  * The level and the teams of one admin, shared by the promote form and the
@@ -21,13 +22,14 @@ export function AdminFields({
   return (
     <>
       <Field label="Level" className="w-36">
-        <Select name="level" defaultValue={adminLevelOf(level)}>
-          {ADMIN_LEVELS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </Select>
+        <Select
+          name="level"
+          defaultValue={adminLevelOf(level)}
+          options={ADMIN_LEVELS.map((option) => ({
+            value: option,
+            label: option,
+          }))}
+        />
       </Field>
       <fieldset>
         <legend className="mb-1.5 text-sm font-medium text-neutral-800">
@@ -36,12 +38,10 @@ export function AdminFields({
         <div className="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-2">
           {ADMIN_TEAMS.map((team) => (
             <label key={team} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 name="teams"
                 value={team}
                 defaultChecked={teams.includes(team)}
-                className="size-4 accent-neutral-900"
               />
               {ADMIN_TEAM_LABELS[team]}
             </label>

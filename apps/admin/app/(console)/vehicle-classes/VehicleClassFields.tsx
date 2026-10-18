@@ -12,7 +12,9 @@ import {
   type VehicleClassRules,
 } from "@repo/db";
 import type { VehicleClass } from "@repo/db/server";
-import { Field, Input, Select } from "@repo/ui/field";
+import { Checkbox, Field, Input } from "@repo/ui/field";
+import { NumberField } from "@repo/ui/number-field";
+import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
 import { Card } from "../../_components/Card";
@@ -74,10 +76,8 @@ function WholeNumberInput({
   onChange?: (value: number) => void;
 }) {
   return (
-    <Input
+    <NumberField
       name={field}
-      type="number"
-      inputMode="numeric"
       step={1}
       min={min}
       max={max}
@@ -159,14 +159,12 @@ export function VehicleClassFieldset({
             <Select
               name="category"
               value={category}
-              onChange={(e) => chooseCategory(e.target.value)}
-            >
-              {TRIP_CATEGORIES.map((option) => (
-                <option key={option} value={option}>
-                  {TRIP_CATEGORY_LABELS[option]}
-                </option>
-              ))}
-            </Select>
+              onValueChange={chooseCategory}
+              options={TRIP_CATEGORIES.map((option) => ({
+                value: option,
+                label: TRIP_CATEGORY_LABELS[option],
+              }))}
+            />
           </Field>
           <Field label={<ClassFieldLabel field="sortOrder" />}>
             <WholeNumberInput
@@ -177,11 +175,9 @@ export function VehicleClassFieldset({
         </div>
         {showActive ? (
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               name="isActive"
               defaultChecked={vehicleClass?.isActive ?? true}
-              className="size-4 accent-neutral-900"
             />
             <ClassFieldLabel field="isActive" />
           </label>

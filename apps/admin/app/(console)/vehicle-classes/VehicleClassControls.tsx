@@ -3,6 +3,7 @@
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { VehicleClass } from "@repo/db/server";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setVehicleClassActiveAction } from "./actions";
@@ -49,6 +50,13 @@ export function VehicleClassActiveSwitch({
               next,
             );
             setError(result?.error ?? null);
+            if (!result?.error) {
+              toast.success(
+                next
+                  ? `${vehicleClass.name} is on.`
+                  : `${vehicleClass.name} is off.`,
+              );
+            }
           });
         }}
       />

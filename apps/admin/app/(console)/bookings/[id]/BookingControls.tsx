@@ -1,7 +1,12 @@
 "use client";
 
-import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
+import {
+  isNextItemStatus,
+  nextItemStatusOf,
+  type NextItemStatus,
+} from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
 import { useActionState } from "react";
@@ -12,6 +17,13 @@ import {
   cancelBookingAction,
   cancelItemAction,
 } from "./actions";
+
+/** What the toast says once each step is taken. */
+const ADVANCED: Record<NextItemStatus, string> = {
+  confirmed: "Item confirmed. The customer is told.",
+  assigned: "Driver assigned.",
+  completed: "Item completed.",
+};
 
 /** What the forward button says for each step it would take. */
 const ADVANCE_LABELS: Record<NextItemStatus, string> = {
@@ -55,11 +67,20 @@ export function ItemControls({
   const [advanceState, advance, advancing] = useActionState<
     ActionState,
     FormData
-  >(advanceItemAction, null);
+  >(async (previous, formData) => {
+    const result = await advanceItemAction(previous, formData);
+    const to = formData.get("to");
+    if (!result?.error && isNextItemStatus(to)) toast.success(ADVANCED[to]);
+    return result;
+  }, null);
   const [cancelState, cancel, cancelling] = useActionState<
     ActionState,
     FormData
-  >(cancelItemAction, null);
+  >(async (previous, formData) => {
+    const result = await cancelItemAction(previous, formData);
+    if (!result?.error) toast.success(`Cancelled ${label}.`);
+    return result;
+  }, null);
   const [dialog, confirm] = useConfirm();
   const next = canAdvance ? nextItemStatusOf(status) : null;
   const cancellable =
@@ -122,7 +143,11 @@ export function CancelBookingControl({
   reference: string;
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
-    cancelBookingAction,
+    async (previous, formData) => {
+      const result = await cancelBookingAction(previous, formData);
+      if (!result?.error) toast.success(`Cancelled booking ${reference}.`);
+      return result;
+    },
     null,
   );
   const [dialog, confirm] = useConfirm();

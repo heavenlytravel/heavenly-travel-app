@@ -3,8 +3,10 @@
 import { TOP_CHOICE_CAP, type TopChoiceChange } from "@repo/db";
 import type { TopChoice, TopChoiceCandidate } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
+import { Tooltip } from "@repo/ui/tooltip";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
-import { Select } from "@repo/ui/field";
+import { Select } from "@repo/ui/select";
 import { ArrowLeftIcon, ArrowRightIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { useState, useTransition } from "react";
@@ -45,9 +47,22 @@ export function TopChoiceControl({
   );
 
   function change(locationId: string, what: TopChoiceChange) {
+    const name =
+      choices.find((choice) => choice.id === locationId)?.name ??
+      candidates.find((candidate) => candidate.id === locationId)?.name ??
+      "The location";
     startTransition(async () => {
       const result = await changeTopChoiceAction(locationId, what);
       setError(result?.error ?? null);
+      if (!result?.error) {
+        toast.success(
+          what === "add"
+            ? `${name} is on the home page.`
+            : what === "remove"
+              ? `${name} is off the home page.`
+              : `Moved ${name} ${what === "up" ? "earlier" : "later"}.`,
+        );
+      }
     });
   }
 
@@ -82,28 +97,30 @@ export function TopChoiceControl({
                 </p>
               </div>
               <TileFoot>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending || place === 0}
-                  aria-label={`Move ${choice.name} earlier`}
-                  title="Move earlier"
-                  className="w-8 px-0"
-                  onClick={() => change(choice.id, "up")}
-                >
-                  <ArrowLeftIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending || place === choices.length - 1}
-                  aria-label={`Move ${choice.name} later`}
-                  title="Move later"
-                  className="w-8 px-0"
-                  onClick={() => change(choice.id, "down")}
-                >
-                  <ArrowRightIcon />
-                </Button>
+                <Tooltip content="Move earlier">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending || place === 0}
+                    aria-label={`Move ${choice.name} earlier`}
+                    className="w-8 px-0"
+                    onClick={() => change(choice.id, "up")}
+                  >
+                    <ArrowLeftIcon />
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Move later">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending || place === choices.length - 1}
+                    aria-label={`Move ${choice.name} later`}
+                    className="w-8 px-0"
+                    onClick={() => change(choice.id, "down")}
+                  >
+                    <ArrowRightIcon />
+                  </Button>
+                </Tooltip>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -128,14 +145,12 @@ export function TopChoiceControl({
                       aria-label="Location to add"
                       value={toAdd}
                       disabled={pending}
-                      onChange={(event) => setPicked(event.target.value)}
-                    >
-                      {candidates.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {candidate.name}
-                        </option>
-                      ))}
-                    </Select>
+                      onValueChange={setPicked}
+                      options={candidates.map((candidate) => ({
+                        value: candidate.id,
+                        label: candidate.name,
+                      }))}
+                    />
                     <Button
                       variant="secondary"
                       disabled={pending || toAdd === ""}

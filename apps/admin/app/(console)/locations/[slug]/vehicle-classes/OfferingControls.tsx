@@ -3,6 +3,7 @@
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { Offering } from "@repo/db/server";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setOfferingActiveAction } from "./actions";
@@ -52,6 +53,13 @@ export function OfferingActiveSwitch({
               next,
             );
             setError(result?.error ?? null);
+            if (!result?.error) {
+              toast.success(
+                next
+                  ? `${vehicleClass.name} is on sale here.`
+                  : `${vehicleClass.name} is off sale here.`,
+              );
+            }
           });
         }}
       />

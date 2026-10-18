@@ -2,6 +2,7 @@
 
 import { plural } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { deleteZoneAction } from "./actions";
@@ -50,6 +51,7 @@ export function ZoneList({
           startTransition(async () => {
             const result = await deleteZoneAction(locationId, zoneId);
             setError(result?.error ?? null);
+            if (!result?.error) toast.success(`Removed the zone ${name}.`);
           });
         }}
       >

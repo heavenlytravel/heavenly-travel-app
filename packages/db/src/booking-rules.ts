@@ -205,6 +205,26 @@ export function formatLocalDateTime(instant: Date) {
   return localDateTime.format(instant);
 }
 
+const localDate = new Intl.DateTimeFormat("en-MY", {
+  timeZone: BOOKING_RULES.timeZone,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+/** The day alone, "Sat, 3 Oct 2026" in Malaysia, for a table that puts the time under it. */
+export function formatLocalDate(instant: Date) {
+  return localDate.format(instant);
+}
+
+/** The time alone, "09:30" in Malaysia, from the same minute the rules read. */
+export function formatLocalTime(instant: Date) {
+  const minute = localMinuteOfDay(instant);
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(Math.floor(minute / 60))}:${two(minute % 60)}`;
+}
+
 /**
  * The Malaysian calendar day an instant falls in, as the UTC instants it
  * starts at (inclusive) and ends at (exclusive), for "today" counts.

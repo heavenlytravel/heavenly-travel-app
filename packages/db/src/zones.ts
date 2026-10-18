@@ -7,6 +7,7 @@ import {
   ZONE_LIMITS,
   checkOddHours,
   checkZoneFields,
+  oddHoursOf,
   type DropoffRule,
   type OddHours,
   type RateCell,
@@ -256,29 +257,18 @@ export async function setOddHours(
       oddHoursFromMinute: window?.fromMinute ?? null,
       oddHoursToMinute: window?.toMinute ?? null,
       oddHoursPercent: window?.percent ?? null,
+      oddHoursFlatSen: window?.flatSen ?? null,
     });
     if (!changed) return { ok: true };
     await tx.location.update({
       where: { id: locationId },
       data: changed.after,
     });
-    const logged = (row: typeof location | typeof changed.after) =>
-      row.oddHoursFromMinute !== null &&
-      row.oddHoursFromMinute !== undefined &&
-      row.oddHoursToMinute !== null &&
-      row.oddHoursToMinute !== undefined &&
-      row.oddHoursPercent !== null &&
-      row.oddHoursPercent !== undefined
-        ? {
-            fromMinute: row.oddHoursFromMinute,
-            toMinute: row.oddHoursToMinute,
-            percent: row.oddHoursPercent,
-          }
-        : {};
+    const before = oddHoursOf(location);
     await logActivity(tx, actor, {
       action: "location.surcharge.updated",
       entityId: locationId,
-      before: logged(location),
+      before: before ? { ...before } : {},
       after: window ? { ...window } : {},
     });
     return { ok: true };

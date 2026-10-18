@@ -44,6 +44,7 @@ import {
   samePageContent,
   type LocationPageKey,
   type PageContent,
+  type PageImage,
 } from "./location-page-input";
 import {
   isInStates,
@@ -143,8 +144,14 @@ export type LocationAddressWithUses = LocationAddress & {
 export type LocationWithDetails = Location &
   WithStates & {
     addresses: LocationAddressWithUses[];
-    pages: PageStanding[];
+    pages: PageSummary[];
   };
+
+/** A page as the screens list it: where it stands, and the picture it leads with. */
+export type PageSummary = PageStanding & {
+  /** The draft's hero image, else that of the copy last published; null when neither has one. */
+  heroImage: PageImage | null;
+};
 
 /** The copy last published, kept when the page is unpublished; null before the first publish. */
 function publishedOf(page: LocationPageKey, row: LocationPage) {
@@ -161,17 +168,22 @@ export type PageRow = Pick<
 function standingOf(
   page: LocationPageKey,
   row: PageRow | undefined,
-): PageStanding {
+): PageSummary {
+  if (!row) return { page, status: "unpublished", heroImage: null };
+  const draft = pageContentOf(page, row.draft);
   return {
     page,
-    status: row
-      ? pageStatusOf(pageContentOf(page, row.draft), publicCopyOf(page, row))
-      : "unpublished",
+    status: pageStatusOf(draft, publicCopyOf(page, row)),
+    heroImage:
+      draft.heroImage ??
+      (row.published === null
+        ? null
+        : pageContentOf(page, row.published).heroImage),
   };
 }
 
 /** Every page of a location, written or not, in the order of `LOCATION_PAGES`. */
-export function standingsOf(rows: readonly PageRow[]): PageStanding[] {
+export function standingsOf(rows: readonly PageRow[]): PageSummary[] {
   return LOCATION_PAGES.map((page) =>
     standingOf(
       page,
@@ -224,7 +236,10 @@ export async function getLocation(
 }
 
 /** A location among the home page's top choices, as the Home page screen lists them. */
-export type TopChoice = Pick<Location, "id" | "name" | "state">;
+export type TopChoice = Pick<Location, "id" | "name" | "slug" | "state"> & {
+  /** Its main page's hero image, which its card on the home page shows. */
+  heroImage: PageImage | null;
+};
 
 const topChoices = {
   where: { topChoiceOrder: { not: null } },
@@ -235,11 +250,26 @@ const topChoices = {
  * The top choices in their order, paused ones included: a paused top choice
  * is left off the home page and keeps its place.
  */
-export function listTopChoices(): Promise<TopChoice[]> {
-  return db.location.findMany({
+export async function listTopChoices(): Promise<TopChoice[]> {
+  const locations = await db.location.findMany({
     ...topChoices,
-    select: { id: true, name: true, state: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      state: true,
+      pages: {
+        where: { locale: PAGE_LOCALE, page: LANDING_PAGE },
+        select: { page: true, isOn: true, draft: true, published: true },
+      },
+    },
   });
+  return locations.map(({ pages, ...location }) => ({
+    ...location,
+    heroImage:
+      standingsOf(pages).find((page) => page.page === LANDING_PAGE)
+        ?.heroImage ?? null,
+  }));
 }
 
 /** A location that can be added to the top choices. */
@@ -305,6 +335,17 @@ export async function listTopChoiceCards(): Promise<TopChoiceCard[]> {
     const view = publicLocationViewOf(location);
     return view ? [topChoiceCardOf(view)] : [];
   });
+}
+
+/** The location at a slug, by its id; null when no location has it. The console's address for a location is its slug. */
+export async function getLocationIdBySlug(
+  slug: string,
+): Promise<string | null> {
+  const location = await db.location.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  return location?.id ?? null;
 }
 
 /** The slug the location's pages are at now; the customer site caches them by it. */

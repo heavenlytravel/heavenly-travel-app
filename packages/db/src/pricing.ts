@@ -1,4 +1,5 @@
 import { isTripMode, type TripMode } from "./booking-status";
+import type { SurchargeCharge } from "./rates-input";
 
 /**
  * Instant pricing for a trip with a driver, car or coach. Pure and
@@ -9,7 +10,8 @@ import { isTripMode, type TripMode } from "./booking-status";
  *   one-way, on a route with a fixed rate: the rate
  *   one-way, metered: max(minimumFare, baseFare + perKm x distanceKm)
  *   hourly:  hourlyRate x hours
- *   then the odd-hours surcharge, a percentage, when the pickup is in the window
+ *   then the odd-hours surcharge, when the pickup is in the window: a
+ *   percentage of the price, or a flat amount
  */
 
 /** The metered rates a location sells a class at, as stored on `LocationVehicleClass`. */
@@ -36,8 +38,8 @@ export type TripPriceInput = {
   rates: TripRates;
   /** The grid's price for a one-way trip between two zones; null when the trip is metered. */
   route?: RouteRate | null;
-  /** The odd-hours percentage, when the pickup is in the window; null otherwise. */
-  surchargePercent?: number | null;
+  /** What the odd-hours surcharge adds, when the pickup is in the window; null otherwise. */
+  surcharge?: SurchargeCharge | null;
 };
 
 /** The receipt stored on the booking item: every input and the result. */
@@ -48,8 +50,8 @@ export type TripPriceBreakdown = {
   hours: number | null;
   /** The fixed rate the price is, or null when the trip was metered. */
   route: RouteRate | null;
-  /** The surcharge that was added, or null when none applied. */
-  surcharge: { percent: number; amountSen: number } | null;
+  /** The surcharge that was added, and its percentage when it was one; null when none applied. */
+  surcharge: { percent: number | null; amountSen: number } | null;
   /** Before the surcharge. */
   subtotalSen: number;
   totalSen: number;
@@ -63,9 +65,12 @@ export type TripPriceBreakdown = {
 export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   const { trip, rates } = input;
   const route = input.route ?? null;
-  const percent = input.surchargePercent ?? null;
-  if (percent !== null && !(percent >= 0)) {
-    throw new RangeError("surchargePercent must be zero or more");
+  const charge = input.surcharge ?? null;
+  if (charge?.percent != null && !(charge.percent >= 0)) {
+    throw new RangeError("the surcharge percent must be zero or more");
+  }
+  if (charge?.flatSen != null && !(charge.flatSen >= 0)) {
+    throw new RangeError("the flat surcharge must be zero or more");
   }
 
   let subtotalSen: number;
@@ -89,10 +94,15 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
     subtotalSen = rates.hourlyRateSen * trip.hours;
   }
 
-  const surcharge =
-    percent !== null && percent > 0
-      ? { percent, amountSen: Math.round((subtotalSen * percent) / 100) }
-      : null;
+  let surcharge: TripPriceBreakdown["surcharge"] = null;
+  if (charge?.percent != null && charge.percent > 0) {
+    surcharge = {
+      percent: charge.percent,
+      amountSen: Math.round((subtotalSen * charge.percent) / 100),
+    };
+  } else if (charge?.flatSen != null && charge.flatSen > 0) {
+    surcharge = { percent: null, amountSen: charge.flatSen };
+  }
 
   return {
     mode: trip.mode,
@@ -160,7 +170,10 @@ function isSurcharge(
 ): value is NonNullable<TripPriceBreakdown["surcharge"]> {
   if (typeof value !== "object" || value === null) return false;
   const s = value as Record<string, unknown>;
-  return typeof s.percent === "number" && typeof s.amountSen === "number";
+  return (
+    (typeof s.percent === "number" || s.percent === null) &&
+    typeof s.amountSen === "number"
+  );
 }
 
 /**

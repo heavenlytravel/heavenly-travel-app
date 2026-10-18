@@ -31,6 +31,7 @@ import {
   dropoffRuleOf,
   isInOddHours,
   oddHoursOf,
+  type SurchargeCharge,
 } from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
 import { routeRateOf, zoneAt } from "./zone-match";
@@ -106,7 +107,7 @@ export type TripQuote = {
   pickupZone: string;
   dropoffZone: string | null;
   /** The odd-hours surcharge that applies to this pickup time; null when none. */
-  surchargePercent: number | null;
+  surcharge: SurchargeCharge | null;
   classes: ClassQuote[];
 };
 
@@ -208,9 +209,11 @@ export async function quoteTrip(
     );
   }
   const window = oddHoursOf(location);
-  const surchargePercent =
+  const surcharge: SurchargeCharge | null =
     window && isInOddHours(window, localMinuteOfDay(request.startsAt))
-      ? window.percent
+      ? window.percent !== null
+        ? { percent: window.percent, flatSen: null }
+        : { percent: null, flatSen: window.flatSen }
       : null;
 
   const hours = basis.mode === "hourly" ? basis.hours : null;
@@ -241,7 +244,7 @@ export async function quoteTrip(
         trip: basis,
         rates: offering,
         route,
-        surchargePercent,
+        surcharge,
       }),
       availability,
     };
@@ -260,7 +263,7 @@ export async function quoteTrip(
       basis,
       pickupZone: pickupZone.name,
       dropoffZone: dropoffZone?.name ?? null,
-      surchargePercent,
+      surcharge,
       classes,
     },
   };

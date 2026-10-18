@@ -5,7 +5,12 @@ import { andList } from "./names";
 import { isLocationPageKey, pageNameOf } from "./location-page-input";
 import { formatMyr } from "./money";
 import { OFFERING_FIELD_LABELS, type OfferingField } from "./offering-input";
-import { dropoffRuleLabel, isDropoffRule, oddHoursLabel } from "./rates-input";
+import {
+  dropoffRuleLabel,
+  isDropoffRule,
+  oddHoursLabel,
+  type OddHours,
+} from "./rates-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
@@ -151,6 +156,55 @@ export const isActivityAction = guardFor(ACTIVITY_ACTIONS);
 
 export function activityActionMeta(action: ActivityAction) {
   return ACTIONS[action];
+}
+
+/** The parts of a location its history can be narrowed to, in the History tab's order. */
+export const LOCATION_HISTORY_KINDS = [
+  "details",
+  "classes",
+  "coverage",
+  "pages",
+  "status",
+] as const;
+export type LocationHistoryKind = (typeof LOCATION_HISTORY_KINDS)[number];
+export const isLocationHistoryKind = guardFor(LOCATION_HISTORY_KINDS);
+export const LOCATION_HISTORY_KIND_LABELS: Record<LocationHistoryKind, string> =
+  {
+    details: "Details",
+    classes: "Vehicle classes",
+    coverage: "Coverage and rates",
+    pages: "Pages",
+    status: "Status",
+  };
+
+/** The part of a location an entry of its history is about; null for an action that is not a location's. */
+export function locationHistoryKindOf(
+  action: string,
+): LocationHistoryKind | null {
+  switch (action) {
+    case "location.updated":
+    case "location.addresses.updated":
+      return "details";
+    case "location.offering.created":
+    case "location.offering.updated":
+      return "classes";
+    case "location.zone.created":
+    case "location.zone.updated":
+    case "location.zone.deleted":
+    case "location.rates.updated":
+    case "location.surcharge.updated":
+    case "location.dropoff.updated":
+      return "coverage";
+    case "location.page.published":
+    case "location.page.updated":
+      return "pages";
+    case "location.created":
+    case "location.state.changed":
+    case "location.deleted":
+      return "status";
+    default:
+      return null;
+  }
 }
 
 /** The action that moves an item to each status, for `advanceItem`. */
@@ -302,15 +356,22 @@ function zoneName(json: unknown) {
 }
 
 /** The odd-hours window an entry holds, as the rules read it; null for none. */
-function oddHoursIn(json: unknown) {
+/** The surcharge an entry logged: a window and a percentage, or since a flat amount too. */
+function oddHoursIn(json: unknown): OddHours | null {
   const fromMinute = field(json, "fromMinute");
   const toMinute = field(json, "toMinute");
   const percent = field(json, "percent");
-  return typeof fromMinute === "number" &&
-    typeof toMinute === "number" &&
-    typeof percent === "number"
-    ? { fromMinute, toMinute, percent }
-    : null;
+  const flatSen = field(json, "flatSen");
+  if (typeof fromMinute !== "number" || typeof toMinute !== "number") {
+    return null;
+  }
+  if (typeof percent === "number") {
+    return { fromMinute, toMinute, percent, flatSen: null };
+  }
+  if (typeof flatSen === "number") {
+    return { fromMinute, toMinute, percent: null, flatSen };
+  }
+  return null;
 }
 
 /** 1.2 -> "×1.20": the multiplier of entries from before rates were set per location. */

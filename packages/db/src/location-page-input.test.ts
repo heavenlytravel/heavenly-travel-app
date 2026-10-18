@@ -5,6 +5,7 @@ import {
   IMAGE_MAX_BYTES,
   LOCATION_PAGES,
   PAGE_LIMITS,
+  changedPageParts,
   checkImageFile,
   checkPageComplete,
   checkPageLimits,
@@ -13,6 +14,7 @@ import {
   isUploadUrl,
   missingFields,
   pageContentOf,
+  pageChecks,
   pageNameOf,
   pageStatusOf,
   paragraphsOf,
@@ -65,7 +67,7 @@ describe("the pages of a location", () => {
   });
 
   it("are named as a sentence names them", () => {
-    assert.equal(pageNameOf("landing"), "the landing page");
+    assert.equal(pageNameOf("landing"), "the main page");
     assert.equal(pageNameOf("coach-charter"), "the Coach charter page");
   });
 });
@@ -125,6 +127,7 @@ describe("pageContentOf", () => {
     const empty = {
       metaTitle: "",
       metaDescription: "",
+      shareImage: null,
       tagline: "",
       heroHeadline: "",
       heroSubheadline: "",
@@ -351,6 +354,51 @@ describe("missingFields", () => {
       true,
     );
     assert.deepEqual(missingFields("landing", content), []);
+  });
+});
+
+describe("pageChecks", () => {
+  it("groups what is missing by the part of the page, with its tab", () => {
+    const checks = pageChecks("landing", pageContentOf("landing", {}));
+    assert.deepEqual(
+      checks.map((check) => [check.key, check.tab, check.missing.length]),
+      [
+        ["search", "search", 2],
+        ["hero", "content", 3],
+        ["intro", "content", 1],
+        ["faqs", "content", 1],
+        ["highlights", "content", 1],
+      ],
+    );
+    assert.equal(
+      pageChecks("coach-charter", complete("car-with-driver")).length,
+      4,
+    );
+  });
+
+  it("asks a share image, which is optional, for its alt text", () => {
+    const base = complete("landing");
+    assert.deepEqual(missingFields("landing", base), []);
+    assert.deepEqual(
+      missingFields("landing", { ...base, shareImage: image("") }),
+      ["Share image: the alt text"],
+    );
+  });
+});
+
+describe("changedPageParts", () => {
+  it("names the parts two contents differ in, in the order of the editor", () => {
+    const base = complete("landing");
+    assert.deepEqual(changedPageParts(base, base), []);
+    assert.deepEqual(
+      changedPageParts(base, {
+        ...base,
+        intro: "Changed.",
+        metaTitle: "Another title",
+        shareImage: image("Share"),
+      }),
+      ["Meta title", "Share image", "Intro"],
+    );
   });
 });
 

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formatMyr, parseRinggit, ringgitInputValue, toSen } from "./money";
+import {
+  formatMyr,
+  formatRinggit,
+  parseRinggit,
+  ringgitInputValue,
+  toSen,
+} from "./money";
 
 describe("parseRinggit", () => {
   it("reads ringgit with up to two decimals as sen", () => {
@@ -25,9 +31,10 @@ describe("parseRinggit", () => {
   });
 });
 
-describe("formatMyr and toSen", () => {
+describe("formatMyr, formatRinggit and toSen", () => {
   it("formats sen as ringgit", () => {
     assert.equal(formatMyr(123456), "RM 1,234.56");
+    assert.equal(formatRinggit(123456), "1,234.56");
     assert.equal(toSen(12.345), 1235);
   });
 });

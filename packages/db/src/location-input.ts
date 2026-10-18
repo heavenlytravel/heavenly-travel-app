@@ -9,7 +9,7 @@ import {
   type LocationPageKey,
   type PageStatus,
 } from "./location-page-input";
-import { andList } from "./names";
+import { andList, plural } from "./names";
 import { slugify } from "./slug";
 
 /**
@@ -115,9 +115,6 @@ export type SetupStep = {
   done: boolean;
 };
 
-const plural = (n: number, one: string, many = `${one}s`) =>
-  `${n} ${n === 1 ? one : many}`;
-
 /**
  * Where each step of the setup stands. Going live needs the landing page
  * published and no published page with edits waiting, so what staff checked
@@ -150,7 +147,7 @@ export function setupSteps(
     (page) => page.page !== LANDING_PAGE && isPagePublished(page.status),
   ).length;
   const pageTodos: string[] = [];
-  if (!landingOn) pageTodos.push("Publish the landing page");
+  if (!landingOn) pageTodos.push("Publish the main page");
   for (const page of pages) {
     if (page.status === "changed") {
       pageTodos.push(`Publish the changes on ${pageNameOf(page.page)}`);
@@ -190,7 +187,7 @@ export function setupSteps(
     step(
       "pages",
       [
-        landingOn ? "Landing page published" : "Landing page not published",
+        landingOn ? "Main page published" : "Main page not published",
         productsOn > 0
           ? `${plural(productsOn, "product page")} published`
           : null,
@@ -247,7 +244,7 @@ export function checkPageUnpublish(
 ): Change {
   if (page === LANDING_PAGE && state !== "draft") {
     return fail(
-      "The landing page stays published once the location has left draft. Pause the location instead.",
+      "The main page stays published once the location has left draft. Pause the location instead.",
     );
   }
   return { ok: true };
@@ -297,11 +294,14 @@ const SET_ASIDE = [
   "sitemap",
   "robots",
 ];
+/** The console's own: a location's address there is its slug, and `/locations/new` adds one. */
+const CONSOLE_PATHS = ["new"];
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   ...SITE_PATHS,
   ...TRIP_CATEGORIES,
   ...LOCALE_CODES,
   ...SET_ASIDE,
+  ...CONSOLE_PATHS,
 ]);
 
 /** A slug is what `slugify` makes, within the limit and not reserved. */

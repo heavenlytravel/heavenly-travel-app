@@ -11,3 +11,8 @@ export function andList(items: readonly string[]) {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
 }
+
+/** A count with its noun: "1 zone", "3 zones", "2 classes" with `many` for an irregular plural. */
+export function plural(n: number, one: string, many = `${one}s`) {
+  return `${n} ${n === 1 ? one : many}`;
+}

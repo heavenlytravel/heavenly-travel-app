@@ -71,7 +71,7 @@ describe("priceTrip", () => {
     const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
       rates,
-      surchargePercent: 50,
+      surcharge: { percent: 50, flatSen: null },
     });
     assert.equal(price.subtotalSen, 18_000);
     assert.deepEqual(price.surcharge, { percent: 50, amountSen: 9_000 });
@@ -83,16 +83,31 @@ describe("priceTrip", () => {
       trip: { mode: "oneway", distanceKm: 10 },
       rates,
       route,
-      surchargePercent: 33,
+      surcharge: { percent: 33, flatSen: null },
     });
     assert.equal(price.totalSen, 4_500 + Math.round(4_500 * 0.33));
+  });
+
+  it("adds a flat surcharge as it is, with no percentage", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 10 },
+      rates,
+      route,
+      surcharge: { percent: null, flatSen: 3_000 },
+    });
+    assert.deepEqual(price.surcharge, { percent: null, amountSen: 3_000 });
+    assert.equal(price.totalSen, 4_500 + 3_000);
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(price))),
+      price,
+    );
   });
 
   it("records no surcharge at zero percent", () => {
     const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
       rates,
-      surchargePercent: 0,
+      surcharge: { percent: 0, flatSen: null },
     });
     assert.equal(price.surcharge, null);
     assert.equal(price.totalSen, 18_000);
@@ -120,7 +135,7 @@ describe("priceTrip", () => {
       priceTrip({
         trip: { mode: "hourly", hours: 3 },
         rates,
-        surchargePercent: -5,
+        surcharge: { percent: -5, flatSen: null },
       }),
     );
   });
@@ -132,7 +147,7 @@ describe("priceBreakdownOf", () => {
       trip: { mode: "oneway", distanceKm: 10 },
       rates,
       route,
-      surchargePercent: 50,
+      surcharge: { percent: 50, flatSen: null },
     });
     assert.deepEqual(
       priceBreakdownOf(JSON.parse(JSON.stringify(price))),

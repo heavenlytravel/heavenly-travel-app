@@ -4,6 +4,7 @@ import {
   ACTIVITY_ACTIONS,
   activityActionMeta,
   describeActivity,
+  locationHistoryKindOf,
 } from "./activity-actions";
 
 describe("describeActivity", () => {
@@ -230,7 +231,7 @@ describe("describeActivity", () => {
         before: { page: "landing", content: null },
         after: { page: "landing", content: {} },
       }),
-      "Published the landing page",
+      "Published the main page",
     );
     const flip = (isOn: boolean) =>
       describeActivity({
@@ -298,5 +299,15 @@ describe("activityActionMeta", () => {
         action,
       );
     }
+  });
+});
+
+describe("locationHistoryKindOf", () => {
+  it("names a part of the location for every action logged against one", () => {
+    for (const action of ACTIVITY_ACTIONS) {
+      if (activityActionMeta(action).entityType !== "location") continue;
+      assert.notEqual(locationHistoryKindOf(action), null, action);
+    }
+    assert.equal(locationHistoryKindOf("booking.created"), null);
   });
 });

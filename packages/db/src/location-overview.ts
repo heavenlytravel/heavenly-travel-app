@@ -2,9 +2,9 @@ import { localDayRange } from "./booking-rules";
 import type { BookingStatus, ItemStatus } from "./booking-status";
 import { db } from "./client";
 import type { Location } from "./generated/prisma/client";
-import type { OperationStanding, PageStanding } from "./location-input";
+import type { OperationStanding } from "./location-input";
 import { PAGE_LOCALE } from "./location-page-input";
-import { standingsOf } from "./locations";
+import { standingsOf, type PageSummary } from "./locations";
 
 /**
  * A location in numbers, for the console's home and the location's
@@ -24,8 +24,8 @@ export type LocationOverview = Pick<
     pickupsToday: number;
     /** Confirmed items ahead that Operation has not assigned a driver to. */
     awaitingDriver: number;
-    /** Where each page stands, in the order of `LOCATION_PAGES`. */
-    pages: PageStanding[];
+    /** Where each page stands and its hero image, in the order of `LOCATION_PAGES`. */
+    pages: PageSummary[];
     /** The newest logged change to the location; null when none is logged. */
     changedAt: Date | null;
   };

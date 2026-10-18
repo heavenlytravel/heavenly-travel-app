@@ -165,7 +165,9 @@ export function priceRows(
   }
   if (price.surcharge) {
     rows.push([
-      `Odd hours, +${price.surcharge.percent}%`,
+      price.surcharge.percent !== null
+        ? `Odd hours, +${price.surcharge.percent}%`
+        : "Odd hours",
       formatMyr(price.surcharge.amountSen),
     ]);
   }

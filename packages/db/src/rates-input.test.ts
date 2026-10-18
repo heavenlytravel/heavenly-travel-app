@@ -7,6 +7,7 @@ import {
   dropoffRuleOf,
   isDropoffRule,
   isInOddHours,
+  isZoneDistrict,
   minuteOfDay,
   oddHoursOf,
   parseOddHoursFields,
@@ -64,6 +65,20 @@ describe("parseZoneFields", () => {
       [[...triangle, triangle[0]]],
       [[...triangle, triangle[0]]],
     ]);
+  });
+
+  it("keeps the district a reshaped boundary started from, apart from a district as it is", () => {
+    const parsed = parseZoneFields({
+      name: "Langkawi, Kuah side",
+      shape: [[triangle], [triangle]],
+      drawnFrom: { reshapedFrom: "langkawi", label: "Langkawi" },
+    });
+    assert.ok(parsed.ok);
+    assert.deepEqual(parsed.value.drawnFrom, {
+      reshapedFrom: "langkawi",
+      label: "Langkawi",
+    });
+    assert.equal(isZoneDistrict(parsed.value.drawnFrom), false);
   });
 
   it("refuses a missing name, a shape that is not a ring and a radius out of range", () => {
@@ -143,7 +158,12 @@ describe("odd hours", () => {
   });
 
   it("spans midnight when the window ends before it starts", () => {
-    const night = { fromMinute: 1380, toMinute: 420, percent: 50 };
+    const night = {
+      fromMinute: 1380,
+      toMinute: 420,
+      percent: 50,
+      flatSen: null,
+    };
     assert.equal(isInOddHours(night, 1410), true);
     assert.equal(isInOddHours(night, 60), true);
     assert.equal(isInOddHours(night, 420), false);
@@ -151,42 +171,117 @@ describe("odd hours", () => {
   });
 
   it("holds a window inside one day too", () => {
-    const lunch = { fromMinute: 720, toMinute: 840, percent: 10 };
+    const lunch = {
+      fromMinute: 720,
+      toMinute: 840,
+      percent: 10,
+      flatSen: null,
+    };
     assert.equal(isInOddHours(lunch, 780), true);
     assert.equal(isInOddHours(lunch, 900), false);
   });
 
   it("checks the window and the percentage", () => {
     assert.equal(
-      checkOddHours({ fromMinute: 1380, toMinute: 420, percent: 50 }).ok,
+      checkOddHours({
+        fromMinute: 1380,
+        toMinute: 420,
+        percent: 50,
+        flatSen: null,
+      }).ok,
       true,
     );
     assert.equal(
-      checkOddHours({ fromMinute: 1380, toMinute: 1380, percent: 50 }).ok,
+      checkOddHours({
+        fromMinute: 1380,
+        toMinute: 1380,
+        percent: 50,
+        flatSen: null,
+      }).ok,
       false,
     );
     assert.equal(
-      checkOddHours({ fromMinute: 1380, toMinute: 420, percent: 0 }).ok,
+      checkOddHours({
+        fromMinute: 1380,
+        toMinute: 420,
+        percent: 0,
+        flatSen: null,
+      }).ok,
       false,
     );
     assert.equal(
-      checkOddHours({ fromMinute: 1380, toMinute: 420, percent: 250 }).ok,
+      checkOddHours({
+        fromMinute: 1380,
+        toMinute: 420,
+        percent: 250,
+        flatSen: null,
+      }).ok,
       false,
     );
   });
 
   it("reads the form: all empty is none, else all three", () => {
-    assert.deepEqual(parseOddHoursFields({ from: "", to: "", percent: "" }), {
+    assert.deepEqual(parseOddHoursFields({ from: "", to: "", amount: "" }), {
       ok: true,
       value: null,
     });
     assert.deepEqual(
-      parseOddHoursFields({ from: "23:00", to: "07:00", percent: "50" }),
-      { ok: true, value: { fromMinute: 1380, toMinute: 420, percent: 50 } },
+      parseOddHoursFields({ from: "23:00", to: "07:00", amount: "50" }),
+      {
+        ok: true,
+        value: { fromMinute: 1380, toMinute: 420, percent: 50, flatSen: null },
+      },
     );
     assert.equal(
-      parseOddHoursFields({ from: "23:00", to: "", percent: "50" }).ok,
+      parseOddHoursFields({ from: "23:00", to: "", amount: "50" }).ok,
       false,
+    );
+  });
+
+  it("reads a flat amount in ringgit, and checks it", () => {
+    assert.deepEqual(
+      parseOddHoursFields({
+        from: "23:00",
+        to: "07:00",
+        kind: "flat",
+        amount: "RM 30",
+      }),
+      {
+        ok: true,
+        value: {
+          fromMinute: 1380,
+          toMinute: 420,
+          percent: null,
+          flatSen: 3_000,
+        },
+      },
+    );
+    assert.equal(
+      parseOddHoursFields({
+        from: "23:00",
+        to: "07:00",
+        kind: "flat",
+        amount: "x",
+      }).ok,
+      false,
+    );
+    assert.equal(
+      checkOddHours({
+        fromMinute: 1380,
+        toMinute: 420,
+        percent: null,
+        flatSen: 0,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      oddHoursOf({
+        oddHoursFromMinute: 1380,
+        oddHoursToMinute: 420,
+        oddHoursPercent: null,
+        oddHoursFlatSen: 3_000,
+      })?.flatSen,
+      3_000,
     );
   });
 
@@ -196,6 +291,7 @@ describe("odd hours", () => {
         oddHoursFromMinute: null,
         oddHoursToMinute: null,
         oddHoursPercent: null,
+        oddHoursFlatSen: null,
       }),
       null,
     );
@@ -204,8 +300,9 @@ describe("odd hours", () => {
         oddHoursFromMinute: 1380,
         oddHoursToMinute: 420,
         oddHoursPercent: 50,
+        oddHoursFlatSen: null,
       }),
-      { fromMinute: 1380, toMinute: 420, percent: 50 },
+      { fromMinute: 1380, toMinute: 420, percent: 50, flatSen: null },
     );
   });
 });

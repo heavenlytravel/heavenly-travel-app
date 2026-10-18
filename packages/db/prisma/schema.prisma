@@ -185,10 +185,13 @@ model Location {
   /// the class chosen). See DROPOFF_RULES in src/rates-input.ts.
   dropoffRule        String    @default("anywhere")
   /// The odd-hours surcharge: a window as minutes of the local day (23:00
-  /// is 1380, 07:00 is 420) and a percentage. All null when there is none.
+  /// is 1380, 07:00 is 420), and what it adds, a percentage of the price or
+  /// a flat amount in sen, exactly one of the two. All null when there is
+  /// none. See OddHours in src/rates-input.ts.
   oddHoursFromMinute Int?
   oddHoursToMinute   Int?
   oddHoursPercent    Int?
+  oddHoursFlatSen    Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

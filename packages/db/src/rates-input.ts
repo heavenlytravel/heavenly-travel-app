@@ -1,7 +1,7 @@
 import type { Change } from "./change";
 import { numberOf, textOf, type Parsed } from "./fields";
 import type { Ring } from "./geo";
-import { parseRinggit } from "./money";
+import { formatMyr, parseRinggit } from "./money";
 import { isRing, isZoneShape, ringsOf, type ZoneShape } from "./zone-match";
 
 /**
@@ -18,13 +18,17 @@ export const ZONE_LIMITS = {
   name: 60,
   /** Zones per location. A price list, not a map of the country. */
   zones: 40,
-  /** Corners of a drawn polygon. */
-  corners: 500,
+  /** Corners of a zone, all its pieces together: the largest district has 653. */
+  corners: 1000,
   /** Metres, for a circle around a place. */
   radiusM: { min: 100, max: 50_000 },
 } as const;
 
-/** A zone drawn as a circle around a place: what the editor keeps to show and redo it. */
+/**
+ * A zone started as a circle around a place. The place and the radius are
+ * a reference only: the shape is what the admin left after reshaping it,
+ * and is stored as drawn.
+ */
 export type ZoneCircle = {
   placeId: string;
   label: string;
@@ -41,7 +45,11 @@ export function isZoneCircle(value: unknown): value is ZoneCircle {
   );
 }
 
-/** A zone that is a district as it is: the district's code, and its name as the editor shows it. */
+/**
+ * A zone that is a district as it is: the district's code, and its name as
+ * the editor shows it. The official boundary, read again from the code on
+ * every save, so it never drifts from the data.
+ */
 export type ZoneDistrict = {
   districtCode: string;
   label: string;
@@ -53,11 +61,26 @@ export function isZoneDistrict(value: unknown): value is ZoneDistrict {
   return typeof d.districtCode === "string" && typeof d.label === "string";
 }
 
-/** Where a zone's shape came from, when it was not drawn corner by corner. */
-export type ZoneOrigin = ZoneCircle | ZoneDistrict;
+/**
+ * A zone started from a district's boundary and then reshaped by hand: the
+ * district is a reference only, and the shape is stored as drawn.
+ */
+export type ZoneReshaped = {
+  reshapedFrom: string;
+  label: string;
+};
+
+export function isZoneReshaped(value: unknown): value is ZoneReshaped {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return typeof r.reshapedFrom === "string" && typeof r.label === "string";
+}
+
+/** Where a zone's shape came from, when it was not drawn from a plain circle or square. */
+export type ZoneOrigin = ZoneCircle | ZoneDistrict | ZoneReshaped;
 
 export function isZoneOrigin(value: unknown): value is ZoneOrigin {
-  return isZoneCircle(value) || isZoneDistrict(value);
+  return isZoneCircle(value) || isZoneDistrict(value) || isZoneReshaped(value);
 }
 
 /** What the zone editor saves. */
@@ -65,7 +88,7 @@ export type ZoneFields = {
   name: string;
   /** One closed ring of [lng, lat], or a district's polygons. */
   shape: ZoneShape;
-  /** The place and radius, or the district, it was drawn from; null for a drawn polygon. */
+  /** The place, the district or the boundary it was started from; null for a plain circle or square. */
   drawnFrom: ZoneOrigin | null;
 };
 
@@ -128,8 +151,9 @@ export function checkZoneFields(fields: ZoneFields): Change {
     if (!radius.ok) return radius;
   }
   if (
-    isZoneDistrict(fields.drawnFrom) &&
-    fields.drawnFrom.districtCode === ""
+    (isZoneDistrict(fields.drawnFrom) &&
+      fields.drawnFrom.districtCode === "") ||
+    (isZoneReshaped(fields.drawnFrom) && fields.drawnFrom.reshapedFrom === "")
   ) {
     return fail("Pick a district.");
   }
@@ -144,9 +168,8 @@ const UNREADABLE_ZONE: Parsed<never> = {
 /**
  * The zone editor's values, read and checked: `{ name, shape, drawnFrom }`
  * as the editor holds them. The shape arrives closed or open and is stored
- * closed. A circle's or a district's shape is drawn again by the writer's
- * caller from the place or the district; what arrives here only has to be
- * a shape.
+ * closed. A district as it is has its boundary read again by the writer's
+ * caller from its code; every other shape is stored as drawn.
  */
 export function parseZoneFields(value: unknown): Parsed<ZoneFields> {
   if (typeof value !== "object" || value === null) return UNREADABLE_ZONE;
@@ -171,7 +194,9 @@ export function parseZoneFields(value: unknown): Parsed<ZoneFields> {
         }
       : isZoneDistrict(drawnFrom)
         ? { districtCode: drawnFrom.districtCode, label: drawnFrom.label }
-        : null,
+        : isZoneReshaped(drawnFrom)
+          ? { reshapedFrom: drawnFrom.reshapedFrom, label: drawnFrom.label }
+          : null,
   };
   const checked = checkZoneFields(fields);
   return checked.ok ? { ok: true, value: fields } : checked;
@@ -240,15 +265,27 @@ export function parseRateCells(rows: unknown): Parsed<RateCell[]> {
 /** A route on the grid: one row, named by its two zones. */
 export type GridRoute = { fromZoneId: string; toZoneId: string };
 
-/** The odd-hours surcharge: a window as minutes of the local day, and a percentage. */
+/**
+ * What the odd-hours surcharge adds to a trip: a percentage of its price,
+ * or a flat amount in sen. Exactly one of the two is set.
+ */
+export type SurchargeCharge =
+  { percent: number; flatSen: null } | { percent: null; flatSen: number };
+
+/** The odd-hours surcharge: a window as minutes of the local day, and what it adds. */
 export type OddHours = {
   fromMinute: number;
   toMinute: number;
-  percent: number;
-};
+} & SurchargeCharge;
+
+/** How the form asks what the surcharge adds. */
+export const SURCHARGE_KINDS = ["percent", "flat"] as const;
+export type SurchargeKind = (typeof SURCHARGE_KINDS)[number];
 
 export const ODD_HOURS = {
   maxPercent: 200,
+  /** RM 1,000. */
+  maxFlatSen: 100_000,
 } as const;
 
 const MINUTES_PER_DAY = 24 * 60;
@@ -270,9 +307,16 @@ export function timeOfMinute(minute: number): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-/** "23:00 to 07:00, +50%" */
+/** "+50%" or "+RM 30.00" */
+export function surchargeLabel(charge: SurchargeCharge) {
+  return charge.percent !== null
+    ? `+${charge.percent}%`
+    : `+${formatMyr(charge.flatSen)}`;
+}
+
+/** "23:00 to 07:00, +50%" or "23:00 to 07:00, +RM 30.00" */
 export function oddHoursLabel(window: OddHours) {
-  return `${timeOfMinute(window.fromMinute)} to ${timeOfMinute(window.toMinute)}, +${window.percent}%`;
+  return `${timeOfMinute(window.fromMinute)} to ${timeOfMinute(window.toMinute)}, ${surchargeLabel(window)}`;
 }
 
 /**
@@ -297,29 +341,42 @@ export function checkOddHours(window: OddHours): Change {
   if (window.fromMinute === window.toMinute) {
     return fail("The window ends at a different time from the one it starts.");
   }
-  if (
-    !Number.isInteger(window.percent) ||
-    window.percent < 1 ||
-    window.percent > ODD_HOURS.maxPercent
+  if (window.percent !== null) {
+    if (
+      !Number.isInteger(window.percent) ||
+      window.percent < 1 ||
+      window.percent > ODD_HOURS.maxPercent
+    ) {
+      return fail(
+        `The surcharge is a whole percentage between 1 and ${ODD_HOURS.maxPercent}.`,
+      );
+    }
+  } else if (
+    !Number.isInteger(window.flatSen) ||
+    window.flatSen < 1 ||
+    window.flatSen > ODD_HOURS.maxFlatSen
   ) {
     return fail(
-      `The surcharge is a whole percentage between 1 and ${ODD_HOURS.maxPercent}.`,
+      `The surcharge is an amount between ${formatMyr(1)} and ${formatMyr(ODD_HOURS.maxFlatSen)}.`,
     );
   }
   return { ok: true };
 }
 
 /**
- * The surcharge form's `from`, `to` and `percent`, read and checked. All
- * three empty means no surcharge; anything else needs all three.
+ * The surcharge form's `from`, `to`, `kind` and `amount`, read and
+ * checked: `kind` "percent" reads the amount as a whole percentage, "flat"
+ * as ringgit. The window and the amount empty mean no surcharge; anything
+ * else needs all three.
  */
 export function parseOddHoursFields(
   values: Record<string, unknown>,
 ): Parsed<OddHours | null> {
   const from = textOf(values.from);
   const to = textOf(values.to);
-  const percentText = textOf(values.percent);
-  if (from === "" && to === "" && percentText === "") {
+  const kind: SurchargeKind = values.kind === "flat" ? "flat" : "percent";
+  const amountText = textOf(values.amount);
+  if (from === "" && to === "" && amountText === "") {
     return { ok: true, value: null };
   }
   const fromMinute = minuteOfDay(from);
@@ -330,11 +387,24 @@ export function parseOddHoursFields(
       error: "Enter the window as times of day, such as 23:00 to 07:00.",
     };
   }
-  const window: OddHours = {
-    fromMinute,
-    toMinute,
-    percent: numberOf(percentText),
-  };
+  let window: OddHours;
+  if (kind === "percent") {
+    window = {
+      fromMinute,
+      toMinute,
+      percent: numberOf(amountText),
+      flatSen: null,
+    };
+  } else {
+    const flatSen = parseRinggit(amountText);
+    if (flatSen === null) {
+      return {
+        ok: false,
+        error: "Enter the surcharge in RM, with at most two decimals.",
+      };
+    }
+    window = { fromMinute, toMinute, percent: null, flatSen };
+  }
   const check = checkOddHours(window);
   return check.ok ? { ok: true, value: window } : check;
 }
@@ -344,17 +414,18 @@ export function oddHoursOf(location: {
   oddHoursFromMinute: number | null;
   oddHoursToMinute: number | null;
   oddHoursPercent: number | null;
+  oddHoursFlatSen: number | null;
 }): OddHours | null {
-  const { oddHoursFromMinute, oddHoursToMinute, oddHoursPercent } = location;
-  return oddHoursFromMinute !== null &&
-    oddHoursToMinute !== null &&
-    oddHoursPercent !== null
-    ? {
-        fromMinute: oddHoursFromMinute,
-        toMinute: oddHoursToMinute,
-        percent: oddHoursPercent,
-      }
-    : null;
+  const {
+    oddHoursFromMinute: fromMinute,
+    oddHoursToMinute: toMinute,
+    oddHoursPercent: percent,
+    oddHoursFlatSen: flatSen,
+  } = location;
+  if (fromMinute === null || toMinute === null) return null;
+  if (percent !== null) return { fromMinute, toMinute, percent, flatSen: null };
+  if (flatSen !== null) return { fromMinute, toMinute, percent: null, flatSen };
+  return null;
 }
 
 /**
@@ -386,6 +457,13 @@ export const DROPOFF_RULE_LABELS: Record<DropoffRule, string> = {
   anywhere: "Drop-offs anywhere",
   zones: "Drop-offs inside this location only",
   grid: "Only the routes on the rate grid",
+};
+
+/** The rule in a word or two, where a summary names it: the location's panel, its overview. */
+export const DROPOFF_RULE_SHORT_LABELS: Record<DropoffRule, string> = {
+  anywhere: "Anywhere",
+  zones: "Inside the zones",
+  grid: "Grid routes only",
 };
 
 export function dropoffRuleLabel(rule: DropoffRule) {

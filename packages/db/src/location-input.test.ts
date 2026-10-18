@@ -97,7 +97,7 @@ describe("stateMoveBlockers", () => {
     });
   });
 
-  it("needs only the landing page published to go live", () => {
+  it("needs only the main page published to go live", () => {
     const move = (patch: Parameters<typeof pages>[0]) =>
       stateMoveBlockers("draft", "live", pages(patch), ready);
     assert.deepEqual(
@@ -108,10 +108,10 @@ describe("stateMoveBlockers", () => {
       [],
     );
     assert.deepEqual(move({ landing: "unpublished" }), [
-      "Publish the landing page",
+      "Publish the main page",
     ]);
     assert.deepEqual(stateMoveBlockers("draft", "live", [], ready), [
-      "Publish the landing page",
+      "Publish the main page",
     ]);
   });
 
@@ -124,7 +124,7 @@ describe("stateMoveBlockers", () => {
         ready,
       ),
       [
-        "Publish the changes on the landing page",
+        "Publish the changes on the main page",
         "Publish the changes on the Coach charter page",
       ],
     );
@@ -166,7 +166,7 @@ describe("setupSteps", () => {
         ["details", "Kedah", true],
         ["vehicle-classes", "3 classes on sale", true],
         ["coverage", "2 zones", true],
-        ["pages", "Landing page published, 2 product pages published", true],
+        ["pages", "Main page published, 2 product pages published", true],
       ],
     );
     assert.deepEqual(setupProgress(steps), {
@@ -189,7 +189,7 @@ describe("setupSteps", () => {
         ["coverage", "No zones yet", false],
         [
           "pages",
-          "Landing page published, 1 product page published, edits waiting",
+          "Main page published, 1 product page published, edits waiting",
           false,
         ],
       ],
@@ -197,9 +197,7 @@ describe("setupSteps", () => {
     const progress = setupProgress(steps);
     assert.equal(progress.done, 2);
     assert.equal(progress.next?.key, "coverage");
-    assert.deepEqual(steps[3]?.todos, [
-      "Publish the changes on the landing page",
-    ]);
+    assert.deepEqual(steps[3]?.todos, ["Publish the changes on the main page"]);
   });
 
   it("asks for a state only when the location has none", () => {
@@ -215,7 +213,7 @@ describe("setupSteps", () => {
 });
 
 describe("checkPageUnpublish", () => {
-  it("keeps the landing page published once the location has left draft", () => {
+  it("keeps the main page published once the location has left draft", () => {
     assert.equal(checkPageUnpublish("draft", "landing").ok, true);
     for (const state of ["live", "paused"] as const) {
       assert.match(
@@ -257,13 +255,14 @@ describe("checkLocationSlug", () => {
     assert.equal(checkLocationSlug("a".repeat(LOCATION_LIMITS.slug)).ok, true);
   });
 
-  it("refuses the site's own paths, the products, the locales and the set-aside names", () => {
+  it("refuses the site's own paths, the products, the locales, the set-aside names and the console's", () => {
     const reserved = [
       ...["account", "booking", "preview", "sign-in", "sign-up", "api"],
       ...TRIP_CATEGORIES,
       ...["en", "ms", "zh"],
       ...["admin", "search", "manage", "quote", "packages"],
       ...["vehicles", "transfer", "driver", "sitemap", "robots"],
+      "new",
     ];
     for (const slug of reserved) {
       assert.match(errorOf(checkLocationSlug(slug)), /something else/, slug);

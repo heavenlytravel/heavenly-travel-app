@@ -51,3 +51,16 @@
     transform 200ms ease-out,
     opacity 300ms ease 200ms;
 }
+
+/*
+ * Radix's Select locks the page while its list is open: it hides the scroll
+ * bar and pads the body by the bar's width. The padding keeps the page's own
+ * content still, but not what is fixed to the window, such as the customer
+ * site's hero photo, which grew by the bar and moved. Keep the bar; the lock
+ * on the wheel and on touch stays, so the page still holds still under the
+ * list.
+ */
+html body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+}

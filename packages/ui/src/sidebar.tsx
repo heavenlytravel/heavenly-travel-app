@@ -16,6 +16,7 @@ import {
 import { cx } from "./cx.js";
 import { PanelLeftIcon, PanelRightIcon, XIcon } from "./icons.js";
 import { Sheet } from "./sheet.js";
+import { Tooltip } from "./tooltip.js";
 
 /**
  * An app sidebar that collapses to a rail of icons, after shadcn's sidebar:
@@ -248,21 +249,23 @@ export function SidebarPanelToggle({
   ...props
 }: ComponentProps<"button">) {
   const { collapsed, toggleCollapsed } = useSidebarPanel();
+  const label = collapsed ? "Expand panel" : "Collapse panel";
   return (
-    <button
-      type="button"
-      aria-label={collapsed ? "Expand panel" : "Collapse panel"}
-      title={collapsed ? "Expand panel" : "Collapse panel"}
-      aria-expanded={!collapsed}
-      onClick={toggleCollapsed}
-      className={cx(
-        "ui:hidden ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:inline-flex",
-        className,
-      )}
-      {...props}
-    >
-      <PanelRightIcon />
-    </button>
+    <Tooltip content={label} side={collapsed ? "left" : "bottom"}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={!collapsed}
+        onClick={toggleCollapsed}
+        className={cx(
+          "ui:hidden ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:inline-flex",
+          className,
+        )}
+        {...props}
+      >
+        <PanelRightIcon />
+      </button>
+    </Tooltip>
   );
 }
 
@@ -552,21 +555,25 @@ export function SidebarMenuButton({
   );
   const shared = {
     className: classes,
-    title: collapsed ? tooltip : undefined,
     "data-active": active || undefined,
     "aria-current": active ? ("page" as const) : undefined,
   };
 
-  if (asChild && isValidElement(children)) {
-    return cloneElement(
-      children as ReactElement<Record<string, unknown>>,
-      shared,
+  const row =
+    asChild && isValidElement(children) ? (
+      cloneElement(children as ReactElement<Record<string, unknown>>, shared)
+    ) : (
+      <button type="button" {...shared} {...props}>
+        {children}
+      </button>
     );
-  }
-  return (
-    <button type="button" {...shared} {...props}>
-      {children}
-    </button>
+  // Collapsed to a rail, the row is an icon alone: its label shows beside it.
+  return collapsed && tooltip ? (
+    <Tooltip content={tooltip} side="right">
+      {row}
+    </Tooltip>
+  ) : (
+    row
   );
 }
 

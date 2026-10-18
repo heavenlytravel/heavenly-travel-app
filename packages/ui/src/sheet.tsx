@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { cx } from "./cx.js";
+import { useModal } from "./modal.js";
 
 const WIDTHS = {
   md: "ui:w-[min(22rem,88vw)]",
@@ -38,14 +39,7 @@ export function Sheet({
   className?: string;
   children: ReactNode;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
+  const ref = useModal(open);
 
   useEffect(() => {
     if (!open) return;

@@ -11,7 +11,14 @@ const VARIANTS = {
     "ui:bg-neutral-900 ui:text-white ui:hover:bg-neutral-700 ui:border-transparent",
   secondary:
     "ui:bg-white ui:text-neutral-900 ui:border-neutral-300 ui:hover:bg-neutral-100",
+  /** A move that removes something, on a screen: quiet, in red. */
   danger: "ui:bg-white ui:text-red-700 ui:border-red-200 ui:hover:bg-red-50",
+  /** A move that takes something from the public and can be undone, a pause: quiet, in amber. */
+  caution:
+    "ui:bg-white ui:text-amber-800 ui:border-amber-300 ui:hover:bg-amber-50",
+  /** The yes of a question whose answer deletes or loses something for good. */
+  destructive:
+    "ui:bg-red-600 ui:text-white ui:hover:bg-red-700 ui:border-transparent",
   ghost:
     "ui:bg-transparent ui:text-neutral-600 ui:border-transparent ui:hover:bg-neutral-100 ui:hover:text-neutral-900",
 } as const;

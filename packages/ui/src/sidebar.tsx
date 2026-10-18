@@ -311,7 +311,7 @@ export function SidebarPanelTrigger({
  * A second column on the page's other side, after shadcn's sidebar-15
  * right sidebar: a sticky panel for the detail of the record on screen,
  * built from the same header, content and footer pieces as the sidebar.
- * From `xl` up it is a column, 20rem wide open and 3rem collapsed to a
+ * From `xl` up it is a column, 18rem wide open and 3rem collapsed to a
  * rail of icons by its toggle or its edge, on its own apart from the
  * sidebar; below `xl`, inside a `SidebarPanelProvider`, the same content
  * opens in a sheet from the right when the trigger is pressed, always
@@ -337,7 +337,7 @@ export function SidebarPanel({
         data-state={collapsed ? "collapsed" : "expanded"}
         className={cx(
           "ui:sticky ui:hidden ui:shrink-0 ui:flex-col ui:border-l ui:border-neutral-200 ui:bg-white ui:text-neutral-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:xl:flex",
-          collapsed ? "ui:w-12" : "ui:w-80",
+          collapsed ? "ui:w-12" : "ui:w-72",
           className,
         )}
         {...props}
@@ -557,6 +557,84 @@ export function SidebarMenuButton({
     "aria-current": active ? ("page" as const) : undefined,
   };
 
+  if (asChild && isValidElement(children)) {
+    return cloneElement(
+      children as ReactElement<Record<string, unknown>>,
+      shared,
+    );
+  }
+  return (
+    <button type="button" {...shared} {...props}>
+      {children}
+    </button>
+  );
+}
+
+/**
+ * A small button at the right end of a menu row, beside its link: the
+ * toggle of the row's submenu, say. The row gives it room with `pr-8`.
+ * Gone while collapsed, with the submenu.
+ */
+export function SidebarMenuAction({
+  className,
+  ...props
+}: ComponentProps<"button">) {
+  const collapsed = useSidebarCollapsed();
+  if (collapsed) return null;
+  return (
+    <button
+      type="button"
+      className={cx(
+        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-200 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/** The rows under a menu row, indented on a line; gone while collapsed. */
+export function SidebarMenuSub({ className, ...props }: ComponentProps<"ul">) {
+  const collapsed = useSidebarCollapsed();
+  if (collapsed) return null;
+  return (
+    <ul
+      className={cx(
+        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-neutral-200 ui:py-0.5 ui:pl-2.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarMenuSubItem({
+  className,
+  ...props
+}: ComponentProps<"li">) {
+  return <li className={cx("ui:relative", className)} {...props} />;
+}
+
+/**
+ * One row of a submenu: smaller than a menu row, its text first, a count
+ * or a status at its end. `asChild` styles the child element (a `Link`).
+ */
+export function SidebarMenuSubButton({
+  asChild = false,
+  active = false,
+  className,
+  children,
+  ...props
+}: ComponentProps<"button"> & { asChild?: boolean; active?: boolean }) {
+  const shared = {
+    className: cx(
+      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-neutral-600 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900",
+      active && "ui:bg-neutral-100 ui:font-medium ui:text-neutral-900",
+      className,
+    ),
+    "data-active": active || undefined,
+    "aria-current": active ? ("page" as const) : undefined,
+  };
   if (asChild && isValidElement(children)) {
     return cloneElement(
       children as ReactElement<Record<string, unknown>>,

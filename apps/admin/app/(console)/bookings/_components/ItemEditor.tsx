@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BOOKING_RULES,
   formatMyr,
   HOURLY_OPTIONS,
   isTripCategory,
@@ -23,7 +24,7 @@ import {
   tripItemField,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { DateField, TimeField } from "@repo/ui/date-field";
+import { DateTimeField } from "@repo/ui/date-field";
 import {
   Field,
   FieldGroup,
@@ -279,21 +280,15 @@ export function ItemEditor({
               />
             </Field>
           )}
-          <Field label="Date">
-            <DateField
-              name={name(TRIP_PARAM.date)}
+          <Field label="Pick-up date and time">
+            <DateTimeField
+              dateName={name(TRIP_PARAM.date)}
+              timeName={name(TRIP_PARAM.time)}
+              title="Pick-up date and time"
               required
-              value={trip.date}
-              onChange={(date) => setTrip({ date })}
-            />
-          </Field>
-          <Field label="Pick-up time">
-            <TimeField
-              name={name(TRIP_PARAM.time)}
-              aria-label="Pick-up time"
-              required
-              value={trip.time}
-              onChange={(time) => setTrip({ time })}
+              value={{ date: trip.date, time: trip.time }}
+              onChange={({ date, time }) => setTrip({ date, time })}
+              timeZone={BOOKING_RULES.timeZone}
             />
           </Field>
         </div>

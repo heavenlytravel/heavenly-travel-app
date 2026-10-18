@@ -425,7 +425,8 @@ One-off copies, run once per database after `db:push`, as
 
 ## Pieces
 
-Built together in one thread, committed and reviewed in this order; each is one PR.
+Built together in one thread and shipped as one PR, #43 (2026-10-18), squashed into one
+commit on `main`. The table is the order the work was planned and described in.
 
 | #   | Commit                                      | Holds                                                                                                                                                                                                                                                                                                                          |
 | --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

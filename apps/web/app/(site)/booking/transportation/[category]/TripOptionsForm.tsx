@@ -19,6 +19,7 @@ import {
   type TripSearch,
   type TripView,
 } from "@repo/db";
+import { useFormErrors } from "@repo/ui/validation";
 import {
   tripBookingHref,
   tripConfirmPath,
@@ -85,6 +86,8 @@ export function TripOptionsForm({
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
   const { pending, go } = useNavigate();
+  const { errors, formProps } = useFormErrors();
+  const passengersError = errors[TRIP_OPTION_FIELDS.passengers];
 
   function continueToConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -106,6 +109,7 @@ export function TripOptionsForm({
         method="get"
         action={tripConfirmPath(category)}
         onSubmit={continueToConfirm}
+        {...formProps}
         className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start"
       >
         {hiddenSearchFields(search).map(([name, value]) => (
@@ -191,6 +195,14 @@ export function TripOptionsForm({
               }
               className={control}
             />
+            {passengersError && (
+              <span
+                role="alert"
+                className="mt-1.5 block text-[0.85rem] text-[#b3261e]"
+              >
+                {passengersError}
+              </span>
+            )}
           </label>
           <p className="-mt-2.5 text-[0.85rem] text-[#67726f]">
             Up to {maxPassengers} passengers. Larger group?{" "}

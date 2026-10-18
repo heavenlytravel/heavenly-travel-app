@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { priceTrip, startingPriceSen, type TripRates } from "./pricing";
+import {
+  priceBreakdownOf,
+  priceTrip,
+  startingPriceSen,
+  type TripRates,
+} from "./pricing";
 
 const rates: TripRates = {
   baseFareSen: 3_000,
@@ -9,25 +14,28 @@ const rates: TripRates = {
   minimumFareSen: 6_000,
 };
 
+const route = {
+  fromZone: "Langkawi Airport",
+  toZone: "Cenang",
+  rateSen: 4_500,
+};
+
 describe("priceTrip", () => {
   it("prices a one-way trip as base fare plus distance", () => {
     const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 50 },
       rates,
-      multiplier: 1,
     });
     assert.equal(price.subtotalSen, 3_000 + 180 * 50);
     assert.equal(price.totalSen, 12_000);
     assert.equal(price.distanceKm, 50);
     assert.equal(price.hours, null);
+    assert.equal(price.route, null);
+    assert.equal(price.surcharge, null);
   });
 
   it("applies the minimum fare to short one-way trips", () => {
-    const price = priceTrip({
-      trip: { mode: "oneway", distanceKm: 2 },
-      rates,
-      multiplier: 1,
-    });
+    const price = priceTrip({ trip: { mode: "oneway", distanceKm: 2 }, rates });
     assert.equal(price.totalSen, rates.minimumFareSen);
   });
 
@@ -35,64 +43,138 @@ describe("priceTrip", () => {
     const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 33.333 },
       rates,
-      multiplier: 1,
     });
     assert.equal(price.subtotalSen, 3_000 + Math.round(180 * 33.333));
     assert.ok(Number.isInteger(price.totalSen));
   });
 
   it("prices an hourly hire as rate times hours, with no minimum fare", () => {
-    const price = priceTrip({
-      trip: { mode: "hourly", hours: 4 },
-      rates,
-      multiplier: 1,
-    });
+    const price = priceTrip({ trip: { mode: "hourly", hours: 4 }, rates });
     assert.equal(price.totalSen, 24_000);
     assert.equal(price.hours, 4);
     assert.equal(price.distanceKm, null);
   });
 
-  it("applies the zone multiplier after the subtotal and rounds to sen", () => {
+  it("prices a one-way trip on a route at the route's rate, whatever the distance", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 80 },
+      rates,
+      route,
+    });
+    assert.equal(price.subtotalSen, 4_500);
+    assert.equal(price.totalSen, 4_500);
+    assert.deepEqual(price.route, route);
+    assert.equal(price.distanceKm, 80);
+  });
+
+  it("adds the odd-hours surcharge after the subtotal and rounds to sen", () => {
     const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
       rates,
-      multiplier: 1.15,
+      surcharge: { percent: 50, flatSen: null },
     });
     assert.equal(price.subtotalSen, 18_000);
-    assert.equal(price.totalSen, 20_700);
+    assert.deepEqual(price.surcharge, { percent: 50, amountSen: 9_000 });
+    assert.equal(price.totalSen, 27_000);
+  });
+
+  it("adds the surcharge to a route's rate too", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 10 },
+      rates,
+      route,
+      surcharge: { percent: 33, flatSen: null },
+    });
+    assert.equal(price.totalSen, 4_500 + Math.round(4_500 * 0.33));
+  });
+
+  it("adds a flat surcharge as it is, with no percentage", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 10 },
+      rates,
+      route,
+      surcharge: { percent: null, flatSen: 3_000 },
+    });
+    assert.deepEqual(price.surcharge, { percent: null, amountSen: 3_000 });
+    assert.equal(price.totalSen, 4_500 + 3_000);
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(price))),
+      price,
+    );
+  });
+
+  it("records no surcharge at zero percent", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 3 },
+      rates,
+      surcharge: { percent: 0, flatSen: null },
+    });
+    assert.equal(price.surcharge, null);
+    assert.equal(price.totalSen, 18_000);
   });
 
   it("copies the rates it used into the breakdown", () => {
     const price = priceTrip({
       trip: { mode: "hourly", hours: 3 },
       rates: { ...rates, extra: true } as TripRates,
-      multiplier: 1,
     });
     assert.deepEqual(price.rates, rates);
   });
 
   it("rejects impossible inputs", () => {
     assert.throws(() =>
-      priceTrip({
-        trip: { mode: "oneway", distanceKm: -1 },
-        rates,
-        multiplier: 1,
-      }),
+      priceTrip({ trip: { mode: "oneway", distanceKm: -1 }, rates }),
     );
     assert.throws(() =>
-      priceTrip({
-        trip: { mode: "hourly", hours: 0 },
-        rates,
-        multiplier: 1,
-      }),
+      priceTrip({ trip: { mode: "hourly", hours: 0 }, rates }),
+    );
+    assert.throws(() =>
+      priceTrip({ trip: { mode: "hourly", hours: 3 }, rates, route }),
     );
     assert.throws(() =>
       priceTrip({
         trip: { mode: "hourly", hours: 3 },
         rates,
-        multiplier: 0,
+        surcharge: { percent: -5, flatSen: null },
       }),
     );
+  });
+});
+
+describe("priceBreakdownOf", () => {
+  it("reads back what priceTrip wrote", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 10 },
+      rates,
+      route,
+      surcharge: { percent: 50, flatSen: null },
+    });
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(price))),
+      price,
+    );
+  });
+
+  it("reads a receipt from before routes and surcharges, keeping its multiplier", () => {
+    const old = {
+      mode: "hourly",
+      rates,
+      multiplier: 1.2,
+      distanceKm: null,
+      hours: 3,
+      subtotalSen: 18_000,
+      totalSen: 21_600,
+    };
+    assert.deepEqual(priceBreakdownOf(old), {
+      ...old,
+      route: null,
+      surcharge: null,
+    });
+  });
+
+  it("is null for anything that is not a receipt", () => {
+    assert.equal(priceBreakdownOf(null), null);
+    assert.equal(priceBreakdownOf({ mode: "oneway" }), null);
   });
 });
 

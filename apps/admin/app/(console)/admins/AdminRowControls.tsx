@@ -1,9 +1,12 @@
 "use client";
 
 import type { AdminChange, AdminTeam } from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { Sheet } from "@repo/ui/sheet";
 import { useActionState, useState } from "react";
+import { confirmedSubmit } from "../../_lib/confirmed-submit";
 import { AdminFields } from "./AdminFields";
 import { revokeAdminAction, setAdminAction } from "./actions";
 
@@ -23,15 +26,23 @@ export function AdminRowControls({
   const [editResult, editAction, editPending] = useActionState(
     async (previous: AdminChange | null, formData: FormData) => {
       const result = await setAdminAction(previous, formData);
-      if (result.ok) setEditing(false);
+      if (result.ok) {
+        setEditing(false);
+        toast.success(`Saved the level and teams of ${email}.`);
+      }
       return result;
     },
     null,
   );
   const [revokeResult, revokeAction, revokePending] = useActionState(
-    revokeAdminAction,
+    async (previous: AdminChange | null, formData: FormData) => {
+      const result = await revokeAdminAction(previous, formData);
+      if (result.ok) toast.success(`Removed admin access for ${email}.`);
+      return result;
+    },
     null,
   );
+  const [dialog, confirm] = useConfirm();
 
   return (
     <div className="flex flex-col items-end gap-1.5">
@@ -41,11 +52,17 @@ export function AdminRowControls({
         </Button>
         <form
           action={revokeAction}
-          onSubmit={(event) => {
-            if (!confirm(`Remove admin access for ${email}?`)) {
-              event.preventDefault();
-            }
-          }}
+          onSubmit={confirmedSubmit(
+            confirm,
+            {
+              title: `Remove admin access for ${email}?`,
+              description:
+                "They can no longer open the console. Promoting them again here gives it back.",
+              action: "Revoke",
+              danger: true,
+            },
+            revokeAction,
+          )}
         >
           <input type="hidden" name="userId" value={userId} />
           <Button
@@ -58,6 +75,7 @@ export function AdminRowControls({
           </Button>
         </form>
       </div>
+      {dialog}
       {revokeResult?.ok === false ? (
         <p aria-live="polite" className="text-xs text-red-700">
           {revokeResult.error}

@@ -28,7 +28,7 @@ describe("bookingEmails", () => {
       customer!.message.text,
       /https:\/\/site\.test\/booking\/HT-7K3QZM/,
     );
-    assert.match(customer!.message.text, /Sat, 3 Oct 2026, 09:30/);
+    assert.match(customer!.message.text, /Sat, 3 Oct 2026, 9:30 AM/);
 
     assert.equal(ops!.message.to, "ops@site.test");
     assert.equal(ops!.message.subject, "New booking HT-7K3QZM");
@@ -164,7 +164,7 @@ describe("bookingEmails", () => {
     );
     assert.equal(emails.length, 1);
     assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM confirmed");
-    assert.match(emails[0]!.message.text, /Sat, 3 Oct 2026, 09:30/);
+    assert.match(emails[0]!.message.text, /Sat, 3 Oct 2026, 9:30 AM/);
   });
 
   it("a customer cancel tells the customer and ops", () => {

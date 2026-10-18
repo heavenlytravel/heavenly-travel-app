@@ -44,16 +44,17 @@ export function crumbsOf(
 }
 
 /**
- * The page's title, description, canonical address and share image, which
- * is the hero image. The preview has no canonical address and is never
- * listed.
+ * The page's title, description, canonical address and share image: the
+ * one Marketing set for shared links, else the hero image, shown as a large
+ * card. The preview has no canonical address and is never listed.
  */
 export function locationMetadata(
   location: LocationView,
   page: LocationViewPage,
   preview = false,
 ): Metadata {
-  const { metaTitle, metaDescription, heroImage } = page.content;
+  const { metaTitle, metaDescription, shareImage, heroImage } = page.content;
+  const shared = shareImage ?? heroImage;
   const title = metaTitle || `${location.name} | ${SITE_NAME}`;
   if (preview) {
     return { title: `Preview: ${title}`, robots: { index: false } };
@@ -69,17 +70,18 @@ export function locationMetadata(
       title,
       description: metaDescription,
       url,
-      images: heroImage
+      images: shared
         ? [
             {
-              url: heroImage.url,
-              width: heroImage.width,
-              height: heroImage.height,
-              alt: heroImage.alt,
+              url: shared.url,
+              width: shared.width,
+              height: shared.height,
+              alt: shared.alt,
             },
           ]
         : undefined,
     },
+    twitter: { card: shared ? "summary_large_image" : "summary" },
   };
 }
 

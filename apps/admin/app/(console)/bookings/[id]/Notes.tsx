@@ -3,7 +3,8 @@
 import { BOOKING_NOTE_MAX_LENGTH, formatLocalDateTime } from "@repo/db";
 import type { BookingNoteEntry } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { inputClassName } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
+import { FieldGroup, Textarea } from "@repo/ui/field";
 import { useActionState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
 import { addNoteAction } from "./actions";
@@ -22,7 +23,11 @@ export function Notes({
   notes: BookingNoteEntry[];
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
-    addNoteAction,
+    async (previous, formData) => {
+      const result = await addNoteAction(previous, formData);
+      if (!result?.error) toast.success("Note added.");
+      return result;
+    },
     null,
   );
 
@@ -48,14 +53,16 @@ export function Notes({
       )}
       <form action={action} className="grid gap-2">
         <input type="hidden" name="bookingId" value={bookingId} />
-        <textarea
-          name="body"
-          required
-          maxLength={BOOKING_NOTE_MAX_LENGTH}
-          rows={3}
-          placeholder="Something the team should know. The customer never sees this."
-          className={`${inputClassName} h-auto py-2`}
-        />
+        <FieldGroup className="grid gap-1.5">
+          <Textarea
+            name="body"
+            required
+            maxLength={BOOKING_NOTE_MAX_LENGTH}
+            rows={3}
+            aria-label="Note"
+            placeholder="Something the team should know. The customer never sees this."
+          />
+        </FieldGroup>
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Adding…" : "Add note"}

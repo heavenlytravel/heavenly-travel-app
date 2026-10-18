@@ -14,10 +14,6 @@ const FORM: Record<string, string> = {
   minPassengers: "1",
   maxPassengers: "3",
   luggage: "2 large bags",
-  baseFare: "30",
-  perKm: "1.80",
-  hourlyRate: "60.00",
-  minimumFare: "60",
   minLeadHours: "4",
   cancellationCutoffHours: "24",
   minHourlyHours: "3",
@@ -31,7 +27,7 @@ function errorOf(values: Record<string, string>) {
 }
 
 describe("parseVehicleClassFields", () => {
-  it("reads the form with money in ringgit into sen", () => {
+  it("reads the form", () => {
     const result = parseVehicleClassFields(FORM);
     assert.equal(result.ok, true);
     if (!result.ok) return;
@@ -43,10 +39,6 @@ describe("parseVehicleClassFields", () => {
       minPassengers: 1,
       maxPassengers: 3,
       luggage: "2 large bags",
-      baseFareSen: 3000,
-      perKmSen: 180,
-      hourlyRateSen: 6000,
-      minimumFareSen: 6000,
       minLeadHours: 4,
       cancellationCutoffHours: 24,
       minHourlyHours: 3,
@@ -76,18 +68,6 @@ describe("parseVehicleClassFields", () => {
       /at least/,
     );
     assert.equal(errorOf({ minPassengers: "3", maxPassengers: "3" }), null);
-  });
-
-  it("refuses money that is negative or not ringgit", () => {
-    assert.match(errorOf({ baseFare: "-1" }) ?? "", /base fare/);
-    assert.match(errorOf({ perKm: "1.234" }) ?? "", /per km/);
-    assert.match(errorOf({ hourlyRate: "" }) ?? "", /per hour/);
-    assert.match(errorOf({ minimumFare: "abc" }) ?? "", /minimum fare/);
-    assert.equal(errorOf({ minimumFare: "0" }), null);
-  });
-
-  it("allows a minimum fare below the base fare", () => {
-    assert.equal(errorOf({ baseFare: "50", minimumFare: "10" }), null);
   });
 
   it("keeps the hours whole and the minimum hire inside the global range", () => {

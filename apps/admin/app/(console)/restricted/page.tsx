@@ -20,7 +20,7 @@ export default async function RestrictedPage() {
           href="/"
           className="font-medium text-neutral-600 underline-offset-4 hover:underline"
         >
-          Back to the Dashboard
+          Back to the locations
         </Link>
       </p>
     </>

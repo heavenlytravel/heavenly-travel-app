@@ -59,13 +59,45 @@ export function inBBox([x, y]: LngLat, box: BBox): boolean {
   return x >= box[0] && y >= box[1] && x <= box[2] && y <= box[3];
 }
 
-/** Twice the signed area of a ring, for picking the largest. */
-function ringArea(ring: Ring) {
+/** The area of a ring in square degrees, for picking the largest or the smallest. */
+export function ringArea(ring: Ring) {
   let sum = 0;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     sum += (ring[j]![0] + ring[i]![0]) * (ring[j]![1] - ring[i]![1]);
   }
   return Math.abs(sum / 2);
+}
+
+/** The bounding box of one ring. */
+export function bboxOfRing(ring: Ring): BBox {
+  return bboxOf([[ring]]);
+}
+
+/** The circle's corners, so a drawn circle and a drawn polygon are one shape. */
+export const CIRCLE_SEGMENTS = 48;
+
+/**
+ * A closed ring around a point at a radius in metres: the polygon a zone
+ * drawn as a circle is stored as. Flat, with the longitude scaled by the
+ * latitude, which is exact enough at the size of an airport or a town.
+ */
+export function circleRing(
+  center: { lat: number; lng: number },
+  radiusM: number,
+  segments = CIRCLE_SEGMENTS,
+): Ring {
+  const radiusDeg = radiusM / 1000 / KM_PER_DEGREE;
+  const scale = Math.cos((center.lat * Math.PI) / 180);
+  const ring: Ring = [];
+  for (let i = 0; i < segments; i++) {
+    const angle = (2 * Math.PI * i) / segments;
+    ring.push([
+      center.lng + (radiusDeg * Math.cos(angle)) / scale,
+      center.lat + radiusDeg * Math.sin(angle),
+    ]);
+  }
+  ring.push(ring[0]!);
+  return ring;
 }
 
 function centroidOf(ring: Ring): LngLat {

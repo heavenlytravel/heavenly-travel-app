@@ -14,8 +14,9 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "./cx.js";
-import { PanelLeftIcon, XIcon } from "./icons.js";
+import { PanelLeftIcon, PanelRightIcon, XIcon } from "./icons.js";
 import { Sheet } from "./sheet.js";
+import { Tooltip } from "./tooltip.js";
 
 /**
  * An app sidebar that collapses to a rail of icons, after shadcn's sidebar:
@@ -161,6 +162,223 @@ export function Sidebar({
   );
 }
 
+/** From here up the panel is a column; below, it opens in a sheet. */
+const PANEL_DESKTOP = "(min-width: 80rem)";
+
+/** The panel's own cookie, apart from the sidebar's: the two collapse independently. */
+const PANEL_COOKIE_NAME = "panel_state";
+
+type SidebarPanelContextValue = {
+  /** The sheet, on narrow screens. */
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  /** The column, from `xl` up: a rail of icons when collapsed. */
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+  toggleCollapsed: () => void;
+};
+
+const SidebarPanelContext = createContext<SidebarPanelContextValue | null>(
+  null,
+);
+
+export function useSidebarPanel() {
+  const context = useContext(SidebarPanelContext);
+  if (!context)
+    throw new Error("useSidebarPanel needs a SidebarPanelProvider.");
+  return context;
+}
+
+/**
+ * Owns the panel's two states: whether its sheet is open on narrow
+ * screens, so the trigger in the page's header and the panel further down
+ * share it, and whether its column is collapsed to a rail from `xl` up,
+ * kept in its own cookie apart from the sidebar's. Widening the window
+ * past `xl` closes the sheet: the column is on screen from there.
+ */
+export function SidebarPanelProvider({
+  defaultCollapsed = false,
+  children,
+}: {
+  /** Read from the `panel_state` cookie on the server, so there is no flash. */
+  defaultCollapsed?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsedState] = useState(defaultCollapsed);
+
+  const setCollapsed = useCallback((next: boolean) => {
+    setCollapsedState(next);
+    document.cookie = `${PANEL_COOKIE_NAME}=${next ? "collapsed" : "expanded"}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+  }, []);
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsedState((current) => {
+      const next = !current;
+      document.cookie = `${PANEL_COOKIE_NAME}=${next ? "collapsed" : "expanded"}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const desktop = window.matchMedia(PANEL_DESKTOP);
+    const onChange = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, []);
+
+  const value = useMemo(
+    () => ({ open, setOpen, collapsed, setCollapsed, toggleCollapsed }),
+    [open, collapsed, setCollapsed, toggleCollapsed],
+  );
+  return (
+    <SidebarPanelContext.Provider value={value}>
+      {children}
+    </SidebarPanelContext.Provider>
+  );
+}
+
+/**
+ * The button inside the panel that collapses its column to a rail or
+ * opens it again; only where the column shows, from `xl` up.
+ */
+export function SidebarPanelToggle({
+  className,
+  ...props
+}: ComponentProps<"button">) {
+  const { collapsed, toggleCollapsed } = useSidebarPanel();
+  const label = collapsed ? "Expand panel" : "Collapse panel";
+  return (
+    <Tooltip content={label} side={collapsed ? "left" : "bottom"}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={!collapsed}
+        onClick={toggleCollapsed}
+        className={cx(
+          "ui:hidden ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:inline-flex",
+          className,
+        )}
+        {...props}
+      >
+        <PanelRightIcon />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** The thin strip on the panel's edge that collapses or expands it, like the sidebar's rail. */
+function SidebarPanelRail() {
+  const { collapsed, toggleCollapsed } = useSidebarPanel();
+  return (
+    <button
+      type="button"
+      aria-label={collapsed ? "Expand panel" : "Collapse panel"}
+      title="Toggle panel"
+      tabIndex={-1}
+      onClick={toggleCollapsed}
+      className={cx(
+        "ui:absolute ui:inset-y-0 ui:-left-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-neutral-200",
+        collapsed ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
+      )}
+    />
+  );
+}
+
+/** The button that opens the panel's sheet; gone from `xl` up, where the column shows. */
+export function SidebarPanelTrigger({
+  className,
+  ...props
+}: ComponentProps<"button">) {
+  const { open, setOpen } = useSidebarPanel();
+  return (
+    <button
+      type="button"
+      aria-label="Toggle panel"
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+      className={cx(
+        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-600 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:hidden",
+        className,
+      )}
+      {...props}
+    >
+      <PanelRightIcon />
+    </button>
+  );
+}
+
+/**
+ * A second column on the page's other side, after shadcn's sidebar-15
+ * right sidebar: a sticky panel for the detail of the record on screen,
+ * built from the same header, content and footer pieces as the sidebar.
+ * From `xl` up it is a column, 18rem wide open and 3rem collapsed to a
+ * rail of icons by its toggle or its edge, on its own apart from the
+ * sidebar; below `xl`, inside a `SidebarPanelProvider`, the same content
+ * opens in a sheet from the right when the trigger is pressed, always
+ * drawn open. The caller says where the column sticks, since that depends
+ * on the page's header.
+ */
+export function SidebarPanel({
+  title,
+  className,
+  children,
+  ...props
+}: ComponentProps<"aside"> & {
+  /** The column's and the sheet's accessible name: "Location panel". */
+  title: string;
+}) {
+  const panel = useContext(SidebarPanelContext);
+  const collapsed = panel?.collapsed ?? false;
+
+  return (
+    <>
+      <aside
+        aria-label={title}
+        data-state={collapsed ? "collapsed" : "expanded"}
+        className={cx(
+          "ui:sticky ui:hidden ui:shrink-0 ui:flex-col ui:border-l ui:border-neutral-200 ui:bg-white ui:text-neutral-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:xl:flex",
+          collapsed ? "ui:w-12" : "ui:w-72",
+          className,
+        )}
+        {...props}
+      >
+        <CollapsedContext.Provider value={collapsed}>
+          {children}
+        </CollapsedContext.Provider>
+        {panel ? <SidebarPanelRail /> : null}
+      </aside>
+      {panel ? (
+        <Sheet
+          open={panel.open}
+          onOpenChange={panel.setOpen}
+          side="right"
+          title={title}
+          className="ui:text-neutral-900"
+        >
+          <div className="ui:flex ui:min-h-full ui:flex-col">
+            <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
+              <button
+                type="button"
+                aria-label="Close panel"
+                onClick={() => panel.setOpen(false)}
+                className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:hover:bg-neutral-100 ui:hover:text-neutral-900"
+              >
+                <XIcon />
+              </button>
+            </div>
+            <CollapsedContext.Provider value={false}>
+              {children}
+            </CollapsedContext.Provider>
+          </div>
+        </Sheet>
+      ) : null}
+    </>
+  );
+}
+
 /** The thin strip on the sidebar's edge that toggles it. */
 function SidebarRail() {
   const { open, toggleSidebar } = useSidebar();
@@ -237,7 +455,7 @@ export function SidebarContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cx(
-        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-auto",
+        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-x-hidden ui:overflow-y-auto",
         className,
       )}
       {...props}
@@ -303,7 +521,11 @@ const MENU_SIZES = {
 /**
  * One row of a menu: an icon and a label. Collapsed, only the icon shows
  * and the label becomes the tooltip. `asChild` styles the child element
- * (a `Link`) instead of rendering a button.
+ * (a `Link`) instead of rendering a button. A child handed over from a
+ * server component must hold no server component of its own (an icon, say):
+ * while the page streams, such a child can reach the row as a lazy
+ * reference, and the row would render as a button on the server and as the
+ * child in the browser. Make such a row in a client component instead.
  */
 export function SidebarMenuButton({
   asChild = false,
@@ -333,11 +555,93 @@ export function SidebarMenuButton({
   );
   const shared = {
     className: classes,
-    title: collapsed ? tooltip : undefined,
     "data-active": active || undefined,
     "aria-current": active ? ("page" as const) : undefined,
   };
 
+  const row =
+    asChild && isValidElement(children) ? (
+      cloneElement(children as ReactElement<Record<string, unknown>>, shared)
+    ) : (
+      <button type="button" {...shared} {...props}>
+        {children}
+      </button>
+    );
+  // Collapsed to a rail, the row is an icon alone: its label shows beside it.
+  return collapsed && tooltip ? (
+    <Tooltip content={tooltip} side="right">
+      {row}
+    </Tooltip>
+  ) : (
+    row
+  );
+}
+
+/**
+ * A small button at the right end of a menu row, beside its link: the
+ * toggle of the row's submenu, say. The row gives it room with `pr-8`.
+ * Gone while collapsed, with the submenu.
+ */
+export function SidebarMenuAction({
+  className,
+  ...props
+}: ComponentProps<"button">) {
+  const collapsed = useSidebarCollapsed();
+  if (collapsed) return null;
+  return (
+    <button
+      type="button"
+      className={cx(
+        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-200 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/** The rows under a menu row, indented on a line; gone while collapsed. */
+export function SidebarMenuSub({ className, ...props }: ComponentProps<"ul">) {
+  const collapsed = useSidebarCollapsed();
+  if (collapsed) return null;
+  return (
+    <ul
+      className={cx(
+        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-neutral-200 ui:py-0.5 ui:pl-2.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function SidebarMenuSubItem({
+  className,
+  ...props
+}: ComponentProps<"li">) {
+  return <li className={cx("ui:relative", className)} {...props} />;
+}
+
+/**
+ * One row of a submenu: smaller than a menu row, its text first, a count
+ * or a status at its end. `asChild` styles the child element (a `Link`).
+ */
+export function SidebarMenuSubButton({
+  asChild = false,
+  active = false,
+  className,
+  children,
+  ...props
+}: ComponentProps<"button"> & { asChild?: boolean; active?: boolean }) {
+  const shared = {
+    className: cx(
+      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-neutral-600 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900",
+      active && "ui:bg-neutral-100 ui:font-medium ui:text-neutral-900",
+      className,
+    ),
+    "data-active": active || undefined,
+    "aria-current": active ? ("page" as const) : undefined,
+  };
   if (asChild && isValidElement(children)) {
     return cloneElement(
       children as ReactElement<Record<string, unknown>>,

@@ -101,8 +101,9 @@ The state is on the location. No Prisma enum: a string checked against a const a
 
 ### The pages of a location
 
-- `/[location]` is the landing page. It introduces the place and links to the product
-  pages that are published.
+- `/[location]` is the landing page, which the console calls the **main page** since
+  2026-10-17 (the key stays `landing`). It introduces the place and links to the
+  product pages that are published.
 - `/[location]/[product]` is one page per product. The products are the list in code,
   `car-with-driver` and `coach-charter` today. A new product is a code change, and it
   then appears as a page on every location.
@@ -127,6 +128,7 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 | ---------------- | --------------------------------------------------------------------------------- |
 | Meta title       | Filled, at most 60 characters                                                     |
 | Meta description | Filled, at most 160 characters                                                    |
+| Share image      | Optional; with alt text when set. Without one, a shared link shows the hero image |
 | Hero headline    | Filled                                                                            |
 | Hero subheadline | Filled                                                                            |
 | Hero image       | Uploaded, with alt text                                                           |
@@ -149,7 +151,9 @@ One fixed layout, in a fixed order. A page has these fields and no others:
   products, the intro, the highlights, the FAQs. Product: the hero with the search card,
   the vehicle classes, the intro, the FAQs, then links to the landing page and the
   location's other products. A part with nothing in it is left out.
-- The image shared on social media is the hero image.
+- The image shared on social media is the share image, else the hero image, as a large
+  card (`twitter:card` `summary_large_image`). Added 2026-10-17 for a hero that crops
+  badly at 1200 by 630.
 - Every page must be complete before it can be published. The limits live in one module
   and are unit-tested.
 - The limits the table leaves open, chosen in PR 3. Characters: hero headline 80, hero
@@ -159,12 +163,27 @@ One fixed layout, in a fixed order. A page has these fields and no others:
 
 ### Editing: one draft, then Publish
 
+The editor, as revised on 2026-10-17: one column. On top, a publish bar held in view
+while the form scrolls: the page's status and what the public sees, "Compare" while the
+draft differs from the published copy (the two side by side, the parts that differ
+marked), "History" once the page has been published (its publishes, each opening the
+page before and after), "Preview" of the saved draft, "Save draft" (also Ctrl+S) and
+"Publish". Under it two tabs: **Page content** (hero, intro, FAQs, highlights) and
+**Search and sharing** (meta title and description with a search-result sketch, the share
+image with a shared-link sketch, and what is set automatically), each with a count of
+what is still missing. "Publish" opens a dialog of the checks the page must pass (the
+`pageChecks` of `location-page-input.ts`), each with "Go to it", what the publish
+changes, and on a public location a line that it goes live at once; "Publish now" waits
+until every check passes. The old side column of "Publishing" and "Before publishing"
+is gone. "Unpublish" shows only where the page may be unpublished.
+
 - Each page has a working draft and a published copy. "Save draft" overwrites the draft
   and changes nothing in public. It checks nothing but the length limits.
 - "Publish" checks the draft is complete, copies it to the published copy and refreshes
   the public page. It works in any location state.
-- On a location that is `live` or `paused`, publishing asks first, "Publish? This goes
-  public at once.", and so does unpublishing (PR 5). A draft location's page does both
+- On a location that is `live` or `paused`, the publish dialog says it goes live at
+  once (it asked "Publish? This goes public at once." before 2026-10-17), and
+  unpublishing asks first (PR 5). A draft location's page does both
   without a question.
 - The editor shows whether the draft differs from what is published, and says what the
   public sees: "The public still sees the copy published 3 Oct 2026. Publish to replace

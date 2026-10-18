@@ -2,6 +2,7 @@ import { ADMIN_TEAM_LABELS, adminTeamsOf, fullName, needsTeam } from "@repo/db";
 import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
+import { Card, CardTitle } from "../../_components/Card";
 import {
   CardSkeleton,
   Streamed,
@@ -55,10 +56,10 @@ async function adminsList({ selfId }: { selfId: string }) {
 
   return (
     <>
-      <section className="mt-6 rounded-lg border border-neutral-200 bg-white p-5">
+      <Card className="mt-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
               The wall
               <Badge tone={wallActive ? "green" : "neutral"}>
                 {wallActive ? "On" : "Off"}
@@ -78,15 +79,17 @@ async function adminsList({ selfId }: { selfId: string }) {
             {withoutTeam === 1
               ? "1 admin has no team."
               : `${withoutTeam} admins have no team.`}{" "}
-            With the wall on they reach only the Dashboard.
+            With the wall on they reach only the home and the locations'
+            overviews.
           </p>
         ) : null}
-      </section>
+      </Card>
 
       <PromoteForm />
 
-      <div className="mt-6">
-        <Table>
+      <Card flush className="mt-6">
+        <CardTitle inset>Every admin</CardTitle>
+        <Table bare>
           <THead>
             <Th>Name</Th>
             <Th>Email</Th>
@@ -150,7 +153,7 @@ async function adminsList({ selfId }: { selfId: string }) {
             })}
           </TBody>
         </Table>
-      </div>
+      </Card>
     </>
   );
 }

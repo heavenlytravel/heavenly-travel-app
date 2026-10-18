@@ -24,7 +24,9 @@ export function InfoTip({
       </button>
       <span
         role="tooltip"
-        className="ui:pointer-events-none ui:absolute ui:top-full ui:left-1/2 ui:z-30 ui:mt-1.5 ui:w-64 ui:-translate-x-1/2 ui:rounded-md ui:bg-neutral-900 ui:px-3 ui:py-2 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:opacity-0 ui:shadow-lg ui:transition-opacity ui:group-hover:opacity-100 ui:group-focus-within:opacity-100"
+        // Out of the layout until shown: a hidden tip by the screen's right
+        // edge would otherwise widen the page and let it scroll sideways.
+        className="ui:pointer-events-none ui:absolute ui:top-full ui:left-1/2 ui:z-30 ui:mt-1.5 ui:hidden ui:w-64 ui:max-w-[calc(100vw-2rem)] ui:-translate-x-1/2 ui:rounded-md ui:bg-neutral-900 ui:px-3 ui:py-2 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg ui:group-hover:block ui:group-focus-within:block"
       >
         {text}
       </span>

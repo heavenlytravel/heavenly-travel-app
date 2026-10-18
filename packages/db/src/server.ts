@@ -13,28 +13,22 @@ export type { AdminWithUser, AdminChange } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
 export { listActivityFor, listActivityForMany, listActivity } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
-export { dashboardCounts } from "./dashboard";
-export type { DashboardCounts } from "./dashboard";
+export {
+  listLocationOverviews,
+  getLocationOverview,
+} from "./location-overview";
+export type { LocationOverview } from "./location-overview";
 export {
   listStates,
-  getState,
   listDistricts,
   resolveDistrict,
-  listCoverageActivity,
-  setStateMultiplier,
-  setDistrictActive,
+  locationAt,
 } from "./coverage";
-export type {
-  State,
-  District,
-  StateWithDistricts,
-  StateSummary,
-  DistrictWithState,
-} from "./coverage";
+export type { State, District, DistrictWithState, ServedAt } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
+export { statesBounds } from "./location-places";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
-  listActiveVehicleClasses,
   listVehicleClasses,
   getVehicleClass,
   createVehicleClass,
@@ -42,7 +36,33 @@ export {
 } from "./vehicle-classes";
 export type { VehicleClass } from "./vehicle-classes";
 export {
-  listLocations,
+  listOfferings,
+  listActiveOfferings,
+  listActiveOfferingsAt,
+  getOffering,
+  listClassesNotOffered,
+  createOffering,
+  updateOffering,
+} from "./offerings";
+export type {
+  Offering,
+  LocationVehicleClass,
+  OfferingClassChoice,
+} from "./offerings";
+export {
+  listZones,
+  getZone,
+  listZoneRates,
+  createZone,
+  updateZone,
+  deleteZone,
+  setZoneRates,
+  setOddHours,
+  setDropoffRule,
+} from "./zones";
+export type { Zone, ZoneRate } from "./zones";
+export {
+  listLocationNames,
   getLocation,
   listTopChoices,
   listTopChoiceCandidates,
@@ -51,10 +71,12 @@ export {
   getPublicLocation,
   getLocationPreview,
   listTopChoiceCards,
+  getLocationIdBySlug,
   getLocationSlug,
   createLocation,
   updateLocation,
   deleteLocation,
+  savedAddressRefusal,
   setLocationAddresses,
   saveLocationPageDraft,
   publishLocationPage,
@@ -67,8 +89,9 @@ export type {
   LocationAddress,
   LocationAddressWithUses,
   LocationWithDetails,
-  LocationSummary,
+  LocationName,
   LocationPageDetails,
+  PageSummary,
   TopChoice,
   TopChoiceCandidate,
   LocationDeleted,
@@ -84,6 +107,7 @@ export type {
   TripQuoteError,
   TripQuoteErrorCode,
   TripQuoteResult,
+  QuotedLocation,
   ClassQuote,
   PrepareTripItemResult,
 } from "./transportation";
@@ -105,6 +129,7 @@ export {
 } from "./bookings";
 export type {
   BookingFilter,
+  BookingOrder,
   BookingWithItems,
   BookingItemWithDetails,
   PreparedItem,
@@ -132,8 +157,10 @@ export * from "./contact";
 export * from "./change";
 export * from "./fields";
 export * from "./slug";
-export * from "./coverage-input";
 export * from "./geo";
+export * from "./zone-match";
+export * from "./rates-input";
+export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./location-input";
 export * from "./location-page-input";

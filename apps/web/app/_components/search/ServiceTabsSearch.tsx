@@ -1,6 +1,11 @@
 "use client";
 
-import { PRODUCTS, visibleFields, type Product } from "../../_lib/search";
+import {
+  fieldKeys,
+  PRODUCTS,
+  visibleFields,
+  type Product,
+} from "../../_lib/search";
 import { bookableCategory } from "../../_lib/transportation-booking";
 import { useTripSubmit } from "../../_lib/useSearch";
 import { Pending } from "../../(site)/_components/Page";
@@ -103,15 +108,19 @@ export function ServiceTabsSearch() {
         <div className="grid gap-2.5 sm:grid-cols-2 lg:flex lg:gap-0">
           {fields.map((f, i) => {
             const id = `svc-${f.key}`;
-            const issue = issues.find((x) => x.field === f.key);
-            const wide = f.kind === "place";
+            const keys = fieldKeys(f);
+            const issue = issues.find((x) => keys.includes(x.field));
             return (
               <div
                 key={f.key}
                 className={`min-h-[68px] min-w-0 rounded-xl border bg-white px-[18px] py-2.5 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
                   issue ? "border-[#b3261e]" : "border-[#dce3e0]"
                 } ${i === 0 ? "lg:rounded-l-[14px]" : "lg:-ml-px"} ${
-                  wide ? "lg:flex-[2]" : "lg:flex-1"
+                  f.kind === "place"
+                    ? "lg:flex-[2]"
+                    : f.kind === "when"
+                      ? "lg:flex-[1.5]"
+                      : "lg:flex-1"
                 }`}
               >
                 <label
@@ -125,8 +134,8 @@ export function ServiceTabsSearch() {
                   id={id}
                   values={values}
                   presets={f.key === "to" ? dropoffs : undefined}
-                  onChange={(v, placeId) => set(f.key, v, placeId)}
-                  className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b]"
+                  onChange={set}
+                  className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b] data-placeholder:text-[#64706d]/80"
                 />
               </div>
             );

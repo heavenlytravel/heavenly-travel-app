@@ -33,11 +33,13 @@ export type FieldKey =
   | "children"
   | "rooms";
 
-export type FieldKind = "place" | "choice" | "date" | "time" | "count";
+export type FieldKind = "place" | "choice" | "date" | "when" | "count";
 
 export type FieldDef = {
   key: FieldKey;
   kind: FieldKind;
+  /** A day and a time in one field: `key` holds the day, this the time. */
+  timeKey?: FieldKey;
   label: string;
   placeholder?: string;
   /** Lowest count allowed; counts default to 1. */
@@ -99,8 +101,7 @@ const TRIP_FIELDS: FieldDef[] = [
     })),
     hidden: (v) => v.mode !== "hourly",
   },
-  { key: "date", kind: "date", label: "Date" },
-  { key: "time", kind: "time", label: "Pick-up time" },
+  { key: "date", timeKey: "time", kind: "when", label: "When" },
 ];
 
 export const PRODUCTS: Record<ProductKey, Product> = {
@@ -170,10 +171,8 @@ export const PRODUCTS: Record<ProductKey, Product> = {
         label: "Pick-up location",
         placeholder: "City, airport or address",
       },
-      { key: "date", kind: "date", label: "Pick-up date" },
-      { key: "time", kind: "time", label: "Pick-up time" },
-      { key: "endDate", kind: "date", label: "Return date" },
-      { key: "endTime", kind: "time", label: "Return time" },
+      { key: "date", timeKey: "time", kind: "when", label: "Pick-up" },
+      { key: "endDate", timeKey: "endTime", kind: "when", label: "Return" },
     ],
   },
   package: {
@@ -199,6 +198,11 @@ export const PRODUCTS: Record<ProductKey, Product> = {
 /** The fields a product shows for the values typed so far. */
 export function visibleFields(product: Product, values: SearchValues) {
   return product.fields.filter((f) => !f.hidden?.(values));
+}
+
+/** The values a field holds: one, or a day and a time. */
+export function fieldKeys(def: FieldDef): (keyof SearchValues)[] {
+  return def.timeKey ? [def.key, def.timeKey] : [def.key];
 }
 
 /** The fields that name a place and can carry a resolved place id. */

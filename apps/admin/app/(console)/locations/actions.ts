@@ -11,6 +11,7 @@ import {
   parseLocationFields,
   publishLocationPage,
   saveLocationPageDraft,
+  savedAddressRefusal,
   setLocationAddresses,
   textOf,
   unpublishLocationPage,
@@ -32,39 +33,37 @@ import {
   HOME_PAGE_PATH,
   LOCATIONS_PATH,
   locationHref,
-  locationPageHref,
+  locationTabHref,
 } from "../../_lib/routes";
 import {
   refreshDeletedLocationAfter,
   refreshLocationAfter,
 } from "../../_lib/site";
+import { revalidateLocation, revalidateLocations } from "./_lib/revalidate";
 
 /**
- * The Locations screens' actions. Each checks `locations.manage` again,
- * passes the admin as the actor and lets the writer in @repo/db check the
- * rest. Arguments passed directly, not through a form, are checked for their
- * type here: an action is reachable by direct POST. A change the public can
- * see also refreshes the customer site. The top choices are the Home page
- * screen's, in ../home-page/actions.
+ * The Locations screens' actions. Each checks `locations.manage` again, or
+ * `locations.activate` for the state move and the delete, passes the admin
+ * as the actor and lets the writer in @repo/db check the rest. Arguments
+ * passed directly, not through a form, are checked for their type here: an
+ * action is reachable by direct POST. A change the public can see also
+ * refreshes the customer site. The top choices are the Home page screen's,
+ * in ../home-page/actions.
  */
-function revalidateLocation(id: string) {
-  revalidatePath(locationHref(id));
-  revalidatePath(LOCATIONS_PATH);
-}
 
 /** After a change the public can see: this console's screens and the customer site's pages. */
 function revalidateEverywhere(id: string) {
-  revalidateLocation(id);
+  revalidateLocation();
   refreshLocationAfter(id);
 }
 
 const MISSING_LOCATION: ActionState = { error: "Missing location." };
 
-/** The location form's values; the ticked districts arrive as one field each. */
+/** The location form's values; the ticked states arrive as one field each. */
 function locationValues(formData: FormData) {
   return {
     ...Object.fromEntries(formData),
-    districts: formData.getAll("districts"),
+    states: formData.getAll("states"),
   };
 }
 
@@ -79,8 +78,8 @@ export async function createLocationAction(
 
   const result = await createLocation(actorOf(admin), parsed.value);
   if (!result.ok) return stateOf(result);
-  revalidateLocation(result.id);
-  redirect(locationHref(result.id));
+  revalidateLocation();
+  redirect(locationHref(parsed.value.slug));
 }
 
 export async function updateLocationAction(
@@ -95,8 +94,13 @@ export async function updateLocationAction(
   if (!parsed.ok) return { error: parsed.error };
 
   const result = await updateLocation(actorOf(admin), id, parsed.value);
-  if (result.ok) revalidateEverywhere(id);
-  return stateOf(result);
+  if (!result.ok) return stateOf(result);
+  revalidateEverywhere(id);
+  // A draft's new slug is its new address in the console too.
+  if (parsed.value.slug !== textOf(formData.get("previousSlug"))) {
+    redirect(locationTabHref(parsed.value.slug, "details"));
+  }
+  return null;
 }
 
 /**
@@ -145,6 +149,40 @@ export async function setLocationAddressesAction(
   return stateOf(result);
 }
 
+/** What the saved address dialog hears of a picked place. */
+export type AddressPlaceCheck =
+  { ok: true; detail: string } | { ok: false; error: string };
+
+/**
+ * Checks a place the moment it is picked in the saved address dialog,
+ * before it joins the list: it has to lie in one of the location's states.
+ * Answers the place's address for the line under its name, or the sentence
+ * that says where it lies instead. Saving the list checks again.
+ */
+export async function checkAddressPlaceAction(
+  locationId: string,
+  placeId: string,
+  label: string,
+): Promise<AddressPlaceCheck> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  if (typeof locationId !== "string" || typeof placeId !== "string") {
+    return { ok: false, error: "Missing location." };
+  }
+  const name = String(label).slice(0, 200);
+  const place = await resolvePlace(placeId);
+  if (!place) {
+    return { ok: false, error: `Google did not return the place of ${name}.` };
+  }
+  const refusal = await savedAddressRefusal(locationId, name, place);
+  if (refusal) return { ok: false, error: refusal };
+  return {
+    ok: true,
+    detail:
+      place.address && place.address !== name ? place.address : place.label,
+  };
+}
+
 /**
  * The page editor's two writes. `version` names the content the editor was
  * opened with, so a page someone else changed meanwhile is not overwritten;
@@ -179,8 +217,7 @@ async function writePage(
       )
     : await saveLocationPageDraft(locationId, page, version, draft);
   if (result.ok) {
-    revalidateLocation(locationId);
-    revalidatePath(locationPageHref(locationId, page));
+    revalidateLocation();
     // A draft changes nothing in public.
     if (publish) refreshLocationAfter(locationId);
   }
@@ -221,7 +258,6 @@ export async function unpublishPageAction(
   const result = await unpublishLocationPage(actorOf(admin), locationId, page);
   if (result.ok) {
     revalidateEverywhere(locationId);
-    revalidatePath(locationPageHref(locationId, page));
   }
   return stateOf(result);
 }
@@ -236,7 +272,7 @@ export async function deleteLocationAction(
   locationId: string,
   typedSlug: string | null,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string") return MISSING_LOCATION;
   if (typedSlug !== null && typeof typedSlug !== "string") {
@@ -245,7 +281,7 @@ export async function deleteLocationAction(
 
   const result = await deleteLocation(actorOf(admin), locationId, typedSlug);
   if (!result.ok) return stateOf(result);
-  revalidatePath(LOCATIONS_PATH);
+  revalidateLocations();
   revalidatePath(HOME_PAGE_PATH);
   refreshDeletedLocationAfter(result.slug);
   redirect(LOCATIONS_PATH);
@@ -255,7 +291,7 @@ export async function moveLocationStateAction(
   locationId: string,
   to: string,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string") return MISSING_LOCATION;
   if (!isLocationState(to)) return { error: "Choose a state." };

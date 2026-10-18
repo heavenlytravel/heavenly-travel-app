@@ -1,25 +1,33 @@
-import type { LocationPageKey } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { locationPreviewUrl } from "../../../_lib/site";
+import { ExternalLinkIcon } from "@repo/ui/icons";
+import { Tooltip } from "@repo/ui/tooltip";
 
 /**
- * Opens a page of a location as staff preview it on the customer site: the
- * saved draft, whatever the location's state and whether the page is
- * published. A plain link in a new tab; the customer site checks `locations.manage`.
+ * "Preview": opens a page of a location as staff preview it on the
+ * customer site, the saved draft whatever the location's state and
+ * whether the page is published. A plain link in a new tab, from
+ * `locationPreviewUrl`; the customer site checks `locations.manage`.
  */
 export function PreviewLink({
-  slug,
-  page,
+  href,
+  size = "md",
+  hint = "Opens the saved draft on the customer site.",
+  className,
 }: {
-  slug: string;
-  /** The landing page when left out. */
-  page?: LocationPageKey;
+  href: string;
+  size?: "sm" | "md";
+  /** The tooltip. */
+  hint?: string;
+  className?: string;
 }) {
   return (
-    <Button asChild variant="secondary">
-      <a href={locationPreviewUrl(slug, page)} target="_blank" rel="noreferrer">
-        Preview
-      </a>
-    </Button>
+    <Tooltip content={hint}>
+      <Button asChild variant="secondary" size={size}>
+        <a href={href} target="_blank" rel="noreferrer" className={className}>
+          Preview
+          <ExternalLinkIcon />
+        </a>
+      </Button>
+    </Tooltip>
   );
 }

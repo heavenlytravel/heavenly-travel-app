@@ -6,6 +6,7 @@ import {
   parseTripOptions,
   parseTripSearch,
   PRICE_OVERRIDE_FIELDS,
+  surchargeLabel,
   textOf,
   unavailableReason,
   type PriceOverride,
@@ -43,8 +44,15 @@ export async function quoteTripView(
     startsAt: formatLocalDateTime(request.startsAt),
     hours: quote.basis.mode === "hourly" ? quote.basis.hours : null,
     distanceKm: quote.basis.mode === "oneway" ? quote.basis.distanceKm : null,
-    district: `${quote.district.name}, ${quote.district.state.name}`,
-    multiplier: quote.district.state.multiplier,
+    district: quote.district
+      ? `${quote.district.name}, ${quote.district.state.name}`
+      : null,
+    location: quote.location.name,
+    route:
+      quote.pickupZone && quote.dropoffZone
+        ? `${quote.pickupZone} to ${quote.dropoffZone}`
+        : null,
+    surcharge: quote.surcharge ? surchargeLabel(quote.surcharge) : null,
     classes: quote.classes.map((c) => ({
       id: c.vehicleClass.id,
       name: c.vehicleClass.name,

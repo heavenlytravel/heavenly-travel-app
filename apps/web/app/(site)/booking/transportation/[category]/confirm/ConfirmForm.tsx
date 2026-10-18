@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { CONTACT_NAME_MAX_LENGTH, type TripCategory } from "@repo/db";
+import { useFormErrors } from "@repo/ui/validation";
 import Link from "next/link";
 import {
   control,
@@ -14,6 +15,7 @@ import { CONFIRM_FIELDS } from "./fields";
 
 const label = "mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]";
 const hint = "mt-1.5 block text-[0.85rem] text-[#67726f]";
+const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
 
 /**
  * Name, phone and email, then the booking is created. The trip travels as
@@ -22,7 +24,9 @@ const hint = "mt-1.5 block text-[0.85rem] text-[#67726f]";
  * cannot be edited here; signed out, a line offers sign-in, which comes
  * back to this page. The fields are controlled: React resets a form once
  * its action returns, and an answer that is an error must not wipe what
- * the customer typed.
+ * the customer typed. A field the browser refuses on submit, left empty
+ * or an email without an @, says why under itself in place of the
+ * browser's bubble.
  */
 export function ConfirmForm({
   category,
@@ -50,9 +54,19 @@ export function ConfirmForm({
   const [phone, setPhone] = useState(defaultPhone);
   const [email, setEmail] = useState(accountEmail ?? "");
   const locked = accountEmail !== null;
+  const { errors, formProps } = useFormErrors();
+  /** The line under a field: why it was refused, or its hint. */
+  const note = (field: string, text?: string) =>
+    errors[field] ? (
+      <span role="alert" className={refused}>
+        {errors[field]}
+      </span>
+    ) : text ? (
+      <span className={hint}>{text}</span>
+    ) : null;
 
   return (
-    <form action={action} className="grid gap-4">
+    <form action={action} {...formProps} className="grid gap-4">
       <input type="hidden" name={CONFIRM_FIELDS.category} value={category} />
       <input type="hidden" name={CONFIRM_FIELDS.trip} value={trip} />
       {signInHref && (
@@ -74,6 +88,7 @@ export function ConfirmForm({
           autoComplete="name"
           className={control}
         />
+        {note(CONFIRM_FIELDS.name)}
       </label>
       <label className="block">
         <span className={label}>Phone number</span>
@@ -87,9 +102,10 @@ export function ConfirmForm({
           autoComplete="tel"
           className={control}
         />
-        <span className={hint}>
-          Your driver will reach you on WhatsApp or by call.
-        </span>
+        {note(
+          CONFIRM_FIELDS.phone,
+          "Your driver will reach you on WhatsApp or by call.",
+        )}
       </label>
       <label className="block">
         <span className={label}>Email</span>
@@ -103,11 +119,12 @@ export function ConfirmForm({
           autoComplete="email"
           className={`${control} ${locked ? "bg-[#f3f6f5] text-[#324844]" : ""}`}
         />
-        <span className={hint}>
-          {locked
+        {note(
+          CONFIRM_FIELDS.email,
+          locked
             ? "From your account. Your booking emails go here."
-            : "We need your email to send your booking confirmation."}
-        </span>
+            : "We need your email to send your booking confirmation.",
+        )}
       </label>
       {/* Honeypot: off screen and out of the tab order, so only a bot fills it. */}
       <div

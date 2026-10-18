@@ -4,9 +4,7 @@ import {
   CalendarCheckIcon,
   HistoryIcon,
   HouseIcon,
-  LayoutDashboardIcon,
   MapIcon,
-  MapPinIcon,
   ShieldCheckIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
@@ -14,7 +12,6 @@ import {
   ACTIVITY_PATH,
   ADMINS_PATH,
   BOOKINGS_PATH,
-  COVERAGE_PATH,
   HOME_PAGE_PATH,
   LOCATIONS_PATH,
   VEHICLE_CLASSES_PATH,
@@ -22,6 +19,8 @@ import {
 
 export type NavItem = {
   href: string;
+  /** Paths under this prefix are the section's too: a location's page is on Locations. */
+  also?: string;
   label: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   /** What the page asks of `requireAdmin`. Without it the link is hidden. */
@@ -30,17 +29,25 @@ export type NavItem = {
 
 export type NavGroup = { label: string; items: NavItem[] };
 
-/** The console's sections, in sidebar order. The header reads the same list. */
+/**
+ * The home: every location with its numbers. The sidebar's first group is
+ * the locations themselves, this row at its head; every team works inside a
+ * location, and the sections below stand beside them. See
+ * docs/261015-locations-as-operation-areas.md.
+ */
+export const LOCATIONS_NAV: NavItem = {
+  href: LOCATIONS_PATH,
+  also: "/locations",
+  label: "Locations",
+  icon: MapIcon,
+  permission: "dashboard.view",
+};
+
+/** The console's other sections, in sidebar order, under the locations. */
 export const NAV: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      {
-        href: "/",
-        label: "Dashboard",
-        icon: LayoutDashboardIcon,
-        permission: "dashboard.view",
-      },
       {
         href: BOOKINGS_PATH,
         label: "Bookings",
@@ -48,28 +55,16 @@ export const NAV: NavGroup[] = [
         permission: "bookings.view",
       },
       {
-        href: COVERAGE_PATH,
-        label: "Coverage",
-        icon: MapPinIcon,
-        permission: "coverage.manage",
-      },
-      {
         href: VEHICLE_CLASSES_PATH,
         label: "Vehicle classes",
         icon: BusIcon,
-        permission: "coverage.manage",
+        permission: "coverage.view",
       },
     ],
   },
   {
     label: "Marketing",
     items: [
-      {
-        href: LOCATIONS_PATH,
-        label: "Locations",
-        icon: MapIcon,
-        permission: "locations.manage",
-      },
       {
         href: HOME_PAGE_PATH,
         label: "Home page",
@@ -106,12 +101,13 @@ export function navFor(permissions: readonly Permission[]): NavGroup[] {
 }
 
 export function isCurrentNav(item: NavItem, pathname: string) {
+  if (item.also && pathname.startsWith(item.also)) return true;
   return item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 }
 
 /** The section the path is in, for the page header's breadcrumb. */
 export function currentNav(pathname: string): NavItem | undefined {
-  return NAV.flatMap((g) => g.items).find((item) =>
+  return [LOCATIONS_NAV, ...NAV.flatMap((g) => g.items)].find((item) =>
     isCurrentNav(item, pathname),
   );
 }

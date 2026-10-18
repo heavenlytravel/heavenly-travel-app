@@ -7,7 +7,7 @@ import {
   formatMyr,
   fullName,
   isBookingStatus,
-  isTripPriceBreakdown,
+  priceBreakdownOf,
   itemHeading,
   nextItemStatusOf,
   priceRows,
@@ -25,13 +25,14 @@ import {
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
-import { Card, CardTitle } from "../../../_components/Card";
+import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { PlaceValue, Rows } from "../../../_components/Rows";
+import { Card, CardTitle } from "../../../_components/Card";
 import {
-  CardSkeleton,
   DetailSkeleton,
   HeaderSkeleton,
+  CardSkeleton,
   Streamed,
 } from "../../../_components/Skeleton";
 import {
@@ -174,51 +175,50 @@ async function bookingDetails({ id }: { id: string }) {
         description={`${statusLabel(booking.status)}. Pick-up ${formatLocalDateTime(booking.startsAt)}.`}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-        <div className="grid gap-6">
-          {booking.items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              label={`${booking.reference} item ${item.position}`}
-              showPosition={booking.items.length > 1}
-              permissions={permissions}
-            />
-          ))}
-        </div>
-
-        <div className="grid gap-6">
-          <Card>
-            <CardTitle>Booking</CardTitle>
-            <Rows rows={summary} />
-            {open && canManage ? (
-              <div className="mt-4">
-                <CancelBookingControl
-                  bookingId={booking.id}
-                  reference={booking.reference}
-                />
-              </div>
-            ) : null}
-          </Card>
-          <Card>
-            <CardTitle>Customer</CardTitle>
-            <Rows rows={customer} />
-          </Card>
-          {permissions.includes("bookings.notes") ? (
+      <DetailColumns
+        main={booking.items.map((item) => (
+          <ItemCard
+            key={item.id}
+            item={item}
+            label={`${booking.reference} item ${item.position}`}
+            showPosition={booking.items.length > 1}
+            permissions={permissions}
+          />
+        ))}
+        side={
+          <>
             <Card>
-              <CardTitle>Notes</CardTitle>
-              <Notes bookingId={booking.id} notes={notes} />
+              <CardTitle>Booking</CardTitle>
+              <Rows rows={summary} />
+              {open && canManage ? (
+                <div className="mt-4">
+                  <CancelBookingControl
+                    bookingId={booking.id}
+                    reference={booking.reference}
+                  />
+                </div>
+              ) : null}
             </Card>
-          ) : null}
-          <Card>
-            <CardTitle>History</CardTitle>
-            <ActivityHistory
-              entries={history}
-              emptyMessage="No activity recorded. This booking predates the log."
-            />
-          </Card>
-        </div>
-      </div>
+            <Card>
+              <CardTitle>Customer</CardTitle>
+              <Rows rows={customer} />
+            </Card>
+            {permissions.includes("bookings.notes") ? (
+              <Card>
+                <CardTitle>Notes</CardTitle>
+                <Notes bookingId={booking.id} notes={notes} />
+              </Card>
+            ) : null}
+            <Card>
+              <CardTitle>History</CardTitle>
+              <ActivityHistory
+                entries={history}
+                emptyMessage="No activity recorded. This booking predates the log."
+              />
+            </Card>
+          </>
+        }
+      />
     </>
   );
 }
@@ -249,12 +249,11 @@ function ItemCard({
       `${item.district.name}, ${item.district.state.name}`,
     ]);
   }
+  if (item.location) rows.push(["Location", item.location.name]);
 
   // The receipt, then the agreed price when one replaces it. The receipt's
   // total stays on record next to what is charged.
-  const receipt = isTripPriceBreakdown(item.priceBreakdown)
-    ? item.priceBreakdown
-    : null;
+  const receipt = priceBreakdownOf(item.priceBreakdown);
   const override =
     item.priceOverrideSen !== null && item.priceOverrideReason !== null
       ? { totalSen: item.priceOverrideSen, reason: item.priceOverrideReason }
@@ -300,7 +299,7 @@ function ItemCard({
     <Card>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold tracking-tight">
+          <h2 className="text-xl font-semibold tracking-tight">
             {showPosition ? `Item ${item.position}: ` : ""}
             {itemHeading(item)}
           </h2>

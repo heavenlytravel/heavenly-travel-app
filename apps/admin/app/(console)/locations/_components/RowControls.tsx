@@ -1,8 +1,11 @@
 import { Button } from "@repo/ui/button";
+import { Tooltip } from "@repo/ui/tooltip";
+import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
 
 /**
- * The buttons of one row of a list Marketing orders by hand: up, down and
- * remove. `name` is what a screen reader hears the row called.
+ * The buttons of one row of a list Marketing orders by hand: up and down
+ * as arrows, and remove in red, all quiet so a long list does not fill up
+ * with boxes. `name` is what a screen reader hears the row called.
  */
 export function RowControls({
   name,
@@ -18,29 +21,36 @@ export function RowControls({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
+      <Tooltip content="Move up">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isFirst}
+          aria-label={`Move ${name} up`}
+          className="w-8 px-0"
+          onClick={() => onMove(-1)}
+        >
+          <ArrowUpIcon />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Move down">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={isLast}
+          aria-label={`Move ${name} down`}
+          className="w-8 px-0"
+          onClick={() => onMove(1)}
+        >
+          <ArrowDownIcon />
+        </Button>
+      </Tooltip>
       <Button
         variant="ghost"
-        size="sm"
-        disabled={isFirst}
-        aria-label={`Move ${name} up`}
-        onClick={() => onMove(-1)}
-      >
-        Up
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={isLast}
-        aria-label={`Move ${name} down`}
-        onClick={() => onMove(1)}
-      >
-        Down
-      </Button>
-      <Button
-        variant="danger"
         size="sm"
         aria-label={`Remove ${name}`}
+        className="text-red-700 hover:bg-red-50 hover:text-red-800"
         onClick={onRemove}
       >
         Remove

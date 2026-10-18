@@ -20,10 +20,16 @@ const RULES = {
   /** Assign and complete. */
   "bookings.fulfil": ["OPERATION"],
   "bookings.notes": ["OPERATION", "RESERVATION", "SALES", "FINANCE"],
-  /** Zones and vehicle classes. */
+  /** Change a location's coverage, the classes it sells, its zones and its rates; the class catalogue. */
   "coverage.manage": ["OPERATION"],
-  /** Locations, their saved addresses and their pages. */
+  /** Read them: the same tabs and the catalogue, without a way to change them. */
+  "coverage.view": ["OPERATION", "RESERVATION", "SALES"],
+  /** Open a location and read its overview. Every team works inside one. */
+  "locations.view": "any",
+  /** Add a location, its details, saved addresses and pages; the home page's top choices. */
   "locations.manage": ["MARKETING"],
+  /** Take a location live, pause it, resume it, delete it. */
+  "locations.activate": "super",
   "admins.manage": "super",
   "wall.switch": "super",
   "activity.view": "super",

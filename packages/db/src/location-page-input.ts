@@ -7,25 +7,37 @@ import { guardFor } from "./const-enum";
  * pure and browser-safe: the editor shows the limits and what is still
  * missing as it is typed, the writers in ./location-pages apply the same
  * checks before they write. Every page has the same fields in the same
- * order; only the landing page has highlights. See
+ * order; only the main page has highlights. See
  * docs/261001-locations-and-pages.md, "The content of a page".
  */
 
+/**
+ * The location's own page, at its address: /langkawi. Its key stays
+ * "landing", in the rows, the log and the code; staff read it as the main
+ * page.
+ */
 export const LANDING_PAGE = "landing";
 
-/** The pages of a location: its landing page, then one per product. */
+/** The pages of a location: its main page, then one per product. */
 export const LOCATION_PAGES = [LANDING_PAGE, ...TRIP_CATEGORIES] as const;
 export type LocationPageKey = (typeof LOCATION_PAGES)[number];
 export const isLocationPageKey = guardFor(LOCATION_PAGES);
 export const LOCATION_PAGE_LABELS: Record<LocationPageKey, string> = {
-  landing: "Landing",
+  landing: "Main page",
   ...TRIP_CATEGORY_LABELS,
 };
 
-/** How a sentence names a page: "the landing page", "the Coach charter page". */
+/** How a heading names a page: "Main page", "Coach charter page". */
+export function pageTitleOf(page: LocationPageKey) {
+  return page === LANDING_PAGE
+    ? LOCATION_PAGE_LABELS[page]
+    : `${LOCATION_PAGE_LABELS[page]} page`;
+}
+
+/** How a sentence names a page: "the main page", "the Coach charter page". */
 export function pageNameOf(page: LocationPageKey) {
   return page === LANDING_PAGE
-    ? "the landing page"
+    ? "the main page"
     : `the ${LOCATION_PAGE_LABELS[page]} page`;
 }
 
@@ -60,13 +72,24 @@ export type PageHighlight = {
 export type PageContent = {
   metaTitle: string;
   metaDescription: string;
+  /**
+   * The picture a shared link shows; null to show the hero image. Optional:
+   * for a hero that crops badly on a 1200 by 630 card.
+   */
+  shareImage: PageImage | null;
+  /**
+   * The main page's only; empty on a product page. The short line over
+   * the headline and under the name on a home page card: "Island escape".
+   * Optional.
+   */
+  tagline: string;
   heroHeadline: string;
   heroSubheadline: string;
   heroImage: PageImage | null;
   /** Plain paragraphs, a blank line between them. */
   intro: string;
   faqs: PageFaq[];
-  /** The landing page's only; empty on a product page. */
+  /** The main page's only; empty on a product page. */
   highlights: PageHighlight[];
 };
 
@@ -74,6 +97,7 @@ export const PAGE_LIMITS = {
   /** Characters. */
   metaTitle: 60,
   metaDescription: 160,
+  tagline: 80,
   heroHeadline: 80,
   heroSubheadline: 160,
   imageAlt: 160,
@@ -180,6 +204,8 @@ export function pageContentOf(
   return {
     metaTitle: lineOf(raw.metaTitle),
     metaDescription: lineOf(raw.metaDescription),
+    shareImage: imageOf(raw.shareImage),
+    tagline: page === LANDING_PAGE ? lineOf(raw.tagline) : "",
     heroHeadline: lineOf(raw.heroHeadline),
     heroSubheadline: lineOf(raw.heroSubheadline),
     heroImage: imageOf(raw.heroImage),
@@ -226,6 +252,9 @@ export function checkPageLimits(content: PageContent): Change {
       `The meta description is at most ${L.metaDescription} characters.`,
     );
   }
+  if (over(content.tagline, L.tagline)) {
+    return fail(`The tagline is at most ${L.tagline} characters.`);
+  }
   if (over(content.heroHeadline, L.heroHeadline)) {
     return fail(`The hero headline is at most ${L.heroHeadline} characters.`);
   }
@@ -238,6 +267,7 @@ export function checkPageLimits(content: PageContent): Change {
     return fail(`The intro is at most ${L.intro} characters.`);
   }
   const images = [
+    content.shareImage,
     content.heroImage,
     ...content.highlights.map((highlight) => highlight.image),
   ];
@@ -287,22 +317,43 @@ function missingOfImage(
   return image.alt === "" ? [itsAltText] : [];
 }
 
+/** The two tabs of the page editor: what the page shows, and what search engines and shared links show. */
+export type PageEditorTab = "content" | "search";
+
 /**
- * What the page still needs before it can be published, in the order of the
- * form: "Meta title", "Intro: at least 100 words (62 so far)", "FAQ 2: the
- * answer". Empty when the page is complete.
+ * One thing a page needs before it is published, as the publish dialog
+ * lists them: what a complete page has there, the tab it is edited on, and
+ * what is still missing, empty once it is done.
  */
-export function missingFields(
+export type PageCheck = {
+  key: "search" | "hero" | "intro" | "faqs" | "highlights";
+  label: string;
+  tab: PageEditorTab;
+  missing: string[];
+};
+
+/**
+ * Everything a page needs before it can be published, in the order of the
+ * editor: the meta title and description, the hero, the intro, the FAQs
+ * and, on the main page, the highlights. A share image is optional, but
+ * one that is set needs its alt text.
+ */
+export function pageChecks(
   page: LocationPageKey,
   content: PageContent,
-): string[] {
+): PageCheck[] {
   const L = PAGE_LIMITS;
-  const missing: string[] = [];
-  if (content.metaTitle === "") missing.push("Meta title");
-  if (content.metaDescription === "") missing.push("Meta description");
-  if (content.heroHeadline === "") missing.push("Hero headline");
-  if (content.heroSubheadline === "") missing.push("Hero subheadline");
-  missing.push(
+  const search: string[] = [];
+  if (content.metaTitle === "") search.push("Meta title");
+  if (content.metaDescription === "") search.push("Meta description");
+  if (content.shareImage && content.shareImage.alt === "") {
+    search.push("Share image: the alt text");
+  }
+
+  const hero: string[] = [];
+  if (content.heroHeadline === "") hero.push("Hero headline");
+  if (content.heroSubheadline === "") hero.push("Hero subheadline");
+  hero.push(
     ...missingOfImage(
       content.heroImage,
       "Hero image",
@@ -311,29 +362,59 @@ export function missingFields(
   );
 
   const words = wordCount(content.intro);
-  if (words < L.introWords) {
-    missing.push(`Intro: at least ${L.introWords} words (${words} so far)`);
-  }
+  const intro =
+    words < L.introWords
+      ? [`Intro: at least ${L.introWords} words (${words} so far)`]
+      : [];
 
+  const faqs: string[] = [];
   if (content.faqs.length < L.minFaqs) {
-    missing.push(`FAQs: at least ${L.minFaqs} (${content.faqs.length} so far)`);
+    faqs.push(`FAQs: at least ${L.minFaqs} (${content.faqs.length} so far)`);
   }
   for (const [i, faq] of content.faqs.entries()) {
-    if (faq.question === "") missing.push(`FAQ ${i + 1}: the question`);
-    if (faq.answer === "") missing.push(`FAQ ${i + 1}: the answer`);
+    if (faq.question === "") faqs.push(`FAQ ${i + 1}: the question`);
+    if (faq.answer === "") faqs.push(`FAQ ${i + 1}: the answer`);
   }
 
-  if (page !== LANDING_PAGE) return missing;
+  const checks: PageCheck[] = [
+    {
+      key: "search",
+      label: "A meta title and description for search results",
+      tab: "search",
+      missing: search,
+    },
+    {
+      key: "hero",
+      label: "A hero: headline, subheadline and an image with its alt text",
+      tab: "content",
+      missing: hero,
+    },
+    {
+      key: "intro",
+      label: `An intro of at least ${L.introWords} words`,
+      tab: "content",
+      missing: intro,
+    },
+    {
+      key: "faqs",
+      label: `At least ${L.minFaqs} FAQs, each with its answer`,
+      tab: "content",
+      missing: faqs,
+    },
+  ];
+  if (page !== LANDING_PAGE) return checks;
+
+  const highlights: string[] = [];
   if (content.highlights.length < L.minHighlights) {
-    missing.push(
+    highlights.push(
       `Highlights: at least ${L.minHighlights} (${content.highlights.length} so far)`,
     );
   }
   for (const [i, highlight] of content.highlights.entries()) {
     const what = `Highlight ${i + 1}`;
-    if (highlight.name === "") missing.push(`${what}: the name`);
-    if (highlight.text === "") missing.push(`${what}: the text`);
-    missing.push(
+    if (highlight.name === "") highlights.push(`${what}: the name`);
+    if (highlight.text === "") highlights.push(`${what}: the text`);
+    highlights.push(
       ...missingOfImage(
         highlight.image,
         `${what}: the image`,
@@ -341,7 +422,46 @@ export function missingFields(
       ),
     );
   }
-  return missing;
+  checks.push({
+    key: "highlights",
+    label: `At least ${L.minHighlights} highlights, each with a name, a text and an image`,
+    tab: "content",
+    missing: highlights,
+  });
+  return checks;
+}
+
+/**
+ * What the page still needs before it can be published, in the order of the
+ * editor: "Meta title", "Intro: at least 100 words (62 so far)", "FAQ 2:
+ * the answer". Empty when the page is complete.
+ */
+export function missingFields(
+  page: LocationPageKey,
+  content: PageContent,
+): string[] {
+  return pageChecks(page, content).flatMap((check) => check.missing);
+}
+
+/** The parts of a page as a person names them, in the order of the editor. */
+const PAGE_PARTS: readonly (readonly [keyof PageContent, string])[] = [
+  ["metaTitle", "Meta title"],
+  ["metaDescription", "Meta description"],
+  ["shareImage", "Share image"],
+  ["tagline", "Tagline"],
+  ["heroHeadline", "Hero headline"],
+  ["heroSubheadline", "Hero subheadline"],
+  ["heroImage", "Hero image"],
+  ["intro", "Intro"],
+  ["faqs", "FAQs"],
+  ["highlights", "Highlights"],
+];
+
+/** The parts in which two contents differ, by name: what a publish would change. */
+export function changedPageParts(a: PageContent, b: PageContent): string[] {
+  return PAGE_PARTS.filter(
+    ([key]) => JSON.stringify(a[key]) !== JSON.stringify(b[key]),
+  ).map(([, label]) => label);
 }
 
 /** Whether the page can be published: within the limits with nothing missing. */

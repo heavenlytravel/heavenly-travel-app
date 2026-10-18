@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { describeActivity, formatLocalDateTime } from "@repo/db";
-import { listActivity, type ActivityEntry } from "@repo/db/server";
+import {
+  listActivity,
+  listLocationNames,
+  type ActivityEntry,
+} from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
 import { Streamed, TableSkeleton } from "../../_components/Skeleton";
@@ -10,11 +14,14 @@ import { activityHref, bookingHref, locationHref } from "../../_lib/routes";
 
 const PAGE_SIZE = 50;
 
-/** Where the record's label leads, when it has a page. */
-function entityLink(entry: ActivityEntry) {
+/** Where the record's label leads, when it has a page; a location's is at its slug. */
+function entityLink(entry: ActivityEntry, slugs: ReadonlyMap<string, string>) {
   if (entry.isDeleted) return null;
   if (entry.entityType === "booking") return bookingHref(entry.entityId);
-  if (entry.entityType === "location") return locationHref(entry.entityId);
+  if (entry.entityType === "location") {
+    const slug = slugs.get(entry.entityId);
+    return slug ? locationHref(slug) : null;
+  }
   return null;
 }
 
@@ -53,10 +60,11 @@ export default async function ActivityPage({
 
 /** One page of the log, and the links to the pages around it. */
 async function activityList({ before }: { before: string | undefined }) {
-  const { entries, nextCursor } = await listActivity({
-    before,
-    take: PAGE_SIZE,
-  });
+  const [{ entries, nextCursor }, locations] = await Promise.all([
+    listActivity({ before, take: PAGE_SIZE }),
+    listLocationNames(),
+  ]);
+  const slugs = new Map(locations.map((l) => [l.id, l.slug]));
 
   return (
     <>
@@ -75,7 +83,7 @@ async function activityList({ before }: { before: string | undefined }) {
               </EmptyRow>
             ) : (
               entries.map((entry) => {
-                const href = entityLink(entry);
+                const href = entityLink(entry, slugs);
                 return (
                   <tr key={entry.id}>
                     <Td className="whitespace-nowrap text-neutral-600 tabular-nums">

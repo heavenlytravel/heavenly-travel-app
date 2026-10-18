@@ -104,7 +104,9 @@ export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, VehicleClassRules> = {
 export type ClassAvailability =
   | { ok: true }
   | { ok: false; reason: "too-soon"; minLeadHours: number }
-  | { ok: false; reason: "too-few-hours"; minHourlyHours: number };
+  | { ok: false; reason: "too-few-hours"; minHourlyHours: number }
+  /** The location only serves the routes on its grid, and this class has no price on this one. */
+  | { ok: false; reason: "not-on-route" };
 
 export function classAvailability(
   rules: ClassRules,
@@ -131,9 +133,14 @@ export function classAvailability(
 /** Why a class cannot take the trip, as the options page says it. */
 export function unavailableReason(availability: ClassAvailability) {
   if (availability.ok) return null;
-  return availability.reason === "too-soon"
-    ? `Needs ${availability.minLeadHours} hours notice`
-    : `Minimum ${availability.minHourlyHours} hours`;
+  switch (availability.reason) {
+    case "too-soon":
+      return `Needs ${availability.minLeadHours} hours notice`;
+    case "too-few-hours":
+      return `Minimum ${availability.minHourlyHours} hours`;
+    case "not-on-route":
+      return "Not offered on this route";
+  }
 }
 
 /** Whether a group fits a class. Only the maximum counts. */
@@ -166,20 +173,53 @@ export function cancellationDeadline(
   return hoursAfter(startsAt, -cancellationCutoffHours);
 }
 
-const localDateTime = new Intl.DateTimeFormat("en-MY", {
+const localClock = new Intl.DateTimeFormat("en-GB", {
   timeZone: BOOKING_RULES.timeZone,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   hour12: false,
 });
 
-/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 09:30" in Malaysia. */
+/** The minute of the Malaysian day an instant falls in: 23:30 is 1410. */
+export function localMinuteOfDay(instant: Date) {
+  const parts = localClock.formatToParts(instant);
+  const read = (type: "hour" | "minute") =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+  // Some runtimes spell midnight "24".
+  return (read("hour") % 24) * 60 + read("minute");
+}
+
+/**
+ * A minute of the day as every page, email and picker shows a time:
+ * 570 is "9:30 AM", 0 is "12:00 AM", 1410 is "11:30 PM".
+ */
+export function formatClock(minute: number) {
+  const hours = Math.floor(minute / 60);
+  const minutes = String(minute % 60).padStart(2, "0");
+  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+}
+
+/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 9:30 AM" in Malaysia. */
 export function formatLocalDateTime(instant: Date) {
-  return localDateTime.format(instant);
+  return `${formatLocalDate(instant)}, ${formatLocalTime(instant)}`;
+}
+
+const localDate = new Intl.DateTimeFormat("en-MY", {
+  timeZone: BOOKING_RULES.timeZone,
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+/** The day alone, "Sat, 3 Oct 2026" in Malaysia, for a table that puts the time under it. */
+export function formatLocalDate(instant: Date) {
+  return localDate.format(instant);
+}
+
+/** The time alone, "9:30 AM" in Malaysia, from the same minute the rules read. */
+export function formatLocalTime(instant: Date) {
+  return formatClock(localMinuteOfDay(instant));
 }
 
 /**

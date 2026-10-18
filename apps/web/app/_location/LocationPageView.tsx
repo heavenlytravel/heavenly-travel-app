@@ -128,7 +128,7 @@ export async function LocationPageView({
 
       {product ? (
         <>
-          <VehicleClasses category={product} />
+          <VehicleClasses slug={location.slug} category={product} />
           {/* Not the product and the place again: the headline has said that. */}
           <Intro
             title={`Getting around ${location.name}`}
@@ -379,9 +379,15 @@ function Highlights({
   );
 }
 
-/** The product's active vehicle classes, each with its seats, luggage and starting price. */
-async function VehicleClasses({ category }: { category: TripCategory }) {
-  const classes = await vehicleClassCards(category);
+/** The classes the location sells in the product, each with its seats, luggage and starting price there. */
+async function VehicleClasses({
+  slug,
+  category,
+}: {
+  slug: string;
+  category: TripCategory;
+}) {
+  const classes = await vehicleClassCards(slug, category);
   if (classes.length === 0) return null;
   return (
     <Section

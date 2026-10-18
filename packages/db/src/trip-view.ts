@@ -128,15 +128,20 @@ export function tripDetailRows(details: {
 }
 
 /**
- * The receipt behind a price, without the total: the rates used, the
- * distance or hours, the multiplier. The app adds the total in its own
- * emphasis.
+ * The receipt behind a price, without the total: the route's fixed rate or
+ * the rates used with the distance or hours, then the surcharge. The app
+ * adds the total in its own emphasis.
  */
 export function priceRows(
   price: TripPriceBreakdown,
 ): [label: string, value: string][] {
   const rows: [string, string][] = [];
-  if (price.mode === "oneway" && price.distanceKm !== null) {
+  if (price.route) {
+    rows.push([
+      `Fixed rate, ${price.route.fromZone} to ${price.route.toZone}`,
+      formatMyr(price.route.rateSen),
+    ]);
+  } else if (price.mode === "oneway" && price.distanceKm !== null) {
     const metered =
       price.rates.baseFareSen +
       Math.round(price.rates.perKmSen * price.distanceKm);
@@ -154,8 +159,17 @@ export function priceRows(
       formatMyr(price.subtotalSen),
     ]);
   }
+  // Items priced before rates were set per location carry a state's multiplier.
   if (price.multiplier !== 1) {
     rows.push([`Area rate × ${price.multiplier}`, formatMyr(price.totalSen)]);
+  }
+  if (price.surcharge) {
+    rows.push([
+      price.surcharge.percent !== null
+        ? `Odd hours, +${price.surcharge.percent}%`
+        : "Odd hours",
+      formatMyr(price.surcharge.amountSen),
+    ]);
   }
   return rows;
 }

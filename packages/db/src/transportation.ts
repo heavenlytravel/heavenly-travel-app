@@ -3,6 +3,7 @@ import {
   classAvailability,
   fitsPassengers,
   isWithinHorizon,
+  localMinuteOfDay,
   type ClassAvailability,
 } from "./booking-rules";
 import {
@@ -11,22 +12,40 @@ import {
   type TripMode,
 } from "./booking-status";
 import type { PreparedItem } from "./bookings";
+import {
+  locationAt,
+  resolveDistrict,
+  type DistrictWithState,
+} from "./coverage";
 import { Prisma } from "./generated/prisma/client";
+import { listActiveOfferings, type Offering } from "./offerings";
 import type { Place } from "./place";
 import {
   priceTrip,
   type PricingBasis,
+  type RouteRate,
   type TripPriceBreakdown,
 } from "./pricing";
-import { listActiveVehicleClasses, type VehicleClass } from "./vehicle-classes";
-import { resolveDistrict, type DistrictWithState } from "./coverage";
+import {
+  dropoffAllowed,
+  dropoffRuleOf,
+  isInOddHours,
+  oddHoursOf,
+  type SurchargeCharge,
+} from "./rates-input";
+import type { VehicleClass } from "./vehicle-classes";
+import { routeRateOf, zoneAt } from "./zone-match";
 
 /**
  * The transportation product, car with driver and coach charter alike: what
  * a customer asks for, what it costs, and how it becomes a booking item. The
- * category only decides which vehicle classes are offered. Everything
- * product-specific lives here; the booking core in bookings.ts only sees a
- * `PreparedItem`. See docs/260928-coach-charter.md.
+ * zone the pickup falls in names the location, and the location's
+ * offerings, zones and rates price the trip, wherever the drop-off is. The
+ * category only
+ * decides which offerings are priced. Everything product-specific lives
+ * here; the booking core in bookings.ts only sees a `PreparedItem`. See
+ * docs/260928-coach-charter.md and
+ * docs/261015-locations-as-operation-areas.md.
  */
 
 export type TripRequest = {
@@ -51,6 +70,8 @@ export type TripItemRequest = TripRequest & {
 
 export type TripQuoteErrorCode =
   | "not-served"
+  | "dropoff-outside"
+  | "route-not-served"
   | "too-far"
   | "dropoff-required"
   | "distance-unavailable"
@@ -63,17 +84,30 @@ export type TripQuoteErrorCode =
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
 export type ClassQuote = {
+  /** The catalogue class: its name, seats, luggage and rules. */
   vehicleClass: VehicleClass;
+  /** The location's offering of it: the rates. */
+  offering: Offering;
   price: TripPriceBreakdown;
   /** Whether the class's own rules accept this trip. */
   availability: ClassAvailability;
 };
 
+/** The location that priced a quote, as the screens name it. */
+export type QuotedLocation = { id: string; name: string; slug: string };
+
 export type TripQuote = {
   category: TripCategory;
-  /** Where the pickup is, with the state whose multiplier priced it. */
-  district: DistrictWithState;
+  /** The district the pickup is in, for the record; null at sea. */
+  district: DistrictWithState | null;
+  /** The location whose rates priced the trip: the one whose zone the pickup is in. */
+  location: QuotedLocation;
   basis: PricingBasis;
+  /** The zone the pickup is in, by name, and the drop-off's; null outside every zone. */
+  pickupZone: string;
+  dropoffZone: string | null;
+  /** The odd-hours surcharge that applies to this pickup time; null when none. */
+  surcharge: SurchargeCharge | null;
   classes: ClassQuote[];
 };
 
@@ -88,20 +122,22 @@ const fail = (code: TripQuoteErrorCode, message: string) => ({
 const HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Every active class in the category priced for one trip, each with its
- * availability, or the reason the trip cannot be booked at all. The options
- * page shows the result; `prepareTripItem` reuses it so a booking is never
- * created from a trip the options page would have refused.
+ * Every offering of the category at the pickup's location, priced for one
+ * trip, each with its availability, or the reason the trip cannot be
+ * booked at all. The options page shows the result; `prepareTripItem`
+ * reuses it so a booking is never created from a trip the options page
+ * would have refused.
  */
 export async function quoteTrip(
   category: TripCategory,
   request: TripRequest,
   now: Date = new Date(),
 ): Promise<TripQuoteResult> {
-  const district = await resolveDistrict(request.pickup);
-  if (!district || !district.isActive) {
+  const served = await locationAt(request.pickup);
+  if (!served) {
     return fail("not-served", "We do not serve that pickup area yet.");
   }
+  const { location, zone: pickupZone } = served;
 
   if (!isWithinHorizon(request.startsAt, now)) {
     return fail(
@@ -130,24 +166,107 @@ export async function quoteTrip(
     basis = { mode: "hourly", hours };
   }
 
+  const [district, offerings] = await Promise.all([
+    resolveDistrict(request.pickup),
+    listActiveOfferings(location.id, category),
+  ]);
+
+  // The drop-off rule: where a one-way trip may end. The pickup is in a
+  // zone already, whatever the rule; hourly hire has no drop-off.
+  const rule = dropoffRuleOf(location);
+  const dropoff = basis.mode === "oneway" ? request.dropoff : null;
+  const dropoffZone = dropoff ? zoneAt(location.zones, dropoff) : null;
+  if (dropoff && !dropoffAllowed(rule, dropoffZone !== null)) {
+    return rule === "grid"
+      ? fail(
+          "route-not-served",
+          `We only serve the routes on our price list from that pickup.`,
+        )
+      : fail(
+          "dropoff-outside",
+          `We only serve drop-offs within ${location.name} from that pickup.`,
+        );
+  }
+  const cellOf = (vehicleClassId: string) =>
+    dropoffZone
+      ? routeRateOf(
+          location.zoneRates,
+          pickupZone.id,
+          dropoffZone.id,
+          vehicleClassId,
+        )
+      : null;
+  // Under "grid" the route itself must be priced, for some class: a route
+  // with no cell at all is not on the price list.
+  if (
+    dropoff &&
+    rule === "grid" &&
+    !offerings.some((offering) => cellOf(offering.vehicleClass.id))
+  ) {
+    return fail(
+      "route-not-served",
+      `We only serve the routes on our price list from that pickup.`,
+    );
+  }
+  const window = oddHoursOf(location);
+  const surcharge: SurchargeCharge | null =
+    window && isInOddHours(window, localMinuteOfDay(request.startsAt))
+      ? window.percent !== null
+        ? { percent: window.percent, flatSen: null }
+        : { percent: null, flatSen: window.flatSen }
+      : null;
+
   const hours = basis.mode === "hourly" ? basis.hours : null;
-  const classes = (await listActiveVehicleClasses(category)).map(
-    (vehicleClass) => ({
+  const classes = offerings.map((offering) => {
+    const { vehicleClass } = offering;
+    const cell = cellOf(vehicleClass.id);
+    const route: RouteRate | null =
+      cell && dropoffZone
+        ? {
+            fromZone: pickupZone.name,
+            toZone: dropoffZone.name,
+            rateSen: cell.priceSen,
+          }
+        : null;
+    // Under "grid" a class with no price on the route is not offered on it.
+    const availability: ClassAvailability =
+      dropoff && rule === "grid" && !cell
+        ? { ok: false, reason: "not-on-route" }
+        : classAvailability(
+            vehicleClass,
+            { startsAt: request.startsAt, hours },
+            now,
+          );
+    return {
       vehicleClass,
+      offering,
       price: priceTrip({
         trip: basis,
-        rates: vehicleClass,
-        multiplier: district.state.multiplier,
+        rates: offering,
+        route,
+        surcharge,
       }),
-      availability: classAvailability(
-        vehicleClass,
-        { startsAt: request.startsAt, hours },
-        now,
-      ),
-    }),
-  );
+      availability,
+    };
+  });
 
-  return { ok: true, quote: { category, district, basis, classes } };
+  return {
+    ok: true,
+    quote: {
+      category,
+      district,
+      location: {
+        id: location.id,
+        name: location.name,
+        slug: location.slug,
+      },
+      basis,
+      pickupZone: pickupZone.name,
+      dropoffZone: dropoffZone?.name ?? null,
+      surcharge,
+      classes,
+    },
+  };
 }
 
 export type PrepareTripItemResult =
@@ -162,8 +281,9 @@ export type PrepareTripItemResult =
 
 /**
  * A customer's choice, validated and priced, ready for `createBooking`. The
- * item snapshots the class's name, category and cancellation cutoff, so what
- * was booked never changes when ops edits or retires the class.
+ * item snapshots the class's name, category and cancellation cutoff, and
+ * the location that priced it, so what was booked never changes when ops
+ * edits or retires the class or redraws a zone.
  */
 export async function prepareTripItem(
   category: TripCategory,
@@ -172,7 +292,7 @@ export async function prepareTripItem(
 ): Promise<PrepareTripItemResult> {
   const quoted = await quoteTrip(category, request, now);
   if (!quoted.ok) return quoted;
-  const { district, basis, classes } = quoted.quote;
+  const { district, location, basis, classes } = quoted.quote;
 
   const chosen = classes.find(
     (c) => c.vehicleClass.id === request.vehicleClassId,
@@ -185,15 +305,23 @@ export async function prepareTripItem(
   }
   const { vehicleClass, price, availability } = chosen;
   if (!availability.ok) {
-    return availability.reason === "too-soon"
-      ? fail(
+    switch (availability.reason) {
+      case "too-soon":
+        return fail(
           "too-soon",
           `${vehicleClass.name} needs ${availability.minLeadHours} hours notice. Choose a later time.`,
-        )
-      : fail(
+        );
+      case "too-few-hours":
+        return fail(
           "too-few-hours",
           `${vehicleClass.name} is hired for at least ${availability.minHourlyHours} hours.`,
         );
+      case "not-on-route":
+        return fail(
+          "route-not-served",
+          `${vehicleClass.name} is not offered on that route.`,
+        );
+    }
   }
   if (!fitsPassengers(vehicleClass, request.passengers)) {
     return fail(
@@ -214,7 +342,8 @@ export async function prepareTripItem(
           ? new Date(request.startsAt.getTime() + basis.hours * HOUR_MS)
           : null,
       cancellationCutoffHours: vehicleClass.cancellationCutoffHours,
-      districtCode: district.code,
+      districtCode: district?.code ?? null,
+      locationId: location.id,
       priceTotalSen: price.totalSen,
       priceBreakdown: price,
       tripDetails: {

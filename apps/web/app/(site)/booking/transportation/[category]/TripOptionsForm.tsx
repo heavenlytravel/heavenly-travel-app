@@ -19,6 +19,10 @@ import {
   type TripSearch,
   type TripView,
 } from "@repo/db";
+import { Radio } from "@repo/ui/field";
+import { NumberField } from "@repo/ui/number-field";
+import { Select } from "@repo/ui/select";
+import { useFormErrors } from "@repo/ui/validation";
 import {
   tripBookingHref,
   tripConfirmPath,
@@ -26,7 +30,6 @@ import {
 import { useNavigate } from "../../../../_lib/useNavigate";
 import {
   control,
-  focus,
   Pending,
   primaryButton,
   textLink,
@@ -85,6 +88,8 @@ export function TripOptionsForm({
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
   const { pending, go } = useNavigate();
+  const { errors, formProps } = useFormErrors();
+  const passengersError = errors[TRIP_OPTION_FIELDS.passengers];
 
   function continueToConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -106,6 +111,7 @@ export function TripOptionsForm({
         method="get"
         action={tripConfirmPath(category)}
         onSubmit={continueToConfirm}
+        {...formProps}
         className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start"
       >
         {hiddenSearchFields(search).map(([name, value]) => (
@@ -128,15 +134,14 @@ export function TripOptionsForm({
                     : "border-[#dce3e0] hover:border-[#073c36]/50"
                 }`}
               >
-                <input
-                  type="radio"
+                <Radio
                   name={TRIP_OPTION_FIELDS.vehicleClass}
                   value={c.id}
                   checked={on}
                   disabled={!ok}
                   required
                   onChange={() => setChosen(c.id)}
-                  className={`mt-1.5 h-[18px] w-[18px] shrink-0 accent-[#073c36] ${focus}`}
+                  className="mt-1.5"
                 />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex flex-wrap items-baseline justify-between gap-x-4">
@@ -172,10 +177,9 @@ export function TripOptionsForm({
             <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
               Passengers
             </span>
-            <input
-              type="number"
+            <NumberField
+              bare
               name={TRIP_OPTION_FIELDS.passengers}
-              inputMode="numeric"
               min={1}
               max={maxPassengers}
               required
@@ -191,6 +195,14 @@ export function TripOptionsForm({
               }
               className={control}
             />
+            {passengersError && (
+              <span
+                role="alert"
+                className="mt-1.5 block text-[0.85rem] text-[#b3261e]"
+              >
+                {passengersError}
+              </span>
+            )}
           </label>
           <p className="-mt-2.5 text-[0.85rem] text-[#67726f]">
             Up to {maxPassengers} passengers. Larger group?{" "}
@@ -201,17 +213,19 @@ export function TripOptionsForm({
               <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
                 Child seats
               </span>
-              <select
+              <Select
+                bare
                 name={TRIP_OPTION_FIELDS.childSeats}
                 defaultValue="0"
+                options={Array.from(
+                  { length: TRIP_MAX_CHILD_SEATS + 1 },
+                  (_, n) => ({
+                    value: String(n),
+                    label: n === 0 ? "None" : String(n),
+                  }),
+                )}
                 className={control}
-              >
-                {Array.from({ length: TRIP_MAX_CHILD_SEATS + 1 }, (_, n) => (
-                  <option key={n} value={n}>
-                    {n === 0 ? "None" : n}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
           )}
           <label className="block">

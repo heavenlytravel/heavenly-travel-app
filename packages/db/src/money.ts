@@ -9,7 +9,12 @@ const ringgit = new Intl.NumberFormat("en-MY", {
 
 /** 123456 -> "RM 1,234.56" */
 export function formatMyr(sen: number) {
-  return `RM ${ringgit.format(sen / 100)}`;
+  return `RM ${formatRinggit(sen)}`;
+}
+
+/** 123456 -> "1,234.56": an amount in a column already headed in RM. */
+export function formatRinggit(sen: number) {
+  return ringgit.format(sen / 100);
 }
 
 /** 12.345 -> 1235; keeps every amount a whole number of sen. */

@@ -49,6 +49,8 @@ export function sampleItem(
     cancellationCutoffHours: 24,
     districtCode: "sepang",
     district: { code: "sepang", name: "Sepang", state: { name: "Selangor" } },
+    locationId: "loc1",
+    location: { id: "loc1", name: "Klang Valley" },
     priceTotalSen: 18000,
     priceBreakdown: {},
     priceOverrideSen: null,

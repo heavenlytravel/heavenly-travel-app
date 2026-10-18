@@ -1,15 +1,29 @@
 "use client";
 
-import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
+import {
+  isNextItemStatus,
+  nextItemStatusOf,
+  type NextItemStatus,
+} from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
+import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
 import { useActionState } from "react";
 import type { ActionState } from "../../../_lib/action-state";
+import { confirmedSubmit } from "../../../_lib/confirmed-submit";
 import {
   advanceItemAction,
   cancelBookingAction,
   cancelItemAction,
 } from "./actions";
+
+/** What the toast says once each step is taken. */
+const ADVANCED: Record<NextItemStatus, string> = {
+  confirmed: "Item confirmed. The customer is told.",
+  assigned: "Driver assigned.",
+  completed: "Item completed.",
+};
 
 /** What the forward button says for each step it would take. */
 const ADVANCE_LABELS: Record<NextItemStatus, string> = {
@@ -42,7 +56,7 @@ export function ItemControls({
 }: {
   itemId: string;
   status: string;
-  /** How the confirm dialog names the item: "HT-7K3QZM item 1". */
+  /** How the cancel's question names the item: "HT-7K3QZM item 1". */
   label: string;
   /** Whether the admin may take the step that comes next. */
   canAdvance: boolean;
@@ -53,11 +67,21 @@ export function ItemControls({
   const [advanceState, advance, advancing] = useActionState<
     ActionState,
     FormData
-  >(advanceItemAction, null);
+  >(async (previous, formData) => {
+    const result = await advanceItemAction(previous, formData);
+    const to = formData.get("to");
+    if (!result?.error && isNextItemStatus(to)) toast.success(ADVANCED[to]);
+    return result;
+  }, null);
   const [cancelState, cancel, cancelling] = useActionState<
     ActionState,
     FormData
-  >(cancelItemAction, null);
+  >(async (previous, formData) => {
+    const result = await cancelItemAction(previous, formData);
+    if (!result?.error) toast.success(`Cancelled ${label}.`);
+    return result;
+  }, null);
+  const [dialog, confirm] = useConfirm();
   const next = canAdvance ? nextItemStatusOf(status) : null;
   const cancellable =
     canCancel && status !== "cancelled" && status !== "completed";
@@ -85,11 +109,17 @@ export function ItemControls({
         {cancellable ? (
           <form
             action={cancel}
-            onSubmit={(event) => {
-              if (!confirm(`Cancel ${label}? The customer will be told.`)) {
-                event.preventDefault();
-              }
-            }}
+            onSubmit={confirmedSubmit(
+              confirm,
+              {
+                title: `Cancel ${label}?`,
+                description: "The customer will be told.",
+                action: "Cancel item",
+                cancel: "Keep it",
+                danger: true,
+              },
+              cancel,
+            )}
           >
             <input type="hidden" name="itemId" value={itemId} />
             <Button type="submit" variant="danger" size="sm" disabled={pending}>
@@ -99,6 +129,7 @@ export function ItemControls({
         ) : null}
       </div>
       <ErrorLine state={advanceState ?? cancelState} />
+      {dialog}
     </div>
   );
 }
@@ -112,23 +143,30 @@ export function CancelBookingControl({
   reference: string;
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
-    cancelBookingAction,
+    async (previous, formData) => {
+      const result = await cancelBookingAction(previous, formData);
+      if (!result?.error) toast.success(`Cancelled booking ${reference}.`);
+      return result;
+    },
     null,
   );
+  const [dialog, confirm] = useConfirm();
 
   return (
     <form
       action={action}
       className="grid gap-1.5"
-      onSubmit={(event) => {
-        if (
-          !confirm(
-            `Cancel booking ${reference}? Every open item is cancelled and the customer is told.`,
-          )
-        ) {
-          event.preventDefault();
-        }
-      }}
+      onSubmit={confirmedSubmit(
+        confirm,
+        {
+          title: `Cancel booking ${reference}?`,
+          description: "Every open item is cancelled and the customer is told.",
+          action: "Cancel booking",
+          cancel: "Keep it",
+          danger: true,
+        },
+        action,
+      )}
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <Button
@@ -140,6 +178,7 @@ export function CancelBookingControl({
         {pending ? "Cancelling…" : "Cancel booking"}
       </Button>
       <ErrorLine state={state} />
+      {dialog}
     </form>
   );
 }

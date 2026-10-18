@@ -12,12 +12,15 @@ import {
   checkLocationSlug,
   checkPageUnpublish,
   hasBeenLive,
-  districtCodesOf,
+  stateCodesOf,
   isLocationState,
   isSlugLocked,
   parseAddressEntries,
   parseLocationFields,
+  setupProgress,
+  setupSteps,
   stateMoveBlockers,
+  type OperationStanding,
   type PageStanding,
 } from "./location-input";
 
@@ -35,6 +38,22 @@ describe("location states", () => {
   });
 });
 
+/** An operation with something to sell: classes on sale, zones drawn, a route priced. */
+const ready: OperationStanding = {
+  stateNames: ["Kedah"],
+  classesOnSale: 3,
+  zones: 2,
+  routesPriced: 1,
+};
+
+/** An operation just added: its states and nothing else. */
+const bare: OperationStanding = {
+  stateNames: ["Kuala Lumpur", "Selangor"],
+  classesOnSale: 0,
+  zones: 0,
+  routesPriced: 0,
+};
+
 /** The three pages, each published as drafted unless the patch says otherwise. */
 function pages(
   patch: Partial<Record<PageStanding["page"], PageStanding["status"]>> = {},
@@ -50,7 +69,7 @@ describe("stateMoveBlockers", () => {
     for (const from of LOCATION_STATES) {
       for (const to of LOCATION_STATES) {
         if (from === to) continue;
-        const blockers = stateMoveBlockers(from, to, pages());
+        const blockers = stateMoveBlockers(from, to, pages(), ready);
         assert.equal(
           blockers.length === 0,
           allowed.has(`${from}>${to}`),
@@ -62,10 +81,10 @@ describe("stateMoveBlockers", () => {
         );
       }
     }
-    assert.deepEqual(stateMoveBlockers("live", "draft", pages()), [
+    assert.deepEqual(stateMoveBlockers("live", "draft", pages(), ready), [
       "A live location cannot move to draft.",
     ]);
-    assert.deepEqual(stateMoveBlockers("draft", "paused", pages()), [
+    assert.deepEqual(stateMoveBlockers("draft", "paused", pages(), ready), [
       "A draft location cannot move to paused.",
     ]);
   });
@@ -78,9 +97,9 @@ describe("stateMoveBlockers", () => {
     });
   });
 
-  it("needs only the landing page published to go live", () => {
+  it("needs only the main page published to go live", () => {
     const move = (patch: Parameters<typeof pages>[0]) =>
-      stateMoveBlockers("draft", "live", pages(patch));
+      stateMoveBlockers("draft", "live", pages(patch), ready);
     assert.deepEqual(
       move({
         "car-with-driver": "unpublished",
@@ -89,10 +108,10 @@ describe("stateMoveBlockers", () => {
       [],
     );
     assert.deepEqual(move({ landing: "unpublished" }), [
-      "Publish the landing page",
+      "Publish the main page",
     ]);
-    assert.deepEqual(stateMoveBlockers("draft", "live", []), [
-      "Publish the landing page",
+    assert.deepEqual(stateMoveBlockers("draft", "live", [], ready), [
+      "Publish the main page",
     ]);
   });
 
@@ -102,27 +121,99 @@ describe("stateMoveBlockers", () => {
         "draft",
         "live",
         pages({ landing: "changed", "coach-charter": "changed" }),
+        ready,
       ),
       [
-        "Publish the changes on the landing page",
+        "Publish the changes on the main page",
         "Publish the changes on the Coach charter page",
       ],
     );
   });
 
+  it("does not go live with nothing to sell or no zone to serve", () => {
+    assert.deepEqual(stateMoveBlockers("draft", "live", pages(), bare), [
+      "Put at least one vehicle class on sale, with its rates, on the Vehicle classes tab",
+      "Draw at least one zone on the Coverage tab; the zones are what the location serves",
+    ]);
+    // A grid is not required: a trip in a zone with no row is metered.
+    assert.deepEqual(
+      stateMoveBlockers("draft", "live", pages(), {
+        ...ready,
+        zones: 1,
+        routesPriced: 0,
+      }),
+      [],
+    );
+  });
+
   it("checks nothing on the moves that keep the pages public", () => {
-    const bare = pages({
+    const unready = pages({
       "car-with-driver": "unpublished",
       "coach-charter": "unpublished",
       landing: "changed",
     });
-    assert.deepEqual(stateMoveBlockers("live", "paused", bare), []);
-    assert.deepEqual(stateMoveBlockers("paused", "live", bare), []);
+    assert.deepEqual(stateMoveBlockers("live", "paused", unready, bare), []);
+    assert.deepEqual(stateMoveBlockers("paused", "live", unready, bare), []);
+  });
+});
+
+describe("setupSteps", () => {
+  it("walks the four tabs in order, each with its standing", () => {
+    const steps = setupSteps(pages(), ready);
+    assert.deepEqual(
+      steps.map((step) => [step.key, step.status, step.done]),
+      [
+        ["details", "Kedah", true],
+        ["vehicle-classes", "3 classes on sale", true],
+        ["coverage", "2 zones", true],
+        ["pages", "Main page published, 2 product pages published", true],
+      ],
+    );
+    assert.deepEqual(setupProgress(steps), {
+      done: 4,
+      total: 4,
+      next: null,
+    });
+  });
+
+  it("names the first step not done as the next one", () => {
+    const steps = setupSteps(
+      pages({ landing: "changed", "car-with-driver": "unpublished" }),
+      { ...bare, classesOnSale: 1 },
+    );
+    assert.deepEqual(
+      steps.map((step) => [step.key, step.status, step.done]),
+      [
+        ["details", "Kuala Lumpur and Selangor", true],
+        ["vehicle-classes", "1 class on sale", true],
+        ["coverage", "No zones yet", false],
+        [
+          "pages",
+          "Main page published, 1 product page published, edits waiting",
+          false,
+        ],
+      ],
+    );
+    const progress = setupProgress(steps);
+    assert.equal(progress.done, 2);
+    assert.equal(progress.next?.key, "coverage");
+    assert.deepEqual(steps[3]?.todos, ["Publish the changes on the main page"]);
+  });
+
+  it("asks for a state only when the location has none", () => {
+    const steps = setupSteps(pages(), { ...bare, stateNames: [] });
+    assert.deepEqual(steps[0], {
+      key: "details",
+      title: "Details",
+      status: "No state yet",
+      todos: ["Tick at least one state on the Details tab"],
+      done: false,
+    });
   });
 });
 
 describe("checkPageUnpublish", () => {
-  it("keeps the landing page published once the location has left draft", () => {
+  it("keeps the main page published once the location has left draft", () => {
     assert.equal(checkPageUnpublish("draft", "landing").ok, true);
     for (const state of ["live", "paused"] as const) {
       assert.match(
@@ -164,13 +255,14 @@ describe("checkLocationSlug", () => {
     assert.equal(checkLocationSlug("a".repeat(LOCATION_LIMITS.slug)).ok, true);
   });
 
-  it("refuses the site's own paths, the products, the locales and the set-aside names", () => {
+  it("refuses the site's own paths, the products, the locales, the set-aside names and the console's", () => {
     const reserved = [
       ...["account", "booking", "preview", "sign-in", "sign-up", "api"],
       ...TRIP_CATEGORIES,
       ...["en", "ms", "zh"],
       ...["admin", "search", "manage", "quote", "packages"],
       ...["vehicles", "transfer", "driver", "sitemap", "robots"],
+      "new",
     ];
     for (const slug of reserved) {
       assert.match(errorOf(checkLocationSlug(slug)), /something else/, slug);
@@ -207,71 +299,46 @@ describe("isSlugLocked", () => {
   });
 });
 
-describe("districtCodesOf", () => {
+describe("stateCodesOf", () => {
   it("keeps each code once, sorted, and drops what is not a code", () => {
-    assert.deepEqual(
-      districtCodesOf(["timur-laut", " barat-daya ", "timur-laut", "", 7]),
-      ["barat-daya", "timur-laut"],
-    );
-    assert.deepEqual(districtCodesOf("barat-daya"), []);
-    assert.deepEqual(districtCodesOf(undefined), []);
+    assert.deepEqual(stateCodesOf(["MY-07", " MY-02 ", "MY-07", "", 7]), [
+      "MY-02",
+      "MY-07",
+    ]);
+    assert.deepEqual(stateCodesOf("MY-02"), []);
+    assert.deepEqual(stateCodesOf(undefined), []);
   });
 });
 
 describe("parseLocationFields", () => {
-  const districts = ["langkawi"];
+  const states = ["MY-02"];
 
-  it("trims the text and reads an empty tagline as none", () => {
+  it("trims the text and keeps the states", () => {
     assert.deepEqual(
-      parseLocationFields({
-        name: " Langkawi ",
-        slug: "langkawi",
-        tagline: "  ",
-        districts,
-      }),
+      parseLocationFields({ name: " Langkawi ", slug: "langkawi", states }),
       {
         ok: true,
-        value: {
-          name: "Langkawi",
-          slug: "langkawi",
-          tagline: null,
-          districtCodes: ["langkawi"],
-        },
+        value: { name: "Langkawi", slug: "langkawi", stateCodes: ["MY-02"] },
       },
     );
-    const parsed = parseLocationFields({
-      name: "Langkawi",
-      slug: "langkawi",
-      tagline: " Beaches and duty-free ",
-      districts,
-    });
-    assert.equal(parsed.ok && parsed.value.tagline, "Beaches and duty-free");
   });
 
-  it("asks for at least one district", () => {
-    const base = { name: "Penang", slug: "penang", tagline: "" };
-    assert.match(errorOf(parseLocationFields(base)), /at least one district/);
+  it("asks for at least one state", () => {
+    const base = { name: "Klang Valley", slug: "klang-valley" };
+    assert.match(errorOf(parseLocationFields(base)), /at least one state/);
     assert.match(
-      errorOf(parseLocationFields({ ...base, districts: [] })),
-      /at least one district/,
+      errorOf(parseLocationFields({ ...base, states: [] })),
+      /at least one state/,
     );
     const parsed = parseLocationFields({
       ...base,
-      districts: ["timur-laut", "barat-daya"],
+      states: ["MY-14", "MY-10"],
     });
-    assert.deepEqual(parsed.ok && parsed.value.districtCodes, [
-      "barat-daya",
-      "timur-laut",
-    ]);
+    assert.deepEqual(parsed.ok && parsed.value.stateCodes, ["MY-10", "MY-14"]);
   });
 
   it("asks for a name and keeps each field in its limit", () => {
-    const base = {
-      name: "Langkawi",
-      slug: "langkawi",
-      tagline: "",
-      districts,
-    };
+    const base = { name: "Langkawi", slug: "langkawi", states };
     assert.match(
       errorOf(parseLocationFields({ ...base, name: "" })),
       /Enter the name/,
@@ -279,10 +346,6 @@ describe("parseLocationFields", () => {
     assert.match(
       errorOf(parseLocationFields({ ...base, name: "a".repeat(61) })),
       /name is at most 60/,
-    );
-    assert.match(
-      errorOf(parseLocationFields({ ...base, tagline: "a".repeat(81) })),
-      /tagline is at most 80/,
     );
     assert.match(
       errorOf(parseLocationFields({ ...base, slug: "api" })),

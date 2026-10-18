@@ -4,6 +4,7 @@ import {
   ACTIVITY_ACTIONS,
   activityActionMeta,
   describeActivity,
+  locationHistoryKindOf,
 } from "./activity-actions";
 
 describe("describeActivity", () => {
@@ -160,18 +161,18 @@ describe("describeActivity", () => {
     assert.equal(
       describeActivity({
         action: "location.updated",
-        before: { name: "Langkawi Island", tagline: null },
-        after: { name: "Langkawi", tagline: "Beaches and duty-free" },
+        before: { name: "Langkawi Island", slug: "langkawi-island" },
+        after: { name: "Langkawi", slug: "langkawi" },
       }),
-      "Renamed to Langkawi, changed the tagline",
+      "Renamed to Langkawi, changed the slug",
     );
     assert.equal(
       describeActivity({
         action: "location.updated",
-        before: { districtCodes: ["barat-daya"] },
-        after: { districtCodes: ["barat-daya", "timur-laut"] },
+        before: { stateCodes: ["MY-07"] },
+        after: { stateCodes: ["MY-02", "MY-07"] },
       }),
-      "Changed the districts",
+      "Changed the states",
     );
   });
 
@@ -191,7 +192,7 @@ describe("describeActivity", () => {
     assert.equal(
       describeActivity({
         action: "location.deleted",
-        before: { name: "Test", slug: "test", districtCodes: ["langkawi"] },
+        before: { name: "Test", slug: "test", stateCodes: ["MY-02"] },
         after: null,
       }),
       "Deleted the location",
@@ -230,7 +231,7 @@ describe("describeActivity", () => {
         before: { page: "landing", content: null },
         after: { page: "landing", content: {} },
       }),
-      "Published the landing page",
+      "Published the main page",
     );
     const flip = (isOn: boolean) =>
       describeActivity({
@@ -298,5 +299,15 @@ describe("activityActionMeta", () => {
         action,
       );
     }
+  });
+});
+
+describe("locationHistoryKindOf", () => {
+  it("names a part of the location for every action logged against one", () => {
+    for (const action of ACTIVITY_ACTIONS) {
+      if (activityActionMeta(action).entityType !== "location") continue;
+      assert.notEqual(locationHistoryKindOf(action), null, action);
+    }
+    assert.equal(locationHistoryKindOf("booking.created"), null);
   });
 });

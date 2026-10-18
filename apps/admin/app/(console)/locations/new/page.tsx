@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import { LOCATIONS_PATH } from "../../../_lib/routes";
-import { districtOptions } from "../_lib/district-options";
+import { stateOptions } from "../_lib/state-options";
 import { NewLocationForm } from "./NewLocationForm";
 
 /**
- * Route: /locations/new. A name, a slug and the districts the place lies in
+ * Route: /locations/new. A name, a slug and the state the place lies in
  * make a location. Marketing's screen behind `locations.manage`.
  */
 export default async function NewLocationPage() {
@@ -15,21 +13,13 @@ export default async function NewLocationPage() {
 
   return (
     <>
-      <p className="mb-4 text-sm">
-        <Link
-          href={LOCATIONS_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
-        >
-          All locations
-        </Link>
-      </p>
       <PageHeader
         title="Add location"
-        description="A new location is a draft: nothing is public until it goes live."
+        description="Step 1 of 4. A new location is a draft; its vehicle classes, its coverage and rates, and its pages follow on its page. It goes live once every step is done."
       />
 
       <div className="mt-6 max-w-2xl">
-        <Streamed fallback={<FormSkeleton fields={4} />}>
+        <Streamed fallback={<FormSkeleton fields={3} />}>
           {() => newLocation()}
         </Streamed>
       </div>
@@ -37,7 +27,7 @@ export default async function NewLocationPage() {
   );
 }
 
-/** The form, with the districts a location can lie in. */
+/** The form, with the states a location can lie in. */
 async function newLocation() {
-  return <NewLocationForm districts={await districtOptions()} />;
+  return <NewLocationForm states={await stateOptions()} />;
 }

@@ -2,6 +2,7 @@
 // handler share. Providers and the Google key live in ./server.
 export type { Place } from "@repo/db";
 export type {
+  Bounds,
   PlaceSuggestion,
   PlaceSearchResponse,
   RoadDistance,

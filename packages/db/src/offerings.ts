@@ -41,7 +41,11 @@ const NOT_FOUND: Change = { ok: false, error: "Offering not found." };
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
 
-const byClassOrder = (a: Offering, b: Offering) =>
+/** Car with driver first, then by the class's order and name. */
+export const byClassOrder = (
+  a: Pick<Offering, "vehicleClass">,
+  b: Pick<Offering, "vehicleClass">,
+) =>
   categoryRank(a.vehicleClass.category) -
     categoryRank(b.vehicleClass.category) ||
   a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||

@@ -1,10 +1,12 @@
 import type { Permission } from "@repo/db";
 import {
+  BanknoteIcon,
   BusIcon,
   CalendarCheckIcon,
   HistoryIcon,
   HouseIcon,
   MapIcon,
+  MapPinIcon,
   ShieldCheckIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
@@ -12,8 +14,10 @@ import {
   ACTIVITY_PATH,
   ADMINS_PATH,
   BOOKINGS_PATH,
+  COVERAGE_PATH,
   HOME_PAGE_PATH,
   LOCATIONS_PATH,
+  RATES_PATH,
   VEHICLE_CLASSES_PATH,
 } from "../_lib/routes";
 
@@ -43,7 +47,11 @@ export const LOCATIONS_NAV: NavItem = {
   permission: "dashboard.view",
 };
 
-/** The console's other sections, in sidebar order, under the locations. */
+/**
+ * The console's other sections, in sidebar order, under the locations.
+ * Operations holds the views across locations: the queue, the catalogue,
+ * every zone and every price; each is changed inside its location.
+ */
 export const NAV: NavGroup[] = [
   {
     label: "Operations",
@@ -58,6 +66,18 @@ export const NAV: NavGroup[] = [
         href: VEHICLE_CLASSES_PATH,
         label: "Vehicle classes",
         icon: BusIcon,
+        permission: "coverage.view",
+      },
+      {
+        href: COVERAGE_PATH,
+        label: "Coverage",
+        icon: MapPinIcon,
+        permission: "coverage.view",
+      },
+      {
+        href: RATES_PATH,
+        label: "Rates",
+        icon: BanknoteIcon,
         permission: "coverage.view",
       },
     ],

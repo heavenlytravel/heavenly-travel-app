@@ -53,6 +53,7 @@ export {
   listZones,
   getZone,
   listZoneRates,
+  listPriceLists,
   createZone,
   updateZone,
   deleteZone,
@@ -60,7 +61,7 @@ export {
   setOddHours,
   setDropoffRule,
 } from "./zones";
-export type { Zone, ZoneRate } from "./zones";
+export type { Zone, ZoneRate, LocationPriceList } from "./zones";
 export {
   listLocationNames,
   getLocation,

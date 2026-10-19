@@ -7,11 +7,12 @@ import {
   emptyBookingsMessage,
 } from "../../_components/BookingFilters";
 import { BookingsTable } from "../../_components/BookingsTable";
+import { LocationFilter } from "../../_components/LocationFilter";
 import { PageHeader } from "../../_components/PageHeader";
 import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
+import { locationFilterOptions } from "../../_lib/location-filter";
 import { bookingsHref, NEW_BOOKING_PATH } from "../../_lib/routes";
-import { LocationFilter } from "./LocationFilter";
 
 /**
  * Route: /bookings?status=received&location=…. The queue across locations,
@@ -51,9 +52,10 @@ export default async function BookingsPage({
           hrefOf={(status) => bookingsHref({ status, location: locationId })}
         />
         <LocationFilter
-          locations={locations}
           value={locationId ?? ""}
-          status={filter}
+          options={locationFilterOptions(locations, (location) =>
+            bookingsHref({ status: filter, location }),
+          )}
         />
       </div>
 

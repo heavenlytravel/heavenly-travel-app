@@ -3,6 +3,7 @@ import type { Actor } from "./activity-actions";
 import type { Change, Created } from "./change";
 import { db } from "./client";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
+import { byClassOrder } from "./offerings";
 import {
   ZONE_LIMITS,
   checkOddHours,
@@ -46,6 +47,41 @@ export function getZone(id: string): Promise<Zone | null> {
 /** Every cell of the location's grid that holds a price. */
 export function listZoneRates(locationId: string): Promise<ZoneRate[]> {
   return db.zoneRate.findMany({ where: { locationId } });
+}
+
+const priceList = {
+  include: {
+    states: { select: { code: true, name: true }, orderBy: { name: "asc" } },
+    zones: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+    zoneRates: true,
+    offerings: { include: { vehicleClass: true } },
+  },
+} satisfies Prisma.LocationDefaultArgs;
+
+/**
+ * A location with what it serves and what it charges: its states, its
+ * zones in their order, its grid, and the classes it sells, in the
+ * catalogue's order, with their rates and rules.
+ */
+export type LocationPriceList = Prisma.LocationGetPayload<typeof priceList>;
+
+/**
+ * Every location's price list by name, or one location's, for the
+ * console's Coverage and Rates across locations. One query, whatever the
+ * number of locations.
+ */
+export async function listPriceLists(
+  locationId?: string,
+): Promise<LocationPriceList[]> {
+  const rows = await db.location.findMany({
+    where: locationId ? { id: locationId } : undefined,
+    orderBy: { name: "asc" },
+    ...priceList,
+  });
+  return rows.map((row) => ({
+    ...row,
+    offerings: row.offerings.sort(byClassOrder),
+  }));
 }
 
 /** A new zone, after the location's others. */

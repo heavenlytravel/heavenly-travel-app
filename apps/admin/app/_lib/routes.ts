@@ -45,6 +45,25 @@ export function bookingHref(id: string) {
 /** Where staff enter a booking that arrived by phone, WhatsApp or email. */
 export const NEW_BOOKING_PATH = `${BOOKINGS_PATH}/new`;
 
+/** A path across locations, narrowed to one location's id when given. */
+function withLocation(path: string, locationId: string | undefined) {
+  return locationId
+    ? `${path}?${new URLSearchParams({ location: locationId })}`
+    : path;
+}
+
+/** Every location's zones on one map, or one location's. */
+export const COVERAGE_PATH = "/coverage";
+export function coverageHref(locationId?: string) {
+  return withLocation(COVERAGE_PATH, locationId);
+}
+
+/** What every location charges, or one location. */
+export const RATES_PATH = "/rates";
+export function ratesHref(locationId?: string) {
+  return withLocation(RATES_PATH, locationId);
+}
+
 /** The catalogue of vehicle classes. */
 export const VEHICLE_CLASSES_PATH = "/vehicle-classes";
 

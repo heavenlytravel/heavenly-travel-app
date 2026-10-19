@@ -20,38 +20,36 @@ import { useActionState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
 import type { ActionState } from "../../../../_lib/action-state";
-import { locationTabHref } from "../../../../_lib/routes";
+import type { FleetClassOption } from "../../../../_lib/fleet-form";
+import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
 import { createDriverAction, updateDriverAction } from "./actions";
-
-/** A class a driver may be ticked for. */
-export type DriverClassOption = {
-  id: string;
-  name: string;
-  category: string;
-};
 
 /**
  * The form for one of our drivers, new or existing: who they are and how
  * to reach them, where they are based, the classes they may drive, the
  * expiry dates of their licences, and notes. A saved driver opens the
- * Drivers tab of the location they are based at.
+ * Drivers tab of the location they are based at, or the list across
+ * locations they were added from.
  */
 export function DriverForm({
-  slug,
   locationId,
   driver,
   classes,
   locations,
+  backHref,
+  backToList = false,
 }: {
-  /** The location whose tab the form is on, for "Cancel". */
-  slug: string;
-  /** Where a new driver is based to start with. */
-  locationId: string;
+  /** Where a new driver is based to start with; absent on the list across locations. */
+  locationId?: string;
   /** Absent on the "new" page. */
   driver?: DriverWithClasses;
   /** Every class in the catalogue, in its order. */
-  classes: DriverClassOption[];
+  classes: FleetClassOption[];
   locations: LocationName[];
+  /** Where "Cancel" goes. */
+  backHref: string;
+  /** Opened from the list across locations, which a saved driver goes back to. */
+  backToList?: boolean;
 }) {
   const isNew = !driver;
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -64,6 +62,13 @@ export function DriverForm({
   return (
     <form action={action} className="grid gap-6">
       {driver ? <input type="hidden" name="id" value={driver.id} /> : null}
+      {backToList ? (
+        <input
+          type="hidden"
+          name={FLEET_BACK_FIELD}
+          value={FLEET_BACK_TO_LIST}
+        />
+      ) : null}
 
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -100,7 +105,8 @@ export function DriverForm({
             <Select
               name="locationId"
               required
-              defaultValue={fields?.locationId ?? locationId}
+              placeholder="Choose the location"
+              defaultValue={fields?.locationId ?? locationId ?? ""}
               options={locations.map((location) => ({
                 value: location.id,
                 label: location.name,
@@ -190,7 +196,7 @@ export function DriverForm({
           {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
         </Button>
         <Link
-          href={locationTabHref(slug, "drivers")}
+          href={backHref}
           className="text-sm text-neutral-600 underline-offset-4 hover:underline"
         >
           Cancel

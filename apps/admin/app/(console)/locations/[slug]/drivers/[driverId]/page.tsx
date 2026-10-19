@@ -18,6 +18,7 @@ import {
   Streamed,
 } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
+import { fleetClassOptions } from "../../../../../_lib/fleet-form";
 import { locationTabHref } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteDriverAction } from "../actions";
@@ -92,15 +93,11 @@ async function driverScreen({
         main={
           <DriverForm
             key={driver?.id ?? "new"}
-            slug={slug}
             locationId={id}
             driver={driver ?? undefined}
-            classes={classes.map((c) => ({
-              id: c.id,
-              name: c.name,
-              category: c.category,
-            }))}
+            classes={fleetClassOptions(classes)}
             locations={locations}
+            backHref={locationTabHref(slug, "drivers")}
           />
         }
         side={

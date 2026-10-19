@@ -29,6 +29,7 @@ import {
   classGroups,
   type FleetClassOption,
 } from "../../../../_lib/fleet-form";
+import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
 import { createVehicleAction, updateVehicleAction } from "./actions";
 
 /** Each name once, in the spelling it was first entered with. */
@@ -97,7 +98,7 @@ function ModelNote({
  * where it is based and whether it is in service, the expiry dates of its
  * documents, and notes. A model the class does not have yet is added to
  * it on save. A saved vehicle opens the Vehicles tab of the location it is
- * based at.
+ * based at, or the list across locations it was added from.
  */
 export function VehicleForm({
   vehicle,
@@ -106,11 +107,12 @@ export function VehicleForm({
   suggestions,
   locations,
   backHref,
+  backToList = false,
 }: {
   /** Absent on the "new" page. */
   vehicle?: VehicleWithModel;
-  /** Where a new vehicle is based to start with. */
-  locationId: string;
+  /** Where a new vehicle is based to start with; absent on the list across locations. */
+  locationId?: string;
   /** Every class in the catalogue, in its order. */
   classes: FleetClassOption[];
   /** Every model in the catalogue, for the brand and model fields. */
@@ -118,6 +120,8 @@ export function VehicleForm({
   locations: LocationName[];
   /** Where "Cancel" goes. */
   backHref: string;
+  /** Opened from the list across locations, which a saved vehicle goes back to. */
+  backToList?: boolean;
 }) {
   const isNew = !vehicle;
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -134,6 +138,13 @@ export function VehicleForm({
   return (
     <form action={action} className="grid gap-6">
       {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
+      {backToList ? (
+        <input
+          type="hidden"
+          name={FLEET_BACK_FIELD}
+          value={FLEET_BACK_TO_LIST}
+        />
+      ) : null}
       <datalist id={brandList}>
         {distinct(suggestions.map((s) => s.brand)).map((name) => (
           <option key={name} value={name} />
@@ -235,7 +246,8 @@ export function VehicleForm({
             <Select
               name="locationId"
               required
-              defaultValue={fields?.locationId ?? locationId}
+              placeholder="Choose the location"
+              defaultValue={fields?.locationId ?? locationId ?? ""}
               options={locations.map((location) => ({
                 value: location.id,
                 label: location.name,

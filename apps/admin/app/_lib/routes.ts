@@ -100,17 +100,33 @@ function fleetListHref(path: string, filter: FleetListFilter) {
   return query ? `${path}?${query}` : path;
 }
 
-/** Our vehicles across locations, narrowed by the filter. */
+/** Our vehicles across locations, narrowed by the filter; a new one, based where its form says. */
 export const VEHICLES_PATH = "/vehicles";
 export function vehiclesHref(filter: FleetListFilter = {}) {
   return fleetListHref(VEHICLES_PATH, filter);
 }
+/** A new vehicle from the list, based at the location the list is narrowed to, if any. */
+export function newVehicleHref(location?: string) {
+  return fleetListHref(`${VEHICLES_PATH}/new`, { location });
+}
 
-/** Our drivers across locations, narrowed by the filter. */
+/** Our drivers across locations, narrowed by the filter; a new one, based where their form says. */
 export const DRIVERS_PATH = "/drivers";
 export function driversHref(filter: FleetListFilter = {}) {
   return fleetListHref(DRIVERS_PATH, filter);
 }
+/** A new driver from the list, based at the location the list is narrowed to, if any. */
+export function newDriverHref(location?: string) {
+  return fleetListHref(`${DRIVERS_PATH}/new`, { location });
+}
+
+/**
+ * The field a vehicle or driver form posts when it was opened from the
+ * list across locations, and its value: once saved, the form goes back
+ * to that list rather than to a location's tab.
+ */
+export const FLEET_BACK_FIELD = "back";
+export const FLEET_BACK_TO_LIST = "list";
 
 /** The console's home: every location with its numbers. */
 export const LOCATIONS_PATH = "/";

@@ -19,23 +19,32 @@ import {
 } from "../../../../_lib/action-state";
 import {
   DRIVERS_PATH,
+  FLEET_BACK_FIELD,
+  FLEET_BACK_TO_LIST,
   LOCATIONS_PATH,
   locationTabHref,
 } from "../../../../_lib/routes";
 import { revalidateLocation } from "../../_lib/revalidate";
 
 /**
- * The Drivers tab's actions. Each checks `fleet.manage` again, passes the
- * admin as the actor and lets the writer in @repo/db check the rest. A
- * saved driver opens the Drivers tab of the location they are based at,
- * which a move changes.
+ * The driver form's actions, on a location's Drivers tab and on the list
+ * across locations. Each checks `fleet.manage` again, passes the admin as
+ * the actor and lets the writer in @repo/db check the rest. A saved
+ * driver opens the Drivers tab of the location they are based at, which a
+ * move changes, or the list they were added from.
  */
 function revalidateDrivers() {
   revalidateLocation();
   revalidatePath(DRIVERS_PATH);
 }
 
-async function openDriversOf(locationId: string): Promise<never> {
+async function openAfterSave(
+  formData: FormData,
+  locationId: string,
+): Promise<never> {
+  if (formData.get(FLEET_BACK_FIELD) === FLEET_BACK_TO_LIST) {
+    redirect(DRIVERS_PATH);
+  }
   const slug = await getLocationSlug(locationId);
   redirect(slug ? locationTabHref(slug, "drivers") : LOCATIONS_PATH);
 }
@@ -58,7 +67,7 @@ export async function createDriverAction(
   const result = await createDriver(actorOf(admin), fields.value);
   if (!result.ok) return stateOf(result);
   revalidateDrivers();
-  return openDriversOf(fields.value.locationId);
+  return openAfterSave(formData, fields.value.locationId);
 }
 
 /** Every field of the form, saved together. */
@@ -75,7 +84,7 @@ export async function updateDriverAction(
   const result = await updateDriver(actorOf(admin), id, fields.value);
   if (!result.ok) return stateOf(result);
   revalidateDrivers();
-  return openDriversOf(fields.value.locationId);
+  return openAfterSave(formData, fields.value.locationId);
 }
 
 /** Deletes a driver entered by mistake; the button then opens the tab. */

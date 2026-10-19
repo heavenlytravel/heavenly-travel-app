@@ -110,9 +110,9 @@ export async function amendItemScreen({
       {back}
       <Header
         title={title}
-        description="Change the trip, the vehicle or the details. The trip is priced again with today's rates, and the customer gets a “Booking updated” email."
+        description="Open the step to change: the trip, the vehicle or the details. The trip is priced again with today's rates, and the customer gets a “Booking updated” email."
       />
-      <div className="mt-6 max-w-3xl">
+      <div className="mt-6">
         <AmendItemForm
           bookingId={booking.id}
           itemId={item.id}

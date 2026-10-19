@@ -7,6 +7,9 @@ const FORM: Record<string, string> = {
   perKm: "1.80",
   hourlyRate: "60.00",
   minimumFare: "60",
+  minLeadHours: "4",
+  cancellationCutoffHours: "24",
+  minHourlyHours: "3",
   isActive: "on",
 };
 
@@ -17,7 +20,7 @@ function errorOf(values: Record<string, string>) {
 }
 
 describe("parseOfferingFields", () => {
-  it("reads money in ringgit into sen and the checkbox", () => {
+  it("reads money in ringgit into sen, the rules in hours and the checkbox", () => {
     assert.deepEqual(parseOfferingFields(FORM), {
       ok: true,
       value: {
@@ -25,6 +28,9 @@ describe("parseOfferingFields", () => {
         perKmSen: 180,
         hourlyRateSen: 6000,
         minimumFareSen: 6000,
+        minLeadHours: 4,
+        cancellationCutoffHours: 24,
+        minHourlyHours: 3,
         isActive: true,
       },
     });
@@ -40,6 +46,18 @@ describe("parseOfferingFields", () => {
     assert.match(errorOf({ hourlyRate: "" }) ?? "", /per hour/);
     assert.match(errorOf({ minimumFare: "abc" }) ?? "", /minimum fare/);
     assert.equal(errorOf({ minimumFare: "0" }), null);
+  });
+
+  it("keeps the hours whole and the minimum hire inside the global range", () => {
+    assert.match(errorOf({ minLeadHours: "-1" }) ?? "", /Notice needed/);
+    assert.match(errorOf({ cancellationCutoffHours: "1.5" }) ?? "", /Cancel/);
+    assert.match(errorOf({ minLeadHours: "" }) ?? "", /Notice needed/);
+    assert.match(errorOf({ minHourlyHours: "2" }) ?? "", /between 3 and 12/);
+    assert.match(errorOf({ minHourlyHours: "13" }) ?? "", /between 3 and 12/);
+    assert.equal(
+      errorOf({ minLeadHours: "0", cancellationCutoffHours: "0" }),
+      null,
+    );
   });
 
   it("allows a minimum fare below the base fare", () => {

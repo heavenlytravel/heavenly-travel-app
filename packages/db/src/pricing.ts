@@ -1,3 +1,4 @@
+import type { OfferingRules } from "./booking-rules";
 import { isTripMode, type TripMode } from "./booking-status";
 import type { SurchargeCharge } from "./rates-input";
 
@@ -134,9 +135,8 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
  * trip is known yet.
  */
 export function startingPriceSen(
-  offering: Pick<TripRates, "minimumFareSen" | "hourlyRateSen"> & {
-    minHourlyHours: number;
-  },
+  offering: Pick<TripRates, "minimumFareSen" | "hourlyRateSen"> &
+    Pick<OfferingRules, "minHourlyHours">,
 ) {
   return Math.min(
     offering.minimumFareSen,

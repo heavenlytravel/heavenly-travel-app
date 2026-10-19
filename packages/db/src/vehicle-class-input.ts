@@ -1,4 +1,3 @@
-import { BOOKING_RULES } from "./booking-rules";
 import { isTripCategory, type TripCategory } from "./booking-status";
 import type { Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
@@ -7,8 +6,9 @@ import { flagOf, numberOf, textOf, type Parsed } from "./fields";
  * What the Vehicle classes screen edits of a catalogue class and the rules
  * it checks, pure and browser-safe: the form displays the messages, the
  * writers in ./vehicle-classes apply the same checks before they write.
- * The rates a location sells a class at are ./offering-input. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes".
+ * The rates and rules a location sells a class under are ./offering-input.
+ * See docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 
 /** Every editable column of `VehicleClass`. */
@@ -20,9 +20,6 @@ export type VehicleClassFields = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  minLeadHours: number;
-  cancellationCutoffHours: number;
-  minHourlyHours: number;
   isActive: boolean;
 };
 
@@ -37,9 +34,6 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
-  minLeadHours: "Notice needed",
-  cancellationCutoffHours: "Cancel up to",
-  minHourlyHours: "Minimum hours",
   isActive: "Active",
 };
 
@@ -55,7 +49,6 @@ export function seatsLabel(vehicleClass: {
 }
 
 const TEXT_FIELDS = ["name", "description", "luggage"] as const;
-const HOUR_FIELDS = ["minLeadHours", "cancellationCutoffHours"] as const;
 
 const isWhole = (n: number) => Number.isInteger(n);
 
@@ -93,23 +86,6 @@ export function checkVehicleClassFields(
   ) {
     return fail("Seats to is at least seats from.");
   }
-  for (const key of HOUR_FIELDS) {
-    const value = fields[key];
-    if (value !== undefined && (!isWhole(value) || value < 0)) {
-      return fail(
-        `${VEHICLE_CLASS_FIELD_LABELS[key]} is a whole number of hours, 0 or more.`,
-      );
-    }
-  }
-  if (fields.minHourlyHours !== undefined) {
-    const { hourlyFloorHours, maxHourlyHours } = BOOKING_RULES;
-    const value = fields.minHourlyHours;
-    if (!isWhole(value) || value < hourlyFloorHours || value > maxHourlyHours) {
-      return fail(
-        `Minimum hours is a whole number between ${hourlyFloorHours} and ${maxHourlyHours}.`,
-      );
-    }
-  }
   return { ok: true };
 }
 
@@ -130,9 +106,6 @@ export function parseVehicleClassFields(
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),
-    minLeadHours: numberOf(values.minLeadHours),
-    cancellationCutoffHours: numberOf(values.cancellationCutoffHours),
-    minHourlyHours: numberOf(values.minHourlyHours),
     isActive: flagOf(values.isActive),
   };
   const check = checkVehicleClassFields(fields);

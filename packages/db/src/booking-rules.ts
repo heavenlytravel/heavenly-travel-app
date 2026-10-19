@@ -66,24 +66,23 @@ export const HOURLY_OPTIONS: readonly number[] = Array.from(
   (_, i) => BOOKING_RULES.hourlyFloorHours + i,
 );
 
-/** The rules a vehicle class sets for a trip, as stored on `VehicleClass`. */
+/** The rules a location sets for a trip in one class, as stored on its offering. */
 export type ClassRules = {
   minLeadHours: number;
   minHourlyHours: number;
 };
 
-/** The three rules a class carries, as stored on `VehicleClass`. */
-export type VehicleClassRules = ClassRules & {
+/** The three rules an offering carries, as stored on `LocationVehicleClass`. */
+export type OfferingRules = ClassRules & {
   cancellationCutoffHours: number;
 };
 
 /**
- * Each category's usual rules. A new class on the Vehicle classes screen
- * starts with them and the seed's classes carry them; a class may differ,
- * it is only a row. The coach values are placeholders until ops confirms
- * them.
+ * Each category's usual rules. A class a location starts selling starts
+ * with them; the location may differ, per class, it is only a row. The
+ * coach values are placeholders until ops confirms them.
  */
-export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, VehicleClassRules> = {
+export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, OfferingRules> = {
   "car-with-driver": {
     minLeadHours: 4,
     cancellationCutoffHours: 24,

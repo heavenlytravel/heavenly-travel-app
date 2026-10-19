@@ -86,10 +86,7 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
-          fromSen: startingPriceSen({
-            ...offering,
-            minHourlyHours: vehicleClass.minHourlyHours,
-          }),
+          fromSen: startingPriceSen(offering),
         }));
       },
       ["vehicle-class-cards", slug, category],

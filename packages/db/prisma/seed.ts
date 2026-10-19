@@ -6,27 +6,20 @@
 // ops owns it and edits it in the console. A district that already exists
 // has only its name and state refreshed from the data file. Districts place
 // an address; coverage is a location's zones, drawn in the console, as
-// docs/261015-locations-as-operation-areas.md describes. Rates are set per
-// location on its Vehicle classes tab, so none are seeded.
-//
-// The coach rules are placeholders until ops confirms them. See
-// docs/260930-coverage.md and docs/260930-ops-screens.md.
-import { CATEGORY_RULE_DEFAULTS } from "../src/booking-rules";
+// docs/261015-locations-as-operation-areas.md describes. Rates and rules
+// are set per location on its Vehicle classes tab, so none are seeded. See
+// docs/260930-coverage.md, docs/260930-ops-screens.md and
+// docs/261018-location-work-and-class-catalogue.md.
 import type { TripCategory } from "../src/booking-status";
 import { db } from "../src/client";
 import { DISTRICT_DATA } from "../src/district-index";
 
-/** Each category with its usual rules; a class may differ, it is only a row. */
-const rulesOf = (category: TripCategory) => ({
-  category,
-  ...CATEGORY_RULE_DEFAULTS[category],
-});
-const CAR_RULES = rulesOf("car-with-driver");
-const COACH_RULES = rulesOf("coach-charter");
+const CAR: { category: TripCategory } = { category: "car-with-driver" };
+const COACH: { category: TripCategory } = { category: "coach-charter" };
 
 const VEHICLE_CLASSES = [
   {
-    ...CAR_RULES,
+    ...CAR,
     slug: "sedan",
     name: "Executive sedan",
     description:
@@ -37,7 +30,7 @@ const VEHICLE_CLASSES = [
     luggage: "2 large bags",
   },
   {
-    ...CAR_RULES,
+    ...CAR,
     slug: "mpv",
     name: "Premium MPV",
     description:
@@ -48,7 +41,7 @@ const VEHICLE_CLASSES = [
     luggage: "5 large bags",
   },
   {
-    ...CAR_RULES,
+    ...CAR,
     slug: "van",
     name: "Passenger van",
     description: "Up to 10 passengers and 8 large bags. Same driver all trip.",
@@ -58,7 +51,7 @@ const VEHICLE_CLASSES = [
     luggage: "8 large bags",
   },
   {
-    ...COACH_RULES,
+    ...COACH,
     slug: "minibus",
     name: "Minibus",
     description:
@@ -69,7 +62,7 @@ const VEHICLE_CLASSES = [
     luggage: "15 large bags",
   },
   {
-    ...COACH_RULES,
+    ...COACH,
     slug: "midi-coach",
     name: "Midi coach",
     description:
@@ -80,7 +73,7 @@ const VEHICLE_CLASSES = [
     luggage: "25 large bags",
   },
   {
-    ...COACH_RULES,
+    ...COACH,
     slug: "coach",
     name: "Coach",
     description:
@@ -91,7 +84,7 @@ const VEHICLE_CLASSES = [
     luggage: "40 large bags",
   },
   {
-    ...COACH_RULES,
+    ...COACH,
     slug: "vip-coach",
     name: "VIP coach",
     description:

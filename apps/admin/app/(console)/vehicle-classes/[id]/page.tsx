@@ -87,8 +87,8 @@ function VehicleClassScreen({
         title={vehicleClass ? vehicleClass.name : "Add class"}
         description={
           vehicleClass
-            ? "The class as every location sells it. Its rates are each location's own, on the location's Vehicle classes tab."
-            : "The slug is derived from the name and never changes after. A location sells the class once it offers it, at its own rates."
+            ? "The class as every location sells it. Its rates and rules are each location's own, on the location's Vehicle classes tab."
+            : "The slug is derived from the name and never changes after. A location sells the class once it offers it, at its own rates and under its own rules."
         }
       />
 

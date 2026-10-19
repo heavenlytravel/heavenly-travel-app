@@ -208,22 +208,32 @@ model Location {
   @@index([state])
 }
 
-/// A class a location sells, at the location's rates. Langkawi's Sedan and
-/// Penang's Sedan are one catalogue class with two offerings. Off hides the
-/// class from the location's options page; a booking keeps its snapshot.
+/// A class a location sells, at the location's rates and under its rules.
+/// Langkawi's Sedan and Penang's Sedan are one catalogue class with two
+/// offerings. Off hides the class from the location's options page; a
+/// booking keeps its snapshot. The rules' defaults are for the schema push
+/// only: db:migrate-offering-rules copies each class's old rules onto its
+/// offerings once, and every offering written since sets all three. See
+/// docs/261018-location-work-and-class-catalogue.md.
 model LocationVehicleClass {
-  id             String       @id @default(cuid())
-  locationId     String
-  location       Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  vehicleClassId String
-  vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
-  isActive       Boolean      @default(true)
-  baseFareSen    Int
-  perKmSen       Int
-  hourlyRateSen  Int
-  minimumFareSen Int
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                      String       @id @default(cuid())
+  locationId              String
+  location                Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicleClassId          String
+  vehicleClass            VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  isActive                Boolean      @default(true)
+  baseFareSen             Int
+  perKmSen                Int
+  hourlyRateSen           Int
+  minimumFareSen          Int
+  /// A pickup must be at least this far in the future.
+  minLeadHours            Int          @default(0)
+  /// Customers may cancel until this long before pickup.
+  cancellationCutoffHours Int          @default(0)
+  /// Shortest hourly hire; never below the hourly floor in src/booking-rules.ts.
+  minHourlyHours          Int          @default(0)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   @@unique([locationId, vehicleClassId])
 }
@@ -321,11 +331,11 @@ model LocationAddress {
 // const arrays in src/booking-status.ts.
 // ---------------------------------------------------------------------------
 
-/// The catalogue: a class of vehicle with driver, its seats, its luggage
-/// and its rules. A location sells it through a `LocationVehicleClass`,
-/// which carries the rates. Never deleted, only deactivated. A booking
-/// snapshots what it shows, so editing or retiring a class never changes
-/// one.
+/// The catalogue: a class of vehicle with driver, what it is, its seats
+/// and its luggage. A location sells it through a `LocationVehicleClass`,
+/// which carries the rates and the rules. Never deleted, only deactivated.
+/// A booking snapshots what it shows, so editing or retiring a class never
+/// changes one.
 model VehicleClass {
   id                      String   @id @default(cuid())
   slug                    String   @unique
@@ -346,12 +356,13 @@ model VehicleClass {
   perKmSen                Int      @default(0)
   hourlyRateSen           Int      @default(0)
   minimumFareSen          Int      @default(0)
-  /// A pickup must be at least this far in the future.
-  minLeadHours            Int
-  /// Customers may cancel until this long before pickup.
-  cancellationCutoffHours Int
-  /// Shortest hourly hire; never below the hourly floor in src/booking-rules.ts.
-  minHourlyHours          Int
+  /// No longer read: the rules are on the location's offering since
+  /// docs/261018-location-work-and-class-catalogue.md. Kept until
+  /// db:migrate-offering-rules has run on every database; dropped in a
+  /// follow-up.
+  minLeadHours            Int      @default(0)
+  cancellationCutoffHours Int      @default(0)
+  minHourlyHours          Int      @default(0)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 

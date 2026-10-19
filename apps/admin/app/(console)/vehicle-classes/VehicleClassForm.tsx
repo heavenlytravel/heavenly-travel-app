@@ -11,8 +11,8 @@ import { VehicleClassFieldset } from "./VehicleClassFields";
 
 /**
  * The form for one catalogue class, new or existing: its fields, then
- * "Add class" or "Save". The rates are a location's, on its Vehicle
- * classes tab. A saved class goes back to the list.
+ * "Add class" or "Save". The rates and rules are a location's, on its
+ * Vehicle classes tab. A saved class goes back to the list.
  */
 export function VehicleClassForm({
   vehicleClass,

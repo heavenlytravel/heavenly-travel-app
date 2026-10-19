@@ -11,7 +11,7 @@ import { locationKey } from "../../../_lib/location-data";
 /**
  * Route: /locations/[slug]/vehicle-classes/[offeringId], and
  * /locations/[slug]/vehicle-classes/new for a class the location does not
- * offer yet. The form for one offering: the class and the rates.
+ * offer yet. The form for one offering: the class, the rates and the rules.
  */
 export default async function LocationOfferingPage({
   params,
@@ -48,7 +48,7 @@ async function newOffering({ id, slug }: { id: string; slug: string }) {
     <>
       <SectionHeader
         title="Add class"
-        description="Pick a class from the catalogue, or add a new one to it, and set the rates this location sells it at."
+        description="Pick a class from the catalogue, or add a new one to it, and set the rates and the rules this location sells it under."
       />
       <div className="mt-6">
         <OfferingForm
@@ -77,7 +77,7 @@ async function existingOffering({
     <>
       <SectionHeader
         title={offering.vehicleClass.name}
-        description="A rate change applies to new quotes at once; a booking keeps its receipt."
+        description="A change to the rates or the rules applies to new quotes at once; a booking keeps its receipt and its cancellation cutoff."
         action={
           <Link
             href={vehicleClassHref(offering.vehicleClassId)}

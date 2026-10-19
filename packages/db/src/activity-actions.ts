@@ -301,8 +301,9 @@ function vehicleClassChanges(after: unknown) {
   if (typeof isActive === "boolean") {
     phrases.push(isActive ? "Turned the class on" : "Turned the class off");
   }
-  // Entries from before rates moved to the location's offering name the
-  // class's old rate fields, which the offering's labels still spell.
+  // Entries from before the rates and the rules moved to the location's
+  // offering name the class's old fields, which the offering's labels
+  // still spell.
   const labelOf = (key: string) =>
     key in VEHICLE_CLASS_FIELD_LABELS
       ? VEHICLE_CLASS_FIELD_LABELS[key as VehicleClassField]
@@ -325,7 +326,7 @@ function className(json: unknown) {
   return typeof name === "string" ? name : "the class";
 }
 
-/** "Put Executive sedan on sale, changed the base fare and the per km" */
+/** "Put Executive sedan on sale, changed the base fare and the notice needed" */
 function offeringChanges(after: unknown) {
   const name = className(after);
   const phrases: string[] = [];
@@ -346,7 +347,7 @@ function offeringChanges(after: unknown) {
         : `Changed ${andList(others)} of ${name}`,
     );
   }
-  return sentence(phrases, `Changed the rates of ${name}`);
+  return sentence(phrases, `Changed ${name}`);
 }
 
 /** "the zone Langkawi Airport", or "a zone". */

@@ -84,12 +84,12 @@ export type TripQuoteErrorCode =
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
 export type ClassQuote = {
-  /** The catalogue class: its name, seats, luggage and rules. */
+  /** The catalogue class: its name, seats and luggage. */
   vehicleClass: VehicleClass;
-  /** The location's offering of it: the rates. */
+  /** The location's offering of it: the rates and the rules. */
   offering: Offering;
   price: TripPriceBreakdown;
-  /** Whether the class's own rules accept this trip. */
+  /** Whether the offering's rules accept this trip. */
   availability: ClassAvailability;
 };
 
@@ -233,7 +233,7 @@ export async function quoteTrip(
       dropoff && rule === "grid" && !cell
         ? { ok: false, reason: "not-on-route" }
         : classAvailability(
-            vehicleClass,
+            offering,
             { startsAt: request.startsAt, hours },
             now,
           );
@@ -281,8 +281,8 @@ export type PrepareTripItemResult =
 
 /**
  * A customer's choice, validated and priced, ready for `createBooking`. The
- * item snapshots the class's name, category and cancellation cutoff, and
- * the location that priced it, so what was booked never changes when ops
+ * item snapshots the class's name and category, the offering's
+ * cancellation cutoff, and the location that priced it, so what was booked never changes when ops
  * edits or retires the class or redraws a zone.
  */
 export async function prepareTripItem(
@@ -303,7 +303,7 @@ export async function prepareTripItem(
       "That vehicle class is no longer available.",
     );
   }
-  const { vehicleClass, price, availability } = chosen;
+  const { vehicleClass, offering, price, availability } = chosen;
   if (!availability.ok) {
     switch (availability.reason) {
       case "too-soon":
@@ -341,7 +341,7 @@ export async function prepareTripItem(
         basis.mode === "hourly"
           ? new Date(request.startsAt.getTime() + basis.hours * HOUR_MS)
           : null,
-      cancellationCutoffHours: vehicleClass.cancellationCutoffHours,
+      cancellationCutoffHours: offering.cancellationCutoffHours,
       districtCode: district?.code ?? null,
       locationId: location.id,
       priceTotalSen: price.totalSen,

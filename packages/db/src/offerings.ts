@@ -19,12 +19,14 @@ export type { LocationVehicleClass };
 
 /**
  * Offerings: the classes a location sells, each at the location's own
- * rates. The catalogue class (./vehicle-classes) carries the seats, the
- * luggage and the rules; the offering carries the rates and whether the
- * class is on sale there. The readers serve the location's Vehicle classes
- * tab and the customer site; the writers are the tab's, each taking the
- * actor and logging against the location inside its transaction. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes".
+ * rates and under its own rules. The catalogue class (./vehicle-classes)
+ * carries what the vehicle is, its seats and its luggage; the
+ * offering carries the rates, the three rules and whether the class is on
+ * sale there. The readers serve the location's Vehicle classes tab and the
+ * customer site; the writers are the tab's, each taking the actor and
+ * logging against the location inside its transaction. See
+ * docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 
 const withClass = {
@@ -111,7 +113,8 @@ export type OfferingClassChoice =
   { vehicleClassId: string } | { newClass: VehicleClassFields };
 
 /**
- * Starts selling a class at the location, at the rates given. A new
+ * Starts selling a class at the location, at the rates and under the rules
+ * given. A new
  * catalogue class is created first, with its slug from its name, and
  * logged against itself as the Vehicle classes screen would. A class the
  * location already offers is refused.
@@ -192,8 +195,9 @@ export async function createOffering(
 }
 
 /**
- * Changes the rates or the switch of an offering. A rate change applies to
- * new quotes at once; a booking keeps its receipt. Saving what is already
+ * Changes the rates, the rules or the switch of an offering. A change
+ * applies to new quotes at once; a booking keeps its receipt and its
+ * cancellation cutoff. Saving what is already
  * there logs nothing.
  */
 export async function updateOffering(

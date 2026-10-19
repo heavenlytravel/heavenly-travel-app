@@ -64,9 +64,9 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** Its picture; null for none. */
+  /** Its picture at the location: a photo of a vehicle there, or the catalogue's; null for none. */
   imageUrl: string | null;
-  /** The models customers see, in order, with their photos. */
+  /** The models of the location's vehicles in service, by name, with their photos. */
   models: {
     id: string;
     name: string;
@@ -94,7 +94,7 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
-          imageUrl: vehicleClass.imageUrl,
+          imageUrl: offering.coverUrl,
           models: vehicleClass.models,
           fromSen: startingPriceSen(offering),
         }));

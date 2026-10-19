@@ -363,7 +363,9 @@ model VehicleClass {
   minPassengers           Int
   maxPassengers           Int
   luggage                 String
-  /// Its picture, a file on UploadThing (src/images.ts); null for none.
+  /// Its neutral picture, a file on UploadThing (src/images.ts); null for
+  /// none. A location shows the first photo of its vehicles of the class in
+  /// its place, once one has a photo.
   imageUrl                String?
   /// No longer read: rates are on the location's offering since
   /// docs/261015-locations-as-operation-areas.md. Kept until the copy
@@ -392,12 +394,12 @@ model VehicleClass {
   @@index([category, isActive])
 }
 
-/// A model of a class, the Toyota Alphard in MPV VIP, with its photos. One
-/// catalogue for every location, as the classes are. The vehicle form adds
-/// one the first time a vehicle of it is entered. A location's customers
-/// see the models of its vehicles in service, and may choose one at the
-/// charge on the class's offering. Off hides it from customers. See
-/// docs/261019-vehicles-and-drivers.md.
+/// A model of a class, the Toyota Alphard in MPV VIP: what a vehicle is,
+/// by brand and name, one catalogue for every location. The vehicle form
+/// adds one the first time a vehicle of it is entered, and suggests the
+/// ones there are. A location's customers see the models of its vehicles
+/// in service, in those vehicles' photos, and may choose one at the charge
+/// on the class's offering. See docs/261019-vehicles-and-drivers.md.
 model VehicleModel {
   id             String       @id @default(cuid())
   vehicleClassId String
@@ -407,34 +409,18 @@ model VehicleModel {
   brand          String       @default("")
   /// The model alone: "Alphard". The screens show "Toyota Alphard".
   name           String
-  sortOrder      Int          @default(0)
-  isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  photos    VehicleModelPhoto[]
   vehicles  Vehicle[]
   tripItems TripItemDetails[]
 
   @@unique([vehicleClassId, brand, name])
 }
 
-/// One photo of a model, in its order; the first is the model's cover.
-model VehicleModelPhoto {
-  id             String       @id @default(cuid())
-  vehicleModelId String
-  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
-  /// A file on UploadThing (src/images.ts).
-  url            String
-  /// "Interior": its alt text; empty for the model's name.
-  caption        String       @default("")
-  sortOrder      Int
-
-  @@index([vehicleModelId, sortOrder])
-}
-
 /// One of our vehicles, based at a location. The expiry dates of its documents
-/// are dates, null where one does not apply. Out of service, it keeps its
+/// are dates, null where one does not apply. Its photos are what its
+/// location's customers see of its model. Out of service, it keeps its
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())
@@ -458,7 +444,23 @@ model Vehicle {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
+  photos VehiclePhoto[]
+
   @@index([locationId, isActive])
+}
+
+/// One photo of a vehicle, in its order; the first is the vehicle's cover.
+model VehiclePhoto {
+  id        String  @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// A file on UploadThing (src/images.ts).
+  url       String
+  /// "Interior": its alt text beside the model's name; empty for the name.
+  caption   String  @default("")
+  sortOrder Int
+
+  @@index([vehicleId, sortOrder])
 }
 
 /// One of our drivers, based at a location. A driver exists before they

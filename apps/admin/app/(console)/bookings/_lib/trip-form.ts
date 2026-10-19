@@ -40,7 +40,7 @@ export type ClassQuoteView = {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
-  /** Its picture; null for none. */
+  /** Its picture at the location: a photo of a vehicle there, or the catalogue's; null for none. */
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];

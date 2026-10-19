@@ -2,10 +2,10 @@ import Link from "next/link";
 import {
   getVehicleClass,
   listActivityFor,
-  listModelsOfClass,
+  listVehicles,
   type ActivityEntry,
-  type CatalogueModel,
   type VehicleClass,
+  type VehicleWithModel,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
@@ -21,13 +21,13 @@ import {
 } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { VEHICLE_CLASSES_PATH } from "../../../_lib/routes";
-import { ModelList } from "../ModelList";
+import { ClassVehicles } from "../ClassVehicles";
 import { VehicleClassForm } from "../VehicleClassForm";
 
 /**
  * Route: /vehicle-classes/[id], and /vehicle-classes/new for a class that
- * does not exist yet. The form and, for an existing class, its models and
- * its history.
+ * does not exist yet. The form and, for an existing class, its vehicles by
+ * location and its history.
  */
 export default async function VehicleClassPage({
   params,
@@ -71,32 +71,32 @@ export default async function VehicleClassPage({
   );
 }
 
-/** A class that exists, read with its models and its history. */
+/** A class that exists, read with its vehicles and its history. */
 async function existingVehicleClass({ id }: { id: string }) {
-  const [vehicleClass, models, history] = await Promise.all([
+  const [vehicleClass, vehicles, history] = await Promise.all([
     getVehicleClass(id),
-    listModelsOfClass(id),
+    listVehicles({ vehicleClassId: id }),
     listActivityFor("vehicle-class", id),
   ]);
   if (!vehicleClass) notFound();
   return (
     <VehicleClassScreen
       vehicleClass={vehicleClass}
-      models={models}
+      vehicles={vehicles}
       history={history}
     />
   );
 }
 
-/** The form under its header, beside the models and the history when the class exists. */
+/** The form under its header, beside the vehicles and the history when the class exists. */
 function VehicleClassScreen({
   vehicleClass,
-  models = [],
+  vehicles = [],
   history = [],
 }: {
   /** Left out for a class that does not exist yet. */
   vehicleClass?: VehicleClass;
-  models?: CatalogueModel[];
+  vehicles?: VehicleWithModel[];
   history?: ActivityEntry[];
 }) {
   return (
@@ -121,10 +121,10 @@ function VehicleClassScreen({
           vehicleClass ? (
             <>
               <Card>
-                <CardTitle description="The brands and models of the vehicles entered in this class, each with its photos. The vehicle form adds them. A location's customers may choose one at the charge the location sets.">
-                  Models
+                <CardTitle description="Our vehicles of this class, by where they are based. A location's customers see the models of its vehicles in service, in their photos.">
+                  Vehicles
                 </CardTitle>
-                <ModelList classId={vehicleClass.id} models={models} />
+                <ClassVehicles vehicles={vehicles} />
               </Card>
               <Card>
                 <CardTitle>History</CardTitle>

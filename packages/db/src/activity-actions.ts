@@ -95,16 +95,12 @@ const ACTIONS = {
     entityType: "vehicle-class",
     customerVisible: false,
   },
-  /** A model of the class, by its name in `modelName`, and how many photos it has. */
+  /** A model the vehicle form added to the class, by its name in `modelName`. */
   "vehicle-class.model.created": {
     entityType: "vehicle-class",
     customerVisible: false,
   },
-  /** The model's name in `modelName`, the changed fields, and the photos by how many. */
-  "vehicle-class.model.updated": {
-    entityType: "vehicle-class",
-    customerVisible: false,
-  },
+  /** A model no vehicle or booking was of any more, by its name in `modelName`. */
   "vehicle-class.model.deleted": {
     entityType: "vehicle-class",
     customerVisible: false,
@@ -357,32 +353,6 @@ function vehicleClassChanges(after: unknown) {
 function modelName(json: unknown) {
   const name = field(json, "modelName");
   return typeof name === "string" ? name : "a model";
-}
-
-/** "Renamed the model Toyota Alphard to Toyota Alphard Executive, changed its photos" */
-function modelChanges(before: unknown, after: unknown) {
-  const name = modelName(before);
-  const phrases: string[] = [];
-  // The brand or the name changed: the entry names the model both ways.
-  if (
-    field(after, "brand") !== undefined ||
-    field(after, "name") !== undefined
-  ) {
-    phrases.push(`Renamed the model ${name} to ${modelName(after)}`);
-  }
-  const isActive = field(after, "isActive");
-  if (typeof isActive === "boolean") {
-    phrases.push(
-      isActive ? `Showed ${name} to customers` : `Hid ${name} from customers`,
-    );
-  }
-  if (field(after, "photos") !== undefined) {
-    phrases.push(`Changed the photos of ${name}`);
-  }
-  if (field(after, "sortOrder") !== undefined) {
-    phrases.push(`Moved ${name} in the order`);
-  }
-  return sentence(phrases, `Changed ${name}`);
 }
 
 /**
@@ -662,8 +632,6 @@ export function describeActivity(entry: DescribableActivity): string {
       return vehicleClassChanges(entry.after);
     case "vehicle-class.model.created":
       return `Added the model ${modelName(entry.after)}`;
-    case "vehicle-class.model.updated":
-      return modelChanges(entry.before, entry.after);
     case "vehicle-class.model.deleted":
       return `Removed the model ${modelName(entry.before)}`;
     case "vehicle.created":

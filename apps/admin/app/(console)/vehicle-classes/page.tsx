@@ -3,8 +3,7 @@ import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   formatMyr,
-  modelName,
-  modelsLine,
+  plural,
   type TripCategory,
 } from "@repo/db";
 import { listVehicleClasses, type CatalogueClass } from "@repo/db/server";
@@ -30,9 +29,10 @@ import { VehicleClassActiveSwitch } from "./VehicleClassControls";
 /**
  * Route: /vehicle-classes. The catalogue: what each class is, a card each
  * by category, with its picture, seats and luggage, and the locations
- * that sell it with its metered rates at each, a link to that location on
- * the Rates screen. One Sedan for every location, so the customer
- * sees the same name and picture wherever they book. Operation's screen,
+ * that sell it with its metered rates and its vehicles in service at
+ * each, a link to that location on the Rates screen. One Sedan for every
+ * location, so the customer sees the same name wherever they book, and a
+ * picture of the vehicles based there. Operation's screen,
  * behind `coverage.manage` for adding, editing and the switch; Reservation
  * and Sales read it behind `coverage.view`. Classes are never deleted,
  * only turned off; a booking keeps its snapshot of the class. See
@@ -134,8 +134,9 @@ function Category({
 
 /**
  * One class: its picture, its name over its seats and luggage, its line,
- * the models customers see, and where it is sold, each location with the class's base fare, per km
- * and per hour there, in grey where it is off sale.
+ * and where it is sold, each location with the class's base fare, per km
+ * and per hour there and how many of its vehicles are in service there,
+ * in grey where it is off sale.
  * For Operation the whole card opens the editor and the foot holds the
  * switch; off, it is in grey.
  */
@@ -182,11 +183,6 @@ function ClassCard({
           <p className="mt-1.5 line-clamp-2 text-sm text-neutral-600">
             {vehicleClass.description}
           </p>
-          <p className="mt-1.5 text-xs text-neutral-500">
-            {vehicleClass.models.length > 0
-              ? modelsLine(vehicleClass.models.map(modelName))
-              : "No model yet"}
-          </p>
         </div>
         <div>
           <p className="text-xs text-neutral-500">Sold in</p>
@@ -215,6 +211,12 @@ function ClassCard({
                       {offering.isActive ? null : (
                         <span className="text-xs font-normal">Off sale</span>
                       )}
+                      <span className="ml-auto text-xs font-normal text-neutral-500 tabular-nums">
+                        {plural(
+                          vehicleClass.inServiceAt[offering.location.id] ?? 0,
+                          "vehicle",
+                        )}
+                      </span>
                     </span>
                     <span className="col-start-2 text-xs text-neutral-500 tabular-nums">
                       {formatMyr(offering.baseFareSen)} +{" "}

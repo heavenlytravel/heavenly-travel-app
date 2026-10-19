@@ -29,9 +29,9 @@ const NOT_FOUND: Change = { ok: false, error: "Vehicle class not found." };
 const withOfferings = {
   include: {
     models: {
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { brand: "asc" }, { name: "asc" }],
-      select: { brand: true, name: true },
+      select: {
+        vehicles: { where: { isActive: true }, select: { locationId: true } },
+      },
     },
     offerings: {
       select: {
@@ -49,10 +49,24 @@ const withOfferings = {
   },
 } satisfies Prisma.VehicleClassDefaultArgs;
 
-/** A class with the models customers see, and the locations that sell it, on sale or off, by name, with its metered rates at each. */
-export type CatalogueClass = Prisma.VehicleClassGetPayload<
-  typeof withOfferings
->;
+type CatalogueRow = Prisma.VehicleClassGetPayload<typeof withOfferings>;
+
+/**
+ * A class with the locations that sell it, on sale or off, by name, with
+ * its metered rates at each, and how many of its vehicles are in service
+ * at each location, by the location's id.
+ */
+export type CatalogueClass = Omit<CatalogueRow, "models"> & {
+  inServiceAt: Record<string, number>;
+};
+
+function catalogueClass({ models, ...row }: CatalogueRow): CatalogueClass {
+  const inServiceAt: Record<string, number> = {};
+  for (const { locationId } of models.flatMap((model) => model.vehicles)) {
+    inServiceAt[locationId] = (inServiceAt[locationId] ?? 0) + 1;
+  }
+  return { ...row, inServiceAt };
+}
 
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
@@ -63,9 +77,9 @@ export async function listVehicleClasses(): Promise<CatalogueClass[]> {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     ...withOfferings,
   });
-  return rows.sort(
-    (a, b) => categoryRank(a.category) - categoryRank(b.category),
-  );
+  return rows
+    .map(catalogueClass)
+    .sort((a, b) => categoryRank(a.category) - categoryRank(b.category));
 }
 
 export function getVehicleClass(id: string): Promise<VehicleClass | null> {

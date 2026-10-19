@@ -19,9 +19,9 @@ import {
   FormSkeleton,
   Streamed,
 } from "../../../../../_components/Skeleton";
-import { getPermissions, requireAdmin } from "../../../../../_lib/access";
+import { requireAdmin } from "../../../../../_lib/access";
 import { fleetClassOptions } from "../../../../../_lib/fleet-form";
-import { locationTabHref, vehicleModelHref } from "../../../../../_lib/routes";
+import { locationTabHref } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteVehicleAction } from "../actions";
 import { VehicleForm } from "../VehicleForm";
@@ -73,15 +73,15 @@ async function vehicleScreen({
   vehicleId: string;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, classes, suggestions, locations, history, permissions] =
-    await Promise.all([
+  const [vehicle, classes, suggestions, locations, history] = await Promise.all(
+    [
       isNew ? null : getVehicle(vehicleId),
       listVehicleClasses(),
       listModelSuggestions(),
       listLocationNames(),
       isNew ? [] : listActivityFor("vehicle", vehicleId),
-      getPermissions(),
-    ]);
+    ],
+  );
   if (!isNew && vehicle?.locationId !== id) notFound();
   const model = vehicle?.vehicleModel;
 
@@ -108,23 +108,8 @@ async function vehicleScreen({
           />
         }
         side={
-          vehicle && model ? (
+          vehicle ? (
             <>
-              {permissions.includes("coverage.manage") ? (
-                <Card>
-                  <CardTitle
-                    description={`Customers who choose the ${modelName(model)} see its photos, the same for every vehicle of it.`}
-                  >
-                    Photos
-                  </CardTitle>
-                  <Link
-                    href={vehicleModelHref(model.vehicleClass.id, model.id)}
-                    className="text-sm font-medium text-neutral-900 underline-offset-4 hover:underline"
-                  >
-                    Photos of the {modelName(model)}
-                  </Link>
-                </Card>
-              ) : null}
               <Card>
                 <CardTitle>History</CardTitle>
                 <ActivityHistory

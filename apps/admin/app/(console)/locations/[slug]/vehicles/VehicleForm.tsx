@@ -3,12 +3,14 @@
 import {
   MODEL_LIMITS,
   modelName,
+  PHOTOS_FIELD,
   sameName,
   VEHICLE_DOCUMENTS,
   VEHICLE_DOCUMENT_LABELS,
   VEHICLE_FIELD_LABELS,
   VEHICLE_LIMITS,
   vehicleFieldsOf,
+  type Photo,
 } from "@repo/db";
 import type {
   LocationName,
@@ -31,6 +33,7 @@ import {
 } from "../../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
 import { createVehicleAction, updateVehicleAction } from "./actions";
+import { PhotoList } from "./PhotoList";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {
@@ -95,9 +98,9 @@ function ModelNote({
 /**
  * The form for one of our vehicles, new or existing: its plate, its class,
  * its brand and model as typed, with the ones entered before suggested,
- * where it is based and whether it is in service, the expiry dates of its
- * documents, and notes. A model the class does not have yet is added to
- * it on save. A saved vehicle opens the Vehicles tab of the location it is
+ * where it is based and whether it is in service, its photos, the expiry
+ * dates of its documents, and notes. A model the class does not have yet
+ * is added to it on save. A saved vehicle opens the Vehicles tab of the location it is
  * based at, or the list across locations it was added from.
  */
 export function VehicleForm({
@@ -132,12 +135,16 @@ export function VehicleForm({
   const [classId, setClassId] = useState(fields?.vehicleClassId ?? "");
   const [brand, setBrand] = useState(fields?.brand ?? "");
   const [model, setModel] = useState(fields?.model ?? "");
+  const [photos, setPhotos] = useState<Photo[]>(
+    vehicle?.photos.map(({ url, caption }) => ({ url, caption })) ?? [],
+  );
   const brandList = useId();
   const modelList = useId();
 
   return (
     <form action={action} className="grid gap-6">
       {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
+      <input type="hidden" name={PHOTOS_FIELD} value={JSON.stringify(photos)} />
       {backToList ? (
         <input
           type="hidden"
@@ -262,6 +269,25 @@ export function VehicleForm({
             <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
           </span>
         </label>
+      </Card>
+
+      <Card className="grid gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">
+            {VEHICLE_FIELD_LABELS.photos}
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            What the customers of the location it is based at see of its model,
+            plate and all, and swipe through when they choose one. The first is
+            its cover; the first cover of the class there is the class&apos;s
+            picture at the location.
+          </p>
+        </div>
+        <PhotoList
+          name={modelName({ brand: brand.trim(), name: model.trim() })}
+          photos={photos}
+          setPhotos={setPhotos}
+        />
       </Card>
 
       <Card className="grid gap-4">

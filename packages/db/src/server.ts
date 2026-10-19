@@ -35,18 +35,8 @@ export {
   updateVehicleClass,
 } from "./vehicle-classes";
 export type { VehicleClass, CatalogueClass } from "./vehicle-classes";
-export {
-  listModelsOfClass,
-  getVehicleModel,
-  listModelSuggestions,
-  updateVehicleModel,
-  deleteVehicleModel,
-} from "./vehicle-models";
-export type {
-  CatalogueModel,
-  ModelSuggestion,
-  ShownModel,
-} from "./vehicle-models";
+export { listModelSuggestions } from "./vehicle-models";
+export type { ModelSuggestion, ShownModel } from "./vehicle-models";
 export {
   listVehicles,
   getVehicle,

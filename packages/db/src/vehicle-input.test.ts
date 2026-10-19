@@ -9,6 +9,8 @@ import {
 
 const NOW = new Date("2026-10-19T04:00:00Z");
 
+const PHOTO = "https://abc123.ufs.sh/f/key-1";
+
 const FORM: Record<string, string> = {
   plate: "vle 1234",
   vehicleClassId: "vc1",
@@ -23,6 +25,7 @@ const FORM: Record<string, string> = {
   insuranceExpiresOn: "2027-03-12",
   inspectionExpiresOn: "",
   permitExpiresOn: "2026-12-31",
+  photos: JSON.stringify([{ url: PHOTO, caption: " Front " }]),
 };
 
 function errorOf(values: Record<string, string>) {
@@ -38,7 +41,7 @@ describe("normalizePlate", () => {
 });
 
 describe("parseVehicleFields", () => {
-  it("reads the form, its dates as days", () => {
+  it("reads the form, its dates as days and its photos in order", () => {
     const result = parseVehicleFields(FORM, NOW);
     assert.deepEqual(result, {
       ok: true,
@@ -56,8 +59,19 @@ describe("parseVehicleFields", () => {
         insuranceExpiresOn: "2027-03-12",
         inspectionExpiresOn: null,
         permitExpiresOn: "2026-12-31",
+        photos: [{ url: PHOTO, caption: "Front" }],
       },
     });
+  });
+
+  it("refuses photos that are not a list of uploads", () => {
+    assert.match(errorOf({ photos: "{not json" }) ?? "", /photos/);
+    assert.match(
+      errorOf({
+        photos: JSON.stringify([{ url: "https://example.com/a.jpg" }]),
+      }) ?? "",
+      /photo/,
+    );
   });
 
   it("takes an empty year as none", () => {

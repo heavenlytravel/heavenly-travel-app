@@ -3,9 +3,9 @@
 import {
   IMAGE_MAX_MB,
   IMAGE_TYPES,
-  MODEL_LIMITS,
+  PHOTO_LIMITS,
   photoAlt,
-  type ModelPhoto,
+  type Photo,
 } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -18,31 +18,31 @@ import {
 } from "@repo/ui/icons";
 import Image from "next/image";
 import { useRef, type Dispatch, type SetStateAction } from "react";
-import { useImageUpload } from "../../_components/use-image-upload";
-import { VEHICLE_MODEL_IMAGE_UPLOAD_PATH } from "../../_lib/routes";
+import { useImageUpload } from "../../../../_components/use-image-upload";
+import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../../_lib/routes";
 
 /**
- * A model's photos, in the order the customer pages through them: each
+ * A vehicle's photos, in the order the customer swipes through them: each
  * with its caption, moved left or right, or taken out. The first is the
- * model's cover. "Add photos" stores each file as soon as it is chosen,
+ * vehicle's cover. "Add photos" stores each file as soon as it is chosen,
  * several at once; the form keeps them once it is saved.
  */
 export function PhotoList({
-  modelName,
+  name,
   photos,
   setPhotos,
 }: {
-  /** The model's name as typed, for the photos' alt text. */
-  modelName: string;
-  photos: ModelPhoto[];
+  /** What the photos show as typed, "Toyota Alphard", for their alt text. */
+  name: string;
+  photos: Photo[];
   /** The form's state setter: an upload lands on the list as it is then, edits made meanwhile kept. */
-  setPhotos: Dispatch<SetStateAction<ModelPhoto[]>>;
+  setPhotos: Dispatch<SetStateAction<Photo[]>>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, error } = useImageUpload(
-    VEHICLE_MODEL_IMAGE_UPLOAD_PATH,
+    VEHICLE_IMAGE_UPLOAD_PATH,
   );
-  const room = MODEL_LIMITS.photos - photos.length;
+  const room = PHOTO_LIMITS.photos - photos.length;
 
   async function add(files: File[]) {
     // One at a time, so the list grows in the order the files were chosen.
@@ -50,7 +50,7 @@ export function PhotoList({
       const image = await upload(file);
       if (!image) break;
       setPhotos((current) =>
-        current.length < MODEL_LIMITS.photos
+        current.length < PHOTO_LIMITS.photos
           ? [...current, { url: image.url, caption: "" }]
           : current,
       );
@@ -72,14 +72,14 @@ export function PhotoList({
     );
   }
 
-  const name = modelName || "the model";
+  const shown = name || "the vehicle";
 
   return (
     <div className="grid gap-4">
       {photos.length === 0 ? (
         <p className="flex items-center gap-2 rounded-lg border border-dashed border-neutral-300 px-4 py-6 text-sm text-neutral-500">
           <ImageIcon className="size-5 text-neutral-400" />
-          No photos yet. The outside first: it is the model&apos;s cover.
+          No photos yet. The outside first: it is the vehicle&apos;s cover.
         </p>
       ) : (
         <ol className="grid grid-cols-[repeat(auto-fill,minmax(min(12rem,100%),1fr))] gap-4">
@@ -91,7 +91,7 @@ export function PhotoList({
               <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-neutral-100">
                 <Image
                   src={photo.url}
-                  alt={photoAlt(name, photo)}
+                  alt={photoAlt(shown, photo)}
                   fill
                   sizes="12rem"
                   className="object-contain"
@@ -105,7 +105,7 @@ export function PhotoList({
               <Input
                 aria-label={`Caption of photo ${i + 1}`}
                 placeholder="Caption, such as Interior"
-                maxLength={MODEL_LIMITS.caption}
+                maxLength={PHOTO_LIMITS.caption}
                 value={photo.caption}
                 onChange={(e) => setCaption(i, e.target.value)}
               />
@@ -153,7 +153,7 @@ export function PhotoList({
           accept={IMAGE_TYPES.join(",")}
           className="sr-only"
           tabIndex={-1}
-          aria-label={`Photos of ${name}: choose files`}
+          aria-label={`Photos of ${shown}: choose files`}
           onChange={(event) => {
             const files = [...(event.target.files ?? [])];
             // Cleared, so choosing the same file again uploads it again.
@@ -171,8 +171,8 @@ export function PhotoList({
         </Button>
         <span className="text-xs text-neutral-500">
           {room > 0
-            ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${MODEL_LIMITS.photos} photos.`
-            : `${MODEL_LIMITS.photos} photos, the most a model holds.`}
+            ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
+            : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
         </span>
       </div>
       {error ? (

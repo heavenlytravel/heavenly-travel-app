@@ -12,7 +12,7 @@
 // - A model named before brands were kept, "Toyota Alphard", is split at
 //   its first space into the brand Toyota and the model Alphard. Its name
 //   on screen stays the same, so this is not logged.
-// - Each listed class gets the list's models it lacks, with no photos.
+// - Each listed class gets the list's models it lacks.
 // - Minibus and Midi coach are deleted with their offerings and zone rates.
 //   One that a booking or a vehicle still uses is switched off instead, and
 //   named.

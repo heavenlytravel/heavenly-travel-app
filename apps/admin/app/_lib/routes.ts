@@ -80,11 +80,6 @@ export function vehicleClassHref(id: string) {
 }
 export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");
 
-/** One model of a class, under the class's page. */
-export function vehicleModelHref(classId: string, modelId: string) {
-  return `${vehicleClassHref(classId)}/models/${modelId}`;
-}
-
 /** What a list of vehicles or drivers narrows to: one location, the ones with a document due, or both. */
 export type FleetListFilter = { location?: string; due?: boolean };
 
@@ -426,9 +421,8 @@ export const LOCATION_IMAGE_UPLOAD_PATH = "/api/uploads/location-image";
 export const VEHICLE_CLASS_IMAGE_UPLOAD_PATH =
   "/api/uploads/vehicle-class-image";
 
-/** Where a model's form posts each photo; answers the stored file. */
-export const VEHICLE_MODEL_IMAGE_UPLOAD_PATH =
-  "/api/uploads/vehicle-model-image";
+/** Where a vehicle's form posts each photo; answers the stored file. */
+export const VEHICLE_IMAGE_UPLOAD_PATH = "/api/uploads/vehicle-image";
 
 /** The form that amends one item of a booking: its trip, vehicle and details; inside a location with its slug. */
 export function amendItemHref(

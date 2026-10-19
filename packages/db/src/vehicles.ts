@@ -5,6 +5,7 @@ import type { Change, Created } from "./change";
 import { db } from "./client";
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
+import { checkPhotos, samePhotos, type Photo } from "./photos-input";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   checkVehicleFields,
@@ -12,9 +13,10 @@ import {
   vehicleFieldsOf,
   type VehicleDocument,
   type VehicleFields,
+  type VehicleInput,
 } from "./vehicle-input";
 import { modelName } from "./vehicle-model-input";
-import { modelFor } from "./vehicle-models";
+import { dropModelIfUnused, modelFor } from "./vehicle-models";
 
 /**
  * Our vehicles, each of one model and based at one location, with the
@@ -22,13 +24,20 @@ import { modelFor } from "./vehicle-models";
  * tab and the list across locations; the writers take the actor and log
  * against the vehicle inside their transaction. A vehicle's model is
  * typed as a class, a brand and a name: the writers find it in the
- * catalogue or add it there. A vehicle out of service keeps its history;
- * one entered by mistake is deleted. See
+ * catalogue or add it there, and clear a model it leaves unused. Its photos
+ * are saved with it and replaced as a whole. A vehicle out of service keeps
+ * its history; one entered by mistake is deleted. See
  * docs/261019-vehicles-and-drivers.md.
  */
 
+const photosInOrder = {
+  orderBy: { sortOrder: "asc" },
+  select: { url: true, caption: true },
+} satisfies Prisma.Vehicle$photosArgs;
+
 const withModel = {
   include: {
+    photos: photosInOrder,
     vehicleModel: {
       select: {
         id: true,
@@ -44,7 +53,7 @@ const withModel = {
   },
 } satisfies Prisma.VehicleDefaultArgs;
 
-/** A vehicle with its model, its class and its location. */
+/** A vehicle with its photos, its model, its class and its location. */
 export type VehicleWithModel = Prisma.VehicleGetPayload<typeof withModel>;
 
 const NOT_FOUND: Change = { ok: false, error: "Vehicle not found." };
@@ -68,13 +77,16 @@ function byClassAndPlate(a: VehicleWithModel, b: VehicleWithModel) {
 /** What the vehicle lists narrow to: one location, the ones with a document due, or both. */
 export type FleetFilter = { locationId?: string; due?: boolean };
 
-/** Every vehicle, or those the filter leaves, in service or not. */
+/** Every vehicle, or those the filter leaves, in service or not; a class's alone for its page. */
 export async function listVehicles(
-  filter: FleetFilter = {},
+  filter: FleetFilter & { vehicleClassId?: string } = {},
 ): Promise<VehicleWithModel[]> {
   const rows = await db.vehicle.findMany({
     where: {
       ...(filter.locationId ? { locationId: filter.locationId } : {}),
+      ...(filter.vehicleClassId
+        ? { vehicleModel: { vehicleClassId: filter.vehicleClassId } }
+        : {}),
       ...(filter.due ? vehiclesDueWhere() : {}),
     },
     ...withModel,
@@ -114,6 +126,10 @@ function vehicleRow<F extends Partial<VehicleFields>>(
     Partial<Record<VehicleDocument, Date | null>>;
 }
 
+/** The photos as their rows store them, numbered in order. */
+const photoRows = (photos: readonly Photo[]) =>
+  photos.map((photo, i) => ({ ...photo, sortOrder: i + 1 }));
+
 const plateTaken = (plate: string) => ({
   ok: false as const,
   error: `${plate} is in the list already.`,
@@ -136,13 +152,16 @@ const NO_LOCATION = {
   error: "Choose where it is based again.",
 };
 
-/** A new vehicle, of the model its class, brand and name find or add. */
+/** A new vehicle with its photos, of the model its class, brand and name find or add. */
 export async function createVehicle(
   actor: Actor,
-  fields: VehicleFields,
+  input: VehicleInput,
 ): Promise<Created> {
+  const { photos, ...fields } = input;
   const check = checkVehicleFields(fields);
   if (!check.ok) return check;
+  const photosCheck = checkPhotos(photos);
+  if (!photosCheck.ok) return photosCheck;
   try {
     return await db.$transaction(async (tx) => {
       const locationName = await locationNameOf(tx, fields.locationId);
@@ -154,12 +173,21 @@ export async function createVehicle(
       });
       if (!model.ok) return model;
       const vehicle = await tx.vehicle.create({
-        data: { ...vehicleRow(fields), vehicleModelId: model.id },
+        data: {
+          ...vehicleRow(fields),
+          vehicleModelId: model.id,
+          photos: { create: photoRows(photos) },
+        },
       });
       await logActivity(tx, actor, {
         action: "vehicle.created",
         entityId: vehicle.id,
-        after: { ...fields, modelName: model.name, locationName },
+        after: {
+          ...fields,
+          photos: photos.length,
+          modelName: model.name,
+          locationName,
+        },
       });
       return { ok: true, id: vehicle.id };
     });
@@ -170,65 +198,87 @@ export async function createVehicle(
 }
 
 /**
- * Changes any of the fields. A class, brand or name that finds the model
- * the vehicle is of already changes nothing of it, so "toyota" for
- * "Toyota" is no change. Saving what is already there logs nothing.
+ * Changes any of the fields, and the photos as a whole. A class, brand or
+ * name that finds the model the vehicle is of already changes nothing of
+ * it, so "toyota" for "Toyota" is no change; another model clears the one
+ * left unused. The photos are logged by how many there are. Saving what is
+ * already there logs nothing.
  */
 export async function updateVehicle(
   actor: Actor,
   id: string,
-  patch: Partial<VehicleFields>,
+  patch: Partial<VehicleInput>,
 ): Promise<Change> {
-  const check = checkVehicleFields(patch);
+  const { photos, ...fieldsPatch } = patch;
+  const check = checkVehicleFields(fieldsPatch);
   if (!check.ok) return check;
+  if (photos) {
+    const photosCheck = checkPhotos(photos);
+    if (!photosCheck.ok) return photosCheck;
+  }
   try {
     return await db.$transaction(async (tx) => {
       const vehicle = await tx.vehicle.findUnique({
         where: { id },
-        include: { vehicleModel: true },
+        include: { vehicleModel: true, photos: photosInOrder },
       });
       if (!vehicle) return NOT_FOUND;
       const current = vehicleFieldsOf(vehicle);
-      const changed = changedFields(current, patch);
-      if (!changed) return { ok: true };
+      const changed = changedFields(current, fieldsPatch);
+      const photosChanged =
+        photos !== undefined && !samePhotos(vehicle.photos, photos);
+      const before: Partial<VehicleFields> = changed?.before ?? {};
+      const after: Partial<VehicleFields> = changed?.after ?? {};
 
       let model: { id: string; name: string } | null = null;
-      if (MODEL_KEYS.some((key) => key in changed.after)) {
+      if (MODEL_KEYS.some((key) => key in after)) {
         const found = await modelFor(tx, actor, {
-          vehicleClassId:
-            changed.after.vehicleClassId ?? current.vehicleClassId,
-          brand: changed.after.brand ?? current.brand,
-          name: changed.after.model ?? current.model,
+          vehicleClassId: after.vehicleClassId ?? current.vehicleClassId,
+          brand: after.brand ?? current.brand,
+          name: after.model ?? current.model,
         });
         if (!found.ok) return found;
         if (found.id === vehicle.vehicleModelId) {
           for (const key of MODEL_KEYS) {
-            delete changed.before[key];
-            delete changed.after[key];
+            delete before[key];
+            delete after[key];
           }
-          if (Object.keys(changed.after).length === 0) return { ok: true };
         } else {
           model = found;
         }
       }
+      if (Object.keys(after).length === 0 && !photosChanged) {
+        return { ok: true };
+      }
 
-      const locationName = changed.after.locationId
-        ? await locationNameOf(tx, changed.after.locationId)
+      const locationName = after.locationId
+        ? await locationNameOf(tx, after.locationId)
         : null;
-      if (changed.after.locationId && !locationName) return NO_LOCATION;
+      if (after.locationId && !locationName) return NO_LOCATION;
       await tx.vehicle.update({
         where: { id },
         data: {
-          ...vehicleRow(changed.after),
+          ...vehicleRow(after),
           ...(model ? { vehicleModelId: model.id } : {}),
         },
       });
+      if (photos && photosChanged) {
+        await tx.vehiclePhoto.deleteMany({ where: { vehicleId: id } });
+        await tx.vehiclePhoto.createMany({
+          data: photoRows(photos).map((photo) => ({ ...photo, vehicleId: id })),
+        });
+      }
+      if (model) await dropModelIfUnused(tx, actor, vehicle.vehicleModelId);
       await logActivity(tx, actor, {
         action: "vehicle.updated",
         entityId: id,
-        before: changed.before,
+        before: {
+          ...before,
+          ...(photosChanged ? { photos: vehicle.photos.length } : {}),
+        },
         after: {
-          ...changed.after,
+          ...after,
+          ...(photos && photosChanged ? { photos: photos.length } : {}),
           ...(model ? { modelName: model.name } : {}),
           ...(locationName ? { locationName } : {}),
         },
@@ -243,7 +293,10 @@ export async function updateVehicle(
   }
 }
 
-/** Deletes a vehicle entered by mistake. One that served is taken out of service instead. */
+/**
+ * Deletes a vehicle entered by mistake, with its photos, and its model when
+ * it leaves it unused. One that served is taken out of service instead.
+ */
 export function deleteVehicle(actor: Actor, id: string): Promise<Change> {
   return db.$transaction(async (tx) => {
     const vehicle = await tx.vehicle.findUnique({ where: { id } });
@@ -254,6 +307,7 @@ export function deleteVehicle(actor: Actor, id: string): Promise<Change> {
       entityId: id,
       before: { plate: vehicle.plate },
     });
+    await dropModelIfUnused(tx, actor, vehicle.vehicleModelId);
     return { ok: true };
   });
 }

@@ -50,15 +50,32 @@ type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
 /** An offering on sale, its class with the models the location's customers see. */
 export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
   vehicleClass: VehicleClass & { models: ShownModel[] };
+  /**
+   * The class's picture at the location: the first photo of its models
+   * there, so a customer sees a vehicle based where they book; the
+   * catalogue's neutral picture until one has a photo; null for neither.
+   */
+  coverUrl: string | null;
 };
 
-/** Offerings as they are read, named and in the class's order. */
+/** Offerings as they are read, named, pictured and in the class's order. */
 function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
   return rows
-    .map(({ vehicleClass: { models, ...vehicleClass }, ...offering }) => ({
-      ...offering,
-      vehicleClass: { ...vehicleClass, models: models.map(shownModel) },
-    }))
+    .map(
+      ({
+        vehicleClass: { models: modelRows, ...vehicleClass },
+        ...offering
+      }) => {
+        const models = modelRows.map(shownModel);
+        return {
+          ...offering,
+          vehicleClass: { ...vehicleClass, models },
+          coverUrl:
+            models.find((model) => model.photos.length > 0)?.photos[0]?.url ??
+            vehicleClass.imageUrl,
+        };
+      },
+    )
     .sort(byClassOrder);
 }
 

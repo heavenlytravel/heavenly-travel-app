@@ -24,6 +24,7 @@ export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
+export * from "./photos-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
 export * from "./expiry";

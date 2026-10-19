@@ -1,6 +1,12 @@
 import type { Change } from "./change";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
+import {
+  checkPhotos,
+  parsePhotos,
+  PHOTOS_FIELD,
+  type Photo,
+} from "./photos-input";
 import { checkModelName, squashName } from "./vehicle-model-input";
 
 /**
@@ -8,9 +14,10 @@ import { checkModelName, squashName } from "./vehicle-model-input";
  * checks, pure and browser-safe: the form shows the messages, the writers
  * in ./vehicles apply the same checks before they write. A vehicle names
  * its class, its brand and its model as typed; the writer finds the
- * catalogue's model or adds it. The expiry dates are days, "2027-03-12", as
- * ./expiry handles them. See docs/261019-vehicles-and-drivers.md,
- * "Vehicles".
+ * catalogue's model or adds it. Its photos are a list of their own
+ * (./photos-input), saved with the fields. The expiry dates are days,
+ * "2027-03-12", as ./expiry handles them. See
+ * docs/261019-vehicles-and-drivers.md, "Vehicles".
  */
 
 export const VEHICLE_LIMITS = { colour: 40, notes: 500 } as const;
@@ -34,7 +41,7 @@ export const VEHICLE_DOCUMENT_LABELS: Record<VehicleDocument, string> = {
   permitExpiresOn: "Operating permit",
 };
 
-/** Every editable field of a vehicle. */
+/** Every editable field of a vehicle but its photos: what a change is compared by. */
 export type VehicleFields = {
   /** In capitals without spaces: "VLE1234". */
   plate: string;
@@ -52,8 +59,11 @@ export type VehicleFields = {
 
 export type VehicleField = keyof VehicleFields;
 
+/** What the form saves: the fields, and the photos in order, the first the vehicle's cover. */
+export type VehicleInput = VehicleFields & { photos: Photo[] };
+
 /** How the screen and the activity log name each field. */
-export const VEHICLE_FIELD_LABELS: Record<VehicleField, string> = {
+export const VEHICLE_FIELD_LABELS: Record<VehicleField | "photos", string> = {
   plate: "Plate",
   vehicleClassId: "Class",
   brand: "Brand",
@@ -63,6 +73,7 @@ export const VEHICLE_FIELD_LABELS: Record<VehicleField, string> = {
   year: "Year made",
   isActive: "In service",
   notes: "Notes",
+  photos: "Photos",
   ...VEHICLE_DOCUMENT_LABELS,
 };
 
@@ -156,11 +167,19 @@ export function checkVehicleFields(
   return { ok: true };
 }
 
-/** The vehicle form's values, read and checked. `isActive` is a checkbox; an empty date is none. */
+/**
+ * The vehicle form's values, read and checked: its fields, and its photos,
+ * which post as JSON under `PHOTOS_FIELD`. `isActive` is a checkbox; an
+ * empty date is none.
+ */
 export function parseVehicleFields(
   values: Record<string, unknown>,
   now: Date = new Date(),
-): Parsed<VehicleFields> {
+): Parsed<VehicleInput> {
+  const photos = parsePhotos(values[PHOTOS_FIELD]);
+  if (!photos) return { ok: false, error: "Upload the photos again." };
+  const photosCheck = checkPhotos(photos);
+  if (!photosCheck.ok) return photosCheck;
   const yearText = textOf(values.year);
   const documents = {} as Record<VehicleDocument, string | null>;
   for (const key of VEHICLE_DOCUMENTS) {
@@ -181,5 +200,5 @@ export function parseVehicleFields(
     ...documents,
   };
   const check = checkVehicleFields(fields, now);
-  return check.ok ? { ok: true, value: fields } : check;
+  return check.ok ? { ok: true, value: { ...fields, photos } } : check;
 }

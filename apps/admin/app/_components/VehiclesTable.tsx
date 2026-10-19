@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
+import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import type { VehicleWithModel } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { locationVehicleHref } from "../_lib/routes";
@@ -49,7 +49,7 @@ export function VehiclesTable({
                   {vehicle.plate}
                 </Link>
                 <span className="block text-xs text-neutral-500">
-                  {vehicle.vehicleModel.name}
+                  {modelName(vehicle.vehicleModel)}
                 </span>
               </Td>
               <Td className="whitespace-nowrap text-neutral-600">

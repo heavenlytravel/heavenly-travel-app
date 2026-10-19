@@ -206,7 +206,7 @@ export function TripOptionsForm({
                   </span>
                   {c.models.length > 0 ? (
                     <span className="flex flex-wrap items-baseline gap-x-3 text-[0.9rem] text-[#324844]">
-                      {modelsLine(c.models)}, or similar
+                      {modelsLine(c.models.map((m) => m.name))}, or similar
                       {hasPhotos(c.models) ? (
                         // A button in the label opens the gallery without choosing the class.
                         <button

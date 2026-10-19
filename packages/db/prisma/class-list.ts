@@ -1,10 +1,11 @@
 import type { TripCategory } from "../src/booking-status";
 
 /**
- * The class catalogue Operation's seating table sets, each class with its
- * models, in order: the seed creates it in a fresh database and
- * scripts/set-class-list.ts brings an existing one to it. Once there, ops
- * owns each class and model and edits them in the console. "2 + 1" is two
+ * The class catalogue Operation's seating table sets, each class with the
+ * models it starts with, in order: the seed creates it in a fresh database
+ * and scripts/set-class-list.ts brings an existing one to it. Once there,
+ * ops owns each class and model and edits them in the console, and the
+ * vehicle form adds the models of the vehicles entered. "2 + 1" is two
  * passengers in the back and one beside the driver; a VIP class seats its
  * passengers in the back only. Starred values in
  * docs/261019-vehicles-and-drivers.md are assumed until Operation confirms
@@ -19,8 +20,8 @@ export type ListedClass = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** Its models' names, in order. */
-  models: string[];
+  /** The models it starts with, in order. */
+  models: { brand: string; name: string }[];
 };
 
 export const CLASS_LIST: ListedClass[] = [
@@ -33,7 +34,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 3,
     luggage: "2 medium bags",
-    models: ["Toyota Vios", "Honda City"],
+    models: [
+      { brand: "Toyota", name: "Vios" },
+      { brand: "Honda", name: "City" },
+    ],
   },
   {
     slug: "sedan-vip",
@@ -44,7 +48,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 2,
     luggage: "2 medium bags",
-    models: ["Toyota Camry", "Honda Accord"],
+    models: [
+      { brand: "Toyota", name: "Camry" },
+      { brand: "Honda", name: "Accord" },
+    ],
   },
   {
     slug: "mpv",
@@ -55,7 +62,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 5,
     luggage: "4 medium bags",
-    models: ["Toyota Innova", "Toyota Veloz"],
+    models: [
+      { brand: "Toyota", name: "Innova" },
+      { brand: "Toyota", name: "Veloz" },
+    ],
   },
   {
     slug: "mpv-vip",
@@ -66,7 +76,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 4,
     luggage: "4 medium bags",
-    models: ["Toyota Vellfire", "Toyota Alphard"],
+    models: [
+      { brand: "Toyota", name: "Vellfire" },
+      { brand: "Toyota", name: "Alphard" },
+    ],
   },
   {
     slug: "van",
@@ -77,7 +90,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 7,
     luggage: "7 medium bags",
-    models: ["Nissan Urvan", "Toyota Hiace"],
+    models: [
+      { brand: "Nissan", name: "Urvan" },
+      { brand: "Toyota", name: "Hiace" },
+    ],
   },
   {
     slug: "coach",
@@ -88,7 +104,10 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 1,
     maxPassengers: 44,
     luggage: "40 large bags",
-    models: ["Scania 44-seater", "Volvo 44-seater"],
+    models: [
+      { brand: "Scania", name: "44-seater" },
+      { brand: "Volvo", name: "44-seater" },
+    ],
   },
   {
     slug: "coach-vip",
@@ -99,6 +118,9 @@ export const CLASS_LIST: ListedClass[] = [
     minPassengers: 15,
     maxPassengers: 27,
     luggage: "25 large bags",
-    models: ["Scania VIP 27-seater", "Volvo VIP 27-seater"],
+    models: [
+      { brand: "Scania", name: "VIP 27-seater" },
+      { brand: "Volvo", name: "VIP 27-seater" },
+    ],
   },
 ];

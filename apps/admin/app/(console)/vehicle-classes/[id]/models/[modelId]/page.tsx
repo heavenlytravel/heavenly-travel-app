@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { plural } from "@repo/db";
+import { modelName, plural } from "@repo/db";
 import { getVehicleClass, getVehicleModel } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../../_components/Card";
@@ -19,10 +19,10 @@ import { deleteVehicleModelAction } from "../../../actions";
 import { ModelForm } from "../../../ModelForm";
 
 /**
- * Route: /vehicle-classes/[id]/models/[modelId], and
- * /vehicle-classes/[id]/models/new for a model the class does not have
- * yet. The model's form: its name, order, switch and photos. A model no
- * vehicle is of can be deleted; the class's page keeps the history.
+ * Route: /vehicle-classes/[id]/models/[modelId]. The model's form: its
+ * brand and name, order, switch and photos. The vehicle form adds models;
+ * here they are named and pictured. A model no vehicle is of can be
+ * deleted; the class's page keeps the history.
  */
 export default async function VehicleModelPage({
   params,
@@ -50,11 +50,11 @@ export default async function VehicleModelPage({
 async function modelScreen({ id, modelId }: { id: string; modelId: string }) {
   const [vehicleClass, model] = await Promise.all([
     getVehicleClass(id),
-    modelId === "new" ? null : getVehicleModel(modelId),
+    getVehicleModel(modelId),
   ]);
-  if (!vehicleClass) notFound();
-  if (modelId !== "new" && model?.vehicleClassId !== id) notFound();
-  const vehicles = model?._count.vehicles ?? 0;
+  if (!vehicleClass || model?.vehicleClassId !== id) notFound();
+  const name = modelName(model);
+  const vehicles = model._count.vehicles;
 
   return (
     <>
@@ -67,41 +67,33 @@ async function modelScreen({ id, modelId }: { id: string; modelId: string }) {
         </Link>
       </p>
       <PageHeader
-        title={model ? model.name : `Add a model to ${vehicleClass.name}`}
-        description={`A model of ${vehicleClass.name}, as the customer sees it at every location. A customer may prefer it; the price is the class's.`}
+        title={name}
+        description={`A model of ${vehicleClass.name}, as the customer sees it wherever a vehicle of it is in service. Where the location sets a charge, the customer may choose it.`}
       />
       <DetailColumns
-        main={
-          <ModelForm
-            key={model?.id ?? "new"}
-            classId={id}
-            model={model ?? undefined}
-          />
-        }
+        main={<ModelForm key={model.id} classId={id} model={model} />}
         side={
-          model ? (
-            <Card>
-              <CardTitle
-                description={
-                  vehicles > 0
-                    ? `${plural(vehicles, "vehicle is", "vehicles are")} of this model, so it stays. Switch it off to hide it from customers.`
-                    : "No vehicle is of it. A booking that preferred it keeps the name."
-                }
-              >
-                Delete
-              </CardTitle>
-              {vehicles === 0 ? (
-                <DeleteRecord
-                  label="Delete model"
-                  title={`Delete ${model.name}?`}
-                  description="Its photos go with it. This cannot be undone."
-                  action={deleteVehicleModelAction.bind(null, model.id)}
-                  doneHref={vehicleClassHref(id)}
-                  doneMessage={`Deleted ${model.name}.`}
-                />
-              ) : null}
-            </Card>
-          ) : null
+          <Card>
+            <CardTitle
+              description={
+                vehicles > 0
+                  ? `${plural(vehicles, "vehicle is", "vehicles are")} of this model, so it stays. Switch it off to hide it from customers.`
+                  : "No vehicle is of it. A booking that chose it keeps the name."
+              }
+            >
+              Delete
+            </CardTitle>
+            {vehicles === 0 ? (
+              <DeleteRecord
+                label="Delete model"
+                title={`Delete the ${name}?`}
+                description="Its photos go with it. This cannot be undone."
+                action={deleteVehicleModelAction.bind(null, model.id)}
+                doneHref={vehicleClassHref(id)}
+                doneMessage={`Deleted the ${name}.`}
+              />
+            ) : null}
+          </Card>
         }
       />
     </>

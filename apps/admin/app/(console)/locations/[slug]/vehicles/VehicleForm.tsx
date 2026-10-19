@@ -1,81 +1,123 @@
 "use client";
 
 import {
-  TRIP_CATEGORY_LABELS,
+  MODEL_LIMITS,
+  modelName,
+  sameName,
   VEHICLE_DOCUMENTS,
   VEHICLE_DOCUMENT_LABELS,
   VEHICLE_FIELD_LABELS,
   VEHICLE_LIMITS,
-  isTripCategory,
   vehicleFieldsOf,
 } from "@repo/db";
 import type {
   LocationName,
-  ModelChoice,
+  ModelSuggestion,
   VehicleWithModel,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
-import { Select, type SelectGroup } from "@repo/ui/select";
+import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useId, useState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
 import type { ActionState } from "../../../../_lib/action-state";
-import { locationTabHref } from "../../../../_lib/routes";
+import {
+  classGroups,
+  type FleetClassOption,
+} from "../../../../_lib/fleet-form";
 import { createVehicleAction, updateVehicleAction } from "./actions";
 
-/**
- * The models as the picker groups them, by class in the catalogue's
- * order: "MPV VIP (Car with driver)", then its models. A model customers
- * do not see says so.
- */
-function modelGroups(models: readonly ModelChoice[]): SelectGroup[] {
-  const groups = new Map<string, SelectGroup>();
-  for (const model of models) {
-    const { vehicleClass } = model;
-    let group = groups.get(vehicleClass.id);
-    if (!group) {
-      group = {
-        label: isTripCategory(vehicleClass.category)
-          ? `${vehicleClass.name} (${TRIP_CATEGORY_LABELS[vehicleClass.category]})`
-          : vehicleClass.name,
-        options: [],
-      };
-      groups.set(vehicleClass.id, group);
-    }
-    group.options.push({
-      value: model.id,
-      label: model.isActive ? model.name : `${model.name} (hidden)`,
-    });
+/** Each name once, in the spelling it was first entered with. */
+function distinct(names: readonly string[]) {
+  const seen = new Map<string, string>();
+  for (const name of names) {
+    const key = name.toLowerCase();
+    if (name && !seen.has(key)) seen.set(key, name);
   }
-  return [...groups.values()];
+  return [...seen.values()];
+}
+
+/** The models of the brand typed: the class's first, then the brand's in other classes. */
+function modelsOf(
+  suggestions: readonly ModelSuggestion[],
+  classId: string,
+  brand: string,
+) {
+  const ofBrand = suggestions.filter((s) => sameName(s.brand, brand));
+  return distinct([
+    ...ofBrand.filter((s) => s.vehicleClassId === classId).map((s) => s.name),
+    ...ofBrand.map((s) => s.name),
+  ]);
 }
 
 /**
- * The form for one of our vehicles, new or existing: what it is, where it
- * is based and whether it is in service, the expiry dates of its
- * documents, and notes. A saved vehicle opens the Vehicles tab of the
- * location it is based at.
+ * What saving does to the catalogue, under the model: nothing when the
+ * class has the model already; otherwise it adds it, and says so, and
+ * names the class that has it already when that is another one.
+ */
+function ModelNote({
+  suggestions,
+  classes,
+  classId,
+  brand,
+  model,
+}: {
+  suggestions: readonly ModelSuggestion[];
+  classes: readonly FleetClassOption[];
+  classId: string;
+  brand: string;
+  model: string;
+}) {
+  if (!classId || !brand.trim() || !model.trim()) return null;
+  const same = suggestions.filter(
+    (s) => sameName(s.brand, brand) && sameName(s.name, model),
+  );
+  if (same.some((s) => s.vehicleClassId === classId)) return null;
+  const className = (id: string) => classes.find((c) => c.id === id)?.name;
+  const elsewhere = same
+    .map((s) => className(s.vehicleClassId))
+    .filter(Boolean);
+  const name = modelName({ brand: brand.trim(), name: model.trim() });
+  return (
+    <p className="text-xs text-neutral-500 sm:col-span-2">
+      {elsewhere.length > 0
+        ? `The ${name} is a model of ${elsewhere.join(" and ")}. Saving makes it a model of ${className(classId)} too, with no photos yet.`
+        : `A new model of ${className(classId)}. Saving adds it to the class's models, with no photos yet: add them on the class's page.`}
+    </p>
+  );
+}
+
+/**
+ * The form for one of our vehicles, new or existing: its plate, its class,
+ * its brand and model as typed, with the ones entered before suggested,
+ * where it is based and whether it is in service, the expiry dates of its
+ * documents, and notes. A model the class does not have yet is added to
+ * it on save. A saved vehicle opens the Vehicles tab of the location it is
+ * based at.
  */
 export function VehicleForm({
-  slug,
-  locationId,
   vehicle,
-  models,
+  locationId,
+  classes,
+  suggestions,
   locations,
+  backHref,
 }: {
-  /** The location whose tab the form is on, for "Cancel". */
-  slug: string;
-  /** Where a new vehicle is based to start with. */
-  locationId: string;
   /** Absent on the "new" page. */
   vehicle?: VehicleWithModel;
-  /** Every model with its class, in the catalogue's order. */
-  models: ModelChoice[];
+  /** Where a new vehicle is based to start with. */
+  locationId: string;
+  /** Every class in the catalogue, in its order. */
+  classes: FleetClassOption[];
+  /** Every model in the catalogue, for the brand and model fields. */
+  suggestions: ModelSuggestion[];
   locations: LocationName[];
+  /** Where "Cancel" goes. */
+  backHref: string;
 }) {
   const isNew = !vehicle;
   const [state, action, pending] = useActionState<ActionState, FormData>(
@@ -83,10 +125,25 @@ export function VehicleForm({
     null,
   );
   const fields = vehicle ? vehicleFieldsOf(vehicle) : null;
+  const [classId, setClassId] = useState(fields?.vehicleClassId ?? "");
+  const [brand, setBrand] = useState(fields?.brand ?? "");
+  const [model, setModel] = useState(fields?.model ?? "");
+  const brandList = useId();
+  const modelList = useId();
 
   return (
     <form action={action} className="grid gap-6">
       {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
+      <datalist id={brandList}>
+        {distinct(suggestions.map((s) => s.brand)).map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
+      <datalist id={modelList}>
+        {modelsOf(suggestions, classId, brand).map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
 
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -101,15 +158,54 @@ export function VehicleForm({
               defaultValue={fields?.plate}
             />
           </Field>
-          <Field label={VEHICLE_FIELD_LABELS.vehicleModelId}>
+          <Field
+            label={
+              <span className="inline-flex items-center gap-1.5">
+                {VEHICLE_FIELD_LABELS.vehicleClassId}
+                <InfoTip text="The class the customer books it as. Its models are the brands and models of the vehicles entered in it." />
+              </span>
+            }
+          >
             <Select
-              name="vehicleModelId"
+              name="vehicleClassId"
               required
-              placeholder="Choose the model"
-              defaultValue={fields?.vehicleModelId ?? ""}
-              options={modelGroups(models)}
+              placeholder="Choose the class"
+              value={classId}
+              onValueChange={setClassId}
+              options={classGroups(classes)}
             />
           </Field>
+          <Field label={VEHICLE_FIELD_LABELS.brand}>
+            <Input
+              name="brand"
+              required
+              autoComplete="off"
+              list={brandList}
+              maxLength={MODEL_LIMITS.brand}
+              placeholder="Toyota"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+            />
+          </Field>
+          <Field label={VEHICLE_FIELD_LABELS.model}>
+            <Input
+              name="model"
+              required
+              autoComplete="off"
+              list={modelList}
+              maxLength={MODEL_LIMITS.name}
+              placeholder="Alphard"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+            />
+          </Field>
+          <ModelNote
+            suggestions={suggestions}
+            classes={classes}
+            classId={classId}
+            brand={brand}
+            model={model}
+          />
           <Field label={VEHICLE_FIELD_LABELS.colour}>
             <Input
               name="colour"
@@ -151,7 +247,7 @@ export function VehicleForm({
           <Checkbox name="isActive" defaultChecked={fields?.isActive ?? true} />
           <span className="inline-flex items-center gap-1.5">
             {VEHICLE_FIELD_LABELS.isActive}
-            <InfoTip text="Out of service, the vehicle keeps its history and its documents are not checked." />
+            <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
           </span>
         </label>
       </Card>
@@ -193,7 +289,7 @@ export function VehicleForm({
           {pending ? "Saving…" : isNew ? "Add vehicle" : "Save"}
         </Button>
         <Link
-          href={locationTabHref(slug, "vehicles")}
+          href={backHref}
           className="text-sm text-neutral-600 underline-offset-4 hover:underline"
         >
           Cancel

@@ -416,7 +416,8 @@ async function VehicleClasses({
             {vehicleClass.models.length > 0 ? (
               // A div, not a p: the gallery's dialog is not phrasing content.
               <div className="mt-2 text-[0.95rem] text-[#324844]">
-                {modelsLine(vehicleClass.models)}, or similar.{" "}
+                {modelsLine(vehicleClass.models.map((m) => m.name))}, or
+                similar.{" "}
                 <ModelPhotosButton
                   title={vehicleClass.name}
                   models={vehicleClass.models}

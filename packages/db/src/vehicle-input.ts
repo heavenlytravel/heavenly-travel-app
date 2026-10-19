@@ -1,13 +1,16 @@
 import type { Change } from "./change";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
+import { checkModelName, squashName } from "./vehicle-model-input";
 
 /**
  * What the Vehicles tab edits of one of our vehicles and the rules it
  * checks, pure and browser-safe: the form shows the messages, the writers
- * in ./vehicles apply the same checks before they write. The expiry dates
- * are days, "2027-03-12", as ./expiry handles them. See
- * docs/261019-vehicles-and-drivers.md, "Vehicles".
+ * in ./vehicles apply the same checks before they write. A vehicle names
+ * its class, its brand and its model as typed; the writer finds the
+ * catalogue's model or adds it. The expiry dates are days, "2027-03-12", as
+ * ./expiry handles them. See docs/261019-vehicles-and-drivers.md,
+ * "Vehicles".
  */
 
 export const VEHICLE_LIMITS = { colour: 40, notes: 500 } as const;
@@ -35,7 +38,11 @@ export const VEHICLE_DOCUMENT_LABELS: Record<VehicleDocument, string> = {
 export type VehicleFields = {
   /** In capitals without spaces: "VLE1234". */
   plate: string;
-  vehicleModelId: string;
+  vehicleClassId: string;
+  /** "Toyota". */
+  brand: string;
+  /** The model alone: "Alphard". */
+  model: string;
   locationId: string;
   colour: string;
   year: number | null;
@@ -48,7 +55,9 @@ export type VehicleField = keyof VehicleFields;
 /** How the screen and the activity log name each field. */
 export const VEHICLE_FIELD_LABELS: Record<VehicleField, string> = {
   plate: "Plate",
-  vehicleModelId: "Model",
+  vehicleClassId: "Class",
+  brand: "Brand",
+  model: "Model",
   locationId: "Based at",
   colour: "Colour",
   year: "Year made",
@@ -64,11 +73,11 @@ export function normalizePlate(text: string) {
 
 const PLATE_RE = /^[A-Z0-9]{2,12}$/;
 
-/** A stored vehicle's fields as the form and the log read them: its dates as days. */
+/** A stored vehicle's fields as the form and the log read them: its model by class, brand and name, its dates as days. */
 export function vehicleFieldsOf(
   vehicle: {
     plate: string;
-    vehicleModelId: string;
+    vehicleModel: { vehicleClassId: string; brand: string; name: string };
     locationId: string;
     colour: string;
     year: number | null;
@@ -78,7 +87,9 @@ export function vehicleFieldsOf(
 ): VehicleFields {
   return {
     plate: vehicle.plate,
-    vehicleModelId: vehicle.vehicleModelId,
+    vehicleClassId: vehicle.vehicleModel.vehicleClassId,
+    brand: vehicle.vehicleModel.brand,
+    model: vehicle.vehicleModel.name,
     locationId: vehicle.locationId,
     colour: vehicle.colour,
     year: vehicle.year,
@@ -112,9 +123,11 @@ export function checkVehicleFields(
   if (fields.plate !== undefined && !PLATE_RE.test(fields.plate)) {
     return fail("Enter the plate: letters and digits, such as VLE 1234.");
   }
-  if (fields.vehicleModelId !== undefined && !fields.vehicleModelId) {
-    return fail("Choose the model.");
+  if (fields.vehicleClassId !== undefined && !fields.vehicleClassId) {
+    return fail("Choose the class.");
   }
+  const named = checkModelName({ brand: fields.brand, name: fields.model });
+  if (!named.ok) return named;
   if (fields.locationId !== undefined && !fields.locationId) {
     return fail("Choose where it is based.");
   }
@@ -157,7 +170,9 @@ export function parseVehicleFields(
   }
   const fields: VehicleFields = {
     plate: normalizePlate(textOf(values.plate)),
-    vehicleModelId: textOf(values.vehicleModelId),
+    vehicleClassId: textOf(values.vehicleClassId),
+    brand: squashName(textOf(values.brand)),
+    model: squashName(textOf(values.model)),
     locationId: textOf(values.locationId),
     colour: textOf(values.colour),
     year: yearText === "" ? null : Number(yearText),

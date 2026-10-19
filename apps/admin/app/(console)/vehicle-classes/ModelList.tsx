@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { plural } from "@repo/db";
+import { modelName, plural } from "@repo/db";
 import type { CatalogueModel } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { ImageIcon } from "@repo/ui/icons";
@@ -8,8 +8,8 @@ import { vehicleModelHref } from "../../_lib/routes";
 
 /**
  * A class's models on its page, in order, a row each: the cover photo,
- * the name, how many photos and vehicles it has, "Off" when customers do
- * not see it. Each row opens the model's form.
+ * the brand and model, how many photos and vehicles it has, "Off" when
+ * customers do not see it. Each row opens the model's form.
  */
 export function ModelList({
   classId,
@@ -21,7 +21,8 @@ export function ModelList({
   if (models.length === 0) {
     return (
       <p className="text-sm text-neutral-500">
-        No model yet. The customer sees the class alone.
+        No model yet. A model joins the class when a vehicle of it is entered;
+        until then the customer sees the class alone.
       </p>
     );
   }
@@ -50,7 +51,7 @@ export function ModelList({
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium text-neutral-900">
-                  {model.name}
+                  {modelName(model)}
                 </span>
                 <span className="block text-xs text-neutral-500">
                   {plural(model.photos.length, "photo")} ·{" "}

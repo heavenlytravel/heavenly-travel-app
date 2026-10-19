@@ -385,14 +385,20 @@ model VehicleClass {
   @@index([category, isActive])
 }
 
-/// A model of a class as the customer sees it, "Toyota Alphard" in MPV VIP,
-/// with its photos. One catalogue for every location, as the classes are.
-/// A customer may prefer one; the price is the class's. Off hides it from
-/// customers. See docs/261019-vehicles-and-drivers.md.
+/// A model of a class, the Toyota Alphard in MPV VIP, with its photos. One
+/// catalogue for every location, as the classes are. The vehicle form adds
+/// one the first time a vehicle of it is entered. A location's customers
+/// see the models of its vehicles in service, and may prefer one; the price
+/// is the class's. Off hides it from customers. See
+/// docs/261019-vehicles-and-drivers.md.
 model VehicleModel {
   id             String       @id @default(cuid())
   vehicleClassId String
   vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  /// "Toyota". Empty only on a model named before brands were kept, until
+  /// db:set-class-list splits its name.
+  brand          String       @default("")
+  /// The model alone: "Alphard". The screens show "Toyota Alphard".
   name           String
   sortOrder      Int          @default(0)
   isActive       Boolean      @default(true)
@@ -403,7 +409,7 @@ model VehicleModel {
   vehicles  Vehicle[]
   tripItems TripItemDetails[]
 
-  @@unique([vehicleClassId, name])
+  @@unique([vehicleClassId, brand, name])
 }
 
 /// One photo of a model, in its order; the first is the model's cover.

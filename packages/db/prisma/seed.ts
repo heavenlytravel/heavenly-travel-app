@@ -29,7 +29,7 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
       slug,
       ...fields,
       models: {
-        create: models.map((name, i) => ({ name, sortOrder: i + 1 })),
+        create: models.map((model, i) => ({ ...model, sortOrder: i + 1 })),
       },
     },
   });

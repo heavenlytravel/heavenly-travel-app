@@ -7,7 +7,6 @@ import {
   type CatalogueModel,
   type VehicleClass,
 } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { DetailColumns } from "../../../_components/PageColumn";
@@ -21,10 +20,7 @@ import {
   Streamed,
 } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import {
-  VEHICLE_CLASSES_PATH,
-  newVehicleModelHref,
-} from "../../../_lib/routes";
+import { VEHICLE_CLASSES_PATH } from "../../../_lib/routes";
 import { ModelList } from "../ModelList";
 import { VehicleClassForm } from "../VehicleClassForm";
 
@@ -125,16 +121,7 @@ function VehicleClassScreen({
           vehicleClass ? (
             <>
               <Card>
-                <CardTitle
-                  description="What the customer sees of the class, each with its photos. A customer may prefer one; the price is the class's."
-                  action={
-                    <Button asChild size="sm" variant="secondary">
-                      <Link href={newVehicleModelHref(vehicleClass.id)}>
-                        Add model
-                      </Link>
-                    </Button>
-                  }
-                >
+                <CardTitle description="The brands and models of the vehicles entered in this class, each with its photos. The vehicle form adds them. A location's customers may choose one at the charge the location sets.">
                   Models
                 </CardTitle>
                 <ModelList classId={vehicleClass.id} models={models} />

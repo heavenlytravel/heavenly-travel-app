@@ -11,7 +11,9 @@ const NOW = new Date("2026-10-19T04:00:00Z");
 
 const FORM: Record<string, string> = {
   plate: "vle 1234",
-  vehicleModelId: "vm1",
+  vehicleClassId: "vc1",
+  brand: " Toyota ",
+  model: "Alphard  Executive",
   locationId: "loc1",
   colour: "Black",
   year: "2023",
@@ -42,7 +44,9 @@ describe("parseVehicleFields", () => {
       ok: true,
       value: {
         plate: "VLE1234",
-        vehicleModelId: "vm1",
+        vehicleClassId: "vc1",
+        brand: "Toyota",
+        model: "Alphard Executive",
         locationId: "loc1",
         colour: "Black",
         year: 2023,
@@ -61,9 +65,11 @@ describe("parseVehicleFields", () => {
     assert.equal(result.ok && result.value.year, null);
   });
 
-  it("needs a plate, a model, a location and a colour", () => {
+  it("needs a plate, a class, a brand, a model, a location and a colour", () => {
     assert.match(errorOf({ plate: " - " }) ?? "", /plate/);
-    assert.match(errorOf({ vehicleModelId: "" }) ?? "", /model/);
+    assert.match(errorOf({ vehicleClassId: "" }) ?? "", /class/);
+    assert.match(errorOf({ brand: " " }) ?? "", /brand/);
+    assert.match(errorOf({ model: "" }) ?? "", /model/);
     assert.match(errorOf({ locationId: "" }) ?? "", /based/);
     assert.match(errorOf({ colour: "" }) ?? "", /colour/);
   });
@@ -85,7 +91,7 @@ describe("parseVehicleFields", () => {
 describe("a stored vehicle", () => {
   const stored = {
     plate: "VLE1234",
-    vehicleModelId: "vm1",
+    vehicleModel: { vehicleClassId: "vc1", brand: "Toyota", name: "Alphard" },
     locationId: "loc1",
     colour: "Black",
     year: 2023,
@@ -97,8 +103,12 @@ describe("a stored vehicle", () => {
     permitExpiresOn: new Date("2027-06-01T00:00:00Z"),
   };
 
-  it("reads its dates as days", () => {
+  it("reads its model by class, brand and name, and its dates as days", () => {
     const fields = vehicleFieldsOf(stored);
+    assert.deepEqual(
+      [fields.vehicleClassId, fields.brand, fields.model],
+      ["vc1", "Toyota", "Alphard"],
+    );
     assert.equal(fields.roadTaxExpiresOn, "2026-11-01");
     assert.equal(fields.inspectionExpiresOn, null);
   });

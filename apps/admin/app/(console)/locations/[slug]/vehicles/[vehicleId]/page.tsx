@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { modelName } from "@repo/db";
 import {
   getVehicle,
   listActivityFor,
   listLocationNames,
-  listModelChoices,
+  listModelSuggestions,
+  listVehicleClasses,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../../../_components/ActivityHistory";
@@ -17,8 +19,9 @@ import {
   FormSkeleton,
   Streamed,
 } from "../../../../../_components/Skeleton";
-import { requireAdmin } from "../../../../../_lib/access";
-import { locationTabHref } from "../../../../../_lib/routes";
+import { getPermissions, requireAdmin } from "../../../../../_lib/access";
+import { fleetClassOptions } from "../../../../../_lib/fleet-form";
+import { locationTabHref, vehicleModelHref } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteVehicleAction } from "../actions";
 import { VehicleForm } from "../VehicleForm";
@@ -70,38 +73,58 @@ async function vehicleScreen({
   vehicleId: string;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, models, locations, history] = await Promise.all([
-    isNew ? null : getVehicle(vehicleId),
-    listModelChoices(),
-    listLocationNames(),
-    isNew ? [] : listActivityFor("vehicle", vehicleId),
-  ]);
+  const [vehicle, classes, suggestions, locations, history, permissions] =
+    await Promise.all([
+      isNew ? null : getVehicle(vehicleId),
+      listVehicleClasses(),
+      listModelSuggestions(),
+      listLocationNames(),
+      isNew ? [] : listActivityFor("vehicle", vehicleId),
+      getPermissions(),
+    ]);
   if (!isNew && vehicle?.locationId !== id) notFound();
+  const model = vehicle?.vehicleModel;
 
   return (
     <>
       <SectionHeader
         title={vehicle ? vehicle.plate : "Add vehicle"}
         description={
-          vehicle
-            ? `${vehicle.vehicleModel.name}, ${vehicle.vehicleModel.vehicleClass.name}.`
-            : "One of our vehicles, based here. Its model says its class and what the customer sees."
+          model
+            ? `${modelName(model)}, ${model.vehicleClass.name}.`
+            : "One of our vehicles, based here. Its class is what customers book, and its model what they may choose."
         }
       />
       <DetailColumns
         main={
           <VehicleForm
             key={vehicle?.id ?? "new"}
-            slug={slug}
             locationId={id}
             vehicle={vehicle ?? undefined}
-            models={models}
+            classes={fleetClassOptions(classes)}
+            suggestions={suggestions}
             locations={locations}
+            backHref={locationTabHref(slug, "vehicles")}
           />
         }
         side={
-          vehicle ? (
+          vehicle && model ? (
             <>
+              {permissions.includes("coverage.manage") ? (
+                <Card>
+                  <CardTitle
+                    description={`Customers who choose the ${modelName(model)} see its photos, the same for every vehicle of it.`}
+                  >
+                    Photos
+                  </CardTitle>
+                  <Link
+                    href={vehicleModelHref(model.vehicleClass.id, model.id)}
+                    className="text-sm font-medium text-neutral-900 underline-offset-4 hover:underline"
+                  >
+                    Photos of the {modelName(model)}
+                  </Link>
+                </Card>
+              ) : null}
               <Card>
                 <CardTitle>History</CardTitle>
                 <ActivityHistory

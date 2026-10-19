@@ -38,12 +38,15 @@ export type { VehicleClass, CatalogueClass } from "./vehicle-classes";
 export {
   listModelsOfClass,
   getVehicleModel,
-  listModelChoices,
-  createVehicleModel,
+  listModelSuggestions,
   updateVehicleModel,
   deleteVehicleModel,
 } from "./vehicle-models";
-export type { CatalogueModel, ModelChoice, ShownModel } from "./vehicle-models";
+export type {
+  CatalogueModel,
+  ModelSuggestion,
+  ShownModel,
+} from "./vehicle-models";
 export {
   listVehicles,
   getVehicle,

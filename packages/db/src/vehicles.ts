@@ -13,13 +13,17 @@ import {
   type VehicleDocument,
   type VehicleFields,
 } from "./vehicle-input";
+import { modelName } from "./vehicle-model-input";
+import { modelFor } from "./vehicle-models";
 
 /**
  * Our vehicles, each of one model and based at one location, with the
  * expiry dates of its documents. The readers serve a location's Vehicles
  * tab and the list across locations; the writers take the actor and log
- * against the vehicle inside their transaction. A vehicle out of service
- * keeps its history; one entered by mistake is deleted. See
+ * against the vehicle inside their transaction. A vehicle's model is
+ * typed as a class, a brand and a name: the writers find it in the
+ * catalogue or add it there. A vehicle out of service keeps its history;
+ * one entered by mistake is deleted. See
  * docs/261019-vehicles-and-drivers.md.
  */
 
@@ -28,6 +32,8 @@ const withModel = {
     vehicleModel: {
       select: {
         id: true,
+        vehicleClassId: true,
+        brand: true,
         name: true,
         vehicleClass: {
           select: { id: true, name: true, category: true, sortOrder: true },
@@ -54,7 +60,7 @@ function byClassAndPlate(a: VehicleWithModel, b: VehicleWithModel) {
     Number(b.isActive) - Number(a.isActive) ||
     categoryRank(classA.category) - categoryRank(classB.category) ||
     classA.sortOrder - classB.sortOrder ||
-    a.vehicleModel.name.localeCompare(b.vehicleModel.name) ||
+    modelName(a.vehicleModel).localeCompare(modelName(b.vehicleModel)) ||
     a.plate.localeCompare(b.plate)
   );
 }
@@ -89,14 +95,23 @@ export function vehiclesDueWhere(now: Date = new Date()) {
   } satisfies Prisma.VehicleWhereInput;
 }
 
-/** The days among the fields as the row stores them: dates. */
-function documentDates(fields: Partial<VehicleFields>) {
-  const dates: Partial<Record<VehicleDocument, Date | null>> = {};
+/** The fields that name the model rather than sit on the vehicle's row. */
+const MODEL_KEYS = ["vehicleClassId", "brand", "model"] as const;
+type ModelKey = (typeof MODEL_KEYS)[number];
+
+/** The fields as the vehicle's row stores them: without the model by name, the days as dates. */
+function vehicleRow<F extends Partial<VehicleFields>>(
+  fields: F,
+): Omit<F, ModelKey | VehicleDocument> &
+  Partial<Record<VehicleDocument, Date | null>> {
+  const row: Record<string, unknown> = { ...fields };
+  for (const key of MODEL_KEYS) delete row[key];
   for (const key of VEHICLE_DOCUMENTS) {
     const day = fields[key];
-    if (day !== undefined) dates[key] = dateOfDay(day);
+    if (day !== undefined) row[key] = dateOfDay(day);
   }
-  return dates;
+  return row as Omit<F, ModelKey | VehicleDocument> &
+    Partial<Record<VehicleDocument, Date | null>>;
 }
 
 const plateTaken = (plate: string) => ({
@@ -104,37 +119,24 @@ const plateTaken = (plate: string) => ({
   error: `${plate} is in the list already.`,
 });
 
-/** Checks that the model and the location a vehicle points at exist, and answers their names for the log. */
-async function namesOf(
+/** The name of the location a vehicle is based at, which must exist. */
+async function locationNameOf(
   tx: Prisma.TransactionClient,
-  fields: Partial<Pick<VehicleFields, "vehicleModelId" | "locationId">>,
-): Promise<
-  | { ok: true; modelName?: string; locationName?: string }
-  | { ok: false; error: string }
-> {
-  const [model, location] = await Promise.all([
-    fields.vehicleModelId
-      ? tx.vehicleModel.findUnique({
-          where: { id: fields.vehicleModelId },
-          select: { name: true },
-        })
-      : null,
-    fields.locationId
-      ? tx.location.findUnique({
-          where: { id: fields.locationId },
-          select: { name: true },
-        })
-      : null,
-  ]);
-  if (fields.vehicleModelId && !model) {
-    return { ok: false, error: "Choose the model again." };
-  }
-  if (fields.locationId && !location) {
-    return { ok: false, error: "Choose where it is based again." };
-  }
-  return { ok: true, modelName: model?.name, locationName: location?.name };
+  locationId: string,
+) {
+  const location = await tx.location.findUnique({
+    where: { id: locationId },
+    select: { name: true },
+  });
+  return location?.name ?? null;
 }
 
+const NO_LOCATION = {
+  ok: false as const,
+  error: "Choose where it is based again.",
+};
+
+/** A new vehicle, of the model its class, brand and name find or add. */
 export async function createVehicle(
   actor: Actor,
   fields: VehicleFields,
@@ -143,19 +145,21 @@ export async function createVehicle(
   if (!check.ok) return check;
   try {
     return await db.$transaction(async (tx) => {
-      const names = await namesOf(tx, fields);
-      if (!names.ok) return names;
+      const locationName = await locationNameOf(tx, fields.locationId);
+      if (!locationName) return NO_LOCATION;
+      const model = await modelFor(tx, actor, {
+        vehicleClassId: fields.vehicleClassId,
+        brand: fields.brand,
+        name: fields.model,
+      });
+      if (!model.ok) return model;
       const vehicle = await tx.vehicle.create({
-        data: { ...fields, ...documentDates(fields) },
+        data: { ...vehicleRow(fields), vehicleModelId: model.id },
       });
       await logActivity(tx, actor, {
         action: "vehicle.created",
         entityId: vehicle.id,
-        after: {
-          ...fields,
-          modelName: names.modelName ?? null,
-          locationName: names.locationName ?? null,
-        },
+        after: { ...fields, modelName: model.name, locationName },
       });
       return { ok: true, id: vehicle.id };
     });
@@ -165,7 +169,11 @@ export async function createVehicle(
   }
 }
 
-/** Changes any of the fields. Saving what is already there logs nothing. */
+/**
+ * Changes any of the fields. A class, brand or name that finds the model
+ * the vehicle is of already changes nothing of it, so "toyota" for
+ * "Toyota" is no change. Saving what is already there logs nothing.
+ */
 export async function updateVehicle(
   actor: Actor,
   id: string,
@@ -175,16 +183,45 @@ export async function updateVehicle(
   if (!check.ok) return check;
   try {
     return await db.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.findUnique({ where: { id } });
+      const vehicle = await tx.vehicle.findUnique({
+        where: { id },
+        include: { vehicleModel: true },
+      });
       if (!vehicle) return NOT_FOUND;
-      const changed = changedFields(vehicleFieldsOf(vehicle), patch);
+      const current = vehicleFieldsOf(vehicle);
+      const changed = changedFields(current, patch);
       if (!changed) return { ok: true };
 
-      const names = await namesOf(tx, changed.after);
-      if (!names.ok) return names;
+      let model: { id: string; name: string } | null = null;
+      if (MODEL_KEYS.some((key) => key in changed.after)) {
+        const found = await modelFor(tx, actor, {
+          vehicleClassId:
+            changed.after.vehicleClassId ?? current.vehicleClassId,
+          brand: changed.after.brand ?? current.brand,
+          name: changed.after.model ?? current.model,
+        });
+        if (!found.ok) return found;
+        if (found.id === vehicle.vehicleModelId) {
+          for (const key of MODEL_KEYS) {
+            delete changed.before[key];
+            delete changed.after[key];
+          }
+          if (Object.keys(changed.after).length === 0) return { ok: true };
+        } else {
+          model = found;
+        }
+      }
+
+      const locationName = changed.after.locationId
+        ? await locationNameOf(tx, changed.after.locationId)
+        : null;
+      if (changed.after.locationId && !locationName) return NO_LOCATION;
       await tx.vehicle.update({
         where: { id },
-        data: { ...changed.after, ...documentDates(changed.after) },
+        data: {
+          ...vehicleRow(changed.after),
+          ...(model ? { vehicleModelId: model.id } : {}),
+        },
       });
       await logActivity(tx, actor, {
         action: "vehicle.updated",
@@ -192,8 +229,8 @@ export async function updateVehicle(
         before: changed.before,
         after: {
           ...changed.after,
-          ...(names.modelName ? { modelName: names.modelName } : {}),
-          ...(names.locationName ? { locationName: names.locationName } : {}),
+          ...(model ? { modelName: model.name } : {}),
+          ...(locationName ? { locationName } : {}),
         },
       });
       return { ok: true };

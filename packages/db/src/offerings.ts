@@ -14,7 +14,7 @@ import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
-import { SHOWN_MODELS } from "./vehicle-models";
+import { modelsShownAt, shownModel, type ShownModel } from "./vehicle-models";
 
 export type { LocationVehicleClass };
 
@@ -37,14 +37,30 @@ const withClass = {
 /** An offering with its catalogue class. */
 export type Offering = Prisma.LocationVehicleClassGetPayload<typeof withClass>;
 
-const withShownModels = {
-  include: { vehicleClass: { include: { models: SHOWN_MODELS } } },
-} satisfies Prisma.LocationVehicleClassDefaultArgs;
+/** The offering's class with the models of the location's vehicles in service. */
+const withModelsAt = (location: Prisma.LocationWhereInput) =>
+  ({
+    include: { vehicleClass: { include: { models: modelsShownAt(location) } } },
+  }) satisfies Prisma.LocationVehicleClassDefaultArgs;
 
-/** An offering on sale, its class with the models the customer sees. */
-export type OfferingOnSale = Prisma.LocationVehicleClassGetPayload<
-  typeof withShownModels
+type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
+  ReturnType<typeof withModelsAt>
 >;
+
+/** An offering on sale, its class with the models the location's customers see. */
+export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
+  vehicleClass: VehicleClass & { models: ShownModel[] };
+};
+
+/** Offerings as they are read, named and in the class's order. */
+function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
+  return rows
+    .map(({ vehicleClass: { models, ...vehicleClass }, ...offering }) => ({
+      ...offering,
+      vehicleClass: { ...vehicleClass, models: models.map(shownModel) },
+    }))
+    .sort(byClassOrder);
+}
 
 const NOT_FOUND: Change = { ok: false, error: "Offering not found." };
 
@@ -72,8 +88,8 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
 
 /**
  * The offerings the location sells in the category right now: on sale, of
- * an active class, in the class's order, each class with its models. What
- * the options page prices.
+ * an active class, in the class's order, each class with the models of
+ * the location's vehicles in service. What the options page prices.
  */
 export async function listActiveOfferings(
   locationId: string,
@@ -85,9 +101,9 @@ export async function listActiveOfferings(
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withShownModels,
+    ...withModelsAt({ id: locationId }),
   });
-  return rows.sort(byClassOrder);
+  return onSale(rows);
 }
 
 /** The same, for the customer site, which knows the location by its slug. */
@@ -101,9 +117,9 @@ export async function listActiveOfferingsAt(
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withShownModels,
+    ...withModelsAt({ slug }),
   });
-  return rows.sort(byClassOrder);
+  return onSale(rows);
 }
 
 export function getOffering(id: string): Promise<Offering | null> {

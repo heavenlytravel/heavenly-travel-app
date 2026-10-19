@@ -30,8 +30,8 @@ const withOfferings = {
   include: {
     models: {
       where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { name: true },
+      orderBy: [{ sortOrder: "asc" }, { brand: "asc" }, { name: "asc" }],
+      select: { brand: true, name: true },
     },
     offerings: {
       select: {

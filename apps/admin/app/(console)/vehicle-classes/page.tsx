@@ -3,6 +3,7 @@ import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   formatMyr,
+  modelName,
   modelsLine,
   type TripCategory,
 } from "@repo/db";
@@ -183,7 +184,7 @@ function ClassCard({
           </p>
           <p className="mt-1.5 text-xs text-neutral-500">
             {vehicleClass.models.length > 0
-              ? modelsLine(vehicleClass.models)
+              ? modelsLine(vehicleClass.models.map(modelName))
               : "No model yet"}
           </p>
         </div>

@@ -2,7 +2,6 @@
 
 import {
   createVehicleClass,
-  createVehicleModel,
   deleteVehicleModel,
   parseVehicleClassFields,
   parseVehicleModelFields,
@@ -70,27 +69,6 @@ export async function setVehicleClassActiveAction(
   const result = await updateVehicleClass(actorOf(admin), id, { isActive });
   if (result.ok) revalidateClasses();
   return stateOf(result);
-}
-
-/** "Add model": its fields and photos. A saved model opens its class. */
-export async function createVehicleModelAction(
-  _previous: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const admin = await getAdmin("coverage.manage");
-  if (!admin) return FORBIDDEN;
-  const classId = textOf(formData.get("vehicleClassId"));
-  if (!classId) return { error: "Missing vehicle class." };
-  const parsed = parseVehicleModelFields(Object.fromEntries(formData));
-  if (!parsed.ok) return { error: parsed.error };
-  const result = await createVehicleModel(
-    actorOf(admin),
-    classId,
-    parsed.value,
-  );
-  if (!result.ok) return stateOf(result);
-  revalidateClasses();
-  redirect(vehicleClassHref(classId));
 }
 
 /** Every field of a model and its photos, saved together. A saved model opens its class. */

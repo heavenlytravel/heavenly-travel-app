@@ -3,6 +3,7 @@
 import {
   MODEL_LIMITS,
   MODEL_PHOTOS_FIELD,
+  modelName,
   VEHICLE_MODEL_FIELD_LABELS,
   type ModelPhoto,
 } from "@repo/db";
@@ -16,37 +17,36 @@ import { useActionState, useState } from "react";
 import { Card } from "../../_components/Card";
 import type { ActionState } from "../../_lib/action-state";
 import { vehicleClassHref } from "../../_lib/routes";
-import { createVehicleModelAction, updateVehicleModelAction } from "./actions";
+import { updateVehicleModelAction } from "./actions";
 import { PhotoList } from "./PhotoList";
 
 /**
- * The form for one model of a class, new or existing: its name, its place
- * in the class's order, whether customers see it, and its photos, then
- * "Add model" or "Save". The photos post as JSON in one field. A saved
- * model goes back to its class.
+ * The form for one model of a class, which a vehicle added: its brand and
+ * name, its place in the class's order, whether customers see it, and its
+ * photos. The photos post as JSON in one field. A saved model goes back to
+ * its class.
  */
 export function ModelForm({
   classId,
   model,
 }: {
   classId: string;
-  /** Absent on the "new" page. */
-  model?: CatalogueModel;
+  model: CatalogueModel;
 }) {
-  const isNew = !model;
   const [state, action, pending] = useActionState<ActionState, FormData>(
-    isNew ? createVehicleModelAction : updateVehicleModelAction,
+    updateVehicleModelAction,
     null,
   );
-  const [name, setName] = useState(model?.name ?? "");
+  const [brand, setBrand] = useState(model.brand);
+  const [name, setName] = useState(model.name);
   const [photos, setPhotos] = useState<ModelPhoto[]>(
-    model?.photos.map(({ url, caption }) => ({ url, caption })) ?? [],
+    model.photos.map(({ url, caption }) => ({ url, caption })),
   );
 
   return (
     <form action={action} className="grid gap-6">
       <input type="hidden" name="vehicleClassId" value={classId} />
-      {model ? <input type="hidden" name="id" value={model.id} /> : null}
+      <input type="hidden" name="id" value={model.id} />
       <input
         type="hidden"
         name={MODEL_PHOTOS_FIELD}
@@ -54,14 +54,25 @@ export function ModelForm({
       />
 
       <Card className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+        <div className="grid gap-4 sm:grid-cols-[1fr_1fr_10rem]">
+          <Field label={VEHICLE_MODEL_FIELD_LABELS.brand}>
+            <Input
+              name="brand"
+              required
+              autoComplete="off"
+              maxLength={MODEL_LIMITS.brand}
+              placeholder="Toyota"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+            />
+          </Field>
           <Field label={VEHICLE_MODEL_FIELD_LABELS.name}>
             <Input
               name="name"
               required
               autoComplete="off"
               maxLength={MODEL_LIMITS.name}
-              placeholder="Toyota Alphard"
+              placeholder="Alphard"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -78,15 +89,15 @@ export function ModelForm({
               name="sortOrder"
               step={1}
               required
-              defaultValue={model?.sortOrder ?? 0}
+              defaultValue={model.sortOrder}
             />
           </Field>
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="isActive" defaultChecked={model?.isActive ?? true} />
+          <Checkbox name="isActive" defaultChecked={model.isActive} />
           <span className="inline-flex items-center gap-1.5">
             {VEHICLE_MODEL_FIELD_LABELS.isActive}
-            <InfoTip text="Off hides the model from the options page and the location pages. Vehicles of it stay." />
+            <InfoTip text="Off hides the model from the options page and the location pages, so it cannot be chosen. Vehicles of it stay." />
           </span>
         </label>
       </Card>
@@ -94,14 +105,18 @@ export function ModelForm({
       <Card className="grid gap-4">
         <h2 className="inline-flex items-center gap-1.5 text-xl font-semibold tracking-tight">
           {VEHICLE_MODEL_FIELD_LABELS.photos}
-          <InfoTip text="The customer pages through them on the options page and on each location's product page. A caption, such as Interior, is read out with the model's name." />
+          <InfoTip text="The customer sees the first when choosing a model, and pages through them all on the options page and on each location's product page. A caption, such as Interior, is read out with the model's name." />
         </h2>
-        <PhotoList modelName={name} photos={photos} setPhotos={setPhotos} />
+        <PhotoList
+          modelName={modelName({ brand, name })}
+          photos={photos}
+          setPhotos={setPhotos}
+        />
       </Card>
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add model" : "Save"}
+          {pending ? "Saving…" : "Save"}
         </Button>
         <Link
           href={vehicleClassHref(classId)}

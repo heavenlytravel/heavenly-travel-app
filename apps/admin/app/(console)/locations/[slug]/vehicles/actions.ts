@@ -18,20 +18,26 @@ import {
 } from "../../../../_lib/action-state";
 import {
   LOCATIONS_PATH,
+  VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,
   locationTabHref,
 } from "../../../../_lib/routes";
+import { refreshVehicleClassesAfter } from "../../../../_lib/site";
 import { revalidateLocation } from "../../_lib/revalidate";
 
 /**
  * The Vehicles tab's actions. Each checks `fleet.manage` again, passes the
  * admin as the actor and lets the writer in @repo/db check the rest. A
  * saved vehicle opens the Vehicles tab of the location it is based at,
- * which a move changes.
+ * which a move changes. A vehicle can add a model
+ * to its class, and changes the models a location's customers see, so the
+ * catalogue and the customer site's class cards refresh too.
  */
 function revalidateVehicles() {
   revalidateLocation();
   revalidatePath(VEHICLES_PATH);
+  revalidatePath(VEHICLE_CLASSES_PATH, "layout");
+  refreshVehicleClassesAfter();
 }
 
 async function openVehiclesOf(locationId: string): Promise<never> {

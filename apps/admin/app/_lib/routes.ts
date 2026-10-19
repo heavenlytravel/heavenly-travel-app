@@ -80,12 +80,9 @@ export function vehicleClassHref(id: string) {
 }
 export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");
 
-/** One model of a class, under the class's page; "new" for the add page. */
+/** One model of a class, under the class's page. */
 export function vehicleModelHref(classId: string, modelId: string) {
   return `${vehicleClassHref(classId)}/models/${modelId}`;
-}
-export function newVehicleModelHref(classId: string) {
-  return vehicleModelHref(classId, "new");
 }
 
 /** What a list of vehicles or drivers narrows to: one location, the ones with a document due, or both. */

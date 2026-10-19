@@ -2,15 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   MODEL_PHOTOS_FIELD,
+  modelName,
   modelsLine,
   parseVehicleModelFields,
   photoAlt,
+  sameName,
 } from "./vehicle-model-input";
 
 const PHOTO = "https://abc123.ufs.sh/f/key-1";
 
 const FORM: Record<string, string> = {
-  name: " Toyota Alphard ",
+  brand: " Toyota ",
+  name: " Alphard ",
   sortOrder: "2",
   isActive: "on",
   [MODEL_PHOTOS_FIELD]: JSON.stringify([
@@ -29,7 +32,8 @@ describe("parseVehicleModelFields", () => {
     assert.deepEqual(parseVehicleModelFields(FORM), {
       ok: true,
       value: {
-        name: "Toyota Alphard",
+        brand: "Toyota",
+        name: "Alphard",
         sortOrder: 2,
         isActive: true,
         photos: [
@@ -48,8 +52,9 @@ describe("parseVehicleModelFields", () => {
     assert.deepEqual(result.ok && result.value.photos, []);
   });
 
-  it("needs a name and a whole sort order", () => {
-    assert.match(errorOf({ name: "" }) ?? "", /name/);
+  it("needs a brand, a model and a whole sort order", () => {
+    assert.match(errorOf({ brand: "" }) ?? "", /brand/);
+    assert.match(errorOf({ name: "" }) ?? "", /model/);
     assert.match(errorOf({ sortOrder: "1.5" }) ?? "", /sort order/);
   });
 
@@ -89,15 +94,29 @@ describe("the words around a model", () => {
     assert.equal(photoAlt("Toyota Alphard", { caption: "" }), "Toyota Alphard");
   });
 
+  it("names a model by its brand and name", () => {
+    assert.equal(
+      modelName({ brand: "Toyota", name: "Alphard" }),
+      "Toyota Alphard",
+    );
+    // A model named before brands were kept.
+    assert.equal(
+      modelName({ brand: "", name: "Toyota Alphard" }),
+      "Toyota Alphard",
+    );
+  });
+
+  it("takes a brand typed in other letters or spaces as the same", () => {
+    assert.equal(sameName(" toyota ", "Toyota"), true);
+    assert.equal(sameName("Land  Cruiser", "land cruiser"), true);
+    assert.equal(sameName("Vios", "City"), false);
+  });
+
   it("lists a class's models as a card names them", () => {
     assert.equal(modelsLine([]), "");
-    assert.equal(modelsLine([{ name: "Toyota Vios" }]), "Toyota Vios");
+    assert.equal(modelsLine(["Toyota Vios"]), "Toyota Vios");
     assert.equal(
-      modelsLine([
-        { name: "Toyota Vellfire" },
-        { name: "Toyota Alphard" },
-        { name: "Lexus LM" },
-      ]),
+      modelsLine(["Toyota Vellfire", "Toyota Alphard", "Lexus LM"]),
       "Toyota Vellfire, Toyota Alphard or Lexus LM",
     );
   });

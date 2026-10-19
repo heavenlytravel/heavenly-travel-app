@@ -363,9 +363,12 @@ function modelName(json: unknown) {
 function modelChanges(before: unknown, after: unknown) {
   const name = modelName(before);
   const phrases: string[] = [];
-  const renamed = field(after, "name");
-  if (typeof renamed === "string") {
-    phrases.push(`Renamed the model ${name} to ${renamed}`);
+  // The brand or the name changed: the entry names the model both ways.
+  if (
+    field(after, "brand") !== undefined ||
+    field(after, "name") !== undefined
+  ) {
+    phrases.push(`Renamed the model ${name} to ${modelName(after)}`);
   }
   const isActive = field(after, "isActive");
   if (typeof isActive === "boolean") {
@@ -414,7 +417,15 @@ function recordChanges(
     .filter(
       (key) =>
         key in labels &&
-        !["isActive", "locationId", "vehicleModelId"].includes(key),
+        ![
+          "isActive",
+          "locationId",
+          "vehicleClassId",
+          "brand",
+          "model",
+          // Entries from before a vehicle named its model by brand and name.
+          "vehicleModelId",
+        ].includes(key),
     )
     .map((key) => `the ${labels[key]!.toLowerCase()}`);
   if (others.length > 0) phrases.push(`Changed ${andList(others)}`);

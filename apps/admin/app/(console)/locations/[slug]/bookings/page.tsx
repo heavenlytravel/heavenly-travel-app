@@ -15,7 +15,7 @@ import { locationKey } from "../../_lib/location-data";
  * Route: /locations/[slug]/bookings?status=received. The location's
  * bookings, newest first: every booking with a pickup in one of its
  * zones, priced by its rates. The same list and filters as the queue
- * across locations.
+ * across locations; a booking opens inside the location.
  */
 export default async function LocationBookingsPage({
   params,
@@ -44,7 +44,7 @@ export default async function LocationBookingsPage({
           key={filter ?? "all"}
           fallback={<TableSkeleton columns={5} />}
         >
-          {() => bookingsList({ id, filter })}
+          {() => bookingsList({ id, slug, filter })}
         </Streamed>
       </div>
     </>
@@ -53,15 +53,18 @@ export default async function LocationBookingsPage({
 
 async function bookingsList({
   id,
+  slug,
   filter,
 }: {
   id: string;
+  slug: string;
   filter: BookingStatus | undefined;
 }) {
   const bookings = await listBookings({ status: filter, locationId: id });
   return (
     <BookingsTable
       bookings={bookings}
+      locationSlug={slug}
       emptyMessage={emptyBookingsMessage(filter)}
     />
   );

@@ -13,11 +13,13 @@ import { amendItemAction } from "../../actions";
 /**
  * One item in the manual booking's editor, filled in from what is stored
  * and priced again. Saving replaces the item's trip, class and details on
- * the server and sends the customer a "Booking updated" email.
+ * the server and sends the customer a "Booking updated" email, then goes
+ * back to the booking where it was opened: the queue's, or a location's.
  */
 export function AmendItemForm({
   bookingId,
   itemId,
+  locationSlug,
   draft: initial,
   hasGoogle,
   canPrice,
@@ -25,6 +27,8 @@ export function AmendItemForm({
 }: {
   bookingId: string;
   itemId: string;
+  /** The location the booking is opened inside; absent from the queue. */
+  locationSlug?: string;
   draft: ItemDraft;
   hasGoogle: boolean;
   canPrice: boolean;
@@ -41,6 +45,9 @@ export function AmendItemForm({
     <form action={action} className="grid gap-6">
       <input type="hidden" name="bookingId" value={bookingId} />
       <input type="hidden" name="itemId" value={itemId} />
+      {locationSlug ? (
+        <input type="hidden" name="locationSlug" value={locationSlug} />
+      ) : null}
       <ItemEditor
         index={0}
         draft={draft}
@@ -59,7 +66,7 @@ export function AmendItemForm({
               : "Choose a vehicle to continue"}
         </Button>
         <Link
-          href={bookingHref(bookingId)}
+          href={bookingHref(bookingId, locationSlug)}
           className="text-sm text-neutral-600 underline-offset-4 hover:underline"
         >
           Cancel

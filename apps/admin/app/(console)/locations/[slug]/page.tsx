@@ -311,6 +311,7 @@ function Operation({
         </CardTitle>
         <BookingsTable
           bare
+          locationSlug={slug}
           bookings={pickups}
           emptyMessage="No pick-ups today."
         />
@@ -330,6 +331,7 @@ function Operation({
           </CardTitle>
           <BookingsTable
             bare
+            locationSlug={slug}
             bookings={received}
             emptyMessage="Nothing awaiting confirmation."
           />

@@ -29,20 +29,27 @@ import {
   stateOf,
   type ActionState,
 } from "../../../_lib/action-state";
-import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
+import {
+  BOOKINGS_PATH,
+  LOCATION_ROUTE,
+  bookingHref,
+} from "../../../_lib/routes";
 import { prepareFormItem } from "../_lib/trip-server";
 
 /**
  * Every transition re-checks the session and the permission (actions are
  * reachable by direct POST), passes the admin as the actor for the log and
  * lets the booking core check the status. The result's `event` sends the
- * confirmed or cancelled emails once the response is out.
+ * confirmed or cancelled emails once the response is out. A change moves
+ * the queue, the home's counts and every location's pages, whose panel
+ * counts the queue and which open the booking inside the location.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
   if (!result.ok) return { error: result.error };
   after(() => sendBookingChangeEmail(result));
   revalidatePath(bookingHref(result.booking.id));
   revalidatePath(BOOKINGS_PATH);
+  revalidatePath(LOCATION_ROUTE, "layout");
   revalidatePath("/");
   return null;
 }
@@ -98,7 +105,10 @@ export async function addNoteAction(
     bookingId,
     String(formData.get("body") ?? ""),
   );
-  if (result.ok) revalidatePath(bookingHref(bookingId));
+  if (result.ok) {
+    revalidatePath(bookingHref(bookingId));
+    revalidatePath(LOCATION_ROUTE, "layout");
+  }
   return stateOf(result);
 }
 
@@ -135,7 +145,7 @@ export async function overrideItemPriceAction(
  * Replaces one item's trip, vehicle and details with the amend form's,
  * priced again on the server. Reservation and Sales. The "Booking
  * updated" email goes out through `finish`; on success the admin lands
- * back on the booking.
+ * back on the booking, inside the location when the form was opened there.
  */
 export async function amendItemAction(
   _previous: ActionState,
@@ -157,5 +167,7 @@ export async function amendItemAction(
     await amendItem(actorOf(admin), itemId, prepared),
   );
   if (result) return result;
-  redirect(bookingHref(bookingId));
+  redirect(
+    bookingHref(bookingId, textOf(formData.get("locationSlug")) || undefined),
+  );
 }

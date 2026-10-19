@@ -38,9 +38,15 @@ export function bookingsHref(
   return query ? `${BOOKINGS_PATH}?${query}` : BOOKINGS_PATH;
 }
 
-/** One booking, by id. The customer site uses the reference; ops uses the id. */
-export function bookingHref(id: string) {
-  return `${BOOKINGS_PATH}/${id}`;
+/**
+ * One booking, by id. The customer site uses the reference; ops uses the
+ * id. With a location's slug, the same booking inside that location, its
+ * panel beside it, as the location's own lists open it.
+ */
+export function bookingHref(id: string, slug?: string) {
+  return slug
+    ? `${locationTabHref(slug, "bookings")}/${id}`
+    : `${BOOKINGS_PATH}/${id}`;
 }
 
 /** Where staff enter a booking that arrived by phone, WhatsApp or email. */
@@ -318,7 +324,11 @@ export const LOCATION_IMAGE_UPLOAD_PATH = "/api/uploads/location-image";
 export const VEHICLE_CLASS_IMAGE_UPLOAD_PATH =
   "/api/uploads/vehicle-class-image";
 
-/** The form that amends one item of a booking: its trip, vehicle and details. */
-export function amendItemHref(bookingId: string, itemId: string) {
-  return `${bookingHref(bookingId)}/amend/${itemId}`;
+/** The form that amends one item of a booking: its trip, vehicle and details; inside a location with its slug. */
+export function amendItemHref(
+  bookingId: string,
+  itemId: string,
+  slug?: string,
+) {
+  return `${bookingHref(bookingId, slug)}/amend/${itemId}`;
 }

@@ -8,6 +8,8 @@ import {
   formatMyr,
   hiddenSearchFields,
   largestGroup,
+  MODEL_ONLY,
+  modelsLine,
   offersChildSeats,
   seatsLabel,
   TRIP_MAX_CHILD_SEATS,
@@ -19,11 +21,16 @@ import {
   type TripSearch,
   type TripView,
 } from "@repo/db";
-import { Radio } from "@repo/ui/field";
+import { Checkbox, Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { useFormErrors } from "@repo/ui/validation";
 import { ClassPicture } from "../../../../_components/ClassPicture";
+import {
+  hasPhotos,
+  ModelGallery,
+  type GalleryModel,
+} from "../../../../_components/ModelGallery";
 import {
   tripBookingHref,
   tripConfirmPath,
@@ -47,6 +54,8 @@ export type ClassOption = {
   maxPassengers: number;
   /** Its picture; null for none. */
   imageUrl: string | null;
+  /** The models customers see, in order, with their photos. */
+  models: GalleryModel[];
   totalSen: number;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;
@@ -64,7 +73,10 @@ export type ClassOption = {
  * refuse the trip, are shown with the reason but cannot be chosen. The passenger
  * count lives here so the trip bar can carry it over a changed trip; the
  * page gives this form the trip as its key, so a changed trip clears the
- * chosen vehicle.
+ * chosen vehicle. A class names its models, and opens their photos in one
+ * gallery kept outside the cards. Once a class with two models or more is
+ * chosen, the customer may prefer one, and say whether a similar vehicle
+ * will do; the price is the class's either way.
  */
 export function TripOptionsForm({
   category,
@@ -86,11 +98,23 @@ export function TripOptionsForm({
   );
   const passengers = Number(passengersText);
   const [chosen, setChosen] = useState<string | null>(null);
+  const [modelId, setModelId] = useState<string | null>(null);
+  const [similarOk, setSimilarOk] = useState(true);
+  const [gallery, setGallery] = useState<ClassOption | null>(null);
   const pictured = classes.some((c) => c.imageUrl !== null);
   const choosable = (c: ClassOption) =>
     c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
+  const models = selected ? selected.models : [];
+  const model = models.find((m) => m.id === modelId) ?? null;
+
+  function choose(id: string) {
+    if (id === chosen) return;
+    setChosen(id);
+    setModelId(null);
+    setSimilarOk(true);
+  }
   const { pending, go } = useNavigate();
   const { errors, formProps } = useFormErrors();
   const passengersError = errors[TRIP_OPTION_FIELDS.passengers];
@@ -121,6 +145,20 @@ export function TripOptionsForm({
         {hiddenSearchFields(search).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
+        {model ? (
+          <input
+            type="hidden"
+            name={TRIP_OPTION_FIELDS.vehicleModel}
+            value={model.id}
+          />
+        ) : null}
+        {model && !similarOk ? (
+          <input
+            type="hidden"
+            name={TRIP_OPTION_FIELDS.similarModel}
+            value={MODEL_ONLY}
+          />
+        ) : null}
 
         <fieldset className="grid gap-3">
           <legend className="mb-3 font-(family-name:--font-display) text-[1.5rem]">
@@ -144,7 +182,7 @@ export function TripOptionsForm({
                   checked={on}
                   disabled={!ok}
                   required
-                  onChange={() => setChosen(c.id)}
+                  onChange={() => choose(c.id)}
                   className="mt-1.5"
                 />
                 {pictured ? (
@@ -166,6 +204,21 @@ export function TripOptionsForm({
                   <span className="text-[0.95rem] text-[#324844]">
                     {c.description}
                   </span>
+                  {c.models.length > 0 ? (
+                    <span className="flex flex-wrap items-baseline gap-x-3 text-[0.9rem] text-[#324844]">
+                      {modelsLine(c.models)}, or similar
+                      {hasPhotos(c.models) ? (
+                        // A button in the label opens the gallery without choosing the class.
+                        <button
+                          type="button"
+                          onClick={() => setGallery(c)}
+                          className={textLink}
+                        >
+                          See photos
+                        </button>
+                      ) : null}
+                    </span>
+                  ) : null}
                   <span className="text-[0.85rem] text-[#67726f]">
                     {seatsLabel(c)}
                     {" · "}
@@ -184,6 +237,46 @@ export function TripOptionsForm({
           <h2 className="font-(family-name:--font-display) text-[1.5rem]">
             Your details
           </h2>
+          {selected && models.length > 1 ? (
+            <div className="grid gap-2.5">
+              <label className="block">
+                <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+                  Model{" "}
+                  <span className="font-normal text-[#67726f]">(optional)</span>
+                </span>
+                <Select
+                  bare
+                  value={modelId ?? ""}
+                  onValueChange={(next) => {
+                    setModelId(next || null);
+                    setSimilarOk(true);
+                  }}
+                  options={[
+                    { value: "", label: "No preference" },
+                    ...models.map((m) => ({ value: m.id, label: m.name })),
+                  ]}
+                  className={control}
+                />
+              </label>
+              {model ? (
+                <>
+                  <label className="flex items-start gap-2.5 text-[0.92rem] text-[#253c38]">
+                    <Checkbox
+                      checked={similarOk}
+                      onChange={(e) => setSimilarOk(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    A similar vehicle is fine if the {model.name} is not free
+                  </label>
+                  {similarOk ? null : (
+                    <p className="text-[0.85rem] text-[#67726f]">
+                      We will contact you before sending another vehicle.
+                    </p>
+                  )}
+                </>
+              ) : null}
+            </div>
+          ) : null}
           <label className="block">
             <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
               Passengers
@@ -280,6 +373,17 @@ export function TripOptionsForm({
           </button>
         </div>
       </form>
+      {gallery ? (
+        <ModelGallery
+          key={gallery.id}
+          title={gallery.name}
+          models={gallery.models}
+          open
+          onOpenChange={(open) => {
+            if (!open) setGallery(null);
+          }}
+        />
+      ) : null}
     </TripBar>
   );
 }

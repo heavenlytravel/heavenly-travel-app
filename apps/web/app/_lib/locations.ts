@@ -66,13 +66,19 @@ export type VehicleClassCard = {
   luggage: string;
   /** Its picture; null for none. */
   imageUrl: string | null;
+  /** The models customers see, in order, with their photos. */
+  models: {
+    id: string;
+    name: string;
+    photos: { url: string; caption: string }[];
+  }[];
   /** The least it can cost there, in sen. */
   fromSen: number;
 };
 
 /**
  * The classes a location sells in a product, in their order, at the
- * location's rates. Tagged with the location, which the admin refreshes
+ * location's rates, each with its models. Tagged with the location, which the admin refreshes
  * after a change to what it sells, and with the catalogue, which it
  * refreshes after a change to a class.
  */
@@ -89,6 +95,7 @@ export const vehicleClassCards = cache(
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
           imageUrl: vehicleClass.imageUrl,
+          models: vehicleClass.models,
           fromSen: startingPriceSen(offering),
         }));
       },

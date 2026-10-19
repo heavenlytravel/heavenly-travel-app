@@ -80,6 +80,14 @@ export function vehicleClassHref(id: string) {
 }
 export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");
 
+/** One model of a class, under the class's page; "new" for the add page. */
+export function vehicleModelHref(classId: string, modelId: string) {
+  return `${vehicleClassHref(classId)}/models/${modelId}`;
+}
+export function newVehicleModelHref(classId: string) {
+  return vehicleModelHref(classId, "new");
+}
+
 /** The console's home: every location with its numbers. */
 export const LOCATIONS_PATH = "/";
 
@@ -323,6 +331,10 @@ export const LOCATION_IMAGE_UPLOAD_PATH = "/api/uploads/location-image";
 /** Where a vehicle class's form posts its picture; answers the stored file. */
 export const VEHICLE_CLASS_IMAGE_UPLOAD_PATH =
   "/api/uploads/vehicle-class-image";
+
+/** Where a model's form posts each photo; answers the stored file. */
+export const VEHICLE_MODEL_IMAGE_UPLOAD_PATH =
+  "/api/uploads/vehicle-model-image";
 
 /** The form that amends one item of a booking: its trip, vehicle and details; inside a location with its slug. */
 export function amendItemHref(

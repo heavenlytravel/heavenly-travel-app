@@ -10,7 +10,7 @@ import type { TripView } from "./trip-view";
 /**
  * A trip as it travels between screens before it is a booking: the search
  * (mode, places, date, time, hours) and the options chosen after pricing
- * (class, passengers, child seats, flight, notes). The website carries it
+ * (class, the model preferred, passengers, child seats, flight, notes). The website carries it
  * in the URL from the search card to the confirm page; the console's manual
  * booking form posts the same names. One parser reads both, so a booking
  * can never be built from a trip the options list did not show.
@@ -45,6 +45,10 @@ export type TripSearch = {
 /** What is chosen once the trip is priced. */
 export type TripOptions = {
   vehicleClassId: string;
+  /** The model the customer prefers; null for no preference. */
+  vehicleModelId: string | null;
+  /** Whether a similar vehicle will do when the model is not free. */
+  similarModelOk: boolean;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -61,6 +65,8 @@ export const TRIP_PARAM = {
   hours: "hours",
   passengers: "passengers",
   vehicleClass: "class",
+  vehicleModel: "model",
+  similarModel: "similar",
   childSeats: "childSeats",
   flightNumber: "flight",
   notes: "notes",
@@ -69,11 +75,20 @@ export const TRIP_PARAM = {
 /** The input names an options form posts, so they match what is parsed. */
 export const TRIP_OPTION_FIELDS = {
   vehicleClass: TRIP_PARAM.vehicleClass,
+  vehicleModel: TRIP_PARAM.vehicleModel,
+  similarModel: TRIP_PARAM.similarModel,
   passengers: TRIP_PARAM.passengers,
   childSeats: TRIP_PARAM.childSeats,
   flightNumber: TRIP_PARAM.flightNumber,
   notes: TRIP_PARAM.notes,
 } as const;
+
+/**
+ * The value of `similar` when the customer wants the model only and is
+ * asked before another is sent; absent or anything else, a similar vehicle
+ * will do.
+ */
+export const MODEL_ONLY = "no";
 
 export const isHeadCount = (n: number) =>
   Number.isInteger(n) && n >= 1 && n <= MAX_HEAD_COUNT;
@@ -161,6 +176,8 @@ const text = (raw: string | null, max: number) => {
 /**
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
+ * A model is optional; whether it belongs to the class is the pricing's to
+ * check.
  */
 export function parseTripOptions(
   category: TripCategory,
@@ -172,10 +189,16 @@ export function parseTripOptions(
   const childSeats = offersChildSeats(category)
     ? intIn(params.get(TRIP_PARAM.childSeats), 0, TRIP_MAX_CHILD_SEATS)
     : null;
+  const vehicleModelId = params.get(TRIP_PARAM.vehicleModel) || null;
   if (!vehicleClassId || !ID_RE.test(vehicleClassId)) return null;
+  if (vehicleModelId !== null && !ID_RE.test(vehicleModelId)) return null;
   if (passengers === null) return null;
   return {
     vehicleClassId,
+    vehicleModelId,
+    similarModelOk:
+      vehicleModelId === null ||
+      params.get(TRIP_PARAM.similarModel) !== MODEL_ONLY,
     passengers,
     childSeats: childSeats ?? 0,
     flightNumber:

@@ -3,6 +3,7 @@ import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   formatMyr,
+  modelsLine,
   type TripCategory,
 } from "@repo/db";
 import { listVehicleClasses, type CatalogueClass } from "@repo/db/server";
@@ -132,7 +133,7 @@ function Category({
 
 /**
  * One class: its picture, its name over its seats and luggage, its line,
- * and where it is sold, each location with the class's base fare, per km
+ * the models customers see, and where it is sold, each location with the class's base fare, per km
  * and per hour there, in grey where it is off sale.
  * For Operation the whole card opens the editor and the foot holds the
  * switch; off, it is in grey.
@@ -179,6 +180,11 @@ function ClassCard({
           </p>
           <p className="mt-1.5 line-clamp-2 text-sm text-neutral-600">
             {vehicleClass.description}
+          </p>
+          <p className="mt-1.5 text-xs text-neutral-500">
+            {vehicleClass.models.length > 0
+              ? modelsLine(vehicleClass.models)
+              : "No model yet"}
           </p>
         </div>
         <div>

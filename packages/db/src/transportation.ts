@@ -18,7 +18,7 @@ import {
   type DistrictWithState,
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
-import { listActiveOfferings, type Offering } from "./offerings";
+import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
 import {
   priceTrip,
@@ -62,6 +62,10 @@ export type TripRequest = {
 
 export type TripItemRequest = TripRequest & {
   vehicleClassId: string;
+  /** The model the customer prefers; null for no preference. */
+  vehicleModelId: string | null;
+  /** Whether a similar vehicle will do when the model is not free. */
+  similarModelOk: boolean;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -79,15 +83,16 @@ export type TripQuoteErrorCode =
   | "class-unavailable"
   | "too-soon"
   | "too-few-hours"
-  | "passengers";
+  | "passengers"
+  | "model-unavailable";
 
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
 export type ClassQuote = {
-  /** The catalogue class: its name, seats and luggage. */
-  vehicleClass: VehicleClass;
+  /** The catalogue class: its name, seats, luggage and the models the customer sees. */
+  vehicleClass: OfferingOnSale["vehicleClass"];
   /** The location's offering of it: the rates and the rules. */
-  offering: Offering;
+  offering: OfferingOnSale;
   price: TripPriceBreakdown;
   /** Whether the offering's rules accept this trip. */
   availability: ClassAvailability;
@@ -275,15 +280,19 @@ export type PrepareTripItemResult =
       item: PreparedItem;
       /** The same values as `item`, typed for display. */
       vehicleClass: VehicleClass;
+      /** The model preferred; null for none. */
+      vehicleModel: { id: string; name: string } | null;
       price: TripPriceBreakdown;
     }
   | { ok: false; error: TripQuoteError };
 
 /**
  * A customer's choice, validated and priced, ready for `createBooking`. The
- * item snapshots the class's name and category, the offering's
- * cancellation cutoff, and the location that priced it, so what was booked never changes when ops
- * edits or retires the class or redraws a zone.
+ * item snapshots the class's name and category, the preferred model's
+ * name, the offering's cancellation cutoff, and the location that priced
+ * it, so what was booked never changes when ops edits or retires the class
+ * or the model or redraws a zone. A model must be one the class shows; the
+ * price is the class's either way.
  */
 export async function prepareTripItem(
   category: TripCategory,
@@ -329,10 +338,20 @@ export async function prepareTripItem(
       `${vehicleClass.name} seats up to ${vehicleClass.maxPassengers} passengers.`,
     );
   }
+  const model = request.vehicleModelId
+    ? vehicleClass.models.find((m) => m.id === request.vehicleModelId)
+    : null;
+  if (model === undefined) {
+    return fail(
+      "model-unavailable",
+      `That model of ${vehicleClass.name} is no longer offered. Choose again.`,
+    );
+  }
 
   return {
     ok: true,
     vehicleClass,
+    vehicleModel: model ? { id: model.id, name: model.name } : null,
     price,
     item: {
       product: "transportation",
@@ -350,6 +369,9 @@ export async function prepareTripItem(
         vehicleClass: { connect: { id: vehicleClass.id } },
         vehicleClassName: vehicleClass.name,
         vehicleClassCategory: category,
+        ...(model ? { vehicleModel: { connect: { id: model.id } } } : {}),
+        vehicleModelName: model?.name ?? null,
+        similarModelOk: model ? request.similarModelOk : true,
         mode: basis.mode,
         pickupPlace: request.pickup,
         dropoffPlace:

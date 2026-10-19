@@ -18,7 +18,13 @@ import {
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { DateTimeField } from "@repo/ui/date-field";
-import { Field, Input, inputClassName, Textarea } from "@repo/ui/field";
+import {
+  Checkbox,
+  Field,
+  Input,
+  inputClassName,
+  Textarea,
+} from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
@@ -26,12 +32,14 @@ import Image from "next/image";
 import { useId } from "react";
 import {
   chosenClass,
+  chosenModel,
   detailsLine,
   isChoosable,
   quoteSummary,
   tripIssue,
   tripLine,
   vehicleLine,
+  type ClassQuoteView,
   type ItemDraft,
 } from "../_lib/trip-form";
 import { Choices } from "./Choices";
@@ -339,7 +347,17 @@ function VehicleFields({
                 role="radio"
                 aria-checked={on}
                 disabled={!ok}
-                onClick={() => onChange({ vehicleClassId: c.id })}
+                onClick={() =>
+                  onChange(
+                    c.id === draft.vehicleClassId
+                      ? { vehicleClassId: c.id }
+                      : {
+                          vehicleClassId: c.id,
+                          vehicleModelId: null,
+                          similarModelOk: true,
+                        },
+                  )
+                }
                 className={cx(
                   "grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 rounded-lg border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-50",
                   on
@@ -377,6 +395,67 @@ function VehicleFields({
           })}
         </div>
       )}
+      <ModelFields draft={draft} onChange={onChange} />
+    </div>
+  );
+}
+
+/** "No preference" among a class's models; never a model's id. */
+const NO_MODEL = "none";
+
+/**
+ * The model the customer prefers, once a class with two models or more is
+ * chosen: none by default, and with one, whether a similar vehicle will
+ * do. The price is the class's either way.
+ */
+function ModelFields({
+  draft,
+  onChange,
+}: {
+  draft: ItemDraft;
+  onChange: (patch: Partial<ItemDraft>) => void;
+}) {
+  const chosen: ClassQuoteView | null = chosenClass(draft);
+  if (!chosen || chosen.models.length < 2) return null;
+  const model = chosenModel(draft);
+  return (
+    <div className="grid gap-3 border-t border-neutral-100 pt-4">
+      <div>
+        <p className="mb-1.5 text-sm font-medium text-neutral-800">
+          Model the customer prefers
+        </p>
+        <Choices
+          label="Model the customer prefers"
+          size="sm"
+          value={draft.vehicleModelId ?? NO_MODEL}
+          options={[
+            { value: NO_MODEL, label: "No preference" },
+            ...chosen.models.map((m) => ({ value: m.id, label: m.name })),
+          ]}
+          onChange={(value) =>
+            onChange({
+              vehicleModelId: value === NO_MODEL ? null : value,
+              similarModelOk: true,
+            })
+          }
+        />
+      </div>
+      {model ? (
+        <div className="grid gap-1">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={draft.similarModelOk}
+              onChange={(e) => onChange({ similarModelOk: e.target.checked })}
+            />
+            A similar vehicle is fine if the {model.name} is not free
+          </label>
+          {draft.similarModelOk ? null : (
+            <p className="text-xs text-amber-700">
+              The customer is asked before another vehicle is sent.
+            </p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

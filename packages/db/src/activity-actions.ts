@@ -91,6 +91,20 @@ const ACTIONS = {
     entityType: "vehicle-class",
     customerVisible: false,
   },
+  /** A model of the class, by its name in `modelName`, and how many photos it has. */
+  "vehicle-class.model.created": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
+  /** The model's name in `modelName`, the changed fields, and the photos by how many. */
+  "vehicle-class.model.updated": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
+  "vehicle-class.model.deleted": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
   "location.created": { entityType: "location", customerVisible: false },
   /**
    * The states are logged by their codes, a top choice by its place on
@@ -231,6 +245,8 @@ export type AmendedFields = {
   startsAt: string;
   hours: number | null;
   vehicleClassName: string;
+  /** The model preferred as `modelPreference` reads it; null for none. */
+  vehicleModel: string | null;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -245,6 +261,7 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
   startsAt: "the pick-up time",
   hours: "the hours",
   vehicleClassName: "the vehicle",
+  vehicleModel: "the model",
   passengers: "the passengers",
   childSeats: "the child seats",
   flightNumber: "the flight",
@@ -318,6 +335,35 @@ function vehicleClassChanges(after: unknown) {
     });
   if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
   return sentence(phrases, "Changed the class");
+}
+
+/** "Toyota Alphard", or "a model" when the entry names none. */
+function modelName(json: unknown) {
+  const name = field(json, "modelName");
+  return typeof name === "string" ? name : "a model";
+}
+
+/** "Renamed the model Toyota Alphard to Toyota Alphard Executive, changed its photos" */
+function modelChanges(before: unknown, after: unknown) {
+  const name = modelName(before);
+  const phrases: string[] = [];
+  const renamed = field(after, "name");
+  if (typeof renamed === "string") {
+    phrases.push(`Renamed the model ${name} to ${renamed}`);
+  }
+  const isActive = field(after, "isActive");
+  if (typeof isActive === "boolean") {
+    phrases.push(
+      isActive ? `Showed ${name} to customers` : `Hid ${name} from customers`,
+    );
+  }
+  if (field(after, "photos") !== undefined) {
+    phrases.push(`Changed the photos of ${name}`);
+  }
+  if (field(after, "sortOrder") !== undefined) {
+    phrases.push(`Moved ${name} in the order`);
+  }
+  return sentence(phrases, `Changed ${name}`);
 }
 
 /** "Executive sedan", or "the class" when the entry names none. */
@@ -543,6 +589,12 @@ export function describeActivity(entry: DescribableActivity): string {
       return "Created the class";
     case "vehicle-class.updated":
       return vehicleClassChanges(entry.after);
+    case "vehicle-class.model.created":
+      return `Added the model ${modelName(entry.after)}`;
+    case "vehicle-class.model.updated":
+      return modelChanges(entry.before, entry.after);
+    case "vehicle-class.model.deleted":
+      return `Removed the model ${modelName(entry.before)}`;
     case "location.created":
       return "Created the location";
     case "location.updated":

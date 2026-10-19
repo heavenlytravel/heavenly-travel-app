@@ -84,6 +84,7 @@ export default async function ConfirmPage({
   const extra = tripDetailRows({
     ...options,
     vehicleClassName: prepared.vehicleClass.name,
+    vehicleModelName: prepared.vehicleModel?.name ?? null,
   });
 
   return (

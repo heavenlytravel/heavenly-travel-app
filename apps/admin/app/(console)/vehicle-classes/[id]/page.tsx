@@ -2,9 +2,12 @@ import Link from "next/link";
 import {
   getVehicleClass,
   listActivityFor,
+  listModelsOfClass,
   type ActivityEntry,
+  type CatalogueModel,
   type VehicleClass,
 } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { DetailColumns } from "../../../_components/PageColumn";
@@ -18,12 +21,17 @@ import {
   Streamed,
 } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import { VEHICLE_CLASSES_PATH } from "../../../_lib/routes";
+import {
+  VEHICLE_CLASSES_PATH,
+  newVehicleModelHref,
+} from "../../../_lib/routes";
+import { ModelList } from "../ModelList";
 import { VehicleClassForm } from "../VehicleClassForm";
 
 /**
  * Route: /vehicle-classes/[id], and /vehicle-classes/new for a class that
- * does not exist yet. The form and, for an existing class, its history.
+ * does not exist yet. The form and, for an existing class, its models and
+ * its history.
  */
 export default async function VehicleClassPage({
   params,
@@ -50,7 +58,12 @@ export default async function VehicleClassPage({
               <HeaderSkeleton />
               <DetailSkeleton
                 main={<FormSkeleton sections={3} fields={4} />}
-                side={<CardSkeleton rows={4} />}
+                side={
+                  <>
+                    <CardSkeleton rows={2} />
+                    <CardSkeleton rows={4} />
+                  </>
+                }
               />
             </>
           }
@@ -62,23 +75,32 @@ export default async function VehicleClassPage({
   );
 }
 
-/** A class that exists, read with its history. */
+/** A class that exists, read with its models and its history. */
 async function existingVehicleClass({ id }: { id: string }) {
-  const [vehicleClass, history] = await Promise.all([
+  const [vehicleClass, models, history] = await Promise.all([
     getVehicleClass(id),
+    listModelsOfClass(id),
     listActivityFor("vehicle-class", id),
   ]);
   if (!vehicleClass) notFound();
-  return <VehicleClassScreen vehicleClass={vehicleClass} history={history} />;
+  return (
+    <VehicleClassScreen
+      vehicleClass={vehicleClass}
+      models={models}
+      history={history}
+    />
+  );
 }
 
-/** The form under its header, beside the history when the class exists. */
+/** The form under its header, beside the models and the history when the class exists. */
 function VehicleClassScreen({
   vehicleClass,
+  models = [],
   history = [],
 }: {
   /** Left out for a class that does not exist yet. */
   vehicleClass?: VehicleClass;
+  models?: CatalogueModel[];
   history?: ActivityEntry[];
 }) {
   return (
@@ -101,13 +123,30 @@ function VehicleClassScreen({
         }
         side={
           vehicleClass ? (
-            <Card>
-              <CardTitle>History</CardTitle>
-              <ActivityHistory
-                entries={history}
-                emptyMessage="No activity recorded. This class was seeded before the log."
-              />
-            </Card>
+            <>
+              <Card>
+                <CardTitle
+                  description="What the customer sees of the class, each with its photos. A customer may prefer one; the price is the class's."
+                  action={
+                    <Button asChild size="sm" variant="secondary">
+                      <Link href={newVehicleModelHref(vehicleClass.id)}>
+                        Add model
+                      </Link>
+                    </Button>
+                  }
+                >
+                  Models
+                </CardTitle>
+                <ModelList classId={vehicleClass.id} models={models} />
+              </Card>
+              <Card>
+                <CardTitle>History</CardTitle>
+                <ActivityHistory
+                  entries={history}
+                  emptyMessage="No activity recorded. This class was seeded before the log."
+                />
+              </Card>
+            </>
           ) : null
         }
       />

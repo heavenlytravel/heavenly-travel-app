@@ -7,6 +7,7 @@ import {
   isProductPage,
   locationPagePath,
   locationPreviewPath,
+  modelsLine,
   paragraphsOf,
   productPagesOf,
   seatsLabel,
@@ -19,6 +20,7 @@ import {
 import { eyebrow, focus, panel } from "../(site)/_components/Page";
 import { ProductIcon } from "../_components/Brand";
 import { ClassPicture } from "../_components/ClassPicture";
+import { ModelPhotosButton } from "../_components/ModelGallery";
 import { SEARCH_CARD_ID } from "../_components/search/SearchProvider";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
@@ -380,7 +382,7 @@ function Highlights({
   );
 }
 
-/** The classes the location sells in the product, each with its picture, seats, luggage and starting price there. */
+/** The classes the location sells in the product, each with its picture, its models and their photos, seats, luggage and starting price there. */
 async function VehicleClasses({
   slug,
   category,
@@ -411,6 +413,16 @@ async function VehicleClasses({
               {vehicleClass.name}
             </h3>
             <p className="mt-1.5 text-[#324844]">{vehicleClass.description}</p>
+            {vehicleClass.models.length > 0 ? (
+              // A div, not a p: the gallery's dialog is not phrasing content.
+              <div className="mt-2 text-[0.95rem] text-[#324844]">
+                {modelsLine(vehicleClass.models)}, or similar.{" "}
+                <ModelPhotosButton
+                  title={vehicleClass.name}
+                  models={vehicleClass.models}
+                />
+              </div>
+            ) : null}
             <p className="mt-3 text-[0.9rem] text-[#67726f]">
               {seatsLabel(vehicleClass)} · {vehicleClass.luggage}
             </p>

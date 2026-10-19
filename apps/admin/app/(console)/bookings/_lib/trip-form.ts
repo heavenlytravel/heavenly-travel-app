@@ -42,6 +42,8 @@ export type ClassQuoteView = {
   maxPassengers: number;
   /** Its picture; null for none. */
   imageUrl: string | null;
+  /** The models customers see, in order; one may be preferred. */
+  models: { id: string; name: string }[];
   totalSen: number;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;
@@ -92,6 +94,10 @@ export type ItemDraft = {
   quote: PricedTrip | null;
   quoteError: string | null;
   vehicleClassId: string | null;
+  /** The model the customer prefers; null for no preference. */
+  vehicleModelId: string | null;
+  /** Whether a similar vehicle will do when the model is not free. */
+  similarModelOk: boolean;
   passengers: string;
   childSeats: string;
   flightNumber: string;
@@ -113,6 +119,8 @@ export const EMPTY_ITEM_DRAFT: ItemDraft = {
   quote: null,
   quoteError: null,
   vehicleClassId: null,
+  vehicleModelId: null,
+  similarModelOk: true,
   passengers: "1",
   childSeats: "0",
   flightNumber: "",
@@ -124,7 +132,8 @@ export const EMPTY_ITEM_DRAFT: ItemDraft = {
 /**
  * A stored item as the editor starts from it, with its trip priced again
  * so the class list shows at once. The class stays chosen when the priced
- * list still offers it. Null for an item that is not a trip.
+ * list still offers it, and the model when the class still shows it. Null
+ * for an item that is not a trip.
  */
 export function itemDraftOf(
   item: BookingItemWithDetails,
@@ -137,6 +146,12 @@ export function itemDraftOf(
   }
   const { date, time } = localDateTimeInputs(trip.startsAt);
   const priced = quote.ok ? quote : null;
+  const vehicleClass = priced?.classes.find(
+    (c) => c.id === details.vehicleClassId,
+  );
+  const model = vehicleClass?.models.find(
+    (m) => m.id === details.vehicleModelId,
+  );
   return {
     trip: {
       category: details.vehicleClassCategory,
@@ -151,9 +166,9 @@ export function itemDraftOf(
     },
     quote: priced,
     quoteError: quote.ok ? null : quote.error,
-    vehicleClassId: priced?.classes.some((c) => c.id === details.vehicleClassId)
-      ? details.vehicleClassId
-      : null,
+    vehicleClassId: vehicleClass ? details.vehicleClassId : null,
+    vehicleModelId: model?.id ?? null,
+    similarModelOk: model ? details.similarModelOk : true,
     passengers: String(details.passengers),
     childSeats: String(details.childSeats),
     flightNumber: details.flightNumber ?? "",
@@ -222,6 +237,12 @@ export function chosenClass(draft: ItemDraft): ClassQuoteView | null {
     : null;
 }
 
+/** The model preferred for an item, among its class's; null for none. */
+export function chosenModel(draft: ItemDraft) {
+  const chosen = chosenClass(draft);
+  return chosen?.models.find((m) => m.id === draft.vehicleModelId) ?? null;
+}
+
 /** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 14:30". */
 export function tripLine(draft: ItemDraft): string {
   const { quote, trip } = draft;
@@ -235,8 +256,8 @@ export function tripLine(draft: ItemDraft): string {
 }
 
 /**
- * The vehicle as a folded step reads: "Premium MPV · 4 passengers ·
- * RM 100.00"; without the price beside a total that shows it.
+ * The vehicle as a folded step reads: "MPV VIP · Toyota Alphard only · 4
+ * passengers · RM 100.00"; without the price beside a total that shows it.
  */
 export function vehicleLine(
   draft: ItemDraft,
@@ -244,8 +265,12 @@ export function vehicleLine(
 ): string {
   const chosen = chosenClass(draft);
   if (!chosen) return draft.quote ? "Not chosen yet" : "Price the trip first";
+  const model = chosenModel(draft);
   return [
     chosen.name,
+    model
+      ? `${model.name} ${draft.similarModelOk ? "or similar" : "only"}`
+      : null,
     plural(Number(draft.passengers), "passenger"),
     price ? formatMyr(chosen.totalSen) : null,
   ]

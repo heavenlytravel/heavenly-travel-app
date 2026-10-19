@@ -371,8 +371,43 @@ model VehicleClass {
   tripItems TripItemDetails[]
   offerings LocationVehicleClass[]
   zoneRates ZoneRate[]
+  models    VehicleModel[]
 
   @@index([category, isActive])
+}
+
+/// A model of a class as the customer sees it, "Toyota Alphard" in MPV VIP,
+/// with its photos. One catalogue for every location, as the classes are.
+/// A customer may prefer one; the price is the class's. Off hides it from
+/// customers. See docs/261019-vehicles-and-drivers.md.
+model VehicleModel {
+  id             String       @id @default(cuid())
+  vehicleClassId String
+  vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  name           String
+  sortOrder      Int          @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  photos    VehicleModelPhoto[]
+  tripItems TripItemDetails[]
+
+  @@unique([vehicleClassId, name])
+}
+
+/// One photo of a model, in its order; the first is the model's cover.
+model VehicleModelPhoto {
+  id             String       @id @default(cuid())
+  vehicleModelId String
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+  /// A file on UploadThing (src/images.ts).
+  url            String
+  /// "Interior": its alt text; empty for the model's name.
+  caption        String       @default("")
+  sortOrder      Int
+
+  @@index([vehicleModelId, sortOrder])
 }
 
 /// An order: one or more items, each one product on one day. `status` is
@@ -488,14 +523,22 @@ model BookingItem {
 /// of Google records (place id, address, lat, lng, state, district), never
 /// queried by field, so they are JSON.
 model TripItemDetails {
-  id                   String       @id @default(cuid())
-  itemId               String       @unique
-  item                 BookingItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  id                   String        @id @default(cuid())
+  itemId               String        @unique
+  item                 BookingItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
   vehicleClassId       String
-  vehicleClass         VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  vehicleClass         VehicleClass  @relation(fields: [vehicleClassId], references: [id])
   /// Snapshots, so a renamed, moved or retired class never changes an old
   /// booking.
   vehicleClassName     String
+  /// The model the customer prefers, and its name as a snapshot; both null
+  /// for no preference. The price is the class's.
+  vehicleModelId       String?
+  vehicleModel         VehicleModel? @relation(fields: [vehicleModelId], references: [id], onDelete: SetNull)
+  vehicleModelName     String?
+  /// Whether a similar vehicle will do when the model is not free; false,
+  /// the customer is asked before another is sent.
+  similarModelOk       Boolean       @default(true)
   /// "car-with-driver" | "coach-charter"
   vehicleClassCategory String
   /// "oneway" | "hourly"
@@ -506,7 +549,7 @@ model TripItemDetails {
   distanceKm           Float?
   passengers           Int
   /// Never asked for a coach.
-  childSeats           Int          @default(0)
+  childSeats           Int           @default(0)
   flightNumber         String?
   notes                String?
 }

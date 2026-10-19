@@ -1,16 +1,10 @@
 "use client";
 
-import {
-  IMAGE_MAX_MB,
-  IMAGE_TYPES,
-  checkImageFile,
-  type UploadedImage,
-} from "@repo/db";
+import { IMAGE_MAX_MB, IMAGE_TYPES, type UploadedImage } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
 import { useRef, useState } from "react";
-
-const FAILED = "The image could not be uploaded. Try again.";
+import { useImageUpload } from "./use-image-upload";
 
 /**
  * One image of a form: what is there now, and the buttons that upload,
@@ -36,36 +30,9 @@ export function ImageUpload({
   onChange: (image: UploadedImage | null) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { upload, uploading, error } = useImageUpload(uploadPath);
   // Read off the file once it has loaded, for the line beside the buttons.
   const [size, setSize] = useState<string | null>(null);
-
-  async function upload(file: File) {
-    const check = checkImageFile(file);
-    if (!check.ok) {
-      setError(check.error);
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
-      const body = new FormData();
-      body.set("file", file);
-      const response = await fetch(uploadPath, { method: "POST", body });
-      const answer = (await response.json()) as
-        UploadedImage | { error?: string };
-      if (!response.ok || !("url" in answer)) {
-        setError(("error" in answer && answer.error) || FAILED);
-        return;
-      }
-      onChange(answer);
-    } catch {
-      setError(FAILED);
-    } finally {
-      setUploading(false);
-    }
-  }
 
   return (
     <div className="grid gap-3">
@@ -96,7 +63,9 @@ export function ImageUpload({
             const file = event.target.files?.[0];
             // Cleared, so choosing the same file again uploads it again.
             event.target.value = "";
-            if (file) void upload(file);
+            if (file) {
+              void upload(file).then((image) => image && onChange(image));
+            }
           }}
         />
         <Button

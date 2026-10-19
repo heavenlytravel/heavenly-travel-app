@@ -61,6 +61,7 @@ export async function quoteTripView(
       minPassengers: c.vehicleClass.minPassengers,
       maxPassengers: c.vehicleClass.maxPassengers,
       imageUrl: c.vehicleClass.imageUrl,
+      models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
       totalSen: c.price.totalSen,
       unavailable: unavailableReason(c.availability),
     })),

@@ -107,18 +107,36 @@ export function tripRows(trip: TripView): DetailRow[] {
   return rows;
 }
 
+/**
+ * The model the customer prefers, as the screens and emails read it:
+ * "Toyota Alphard, or a similar vehicle", or "Toyota Alphard only: we ask
+ * before sending another"; null for no preference.
+ */
+export function modelPreference(details: {
+  vehicleModelName?: string | null;
+  similarModelOk?: boolean;
+}): string | null {
+  const name = details.vehicleModelName;
+  if (!name) return null;
+  return details.similarModelOk === false
+    ? `${name} only: we ask before sending another`
+    : `${name}, or a similar vehicle`;
+}
+
 /** The rows after the trip: what was chosen on the options page. */
 export function tripDetailRows(details: {
   vehicleClassName: string;
+  vehicleModelName?: string | null;
+  similarModelOk?: boolean;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
-  const rows: [string, string][] = [
-    ["Vehicle", details.vehicleClassName],
-    ["Passengers", String(details.passengers)],
-  ];
+  const rows: [string, string][] = [["Vehicle", details.vehicleClassName]];
+  const model = modelPreference(details);
+  if (model) rows.push(["Model", model]);
+  rows.push(["Passengers", String(details.passengers)]);
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
   }

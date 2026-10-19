@@ -14,6 +14,7 @@ import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
+import { SHOWN_MODELS } from "./vehicle-models";
 
 export type { LocationVehicleClass };
 
@@ -35,6 +36,15 @@ const withClass = {
 
 /** An offering with its catalogue class. */
 export type Offering = Prisma.LocationVehicleClassGetPayload<typeof withClass>;
+
+const withShownModels = {
+  include: { vehicleClass: { include: { models: SHOWN_MODELS } } },
+} satisfies Prisma.LocationVehicleClassDefaultArgs;
+
+/** An offering on sale, its class with the models the customer sees. */
+export type OfferingOnSale = Prisma.LocationVehicleClassGetPayload<
+  typeof withShownModels
+>;
 
 const NOT_FOUND: Change = { ok: false, error: "Offering not found." };
 
@@ -62,19 +72,20 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
 
 /**
  * The offerings the location sells in the category right now: on sale, of
- * an active class, in the class's order. What the options page prices.
+ * an active class, in the class's order, each class with its models. What
+ * the options page prices.
  */
 export async function listActiveOfferings(
   locationId: string,
   category: TripCategory,
-): Promise<Offering[]> {
+): Promise<OfferingOnSale[]> {
   const rows = await db.locationVehicleClass.findMany({
     where: {
       locationId,
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withClass,
+    ...withShownModels,
   });
   return rows.sort(byClassOrder);
 }
@@ -83,14 +94,14 @@ export async function listActiveOfferings(
 export async function listActiveOfferingsAt(
   slug: string,
   category: TripCategory,
-): Promise<Offering[]> {
+): Promise<OfferingOnSale[]> {
   const rows = await db.locationVehicleClass.findMany({
     where: {
       location: { slug },
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withClass,
+    ...withShownModels,
   });
   return rows.sort(byClassOrder);
 }

@@ -24,6 +24,7 @@ import { isPlace } from "./place";
 import { priceBreakdownOf } from "./pricing";
 import { isUniqueViolation } from "./prisma-errors";
 import { generateReference } from "./references";
+import { modelPreference } from "./trip-view";
 
 /**
  * The booking core, shared by every product: creation, lists, and the item
@@ -538,6 +539,8 @@ function amendedFieldsOf(
     dropoffPlace?: unknown;
     hours?: number | null;
     vehicleClassName: string;
+    vehicleModelName?: string | null;
+    similarModelOk?: boolean;
     passengers: number;
     childSeats?: number;
     flightNumber?: string | null;
@@ -550,6 +553,7 @@ function amendedFieldsOf(
     startsAt: item.startsAt.toISOString(),
     hours: details.hours ?? null,
     vehicleClassName: details.vehicleClassName,
+    vehicleModel: modelPreference(details),
     passengers: details.passengers,
     childSeats: details.childSeats ?? 0,
     flightNumber: details.flightNumber ?? null,
@@ -636,7 +640,13 @@ export function amendItem(
         priceBreakdown: next.priceBreakdown,
         priceOverrideSen: next.override?.totalSen ?? null,
         priceOverrideReason: next.override?.reason ?? null,
-        tripDetails: { update: next.tripDetails },
+        tripDetails: {
+          update: {
+            ...next.tripDetails,
+            // No model preferred now: the one preferred before goes.
+            vehicleModel: next.tripDetails.vehicleModel ?? { disconnect: true },
+          },
+        },
       },
     });
     await logActivity(tx, actor, {

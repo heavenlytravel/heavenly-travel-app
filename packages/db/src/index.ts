@@ -23,6 +23,7 @@ export * from "./zone-match";
 export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
+export * from "./vehicle-model-input";
 export * from "./location-input";
 export * from "./images";
 export * from "./location-page-input";

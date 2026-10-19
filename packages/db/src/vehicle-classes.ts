@@ -17,16 +17,22 @@ export type { VehicleClass };
  * seats, its luggage and its picture. The rates and the rules are each
  * location's, on its offerings (./offerings). The reader serves the
  * Vehicle classes screen; the writers are the screen's, each taking the
- * actor and logging inside its transaction. Classes are never deleted,
- * only turned off; a booking keeps its snapshot. See
- * docs/260930-ops-screens.md and
- * docs/261018-location-work-and-class-catalogue.md.
+ * actor and logging inside its transaction. The console never deletes a
+ * class, it turns one off; a booking keeps its snapshot. A class's models
+ * are ./vehicle-models. See docs/260930-ops-screens.md,
+ * docs/261018-location-work-and-class-catalogue.md and
+ * docs/261019-vehicles-and-drivers.md.
  */
 
 const NOT_FOUND: Change = { ok: false, error: "Vehicle class not found." };
 
 const withOfferings = {
   include: {
+    models: {
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { name: true },
+    },
     offerings: {
       select: {
         id: true,
@@ -43,7 +49,7 @@ const withOfferings = {
   },
 } satisfies Prisma.VehicleClassDefaultArgs;
 
-/** A class with the locations that sell it, on sale or off, by name, and its metered rates at each. */
+/** A class with the models customers see, and the locations that sell it, on sale or off, by name, with its metered rates at each. */
 export type CatalogueClass = Prisma.VehicleClassGetPayload<
   typeof withOfferings
 >;

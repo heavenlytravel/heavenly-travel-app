@@ -239,6 +239,13 @@ model LocationVehicleClass {
   cancellationCutoffHours Int          @default(0)
   /// Shortest hourly hire; never below the hourly floor in src/booking-rules.ts.
   minHourlyHours          Int          @default(0)
+  /// What a customer pays to choose the model they ride in, among the
+  /// class's models with a vehicle in service here: a percentage of the
+  /// trip's price or a flat amount in sen, exactly one of the two. Both null
+  /// when customers here cannot choose. See modelChoiceOf in
+  /// src/offering-input.ts.
+  modelChoicePercent      Int?
+  modelChoiceFlatSen      Int?
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
@@ -388,8 +395,8 @@ model VehicleClass {
 /// A model of a class, the Toyota Alphard in MPV VIP, with its photos. One
 /// catalogue for every location, as the classes are. The vehicle form adds
 /// one the first time a vehicle of it is entered. A location's customers
-/// see the models of its vehicles in service, and may prefer one; the price
-/// is the class's. Off hides it from customers. See
+/// see the models of its vehicles in service, and may choose one at the
+/// charge on the class's offering. Off hides it from customers. See
 /// docs/261019-vehicles-and-drivers.md.
 model VehicleModel {
   id             String       @id @default(cuid())
@@ -601,14 +608,12 @@ model TripItemDetails {
   /// Snapshots, so a renamed, moved or retired class never changes an old
   /// booking.
   vehicleClassName     String
-  /// The model the customer prefers, and its name as a snapshot; both null
-  /// for no preference. The price is the class's.
+  /// The model the customer chose, which the receipt charges for, and its
+  /// name as a snapshot: "Toyota Alphard". Both null when any model of the
+  /// class will do.
   vehicleModelId       String?
   vehicleModel         VehicleModel? @relation(fields: [vehicleModelId], references: [id], onDelete: SetNull)
   vehicleModelName     String?
-  /// Whether a similar vehicle will do when the model is not free; false,
-  /// the customer is asked before another is sent.
-  similarModelOk       Boolean       @default(true)
   /// "car-with-driver" | "coach-charter"
   vehicleClassCategory String
   /// "oneway" | "hourly"

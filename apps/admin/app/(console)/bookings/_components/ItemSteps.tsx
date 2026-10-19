@@ -18,13 +18,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { DateTimeField } from "@repo/ui/date-field";
-import {
-  Checkbox,
-  Field,
-  Input,
-  inputClassName,
-  Textarea,
-} from "@repo/ui/field";
+import { Field, Input, inputClassName, Textarea } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
@@ -351,11 +345,7 @@ function VehicleFields({
                   onChange(
                     c.id === draft.vehicleClassId
                       ? { vehicleClassId: c.id }
-                      : {
-                          vehicleClassId: c.id,
-                          vehicleModelId: null,
-                          similarModelOk: true,
-                        },
+                      : { vehicleClassId: c.id, vehicleModelId: null },
                   )
                 }
                 className={cx(
@@ -400,13 +390,13 @@ function VehicleFields({
   );
 }
 
-/** "No preference" among a class's models; never a model's id. */
-const NO_MODEL = "none";
+/** "Any model" of a class; never a model's id. */
+const ANY_MODEL = "any";
 
 /**
- * The model the customer prefers, once a class with two models or more is
- * chosen: none by default, and with one, whether a similar vehicle will
- * do. The price is the class's either way.
+ * The model the customer chooses, once a class the location lets them
+ * choose in is chosen: any model by default, which the price includes,
+ * or one of the location's models at the class's charge.
  */
 function ModelFields({
   draft,
@@ -416,46 +406,30 @@ function ModelFields({
   onChange: (patch: Partial<ItemDraft>) => void;
 }) {
   const chosen: ClassQuoteView | null = chosenClass(draft);
-  if (!chosen || chosen.models.length < 2) return null;
-  const model = chosenModel(draft);
+  if (chosen?.modelChoiceSen == null) return null;
+  const charge = `+${formatMyr(chosen.modelChoiceSen)}`;
   return (
-    <div className="grid gap-3 border-t border-neutral-100 pt-4">
-      <div>
-        <p className="mb-1.5 text-sm font-medium text-neutral-800">
-          Model the customer prefers
-        </p>
-        <Choices
-          label="Model the customer prefers"
-          size="sm"
-          value={draft.vehicleModelId ?? NO_MODEL}
-          options={[
-            { value: NO_MODEL, label: "No preference" },
-            ...chosen.models.map((m) => ({ value: m.id, label: m.name })),
-          ]}
-          onChange={(value) =>
-            onChange({
-              vehicleModelId: value === NO_MODEL ? null : value,
-              similarModelOk: true,
-            })
-          }
-        />
-      </div>
-      {model ? (
-        <div className="grid gap-1">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={draft.similarModelOk}
-              onChange={(e) => onChange({ similarModelOk: e.target.checked })}
-            />
-            A similar vehicle is fine if the {model.name} is not free
-          </label>
-          {draft.similarModelOk ? null : (
-            <p className="text-xs text-amber-700">
-              The customer is asked before another vehicle is sent.
-            </p>
-          )}
-        </div>
-      ) : null}
+    <div className="grid gap-1.5 border-t border-neutral-100 pt-4">
+      <p className="text-sm font-medium text-neutral-800">Model</p>
+      <Choices
+        label="Model"
+        size="sm"
+        value={chosenModel(draft)?.id ?? ANY_MODEL}
+        options={[
+          { value: ANY_MODEL, label: `Any ${chosen.name}` },
+          ...chosen.models.map((m) => ({
+            value: m.id,
+            label: `${m.name} ${charge}`,
+          })),
+        ]}
+        onChange={(value) =>
+          onChange({ vehicleModelId: value === ANY_MODEL ? null : value })
+        }
+      />
+      <p className="text-xs text-neutral-500">
+        Any model is in the price. A model chosen costs {charge} more, and
+        Operation sends that one.
+      </p>
     </div>
   );
 }

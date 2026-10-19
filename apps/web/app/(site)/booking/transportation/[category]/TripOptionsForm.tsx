@@ -8,7 +8,6 @@ import {
   formatMyr,
   hiddenSearchFields,
   largestGroup,
-  MODEL_ONLY,
   modelsLine,
   offersChildSeats,
   seatsLabel,
@@ -21,7 +20,7 @@ import {
   type TripSearch,
   type TripView,
 } from "@repo/db";
-import { Checkbox, Radio } from "@repo/ui/field";
+import { Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { useFormErrors } from "@repo/ui/validation";
@@ -42,6 +41,7 @@ import {
   primaryButton,
   textLink,
 } from "../../../_components/Page";
+import { ModelChoice } from "./ModelChoice";
 import { TripBar } from "./TripBar";
 
 /** One vehicle class as priced for this trip. Plain data, sent to the browser. */
@@ -54,12 +54,18 @@ export type ClassOption = {
   maxPassengers: number;
   /** Its picture; null for none. */
   imageUrl: string | null;
-  /** The models customers see, in order, with their photos. */
+  /** The models of the location's vehicles in service, in order, with their photos. */
   models: GalleryModel[];
+  /** With any model of the class. */
   totalSen: number;
+  /** What choosing one of the models adds; null when the customer cannot choose here. */
+  modelChoiceSen: number | null;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;
 };
+
+/** The gallery open over the form: a class's models, at one of them. */
+type OpenGallery = { option: ClassOption; modelId: string | null };
 
 /**
  * The trip bar, then vehicle class, passengers, child seats where the
@@ -73,10 +79,10 @@ export type ClassOption = {
  * refuse the trip, are shown with the reason but cannot be chosen. The passenger
  * count lives here so the trip bar can carry it over a changed trip; the
  * page gives this form the trip as its key, so a changed trip clears the
- * chosen vehicle. A class names its models, and opens their photos in one
- * gallery kept outside the cards. Once a class with two models or more is
- * chosen, the customer may prefer one, and say whether a similar vehicle
- * will do; the price is the class's either way.
+ * chosen vehicle. A class names its models; chosen, its card opens on
+ * them with their photos, and where the location lets the customer choose
+ * one, they may, at the class's charge. The photos open in one gallery
+ * kept outside the cards, whose clicks would otherwise choose the class.
  */
 export function TripOptionsForm({
   category,
@@ -99,21 +105,24 @@ export function TripOptionsForm({
   const passengers = Number(passengersText);
   const [chosen, setChosen] = useState<string | null>(null);
   const [modelId, setModelId] = useState<string | null>(null);
-  const [similarOk, setSimilarOk] = useState(true);
-  const [gallery, setGallery] = useState<ClassOption | null>(null);
+  const [gallery, setGallery] = useState<OpenGallery | null>(null);
   const pictured = classes.some((c) => c.imageUrl !== null);
   const choosable = (c: ClassOption) =>
     c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
-  const models = selected ? selected.models : [];
-  const model = models.find((m) => m.id === modelId) ?? null;
+  const model =
+    selected && selected.modelChoiceSen !== null
+      ? (selected.models.find((m) => m.id === modelId) ?? null)
+      : null;
+  const totalSen = selected
+    ? selected.totalSen + (model ? (selected.modelChoiceSen ?? 0) : 0)
+    : null;
 
   function choose(id: string) {
     if (id === chosen) return;
     setChosen(id);
     setModelId(null);
-    setSimilarOk(true);
   }
   const { pending, go } = useNavigate();
   const { errors, formProps } = useFormErrors();
@@ -122,9 +131,10 @@ export function TripOptionsForm({
   function continueToConfirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const query = new URLSearchParams();
-    new FormData(e.currentTarget).forEach((value, name) =>
-      query.append(name, String(value)),
-    );
+    // An empty choice is no choice: "Any" model, no flight, no notes.
+    new FormData(e.currentTarget).forEach((value, name) => {
+      if (value !== "") query.append(name, String(value));
+    });
     go(`${tripConfirmPath(category)}?${query}`);
   }
 
@@ -145,20 +155,6 @@ export function TripOptionsForm({
         {hiddenSearchFields(search).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
-        {model ? (
-          <input
-            type="hidden"
-            name={TRIP_OPTION_FIELDS.vehicleModel}
-            value={model.id}
-          />
-        ) : null}
-        {model && !similarOk ? (
-          <input
-            type="hidden"
-            name={TRIP_OPTION_FIELDS.similarModel}
-            value={MODEL_ONLY}
-          />
-        ) : null}
 
         <fieldset className="grid gap-3">
           <legend className="mb-3 font-(family-name:--font-display) text-[1.5rem]">
@@ -168,67 +164,82 @@ export function TripOptionsForm({
             const ok = choosable(c);
             const on = chosen === c.id && ok;
             return (
-              <label
+              <div
                 key={c.id}
-                className={`flex cursor-pointer items-start gap-4 rounded-[16px] border-2 bg-white p-5 transition-colors has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${
+                className={`overflow-hidden rounded-[16px] border-2 transition-colors has-[:disabled]:opacity-50 ${
                   on
                     ? "border-[#073c36] bg-[#e8f2ef]"
-                    : "border-[#dce3e0] hover:border-[#073c36]/50"
+                    : "border-[#dce3e0] bg-white hover:border-[#073c36]/50"
                 }`}
               >
-                <Radio
-                  name={TRIP_OPTION_FIELDS.vehicleClass}
-                  value={c.id}
-                  checked={on}
-                  disabled={!ok}
-                  required
-                  onChange={() => choose(c.id)}
-                  className="mt-1.5"
-                />
-                {pictured ? (
-                  <ClassPicture
-                    src={c.imageUrl}
-                    sizes="(min-width: 40rem) 144px, 96px"
-                    className="w-24 shrink-0 sm:w-36"
+                <label className="flex cursor-pointer items-start gap-4 p-5 has-[:disabled]:cursor-not-allowed">
+                  <Radio
+                    name={TRIP_OPTION_FIELDS.vehicleClass}
+                    value={c.id}
+                    checked={on}
+                    disabled={!ok}
+                    required
+                    onChange={() => choose(c.id)}
+                    className="mt-1.5"
+                  />
+                  {pictured ? (
+                    <ClassPicture
+                      src={c.imageUrl}
+                      sizes="(min-width: 40rem) 144px, 96px"
+                      className="w-24 shrink-0 sm:w-36"
+                    />
+                  ) : null}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="flex flex-wrap items-baseline justify-between gap-x-4">
+                      <span className="text-[1.1rem] font-bold text-[#082f2b]">
+                        {c.name}
+                      </span>
+                      <span className="text-[1.15rem] font-bold text-[#073c36]">
+                        {formatMyr(c.totalSen)}
+                      </span>
+                    </span>
+                    <span className="text-[0.95rem] text-[#324844]">
+                      {c.description}
+                    </span>
+                    {c.models.length > 0 ? (
+                      <span className="flex flex-wrap items-baseline gap-x-3 text-[0.9rem] text-[#324844]">
+                        {modelsLine(c.models.map((m) => m.name))}, or similar
+                        {!on && hasPhotos(c.models) ? (
+                          // A button in the label opens the gallery without choosing the class.
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setGallery({ option: c, modelId: null })
+                            }
+                            className={textLink}
+                          >
+                            See photos
+                          </button>
+                        ) : null}
+                      </span>
+                    ) : null}
+                    <span className="text-[0.85rem] text-[#67726f]">
+                      {seatsLabel(c)}
+                      {" · "}
+                      {c.luggage}
+                      {c.unavailable
+                        ? ` · ${c.unavailable}`
+                        : !ok && " · Does not fit your group"}
+                    </span>
+                  </span>
+                </label>
+                {on ? (
+                  <ModelChoice
+                    vehicleClassName={c.name}
+                    imageUrl={c.imageUrl}
+                    models={c.models}
+                    chargeSen={c.modelChoiceSen}
+                    modelId={model?.id ?? null}
+                    onChoose={setModelId}
+                    onPhotos={(id) => setGallery({ option: c, modelId: id })}
                   />
                 ) : null}
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="flex flex-wrap items-baseline justify-between gap-x-4">
-                    <span className="text-[1.1rem] font-bold text-[#082f2b]">
-                      {c.name}
-                    </span>
-                    <span className="text-[1.15rem] font-bold text-[#073c36]">
-                      {formatMyr(c.totalSen)}
-                    </span>
-                  </span>
-                  <span className="text-[0.95rem] text-[#324844]">
-                    {c.description}
-                  </span>
-                  {c.models.length > 0 ? (
-                    <span className="flex flex-wrap items-baseline gap-x-3 text-[0.9rem] text-[#324844]">
-                      {modelsLine(c.models.map((m) => m.name))}, or similar
-                      {hasPhotos(c.models) ? (
-                        // A button in the label opens the gallery without choosing the class.
-                        <button
-                          type="button"
-                          onClick={() => setGallery(c)}
-                          className={textLink}
-                        >
-                          See photos
-                        </button>
-                      ) : null}
-                    </span>
-                  ) : null}
-                  <span className="text-[0.85rem] text-[#67726f]">
-                    {seatsLabel(c)}
-                    {" · "}
-                    {c.luggage}
-                    {c.unavailable
-                      ? ` · ${c.unavailable}`
-                      : !ok && " · Does not fit your group"}
-                  </span>
-                </span>
-              </label>
+              </div>
             );
           })}
         </fieldset>
@@ -237,46 +248,6 @@ export function TripOptionsForm({
           <h2 className="font-(family-name:--font-display) text-[1.5rem]">
             Your details
           </h2>
-          {selected && models.length > 1 ? (
-            <div className="grid gap-2.5">
-              <label className="block">
-                <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
-                  Model{" "}
-                  <span className="font-normal text-[#67726f]">(optional)</span>
-                </span>
-                <Select
-                  bare
-                  value={modelId ?? ""}
-                  onValueChange={(next) => {
-                    setModelId(next || null);
-                    setSimilarOk(true);
-                  }}
-                  options={[
-                    { value: "", label: "No preference" },
-                    ...models.map((m) => ({ value: m.id, label: m.name })),
-                  ]}
-                  className={control}
-                />
-              </label>
-              {model ? (
-                <>
-                  <label className="flex items-start gap-2.5 text-[0.92rem] text-[#253c38]">
-                    <Checkbox
-                      checked={similarOk}
-                      onChange={(e) => setSimilarOk(e.target.checked)}
-                      className="mt-0.5"
-                    />
-                    A similar vehicle is fine if the {model.name} is not free
-                  </label>
-                  {similarOk ? null : (
-                    <p className="text-[0.85rem] text-[#67726f]">
-                      We will contact you before sending another vehicle.
-                    </p>
-                  )}
-                </>
-              ) : null}
-            </div>
-          ) : null}
           <label className="block">
             <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
               Passengers
@@ -365,8 +336,8 @@ export function TripOptionsForm({
           >
             {pending ? (
               <Pending>Preparing your booking…</Pending>
-            ) : selected && canContinue ? (
-              `Continue · ${formatMyr(selected.totalSen)}`
+            ) : canContinue && totalSen !== null ? (
+              `Continue · ${formatMyr(totalSen)}`
             ) : (
               "Choose a vehicle to continue"
             )}
@@ -375,9 +346,10 @@ export function TripOptionsForm({
       </form>
       {gallery ? (
         <ModelGallery
-          key={gallery.id}
-          title={gallery.name}
-          models={gallery.models}
+          key={`${gallery.option.id}:${gallery.modelId ?? ""}`}
+          title={gallery.option.name}
+          models={gallery.option.models}
+          initialModelId={gallery.modelId}
           open
           onOpenChange={(open) => {
             if (!open) setGallery(null);

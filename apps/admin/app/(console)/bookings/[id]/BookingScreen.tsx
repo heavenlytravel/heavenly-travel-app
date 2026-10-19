@@ -320,13 +320,12 @@ function ItemCard({
           }
         />
       </div>
-      {/* The customer wants this model or a call: kept by people until assignment checks it. */}
+      {/* The customer paid for this model: kept by people until assignment checks it. */}
       {item.tripDetails?.vehicleModelName &&
-      !item.tripDetails.similarModelOk &&
       (item.status === "received" || item.status === "confirmed") ? (
         <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          The customer wants the {item.tripDetails.vehicleModelName} only. If
-          none is free, ask them before sending another vehicle.
+          The customer paid to choose the {item.tripDetails.vehicleModelName}.
+          Send one. If none is free, call them before sending another vehicle.
         </p>
       ) : null}
       <Rows rows={rows} />

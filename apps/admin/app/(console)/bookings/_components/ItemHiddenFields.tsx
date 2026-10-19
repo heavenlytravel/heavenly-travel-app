@@ -1,5 +1,4 @@
 import {
-  MODEL_ONLY,
   offersChildSeats,
   PRICE_OVERRIDE_FIELDS,
   TRIP_OPTION_FIELDS,
@@ -29,7 +28,6 @@ export function ItemHiddenFields({
     ...tripInput(draft.trip),
     [TRIP_OPTION_FIELDS.vehicleClass]: draft.vehicleClassId ?? "",
     [TRIP_OPTION_FIELDS.vehicleModel]: draft.vehicleModelId ?? "",
-    [TRIP_OPTION_FIELDS.similarModel]: draft.similarModelOk ? "" : MODEL_ONLY,
     [TRIP_OPTION_FIELDS.passengers]: draft.passengers,
     [TRIP_OPTION_FIELDS.flightNumber]: draft.flightNumber,
     [TRIP_OPTION_FIELDS.notes]: draft.notes,

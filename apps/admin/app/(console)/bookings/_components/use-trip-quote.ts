@@ -16,7 +16,7 @@ import {
  * changed trip clears the prices at once, since they no longer apply; the
  * class chosen stays chosen when the new prices still offer it, so moving
  * a pick-up by half an hour does not lose the vehicle, and so does the
- * model when the class still shows it.
+ * model when it can still be chosen.
  */
 export function useTripQuote(
   draft: ItemDraft,
@@ -43,7 +43,9 @@ export function useTripQuote(
       const kept = result.classes.find(
         (c) => c.id === keepClassId && c.unavailable === null,
       );
-      const keptModel = kept?.models.some((m) => m.id === keepModelId);
+      const keptModel =
+        kept?.modelChoiceSen != null &&
+        kept.models.some((m) => m.id === keepModelId);
       onChange({
         quote: result,
         quoteError: null,

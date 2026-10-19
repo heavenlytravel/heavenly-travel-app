@@ -13,6 +13,8 @@ import type { SurchargeCharge } from "./rates-input";
  *   hourly:  hourlyRate x hours
  *   then the odd-hours surcharge, when the pickup is in the window: a
  *   percentage of the price, or a flat amount
+ *   then the charge for the model the customer chose, when they chose
+ *   one: a percentage of the price before the surcharge, or a flat amount
  */
 
 /** The metered rates a location sells a class at, as stored on `LocationVehicleClass`. */
@@ -53,7 +55,9 @@ export type TripPriceBreakdown = {
   route: RouteRate | null;
   /** The surcharge that was added, and its percentage when it was one; null when none applied. */
   surcharge: { percent: number | null; amountSen: number } | null;
-  /** Before the surcharge. */
+  /** The model the customer chose, by name, and what choosing it added; null when any model would do. */
+  model: { name: string; percent: number | null; amountSen: number } | null;
+  /** Before the surcharge and the model. */
   subtotalSen: number;
   totalSen: number;
   /**
@@ -95,15 +99,13 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
     subtotalSen = rates.hourlyRateSen * trip.hours;
   }
 
-  let surcharge: TripPriceBreakdown["surcharge"] = null;
-  if (charge?.percent != null && charge.percent > 0) {
-    surcharge = {
-      percent: charge.percent,
-      amountSen: Math.round((subtotalSen * charge.percent) / 100),
-    };
-  } else if (charge?.flatSen != null && charge.flatSen > 0) {
-    surcharge = { percent: null, amountSen: charge.flatSen };
-  }
+  const surcharge: TripPriceBreakdown["surcharge"] =
+    charge && (charge.percent !== null ? charge.percent : charge.flatSen) > 0
+      ? {
+          percent: charge.percent,
+          amountSen: chargeAmountSen(charge, subtotalSen),
+        }
+      : null;
 
   return {
     mode: trip.mode,
@@ -123,9 +125,38 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
         }
       : null,
     surcharge,
+    model: null,
     subtotalSen,
     totalSen: subtotalSen + (surcharge?.amountSen ?? 0),
     multiplier: 1,
+  };
+}
+
+/** What a charge adds to a price: its percentage of it, to the nearest sen, or its flat amount. */
+export function chargeAmountSen(charge: SurchargeCharge, priceSen: number) {
+  return charge.percent !== null
+    ? Math.round((priceSen * charge.percent) / 100)
+    : charge.flatSen;
+}
+
+/**
+ * The receipt with the model the customer chose: the charge for choosing
+ * it, worked on the price before the surcharge, added to the total. A
+ * model already on the receipt is replaced.
+ */
+export function withModelChoice(
+  price: TripPriceBreakdown,
+  modelName: string,
+  charge: SurchargeCharge,
+): TripPriceBreakdown {
+  if (!((charge.percent !== null ? charge.percent : charge.flatSen) >= 0)) {
+    throw new RangeError("the model charge must be zero or more");
+  }
+  const amountSen = chargeAmountSen(charge, price.subtotalSen);
+  return {
+    ...price,
+    model: { name: modelName, percent: charge.percent, amountSen },
+    totalSen: price.totalSen - (price.model?.amountSen ?? 0) + amountSen,
   };
 }
 
@@ -176,9 +207,17 @@ function isSurcharge(
   );
 }
 
+function isModelCharge(
+  value: unknown,
+): value is NonNullable<TripPriceBreakdown["model"]> {
+  return (
+    isSurcharge(value) && typeof (value as { name?: unknown }).name === "string"
+  );
+}
+
 /**
- * Reads a stored `priceBreakdown` back from JSON, in the shape above or the
- * one before it (a multiplier, no route and no surcharge). Null when the
+ * Reads a stored `priceBreakdown` back from JSON, in the shape above or one
+ * before it (a multiplier, no route, no surcharge, no model). Null when the
  * value is not a receipt.
  */
 export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
@@ -202,6 +241,7 @@ export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
     hours: p.hours as number | null,
     route: isRouteRate(p.route) ? p.route : null,
     surcharge: isSurcharge(p.surcharge) ? p.surcharge : null,
+    model: isModelCharge(p.model) ? p.model : null,
     subtotalSen: p.subtotalSen,
     totalSen: p.totalSen,
     multiplier: typeof p.multiplier === "number" ? p.multiplier : 1,

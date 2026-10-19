@@ -87,7 +87,6 @@ describe("parseTripOptions", () => {
       {
         vehicleClassId: "vc1",
         vehicleModelId: null,
-        similarModelOk: true,
         passengers: 3,
         childSeats: 1,
         flightNumber: "MH 123",
@@ -104,25 +103,17 @@ describe("parseTripOptions", () => {
     assert.equal(options?.childSeats, 0);
   });
 
-  it("reads the model preferred and whether a similar one will do", () => {
-    const similar = parseTripOptions(
+  it("reads the model chosen, and none for an empty one", () => {
+    const chosen = parseTripOptions(
       "car-with-driver",
       "class=vc1&model=vm2&passengers=2",
     );
-    assert.equal(similar?.vehicleModelId, "vm2");
-    assert.equal(similar?.similarModelOk, true);
-    const only = parseTripOptions(
-      "car-with-driver",
-      "class=vc1&model=vm2&similar=no&passengers=2",
-    );
-    assert.equal(only?.similarModelOk, false);
-    // With no model there is nothing to stand in for.
+    assert.equal(chosen?.vehicleModelId, "vm2");
     const none = parseTripOptions(
       "car-with-driver",
-      "class=vc1&model=&similar=no&passengers=2",
+      "class=vc1&model=&passengers=2",
     );
     assert.equal(none?.vehicleModelId, null);
-    assert.equal(none?.similarModelOk, true);
   });
 
   it("refuses a model id that is not an id", () => {

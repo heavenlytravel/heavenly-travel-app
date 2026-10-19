@@ -66,7 +66,6 @@ export function sampleItem(
       vehicleClassName: "Sedan VIP",
       vehicleModelId: "vm1",
       vehicleModelName: "Toyota Camry",
-      similarModelOk: true,
       vehicleClassCategory: "car-with-driver",
       mode: "oneway",
       pickupPlace: klia,

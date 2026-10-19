@@ -3,6 +3,8 @@
 import {
   BOOKING_RULES,
   CATEGORY_RULE_DEFAULTS,
+  MODEL_CHOICE_FIELDS,
+  modelChoiceOf,
   OFFERING_FIELD_LABELS,
   OFFERING_MONEY_FIELDS,
   OFFERING_RULE_FIELDS,
@@ -12,6 +14,7 @@ import {
   ringgitInputValue,
   type OfferingField,
   type OfferingRules,
+  type SurchargeKind,
   type TripCategory,
   type TripRates,
 } from "@repo/db";
@@ -24,6 +27,7 @@ import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Card } from "../../../../_components/Card";
+import { ChargeInput } from "../../../../_components/ChargeInput";
 import type { ActionState } from "../../../../_lib/action-state";
 import { locationTabHref } from "../../../../_lib/routes";
 import {
@@ -89,12 +93,58 @@ function MoneyInput({
 }
 
 /**
+ * The charge to choose a model in a sentence: "Choosing a model costs 15 %
+ * more", or "RM 40 more" with the switch on RM. Empty, customers get any
+ * model of the class.
+ */
+function ModelChoiceField({ offering }: { offering?: Offering }) {
+  const charge = offering ? modelChoiceOf(offering) : null;
+  const [kind, setKind] = useState<SurchargeKind>(
+    charge && charge.percent === null ? "flat" : "percent",
+  );
+  const [amount, setAmount] = useState(
+    charge
+      ? charge.percent !== null
+        ? String(charge.percent)
+        : ringgitInputValue(charge.flatSen)
+      : "",
+  );
+  return (
+    <div className="grid gap-2">
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-800">
+        {OFFERING_FIELD_LABELS.modelChoicePercent}
+        <InfoTip text="Customers choose among the models of this location's vehicles in service, once there are two or more. A booking keeps the charge it was made with." />
+      </span>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-neutral-700">
+        <span>Choosing a model costs</span>
+        <ChargeInput
+          name={MODEL_CHOICE_FIELDS.amount}
+          kindName={MODEL_CHOICE_FIELDS.kind}
+          label="Charge to choose a model"
+          kind={kind}
+          amount={amount}
+          onKindChange={setKind}
+          onAmountChange={setAmount}
+        />
+        <span>more.</span>
+      </div>
+      <p className="text-xs text-neutral-500">
+        {kind === "percent"
+          ? "A whole percentage of the trip's price before any odd-hours surcharge."
+          : "One amount added to the trip, whatever its price."}{" "}
+        Leave it empty and customers here get any model of the class.
+      </p>
+    </div>
+  );
+}
+
+/**
  * The form for one offering of a location. A new one picks a class from
  * the catalogue or creates one, then sets the rates and the rules; the
  * rules start from the usual ones of the class's category, and start again
- * when the category changes. An existing one edits its rates, its rules
- * and its switch. Money is typed in ringgit, the rules in hours. A saved
- * offering goes back to the tab.
+ * when the category changes. An existing one edits its rates, its rules,
+ * the charge to choose a model and its switch. Money is typed in ringgit,
+ * the rules in hours. A saved offering goes back to the tab.
  */
 export function OfferingForm({
   locationId,
@@ -259,6 +309,7 @@ export function OfferingForm({
             Allowed, but check it is what you mean.
           </p>
         ) : null}
+        <ModelChoiceField offering={offering} />
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
             name="isActive"

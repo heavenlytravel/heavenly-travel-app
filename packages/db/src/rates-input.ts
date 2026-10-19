@@ -267,8 +267,9 @@ export function parseRateCells(rows: unknown): Parsed<RateCell[]> {
 export type GridRoute = { fromZoneId: string; toZoneId: string };
 
 /**
- * What the odd-hours surcharge adds to a trip: a percentage of its price,
- * or a flat amount in sen. Exactly one of the two is set.
+ * What a charge adds to a trip: a percentage of its price, or a flat
+ * amount in sen. Exactly one of the two is set. The odd-hours surcharge is
+ * one, and so is the charge for choosing a model.
  */
 export type SurchargeCharge =
   { percent: number; flatSen: null } | { percent: null; flatSen: number };
@@ -279,15 +280,76 @@ export type OddHours = {
   toMinute: number;
 } & SurchargeCharge;
 
-/** How the form asks what the surcharge adds. */
+/** How a form asks what a charge adds. */
 export const SURCHARGE_KINDS = ["percent", "flat"] as const;
 export type SurchargeKind = (typeof SURCHARGE_KINDS)[number];
 
-export const ODD_HOURS = {
+/** The most a charge may add. */
+export const CHARGE_LIMITS = {
   maxPercent: 200,
   /** RM 1,000. */
   maxFlatSen: 100_000,
 } as const;
+
+const sentenceCase = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * The rules on a charge: a whole percentage from 1, or an amount from one
+ * sen, each up to its limit. `subject` names it in the message: "the
+ * surcharge".
+ */
+export function checkCharge(charge: SurchargeCharge, subject: string): Change {
+  if (charge.percent !== null) {
+    if (
+      !Number.isInteger(charge.percent) ||
+      charge.percent < 1 ||
+      charge.percent > CHARGE_LIMITS.maxPercent
+    ) {
+      return fail(
+        `${sentenceCase(subject)} is a whole percentage between 1 and ${CHARGE_LIMITS.maxPercent}.`,
+      );
+    }
+  } else if (
+    !Number.isInteger(charge.flatSen) ||
+    charge.flatSen < 1 ||
+    charge.flatSen > CHARGE_LIMITS.maxFlatSen
+  ) {
+    return fail(
+      `${sentenceCase(subject)} is an amount between ${formatMyr(1)} and ${formatMyr(CHARGE_LIMITS.maxFlatSen)}.`,
+    );
+  }
+  return { ok: true };
+}
+
+/**
+ * A charge's amount as a form posts it, read but not checked: `kind`
+ * "flat" reads it as ringgit, anything else as a whole percentage. What an
+ * empty amount means is the caller's to say.
+ */
+export function parseCharge(
+  kind: unknown,
+  amount: string,
+  subject: string,
+): Parsed<SurchargeCharge> {
+  if (kind !== "flat") {
+    return { ok: true, value: { percent: numberOf(amount), flatSen: null } };
+  }
+  const flatSen = parseRinggit(amount);
+  return flatSen === null
+    ? { ok: false, error: `Enter ${subject} in RM, with at most two decimals.` }
+    : { ok: true, value: { percent: null, flatSen } };
+}
+
+/** A percentage column and a flat one as a charge: the percentage when it is set; null when neither is. */
+export function chargeOf(
+  percent: number | null,
+  flatSen: number | null,
+): SurchargeCharge | null {
+  if (percent !== null) return { percent, flatSen: null };
+  if (flatSen !== null) return { percent: null, flatSen };
+  return null;
+}
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -344,26 +406,7 @@ export function checkOddHours(window: OddHours): Change {
   if (window.fromMinute === window.toMinute) {
     return fail("The window ends at a different time from the one it starts.");
   }
-  if (window.percent !== null) {
-    if (
-      !Number.isInteger(window.percent) ||
-      window.percent < 1 ||
-      window.percent > ODD_HOURS.maxPercent
-    ) {
-      return fail(
-        `The surcharge is a whole percentage between 1 and ${ODD_HOURS.maxPercent}.`,
-      );
-    }
-  } else if (
-    !Number.isInteger(window.flatSen) ||
-    window.flatSen < 1 ||
-    window.flatSen > ODD_HOURS.maxFlatSen
-  ) {
-    return fail(
-      `The surcharge is an amount between ${formatMyr(1)} and ${formatMyr(ODD_HOURS.maxFlatSen)}.`,
-    );
-  }
-  return { ok: true };
+  return checkCharge(window, "the surcharge");
 }
 
 /**
@@ -377,7 +420,6 @@ export function parseOddHoursFields(
 ): Parsed<OddHours | null> {
   const from = textOf(values.from);
   const to = textOf(values.to);
-  const kind: SurchargeKind = values.kind === "flat" ? "flat" : "percent";
   const amountText = textOf(values.amount);
   if (from === "" && to === "" && amountText === "") {
     return { ok: true, value: null };
@@ -391,24 +433,9 @@ export function parseOddHoursFields(
         "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
     };
   }
-  let window: OddHours;
-  if (kind === "percent") {
-    window = {
-      fromMinute,
-      toMinute,
-      percent: numberOf(amountText),
-      flatSen: null,
-    };
-  } else {
-    const flatSen = parseRinggit(amountText);
-    if (flatSen === null) {
-      return {
-        ok: false,
-        error: "Enter the surcharge in RM, with at most two decimals.",
-      };
-    }
-    window = { fromMinute, toMinute, percent: null, flatSen };
-  }
+  const charge = parseCharge(values.kind, amountText, "the surcharge");
+  if (!charge.ok) return charge;
+  const window: OddHours = { fromMinute, toMinute, ...charge.value };
   const check = checkOddHours(window);
   return check.ok ? { ok: true, value: window } : check;
 }
@@ -420,16 +447,11 @@ export function oddHoursOf(location: {
   oddHoursPercent: number | null;
   oddHoursFlatSen: number | null;
 }): OddHours | null {
-  const {
-    oddHoursFromMinute: fromMinute,
-    oddHoursToMinute: toMinute,
-    oddHoursPercent: percent,
-    oddHoursFlatSen: flatSen,
-  } = location;
-  if (fromMinute === null || toMinute === null) return null;
-  if (percent !== null) return { fromMinute, toMinute, percent, flatSen: null };
-  if (flatSen !== null) return { fromMinute, toMinute, percent: null, flatSen };
-  return null;
+  const { oddHoursFromMinute: fromMinute, oddHoursToMinute: toMinute } =
+    location;
+  const charge = chargeOf(location.oddHoursPercent, location.oddHoursFlatSen);
+  if (fromMinute === null || toMinute === null || !charge) return null;
+  return { fromMinute, toMinute, ...charge };
 }
 
 /**

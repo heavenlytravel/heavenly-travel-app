@@ -63,6 +63,7 @@ export async function quoteTripView(
       imageUrl: c.vehicleClass.imageUrl,
       models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
       totalSen: c.price.totalSen,
+      modelChoiceSen: c.modelChoice?.amountSen ?? null,
       unavailable: unavailableReason(c.availability),
     })),
   };

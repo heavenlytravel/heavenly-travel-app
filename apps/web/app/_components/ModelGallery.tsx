@@ -26,22 +26,26 @@ const pill = `rounded-full border px-3.5 py-1.5 text-[0.88rem] font-semibold tra
  * models as tabs when there are several, the photo large with its caption,
  * the one before and after, and the photos as thumbnails. Controlled: the
  * page owns `open`, so the options form keeps one gallery outside its
- * cards, whose clicks would otherwise choose the class.
+ * cards, whose clicks would otherwise choose the class. It opens at the
+ * model asked for, or the first.
  */
 export function ModelGallery({
   title,
   models,
+  initialModelId = null,
   open,
   onOpenChange,
 }: {
   /** The class: "MPV VIP". */
   title: string;
   models: readonly GalleryModel[];
+  /** The model to open at; null for the first. */
+  initialModelId?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const shown = models.filter((model) => model.photos.length > 0);
-  const [modelId, setModelId] = useState<string | null>(null);
+  const [modelId, setModelId] = useState<string | null>(initialModelId);
   const [at, setAt] = useState(0);
   const model = shown.find((m) => m.id === modelId) ?? shown[0];
   if (!model) return null;
@@ -55,7 +59,7 @@ export function ModelGallery({
       open={open}
       onOpenChange={onOpenChange}
       title={`${title} photos`}
-      description="What you may ride in. The price is the class's, whichever comes."
+      description="The models of this class we may send."
       width="lg"
     >
       <div className="grid gap-4">

@@ -16,6 +16,7 @@ import {
   agreedPriceIssue,
   chosenClass,
   itemTotalSen,
+  quotedTotalSen,
   tripLine,
   vehicleLine,
   type ItemDraft,
@@ -65,7 +66,7 @@ export function AmendItemForm({
     : !done.vehicle
       ? "Choose a vehicle."
       : priceIssue;
-  const totalSen = canPrice ? itemTotalSen(draft) : (chosen?.totalSen ?? null);
+  const totalSen = canPrice ? itemTotalSen(draft) : quotedTotalSen(draft);
 
   return (
     <form

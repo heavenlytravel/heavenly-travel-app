@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
-import { chosenClass, type ItemDraft } from "../_lib/trip-form";
+import { quotedTotalSen, type ItemDraft } from "../_lib/trip-form";
 import { Choices } from "./Choices";
 
 /** The reasons staff give most, one tap each; anything else is typed. */
@@ -50,7 +50,7 @@ export function BookingSummary({
   error: string | null;
   cancelHref: string;
 }) {
-  const chosen = chosenClass(draft);
+  const quoted = quotedTotalSen(draft);
   const agreed = canPrice ? parseRinggit(draft.agreedPrice) : null;
 
   return (
@@ -69,7 +69,7 @@ export function BookingSummary({
         <div className="flex justify-between gap-4">
           <span className="text-neutral-600">Quoted price</span>
           <span className="tabular-nums">
-            {chosen ? formatMyr(chosen.totalSen) : "—"}
+            {quoted !== null ? formatMyr(quoted) : "—"}
           </span>
         </div>
         {agreed !== null ? (
@@ -81,14 +81,14 @@ export function BookingSummary({
         <div className="mt-1 flex justify-between gap-4 border-t border-neutral-100 pt-2 text-base font-semibold">
           <span>Total</span>
           <span className="tabular-nums">
-            {chosen ? formatMyr(agreed ?? chosen.totalSen) : "—"}
+            {quoted !== null ? formatMyr(agreed ?? quoted) : "—"}
           </span>
         </div>
-        {canPrice && chosen ? (
+        {canPrice && quoted !== null ? (
           <AgreedPrice
             draft={draft}
             onChange={onChange}
-            quotedSen={chosen.totalSen}
+            quotedSen={quoted}
             note={priceNote}
           />
         ) : null}

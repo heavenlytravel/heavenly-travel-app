@@ -261,7 +261,7 @@ export type AmendedFields = {
   startsAt: string;
   hours: number | null;
   vehicleClassName: string;
-  /** The model preferred as `modelPreference` reads it; null for none. */
+  /** The model chosen, by name; null when any would do. */
   vehicleModel: string | null;
   passengers: number;
   childSeats: number;
@@ -446,12 +446,17 @@ function offeringChanges(after: unknown) {
   if (typeof isActive === "boolean") {
     phrases.push(isActive ? `Put ${name} on sale` : `Took ${name} off sale`);
   }
-  const others = keysOf(after)
-    .filter(
-      (key): key is OfferingField =>
-        key in OFFERING_FIELD_LABELS && key !== "isActive",
-    )
-    .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`);
+  // The charge to choose a model is two columns under one label.
+  const others = [
+    ...new Set(
+      keysOf(after)
+        .filter(
+          (key): key is OfferingField =>
+            key in OFFERING_FIELD_LABELS && key !== "isActive",
+        )
+        .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`),
+    ),
+  ];
   if (others.length > 0) {
     phrases.push(
       phrases.length > 0

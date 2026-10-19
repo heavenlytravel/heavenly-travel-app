@@ -18,10 +18,13 @@ import {
   type DistrictWithState,
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
+import { modelChoiceOf } from "./offering-input";
 import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
 import {
+  chargeAmountSen,
   priceTrip,
+  withModelChoice,
   type PricingBasis,
   type RouteRate,
   type TripPriceBreakdown,
@@ -62,10 +65,8 @@ export type TripRequest = {
 
 export type TripItemRequest = TripRequest & {
   vehicleClassId: string;
-  /** The model the customer prefers; null for no preference. */
+  /** The model the customer chose, at the class's charge; null when any will do. */
   vehicleModelId: string | null;
-  /** Whether a similar vehicle will do when the model is not free. */
-  similarModelOk: boolean;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -88,12 +89,22 @@ export type TripQuoteErrorCode =
 
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
+/** What choosing a model of a class adds to a trip: the location's charge, and its amount for the trip. */
+export type ModelChoiceQuote = { charge: SurchargeCharge; amountSen: number };
+
 export type ClassQuote = {
-  /** The catalogue class: its name, seats, luggage and the models the customer sees. */
+  /** The catalogue class: its name, seats, luggage, and the models of the location's vehicles in service. */
   vehicleClass: OfferingOnSale["vehicleClass"];
   /** The location's offering of it: the rates and the rules. */
   offering: OfferingOnSale;
+  /** With any model of the class. */
   price: TripPriceBreakdown;
+  /**
+   * What choosing one of the models adds; null when the customer cannot
+   * choose: the location sets no charge for it, or has fewer than two
+   * models of the class.
+   */
+  modelChoice: ModelChoiceQuote | null;
   /** Whether the offering's rules accept this trip. */
   availability: ClassAvailability;
 };
@@ -242,15 +253,16 @@ export async function quoteTrip(
             { startsAt: request.startsAt, hours },
             now,
           );
+    const price = priceTrip({ trip: basis, rates: offering, route, surcharge });
+    const charge = modelChoiceOf(offering);
     return {
       vehicleClass,
       offering,
-      price: priceTrip({
-        trip: basis,
-        rates: offering,
-        route,
-        surcharge,
-      }),
+      price,
+      modelChoice:
+        charge && vehicleClass.models.length > 1
+          ? { charge, amountSen: chargeAmountSen(charge, price.subtotalSen) }
+          : null,
       availability,
     };
   });
@@ -280,7 +292,7 @@ export type PrepareTripItemResult =
       item: PreparedItem;
       /** The same values as `item`, typed for display. */
       vehicleClass: VehicleClass;
-      /** The model preferred; null for none. */
+      /** The model chosen; null when any will do. */
       vehicleModel: { id: string; name: string } | null;
       price: TripPriceBreakdown;
     }
@@ -288,11 +300,11 @@ export type PrepareTripItemResult =
 
 /**
  * A customer's choice, validated and priced, ready for `createBooking`. The
- * item snapshots the class's name and category, the preferred model's
- * name, the offering's cancellation cutoff, and the location that priced
- * it, so what was booked never changes when ops edits or retires the class
- * or the model or redraws a zone. A model must be one the class shows; the
- * price is the class's either way.
+ * item snapshots the class's name and category, the chosen model's name,
+ * the offering's cancellation cutoff, and the location that priced it, so
+ * what was booked never changes when ops edits or retires the class or the
+ * model or redraws a zone. A model must be one the quote lets the customer
+ * choose, and the receipt charges for it.
  */
 export async function prepareTripItem(
   category: TripCategory,
@@ -312,7 +324,7 @@ export async function prepareTripItem(
       "That vehicle class is no longer available.",
     );
   }
-  const { vehicleClass, offering, price, availability } = chosen;
+  const { vehicleClass, offering, modelChoice, availability } = chosen;
   if (!availability.ok) {
     switch (availability.reason) {
       case "too-soon":
@@ -338,20 +350,26 @@ export async function prepareTripItem(
       `${vehicleClass.name} seats up to ${vehicleClass.maxPassengers} passengers.`,
     );
   }
-  const model = request.vehicleModelId
-    ? vehicleClass.models.find((m) => m.id === request.vehicleModelId)
-    : null;
-  if (model === undefined) {
-    return fail(
-      "model-unavailable",
-      `That model of ${vehicleClass.name} is no longer offered. Choose again.`,
-    );
+  let price = chosen.price;
+  let model: { id: string; name: string } | null = null;
+  if (request.vehicleModelId) {
+    const found = modelChoice
+      ? vehicleClass.models.find((m) => m.id === request.vehicleModelId)
+      : undefined;
+    if (!found || !modelChoice) {
+      return fail(
+        "model-unavailable",
+        `That model of ${vehicleClass.name} can no longer be chosen. Choose again.`,
+      );
+    }
+    model = { id: found.id, name: found.name };
+    price = withModelChoice(price, found.name, modelChoice.charge);
   }
 
   return {
     ok: true,
     vehicleClass,
-    vehicleModel: model ? { id: model.id, name: model.name } : null,
+    vehicleModel: model,
     price,
     item: {
       product: "transportation",
@@ -371,7 +389,6 @@ export async function prepareTripItem(
         vehicleClassCategory: category,
         ...(model ? { vehicleModel: { connect: { id: model.id } } } : {}),
         vehicleModelName: model?.name ?? null,
-        similarModelOk: model ? request.similarModelOk : true,
         mode: basis.mode,
         pickupPlace: request.pickup,
         dropoffPlace:

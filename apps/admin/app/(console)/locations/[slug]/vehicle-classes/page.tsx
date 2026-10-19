@@ -3,6 +3,8 @@ import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   formatMyr,
+  modelChoiceOf,
+  surchargeLabel,
   type TripCategory,
 } from "@repo/db";
 import { listOfferings, type Offering } from "@repo/db/server";
@@ -165,7 +167,8 @@ function Category({
 /**
  * One class at this location: the catalogue's picture, then its name over
  * the catalogue's seats and luggage, the switch that puts it on sale here,
- * its four rates and its three rules here, and its editor. The whole card
+ * its four rates, the charge to choose a model and its three rules here,
+ * and its editor. The whole card
  * opens the editor; off, it is in grey. Read only, the switch is a badge
  * and there is no editor.
  */
@@ -183,11 +186,16 @@ function OfferingCard({
 }) {
   const { vehicleClass } = offering;
   const href = locationOfferingHref(slug, offering.id);
+  const modelChoice = modelChoiceOf(offering);
   const rates: [label: string, value: string][] = [
     ["Base fare", formatMyr(offering.baseFareSen)],
     ["Per km", formatMyr(offering.perKmSen)],
     ["Per hour", formatMyr(offering.hourlyRateSen)],
     ["Minimum fare", formatMyr(offering.minimumFareSen)],
+    [
+      "To choose a model",
+      modelChoice ? surchargeLabel(modelChoice) : "Not offered",
+    ],
   ];
 
   return (

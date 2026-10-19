@@ -4,6 +4,7 @@ import {
   priceBreakdownOf,
   priceTrip,
   startingPriceSen,
+  withModelChoice,
   type TripRates,
 } from "./pricing";
 
@@ -141,8 +142,55 @@ describe("priceTrip", () => {
   });
 });
 
+describe("withModelChoice", () => {
+  const surcharged = priceTrip({
+    trip: { mode: "oneway", distanceKm: 10 },
+    rates,
+    route,
+    surcharge: { percent: 50, flatSen: null },
+  });
+
+  it("works a percentage on the price before the surcharge", () => {
+    const price = withModelChoice(surcharged, "Toyota Alphard", {
+      percent: 20,
+      flatSen: null,
+    });
+    assert.deepEqual(price.model, {
+      name: "Toyota Alphard",
+      percent: 20,
+      amountSen: 900,
+    });
+    assert.equal(price.subtotalSen, 4_500);
+    assert.equal(price.totalSen, 4_500 + 2_250 + 900);
+  });
+
+  it("adds a flat amount as it is, and replaces a model already there", () => {
+    const once = withModelChoice(surcharged, "Toyota Vellfire", {
+      percent: null,
+      flatSen: 5_000,
+    });
+    const again = withModelChoice(once, "Toyota Alphard", {
+      percent: null,
+      flatSen: 3_000,
+    });
+    assert.equal(again.model?.name, "Toyota Alphard");
+    assert.equal(again.totalSen, surcharged.totalSen + 3_000);
+  });
+
+  it("rejects a negative charge", () => {
+    assert.throws(
+      () =>
+        withModelChoice(surcharged, "Toyota Alphard", {
+          percent: null,
+          flatSen: -1,
+        }),
+      RangeError,
+    );
+  });
+});
+
 describe("priceBreakdownOf", () => {
-  it("reads back what priceTrip wrote", () => {
+  it("reads back what priceTrip wrote, a model chosen with it", () => {
     const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 10 },
       rates,
@@ -152,6 +200,14 @@ describe("priceBreakdownOf", () => {
     assert.deepEqual(
       priceBreakdownOf(JSON.parse(JSON.stringify(price))),
       price,
+    );
+    const chosen = withModelChoice(price, "Toyota Alphard", {
+      percent: null,
+      flatSen: 3_000,
+    });
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(chosen))),
+      chosen,
     );
   });
 
@@ -169,6 +225,7 @@ describe("priceBreakdownOf", () => {
       ...old,
       route: null,
       surcharge: null,
+      model: null,
     });
   });
 

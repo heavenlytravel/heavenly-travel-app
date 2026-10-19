@@ -31,6 +31,8 @@ describe("parseOfferingFields", () => {
         minLeadHours: 4,
         cancellationCutoffHours: 24,
         minHourlyHours: 3,
+        modelChoicePercent: null,
+        modelChoiceFlatSen: null,
         isActive: true,
       },
     });
@@ -63,11 +65,54 @@ describe("parseOfferingFields", () => {
   it("allows a minimum fare below the base fare", () => {
     assert.equal(errorOf({ baseFare: "50", minimumFare: "10" }), null);
   });
+
+  it("reads the charge to choose a model as a percentage or in ringgit", () => {
+    const percent = parseOfferingFields({
+      ...FORM,
+      modelChoiceKind: "percent",
+      modelChoiceAmount: "15",
+    });
+    assert.deepEqual(
+      percent.ok && [
+        percent.value.modelChoicePercent,
+        percent.value.modelChoiceFlatSen,
+      ],
+      [15, null],
+    );
+    const flat = parseOfferingFields({
+      ...FORM,
+      modelChoiceKind: "flat",
+      modelChoiceAmount: "40.50",
+    });
+    assert.deepEqual(
+      flat.ok && [flat.value.modelChoicePercent, flat.value.modelChoiceFlatSen],
+      [null, 4050],
+    );
+  });
+
+  it("keeps the charge to choose a model within its limits", () => {
+    assert.match(
+      errorOf({ modelChoiceKind: "percent", modelChoiceAmount: "0" }) ?? "",
+      /choose a model is a whole percentage/,
+    );
+    assert.match(
+      errorOf({ modelChoiceKind: "flat", modelChoiceAmount: "abc" }) ?? "",
+      /choose a model in RM/,
+    );
+  });
 });
 
 describe("checkOfferingFields", () => {
   it("checks only the fields it is given", () => {
     assert.equal(checkOfferingFields({ isActive: false }).ok, true);
     assert.equal(checkOfferingFields({ perKmSen: 1.5 }).ok, false);
+  });
+
+  it("refuses a charge to choose a model that is both kinds", () => {
+    assert.equal(
+      checkOfferingFields({ modelChoicePercent: 10, modelChoiceFlatSen: 500 })
+        .ok,
+      false,
+    );
   });
 });

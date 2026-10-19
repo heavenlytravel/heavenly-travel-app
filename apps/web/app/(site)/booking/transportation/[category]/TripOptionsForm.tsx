@@ -231,7 +231,6 @@ export function TripOptionsForm({
                 {on ? (
                   <ModelChoice
                     vehicleClassName={c.name}
-                    imageUrl={c.imageUrl}
                     models={c.models}
                     chargeSen={c.modelChoiceSen}
                     modelId={model?.id ?? null}

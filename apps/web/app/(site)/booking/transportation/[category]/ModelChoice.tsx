@@ -2,63 +2,45 @@
 
 import { formatMyr, TRIP_OPTION_FIELDS } from "@repo/db";
 import { Radio } from "@repo/ui/field";
-import Image from "next/image";
-import { ClassPicture } from "../../../../_components/ClassPicture";
 import type { GalleryModel } from "../../../../_components/ModelGallery";
+import { PhotoCarousel } from "../../../../_components/PhotoCarousel";
 import { focus } from "../../../_components/Page";
 
-const tile = `relative grid content-start gap-2 rounded-[12px] border-2 bg-white p-2 transition-colors`;
+const tile =
+  "grid content-start gap-2.5 rounded-[14px] border-2 bg-white p-2.5";
+const sizes = "(min-width: 64rem) 340px, (min-width: 40rem) 45vw, 90vw";
 
-/** "See 4 photos" over a model's cover, opening the gallery at it. Outside the tile's label, so it does not choose the model. */
-function PhotosButton({
+/** "View" over a model's photos, opening them large in the gallery. Outside the tile's label, so it does not choose the model. */
+function ViewButton({
   model,
   onPhotos,
 }: {
   model: GalleryModel;
   onPhotos: (modelId: string) => void;
 }) {
-  const count = model.photos.length;
-  if (count === 0) return null;
+  if (model.photos.length === 0) return null;
   return (
     <button
       type="button"
       onClick={() => onPhotos(model.id)}
-      aria-label={`See the photos of the ${model.name}`}
-      className={`absolute top-3.5 right-3.5 rounded-full bg-white/90 px-2.5 py-1 text-[0.78rem] font-semibold text-[#073c36] shadow ${focus}`}
+      aria-label={`See the photos of the ${model.name} larger`}
+      className={`absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-[0.8rem] font-semibold text-[#073c36] shadow ${focus}`}
     >
-      {count === 1 ? "See photo" : `See ${count} photos`}
+      View
     </button>
   );
 }
 
-/** A model's cover photo in a tile's frame; empty with none. */
-function Cover({ model }: { model: GalleryModel }) {
-  const cover = model.photos[0];
-  return (
-    <span className="relative block aspect-[3/2] overflow-hidden rounded-[8px] bg-[#f3f6f5]">
-      {cover ? (
-        <Image
-          src={cover.url}
-          alt=""
-          fill
-          sizes="(min-width: 40rem) 200px, 45vw"
-          className="object-cover"
-        />
-      ) : null}
-    </span>
-  );
-}
-
 /**
- * The models of a class the customer has chosen, under its card, each
- * with its cover photo and its photos a tap away. Where the location lets
- * the customer choose, a choice: any model of the class, which the price
- * includes and which comes first, or one of the models at the class's
- * charge. Otherwise the models are shown to look at, as what we may send.
+ * The models of a class the customer has chosen, under its card, each in
+ * a tile wide enough to see the vehicle, its photos swiped through in
+ * place and "View" opening them large. Where the location lets the
+ * customer choose, a choice: any model of the class first, which the price
+ * includes, or one of the models at the class's charge. Otherwise the
+ * models are shown to look at, as what we may send.
  */
 export function ModelChoice({
   vehicleClassName,
-  imageUrl,
   models,
   chargeSen,
   modelId,
@@ -67,8 +49,6 @@ export function ModelChoice({
 }: {
   /** "MPV VIP". */
   vehicleClassName: string;
-  /** The class's picture, for "Any". */
-  imageUrl: string | null;
   models: readonly GalleryModel[];
   /** What choosing a model adds; null when the customer cannot choose here. */
   chargeSen: number | null;
@@ -80,7 +60,8 @@ export function ModelChoice({
   if (models.length === 0) return null;
   const heading = "text-[0.98rem] font-semibold text-[#082f2b]";
   const note = "mt-0.5 text-[0.88rem] text-[#5d6966]";
-  const grid = "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3";
+  const grid = "mt-3 grid gap-3 sm:grid-cols-2";
+  const name = "text-[0.98rem] font-semibold text-[#082f2b]";
 
   if (chargeSen === null) {
     return (
@@ -91,12 +72,14 @@ export function ModelChoice({
         </p>
         <ul className={grid}>
           {models.map((model) => (
-            <li key={model.id} className={`${tile} border-[#dce3e0]`}>
-              <Cover model={model} />
-              <span className="px-1 pb-1 text-[0.92rem] font-semibold text-[#082f2b]">
-                {model.name}
-              </span>
-              <PhotosButton model={model} onPhotos={onPhotos} />
+            <li key={model.id} className={`relative ${tile} border-[#dce3e0]`}>
+              <PhotoCarousel
+                name={model.name}
+                photos={model.photos}
+                sizes={sizes}
+              />
+              <span className={`px-1 pb-0.5 ${name}`}>{model.name}</span>
+              <ViewButton model={model} onPhotos={onPhotos} />
             </li>
           ))}
         </ul>
@@ -104,10 +87,8 @@ export function ModelChoice({
     );
   }
 
-  const option = (on: boolean) =>
-    `${tile} cursor-pointer ${
-      on ? "border-[#073c36]" : "border-[#dce3e0] hover:border-[#073c36]/50"
-    }`;
+  const chosen = (on: boolean) =>
+    on ? "border-[#073c36]" : "border-[#dce3e0] hover:border-[#073c36]/50";
   return (
     <fieldset className="border-t border-[#073c36]/15 px-5 pt-4 pb-5">
       <legend className="sr-only">Model</legend>
@@ -119,48 +100,52 @@ export function ModelChoice({
         Any {vehicleClassName} is in the price. To ride in a particular model,
         choose it for {formatMyr(chargeSen)} more.
       </p>
-      <div className={grid}>
-        <label className={option(modelId === null)}>
-          <ClassPicture src={imageUrl} sizes="(min-width: 40rem) 200px, 45vw" />
-          <span className="flex items-start gap-2 px-1 pb-1">
-            <Radio
-              name={TRIP_OPTION_FIELDS.vehicleModel}
-              value=""
-              checked={modelId === null}
-              onChange={() => onChoose(null)}
-              className="mt-0.5"
-            />
-            <span className="grid gap-0.5">
-              <span className="text-[0.92rem] font-semibold text-[#082f2b]">
-                Any {vehicleClassName}
-              </span>
-              <span className="text-[0.85rem] text-[#5d6966]">Included</span>
-            </span>
+      <label
+        className={`mt-3 flex cursor-pointer items-start gap-3 rounded-[14px] border-2 bg-white px-4 py-3 ${chosen(modelId === null)}`}
+      >
+        <Radio
+          name={TRIP_OPTION_FIELDS.vehicleModel}
+          value=""
+          checked={modelId === null}
+          onChange={() => onChoose(null)}
+          className="mt-1"
+        />
+        <span className="grid gap-0.5">
+          <span className={name}>Any {vehicleClassName}</span>
+          <span className="text-[0.88rem] text-[#5d6966]">
+            Included: whichever is free on the day
           </span>
-        </label>
+        </span>
+      </label>
+      <div className={grid}>
         {models.map((model) => (
           <div key={model.id} className="relative">
-            <label className={option(modelId === model.id)}>
-              <Cover model={model} />
-              <span className="flex items-start gap-2 px-1 pb-1">
+            <label
+              className={`${tile} cursor-pointer ${chosen(modelId === model.id)}`}
+            >
+              <PhotoCarousel
+                name={model.name}
+                photos={model.photos}
+                sizes={sizes}
+                decorative
+              />
+              <span className="flex items-start gap-2.5 px-1 pb-0.5">
                 <Radio
                   name={TRIP_OPTION_FIELDS.vehicleModel}
                   value={model.id}
                   checked={modelId === model.id}
                   onChange={() => onChoose(model.id)}
-                  className="mt-0.5"
+                  className="mt-1"
                 />
-                <span className="grid min-w-0 gap-0.5">
-                  <span className="text-[0.92rem] font-semibold text-[#082f2b]">
-                    {model.name}
-                  </span>
-                  <span className="text-[0.85rem] font-semibold text-[#073c36]">
+                <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3">
+                  <span className={name}>{model.name}</span>
+                  <span className="text-[0.92rem] font-semibold text-[#073c36]">
                     +{formatMyr(chargeSen)}
                   </span>
                 </span>
               </span>
             </label>
-            <PhotosButton model={model} onPhotos={onPhotos} />
+            <ViewButton model={model} onPhotos={onPhotos} />
           </div>
         ))}
       </div>

@@ -77,37 +77,47 @@ model only once a vehicle of it is in service at their location.
 - There is no Delete in the console. Operation switches a class off; the one-off script
   deletes the two old classes.
 
-### Models and their photos
+### Models
 
 - A model has a brand ("Toyota") and a name ("Alphard"), shown together as "Toyota
-  Alphard", an order within its class, a switch for whether customers see it, and its
-  photos.
+  Alphard", and nothing else: no photos, order or switch of its own. Models are listed
+  by name.
 - Models come from the vehicles entered. The vehicle form takes the brand and the model
   as typed, suggesting the ones entered before; saving finds the class's model of that
-  brand and name, however it is cased, or adds it at the end of the class's order with
-  no photos, logged against the class. There is no "Add model" on the class's page.
-- A model's photos are in order; the first is the model's cover. Each has an optional
-  caption ("Interior"): its alt text is "Toyota Alphard, Interior", or the model's name
-  alone. At most 12. They are uploaded through `/api/uploads/vehicle-model-image`
-  (`coverage.manage`), several at once, and are moved, captioned and removed on the
-  model's page. The upload is one hook, `use-image-upload.ts`, that the class picture
-  uses too.
-- The class's picture stays the class's cover: the options page and the location's
-  product page show it on the class's card.
-- Models are listed on their class's page, `/vehicle-classes/[id]`, in a Models card beside
-  the form, and named, ordered, switched and pictured on
-  `/vehicle-classes/[id]/models/[modelId]`. Both are behind `coverage.manage`, as the
-  catalogue is; a vehicle's page links to its model's photos for an admin who has it.
-  Their changes are logged against the class. A model is deleted only while no vehicle is
-  of it; otherwise it is switched off. The catalogue's cards name each class's models.
+  brand and name, however it is cased, or adds it, logged against the class.
+- A model no vehicle is of and no booking chose goes as soon as its last vehicle leaves
+  it, so a model typed wrong and corrected leaves no suggestion behind. The models the
+  class list starts with stay until a vehicle has been of them.
+- There is no screen for models. The class's page lists its vehicles by location
+  instead: Langkawi, "3 vehicles: 2 Toyota Vios, 1 Honda City", each row opening the
+  location's Vehicles tab. The catalogue's cards give each location that sells the class
+  its count of vehicles in service.
+
+### Photos
+
+Revised on 2026-10-20: the photos were the model's, one set for every location, so a
+Penang customer would see a Langkawi plate. They are each vehicle's now.
+
+- A vehicle has up to 12 photos, in order, each with an optional caption ("Interior"):
+  its alt text is "Toyota Alphard, Interior", or the model's name alone. The first is
+  the vehicle's cover. They are uploaded on the vehicle's form, through
+  `/api/uploads/vehicle-image` (`fleet.manage`), several at once, and are moved,
+  captioned and removed there. The upload is one hook, `use-image-upload.ts`, that the
+  class picture uses too. `src/photos-input.ts` reads and checks the list.
+- A location's customers see a model in the photos of its vehicles in service there, one
+  vehicle's after another, the first entered first, at most 12.
+- The class's picture at a location is the first photo of its models there. Until a
+  vehicle there has one, it is the catalogue's picture, which is meant to be neutral: a
+  cut-out with no plate. Nothing more to upload: a location's cover follows its own
+  vehicles.
 
 ### The customer's choice of model
 
 - The rule, from Operation: a customer books a class, and we send whichever of its models
   is free. A customer who wants a particular model pays for the choice.
-- A location's customers see the models of the vehicles based there and in service, of
-  models that are on. A model no vehicle there is of is not shown, so the site never
-  sells a model the location cannot send.
+- A location's customers see the models of the vehicles based there and in service. A
+  model no vehicle there is of is not shown, so the site never sells a model the
+  location cannot send.
 - What the choice costs is the location's, on the class's offering (its Vehicle classes
   tab, beside the rates): a percentage of the trip's price before any odd-hours
   surcharge, or a flat amount, the same for every model of the class there. Empty, the
@@ -115,12 +125,14 @@ model only once a vehicle of it is in service at their location.
   percentage and the amount follow the odd-hours surcharge's rules and limits, and its
   input: `ChargeInput` in the console, `checkCharge` and `parseCharge` in
   `src/rates-input.ts`.
-- On the options page, a class's card names its models ("Toyota Vellfire or Toyota
-  Alphard, or similar") and "See photos" opens them in one gallery. Chosen, the card opens
-  on its models, each with its cover photo and "See 4 photos", which opens the gallery at
-  that model:
+- On the options page, a class's card shows its picture at the location, names its
+  models ("Toyota Vellfire or Toyota Alphard, or similar") and "See photos" opens them in
+  one gallery. Chosen, the card opens on its models, a tile each, two side by side and
+  one on a phone, wide enough to see the vehicle. A tile's photos are swiped through in
+  place (`PhotoCarousel`: snapping slides, arrows for a pointer, a dot per photo), and
+  "View" opens them large in the gallery:
   - where the location charges for the choice, "Choose your model (optional)": "Any MPV
-    VIP, Included", ticked to start, then each model at "+RM 40.00";
+    VIP, Included", ticked to start, then a tile per model at "+RM 40.00";
   - where it does not, "What we may send", to look at.
 - A model chosen adds a line to the receipt, "Toyota Alphard, chosen" (with "+10%" for a
   percentage), and to the total. The URL carries it as `model`; the item keeps the model
@@ -139,8 +151,8 @@ model only once a vehicle of it is in service at their location.
 ### Vehicles
 
 - A vehicle has a plate, a class, a brand and a model, the location it is based at, a
-  colour, the year it was made, whether it is in service, the expiry dates of its
-  documents, and notes. The class is picked; the brand and the model are typed, with the
+  colour, the year it was made, whether it is in service, its photos, the expiry dates
+  of its documents, and notes. The class is picked; the brand and the model are typed, with the
   brands entered before suggested, and the brand's models in the class first. Under them
   the form says when saving will add a model to the class, and names the class that has
   it already when it is another one.
@@ -158,7 +170,7 @@ model only once a vehicle of it is in service at their location.
   model is no longer shown at its location unless another vehicle of it is in service
   there. One entered by mistake can be deleted.
 - Saving, moving or deleting a vehicle refreshes the customer site's class cards, which
-  name the location's models.
+  name the location's models and show their photos.
 - The customer sees no vehicle until assignment, when OP3 sends the plate, the colour,
   the model and the driver.
 
@@ -214,18 +226,8 @@ VehicleModel                          new
   vehicleClassId     -> VehicleClass
   brand              String @default("")  "Toyota"; empty only before db:set-class-list
   name               String           "Alphard"
-  sortOrder          Int
-  isActive           Boolean @default(true)
-  photos             VehicleModelPhoto[]
   vehicles           Vehicle[]
   @@unique([vehicleClassId, brand, name])
-
-VehicleModelPhoto                     new
-  id
-  vehicleModelId     -> VehicleModel, onDelete: Cascade
-  url                String           on UploadThing (src/images.ts)
-  caption            String @default("")
-  sortOrder          Int
 
 Vehicle                               new
   id
@@ -238,6 +240,14 @@ Vehicle                               new
   roadTaxExpiresOn, insuranceExpiresOn, inspectionExpiresOn, permitExpiresOn
                      DateTime? @db.Date
   notes              String @default("")
+  photos             VehiclePhoto[]
+
+VehiclePhoto                          new
+  id
+  vehicleId          -> Vehicle, onDelete: Cascade
+  url                String           on UploadThing (src/images.ts)
+  caption            String @default("")
+  sortOrder          Int
 
 Driver                                new, in place of DriverProfile (no longer read)
   id
@@ -271,9 +281,11 @@ push):
 1. Development only: the developer has cleared the bookings.
 2. `pnpm db:push` (development), `pnpm db:push:prod` (production). In production it
    only adds tables and columns, so the code running until the deploy keeps working. In
-   development, where the first version was pushed, it also drops
-   `TripItemDetails.similarModelOk`, the tick box's column, and may ask to accept that:
-   the column was never in production.
+   development, where the earlier versions were pushed, it also drops
+   `TripItemDetails.similarModelOk` (the tick box), `VehicleModelPhoto` (the models'
+   photos) and `VehicleModel.sortOrder` and `isActive`, and may ask to accept that:
+   none of them was ever in production. A model photo uploaded in development is
+   uploaded again on a vehicle.
 3. `pnpm --filter @repo/db db:migrate-offering-rules` (and `:prod`), from the plan
    before.
 4. `pnpm --filter @repo/db db:set-class-list` (and `:prod`): splits a model named before
@@ -283,8 +295,8 @@ push):
    still uses is switched off instead and listed. Running it again changes nothing.
 5. Deploy the code.
 6. Operation sells Sedan VIP and MPV VIP at each location with their rates, sets the
-   charge to choose a model where customers may, enters the vehicles and drivers, and
-   uploads the class pictures and each model's photos.
+   charge to choose a model where customers may, enters the vehicles with their photos
+   and the drivers, and uploads a neutral picture for each class.
 
 ## Operation's answers
 
@@ -335,6 +347,9 @@ Later:
 - The drivers' languages and photo, for the customer's message.
 - Features on a model (captain seats, Wi-Fi), shown with its photos.
 - A charge per model, should a location want the Alphard dearer than the Vellfire.
+- A cover picked for each class at each location, should the first photo of its
+  vehicles there not be the best picture of the class.
+- A vehicle's cover beside its plate in the console's lists.
 - Removing an unused photo's file from UploadThing: a removed photo stays stored, as a
   page's replaced image does.
 - Links from the Activity screen to a vehicle's or a driver's page.

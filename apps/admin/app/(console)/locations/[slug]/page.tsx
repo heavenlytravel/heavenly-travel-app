@@ -36,9 +36,9 @@ import {
 } from "../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
-  LOCATION_TABS,
   locationBookingsHref,
   locationTabHref,
+  locationTabsFor,
   setupStepTab,
   type LocationTab,
 } from "../../../_lib/routes";
@@ -65,11 +65,12 @@ const PAGE_DOTS: Record<PageStatus, string> = {
 /**
  * Route: /locations/[slug]. The Overview tab, for every team. A draft
  * location opens on its setup checklist: the four steps, where each
- * stands, and what to do next. A live or paused one opens on the day's
- * operation: its queue in numbers, today's pick-ups and the bookings
- * awaiting confirmation, for the teams that work the queue. Under either,
- * the location's parts at a glance, a line each and a way in; its history
- * is its own tab.
+ * stands, and what to do next. A live or paused one opens on its day, the
+ * tab named Today: its queue in numbers, today's pick-ups and the bookings
+ * awaiting confirmation, for the teams that work the queue. A team that
+ * does not, such as Marketing, sees the location's parts at a glance
+ * instead, a line each and a way in, which the panel also lists. See
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 export default async function LocationOverviewPage({
   params,
@@ -110,8 +111,11 @@ async function overview({ id, slug }: { id: string; slug: string }) {
 
   const may = (permission: Permission) => permissions.includes(permission);
   const state = locationStateOf(location.state);
-  const worksQueue = state !== "draft" && may("bookings.view");
-  const operates = may("coverage.view");
+  const draft = state === "draft";
+  const worksQueue = !draft && may("bookings.view");
+  // A live location's parts at a glance, for a team with no queue to work.
+  const glance = !draft && !worksQueue;
+  const operates = glance && may("coverage.view");
   const [zones, offerings, pickups, received] = await Promise.all([
     operates ? listZones(id) : [],
     operates ? listOfferings(id) : [],
@@ -130,7 +134,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   ]);
 
   let top: ReactNode = null;
-  if (state === "draft") {
+  if (draft) {
     const steps = setupSteps(location.pages, numbers);
     const hrefOf = (step: SetupStep) => {
       const tab = setupStepTab(step.key);
@@ -202,9 +206,11 @@ async function overview({ id, slug }: { id: string; slug: string }) {
     ),
   };
   // The tabs with a line, the admin may open, in the panel's order.
-  const glances = LOCATION_TABS.filter(
-    (tab) => lines[tab.key] !== undefined && may(tab.permission),
-  );
+  const glances = glance
+    ? locationTabsFor(state).filter(
+        (tab) => lines[tab.key] !== undefined && may(tab.permission),
+      )
+    : [];
 
   return (
     <div className="grid gap-6">

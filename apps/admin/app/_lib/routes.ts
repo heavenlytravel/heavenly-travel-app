@@ -4,6 +4,7 @@ import {
   type BookingStatus,
   type LocationHistoryKind,
   type LocationPageKey,
+  type LocationState,
   type Permission,
   type SetupStepKey,
 } from "@repo/db";
@@ -166,6 +167,69 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     step: null,
   },
 ];
+
+/**
+ * Where a tab sits in the panel beside a location: the day's work, the
+ * setup done once and rarely touched, or the panel's foot.
+ */
+export type LocationTabGroup = "work" | "setup" | "foot";
+
+/** A tab as a location in one state shows it: in its group, under the name it has there. */
+export type PlacedTab = LocationTabDef & { group: LocationTabGroup };
+
+/** The day's work in its order: the day, the queue, the pages Marketing keeps. */
+const WORK_TABS: readonly LocationTab[] = ["overview", "bookings", "pages"];
+
+/**
+ * The group of a tab in a location in this state; null for a tab it does
+ * not show. A draft is all setup: its overview is the checklist, then the
+ * steps and the rates, and it has no Bookings tab, since a draft takes no
+ * bookings. Once live or paused, the day's work comes first and the setup
+ * folds away under it; the pages, a setup step while a draft, are work
+ * from then on. The history is at the foot either way.
+ */
+function groupOf(
+  tab: LocationTab,
+  state: LocationState,
+): LocationTabGroup | null {
+  const draft = state === "draft";
+  switch (tab) {
+    case "history":
+      return "foot";
+    case "overview":
+      return "work";
+    case "bookings":
+      return draft ? null : "work";
+    case "pages":
+      return draft ? "setup" : "work";
+    default:
+      return "setup";
+  }
+}
+
+/**
+ * The tabs of a location in this state, in the panel's order: the work,
+ * then the setup, then the foot. The overview of a live or paused location
+ * is its day, "Today". The panel and the strip of tabs on narrow screens
+ * both read this. See docs/261018-location-work-and-class-catalogue.md.
+ */
+export function locationTabsFor(state: LocationState): PlacedTab[] {
+  const placed = LOCATION_TABS.flatMap((tab): PlacedTab[] => {
+    const group = groupOf(tab.key, state);
+    if (!group) return [];
+    const label =
+      tab.key === "overview" && state !== "draft" ? "Today" : tab.label;
+    return [{ ...tab, label, group }];
+  });
+  const rank = (tab: PlacedTab) =>
+    tab.group === "work"
+      ? WORK_TABS.indexOf(tab.key)
+      : tab.group === "setup"
+        ? WORK_TABS.length
+        : WORK_TABS.length + 1;
+  // A stable sort, so the setup keeps the order the tabs are walked in.
+  return placed.sort((a, b) => rank(a) - rank(b));
+}
 
 /** The tab of a setup step. */
 export function setupStepTab(step: SetupStepKey): LocationTabDef {

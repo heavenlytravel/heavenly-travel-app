@@ -31,7 +31,7 @@ import {
   locationBookingsHref,
   locationHref,
 } from "../_lib/routes";
-import { CardImage } from "./locations/_components/CardImage";
+import { CardImage } from "../_components/CardImage";
 import { SetupBar } from "./locations/_components/SetupBar";
 
 function whoAmI(admin: Awaited<ReturnType<typeof requireAdmin>>) {
@@ -132,7 +132,7 @@ function LocationCard({
   return (
     <Tile>
       <CardImage
-        image={hero}
+        src={hero?.url ?? null}
         sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
         fallback={
           <span className="text-5xl font-semibold text-neutral-300">

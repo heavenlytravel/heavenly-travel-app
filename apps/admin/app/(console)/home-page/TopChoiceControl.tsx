@@ -13,7 +13,7 @@ import { useState, useTransition } from "react";
 import { TILE_LINK, Tile, TileFoot, TileGrid } from "../../_components/Card";
 import { LocationStateBadge } from "../../_components/StatusBadges";
 import { locationHref } from "../../_lib/routes";
-import { CardImage } from "../locations/_components/CardImage";
+import { CardImage } from "../../_components/CardImage";
 import { changeTopChoiceAction } from "./actions";
 
 /**
@@ -73,7 +73,7 @@ export function TopChoiceControl({
           choice ? (
             <Tile key={choice.id}>
               <CardImage
-                image={choice.heroImage}
+                src={choice.heroImage?.url ?? null}
                 sizes="(min-width: 1024px) 18rem, (min-width: 640px) 50vw, 100vw"
                 fallback={
                   <span className="text-5xl font-semibold text-neutral-300">

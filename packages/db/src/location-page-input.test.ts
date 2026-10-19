@@ -2,16 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TRIP_CATEGORIES } from "./booking-status";
 import {
-  IMAGE_MAX_BYTES,
   LOCATION_PAGES,
   PAGE_LIMITS,
   changedPageParts,
-  checkImageFile,
   checkPageComplete,
   checkPageLimits,
   isLocationPageKey,
   isPagePublished,
-  isUploadUrl,
   missingFields,
   pageContentOf,
   pageChecks,
@@ -69,40 +66,6 @@ describe("the pages of a location", () => {
   it("are named as a sentence names them", () => {
     assert.equal(pageNameOf("landing"), "the main page");
     assert.equal(pageNameOf("coach-charter"), "the Coach charter page");
-  });
-});
-
-describe("checkImageFile", () => {
-  it("takes a JPEG, a PNG or a WebP within 4 MB", () => {
-    for (const type of ["image/jpeg", "image/png", "image/webp"]) {
-      assert.equal(checkImageFile({ type, size: IMAGE_MAX_BYTES }).ok, true);
-    }
-    assert.match(
-      errorOf(checkImageFile({ type: "image/gif", size: 10 })),
-      /JPEG, a PNG or a WebP/,
-    );
-    assert.match(
-      errorOf(checkImageFile({ type: "image/png", size: IMAGE_MAX_BYTES + 1 })),
-      /at most 4 MB/,
-    );
-  });
-});
-
-describe("isUploadUrl", () => {
-  it("accepts a file on UploadThing only", () => {
-    assert.equal(isUploadUrl("https://abc123.ufs.sh/f/key-1"), true);
-    for (const value of [
-      "http://abc123.ufs.sh/f/key-1",
-      "https://ufs.sh.example.com/f/key-1",
-      "https://abc123.ufs.sh/a/key-1",
-      "https://example.com/beach.jpg",
-      "/beach.jpg",
-      "",
-      null,
-      7,
-    ]) {
-      assert.equal(isUploadUrl(value), false, String(value));
-    }
   });
 });
 

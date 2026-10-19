@@ -24,6 +24,7 @@ export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./location-input";
+export * from "./images";
 export * from "./location-page-input";
 export * from "./location-view";
 export * from "./cache-tags";

@@ -3,7 +3,7 @@ import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import type { Change, Created } from "./change";
 import { db } from "./client";
-import type { VehicleClass } from "./generated/prisma/client";
+import type { Prisma, VehicleClass } from "./generated/prisma/client";
 import { slugify } from "./slug";
 import {
   checkVehicleClassFields,
@@ -13,31 +13,49 @@ import {
 export type { VehicleClass };
 
 /**
- * The classes of vehicle the site sells, with their rates and rules. The
- * readers serve the website and the Vehicle classes screen; the writers are
- * the screen's, each taking the actor and logging inside its transaction.
- * Classes are never deleted, only turned off; a booking keeps its snapshot.
- * See docs/260930-ops-screens.md.
+ * The catalogue: the classes of vehicle the site sells, what each is, its
+ * seats, its luggage and its picture. The rates and the rules are each
+ * location's, on its offerings (./offerings). The reader serves the
+ * Vehicle classes screen; the writers are the screen's, each taking the
+ * actor and logging inside its transaction. Classes are never deleted,
+ * only turned off; a booking keeps its snapshot. See
+ * docs/260930-ops-screens.md and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 
 const NOT_FOUND: Change = { ok: false, error: "Vehicle class not found." };
 
-export function listActiveVehicleClasses(
-  category: TripCategory,
-): Promise<VehicleClass[]> {
-  return db.vehicleClass.findMany({
-    where: { category, isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
-}
+const withOfferings = {
+  include: {
+    offerings: {
+      select: {
+        id: true,
+        isActive: true,
+        baseFareSen: true,
+        perKmSen: true,
+        hourlyRateSen: true,
+        location: {
+          select: { id: true, name: true, slug: true, state: true },
+        },
+      },
+      orderBy: { location: { name: "asc" } },
+    },
+  },
+} satisfies Prisma.VehicleClassDefaultArgs;
+
+/** A class with the locations that sell it, on sale or off, by name, and its metered rates at each. */
+export type CatalogueClass = Prisma.VehicleClassGetPayload<
+  typeof withOfferings
+>;
 
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
 
-/** Every class, active or not: car with driver first, then by sort order and name. */
-export async function listVehicleClasses(): Promise<VehicleClass[]> {
+/** Every class, active or not, with where it is sold: car with driver first, then by sort order and name. */
+export async function listVehicleClasses(): Promise<CatalogueClass[]> {
   const rows = await db.vehicleClass.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    ...withOfferings,
   });
   return rows.sort(
     (a, b) => categoryRank(a.category) - categoryRank(b.category),

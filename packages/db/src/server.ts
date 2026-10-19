@@ -34,7 +34,7 @@ export {
   createVehicleClass,
   updateVehicleClass,
 } from "./vehicle-classes";
-export type { VehicleClass } from "./vehicle-classes";
+export type { VehicleClass, CatalogueClass } from "./vehicle-classes";
 export {
   listOfferings,
   listActiveOfferings,

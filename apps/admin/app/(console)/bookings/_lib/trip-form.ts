@@ -34,6 +34,8 @@ export type ClassQuoteView = {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
+  /** Its picture; null for none. */
+  imageUrl: string | null;
   totalSen: number;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;

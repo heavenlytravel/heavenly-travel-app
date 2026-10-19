@@ -60,6 +60,7 @@ export async function quoteTripView(
       luggage: c.vehicleClass.luggage,
       minPassengers: c.vehicleClass.minPassengers,
       maxPassengers: c.vehicleClass.maxPassengers,
+      imageUrl: c.vehicleClass.imageUrl,
       totalSen: c.price.totalSen,
       unavailable: unavailableReason(c.availability),
     })),

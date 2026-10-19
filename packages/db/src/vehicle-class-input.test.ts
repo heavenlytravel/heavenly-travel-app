@@ -14,6 +14,7 @@ const FORM: Record<string, string> = {
   minPassengers: "1",
   maxPassengers: "3",
   luggage: "2 large bags",
+  imageUrl: "https://abc123.ufs.sh/f/key-1",
   isActive: "on",
 };
 
@@ -36,6 +37,7 @@ describe("parseVehicleClassFields", () => {
       minPassengers: 1,
       maxPassengers: 3,
       luggage: "2 large bags",
+      imageUrl: "https://abc123.ufs.sh/f/key-1",
       isActive: true,
     });
   });
@@ -62,6 +64,15 @@ describe("parseVehicleClassFields", () => {
       /at least/,
     );
     assert.equal(errorOf({ minPassengers: "3", maxPassengers: "3" }), null);
+  });
+
+  it("reads no picture as null and takes a picture on UploadThing only", () => {
+    const result = parseVehicleClassFields({ ...FORM, imageUrl: "" });
+    assert.equal(result.ok && result.value.imageUrl, null);
+    assert.match(
+      errorOf({ imageUrl: "https://example.com/sedan.jpg" }) ?? "",
+      /picture/,
+    );
   });
 });
 

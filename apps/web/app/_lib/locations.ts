@@ -64,6 +64,8 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
+  /** Its picture; null for none. */
+  imageUrl: string | null;
   /** The least it can cost there, in sen. */
   fromSen: number;
 };
@@ -86,6 +88,7 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
+          imageUrl: vehicleClass.imageUrl,
           fromSen: startingPriceSen(offering),
         }));
       },

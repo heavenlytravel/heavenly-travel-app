@@ -1,6 +1,7 @@
 import { isTripCategory, type TripCategory } from "./booking-status";
 import type { Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
+import { isUploadUrl } from "./images";
 
 /**
  * What the Vehicle classes screen edits of a catalogue class and the rules
@@ -20,6 +21,8 @@ export type VehicleClassFields = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
+  /** Its picture on UploadThing; null for none. */
+  imageUrl: string | null;
   isActive: boolean;
 };
 
@@ -34,6 +37,7 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
+  imageUrl: "Picture",
   isActive: "Active",
 };
 
@@ -86,10 +90,20 @@ export function checkVehicleClassFields(
   ) {
     return fail("Seats to is at least seats from.");
   }
+  if (
+    fields.imageUrl !== undefined &&
+    fields.imageUrl !== null &&
+    !isUploadUrl(fields.imageUrl)
+  ) {
+    return fail("Upload the picture again.");
+  }
   return { ok: true };
 }
 
-/** The class form's values, read and checked. `isActive` is a checkbox. */
+/**
+ * The class form's values, read and checked. `isActive` is a checkbox;
+ * `imageUrl` is the address the upload answered, empty for no picture.
+ */
 export function parseVehicleClassFields(
   values: Record<string, unknown>,
 ): Parsed<VehicleClassFields> {
@@ -106,6 +120,7 @@ export function parseVehicleClassFields(
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),
+    imageUrl: textOf(values.imageUrl) || null,
     isActive: flagOf(values.isActive),
   };
   const check = checkVehicleClassFields(fields);

@@ -81,6 +81,7 @@ export default async function TripOptionsPage({ params, searchParams }: Props) {
     luggage: c.vehicleClass.luggage,
     minPassengers: c.vehicleClass.minPassengers,
     maxPassengers: c.vehicleClass.maxPassengers,
+    imageUrl: c.vehicleClass.imageUrl,
     totalSen: c.price.totalSen,
     unavailable: unavailableReason(c.availability),
   }));

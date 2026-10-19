@@ -231,6 +231,10 @@ export function newLocationZoneHref(slug: string) {
 /** Where the page editor posts an image; answers the stored file. */
 export const LOCATION_IMAGE_UPLOAD_PATH = "/api/uploads/location-image";
 
+/** Where a vehicle class's form posts its picture; answers the stored file. */
+export const VEHICLE_CLASS_IMAGE_UPLOAD_PATH =
+  "/api/uploads/vehicle-class-image";
+
 /** The form that amends one item of a booking: its trip, vehicle and details. */
 export function amendItemHref(bookingId: string, itemId: string) {
   return `${bookingHref(bookingId)}/amend/${itemId}`;

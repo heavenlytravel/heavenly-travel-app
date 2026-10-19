@@ -15,6 +15,8 @@ import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
 import { Card } from "../../_components/Card";
+import { ImageUpload } from "../../_components/ImageUpload";
+import { VEHICLE_CLASS_IMAGE_UPLOAD_PATH } from "../../_lib/routes";
 
 /** The category a new class starts in. */
 export const DEFAULT_CATEGORY: TripCategory = "car-with-driver";
@@ -25,6 +27,8 @@ const TIPS: Partial<Record<VehicleClassField, string>> = {
   sortOrder: "The position within the category, lowest first.",
   minPassengers: 'Information only, shown as "from".',
   maxPassengers: "A larger group is refused this class.",
+  imageUrl:
+    "Shown on the options page and on each location's product page. The whole vehicle stays in view: a photo or a cut-out on a plain background.",
   isActive:
     "Off hides the class from every location's options page and search card.",
 };
@@ -61,10 +65,11 @@ function WholeNumberInput({
 }
 
 /**
- * The fields of a catalogue class, as two sections of a form: what it is,
- * and its seats and luggage. The rates and the rules are each location's,
- * on its offering. The Vehicle classes screen's form and a location's
- * "Add class" both post these under the same names.
+ * The fields of a catalogue class, as three sections of a form: what it
+ * is, its picture, its seats and luggage. The rates and the rules are each
+ * location's, on its offering. The Vehicle classes screen's form and a
+ * location's "Add class" both post these under the same names; the picture
+ * goes as the address the upload answered.
  */
 export function VehicleClassFieldset({
   vehicleClass,
@@ -83,6 +88,7 @@ export function VehicleClassFieldset({
       ? vehicleClass.category
       : DEFAULT_CATEGORY,
   );
+  const [imageUrl, setImageUrl] = useState(vehicleClass?.imageUrl ?? null);
 
   function chooseCategory(next: string) {
     if (!isTripCategory(next)) return;
@@ -151,6 +157,21 @@ export function VehicleClassFieldset({
             <ClassFieldLabel field="isActive" />
           </label>
         ) : null}
+      </Card>
+
+      <Card className="grid gap-4">
+        <h2 className="inline-flex items-center gap-1.5 text-xl font-semibold tracking-tight">
+          {VEHICLE_CLASS_FIELD_LABELS.imageUrl}
+          <InfoTip text={TIPS.imageUrl!} />
+        </h2>
+        <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
+        <ImageUpload
+          label={`Picture of ${vehicleClass?.name ?? "the class"}`}
+          uploadPath={VEHICLE_CLASS_IMAGE_UPLOAD_PATH}
+          src={imageUrl}
+          alt={vehicleClass?.name ?? ""}
+          onChange={(image) => setImageUrl(image?.url ?? null)}
+        />
       </Card>
 
       <Card className="grid gap-4">

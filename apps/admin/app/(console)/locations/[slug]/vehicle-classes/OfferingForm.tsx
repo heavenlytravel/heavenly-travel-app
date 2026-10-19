@@ -226,8 +226,8 @@ export function OfferingForm({
             {offering.vehicleClass.name}
           </h2>
           <p className="text-sm text-neutral-600">
-            {offering.vehicleClass.description} Its seats and luggage are the
-            catalogue&apos;s, the same at every location.
+            {offering.vehicleClass.description} Its seats, luggage and picture
+            are the catalogue&apos;s, the same at every location.
           </p>
         </Card>
       )}

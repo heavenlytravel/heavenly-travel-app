@@ -331,11 +331,11 @@ model LocationAddress {
 // const arrays in src/booking-status.ts.
 // ---------------------------------------------------------------------------
 
-/// The catalogue: a class of vehicle with driver, what it is, its seats
-/// and its luggage. A location sells it through a `LocationVehicleClass`,
-/// which carries the rates and the rules. Never deleted, only deactivated.
-/// A booking snapshots what it shows, so editing or retiring a class never
-/// changes one.
+/// The catalogue: a class of vehicle with driver, what it is, its seats,
+/// its luggage and its picture. A location sells it through a
+/// `LocationVehicleClass`, which carries the rates and the rules. Never
+/// deleted, only deactivated. A booking snapshots what it shows, so
+/// editing or retiring a class never changes one.
 model VehicleClass {
   id                      String   @id @default(cuid())
   slug                    String   @unique
@@ -349,6 +349,8 @@ model VehicleClass {
   minPassengers           Int
   maxPassengers           Int
   luggage                 String
+  /// Its picture, a file on UploadThing (src/images.ts); null for none.
+  imageUrl                String?
   /// No longer read: rates are on the location's offering since
   /// docs/261015-locations-as-operation-areas.md. Kept until the copy
   /// script has run on every database; dropped in a follow-up.

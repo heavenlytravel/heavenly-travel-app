@@ -23,6 +23,7 @@ import { Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { useFormErrors } from "@repo/ui/validation";
+import { ClassPicture } from "../../../../_components/ClassPicture";
 import {
   tripBookingHref,
   tripConfirmPath,
@@ -44,6 +45,8 @@ export type ClassOption = {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
+  /** Its picture; null for none. */
+  imageUrl: string | null;
   totalSen: number;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;
@@ -56,9 +59,9 @@ export type ClassOption = {
  * shareable and survives the sign-in redirect. The browser opens that URL
  * through the router, so the button can say so while the confirm page
  * prices the trip; the form's own action is the same URL, for a click
- * before the page has hydrated. Classes the passenger count does not fit,
- * or whose rules refuse the trip, are shown with the reason but cannot be
- * chosen. The passenger
+ * before the page has hydrated. Each class shows its picture when any of
+ * them has one. Classes the passenger count does not fit, or whose rules
+ * refuse the trip, are shown with the reason but cannot be chosen. The passenger
  * count lives here so the trip bar can carry it over a changed trip; the
  * page gives this form the trip as its key, so a changed trip clears the
  * chosen vehicle.
@@ -83,6 +86,7 @@ export function TripOptionsForm({
   );
   const passengers = Number(passengersText);
   const [chosen, setChosen] = useState<string | null>(null);
+  const pictured = classes.some((c) => c.imageUrl !== null);
   const choosable = (c: ClassOption) =>
     c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
@@ -143,6 +147,13 @@ export function TripOptionsForm({
                   onChange={() => setChosen(c.id)}
                   className="mt-1.5"
                 />
+                {pictured ? (
+                  <ClassPicture
+                    src={c.imageUrl}
+                    sizes="(min-width: 40rem) 144px, 96px"
+                    className="w-24 shrink-0 sm:w-36"
+                  />
+                ) : null}
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex flex-wrap items-baseline justify-between gap-x-4">
                     <span className="text-[1.1rem] font-bold text-[#082f2b]">

@@ -20,7 +20,7 @@ export type { LocationVehicleClass };
 /**
  * Offerings: the classes a location sells, each at the location's own
  * rates and under its own rules. The catalogue class (./vehicle-classes)
- * carries what the vehicle is, its seats and its luggage; the
+ * carries what the vehicle is, its seats, its luggage and its picture; the
  * offering carries the rates, the three rules and whether the class is on
  * sale there. The readers serve the location's Vehicle classes tab and the
  * customer site; the writers are the tab's, each taking the actor and

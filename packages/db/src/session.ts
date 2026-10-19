@@ -9,7 +9,7 @@ import { isWallActive } from "./settings";
 import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
 
 const withProfiles = {
-  include: { adminProfile: true, driverProfile: true, partnerProfile: true },
+  include: { adminProfile: true, driver: true, partnerProfile: true },
 } satisfies Prisma.UserDefaultArgs;
 
 export type SessionUser = Prisma.UserGetPayload<typeof withProfiles>;
@@ -52,7 +52,7 @@ export type Access =
  * to render each status themselves (redirect, "no access", pending screen).
  *
  *   user    -> any signed-in user
- *   driver  -> active driver profile, or any admin
+ *   driver  -> an active driver with this account, or any admin
  *   partner -> active partner profile, or any admin
  *   admin   -> admin profile
  */
@@ -67,7 +67,7 @@ export async function getAccess(area: Area): Promise<Access> {
     case "admin":
       return isAdmin ? { status: "ok", user } : { status: "forbidden", user };
     case "driver":
-      return gateProfile(user, isAdmin, user.driverProfile);
+      return gateProfile(user, isAdmin, user.driver);
     case "partner":
       return gateProfile(user, isAdmin, user.partnerProfile);
   }

@@ -8,7 +8,8 @@ import { vehicleModelHref } from "../../_lib/routes";
 
 /**
  * A class's models on its page, in order, a row each: the cover photo,
- * the name, how many photos it has, "Off" when customers do not see it. Each row opens the model's form.
+ * the name, how many photos and vehicles it has, "Off" when customers do
+ * not see it. Each row opens the model's form.
  */
 export function ModelList({
   classId,
@@ -52,7 +53,8 @@ export function ModelList({
                   {model.name}
                 </span>
                 <span className="block text-xs text-neutral-500">
-                  {plural(model.photos.length, "photo")}
+                  {plural(model.photos.length, "photo")} ·{" "}
+                  {plural(model._count.vehicles, "vehicle")}
                 </span>
               </span>
               {model.isActive ? null : <Badge>Off</Badge>}

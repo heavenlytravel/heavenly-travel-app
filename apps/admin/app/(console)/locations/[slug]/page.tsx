@@ -37,7 +37,9 @@ import {
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
   locationBookingsHref,
+  locationDriversHref,
   locationTabHref,
+  locationVehiclesHref,
   locationTabsFor,
   setupStepTab,
   type LocationTab,
@@ -67,7 +69,8 @@ const PAGE_DOTS: Record<PageStatus, string> = {
  * location opens on its setup checklist: the four steps, where each
  * stands, and what to do next. A live or paused one opens on its day, the
  * tab named Today: its queue in numbers, today's pick-ups and the bookings
- * awaiting confirmation, for the teams that work the queue. A team that
+ * awaiting confirmation, for the teams that work the queue, and for
+ * Operation the vehicles and drivers with a document due. A team that
  * does not, such as Marketing, sees the location's parts at a glance
  * instead, a line each and a way in, which the panel also lists. See
  * docs/261018-location-work-and-class-catalogue.md.
@@ -212,9 +215,15 @@ async function overview({ id, slug }: { id: string; slug: string }) {
       )
     : [];
 
+  const documentsDue =
+    !draft &&
+    may("fleet.manage") &&
+    numbers.vehiclesDue + numbers.driversDue > 0;
+
   return (
     <div className="grid gap-6">
       {top}
+      {documentsDue ? <DocumentsDueCard slug={slug} numbers={numbers} /> : null}
       {glances.length > 0 ? (
         <Card flush>
           <CardTitle
@@ -338,6 +347,50 @@ function Operation({
         </Card>
       ) : null}
     </>
+  );
+}
+
+/** Operation's reminder of the documents due here within 30 days or expired, each a link to the list of them. */
+function DocumentsDueCard({
+  slug,
+  numbers,
+}: {
+  slug: string;
+  numbers: LocationOverview;
+}) {
+  const lines = [
+    numbers.vehiclesDue > 0
+      ? {
+          text: `${plural(numbers.vehiclesDue, "vehicle has", "vehicles have")} a document due`,
+          href: locationVehiclesHref(slug, true),
+        }
+      : null,
+    numbers.driversDue > 0
+      ? {
+          text: `${plural(numbers.driversDue, "driver has", "drivers have")} a licence due`,
+          href: locationDriversHref(slug, true),
+        }
+      : null,
+  ].filter((line) => line !== null);
+  return (
+    <Card>
+      <CardTitle description="Within 30 days or already expired. Renew them before the vehicle or the driver is sent out.">
+        Documents due
+      </CardTitle>
+      <ul className="grid gap-2">
+        {lines.map((line) => (
+          <li key={line.href}>
+            <Link
+              href={line.href}
+              className="flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+            >
+              {line.text}
+              <ChevronRightIcon />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

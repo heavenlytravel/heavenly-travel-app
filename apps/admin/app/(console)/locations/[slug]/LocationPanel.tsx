@@ -37,13 +37,17 @@ import {
 import { LocationStateBadge } from "../../../_components/StatusBadges";
 import {
   locationBookingsHref,
+  locationDriversHref,
   locationOfferingHref,
   locationPageHref,
   locationRatesPartHref,
   locationTabHref,
   locationTabsFor,
+  locationVehiclesHref,
   locationZoneHref,
+  newLocationDriverHref,
   newLocationOfferingHref,
+  newLocationVehicleHref,
   newLocationZoneHref,
   setupStepTab,
   type LocationTab,
@@ -72,16 +76,23 @@ const PAGE_DOTS: Record<PageStatus, PanelItem["dot"]> = {
   changed: "amber",
 };
 
+/** "3 vehicles in service, 1 with a document due": a vehicles or drivers tab's line. */
+function fleetLine(count: string, state: string, due: number) {
+  const line = `${count} ${state}`;
+  return due === 0 ? line : `${line}, ${due} with a document due`;
+}
+
 /**
  * The panel beside a location's page, after shadcn's sidebar-15 right
  * sidebar: the location's name and state on top, then its sections in two
  * groups, each section with one line on where it stands and, where it has
  * something to list, a submenu of it: the classes, the zones, the three
- * parts of the rates, the pages, the bookings by status. A draft is set up
+ * parts of the rates, the pages, the bookings by status, the vehicles and
+ * drivers with a document due. A draft is set up
  * before anything else: its overview stands alone on top, then the Setup
  * group with how far it has come and what to do next, its steps numbered.
- * Once live or paused the day comes first: Work holds Today, the bookings
- * and the pages; the setup, done once and rarely touched, folds away under
+ * Once live or paused the day comes first: Work holds Today, the bookings,
+ * the vehicles, the drivers and the pages; the setup, done once and rarely touched, folds away under
  * it. At the foot, the history and the public page. Every admin sees the
  * panel; each group shows only what the admin may open. On screens too
  * narrow for the column it opens as a sheet from the console header's
@@ -128,6 +139,20 @@ export function LocationPanel({
       return overview.routesPriced === 0
         ? "No routes priced; trips are metered"
         : `${plural(overview.routesPriced, "route")} priced`;
+    }
+    if (tab === "vehicles") {
+      return fleetLine(
+        plural(overview.vehicles, "vehicle"),
+        "in service",
+        overview.vehiclesDue,
+      );
+    }
+    if (tab === "drivers") {
+      return fleetLine(
+        plural(overview.drivers, "driver"),
+        "active",
+        overview.driversDue,
+      );
     }
     if (tab === "history") {
       return overview.changedAt
@@ -215,6 +240,38 @@ export function LocationPanel({
           dot: PAGE_DOTS[page.status],
           note: PAGE_STATUS_LABELS[page.status],
         }));
+      case "vehicles":
+        return [
+          {
+            key: "due",
+            label: "Documents due",
+            href: locationVehiclesHref(slug, true),
+            note:
+              overview.vehiclesDue > 0
+                ? String(overview.vehiclesDue)
+                : undefined,
+          },
+          {
+            key: "new",
+            label: "Add vehicle",
+            href: newLocationVehicleHref(slug),
+          },
+        ];
+      case "drivers":
+        return [
+          {
+            key: "due",
+            label: "Licences due",
+            href: locationDriversHref(slug, true),
+            note:
+              overview.driversDue > 0 ? String(overview.driversDue) : undefined,
+          },
+          {
+            key: "new",
+            label: "Add driver",
+            href: newLocationDriverHref(slug),
+          },
+        ];
       case "bookings":
         return BOOKING_STATUSES.map((status) => ({
           key: status,

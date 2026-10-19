@@ -20,7 +20,7 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, state or district code, class, admin user, setting or location the action touched. */
+  /** The booking, state or district code, class, admin user, setting, location, vehicle or driver the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
@@ -74,7 +74,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall"; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
@@ -101,38 +101,83 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   const userIds = new Set<string>(idsOf(rows, "admin"));
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
 
-  const [users, bookings, states, districts, vehicleClasses, locations] =
-    await Promise.all([
-      db.user.findMany({
-        where: { id: { in: [...userIds] } },
-        select: { id: true, email: true, firstName: true, lastName: true },
-      }),
-      db.booking.findMany({
-        where: { id: { in: idsOf(rows, "booking") } },
-        select: { id: true, reference: true },
-      }),
-      db.state.findMany({
-        where: { code: { in: idsOf(rows, "state") } },
-        select: { code: true, name: true },
-      }),
-      db.district.findMany({
-        where: { code: { in: idsOf(rows, "district") } },
-        select: { code: true, name: true },
-      }),
-      db.vehicleClass.findMany({
-        where: { id: { in: idsOf(rows, "vehicle-class") } },
-        select: { id: true, name: true },
-      }),
-      db.location.findMany({
-        where: { id: { in: idsOf(rows, "location") } },
-        select: { id: true, name: true },
-      }),
-    ]);
+  const [
+    users,
+    bookings,
+    states,
+    districts,
+    vehicleClasses,
+    locations,
+    vehicles,
+    drivers,
+  ] = await Promise.all([
+    db.user.findMany({
+      where: { id: { in: [...userIds] } },
+      select: { id: true, email: true, firstName: true, lastName: true },
+    }),
+    db.booking.findMany({
+      where: { id: { in: idsOf(rows, "booking") } },
+      select: { id: true, reference: true },
+    }),
+    db.state.findMany({
+      where: { code: { in: idsOf(rows, "state") } },
+      select: { code: true, name: true },
+    }),
+    db.district.findMany({
+      where: { code: { in: idsOf(rows, "district") } },
+      select: { code: true, name: true },
+    }),
+    db.vehicleClass.findMany({
+      where: { id: { in: idsOf(rows, "vehicle-class") } },
+      select: { id: true, name: true },
+    }),
+    db.location.findMany({
+      where: { id: { in: idsOf(rows, "location") } },
+      select: { id: true, name: true },
+    }),
+    db.vehicle.findMany({
+      where: { id: { in: idsOf(rows, "vehicle") } },
+      select: { id: true, plate: true },
+    }),
+    db.driver.findMany({
+      where: { id: { in: idsOf(rows, "driver") } },
+      select: { id: true, name: true },
+    }),
+  ]);
   const userById = new Map(users.map((u) => [u.id, u]));
-  const deleted = await deletedLocationNames(
-    idsOf(rows, "location"),
-    new Set(locations.map((l) => l.id)),
-  );
+  const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
+    deletedNames(
+      "location.deleted",
+      "name",
+      idsOf(rows, "location"),
+      new Set(locations.map((l) => l.id)),
+    ),
+    deletedNames(
+      "vehicle.deleted",
+      "plate",
+      idsOf(rows, "vehicle"),
+      new Set(vehicles.map((v) => v.id)),
+    ),
+    deletedNames(
+      "driver.deleted",
+      "name",
+      idsOf(rows, "driver"),
+      new Set(drivers.map((d) => d.id)),
+    ),
+  ]);
+  const withDeleted = (
+    live: readonly (readonly [string, string])[],
+    gone: Map<string, string>,
+  ) =>
+    new Map([
+      ...live,
+      ...[...gone].map(([id, name]) => [id, `${name} (deleted)`] as const),
+    ]);
+  const gone: Partial<Record<ActivityEntityType, Map<string, string>>> = {
+    location: deleted,
+    vehicle: deletedVehicles,
+    driver: deletedDrivers,
+  };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, b.reference])),
     state: new Map(states.map((s) => [s.code, s.name])),
@@ -140,10 +185,18 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
-    location: new Map([
-      ...locations.map((l) => [l.id, l.name] as const),
-      ...[...deleted].map(([id, name]) => [id, `${name} (deleted)`] as const),
-    ]),
+    location: withDeleted(
+      locations.map((l) => [l.id, l.name] as const),
+      deleted,
+    ),
+    vehicle: withDeleted(
+      vehicles.map((v) => [v.id, v.plate] as const),
+      deletedVehicles,
+    ),
+    driver: withDeleted(
+      drivers.map((d) => [d.id, d.name] as const),
+      deletedDrivers,
+    ),
   };
 
   return rows.map((row) => {
@@ -154,31 +207,32 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       ...row,
       actorName,
       entityLabel: entityLabelOf(row, labels),
-      isDeleted: row.entityType === "location" && deleted.has(row.entityId),
+      isDeleted:
+        gone[row.entityType as ActivityEntityType]?.has(row.entityId) ?? false,
     };
   });
 }
 
 /**
- * The names of the locations among the ids that no longer exist, from the
- * entry their deletion logged. Asked only when one is missing.
+ * The names of the records among the ids that no longer exist, from the
+ * `key` of the entry their deletion logged: a location's name, a
+ * vehicle's plate. Asked only when one is missing.
  */
-async function deletedLocationNames(
+async function deletedNames(
+  action: ActivityAction,
+  key: string,
   ids: readonly string[],
   existing: ReadonlySet<string>,
 ): Promise<Map<string, string>> {
   const missing = [...new Set(ids)].filter((id) => !existing.has(id));
   if (missing.length === 0) return new Map();
   const entries = await db.activityLog.findMany({
-    where: {
-      action: "location.deleted" satisfies ActivityAction,
-      entityId: { in: missing },
-    },
+    where: { action, entityId: { in: missing } },
     select: { entityId: true, before: true },
   });
   return new Map(
     entries.flatMap(({ entityId, before }) => {
-      const name = (before as { name?: unknown } | null)?.name;
+      const name = (before as Record<string, unknown> | null)?.[key];
       return typeof name === "string" ? [[entityId, name] as const] : [];
     }),
   );
@@ -199,6 +253,8 @@ function entityLabelOf(
     case "district":
     case "vehicle-class":
     case "location":
+    case "vehicle":
+    case "driver":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:
       return row.entityId;

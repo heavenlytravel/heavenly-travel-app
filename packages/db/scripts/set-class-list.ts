@@ -11,7 +11,8 @@
 //   lacks is created, on in the catalogue and sold nowhere yet.
 // - Each listed class gets the list's models it lacks, with no photos.
 // - Minibus and Midi coach are deleted with their offerings and zone rates.
-//   One that a booking still uses is switched off instead, and named.
+//   One that a booking or a vehicle still uses is switched off instead, and
+//   named.
 //
 // The class and model changes are logged as the system's. Running it again
 // changes nothing.
@@ -99,10 +100,17 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
 for (const slug of DROPPED) {
   const dropped = await db.vehicleClass.findUnique({
     where: { slug },
-    include: { _count: { select: { tripItems: true } } },
+    include: {
+      _count: { select: { tripItems: true } },
+      models: { select: { _count: { select: { vehicles: true } } } },
+    },
   });
   if (!dropped) continue;
-  if (dropped._count.tripItems > 0) {
+  const vehicles = dropped.models.reduce(
+    (sum, model) => sum + model._count.vehicles,
+    0,
+  );
+  if (dropped._count.tripItems > 0 || vehicles > 0) {
     if (dropped.isActive) {
       const off = await updateVehicleClass(SYSTEM_ACTOR, dropped.id, {
         isActive: false,
@@ -110,7 +118,7 @@ for (const slug of DROPPED) {
       must(slug, off);
     }
     console.log(
-      `${dropped.name}: ${dropped._count.tripItems} booking items use it, so it is switched off, not deleted.`,
+      `${dropped.name}: ${dropped._count.tripItems} booking items and ${vehicles} vehicles use it, so it is switched off, not deleted.`,
     );
     continue;
   }

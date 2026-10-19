@@ -38,11 +38,28 @@ export type { VehicleClass, CatalogueClass } from "./vehicle-classes";
 export {
   listModelsOfClass,
   getVehicleModel,
+  listModelChoices,
   createVehicleModel,
   updateVehicleModel,
   deleteVehicleModel,
 } from "./vehicle-models";
-export type { CatalogueModel, ShownModel } from "./vehicle-models";
+export type { CatalogueModel, ModelChoice, ShownModel } from "./vehicle-models";
+export {
+  listVehicles,
+  getVehicle,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+} from "./vehicles";
+export type { VehicleWithModel, FleetFilter } from "./vehicles";
+export {
+  listDrivers,
+  getDriver,
+  createDriver,
+  updateDriver,
+  deleteDriver,
+} from "./drivers";
+export type { DriverWithClasses } from "./drivers";
 export {
   listOfferings,
   listActiveOfferings,
@@ -173,6 +190,9 @@ export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
+export * from "./vehicle-input";
+export * from "./driver-input";
+export * from "./expiry";
 export * from "./location-input";
 export * from "./images";
 export * from "./location-page-input";

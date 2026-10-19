@@ -1,5 +1,6 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
+import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import type { Change, Created } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -13,10 +14,10 @@ import {
 /**
  * The models of each class, "Toyota Vellfire" and "Toyota Alphard" in MPV
  * VIP, with their photos: one catalogue for every location, kept on the
- * class's page. The customer site shows a class's active models. The
- * writers take the actor and log against the class inside their
- * transaction. A booking that preferred a model deleted since keeps its
- * name. See
+ * class's page. The customer site shows a class's active models; a vehicle
+ * is of one model. The writers take the actor and log against the class
+ * inside their transaction. A model is deleted only while no vehicle is of
+ * it; a booking that preferred it keeps the name. See
  * docs/261019-vehicles-and-drivers.md.
  */
 
@@ -48,10 +49,13 @@ export type ShownModel = Prisma.VehicleModelGetPayload<{
 }>;
 
 const withPhotos = {
-  include: { photos: photosInOrder },
+  include: {
+    photos: photosInOrder,
+    _count: { select: { vehicles: true } },
+  },
 } satisfies Prisma.VehicleModelDefaultArgs;
 
-/** A model with its photos, as the catalogue lists it. */
+/** A model with its photos and how many vehicles are of it, as the catalogue lists it. */
 export type CatalogueModel = Prisma.VehicleModelGetPayload<typeof withPhotos>;
 
 /** Every model of the class, active or not, in order. */
@@ -67,6 +71,51 @@ export function listModelsOfClass(
 
 export function getVehicleModel(id: string): Promise<CatalogueModel | null> {
   return db.vehicleModel.findUnique({ where: { id }, ...withPhotos });
+}
+
+/** A model a vehicle can be of, named with its class: "MPV VIP · Toyota Alphard". */
+export type ModelChoice = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  vehicleClass: { id: string; name: string; category: string };
+};
+
+const categoryRank = (category: string) =>
+  TRIP_CATEGORIES.indexOf(category as TripCategory);
+
+/** Every model with its class, car with driver first, then in the classes' and the models' order: the vehicle form's list. */
+export async function listModelChoices(): Promise<ModelChoice[]> {
+  const rows = await db.vehicleModel.findMany({
+    select: {
+      id: true,
+      name: true,
+      isActive: true,
+      sortOrder: true,
+      vehicleClass: {
+        select: { id: true, name: true, category: true, sortOrder: true },
+      },
+    },
+  });
+  rows.sort(
+    (a, b) =>
+      categoryRank(a.vehicleClass.category) -
+        categoryRank(b.vehicleClass.category) ||
+      a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||
+      a.vehicleClass.name.localeCompare(b.vehicleClass.name) ||
+      a.sortOrder - b.sortOrder ||
+      a.name.localeCompare(b.name),
+  );
+  return rows.map(({ id, name, isActive, vehicleClass }) => ({
+    id,
+    name,
+    isActive,
+    vehicleClass: {
+      id: vehicleClass.id,
+      name: vehicleClass.name,
+      category: vehicleClass.category,
+    },
+  }));
 }
 
 const TAKEN = (name: string) => ({
@@ -185,11 +234,20 @@ export async function updateVehicleModel(
   }
 }
 
-/** Deletes a model with its photos. A booking that preferred it keeps the name. */
+/** Deletes a model no vehicle is of, with its photos. A booking that preferred it keeps the name. */
 export function deleteVehicleModel(actor: Actor, id: string): Promise<Change> {
   return db.$transaction(async (tx) => {
-    const model = await tx.vehicleModel.findUnique({ where: { id } });
+    const model = await tx.vehicleModel.findUnique({
+      where: { id },
+      include: { _count: { select: { vehicles: true } } },
+    });
     if (!model) return NOT_FOUND;
+    if (model._count.vehicles > 0) {
+      return {
+        ok: false,
+        error: `${model._count.vehicles === 1 ? "A vehicle is" : `${model._count.vehicles} vehicles are`} of ${model.name}. Switch it off instead.`,
+      };
+    }
     await tx.vehicleModel.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "vehicle-class.model.deleted",

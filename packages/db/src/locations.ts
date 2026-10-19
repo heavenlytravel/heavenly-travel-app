@@ -58,6 +58,7 @@ import {
   type LocationView,
   type TopChoiceCard,
 } from "./location-view";
+import { andList, plural } from "./names";
 import { isPlace, type Place } from "./place";
 
 export type { Location, LocationAddress };
@@ -912,7 +913,8 @@ export type LocationDeleted = { ok: true; slug: string } | Refusal;
  * home page first, so the places after it close up. What the location was
  * is logged, and its earlier entries stay in the log under the name it had.
  * The images its pages uploaded stay in storage; its bookings keep their
- * receipts and lose the pointer.
+ * receipts and lose the pointer. One with vehicles or drivers based at it
+ * is refused until they move.
  */
 export async function deleteLocation(
   actor: Actor,
@@ -922,11 +924,30 @@ export async function deleteLocation(
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
       where: { id },
-      include: { states: { select: { code: true } } },
+      include: {
+        states: { select: { code: true } },
+        _count: { select: { vehicles: true, drivers: true } },
+      },
     });
     if (!location) return NOT_FOUND;
     const check = checkLocationDelete(location, typedSlug);
     if (!check.ok) return check;
+    // Our vehicles and drivers are not the location's to take with it.
+    const based = [
+      location._count.vehicles > 0
+        ? plural(location._count.vehicles, "vehicle")
+        : null,
+      location._count.drivers > 0
+        ? plural(location._count.drivers, "driver")
+        : null,
+    ].filter((part) => part !== null);
+    if (based.length > 0) {
+      const one = location._count.vehicles + location._count.drivers === 1;
+      return {
+        ok: false,
+        error: `${andList(based)} ${one ? "is" : "are"} based here. Move ${one ? "it" : "them"} to another location first.`,
+      };
+    }
 
     const left = await changeTopChoiceIn(tx, actor, id, "remove");
     if (!left.ok) return left;

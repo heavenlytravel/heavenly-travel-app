@@ -23,10 +23,12 @@ model User {
   updatedAt DateTime @updatedAt
 
   adminProfile   AdminProfile?
-  driverProfile  DriverProfile?
+  driver         Driver?
   partnerProfile PartnerProfile?
   bookings       Booking[]
   bookingNotes   BookingNote[]
+  /// No longer read: see DriverProfile.
+  driverProfile  DriverProfile?
 }
 
 /// Staff access. `level` is one of the AdminLevel values and `teams` holds
@@ -66,7 +68,7 @@ model ActivityLog {
   /// "booking.item.confirmed", "wall.switched", ...
   action          String
   /// "booking" | "state" | "district" | "vehicle-class" | "admin" | "setting"
-  /// | "location"
+  /// | "location" | "vehicle" | "driver"
   entityType      String
   entityId        String
   before          Json?
@@ -80,7 +82,10 @@ model ActivityLog {
   @@index([createdAt])
 }
 
-/// Stub. Real driver fields (licence, vehicle links) arrive with that feature.
+/// No longer read: a driver is a `Driver` since
+/// docs/261019-vehicles-and-drivers.md, and nothing wrote to this. Kept so
+/// the schema push before the deploy leaves the running code, which reads
+/// it at sign-in, working; dropped in a follow-up.
 model DriverProfile {
   id        String    @id @default(cuid())
   userId    String    @unique
@@ -204,6 +209,8 @@ model Location {
   zones     Zone[]
   zoneRates ZoneRate[]
   items     BookingItem[]
+  vehicles  Vehicle[]
+  drivers   Driver[]
 
   @@index([state])
 }
@@ -372,6 +379,8 @@ model VehicleClass {
   offerings LocationVehicleClass[]
   zoneRates ZoneRate[]
   models    VehicleModel[]
+  /// The drivers who may drive it.
+  drivers   Driver[]
 
   @@index([category, isActive])
 }
@@ -391,6 +400,7 @@ model VehicleModel {
   updatedAt      DateTime     @updatedAt
 
   photos    VehicleModelPhoto[]
+  vehicles  Vehicle[]
   tripItems TripItemDetails[]
 
   @@unique([vehicleClassId, name])
@@ -408,6 +418,60 @@ model VehicleModelPhoto {
   sortOrder      Int
 
   @@index([vehicleModelId, sortOrder])
+}
+
+/// One of our vehicles, based at a location. The expiry dates of its documents
+/// are dates, null where one does not apply. Out of service, it keeps its
+/// history. See docs/261019-vehicles-and-drivers.md.
+model Vehicle {
+  id                  String       @id @default(cuid())
+  /// In capitals without spaces: "VLE1234".
+  plate               String       @unique
+  vehicleModelId      String
+  vehicleModel        VehicleModel @relation(fields: [vehicleModelId], references: [id])
+  locationId          String
+  location            Location     @relation(fields: [locationId], references: [id])
+  colour              String
+  /// The year it was made.
+  year                Int?
+  isActive            Boolean      @default(true)
+  roadTaxExpiresOn    DateTime?    @db.Date
+  insuranceExpiresOn  DateTime?    @db.Date
+  /// The PUSPAKOM inspection.
+  inspectionExpiresOn DateTime?    @db.Date
+  /// The operating permit: APAD's in Peninsular Malaysia.
+  permitExpiresOn     DateTime?    @db.Date
+  notes               String       @default("")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([locationId, isActive])
+}
+
+/// One of our drivers, based at a location. A driver exists before they
+/// have an account; the account is linked when the driver portal opens, and
+/// `getAccess("driver")` reads this row, active or pending. See
+/// docs/261019-vehicles-and-drivers.md.
+model Driver {
+  id               String         @id @default(cuid())
+  userId           String?        @unique
+  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  locationId       String
+  location         Location       @relation(fields: [locationId], references: [id])
+  name             String
+  /// Their WhatsApp, as src/phone.ts keeps it.
+  phone            String
+  /// The classes they may drive: a coach driver is not a sedan driver.
+  vehicleClasses   VehicleClass[]
+  licenceExpiresOn DateTime?      @db.Date
+  /// The PSV vocational licence, to drive paying passengers.
+  psvExpiresOn     DateTime?      @db.Date
+  isActive         Boolean        @default(true)
+  notes            String         @default("")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([locationId, isActive])
 }
 
 /// An order: one or more items, each one product on one day. `status` is

@@ -11,11 +11,13 @@ import {
   oddHoursLabel,
   type OddHours,
 } from "./rates-input";
+import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
   type VehicleClassField,
 } from "./vehicle-class-input";
+import { VEHICLE_FIELD_LABELS } from "./vehicle-input";
 
 /**
  * The activity log's vocabulary, browser-safe: who can act, what an entry
@@ -53,6 +55,8 @@ export const ACTIVITY_ENTITY_TYPES = [
   "admin",
   "setting",
   "location",
+  "vehicle",
+  "driver",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -105,6 +109,18 @@ const ACTIONS = {
     entityType: "vehicle-class",
     customerVisible: false,
   },
+  /** Its fields, with the model's and the location's names beside their ids. */
+  "vehicle.created": { entityType: "vehicle", customerVisible: false },
+  /** The changed fields; a new model or location with its name too. */
+  "vehicle.updated": { entityType: "vehicle", customerVisible: false },
+  /** The plate in `before`: the row is gone. */
+  "vehicle.deleted": { entityType: "vehicle", customerVisible: false },
+  /** Its fields, the classes by name in `classes`, the location's name. */
+  "driver.created": { entityType: "driver", customerVisible: false },
+  /** The changed fields; changed classes by name, a new location with its name. */
+  "driver.updated": { entityType: "driver", customerVisible: false },
+  /** The name in `before`: the row is gone. */
+  "driver.deleted": { entityType: "driver", customerVisible: false },
   "location.created": { entityType: "location", customerVisible: false },
   /**
    * The states are logged by their codes, a top choice by its place on
@@ -366,6 +382,45 @@ function modelChanges(before: unknown, after: unknown) {
   return sentence(phrases, `Changed ${name}`);
 }
 
+/**
+ * "Moved to Penang, changed the colour and the road tax": a vehicle's or a
+ * driver's changes. The switch, the location and the model or the classes
+ * read as their own phrases; the rest are named by their labels.
+ */
+function recordChanges(
+  after: unknown,
+  labels: Record<string, string>,
+  switched: [on: string, off: string],
+  fallback: string,
+) {
+  const phrases: string[] = [];
+  const isActive = field(after, "isActive");
+  if (typeof isActive === "boolean") {
+    phrases.push(isActive ? switched[0] : switched[1]);
+  }
+  const locationName = field(after, "locationName");
+  if (typeof locationName === "string") {
+    phrases.push(`Moved to ${locationName}`);
+  }
+  const model = field(after, "modelName");
+  if (typeof model === "string") phrases.push(`Changed the model to ${model}`);
+  const classes = field(after, "classes");
+  if (Array.isArray(classes)) {
+    phrases.push(
+      `Changed the classes they may drive to ${andList(classes.map(String))}`,
+    );
+  }
+  const others = keysOf(after)
+    .filter(
+      (key) =>
+        key in labels &&
+        !["isActive", "locationId", "vehicleModelId"].includes(key),
+    )
+    .map((key) => `the ${labels[key]!.toLowerCase()}`);
+  if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
+  return sentence(phrases, fallback);
+}
+
 /** "Executive sedan", or "the class" when the entry names none. */
 function className(json: unknown) {
   const name = field(json, "vehicleClassName");
@@ -595,6 +650,28 @@ export function describeActivity(entry: DescribableActivity): string {
       return modelChanges(entry.before, entry.after);
     case "vehicle-class.model.deleted":
       return `Removed the model ${modelName(entry.before)}`;
+    case "vehicle.created":
+      return "Added the vehicle";
+    case "vehicle.updated":
+      return recordChanges(
+        entry.after,
+        VEHICLE_FIELD_LABELS,
+        ["Put the vehicle in service", "Took the vehicle out of service"],
+        "Changed the vehicle",
+      );
+    case "vehicle.deleted":
+      return "Deleted the vehicle";
+    case "driver.created":
+      return "Added the driver";
+    case "driver.updated":
+      return recordChanges(
+        entry.after,
+        DRIVER_FIELD_LABELS,
+        ["Made the driver active", "Made the driver inactive"],
+        "Changed the driver",
+      );
+    case "driver.deleted":
+      return "Deleted the driver";
     case "location.created":
       return "Created the location";
     case "location.updated":

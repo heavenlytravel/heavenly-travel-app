@@ -88,6 +88,33 @@ export function newVehicleModelHref(classId: string) {
   return vehicleModelHref(classId, "new");
 }
 
+/** What a list of vehicles or drivers narrows to: one location, the ones with a document due, or both. */
+export type FleetListFilter = { location?: string; due?: boolean };
+
+/** The value of `due` in a list's address when it shows only the documents due. */
+export const DUE_PARAM = "1";
+
+/** A list of vehicles or drivers with its filter in the address. */
+function fleetListHref(path: string, filter: FleetListFilter) {
+  const params = new URLSearchParams();
+  if (filter.location) params.set("location", filter.location);
+  if (filter.due) params.set("due", DUE_PARAM);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/** Our vehicles across locations, narrowed by the filter. */
+export const VEHICLES_PATH = "/vehicles";
+export function vehiclesHref(filter: FleetListFilter = {}) {
+  return fleetListHref(VEHICLES_PATH, filter);
+}
+
+/** Our drivers across locations, narrowed by the filter. */
+export const DRIVERS_PATH = "/drivers";
+export function driversHref(filter: FleetListFilter = {}) {
+  return fleetListHref(DRIVERS_PATH, filter);
+}
+
 /** The console's home: every location with its numbers. */
 export const LOCATIONS_PATH = "/";
 
@@ -114,9 +141,15 @@ export function locationSlugOf(pathname: string): string | null {
   return slug === "" || slug === "new" ? null : decodeURIComponent(slug);
 }
 
-/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings or the history. */
+/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings, the vehicles, the drivers or the history. */
 export type LocationTab =
-  "overview" | SetupStepKey | "rates" | "bookings" | "history";
+  | "overview"
+  | SetupStepKey
+  | "rates"
+  | "bookings"
+  | "vehicles"
+  | "drivers"
+  | "history";
 
 export type LocationTabDef = {
   key: LocationTab;
@@ -138,7 +171,8 @@ const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
 /**
  * The tabs of a location's page, in order: the overview, then the four
  * setup steps in the order an admin walks them, with the rates right after
- * the coverage whose zones they price, then the bookings and the history. Each is its own
+ * the coverage whose zones they price, then the bookings, the vehicles and
+ * drivers based there, and the history. Each is its own
  * route behind its own permission, as every console page is; the panel
  * beside the location's page lists the tabs the admin may open. See
  * docs/261015-locations-as-operation-areas.md, "Who may do what".
@@ -175,6 +209,18 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     step: null,
   },
   {
+    key: "vehicles",
+    label: "Vehicles",
+    permission: "fleet.manage",
+    step: null,
+  },
+  {
+    key: "drivers",
+    label: "Drivers",
+    permission: "fleet.manage",
+    step: null,
+  },
+  {
     key: "history",
     label: "History",
     permission: "locations.view",
@@ -191,8 +237,14 @@ export type LocationTabGroup = "work" | "setup" | "foot";
 /** A tab as a location in one state shows it: in its group, under the name it has there. */
 export type PlacedTab = LocationTabDef & { group: LocationTabGroup };
 
-/** The day's work in its order: the day, the queue, the pages Marketing keeps. */
-const WORK_TABS: readonly LocationTab[] = ["overview", "bookings", "pages"];
+/** The day's work in its order: the day, the queue, the vehicles and drivers Operation sends, the pages Marketing keeps. */
+const WORK_TABS: readonly LocationTab[] = [
+  "overview",
+  "bookings",
+  "vehicles",
+  "drivers",
+  "pages",
+];
 
 /**
  * The group of a tab in a location in this state; null for a tab it does
@@ -200,7 +252,8 @@ const WORK_TABS: readonly LocationTab[] = ["overview", "bookings", "pages"];
  * steps and the rates, and it has no Bookings tab, since a draft takes no
  * bookings. Once live or paused, the day's work comes first and the setup
  * folds away under it; the pages, a setup step while a draft, are work
- * from then on. The history is at the foot either way.
+ * from then on, and so are the vehicles and drivers, entered while it is
+ * set up. The history is at the foot either way.
  */
 function groupOf(
   tab: LocationTab,
@@ -215,6 +268,8 @@ function groupOf(
     case "bookings":
       return draft ? null : "work";
     case "pages":
+    case "vehicles":
+    case "drivers":
       return draft ? "setup" : "work";
     default:
       return "setup";
@@ -315,6 +370,32 @@ export function locationOfferingHref(slug: string, offeringId: string) {
 }
 export function newLocationOfferingHref(slug: string) {
   return locationOfferingHref(slug, "new");
+}
+
+/** A location's vehicles, or only those with a document due. */
+export function locationVehiclesHref(slug: string, due?: boolean) {
+  return fleetListHref(locationTabHref(slug, "vehicles"), { due });
+}
+
+/** A location's drivers, or only those with a licence due. */
+export function locationDriversHref(slug: string, due?: boolean) {
+  return fleetListHref(locationTabHref(slug, "drivers"), { due });
+}
+
+/** One vehicle based at a location; "new" for the add page. */
+export function locationVehicleHref(slug: string, vehicleId: string) {
+  return `${locationTabHref(slug, "vehicles")}/${vehicleId}`;
+}
+export function newLocationVehicleHref(slug: string) {
+  return locationVehicleHref(slug, "new");
+}
+
+/** One driver based at a location; "new" for the add page. */
+export function locationDriverHref(slug: string, driverId: string) {
+  return `${locationTabHref(slug, "drivers")}/${driverId}`;
+}
+export function newLocationDriverHref(slug: string) {
+  return locationDriverHref(slug, "new");
 }
 
 /** The editor of one zone of a location; "new" for the add page. */

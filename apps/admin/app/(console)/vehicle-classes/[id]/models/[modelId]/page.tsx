@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { plural } from "@repo/db";
 import { getVehicleClass, getVehicleModel } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../../_components/Card";
@@ -20,8 +21,8 @@ import { ModelForm } from "../../../ModelForm";
 /**
  * Route: /vehicle-classes/[id]/models/[modelId], and
  * /vehicle-classes/[id]/models/new for a model the class does not have
- * yet. The model's form: its name, order, switch and photos, and its
- * delete; the class's page keeps the history.
+ * yet. The model's form: its name, order, switch and photos. A model no
+ * vehicle is of can be deleted; the class's page keeps the history.
  */
 export default async function VehicleModelPage({
   params,
@@ -53,6 +54,7 @@ async function modelScreen({ id, modelId }: { id: string; modelId: string }) {
   ]);
   if (!vehicleClass) notFound();
   if (modelId !== "new" && model?.vehicleClassId !== id) notFound();
+  const vehicles = model?._count.vehicles ?? 0;
 
   return (
     <>
@@ -79,17 +81,25 @@ async function modelScreen({ id, modelId }: { id: string; modelId: string }) {
         side={
           model ? (
             <Card>
-              <CardTitle description="A booking that preferred it keeps the name. To hide it from customers, switch it off instead.">
+              <CardTitle
+                description={
+                  vehicles > 0
+                    ? `${plural(vehicles, "vehicle is", "vehicles are")} of this model, so it stays. Switch it off to hide it from customers.`
+                    : "No vehicle is of it. A booking that preferred it keeps the name."
+                }
+              >
                 Delete
               </CardTitle>
-              <DeleteRecord
-                label="Delete model"
-                title={`Delete ${model.name}?`}
-                description="Its photos go with it. This cannot be undone."
-                action={deleteVehicleModelAction.bind(null, model.id)}
-                doneHref={vehicleClassHref(id)}
-                doneMessage={`Deleted ${model.name}.`}
-              />
+              {vehicles === 0 ? (
+                <DeleteRecord
+                  label="Delete model"
+                  title={`Delete ${model.name}?`}
+                  description="Its photos go with it. This cannot be undone."
+                  action={deleteVehicleModelAction.bind(null, model.id)}
+                  doneHref={vehicleClassHref(id)}
+                  doneMessage={`Deleted ${model.name}.`}
+                />
+              ) : null}
             </Card>
           ) : null
         }

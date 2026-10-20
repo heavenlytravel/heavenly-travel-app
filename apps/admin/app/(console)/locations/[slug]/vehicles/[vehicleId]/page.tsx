@@ -2,27 +2,22 @@ import Link from "next/link";
 import { modelName } from "@repo/db";
 import {
   getVehicle,
-  listActivityFor,
   listLocationNames,
   listModelSuggestions,
   listVehicleClasses,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { ActivityHistory } from "../../../../../_components/ActivityHistory";
-import { Card, CardTitle } from "../../../../../_components/Card";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
 import { DetailColumns } from "../../../../../_components/PageColumn";
+import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
-import {
-  CardSkeleton,
-  DetailSkeleton,
-  FormSkeleton,
-  Streamed,
-} from "../../../../../_components/Skeleton";
+import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { fleetClassOptions } from "../../../../../_lib/fleet-form";
 import {
   locationTabHref,
+  locationVehicleHref,
+  recordHistoryHref,
   VEHICLE_CLASS_PARAM,
 } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
@@ -32,9 +27,10 @@ import { VehicleForm } from "../VehicleForm";
 /**
  * Route: /locations/[slug]/vehicles/[vehicleId], and
  * /locations/[slug]/vehicles/new?class=… for a vehicle not entered yet,
- * starting in the class a class's page added it from. The
- * vehicle's form, and beside an existing one its history and the delete
- * for one entered by mistake. A vehicle based elsewhere is not found here.
+ * starting in the class a class's page added it from. The vehicle's form
+ * across the page, and level with an existing one's plate the way to its
+ * history and the delete for one entered by mistake. A vehicle based
+ * elsewhere is not found here.
  */
 export default async function LocationVehiclePage({
   params,
@@ -58,10 +54,7 @@ export default async function LocationVehiclePage({
       </p>
       <Streamed
         fallback={
-          <DetailSkeleton
-            main={<FormSkeleton sections={3} fields={4} />}
-            side={<CardSkeleton rows={4} />}
-          />
+          <DetailColumns main={<FormSkeleton sections={3} fields={4} />} />
         }
       >
         {() => vehicleScreen({ id, slug, vehicleId, startClassId })}
@@ -83,15 +76,12 @@ async function vehicleScreen({
   startClassId: string | undefined;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, classes, suggestions, locations, history] = await Promise.all(
-    [
-      isNew ? null : getVehicle(vehicleId),
-      listVehicleClasses(),
-      listModelSuggestions(),
-      listLocationNames(),
-      isNew ? [] : listActivityFor("vehicle", vehicleId),
-    ],
-  );
+  const [vehicle, classes, suggestions, locations] = await Promise.all([
+    isNew ? null : getVehicle(vehicleId),
+    listVehicleClasses(),
+    listModelSuggestions(),
+    listLocationNames(),
+  ]);
   if (!isNew && vehicle?.locationId !== id) notFound();
   const model = vehicle?.vehicleModel;
 
@@ -103,6 +93,23 @@ async function vehicleScreen({
           model
             ? `${modelName(model)}, ${model.vehicleClass.name}.`
             : "One of our vehicles, based here. Its class is what customers book, and its model what they may choose."
+        }
+        action={
+          vehicle ? (
+            <>
+              <HistoryLink
+                href={recordHistoryHref(locationVehicleHref(slug, vehicle.id))}
+              />
+              <DeleteRecord
+                label="Delete vehicle"
+                title={`Delete ${vehicle.plate}?`}
+                description="For a vehicle entered by mistake: one that has served is taken out of service instead. Its history stays in the log. This cannot be undone."
+                action={deleteVehicleAction.bind(null, vehicle.id)}
+                doneHref={locationTabHref(slug, "vehicles")}
+                doneMessage={`Deleted ${vehicle.plate}.`}
+              />
+            </>
+          ) : null
         }
       />
       <DetailColumns
@@ -121,32 +128,6 @@ async function vehicleScreen({
             locations={locations}
             backHref={locationTabHref(slug, "vehicles")}
           />
-        }
-        side={
-          vehicle ? (
-            <>
-              <Card>
-                <CardTitle>History</CardTitle>
-                <ActivityHistory
-                  entries={history}
-                  emptyMessage="No activity recorded."
-                />
-              </Card>
-              <Card>
-                <CardTitle description="For a vehicle entered by mistake. One that has served is taken out of service instead.">
-                  Delete
-                </CardTitle>
-                <DeleteRecord
-                  label="Delete vehicle"
-                  title={`Delete ${vehicle.plate}?`}
-                  description="Its history stays in the log. This cannot be undone."
-                  action={deleteVehicleAction.bind(null, vehicle.id)}
-                  doneHref={locationTabHref(slug, "vehicles")}
-                  doneMessage={`Deleted ${vehicle.plate}.`}
-                />
-              </Card>
-            </>
-          ) : null
         }
       />
     </>

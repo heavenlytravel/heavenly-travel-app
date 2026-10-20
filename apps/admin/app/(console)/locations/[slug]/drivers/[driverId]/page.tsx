@@ -1,25 +1,22 @@
 import Link from "next/link";
 import {
   getDriver,
-  listActivityFor,
   listLocationNames,
   listVehicleClasses,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { ActivityHistory } from "../../../../../_components/ActivityHistory";
-import { Card, CardTitle } from "../../../../../_components/Card";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
 import { DetailColumns } from "../../../../../_components/PageColumn";
+import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
-import {
-  CardSkeleton,
-  DetailSkeleton,
-  FormSkeleton,
-  Streamed,
-} from "../../../../../_components/Skeleton";
+import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { fleetClassOptions } from "../../../../../_lib/fleet-form";
-import { locationTabHref } from "../../../../../_lib/routes";
+import {
+  locationDriverHref,
+  locationTabHref,
+  recordHistoryHref,
+} from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteDriverAction } from "../actions";
 import { DriverForm } from "../DriverForm";
@@ -27,8 +24,9 @@ import { DriverForm } from "../DriverForm";
 /**
  * Route: /locations/[slug]/drivers/[driverId], and
  * /locations/[slug]/drivers/new for a driver not entered yet. The driver's
- * form, and beside an existing one their history and the delete for one
- * entered by mistake. A driver based elsewhere is not found here.
+ * form across the page, and level with an existing one's name the way to
+ * their history and the delete for one entered by mistake. A driver based
+ * elsewhere is not found here.
  */
 export default async function LocationDriverPage({
   params,
@@ -49,10 +47,7 @@ export default async function LocationDriverPage({
       </p>
       <Streamed
         fallback={
-          <DetailSkeleton
-            main={<FormSkeleton sections={3} fields={4} />}
-            side={<CardSkeleton rows={4} />}
-          />
+          <DetailColumns main={<FormSkeleton sections={3} fields={4} />} />
         }
       >
         {() => driverScreen({ id, slug, driverId })}
@@ -71,11 +66,10 @@ async function driverScreen({
   driverId: string;
 }) {
   const isNew = driverId === "new";
-  const [driver, classes, locations, history] = await Promise.all([
+  const [driver, classes, locations] = await Promise.all([
     isNew ? null : getDriver(driverId),
     listVehicleClasses(),
     listLocationNames(),
-    isNew ? [] : listActivityFor("driver", driverId),
   ]);
   if (!isNew && driver?.locationId !== id) notFound();
 
@@ -88,6 +82,23 @@ async function driverScreen({
             ? driver.vehicleClasses.map((c) => c.name).join(", ")
             : "One of our drivers, based here, with the classes they may drive."
         }
+        action={
+          driver ? (
+            <>
+              <HistoryLink
+                href={recordHistoryHref(locationDriverHref(slug, driver.id))}
+              />
+              <DeleteRecord
+                label="Delete driver"
+                title={`Delete ${driver.name}?`}
+                description="For a driver entered by mistake: one who has driven for us is made inactive instead. Their history stays in the log. This cannot be undone."
+                action={deleteDriverAction.bind(null, driver.id)}
+                doneHref={locationTabHref(slug, "drivers")}
+                doneMessage={`Deleted ${driver.name}.`}
+              />
+            </>
+          ) : null
+        }
       />
       <DetailColumns
         main={
@@ -99,32 +110,6 @@ async function driverScreen({
             locations={locations}
             backHref={locationTabHref(slug, "drivers")}
           />
-        }
-        side={
-          driver ? (
-            <>
-              <Card>
-                <CardTitle>History</CardTitle>
-                <ActivityHistory
-                  entries={history}
-                  emptyMessage="No activity recorded."
-                />
-              </Card>
-              <Card>
-                <CardTitle description="For a driver entered by mistake. One who has driven for us is made inactive instead.">
-                  Delete
-                </CardTitle>
-                <DeleteRecord
-                  label="Delete driver"
-                  title={`Delete ${driver.name}?`}
-                  description="Their history stays in the log. This cannot be undone."
-                  action={deleteDriverAction.bind(null, driver.id)}
-                  doneHref={locationTabHref(slug, "drivers")}
-                  doneMessage={`Deleted ${driver.name}.`}
-                />
-              </Card>
-            </>
-          ) : null
         }
       />
     </>

@@ -8,10 +8,11 @@ import { useState, useTransition } from "react";
 import type { ActionState } from "../_lib/action-state";
 
 /**
- * The delete button of a record entered by mistake: a model, a vehicle, a
- * driver. It asks first in an alert dialog, runs the action, a server
- * action bound to the record, and opens `doneHref` once the record is
- * gone; a refusal shows under the button.
+ * The delete button of a record entered by mistake, in the record's
+ * header: a vehicle, a driver. It asks first in an alert dialog, which
+ * says when to take the record out of use instead, runs the action, a
+ * server action bound to the record, and opens `doneHref` once the record
+ * is gone; a refusal shows beside the button, before it.
  */
 export function DeleteRecord({
   label,
@@ -35,7 +36,12 @@ export function DeleteRecord({
   const [dialog, confirm] = useConfirm();
 
   return (
-    <div className="grid justify-items-start gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+      {error ? (
+        <p aria-live="polite" className="text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
       <Button
         variant="secondary"
         disabled={pending}
@@ -62,11 +68,6 @@ export function DeleteRecord({
       >
         {pending ? "Deleting…" : label}
       </Button>
-      {error ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
       {dialog}
     </div>
   );

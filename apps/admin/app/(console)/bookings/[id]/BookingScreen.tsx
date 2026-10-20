@@ -17,16 +17,15 @@ import {
 } from "@repo/db";
 import {
   getBooking,
-  listActivityFor,
   listBookingNotes,
   type BookingItemWithDetails,
 } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { ActivityHistory } from "../../../_components/ActivityHistory";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { SectionHeader } from "../../../_components/SectionHeader";
+import { HistoryLink } from "../../../_components/RecordHistory";
 import { PlaceValue, Rows } from "../../../_components/Rows";
 import { Card, CardTitle } from "../../../_components/Card";
 import {
@@ -39,7 +38,11 @@ import {
   ItemStatusBadge,
 } from "../../../_components/StatusBadges";
 import { getPermissions } from "../../../_lib/access";
-import { amendItemHref, bookingHref } from "../../../_lib/routes";
+import {
+  amendItemHref,
+  bookingHref,
+  recordHistoryHref,
+} from "../../../_lib/routes";
 import { CancelBookingControl, ItemControls } from "./BookingControls";
 import { Notes } from "./Notes";
 import { PriceOverrideControl } from "./PriceOverride";
@@ -76,7 +79,8 @@ export function BookingSkeleton() {
 /**
  * One booking for ops, under its reference: each item with its trip,
  * price and controls on the left; the customer, the totals, the
- * booking-level cancel, the internal notes and the history on the right.
+ * booking-level cancel and the internal notes on the right; the way to its
+ * history in its header.
  * Every team opens it; the controls follow what the admin may do. From
  * the queue it is the page's own header; inside a location, under the
  * location's header, it is a section of that page, and its links stay in
@@ -90,10 +94,9 @@ export async function bookingScreen({
   id: string;
   place: BookingPlace;
 }) {
-  const [booking, permissions, history, notes] = await Promise.all([
+  const [booking, permissions, notes] = await Promise.all([
     getBooking(id),
     getPermissions(),
-    listActivityFor("booking", id),
     listBookingNotes(id),
   ]);
   if (!booking) notFound();
@@ -171,6 +174,11 @@ export async function bookingScreen({
       <Header
         title={booking.reference}
         description={`${statusLabel(booking.status)}. Pick-up ${formatLocalDateTime(booking.startsAt)}.`}
+        action={
+          <HistoryLink
+            href={recordHistoryHref(bookingHref(booking.id, place?.slug))}
+          />
+        }
       />
 
       <DetailColumns
@@ -208,13 +216,6 @@ export async function bookingScreen({
                 <Notes bookingId={booking.id} notes={notes} />
               </Card>
             ) : null}
-            <Card>
-              <CardTitle>History</CardTitle>
-              <ActivityHistory
-                entries={history}
-                emptyMessage="No activity recorded. This booking predates the log."
-              />
-            </Card>
           </>
         }
       />

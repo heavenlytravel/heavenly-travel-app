@@ -19,6 +19,11 @@ export const ACTIVITY_PATH = "/activity";
 export function activityHref(before?: string) {
   return before ? `${ACTIVITY_PATH}?before=${before}` : ACTIVITY_PATH;
 }
+/** A record's history page, under the record's own page: a vehicle's, a driver's, a class's, a booking's. */
+export function recordHistoryHref(recordHref: string) {
+  return `${recordHref}/history`;
+}
+
 /** Where an admin lands when a screen belongs to another team. */
 export const RESTRICTED_PATH = "/restricted";
 

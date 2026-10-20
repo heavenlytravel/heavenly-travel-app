@@ -6,7 +6,7 @@ import {
   pageTitleOf,
   type LocationPageKey,
 } from "@repo/db";
-import { getLocationPage, listActivityForMany } from "@repo/db/server";
+import { getLocationPage, listPagePublishes } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import {
   BackLinkSkeleton,
@@ -69,27 +69,20 @@ async function pageEditorDetails({
   id: string;
   page: LocationPageKey;
 }) {
-  const [details, history] = await Promise.all([
+  const [details, published] = await Promise.all([
     getLocationPage(id, page),
-    listActivityForMany([{ entityType: "location", entityId: id }]),
+    listPagePublishes(id, page),
   ]);
   if (!details) notFound();
   const { location } = details;
   const state = locationStateOf(location.state);
-  // This page's publishes, newest first, each with its before and after.
-  const publishes: PagePublishEntry[] = history
-    .filter(
-      (entry) =>
-        entry.action === "location.page.published" &&
-        (entry.after as { page?: unknown } | null)?.page === page,
-    )
-    .reverse()
-    .map((entry) => ({
-      id: entry.id,
-      at: entry.createdAt,
-      actorName: entry.actorName,
-      href: locationPublishHref(location.slug, entry.id),
-    }));
+  // This page's publishes, newest first, each opening its before and after.
+  const publishes: PagePublishEntry[] = published.map((entry) => ({
+    id: entry.id,
+    at: entry.createdAt,
+    actorName: entry.actorName,
+    href: locationPublishHref(location.slug, entry.id),
+  }));
 
   return (
     <>

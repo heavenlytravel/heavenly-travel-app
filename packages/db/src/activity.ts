@@ -2,9 +2,11 @@ import {
   activityActionMeta,
   ANONYMOUS_ACTOR_NAMES,
   isActorKind,
+  locationHistoryActions,
   type ActivityAction,
   type ActivityEntityType,
   type Actor,
+  type LocationHistoryKind,
 } from "./activity-actions";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
@@ -103,6 +105,18 @@ function idsOf(rows: ActivityLog[], entityType: ActivityEntityType) {
 async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   const userIds = new Set<string>(idsOf(rows, "admin"));
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
+  // A record type the rows do not name costs no query.
+  const read = <T>(ids: readonly string[], query: () => Promise<T[]>) =>
+    ids.length > 0 ? query() : Promise.resolve<T[]>([]);
+  const ids = {
+    booking: idsOf(rows, "booking"),
+    state: idsOf(rows, "state"),
+    district: idsOf(rows, "district"),
+    vehicleClass: idsOf(rows, "vehicle-class"),
+    location: idsOf(rows, "location"),
+    vehicle: idsOf(rows, "vehicle"),
+    driver: idsOf(rows, "driver"),
+  };
 
   const [
     users,
@@ -114,57 +128,73 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     vehicles,
     drivers,
   ] = await Promise.all([
-    db.user.findMany({
-      where: { id: { in: [...userIds] } },
-      select: { id: true, email: true, firstName: true, lastName: true },
-    }),
-    db.booking.findMany({
-      where: { id: { in: idsOf(rows, "booking") } },
-      select: { id: true, reference: true },
-    }),
-    db.state.findMany({
-      where: { code: { in: idsOf(rows, "state") } },
-      select: { code: true, name: true },
-    }),
-    db.district.findMany({
-      where: { code: { in: idsOf(rows, "district") } },
-      select: { code: true, name: true },
-    }),
-    db.vehicleClass.findMany({
-      where: { id: { in: idsOf(rows, "vehicle-class") } },
-      select: { id: true, name: true },
-    }),
-    db.location.findMany({
-      where: { id: { in: idsOf(rows, "location") } },
-      select: { id: true, name: true },
-    }),
-    db.vehicle.findMany({
-      where: { id: { in: idsOf(rows, "vehicle") } },
-      select: { id: true, plate: true },
-    }),
-    db.driver.findMany({
-      where: { id: { in: idsOf(rows, "driver") } },
-      select: { id: true, name: true },
-    }),
+    read([...userIds], () =>
+      db.user.findMany({
+        where: { id: { in: [...userIds] } },
+        select: { id: true, email: true, firstName: true, lastName: true },
+      }),
+    ),
+    read(ids.booking, () =>
+      db.booking.findMany({
+        where: { id: { in: ids.booking } },
+        select: { id: true, reference: true },
+      }),
+    ),
+    read(ids.state, () =>
+      db.state.findMany({
+        where: { code: { in: ids.state } },
+        select: { code: true, name: true },
+      }),
+    ),
+    read(ids.district, () =>
+      db.district.findMany({
+        where: { code: { in: ids.district } },
+        select: { code: true, name: true },
+      }),
+    ),
+    read(ids.vehicleClass, () =>
+      db.vehicleClass.findMany({
+        where: { id: { in: ids.vehicleClass } },
+        select: { id: true, name: true },
+      }),
+    ),
+    read(ids.location, () =>
+      db.location.findMany({
+        where: { id: { in: ids.location } },
+        select: { id: true, name: true },
+      }),
+    ),
+    read(ids.vehicle, () =>
+      db.vehicle.findMany({
+        where: { id: { in: ids.vehicle } },
+        select: { id: true, plate: true },
+      }),
+    ),
+    read(ids.driver, () =>
+      db.driver.findMany({
+        where: { id: { in: ids.driver } },
+        select: { id: true, name: true },
+      }),
+    ),
   ]);
   const userById = new Map(users.map((u) => [u.id, u]));
   const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
     deletedNames(
       "location.deleted",
       "name",
-      idsOf(rows, "location"),
+      ids.location,
       new Set(locations.map((l) => l.id)),
     ),
     deletedNames(
       "vehicle.deleted",
       "plate",
-      idsOf(rows, "vehicle"),
+      ids.vehicle,
       new Set(vehicles.map((v) => v.id)),
     ),
     deletedNames(
       "driver.deleted",
       "name",
-      idsOf(rows, "driver"),
+      ids.driver,
       new Set(drivers.map((d) => d.id)),
     ),
   ]);
@@ -230,7 +260,11 @@ async function deletedNames(
   const missing = [...new Set(ids)].filter((id) => !existing.has(id));
   if (missing.length === 0) return new Map();
   const entries = await db.activityLog.findMany({
-    where: { action, entityId: { in: missing } },
+    where: {
+      entityType: activityActionMeta(action).entityType,
+      entityId: { in: missing },
+      action,
+    },
     select: { entityId: true, before: true },
   });
   return new Map(
@@ -296,22 +330,69 @@ export async function listActivityForMany(
 }
 
 /**
- * A location's history, oldest first: the changes to the location itself,
- * and to the vehicles and drivers based there when each was made.
+ * A location's history, newest first, one page at a time: the changes to
+ * the location itself, and to the vehicles and drivers based there when
+ * each was made, or those of one part of it. `fleet` false leaves the
+ * vehicles' and drivers' out, for an admin who does not manage them.
+ * `before` is the id of the last entry of the previous page.
  */
-export async function listLocationHistory(
+export async function listLocationHistory({
+  locationId,
+  kind,
+  fleet,
+  before,
+  take,
+}: {
+  locationId: string;
+  kind?: LocationHistoryKind;
+  fleet: boolean;
+  before?: string;
+  take: number;
+}): Promise<ActivityPage> {
+  const rows = await db.activityLog.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { entityType: "location", entityId: locationId },
+            { locationIds: { has: locationId } },
+          ],
+        },
+        kind ? { action: { in: locationHistoryActions(kind) } } : {},
+        fleet ? {} : { entityType: { notIn: ["vehicle", "driver"] } },
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(before ? { cursor: { id: before }, skip: 1 } : {}),
+  });
+  const page = rows.slice(0, take);
+  return {
+    entries: await decorate(page),
+    nextCursor: rows.length > take ? (page.at(-1)?.id ?? null) : null,
+  };
+}
+
+/**
+ * The publishes of one page of a location, newest first: who published it
+ * and when. What each put on the page is read on its own page, so the
+ * snapshots are left unread here.
+ */
+export async function listPagePublishes(
   locationId: string,
+  page: string,
 ): Promise<ActivityEntry[]> {
   const rows = await db.activityLog.findMany({
     where: {
-      OR: [
-        { entityType: "location", entityId: locationId },
-        { locationIds: { has: locationId } },
-      ],
+      entityType: "location",
+      entityId: locationId,
+      action: "location.page.published",
+      after: { path: ["page"], equals: page },
     },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    omit: { before: true, after: true },
   });
-  return decorate(rows);
+  return decorate(rows.map((row) => ({ ...row, before: null, after: null })));
 }
 
 export type ActivityPage = {

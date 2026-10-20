@@ -392,9 +392,12 @@ export function locationPageHref(slug: string, page: LocationPageKey) {
 }
 
 /** A location's history, optionally narrowed to one part of it. */
-export function locationHistoryHref(slug: string, kind?: LocationHistoryKind) {
-  const base = locationTabHref(slug, "history");
-  return kind ? `${base}?kind=${kind}` : base;
+export function locationHistoryHref(
+  slug: string,
+  kind?: LocationHistoryKind,
+  before?: string,
+) {
+  return listHref(locationTabHref(slug, "history"), { kind, before });
 }
 
 /** What one publish in a location's history put on a page, by the log entry's id. */

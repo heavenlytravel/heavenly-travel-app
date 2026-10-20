@@ -6,7 +6,8 @@ import {
   type LocationHistoryKind,
   type Permission,
 } from "@repo/db";
-import { listLocationHistory, type ActivityEntry } from "@repo/db/server";
+import { listLocationHistory } from "@repo/db/server";
+import Link from "next/link";
 import { FilterLinks } from "../../../../_components/FilterLinks";
 import { HistoryTimeline } from "../../../../_components/HistoryTimeline";
 import { SectionHeader } from "../../../../_components/SectionHeader";
@@ -27,18 +28,17 @@ function kindOptions(fleet: boolean) {
   );
 }
 
-/** Whether an entry is about one of the location's vehicles or drivers. */
-const isFleet = (entry: ActivityEntry) =>
-  entry.entityType === "vehicle" || entry.entityType === "driver";
+/** How many changes a page of the history holds. */
+const PAGE_SIZE = 50;
 
 /**
- * Route: /locations/[slug]/history?kind=coverage. Every change to the
- * location, newest first, grouped by the day it was made, and narrowed to
- * one part of the location by the row of filters: its details, its
- * classes, its coverage and rates, its vehicles and drivers, its pages or
- * its status. A publish opens the page as it was before and after, for
- * Marketing; a vehicle's or a driver's change, which Operation alone
- * sees, opens the record while it exists.
+ * Route: /locations/[slug]/history?kind=coverage&before=…. Every change
+ * to the location, newest first, a page at a time, grouped by the day it
+ * was made, and narrowed to one part of the location by the row of
+ * filters: its details, its classes, its coverage and rates, its vehicles
+ * and drivers, its pages or its status. A publish opens the page as it
+ * was before and after, for Marketing; a vehicle's or a driver's change,
+ * which Operation alone sees, opens the record while it exists.
  */
 export default async function LocationHistoryPage({
   params,
@@ -47,7 +47,8 @@ export default async function LocationHistoryPage({
   await requireAdmin("locations.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
-  const { kind } = await searchParams;
+  const { kind, before: cursor } = await searchParams;
+  const before = typeof cursor === "string" && cursor ? cursor : undefined;
   const permissions = await getPermissions();
   const fleet = permissions.includes("fleet.manage");
   const filter =
@@ -70,61 +71,98 @@ export default async function LocationHistoryPage({
         />
       </div>
       <div className="mt-4">
-        <Streamed key={filter ?? "all"} fallback={<CardSkeleton rows={6} />}>
-          {() => history({ id, slug, filter, permissions })}
+        <Streamed
+          key={`${filter ?? "all"}:${before ?? "newest"}`}
+          fallback={<CardSkeleton rows={6} />}
+        >
+          {() => history({ id, slug, filter, fleet, before, permissions })}
         </Streamed>
       </div>
     </>
   );
 }
 
+/** One page of the history, and the links to the pages around it. */
 async function history({
   id,
   slug,
   filter,
+  fleet,
+  before,
   permissions,
 }: {
   id: string;
   slug: string;
   filter: LocationHistoryKind | undefined;
+  fleet: boolean;
+  before: string | undefined;
   permissions: readonly Permission[];
 }) {
-  const fleet = permissions.includes("fleet.manage");
-  const entries = (await listLocationHistory(id)).filter(
-    (entry) =>
-      (fleet || !isFleet(entry)) &&
-      (!filter || locationHistoryKindOf(entry.action) === filter),
-  );
+  const { entries, nextCursor } = await listLocationHistory({
+    locationId: id,
+    kind: filter,
+    fleet,
+    before,
+    take: PAGE_SIZE,
+  });
   const readsPublishes = permissions.includes("locations.manage");
+  const link =
+    "font-medium text-neutral-600 underline-offset-4 hover:underline";
 
   return (
-    <HistoryTimeline
-      entries={entries}
-      emptyMessage={
-        filter
-          ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
-          : "No changes recorded for this location."
-      }
-      hrefOf={(entry) => {
-        if (readsPublishes && entry.action === "location.page.published") {
-          return locationPublishHref(slug, entry.id);
+    <>
+      <HistoryTimeline
+        // The timeline reads entries oldest first.
+        entries={[...entries].reverse()}
+        emptyMessage={
+          filter
+            ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
+            : "No changes recorded for this location."
         }
-        if (entry.isDeleted) return null;
-        if (entry.entityType === "vehicle") {
-          return locationVehicleHref(slug, entry.entityId);
-        }
-        if (entry.entityType === "driver") {
-          return locationDriverHref(slug, entry.entityId);
-        }
-        return null;
-      }}
-      tagOf={(entry) => {
-        if (entry.entityType === "vehicle")
-          return `Vehicle ${entry.entityLabel}`;
-        if (entry.entityType === "driver") return `Driver ${entry.entityLabel}`;
-        const kind = locationHistoryKindOf(entry.action);
-        return kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
-      }}
-    />
+        hrefOf={(entry) => {
+          if (readsPublishes && entry.action === "location.page.published") {
+            return locationPublishHref(slug, entry.id);
+          }
+          if (entry.isDeleted) return null;
+          if (entry.entityType === "vehicle") {
+            return locationVehicleHref(slug, entry.entityId);
+          }
+          if (entry.entityType === "driver") {
+            return locationDriverHref(slug, entry.entityId);
+          }
+          return null;
+        }}
+        tagOf={(entry) => {
+          if (entry.entityType === "vehicle")
+            return `Vehicle ${entry.entityLabel}`;
+          if (entry.entityType === "driver")
+            return `Driver ${entry.entityLabel}`;
+          const kind = locationHistoryKindOf(entry.action);
+          return kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
+        }}
+      />
+      {before || nextCursor ? (
+        <nav
+          aria-label="Pages"
+          className="mt-4 flex items-center justify-between text-sm"
+        >
+          {before ? (
+            <Link href={locationHistoryHref(slug, filter)} className={link}>
+              Newest
+            </Link>
+          ) : (
+            <span />
+          )}
+          {nextCursor ? (
+            <Link
+              href={locationHistoryHref(slug, filter, nextCursor)}
+              className={link}
+            >
+              Older changes
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
+    </>
   );
 }

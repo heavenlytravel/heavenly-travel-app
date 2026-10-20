@@ -242,6 +242,15 @@ export function locationHistoryKindOf(
   }
 }
 
+/** The actions one part of a location's history holds. */
+export function locationHistoryActions(
+  kind: LocationHistoryKind,
+): ActivityAction[] {
+  return ACTIVITY_ACTIONS.filter(
+    (action) => locationHistoryKindOf(action) === kind,
+  );
+}
+
 /** The action that moves an item to each status, for `advanceItem`. */
 export const ITEM_ACTIONS = {
   confirmed: "booking.item.confirmed",

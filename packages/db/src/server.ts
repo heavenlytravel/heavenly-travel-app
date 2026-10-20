@@ -15,6 +15,7 @@ export {
   listActivityFor,
   listActivityForMany,
   listLocationHistory,
+  listPagePublishes,
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
@@ -83,6 +84,7 @@ export type {
 } from "./offerings";
 export {
   listZones,
+  listZoneNames,
   getZone,
   listZoneRates,
   listCoverage,

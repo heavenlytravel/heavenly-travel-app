@@ -2,6 +2,7 @@ import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { PHOTO_LIMITS } from "./photos-input";
 import { checkModelName, modelName, sameName } from "./vehicle-model-input";
 
 /**
@@ -20,9 +21,11 @@ const byName = [
   { name: "asc" },
 ] satisfies Prisma.VehicleModelOrderByWithRelationInput[];
 
+/** A vehicle's photos in order, no more than a model shows. */
 const photosInOrder = {
   orderBy: { sortOrder: "asc" },
   select: { url: true, caption: true },
+  take: PHOTO_LIMITS.photos,
 } satisfies Prisma.Vehicle$photosArgs;
 
 /**

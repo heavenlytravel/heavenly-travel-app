@@ -1,7 +1,12 @@
 import { db } from "./client";
 import { districtCodeAt } from "./district-index";
-import type { District, Prisma, State } from "./generated/prisma/client";
-import { isPublicState, locationStateOf } from "./location-input";
+import type {
+  District,
+  Prisma,
+  State,
+  ZoneRate,
+} from "./generated/prisma/client";
+import { isPublicState, LOCATION_STATES } from "./location-input";
 import { zoneAt, zoneShapeArea, type ZoneShape } from "./zone-match";
 
 export type { District, State };
@@ -49,15 +54,23 @@ export async function resolveDistrict(place: {
   return db.district.findUnique({ where: { code }, ...withState });
 }
 
-/** What pricing reads of a location: its zones, its grid and its rules. */
-export const forQuote = {
+const withZones = {
   include: {
     zones: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-    zoneRates: true,
   },
 } satisfies Prisma.LocationDefaultArgs;
 
-export type LocationForQuote = Prisma.LocationGetPayload<typeof forQuote>;
+/**
+ * What pricing reads of a location: its rules, its zones, and the cells of
+ * its grid on a route from the pickup's zone, the only ones a trip from it
+ * can be priced by.
+ */
+export type LocationForQuote = Prisma.LocationGetPayload<typeof withZones> & {
+  zoneRates: ZoneRate[];
+};
+
+/** The states a location serves pickups in. */
+const PUBLIC_STATES = LOCATION_STATES.filter(isPublicState);
 
 /** A served pickup: the zone it fell in and the location that zone is. */
 export type ServedAt = {
@@ -75,19 +88,29 @@ export async function locationAt(place: {
   lat: number;
   lng: number;
 }): Promise<ServedAt | null> {
-  const locations = await db.location.findMany(forQuote);
-  let served: ServedAt | null = null;
-  let servedArea = Infinity;
+  const locations = await db.location.findMany({
+    where: { state: { in: PUBLIC_STATES } },
+    ...withZones,
+  });
+  let best: {
+    location: (typeof locations)[number];
+    zone: ServedAt["zone"];
+    area: number;
+  } | null = null;
   for (const location of locations) {
-    if (!isPublicState(locationStateOf(location.state))) continue;
     const zone = zoneAt(location.zones, place);
     if (!zone) continue;
     // `zoneAt` answered the zone, so its shape is a shape.
     const area = zoneShapeArea(zone.shape as ZoneShape);
-    if (area < servedArea) {
-      served = { location, zone };
-      servedArea = area;
-    }
+    if (!best || area < best.area) best = { location, zone, area };
   }
-  return served;
+  if (!best) return null;
+  const { location, zone } = best;
+  const zoneRates = await db.zoneRate.findMany({
+    where: {
+      locationId: location.id,
+      OR: [{ fromZoneId: zone.id }, { toZoneId: zone.id }],
+    },
+  });
+  return { location: { ...location, zoneRates }, zone };
 }

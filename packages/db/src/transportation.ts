@@ -152,7 +152,11 @@ export async function quoteTrip(
   request: TripRequest,
   now: Date = new Date(),
 ): Promise<TripQuoteResult> {
-  const served = await locationAt(request.pickup);
+  // The district is the record's: read alongside the location.
+  const [served, district] = await Promise.all([
+    locationAt(request.pickup),
+    resolveDistrict(request.pickup),
+  ]);
   if (!served) {
     return fail("not-served", "We do not serve that pickup area yet.");
   }
@@ -185,10 +189,7 @@ export async function quoteTrip(
     basis = { mode: "hourly", hours };
   }
 
-  const [district, offerings] = await Promise.all([
-    resolveDistrict(request.pickup),
-    listActiveOfferings(location.id, category),
-  ]);
+  const offerings = await listActiveOfferings(location.id, category);
 
   // The drop-off rule: where a one-way trip may end. The pickup is in a
   // zone already, whatever the rule; hourly hire has no drop-off.

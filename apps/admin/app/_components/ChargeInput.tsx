@@ -3,6 +3,13 @@
 import type { SurchargeKind } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { Input } from "@repo/ui/field";
+import { radioKeys } from "../_lib/radio-keys";
+
+/** The two kinds of charge, as the switch beside the amount shows them. */
+const KINDS = [
+  ["percent", "%"],
+  ["flat", "RM"],
+] as const;
 
 /**
  * What a charge adds, typed in a sentence: the amount, with "%" or "RM"
@@ -29,6 +36,18 @@ export function ChargeInput({
   onKindChange: (kind: SurchargeKind) => void;
   onAmountChange: (amount: string) => void;
 }) {
+  /** Switches to the other kind, its amount emptied; the kind there is stays as it is. */
+  function choose(next: SurchargeKind) {
+    if (next === kind) return;
+    onKindChange(next);
+    onAmountChange("");
+  }
+  const keys = radioKeys({
+    count: KINDS.length,
+    chosen: KINDS.findIndex(([value]) => value === kind),
+    choose: (index) => choose(KINDS[index]![0]),
+  });
+
   return (
     <>
       <input type="hidden" name={kindName} value={kind} />
@@ -68,24 +87,18 @@ export function ChargeInput({
       <span
         role="radiogroup"
         aria-label={`The ${label.toLowerCase()} is`}
+        onKeyDown={keys.onKeyDown}
         className="inline-flex overflow-hidden rounded-md border border-neutral-300 bg-white"
       >
-        {(
-          [
-            ["percent", "%"],
-            ["flat", "RM"],
-          ] as const
-        ).map(([value, text]) => (
+        {KINDS.map(([value, text], index) => (
           <button
             key={value}
             type="button"
             role="radio"
             aria-checked={kind === value}
+            tabIndex={keys.tabIndexOf(index)}
             aria-label={value === "percent" ? "A percentage" : "A flat amount"}
-            onClick={() => {
-              onKindChange(value);
-              onAmountChange("");
-            }}
+            onClick={() => choose(value)}
             className={cx(
               "h-10 px-3 text-sm font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-neutral-900",
               value === "flat" && "border-l border-neutral-300",

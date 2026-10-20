@@ -1,6 +1,7 @@
 "use client";
 
 import { cx } from "@repo/ui/cx";
+import { radioKeys } from "../../../_lib/radio-keys";
 
 /**
  * A choice of two or three, as buttons side by side, one of them pressed:
@@ -22,31 +23,19 @@ export function Choices<T extends string>({
   onChange: (value: T) => void;
   size?: "sm" | "md";
 }) {
+  const keys = radioKeys({
+    count: options.length,
+    chosen: options.findIndex((option) => option.value === value),
+    choose: (index) => onChange(options[index]!.value),
+  });
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className="flex flex-wrap gap-2"
-      onKeyDown={(event) => {
-        const step =
-          event.key === "ArrowRight" || event.key === "ArrowDown"
-            ? 1
-            : event.key === "ArrowLeft" || event.key === "ArrowUp"
-              ? -1
-              : 0;
-        if (!step) return;
-        event.preventDefault();
-        const at = options.findIndex((option) => option.value === value);
-        const next =
-          options[(at + step + options.length) % options.length] ?? options[0];
-        if (!next) return;
-        onChange(next.value);
-        const buttons =
-          event.currentTarget.querySelectorAll<HTMLButtonElement>("button");
-        buttons[options.indexOf(next)]?.focus();
-      }}
+      onKeyDown={keys.onKeyDown}
     >
-      {options.map((option) => {
+      {options.map((option, index) => {
         const on = option.value === value;
         return (
           <button
@@ -54,7 +43,7 @@ export function Choices<T extends string>({
             type="button"
             role="radio"
             aria-checked={on}
-            tabIndex={on || (value === null && option === options[0]) ? 0 : -1}
+            tabIndex={keys.tabIndexOf(index)}
             onClick={() => onChange(option.value)}
             className={cx(
               "rounded-full border font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900",

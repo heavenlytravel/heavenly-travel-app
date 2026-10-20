@@ -39,6 +39,7 @@ import {
 import { Choices } from "./Choices";
 import { Step, StepFoot } from "./Step";
 import { useTripQuote } from "./use-trip-quote";
+import { radioKeys } from "../../../_lib/radio-keys";
 
 /** The steps of one item, in order. A new booking puts its customer before them. */
 export const ITEM_STEPS = ["trip", "vehicle", "details"] as const;
@@ -301,6 +302,20 @@ function VehicleFields({
   }
   const passengers = Number(draft.passengers);
   const maxPassengers = largestGroup(quote.classes);
+  const chooseClass = (id: string) =>
+    onChange(
+      id === draft.vehicleClassId
+        ? { vehicleClassId: id }
+        : { vehicleClassId: id, vehicleModelId: null },
+    );
+  const keys = radioKeys({
+    count: quote.classes.length,
+    chosen: quote.classes.findIndex(
+      (c) => c.id === draft.vehicleClassId && isChoosable(c, passengers),
+    ),
+    canTake: (index) => isChoosable(quote.classes[index]!, passengers),
+    choose: (index) => chooseClass(quote.classes[index]!.id),
+  });
 
   return (
     <div className="grid gap-5">
@@ -330,8 +345,13 @@ function VehicleFields({
           Vehicle classes tab first.
         </p>
       ) : (
-        <div role="radiogroup" aria-label="Vehicle" className="grid gap-2">
-          {quote.classes.map((c) => {
+        <div
+          role="radiogroup"
+          aria-label="Vehicle"
+          onKeyDown={keys.onKeyDown}
+          className="grid gap-2"
+        >
+          {quote.classes.map((c, index) => {
             const ok = isChoosable(c, passengers);
             const on = draft.vehicleClassId === c.id && ok;
             return (
@@ -340,14 +360,9 @@ function VehicleFields({
                 type="button"
                 role="radio"
                 aria-checked={on}
+                tabIndex={keys.tabIndexOf(index)}
                 disabled={!ok}
-                onClick={() =>
-                  onChange(
-                    c.id === draft.vehicleClassId
-                      ? { vehicleClassId: c.id }
-                      : { vehicleClassId: c.id, vehicleModelId: null },
-                  )
-                }
+                onClick={() => chooseClass(c.id)}
                 className={cx(
                   "grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 rounded-lg border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-50",
                   on

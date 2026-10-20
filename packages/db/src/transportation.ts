@@ -22,7 +22,6 @@ import { modelChoiceOf } from "./offering-input";
 import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
 import {
-  chargeAmountSen,
   priceTrip,
   withModelChoice,
   type PricingBasis,
@@ -38,6 +37,11 @@ import {
 } from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
 import { routeRateOf, zoneAt } from "./zone-match";
+import {
+  choosableModel,
+  modelChoiceQuote,
+  type ModelChoiceQuote,
+} from "./model-choice";
 
 /**
  * The transportation product, car with driver and coach charter alike: what
@@ -90,7 +94,6 @@ export type TripQuoteErrorCode =
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
 /** What choosing a model of a class adds to a trip: the location's charge, and its amount for the trip. */
-export type ModelChoiceQuote = { charge: SurchargeCharge; amountSen: number };
 
 export type ClassQuote = {
   /** The catalogue class: its name, seats, luggage, and the models of the location's vehicles in service. */
@@ -254,15 +257,15 @@ export async function quoteTrip(
             now,
           );
     const price = priceTrip({ trip: basis, rates: offering, route, surcharge });
-    const charge = modelChoiceOf(offering);
     return {
       vehicleClass,
       offering,
       price,
-      modelChoice:
-        charge && vehicleClass.models.length > 1
-          ? { charge, amountSen: chargeAmountSen(charge, price.subtotalSen) }
-          : null,
+      modelChoice: modelChoiceQuote(
+        modelChoiceOf(offering),
+        vehicleClass.models.length,
+        price.subtotalSen,
+      ),
       availability,
     };
   });
@@ -353,9 +356,11 @@ export async function prepareTripItem(
   let price = chosen.price;
   let model: { id: string; name: string } | null = null;
   if (request.vehicleModelId) {
-    const found = modelChoice
-      ? vehicleClass.models.find((m) => m.id === request.vehicleModelId)
-      : undefined;
+    const found = choosableModel(
+      vehicleClass.models,
+      modelChoice !== null,
+      request.vehicleModelId,
+    );
     if (!found || !modelChoice) {
       return fail(
         "model-unavailable",

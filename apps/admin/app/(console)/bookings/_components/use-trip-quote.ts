@@ -1,5 +1,7 @@
 "use client";
 
+import { choosableModel } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { useRef, useTransition } from "react";
 import { quoteTripAction } from "../_lib/quote-action";
 import {
@@ -8,7 +10,6 @@ import {
   type ItemDraft,
   type TripValues,
 } from "../_lib/trip-form";
-import { answerOf } from "@repo/ui/action-answer";
 
 /**
  * The prices of an item's trip, kept in step with the trip: every change
@@ -45,8 +46,12 @@ export function useTripQuote(
         (c) => c.id === keepClassId && c.unavailable === null,
       );
       const keptModel =
-        kept?.modelChoiceSen != null &&
-        kept.models.some((m) => m.id === keepModelId);
+        kept !== undefined &&
+        choosableModel(
+          kept.models,
+          kept.modelChoiceSen !== null,
+          keepModelId,
+        ) !== null;
       onChange({
         quote: result,
         quoteError: null,

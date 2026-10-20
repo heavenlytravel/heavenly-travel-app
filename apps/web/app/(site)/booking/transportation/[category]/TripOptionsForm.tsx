@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  choosableModel,
   CONTACT,
   fitsPassengers,
   formatMyr,
@@ -113,10 +114,9 @@ export function TripOptionsForm({
     c.unavailable === null && fitsPassengers(c, passengers);
   const selected = chosen && classes.find((c) => c.id === chosen);
   const canContinue = Boolean(selected && choosable(selected));
-  const model =
-    selected && selected.modelChoiceSen !== null
-      ? (selected.models.find((m) => m.id === modelId) ?? null)
-      : null;
+  const model = selected
+    ? choosableModel(selected.models, selected.modelChoiceSen !== null, modelId)
+    : null;
   const totalSen = selected
     ? selected.totalSen + (model ? (selected.modelChoiceSen ?? 0) : 0)
     : null;

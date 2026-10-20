@@ -9,13 +9,13 @@ import type {
   VehicleClass,
 } from "./generated/prisma/client";
 import { checkOfferingFields, type OfferingFields } from "./offering-input";
-import type { Photo } from "./photos-input";
 import { slugify } from "./slug";
 import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
-import { modelsShownAt, shownModel, type ShownModel } from "./vehicle-models";
+import { classCoverOf, shownModel, type ShownModel } from "./models-shown";
+import { modelsShownAt } from "./vehicle-models";
 
 export type { LocationVehicleClass };
 
@@ -47,23 +47,6 @@ const withModelsAt = (location: Prisma.LocationWhereInput) =>
 type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
   ReturnType<typeof withModelsAt>
 >;
-
-/**
- * A class's picture at a location: the first photo of the first vehicle
- * entered of those in service there with a photo, so a customer sees a
- * vehicle based where they book; the catalogue's neutral picture until one
- * has a photo; null for neither. `models` are as `modelsShownAt` reads them.
- */
-export function classCoverOf(
-  models: readonly { vehicles: { createdAt: Date; photos: Photo[] }[] }[],
-  catalogueUrl: string | null,
-): string | null {
-  const first = models
-    .flatMap((model) => model.vehicles)
-    .filter((vehicle) => vehicle.photos.length > 0)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
-  return first?.photos[0]?.url ?? catalogueUrl;
-}
 
 /** An offering with its class's picture at the location, as `classCoverOf` finds it. */
 export type PicturedOffering = Offering & { coverUrl: string | null };

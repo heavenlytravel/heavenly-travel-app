@@ -2,12 +2,7 @@ import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
-import { PHOTO_LIMITS, type Photo } from "./photos-input";
-import {
-  checkModelName,
-  modelName,
-  sameName,
-} from "./vehicle-model-input";
+import { checkModelName, modelName, sameName } from "./vehicle-model-input";
 
 /**
  * The models of each class, the Toyota Vellfire and the Toyota Alphard in
@@ -35,7 +30,7 @@ const photosInOrder = {
  * vehicle in service based there, by name, each with those vehicles, the
  * first entered first, with when each was entered and its photos. The
  * offerings read it, then `shownModel` names each and `classCoverOf`
- * finds the class's picture.
+ * finds the class's picture (./models-shown).
  */
 export function modelsShownAt(location: Prisma.LocationWhereInput) {
   const there = { isActive: true, location } satisfies Prisma.VehicleWhereInput;
@@ -53,29 +48,6 @@ export function modelsShownAt(location: Prisma.LocationWhereInput) {
       },
     },
   } satisfies Prisma.VehicleClass$modelsArgs;
-}
-
-/** A model as the customer sees it: "Toyota Alphard", and the photos of its vehicles there. */
-export type ShownModel = { id: string; name: string; photos: Photo[] };
-
-/**
- * A row `modelsShownAt` read, named as the customer sees it, with its
- * vehicles' photos one after another: each vehicle's in its order, the
- * first 12 of them.
- */
-export function shownModel(row: {
-  id: string;
-  brand: string;
-  name: string;
-  vehicles: { photos: Photo[] }[];
-}): ShownModel {
-  return {
-    id: row.id,
-    name: modelName(row),
-    photos: row.vehicles
-      .flatMap((vehicle) => vehicle.photos)
-      .slice(0, PHOTO_LIMITS.photos),
-  };
 }
 
 /** A model as the vehicle form suggests it: its class, its brand and its name. */

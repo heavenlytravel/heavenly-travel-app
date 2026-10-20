@@ -38,3 +38,4 @@ export * from "./booking-contact";
 export * from "./booking-limits";
 export * from "./site-paths";
 export * from "./search";
+export * from "./model-choice";

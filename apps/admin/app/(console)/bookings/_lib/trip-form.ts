@@ -1,4 +1,5 @@
 import {
+  choosableModel,
   fitsPassengers,
   formatMyr,
   HOURLY_OPTIONS,
@@ -148,10 +149,13 @@ export function itemDraftOf(
   const vehicleClass = priced?.classes.find(
     (c) => c.id === details.vehicleClassId,
   );
-  const model =
-    vehicleClass?.modelChoiceSen != null
-      ? vehicleClass.models.find((m) => m.id === details.vehicleModelId)
-      : undefined;
+  const model = vehicleClass
+    ? choosableModel(
+        vehicleClass.models,
+        vehicleClass.modelChoiceSen !== null,
+        details.vehicleModelId,
+      )
+    : null;
   return {
     trip: {
       category: details.vehicleClassCategory,
@@ -239,8 +243,13 @@ export function chosenClass(draft: ItemDraft): ClassQuoteView | null {
 /** The model chosen for an item, among those its class lets the customer choose; null for none. */
 export function chosenModel(draft: ItemDraft) {
   const chosen = chosenClass(draft);
-  if (chosen?.modelChoiceSen == null) return null;
-  return chosen.models.find((m) => m.id === draft.vehicleModelId) ?? null;
+  return chosen
+    ? choosableModel(
+        chosen.models,
+        chosen.modelChoiceSen !== null,
+        draft.vehicleModelId,
+      )
+    : null;
 }
 
 /** What the item costs at the quote: the class's price, and the charge for the model chosen; null before a vehicle is chosen. */

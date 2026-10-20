@@ -46,7 +46,8 @@ export type {
   ClassOption,
 } from "./vehicle-classes";
 export { listModelSuggestions } from "./vehicle-models";
-export type { ModelSuggestion, ShownModel } from "./vehicle-models";
+export type { ModelSuggestion } from "./vehicle-models";
+export type { ShownModel } from "./models-shown";
 export {
   listVehicles,
   getVehicle,

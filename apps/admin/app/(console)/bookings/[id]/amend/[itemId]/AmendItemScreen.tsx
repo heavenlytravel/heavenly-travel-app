@@ -1,9 +1,11 @@
 import Link from "next/link";
 import {
   describePriceOverride,
+  formatMyr,
   isTripCategory,
   ITEM_STATUS_LABELS,
   isItemStatus,
+  priceBreakdownOf,
   tripSearchOf,
   tripViewOfItem,
 } from "@repo/db";
@@ -40,7 +42,8 @@ export function AmendItemSkeleton() {
 /**
  * One item of a booking in the manual booking's editor, filled in and
  * priced again, while it is received or confirmed; or why it cannot be
- * amended. Inside a location, a section under the location's header whose
+ * amended. A model chosen at booking that can no longer be chosen is
+ * named above the form, since saving drops it and its charge. Inside a location, a section under the location's header whose
  * links stay in the location; a booking with no item picking up there
  * opens from the queue instead.
  */
@@ -104,6 +107,16 @@ export async function amendItemScreen({
     item.priceOverrideSen !== null && item.priceOverrideReason !== null
       ? { totalSen: item.priceOverrideSen, reason: item.priceOverrideReason }
       : null;
+  // The model chosen at booking, when the trip priced again no longer lets
+  // it be chosen: the amend drops it, so the admin is told before saving.
+  const bookedModel = item.tripDetails?.vehicleModelName ?? null;
+  const modelCharge = priceBreakdownOf(item.priceBreakdown)?.model?.amountSen;
+  const droppedModel =
+    bookedModel && draft.vehicleModelId === null
+      ? `The ${bookedModel} chosen at booking can no longer be chosen here. Saving removes it${
+          modelCharge ? ` and its ${formatMyr(modelCharge)} charge` : ""
+        } from the booking.`
+      : null;
 
   return (
     <>
@@ -112,6 +125,14 @@ export async function amendItemScreen({
         title={title}
         description="Open the step to change: the trip, the vehicle or the details. The trip is priced again with today's rates, and the customer gets a “Booking updated” email."
       />
+      {droppedModel ? (
+        <p
+          role="note"
+          className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {droppedModel}
+        </p>
+      ) : null}
       <div className="mt-6">
         <AmendItemForm
           bookingId={booking.id}

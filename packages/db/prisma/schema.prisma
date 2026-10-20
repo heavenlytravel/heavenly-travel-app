@@ -254,6 +254,7 @@ model LocationVehicleClass {
   updatedAt               DateTime     @updatedAt
 
   @@unique([locationId, vehicleClassId])
+  @@index([vehicleClassId])
 }
 
 /// A line on a location's price list: an area the admin drew on a map, or a
@@ -296,6 +297,8 @@ model ZoneRate {
 
   @@unique([fromZoneId, toZoneId, vehicleClassId])
   @@index([locationId])
+  @@index([vehicleClassId])
+  @@index([toZoneId])
 }
 
 /// One page of a location in one locale: the landing page or a product's.
@@ -537,6 +540,7 @@ model Booking {
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])
   @@index([createdIp, createdAt])
+  @@index([createdAt])
 }
 
 /// A note staff keep on a booking. Never shown to the customer, never

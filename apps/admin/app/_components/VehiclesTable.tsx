@@ -7,26 +7,31 @@ import { DocumentsDue } from "./DocumentsDue";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
 
 /**
- * Our vehicles as a table, for a location's Vehicles tab and the list
- * across locations: the plate and model, the class, the location where
- * the list spans several, the colour and year, the documents due, and
- * whether it is in service. Each opens inside its location.
+ * Our vehicles as a table, for a location's Vehicles tab, the list across
+ * locations and a class's page at a location: the plate and model, the
+ * class where the list holds several, the location where it spans
+ * several, the colour and year, the documents due, and whether it is in
+ * service. Each opens inside its location. `bare` is for a `flush` card.
  */
 export function VehiclesTable({
   vehicles,
+  showClass = true,
   showLocation = false,
+  bare = false,
   emptyMessage,
 }: {
   vehicles: VehicleWithModel[];
+  showClass?: boolean;
   showLocation?: boolean;
+  bare?: boolean;
   emptyMessage: string;
 }) {
-  const columns = showLocation ? 6 : 5;
+  const columns = 4 + Number(showClass) + Number(showLocation);
   return (
-    <Table>
+    <Table bare={bare}>
       <THead>
         <Th>Vehicle</Th>
-        <Th>Class</Th>
+        {showClass ? <Th>Class</Th> : null}
         {showLocation ? <Th>Based at</Th> : null}
         <Th>Colour</Th>
         <Th>Documents</Th>
@@ -52,9 +57,11 @@ export function VehiclesTable({
                   {modelName(vehicle.vehicleModel)}
                 </span>
               </Td>
-              <Td className="whitespace-nowrap text-neutral-600">
-                {vehicle.vehicleModel.vehicleClass.name}
-              </Td>
+              {showClass ? (
+                <Td className="whitespace-nowrap text-neutral-600">
+                  {vehicle.vehicleModel.vehicleClass.name}
+                </Td>
+              ) : null}
               {showLocation ? (
                 <Td className="whitespace-nowrap text-neutral-600">
                   {vehicle.location.name}

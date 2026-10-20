@@ -107,6 +107,7 @@ function ModelNote({
 export function VehicleForm({
   vehicle,
   locationId,
+  vehicleClassId,
   classes,
   suggestions,
   locations,
@@ -117,6 +118,8 @@ export function VehicleForm({
   vehicle?: VehicleWithModel;
   /** Where a new vehicle is based to start with; absent on the list across locations. */
   locationId?: string;
+  /** The class a new vehicle starts in, when it is added from the class's page. */
+  vehicleClassId?: string;
   /** Every class in the catalogue, in its order. */
   classes: FleetClassOption[];
   /** Every model in the catalogue, for the brand and model fields. */
@@ -133,7 +136,9 @@ export function VehicleForm({
     null,
   );
   const fields = vehicle ? vehicleFieldsOf(vehicle) : null;
-  const [classId, setClassId] = useState(fields?.vehicleClassId ?? "");
+  const [classId, setClassId] = useState(
+    fields?.vehicleClassId ?? vehicleClassId ?? "",
+  );
   const [brand, setBrand] = useState(fields?.brand ?? "");
   const [model, setModel] = useState(fields?.model ?? "");
   const [photos, setPhotos] = useState<Photo[]>(

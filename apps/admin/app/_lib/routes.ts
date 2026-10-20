@@ -394,8 +394,16 @@ export function locationDriversHref(slug: string, due?: boolean) {
 export function locationVehicleHref(slug: string, vehicleId: string) {
   return `${locationTabHref(slug, "vehicles")}/${vehicleId}`;
 }
-export function newLocationVehicleHref(slug: string) {
-  return locationVehicleHref(slug, "new");
+
+/** The parameter of the add page that names the class a new vehicle starts in. */
+export const VEHICLE_CLASS_PARAM = "class";
+
+/** The add page of a vehicle based at a location, starting in a class when given. */
+export function newLocationVehicleHref(slug: string, vehicleClassId?: string) {
+  const base = locationVehicleHref(slug, "new");
+  return vehicleClassId
+    ? `${base}?${new URLSearchParams({ [VEHICLE_CLASS_PARAM]: vehicleClassId })}`
+    : base;
 }
 
 /** One driver based at a location; "new" for the add page. */

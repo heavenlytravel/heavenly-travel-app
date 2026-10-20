@@ -1,17 +1,30 @@
 import Link from "next/link";
-import { getOffering, listClassesNotOffered } from "@repo/db/server";
+import {
+  getOffering,
+  listClassesNotOffered,
+  listVehicles,
+} from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
+import { Card, CardTitle } from "../../../../../_components/Card";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
 import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
-import { requireAdmin } from "../../../../../_lib/access";
-import { locationTabHref, vehicleClassHref } from "../../../../../_lib/routes";
+import { VehiclesTable } from "../../../../../_components/VehiclesTable";
+import { getPermissions, requireAdmin } from "../../../../../_lib/access";
+import {
+  locationTabHref,
+  newLocationVehicleHref,
+  vehicleClassHref,
+} from "../../../../../_lib/routes";
 import { OfferingForm } from "../OfferingForm";
 import { locationKey } from "../../../_lib/location-data";
 
 /**
  * Route: /locations/[slug]/vehicle-classes/[offeringId], and
  * /locations/[slug]/vehicle-classes/new for a class the location does not
- * offer yet. The form for one offering: the class, the rates and the rules.
+ * offer yet. The form for one offering: the class, the rates and the rules;
+ * under it, for an admin who manages the fleet, our vehicles of the class
+ * based here.
  */
 export default async function LocationOfferingPage({
   params,
@@ -61,7 +74,7 @@ async function newOffering({ id, slug }: { id: string; slug: string }) {
   );
 }
 
-/** The form for an offering the location has. */
+/** The form for an offering the location has, over the class's vehicles here. */
 async function existingOffering({
   id,
   slug,
@@ -71,8 +84,17 @@ async function existingOffering({
   slug: string;
   offeringId: string;
 }) {
-  const offering = await getOffering(offeringId);
+  const [offering, permissions] = await Promise.all([
+    getOffering(offeringId),
+    getPermissions(),
+  ]);
   if (!offering || offering.locationId !== id) notFound();
+  const vehicles = permissions.includes("fleet.manage")
+    ? await listVehicles({
+        locationId: id,
+        vehicleClassId: offering.vehicleClassId,
+      })
+    : null;
   return (
     <>
       <SectionHeader
@@ -95,6 +117,31 @@ async function existingOffering({
           offering={offering}
         />
       </div>
+      {vehicles ? (
+        <Card flush className="mt-6">
+          <CardTitle
+            inset
+            description={`Our ${offering.vehicleClass.name} vehicles based here. Customers here see the models of those in service, in their photos.`}
+            action={
+              <Button asChild variant="secondary" size="sm">
+                <Link
+                  href={newLocationVehicleHref(slug, offering.vehicleClassId)}
+                >
+                  Add vehicle
+                </Link>
+              </Button>
+            }
+          >
+            Vehicles
+          </CardTitle>
+          <VehiclesTable
+            vehicles={vehicles}
+            showClass={false}
+            bare
+            emptyMessage={`No ${offering.vehicleClass.name} based here yet.`}
+          />
+        </Card>
+      ) : null}
     </>
   );
 }

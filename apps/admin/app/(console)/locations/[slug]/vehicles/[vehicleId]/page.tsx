@@ -21,23 +21,30 @@ import {
 } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { fleetClassOptions } from "../../../../../_lib/fleet-form";
-import { locationTabHref } from "../../../../../_lib/routes";
+import {
+  locationTabHref,
+  VEHICLE_CLASS_PARAM,
+} from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteVehicleAction } from "../actions";
 import { VehicleForm } from "../VehicleForm";
 
 /**
  * Route: /locations/[slug]/vehicles/[vehicleId], and
- * /locations/[slug]/vehicles/new for a vehicle not entered yet. The
+ * /locations/[slug]/vehicles/new?class=… for a vehicle not entered yet,
+ * starting in the class a class's page added it from. The
  * vehicle's form, and beside an existing one its history and the delete
  * for one entered by mistake. A vehicle based elsewhere is not found here.
  */
 export default async function LocationVehiclePage({
   params,
+  searchParams,
 }: PageProps<"/locations/[slug]/vehicles/[vehicleId]">) {
   await requireAdmin("fleet.manage");
   const { slug, vehicleId } = await params;
   const { id } = await locationKey(slug);
+  const classParam = (await searchParams)[VEHICLE_CLASS_PARAM];
+  const startClassId = typeof classParam === "string" ? classParam : undefined;
 
   return (
     <>
@@ -57,7 +64,7 @@ export default async function LocationVehiclePage({
           />
         }
       >
-        {() => vehicleScreen({ id, slug, vehicleId })}
+        {() => vehicleScreen({ id, slug, vehicleId, startClassId })}
       </Streamed>
     </>
   );
@@ -67,10 +74,13 @@ async function vehicleScreen({
   id,
   slug,
   vehicleId,
+  startClassId,
 }: {
   id: string;
   slug: string;
   vehicleId: string;
+  /** The class a new vehicle starts in, from the address. */
+  startClassId: string | undefined;
 }) {
   const isNew = vehicleId === "new";
   const [vehicle, classes, suggestions, locations, history] = await Promise.all(
@@ -100,6 +110,11 @@ async function vehicleScreen({
           <VehicleForm
             key={vehicle?.id ?? "new"}
             locationId={id}
+            vehicleClassId={
+              classes.some((c) => c.id === startClassId)
+                ? startClassId
+                : undefined
+            }
             vehicle={vehicle ?? undefined}
             classes={fleetClassOptions(classes)}
             suggestions={suggestions}

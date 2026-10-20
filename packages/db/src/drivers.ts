@@ -160,6 +160,7 @@ export async function createDriver(
         classes: names.classNames ?? [],
         locationName: names.locationName ?? null,
       },
+      locationIds: [fields.locationId],
     });
     return { ok: true, id: driver.id };
   });
@@ -228,6 +229,10 @@ export async function updateDriver(
         ...(classesChanged ? { classes: names.classNames ?? [] } : {}),
         ...(names.locationName ? { locationName: names.locationName } : {}),
       },
+      locationIds: [
+        driver.locationId,
+        ...(changed?.after.locationId ? [changed.after.locationId] : []),
+      ],
     });
     return { ok: true };
   });
@@ -236,13 +241,17 @@ export async function updateDriver(
 /** Deletes a driver entered by mistake. One who has driven for us is made inactive instead. */
 export function deleteDriver(actor: Actor, id: string): Promise<Change> {
   return db.$transaction(async (tx) => {
-    const driver = await tx.driver.findUnique({ where: { id } });
+    const driver = await tx.driver.findUnique({
+      where: { id },
+      include: { location: { select: { name: true } } },
+    });
     if (!driver) return NOT_FOUND;
     await tx.driver.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "driver.deleted",
       entityId: id,
-      before: { name: driver.name },
+      before: { name: driver.name, locationName: driver.location.name },
+      locationIds: [driver.locationId],
     });
     return { ok: true };
   });

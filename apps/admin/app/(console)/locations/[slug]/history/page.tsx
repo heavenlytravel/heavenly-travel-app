@@ -4,30 +4,41 @@ import {
   isLocationHistoryKind,
   locationHistoryKindOf,
   type LocationHistoryKind,
+  type Permission,
 } from "@repo/db";
-import { listActivityForMany } from "@repo/db/server";
+import { listLocationHistory, type ActivityEntry } from "@repo/db/server";
 import { FilterLinks } from "../../../../_components/FilterLinks";
 import { HistoryTimeline } from "../../../../_components/HistoryTimeline";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
+  locationDriverHref,
   locationHistoryHref,
   locationPublishHref,
+  locationVehicleHref,
 } from "../../../../_lib/routes";
 import { locationKey } from "../../_lib/location-data";
 
-const KIND_OPTIONS = LOCATION_HISTORY_KINDS.map((kind) => ({
-  value: kind,
-  label: LOCATION_HISTORY_KIND_LABELS[kind],
-}));
+/** The parts the filter offers: the fleet's only to an admin who manages it. */
+function kindOptions(fleet: boolean) {
+  return LOCATION_HISTORY_KINDS.filter((kind) => fleet || kind !== "fleet").map(
+    (kind) => ({ value: kind, label: LOCATION_HISTORY_KIND_LABELS[kind] }),
+  );
+}
+
+/** Whether an entry is about one of the location's vehicles or drivers. */
+const isFleet = (entry: ActivityEntry) =>
+  entry.entityType === "vehicle" || entry.entityType === "driver";
 
 /**
  * Route: /locations/[slug]/history?kind=coverage. Every change to the
  * location, newest first, grouped by the day it was made, and narrowed to
  * one part of the location by the row of filters: its details, its
- * classes, its coverage and rates, its pages or its status. A publish
- * opens the page as it was before and after, for Marketing.
+ * classes, its coverage and rates, its vehicles and drivers, its pages or
+ * its status. A publish opens the page as it was before and after, for
+ * Marketing; a vehicle's or a driver's change, which Operation alone
+ * sees, opens the record while it exists.
  */
 export default async function LocationHistoryPage({
   params,
@@ -37,25 +48,30 @@ export default async function LocationHistoryPage({
   const { slug } = await params;
   const { id } = await locationKey(slug);
   const { kind } = await searchParams;
-  const filter = isLocationHistoryKind(kind) ? kind : undefined;
+  const permissions = await getPermissions();
+  const fleet = permissions.includes("fleet.manage");
+  const filter =
+    isLocationHistoryKind(kind) && (fleet || kind !== "fleet")
+      ? kind
+      : undefined;
 
   return (
     <>
       <SectionHeader
         title="History"
-        description="Every change to this location, newest first: who made it and when."
+        description="Every change to this location and the vehicles and drivers based here, newest first: who made it and when."
       />
       <div className="mt-4">
         <FilterLinks
           label="Filter by part of the location"
-          options={KIND_OPTIONS}
+          options={kindOptions(fleet)}
           active={filter}
           hrefOf={(value) => locationHistoryHref(slug, value)}
         />
       </div>
       <div className="mt-4">
         <Streamed key={filter ?? "all"} fallback={<CardSkeleton rows={6} />}>
-          {() => history({ id, slug, filter })}
+          {() => history({ id, slug, filter, permissions })}
         </Streamed>
       </div>
     </>
@@ -66,18 +82,19 @@ async function history({
   id,
   slug,
   filter,
+  permissions,
 }: {
   id: string;
   slug: string;
   filter: LocationHistoryKind | undefined;
+  permissions: readonly Permission[];
 }) {
-  const [all, permissions] = await Promise.all([
-    listActivityForMany([{ entityType: "location", entityId: id }]),
-    getPermissions(),
-  ]);
-  const entries = filter
-    ? all.filter((entry) => locationHistoryKindOf(entry.action) === filter)
-    : all;
+  const fleet = permissions.includes("fleet.manage");
+  const entries = (await listLocationHistory(id)).filter(
+    (entry) =>
+      (fleet || !isFleet(entry)) &&
+      (!filter || locationHistoryKindOf(entry.action) === filter),
+  );
   const readsPublishes = permissions.includes("locations.manage");
 
   return (
@@ -88,12 +105,23 @@ async function history({
           ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
           : "No changes recorded for this location."
       }
-      hrefOf={(entry) =>
-        readsPublishes && entry.action === "location.page.published"
-          ? locationPublishHref(slug, entry.id)
-          : null
-      }
+      hrefOf={(entry) => {
+        if (readsPublishes && entry.action === "location.page.published") {
+          return locationPublishHref(slug, entry.id);
+        }
+        if (entry.isDeleted) return null;
+        if (entry.entityType === "vehicle") {
+          return locationVehicleHref(slug, entry.entityId);
+        }
+        if (entry.entityType === "driver") {
+          return locationDriverHref(slug, entry.entityId);
+        }
+        return null;
+      }}
       tagOf={(entry) => {
+        if (entry.entityType === "vehicle")
+          return `Vehicle ${entry.entityLabel}`;
+        if (entry.entityType === "driver") return `Driver ${entry.entityLabel}`;
         const kind = locationHistoryKindOf(entry.action);
         return kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
       }}

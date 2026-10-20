@@ -6,7 +6,7 @@ import {
   listModelSuggestions,
   listClassOptions,
 } from "@repo/db/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
 import { DetailColumns } from "../../../../../_components/PageColumn";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
@@ -29,7 +29,7 @@ import { VehicleForm } from "../../../../vehicles/_components/VehicleForm";
  * starting in the class a class's page added it from. The vehicle's form
  * across the page, and level with an existing one's plate the way to its
  * history and the delete for one entered by mistake. A vehicle based
- * elsewhere is not found here.
+ * elsewhere opens at its own location.
  */
 export default async function LocationVehiclePage({
   params,
@@ -81,7 +81,11 @@ async function vehicleScreen({
     listModelSuggestions(),
     listLocationNames(),
   ]);
-  if (!isNew && vehicle?.locationId !== id) notFound();
+  if (!isNew && !vehicle) notFound();
+  // Based at another location now: its page is there.
+  if (vehicle && vehicle.locationId !== id) {
+    redirect(locationVehicleHref(vehicle.location.slug, vehicle.id));
+  }
   const model = vehicle?.vehicleModel;
 
   return (

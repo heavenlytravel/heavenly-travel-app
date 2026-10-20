@@ -189,6 +189,7 @@ export const LOCATION_HISTORY_KINDS = [
   "details",
   "classes",
   "coverage",
+  "fleet",
   "pages",
   "status",
 ] as const;
@@ -199,6 +200,7 @@ export const LOCATION_HISTORY_KIND_LABELS: Record<LocationHistoryKind, string> =
     details: "Details",
     classes: "Vehicle classes",
     coverage: "Coverage and rates",
+    fleet: "Vehicles and drivers",
     pages: "Pages",
     status: "Status",
   };
@@ -220,6 +222,13 @@ export function locationHistoryKindOf(
     case "location.surcharge.updated":
     case "location.dropoff.updated":
       return "coverage";
+    case "vehicle.created":
+    case "vehicle.updated":
+    case "vehicle.deleted":
+    case "driver.created":
+    case "driver.updated":
+    case "driver.deleted":
+      return "fleet";
     case "location.page.published":
     case "location.page.updated":
     case "location.addresses.updated":
@@ -643,8 +652,12 @@ export function describeActivity(entry: DescribableActivity): string {
         ["Put the vehicle in service", "Took the vehicle out of service"],
         "Changed the vehicle",
       );
-    case "vehicle.deleted":
-      return "Deleted the vehicle";
+    case "vehicle.deleted": {
+      const model = field(entry.before, "modelName");
+      return typeof model === "string"
+        ? `Deleted the ${model}`
+        : "Deleted the vehicle";
+    }
     case "driver.created":
       return "Added the driver";
     case "driver.updated":

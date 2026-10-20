@@ -4,7 +4,7 @@ import {
   listLocationNames,
   listClassOptions,
 } from "@repo/db/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
 import { DetailColumns } from "../../../../../_components/PageColumn";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
@@ -25,7 +25,7 @@ import { DriverForm } from "../../../../drivers/_components/DriverForm";
  * /locations/[slug]/drivers/new for a driver not entered yet. The driver's
  * form across the page, and level with an existing one's name the way to
  * their history and the delete for one entered by mistake. A driver based
- * elsewhere is not found here.
+ * elsewhere opens at their own location.
  */
 export default async function LocationDriverPage({
   params,
@@ -70,7 +70,11 @@ async function driverScreen({
     listClassOptions(),
     listLocationNames(),
   ]);
-  if (!isNew && driver?.locationId !== id) notFound();
+  if (!isNew && !driver) notFound();
+  // Based at another location now: its page is there.
+  if (driver && driver.locationId !== id) {
+    redirect(locationDriverHref(driver.location.slug, driver.id));
+  }
 
   return (
     <>

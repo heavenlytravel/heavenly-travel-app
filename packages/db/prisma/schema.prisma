@@ -76,10 +76,14 @@ model ActivityLog {
   /// Whether a future customer page may show this entry. Staff names,
   /// internal notes and override reasons never reach a customer.
   customerVisible Boolean  @default(false)
+  /// The locations whose history the entry belongs in besides its own
+  /// record's: a vehicle's or a driver's location, both of them for a move.
+  locationIds     String[] @default([])
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId, createdAt])
   @@index([createdAt])
+  @@index([locationIds], type: Gin)
 }
 
 /// No longer read: a driver is a `Driver` since

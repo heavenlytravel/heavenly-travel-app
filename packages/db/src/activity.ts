@@ -24,6 +24,8 @@ export type ActivityWrite = {
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
+  /** The locations whose history it belongs in too: where a vehicle or a driver is based, before and after a move. */
+  locationIds?: readonly string[];
 };
 
 /** Writes one entry inside the caller's transaction. */
@@ -43,6 +45,7 @@ export function logActivity(
       before: entry.before,
       after: entry.after,
       customerVisible: meta.customerVisible,
+      locationIds: [...new Set(entry.locationIds ?? [])],
     },
   });
 }
@@ -287,6 +290,25 @@ export async function listActivityForMany(
   const rows = await db.activityLog.findMany({
     where: { OR: records.map((r) => ({ ...r })) },
     // Entries written by one transaction share a time; the id keeps their order.
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+  return decorate(rows);
+}
+
+/**
+ * A location's history, oldest first: the changes to the location itself,
+ * and to the vehicles and drivers based there when each was made.
+ */
+export async function listLocationHistory(
+  locationId: string,
+): Promise<ActivityEntry[]> {
+  const rows = await db.activityLog.findMany({
+    where: {
+      OR: [
+        { entityType: "location", entityId: locationId },
+        { locationIds: { has: locationId } },
+      ],
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   return decorate(rows);

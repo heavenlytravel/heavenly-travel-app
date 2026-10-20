@@ -224,6 +224,7 @@ export async function createVehicle(
           modelName: model.name,
           locationName,
         },
+        locationIds: [fields.locationId],
       });
       return { ok: true, id: vehicle.id };
     });
@@ -318,6 +319,10 @@ export async function updateVehicle(
           ...(model ? { modelName: model.name } : {}),
           ...(locationName ? { locationName } : {}),
         },
+        locationIds: [
+          vehicle.locationId,
+          ...(after.locationId ? [after.locationId] : []),
+        ],
       });
       return { ok: true };
     });
@@ -335,13 +340,24 @@ export async function updateVehicle(
  */
 export function deleteVehicle(actor: Actor, id: string): Promise<Change> {
   return db.$transaction(async (tx) => {
-    const vehicle = await tx.vehicle.findUnique({ where: { id } });
+    const vehicle = await tx.vehicle.findUnique({
+      where: { id },
+      include: {
+        vehicleModel: { select: { brand: true, name: true } },
+        location: { select: { name: true } },
+      },
+    });
     if (!vehicle) return NOT_FOUND;
     await tx.vehicle.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "vehicle.deleted",
       entityId: id,
-      before: { plate: vehicle.plate },
+      before: {
+        plate: vehicle.plate,
+        modelName: modelName(vehicle.vehicleModel),
+        locationName: vehicle.location.name,
+      },
+      locationIds: [vehicle.locationId],
     });
     await dropModelIfUnused(tx, actor, vehicle.vehicleModelId);
     return { ok: true };

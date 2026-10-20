@@ -311,3 +311,98 @@ describe("locationHistoryKindOf", () => {
     assert.equal(locationHistoryKindOf("booking.created"), null);
   });
 });
+
+describe("describeActivity, the fleet", () => {
+  const entry = (action: string, before: unknown, after: unknown) =>
+    describeActivity({ action, before, after });
+
+  it("says what changed on a vehicle", () => {
+    assert.equal(entry("vehicle.created", null, {}), "Added the vehicle");
+    assert.equal(
+      entry(
+        "vehicle.updated",
+        { colour: "Black", isActive: true },
+        { colour: "White", isActive: false },
+      ),
+      "Took the vehicle out of service, changed the colour",
+    );
+    assert.equal(
+      entry(
+        "vehicle.updated",
+        {},
+        { brand: "Toyota", model: "Vellfire", modelName: "Toyota Vellfire" },
+      ),
+      "Changed the model to Toyota Vellfire",
+    );
+    assert.equal(
+      entry(
+        "vehicle.updated",
+        { locationId: "a" },
+        { locationId: "b", locationName: "Langkawi" },
+      ),
+      "Moved to Langkawi",
+    );
+  });
+
+  it("names the model a deleted vehicle was", () => {
+    assert.equal(
+      entry(
+        "vehicle.deleted",
+        { plate: "VLE1234", modelName: "Toyota Alphard" },
+        null,
+      ),
+      "Deleted the Toyota Alphard",
+    );
+    assert.equal(
+      entry("vehicle.deleted", { plate: "VLE1234" }, null),
+      "Deleted the vehicle",
+    );
+  });
+
+  it("says what changed on a driver", () => {
+    assert.equal(entry("driver.created", null, {}), "Added the driver");
+    assert.equal(
+      entry(
+        "driver.updated",
+        { classes: ["Sedan VIP"] },
+        { classes: ["Sedan VIP", "MPV VIP"] },
+      ),
+      "Changed the classes they may drive to Sedan VIP and MPV VIP",
+    );
+    assert.equal(
+      entry("driver.updated", { isActive: false }, { isActive: true }),
+      "Made the driver active",
+    );
+    assert.equal(
+      entry("driver.deleted", { name: "Ali" }, null),
+      "Deleted the driver",
+    );
+  });
+
+  it("names a model added to or removed from a class", () => {
+    assert.equal(
+      entry("vehicle-class.model.created", null, {
+        modelName: "Toyota Alphard",
+      }),
+      "Added the model Toyota Alphard",
+    );
+    assert.equal(
+      entry(
+        "vehicle-class.model.deleted",
+        { modelName: "Toyota Alphard" },
+        null,
+      ),
+      "Removed the model Toyota Alphard",
+    );
+  });
+});
+
+describe("locationHistoryKindOf, the fleet", () => {
+  it("puts vehicles and drivers in their own part", () => {
+    for (const action of ACTIVITY_ACTIONS) {
+      const { entityType } = activityActionMeta(action);
+      if (entityType !== "vehicle" && entityType !== "driver") continue;
+      assert.equal(locationHistoryKindOf(action), "fleet", action);
+    }
+  });
+});

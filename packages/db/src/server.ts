@@ -11,7 +11,12 @@ export {
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
 export type { AdminWithUser } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
-export { listActivityFor, listActivityForMany, listActivity } from "./activity";
+export {
+  listActivityFor,
+  listActivityForMany,
+  listLocationHistory,
+  listActivity,
+} from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {
   listLocationOverviews,

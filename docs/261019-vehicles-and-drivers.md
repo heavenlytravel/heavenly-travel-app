@@ -90,10 +90,12 @@ model only once a vehicle of it is in service at their location.
 - A model no vehicle is of and no booking chose goes as soon as its last vehicle leaves
   it, so a model typed wrong and corrected leaves no suggestion behind. The models the
   class list starts with stay until a vehicle has been of them.
-- There is no screen for models. The class's page lists its vehicles by location
-  instead: Langkawi, "3 vehicles: 2 Toyota Vios, 1 Honda City", each row opening the
-  location's Vehicles tab. The catalogue's cards give each location that sells the class
-  its count of vehicles in service.
+- There is no screen for models. The class's page inside a location lists our vehicles
+  of the class based there, under its rates and rules, with "Add vehicle" opening the
+  form with the class picked. The catalogue's class page lists its vehicles by location:
+  Langkawi, "3 vehicles: 2 Toyota Vios, 1 Honda City", each row opening the location's
+  Vehicles tab. The catalogue's cards give each location that sells the class its count
+  of vehicles in service.
 
 ### Photos
 
@@ -108,10 +110,11 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
   class picture uses too. `src/photos-input.ts` reads and checks the list.
 - A location's customers see a model in the photos of its vehicles in service there, one
   vehicle's after another, the first entered first, at most 12.
-- The class's picture at a location is the first photo of its models there. Until a
-  vehicle there has one, it is the catalogue's picture, which is meant to be neutral: a
-  cut-out with no plate. Nothing more to upload: a location's cover follows its own
-  vehicles.
+- The class's picture at a location is the first photo of its first vehicle entered of
+  those in service there with a photo (`classCoverOf`). Until a vehicle there has one,
+  it is the catalogue's picture, which is meant to be neutral: a cut-out with no plate.
+  Nothing more to upload: a location's cover follows its own vehicles. The location's
+  Vehicle classes tab shows the same picture, as customers see it.
 
 ### The customer's choice of model
 
@@ -202,9 +205,11 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
   once live or paused, and unnumbered in Setup while a draft. The panel says how many are
   in service or active and how many have a document due, and links to those due and to
   "Add". Each tab lists, filters to "Documents due", adds and opens:
-  `/locations/[slug]/vehicles/[id]`, `/locations/[slug]/drivers/[id]`, each with its
-  history and the delete. Moving one to another location is a change of where it is
-  based; the save opens that location's tab.
+  `/locations/[slug]/vehicles/[id]`, `/locations/[slug]/drivers/[id]`: the form across
+  the page, and level with the title "History", to the record's own history page
+  (`.../history`, as a class's and a booking's have too), and "Delete". Moving one to
+  another location is a change of where it is based; the save opens that location's
+  tab.
 - A live location's Today shows Operation a "Documents due" card when any vehicle or
   driver there has one.
 - The sidebar's Operations group gains Vehicles and Drivers across locations, filtered by

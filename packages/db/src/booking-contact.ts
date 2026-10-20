@@ -1,3 +1,4 @@
+import { refuse } from "./change";
 import { textOf, type Parsed } from "./fields";
 import { isValidPhone, normalizePhone } from "./phone";
 
@@ -80,16 +81,16 @@ export function parseContact(values: {
 }): Parsed<ContactFields> {
   const contactName = textOf(values.name).slice(0, CONTACT_NAME_MAX_LENGTH);
   if (!contactName) {
-    return { ok: false, error: "Enter the name the driver should ask for." };
+    return refuse("Enter the name the driver should ask for.", "name");
   }
   const contactPhone = normalizePhone(textOf(values.phone));
   if (!isValidPhone(contactPhone)) {
-    return { ok: false, error: "Enter a phone number the driver can call." };
+    return refuse("Enter a phone number the driver can call.", "phone");
   }
   const contactEmail = normalizeEmail(textOf(values.email));
-  if (!contactEmail) return { ok: false, error: EMAIL_REQUIRED_MESSAGE };
+  if (!contactEmail) return refuse(EMAIL_REQUIRED_MESSAGE, "email");
   if (!isValidEmail(contactEmail)) {
-    return { ok: false, error: "Enter a valid email address." };
+    return refuse("Enter an email address, such as name@example.com.", "email");
   }
   return { ok: true, value: { contactName, contactPhone, contactEmail } };
 }

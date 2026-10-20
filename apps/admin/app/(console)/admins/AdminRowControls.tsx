@@ -1,12 +1,12 @@
 "use client";
 
-import type { AdminChange, AdminTeam } from "@repo/db";
+import type { AdminTeam } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
-import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { Sheet } from "@repo/ui/sheet";
-import { useActionState, useState } from "react";
-import { confirmedSubmit } from "../../_lib/confirmed-submit";
+import { useState } from "react";
+import { FormError } from "../../_components/FormError";
+import { useActionForm } from "../../_lib/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { revokeAdminAction, setAdminAction } from "./actions";
 
@@ -23,26 +23,22 @@ export function AdminRowControls({
   teams: readonly AdminTeam[];
 }) {
   const [editing, setEditing] = useState(false);
-  const [editResult, editAction, editPending] = useActionState(
-    async (previous: AdminChange | null, formData: FormData) => {
-      const result = await setAdminAction(previous, formData);
-      if (result.ok) {
-        setEditing(false);
-        toast.success(`Saved the level and teams of ${email}.`);
-      }
-      return result;
-    },
-    null,
-  );
-  const [revokeResult, revokeAction, revokePending] = useActionState(
-    async (previous: AdminChange | null, formData: FormData) => {
-      const result = await revokeAdminAction(previous, formData);
-      if (result.ok) toast.success(`Removed admin access for ${email}.`);
-      return result;
-    },
-    null,
-  );
+  const edit = useActionForm(setAdminAction, {
+    done: `Saved the level and teams of ${email}.`,
+    onDone: () => setEditing(false),
+  });
   const [dialog, confirm] = useConfirm();
+  const revoke = useActionForm(revokeAdminAction, {
+    ask: () =>
+      confirm({
+        title: `Remove admin access for ${email}?`,
+        description:
+          "They can no longer open the console. Promoting them again here gives it back.",
+        action: "Revoke",
+        danger: true,
+      }),
+    done: `Removed admin access for ${email}.`,
+  });
 
   return (
     <div className="flex flex-col items-end gap-1.5">
@@ -50,44 +46,27 @@ export function AdminRowControls({
         <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
           Edit
         </Button>
-        <form
-          action={revokeAction}
-          onSubmit={confirmedSubmit(
-            confirm,
-            {
-              title: `Remove admin access for ${email}?`,
-              description:
-                "They can no longer open the console. Promoting them again here gives it back.",
-              action: "Revoke",
-              danger: true,
-            },
-            revokeAction,
-          )}
-        >
+        <form {...revoke.formProps}>
           <input type="hidden" name="userId" value={userId} />
           <Button
             type="submit"
             variant="danger"
             size="sm"
-            disabled={revokePending}
+            disabled={revoke.pending}
           >
             Revoke
           </Button>
         </form>
       </div>
       {dialog}
-      {revokeResult?.ok === false ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {revokeResult.error}
-        </p>
-      ) : null}
+      <FormError error={revoke.error} size="xs" />
 
       <Sheet
         open={editing}
         onOpenChange={setEditing}
         title={`Level and teams for ${email}`}
       >
-        <form action={editAction} className="grid gap-5 p-6 text-left">
+        <form {...edit.formProps} className="grid gap-5 p-6 text-left">
           <div>
             <h2 className="text-base font-semibold tracking-tight">
               Level and teams
@@ -101,22 +80,18 @@ export function AdminRowControls({
             and needs none.
           </p>
           <div className="flex items-center gap-2">
-            <Button type="submit" disabled={editPending}>
-              {editPending ? "Saving…" : "Save"}
+            <Button type="submit" disabled={edit.pending}>
+              {edit.pending ? "Saving…" : "Save"}
             </Button>
             <Button
               variant="ghost"
-              disabled={editPending}
+              disabled={edit.pending}
               onClick={() => setEditing(false)}
             >
               Cancel
             </Button>
           </div>
-          {editResult?.ok === false ? (
-            <p aria-live="polite" className="text-sm text-red-700">
-              {editResult.error}
-            </p>
-          ) : null}
+          <FormError error={edit.error} />
         </form>
       </Sheet>
     </div>

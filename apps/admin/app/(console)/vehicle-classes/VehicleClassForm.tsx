@@ -3,9 +3,9 @@
 import type { VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
-import { useActionState } from "react";
-import type { ActionState } from "../../_lib/action-state";
+import { FormError } from "../../_components/FormError";
 import { VEHICLE_CLASSES_PATH } from "../../_lib/routes";
+import { useActionForm } from "../../_lib/use-action-form";
 import { createVehicleClassAction, updateVehicleClassAction } from "./actions";
 import { VehicleClassFieldset } from "./VehicleClassFields";
 
@@ -21,13 +21,13 @@ export function VehicleClassForm({
   vehicleClass?: VehicleClass;
 }) {
   const isNew = !vehicleClass;
-  const [state, action, pending] = useActionState<ActionState, FormData>(
+  const { pending, error, formProps } = useActionForm(
     isNew ? createVehicleClassAction : updateVehicleClassAction,
-    null,
+    { done: isNew ? "Class added to the catalogue." : "Class saved." },
   );
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...formProps} className="grid gap-6">
       {vehicleClass ? (
         <input type="hidden" name="id" value={vehicleClass.id} />
       ) : null}
@@ -42,11 +42,7 @@ export function VehicleClassForm({
         >
           Cancel
         </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </form>
   );

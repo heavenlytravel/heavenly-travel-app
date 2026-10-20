@@ -9,7 +9,7 @@ export {
   deleteUserFromClerk,
 } from "./sync";
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
-export type { AdminWithUser, AdminChange } from "./admins";
+export type { AdminWithUser } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
 export { listActivityFor, listActivityForMany, listActivity } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
@@ -49,11 +49,7 @@ export {
   updateVehicle,
   deleteVehicle,
 } from "./vehicles";
-export type {
-  ListedVehicle,
-  VehicleWithModel,
-  FleetFilter,
-} from "./vehicles";
+export type { ListedVehicle, VehicleWithModel, FleetFilter } from "./vehicles";
 export {
   listDrivers,
   getDriver,

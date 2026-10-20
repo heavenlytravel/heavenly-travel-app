@@ -3,10 +3,9 @@
 import { BOOKING_NOTE_MAX_LENGTH, formatLocalDateTime } from "@repo/db";
 import type { BookingNoteEntry } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { toast } from "@repo/ui/toast";
 import { FieldGroup, Textarea } from "@repo/ui/field";
-import { useActionState } from "react";
-import type { ActionState } from "../../../_lib/action-state";
+import { FormError } from "../../../_components/FormError";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { addNoteAction } from "./actions";
 
 /**
@@ -22,14 +21,10 @@ export function Notes({
   bookingId: string;
   notes: BookingNoteEntry[];
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    async (previous, formData) => {
-      const result = await addNoteAction(previous, formData);
-      if (!result?.error) toast.success("Note added.");
-      return result;
-    },
-    null,
-  );
+  const { pending, error, formProps } = useActionForm(addNoteAction, {
+    done: "Note added.",
+    reset: true,
+  });
 
   return (
     <div className="grid gap-4">
@@ -51,7 +46,7 @@ export function Notes({
           ))}
         </ol>
       )}
-      <form action={action} className="grid gap-2">
+      <form {...formProps} className="grid gap-2">
         <input type="hidden" name="bookingId" value={bookingId} />
         <FieldGroup className="grid gap-1.5">
           <Textarea
@@ -67,11 +62,7 @@ export function Notes({
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Adding…" : "Add note"}
           </Button>
-          {state?.error ? (
-            <p aria-live="polite" className="text-xs text-red-700">
-              {state.error}
-            </p>
-          ) : null}
+          <FormError error={error} size="xs" />
         </div>
       </form>
     </div>

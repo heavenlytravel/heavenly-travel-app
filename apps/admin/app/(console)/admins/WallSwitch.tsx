@@ -1,9 +1,12 @@
 "use client";
 
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm, type ConfirmRequest } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
+import { FormError } from "../../_components/FormError";
+import { errorOf } from "../../_lib/action-state";
 import { setWallAction } from "./actions";
 
 const CONFIRM: Record<"on" | "off", ConfirmRequest> = {
@@ -35,19 +38,15 @@ export function WallSwitch({ active }: { active: boolean }) {
         onCheckedChange={async (next) => {
           if (!(await confirm(next ? CONFIRM.on : CONFIRM.off))) return;
           startTransition(async () => {
-            const result = await setWallAction(next);
-            setError(result.ok ? null : result.error);
-            if (result.ok) {
+            const error = errorOf(await answerOf(setWallAction(next)));
+            setError(error);
+            if (!error) {
               toast.success(next ? "The wall is on." : "The wall is off.");
             }
           });
         }}
       />
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
       {dialog}
     </div>
   );

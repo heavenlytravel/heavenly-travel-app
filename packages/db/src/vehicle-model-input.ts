@@ -1,4 +1,4 @@
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 
 /**
  * How a model is named, the Toyota Alphard in MPV VIP, and the rules on
@@ -31,23 +31,32 @@ export function modelsLine(names: readonly string[]) {
   return `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
 }
 
-const fail = (error: string): Change => ({ ok: false, error });
-
-/** The rules on a model's brand and name, as the vehicle form types them; a field left out is not checked. */
+/**
+ * The rules on a model's brand and name, as the vehicle form types them,
+ * its fields `brand` and `model`; a field left out is not checked.
+ */
 export function checkModelName(fields: {
   brand?: string;
   name?: string;
 }): Change {
   if (fields.brand !== undefined) {
-    if (fields.brand === "") return fail("Enter the brand, such as Toyota.");
+    if (fields.brand === "")
+      return refuse("Enter the brand, such as Toyota.", "brand");
     if (fields.brand.length > MODEL_LIMITS.brand) {
-      return fail(`A brand is at most ${MODEL_LIMITS.brand} characters.`);
+      return refuse(
+        `A brand is at most ${MODEL_LIMITS.brand} characters.`,
+        "brand",
+      );
     }
   }
   if (fields.name !== undefined) {
-    if (fields.name === "") return fail("Enter the model, such as Alphard.");
+    if (fields.name === "")
+      return refuse("Enter the model, such as Alphard.", "model");
     if (fields.name.length > MODEL_LIMITS.name) {
-      return fail(`A model is at most ${MODEL_LIMITS.name} characters.`);
+      return refuse(
+        `A model is at most ${MODEL_LIMITS.name} characters.`,
+        "model",
+      );
     }
   }
   return { ok: true };

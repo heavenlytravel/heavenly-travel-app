@@ -1,5 +1,5 @@
 import { isTripCategory, type TripCategory } from "./booking-status";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { isUploadUrl } from "./images";
 
@@ -56,8 +56,6 @@ const TEXT_FIELDS = ["name", "description", "luggage"] as const;
 
 const isWhole = (n: number) => Number.isInteger(n);
 
-const fail = (error: string): Change => ({ ok: false, error });
-
 const lowerLabel = (key: VehicleClassField) =>
   VEHICLE_CLASS_FIELD_LABELS[key].toLowerCase();
 
@@ -68,19 +66,19 @@ export function checkVehicleClassFields(
   for (const key of TEXT_FIELDS) {
     const value = fields[key];
     if (value !== undefined && value.trim() === "") {
-      return fail(`Enter the ${lowerLabel(key)}.`);
+      return refuse(`Enter the ${lowerLabel(key)}.`, key);
     }
   }
   if (fields.category !== undefined && !isTripCategory(fields.category)) {
-    return fail("Choose a category.");
+    return refuse("Choose a category.", "category");
   }
   if (fields.sortOrder !== undefined && !isWhole(fields.sortOrder)) {
-    return fail("The sort order is a whole number.");
+    return refuse("The sort order is a whole number.", "sortOrder");
   }
   for (const key of ["minPassengers", "maxPassengers"] as const) {
     const value = fields[key];
     if (value !== undefined && (!isWhole(value) || value < 1)) {
-      return fail("Seats are whole numbers from 1.");
+      return refuse("Seats are whole numbers from 1.", key);
     }
   }
   if (
@@ -88,14 +86,20 @@ export function checkVehicleClassFields(
     fields.maxPassengers !== undefined &&
     fields.maxPassengers < fields.minPassengers
   ) {
-    return fail("Seats to is at least seats from.");
+    return refuse(
+      "Seats to is at least seats from. Raise it, or lower seats from.",
+      "maxPassengers",
+    );
   }
   if (
     fields.imageUrl !== undefined &&
     fields.imageUrl !== null &&
     !isUploadUrl(fields.imageUrl)
   ) {
-    return fail("Upload the picture again.");
+    return refuse(
+      "The picture did not finish uploading. Upload it again.",
+      "imageUrl",
+    );
   }
   return { ok: true };
 }
@@ -109,7 +113,7 @@ export function parseVehicleClassFields(
 ): Parsed<VehicleClassFields> {
   const category = textOf(values.category);
   if (!isTripCategory(category)) {
-    return { ok: false, error: "Choose a category." };
+    return refuse("Choose a category.", "category");
   }
 
   const fields: VehicleClassFields = {

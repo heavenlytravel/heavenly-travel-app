@@ -1,6 +1,6 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
 import { byClassOrder } from "./offerings";
@@ -26,11 +26,12 @@ export type { Zone, ZoneRate };
  * rates".
  */
 
-/** Why a write did not happen; fits both `Change` and `Created`. */
-type Refusal = { ok: false; error: string };
-
-const NOT_FOUND: Refusal = { ok: false, error: "Location not found." };
-const ZONE_NOT_FOUND: Refusal = { ok: false, error: "Zone not found." };
+const NOT_FOUND = refuse(
+  "This location was deleted meanwhile. Go back to Locations.",
+);
+const ZONE_NOT_FOUND = refuse(
+  "This zone was deleted meanwhile. Go back to Coverage.",
+);
 
 /** The zones of a location in their order. */
 export function listZones(locationId: string): Promise<Zone[]> {
@@ -126,10 +127,9 @@ export async function createZone(
     });
     if (!location) return NOT_FOUND;
     if (location._count.zones >= ZONE_LIMITS.zones) {
-      return {
-        ok: false,
-        error: `A location keeps at most ${ZONE_LIMITS.zones} zones.`,
-      };
+      return refuse(
+        `A location keeps at most ${ZONE_LIMITS.zones} zones. Delete one first.`,
+      );
     }
     const last = await tx.zone.aggregate({
       where: { locationId },
@@ -248,13 +248,10 @@ export async function setZoneRates(
     }[] = [];
     for (const cell of cells) {
       if (!zoneName.has(cell.fromZoneId) || !zoneName.has(cell.toZoneId)) {
-        return { ok: false, error: "A zone on the grid was removed. Reload." };
+        return refuse("A zone on the grid was deleted meanwhile. Reload.");
       }
       if (!className.has(cell.vehicleClassId)) {
-        return {
-          ok: false,
-          error: "A class on the grid is no longer offered here. Reload.",
-        };
+        return refuse("A class on the grid is no longer offered here. Reload.");
       }
       const key = `${cell.fromZoneId}|${cell.toZoneId}|${cell.vehicleClassId}`;
       const was = stored.get(key) ?? null;

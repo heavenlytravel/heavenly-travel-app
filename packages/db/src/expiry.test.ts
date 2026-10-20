@@ -31,14 +31,17 @@ describe("days", () => {
   });
 
   it("reads a date input: empty is none", () => {
-    assert.deepEqual(parseDay("", "Road tax"), { ok: true, value: null });
-    assert.deepEqual(parseDay(" 2027-03-12 ", "Road tax"), {
+    const read = (text: string) =>
+      parseDay(text, "Road tax", "roadTaxExpiresOn");
+    assert.deepEqual(read(""), { ok: true, value: null });
+    assert.deepEqual(read(" 2027-03-12 "), {
       ok: true,
       value: "2027-03-12",
     });
-    const wrong = parseDay("2027-13-01", "Road tax");
+    const wrong = read("2027-13-01");
     assert.equal(wrong.ok, false);
     assert.match(wrong.ok ? "" : wrong.error, /road tax expiry/);
+    assert.equal(wrong.ok ? "" : wrong.field, "roadTaxExpiresOn");
   });
 
   it("formats a day as people read it", () => {

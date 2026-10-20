@@ -1,5 +1,5 @@
 import { BOOKING_RULES, type OfferingRules } from "./booking-rules";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { parseRinggit } from "./money";
 import type { TripRates } from "./pricing";
@@ -90,8 +90,6 @@ const MONEY_FIELDS = Object.keys(OFFERING_MONEY_FIELDS) as (keyof TripRates)[];
 /** The rules counted from 0; the minimum hours has its own range. */
 const HOUR_FIELDS = ["minLeadHours", "cancellationCutoffHours"] as const;
 
-const fail = (error: string): Change => ({ ok: false, error });
-
 const lowerLabel = (key: OfferingField) =>
   OFFERING_FIELD_LABELS[key].toLowerCase();
 
@@ -102,16 +100,18 @@ export function checkOfferingFields(fields: Partial<OfferingFields>): Change {
   for (const key of MONEY_FIELDS) {
     const value = fields[key];
     if (value !== undefined && (!isWhole(value) || value < 0)) {
-      return fail(
+      return refuse(
         `Enter the ${lowerLabel(key)} in RM, with at most two decimals.`,
+        OFFERING_MONEY_FIELDS[key],
       );
     }
   }
   for (const key of HOUR_FIELDS) {
     const value = fields[key];
     if (value !== undefined && (!isWhole(value) || value < 0)) {
-      return fail(
+      return refuse(
         `${OFFERING_FIELD_LABELS[key]} is a whole number of hours, 0 or more.`,
+        key,
       );
     }
   }
@@ -119,20 +119,26 @@ export function checkOfferingFields(fields: Partial<OfferingFields>): Change {
     const { hourlyFloorHours, maxHourlyHours } = BOOKING_RULES;
     const value = fields.minHourlyHours;
     if (!isWhole(value) || value < hourlyFloorHours || value > maxHourlyHours) {
-      return fail(
+      return refuse(
         `Minimum hours is a whole number between ${hourlyFloorHours} and ${maxHourlyHours}.`,
+        "minHourlyHours",
       );
     }
   }
   const { modelChoicePercent: percent, modelChoiceFlatSen: flatSen } = fields;
   if (percent != null && flatSen != null) {
-    return fail(
+    return refuse(
       "Charge a percentage or an amount to choose a model, not both.",
+      MODEL_CHOICE_FIELDS.amount,
     );
   }
   const modelChoice = chargeOf(percent ?? null, flatSen ?? null);
   if (modelChoice) {
-    const check = checkCharge(modelChoice, MODEL_CHOICE);
+    const check = checkCharge(
+      modelChoice,
+      MODEL_CHOICE,
+      MODEL_CHOICE_FIELDS.amount,
+    );
     if (!check.ok) return check;
   }
   return { ok: true };
@@ -153,6 +159,7 @@ function modelChoiceColumnsOf(
     values[MODEL_CHOICE_FIELDS.kind],
     amount,
     MODEL_CHOICE,
+    MODEL_CHOICE_FIELDS.amount,
   );
   if (!charge.ok) return charge;
   return {
@@ -177,10 +184,10 @@ export function parseOfferingFields(
   for (const key of MONEY_FIELDS) {
     const sen = parseRinggit(textOf(values[OFFERING_MONEY_FIELDS[key]]));
     if (sen === null) {
-      return {
-        ok: false,
-        error: `Enter the ${lowerLabel(key)} in RM, with at most two decimals.`,
-      };
+      return refuse(
+        `Enter the ${lowerLabel(key)} in RM, with at most two decimals.`,
+        OFFERING_MONEY_FIELDS[key],
+      );
     }
     money[key] = sen;
   }

@@ -1,11 +1,14 @@
 "use client";
 
 import { plural } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { deleteZoneAction } from "./actions";
+import { FormError } from "../../../../_components/FormError";
+import { errorOf } from "../../../../_lib/action-state";
 
 /**
  * The remove button of one zone's row, quiet beside "Edit" since a row
@@ -49,19 +52,17 @@ export function ZoneList({
           });
           if (!remove) return;
           startTransition(async () => {
-            const result = await deleteZoneAction(locationId, zoneId);
-            setError(result?.error ?? null);
-            if (!result?.error) toast.success(`Removed the zone ${name}.`);
+            const refused = errorOf(
+              await answerOf(deleteZoneAction(locationId, zoneId)),
+            );
+            setError(refused);
+            if (!refused) toast.success(`Removed the zone ${name}.`);
           });
         }}
       >
         {pending ? "Removing…" : "Remove"}
       </Button>
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
       {dialog}
     </div>
   );

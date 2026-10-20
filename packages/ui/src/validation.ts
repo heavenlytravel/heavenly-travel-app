@@ -60,22 +60,68 @@ function refuse(event: SyntheticEvent): string | null {
   return validityMessage(control);
 }
 
+/** A control's mark taken off, and a reason the server gave for it. */
+function unmark(control: Element) {
+  control.removeAttribute("aria-invalid");
+  if (
+    control instanceof HTMLInputElement ||
+    control instanceof HTMLSelectElement ||
+    control instanceof HTMLTextAreaElement
+  ) {
+    control.setCustomValidity("");
+  }
+}
+
 /**
  * The control a change came from, its mark cleared, and the marks of the
- * rest of its group when it is a radio: one pick answers them all.
+ * rest of its group when it is one of several of a name, radios or tick
+ * boxes: one change answers them all.
  */
 function cleared(event: SyntheticEvent) {
   const control = event.target;
-  if (control instanceof HTMLInputElement && control.type === "radio") {
+  if (control instanceof HTMLInputElement && control.name) {
     const group = control.form?.elements.namedItem(control.name);
     if (group instanceof RadioNodeList) {
-      for (const radio of group) {
-        if (radio instanceof HTMLElement) radio.removeAttribute("aria-invalid");
+      for (const each of group) {
+        if (each instanceof Element) unmark(each);
       }
     }
   }
-  if (control instanceof HTMLElement) control.removeAttribute("aria-invalid");
+  if (control instanceof Element) unmark(control);
   return control;
+}
+
+/**
+ * Shows a reason the server gave for refusing one field the way a
+ * refused control shows the browser's own: under it in red, the control
+ * marked and given the focus, the mark gone once it changes. For a
+ * control in a `Field`, a `FieldGroup` or a form with `useFormErrors`.
+ * Answers false when nothing showed it, a hidden control or one with none
+ * of those around it, so the caller shows the reason elsewhere.
+ */
+export function showFieldError(
+  form: HTMLFormElement | null,
+  name: string,
+  message: string,
+): boolean {
+  const named = form?.elements.namedItem(name);
+  const control = named instanceof RadioNodeList ? named[0] : named;
+  if (
+    !(
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLSelectElement ||
+      control instanceof HTMLTextAreaElement
+    ) ||
+    !control.willValidate
+  ) {
+    return false;
+  }
+  control.setCustomValidity(message);
+  // Fires `invalid` for the wrapper to show, without the browser's bubble.
+  control.checkValidity();
+  if (control.getAttribute("aria-invalid") === "true") return true;
+  control.setCustomValidity("");
+  return false;
 }
 
 /**

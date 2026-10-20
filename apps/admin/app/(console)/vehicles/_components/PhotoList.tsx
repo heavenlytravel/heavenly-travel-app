@@ -20,6 +20,7 @@ import Image from "next/image";
 import { useRef, type Dispatch, type SetStateAction } from "react";
 import { useImageUpload } from "../../../_components/use-image-upload";
 import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../_lib/routes";
+import { FormError } from "../../../_components/FormError";
 
 /**
  * A vehicle's photos, in the order the customer swipes through them: each
@@ -175,11 +176,7 @@ export function PhotoList({
             : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
         </span>
       </div>
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
     </div>
   );
 }

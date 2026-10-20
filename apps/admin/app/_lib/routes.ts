@@ -122,11 +122,10 @@ export function newDriverHref(location?: string) {
 
 /**
  * The field a vehicle or driver form posts when it was opened from the
- * list across locations, and its value: once saved, the form goes back
- * to that list rather than to a location's tab.
+ * list across locations: the list's address, as it was filtered. Once
+ * saved, the form goes back to it rather than to a location's tab.
  */
 export const FLEET_BACK_FIELD = "back";
-export const FLEET_BACK_TO_LIST = "list";
 
 /** The console's home: every location with its numbers. */
 export const LOCATIONS_PATH = "/";

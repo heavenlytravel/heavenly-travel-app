@@ -5,11 +5,14 @@ import {
   LOCATION_STATE_MOVE,
   type LocationState,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm, type ConfirmRequest } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { moveLocationStateAction } from "../actions";
+import { FormError } from "../../../_components/FormError";
+import { errorOf } from "../../../_lib/action-state";
 
 /** What the admin is asked before a move the public notices; null for the rest. */
 function questionOf(from: LocationState, name: string): ConfirmRequest | null {
@@ -60,12 +63,13 @@ export function StateMove({
     const question = questionOf(state, name);
     if (question && !(await confirm(question))) return;
     startTransition(async () => {
-      const result = await moveLocationStateAction(
-        locationId,
-        LOCATION_STATE_MOVE[state],
+      const refused = errorOf(
+        await answerOf(
+          moveLocationStateAction(locationId, LOCATION_STATE_MOVE[state]),
+        ),
       );
-      setError(result?.error ?? null);
-      if (!result?.error) {
+      setError(refused);
+      if (!refused) {
         toast.success(
           state === "draft"
             ? `${name} is live.`
@@ -86,11 +90,7 @@ export function StateMove({
       >
         {LOCATION_MOVE_LABELS[state]}
       </Button>
-      {error ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} />
       {dialog}
     </div>
   );

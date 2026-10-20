@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { CONTACT_NAME_MAX_LENGTH, type TripCategory } from "@repo/db";
-import { useFormErrors } from "@repo/ui/validation";
+import { answerOf } from "@repo/ui/action-answer";
+import { showFieldError, useFormErrors } from "@repo/ui/validation";
 import Link from "next/link";
 import {
   control,
@@ -24,9 +25,10 @@ const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
  * cannot be edited here; signed out, a line offers sign-in, which comes
  * back to this page. The fields are controlled: React resets a form once
  * its action returns, and an answer that is an error must not wipe what
- * the customer typed. A field the browser refuses on submit, left empty
- * or an email without an @, says why under itself in place of the
- * browser's bubble.
+ * the customer typed. A field refused, by the browser on submit (left
+ * empty, an email without an @) or by the server, says why under itself
+ * in place of the browser's bubble; any other refusal shows above the
+ * button, and one that never answered says to try again.
  */
 export function ConfirmForm({
   category,
@@ -46,8 +48,19 @@ export function ConfirmForm({
   /** Where a visitor signs in; null when signed in. */
   signInHref: string | null;
 }) {
+  const form = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState<ConfirmState, FormData>(
-    createTripBookingAction,
+    async (previous, formData) => {
+      const answer = await answerOf(
+        createTripBookingAction(previous, formData),
+      );
+      const atField =
+        answer !== null &&
+        "field" in answer &&
+        answer.field !== undefined &&
+        showFieldError(form.current, answer.field, answer.error);
+      return atField ? null : answer;
+    },
     null,
   );
   const [name, setName] = useState(defaultName);
@@ -66,7 +79,7 @@ export function ConfirmForm({
     ) : null;
 
   return (
-    <form action={action} {...formProps} className="grid gap-4">
+    <form ref={form} action={action} {...formProps} className="grid gap-4">
       <input type="hidden" name={CONFIRM_FIELDS.category} value={category} />
       <input type="hidden" name={CONFIRM_FIELDS.trip} value={trip} />
       {signInHref && (

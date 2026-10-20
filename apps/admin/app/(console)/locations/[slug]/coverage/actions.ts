@@ -13,10 +13,11 @@ import {
 import { resolvePlace } from "@repo/places/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
+  type ActionState,
   FORBIDDEN,
   FORBIDDEN_MESSAGE,
+  STALE,
   stateOf,
-  type ActionState,
 } from "../../../../_lib/action-state";
 import { revalidateLocation } from "../../_lib/revalidate";
 
@@ -99,7 +100,7 @@ export async function deleteZoneAction(
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string" || typeof zoneId !== "string") {
-    return { error: "Missing zone." };
+    return STALE;
   }
   const result = await deleteZone(actorOf(admin), zoneId);
   if (result.ok) revalidateLocation();

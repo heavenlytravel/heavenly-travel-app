@@ -11,9 +11,11 @@ import {
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
-  FORBIDDEN,
-  stateOf,
   type ActionState,
+  FORBIDDEN,
+  refusalOf,
+  STALE,
+  stateOf,
 } from "../../../../_lib/action-state";
 import { revalidateLocation } from "../../_lib/revalidate";
 
@@ -33,9 +35,9 @@ export async function setZoneRatesAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string") return { error: "Missing location." };
+  if (typeof locationId !== "string") return STALE;
   const parsed = parseRateCells(rows);
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return refusalOf(parsed);
   const result = await setZoneRates(actorOf(admin), locationId, parsed.value);
   if (result.ok) revalidateLocation();
   return stateOf(result);
@@ -48,9 +50,9 @@ export async function setOddHoursAction(
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
   const locationId = textOf(formData.get("locationId"));
-  if (!locationId) return { error: "Missing location." };
+  if (!locationId) return STALE;
   const parsed = parseOddHoursFields(Object.fromEntries(formData));
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return refusalOf(parsed);
   const result = await setOddHours(actorOf(admin), locationId, parsed.value);
   if (result.ok) revalidateLocation();
   return stateOf(result);
@@ -62,9 +64,7 @@ export async function setDropoffRuleAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string" || !isDropoffRule(rule)) {
-    return { error: "Choose a rule." };
-  }
+  if (typeof locationId !== "string" || !isDropoffRule(rule)) return STALE;
   const result = await setDropoffRule(actorOf(admin), locationId, rule);
   if (result.ok) revalidateLocation();
   return stateOf(result);

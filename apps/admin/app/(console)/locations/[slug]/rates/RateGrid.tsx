@@ -7,6 +7,7 @@ import {
   ringgitInputValue,
   type DropoffRule,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
@@ -24,6 +25,7 @@ import { locationTabHref } from "../../../../_lib/routes";
 import { useLeaveGuard } from "../../../../_lib/use-leave-guard";
 import { setZoneRatesAction } from "./actions";
 import { AddRouteDialog, pairKey, type NewRoute } from "./AddRouteDialog";
+import { errorOf } from "../../../../_lib/action-state";
 
 type Zone = { id: string; name: string };
 /** A column of the grid: a class on sale here, with the category it is sold under. */
@@ -351,15 +353,19 @@ export function RateGrid({
   // the grid as saved; the grid's other changes stay as they were.
   async function addRoute(added: NewRoute): Promise<string | null> {
     const route = { fromZoneId: added.fromZoneId, toZoneId: added.toZoneId };
-    const result = await setZoneRatesAction(
-      locationId,
-      classes.map((column) => ({
-        ...route,
-        vehicleClassId: column.id,
-        price: added.prices[column.id] ?? "",
-      })),
+    const refused = errorOf(
+      await answerOf(
+        setZoneRatesAction(
+          locationId,
+          classes.map((column) => ({
+            ...route,
+            vehicleClassId: column.id,
+            price: added.prices[column.id] ?? "",
+          })),
+        ),
+      ),
     );
-    if (result?.error) return result.error;
+    if (refused) return refused;
     const stored: Record<string, number> = {};
     for (const column of classes) {
       const reading = readCell(added.prices[column.id]);
@@ -437,9 +443,11 @@ export function RateGrid({
       rows.push({ fromZoneId, toZoneId, vehicleClassId, price: "" });
     }
     startTransition(async () => {
-      const result = await setZoneRatesAction(locationId, rows);
-      if (result?.error) {
-        setNotice({ tone: "error", text: result.error });
+      const refused = errorOf(
+        await answerOf(setZoneRatesAction(locationId, rows)),
+      );
+      if (refused) {
+        setNotice({ tone: "error", text: refused });
         return;
       }
       // What was just saved is what the next changes count from: the

@@ -6,6 +6,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Field } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState, useTransition, type FormEvent } from "react";
+import { FormError } from "../../../../_components/FormError";
 
 type Zone = { id: string; name: string };
 type ClassColumn = { id: string; name: string; category: string };
@@ -209,11 +210,7 @@ function RouteForm({
         </p>
       </fieldset>
 
-      {error ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={pending}>
           Cancel

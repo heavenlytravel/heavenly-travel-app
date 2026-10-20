@@ -25,12 +25,13 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Card } from "../../../_components/Card";
 import { ExpiryDateField } from "../../../_components/ExpiryDateField";
-import type { ActionState } from "../../../_lib/action-state";
+import { FormError } from "../../../_components/FormError";
 import { classGroups } from "../../../_lib/fleet-form";
-import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../_lib/routes";
+import { FLEET_BACK_FIELD } from "../../../_lib/routes";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { createVehicleAction, updateVehicleAction } from "../actions";
 import { PhotoList } from "./PhotoList";
 
@@ -123,15 +124,15 @@ export function VehicleForm({
   /** Every model in the catalogue, for the brand and model fields. */
   suggestions: ModelSuggestion[];
   locations: LocationName[];
-  /** Where "Cancel" goes. */
+  /** Where "Cancel" goes; with `backToList`, where a saved vehicle goes too. */
   backHref: string;
   /** Opened from the list across locations, which a saved vehicle goes back to. */
   backToList?: boolean;
 }) {
   const isNew = !vehicle;
-  const [state, action, pending] = useActionState<ActionState, FormData>(
+  const { pending, error, formProps } = useActionForm(
     isNew ? createVehicleAction : updateVehicleAction,
-    null,
+    { done: isNew ? "Vehicle added." : "Vehicle saved." },
   );
   const fields = vehicle ? vehicleFieldsOf(vehicle) : null;
   const [classId, setClassId] = useState(
@@ -144,15 +145,11 @@ export function VehicleForm({
   );
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...formProps} className="grid gap-6">
       {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
       <input type="hidden" name={PHOTOS_FIELD} value={JSON.stringify(photos)} />
       {backToList ? (
-        <input
-          type="hidden"
-          name={FLEET_BACK_FIELD}
-          value={FLEET_BACK_TO_LIST}
-        />
+        <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />
       ) : null}
 
       <Card className="grid gap-4">
@@ -324,11 +321,7 @@ export function VehicleForm({
         >
           Cancel
         </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </form>
   );

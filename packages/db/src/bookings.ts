@@ -406,12 +406,16 @@ export function advanceItem(
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
-    if (!item) return { ok: false, error: "Booking item not found." };
+    if (!item)
+      return {
+        ok: false,
+        error: "This item is no longer on the booking. Reload the booking.",
+      };
     const next = nextItemStatusOf(item.status);
     if (next === null || next !== to) {
       return {
         ok: false,
-        error: `Item is ${item.status}, so it cannot become ${to}.`,
+        error: `Item is ${item.status} now, so it cannot become ${to}. Reload the booking.`,
       };
     }
     await tx.bookingItem.update({
@@ -442,9 +446,16 @@ export function cancelItem(
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
-    if (!item) return { ok: false, error: "Booking item not found." };
+    if (!item)
+      return {
+        ok: false,
+        error: "This item is no longer on the booking. Reload the booking.",
+      };
     if (item.status === "cancelled" || item.status === "completed") {
-      return { ok: false, error: `Item is already ${item.status}.` };
+      return {
+        ok: false,
+        error: `Item is already ${item.status}. Reload the booking.`,
+      };
     }
     await tx.bookingItem.update({
       where: { id: itemId },
@@ -482,11 +493,15 @@ export function overrideItemPrice(
   }
   return db.$transaction(async (tx) => {
     const item = await tx.bookingItem.findUnique({ where: { id: itemId } });
-    if (!item) return { ok: false, error: "Booking item not found." };
+    if (!item)
+      return {
+        ok: false,
+        error: "This item is no longer on the booking. Reload the booking.",
+      };
     if (item.status === "cancelled" || item.status === "completed") {
       return {
         ok: false,
-        error: `Item is ${item.status}, so its price cannot change.`,
+        error: `Item is ${item.status} now, so its price cannot change. Reload the booking.`,
       };
     }
     const receipt = priceBreakdownOf(item.priceBreakdown);
@@ -589,11 +604,15 @@ export function amendItem(
       where: { id: itemId },
       include: { tripDetails: true },
     });
-    if (!item) return { ok: false, error: "Booking item not found." };
+    if (!item)
+      return {
+        ok: false,
+        error: "This item is no longer on the booking. Reload the booking.",
+      };
     if (item.status !== "received" && item.status !== "confirmed") {
       return {
         ok: false,
-        error: `Item is ${item.status}, so it cannot be amended.`,
+        error: `Item is ${item.status} now, so it cannot be amended. Go back to the booking.`,
       };
     }
     if (!item.tripDetails || item.product !== next.product) {
@@ -703,9 +722,16 @@ export function cancelBookingAsAdmin(
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const booking = await tx.booking.findUnique({ where: { id: bookingId } });
-    if (!booking) return { ok: false, error: "Booking not found." };
+    if (!booking)
+      return {
+        ok: false,
+        error: "This booking was deleted meanwhile. Go back to Bookings.",
+      };
     if (booking.status === "cancelled" || booking.status === "completed") {
-      return { ok: false, error: `Booking is already ${booking.status}.` };
+      return {
+        ok: false,
+        error: `Booking is already ${booking.status}. Reload the booking.`,
+      };
     }
     return {
       ok: true,
@@ -736,7 +762,11 @@ export function cancelBookingAsCustomer(
         },
       },
     });
-    if (!booking) return { ok: false, error: "Booking not found." };
+    if (!booking)
+      return {
+        ok: false,
+        error: "This booking was deleted meanwhile. Go back to Bookings.",
+      };
     const allowed = checkCustomerCancel(booking, now);
     if (!allowed.ok) return { ok: false, error: allowed.message };
     return {

@@ -1,4 +1,4 @@
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import { isValidPhone, normalizePhone } from "./phone";
@@ -84,30 +84,37 @@ export function driverDocumentsDue(
   return documentsDue(days, DRIVER_DOCUMENT_LABELS, now);
 }
 
-const fail = (error: string): Change => ({ ok: false, error });
-
 /** The rules on a driver's fields; a field left out is not checked. */
 export function checkDriverFields(fields: Partial<DriverFields>): Change {
   if (fields.name !== undefined) {
-    if (fields.name === "") return fail("Enter the driver's name.");
+    if (fields.name === "") return refuse("Enter the driver's name.", "name");
     if (fields.name.length > DRIVER_LIMITS.name) {
-      return fail(`A name is at most ${DRIVER_LIMITS.name} characters.`);
+      return refuse(
+        `A name is at most ${DRIVER_LIMITS.name} characters.`,
+        "name",
+      );
     }
   }
   if (fields.phone !== undefined && !isValidPhone(fields.phone)) {
-    return fail("Enter a phone number the team can call.");
+    return refuse("Enter a phone number the team can call.", "phone");
   }
   if (fields.locationId !== undefined && !fields.locationId) {
-    return fail("Choose where they are based.");
+    return refuse("Choose where they are based.", "locationId");
   }
   if (
     fields.vehicleClassIds !== undefined &&
     fields.vehicleClassIds.length === 0
   ) {
-    return fail("Tick at least one class they may drive.");
+    return refuse(
+      "Tick at least one class they may drive.",
+      DRIVER_CLASSES_FIELD,
+    );
   }
   if (fields.notes !== undefined && fields.notes.length > DRIVER_LIMITS.notes) {
-    return fail(`Notes are at most ${DRIVER_LIMITS.notes} characters.`);
+    return refuse(
+      `Notes are at most ${DRIVER_LIMITS.notes} characters.`,
+      "notes",
+    );
   }
   return { ok: true };
 }
@@ -123,7 +130,7 @@ export function parseDriverFields(
 ): Parsed<DriverFields> {
   const documents = {} as Record<DriverDocument, string | null>;
   for (const key of DRIVER_DOCUMENTS) {
-    const day = parseDay(values[key], DRIVER_DOCUMENT_LABELS[key]);
+    const day = parseDay(values[key], DRIVER_DOCUMENT_LABELS[key], key);
     if (!day.ok) return day;
     documents[key] = day.value;
   }

@@ -1,4 +1,4 @@
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import {
@@ -124,28 +124,32 @@ export function vehicleDocumentsDue(
   return documentsDue(days, VEHICLE_DOCUMENT_LABELS, now);
 }
 
-const fail = (error: string): Change => ({ ok: false, error });
-
 /** The rules on a vehicle's fields; a field left out is not checked. */
 export function checkVehicleFields(
   fields: Partial<VehicleFields>,
   now: Date = new Date(),
 ): Change {
   if (fields.plate !== undefined && !PLATE_RE.test(fields.plate)) {
-    return fail("Enter the plate: letters and digits, such as VLE 1234.");
+    return refuse(
+      "Enter the plate: letters and digits, such as VLE 1234.",
+      "plate",
+    );
   }
   if (fields.vehicleClassId !== undefined && !fields.vehicleClassId) {
-    return fail("Choose the class.");
+    return refuse("Choose the class.", "vehicleClassId");
   }
   const named = checkModelName({ brand: fields.brand, name: fields.model });
   if (!named.ok) return named;
   if (fields.locationId !== undefined && !fields.locationId) {
-    return fail("Choose where it is based.");
+    return refuse("Choose where it is based.", "locationId");
   }
   if (fields.colour !== undefined) {
-    if (fields.colour === "") return fail("Enter the colour.");
+    if (fields.colour === "") return refuse("Enter the colour.", "colour");
     if (fields.colour.length > VEHICLE_LIMITS.colour) {
-      return fail(`A colour is at most ${VEHICLE_LIMITS.colour} characters.`);
+      return refuse(
+        `A colour is at most ${VEHICLE_LIMITS.colour} characters.`,
+        "colour",
+      );
     }
   }
   if (fields.year !== undefined && fields.year !== null) {
@@ -155,14 +159,20 @@ export function checkVehicleFields(
       fields.year < OLDEST_YEAR ||
       fields.year > newest
     ) {
-      return fail(`The year made is from ${OLDEST_YEAR} to ${newest}.`);
+      return refuse(
+        `The year made is from ${OLDEST_YEAR} to ${newest}.`,
+        "year",
+      );
     }
   }
   if (
     fields.notes !== undefined &&
     fields.notes.length > VEHICLE_LIMITS.notes
   ) {
-    return fail(`Notes are at most ${VEHICLE_LIMITS.notes} characters.`);
+    return refuse(
+      `Notes are at most ${VEHICLE_LIMITS.notes} characters.`,
+      "notes",
+    );
   }
   return { ok: true };
 }
@@ -177,13 +187,15 @@ export function parseVehicleFields(
   now: Date = new Date(),
 ): Parsed<VehicleInput> {
   const photos = parsePhotos(values[PHOTOS_FIELD]);
-  if (!photos) return { ok: false, error: "Upload the photos again." };
+  if (!photos) {
+    return refuse("The photos did not arrive. Add them again.", PHOTOS_FIELD);
+  }
   const photosCheck = checkPhotos(photos);
   if (!photosCheck.ok) return photosCheck;
   const yearText = textOf(values.year);
   const documents = {} as Record<VehicleDocument, string | null>;
   for (const key of VEHICLE_DOCUMENTS) {
-    const day = parseDay(values[key], VEHICLE_DOCUMENT_LABELS[key]);
+    const day = parseDay(values[key], VEHICLE_DOCUMENT_LABELS[key], key);
     if (!day.ok) return day;
     documents[key] = day.value;
   }

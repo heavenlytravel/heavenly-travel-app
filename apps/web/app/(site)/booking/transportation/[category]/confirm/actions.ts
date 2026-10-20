@@ -25,7 +25,8 @@ import { bookingHref, receivedHref } from "../../../../../_lib/routes";
 import { bookableCategory } from "../../../../../_lib/transportation-booking";
 import { CONFIRM_FIELDS } from "./fields";
 
-export type ConfirmState = { error: string } | null;
+/** Why the booking was not made, and the form's field it is about when it is about one; null before. */
+export type ConfirmState = { error: string; field?: string } | null;
 
 /** The visitor's address as Vercel reports it, or null outside a proxy. */
 async function requestIp(): Promise<string | null> {
@@ -70,7 +71,11 @@ export async function createTripBookingAction(
     phone: formData.get(CONFIRM_FIELDS.phone),
     email: user ? user.email : formData.get(CONFIRM_FIELDS.email),
   });
-  if (!contact.ok) return { error: contact.error };
+  if (!contact.ok) {
+    return contact.field
+      ? { error: contact.error, field: contact.field }
+      : { error: contact.error };
+  }
 
   const createdIp = await requestIp();
   const limited = await isBookingRateLimited({

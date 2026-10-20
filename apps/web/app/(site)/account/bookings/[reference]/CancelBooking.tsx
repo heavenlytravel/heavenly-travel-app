@@ -1,5 +1,6 @@
 "use client";
 
+import { answerOf } from "@repo/ui/action-answer";
 import { useActionState, useState } from "react";
 import {
   dangerButton,
@@ -25,7 +26,7 @@ export function CancelBooking({
 }) {
   const [armed, setArmed] = useState(false);
   const [state, action, pending] = useActionState<CancelState, FormData>(
-    cancelBookingAction,
+    (previous, formData) => answerOf(cancelBookingAction(previous, formData)),
     null,
   );
 

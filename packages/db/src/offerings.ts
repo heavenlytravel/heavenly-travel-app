@@ -1,7 +1,7 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type {
   LocationVehicleClass,
@@ -90,7 +90,9 @@ function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
     .sort(byClassOrder);
 }
 
-const NOT_FOUND: Change = { ok: false, error: "Offering not found." };
+const NOT_FOUND: Change = refuse(
+  "This class was taken off this location meanwhile. Go back to the list.",
+);
 
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
@@ -216,26 +218,35 @@ export async function createOffering(
       where: { id: locationId },
       select: { id: true },
     });
-    if (!location) return { ok: false, error: "Location not found." };
+    if (!location) {
+      return refuse(
+        "This location was deleted meanwhile. Go back to Locations.",
+      );
+    }
 
     let vehicleClass: VehicleClass;
     if ("vehicleClassId" in choice) {
       const found = await tx.vehicleClass.findUnique({
         where: { id: choice.vehicleClassId },
       });
-      if (!found) return { ok: false, error: "Vehicle class not found." };
+      if (!found) {
+        return refuse(
+          "That class was just deleted. Choose the class again.",
+          "vehicleClassId",
+        );
+      }
       vehicleClass = found;
     } else {
       const slug = slugify(choice.newClass.name);
       if (!slug) {
-        return { ok: false, error: "Enter a name with a letter or digit." };
+        return refuse("Enter a name with a letter or digit.", "name");
       }
       const taken = await tx.vehicleClass.findUnique({ where: { slug } });
       if (taken) {
-        return {
-          ok: false,
-          error: `${taken.name} already has the slug ${slug}. Pick it from the catalogue instead.`,
-        };
+        return refuse(
+          `${taken.name} is in the catalogue already. Choose it from the catalogue instead.`,
+          "name",
+        );
       }
       vehicleClass = await tx.vehicleClass.create({
         data: { slug, ...choice.newClass },
@@ -256,10 +267,10 @@ export async function createOffering(
       },
     });
     if (already) {
-      return {
-        ok: false,
-        error: `${vehicleClass.name} is already offered here. Edit its rates instead.`,
-      };
+      return refuse(
+        `${vehicleClass.name} is already offered here. Edit its rates instead.`,
+        "vehicleClassId",
+      );
     }
     const offering = await tx.locationVehicleClass.create({
       data: { locationId, vehicleClassId: vehicleClass.id, ...fields },

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { answerOf } from "@repo/ui/action-answer";
 import { inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
@@ -44,7 +45,10 @@ export function AddressTester({
             setPlaceId(picked);
             if (picked) {
               startTest(async () => {
-                setResult(await testAddressAction(picked));
+                const answer = await answerOf(testAddressAction(picked));
+                setResult(
+                  "ok" in answer ? answer : { ok: false, error: answer.error },
+                );
               });
             } else {
               setResult(null);

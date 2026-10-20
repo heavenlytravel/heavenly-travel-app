@@ -21,13 +21,14 @@ import {
 } from "@repo/db/server";
 import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
 import {
-  FORBIDDEN,
-  stateOf,
   type ActionState,
+  FORBIDDEN,
+  refusalOf,
+  STALE,
+  stateOf,
 } from "../../../_lib/action-state";
 import {
   BOOKINGS_PATH,
@@ -45,7 +46,7 @@ import { prepareFormItem } from "../_lib/trip-server";
  * counts the queue and which open the booking inside the location.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return refusalOf(result);
   after(() => sendBookingChangeEmail(result));
   revalidatePath(bookingHref(result.booking.id));
   revalidatePath(BOOKINGS_PATH);
@@ -62,7 +63,7 @@ export async function advanceItemAction(
   const itemId = String(formData.get("itemId") ?? "");
   const to = formData.get("to");
   if (!itemId || !isNextItemStatus(to)) {
-    return { error: "Missing item or step." };
+    return STALE;
   }
   const admin = await getAdmin(ADVANCE_PERMISSIONS[to]);
   if (!admin) return FORBIDDEN;
@@ -76,7 +77,7 @@ export async function cancelItemAction(
   const admin = await getAdmin("bookings.manage");
   if (!admin) return FORBIDDEN;
   const itemId = String(formData.get("itemId") ?? "");
-  if (!itemId) return { error: "Missing item." };
+  if (!itemId) return STALE;
   return finish(await cancelItem(actorOf(admin), itemId));
 }
 
@@ -87,7 +88,7 @@ export async function cancelBookingAction(
   const admin = await getAdmin("bookings.manage");
   if (!admin) return FORBIDDEN;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) return { error: "Missing booking." };
+  if (!bookingId) return STALE;
   return finish(await cancelBookingAsAdmin(actorOf(admin), bookingId));
 }
 
@@ -99,7 +100,7 @@ export async function addNoteAction(
   const admin = await getAdmin("bookings.notes");
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
-  if (!bookingId) return { error: "Missing booking." };
+  if (!bookingId) return STALE;
   const result = await addBookingNote(
     actorOf(admin),
     bookingId,
@@ -124,7 +125,7 @@ export async function overrideItemPriceAction(
   const admin = await getAdmin("bookings.create");
   if (!admin) return FORBIDDEN;
   const itemId = textOf(formData.get("itemId"));
-  if (!itemId) return { error: "Missing item." };
+  if (!itemId) return STALE;
 
   let override: PriceOverride | null = null;
   if (!flagOf(formData.get("remove"))) {
@@ -132,7 +133,7 @@ export async function overrideItemPriceAction(
       amount: formData.get(PRICE_OVERRIDE_FIELDS.amount),
       reason: formData.get(PRICE_OVERRIDE_FIELDS.reason),
     });
-    if (!parsed.ok) return { error: parsed.error };
+    if (!parsed.ok) return refusalOf(parsed);
     if (!parsed.value) {
       return { error: "Enter the agreed price and the reason." };
     }
@@ -155,10 +156,10 @@ export async function amendItemAction(
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
   const itemId = textOf(formData.get("itemId"));
-  if (!bookingId || !itemId) return { error: "Missing item." };
+  if (!bookingId || !itemId) return STALE;
 
   const prepared = await prepareFormItem(tripItemParams(formData, 0));
-  if (!prepared.ok) return { error: prepared.error };
+  if (!prepared.ok) return refusalOf(prepared);
   // An agreed price is its own permission, checked only when one is posted.
   if (prepared.override && !(await getAdmin("bookings.create"))) {
     return FORBIDDEN;
@@ -167,7 +168,10 @@ export async function amendItemAction(
     await amendItem(actorOf(admin), itemId, prepared),
   );
   if (result) return result;
-  redirect(
-    bookingHref(bookingId, textOf(formData.get("locationSlug")) || undefined),
-  );
+  return {
+    href: bookingHref(
+      bookingId,
+      textOf(formData.get("locationSlug")) || undefined,
+    ),
+  };
 }

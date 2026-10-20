@@ -2,6 +2,7 @@
 
 import { LOCATION_LIMITS, checkAddressNames } from "@repo/db";
 import type { Bounds } from "@repo/places";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Badge } from "@repo/ui/badge";
@@ -14,6 +15,7 @@ import { Card, CardTitle } from "../../../_components/Card";
 import { RowControls, movedRow } from "../_components/RowControls";
 import { setLocationAddressesAction } from "../actions";
 import { AddressDialog, type AddressDialogMode } from "./AddressDialog";
+import { errorOf } from "../../../_lib/action-state";
 
 /** A saved address as the page hands it over. */
 export type SavedAddress = {
@@ -147,17 +149,21 @@ export function SavedAddresses({
       return;
     }
     startSave(async () => {
-      const result = await setLocationAddressesAction(
-        locationId,
-        addresses.map((address) => address.id),
-        rows.map((row) =>
-          row.id
-            ? { id: row.id, name: row.name }
-            : { placeId: row.placeId, name: row.name },
+      const refused = errorOf(
+        await answerOf(
+          setLocationAddressesAction(
+            locationId,
+            addresses.map((address) => address.id),
+            rows.map((row) =>
+              row.id
+                ? { id: row.id, name: row.name }
+                : { placeId: row.placeId, name: row.name },
+            ),
+          ),
         ),
       );
-      setError(result?.error ?? null);
-      if (result === null) toast.success("Saved addresses saved.");
+      setError(refused);
+      if (!refused) toast.success("Saved addresses saved.");
     });
   }
 

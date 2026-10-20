@@ -14,7 +14,6 @@ export * from "./trip-view";
 export * from "./names";
 export * from "./contact";
 export type { SessionUser, Access } from "./session";
-export type { AdminChange } from "./admins";
 export * from "./change";
 export * from "./fields";
 export * from "./slug";

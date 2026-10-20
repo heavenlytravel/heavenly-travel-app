@@ -9,10 +9,10 @@ import {
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { TimeField } from "@repo/ui/date-field";
-import { toast } from "@repo/ui/toast";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { ChargeInput } from "../../../../_components/ChargeInput";
-import type { ActionState } from "../../../../_lib/action-state";
+import { FormError } from "../../../../_components/FormError";
+import { useActionForm } from "../../../../_lib/use-action-form";
 import { setOddHoursAction } from "./actions";
 
 /** The amount as the field shows it: a whole percentage, or ringgit. */
@@ -37,19 +37,6 @@ export function OddHoursForm({
   /** The surcharge in force; null for none. */
   window: OddHours | null;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    async (previous, formData) => {
-      const result = await setOddHoursAction(previous, formData);
-      if (result === null) {
-        const removed = ["from", "to", "amount"].every(
-          (field) => !String(formData.get(field) ?? "").trim(),
-        );
-        toast.success(removed ? "Surcharge removed." : "Surcharge saved.");
-      }
-      return result;
-    },
-    null,
-  );
   const [from, setFrom] = useState(
     window ? timeOfMinute(window.fromMinute) : "",
   );
@@ -59,6 +46,9 @@ export function OddHoursForm({
   );
   const [amount, setAmount] = useState(amountOf(window));
   const empty = from === "" && to === "" && amount === "";
+  const { pending, error, formProps } = useActionForm(setOddHoursAction, {
+    done: empty ? "Surcharge removed." : "Surcharge saved.",
+  });
   const unchanged = window
     ? from === timeOfMinute(window.fromMinute) &&
       to === timeOfMinute(window.toMinute) &&
@@ -73,7 +63,7 @@ export function OddHoursForm({
   }
 
   return (
-    <form action={action} className="grid gap-4">
+    <form {...formProps} className="grid gap-4">
       <input type="hidden" name="locationId" value={locationId} />
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-sm text-neutral-700">
         <span>Trips that start between</span>
@@ -120,11 +110,7 @@ export function OddHoursForm({
             Clear
           </Button>
         ) : null}
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </form>
   );

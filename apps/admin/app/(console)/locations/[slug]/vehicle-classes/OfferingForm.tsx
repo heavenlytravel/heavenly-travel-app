@@ -25,11 +25,12 @@ import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ChargeInput } from "../../../../_components/ChargeInput";
-import type { ActionState } from "../../../../_lib/action-state";
+import { FormError } from "../../../../_components/FormError";
 import { locationTabHref } from "../../../../_lib/routes";
+import { useActionForm } from "../../../../_lib/use-action-form";
 import {
   DEFAULT_CATEGORY,
   VehicleClassFieldset,
@@ -161,9 +162,9 @@ export function OfferingForm({
   candidates?: VehicleClass[];
 }) {
   const isNew = !offering;
-  const [state, action, pending] = useActionState<ActionState, FormData>(
+  const { pending, error, formProps } = useActionForm(
     isNew ? createOfferingAction : updateOfferingAction,
-    null,
+    { done: isNew ? "Class added to this location." : "Rates saved." },
   );
   const [source, setSource] = useState<string>(
     candidates.length > 0 ? SOURCES.catalogue : SOURCES.new,
@@ -198,7 +199,7 @@ export function OfferingForm({
     baseSen !== null && minimumSen !== null && minimumSen < baseSen;
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...formProps} className="grid gap-6">
       <input type="hidden" name="locationId" value={locationId} />
       {offering ? <input type="hidden" name="id" value={offering.id} /> : null}
 
@@ -369,11 +370,7 @@ export function OfferingForm({
         >
           Cancel
         </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </form>
   );

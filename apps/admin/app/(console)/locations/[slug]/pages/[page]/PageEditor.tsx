@@ -23,6 +23,7 @@ import {
   type PageFaq,
   type PageHighlight,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Button } from "@repo/ui/button";
@@ -59,6 +60,7 @@ import {
 } from "./PageHistory";
 import { PublishDialog } from "./PublishDialog";
 import { SearchResultPreview, SharedLinkPreview } from "./SearchPreviews";
+import { errorOf } from "../../../../../_lib/action-state";
 
 /** A row of a list in the form, with a key that stays while the form is open. */
 type Keyed<T> = T & { key: string };
@@ -277,13 +279,15 @@ export function PageEditor({
 
   function write(publish: boolean) {
     startTransition(async () => {
-      const result = await (publish ? publishPageAction : savePageDraftAction)(
-        locationId,
-        page,
-        version,
-        normal,
+      const result = await answerOf(
+        (publish ? publishPageAction : savePageDraftAction)(
+          locationId,
+          page,
+          version,
+          normal,
+        ),
       );
-      if (!result.ok) {
+      if ("error" in result) {
         setError(result.error);
         return;
       }
@@ -312,9 +316,11 @@ export function PageEditor({
       return;
     }
     startTransition(async () => {
-      const result = await unpublishPageAction(locationId, page);
-      if (result) {
-        setError(result.error);
+      const refused = errorOf(
+        await answerOf(unpublishPageAction(locationId, page)),
+      );
+      if (refused) {
+        setError(refused);
         return;
       }
       setPublished(null);

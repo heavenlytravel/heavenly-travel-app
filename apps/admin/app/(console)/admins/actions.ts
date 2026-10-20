@@ -6,14 +6,13 @@ import {
   revokeAdmin,
   setAdmin,
   setWallActive,
-  type AdminChange,
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
+import { type ActionState, STALE, stateOf } from "../../_lib/action-state";
 import { ADMINS_PATH } from "../../_lib/routes";
 
-const FORBIDDEN: AdminChange = {
-  ok: false,
+const FORBIDDEN: ActionState = {
   error: "Only SUPER admins can manage admins.",
 };
 
@@ -31,9 +30,9 @@ function revalidateAccess() {
  * the permission again.
  */
 export async function setAdminAction(
-  _previous: AdminChange | null,
+  _previous: ActionState,
   formData: FormData,
-): Promise<AdminChange> {
+): Promise<ActionState> {
   const actor = await getAdmin("admins.manage");
   if (!actor) return FORBIDDEN;
 
@@ -42,47 +41,52 @@ export async function setAdminAction(
     .toLowerCase();
   const level = formData.get("level");
   const teams = formData.getAll("teams");
-  if (!email || !isAdminLevel(level) || !teams.every(isAdminTeam)) {
-    return { ok: false, error: "Enter an email and choose a level." };
+  if (!email) {
+    return { error: "Enter their email.", field: "email" };
   }
+  if (!isAdminLevel(level)) {
+    return { error: "Choose a level.", field: "level" };
+  }
+  if (!teams.every(isAdminTeam)) return STALE;
   if (email === actor.email.toLowerCase() && level !== "SUPER") {
-    return { ok: false, error: "You cannot lower your own level." };
+    return {
+      error: "You cannot lower your own level. Ask another SUPER admin.",
+      field: "level",
+    };
   }
 
   const result = await setAdmin(actorOf(actor), email, level, teams);
   if (result.ok) revalidateAccess();
-  return result;
+  return stateOf(result);
 }
 
 export async function revokeAdminAction(
-  _previous: AdminChange | null,
+  _previous: ActionState,
   formData: FormData,
-): Promise<AdminChange> {
+): Promise<ActionState> {
   const actor = await getAdmin("admins.manage");
   if (!actor) return FORBIDDEN;
 
   const userId = String(formData.get("userId") ?? "");
-  if (!userId) return { ok: false, error: "Missing user." };
+  if (!userId) return STALE;
   if (userId === actor.id) {
-    return { ok: false, error: "You cannot revoke your own access." };
+    return {
+      error: "You cannot revoke your own access. Ask another SUPER admin.",
+    };
   }
 
   const result = await revokeAdmin(actorOf(actor), userId);
   if (result.ok) revalidatePath(ADMINS_PATH);
-  return result;
+  return stateOf(result);
 }
 
 /** Turns the wall between teams on or off for the whole app. */
-export async function setWallAction(wallActive: boolean): Promise<AdminChange> {
+export async function setWallAction(wallActive: boolean): Promise<ActionState> {
   const actor = await getAdmin("wall.switch");
-  if (!actor) {
-    return { ok: false, error: "Only SUPER admins can switch the wall." };
-  }
-  if (typeof wallActive !== "boolean") {
-    return { ok: false, error: "Choose on or off." };
-  }
+  if (!actor) return { error: "Only SUPER admins can switch the wall." };
+  if (typeof wallActive !== "boolean") return STALE;
 
   await setWallActive(actorOf(actor), wallActive);
   revalidateAccess();
-  return { ok: true };
+  return null;
 }

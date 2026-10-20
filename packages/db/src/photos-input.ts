@@ -1,4 +1,4 @@
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { textOf } from "./fields";
 import { isUploadUrl } from "./images";
 
@@ -31,20 +31,23 @@ export function photoAlt(name: string, photo: { caption: string }) {
 /** The rules on a list of photos: at most 12, each stored on UploadThing, each caption short. */
 export function checkPhotos(photos: readonly Photo[]): Change {
   if (photos.length > PHOTO_LIMITS.photos) {
-    return {
-      ok: false,
-      error: `A vehicle has at most ${PHOTO_LIMITS.photos} photos.`,
-    };
+    return refuse(
+      `A vehicle has at most ${PHOTO_LIMITS.photos} photos. Remove some.`,
+      PHOTOS_FIELD,
+    );
   }
   for (const photo of photos) {
     if (!isUploadUrl(photo.url)) {
-      return { ok: false, error: "Upload the photo again." };
+      return refuse(
+        "A photo did not finish uploading. Remove it and add it again.",
+        PHOTOS_FIELD,
+      );
     }
     if (photo.caption.length > PHOTO_LIMITS.caption) {
-      return {
-        ok: false,
-        error: `A caption is at most ${PHOTO_LIMITS.caption} characters.`,
-      };
+      return refuse(
+        `A caption is at most ${PHOTO_LIMITS.caption} characters. Shorten it.`,
+        PHOTOS_FIELD,
+      );
     }
   }
   return { ok: true };

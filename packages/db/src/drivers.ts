@@ -1,9 +1,10 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import {
   checkDriverFields,
+  DRIVER_CLASSES_FIELD,
   DRIVER_DOCUMENTS,
   driverFieldsOf,
   type DriverDocument,
@@ -35,7 +36,9 @@ const withClasses = {
 /** A driver with the classes they may drive and their location. */
 export type DriverWithClasses = Prisma.DriverGetPayload<typeof withClasses>;
 
-const NOT_FOUND: Change = { ok: false, error: "Driver not found." };
+const NOT_FOUND: Change = refuse(
+  "This driver was deleted meanwhile. Go back to the list.",
+);
 
 /** Every driver, or those the filter leaves, active first, by name. */
 export function listDrivers(
@@ -82,8 +85,7 @@ async function namesOf(
   tx: Prisma.TransactionClient,
   fields: Partial<Pick<DriverFields, "locationId" | "vehicleClassIds">>,
 ): Promise<
-  | { ok: true; locationName?: string; classNames?: string[] }
-  | { ok: false; error: string }
+  { ok: true; locationName?: string; classNames?: string[] } | Refusal
 > {
   const ids = fields.vehicleClassIds;
   const [location, classes] = await Promise.all([
@@ -102,10 +104,16 @@ async function namesOf(
       : null,
   ]);
   if (fields.locationId && !location) {
-    return { ok: false, error: "Choose where they are based again." };
+    return refuse(
+      "That location was just deleted. Choose where they are based again.",
+      "locationId",
+    );
   }
   if (ids && classes?.length !== ids.length) {
-    return { ok: false, error: "Tick the classes they may drive again." };
+    return refuse(
+      "A class ticked was just deleted. Tick the classes they may drive again.",
+      DRIVER_CLASSES_FIELD,
+    );
   }
   return {
     ok: true,

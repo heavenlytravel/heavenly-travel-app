@@ -3,9 +3,9 @@
 import { CONTACT_NAME_MAX_LENGTH, formatMyr, parseContact } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { useActionState, useState } from "react";
-import type { ActionState } from "../../../_lib/action-state";
+import { useState } from "react";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { BookingSummary } from "../_components/BookingSummary";
 import { ItemHiddenFields } from "../_components/ItemHiddenFields";
 import {
@@ -51,10 +51,9 @@ export function NewBookingForm({
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [draft, setDraft] = useState<ItemDraft>(EMPTY_ITEM_DRAFT);
   const [open, setOpen] = useState<StepKey | null>("customer");
-  const [state, create, creating] = useActionState<ActionState, FormData>(
-    createManualBookingAction,
-    null,
-  );
+  const create = useActionForm(createManualBookingAction, {
+    done: "Booking created. The customer gets the received email.",
+  });
 
   const patch = (changes: Partial<ItemDraft>) =>
     setDraft((current) => ({ ...current, ...changes }));
@@ -73,7 +72,7 @@ export function NewBookingForm({
 
   return (
     <form
-      action={create}
+      {...create.formProps}
       // Enter in a field does not create the booking: the button does.
       onKeyDown={(event) => {
         if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
@@ -146,8 +145,11 @@ export function NewBookingForm({
             onChange={patch}
             canPrice
             submit={
-              <Button type="submit" disabled={creating || missing !== null}>
-                {creating
+              <Button
+                type="submit"
+                disabled={create.pending || missing !== null}
+              >
+                {create.pending
                   ? "Creating…"
                   : totalSen !== null
                     ? `Create booking · ${formatMyr(totalSen)}`
@@ -155,7 +157,7 @@ export function NewBookingForm({
               </Button>
             }
             missing={missing}
-            error={state?.error ?? null}
+            error={create.error}
             cancelHref={BOOKINGS_PATH}
           />
           <p className="mt-3 px-1 text-xs text-neutral-500">

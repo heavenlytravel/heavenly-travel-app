@@ -1,7 +1,7 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
@@ -62,7 +62,9 @@ const withPhotos = {
 /** A vehicle as its form edits it: as listed, and with its photos. */
 export type VehicleWithModel = Prisma.VehicleGetPayload<typeof withPhotos>;
 
-const NOT_FOUND: Change = { ok: false, error: "Vehicle not found." };
+const NOT_FOUND: Change = refuse(
+  "This vehicle was deleted meanwhile. Go back to the list.",
+);
 
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
@@ -136,10 +138,19 @@ function vehicleRow<F extends Partial<VehicleFields>>(
 const photoRows = (photos: readonly Photo[]) =>
   photos.map((photo, i) => ({ ...photo, sortOrder: i + 1 }));
 
-const plateTaken = (plate: string) => ({
-  ok: false as const,
-  error: `${plate} is in the list already.`,
-});
+/** Why a plate is refused: another vehicle has it, based where it says. */
+async function plateTaken(plate: string): Promise<Refusal> {
+  const other = await db.vehicle.findUnique({
+    where: { plate },
+    select: { location: { select: { name: true } } },
+  });
+  return refuse(
+    other
+      ? `${plate} is already in the list, based at ${other.location.name}. Check the plate.`
+      : `${plate} is already in the list. Check the plate.`,
+    "plate",
+  );
+}
 
 /** The name of the location a vehicle is based at, which must exist. */
 async function locationNameOf(
@@ -153,10 +164,10 @@ async function locationNameOf(
   return location?.name ?? null;
 }
 
-const NO_LOCATION = {
-  ok: false as const,
-  error: "Choose where it is based again.",
-};
+const NO_LOCATION = refuse(
+  "That location was just deleted. Choose where it is based again.",
+  "locationId",
+);
 
 /** A new vehicle with its photos, of the model its class, brand and name find or add. */
 export async function createVehicle(

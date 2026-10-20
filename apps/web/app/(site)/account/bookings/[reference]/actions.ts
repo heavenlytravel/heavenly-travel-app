@@ -29,7 +29,9 @@ export async function cancelBookingAction(
   }
 
   const reference = normalizeReference(String(formData.get("reference") ?? ""));
-  if (!isReference(reference)) return { error: "Booking not found." };
+  if (!isReference(reference)) {
+    return { error: "This booking link is broken. Open it from My bookings." };
+  }
 
   const result = await cancelBookingAsCustomer(
     { kind: "customer", userId: access.user.id },

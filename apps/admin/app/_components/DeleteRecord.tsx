@@ -1,11 +1,13 @@
 "use client";
 
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { ActionState } from "../_lib/action-state";
+import { errorOf, type ActionState } from "../_lib/action-state";
+import { FormError } from "./FormError";
 
 /**
  * The delete button of a record entered by mistake, in the record's
@@ -37,11 +39,7 @@ export function DeleteRecord({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-      {error ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} />
       <Button
         variant="secondary"
         disabled={pending}
@@ -58,9 +56,9 @@ export function DeleteRecord({
             return;
           }
           startTransition(async () => {
-            const result = await action();
-            setError(result?.error ?? null);
-            if (result?.error) return;
+            const refused = errorOf(await answerOf(action()));
+            setError(refused);
+            if (refused) return;
             toast.success(doneMessage);
             router.push(doneHref);
           });

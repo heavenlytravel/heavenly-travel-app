@@ -11,6 +11,7 @@ import {
   type ZoneOrigin,
   type ZoneShape,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
@@ -32,6 +33,7 @@ import {
 import { ZoneMap, type DistrictChoice, type OtherZone } from "./ZoneMap";
 import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
+import { FormError } from "../../../../../_components/FormError";
 
 /** Where a zone starts: a district, a circle around an address, or a circle or square put on the map. */
 type Source = "district" | "address" | "draw";
@@ -201,8 +203,8 @@ export function ZoneEditor({
       return;
     }
     startTransition(async () => {
-      const result = await districtPolygonsAction(code);
-      if (!result.ok) {
+      const result = await answerOf(districtPolygonsAction(code));
+      if ("error" in result) {
         setError(result.error);
         return;
       }
@@ -222,8 +224,8 @@ export function ZoneEditor({
     setError(null);
     if (!picked) return;
     startTransition(async () => {
-      const point = await placePointAction(picked);
-      if (!point.ok) {
+      const point = await answerOf(placePointAction(picked));
+      if ("error" in point) {
         setError(point.error);
         return;
       }
@@ -255,10 +257,12 @@ export function ZoneEditor({
           : null;
     const fields = { name, shape, drawnFrom };
     startTransition(async () => {
-      const result = zone
-        ? await updateZoneAction(locationId, zone.id, fields)
-        : await createZoneAction(locationId, fields);
-      if (!result.ok) {
+      const result = await answerOf(
+        zone
+          ? updateZoneAction(locationId, zone.id, fields)
+          : createZoneAction(locationId, fields),
+      );
+      if ("error" in result) {
         setError(result.error);
         return;
       }
@@ -479,11 +483,7 @@ export function ZoneEditor({
             {corners} of {ZONE_LIMITS.corners} corners
           </span>
         ) : null}
-        {error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { formatClock } from "./booking-rules";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { numberOf, textOf, type Parsed } from "./fields";
 import type { Ring } from "./geo";
 import { formatMyr, parseRinggit } from "./money";
@@ -11,8 +11,6 @@ import { isRing, isZoneShape, ringsOf, type ZoneShape } from "./zone-match";
  * apply the same checks before they write. See
  * docs/261015-locations-as-operation-areas.md.
  */
-
-const fail = (error: string): Change => ({ ok: false, error });
 
 export const ZONE_LIMITS = {
   /** Characters. */
@@ -94,9 +92,9 @@ export type ZoneFields = {
 };
 
 export function checkZoneName(name: string): Change {
-  if (name === "") return fail("Enter the zone's name.");
+  if (name === "") return refuse("Enter the zone's name.");
   if (name.length > ZONE_LIMITS.name) {
-    return fail(`A zone name is at most ${ZONE_LIMITS.name} characters.`);
+    return refuse(`A zone name is at most ${ZONE_LIMITS.name} characters.`);
   }
   return { ok: true };
 }
@@ -104,7 +102,7 @@ export function checkZoneName(name: string): Change {
 export function checkRadius(radiusM: number): Change {
   const { min, max } = ZONE_LIMITS.radiusM;
   if (!Number.isInteger(radiusM) || radiusM < min || radiusM > max) {
-    return fail(
+    return refuse(
       `The radius is a whole number of metres between ${min} and ${max}.`,
     );
   }
@@ -117,13 +115,13 @@ export function checkRadius(radiusM: number): Change {
  */
 export function checkZoneShape(shape: unknown): Change {
   if (!isZoneShape(shape)) {
-    return fail(
+    return refuse(
       "Draw the zone on the map, pick a place and a radius, or pick a district.",
     );
   }
   const corners = ringsOf(shape).reduce((sum, ring) => sum + ring.length, 0);
   if (corners > ZONE_LIMITS.corners + ringsOf(shape).length) {
-    return fail(`A zone has at most ${ZONE_LIMITS.corners} corners.`);
+    return refuse(`A zone has at most ${ZONE_LIMITS.corners} corners.`);
   }
   return { ok: true };
 }
@@ -156,7 +154,7 @@ export function checkZoneFields(fields: ZoneFields): Change {
       fields.drawnFrom.districtCode === "") ||
     (isZoneReshaped(fields.drawnFrom) && fields.drawnFrom.reshapedFrom === "")
   ) {
-    return fail("Pick a district.");
+    return refuse("Pick a district.");
   }
   return { ok: true };
 }
@@ -297,17 +295,22 @@ const sentenceCase = (text: string) =>
 /**
  * The rules on a charge: a whole percentage from 1, or an amount from one
  * sen, each up to its limit. `subject` names it in the message: "the
- * surcharge".
+ * surcharge"; `field` is the form's field for its amount.
  */
-export function checkCharge(charge: SurchargeCharge, subject: string): Change {
+export function checkCharge(
+  charge: SurchargeCharge,
+  subject: string,
+  field: string,
+): Change {
   if (charge.percent !== null) {
     if (
       !Number.isInteger(charge.percent) ||
       charge.percent < 1 ||
       charge.percent > CHARGE_LIMITS.maxPercent
     ) {
-      return fail(
+      return refuse(
         `${sentenceCase(subject)} is a whole percentage between 1 and ${CHARGE_LIMITS.maxPercent}.`,
+        field,
       );
     }
   } else if (
@@ -315,8 +318,9 @@ export function checkCharge(charge: SurchargeCharge, subject: string): Change {
     charge.flatSen < 1 ||
     charge.flatSen > CHARGE_LIMITS.maxFlatSen
   ) {
-    return fail(
+    return refuse(
       `${sentenceCase(subject)} is an amount between ${formatMyr(1)} and ${formatMyr(CHARGE_LIMITS.maxFlatSen)}.`,
+      field,
     );
   }
   return { ok: true };
@@ -325,19 +329,21 @@ export function checkCharge(charge: SurchargeCharge, subject: string): Change {
 /**
  * A charge's amount as a form posts it, read but not checked: `kind`
  * "flat" reads it as ringgit, anything else as a whole percentage. What an
- * empty amount means is the caller's to say.
+ * empty amount means is the caller's to say. `field` is the form's field
+ * for the amount.
  */
 export function parseCharge(
   kind: unknown,
   amount: string,
   subject: string,
+  field: string,
 ): Parsed<SurchargeCharge> {
   if (kind !== "flat") {
     return { ok: true, value: { percent: numberOf(amount), flatSen: null } };
   }
   const flatSen = parseRinggit(amount);
   return flatSen === null
-    ? { ok: false, error: `Enter ${subject} in RM, with at most two decimals.` }
+    ? refuse(`Enter ${subject} in RM, with at most two decimals.`, field)
     : { ok: true, value: { percent: null, flatSen } };
 }
 
@@ -398,15 +404,19 @@ export function isInOddHours(window: OddHours, minute: number) {
 export function checkOddHours(window: OddHours): Change {
   for (const minute of [window.fromMinute, window.toMinute]) {
     if (!Number.isInteger(minute) || minute < 0 || minute >= MINUTES_PER_DAY) {
-      return fail(
+      return refuse(
         "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+        minute === window.fromMinute ? "from" : "to",
       );
     }
   }
   if (window.fromMinute === window.toMinute) {
-    return fail("The window ends at a different time from the one it starts.");
+    return refuse(
+      "The window ends at a different time from the one it starts.",
+      "to",
+    );
   }
-  return checkCharge(window, "the surcharge");
+  return checkCharge(window, "the surcharge", "amount");
 }
 
 /**
@@ -427,13 +437,17 @@ export function parseOddHoursFields(
   const fromMinute = minuteOfDay(from);
   const toMinute = minuteOfDay(to);
   if (fromMinute === null || toMinute === null) {
-    return {
-      ok: false,
-      error:
-        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
-    };
+    return refuse(
+      "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+      fromMinute === null ? "from" : "to",
+    );
   }
-  const charge = parseCharge(values.kind, amountText, "the surcharge");
+  const charge = parseCharge(
+    values.kind,
+    amountText,
+    "the surcharge",
+    "amount",
+  );
   if (!charge.ok) return charge;
   const window: OddHours = { fromMinute, toMinute, ...charge.value };
   const check = checkOddHours(window);

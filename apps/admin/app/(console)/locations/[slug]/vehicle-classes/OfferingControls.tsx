@@ -2,11 +2,14 @@
 
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { Offering } from "@repo/db/server";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setOfferingActiveAction } from "./actions";
+import { FormError } from "../../../../_components/FormError";
+import { errorOf } from "../../../../_lib/action-state";
 
 /**
  * An offering's switch. Taking the last class of a category off sale asks
@@ -47,13 +50,13 @@ export function OfferingActiveSwitch({
             return;
           }
           startTransition(async () => {
-            const result = await setOfferingActiveAction(
-              offering.locationId,
-              offering.id,
-              next,
+            const refused = errorOf(
+              await answerOf(
+                setOfferingActiveAction(offering.locationId, offering.id, next),
+              ),
             );
-            setError(result?.error ?? null);
-            if (!result?.error) {
+            setError(refused);
+            if (!refused) {
               toast.success(
                 next
                   ? `${vehicleClass.name} is on sale here.`
@@ -63,11 +66,7 @@ export function OfferingActiveSwitch({
           });
         }}
       />
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
       {dialog}
     </div>
   );

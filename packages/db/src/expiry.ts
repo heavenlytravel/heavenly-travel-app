@@ -1,4 +1,5 @@
 import { localDateTimeInputs } from "./booking-rules";
+import { refuse } from "./change";
 import type { Parsed } from "./fields";
 
 /**
@@ -45,15 +46,16 @@ export function isDay(text: string): boolean {
 }
 
 /** A date input's value, read: null when empty. */
-export function parseDay(value: unknown, label: string): Parsed<string | null> {
+export function parseDay(
+  value: unknown,
+  label: string,
+  field: string,
+): Parsed<string | null> {
   const text = typeof value === "string" ? value.trim() : "";
   if (text === "") return { ok: true, value: null };
   return isDay(text)
     ? { ok: true, value: text }
-    : {
-        ok: false,
-        error: `Enter the ${label.toLowerCase()} expiry as a date.`,
-      };
+    : refuse(`Enter the ${label.toLowerCase()} expiry as a date.`, field);
 }
 
 /** Today in Malaysia, "2026-10-19". */

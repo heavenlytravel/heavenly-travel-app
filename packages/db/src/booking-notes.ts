@@ -1,7 +1,7 @@
 import { logActivity } from "./activity";
 import type { AdminActor } from "./activity-actions";
 import { parseNoteBody } from "./booking-input";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { db } from "./client";
 import { fullName } from "./names";
 
@@ -54,7 +54,9 @@ export function addBookingNote(
       where: { id: bookingId },
       select: { id: true },
     });
-    if (!booking) return { ok: false, error: "Booking not found." };
+    if (!booking) {
+      return refuse("This booking was deleted meanwhile. Go back to Bookings.");
+    }
 
     const note = await tx.bookingNote.create({
       data: { bookingId, authorId: actor.userId, body: parsed.value },

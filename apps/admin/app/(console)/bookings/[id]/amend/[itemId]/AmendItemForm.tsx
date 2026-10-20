@@ -2,9 +2,9 @@
 
 import { formatMyr } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { useActionState, useState } from "react";
-import type { ActionState } from "../../../../../_lib/action-state";
+import { useState } from "react";
 import { bookingHref } from "../../../../../_lib/routes";
+import { useActionForm } from "../../../../../_lib/use-action-form";
 import { BookingSummary } from "../../../_components/BookingSummary";
 import { ItemHiddenFields } from "../../../_components/ItemHiddenFields";
 import {
@@ -51,10 +51,9 @@ export function AmendItemForm({
 }) {
   const [draft, setDraft] = useState(initial);
   const [open, setOpen] = useState<ItemStep | null>(null);
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    amendItemAction,
-    null,
-  );
+  const { pending, error, formProps } = useActionForm(amendItemAction, {
+    done: "Item amended. The customer gets a “Booking updated” email.",
+  });
 
   const patch = (changes: Partial<ItemDraft>) =>
     setDraft((current) => ({ ...current, ...changes }));
@@ -70,7 +69,7 @@ export function AmendItemForm({
 
   return (
     <form
-      action={action}
+      {...formProps}
       // Enter in a field does not save the item: the button does.
       onKeyDown={(event) => {
         if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
@@ -121,7 +120,7 @@ export function AmendItemForm({
               </Button>
             }
             missing={missing}
-            error={state?.error ?? null}
+            error={error}
             cancelHref={bookingHref(bookingId, locationSlug)}
           />
         </aside>

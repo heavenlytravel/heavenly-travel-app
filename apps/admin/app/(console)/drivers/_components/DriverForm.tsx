@@ -20,11 +20,11 @@ import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { useActionState } from "react";
 import { Card } from "../../../_components/Card";
 import { ExpiryDateField } from "../../../_components/ExpiryDateField";
-import type { ActionState } from "../../../_lib/action-state";
-import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../_lib/routes";
+import { FormError } from "../../../_components/FormError";
+import { FLEET_BACK_FIELD } from "../../../_lib/routes";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { createDriverAction, updateDriverAction } from "../actions";
 
 /**
@@ -49,28 +49,24 @@ export function DriverForm({
   /** Every class in the catalogue, in its order. */
   classes: ClassOption[];
   locations: LocationName[];
-  /** Where "Cancel" goes. */
+  /** Where "Cancel" goes; with `backToList`, where a saved driver goes too. */
   backHref: string;
   /** Opened from the list across locations, which a saved driver goes back to. */
   backToList?: boolean;
 }) {
   const isNew = !driver;
-  const [state, action, pending] = useActionState<ActionState, FormData>(
+  const { pending, error, formProps } = useActionForm(
     isNew ? createDriverAction : updateDriverAction,
-    null,
+    { done: isNew ? "Driver added." : "Driver saved." },
   );
   const fields = driver ? driverFieldsOf(driver) : null;
   const ticked = new Set(fields?.vehicleClassIds ?? []);
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...formProps} className="grid gap-6">
       {driver ? <input type="hidden" name="id" value={driver.id} /> : null}
       {backToList ? (
-        <input
-          type="hidden"
-          name={FLEET_BACK_FIELD}
-          value={FLEET_BACK_TO_LIST}
-        />
+        <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />
       ) : null}
 
       <Card className="grid gap-4">
@@ -204,11 +200,7 @@ export function DriverForm({
         >
           Cancel
         </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={error} />
       </div>
     </form>
   );

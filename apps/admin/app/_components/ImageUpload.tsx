@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useImageUpload } from "./use-image-upload";
+import { FormError } from "./FormError";
 
 /**
  * One image of a form: what is there now, and the buttons that upload,
@@ -95,11 +96,7 @@ export function ImageUpload({
           <span className="text-xs text-neutral-500 tabular-nums">{size}</span>
         ) : null}
       </div>
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { textOf, type Parsed } from "./fields";
 import { formatMyr, parseRinggit } from "./money";
 
@@ -15,12 +15,12 @@ export const BOOKING_NOTE_MAX_LENGTH = 2000;
 /** A note's text, trimmed, or why it cannot be saved. */
 export function parseNoteBody(value: unknown): Parsed<string> {
   const body = textOf(value);
-  if (body === "") return { ok: false, error: "Write the note first." };
+  if (body === "") return refuse("Write the note first.", "body");
   if (body.length > BOOKING_NOTE_MAX_LENGTH) {
-    return {
-      ok: false,
-      error: `A note is at most ${BOOKING_NOTE_MAX_LENGTH} characters.`,
-    };
+    return refuse(
+      `A note is at most ${BOOKING_NOTE_MAX_LENGTH} characters. Shorten it.`,
+      "body",
+    );
   }
   return { ok: true, value: body };
 }
@@ -39,17 +39,23 @@ export const PRICE_OVERRIDE_FIELDS = {
 /** The rules on an override; the writer checks them again. */
 export function checkPriceOverride(override: PriceOverride): Change {
   if (!Number.isInteger(override.totalSen) || override.totalSen < 0) {
-    return { ok: false, error: "Enter the agreed price in RM." };
+    return refuse(
+      "Enter the agreed price in RM.",
+      PRICE_OVERRIDE_FIELDS.amount,
+    );
   }
   const reason = override.reason.trim();
   if (reason === "") {
-    return { ok: false, error: "Give the reason for the agreed price." };
+    return refuse(
+      "Give the reason for the agreed price.",
+      PRICE_OVERRIDE_FIELDS.reason,
+    );
   }
   if (reason.length > PRICE_OVERRIDE_REASON_MAX_LENGTH) {
-    return {
-      ok: false,
-      error: `The reason is at most ${PRICE_OVERRIDE_REASON_MAX_LENGTH} characters.`,
-    };
+    return refuse(
+      `The reason is at most ${PRICE_OVERRIDE_REASON_MAX_LENGTH} characters. Shorten it.`,
+      PRICE_OVERRIDE_FIELDS.reason,
+    );
   }
   return { ok: true };
 }
@@ -68,10 +74,10 @@ export function parsePriceOverride(values: {
   if (amount === "" && reason === "") return { ok: true, value: null };
   const totalSen = parseRinggit(amount);
   if (totalSen === null) {
-    return {
-      ok: false,
-      error: "Enter the agreed price in RM, with at most two decimals.",
-    };
+    return refuse(
+      "Enter the agreed price in RM, with at most two decimals.",
+      PRICE_OVERRIDE_FIELDS.amount,
+    );
   }
   const override = { totalSen, reason };
   const check = checkPriceOverride(override);

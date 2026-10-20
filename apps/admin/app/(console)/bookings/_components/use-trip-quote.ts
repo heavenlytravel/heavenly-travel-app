@@ -8,6 +8,7 @@ import {
   type ItemDraft,
   type TripValues,
 } from "../_lib/trip-form";
+import { answerOf } from "@repo/ui/action-answer";
 
 /**
  * The prices of an item's trip, kept in step with the trip: every change
@@ -34,9 +35,9 @@ export function useTripQuote(
     const ticket = ++latest.current;
     if (tripIssue(trip)) return;
     startQuote(async () => {
-      const result = await quoteTripAction(tripInput(trip));
+      const result = await answerOf(quoteTripAction(tripInput(trip)));
       if (ticket !== latest.current) return;
-      if (!result.ok) {
+      if ("error" in result) {
         onChange({ quote: null, quoteError: result.error });
         return;
       }

@@ -2,11 +2,14 @@
 
 import { TRIP_CATEGORY_LABELS, isTripCategory } from "@repo/db";
 import type { VehicleClass } from "@repo/db/server";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setVehicleClassActiveAction } from "./actions";
+import { FormError } from "../../_components/FormError";
+import { errorOf } from "../../_lib/action-state";
 
 /**
  * The class's switch. Turning off the last active class of a category asks
@@ -45,12 +48,13 @@ export function VehicleClassActiveSwitch({
             return;
           }
           startTransition(async () => {
-            const result = await setVehicleClassActiveAction(
-              vehicleClass.id,
-              next,
+            const refused = errorOf(
+              await answerOf(
+                setVehicleClassActiveAction(vehicleClass.id, next),
+              ),
             );
-            setError(result?.error ?? null);
-            if (!result?.error) {
+            setError(refused);
+            if (!refused) {
               toast.success(
                 next
                   ? `${vehicleClass.name} is on.`
@@ -60,11 +64,7 @@ export function VehicleClassActiveSwitch({
           });
         }}
       />
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
       {dialog}
     </div>
   );

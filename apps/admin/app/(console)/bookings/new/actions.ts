@@ -8,10 +8,13 @@ import {
 } from "@repo/db/server";
 import { sendBookingEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
-import { FORBIDDEN, type ActionState } from "../../../_lib/action-state";
+import {
+  type ActionState,
+  FORBIDDEN,
+  refusalOf,
+} from "../../../_lib/action-state";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 import { CONTACT_FIELDS } from "../_lib/trip-form";
 import { prepareFormItem } from "../_lib/trip-server";
@@ -36,11 +39,11 @@ export async function createManualBookingAction(
     phone: formData.get(CONTACT_FIELDS.phone),
     email: formData.get(CONTACT_FIELDS.email),
   });
-  if (!contact.ok) return { error: contact.error };
+  if (!contact.ok) return refusalOf(contact);
 
   const indexes = tripItemIndexes(formData);
   if (indexes.length === 0) {
-    return { error: "Fill in the trip and get prices first." };
+    return { error: "Fill in the trip first." };
   }
   const prepared = await Promise.all(
     indexes.map((index) => prepareFormItem(tripItemParams(formData, index))),
@@ -68,5 +71,5 @@ export async function createManualBookingAction(
   after(() => sendBookingEmail("received", booking));
   revalidatePath(BOOKINGS_PATH);
   revalidatePath("/");
-  redirect(bookingHref(booking.id));
+  return { href: bookingHref(booking.id) };
 }

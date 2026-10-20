@@ -1,7 +1,7 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type { Prisma, VehicleClass } from "./generated/prisma/client";
 import { slugify } from "./slug";
@@ -24,7 +24,9 @@ export type { VehicleClass };
  * docs/261019-vehicles-and-drivers.md.
  */
 
-const NOT_FOUND: Change = { ok: false, error: "Vehicle class not found." };
+const NOT_FOUND: Change = refuse(
+  "This class was deleted meanwhile. Go back to the catalogue.",
+);
 
 const withOfferings = {
   include: {
@@ -111,16 +113,15 @@ export async function createVehicleClass(
   const check = checkVehicleClassFields(fields);
   if (!check.ok) return check;
   const slug = slugify(fields.name);
-  if (!slug)
-    return { ok: false, error: "Enter a name with a letter or digit." };
+  if (!slug) return refuse("Enter a name with a letter or digit.", "name");
 
   return db.$transaction(async (tx) => {
     const taken = await tx.vehicleClass.findUnique({ where: { slug } });
     if (taken) {
-      return {
-        ok: false,
-        error: `${taken.name} already has the slug ${slug}.`,
-      };
+      return refuse(
+        `${taken.name} is in the catalogue already. Name this class differently.`,
+        "name",
+      );
     }
     const vehicleClass = await tx.vehicleClass.create({
       data: { slug, ...fields },

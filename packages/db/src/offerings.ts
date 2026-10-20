@@ -304,6 +304,19 @@ export async function updateOffering(
       ...withClass,
     });
     if (!offering) return NOT_FOUND;
+    // A patch of one charge column meets the other as stored: checked
+    // together, so an offering never charges both a share and an amount.
+    const charge = checkOfferingFields({
+      modelChoicePercent:
+        "modelChoicePercent" in patch
+          ? patch.modelChoicePercent
+          : offering.modelChoicePercent,
+      modelChoiceFlatSen:
+        "modelChoiceFlatSen" in patch
+          ? patch.modelChoiceFlatSen
+          : offering.modelChoiceFlatSen,
+    });
+    if (!charge.ok) return charge;
 
     const changed = changedFields(offering, patch);
     if (!changed) return { ok: true };

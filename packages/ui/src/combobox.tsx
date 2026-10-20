@@ -86,6 +86,10 @@ export function Combobox({
       >
         <Popover.Trigger
           ref={ref}
+          // A field holding a value picked from a list: read as one, with
+          // whether it must be filled.
+          role="combobox"
+          aria-required={required}
           className={cx(
             inputClassName,
             "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left",
@@ -106,18 +110,28 @@ export function Combobox({
             align="start"
             sideOffset={4}
             collisionPadding={8}
+            aria-label={placeholder}
             className="ui:z-50 ui:w-[var(--radix-popover-trigger-width)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
           >
-            {/* The list is narrowed here, so "Create" stays last. */}
-            <Command label={searchPlaceholder} shouldFilter={false} loop>
+            {/* The list is narrowed here, so "Create" stays last. It opens
+                on the value there is. */}
+            <Command
+              label={searchPlaceholder}
+              shouldFilter={false}
+              loop
+              defaultValue={listed.find((option) => sameText(option, value))}
+            >
               <Command.Input
                 value={search}
                 onValueChange={setSearch}
+                // Typing a search is not a change of the field: the field
+                // around it keeps its message until a value is chosen.
+                onInput={(event) => event.stopPropagation()}
                 maxLength={maxLength}
                 placeholder={searchPlaceholder}
                 className="ui:h-10 ui:w-full ui:border-b ui:border-popover-line ui:bg-transparent ui:px-3 ui:text-sm ui:outline-none ui:placeholder:text-neutral-400"
               />
-              <Command.List className="ui:max-h-72 ui:scroll-py-1 ui:overflow-y-auto ui:p-1">
+              <Command.List className="ui:max-h-[min(18rem,calc(var(--radix-popover-content-available-height)_-_2.5rem))] ui:scroll-py-1 ui:overflow-y-auto ui:p-1">
                 <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-neutral-500">
                   None yet. Type one to add it.
                 </Command.Empty>

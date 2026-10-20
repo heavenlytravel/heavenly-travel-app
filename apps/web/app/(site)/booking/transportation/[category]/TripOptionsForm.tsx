@@ -26,7 +26,6 @@ import { Select } from "@repo/ui/select";
 import { useFormErrors } from "@repo/ui/validation";
 import { ClassPicture } from "../../../../_components/ClassPicture";
 import {
-  hasPhotos,
   ModelGallery,
   type GalleryModel,
 } from "../../../../_components/ModelGallery";
@@ -65,7 +64,7 @@ export type ClassOption = {
 };
 
 /** The gallery open over the form: a class's models, at one of them. */
-type OpenGallery = { option: ClassOption; modelId: string | null };
+type OpenGallery = { option: ClassOption; modelId: string };
 
 /**
  * The trip bar, then vehicle class, passengers, child seats where the
@@ -81,8 +80,9 @@ type OpenGallery = { option: ClassOption; modelId: string | null };
  * page gives this form the trip as its key, so a changed trip clears the
  * chosen vehicle. A class names its models; chosen, its card opens on
  * them with their photos, and where the location lets the customer choose
- * one, they may, at the class's charge. The photos open in one gallery
- * kept outside the cards, whose clicks would otherwise choose the class.
+ * one, they may, at the class's charge. A model's photos open large in one
+ * gallery kept outside the cards, whose clicks would otherwise choose the
+ * class.
  */
 export function TripOptionsForm({
   category,
@@ -202,20 +202,8 @@ export function TripOptionsForm({
                       {c.description}
                     </span>
                     {c.models.length > 0 ? (
-                      <span className="flex flex-wrap items-baseline gap-x-3 text-[0.9rem] text-[#324844]">
+                      <span className="text-[0.9rem] text-[#324844]">
                         {modelsLine(c.models.map((m) => m.name))}, or similar
-                        {!on && hasPhotos(c.models) ? (
-                          // A button in the label opens the gallery without choosing the class.
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setGallery({ option: c, modelId: null })
-                            }
-                            className={textLink}
-                          >
-                            See photos
-                          </button>
-                        ) : null}
                       </span>
                     ) : null}
                     <span className="text-[0.85rem] text-[#67726f]">
@@ -345,7 +333,7 @@ export function TripOptionsForm({
       </form>
       {gallery ? (
         <ModelGallery
-          key={`${gallery.option.id}:${gallery.modelId ?? ""}`}
+          key={`${gallery.option.id}:${gallery.modelId}`}
           title={gallery.option.name}
           models={gallery.option.models}
           initialModelId={gallery.modelId}

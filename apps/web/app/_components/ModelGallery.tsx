@@ -15,7 +15,7 @@ export type GalleryModel = {
 };
 
 /** Whether any of the models has a photo to show. */
-export function hasPhotos(models: readonly GalleryModel[]) {
+function hasPhotos(models: readonly GalleryModel[]) {
   return models.some((model) => model.photos.length > 0);
 }
 

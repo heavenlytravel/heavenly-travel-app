@@ -23,7 +23,7 @@ describe("bookingEmails", () => {
     assert.equal(customer!.message.to, "aina@example.com");
     assert.equal(customer!.message.subject, "Booking HT-7K3QZM received");
     assert.match(customer!.message.text, /Pick-up: KLIA Terminal 1/);
-    assert.match(customer!.message.text, /Total: RM 180\.00/);
+    assert.match(customer!.message.text, /Total: RM 184\.80/);
     assert.match(
       customer!.message.text,
       /https:\/\/site\.test\/booking\/HT-7K3QZM/,
@@ -266,9 +266,25 @@ describe("bookingEmails", () => {
     for (const { message } of coach) {
       assert.match(message.text, /COACH CHARTER\nTrip: By the hour/);
       assert.match(message.html, />Coach charter</);
-      assert.match(message.text, /Vehicle: Minibus/);
+      assert.match(message.text, /Vehicle: Coach VIP/);
       assert.match(message.text, /Duration: 8 hours/);
       assert.doesNotMatch(message.text, /Child seats|Drop-off|Flight/);
+    }
+  });
+
+  it("names the model chosen, and none when any of the class will do", () => {
+    const chosen = bookingEmails("received", sampleBooking(), settings);
+    const any = bookingEmails(
+      "received",
+      sampleBooking({ items: [sampleCoachItem()] }),
+      settings,
+    );
+    for (const { message } of chosen) {
+      assert.match(message.text, /Vehicle: Sedan VIP\nModel: Toyota Camry/);
+      assert.match(message.html, /Toyota Camry/);
+    }
+    for (const { message } of any) {
+      assert.doesNotMatch(message.text, /Model:/);
     }
   });
 });

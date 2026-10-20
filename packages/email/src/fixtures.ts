@@ -1,11 +1,12 @@
-import type { Place } from "@repo/db";
+import { priceTrip, withModelChoice, type Place } from "@repo/db";
 import type { BookingItemWithDetails, BookingWithItems } from "@repo/db/server";
 import type { BookingEmailEvent, EmailSettings } from "./booking-emails";
 
 /**
- * A sample booking for the unit tests and the preview script: one sedan
- * from KLIA to Kuala Lumpur, and a minibus by the hour to put in its place.
- * Pass overrides to move it through the lifecycle.
+ * A sample booking for the unit tests and the preview script: a Sedan VIP
+ * from KLIA to Kuala Lumpur, its Toyota Camry chosen for 10% more, and a
+ * Coach VIP by the hour to put in its place. Each carries the receipt its
+ * price comes from. Pass overrides to move it through the lifecycle.
  */
 
 export const sampleSettings: EmailSettings = {
@@ -35,6 +36,32 @@ const kl: Place = {
 
 const at = new Date("2026-10-03T01:30:00Z");
 
+/** The sedan's receipt: 55.2 km metered, and the Camry chosen at 10%. */
+const sedanPrice = withModelChoice(
+  priceTrip({
+    trip: { mode: "oneway", distanceKm: 55.2 },
+    rates: {
+      baseFareSen: 3000,
+      perKmSen: 250,
+      hourlyRateSen: 8000,
+      minimumFareSen: 5000,
+    },
+  }),
+  "Toyota Camry",
+  { percent: 10, flatSen: null },
+);
+
+/** The coach's receipt: 8 hours, any coach of the class. */
+const coachPrice = priceTrip({
+  trip: { mode: "hourly", hours: 8 },
+  rates: {
+    baseFareSen: 0,
+    perKmSen: 0,
+    hourlyRateSen: 18000,
+    minimumFareSen: 0,
+  },
+});
+
 export function sampleItem(
   overrides: Partial<BookingItemWithDetails> = {},
 ): BookingItemWithDetails {
@@ -51,8 +78,8 @@ export function sampleItem(
     district: { code: "sepang", name: "Sepang", state: { name: "Selangor" } },
     locationId: "loc1",
     location: { id: "loc1", name: "Klang Valley" },
-    priceTotalSen: 18000,
-    priceBreakdown: {},
+    priceTotalSen: sedanPrice.totalSen,
+    priceBreakdown: sedanPrice,
     priceOverrideSen: null,
     priceOverrideReason: null,
     confirmedAt: null,
@@ -81,7 +108,7 @@ export function sampleItem(
   };
 }
 
-/** A coach item: a minibus for 8 hours from Kuala Lumpur, no child seats. */
+/** A coach item: a Coach VIP for 8 hours from Kuala Lumpur, any of its models, no child seats. */
 export function sampleCoachItem(
   overrides: Partial<BookingItemWithDetails> = {},
 ): BookingItemWithDetails {
@@ -90,11 +117,14 @@ export function sampleCoachItem(
     ...car,
     endsAt: new Date(at.getTime() + 8 * 60 * 60 * 1000),
     cancellationCutoffHours: 48,
-    priceTotalSen: 144000,
+    priceTotalSen: coachPrice.totalSen,
+    priceBreakdown: coachPrice,
     tripDetails: {
       ...car.tripDetails!,
       vehicleClassId: "vc4",
-      vehicleClassName: "Minibus",
+      vehicleClassName: "Coach VIP",
+      vehicleModelId: null,
+      vehicleModelName: null,
       vehicleClassCategory: "coach-charter",
       mode: "hourly",
       pickupPlace: kl,
@@ -128,7 +158,7 @@ export function sampleBooking(
     contactPhone: "+60123456789",
     contactEmail: "aina@example.com",
     createdIp: null,
-    priceTotalSen: 18000,
+    priceTotalSen: sedanPrice.totalSen,
     currency: "MYR",
     startsAt: at,
     confirmedAt: null,
@@ -157,7 +187,7 @@ export const sampleCases: {
     name: "received-coach",
     event: "received",
     booking: sampleBooking({
-      priceTotalSen: 144000,
+      priceTotalSen: coachPrice.totalSen,
       items: [sampleCoachItem()],
     }),
   },

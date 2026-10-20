@@ -70,9 +70,10 @@ const PAGE_DOTS: Record<PageStatus, string> = {
  * stands, and what to do next. A live or paused one opens on its day, the
  * tab named Today: its queue in numbers, today's pick-ups and the bookings
  * awaiting confirmation, for the teams that work the queue, and for
- * Operation the vehicles and drivers with a document due. A team that
- * does not, such as Marketing, sees the location's parts at a glance
- * instead, a line each and a way in, which the panel also lists. See
+ * Operation the vehicles with a document due and the drivers with a licence
+ * due. A team that does not, such as Marketing, sees the location's parts
+ * at a glance instead, a line each and a way in, which the panel also
+ * lists. See
  * docs/261018-location-work-and-class-catalogue.md.
  */
 export default async function LocationOverviewPage({

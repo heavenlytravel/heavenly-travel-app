@@ -77,10 +77,15 @@ const PAGE_DOTS: Record<PageStatus, PanelItem["dot"]> = {
   changed: "amber",
 };
 
-/** "3 vehicles in service, 1 with a document due": a vehicles or drivers tab's line. */
-function fleetLine(count: string, state: string, due: number) {
+/** "3 vehicles in service, 1 with a document due": a vehicles or drivers tab's line, a driver's documents being licences. */
+function fleetLine(
+  count: string,
+  state: string,
+  due: number,
+  document: "document" | "licence",
+) {
   const line = `${count} ${state}`;
-  return due === 0 ? line : `${line}, ${due} with a document due`;
+  return due === 0 ? line : `${line}, ${due} with a ${document} due`;
 }
 
 /**
@@ -89,9 +94,10 @@ function fleetLine(count: string, state: string, due: number) {
  * groups, each section with one line on where it stands and, where it has
  * something to list, a submenu of it: the classes, the zones, the three
  * parts of the rates, the pages and their saved addresses, the bookings by
- * status, the vehicles and drivers with a document due. A draft is set up
- * before anything else: its overview stands alone on top, then the Setup
- * group with how far it has come and what to do next, its steps numbered.
+ * status, the vehicles with a document due and the drivers with a licence
+ * due. A draft is set up before anything else: its overview stands alone
+ * on top, then the Setup group with how far it has come and what to do
+ * next, its steps numbered.
  * Once live or paused the day comes first: Work holds Today, the bookings,
  * the vehicles, the drivers and the pages; the setup, done once and rarely touched, folds away under
  * it. At the foot, the history and the public page. Every admin sees the
@@ -146,6 +152,7 @@ export function LocationPanel({
         plural(overview.vehicles, "vehicle"),
         "in service",
         overview.vehiclesDue,
+        "document",
       );
     }
     if (tab === "drivers") {
@@ -153,6 +160,7 @@ export function LocationPanel({
         plural(overview.drivers, "driver"),
         "active",
         overview.driversDue,
+        "licence",
       );
     }
     if (tab === "status") {

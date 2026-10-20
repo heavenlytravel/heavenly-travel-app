@@ -30,12 +30,22 @@ to do; it is what each class is, and it needs a picture.
   (`locationAt` skips drafts).
 - A live or paused location puts the day first. The Work group holds the overview,
   named Today, then Bookings and Pages; Pages is Marketing's regular work, a setup
-  step only while a draft. The Setup group (Details, Vehicle classes, Coverage, Rates)
-  is folded under its heading, which names what it holds; it opens by hand or by
-  itself on one of its tabs, and stays as the admin left it while they move around.
+  step only while a draft. The Setup group (Details, Vehicle classes, Coverage, Rates,
+  Status) is folded under its heading, which names what it holds; it opens by hand or
+  by itself on one of its tabs, and stays as the admin left it while they move around.
+- Revised on 2026-10-20: the location's header is its name alone. The state badge and
+  "Pause" level with it on every tab read as if they paused the tab's own record. The
+  panel keeps the badge, and a Status tab ends the Setup group: what the state means,
+  what still stands in the way of going live, Go live, Pause or Resume for SUPER, and
+  Delete location, moved from Details. Every admin reads it.
 - History is at the panel's foot, beside the public page.
-- The About section goes. Its facts are on their tabs: the states and the saved
-  addresses on Details, the top choice on Home page, the last change on History.
+- The About section goes. Its facts are on their tabs: the states on Details, the top
+  choice on Home page, the last change on History.
+- Revised on 2026-10-20: the saved addresses are on the Pages tab, under the pages,
+  still Marketing's. They are what the pages offer: the search card's drop-offs before
+  anything is typed, and the highlights' "Take me here". They are shortcuts only: the
+  drop-off rule on Rates judges a trip by zones, and a price for a particular place is
+  a route on the rate grid.
 - The strip of tabs on narrow screens follows the same order and names, from
   `locationTabsFor(state)` in `apps/admin/app/_lib/routes.ts`, which the panel reads
   too.

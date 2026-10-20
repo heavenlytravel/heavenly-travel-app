@@ -45,10 +45,34 @@ const CONFIRMED: ItemStatus = "confirmed";
 const CANCELLED: ItemStatus = "cancelled";
 
 /** Every location, by name, each with its numbers. */
-export async function listLocationOverviews(
+export function listLocationOverviews(
   now: Date = new Date(),
 ): Promise<LocationOverview[]> {
+  return overviewsOf(undefined, now);
+}
+
+/** One location's numbers, or null when there is no such location. */
+export async function getLocationOverview(
+  id: string,
+  now: Date = new Date(),
+): Promise<LocationOverview | null> {
+  const [overview] = await overviewsOf(id, now);
+  return overview ?? null;
+}
+
+/**
+ * The numbers of every location, or of the one with this id: each query
+ * narrowed to it, so a location's tab counts its own rows only. Counts
+ * are SQL's, by groups, never rows fetched and counted here.
+ */
+async function overviewsOf(
+  locationId: string | undefined,
+  now: Date,
+): Promise<LocationOverview[]> {
   const today = localDayRange(now);
+  const here = locationId ? { locationId } : {};
+  // An item belongs to a location only once a location priced it.
+  const itemHere = { locationId: locationId ?? { not: null } };
   const [
     locations,
     offerings,
@@ -61,6 +85,7 @@ export async function listLocationOverviews(
     driversDue,
   ] = await Promise.all([
     db.location.findMany({
+      where: locationId ? { id: locationId } : undefined,
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -85,29 +110,29 @@ export async function listLocationOverviews(
     }),
     db.locationVehicleClass.groupBy({
       by: ["locationId"],
-      where: { isActive: true, vehicleClass: { isActive: true } },
+      where: { ...here, isActive: true, vehicleClass: { isActive: true } },
       _count: { _all: true },
     }),
-    // A route counts once however many classes it is priced for.
-    db.zoneRate.findMany({
-      select: { locationId: true, fromZoneId: true, toZoneId: true },
-      distinct: ["locationId", "fromZoneId", "toZoneId"],
+    // A route counts once however many classes it is priced for: one
+    // group per pair of zones.
+    db.zoneRate.groupBy({
+      by: ["locationId", "fromZoneId", "toZoneId"],
+      where: here,
     }),
     // A booking counts once per location its items pick up in, however
-    // many of its items do.
-    db.bookingItem.findMany({
+    // many of its items do: one group per booking and location.
+    db.bookingItem.groupBy({
+      by: ["locationId", "bookingId"],
       where: {
-        locationId: { not: null },
+        ...itemHere,
         status: { not: CANCELLED },
         booking: { status: RECEIVED },
       },
-      select: { locationId: true, bookingId: true },
-      distinct: ["locationId", "bookingId"],
     }),
     db.bookingItem.groupBy({
       by: ["locationId"],
       where: {
-        locationId: { not: null },
+        ...itemHere,
         status: { not: CANCELLED },
         startsAt: { gte: today.start, lt: today.end },
       },
@@ -116,7 +141,7 @@ export async function listLocationOverviews(
     db.bookingItem.groupBy({
       by: ["locationId"],
       where: {
-        locationId: { not: null },
+        ...itemHere,
         status: CONFIRMED,
         startsAt: { gte: now },
       },
@@ -124,17 +149,20 @@ export async function listLocationOverviews(
     }),
     db.activityLog.groupBy({
       by: ["entityId"],
-      where: { entityType: "location" },
+      where: {
+        entityType: "location",
+        ...(locationId ? { entityId: locationId } : {}),
+      },
       _max: { createdAt: true },
     }),
     db.vehicle.groupBy({
       by: ["locationId"],
-      where: vehiclesDueWhere(now),
+      where: { ...here, ...vehiclesDueWhere(now) },
       _count: { _all: true },
     }),
     db.driver.groupBy({
       by: ["locationId"],
-      where: driversDueWhere(now),
+      where: { ...here, ...driversDueWhere(now) },
       _count: { _all: true },
     }),
   ]);
@@ -177,13 +205,4 @@ export async function listLocationOverviews(
     pages: standingsOf(pages),
     changedAt: changedAt.get(location.id) ?? null,
   }));
-}
-
-/** One location's numbers, or null when there is no such location. */
-export async function getLocationOverview(
-  id: string,
-  now: Date = new Date(),
-): Promise<LocationOverview | null> {
-  const overviews = await listLocationOverviews(now);
-  return overviews.find((overview) => overview.id === id) ?? null;
 }

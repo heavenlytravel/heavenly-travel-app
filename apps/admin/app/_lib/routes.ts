@@ -154,7 +154,7 @@ export function locationSlugOf(pathname: string): string | null {
   return slug === "" || slug === "new" ? null : decodeURIComponent(slug);
 }
 
-/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings, the vehicles, the drivers or the history. */
+/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings, the vehicles, the drivers, the status or the history. */
 export type LocationTab =
   | "overview"
   | SetupStepKey
@@ -162,6 +162,7 @@ export type LocationTab =
   | "bookings"
   | "vehicles"
   | "drivers"
+  | "status"
   | "history";
 
 export type LocationTabDef = {
@@ -185,7 +186,7 @@ const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
  * The tabs of a location's page, in order: the overview, then the four
  * setup steps in the order an admin walks them, with the rates right after
  * the coverage whose zones they price, then the bookings, the vehicles and
- * drivers based there, and the history. Each is its own
+ * drivers based there, the status, and the history. Each is its own
  * route behind its own permission, as every console page is; the panel
  * beside the location's page lists the tabs the admin may open. See
  * docs/261015-locations-as-operation-areas.md, "Who may do what".
@@ -234,6 +235,12 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     step: null,
   },
   {
+    key: "status",
+    label: "Status",
+    permission: "locations.view",
+    step: null,
+  },
+  {
     key: "history",
     label: "History",
     permission: "locations.view",
@@ -266,7 +273,8 @@ const WORK_TABS: readonly LocationTab[] = [
  * bookings. Once live or paused, the day's work comes first and the setup
  * folds away under it; the pages, a setup step while a draft, are work
  * from then on, and so are the vehicles and drivers, entered while it is
- * set up. The history is at the foot either way.
+ * set up. The status ends the setup, going live last; the history is at
+ * the foot either way.
  */
 function groupOf(
   tab: LocationTab,

@@ -34,8 +34,8 @@ function questionOf(from: LocationState, name: string): ConfirmRequest | null {
 }
 
 /**
- * The one move a location can make from its state, as a button in the
- * location's header: "Go live", "Pause" or "Resume". "Pause" takes the
+ * The one move a location can make from its state, as a button on the
+ * location's Status tab: "Go live", "Pause" or "Resume". "Pause" takes the
  * location off sale, so it stands out in amber, and it and "Go live" ask
  * first in an alert dialog. While its pages do not allow the move the
  * button is disabled.
@@ -78,7 +78,7 @@ export function StateMove({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
+    <div className="flex flex-col items-start gap-1.5">
       <Button
         variant={state === "live" ? "caution" : "primary"}
         disabled={pending || blocked}
@@ -87,10 +87,7 @@ export function StateMove({
         {LOCATION_MOVE_LABELS[state]}
       </Button>
       {error ? (
-        <p
-          aria-live="polite"
-          className="max-w-64 text-right text-xs text-red-700"
-        >
+        <p aria-live="polite" className="text-sm text-red-700">
           {error}
         </p>
       ) : null}

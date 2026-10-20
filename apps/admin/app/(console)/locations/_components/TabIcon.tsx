@@ -9,6 +9,7 @@ import {
   LayoutDashboardIcon,
   MapIcon,
   MapPinIcon,
+  PowerIcon,
 } from "@repo/ui/icons";
 import type { ReactNode } from "react";
 import type { LocationTab } from "../../../_lib/routes";
@@ -24,5 +25,6 @@ export const LOCATION_TAB_ICONS: Record<LocationTab, ReactNode> = {
   bookings: <CalendarCheckIcon />,
   vehicles: <CarIcon />,
   drivers: <IdCardIcon />,
+  status: <PowerIcon />,
   history: <HistoryIcon />,
 };

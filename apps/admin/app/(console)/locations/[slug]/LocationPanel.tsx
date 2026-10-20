@@ -154,6 +154,13 @@ export function LocationPanel({
         overview.driversDue,
       );
     }
+    if (tab === "status") {
+      if (state === "live") return "Live, taking bookings";
+      if (state === "paused") return "Paused, taking no bookings";
+      return progress.next
+        ? "Goes live once the setup is done"
+        : "Ready to go live";
+    }
     if (tab === "history") {
       return overview.changedAt
         ? `Last change ${formatLocalDate(overview.changedAt)}`

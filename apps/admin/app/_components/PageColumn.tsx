@@ -28,7 +28,9 @@ export function DetailColumns({
 }) {
   return (
     <div className="mt-6 @container">
-      <div className="grid gap-6 @3xl:grid-cols-[1fr_320px] @3xl:items-start">
+      <div
+        className={`grid gap-6 ${side ? "@3xl:grid-cols-[1fr_320px] @3xl:items-start" : ""}`}
+      >
         <div className="grid min-w-0 gap-6">{main}</div>
         {side ? <div className="grid min-w-0 gap-6">{side}</div> : null}
       </div>

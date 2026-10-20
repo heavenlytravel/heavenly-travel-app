@@ -13,6 +13,7 @@ import {
   type Photo,
 } from "@repo/db";
 import type {
+  ClassOption,
   LocationName,
   ModelSuggestion,
   VehicleWithModel,
@@ -28,10 +29,7 @@ import { useActionState, useState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
 import type { ActionState } from "../../../../_lib/action-state";
-import {
-  classGroups,
-  type FleetClassOption,
-} from "../../../../_lib/fleet-form";
+import { classGroups } from "../../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
 import { createVehicleAction, updateVehicleAction } from "./actions";
 import { PhotoList } from "./PhotoList";
@@ -72,7 +70,7 @@ function ModelNote({
   model,
 }: {
   suggestions: readonly ModelSuggestion[];
-  classes: readonly FleetClassOption[];
+  classes: readonly ClassOption[];
   classId: string;
   brand: string;
   model: string;
@@ -121,7 +119,7 @@ export function VehicleForm({
   /** The class a new vehicle starts in, when it is added from the class's page. */
   vehicleClassId?: string;
   /** Every class in the catalogue, in its order. */
-  classes: FleetClassOption[];
+  classes: ClassOption[];
   /** Every model in the catalogue, for the brand and model fields. */
   suggestions: ModelSuggestion[];
   locations: LocationName[];

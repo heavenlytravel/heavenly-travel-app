@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
-import type { VehicleWithModel } from "@repo/db/server";
+import type { ListedVehicle } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { locationVehicleHref } from "../_lib/routes";
 import { DocumentsDue } from "./DocumentsDue";
@@ -20,7 +20,7 @@ export function VehiclesTable({
   bare = false,
   emptyMessage,
 }: {
-  vehicles: VehicleWithModel[];
+  vehicles: ListedVehicle[];
   showClass?: boolean;
   showLocation?: boolean;
   bare?: boolean;

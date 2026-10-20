@@ -3,7 +3,7 @@ import {
   getVehicleClass,
   listVehicles,
   type VehicleClass,
-  type VehicleWithModel,
+  type ListedVehicle,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { DetailColumns } from "../../../_components/PageColumn";
@@ -85,7 +85,7 @@ function VehicleClassScreen({
 }: {
   /** Left out for a class that does not exist yet. */
   vehicleClass?: VehicleClass;
-  vehicles?: VehicleWithModel[];
+  vehicles?: ListedVehicle[];
 }) {
   return (
     <>

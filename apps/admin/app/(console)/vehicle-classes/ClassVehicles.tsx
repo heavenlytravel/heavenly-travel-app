@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { modelName, plural } from "@repo/db";
-import type { VehicleWithModel } from "@repo/db/server";
+import type { ListedVehicle } from "@repo/db/server";
 import { LocationMark } from "../../_components/LocationMark";
 import { locationVehiclesHref } from "../../_lib/routes";
 
 /** One location's vehicles of the class. */
 type LocationGroup = {
-  location: VehicleWithModel["location"];
+  location: ListedVehicle["location"];
   inService: number;
   outOfService: number;
   /** "2 Toyota Vios, 1 Honda City": those in service, by model. */
@@ -14,11 +14,11 @@ type LocationGroup = {
 };
 
 /** The vehicles by location, by the location's name, and in service by model. */
-function byLocation(vehicles: readonly VehicleWithModel[]): LocationGroup[] {
+function byLocation(vehicles: readonly ListedVehicle[]): LocationGroup[] {
   const groups = new Map<
     string,
     {
-      location: VehicleWithModel["location"];
+      location: ListedVehicle["location"];
       outOfService: number;
       models: Map<string, number>;
     }
@@ -58,7 +58,7 @@ function byLocation(vehicles: readonly VehicleWithModel[]): LocationGroup[] {
 export function ClassVehicles({
   vehicles,
 }: {
-  vehicles: readonly VehicleWithModel[];
+  vehicles: readonly ListedVehicle[];
 }) {
   if (vehicles.length === 0) {
     return (

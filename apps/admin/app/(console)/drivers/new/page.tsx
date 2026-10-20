@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { listLocationNames, listVehicleClasses } from "@repo/db/server";
+import { listClassOptions, listLocationNames } from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import { fleetClassOptions } from "../../../_lib/fleet-form";
 import { DRIVERS_PATH } from "../../../_lib/routes";
 import { DriverForm } from "../../locations/[slug]/drivers/DriverForm";
 
@@ -48,7 +47,7 @@ export default async function NewDriverPage({
 
 async function newDriverForm(location: string | undefined) {
   const [classes, locations] = await Promise.all([
-    listVehicleClasses(),
+    listClassOptions(),
     listLocationNames(),
   ]);
   return (
@@ -56,7 +55,7 @@ async function newDriverForm(location: string | undefined) {
       main={
         <DriverForm
           locationId={locations.find((l) => l.id === location)?.id}
-          classes={fleetClassOptions(classes)}
+          classes={classes}
           locations={locations}
           backHref={DRIVERS_PATH}
           backToList

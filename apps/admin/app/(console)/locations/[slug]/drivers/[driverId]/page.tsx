@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   getDriver,
   listLocationNames,
-  listVehicleClasses,
+  listClassOptions,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
@@ -11,7 +11,6 @@ import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
 import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
-import { fleetClassOptions } from "../../../../../_lib/fleet-form";
 import {
   locationDriverHref,
   locationTabHref,
@@ -68,7 +67,7 @@ async function driverScreen({
   const isNew = driverId === "new";
   const [driver, classes, locations] = await Promise.all([
     isNew ? null : getDriver(driverId),
-    listVehicleClasses(),
+    listClassOptions(),
     listLocationNames(),
   ]);
   if (!isNew && driver?.locationId !== id) notFound();
@@ -106,7 +105,7 @@ async function driverScreen({
             key={driver?.id ?? "new"}
             locationId={id}
             driver={driver ?? undefined}
-            classes={fleetClassOptions(classes)}
+            classes={classes}
             locations={locations}
             backHref={locationTabHref(slug, "drivers")}
           />

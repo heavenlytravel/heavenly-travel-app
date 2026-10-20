@@ -82,6 +82,23 @@ export async function listVehicleClasses(): Promise<CatalogueClass[]> {
     .sort((a, b) => categoryRank(a.category) - categoryRank(b.category));
 }
 
+/** A class as a form picks it: what it is called, its category and whether it is on. */
+export type ClassOption = Pick<
+  VehicleClass,
+  "id" | "name" | "category" | "isActive"
+>;
+
+/** Every class, active or not, in the catalogue's order, as a form lists them. */
+export async function listClassOptions(): Promise<ClassOption[]> {
+  const rows = await db.vehicleClass.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, category: true, isActive: true },
+  });
+  return rows.sort(
+    (a, b) => categoryRank(a.category) - categoryRank(b.category),
+  );
+}
+
 export function getVehicleClass(id: string): Promise<VehicleClass | null> {
   return db.vehicleClass.findUnique({ where: { id } });
 }

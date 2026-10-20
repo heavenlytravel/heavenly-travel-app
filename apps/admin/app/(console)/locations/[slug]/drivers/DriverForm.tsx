@@ -10,7 +10,11 @@ import {
   TRIP_CATEGORY_LABELS,
   driverFieldsOf,
 } from "@repo/db";
-import type { DriverWithClasses, LocationName } from "@repo/db/server";
+import type {
+  ClassOption,
+  DriverWithClasses,
+  LocationName,
+} from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
@@ -20,7 +24,6 @@ import { useActionState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
 import type { ActionState } from "../../../../_lib/action-state";
-import type { FleetClassOption } from "../../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
 import { createDriverAction, updateDriverAction } from "./actions";
 
@@ -44,7 +47,7 @@ export function DriverForm({
   /** Absent on the "new" page. */
   driver?: DriverWithClasses;
   /** Every class in the catalogue, in its order. */
-  classes: FleetClassOption[];
+  classes: ClassOption[];
   locations: LocationName[];
   /** Where "Cancel" goes. */
   backHref: string;

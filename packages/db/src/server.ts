@@ -30,11 +30,16 @@ export { statesBounds } from "./location-places";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,
+  listClassOptions,
   getVehicleClass,
   createVehicleClass,
   updateVehicleClass,
 } from "./vehicle-classes";
-export type { VehicleClass, CatalogueClass } from "./vehicle-classes";
+export type {
+  VehicleClass,
+  CatalogueClass,
+  ClassOption,
+} from "./vehicle-classes";
 export { listModelSuggestions } from "./vehicle-models";
 export type { ModelSuggestion, ShownModel } from "./vehicle-models";
 export {
@@ -44,7 +49,11 @@ export {
   updateVehicle,
   deleteVehicle,
 } from "./vehicles";
-export type { VehicleWithModel, FleetFilter } from "./vehicles";
+export type {
+  ListedVehicle,
+  VehicleWithModel,
+  FleetFilter,
+} from "./vehicles";
 export {
   listDrivers,
   getDriver,
@@ -74,6 +83,7 @@ export {
   listZones,
   getZone,
   listZoneRates,
+  listCoverage,
   listPriceLists,
   createZone,
   updateZone,

@@ -4,7 +4,7 @@ import {
   getVehicle,
   listLocationNames,
   listModelSuggestions,
-  listVehicleClasses,
+  listClassOptions,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
@@ -13,7 +13,6 @@ import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
 import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
-import { fleetClassOptions } from "../../../../../_lib/fleet-form";
 import {
   locationTabHref,
   locationVehicleHref,
@@ -78,7 +77,7 @@ async function vehicleScreen({
   const isNew = vehicleId === "new";
   const [vehicle, classes, suggestions, locations] = await Promise.all([
     isNew ? null : getVehicle(vehicleId),
-    listVehicleClasses(),
+    listClassOptions(),
     listModelSuggestions(),
     listLocationNames(),
   ]);
@@ -123,7 +122,7 @@ async function vehicleScreen({
                 : undefined
             }
             vehicle={vehicle ?? undefined}
-            classes={fleetClassOptions(classes)}
+            classes={classes}
             suggestions={suggestions}
             locations={locations}
             backHref={locationTabHref(slug, "vehicles")}

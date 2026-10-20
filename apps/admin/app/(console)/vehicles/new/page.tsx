@@ -2,13 +2,12 @@ import Link from "next/link";
 import {
   listLocationNames,
   listModelSuggestions,
-  listVehicleClasses,
+  listClassOptions,
 } from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import { fleetClassOptions } from "../../../_lib/fleet-form";
 import { VEHICLES_PATH } from "../../../_lib/routes";
 import { VehicleForm } from "../../locations/[slug]/vehicles/VehicleForm";
 
@@ -52,7 +51,7 @@ export default async function NewVehiclePage({
 
 async function newVehicleForm(location: string | undefined) {
   const [classes, suggestions, locations] = await Promise.all([
-    listVehicleClasses(),
+    listClassOptions(),
     listModelSuggestions(),
     listLocationNames(),
   ]);
@@ -61,7 +60,7 @@ async function newVehicleForm(location: string | undefined) {
       main={
         <VehicleForm
           locationId={locations.find((l) => l.id === location)?.id}
-          classes={fleetClassOptions(classes)}
+          classes={classes}
           suggestions={suggestions}
           locations={locations}
           backHref={VEHICLES_PATH}

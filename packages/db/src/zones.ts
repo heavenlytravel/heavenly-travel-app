@@ -49,26 +49,52 @@ export function listZoneRates(locationId: string): Promise<ZoneRate[]> {
   return db.zoneRate.findMany({ where: { locationId } });
 }
 
-const priceList = {
+const zonesInOrder = {
+  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+} satisfies Prisma.Location$zonesArgs;
+
+const coverage = {
   include: {
     states: { select: { code: true, name: true }, orderBy: { name: "asc" } },
-    zones: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+    zones: zonesInOrder,
+    zoneRates: true,
+  },
+} satisfies Prisma.LocationDefaultArgs;
+
+/** A location with what it serves: its states, its zones in their order with their shapes, and its grid. */
+export type LocationCoverage = Prisma.LocationGetPayload<typeof coverage>;
+
+/**
+ * Every location's coverage by name, or one location's, for the console's
+ * Coverage across locations. One query, whatever the number of locations.
+ */
+export function listCoverage(locationId?: string): Promise<LocationCoverage[]> {
+  return db.location.findMany({
+    where: locationId ? { id: locationId } : undefined,
+    orderBy: { name: "asc" },
+    ...coverage,
+  });
+}
+
+const priceList = {
+  include: {
+    zones: { ...zonesInOrder, select: { id: true, name: true } },
     zoneRates: true,
     offerings: { include: { vehicleClass: true } },
   },
 } satisfies Prisma.LocationDefaultArgs;
 
 /**
- * A location with what it serves and what it charges: its states, its
- * zones in their order, its grid, and the classes it sells, in the
- * catalogue's order, with their rates and rules.
+ * A location with what it charges: its zones in their order, by name, its
+ * grid, and the classes it sells, in the catalogue's order, with their
+ * rates and rules.
  */
 export type LocationPriceList = Prisma.LocationGetPayload<typeof priceList>;
 
 /**
  * Every location's price list by name, or one location's, for the
- * console's Coverage and Rates across locations. One query, whatever the
- * number of locations.
+ * console's Rates across locations. One query, whatever the number of
+ * locations; the zones' shapes are left out.
  */
 export async function listPriceLists(
   locationId?: string,

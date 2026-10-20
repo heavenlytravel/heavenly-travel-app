@@ -1,4 +1,5 @@
 import { TRIP_CATEGORIES, TRIP_CATEGORY_LABELS } from "@repo/db";
+import type { ClassOption } from "@repo/db/server";
 import type { SelectGroup } from "@repo/ui/select";
 
 /**
@@ -6,29 +7,9 @@ import type { SelectGroup } from "@repo/ui/select";
  * they pick them, a vehicle's class and a driver's classes. Browser-safe.
  */
 
-/** A class a vehicle can be of or a driver may drive. Plain data, sent to the browser. */
-export type FleetClassOption = {
-  id: string;
-  name: string;
-  category: string;
-  isActive: boolean;
-};
-
-/** The catalogue's classes, in its order, as the fleet forms take them. */
-export function fleetClassOptions(
-  classes: readonly FleetClassOption[],
-): FleetClassOption[] {
-  return classes.map(({ id, name, category, isActive }) => ({
-    id,
-    name,
-    category,
-    isActive,
-  }));
-}
-
 /** The classes under their category, car with driver first; a class off in the catalogue says so. */
 export function classGroups(
-  classes: readonly FleetClassOption[],
+  classes: readonly ClassOption[],
 ): SelectGroup[] {
   return TRIP_CATEGORIES.flatMap((category) => {
     const options = classes

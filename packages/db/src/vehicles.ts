@@ -35,9 +35,8 @@ const photosInOrder = {
   select: { url: true, caption: true },
 } satisfies Prisma.Vehicle$photosArgs;
 
-const withModel = {
+const listed = {
   include: {
-    photos: photosInOrder,
     vehicleModel: {
       select: {
         id: true,
@@ -53,8 +52,15 @@ const withModel = {
   },
 } satisfies Prisma.VehicleDefaultArgs;
 
-/** A vehicle with its photos, its model, its class and its location. */
-export type VehicleWithModel = Prisma.VehicleGetPayload<typeof withModel>;
+/** A vehicle as the lists show it: with its model, its class and its location. */
+export type ListedVehicle = Prisma.VehicleGetPayload<typeof listed>;
+
+const withPhotos = {
+  include: { ...listed.include, photos: photosInOrder },
+} satisfies Prisma.VehicleDefaultArgs;
+
+/** A vehicle as its form edits it: as listed, and with its photos. */
+export type VehicleWithModel = Prisma.VehicleGetPayload<typeof withPhotos>;
 
 const NOT_FOUND: Change = { ok: false, error: "Vehicle not found." };
 
@@ -62,7 +68,7 @@ const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
 
 /** In service first, then car with driver first, in the classes' order, by model and plate. */
-function byClassAndPlate(a: VehicleWithModel, b: VehicleWithModel) {
+function byClassAndPlate(a: ListedVehicle, b: ListedVehicle) {
   const classA = a.vehicleModel.vehicleClass;
   const classB = b.vehicleModel.vehicleClass;
   return (
@@ -80,7 +86,7 @@ export type FleetFilter = { locationId?: string; due?: boolean };
 /** Every vehicle, or those the filter leaves, in service or not; a class's alone for its page. */
 export async function listVehicles(
   filter: FleetFilter & { vehicleClassId?: string } = {},
-): Promise<VehicleWithModel[]> {
+): Promise<ListedVehicle[]> {
   const rows = await db.vehicle.findMany({
     where: {
       ...(filter.locationId ? { locationId: filter.locationId } : {}),
@@ -89,13 +95,13 @@ export async function listVehicles(
         : {}),
       ...(filter.due ? vehiclesDueWhere() : {}),
     },
-    ...withModel,
+    ...listed,
   });
   return rows.sort(byClassAndPlate);
 }
 
 export function getVehicle(id: string): Promise<VehicleWithModel | null> {
-  return db.vehicle.findUnique({ where: { id }, ...withModel });
+  return db.vehicle.findUnique({ where: { id }, ...withPhotos });
 }
 
 /** Where a vehicle filter matches the ones in service with a document due by the warning, or expired. */

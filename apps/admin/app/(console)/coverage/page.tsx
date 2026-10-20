@@ -1,5 +1,5 @@
 import { isZoneShape, plural } from "@repo/db";
-import { listLocationNames, listPriceLists } from "@repo/db/server";
+import { listCoverage, listLocationNames } from "@repo/db/server";
 import { LocationFilter } from "../../_components/LocationFilter";
 import { Card, CardTitle } from "../../_components/Card";
 import { PageHeader } from "../../_components/PageHeader";
@@ -63,7 +63,7 @@ export default async function CoveragePage({
 
 async function coverage({ locationId }: { locationId: string | undefined }) {
   const [lists, permissions] = await Promise.all([
-    listPriceLists(locationId),
+    listCoverage(locationId),
     getPermissions(),
   ]);
   const manages = permissions.includes("coverage.manage");

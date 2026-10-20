@@ -1,17 +1,13 @@
-import Link from "next/link";
 import {
   LOCATION_HISTORY_KINDS,
   LOCATION_HISTORY_KIND_LABELS,
-  describeActivity,
-  formatLocalDate,
-  formatLocalTime,
   isLocationHistoryKind,
   locationHistoryKindOf,
   type LocationHistoryKind,
 } from "@repo/db";
-import { listActivityForMany, type ActivityEntry } from "@repo/db/server";
-import { Frame } from "../../../../_components/Card";
+import { listActivityForMany } from "@repo/db/server";
 import { FilterLinks } from "../../../../_components/FilterLinks";
+import { HistoryTimeline } from "../../../../_components/HistoryTimeline";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
@@ -66,16 +62,6 @@ export default async function LocationHistoryPage({
   );
 }
 
-/** The entries by the Malaysian day they were made, the days and the entries newest first. */
-function byDay(entries: readonly ActivityEntry[]) {
-  const days = new Map<string, ActivityEntry[]>();
-  for (const entry of [...entries].reverse()) {
-    const day = formatLocalDate(entry.createdAt);
-    days.set(day, [...(days.get(day) ?? []), entry]);
-  }
-  return [...days.entries()];
-}
-
 async function history({
   id,
   slug,
@@ -94,68 +80,23 @@ async function history({
     : all;
   const readsPublishes = permissions.includes("locations.manage");
 
-  if (entries.length === 0) {
-    return (
-      <Frame>
-        <p className="px-6 py-8 text-center text-sm text-neutral-500">
-          {filter
-            ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
-            : "No changes recorded for this location."}
-        </p>
-      </Frame>
-    );
-  }
-
   return (
-    <div className="grid gap-6">
-      {byDay(entries).map(([day, dayEntries]) => (
-        <section key={day} className="min-w-0">
-          <h3 className="mb-2 text-sm font-semibold text-neutral-700">{day}</h3>
-          <Frame>
-            <ol className="divide-y divide-neutral-100 text-sm">
-              {dayEntries.map((entry) => {
-                const kind = locationHistoryKindOf(entry.action);
-                const href =
-                  readsPublishes && entry.action === "location.page.published"
-                    ? locationPublishHref(slug, entry.id)
-                    : null;
-                return (
-                  <li
-                    key={entry.id}
-                    className="grid grid-cols-[3.5rem_1fr] gap-3 px-6 py-3 sm:grid-cols-[3.5rem_1fr_auto]"
-                  >
-                    <span className="text-neutral-500 tabular-nums">
-                      {formatLocalTime(entry.createdAt)}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-medium text-neutral-900">
-                        {href ? (
-                          <Link
-                            href={href}
-                            className="underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900"
-                          >
-                            {describeActivity(entry)}
-                          </Link>
-                        ) : (
-                          describeActivity(entry)
-                        )}
-                      </span>
-                      <span className="block truncate text-xs text-neutral-500">
-                        {entry.actorName}
-                      </span>
-                    </span>
-                    {kind ? (
-                      <span className="col-start-2 text-xs text-neutral-500 sm:col-start-auto sm:text-right">
-                        {LOCATION_HISTORY_KIND_LABELS[kind]}
-                      </span>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ol>
-          </Frame>
-        </section>
-      ))}
-    </div>
+    <HistoryTimeline
+      entries={entries}
+      emptyMessage={
+        filter
+          ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
+          : "No changes recorded for this location."
+      }
+      hrefOf={(entry) =>
+        readsPublishes && entry.action === "location.page.published"
+          ? locationPublishHref(slug, entry.id)
+          : null
+      }
+      tagOf={(entry) => {
+        const kind = locationHistoryKindOf(entry.action);
+        return kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
+      }}
+    />
   );
 }

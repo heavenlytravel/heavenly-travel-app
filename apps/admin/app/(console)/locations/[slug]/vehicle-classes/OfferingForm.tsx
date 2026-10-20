@@ -37,6 +37,10 @@ import {
 } from "../../../vehicle-classes/VehicleClassFields";
 import { createOfferingAction, updateOfferingAction } from "./actions";
 import { SOURCES, SOURCE_FIELD } from "./offering-form";
+import {
+  UploadsContext,
+  useUploadCount,
+} from "../../../../_components/use-image-upload";
 
 const TIPS: Partial<Record<OfferingField, string>> = {
   minimumFareSen:
@@ -166,6 +170,7 @@ export function OfferingForm({
     isNew ? createOfferingAction : updateOfferingAction,
     { done: isNew ? "Class added to this location." : "Rates saved." },
   );
+  const uploads = useUploadCount();
   const [source, setSource] = useState<string>(
     candidates.length > 0 ? SOURCES.catalogue : SOURCES.new,
   );
@@ -199,179 +204,189 @@ export function OfferingForm({
     baseSen !== null && minimumSen !== null && minimumSen < baseSen;
 
   return (
-    <form {...formProps} className="grid gap-6">
-      <input type="hidden" name="locationId" value={locationId} />
-      {offering ? <input type="hidden" name="id" value={offering.id} /> : null}
+    <UploadsContext value={uploads.track}>
+      <form {...formProps} className="grid gap-6">
+        <input type="hidden" name="locationId" value={locationId} />
+        {offering ? (
+          <input type="hidden" name="id" value={offering.id} />
+        ) : null}
 
-      {isNew ? (
-        <>
-          <Card className="grid gap-4">
-            <fieldset className="grid gap-2">
-              <legend className="mb-1.5 text-sm font-medium text-neutral-800">
-                Which class
-              </legend>
-              <label className="flex items-center gap-2 text-sm">
-                <Radio
-                  name={SOURCE_FIELD}
-                  value={SOURCES.catalogue}
-                  checked={source === SOURCES.catalogue}
-                  disabled={candidates.length === 0}
-                  onChange={() => {
-                    follow(categoryOf(SOURCES.catalogue, classId));
-                    setSource(SOURCES.catalogue);
-                  }}
-                />
-                One from the catalogue
-                {candidates.length === 0 ? (
-                  <span className="text-neutral-500">
-                    (every class is offered here already)
-                  </span>
-                ) : null}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Radio
-                  name={SOURCE_FIELD}
-                  value={SOURCES.new}
-                  checked={source === SOURCES.new}
-                  onChange={() => {
-                    follow(newCategory);
-                    setSource(SOURCES.new);
-                  }}
-                />
-                A new class, added to the catalogue
-              </label>
-            </fieldset>
-            {source === SOURCES.catalogue ? (
-              <Field label="Class">
-                <Select
-                  name="vehicleClassId"
-                  required
-                  value={classId}
-                  onValueChange={(next) => {
-                    follow(categoryOf(SOURCES.catalogue, next));
-                    setClassId(next);
-                  }}
-                  options={candidates.map((vehicleClass) => ({
-                    value: vehicleClass.id,
-                    label: isTripCategory(vehicleClass.category)
-                      ? `${vehicleClass.name} (${TRIP_CATEGORY_LABELS[vehicleClass.category]})`
-                      : vehicleClass.name,
-                  }))}
-                />
-              </Field>
+        {isNew ? (
+          <>
+            <Card className="grid gap-4">
+              <fieldset className="grid gap-2">
+                <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+                  Which class
+                </legend>
+                <label className="flex items-center gap-2 text-sm">
+                  <Radio
+                    name={SOURCE_FIELD}
+                    value={SOURCES.catalogue}
+                    checked={source === SOURCES.catalogue}
+                    disabled={candidates.length === 0}
+                    onChange={() => {
+                      follow(categoryOf(SOURCES.catalogue, classId));
+                      setSource(SOURCES.catalogue);
+                    }}
+                  />
+                  One from the catalogue
+                  {candidates.length === 0 ? (
+                    <span className="text-neutral-500">
+                      (every class is offered here already)
+                    </span>
+                  ) : null}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Radio
+                    name={SOURCE_FIELD}
+                    value={SOURCES.new}
+                    checked={source === SOURCES.new}
+                    onChange={() => {
+                      follow(newCategory);
+                      setSource(SOURCES.new);
+                    }}
+                  />
+                  A new class, added to the catalogue
+                </label>
+              </fieldset>
+              {source === SOURCES.catalogue ? (
+                <Field label="Class">
+                  <Select
+                    name="vehicleClassId"
+                    required
+                    value={classId}
+                    onValueChange={(next) => {
+                      follow(categoryOf(SOURCES.catalogue, next));
+                      setClassId(next);
+                    }}
+                    options={candidates.map((vehicleClass) => ({
+                      value: vehicleClass.id,
+                      label: isTripCategory(vehicleClass.category)
+                        ? `${vehicleClass.name} (${TRIP_CATEGORY_LABELS[vehicleClass.category]})`
+                        : vehicleClass.name,
+                    }))}
+                  />
+                </Field>
+              ) : null}
+            </Card>
+            {source === SOURCES.new ? (
+              <VehicleClassFieldset
+                showActive={false}
+                onCategoryChange={(next) => {
+                  follow(next);
+                  setNewCategory(next);
+                }}
+              />
             ) : null}
+          </>
+        ) : (
+          <Card className="grid gap-4">
+            <h2 className="text-xl font-semibold tracking-tight">
+              {offering.vehicleClass.name}
+            </h2>
+            <p className="text-sm text-neutral-600">
+              {offering.vehicleClass.description} Its seats, luggage and picture
+              are the catalogue&apos;s, the same at every location.
+            </p>
           </Card>
-          {source === SOURCES.new ? (
-            <VehicleClassFieldset
-              showActive={false}
-              onCategoryChange={(next) => {
-                follow(next);
-                setNewCategory(next);
-              }}
-            />
-          ) : null}
-        </>
-      ) : (
+        )}
+
         <Card className="grid gap-4">
           <h2 className="text-xl font-semibold tracking-tight">
-            {offering.vehicleClass.name}
+            Rates at this location
           </h2>
-          <p className="text-sm text-neutral-600">
-            {offering.vehicleClass.description} Its seats, luggage and picture
-            are the catalogue&apos;s, the same at every location.
-          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MoneyInput
+              field="baseFareSen"
+              defaultSen={offering?.baseFareSen}
+              onChange={setBaseFare}
+            />
+            <MoneyInput field="perKmSen" defaultSen={offering?.perKmSen} />
+            <MoneyInput
+              field="hourlyRateSen"
+              defaultSen={offering?.hourlyRateSen}
+            />
+            <MoneyInput
+              field="minimumFareSen"
+              defaultSen={offering?.minimumFareSen}
+              onChange={setMinimumFare}
+            />
+          </div>
+          {minimumBelowBase ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              The minimum fare is below the base fare, so it never applies.
+              Allowed, but check it is what you mean.
+            </p>
+          ) : null}
+          <ModelChoiceField offering={offering} />
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              name="isActive"
+              defaultChecked={offering?.isActive ?? true}
+            />
+            <span className="inline-flex items-center gap-1.5">
+              {OFFERING_FIELD_LABELS.isActive}
+              <InfoTip text="Off hides the class from this location's options page and search card. Bookings already made are not changed." />
+            </span>
+          </label>
         </Card>
-      )}
 
-      <Card className="grid gap-4">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Rates at this location
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MoneyInput
-            field="baseFareSen"
-            defaultSen={offering?.baseFareSen}
-            onChange={setBaseFare}
-          />
-          <MoneyInput field="perKmSen" defaultSen={offering?.perKmSen} />
-          <MoneyInput
-            field="hourlyRateSen"
-            defaultSen={offering?.hourlyRateSen}
-          />
-          <MoneyInput
-            field="minimumFareSen"
-            defaultSen={offering?.minimumFareSen}
-            onChange={setMinimumFare}
-          />
+        <Card className="grid gap-4">
+          <h2 className="text-xl font-semibold tracking-tight">
+            Rules at this location
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {OFFERING_RULE_FIELDS.map((field) => (
+              <Field
+                key={field}
+                label={<FieldLabel field={field} unit="hours" />}
+              >
+                <NumberField
+                  name={field}
+                  step={1}
+                  min={
+                    field === "minHourlyHours"
+                      ? BOOKING_RULES.hourlyFloorHours
+                      : 0
+                  }
+                  max={
+                    field === "minHourlyHours"
+                      ? BOOKING_RULES.maxHourlyHours
+                      : undefined
+                  }
+                  required
+                  value={rules[field]}
+                  onChange={(e) =>
+                    setRules((current) => ({
+                      ...current,
+                      [field]: e.target.value,
+                    }))
+                  }
+                />
+              </Field>
+            ))}
+          </div>
+        </Card>
+
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={pending || uploads.uploading}>
+            {uploads.uploading
+              ? "Uploading the picture…"
+              : pending
+                ? "Saving…"
+                : isNew
+                  ? "Add class"
+                  : "Save"}
+          </Button>
+          <Link
+            href={locationTabHref(locationSlug, "vehicle-classes")}
+            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          >
+            Cancel
+          </Link>
+          <FormError error={error} />
         </div>
-        {minimumBelowBase ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            The minimum fare is below the base fare, so it never applies.
-            Allowed, but check it is what you mean.
-          </p>
-        ) : null}
-        <ModelChoiceField offering={offering} />
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            name="isActive"
-            defaultChecked={offering?.isActive ?? true}
-          />
-          <span className="inline-flex items-center gap-1.5">
-            {OFFERING_FIELD_LABELS.isActive}
-            <InfoTip text="Off hides the class from this location's options page and search card. Bookings already made are not changed." />
-          </span>
-        </label>
-      </Card>
-
-      <Card className="grid gap-4">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Rules at this location
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {OFFERING_RULE_FIELDS.map((field) => (
-            <Field
-              key={field}
-              label={<FieldLabel field={field} unit="hours" />}
-            >
-              <NumberField
-                name={field}
-                step={1}
-                min={
-                  field === "minHourlyHours"
-                    ? BOOKING_RULES.hourlyFloorHours
-                    : 0
-                }
-                max={
-                  field === "minHourlyHours"
-                    ? BOOKING_RULES.maxHourlyHours
-                    : undefined
-                }
-                required
-                value={rules[field]}
-                onChange={(e) =>
-                  setRules((current) => ({
-                    ...current,
-                    [field]: e.target.value,
-                  }))
-                }
-              />
-            </Field>
-          ))}
-        </div>
-      </Card>
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add class" : "Save"}
-        </Button>
-        <Link
-          href={locationTabHref(locationSlug, "vehicle-classes")}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
-    </form>
+      </form>
+    </UploadsContext>
   );
 }

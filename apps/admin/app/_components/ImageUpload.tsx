@@ -31,7 +31,10 @@ export function ImageUpload({
   onChange: (image: UploadedImage | null) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const { upload, uploading, error } = useImageUpload(uploadPath);
+  const { upload, uploading, error } = useImageUpload(
+    uploadPath,
+    label.toLowerCase(),
+  );
   // Read off the file once it has loaded, for the line beside the buttons.
   const [size, setSize] = useState<string | null>(null);
 
@@ -64,9 +67,7 @@ export function ImageUpload({
             const file = event.target.files?.[0];
             // Cleared, so choosing the same file again uploads it again.
             event.target.value = "";
-            if (file) {
-              void upload(file).then((image) => image && onChange(image));
-            }
+            if (file) void upload([file], onChange);
           }}
         />
         <Button

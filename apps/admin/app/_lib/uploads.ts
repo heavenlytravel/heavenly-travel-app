@@ -12,10 +12,10 @@ import { FORBIDDEN_MESSAGE } from "./action-state";
 
 /**
  * Image uploads to UploadThing, for the location pages, the vehicle
- * classes and their models' photos. The file goes through this server: the
- * browser never holds the token. What the file is and how large it draws
- * are read from its bytes, not from what the browser says. See docs/261001-locations-and-pages.md,
- * "Images".
+ * classes' pictures and the vehicles' photos. The file goes through this
+ * server: the browser never holds the token. What the file is and how
+ * large it draws are read from its bytes, not from what the browser says.
+ * See docs/261001-locations-and-pages.md, "Images".
  */
 
 type ImageUpload =

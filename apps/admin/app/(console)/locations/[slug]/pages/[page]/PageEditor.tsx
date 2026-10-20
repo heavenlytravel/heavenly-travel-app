@@ -61,6 +61,10 @@ import {
 import { PublishDialog } from "./PublishDialog";
 import { SearchResultPreview, SharedLinkPreview } from "./SearchPreviews";
 import { errorOf } from "../../../../../_lib/action-state";
+import {
+  UploadsContext,
+  useUploadCount,
+} from "../../../../../_components/use-image-upload";
 
 /** A row of a list in the form, with a key that stays while the form is open. */
 type Keyed<T> = T & { key: string };
@@ -206,6 +210,9 @@ export function PageEditor({
   const [version, setVersion] = useState(versionAtOpen);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const uploads = useUploadCount();
+  // An image still uploading is not in the page yet: saving waits for it.
+  const busy = pending || uploads.uploading;
   const [tab, setTab] = useState<PageEditorTab>("content");
   const [publishing, setPublishing] = useState(false);
   const [comparing, setComparing] = useState(false);
@@ -334,7 +341,7 @@ export function PageEditor({
   const saveRef = useRef<() => void>(() => {});
   useEffect(() => {
     saveRef.current = () => {
-      if (dirty && limits.ok && !pending) write(false);
+      if (dirty && limits.ok && !busy) write(false);
     };
   });
   useEffect(() => {
@@ -348,7 +355,9 @@ export function PageEditor({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const message = pending ? (
+  const message = uploads.uploading ? (
+    <span className="text-neutral-500">Uploading the image…</span>
+  ) : pending ? (
     <span className="text-neutral-500">Saving…</span>
   ) : error ? (
     <span className="text-red-700">{error}</span>
@@ -384,336 +393,239 @@ export function PageEditor({
   }
 
   return (
-    <div className="grid gap-6">
-      {/* Runs to the column's edges, so the form scrolls out of sight under it. */}
-      <div className="sticky top-14 z-[5] -mx-5 border-b border-neutral-200 bg-neutral-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-            <PageStatusBadge status={status} />
-            {dirty ? (
-              <span className="text-xs font-medium text-amber-700">
-                Unsaved edits
-              </span>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <PreviewLink
-              size="sm"
-              href={previewUrl}
-              hint={
-                dirty
-                  ? "Shows the saved draft: save first to see your latest edits."
-                  : undefined
-              }
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={pending || !dirty || !limits.ok}
-              onClick={() => write(false)}
-            >
-              Save draft
-            </Button>
-            <Tooltip
-              content={
-                status === "published"
-                  ? "The public sees this draft already."
-                  : null
-              }
-            >
-              <Button
-                size="sm"
-                disabled={pending || status === "published"}
-                onClick={() => setPublishing(true)}
-              >
-                Publish
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-        <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-          <span className="text-neutral-500">{path}</span>
-          <span aria-live="polite">{message}</span>
-          {moves.length > 0 ? (
-            <span className="flex flex-wrap gap-x-3">{moves}</span>
-          ) : null}
-        </p>
-      </div>
-
-      <div
-        role="tablist"
-        aria-label="Parts of the page"
-        className="flex gap-1 border-b border-neutral-200"
-      >
-        {TABS.map((entry) => {
-          const selected = tab === entry.key;
-          const missing = missingIn(entry.key);
-          return (
-            <button
-              key={entry.key}
-              type="button"
-              role="tab"
-              id={`tab-${entry.key}`}
-              aria-selected={selected}
-              aria-controls={`panel-${entry.key}`}
-              onClick={() => setTab(entry.key)}
-              className={cx(
-                "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
-                selected
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900",
-              )}
-            >
-              {entry.label}
-              {missing > 0 ? (
-                <Tooltip content={`${missing} to do before publishing`}>
-                  <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
-                    {missing}
-                  </span>
-                </Tooltip>
+    <UploadsContext value={uploads.track}>
+      <div className="grid gap-6">
+        {/* Runs to the column's edges, so the form scrolls out of sight under it. */}
+        <div className="sticky top-14 z-[5] -mx-5 border-b border-neutral-200 bg-neutral-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+              <PageStatusBadge status={status} />
+              {dirty ? (
+                <span className="text-xs font-medium text-amber-700">
+                  Unsaved edits
+                </span>
               ) : null}
-            </button>
-          );
-        })}
-      </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <PreviewLink
+                size="sm"
+                href={previewUrl}
+                hint={
+                  dirty
+                    ? "Shows the saved draft: save first to see your latest edits."
+                    : undefined
+                }
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy || !dirty || !limits.ok}
+                onClick={() => write(false)}
+              >
+                Save draft
+              </Button>
+              <Tooltip
+                content={
+                  status === "published"
+                    ? "The public sees this draft already."
+                    : null
+                }
+              >
+                <Button
+                  size="sm"
+                  disabled={busy || status === "published"}
+                  onClick={() => setPublishing(true)}
+                >
+                  Publish
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+            <span className="text-neutral-500">{path}</span>
+            <span aria-live="polite">{message}</span>
+            {moves.length > 0 ? (
+              <span className="flex flex-wrap gap-x-3">{moves}</span>
+            ) : null}
+          </p>
+        </div>
 
-      {tab === "content" ? (
         <div
-          role="tabpanel"
-          id="panel-content"
-          aria-labelledby="tab-content"
-          className="grid gap-6"
+          role="tablist"
+          aria-label="Parts of the page"
+          className="flex gap-1 border-b border-neutral-200"
         >
-          <Card id={partId("hero")} className={PART_SCROLL}>
-            <CardTitle description="The top of the page. Its image is also what a shared link shows, unless a share image is set under Search and sharing.">
-              Hero
-            </CardTitle>
-            <div className="grid gap-4">
-              {page === LANDING_PAGE ? (
+          {TABS.map((entry) => {
+            const selected = tab === entry.key;
+            const missing = missingIn(entry.key);
+            return (
+              <button
+                key={entry.key}
+                type="button"
+                role="tab"
+                id={`tab-${entry.key}`}
+                aria-selected={selected}
+                aria-controls={`panel-${entry.key}`}
+                onClick={() => setTab(entry.key)}
+                className={cx(
+                  "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+                  selected
+                    ? "border-neutral-900 text-neutral-900"
+                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900",
+                )}
+              >
+                {entry.label}
+                {missing > 0 ? (
+                  <Tooltip content={`${missing} to do before publishing`}>
+                    <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
+                      {missing}
+                    </span>
+                  </Tooltip>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === "content" ? (
+          <div
+            role="tabpanel"
+            id="panel-content"
+            aria-labelledby="tab-content"
+            className="grid gap-6"
+          >
+            <Card id={partId("hero")} className={PART_SCROLL}>
+              <CardTitle description="The top of the page. Its image is also what a shared link shows, unless a share image is set under Search and sharing.">
+                Hero
+              </CardTitle>
+              <div className="grid gap-4">
+                {page === LANDING_PAGE ? (
+                  <Field
+                    label={
+                      <Counted
+                        label="Tagline"
+                        value={normal.tagline}
+                        limit={PAGE_LIMITS.tagline}
+                      />
+                    }
+                  >
+                    <Input
+                      autoComplete="off"
+                      placeholder="Island escape"
+                      value={content.tagline}
+                      onChange={(event) =>
+                        edit({ tagline: event.target.value })
+                      }
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      The short line over the headline, and under the name on a
+                      home page card. Optional.
+                    </p>
+                  </Field>
+                ) : null}
                 <Field
                   label={
                     <Counted
-                      label="Tagline"
-                      value={normal.tagline}
-                      limit={PAGE_LIMITS.tagline}
+                      label="Headline"
+                      value={normal.heroHeadline}
+                      limit={PAGE_LIMITS.heroHeadline}
                     />
                   }
                 >
                   <Input
                     autoComplete="off"
-                    placeholder="Island escape"
-                    value={content.tagline}
-                    onChange={(event) => edit({ tagline: event.target.value })}
+                    value={content.heroHeadline}
+                    onChange={(event) =>
+                      edit({ heroHeadline: event.target.value })
+                    }
                   />
-                  <p className="mt-1 text-xs text-neutral-500">
-                    The short line over the headline, and under the name on a
-                    home page card. Optional.
-                  </p>
                 </Field>
-              ) : null}
-              <Field
-                label={
-                  <Counted
-                    label="Headline"
-                    value={normal.heroHeadline}
-                    limit={PAGE_LIMITS.heroHeadline}
-                  />
-                }
-              >
-                <Input
-                  autoComplete="off"
-                  value={content.heroHeadline}
-                  onChange={(event) =>
-                    edit({ heroHeadline: event.target.value })
+                <Field
+                  label={
+                    <Counted
+                      label="Subheadline"
+                      value={normal.heroSubheadline}
+                      limit={PAGE_LIMITS.heroSubheadline}
+                    />
                   }
-                />
-              </Field>
+                >
+                  <Textarea
+                    rows={2}
+                    value={content.heroSubheadline}
+                    onChange={(event) =>
+                      edit({ heroSubheadline: event.target.value })
+                    }
+                  />
+                </Field>
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                    Image
+                  </p>
+                  <ImageField
+                    label="Hero image"
+                    image={content.heroImage}
+                    onChange={(heroImage) => edit({ heroImage })}
+                  />
+                </div>
+              </div>
+            </Card>
+            <Card id={partId("intro")} className={PART_SCROLL}>
+              <CardTitle description="Plain paragraphs. Start a new line for a new paragraph.">
+                Intro
+              </CardTitle>
               <Field
                 label={
-                  <Counted
-                    label="Subheadline"
-                    value={normal.heroSubheadline}
-                    limit={PAGE_LIMITS.heroSubheadline}
-                  />
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span>
+                      Text{" "}
+                      <span className="text-xs font-normal text-neutral-500 tabular-nums">
+                        · {words} {words === 1 ? "word" : "words"}, at least{" "}
+                        {PAGE_LIMITS.introWords}
+                      </span>
+                    </span>
+                    <Count
+                      value={normal.intro.length}
+                      limit={PAGE_LIMITS.intro}
+                    />
+                  </span>
                 }
               >
                 <Textarea
-                  rows={2}
-                  value={content.heroSubheadline}
-                  onChange={(event) =>
-                    edit({ heroSubheadline: event.target.value })
-                  }
+                  rows={10}
+                  value={content.intro}
+                  onChange={(event) => edit({ intro: event.target.value })}
                 />
               </Field>
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-neutral-800">
-                  Image
-                </p>
-                <ImageField
-                  label="Hero image"
-                  image={content.heroImage}
-                  onChange={(heroImage) => edit({ heroImage })}
-                />
-              </div>
-            </div>
-          </Card>
-          <Card id={partId("intro")} className={PART_SCROLL}>
-            <CardTitle description="Plain paragraphs. Start a new line for a new paragraph.">
-              Intro
-            </CardTitle>
-            <Field
-              label={
-                <span className="flex items-baseline justify-between gap-3">
-                  <span>
-                    Text{" "}
-                    <span className="text-xs font-normal text-neutral-500 tabular-nums">
-                      · {words} {words === 1 ? "word" : "words"}, at least{" "}
-                      {PAGE_LIMITS.introWords}
-                    </span>
-                  </span>
-                  <Count
-                    value={normal.intro.length}
-                    limit={PAGE_LIMITS.intro}
-                  />
-                </span>
-              }
-            >
-              <Textarea
-                rows={10}
-                value={content.intro}
-                onChange={(event) => edit({ intro: event.target.value })}
-              />
-            </Field>
-          </Card>
-          <Card id={partId("faqs")} className={PART_SCROLL}>
-            <CardTitle
-              description={`At least ${PAGE_LIMITS.minFaqs}, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`}
-            >
-              FAQs
-            </CardTitle>
-            <div className="grid gap-4">
-              {content.faqs.length === 0 ? (
-                <p className="text-sm text-neutral-500">No FAQs yet.</p>
-              ) : (
-                <ol className={ROWS}>
-                  {content.faqs.map((faq, index) => (
-                    <li key={faq.key} className="grid gap-3 py-4 first:pt-0">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          FAQ {index + 1}
-                        </span>
-                        <RowControls
-                          name={`FAQ ${index + 1}`}
-                          isFirst={index === 0}
-                          isLast={index === content.faqs.length - 1}
-                          onMove={(by) =>
-                            edit({ faqs: movedRow(content.faqs, index, by) })
-                          }
-                          onRemove={() =>
-                            edit({
-                              faqs: content.faqs.filter(
-                                (other) => other.key !== faq.key,
-                              ),
-                            })
-                          }
-                        />
-                      </div>
-                      <Field
-                        label={
-                          <Counted
-                            label="Question"
-                            value={normal.faqs[index]?.question ?? ""}
-                            limit={PAGE_LIMITS.faqQuestion}
-                          />
-                        }
-                      >
-                        <Input
-                          autoComplete="off"
-                          value={faq.question}
-                          onChange={(event) =>
-                            editFaq(faq.key, { question: event.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field
-                        label={
-                          <Counted
-                            label="Answer"
-                            value={normal.faqs[index]?.answer ?? ""}
-                            limit={PAGE_LIMITS.faqAnswer}
-                          />
-                        }
-                      >
-                        <Textarea
-                          rows={3}
-                          value={faq.answer}
-                          onChange={(event) =>
-                            editFaq(faq.key, { answer: event.target.value })
-                          }
-                        />
-                      </Field>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              <div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={content.faqs.length >= PAGE_LIMITS.maxFaqs}
-                  onClick={() =>
-                    edit({
-                      faqs: [
-                        ...content.faqs,
-                        { key: newKey(), question: "", answer: "" },
-                      ],
-                    })
-                  }
-                >
-                  Add FAQ
-                </Button>
-              </div>
-            </div>
-          </Card>
-          {isLanding ? (
-            <Card id={partId("highlights")} className={PART_SCROLL}>
+            </Card>
+            <Card id={partId("faqs")} className={PART_SCROLL}>
               <CardTitle
-                description={`What to see and do here. At least ${PAGE_LIMITS.minHighlights}, at most ${PAGE_LIMITS.maxHighlights}. Shown in this order.`}
+                description={`At least ${PAGE_LIMITS.minFaqs}, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`}
               >
-                Highlights
+                FAQs
               </CardTitle>
               <div className="grid gap-4">
-                {content.highlights.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No highlights yet.</p>
+                {content.faqs.length === 0 ? (
+                  <p className="text-sm text-neutral-500">No FAQs yet.</p>
                 ) : (
                   <ol className={ROWS}>
-                    {content.highlights.map((highlight, index) => (
-                      <li
-                        key={highlight.key}
-                        className="grid gap-3 py-4 first:pt-0"
-                      >
+                    {content.faqs.map((faq, index) => (
+                      <li key={faq.key} className="grid gap-3 py-4 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-sm font-medium">
-                            Highlight {index + 1}
+                            FAQ {index + 1}
                           </span>
                           <RowControls
-                            name={`highlight ${index + 1}`}
+                            name={`FAQ ${index + 1}`}
                             isFirst={index === 0}
-                            isLast={index === content.highlights.length - 1}
+                            isLast={index === content.faqs.length - 1}
                             onMove={(by) =>
-                              edit({
-                                highlights: movedRow(
-                                  content.highlights,
-                                  index,
-                                  by,
-                                ),
-                              })
+                              edit({ faqs: movedRow(content.faqs, index, by) })
                             }
                             onRemove={() =>
                               edit({
-                                highlights: content.highlights.filter(
-                                  (other) => other.key !== highlight.key,
+                                faqs: content.faqs.filter(
+                                  (other) => other.key !== faq.key,
                                 ),
                               })
                             }
@@ -722,92 +634,35 @@ export function PageEditor({
                         <Field
                           label={
                             <Counted
-                              label="Name"
-                              value={normal.highlights[index]?.name ?? ""}
-                              limit={PAGE_LIMITS.highlightName}
+                              label="Question"
+                              value={normal.faqs[index]?.question ?? ""}
+                              limit={PAGE_LIMITS.faqQuestion}
                             />
                           }
                         >
                           <Input
                             autoComplete="off"
-                            value={highlight.name}
+                            value={faq.question}
                             onChange={(event) =>
-                              editHighlight(highlight.key, {
-                                name: event.target.value,
-                              })
+                              editFaq(faq.key, { question: event.target.value })
                             }
                           />
                         </Field>
                         <Field
                           label={
                             <Counted
-                              label="Text"
-                              value={normal.highlights[index]?.text ?? ""}
-                              limit={PAGE_LIMITS.highlightText}
+                              label="Answer"
+                              value={normal.faqs[index]?.answer ?? ""}
+                              limit={PAGE_LIMITS.faqAnswer}
                             />
                           }
                         >
                           <Textarea
                             rows={3}
-                            value={highlight.text}
+                            value={faq.answer}
                             onChange={(event) =>
-                              editHighlight(highlight.key, {
-                                text: event.target.value,
-                              })
+                              editFaq(faq.key, { answer: event.target.value })
                             }
-                          />
-                        </Field>
-                        <div>
-                          <p className="mb-1.5 text-sm font-medium text-neutral-800">
-                            Image
-                          </p>
-                          <ImageField
-                            label={`Image of highlight ${index + 1}`}
-                            image={highlight.image}
-                            onChange={(image) =>
-                              editHighlight(highlight.key, { image })
-                            }
-                          />
-                        </div>
-                        <Field
-                          label={
-                            <span className="inline-flex items-center gap-1.5">
-                              Saved address
-                              <InfoTip text="Optional. With an address, the highlight shows “Take me here”, which fills the drop-off with it. Addresses are kept on the Pages tab, under the pages." />
-                            </span>
-                          }
-                          hint={
-                            addresses.length === 0 ? (
-                              <Link
-                                href={locationAddressesHref(locationSlug)}
-                                className="underline underline-offset-4 hover:text-neutral-900"
-                              >
-                                Add saved addresses on the location first
-                              </Link>
-                            ) : undefined
-                          }
-                        >
-                          <Select
-                            value={
-                              addresses.some(
-                                (address) => address.id === highlight.addressId,
-                              )
-                                ? (highlight.addressId ?? "")
-                                : ""
-                            }
-                            disabled={addresses.length === 0}
-                            onValueChange={(next) =>
-                              editHighlight(highlight.key, {
-                                addressId: next || null,
-                              })
-                            }
-                            options={[
-                              { value: "", label: "No address" },
-                              ...addresses.map((address) => ({
-                                value: address.id,
-                                label: address.name,
-                              })),
-                            ]}
                           />
                         </Field>
                       </li>
@@ -818,172 +673,333 @@ export function PageEditor({
                   <Button
                     variant="secondary"
                     size="sm"
-                    disabled={
-                      content.highlights.length >= PAGE_LIMITS.maxHighlights
-                    }
+                    disabled={content.faqs.length >= PAGE_LIMITS.maxFaqs}
                     onClick={() =>
                       edit({
-                        highlights: [
-                          ...content.highlights,
-                          {
-                            key: newKey(),
-                            name: "",
-                            text: "",
-                            image: null,
-                            addressId: null,
-                          },
+                        faqs: [
+                          ...content.faqs,
+                          { key: newKey(), question: "", answer: "" },
                         ],
                       })
                     }
                   >
-                    Add highlight
+                    Add FAQ
                   </Button>
                 </div>
               </div>
             </Card>
-          ) : null}
-        </div>
-      ) : (
-        <div
-          role="tabpanel"
-          id="panel-search"
-          aria-labelledby="tab-search"
-          className="grid gap-6"
-        >
-          <Card id={partId("search")} className={PART_SCROLL}>
-            <CardTitle description="What a search result shows. Not on the page itself.">
-              Search results
-            </CardTitle>
-            <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
-              <div className="grid gap-4">
-                <Field
-                  label={
-                    <Counted
-                      label="Meta title"
-                      value={normal.metaTitle}
-                      limit={PAGE_LIMITS.metaTitle}
-                    />
-                  }
+            {isLanding ? (
+              <Card id={partId("highlights")} className={PART_SCROLL}>
+                <CardTitle
+                  description={`What to see and do here. At least ${PAGE_LIMITS.minHighlights}, at most ${PAGE_LIMITS.maxHighlights}. Shown in this order.`}
                 >
-                  <Input
-                    autoComplete="off"
-                    value={content.metaTitle}
-                    onChange={(event) =>
-                      edit({ metaTitle: event.target.value })
+                  Highlights
+                </CardTitle>
+                <div className="grid gap-4">
+                  {content.highlights.length === 0 ? (
+                    <p className="text-sm text-neutral-500">
+                      No highlights yet.
+                    </p>
+                  ) : (
+                    <ol className={ROWS}>
+                      {content.highlights.map((highlight, index) => (
+                        <li
+                          key={highlight.key}
+                          className="grid gap-3 py-4 first:pt-0"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-sm font-medium">
+                              Highlight {index + 1}
+                            </span>
+                            <RowControls
+                              name={`highlight ${index + 1}`}
+                              isFirst={index === 0}
+                              isLast={index === content.highlights.length - 1}
+                              onMove={(by) =>
+                                edit({
+                                  highlights: movedRow(
+                                    content.highlights,
+                                    index,
+                                    by,
+                                  ),
+                                })
+                              }
+                              onRemove={() =>
+                                edit({
+                                  highlights: content.highlights.filter(
+                                    (other) => other.key !== highlight.key,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                          <Field
+                            label={
+                              <Counted
+                                label="Name"
+                                value={normal.highlights[index]?.name ?? ""}
+                                limit={PAGE_LIMITS.highlightName}
+                              />
+                            }
+                          >
+                            <Input
+                              autoComplete="off"
+                              value={highlight.name}
+                              onChange={(event) =>
+                                editHighlight(highlight.key, {
+                                  name: event.target.value,
+                                })
+                              }
+                            />
+                          </Field>
+                          <Field
+                            label={
+                              <Counted
+                                label="Text"
+                                value={normal.highlights[index]?.text ?? ""}
+                                limit={PAGE_LIMITS.highlightText}
+                              />
+                            }
+                          >
+                            <Textarea
+                              rows={3}
+                              value={highlight.text}
+                              onChange={(event) =>
+                                editHighlight(highlight.key, {
+                                  text: event.target.value,
+                                })
+                              }
+                            />
+                          </Field>
+                          <div>
+                            <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                              Image
+                            </p>
+                            <ImageField
+                              label={`Image of highlight ${index + 1}`}
+                              image={highlight.image}
+                              onChange={(image) =>
+                                editHighlight(highlight.key, { image })
+                              }
+                            />
+                          </div>
+                          <Field
+                            label={
+                              <span className="inline-flex items-center gap-1.5">
+                                Saved address
+                                <InfoTip text="Optional. With an address, the highlight shows “Take me here”, which fills the drop-off with it. Addresses are kept on the Pages tab, under the pages." />
+                              </span>
+                            }
+                            hint={
+                              addresses.length === 0 ? (
+                                <Link
+                                  href={locationAddressesHref(locationSlug)}
+                                  className="underline underline-offset-4 hover:text-neutral-900"
+                                >
+                                  Add saved addresses on the location first
+                                </Link>
+                              ) : undefined
+                            }
+                          >
+                            <Select
+                              value={
+                                addresses.some(
+                                  (address) =>
+                                    address.id === highlight.addressId,
+                                )
+                                  ? (highlight.addressId ?? "")
+                                  : ""
+                              }
+                              disabled={addresses.length === 0}
+                              onValueChange={(next) =>
+                                editHighlight(highlight.key, {
+                                  addressId: next || null,
+                                })
+                              }
+                              options={[
+                                { value: "", label: "No address" },
+                                ...addresses.map((address) => ({
+                                  value: address.id,
+                                  label: address.name,
+                                })),
+                              ]}
+                            />
+                          </Field>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  <div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={
+                        content.highlights.length >= PAGE_LIMITS.maxHighlights
+                      }
+                      onClick={() =>
+                        edit({
+                          highlights: [
+                            ...content.highlights,
+                            {
+                              key: newKey(),
+                              name: "",
+                              text: "",
+                              image: null,
+                              addressId: null,
+                            },
+                          ],
+                        })
+                      }
+                    >
+                      Add highlight
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ) : null}
+          </div>
+        ) : (
+          <div
+            role="tabpanel"
+            id="panel-search"
+            aria-labelledby="tab-search"
+            className="grid gap-6"
+          >
+            <Card id={partId("search")} className={PART_SCROLL}>
+              <CardTitle description="What a search result shows. Not on the page itself.">
+                Search results
+              </CardTitle>
+              <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+                <div className="grid gap-4">
+                  <Field
+                    label={
+                      <Counted
+                        label="Meta title"
+                        value={normal.metaTitle}
+                        limit={PAGE_LIMITS.metaTitle}
+                      />
                     }
-                  />
-                </Field>
-                <Field
-                  label={
-                    <Counted
-                      label="Meta description"
-                      value={normal.metaDescription}
-                      limit={PAGE_LIMITS.metaDescription}
+                  >
+                    <Input
+                      autoComplete="off"
+                      value={content.metaTitle}
+                      onChange={(event) =>
+                        edit({ metaTitle: event.target.value })
+                      }
                     />
-                  }
-                >
-                  <Textarea
-                    rows={4}
-                    value={content.metaDescription}
-                    onChange={(event) =>
-                      edit({ metaDescription: event.target.value })
+                  </Field>
+                  <Field
+                    label={
+                      <Counted
+                        label="Meta description"
+                        value={normal.metaDescription}
+                        limit={PAGE_LIMITS.metaDescription}
+                      />
                     }
-                  />
-                </Field>
-              </div>
-              <SearchResultPreview
-                url={publicUrl}
-                title={normal.metaTitle}
-                description={normal.metaDescription}
-                fallbackTitle={`${locationName} | Heavenly Travel`}
-              />
-            </div>
-          </Card>
-
-          <Card>
-            <CardTitle description="What WhatsApp, Facebook and others show when someone shares the page: the meta title and description, with this image.">
-              Shared links
-            </CardTitle>
-            <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-neutral-800">
-                  Share image
-                </p>
-                <ImageField
-                  label="Share image"
-                  image={content.shareImage}
-                  onChange={(shareImage) => edit({ shareImage })}
+                  >
+                    <Textarea
+                      rows={4}
+                      value={content.metaDescription}
+                      onChange={(event) =>
+                        edit({ metaDescription: event.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+                <SearchResultPreview
+                  url={publicUrl}
+                  title={normal.metaTitle}
+                  description={normal.metaDescription}
+                  fallbackTitle={`${locationName} | Heavenly Travel`}
                 />
-                <p className="mt-1.5 text-xs text-neutral-500">
-                  Optional. Without one, a shared link shows the hero image.
-                  Best at 1200 by 630 pixels, with what matters in the middle.
-                </p>
               </div>
-              <SharedLinkPreview
-                url={publicUrl}
-                title={normal.metaTitle}
-                description={normal.metaDescription}
-                image={normal.shareImage ?? normal.heroImage}
-              />
-            </div>
-          </Card>
+            </Card>
 
-          <Card>
-            <CardTitle>Set for you</CardTitle>
-            <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Until the site moves to heavenlytravel.my, search engines are
-              asked not to list any of its pages. These fields count from then;
-              shared links use them already.
-            </p>
-            <ul className="grid gap-1.5 text-sm text-neutral-600">
-              <li>
-                The page&apos;s address and its canonical link, so search
-                engines list one address for it.
-              </li>
-              <li>
-                Its breadcrumbs and its FAQs in the structured form search
-                engines read, so the FAQs can show in results.
-              </li>
-              <li>
-                A preview, a draft and an unpublished page are never listed.
-                Keywords are left out: search engines no longer read them.
-              </li>
-            </ul>
-          </Card>
-        </div>
-      )}
+            <Card>
+              <CardTitle description="What WhatsApp, Facebook and others show when someone shares the page: the meta title and description, with this image.">
+                Shared links
+              </CardTitle>
+              <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                    Share image
+                  </p>
+                  <ImageField
+                    label="Share image"
+                    image={content.shareImage}
+                    onChange={(shareImage) => edit({ shareImage })}
+                  />
+                  <p className="mt-1.5 text-xs text-neutral-500">
+                    Optional. Without one, a shared link shows the hero image.
+                    Best at 1200 by 630 pixels, with what matters in the middle.
+                  </p>
+                </div>
+                <SharedLinkPreview
+                  url={publicUrl}
+                  title={normal.metaTitle}
+                  description={normal.metaDescription}
+                  image={normal.shareImage ?? normal.heroImage}
+                />
+              </div>
+            </Card>
 
-      <PublishDialog
-        open={publishing}
-        onOpenChange={setPublishing}
-        pageName={pageNameOf(page)}
-        locationName={locationName}
-        isPublic={isPublic}
-        checks={checks}
-        limitsError={limits.ok ? null : limits.error}
-        changes={published ? changedPageParts(published, normal) : null}
-        pending={pending}
-        onPublish={() => write(true)}
-        onGoTo={goTo}
-      />
-      {published ? (
-        <CompareDialog
-          open={comparing}
-          onOpenChange={setComparing}
-          page={page}
-          published={published}
-          draft={normal}
-          addressNames={addressNames}
+            <Card>
+              <CardTitle>Set for you</CardTitle>
+              <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Until the site moves to heavenlytravel.my, search engines are
+                asked not to list any of its pages. These fields count from
+                then; shared links use them already.
+              </p>
+              <ul className="grid gap-1.5 text-sm text-neutral-600">
+                <li>
+                  The page&apos;s address and its canonical link, so search
+                  engines list one address for it.
+                </li>
+                <li>
+                  Its breadcrumbs and its FAQs in the structured form search
+                  engines read, so the FAQs can show in results.
+                </li>
+                <li>
+                  A preview, a draft and an unpublished page are never listed.
+                  Keywords are left out: search engines no longer read them.
+                </li>
+              </ul>
+            </Card>
+          </div>
+        )}
+
+        <PublishDialog
+          open={publishing}
+          onOpenChange={setPublishing}
+          pageName={pageNameOf(page)}
+          locationName={locationName}
+          isPublic={isPublic}
+          checks={checks}
+          limitsError={limits.ok ? null : limits.error}
+          changes={published ? changedPageParts(published, normal) : null}
+          pending={pending}
+          onPublish={() => write(true)}
+          onGoTo={goTo}
         />
-      ) : null}
-      <HistoryDialog
-        open={readingHistory}
-        onOpenChange={setReadingHistory}
-        publishes={publishes}
-        allHref={historyHref}
-      />
-      {confirmDialog}
-      {leaveDialog}
-    </div>
+        {published ? (
+          <CompareDialog
+            open={comparing}
+            onOpenChange={setComparing}
+            page={page}
+            published={published}
+            draft={normal}
+            addressNames={addressNames}
+          />
+        ) : null}
+        <HistoryDialog
+          open={readingHistory}
+          onOpenChange={setReadingHistory}
+          publishes={publishes}
+          allHref={historyHref}
+        />
+        {confirmDialog}
+        {leaveDialog}
+      </div>
+    </UploadsContext>
   );
 }

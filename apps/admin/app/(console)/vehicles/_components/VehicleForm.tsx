@@ -34,6 +34,10 @@ import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
 import { createVehicleAction, updateVehicleAction } from "../actions";
 import { PhotoList } from "./PhotoList";
+import {
+  UploadsContext,
+  useUploadCount,
+} from "../../../_components/use-image-upload";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {
@@ -134,6 +138,7 @@ export function VehicleForm({
     isNew ? createVehicleAction : updateVehicleAction,
     { done: isNew ? "Vehicle added." : "Vehicle saved." },
   );
+  const uploads = useUploadCount();
   const fields = vehicle ? vehicleFieldsOf(vehicle) : null;
   const [classId, setClassId] = useState(
     fields?.vehicleClassId ?? vehicleClassId ?? "",
@@ -145,184 +150,199 @@ export function VehicleForm({
   );
 
   return (
-    <form {...formProps} className="grid gap-6">
-      {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
-      <input type="hidden" name={PHOTOS_FIELD} value={JSON.stringify(photos)} />
-      {backToList ? (
-        <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />
-      ) : null}
-
-      <Card className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={VEHICLE_FIELD_LABELS.plate}>
-            <Input
-              name="plate"
-              required
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="VLE 1234"
-              className="uppercase"
-              defaultValue={fields?.plate}
-            />
-          </Field>
-          <Field
-            label={
-              <span className="inline-flex items-center gap-1.5">
-                {VEHICLE_FIELD_LABELS.vehicleClassId}
-                <InfoTip text="The class the customer books it as. Its models are the brands and models of the vehicles entered in it." />
-              </span>
-            }
-          >
-            <Select
-              name="vehicleClassId"
-              required
-              placeholder="Choose the class"
-              value={classId}
-              onValueChange={setClassId}
-              options={classGroups(classes)}
-            />
-          </Field>
-          <Field label={VEHICLE_FIELD_LABELS.brand}>
-            <Combobox
-              name="brand"
-              required
-              maxLength={MODEL_LIMITS.brand}
-              placeholder="Choose or add the brand"
-              searchPlaceholder="Find a brand, or type a new one"
-              options={distinct(suggestions.map((s) => s.brand))}
-              value={brand}
-              onValueChange={setBrand}
-            />
-          </Field>
-          <Field label={VEHICLE_FIELD_LABELS.model}>
-            <Combobox
-              name="model"
-              required
-              maxLength={MODEL_LIMITS.name}
-              placeholder="Choose or add the model"
-              searchPlaceholder="Find a model, or type a new one"
-              options={modelsOf(suggestions, classId, brand)}
-              value={model}
-              onValueChange={setModel}
-            />
-          </Field>
-          <ModelNote
-            suggestions={suggestions}
-            classes={classes}
-            classId={classId}
-            brand={brand}
-            model={model}
-          />
-          <Field label={VEHICLE_FIELD_LABELS.colour}>
-            <Input
-              name="colour"
-              required
-              autoComplete="off"
-              maxLength={VEHICLE_LIMITS.colour}
-              placeholder="Black"
-              defaultValue={fields?.colour}
-            />
-          </Field>
-          <Field label={VEHICLE_FIELD_LABELS.year}>
-            <NumberField
-              name="year"
-              step={1}
-              placeholder="2023"
-              defaultValue={fields?.year ?? undefined}
-            />
-          </Field>
-          <Field
-            label={
-              <span className="inline-flex items-center gap-1.5">
-                {VEHICLE_FIELD_LABELS.locationId}
-                <InfoTip text="To move a vehicle to another location, change where it is based." />
-              </span>
-            }
-          >
-            <Select
-              name="locationId"
-              required
-              placeholder="Choose the location"
-              defaultValue={fields?.locationId ?? locationId ?? ""}
-              options={locations.map((location) => ({
-                value: location.id,
-                label: location.name,
-              }))}
-            />
-          </Field>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="isActive" defaultChecked={fields?.isActive ?? true} />
-          <span className="inline-flex items-center gap-1.5">
-            {VEHICLE_FIELD_LABELS.isActive}
-            <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
-          </span>
-        </label>
-      </Card>
-
-      <Card className="grid gap-4">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            {VEHICLE_FIELD_LABELS.photos}
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            What the customers of the location it is based at see of its model,
-            plate and all, and swipe through when they choose one. The first is
-            its cover; the first cover of the class there is the class&apos;s
-            picture at the location.
-          </p>
-        </div>
-        <PhotoList
-          name={modelName({ brand: brand.trim(), name: model.trim() })}
-          photos={photos}
-          setPhotos={setPhotos}
+    <UploadsContext value={uploads.track}>
+      <form {...formProps} className="grid gap-6">
+        {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
+        <input
+          type="hidden"
+          name={PHOTOS_FIELD}
+          value={JSON.stringify(photos)}
         />
-      </Card>
+        {backToList ? (
+          <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />
+        ) : null}
 
-      <Card className="grid gap-4">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Documents</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            The expiry dates of what a vehicle that carries paying passengers
-            keeps valid. A date within 30 days shows as due.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {VEHICLE_DOCUMENTS.map((key) => (
-            <ExpiryDateField
-              key={key}
-              name={key}
-              label={VEHICLE_DOCUMENT_LABELS[key]}
-              defaultValue={fields?.[key] ?? null}
+        <Card className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={VEHICLE_FIELD_LABELS.plate}>
+              <Input
+                name="plate"
+                required
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="VLE 1234"
+                className="uppercase"
+                defaultValue={fields?.plate}
+              />
+            </Field>
+            <Field
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  {VEHICLE_FIELD_LABELS.vehicleClassId}
+                  <InfoTip text="The class the customer books it as. Its models are the brands and models of the vehicles entered in it." />
+                </span>
+              }
+            >
+              <Select
+                name="vehicleClassId"
+                required
+                placeholder="Choose the class"
+                value={classId}
+                onValueChange={setClassId}
+                options={classGroups(classes)}
+              />
+            </Field>
+            <Field label={VEHICLE_FIELD_LABELS.brand}>
+              <Combobox
+                name="brand"
+                required
+                maxLength={MODEL_LIMITS.brand}
+                placeholder="Choose or add the brand"
+                searchPlaceholder="Find a brand, or type a new one"
+                options={distinct(suggestions.map((s) => s.brand))}
+                value={brand}
+                onValueChange={setBrand}
+              />
+            </Field>
+            <Field label={VEHICLE_FIELD_LABELS.model}>
+              <Combobox
+                name="model"
+                required
+                maxLength={MODEL_LIMITS.name}
+                placeholder="Choose or add the model"
+                searchPlaceholder="Find a model, or type a new one"
+                options={modelsOf(suggestions, classId, brand)}
+                value={model}
+                onValueChange={setModel}
+              />
+            </Field>
+            <ModelNote
+              suggestions={suggestions}
+              classes={classes}
+              classId={classId}
+              brand={brand}
+              model={model}
             />
-          ))}
-        </div>
-      </Card>
+            <Field label={VEHICLE_FIELD_LABELS.colour}>
+              <Input
+                name="colour"
+                required
+                autoComplete="off"
+                maxLength={VEHICLE_LIMITS.colour}
+                placeholder="Black"
+                defaultValue={fields?.colour}
+              />
+            </Field>
+            <Field label={VEHICLE_FIELD_LABELS.year}>
+              <NumberField
+                name="year"
+                step={1}
+                placeholder="2023"
+                defaultValue={fields?.year ?? undefined}
+              />
+            </Field>
+            <Field
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  {VEHICLE_FIELD_LABELS.locationId}
+                  <InfoTip text="To move a vehicle to another location, change where it is based." />
+                </span>
+              }
+            >
+              <Select
+                name="locationId"
+                required
+                placeholder="Choose the location"
+                defaultValue={fields?.locationId ?? locationId ?? ""}
+                options={locations.map((location) => ({
+                  value: location.id,
+                  label: location.name,
+                }))}
+              />
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              name="isActive"
+              defaultChecked={fields?.isActive ?? true}
+            />
+            <span className="inline-flex items-center gap-1.5">
+              {VEHICLE_FIELD_LABELS.isActive}
+              <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
+            </span>
+          </label>
+        </Card>
 
-      <Card className="grid gap-4">
-        <Field label={VEHICLE_FIELD_LABELS.notes}>
-          <Textarea
-            name="notes"
-            rows={3}
-            maxLength={VEHICLE_LIMITS.notes}
-            placeholder="Leather seats, a dent on the rear door, anything the team should know"
-            defaultValue={fields?.notes}
+        <Card className="grid gap-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              {VEHICLE_FIELD_LABELS.photos}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              What the customers of the location it is based at see of its
+              model, plate and all, and swipe through when they choose one. The
+              first is its cover; the first cover of the class there is the
+              class&apos;s picture at the location.
+            </p>
+          </div>
+          <PhotoList
+            name={modelName({ brand: brand.trim(), name: model.trim() })}
+            photos={photos}
+            setPhotos={setPhotos}
           />
-        </Field>
-      </Card>
+        </Card>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add vehicle" : "Save"}
-        </Button>
-        <Link
-          href={backHref}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
-    </form>
+        <Card className="grid gap-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Documents</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              The expiry dates of what a vehicle that carries paying passengers
+              keeps valid. A date within 30 days shows as due.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {VEHICLE_DOCUMENTS.map((key) => (
+              <ExpiryDateField
+                key={key}
+                name={key}
+                label={VEHICLE_DOCUMENT_LABELS[key]}
+                defaultValue={fields?.[key] ?? null}
+              />
+            ))}
+          </div>
+        </Card>
+
+        <Card className="grid gap-4">
+          <Field label={VEHICLE_FIELD_LABELS.notes}>
+            <Textarea
+              name="notes"
+              rows={3}
+              maxLength={VEHICLE_LIMITS.notes}
+              placeholder="Leather seats, a dent on the rear door, anything the team should know"
+              defaultValue={fields?.notes}
+            />
+          </Field>
+        </Card>
+
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={pending || uploads.uploading}>
+            {uploads.uploading
+              ? "Uploading photos…"
+              : pending
+                ? "Saving…"
+                : isNew
+                  ? "Add vehicle"
+                  : "Save"}
+          </Button>
+          <Link
+            href={backHref}
+            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          >
+            Cancel
+          </Link>
+          <FormError error={error} />
+        </div>
+      </form>
+    </UploadsContext>
   );
 }

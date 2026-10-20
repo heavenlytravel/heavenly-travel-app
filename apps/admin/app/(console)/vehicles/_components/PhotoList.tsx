@@ -17,7 +17,7 @@ import {
   XIcon,
 } from "@repo/ui/icons";
 import Image from "next/image";
-import { useRef, type Dispatch, type SetStateAction } from "react";
+import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useImageUpload } from "../../../_components/use-image-upload";
 import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../_lib/routes";
 import { FormError } from "../../../_components/FormError";
@@ -26,7 +26,9 @@ import { FormError } from "../../../_components/FormError";
  * A vehicle's photos, in the order the customer swipes through them: each
  * with its caption, moved left or right, or taken out. The first is the
  * vehicle's cover. "Add photos" stores each file as soon as it is chosen,
- * several at once; the form keeps them once it is saved.
+ * several at once, each shown in its place until it lands; files past
+ * the limit are left out, and the list says so. The form keeps them once
+ * it is saved, and waits for the uploads.
  */
 export function PhotoList({
   name,
@@ -40,22 +42,26 @@ export function PhotoList({
   setPhotos: Dispatch<SetStateAction<Photo[]>>;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const { upload, uploading, error } = useImageUpload(
+  const { upload, uploading, pending, error } = useImageUpload(
     VEHICLE_IMAGE_UPLOAD_PATH,
+    "photo",
   );
+  const [leftOut, setLeftOut] = useState<string | null>(null);
   const room = PHOTO_LIMITS.photos - photos.length;
 
-  async function add(files: File[]) {
-    // One at a time, so the list grows in the order the files were chosen.
-    for (const file of files.slice(0, room)) {
-      const image = await upload(file);
-      if (!image) break;
+  function add(files: File[]) {
+    setLeftOut(
+      files.length > room
+        ? `A vehicle holds ${PHOTO_LIMITS.photos} photos: the first ${room} of the ${files.length} chosen are added.`
+        : null,
+    );
+    void upload(files.slice(0, room), (image) =>
       setPhotos((current) =>
         current.length < PHOTO_LIMITS.photos
           ? [...current, { url: image.url, caption: "" }]
           : current,
-      );
-    }
+      ),
+    );
   }
 
   function move(from: number, to: number) {
@@ -77,7 +83,7 @@ export function PhotoList({
 
   return (
     <div className="grid gap-4">
-      {photos.length === 0 ? (
+      {photos.length === 0 && pending.length === 0 ? (
         <p className="flex items-center gap-2 rounded-lg border border-dashed border-neutral-300 px-4 py-6 text-sm text-neutral-500">
           <ImageIcon className="size-5 text-neutral-400" />
           No photos yet. The outside first: it is the vehicle&apos;s cover.
@@ -86,7 +92,7 @@ export function PhotoList({
         <ol className="grid grid-cols-[repeat(auto-fill,minmax(min(12rem,100%),1fr))] gap-4">
           {photos.map((photo, i) => (
             <li
-              key={`${photo.url}-${i}`}
+              key={photo.url}
               className="grid gap-2 rounded-lg border border-neutral-200 p-2"
             >
               <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-neutral-100">
@@ -143,6 +149,17 @@ export function PhotoList({
               </div>
             </li>
           ))}
+          {pending.map((file, i) => (
+            <li
+              key={`${file}-${i}`}
+              className="grid content-start gap-2 rounded-lg border border-dashed border-neutral-300 p-2"
+            >
+              <div className="grid aspect-[3/2] animate-pulse place-items-center rounded-md bg-neutral-100 text-xs text-neutral-500">
+                {i === 0 ? "Uploading…" : "Waiting…"}
+              </div>
+              <p className="truncate px-1 text-xs text-neutral-600">{file}</p>
+            </li>
+          ))}
         </ol>
       )}
 
@@ -159,7 +176,7 @@ export function PhotoList({
             const files = [...(event.target.files ?? [])];
             // Cleared, so choosing the same file again uploads it again.
             event.target.value = "";
-            if (files.length > 0) void add(files);
+            if (files.length > 0) add(files);
           }}
         />
         <Button
@@ -176,7 +193,7 @@ export function PhotoList({
             : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
         </span>
       </div>
-      <FormError error={error} size="xs" />
+      <FormError error={error ?? leftOut} size="xs" />
     </div>
   );
 }

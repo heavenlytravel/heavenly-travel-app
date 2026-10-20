@@ -306,11 +306,13 @@ push):
    uploaded again on a vehicle.
 3. `pnpm --filter @repo/db db:migrate-offering-rules` (and `:prod`), from the plan
    before.
-4. `pnpm --filter @repo/db db:set-class-list` (and `:prod`): splits a model named before
-   brands were kept, "Toyota Alphard", into its brand and name; sets the classes' names,
-   seats, luggage and order, adds the models they start with, renames VIP coach, and
-   deletes Minibus and Midi coach with their prices. A class that a booking or a vehicle
-   still uses is switched off instead and listed. Running it again changes nothing.
+4. `pnpm --filter @repo/db db:set-class-list` (and `:prod`), first with `-- --dry-run`,
+   which prints every change and writes nothing: splits a model named before brands
+   were kept, "Toyota Alphard", into its brand and name; sets the classes' names, seats,
+   luggage and order, adds the models they start with, renames VIP coach, and deletes
+   Minibus and Midi coach with their prices and models. A class that a booking, a
+   vehicle or a driver still has is switched off instead and listed. Running it again
+   changes nothing.
 5. Deploy the code.
 6. Operation sells Sedan VIP and MPV VIP at each location with their rates, sets the
    charge to choose a model where customers may, enters the vehicles with their photos

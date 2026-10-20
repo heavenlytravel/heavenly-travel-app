@@ -447,6 +447,7 @@ model Vehicle {
   photos VehiclePhoto[]
 
   @@index([locationId, isActive])
+  @@index([vehicleModelId])
 }
 
 /// One photo of a vehicle, in its order; the first is the vehicle's cover.
@@ -629,4 +630,6 @@ model TripItemDetails {
   childSeats           Int           @default(0)
   flightNumber         String?
   notes                String?
+
+  @@index([vehicleModelId])
 }

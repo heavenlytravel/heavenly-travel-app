@@ -82,9 +82,11 @@ model only once a vehicle of it is in service at their location.
 - A model has a brand ("Toyota") and a name ("Alphard"), shown together as "Toyota
   Alphard", and nothing else: no photos, order or switch of its own. Models are listed
   by name.
-- Models come from the vehicles entered. The vehicle form takes the brand and the model
-  as typed, suggesting the ones entered before; saving finds the class's model of that
-  brand and name, however it is cased, or adds it, logged against the class.
+- Models come from the vehicles entered. The vehicle form's brand and model each open a
+  list of the ones entered before that narrows as you type, with "Create" under it for
+  a new one (`Combobox` in `@repo/ui`, after shadcn's, on cmdk); saving finds the
+  class's model of that brand and name, however it is cased, or adds it, logged against
+  the class.
 - A model no vehicle is of and no booking chose goes as soon as its last vehicle leaves
   it, so a model typed wrong and corrected leaves no suggestion behind. The models the
   class list starts with stay until a vehicle has been of them.
@@ -125,12 +127,14 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
   percentage and the amount follow the odd-hours surcharge's rules and limits, and its
   input: `ChargeInput` in the console, `checkCharge` and `parseCharge` in
   `src/rates-input.ts`.
-- On the options page, a class's card shows its picture at the location, names its
-  models ("Toyota Vellfire or Toyota Alphard, or similar") and "See photos" opens them in
-  one gallery. Chosen, the card opens on its models, a tile each, two side by side and
-  one on a phone, wide enough to see the vehicle. A tile's photos are swiped through in
-  place (`PhotoCarousel`: snapping slides, arrows for a pointer, a dot per photo), and
-  "View" opens them large in the gallery:
+- On the options page, a class's card shows its picture at the location and names its
+  models ("Toyota Vellfire or Toyota Alphard, or similar"). Chosen, the card opens on its
+  models, a tile each, two side by side and one on a phone, wide enough to see the
+  vehicle: the first four, then "Show all 6 models" for the rest, so a long list does
+  not push the next class far down. A tile's photos are swiped through in place
+  (`PhotoCarousel`: snapping slides, arrows for a pointer, a dot per photo), a tap
+  anywhere on the tile but the arrows chooses it, and "View" opens its photos large in a
+  gallery, the page behind holding still:
   - where the location charges for the choice, "Choose your model (optional)": "Any MPV
     VIP, Included", ticked to start, then a tile per model at "+RM 40.00";
   - where it does not, "What we may send", to look at.
@@ -152,8 +156,8 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
 
 - A vehicle has a plate, a class, a brand and a model, the location it is based at, a
   colour, the year it was made, whether it is in service, its photos, the expiry dates
-  of its documents, and notes. The class is picked; the brand and the model are typed, with the
-  brands entered before suggested, and the brand's models in the class first. Under them
+  of its documents, and notes. The class is picked; the brand and the model are picked
+  from the ones entered before or added new, the brand's models in the class first. Under them
   the form says when saving will add a model to the class, and names the class that has
   it already when it is another one.
 - The plate is unique, kept in capitals without spaces: "vle 1234" is VLE1234.

@@ -10,11 +10,7 @@ import {
   oddHoursOf,
   surchargeLabel,
 } from "@repo/db";
-import {
-  listLocationNames,
-  listPriceLists,
-  type LocationPriceList,
-} from "@repo/db/server";
+import { listPriceLists, type LocationPriceList } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardTitle } from "../../_components/Card";
 import { LocationFilter } from "../../_components/LocationFilter";
@@ -29,6 +25,7 @@ import { locationTabHref, ratesHref } from "../../_lib/routes";
 import { dropoffRuleNote } from "../locations/[slug]/rates/dropoff-note";
 import { RateGrid } from "../locations/[slug]/rates/RateGrid";
 import { rulesText } from "../vehicle-classes/_lib/class-text";
+import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /rates?location=…. What every location charges, or one
@@ -44,7 +41,7 @@ export default async function RatesPage({ searchParams }: PageProps<"/rates">) {
   const { location } = await searchParams;
   const locationId =
     typeof location === "string" && location ? location : undefined;
-  const locations = await listLocationNames();
+  const locations = await locationNames();
 
   return (
     <>

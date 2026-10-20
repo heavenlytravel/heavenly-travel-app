@@ -2,7 +2,6 @@ import Link from "next/link";
 import { modelName } from "@repo/db";
 import {
   getVehicle,
-  listLocationNames,
   listModelSuggestions,
   listClassOptions,
 } from "@repo/db/server";
@@ -22,6 +21,7 @@ import {
 import { locationKey } from "../../../_lib/location-data";
 import { deleteVehicleAction } from "../../../../vehicles/actions";
 import { VehicleForm } from "../../../../vehicles/_components/VehicleForm";
+import { locationNames } from "../../../../../_lib/location-names";
 
 /**
  * Route: /locations/[slug]/vehicles/[vehicleId], and
@@ -79,7 +79,7 @@ async function vehicleScreen({
     isNew ? null : getVehicle(vehicleId),
     listClassOptions(),
     listModelSuggestions(),
-    listLocationNames(),
+    locationNames(),
   ]);
   if (!isNew && !vehicle) notFound();
   // Based at another location now: its page is there.

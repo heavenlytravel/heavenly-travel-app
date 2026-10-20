@@ -41,6 +41,17 @@ export function listZones(locationId: string): Promise<Zone[]> {
   });
 }
 
+/** The zones of a location in their order, by name only: what a list or a menu of them shows. */
+export function listZoneNames(
+  locationId: string,
+): Promise<{ id: string; name: string }[]> {
+  return db.zone.findMany({
+    where: { locationId },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true, name: true },
+  });
+}
+
 export function getZone(id: string): Promise<Zone | null> {
   return db.zone.findUnique({ where: { id } });
 }

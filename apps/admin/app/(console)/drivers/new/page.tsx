@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { listClassOptions, listLocationNames } from "@repo/db/server";
+import { listClassOptions } from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { DRIVERS_PATH, driversHref } from "../../../_lib/routes";
 import { DriverForm } from "../_components/DriverForm";
+import { locationNames } from "../../../_lib/location-names";
 
 /**
  * Route: /drivers/new?location=…. A driver added from the list across
@@ -49,7 +50,7 @@ export default async function NewDriverPage({
 async function newDriverForm(location: string | undefined) {
   const [classes, locations] = await Promise.all([
     listClassOptions(),
-    listLocationNames(),
+    locationNames(),
   ]);
   const locationId = locations.find((l) => l.id === location)?.id;
   return (

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { searchTermOf } from "@repo/db";
-import { listLocationNames } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { FleetList } from "../../_components/FleetList";
 import { LocationFilter } from "../../_components/LocationFilter";
@@ -13,6 +12,7 @@ import {
   SEARCH_PARAM,
   driversHref,
 } from "../../_lib/routes";
+import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /drivers?location=…&due=1&q=…. Our drivers across locations,
@@ -32,7 +32,7 @@ export default async function DriversPage({
       : undefined;
   const due = params.due === DUE_PARAM;
   const q = searchTermOf(params[SEARCH_PARAM]) ?? undefined;
-  const locations = await listLocationNames();
+  const locations = await locationNames();
 
   return (
     <>

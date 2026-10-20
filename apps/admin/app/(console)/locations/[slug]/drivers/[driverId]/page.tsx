@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  getDriver,
-  listLocationNames,
-  listClassOptions,
-} from "@repo/db/server";
+import { getDriver, listClassOptions } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import { DeleteRecord } from "../../../../../_components/DeleteRecord";
 import { DetailColumns } from "../../../../../_components/PageColumn";
@@ -19,6 +15,7 @@ import {
 import { locationKey } from "../../../_lib/location-data";
 import { deleteDriverAction } from "../../../../drivers/actions";
 import { DriverForm } from "../../../../drivers/_components/DriverForm";
+import { locationNames } from "../../../../../_lib/location-names";
 
 /**
  * Route: /locations/[slug]/drivers/[driverId], and
@@ -68,7 +65,7 @@ async function driverScreen({
   const [driver, classes, locations] = await Promise.all([
     isNew ? null : getDriver(driverId),
     listClassOptions(),
-    listLocationNames(),
+    locationNames(),
   ]);
   if (!isNew && !driver) notFound();
   // Based at another location now: its page is there.

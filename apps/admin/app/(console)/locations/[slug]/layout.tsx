@@ -1,5 +1,4 @@
 import { locationStateOf, setupSteps, type Permission } from "@repo/db";
-import { listOfferings, listZones } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { PageColumn } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
@@ -13,7 +12,9 @@ import { locationTabsFor } from "../../../_lib/routes";
 import {
   locationDetails,
   locationKey,
+  locationOfferings,
   locationOverview,
+  locationZoneNames,
 } from "../_lib/location-data";
 import { LocationPanel, PANEL_PLACEMENT, PANEL_TITLE } from "./LocationPanel";
 import { LocationTabs } from "./LocationTabs";
@@ -110,14 +111,14 @@ async function locationPanel({
   const listsThem = permissions.includes("coverage.manage");
   const [standing, zones, offerings] = await Promise.all([
     locationStanding(id),
-    listsThem ? listZones(id) : [],
-    listsThem ? listOfferings(id) : [],
+    listsThem ? locationZoneNames(id) : [],
+    listsThem ? locationOfferings(id) : [],
   ]);
   return (
     <LocationPanel
       {...standing}
       permissions={permissions}
-      zones={zones.map((zone) => ({ id: zone.id, name: zone.name }))}
+      zones={zones}
       offerings={offerings.map((offering) => ({
         id: offering.id,
         name: offering.vehicleClass.name,

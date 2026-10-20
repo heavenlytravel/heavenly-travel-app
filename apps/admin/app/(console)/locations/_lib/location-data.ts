@@ -4,6 +4,8 @@ import {
   getLocationIdBySlug,
   getLocationOverview,
   getLocationSlug,
+  listOfferings,
+  listZoneNames,
 } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
@@ -34,3 +36,9 @@ export const locationDetails = cache((id: string) => getLocation(id));
 
 /** The location's numbers; null when there is no such location. */
 export const locationOverview = cache((id: string) => getLocationOverview(id));
+
+/** The location's zones by name, for the panel's menu and the tabs that list them. */
+export const locationZoneNames = cache((id: string) => listZoneNames(id));
+
+/** The classes the location offers, for the panel's menu and the tabs that list them. */
+export const locationOfferings = cache((id: string) => listOfferings(id));

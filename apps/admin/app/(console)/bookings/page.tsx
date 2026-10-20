@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { isBookingStatus, searchTermOf } from "@repo/db";
-import { listLocationNames } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { LocationFilter } from "../../_components/LocationFilter";
 import { PageHeader } from "../../_components/PageHeader";
@@ -14,6 +13,7 @@ import {
   SEARCH_PARAM,
 } from "../../_lib/routes";
 import { BookingsList } from "./_components/BookingsList";
+import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /bookings?status=received&location=…&q=…&page=2. The queue
@@ -34,7 +34,7 @@ export default async function BookingsPage({
   const page = pageOf(params[PAGE_PARAM]);
   const [permissions, locations] = await Promise.all([
     getPermissions(),
-    listLocationNames(),
+    locationNames(),
   ]);
 
   return (

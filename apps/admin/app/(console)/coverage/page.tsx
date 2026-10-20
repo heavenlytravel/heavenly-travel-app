@@ -1,5 +1,5 @@
 import { isZoneShape, plural } from "@repo/db";
-import { listCoverage, listLocationNames } from "@repo/db/server";
+import { listCoverage } from "@repo/db/server";
 import { LocationFilter } from "../../_components/LocationFilter";
 import { Card, CardTitle } from "../../_components/Card";
 import { PageHeader } from "../../_components/PageHeader";
@@ -18,6 +18,7 @@ import {
 } from "../locations/[slug]/coverage/zone-lines";
 import { zoneColor } from "../locations/[slug]/coverage/zones/zone-colors";
 import { CoverageAcross, type AcrossLocation } from "./CoverageAcross";
+import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /coverage?location=…. Where every location serves pickups, on
@@ -35,7 +36,7 @@ export default async function CoveragePage({
   const { location } = await searchParams;
   const locationId =
     typeof location === "string" && location ? location : undefined;
-  const locations = await listLocationNames();
+  const locations = await locationNames();
 
   return (
     <>

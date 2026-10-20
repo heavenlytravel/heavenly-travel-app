@@ -1,15 +1,12 @@
 import Link from "next/link";
-import {
-  listClassOptions,
-  listLocationNames,
-  listModelSuggestions,
-} from "@repo/db/server";
+import { listClassOptions, listModelSuggestions } from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { VEHICLES_PATH, vehiclesHref } from "../../../_lib/routes";
 import { VehicleForm } from "../_components/VehicleForm";
+import { locationNames } from "../../../_lib/location-names";
 
 /**
  * Route: /vehicles/new?location=…. A vehicle added from the list across
@@ -54,7 +51,7 @@ async function newVehicleForm(location: string | undefined) {
   const [classes, suggestions, locations] = await Promise.all([
     listClassOptions(),
     listModelSuggestions(),
-    listLocationNames(),
+    locationNames(),
   ]);
   const locationId = locations.find((l) => l.id === location)?.id;
   return (

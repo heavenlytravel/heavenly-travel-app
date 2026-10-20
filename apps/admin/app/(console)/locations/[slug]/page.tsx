@@ -17,8 +17,6 @@ import {
 } from "@repo/db";
 import {
   listBookings,
-  listOfferings,
-  listZones,
   type BookingWithItems,
   type LocationOverview,
 } from "@repo/db/server";
@@ -48,7 +46,9 @@ import { LOCATION_TAB_ICONS } from "../_components/TabIcon";
 import {
   locationDetails,
   locationKey,
+  locationOfferings,
   locationOverview,
+  locationZoneNames,
 } from "../_lib/location-data";
 import { SetupChecklist } from "./SetupChecklist";
 
@@ -121,8 +121,8 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   const glance = !draft && !worksQueue;
   const operates = glance && may("coverage.view");
   const [zones, offerings, pickups, received] = await Promise.all([
-    operates ? listZones(id) : [],
-    operates ? listOfferings(id) : [],
+    operates ? locationZoneNames(id) : [],
+    operates ? locationOfferings(id) : [],
     worksQueue
       ? listBookings(
           { locationId: id, pickupOn: new Date() },

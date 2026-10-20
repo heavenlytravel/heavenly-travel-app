@@ -1,4 +1,4 @@
-// Usage: pnpm --filter @repo/db db:set-class-list
+// Usage: pnpm --filter @repo/db db:set-class-list [-- --dry-run]
 //
 // Run once per database after the schema push of
 // docs/261019-vehicles-and-drivers.md, and after db:migrate-offering-rules
@@ -13,12 +13,15 @@
 //   its first space into the brand Toyota and the model Alphard. Its name
 //   on screen stays the same, so this is not logged.
 // - Each listed class gets the list's models it lacks.
-// - Minibus and Midi coach are deleted with their offerings and zone rates.
-//   One that a booking or a vehicle still uses is switched off instead, and
-//   named.
+// - Minibus and Midi coach are deleted with their offerings, zone rates and
+//   models. One that a booking, a vehicle or a driver still has is switched
+//   off instead, and named. The console never deletes a class, so these
+//   deletes are reported here and not in any History.
 //
-// The class and model changes are logged as the system's. Running it again
-// changes nothing.
+// With --dry-run it reads the database and prints every change it would
+// make, writing nothing: run it so first against production. The class and
+// model changes are logged as the system's. Running it again changes
+// nothing.
 import { SYSTEM_ACTOR } from "../src/activity-actions";
 import { db } from "../src/client";
 import { createVehicleClass, updateVehicleClass } from "../src/vehicle-classes";
@@ -32,6 +35,13 @@ const RENAMED: Record<string, string> = { "vip-coach": "coach-vip" };
 /** The classes the list drops. */
 const DROPPED = ["minibus", "midi-coach"];
 
+const DRY_RUN = process.argv.includes("--dry-run");
+
+/** Prints a change, as made or as it would be. */
+function report(change: string) {
+  console.log(DRY_RUN ? `Would: ${change}` : change);
+}
+
 /** Stops the script on a refusal, naming what was refused. */
 function must<T extends { ok: true } | { ok: false; error: string }>(
   what: string,
@@ -40,14 +50,25 @@ function must<T extends { ok: true } | { ok: false; error: string }>(
   if (!result.ok) throw new Error(`${what}: ${result.error}`);
 }
 
+if (DRY_RUN) console.log("Dry run: nothing is written.");
+
 for (const [from, to] of Object.entries(RENAMED)) {
   const [old, taken] = await Promise.all([
     db.vehicleClass.findUnique({ where: { slug: from } }),
     db.vehicleClass.findUnique({ where: { slug: to } }),
   ]);
-  if (old && !taken) {
-    await db.vehicleClass.update({ where: { id: old.id }, data: { slug: to } });
-    console.log(`${old.name}: slug ${from} is now ${to}.`);
+  if (old && taken) {
+    console.log(
+      `${old.name} (${from}) and ${taken.name} (${to}) both exist, so the slug is not moved. Move what ${old.name} sells to ${taken.name}, then switch ${old.name} off.`,
+    );
+  } else if (old) {
+    if (!DRY_RUN) {
+      await db.vehicleClass.update({
+        where: { id: old.id },
+        data: { slug: to },
+      });
+    }
+    report(`${old.name}: slug ${from} is now ${to}.`);
   }
 }
 
@@ -55,28 +76,37 @@ for (const model of await db.vehicleModel.findMany({ where: { brand: "" } })) {
   const at = model.name.indexOf(" ");
   if (at < 0) {
     console.log(
-      `${model.name}: one word, so no brand. Give it one on its class's page.`,
+      `${model.name}: one word, so no brand. Edit its vehicles to give them one.`,
     );
     continue;
   }
   const brand = model.name.slice(0, at);
   const name = model.name.slice(at + 1);
-  await db.vehicleModel.update({
-    where: { id: model.id },
-    data: { brand, name },
-  });
-  console.log(`${model.name}: the brand ${brand}, the model ${name}.`);
+  if (!DRY_RUN) {
+    await db.vehicleModel.update({
+      where: { id: model.id },
+      data: { brand, name },
+    });
+  }
+  report(`${model.name}: the brand ${brand}, the model ${name}.`);
 }
 
 for (const { slug, models, ...fields } of CLASS_LIST) {
   let vehicleClass = await db.vehicleClass.findUnique({ where: { slug } });
   if (vehicleClass) {
-    const updated = await updateVehicleClass(
-      SYSTEM_ACTOR,
-      vehicleClass.id,
-      fields,
+    if (!DRY_RUN) {
+      const updated = await updateVehicleClass(
+        SYSTEM_ACTOR,
+        vehicleClass.id,
+        fields,
+      );
+      must(slug, updated);
+    }
+  } else if (DRY_RUN) {
+    report(
+      `${fields.name}: created, with the models ${models.map(modelName).join(", ")}.`,
     );
-    must(slug, updated);
+    continue;
   } else {
     const created = await createVehicleClass(SYSTEM_ACTOR, {
       ...fields,
@@ -92,9 +122,7 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
         `${fields.name} was given the slug ${vehicleClass.slug}.`,
       );
     }
-    console.log(
-      `${fields.name}: created. Sell it at each location with its rates.`,
-    );
+    report(`${fields.name}: created. Sell it at each location with its rates.`);
   }
 
   const vehicleClassId = vehicleClass.id;
@@ -107,11 +135,13 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
       (m) => sameName(m.brand, model.brand) && sameName(m.name, model.name),
     );
     if (there) continue;
-    const added = await db.$transaction((tx) =>
-      modelFor(tx, SYSTEM_ACTOR, { vehicleClassId, ...model }),
-    );
-    must(`${slug}, ${modelName(model)}`, added);
-    console.log(`${fields.name}: added the model ${modelName(model)}.`);
+    if (!DRY_RUN) {
+      const added = await db.$transaction((tx) =>
+        modelFor(tx, SYSTEM_ACTOR, { vehicleClassId, ...model }),
+      );
+      must(`${slug}, ${modelName(model)}`, added);
+    }
+    report(`${fields.name}: added the model ${modelName(model)}.`);
   }
 }
 
@@ -119,7 +149,7 @@ for (const slug of DROPPED) {
   const dropped = await db.vehicleClass.findUnique({
     where: { slug },
     include: {
-      _count: { select: { tripItems: true } },
+      _count: { select: { tripItems: true, drivers: true } },
       models: { select: { _count: { select: { vehicles: true } } } },
     },
   });
@@ -128,32 +158,42 @@ for (const slug of DROPPED) {
     (sum, model) => sum + model._count.vehicles,
     0,
   );
-  if (dropped._count.tripItems > 0 || vehicles > 0) {
-    if (dropped.isActive) {
+  const { tripItems, drivers } = dropped._count;
+  if (tripItems > 0 || vehicles > 0 || drivers > 0) {
+    if (dropped.isActive && !DRY_RUN) {
       const off = await updateVehicleClass(SYSTEM_ACTOR, dropped.id, {
         isActive: false,
       });
       must(slug, off);
     }
-    console.log(
-      `${dropped.name}: ${dropped._count.tripItems} booking items and ${vehicles} vehicles use it, so it is switched off, not deleted.`,
+    report(
+      `${dropped.name}: ${tripItems} booking items, ${vehicles} vehicles and ${drivers} drivers have it, so it is switched off, not deleted.`,
     );
     continue;
   }
-  const [rates, offerings] = await db.$transaction([
-    db.zoneRate.deleteMany({ where: { vehicleClassId: dropped.id } }),
-    db.locationVehicleClass.deleteMany({
-      where: { vehicleClassId: dropped.id },
-    }),
-    db.vehicleModel.deleteMany({ where: { vehicleClassId: dropped.id } }),
-    db.vehicleClass.delete({ where: { id: dropped.id } }),
+  const [rates, offerings, models] = await Promise.all([
+    db.zoneRate.count({ where: { vehicleClassId: dropped.id } }),
+    db.locationVehicleClass.count({ where: { vehicleClassId: dropped.id } }),
+    db.vehicleModel.count({ where: { vehicleClassId: dropped.id } }),
   ]);
-  console.log(
-    `${dropped.name}: deleted, with ${offerings.count} offerings and ${rates.count} zone rates.`,
+  if (!DRY_RUN) {
+    await db.$transaction([
+      db.zoneRate.deleteMany({ where: { vehicleClassId: dropped.id } }),
+      db.locationVehicleClass.deleteMany({
+        where: { vehicleClassId: dropped.id },
+      }),
+      db.vehicleModel.deleteMany({ where: { vehicleClassId: dropped.id } }),
+      db.vehicleClass.delete({ where: { id: dropped.id } }),
+    ]);
+  }
+  report(
+    `${dropped.name}: deleted, with ${offerings} offerings, ${rates} zone rates and ${models} models.`,
   );
 }
 
 await db.$disconnect();
 console.log(
-  `The catalogue holds the ${CLASS_LIST.length} classes of the list.`,
+  DRY_RUN
+    ? "Dry run done. Run it again without --dry-run to make these changes."
+    : `The catalogue holds the ${CLASS_LIST.length} classes of the list.`,
 );

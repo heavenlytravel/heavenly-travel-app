@@ -12,7 +12,12 @@ import { usePortalContainer } from "./portal-container.js";
 /** The value of the "Create" row in the list, apart from any option's. */
 const CREATE = "\u0000create";
 
-const sameText = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+/** Text as a name is kept: trimmed, one space between its words. */
+const squash = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/** Two values that are one typed differently: "toyota  " and "Toyota". */
+const sameText = (a: string, b: string) =>
+  squash(a).toLowerCase() === squash(b).toLowerCase();
 
 const row =
   "ui:flex ui:cursor-default ui:items-center ui:gap-2 ui:rounded-sm ui:px-2 ui:py-1.5 ui:text-sm ui:outline-hidden ui:select-none ui:aria-selected:bg-accent ui:aria-selected:text-accent-foreground";
@@ -52,7 +57,7 @@ export function Combobox({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { ref, container, trigger } = usePortalContainer();
-  const typed = search.trim();
+  const typed = squash(search);
   // A value just created is not an option yet: it is listed last, ticked.
   const listed =
     value && !options.some((option) => sameText(option, value))

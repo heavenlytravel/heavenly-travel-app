@@ -7,7 +7,7 @@ import {
   surchargeLabel,
   type TripCategory,
 } from "@repo/db";
-import { listOfferings, type Offering } from "@repo/db/server";
+import { listPicturedOfferings, type PicturedOffering } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { BusIcon } from "@repo/ui/icons";
@@ -102,7 +102,7 @@ async function categories({
   slug: string;
   manages: boolean;
 }) {
-  const offerings = await listOfferings(id);
+  const offerings = await listPicturedOfferings(id);
   return (
     <div className="mt-6 grid gap-8">
       {TRIP_CATEGORIES.map((category) => (
@@ -130,7 +130,7 @@ function Category({
   slug: string;
   category: TripCategory;
   manages: boolean;
-  offerings: Offering[];
+  offerings: PicturedOffering[];
 }) {
   const onSale = offerings.filter((o) => o.isActive).length;
   return (
@@ -165,7 +165,7 @@ function Category({
 }
 
 /**
- * One class at this location: the catalogue's picture, then its name over
+ * One class at this location: its picture here, as customers see it, then its name over
  * the catalogue's seats and luggage, the switch that puts it on sale here,
  * its four rates, the charge to choose a model and its three rules here,
  * and its editor. The whole card
@@ -179,7 +179,7 @@ function OfferingCard({
   lastOnSale,
 }: {
   slug: string;
-  offering: Offering;
+  offering: PicturedOffering;
   manages: boolean;
   /** It is the last of its category on sale here, so turning it off asks first. */
   lastOnSale: boolean;
@@ -201,7 +201,7 @@ function OfferingCard({
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
       <CardImage
-        src={vehicleClass.imageUrl}
+        src={offering.coverUrl}
         fit="contain"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={<BusIcon className="size-7 text-neutral-300" />}

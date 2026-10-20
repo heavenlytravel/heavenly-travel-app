@@ -29,8 +29,9 @@ const photosInOrder = {
 /**
  * A class's models as one location's customers see them: those with a
  * vehicle in service based there, by name, each with those vehicles, the
- * first entered first, and their photos. The offerings on sale read it,
- * then `shownModel` names each.
+ * first entered first, with when each was entered and its photos. The
+ * offerings read it, then `shownModel` names each and `classCoverOf`
+ * finds the class's picture.
  */
 export function modelsShownAt(location: Prisma.LocationWhereInput) {
   const there = { isActive: true, location } satisfies Prisma.VehicleWhereInput;
@@ -44,7 +45,7 @@ export function modelsShownAt(location: Prisma.LocationWhereInput) {
       vehicles: {
         where: there,
         orderBy: { createdAt: "asc" },
-        select: { photos: photosInOrder },
+        select: { createdAt: true, photos: photosInOrder },
       },
     },
   } satisfies Prisma.VehicleClass$modelsArgs;

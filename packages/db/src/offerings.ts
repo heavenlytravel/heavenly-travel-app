@@ -9,6 +9,7 @@ import type {
   VehicleClass,
 } from "./generated/prisma/client";
 import { checkOfferingFields, type OfferingFields } from "./offering-input";
+import type { Photo } from "./photos-input";
 import { slugify } from "./slug";
 import {
   checkVehicleClassFields,
@@ -47,14 +48,29 @@ type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
   ReturnType<typeof withModelsAt>
 >;
 
-/** An offering on sale, its class with the models the location's customers see. */
+/**
+ * A class's picture at a location: the first photo of the first vehicle
+ * entered of those in service there with a photo, so a customer sees a
+ * vehicle based where they book; the catalogue's neutral picture until one
+ * has a photo; null for neither. `models` are as `modelsShownAt` reads them.
+ */
+export function classCoverOf(
+  models: readonly { vehicles: { createdAt: Date; photos: Photo[] }[] }[],
+  catalogueUrl: string | null,
+): string | null {
+  const first = models
+    .flatMap((model) => model.vehicles)
+    .filter((vehicle) => vehicle.photos.length > 0)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+  return first?.photos[0]?.url ?? catalogueUrl;
+}
+
+/** An offering with its class's picture at the location, as `classCoverOf` finds it. */
+export type PicturedOffering = Offering & { coverUrl: string | null };
+
+/** An offering on sale, pictured, its class with the models the location's customers see. */
 export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
   vehicleClass: VehicleClass & { models: ShownModel[] };
-  /**
-   * The class's picture at the location: the first photo of its models
-   * there, so a customer sees a vehicle based where they book; the
-   * catalogue's neutral picture until one has a photo; null for neither.
-   */
   coverUrl: string | null;
 };
 
@@ -65,16 +81,11 @@ function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
       ({
         vehicleClass: { models: modelRows, ...vehicleClass },
         ...offering
-      }) => {
-        const models = modelRows.map(shownModel);
-        return {
-          ...offering,
-          vehicleClass: { ...vehicleClass, models },
-          coverUrl:
-            models.find((model) => model.photos.length > 0)?.photos[0]?.url ??
-            vehicleClass.imageUrl,
-        };
-      },
+      }) => ({
+        ...offering,
+        vehicleClass: { ...vehicleClass, models: modelRows.map(shownModel) },
+        coverUrl: classCoverOf(modelRows, vehicleClass.imageUrl),
+      }),
     )
     .sort(byClassOrder);
 }
@@ -101,6 +112,26 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
     ...withClass,
   });
   return rows.sort(byClassOrder);
+}
+
+/**
+ * Every offering of the location, as `listOfferings`, each with its
+ * class's picture there: the Vehicle classes tab shows what customers see.
+ */
+export async function listPicturedOfferings(
+  locationId: string,
+): Promise<PicturedOffering[]> {
+  const rows = await db.locationVehicleClass.findMany({
+    where: { locationId },
+    ...withModelsAt({ id: locationId }),
+  });
+  return rows
+    .map(({ vehicleClass: { models, ...vehicleClass }, ...offering }) => ({
+      ...offering,
+      vehicleClass,
+      coverUrl: classCoverOf(models, vehicleClass.imageUrl),
+    }))
+    .sort(byClassOrder);
 }
 
 /**

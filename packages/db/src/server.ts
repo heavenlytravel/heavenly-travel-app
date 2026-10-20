@@ -55,6 +55,7 @@ export {
 export type { DriverWithClasses } from "./drivers";
 export {
   listOfferings,
+  listPicturedOfferings,
   listActiveOfferings,
   listActiveOfferingsAt,
   getOffering,
@@ -65,6 +66,7 @@ export {
 export type {
   Offering,
   OfferingOnSale,
+  PicturedOffering,
   LocationVehicleClass,
   OfferingClassChoice,
 } from "./offerings";

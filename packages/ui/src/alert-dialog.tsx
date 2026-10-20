@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./button.js";
-import { useModal } from "./modal.js";
+import { ModalBody, useModal } from "./modal.js";
 
 /** What an alert dialog asks: the question, what follows from it, and its two answers. */
 export type ConfirmRequest = {
@@ -51,40 +51,42 @@ export function AlertDialog({
       onClose={() => {
         if (open) onAnswer(false);
       }}
-      className="ui:m-auto ui:w-[min(30rem,92vw)] ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45"
+      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45"
     >
-      {request ? (
-        <div className="ui:grid ui:gap-5 ui:p-6">
-          <div className="ui:grid ui:gap-2">
-            <h2
-              id={titleId}
-              className="ui:text-lg ui:font-semibold ui:tracking-tight"
-            >
-              {request.title}
-            </h2>
-            {request.description ? (
-              <div
-                id={descriptionId}
-                className="ui:text-sm ui:text-neutral-600"
+      <ModalBody open={open} className="ui:max-h-[90vh]">
+        {request ? (
+          <div className="ui:grid ui:gap-5 ui:p-6">
+            <div className="ui:grid ui:gap-2">
+              <h2
+                id={titleId}
+                className="ui:text-lg ui:font-semibold ui:tracking-tight"
               >
-                {request.description}
-              </div>
-            ) : null}
+                {request.title}
+              </h2>
+              {request.description ? (
+                <div
+                  id={descriptionId}
+                  className="ui:text-sm ui:text-neutral-600"
+                >
+                  {request.description}
+                </div>
+              ) : null}
+            </div>
+            {/* "Cancel" first, so the browser gives it the focus; reversed on a phone, the action on top. */}
+            <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+              <Button variant="secondary" onClick={() => onAnswer(false)}>
+                {request.cancel ?? "Cancel"}
+              </Button>
+              <Button
+                variant={request.danger ? "destructive" : "primary"}
+                onClick={() => onAnswer(true)}
+              >
+                {request.action}
+              </Button>
+            </div>
           </div>
-          {/* "Cancel" first, so the browser gives it the focus; reversed on a phone, the action on top. */}
-          <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
-            <Button variant="secondary" onClick={() => onAnswer(false)}>
-              {request.cancel ?? "Cancel"}
-            </Button>
-            <Button
-              variant={request.danger ? "destructive" : "primary"}
-              onClick={() => onAnswer(true)}
-            >
-              {request.action}
-            </Button>
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </ModalBody>
     </dialog>
   );
 }

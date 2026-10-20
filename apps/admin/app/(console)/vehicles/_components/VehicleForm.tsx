@@ -134,9 +134,14 @@ export function VehicleForm({
   backToList?: boolean;
 }) {
   const isNew = !vehicle;
-  const { pending, error, formProps } = useActionForm(
+  const { pending, error, formProps, markDirty, leaveDialog } = useActionForm(
     isNew ? createVehicleAction : updateVehicleAction,
-    { done: isNew ? "Vehicle added." : "Vehicle saved." },
+    {
+      done: isNew ? "Vehicle added." : "Vehicle saved.",
+      leave: isNew
+        ? "The vehicle is not added."
+        : "The changes to this vehicle are lost.",
+    },
   );
   const uploads = useUploadCount();
   const fields = vehicle ? vehicleFieldsOf(vehicle) : null;
@@ -288,7 +293,10 @@ export function VehicleForm({
           <PhotoList
             name={modelName({ brand: brand.trim(), name: model.trim() })}
             photos={photos}
-            setPhotos={setPhotos}
+            setPhotos={(next) => {
+              markDirty();
+              setPhotos(next);
+            }}
           />
         </Card>
 
@@ -342,6 +350,7 @@ export function VehicleForm({
           </Link>
           <FormError error={error} />
         </div>
+        {leaveDialog}
       </form>
     </UploadsContext>
   );

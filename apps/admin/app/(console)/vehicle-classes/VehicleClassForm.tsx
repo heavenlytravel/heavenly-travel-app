@@ -25,9 +25,14 @@ export function VehicleClassForm({
   vehicleClass?: VehicleClass;
 }) {
   const isNew = !vehicleClass;
-  const { pending, error, formProps } = useActionForm(
+  const { pending, error, formProps, leaveDialog } = useActionForm(
     isNew ? createVehicleClassAction : updateVehicleClassAction,
-    { done: isNew ? "Class added to the catalogue." : "Class saved." },
+    {
+      done: isNew ? "Class added to the catalogue." : "Class saved.",
+      leave: isNew
+        ? "The class is not added."
+        : "The changes to this class are lost.",
+    },
   );
   const uploads = useUploadCount();
 
@@ -56,6 +61,7 @@ export function VehicleClassForm({
           </Link>
           <FormError error={error} />
         </div>
+        {leaveDialog}
       </form>
     </UploadsContext>
   );

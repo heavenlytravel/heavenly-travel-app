@@ -55,9 +55,14 @@ export function DriverForm({
   backToList?: boolean;
 }) {
   const isNew = !driver;
-  const { pending, error, formProps } = useActionForm(
+  const { pending, error, formProps, leaveDialog } = useActionForm(
     isNew ? createDriverAction : updateDriverAction,
-    { done: isNew ? "Driver added." : "Driver saved." },
+    {
+      done: isNew ? "Driver added." : "Driver saved.",
+      leave: isNew
+        ? "The driver is not added."
+        : "The changes to this driver are lost.",
+    },
   );
   const fields = driver ? driverFieldsOf(driver) : null;
   const ticked = new Set(fields?.vehicleClassIds ?? []);
@@ -202,6 +207,7 @@ export function DriverForm({
         </Link>
         <FormError error={error} />
       </div>
+      {leaveDialog}
     </form>
   );
 }

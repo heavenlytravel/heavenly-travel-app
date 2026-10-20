@@ -4,8 +4,15 @@ import { answerOf, UNANSWERED_MESSAGE } from "@repo/ui/action-answer";
 import { toast } from "@repo/ui/toast";
 import { showFieldError } from "@repo/ui/validation";
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useRef, type FormEvent } from "react";
+import {
+  startTransition,
+  useActionState,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import type { ActionState } from "./action-state";
+import { useLeaveGuard } from "./use-leave-guard";
 
 /** What the form shows of its last answer: the sentence for beside the button, when no field shows it. */
 type FormState = { error: string | null };
@@ -26,8 +33,12 @@ type FormState = { error: string | null };
  *   `onDone` and opens the page the action answered, if any.
  * - An action that does not answer, the network down or the server
  *   failing, says so in `error` rather than showing the error page.
+ * - With `leave`, saying what leaving loses, a link away while the form
+ *   has unsaved edits asks first, through `useLeaveGuard`. A change
+ *   typed or picked marks it; `markDirty` marks one made otherwise,
+ *   a photo moved.
  *
- * Spread `formProps` on the `<form>`.
+ * Spread `formProps` on the `<form>` and render `leaveDialog`.
  */
 export function useActionForm(
   action: (state: ActionState, formData: FormData) => Promise<ActionState>,
@@ -36,6 +47,7 @@ export function useActionForm(
     done,
     reset = false,
     onDone,
+    leave,
   }: {
     /** The question before posting; false keeps the form as it is. */
     ask?: () => Promise<boolean>;
@@ -43,10 +55,14 @@ export function useActionForm(
     done?: string;
     reset?: boolean;
     onDone?: () => void;
+    /** What leaving with unsaved edits loses: "The vehicle is not added." */
+    leave?: string;
   } = {},
 ) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
+  const [dirty, setDirty] = useState(false);
+  const leaveDialog = useLeaveGuard(leave !== undefined && dirty, leave ?? "");
   const [state, dispatch, pending] = useActionState<FormState, FormData>(
     async (_previous, formData) => {
       const answer = await answerOf(action(null, formData));
@@ -57,6 +73,7 @@ export function useActionForm(
             : false;
         return { error: atField ? null : answer.error || UNANSWERED_MESSAGE };
       }
+      setDirty(false);
       if (done) toast.success(done);
       if (reset) form.current?.reset();
       onDone?.();
@@ -69,8 +86,11 @@ export function useActionForm(
   return {
     pending,
     error: state.error,
+    markDirty: () => setDirty(true),
+    leaveDialog,
     formProps: {
       ref: form,
+      onInput: () => setDirty(true),
       onSubmit: async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         // Read before the question, while the form is still there.

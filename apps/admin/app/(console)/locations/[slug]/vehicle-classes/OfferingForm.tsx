@@ -166,9 +166,14 @@ export function OfferingForm({
   candidates?: VehicleClass[];
 }) {
   const isNew = !offering;
-  const { pending, error, formProps } = useActionForm(
+  const { pending, error, formProps, leaveDialog } = useActionForm(
     isNew ? createOfferingAction : updateOfferingAction,
-    { done: isNew ? "Class added to this location." : "Rates saved." },
+    {
+      done: isNew ? "Class added to this location." : "Rates saved.",
+      leave: isNew
+        ? "The class is not added to this location."
+        : "The changes to its rates and rules are lost.",
+    },
   );
   const uploads = useUploadCount();
   const [source, setSource] = useState<string>(
@@ -386,6 +391,7 @@ export function OfferingForm({
           </Link>
           <FormError error={error} />
         </div>
+        {leaveDialog}
       </form>
     </UploadsContext>
   );

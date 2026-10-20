@@ -2,14 +2,16 @@
 
 import { formatMyr, TRIP_OPTION_FIELDS } from "@repo/db";
 import { Radio } from "@repo/ui/field";
-import { useId } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { GalleryModel } from "../../../../_components/ModelGallery";
 import { PhotoCarousel } from "../../../../_components/PhotoCarousel";
-import { focus } from "../../../_components/Page";
+import { focus, secondaryButton } from "../../../_components/Page";
 
 const tile =
   "grid content-start gap-2.5 rounded-[14px] border-2 bg-white p-2.5";
 const sizes = "(min-width: 64rem) 340px, (min-width: 40rem) 45vw, 90vw";
+/** The models shown before "Show all": two rows of two. */
+const FIRST_MODELS = 4;
 
 /** "View" over a model's photos, opening them large in the gallery. Outside the tile's label, so it does not choose the model. */
 function ViewButton({
@@ -29,6 +31,49 @@ function ViewButton({
     >
       View
     </button>
+  );
+}
+
+/**
+ * The models' tiles, two to a row from a tablet up: the first few, and
+ * "Show all" for the rest when there are more, so a class with ten models
+ * does not push the next class far down the page. Shown, the rest stay
+ * shown, and the focus moves to the first of them; a model chosen among
+ * them stays in the form.
+ */
+function ModelGrid({
+  models,
+  tile,
+}: {
+  models: readonly GalleryModel[];
+  /** A model's `<li>`. */
+  tile: (model: GalleryModel) => ReactNode;
+}) {
+  const [all, setAll] = useState(false);
+  const list = useRef<HTMLUListElement>(null);
+  const shown = all ? models : models.slice(0, FIRST_MODELS);
+
+  useEffect(() => {
+    if (!all) return;
+    const first = list.current?.children[FIRST_MODELS];
+    (first?.querySelector("input") ?? first?.querySelector("button"))?.focus();
+  }, [all]);
+
+  return (
+    <>
+      <ul ref={list} className="mt-3 grid gap-3 sm:grid-cols-2">
+        {shown.map(tile)}
+      </ul>
+      {shown.length < models.length ? (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className={`mt-3 w-full ${secondaryButton}`}
+        >
+          Show all {models.length} models
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -63,7 +108,6 @@ export function ModelChoice({
   if (models.length === 0) return null;
   const heading = "text-[0.98rem] font-semibold text-[#082f2b]";
   const note = "mt-0.5 text-[0.88rem] text-[#5d6966]";
-  const grid = "mt-3 grid gap-3 sm:grid-cols-2";
   const name = "text-[0.98rem] font-semibold text-[#082f2b]";
 
   if (chargeSen === null) {
@@ -73,8 +117,9 @@ export function ModelChoice({
         <p className={note}>
           Whichever of these is free on the day, at the same price.
         </p>
-        <ul className={grid}>
-          {models.map((model) => (
+        <ModelGrid
+          models={models}
+          tile={(model) => (
             <li key={model.id} className={`relative ${tile} border-[#dce3e0]`}>
               <PhotoCarousel
                 name={model.name}
@@ -84,8 +129,8 @@ export function ModelChoice({
               <span className={`px-1 pb-0.5 ${name}`}>{model.name}</span>
               <ViewButton model={model} onPhotos={onPhotos} />
             </li>
-          ))}
-        </ul>
+          )}
+        />
       </div>
     );
   }
@@ -120,8 +165,9 @@ export function ModelChoice({
           </span>
         </span>
       </label>
-      <div className={grid}>
-        {models.map((model) => {
+      <ModelGrid
+        models={models}
+        tile={(model) => {
           // The label names its radio: left to itself it would take the
           // photo arrows, its first buttons, and a tap would page the photos.
           // The radio is named by the model and its charge alone, without
@@ -129,7 +175,7 @@ export function ModelChoice({
           const radioId = `${radioIds}${model.id}`;
           const nameId = `${radioId}-name`;
           return (
-            <div key={model.id} className="relative">
+            <li key={model.id} className="relative">
               <label
                 htmlFor={radioId}
                 className={`${tile} cursor-pointer ${chosen(modelId === model.id)}`}
@@ -162,10 +208,10 @@ export function ModelChoice({
                 </span>
               </label>
               <ViewButton model={model} onPhotos={onPhotos} />
-            </div>
+            </li>
           );
-        })}
-      </div>
+        }}
+      />
     </fieldset>
   );
 }

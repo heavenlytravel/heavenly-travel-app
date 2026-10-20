@@ -79,7 +79,8 @@ to do; it is what each class is, and it needs a picture.
   (`CATEGORY_RULE_DEFAULTS`), and starts again from them when its category changes on
   the "Add class" form.
 - A booking item keeps the cancellation cutoff it was made with, as before, so a
-  change never moves an existing booking.
+  change to the rules never moves an existing booking. An amend still prices the trip
+  again with the rules of the day, cutoff included: see Future work.
 - The quote and the options page read the rules from the offering.
 
 ### The catalogue: what each class is
@@ -88,8 +89,8 @@ to do; it is what each class is, and it needs a picture.
   luggage, picture and order. One Sedan for every location, so the customer sees the
   same name and picture wherever they book, and the fleet (OP2) will point at it.
 - `/vehicle-classes` shows a card per class, as a location's tab does: its picture, its
-  seats and luggage, its line, and where it is sold, each location a link to its
-  Vehicle classes tab, greyed where the class is off sale.
+  seats and luggage, its line, and where it is sold, each location a link to it on
+  Rates, greyed where the class is off sale.
 - A class has one picture, `VehicleClass.imageUrl`, a file on UploadThing through
   `/api/uploads/vehicle-class-image` (`coverage.manage`). It shows on the customer
   site's options page and on each location's product page, in a frame that keeps the
@@ -105,12 +106,14 @@ to do; it is what each class is, and it needs a picture.
   to one location by the filter, each zone has its own colour, as the location's tab
   draws them. A zone opens its editor for Operation and its location's tab for the
   teams that read.
-- **Rates** (`/rates`): per location, its classes at their metered rates and rules,
-  its rate grid (read only), its drop-off rule and its odd-hours surcharge.
+- **Rates** (`/rates`): per location, its classes at their metered rates, the charge
+  to choose a model and the rules, its rate grid (read only), its drop-off rule and its
+  odd-hours surcharge.
 - **Vehicle classes**: each card lists the locations that sell the class with its base
   fare, per km and per hour at each, a link to that location on Rates.
-- One reader, `listPriceLists`, loads every location's zones, grid and offerings in a
-  single query for both screens. The location filter is the queue's, shared.
+- `listCoverage` loads every location's zones, with their shapes, and grid for
+  Coverage, and `listPriceLists` the zones by name, grid and offerings for Rates, each
+  in a single query. The location filter is the queue's, shared.
 
 ### The manual booking in steps
 
@@ -163,3 +166,13 @@ The defaults are for the push only. In each database, in this order:
 - Drop the rule columns of `VehicleClass` once the copy has run on every database, with
   the columns BL-58 drops.
 - A link from a booking opened from the queue to the same booking inside its location.
+- Rules for an amend, so a booking stays the receipt of what was bought. Today an amend
+  prices the whole trip again with the rules of the day: today's rates, cutoff and
+  notice, the class only if still on sale, and the model only if still choosable (the
+  amend screen warns when it drops one). The proposal agreed in review: a change to
+  the details alone (passengers, child seats, flight, notes) prices nothing again and
+  keeps the receipt, and works up to the pickup; a change to the trip prices it again
+  with today's rates for the class booked, keeps the model at its booked charge and the
+  cancellation hours booked, and shows the old and new totals before saving. Open: warn
+  or refuse a trip moved inside the notice, and whether a class off sale since the
+  booking is still priced with its rates.

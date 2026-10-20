@@ -203,20 +203,25 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
   (`ORGANISATION.md` in the docs repo). It reads, adds and changes both.
 - Each location gains a Vehicles tab and a Drivers tab: in the Work group after Bookings
   once live or paused, and unnumbered in Setup while a draft. The panel says how many are
-  in service or active and how many have a document due, and links to those due and to
-  "Add". Each tab lists, filters to "Documents due", adds and opens:
+  in service or active and how many have a document (a driver's: a licence) due, and
+  links to those due and to "Add". Each tab lists, filters to "Documents due" ("Licences
+  due" for drivers), searches by plate, brand or model (a driver by name or phone), adds
+  and opens:
   `/locations/[slug]/vehicles/[id]`, `/locations/[slug]/drivers/[id]`: the form across
   the page, and level with the title "History", to the record's own history page
   (`.../history`, as a class's and a booking's have too), and "Delete". Moving one to
   another location is a change of where it is based; the save opens that location's
-  tab.
+  tab, and its page under the old location opens it at the new one.
+- A location's History lists its vehicles' and drivers' changes with its own, under
+  "Vehicles and drivers", for Operation: a move is in both locations' history. The
+  catalogue's class page lists the class's vehicles to Operation alone.
 - A live location's Today shows Operation a "Documents due" card when any vehicle or
   driver there has one.
 - The sidebar's Operations group gains Vehicles and Drivers across locations, filtered by
   location and by documents due, each row opening inside its location. "Add vehicle" and
   "Add driver" there open `/vehicles/new` and `/drivers/new`: the same forms, with where
   it is based to choose, starting at the location the list is narrowed to. Saved, they go
-  back to the list.
+  back to the list, narrowed as it was.
 - A location with vehicles or drivers based at it cannot be deleted: the refusal says to
   move them first.
 
@@ -279,6 +284,10 @@ TripItemDetails
 
 BookingItem.priceBreakdown (JSON)
   + model             { name, percent, amountSen } | null
+
+ActivityLog
+  + locationIds       String[] @default([])   the locations whose history an entry is
+                                               in too: a vehicle's or a driver's; GIN
 ```
 
 ## Rollout

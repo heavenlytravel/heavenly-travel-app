@@ -59,7 +59,7 @@ export function Dialog({
         className,
       )}
     >
-      <ModalBody open={open} className="ui:max-h-[min(48rem,90vh)]">
+      <ModalBody open={open} className="ui:max-h-[min(48rem,90dvh)]">
         {open ? (
           <div className="ui:grid ui:gap-4 ui:p-5">
             <div className="ui:flex ui:items-start ui:gap-4">

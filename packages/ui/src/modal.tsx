@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { RemoveScroll } from "react-remove-scroll";
 import { cx } from "./cx.js";
 
 /**
  * The native `<dialog>` under a dialog, a sheet and an alert dialog, shown
- * as a modal while `open` and closed otherwise, so focus trapping, Escape
- * and the top layer come from the browser. Put the ref on the `<dialog>`.
+ * as a modal while `open` and closed otherwise, so focus trapping, Escape,
+ * the top layer and handing the focus back on close come from the browser.
+ * One taken off the page while open, its caller gone, is closed first, so
+ * the focus still goes back to where it was. Put the ref on the
+ * `<dialog>`.
  */
 export function useModal(open: boolean) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -18,6 +21,15 @@ export function useModal(open: boolean) {
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
   }, [open]);
+
+  // A layout effect's cleanup runs before the element leaves the page; a
+  // dialog removed while open gives the focus back to nothing.
+  useLayoutEffect(() => {
+    const dialog = ref.current;
+    return () => {
+      if (dialog?.open) dialog.close();
+    };
+  }, []);
 
   return ref;
 }

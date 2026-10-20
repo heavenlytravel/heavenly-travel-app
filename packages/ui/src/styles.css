@@ -64,3 +64,14 @@ html body[data-scroll-locked] {
   overflow: visible !important;
   margin-right: 0 !important;
 }
+
+/*
+ * Under a modal dialog the page holds still for the keyboard and the
+ * scroll bar too, which the lock on the wheel and on touch does not stop:
+ * Space or Page Down in the dialog no longer scrolls the page behind it.
+ * The bar's room is kept, so nothing on the page moves or changes width.
+ */
+html:has(dialog:modal) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}

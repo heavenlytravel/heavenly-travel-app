@@ -53,7 +53,7 @@ export function AlertDialog({
       }}
       className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45"
     >
-      <ModalBody open={open} className="ui:max-h-[90vh]">
+      <ModalBody open={open} className="ui:max-h-[90dvh]">
         {request ? (
           <div className="ui:grid ui:gap-5 ui:p-6">
             <div className="ui:grid ui:gap-2">

@@ -3,7 +3,11 @@ import type { Actor } from "./activity-actions";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { PHOTO_LIMITS, type Photo } from "./photos-input";
-import { checkModelName, modelName } from "./vehicle-model-input";
+import {
+  checkModelName,
+  modelName,
+  sameName,
+} from "./vehicle-model-input";
 
 /**
  * The models of each class, the Toyota Vellfire and the Toyota Alphard in
@@ -91,8 +95,8 @@ export function listModelSuggestions(): Promise<ModelSuggestion[]> {
 
 /**
  * The model of the class with this brand and name, as the vehicle form
- * names it: the one there is, however it was cased, or a new one, logged
- * against the class. Inside the vehicle writer's transaction.
+ * names it: the one there is, however it was cased or spaced, or a new
+ * one, logged against the class. Inside the vehicle writer's transaction.
  */
 export async function modelFor(
   tx: Prisma.TransactionClient,
@@ -104,29 +108,45 @@ export async function modelFor(
   const check = checkModelName(wanted);
   if (!check.ok) return check;
   const { vehicleClassId, brand, name } = wanted;
-  const found = await tx.vehicleModel.findFirst({
-    where: {
-      vehicleClassId,
-      brand: { equals: brand, mode: "insensitive" },
-      name: { equals: name, mode: "insensitive" },
-    },
+  // A class has a handful of models: compared here, by the rule the form
+  // suggests them by, rather than by a database pattern.
+  const models = await tx.vehicleModel.findMany({
+    where: { vehicleClassId },
     select: { id: true, brand: true, name: true },
   });
+  const found = models.find(
+    (model) => sameName(model.brand, brand) && sameName(model.name, name),
+  );
   if (found) return { ok: true, id: found.id, name: modelName(found) };
 
   const vehicleClass = await tx.vehicleClass.findUnique({
     where: { id: vehicleClassId },
     select: { id: true },
   });
-  if (!vehicleClass) return { ok: false, error: "Choose the class again." };
-  const model = await tx.vehicleModel.create({
-    data: { vehicleClassId, brand, name },
+  if (!vehicleClass) {
+    return {
+      ok: false,
+      error: "That class was just deleted. Choose the class again.",
+    };
+  }
+  // Another save may be adding the same model at this moment. A refused
+  // insert would end this transaction, so a duplicate is skipped instead
+  // and the model read back: whichever save added it logs it.
+  const { count } = await tx.vehicleModel.createMany({
+    data: [{ vehicleClassId, brand, name }],
+    skipDuplicates: true,
   });
-  await logActivity(tx, actor, {
-    action: "vehicle-class.model.created",
-    entityId: vehicleClassId,
-    after: { modelName: modelName(model) },
+  const model = await tx.vehicleModel.findUniqueOrThrow({
+    where: { vehicleClassId_brand_name: { vehicleClassId, brand, name } },
+    select: { id: true, brand: true, name: true },
   });
+  if (count > 0) {
+    await logActivity(tx, actor, {
+      action: "vehicle-class.model.created",
+      entityId: vehicleClassId,
+      after: { modelName: modelName(model) },
+    });
+  }
   return { ok: true, id: model.id, name: modelName(model) };
 }
 
@@ -141,14 +161,14 @@ export async function dropModelIfUnused(
   actor: Actor,
   id: string,
 ) {
-  const model = await tx.vehicleModel.findUnique({
-    where: { id },
-    include: { _count: { select: { vehicles: true, tripItems: true } } },
+  const model = await tx.vehicleModel.findUnique({ where: { id } });
+  if (!model) return;
+  // Checked and deleted in one statement, so a vehicle saved with the model
+  // meanwhile keeps it.
+  const { count } = await tx.vehicleModel.deleteMany({
+    where: { id, vehicles: { none: {} }, tripItems: { none: {} } },
   });
-  if (!model || model._count.vehicles > 0 || model._count.tripItems > 0) {
-    return;
-  }
-  await tx.vehicleModel.delete({ where: { id } });
+  if (count === 0) return;
   await logActivity(tx, actor, {
     action: "vehicle-class.model.deleted",
     entityId: model.vehicleClassId,

@@ -17,7 +17,7 @@ import {
   HeaderSkeleton,
   Streamed,
 } from "../../../_components/Skeleton";
-import { requireAdmin } from "../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
   recordHistoryHref,
   VEHICLE_CLASSES_PATH,
@@ -28,8 +28,9 @@ import { VehicleClassForm } from "../VehicleClassForm";
 
 /**
  * Route: /vehicle-classes/[id], and /vehicle-classes/new for a class that
- * does not exist yet. The form and, for an existing class, its vehicles by
- * location beside it and the way to its history in its header.
+ * does not exist yet. The form and, for an existing class, the way to its
+ * history in its header and, for an admin who manages the fleet, its
+ * vehicles by location beside it.
  */
 export default async function VehicleClassPage({
   params,
@@ -68,24 +69,28 @@ export default async function VehicleClassPage({
   );
 }
 
-/** A class that exists, read with its vehicles. */
+/** A class that exists, read with its vehicles for an admin who manages the fleet. */
 async function existingVehicleClass({ id }: { id: string }) {
-  const [vehicleClass, vehicles] = await Promise.all([
+  const [vehicleClass, permissions] = await Promise.all([
     getVehicleClass(id),
-    listVehicles({ vehicleClassId: id }),
+    getPermissions(),
   ]);
   if (!vehicleClass) notFound();
+  const vehicles = permissions.includes("fleet.manage")
+    ? await listVehicles({ vehicleClassId: id })
+    : null;
   return <VehicleClassScreen vehicleClass={vehicleClass} vehicles={vehicles} />;
 }
 
-/** The form under its header, beside the vehicles when the class exists. */
+/** The form under its header, beside the vehicles when the class exists and they are shown. */
 function VehicleClassScreen({
   vehicleClass,
-  vehicles = [],
+  vehicles = null,
 }: {
   /** Left out for a class that does not exist yet. */
   vehicleClass?: VehicleClass;
-  vehicles?: ListedVehicle[];
+  /** Null for an admin who does not manage the fleet. */
+  vehicles?: ListedVehicle[] | null;
 }) {
   return (
     <>
@@ -113,7 +118,7 @@ function VehicleClassScreen({
           />
         }
         side={
-          vehicleClass ? (
+          vehicleClass && vehicles ? (
             <Card>
               <CardTitle description="Our vehicles of this class, by where they are based. A location's customers see the models of its vehicles in service, in their photos.">
                 Vehicles

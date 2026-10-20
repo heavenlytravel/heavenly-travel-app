@@ -36,7 +36,6 @@ export const CONTACT_FIELDS = {
 export type ClassQuoteView = {
   id: string;
   name: string;
-  description: string;
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
@@ -52,7 +51,7 @@ export type ClassQuoteView = {
   unavailable: string | null;
 };
 
-/** What "Get prices" answers: the trip as resolved and every class priced. */
+/** What the item editor's prices answer: the trip as resolved and every class priced. */
 export type TripQuoteView =
   | {
       ok: true;

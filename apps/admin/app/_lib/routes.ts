@@ -197,7 +197,6 @@ export type LocationTabDef = {
   step: SetupStepKey | null;
 };
 
-/** Which team's permission each setup step's tab is behind. */
 /** What opening each setup step's tab asks; changing the classes or the coverage asks `coverage.manage`. */
 const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
   details: "locations.manage",

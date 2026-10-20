@@ -3,9 +3,10 @@ import type { TripCategory } from "./booking-status";
 /**
  * Global business rules and the pure checks built on them. Pure: no database
  * and no `server-only`, so it runs in unit tests and in the browser. The
- * notice, the cancellation cutoff and the minimum hire are set per vehicle
- * class; the rest is global. See docs/260928-coach-charter.md, "Rules live on the
- * vehicle class".
+ * notice, the cancellation cutoff and the minimum hire are each location's
+ * for each class it sells, on its offering (./offering-input); the rest is
+ * global. See docs/261018-location-work-and-class-catalogue.md, "The rules
+ * per location and class".
  */
 
 export const BOOKING_RULES = {

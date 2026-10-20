@@ -2,6 +2,7 @@
 
 import { formatMyr, TRIP_OPTION_FIELDS } from "@repo/db";
 import { Radio } from "@repo/ui/field";
+import { useId } from "react";
 import type { GalleryModel } from "../../../../_components/ModelGallery";
 import { PhotoCarousel } from "../../../../_components/PhotoCarousel";
 import { focus } from "../../../_components/Page";
@@ -36,8 +37,9 @@ function ViewButton({
  * a tile wide enough to see the vehicle, its photos swiped through in
  * place and "View" opening them large. Where the location lets the
  * customer choose, a choice: any model of the class first, which the price
- * includes, or one of the models at the class's charge. Otherwise the
- * models are shown to look at, as what we may send.
+ * includes, or one of the models at the class's charge, chosen by a tap
+ * anywhere on its tile but the photo arrows. Otherwise the models are
+ * shown to look at, as what we may send.
  */
 export function ModelChoice({
   vehicleClassName,
@@ -57,6 +59,7 @@ export function ModelChoice({
   onChoose: (modelId: string | null) => void;
   onPhotos: (modelId: string) => void;
 }) {
+  const radioIds = useId();
   if (models.length === 0) return null;
   const heading = "text-[0.98rem] font-semibold text-[#082f2b]";
   const note = "mt-0.5 text-[0.88rem] text-[#5d6966]";
@@ -118,36 +121,50 @@ export function ModelChoice({
         </span>
       </label>
       <div className={grid}>
-        {models.map((model) => (
-          <div key={model.id} className="relative">
-            <label
-              className={`${tile} cursor-pointer ${chosen(modelId === model.id)}`}
-            >
-              <PhotoCarousel
-                name={model.name}
-                photos={model.photos}
-                sizes={sizes}
-                decorative
-              />
-              <span className="flex items-start gap-2.5 px-1 pb-0.5">
-                <Radio
-                  name={TRIP_OPTION_FIELDS.vehicleModel}
-                  value={model.id}
-                  checked={modelId === model.id}
-                  onChange={() => onChoose(model.id)}
-                  className="mt-1"
+        {models.map((model) => {
+          // The label names its radio: left to itself it would take the
+          // photo arrows, its first buttons, and a tap would page the photos.
+          // The radio is named by the model and its charge alone, without
+          // the arrows' names.
+          const radioId = `${radioIds}${model.id}`;
+          const nameId = `${radioId}-name`;
+          return (
+            <div key={model.id} className="relative">
+              <label
+                htmlFor={radioId}
+                className={`${tile} cursor-pointer ${chosen(modelId === model.id)}`}
+              >
+                <PhotoCarousel
+                  name={model.name}
+                  photos={model.photos}
+                  sizes={sizes}
+                  decorative
                 />
-                <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3">
-                  <span className={name}>{model.name}</span>
-                  <span className="text-[0.92rem] font-semibold text-[#073c36]">
-                    +{formatMyr(chargeSen)}
+                <span className="flex items-start gap-2.5 px-1 pb-0.5">
+                  <Radio
+                    id={radioId}
+                    aria-labelledby={nameId}
+                    name={TRIP_OPTION_FIELDS.vehicleModel}
+                    value={model.id}
+                    checked={modelId === model.id}
+                    onChange={() => onChoose(model.id)}
+                    className="mt-1"
+                  />
+                  <span
+                    id={nameId}
+                    className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3"
+                  >
+                    <span className={name}>{model.name}</span>
+                    <span className="text-[0.92rem] font-semibold text-[#073c36]">
+                      +{formatMyr(chargeSen)}
+                    </span>
                   </span>
                 </span>
-              </span>
-            </label>
-            <ViewButton model={model} onPhotos={onPhotos} />
-          </div>
-        ))}
+              </label>
+              <ViewButton model={model} onPhotos={onPhotos} />
+            </div>
+          );
+        })}
       </div>
     </fieldset>
   );

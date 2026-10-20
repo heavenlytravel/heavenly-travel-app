@@ -13,7 +13,9 @@ const arrow = `absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center 
  * to each, so a finger, a trackpad or a mouse wheel pages them, with arrows
  * for a pointer and a dot for each photo. Spans throughout, so it sits in a
  * choice's label: the arrows are buttons, which page without choosing,
- * while a tap on a photo chooses. With no photo the frame shows a car.
+ * while a tap on a photo chooses. Being the label's first buttons, they are
+ * what it labels unless it names its control with `htmlFor`. With no
+ * photo the frame shows a car.
  */
 export function PhotoCarousel({
   name,

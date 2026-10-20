@@ -5,8 +5,10 @@ import {
   dropoffRuleOf,
   formatMyr,
   isTripCategory,
+  modelChoiceOf,
   oddHoursLabel,
   oddHoursOf,
+  surchargeLabel,
 } from "@repo/db";
 import {
   listLocationNames,
@@ -127,7 +129,7 @@ function LocationRates({
       <Card flush>
         <CardTitle
           inset
-          description="Every trip not on the grid is metered at these rates. The rules are the location's own, per class."
+          description="Every trip not on the grid is metered at these rates; choosing a model adds its charge to any trip. The rules are the location's own, per class."
           action={editLink(classesHref)}
         >
           Vehicle classes
@@ -139,15 +141,17 @@ function LocationRates({
             <Th align="right">Per km</Th>
             <Th align="right">Per hour</Th>
             <Th align="right">Minimum</Th>
+            <Th align="right">To choose a model</Th>
             <Th>Rules</Th>
           </THead>
           <TBody>
             {list.offerings.length === 0 ? (
-              <EmptyRow colSpan={6}>Nothing is sold here yet.</EmptyRow>
+              <EmptyRow colSpan={7}>Nothing is sold here yet.</EmptyRow>
             ) : (
               list.offerings.map((offering) => {
                 const { vehicleClass } = offering;
                 const selling = offering.isActive && vehicleClass.isActive;
+                const modelChoice = modelChoiceOf(offering);
                 return (
                   <tr
                     key={offering.id}
@@ -175,6 +179,13 @@ function LocationRates({
                     </Td>
                     <Td className="text-right tabular-nums">
                       {formatMyr(offering.minimumFareSen)}
+                    </Td>
+                    <Td className="text-right tabular-nums">
+                      {modelChoice ? (
+                        surchargeLabel(modelChoice)
+                      ) : (
+                        <span className="text-neutral-500">Not offered</span>
+                      )}
                     </Td>
                     <Td className="text-xs whitespace-nowrap text-neutral-600">
                       {rulesText(offering)}

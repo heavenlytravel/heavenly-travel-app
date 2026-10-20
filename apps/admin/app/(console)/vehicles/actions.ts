@@ -10,12 +10,12 @@ import {
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { actorOf, getAdmin } from "../../../../_lib/access";
+import { actorOf, getAdmin } from "../../_lib/access";
 import {
   FORBIDDEN,
   stateOf,
   type ActionState,
-} from "../../../../_lib/action-state";
+} from "../../_lib/action-state";
 import {
   FLEET_BACK_FIELD,
   FLEET_BACK_TO_LIST,
@@ -23,9 +23,9 @@ import {
   VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,
   locationTabHref,
-} from "../../../../_lib/routes";
-import { refreshVehicleClassesAfter } from "../../../../_lib/site";
-import { revalidateLocation } from "../../_lib/revalidate";
+} from "../../_lib/routes";
+import { refreshVehicleClassesAfter } from "../../_lib/site";
+import { revalidateLocation } from "../locations/_lib/revalidate";
 
 /**
  * The vehicle form's actions, on a location's Vehicles tab and on the list

@@ -17,8 +17,8 @@ import {
   recordHistoryHref,
 } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
-import { deleteDriverAction } from "../actions";
-import { DriverForm } from "../DriverForm";
+import { deleteDriverAction } from "../../../../drivers/actions";
+import { DriverForm } from "../../../../drivers/_components/DriverForm";
 
 /**
  * Route: /locations/[slug]/drivers/[driverId], and

@@ -9,7 +9,7 @@ import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { VEHICLES_PATH } from "../../../_lib/routes";
-import { VehicleForm } from "../../locations/[slug]/vehicles/VehicleForm";
+import { VehicleForm } from "../_components/VehicleForm";
 
 /**
  * Route: /vehicles/new?location=…. A vehicle added from the list across

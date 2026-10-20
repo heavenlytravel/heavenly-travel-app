@@ -11,20 +11,20 @@ import {
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { actorOf, getAdmin } from "../../../../_lib/access";
+import { actorOf, getAdmin } from "../../_lib/access";
 import {
   FORBIDDEN,
   stateOf,
   type ActionState,
-} from "../../../../_lib/action-state";
+} from "../../_lib/action-state";
 import {
   DRIVERS_PATH,
   FLEET_BACK_FIELD,
   FLEET_BACK_TO_LIST,
   LOCATIONS_PATH,
   locationTabHref,
-} from "../../../../_lib/routes";
-import { revalidateLocation } from "../../_lib/revalidate";
+} from "../../_lib/routes";
+import { revalidateLocation } from "../locations/_lib/revalidate";
 
 /**
  * The driver form's actions, on a location's Drivers tab and on the list

@@ -5,7 +5,7 @@ import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { DRIVERS_PATH } from "../../../_lib/routes";
-import { DriverForm } from "../../locations/[slug]/drivers/DriverForm";
+import { DriverForm } from "../_components/DriverForm";
 
 /**
  * Route: /drivers/new?location=…. A driver added from the list across

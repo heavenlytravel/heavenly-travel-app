@@ -26,12 +26,12 @@ import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { Card } from "../../../../_components/Card";
-import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
-import type { ActionState } from "../../../../_lib/action-state";
-import { classGroups } from "../../../../_lib/fleet-form";
-import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../../_lib/routes";
-import { createVehicleAction, updateVehicleAction } from "./actions";
+import { Card } from "../../../_components/Card";
+import { ExpiryDateField } from "../../../_components/ExpiryDateField";
+import type { ActionState } from "../../../_lib/action-state";
+import { classGroups } from "../../../_lib/fleet-form";
+import { FLEET_BACK_FIELD, FLEET_BACK_TO_LIST } from "../../../_lib/routes";
+import { createVehicleAction, updateVehicleAction } from "../actions";
 import { PhotoList } from "./PhotoList";
 
 /** Each name once, in the spelling it was first entered with. */

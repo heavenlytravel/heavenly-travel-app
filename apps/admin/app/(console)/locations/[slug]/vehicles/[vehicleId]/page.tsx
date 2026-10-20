@@ -20,8 +20,8 @@ import {
   VEHICLE_CLASS_PARAM,
 } from "../../../../../_lib/routes";
 import { locationKey } from "../../../_lib/location-data";
-import { deleteVehicleAction } from "../actions";
-import { VehicleForm } from "../VehicleForm";
+import { deleteVehicleAction } from "../../../../vehicles/actions";
+import { VehicleForm } from "../../../../vehicles/_components/VehicleForm";
 
 /**
  * Route: /locations/[slug]/vehicles/[vehicleId], and

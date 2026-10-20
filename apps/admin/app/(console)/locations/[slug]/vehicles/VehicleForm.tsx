@@ -90,8 +90,8 @@ function ModelNote({
   return (
     <p className="text-xs text-neutral-500 sm:col-span-2">
       {elsewhere.length > 0
-        ? `The ${name} is a model of ${elsewhere.join(" and ")}. Saving makes it a model of ${className(classId)} too, with no photos yet.`
-        : `A new model of ${className(classId)}. Saving adds it to the class's models, with no photos yet: add them on the class's page.`}
+        ? `The ${name} is a model of ${elsewhere.join(" and ")}. Saving makes it a model of ${className(classId)} too.`
+        : `A new model of ${className(classId)}. Saving adds it to the class's models.`}
     </p>
   );
 }

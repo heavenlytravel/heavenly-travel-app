@@ -117,6 +117,22 @@ export function LocationPanelNav({
   const [unfolded, setUnfolded] = useState<
     Partial<Record<PanelGroup["key"], boolean>>
   >({});
+  // A tab opened inside a group folded by hand opens the group: the fold
+  // is forgotten, and the group follows the tab on screen again.
+  const [shownTab, setShownTab] = useState(active);
+  if (active !== shownTab) {
+    setShownTab(active);
+    const holder = groups.find((group) =>
+      group.sections.some((section) => section.key === active),
+    );
+    if (holder && unfolded[holder.key] === false) {
+      setUnfolded((was) => {
+        const rest = { ...was };
+        delete rest[holder.key];
+        return rest;
+      });
+    }
+  }
   const lastPathname = useRef(pathname);
   useEffect(() => {
     if (lastPathname.current === pathname) return;

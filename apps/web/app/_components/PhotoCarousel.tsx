@@ -14,8 +14,10 @@ const arrow = `absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center 
  * for a pointer and a dot for each photo. Spans throughout, so it sits in a
  * choice's label: the arrows are buttons, which page without choosing,
  * while a tap on a photo chooses. Being the label's first buttons, they are
- * what it labels unless it names its control with `htmlFor`. With no
- * photo the frame shows a car.
+ * what it labels unless it names its control with `htmlFor`. An arrow
+ * that runs out, at the first photo or the last, hands the focus to the
+ * other one. Paging slides, unless the reader asks for less motion. With
+ * no photo the frame shows a car.
  */
 export function PhotoCarousel({
   name,
@@ -32,12 +34,28 @@ export function PhotoCarousel({
   decorative?: boolean;
 }) {
   const track = useRef<HTMLSpanElement>(null);
+  const previous = useRef<HTMLButtonElement>(null);
+  const next = useRef<HTMLButtonElement>(null);
   const [at, setAt] = useState(0);
   const count = photos.length;
 
   function go(step: number) {
     const el = track.current;
-    if (el) el.scrollBy({ left: step * el.clientWidth, behavior: "smooth" });
+    if (!el) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollBy({
+      left: step * el.clientWidth,
+      behavior: still ? "instant" : "smooth",
+    });
+    const to = Math.min(Math.max(at + step, 0), count - 1);
+    setAt(to);
+    // The arrow pressed goes at the end it reached: the focus moves to the
+    // other one, once it is drawn.
+    if (to === 0 || to === count - 1) {
+      requestAnimationFrame(() =>
+        (to === 0 ? next : previous).current?.focus(),
+      );
+    }
   }
 
   return (
@@ -75,6 +93,7 @@ export function PhotoCarousel({
         <>
           {at > 0 ? (
             <button
+              ref={previous}
               type="button"
               aria-label="Previous photo"
               onClick={() => go(-1)}
@@ -85,6 +104,7 @@ export function PhotoCarousel({
           ) : null}
           {at < count - 1 ? (
             <button
+              ref={next}
               type="button"
               aria-label="Next photo"
               onClick={() => go(1)}

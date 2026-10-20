@@ -23,7 +23,7 @@ const pill = `rounded-full border px-3.5 py-1.5 text-[0.88rem] font-semibold tra
 
 /**
  * The photos of a class's models in a dialog, one model at a time: the
- * models as tabs when there are several, the photo large with its caption,
+ * models as toggle buttons when there are several, the one shown pressed, the photo large with its caption,
  * the one before and after, and the photos as thumbnails. Controlled: the
  * page owns `open`, so the options form keeps one gallery outside its
  * cards, whose clicks would otherwise choose the class. It opens at the
@@ -65,7 +65,7 @@ export function ModelGallery({
       <div className="grid gap-4">
         {shown.length > 1 ? (
           <div
-            role="tablist"
+            role="group"
             aria-label="Models"
             className="flex flex-wrap gap-2"
           >
@@ -75,8 +75,7 @@ export function ModelGallery({
                 <button
                   key={m.id}
                   type="button"
-                  role="tab"
-                  aria-selected={on}
+                  aria-pressed={on}
                   onClick={() => {
                     setModelId(m.id);
                     setAt(0);

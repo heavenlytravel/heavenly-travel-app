@@ -85,6 +85,7 @@ export default async function TripOptionsPage({ params, searchParams }: Props) {
     models: c.vehicleClass.models,
     totalSen: c.price.totalSen,
     modelChoiceSen: c.modelChoice?.amountSen ?? null,
+    modelChoicePercent: c.modelChoice?.charge.percent ?? null,
     unavailable: unavailableReason(c.availability),
   }));
 

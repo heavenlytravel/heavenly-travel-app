@@ -2,7 +2,7 @@
 
 import { formatMyr, TRIP_OPTION_FIELDS } from "@repo/db";
 import { Radio } from "@repo/ui/field";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import type { GalleryModel } from "../../../../_components/ModelGallery";
 import { PhotoCarousel } from "../../../../_components/PhotoCarousel";
 import { focus, secondaryButton } from "../../../_components/Page";
@@ -38,26 +38,38 @@ function ViewButton({
  * The models' tiles, two to a row from a tablet up: the first few, and
  * "Show all" for the rest when there are more, so a class with ten models
  * does not push the next class far down the page. Shown, the rest stay
- * shown, and the focus moves to the first of them; a model chosen among
- * them stays in the form.
+ * shown, and the focus moves to the first of them. A model chosen among
+ * them keeps them shown when the grid comes back, the class closed and
+ * opened again by a change of passengers, so the choice stays in the
+ * form and in its price.
  */
 function ModelGrid({
   models,
+  chosenId = null,
   tile,
 }: {
   models: readonly GalleryModel[];
+  /** The model chosen, if any. */
+  chosenId?: string | null;
   /** A model's `<li>`. */
   tile: (model: GalleryModel) => ReactNode;
 }) {
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(
+    () => models.findIndex((model) => model.id === chosenId) >= FIRST_MODELS,
+  );
   const list = useRef<HTMLUListElement>(null);
   const shown = all ? models : models.slice(0, FIRST_MODELS);
 
-  useEffect(() => {
-    if (!all) return;
-    const first = list.current?.children[FIRST_MODELS];
-    (first?.querySelector("input") ?? first?.querySelector("button"))?.focus();
-  }, [all]);
+  function showAll() {
+    setAll(true);
+    // Once the rest are drawn, the focus goes to the first of them.
+    requestAnimationFrame(() => {
+      const first = list.current?.children[FIRST_MODELS];
+      (
+        first?.querySelector("input") ?? first?.querySelector("button")
+      )?.focus();
+    });
+  }
 
   return (
     <>
@@ -67,7 +79,7 @@ function ModelGrid({
       {shown.length < models.length ? (
         <button
           type="button"
-          onClick={() => setAll(true)}
+          onClick={showAll}
           className={`mt-3 w-full ${secondaryButton}`}
         >
           Show all {models.length} models
@@ -90,6 +102,7 @@ export function ModelChoice({
   vehicleClassName,
   models,
   chargeSen,
+  chargePercent,
   modelId,
   onChoose,
   onPhotos,
@@ -99,6 +112,8 @@ export function ModelChoice({
   models: readonly GalleryModel[];
   /** What choosing a model adds; null when the customer cannot choose here. */
   chargeSen: number | null;
+  /** The share of the fare it is, 10 for 10%; null for an amount of its own. */
+  chargePercent: number | null;
   /** The model chosen; null for any. */
   modelId: string | null;
   onChoose: (modelId: string | null) => void;
@@ -146,7 +161,8 @@ export function ModelChoice({
       </p>
       <p className={note}>
         Any {vehicleClassName} is in the price. To ride in a particular model,
-        choose it for {formatMyr(chargeSen)} more.
+        choose it for {formatMyr(chargeSen)} more
+        {chargePercent !== null ? `, ${chargePercent}% of the fare` : ""}.
       </p>
       <label
         className={`mt-3 flex cursor-pointer items-start gap-3 rounded-[14px] border-2 bg-white px-4 py-3 ${chosen(modelId === null)}`}
@@ -167,6 +183,7 @@ export function ModelChoice({
       </label>
       <ModelGrid
         models={models}
+        chosenId={modelId}
         tile={(model) => {
           // The label names its radio: left to itself it would take the
           // photo arrows, its first buttons, and a tap would page the photos.

@@ -170,7 +170,8 @@ export function ModelGallery({
 
 /**
  * "See photos" and the gallery it opens, for a class card that is not a
- * choice itself: a location's product page.
+ * choice itself: a location's product page. Each opening starts again at
+ * the first model's first photo.
  */
 export function ModelPhotosButton({
   title,
@@ -182,17 +183,23 @@ export function ModelPhotosButton({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Counts the openings: a new one is a new gallery.
+  const [opened, setOpened] = useState(0);
   if (!hasPhotos(models)) return null;
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpened((count) => count + 1);
+          setOpen(true);
+        }}
         className={`font-semibold text-[#073c36] underline-offset-4 hover:underline ${focus} ${className}`}
       >
         See photos
       </button>
       <ModelGallery
+        key={opened}
         title={title}
         models={models}
         open={open}

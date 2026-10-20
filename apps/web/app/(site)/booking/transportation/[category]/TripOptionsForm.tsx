@@ -59,6 +59,8 @@ export type ClassOption = {
   totalSen: number;
   /** What choosing one of the models adds; null when the customer cannot choose here. */
   modelChoiceSen: number | null;
+  /** The share of the fare that charge is, 10 for 10%; null for an amount of its own. */
+  modelChoicePercent: number | null;
   /** Why the class cannot take this trip, or null when it can. */
   unavailable: string | null;
 };
@@ -221,6 +223,7 @@ export function TripOptionsForm({
                     vehicleClassName={c.name}
                     models={c.models}
                     chargeSen={c.modelChoiceSen}
+                    chargePercent={c.modelChoicePercent}
                     modelId={model?.id ?? null}
                     onChoose={setModelId}
                     onPhotos={(id) => setGallery({ option: c, modelId: id })}

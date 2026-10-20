@@ -18,12 +18,13 @@ import type {
   VehicleWithModel,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
+import { Combobox } from "@repo/ui/combobox";
 import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ExpiryDateField } from "../../../../_components/ExpiryDateField";
 import type { ActionState } from "../../../../_lib/action-state";
@@ -97,7 +98,7 @@ function ModelNote({
 
 /**
  * The form for one of our vehicles, new or existing: its plate, its class,
- * its brand and model as typed, with the ones entered before suggested,
+ * its brand and model, chosen from the ones entered before or added new,
  * where it is based and whether it is in service, its photos, the expiry
  * dates of its documents, and notes. A model the class does not have yet
  * is added to it on save. A saved vehicle opens the Vehicles tab of the location it is
@@ -138,8 +139,6 @@ export function VehicleForm({
   const [photos, setPhotos] = useState<Photo[]>(
     vehicle?.photos.map(({ url, caption }) => ({ url, caption })) ?? [],
   );
-  const brandList = useId();
-  const modelList = useId();
 
   return (
     <form action={action} className="grid gap-6">
@@ -152,16 +151,6 @@ export function VehicleForm({
           value={FLEET_BACK_TO_LIST}
         />
       ) : null}
-      <datalist id={brandList}>
-        {distinct(suggestions.map((s) => s.brand)).map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
-      <datalist id={modelList}>
-        {modelsOf(suggestions, classId, brand).map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
 
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -194,27 +183,27 @@ export function VehicleForm({
             />
           </Field>
           <Field label={VEHICLE_FIELD_LABELS.brand}>
-            <Input
+            <Combobox
               name="brand"
               required
-              autoComplete="off"
-              list={brandList}
               maxLength={MODEL_LIMITS.brand}
-              placeholder="Toyota"
+              placeholder="Choose or add the brand"
+              searchPlaceholder="Find a brand, or type a new one"
+              options={distinct(suggestions.map((s) => s.brand))}
               value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              onValueChange={setBrand}
             />
           </Field>
           <Field label={VEHICLE_FIELD_LABELS.model}>
-            <Input
+            <Combobox
               name="model"
               required
-              autoComplete="off"
-              list={modelList}
               maxLength={MODEL_LIMITS.name}
-              placeholder="Alphard"
+              placeholder="Choose or add the model"
+              searchPlaceholder="Find a model, or type a new one"
+              options={modelsOf(suggestions, classId, brand)}
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onValueChange={setModel}
             />
           </Field>
           <ModelNote

@@ -1,19 +1,16 @@
-import { isPlace, isSlugLocked } from "@repo/db";
-import { statesBounds } from "@repo/db/server";
+import { isSlugLocked } from "@repo/db";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
-import { SAVED_ADDRESSES_ID } from "../../../../_lib/routes";
 import { locationDetails, locationKey } from "../../_lib/location-data";
 import { stateOptions } from "../../_lib/state-options";
 import { LocationDetailsForm } from "../LocationDetailsForm";
-import { SavedAddresses, type SavedAddress } from "../SavedAddresses";
 
 /**
  * Route: /locations/[slug]/details. Marketing's tab, step 1 of the setup:
- * the name, the slug and the states the location lies in, and its saved
- * addresses. Its deletion is on the Status tab.
+ * the name, the slug and the states the location lies in. Its saved
+ * addresses are on the Pages tab, its deletion on the Status tab.
  */
 export default async function LocationDetailsPage({
   params,
@@ -23,18 +20,9 @@ export default async function LocationDetailsPage({
   const { id } = await locationKey(slug);
 
   return (
-    <div className="grid gap-6">
-      <Streamed
-        fallback={
-          <>
-            <CardSkeleton rows={5} />
-            <CardSkeleton rows={3} />
-          </>
-        }
-      >
-        {() => details({ id })}
-      </Streamed>
-    </div>
+    <Streamed fallback={<CardSkeleton rows={5} />}>
+      {() => details({ id })}
+    </Streamed>
   );
 }
 
@@ -45,41 +33,19 @@ async function details({ id }: { id: string }) {
   ]);
   if (!location) notFound();
 
-  const addresses: SavedAddress[] = location.addresses.map((address) => {
-    const spot = isPlace(address.place) ? address.place : null;
-    return {
-      id: address.id,
-      name: address.name,
-      placeId: spot?.placeId ?? "",
-      placeLabel: spot?.label ?? "",
-      placeAddress: spot?.address ?? "",
-      usedBy: address.usedBy,
-      isStray: address.isStray,
-    };
-  });
-
   return (
-    <>
-      <Card>
-        <CardTitle>Details</CardTitle>
-        <LocationDetailsForm
-          location={{
-            id: location.id,
-            name: location.name,
-            slug: location.slug,
-            stateCodes: location.states.map((state) => state.code).sort(),
-            slugLocked: isSlugLocked(location),
-          }}
-          states={states}
-        />
-      </Card>
-      <SavedAddresses
-        id={SAVED_ADDRESSES_ID}
-        locationId={location.id}
-        stateNames={location.states.map((state) => state.name)}
-        within={statesBounds(location.states.map((state) => state.code))}
-        addresses={addresses}
+    <Card>
+      <CardTitle>Details</CardTitle>
+      <LocationDetailsForm
+        location={{
+          id: location.id,
+          name: location.name,
+          slug: location.slug,
+          stateCodes: location.states.map((state) => state.code).sort(),
+          slugLocked: isSlugLocked(location),
+        }}
+        states={states}
       />
-    </>
+    </Card>
   );
 }

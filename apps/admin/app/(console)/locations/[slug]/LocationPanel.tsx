@@ -39,6 +39,7 @@ import {
   locationBookingsHref,
   locationDriversHref,
   locationOfferingHref,
+  locationAddressesHref,
   locationPageHref,
   locationRatesPartHref,
   locationTabHref,
@@ -87,8 +88,8 @@ function fleetLine(count: string, state: string, due: number) {
  * sidebar: the location's name and state on top, then its sections in two
  * groups, each section with one line on where it stands and, where it has
  * something to list, a submenu of it: the classes, the zones, the three
- * parts of the rates, the pages, the bookings by status, the vehicles and
- * drivers with a document due. A draft is set up
+ * parts of the rates, the pages and their saved addresses, the bookings by
+ * status, the vehicles and drivers with a document due. A draft is set up
  * before anything else: its overview stands alone on top, then the Setup
  * group with how far it has come and what to do next, its steps numbered.
  * Once live or paused the day comes first: Work holds Today, the bookings,
@@ -240,13 +241,21 @@ export function LocationPanel({
           },
         ];
       case "pages":
-        return overview.pages.map((page) => ({
-          key: page.page,
-          label: LOCATION_PAGE_LABELS[page.page],
-          href: locationPageHref(slug, page.page),
-          dot: PAGE_DOTS[page.status],
-          note: PAGE_STATUS_LABELS[page.status],
-        }));
+        return [
+          ...overview.pages.map((page) => ({
+            key: page.page,
+            label: LOCATION_PAGE_LABELS[page.page],
+            href: locationPageHref(slug, page.page),
+            dot: PAGE_DOTS[page.status],
+            note: PAGE_STATUS_LABELS[page.status],
+          })),
+          {
+            key: "addresses",
+            label: "Saved addresses",
+            href: locationAddressesHref(slug),
+            note: String(location.addresses.length),
+          },
+        ];
       case "vehicles":
         return [
           {

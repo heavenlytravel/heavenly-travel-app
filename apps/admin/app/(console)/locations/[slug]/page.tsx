@@ -170,7 +170,6 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   const lines: Partial<Record<LocationTab, ReactNode>> = {
     details: [
       andList(numbers.stateNames) || "No state yet",
-      plural(location.addresses.length, "saved address", "saved addresses"),
       location.topChoiceOrder === null
         ? null
         : `Top choice ${location.topChoiceOrder}`,
@@ -205,6 +204,13 @@ async function overview({ id, slug }: { id: string; slug: string }) {
             {LOCATION_PAGE_LABELS[page.page]}
           </span>
         ))}
+        <span>
+          {plural(
+            location.addresses.length,
+            "saved address",
+            "saved addresses",
+          )}
+        </span>
       </span>
     ),
   };

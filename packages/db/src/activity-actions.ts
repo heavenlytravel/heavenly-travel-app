@@ -209,7 +209,6 @@ export function locationHistoryKindOf(
 ): LocationHistoryKind | null {
   switch (action) {
     case "location.updated":
-    case "location.addresses.updated":
       return "details";
     case "location.offering.created":
     case "location.offering.updated":
@@ -223,6 +222,7 @@ export function locationHistoryKindOf(
       return "coverage";
     case "location.page.published":
     case "location.page.updated":
+    case "location.addresses.updated":
       return "pages";
     case "location.created":
     case "location.state.changed":

@@ -767,7 +767,7 @@ export function PageEditor({
                           label={
                             <span className="inline-flex items-center gap-1.5">
                               Saved address
-                              <InfoTip text="Optional. With an address, the highlight shows “Take me here”, which fills the drop-off with it. Addresses are kept on the location's page." />
+                              <InfoTip text="Optional. With an address, the highlight shows “Take me here”, which fills the drop-off with it. Addresses are kept on the Pages tab, under the pages." />
                             </span>
                           }
                           hint={

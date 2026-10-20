@@ -354,10 +354,10 @@ export function locationRatesPartHref(
   return `${locationTabHref(slug, "rates")}#${RATES_PARTS[part]}`;
 }
 
-/** The id of the saved addresses card on a location's Details tab, and the link that lands on it. */
+/** The id of the saved addresses card on a location's Pages tab, and the link that lands on it. */
 export const SAVED_ADDRESSES_ID = "saved-addresses";
 export function locationAddressesHref(slug: string) {
-  return `${locationTabHref(slug, "details")}#${SAVED_ADDRESSES_ID}`;
+  return `${locationTabHref(slug, "pages")}#${SAVED_ADDRESSES_ID}`;
 }
 
 /** What Marketing sets on the customer site's home page: the top choices. */

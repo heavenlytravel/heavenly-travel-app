@@ -17,6 +17,7 @@ import {
 } from "./vehicle-input";
 import { modelName } from "./vehicle-model-input";
 import { dropModelIfUnused, modelFor } from "./vehicle-models";
+import { plateTermOf } from "./search";
 
 /**
  * Our vehicles, each of one model and based at one location, with the
@@ -82,21 +83,39 @@ function byClassAndPlate(a: ListedVehicle, b: ListedVehicle) {
   );
 }
 
-/** What the vehicle lists narrow to: one location, the ones with a document due, or both. */
-export type FleetFilter = { locationId?: string; due?: boolean };
+/** What the vehicle and driver lists narrow to: one location, the ones with a document due, a search, or any of them together. */
+export type FleetFilter = {
+  locationId?: string;
+  due?: boolean;
+  /** As `searchTermOf` reads it: part of a vehicle's plate or model, or of a driver's name or phone. */
+  search?: string;
+};
+
+/** Where a vehicle matches a search: its plate, its brand or its model. */
+function vehicleSearchWhere(search: string): Prisma.VehicleWhereInput {
+  const plate = plateTermOf(search);
+  return {
+    OR: [
+      ...(plate ? [{ plate: { contains: plate } }] : []),
+      { vehicleModel: { brand: { contains: search, mode: "insensitive" } } },
+      { vehicleModel: { name: { contains: search, mode: "insensitive" } } },
+    ],
+  };
+}
 
 /** Every vehicle, or those the filter leaves, in service or not; a class's alone for its page. */
 export async function listVehicles(
   filter: FleetFilter & { vehicleClassId?: string } = {},
 ): Promise<ListedVehicle[]> {
+  const where: Prisma.VehicleWhereInput[] = [];
+  if (filter.locationId) where.push({ locationId: filter.locationId });
+  if (filter.vehicleClassId) {
+    where.push({ vehicleModel: { vehicleClassId: filter.vehicleClassId } });
+  }
+  if (filter.due) where.push(vehiclesDueWhere());
+  if (filter.search) where.push(vehicleSearchWhere(filter.search));
   const rows = await db.vehicle.findMany({
-    where: {
-      ...(filter.locationId ? { locationId: filter.locationId } : {}),
-      ...(filter.vehicleClassId
-        ? { vehicleModel: { vehicleClassId: filter.vehicleClassId } }
-        : {}),
-      ...(filter.due ? vehiclesDueWhere() : {}),
-    },
+    where: { AND: where },
     ...listed,
   });
   return rows.sort(byClassAndPlate);

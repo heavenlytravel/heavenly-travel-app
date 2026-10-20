@@ -170,7 +170,9 @@ function LocationCard({
                 // Above the card's link, so it opens the bookings instead.
                 <Tooltip content="Bookings awaiting confirmation">
                   <Link
-                    href={locationBookingsHref(location.slug, "received")}
+                    href={locationBookingsHref(location.slug, {
+                      status: "received",
+                    })}
                     className="relative z-1 inline-flex items-center gap-1.5 align-top text-amber-800 underline-offset-4 hover:underline"
                   >
                     <span

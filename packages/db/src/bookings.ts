@@ -24,6 +24,7 @@ import { isPlace } from "./place";
 import { priceBreakdownOf } from "./pricing";
 import { isUniqueViolation } from "./prisma-errors";
 import { generateReference } from "./references";
+import { phoneDigitsOf } from "./search";
 
 /**
  * The booking core, shared by every product: creation, lists, and the item
@@ -264,13 +265,15 @@ export function getBookingForUser(
 
 /**
  * What the admin lists are narrowed to: a status, a location, the day an
- * item picks up (Malaysian time, cancelled items aside), or any of them
- * together.
+ * item picks up (Malaysian time, cancelled items aside), a search, or any
+ * of them together.
  */
 export type BookingFilter = {
   status?: BookingStatus;
   locationId?: string;
   pickupOn?: Date;
+  /** As `searchTermOf` reads it: part of the reference, or of the customer's name, phone or email. */
+  search?: string;
 };
 
 function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
@@ -287,6 +290,15 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
     item.status = { not: "cancelled" satisfies ItemStatus };
   }
   if (Object.keys(item).length > 0) where.items = { some: item };
+  if (filter.search) {
+    const phone = phoneDigitsOf(filter.search);
+    where.OR = [
+      { reference: { contains: filter.search.toUpperCase() } },
+      { contactName: { contains: filter.search, mode: "insensitive" } },
+      { contactEmail: { contains: filter.search, mode: "insensitive" } },
+      ...(phone ? [{ contactPhone: { contains: phone } }] : []),
+    ];
+  }
   return Object.keys(where).length > 0 ? where : undefined;
 }
 
@@ -298,15 +310,23 @@ const ORDERS: Record<BookingOrder, Prisma.BookingOrderByWithRelationInput> = {
   soonest: { startsAt: "asc" },
 };
 
-/** Admin list, newest first unless told otherwise. `take` caps it for an overview. */
+/**
+ * Admin list, newest first unless told otherwise. `take` caps it, for an
+ * overview or a page; `skip` passes the pages before.
+ */
 export function listBookings(
   filter: BookingFilter = {},
-  { order = "newest", take }: { order?: BookingOrder; take?: number } = {},
+  {
+    order = "newest",
+    take,
+    skip,
+  }: { order?: BookingOrder; take?: number; skip?: number } = {},
 ): Promise<BookingWithItems[]> {
   return db.booking.findMany({
     where: whereOf(filter),
     orderBy: ORDERS[order],
     take,
+    skip,
     ...withItems,
   });
 }

@@ -13,6 +13,7 @@ import {
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
 import type { FleetFilter } from "./vehicles";
+import { phoneDigitsOf } from "./search";
 
 /**
  * Our drivers, each based at one location, with the classes they may drive
@@ -40,15 +41,27 @@ const NOT_FOUND: Change = refuse(
   "This driver was deleted meanwhile. Go back to the list.",
 );
 
+/** Where a driver matches a search: their name or their phone. */
+function driverSearchWhere(search: string): Prisma.DriverWhereInput {
+  const phone = phoneDigitsOf(search);
+  return {
+    OR: [
+      { name: { contains: search, mode: "insensitive" } },
+      ...(phone ? [{ phone: { contains: phone } }] : []),
+    ],
+  };
+}
+
 /** Every driver, or those the filter leaves, active first, by name. */
 export function listDrivers(
   filter: FleetFilter = {},
 ): Promise<DriverWithClasses[]> {
+  const where: Prisma.DriverWhereInput[] = [];
+  if (filter.locationId) where.push({ locationId: filter.locationId });
+  if (filter.due) where.push(driversDueWhere());
+  if (filter.search) where.push(driverSearchWhere(filter.search));
   return db.driver.findMany({
-    where: {
-      ...(filter.locationId ? { locationId: filter.locationId } : {}),
-      ...(filter.due ? driversDueWhere() : {}),
-    },
+    where: { AND: where },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     ...withClasses,
   });

@@ -279,7 +279,8 @@ function Operation({
   pickups: BookingWithItems[];
   received: BookingWithItems[];
 }) {
-  const queue = (status?: BookingStatus) => locationBookingsHref(slug, status);
+  const queue = (status?: BookingStatus) =>
+    locationBookingsHref(slug, { status });
   const figures: Figure[] = [
     {
       label: BOOKING_STATUS_LABELS.received,
@@ -368,13 +369,13 @@ function DocumentsDueCard({
     numbers.vehiclesDue > 0
       ? {
           text: `${plural(numbers.vehiclesDue, "vehicle has", "vehicles have")} a document due`,
-          href: locationVehiclesHref(slug, true),
+          href: locationVehiclesHref(slug, { due: true }),
         }
       : null,
     numbers.driversDue > 0
       ? {
           text: `${plural(numbers.driversDue, "driver has", "drivers have")} a licence due`,
-          href: locationDriversHref(slug, true),
+          href: locationDriversHref(slug, { due: true }),
         }
       : null,
   ].filter((line) => line !== null);

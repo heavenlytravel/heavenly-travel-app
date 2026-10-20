@@ -27,20 +27,45 @@ export function recordHistoryHref(recordHref: string) {
 /** Where an admin lands when a screen belongs to another team. */
 export const RESTRICTED_PATH = "/restricted";
 
+/** The field of a list's address its search box fills. */
+export const SEARCH_PARAM = "q";
+
+/** The field of a list's address naming its page, from 1; the first is left out. */
+export const PAGE_PARAM = "page";
+
+/** A list's address with its filters, those empty left out. */
+function listHref(path: string, filter: Record<string, string | undefined>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filter)) {
+    if (value) params.set(key, value);
+  }
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+/** The page as the address names it: none for the first. */
+const pageParam = (page?: number) =>
+  page && page > 1 ? String(page) : undefined;
+
+/** What a bookings list narrows to, and the page of it. */
+export type BookingsListFilter = {
+  status?: BookingStatus;
+  q?: string;
+  page?: number;
+};
+
 export const BOOKINGS_PATH = "/bookings";
 
-/** The queue across locations, optionally narrowed to one status, one location, or both. */
+/** The queue across locations, narrowed by status, location, search, or any of them, at a page. */
 export function bookingsHref(
-  filter: {
-    status?: BookingStatus;
-    location?: string;
-  } = {},
+  filter: BookingsListFilter & { location?: string } = {},
 ) {
-  const params = new URLSearchParams();
-  if (filter.status) params.set("status", filter.status);
-  if (filter.location) params.set("location", filter.location);
-  const query = params.toString();
-  return query ? `${BOOKINGS_PATH}?${query}` : BOOKINGS_PATH;
+  return listHref(BOOKINGS_PATH, {
+    status: filter.status,
+    location: filter.location,
+    [SEARCH_PARAM]: filter.q,
+    [PAGE_PARAM]: pageParam(filter.page),
+  });
 }
 
 /**
@@ -85,19 +110,19 @@ export function vehicleClassHref(id: string) {
 }
 export const NEW_VEHICLE_CLASS_PATH = vehicleClassHref("new");
 
-/** What a list of vehicles or drivers narrows to: one location, the ones with a document due, or both. */
-export type FleetListFilter = { location?: string; due?: boolean };
+/** What a list of vehicles or drivers narrows to: one location, the ones with a document due, a search, or any of them. */
+export type FleetListFilter = { location?: string; due?: boolean; q?: string };
 
 /** The value of `due` in a list's address when it shows only the documents due. */
 export const DUE_PARAM = "1";
 
 /** A list of vehicles or drivers with its filter in the address. */
 function fleetListHref(path: string, filter: FleetListFilter) {
-  const params = new URLSearchParams();
-  if (filter.location) params.set("location", filter.location);
-  if (filter.due) params.set("due", DUE_PARAM);
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+  return listHref(path, {
+    location: filter.location,
+    due: filter.due ? DUE_PARAM : undefined,
+    [SEARCH_PARAM]: filter.q,
+  });
 }
 
 /** Our vehicles across locations, narrowed by the filter; a new one, based where its form says. */
@@ -378,10 +403,16 @@ export function locationPublishHref(slug: string, entryId: string) {
   return `${locationHref(slug)}/history/${entryId}`;
 }
 
-/** A location's bookings, optionally narrowed to one status. */
-export function locationBookingsHref(slug: string, status?: BookingStatus) {
-  const base = locationTabHref(slug, "bookings");
-  return status ? `${base}?status=${status}` : base;
+/** A location's bookings, narrowed by status, search, or both, at a page. */
+export function locationBookingsHref(
+  slug: string,
+  filter: BookingsListFilter = {},
+) {
+  return listHref(locationTabHref(slug, "bookings"), {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+    [PAGE_PARAM]: pageParam(filter.page),
+  });
 }
 
 /** One offering of a location: the rates it sells a class at; "new" for the add page. */
@@ -392,14 +423,20 @@ export function newLocationOfferingHref(slug: string) {
   return locationOfferingHref(slug, "new");
 }
 
-/** A location's vehicles, or only those with a document due. */
-export function locationVehiclesHref(slug: string, due?: boolean) {
-  return fleetListHref(locationTabHref(slug, "vehicles"), { due });
+/** A location's vehicles, narrowed to those with a document due, a search, or both. */
+export function locationVehiclesHref(
+  slug: string,
+  filter: Omit<FleetListFilter, "location"> = {},
+) {
+  return fleetListHref(locationTabHref(slug, "vehicles"), filter);
 }
 
-/** A location's drivers, or only those with a licence due. */
-export function locationDriversHref(slug: string, due?: boolean) {
-  return fleetListHref(locationTabHref(slug, "drivers"), { due });
+/** A location's drivers, narrowed to those with a licence due, a search, or both. */
+export function locationDriversHref(
+  slug: string,
+  filter: Omit<FleetListFilter, "location"> = {},
+) {
+  return fleetListHref(locationTabHref(slug, "drivers"), filter);
 }
 
 /** One vehicle based at a location; "new" for the add page. */

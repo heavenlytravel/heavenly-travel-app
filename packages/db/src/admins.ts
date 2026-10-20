@@ -15,8 +15,24 @@ const LAST_SUPER_ERROR =
   "This is the only SUPER admin. Promote another SUPER admin first.";
 const NO_TEAM_ERROR = "A REGULAR admin needs at least one team. Tick one.";
 
-export function listAdmins(): Promise<AdminWithUser[]> {
+/**
+ * Every admin, in the order they were made one, or those a search finds:
+ * each word of it in their first name, last name or email.
+ */
+export function listAdmins(search?: string): Promise<AdminWithUser[]> {
+  const words = search ? search.split(" ") : [];
   return db.adminProfile.findMany({
+    where: {
+      AND: words.map((word) => ({
+        user: {
+          OR: [
+            { firstName: { contains: word, mode: "insensitive" } },
+            { lastName: { contains: word, mode: "insensitive" } },
+            { email: { contains: word, mode: "insensitive" } },
+          ],
+        },
+      })),
+    },
     ...withUser,
     orderBy: { createdAt: "asc" },
   });

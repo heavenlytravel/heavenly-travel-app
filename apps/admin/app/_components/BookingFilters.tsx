@@ -32,8 +32,12 @@ export function BookingStatusFilter({
   );
 }
 
-/** What a list says when the filter leaves nothing. */
-export function emptyBookingsMessage(filter: BookingStatus | undefined) {
+/** What a list says when its filters leave nothing: the status, and the search when there is one. */
+export function emptyBookingsMessage(
+  filter: BookingStatus | undefined,
+  search?: string,
+) {
+  if (search) return `No booking matches “${search}”.`;
   return filter
     ? `No ${BOOKING_STATUS_LABELS[filter].toLowerCase()} bookings.`
     : "No bookings yet.";

@@ -1,24 +1,23 @@
 import Link from "next/link";
-import { listDrivers } from "@repo/db/server";
+import { searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { DriversTable } from "../../../../_components/DriversTable";
-import { DueFilter } from "../../../../_components/DueFilter";
+import { FleetList } from "../../../../_components/FleetList";
 import { SectionHeader } from "../../../../_components/SectionHeader";
-import { Streamed, TableSkeleton } from "../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
 import {
   DUE_PARAM,
   locationDriversHref,
   newLocationDriverHref,
+  SEARCH_PARAM,
 } from "../../../../_lib/routes";
 import { locationKey } from "../../_lib/location-data";
 
 /**
- * Route: /locations/[slug]/drivers?due=1. Operation's tab: our drivers
- * based at the location, active first, by name, with the classes they may
- * drive and the licences due within 30 days or expired; narrowed to those
- * with one due. A driver opens their form here. See
- * docs/261019-vehicles-and-drivers.md.
+ * Route: /locations/[slug]/drivers?due=1&q=…. Operation's tab: our
+ * drivers based at the location, active first, by name, with the classes
+ * they may drive and the licences due within 30 days or expired;
+ * narrowed to those with one due, to a search by name or phone, or both.
+ * A driver opens their form here. See docs/261019-vehicles-and-drivers.md.
  */
 export default async function LocationDriversPage({
   params,
@@ -27,7 +26,9 @@ export default async function LocationDriversPage({
   await requireAdmin("fleet.manage");
   const { slug } = await params;
   const { id } = await locationKey(slug);
-  const due = (await searchParams).due === DUE_PARAM;
+  const query = await searchParams;
+  const due = query.due === DUE_PARAM;
+  const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
 
   return (
     <>
@@ -41,24 +42,12 @@ export default async function LocationDriversPage({
         }
       />
       <div className="mt-4">
-        <DueFilter
-          due={due}
-          hrefOf={(next) => locationDriversHref(slug, next)}
+        <FleetList
+          kind="drivers"
+          filter={{ due, q }}
+          hrefOf={(filter) => locationDriversHref(slug, filter)}
+          locationId={id}
         />
-      </div>
-      <div className="mt-4">
-        <Streamed key={String(due)} fallback={<TableSkeleton columns={4} />}>
-          {async () => (
-            <DriversTable
-              drivers={await listDrivers({ locationId: id, due })}
-              emptyMessage={
-                due
-                  ? "No driver here has a licence due."
-                  : "No driver based here yet."
-              }
-            />
-          )}
-        </Streamed>
       </div>
     </>
   );

@@ -198,4 +198,5 @@ export * from "./location-input";
 export * from "./images";
 export * from "./location-page-input";
 export * from "./location-view";
+export * from "./search";
 export * from "./cache-tags";

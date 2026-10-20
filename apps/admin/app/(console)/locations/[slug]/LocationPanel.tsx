@@ -261,7 +261,7 @@ export function LocationPanel({
           {
             key: "due",
             label: "Documents due",
-            href: locationVehiclesHref(slug, true),
+            href: locationVehiclesHref(slug, { due: true }),
             note:
               overview.vehiclesDue > 0
                 ? String(overview.vehiclesDue)
@@ -278,7 +278,7 @@ export function LocationPanel({
           {
             key: "due",
             label: "Licences due",
-            href: locationDriversHref(slug, true),
+            href: locationDriversHref(slug, { due: true }),
             note:
               overview.driversDue > 0 ? String(overview.driversDue) : undefined,
           },
@@ -292,7 +292,7 @@ export function LocationPanel({
         return BOOKING_STATUSES.map((status) => ({
           key: status,
           label: BOOKING_STATUS_LABELS[status],
-          href: locationBookingsHref(slug, status),
+          href: locationBookingsHref(slug, { status }),
           note:
             status === "received" && overview.awaitingConfirmation > 0
               ? String(overview.awaitingConfirmation)

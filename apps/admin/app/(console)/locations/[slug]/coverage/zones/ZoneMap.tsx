@@ -161,8 +161,8 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * keeps its own, puts the map and the line under it on screen together:
  * Google's would show the map alone, and the line's notices with it
  * unseen. With the pencil every
- * edit is a plain click (./piece-editor): select a piece or a corner,
- * drag it, grow or shrink a piece from the squares of its box, add a
+ * edit is a plain click (./piece-editor): select a piece or a corner, or
+ * several pieces with Shift+click, drag it, grow or shrink a piece from the squares of its box, add a
  * corner with the "+" on an edge, take away what is selected with the
  * bin, cut a piece in two with the scissors. The square
  * and the circle add a piece in the middle of the view. With the hand
@@ -459,10 +459,12 @@ export function ZoneMap({
           : cutting
             ? "Click another corner of this piece to cut it in two along the line. Esc stops."
             : !selection
-              ? "Click a piece to edit it. Drag anywhere else to move the map. The i at the end of the tools says how each one works."
-              : selection.corner
-                ? "Drag the corner to move it. The bin removes it; the scissors cut the piece from it to another corner."
-                : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
+              ? "Click a piece to edit it, or Shift+click several. Drag anywhere else to move the map. The i at the end of the tools says how each one works."
+              : selection.pieces > 1
+                ? `${selection.pieces} pieces selected. The bin deletes them all. Shift+click a piece to add it or leave it out.`
+                : selection.corner
+                  ? "Drag the corner to move it. The bin removes it; the scissors cut the piece from it to another corner."
+                  : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
 
   // The shortcuts as this computer writes them, once the map is there: the
   // toolbar shows in the browser only.
@@ -564,7 +566,9 @@ export function ZoneMap({
                     label={
                       selection?.corner
                         ? "Remove the corner selected"
-                        : "Delete the piece selected"
+                        : selection && selection.pieces > 1
+                          ? `Delete the ${selection.pieces} pieces selected`
+                          : "Delete the piece selected"
                     }
                     shortcut={keys.remove}
                     why={

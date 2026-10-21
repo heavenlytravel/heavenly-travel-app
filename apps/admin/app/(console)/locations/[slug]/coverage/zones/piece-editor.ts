@@ -13,6 +13,9 @@ import { openRing as open, pathOf } from "./map-shapes";
  *
  * - a click selects a piece and only its corners show; a click on a corner
  *   selects it;
+ * - Shift+click, or Ctrl+click (⌘+click on a Mac, where Ctrl+click is the
+ *   right-click), adds a piece to the selection or takes it out: several
+ *   are deleted together, or merged, and show no corners;
  * - a drag on a corner moves it, a drag inside the piece moves the piece
  *   alone, and a drag anywhere else moves the map;
  * - a box runs around the piece selected, a square at each of its corners:
@@ -21,10 +24,11 @@ import { openRing as open, pathOf } from "./map-shapes";
  * - pointing at an edge shows one "+" on it, under the pointer: a click
  *   adds a corner there, a drag adds and moves it;
  * - the toolbar, or Delete and Backspace, removes the corner selected, or
- *   the piece; its scissors cut the piece from the corner selected to
+ *   the pieces; its scissors cut the piece from the corner selected to
  *   another one clicked, along the straight line between them; Esc stops.
  *
- * A right-click opens a menu of the same choices, as a shortcut. Every
+ * A right-click opens a menu of the same choices, as a shortcut, and on a
+ * piece offers to delete all the others, to keep a main island only. Every
  * change reports the whole shape once, when it is done, so each is one
  * step of Undo. Browser only.
  */
@@ -62,8 +66,8 @@ export type PieceMenuItem = {
 /** The right-click menu, at a point of the map's box in pixels. */
 export type PieceMenu = { x: number; y: number; items: PieceMenuItem[] };
 
-/** What is selected: a piece, and maybe one of its corners. */
-export type PieceSelection = { piece: number; corner: boolean } | null;
+/** What is selected: how many pieces, and whether a corner of the one is. */
+export type PieceSelection = { pieces: number; corner: boolean } | null;
 
 export type PieceEditorOptions = {
   map: google.maps.Map;
@@ -88,7 +92,7 @@ export type PieceEditor = {
   setEditable: (editable: boolean) => void;
   /** A new piece, selected, added after the others. */
   addPiece: (ring: LngLat[]) => void;
-  /** Removes the corner selected, else deletes the piece selected. */
+  /** Removes the corner selected, else deletes the pieces selected. */
   removeSelected: () => void;
   /** Starts a cut from the corner selected. */
   startCut: () => void;
@@ -179,6 +183,11 @@ function resized(resize: Resize, pointer: Pixel): OpenPiece {
   );
 }
 
+/** Whether a click adds to the selection or takes from it, not selects afresh. */
+const adds = (event: unknown) =>
+  event instanceof MouseEvent &&
+  (event.shiftKey || event.ctrlKey || event.metaKey);
+
 /** Whether a key press belongs to a field being typed in, not the map. */
 export const typing = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
@@ -189,7 +198,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const { map, library, style, selectedStyle } = options;
   let pieces: OpenPiece[] = [];
   let polygons: google.maps.Polygon[] = [];
-  let selected: number | null = null;
+  // The pieces selected, in their order; with one, its corners, its box and
+  // the "+" show, and `single` names it.
+  let chosen: number[] = [];
+  const single = () => (chosen.length === 1 ? chosen[0]! : null);
   // The corner selected, the one just added, and the first of a cut.
   let corner: CornerAt | null = null;
   let added: CornerAt | null = null;
@@ -280,7 +292,9 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   function announce() {
     options.onSelect(
-      selected === null ? null : { piece: selected, corner: corner !== null },
+      chosen.length === 0
+        ? null
+        : { pieces: chosen.length, corner: corner !== null },
     );
   }
 
@@ -293,20 +307,40 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     options.onCutting(false);
   }
 
-  function select(index: number | null) {
-    const next = index !== null && index < pieces.length ? index : null;
-    if (next === selected) return;
+  /** Selects the pieces, in their order, and no corner. */
+  function choose(next: number[]) {
+    const sorted = next.filter((i) => i < pieces.length).sort((a, b) => a - b);
+    if (
+      sorted.length === chosen.length &&
+      sorted.every((i, at) => i === chosen[at])
+    ) {
+      return;
+    }
     stopCut();
-    const was = selected;
-    selected = next;
+    const was = chosen;
+    chosen = sorted;
     corner = null;
     added = null;
-    if (was !== null) polygons[was]?.setOptions(style);
-    if (next !== null) polygons[next]?.setOptions(selectedStyle);
+    for (const i of was) {
+      if (!sorted.includes(i)) polygons[i]?.setOptions(style);
+    }
+    for (const i of sorted) polygons[i]?.setOptions(selectedStyle);
     hidePlus();
     drawHandles();
     announce();
   }
+
+  /** Selects the one piece, or none. */
+  const select = (index: number | null) =>
+    choose(index === null ? [] : [index]);
+
+  /** Adds the piece to the selection, or takes it out. */
+  const toggle = (index: number) =>
+    choose(
+      chosen.includes(index)
+        ? chosen.filter((i) => i !== index)
+        : [...chosen, index],
+    );
 
   function selectCorner(at: CornerAt | null) {
     corner = at;
@@ -337,19 +371,20 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     for (const polygon of polygons) polygon.setMap(null);
     polygons = pieces.map((piece, index) => {
       const polygon = new library.Polygon({
-        ...(index === selected ? selectedStyle : style),
+        ...(chosen.includes(index) ? selectedStyle : style),
         paths: piece.map(pathOf),
         clickable: editable,
         map,
       });
-      polygon.addListener("click", () => {
+      polygon.addListener("click", (event: google.maps.PolyMouseEvent) => {
         if (!editable || clickIgnored()) return;
         options.onMenu(null);
-        select(index);
+        if (adds(event.domEvent)) toggle(index);
+        else select(index);
       });
       polygon.addListener("rightclick", (event: google.maps.PolyMouseEvent) => {
         if (editable && event.domEvent instanceof MouseEvent) {
-          openMenu(event.domEvent, [deleteItem(index)]);
+          openMenu(event.domEvent, pieceItems(index));
         }
       });
       return polygon;
@@ -368,7 +403,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   function drawHandles() {
     const proj = projection();
-    const piece = selected === null ? undefined : pieces[selected];
+    const index = single();
+    const piece = index === null ? undefined : pieces[index];
     if (!editable || !proj || !piece) {
       svg.style.display = "none";
       pixels = [];
@@ -559,21 +595,26 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     announce();
   }
 
-  function deletePiece(index: number) {
-    if (pieces.length <= 1) {
+  /** Deletes the pieces, in one step; the zone keeps one at least. */
+  function deletePieces(gone: readonly number[]) {
+    if (gone.length >= pieces.length) {
       options.onNotice(
-        "A zone keeps at least one piece. Remove the zone itself on the Coverage tab.",
+        pieces.length === 1
+          ? "A zone keeps at least one piece. Remove the zone itself on the Coverage tab."
+          : "A zone keeps at least one piece. Leave one out of the selection, or remove the zone itself on the Coverage tab.",
         "refused",
       );
       return;
     }
     stopCut();
-    pieces = pieces.filter((_, i) => i !== index);
-    // Another piece keeps its selection, one place along if it came after.
-    const was = selected;
-    selected =
-      was === null || was === index ? null : was > index ? was - 1 : was;
-    if (selected !== was) corner = null;
+    pieces = pieces.filter((_, i) => !gone.includes(i));
+    // The pieces still selected stay so, each a place along for every one
+    // gone before it; the one whose corner was selected keeps it.
+    const was = chosen;
+    chosen = was
+      .filter((i) => !gone.includes(i))
+      .map((i) => i - gone.filter((g) => g < i).length);
+    if (was.length !== 1 || chosen.length !== 1) corner = null;
     added = null;
     drawPolygons();
     drawHandles();
@@ -584,8 +625,25 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const deleteItem = (index: number): PieceMenuItem => ({
     label: "Delete this piece",
     danger: true,
-    run: () => deletePiece(index),
+    run: () => deletePieces([index]),
   });
+
+  /** A right-click on a piece: delete it, or, of several, every other one, to keep a main island only. */
+  const pieceItems = (index: number): PieceMenuItem[] => [
+    deleteItem(index),
+    ...(pieces.length > 1
+      ? [
+          {
+            label: "Delete the other pieces",
+            danger: true,
+            run: () => {
+              deletePieces(pieces.flatMap((_, i) => (i === index ? [] : [i])));
+              select(0);
+            },
+          },
+        ]
+      : []),
+  ];
 
   const addCornerItem = (
     index: number,
@@ -603,7 +661,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     "A cut runs between two corners of the piece's outer edge, not a hole's.";
 
   function startCut() {
-    if (selected === null || !corner) return;
+    if (single() === null || !corner) return;
     if (corner.ring !== 0) {
       options.onNotice(OUTER_EDGE, "refused");
       return;
@@ -616,7 +674,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   function finishCut(to: CornerAt) {
     const from = cutFrom;
-    const index = selected;
+    const index = single();
     stopCut();
     if (!from || index === null) return;
     const cut =
@@ -637,7 +695,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     }
     pieces.splice(index, 1, ...cut.parts);
     ignoreClickUntil = performance.now() + 500;
-    selected = null;
+    chosen = [];
     corner = null;
     added = null;
     drawPolygons();
@@ -658,7 +716,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     plus.style.display = "none";
   }
   function onHover(event: PointerEvent) {
-    if (drag || !editable || selected === null) return;
+    if (drag || !editable || single() === null) return;
     if (cutFrom) {
       const start = pixels[cutFrom.ring]?.[cutFrom.corner];
       const p = pixelAt(event);
@@ -746,11 +804,18 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   }
 
   group.addEventListener("pointerdown", (event) => {
+    const selected = single();
     if (event.button !== 0 || selected === null) return;
     event.stopPropagation();
     event.preventDefault();
     options.onMenu(null);
     const target = event.target as SVGElement;
+    // Shift+click inside the piece takes it out of the selection, as on
+    // any other piece; on its corners and squares it is a plain press.
+    if (adds(event) && !cutFrom && target === body) {
+      toggle(selected);
+      return;
+    }
     const at: CornerAt | null =
       target.dataset.corner !== undefined
         ? {
@@ -803,6 +868,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   });
 
   group.addEventListener("pointermove", (event) => {
+    const selected = single();
     if (!drag || selected === null) return;
     if (drag.kind === "size") {
       const p = pixelAt(event);
@@ -840,9 +906,9 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   group.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (selected === null) return;
+    const index = single();
+    if (index === null) return;
     stopCut();
-    const index = selected;
     const target = event.target as SVGElement;
     if (target.dataset.corner !== undefined) {
       const at = {
@@ -858,12 +924,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       return;
     }
     const edge = edgeNear(event, MENU_EDGE_PX);
-    openMenu(
-      event,
-      edge
-        ? [addCornerItem(index, edge), deleteItem(index)]
-        : [deleteItem(index)],
-    );
+    openMenu(event, [
+      ...(edge ? [addCornerItem(index, edge)] : []),
+      ...pieceItems(index),
+    ]);
   });
 
   // Just outside the selected piece, a right-click near its edge adds a
@@ -871,6 +935,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const mapRightClick = map.addListener(
     "rightclick",
     (event: google.maps.MapMouseEvent) => {
+      const selected = single();
       if (
         !editable ||
         selected === null ||
@@ -884,26 +949,31 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       else options.onMenu(null);
     },
   );
-  const mapClick = map.addListener("click", () => {
-    if (clickIgnored()) return;
-    options.onMenu(null);
-    select(null);
-  });
+  // A click on the map lets go of the selection; one adding to it, missing
+  // the piece, keeps it.
+  const mapClick = map.addListener(
+    "click",
+    (event: google.maps.MapMouseEvent) => {
+      if (clickIgnored()) return;
+      options.onMenu(null);
+      if (!adds(event.domEvent)) select(null);
+    },
+  );
   const mapMoved = [
     map.addListener("dragstart", () => options.onMenu(null)),
     map.addListener("zoom_changed", () => options.onMenu(null)),
   ];
 
   function removeSelected() {
-    if (selected === null) return;
-    if (corner) removeCorner(selected, corner);
-    else deletePiece(selected);
+    const selected = single();
+    if (selected !== null && corner) removeCorner(selected, corner);
+    else if (chosen.length > 0) deletePieces(chosen);
   }
 
   // Delete and Backspace take away what is selected; Esc stops a cut, then
-  // lets go of the corner, then of the piece. Not while a field is typed in.
+  // lets go of the corner, then of the pieces. Not while a field is typed in.
   function onKey(event: KeyboardEvent) {
-    if (!editable || selected === null || typing(event.target)) return;
+    if (!editable || chosen.length === 0 || typing(event.target)) return;
     if (event.key === "Escape") {
       if (cutFrom) stopCut();
       else if (corner) selectCorner(null);
@@ -924,7 +994,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       pieces = next.map((piece) => piece.map(open));
       corner = null;
       added = null;
-      if (selected !== null && !same) selected = null;
+      if (!same) chosen = [];
       options.onMenu(null);
       hidePlus();
       drawPolygons();
@@ -945,7 +1015,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     addPiece(ring) {
       stopCut();
       pieces = [...pieces, [open(ring)]];
-      selected = pieces.length - 1;
+      chosen = [pieces.length - 1];
       corner = null;
       added = null;
       drawPolygons();

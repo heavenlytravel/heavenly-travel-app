@@ -32,6 +32,8 @@ export function shortcutsHere() {
           aria: "Control+Shift+Z Control+Y",
         }) satisfies Shortcut,
     remove: { shown: "Delete", aria: "Delete Backspace" } satisfies Shortcut,
+    /** The clicks that add a piece to the selection; Ctrl+click is a Mac's right-click. */
+    addClick: mac ? "Shift+click or ⌘+click" : "Shift+click or Ctrl+click",
   };
 }
 
@@ -72,7 +74,7 @@ export function ZoneMapHelp({
       <ul className="grid gap-2.5">
         <Step icon={<PencilIcon />}>
           Edit: click a piece to select it, then drag inside it to move it, or
-          drag a corner.
+          drag a corner. {keys.addClick} adds more pieces to the selection.
         </Step>
         <Step icon={<HandIcon />}>
           Only move the map, so nothing changes by mistake.
@@ -104,7 +106,9 @@ export function ZoneMapHelp({
           is cut in two.
         </Step>
         <Step icon={<TrashIcon />}>
-          Remove the corner selected, or the piece ({keys.remove.shown}).
+          Remove the corner selected, or the pieces ({keys.remove.shown}). A
+          right-click on a piece can delete all the others, to keep only the
+          main island.
         </Step>
         <Step icon={<UndoIcon />}>
           Undo ({keys.undo.shown}), and Redo ({keys.redo.shown}) to take an undo

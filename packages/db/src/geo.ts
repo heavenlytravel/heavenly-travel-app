@@ -98,8 +98,11 @@ export function bboxOfRing(ring: Ring): BBox {
   return bboxOf([[ring]]);
 }
 
-/** The circle's corners, so a drawn circle and a drawn polygon are one shape. */
-export const CIRCLE_SEGMENTS = 48;
+/**
+ * The circle's corners, so a drawn circle and a drawn polygon are one
+ * shape: round enough, and few enough to reshape by hand.
+ */
+const CIRCLE_SEGMENTS = 24;
 
 /**
  * A closed ring around a point at a radius in metres: the polygon a zone
@@ -109,13 +112,12 @@ export const CIRCLE_SEGMENTS = 48;
 export function circleRing(
   center: { lat: number; lng: number },
   radiusM: number,
-  segments = CIRCLE_SEGMENTS,
 ): Ring {
   const radiusDeg = radiusM / 1000 / KM_PER_DEGREE;
   const scale = Math.cos((center.lat * Math.PI) / 180);
   const ring: Ring = [];
-  for (let i = 0; i < segments; i++) {
-    const angle = (2 * Math.PI * i) / segments;
+  for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
+    const angle = (2 * Math.PI * i) / CIRCLE_SEGMENTS;
     ring.push([
       center.lng + (radiusDeg * Math.cos(angle)) / scale,
       center.lat + radiusDeg * Math.sin(angle),

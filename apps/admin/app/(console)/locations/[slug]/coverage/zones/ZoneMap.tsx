@@ -46,9 +46,6 @@ export type {
   OtherZone,
 } from "./map-shapes";
 
-/** Corners of a circle placed on the map: round enough, and few enough to reshape by hand. */
-const CIRCLE_CORNERS = 24;
-
 /** How much of the view a new circle or square takes. */
 const STARTER_SHARE = 0.25;
 
@@ -315,7 +312,7 @@ export function ZoneMap({
     editor.current?.setEditable(true);
     editor.current?.addPiece(
       kind === "circle"
-        ? circleRing(view.center, view.size / 2, CIRCLE_CORNERS)
+        ? circleRing(view.center, view.size / 2)
         : squareRing(view.center, view.size),
     );
   }

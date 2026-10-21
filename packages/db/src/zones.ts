@@ -1,6 +1,6 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { refuse, type Change, type Created, type Refusal } from "./change";
+import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
 import { andList } from "./names";
@@ -9,8 +9,11 @@ import {
   ZONE_LIMITS,
   checkOddHours,
   checkZoneFields,
+  checkZoneShape,
   dropoffRuleOf,
+  isZoneDistrict,
   oddHoursOf,
+  reshapedFromDistrict,
   type DropoffRule,
   type OddHours,
   type RateCell,
@@ -232,10 +235,16 @@ export async function listPriceLists(
 }
 
 /**
- * A zone write refused because the zone overlaps others, with their names:
- * the zone maker offers to cut them out of it.
+ * A zone a shape overlaps, as a refusal names it: "Langkawi", or "KLIA
+ * (Selangor)" for another location's.
  */
-export type ZoneRefusal = Refusal & { overlaps?: string[] };
+export type ZoneInTheWay = { id: string; label: string };
+
+/**
+ * A zone write refused because the zone overlaps others, with those zones:
+ * the zone maker offers to cut them out of it, or it out of them.
+ */
+export type ZoneRefusal = Refusal & { overlaps?: ZoneInTheWay[] };
 
 /**
  * The key of the lock zone writes take, one at a time across the console,
@@ -244,43 +253,162 @@ export type ZoneRefusal = Refusal & { overlaps?: string[] };
 const ZONE_WRITE_LOCK = 261021;
 
 /**
- * Why the shape cannot be saved: it covers ground another zone covers, of
- * this location or another. Zones never overlap, so a pickup falls in one
- * zone of one location at most. Null when it overlaps none. Takes the
+ * The zones whose ground the shape covers, of this location or another, in
+ * their order; `zoneId`, the zone being remade, is left out. Takes the
  * lock, so it runs first in the write's transaction.
  */
-async function overlapRefusal(
+async function zonesInTheWay(
   tx: Prisma.TransactionClient,
   locationId: string,
   shape: ZoneShape,
   zoneId?: string,
-): Promise<ZoneRefusal | null> {
+) {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
   const zones = await tx.zone.findMany({
     where: zoneId ? { id: { not: zoneId } } : undefined,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: {
+      id: true,
       name: true,
       shape: true,
+      drawnFrom: true,
       locationId: true,
       location: { select: { name: true } },
     },
   });
-  const overlaps = zones.flatMap((zone) =>
+  return zones.flatMap((zone) =>
     isZoneShape(zone.shape) && shapesOverlap(shape, zone.shape)
       ? [
-          zone.locationId === locationId
-            ? zone.name
-            : `${zone.name} (${zone.location.name})`,
+          {
+            ...zone,
+            shape: zone.shape,
+            label:
+              zone.locationId === locationId
+                ? zone.name
+                : `${zone.name} (${zone.location.name})`,
+          },
         ]
       : [],
   );
-  if (overlaps.length === 0) return null;
+}
+
+/**
+ * Why a shape over the zones cannot be saved as it is: zones never overlap,
+ * so a pickup falls in one zone of one location at most.
+ */
+function overlapRefusal(zones: readonly ZoneInTheWay[]): ZoneRefusal {
+  const labels = zones.map((zone) => zone.label);
+  const one = zones.length === 1;
   return {
     ok: false,
-    error: `This zone overlaps ${andList(overlaps)}. Zones never overlap: reshape it, or cut ${overlaps.length === 1 ? "that zone" : "those zones"} out of it.`,
-    overlaps,
+    error: `This zone overlaps ${andList(labels)}. Zones never overlap: reshape it, cut ${one ? "that zone" : "those zones"} out of it, or cut it out of ${one ? "that zone" : "them"}.`,
+    overlaps: zones.map(({ id, label }) => ({ id, label })),
   };
+}
+
+/**
+ * Makes way for a zone's shape. With no zone in the way, nothing to do.
+ * Zones in the way refuse the write, unless the admin chose to cut this
+ * zone out of them (`cutFrom`, their ids as the refusal named them): then
+ * each loses the ground the shape covers, keeping its rates, and a district
+ * as it is becomes reshaped from it. Refused when the zones in the way are
+ * no longer the ones chosen, or when one would be left with nothing or
+ * with more corners than a zone keeps.
+ * Answers the zones cut, for the pages to refresh.
+ */
+async function makeWay(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  zone: { locationId: string; name: string; shape: ZoneShape },
+  zoneId: string | undefined,
+  cutFrom: readonly string[] | undefined,
+): Promise<
+  { ok: true; cut: { id: string; locationId: string }[] } | ZoneRefusal
+> {
+  const inTheWay = await zonesInTheWay(tx, zone.locationId, zone.shape, zoneId);
+  if (inTheWay.length === 0) return { ok: true, cut: [] };
+  const refusal = overlapRefusal(inTheWay);
+  if (!cutFrom) return refusal;
+  const chosen = new Set(cutFrom);
+  if (
+    chosen.size !== inTheWay.length ||
+    inTheWay.some((other) => !chosen.has(other.id))
+  ) {
+    return {
+      ...refusal,
+      error: `The zones in the way changed meanwhile. ${refusal.error}`,
+    };
+  }
+  // Every cut is worked out before any is written: a refusal returns
+  // from the transaction, which then commits what was written.
+  const cuts = inTheWay.map((other) => ({
+    ...other,
+    left: cutOut(other.shape, [zone.shape]),
+  }));
+  const emptied = cuts.filter((other) => other.left.length === 0);
+  if (emptied.length > 0) {
+    // The other way, cutting them out of this zone, is still open.
+    const one = emptied.length === 1;
+    return {
+      ...refuse(
+        `This zone covers all of ${andList(emptied.map((other) => other.label))}, so nothing of ${one ? "it" : "them"} would be left. Cut ${one ? "it" : "them"} out of this zone instead, remove ${one ? "it" : "them"} on the Coverage tab, or reshape this zone.`,
+      ),
+      overlaps: refusal.overlaps,
+    };
+  }
+  // A hole adds this zone's corners to theirs; past the limit, no editor
+  // could save them again.
+  const crowded = cuts.filter((other) => !checkZoneShape(other.left).ok);
+  if (crowded.length > 0) {
+    const one = crowded.length === 1;
+    return {
+      ...refuse(
+        `With this zone cut out, ${andList(crowded.map((other) => other.label))} would have more than ${ZONE_LIMITS.corners} corners. Cut ${one ? "it" : "them"} out of this zone instead, or give this zone fewer corners.`,
+      ),
+      overlaps: refusal.overlaps,
+    };
+  }
+  for (const other of cuts) {
+    await tx.zone.update({
+      where: { id: other.id },
+      data: {
+        shape: other.left,
+        ...(isZoneDistrict(other.drawnFrom)
+          ? { drawnFrom: reshapedFromDistrict(other.drawnFrom) }
+          : {}),
+      },
+    });
+    await logActivity(tx, actor, {
+      action: "location.zone.updated",
+      entityId: other.locationId,
+      before: { zoneId: other.id, name: other.name },
+      after: { zoneId: other.id, name: other.name, cutFor: zone.name },
+    });
+  }
+  return {
+    ok: true,
+    cut: cuts.map(({ id, locationId }) => ({ id, locationId })),
+  };
+}
+
+/**
+ * The other locations a zone write reaches, by id, once each: those whose
+ * zones it cut, and those whose grids end at the zones it changed.
+ */
+async function alsoChangedBy(
+  tx: Prisma.TransactionClient,
+  locationId: string,
+  changed: readonly { id: string; locationId: string }[],
+): Promise<string[]> {
+  const grids = await Promise.all(
+    changed.map((zone) => gridsEndingAt(tx, zone)),
+  );
+  return [
+    ...new Set([
+      ...changed.map((zone) => zone.locationId),
+      ...grids.flat().map((grid) => grid.locationId),
+    ]),
+  ].filter((id) => id !== locationId);
 }
 
 /**
@@ -308,12 +436,24 @@ export async function cutOutOverlaps(
   return { ok: true, shape: left };
 }
 
-/** A new zone, after the location's others. It may not overlap any zone. */
+/**
+ * A zone write done, with the other locations whose pages it changes, by
+ * id: those whose zones it cut, and those whose grids end at a zone it
+ * changed. Their search keeps to those zones too, so they are refreshed
+ * with the location's own.
+ */
+export type ZoneChanged = { ok: true; alsoChanged: string[] };
+
+/**
+ * A new zone, after the location's others. It may not overlap any zone,
+ * unless `cutFrom` names the zones in the way to cut it out of (`makeWay`).
+ */
 export async function createZone(
   actor: Actor,
   locationId: string,
   fields: ZoneFields,
-): Promise<Created | ZoneRefusal> {
+  cutFrom?: readonly string[],
+): Promise<(ZoneChanged & { id: string }) | ZoneRefusal> {
   const check = checkZoneFields(fields);
   if (!check.ok) return check;
 
@@ -323,13 +463,20 @@ export async function createZone(
       select: { id: true, _count: { select: { zones: true } } },
     });
     if (!location) return NOT_FOUND;
-    const overlap = await overlapRefusal(tx, locationId, fields.shape);
-    if (overlap) return overlap;
+    // Before the way is made: a refusal after it would keep the cuts.
     if (location._count.zones >= ZONE_LIMITS.zones) {
       return refuse(
         `A location keeps at most ${ZONE_LIMITS.zones} zones. Delete one first.`,
       );
     }
+    const way = await makeWay(
+      tx,
+      actor,
+      { locationId, name: fields.name, shape: fields.shape },
+      undefined,
+      cutFrom,
+    );
+    if (!way.ok) return way;
     const last = await tx.zone.aggregate({
       where: { locationId },
       _max: { sortOrder: true },
@@ -348,22 +495,24 @@ export async function createZone(
       entityId: locationId,
       after: { zoneId: zone.id, name: fields.name },
     });
-    return { ok: true, id: zone.id };
+    return {
+      ok: true,
+      id: zone.id,
+      alsoChanged: await alsoChangedBy(tx, locationId, way.cut),
+    };
   });
 }
 
 /**
- * A zone write done, with the other locations whose grids end at the zone,
- * by id: their pages' search keeps to the zone too, so they are refreshed
- * with its own.
+ * Renames or redraws a zone. Its rates stay, and other locations' routes to
+ * it follow it. It may not overlap any other zone, unless `cutFrom` names
+ * the zones in the way to cut it out of (`makeWay`).
  */
-export type ZoneChanged = { ok: true; otherGrids: string[] };
-
-/** Renames or redraws a zone. Its rates stay, and other locations' routes to it follow it. It may not overlap any other zone. */
 export async function updateZone(
   actor: Actor,
   id: string,
   fields: ZoneFields,
+  cutFrom?: readonly string[],
 ): Promise<ZoneChanged | ZoneRefusal> {
   const check = checkZoneFields(fields);
   if (!check.ok) return check;
@@ -371,9 +520,14 @@ export async function updateZone(
   return db.$transaction(async (tx) => {
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
-    const overlap = await overlapRefusal(tx, zone.locationId, fields.shape, id);
-    if (overlap) return overlap;
-    const grids = await gridsEndingAt(tx, zone);
+    const way = await makeWay(
+      tx,
+      actor,
+      { locationId: zone.locationId, name: fields.name, shape: fields.shape },
+      id,
+      cutFrom,
+    );
+    if (!way.ok) return way;
     await tx.zone.update({
       where: { id },
       data: {
@@ -388,7 +542,10 @@ export async function updateZone(
       before: { zoneId: id, name: zone.name },
       after: { zoneId: id, name: fields.name },
     });
-    return { ok: true, otherGrids: grids.map((grid) => grid.locationId) };
+    return {
+      ok: true,
+      alsoChanged: await alsoChangedBy(tx, zone.locationId, [zone, ...way.cut]),
+    };
   });
 }
 
@@ -417,7 +574,7 @@ export async function deleteZone(
           : {}),
       },
     });
-    return { ok: true, otherGrids: grids.map((grid) => grid.locationId) };
+    return { ok: true, alsoChanged: grids.map((grid) => grid.locationId) };
   });
 }
 

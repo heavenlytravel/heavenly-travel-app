@@ -703,6 +703,11 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.zone.created":
       return `Added ${zoneName(entry.after)}`;
     case "location.zone.updated": {
+      // Another zone saved over this one cut its ground out of it.
+      const cutFor = field(entry.after, "cutFor");
+      if (typeof cutFor === "string") {
+        return `Cut ${cutFor} out of ${zoneName(entry.after)}`;
+      }
       const was = field(entry.before, "name");
       const now = field(entry.after, "name");
       return typeof was === "string" && typeof now === "string" && was !== now

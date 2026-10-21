@@ -109,6 +109,7 @@ export type {
   ZoneRate,
   LocationPriceList,
   ZoneRefusal,
+  ZoneInTheWay,
   ZoneOutline,
   ZoneElsewhere,
   ZoneChanged,

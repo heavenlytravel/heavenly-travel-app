@@ -196,10 +196,17 @@ The partner grid, as data:
   one zone of one location at most. `createZone` and `updateZone` refuse a shape that
   covers more than 0.002 km² of another zone (about 45 m by 45 m: the rounding of
   borders drawn to meet), under an advisory lock so two saves at once cannot both
-  pass. The refusal names the zones in the way, and the zone
-  maker offers "Cut them out", which takes their ground off the new zone
-  (`cutOutOverlaps`); a district or its mukims cut that way become the admin's own
-  shape. The console home's "Test an address" names the zone a place falls in, next to
+  pass. The refusal names the zones in the way, and the zone maker offers both ways
+  out. "Cut them out of this zone" takes their ground off the zone being saved
+  (`cutOutOverlaps`), to check on the map before saving again. "Cut this zone out of
+  them" (2026-10-21), after a confirm, saves the zone as drawn and takes its ground off
+  them in the same transaction (`makeWay`, with the ids the refusal named): an airport
+  drawn inside a district zone keeps its circle and leaves a hole in the district.
+  The cut zones keep their rates, the activity log says "Cut Airport out of the zone
+  Langkawi", and the pages of every location reached are refreshed. It is refused when
+  the zones in the way changed meanwhile, when one would be left with nothing, or with
+  more corners than a zone keeps. Either way, a district or its mukims that lose ground
+  become the admin's own shape, reshaped from them. The console home's "Test an address" names the zone a place falls in, next to
   its location and district.
 - A **zone rate** is one cell: from zone, to zone, vehicle class, price. Entered on a
   grid, one row per route and one column per offered class, as in the contract. A route

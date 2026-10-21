@@ -15,6 +15,7 @@ import {
   updateZone,
   type MultiPolygon,
   type ZoneFields,
+  type ZoneInTheWay,
 } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
@@ -44,7 +45,21 @@ import type { MukimChoice } from "./zones/map-shapes";
  * overlaps when that is why.
  */
 export type ZoneSaved =
-  { ok: true; id: string } | { ok: false; error: string; overlaps?: string[] };
+  | { ok: true; id: string }
+  | { ok: false; error: string; overlaps?: ZoneInTheWay[] };
+
+/**
+ * The zones in the way the admin chose to cut the zone out of, as the last
+ * refusal named them, by id; none to keep every other zone as it is.
+ */
+function cutFromOf(cutFrom: unknown): string[] | undefined | null {
+  if (cutFrom === undefined || cutFrom === null) return undefined;
+  return Array.isArray(cutFrom) &&
+    cutFrom.length > 0 &&
+    cutFrom.every((id) => typeof id === "string")
+    ? cutFrom
+    : null;
+}
 
 /** Some of a district's mukims put together, or why not. */
 async function mukimShapeOf(
@@ -114,45 +129,59 @@ async function zoneFieldsOf(
   };
 }
 
-/** `fields` is the zone's name, shape and origin as JSON text. */
+/**
+ * `fields` is the zone's name, shape and origin as JSON text; `cutFrom`,
+ * the zones in the way to cut it out of, when the admin chose that.
+ */
 export async function createZoneAction(
   locationId: string,
   fields: string,
+  cutFrom?: string[],
 ): Promise<ZoneSaved> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  if (typeof locationId !== "string") {
-    return { ok: false, error: "Missing location." };
+  const chosen = cutFromOf(cutFrom);
+  if (typeof locationId !== "string" || chosen === null) {
+    return { ok: false, error: "The zone could not be read. Reload." };
   }
   const zone = await zoneFieldsOf(fields);
   if (!zone.ok) return zone;
-  const result = await createZone(actorOf(admin), locationId, zone.value);
-  if (result.ok) {
-    revalidateLocation();
-    refreshLocationAfter(locationId);
-  }
-  return result;
+  const result = await createZone(
+    actorOf(admin),
+    locationId,
+    zone.value,
+    chosen,
+  );
+  if (!result.ok) return result;
+  revalidateLocation();
+  refreshLocationAfter(locationId, ...result.alsoChanged);
+  return { ok: true, id: result.id };
 }
 
-/** `fields` as for `createZoneAction`. */
+/** `fields` and `cutFrom` as for `createZoneAction`. */
 export async function updateZoneAction(
   locationId: string,
   zoneId: string,
   fields: string,
+  cutFrom?: string[],
 ): Promise<ZoneSaved> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  if (typeof locationId !== "string" || typeof zoneId !== "string") {
-    return { ok: false, error: "Missing zone." };
+  const chosen = cutFromOf(cutFrom);
+  if (
+    typeof locationId !== "string" ||
+    typeof zoneId !== "string" ||
+    chosen === null
+  ) {
+    return { ok: false, error: "The zone could not be read. Reload." };
   }
   const zone = await zoneFieldsOf(fields);
   if (!zone.ok) return zone;
-  const result = await updateZone(actorOf(admin), zoneId, zone.value);
-  if (result.ok) {
-    revalidateLocation();
-    refreshLocationAfter(locationId, ...result.otherGrids);
-  }
-  return result.ok ? { ok: true, id: zoneId } : result;
+  const result = await updateZone(actorOf(admin), zoneId, zone.value, chosen);
+  if (!result.ok) return result;
+  revalidateLocation();
+  refreshLocationAfter(locationId, ...result.alsoChanged);
+  return { ok: true, id: zoneId };
 }
 
 export async function deleteZoneAction(
@@ -167,7 +196,7 @@ export async function deleteZoneAction(
   const result = await deleteZone(actorOf(admin), zoneId);
   if (result.ok) {
     revalidateLocation();
-    refreshLocationAfter(locationId, ...result.otherGrids);
+    refreshLocationAfter(locationId, ...result.alsoChanged);
   }
   return stateOf(result);
 }

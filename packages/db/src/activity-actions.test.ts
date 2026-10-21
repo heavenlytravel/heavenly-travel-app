@@ -188,6 +188,25 @@ describe("describeActivity", () => {
     assert.equal(change(1, null), "Removed from the top choices");
   });
 
+  it("says a zone lost ground to another saved over it", () => {
+    assert.equal(
+      describeActivity({
+        action: "location.zone.updated",
+        before: { zoneId: "z1", name: "Langkawi" },
+        after: { zoneId: "z1", name: "Langkawi", cutFor: "Airport" },
+      }),
+      "Cut Airport out of the zone Langkawi",
+    );
+    assert.equal(
+      describeActivity({
+        action: "location.zone.updated",
+        before: { zoneId: "z1", name: "Langkawi" },
+        after: { zoneId: "z1", name: "Langkawi" },
+      }),
+      "Redrew the zone Langkawi",
+    );
+  });
+
   it("says a location was deleted", () => {
     assert.equal(
       describeActivity({

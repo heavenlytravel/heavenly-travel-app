@@ -103,6 +103,19 @@ function mukimCodesOf(codes: string[] | undefined) {
   return codes ? { mukimCodes: [...new Set(codes)] } : {};
 }
 
+/**
+ * A district zone, or one of some of its mukims, that loses ground to
+ * another zone: its boundary is no longer the official one, so it is
+ * reshaped from them.
+ */
+export function reshapedFromDistrict(origin: ZoneDistrict): ZoneReshaped {
+  return {
+    reshapedFrom: origin.districtCode,
+    ...mukimCodesOf(origin.mukimCodes),
+    label: origin.label,
+  };
+}
+
 /** Where a zone's shape came from, when it was not drawn from a plain circle or square. */
 export type ZoneOrigin = ZoneCircle | ZoneDistrict | ZoneReshaped;
 

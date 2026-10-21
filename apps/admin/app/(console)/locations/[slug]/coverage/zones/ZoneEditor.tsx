@@ -13,6 +13,7 @@ import {
   type ZoneShape,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
@@ -32,6 +33,7 @@ import {
   mukimPolygonsAction,
   placePointAction,
   updateZoneAction,
+  type ZoneSaved,
 } from "../actions";
 import {
   ZoneMap,
@@ -43,6 +45,11 @@ import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
 import { FormError } from "../../../../../_components/FormError";
 import { pricedFromSentence, type PricedFrom } from "../zone-lines";
+
+/** A zone the last save found this one overlapping: its id, and its name as the refusal gave it. */
+type InTheWay = NonNullable<
+  Extract<ZoneSaved, { ok: false }>["overlaps"]
+>[number];
 
 /** Where a zone starts: a district or its mukims, a circle around an address, or a circle or square put on the map. */
 type Source = "district" | "address" | "draw";
@@ -136,7 +143,10 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * added and removed with a right-click, a piece moved alone, deleted, or
  * added, each step undone with Undo. A zone may not overlap any
  * other, this location's or another's: when the save is refused for it,
- * "Cut them out" takes their ground off this one. A district as it is
+ * either "Cut them out of this zone" takes their ground off this one, to
+ * check on the map before saving, or "Cut this zone out of them" saves
+ * this one as it is and takes its ground off them, after asking: a small
+ * zone drawn inside a big one keeps its shape. A district as it is
  * needs no map; everything else is drawn on it. A saved zone goes back to
  * the Coverage tab.
  */
@@ -238,8 +248,10 @@ export function ZoneEditor({
   const [frame, setFrame] = useState(0);
   const reframe = () => setFrame((count) => count + 1);
   const [error, setError] = useState<string | null>(null);
-  // The zones the last save found this one overlapping, to cut out.
-  const [overlaps, setOverlaps] = useState<string[] | null>(null);
+  // The zones the last save found this one overlapping: to cut out of
+  // this one, or to cut this one out of.
+  const [overlaps, setOverlaps] = useState<InTheWay[] | null>(null);
+  const [confirmDialog, confirm] = useConfirm();
   const [pending, startTransition] = useTransition();
   // Each preview asked of the server is numbered; an answer that arrives
   // after a newer question is dropped, so quick ticks end on the last.
@@ -382,7 +394,7 @@ export function ZoneEditor({
 
   function cutThemOut() {
     if (!shape || !overlaps) return;
-    const cut = overlaps;
+    const cut = overlaps.map((other) => other.label);
     // With others' ground taken off, a district's boundary is the admin's
     // own shape, as after any change.
     preview(cutOutAction(JSON.stringify(shape), zone?.id ?? null), (result) => {
@@ -393,7 +405,26 @@ export function ZoneEditor({
     });
   }
 
-  function save() {
+  /**
+   * Keeps this zone as it is on the map and saves it, the zones in the way
+   * losing the ground it covers, once the admin agrees: it changes them too.
+   */
+  async function cutOutOfThem() {
+    if (!overlaps) return;
+    const labels = overlaps.map((other) => other.label);
+    const one = overlaps.length === 1;
+    const go = await confirm({
+      title: one
+        ? `Cut this zone out of ${labels[0]}?`
+        : `Cut this zone out of ${overlaps.length} zones?`,
+      description: `${andList(labels)} ${one ? "loses" : "lose"} the ground this zone covers and ${one ? "keeps its" : "keep their"} rates; a pickup there becomes this zone's. This zone is saved as it is on the map.`,
+      action: "Cut and save",
+    });
+    if (go) save(overlaps);
+  }
+
+  /** Saves the zone; `cutFrom`, the zones in the way, to cut it out of them. */
+  function save(cutFrom?: readonly InTheWay[]) {
     if (!shape) {
       setError(
         source === "district"
@@ -424,19 +455,25 @@ export function ZoneEditor({
           ? { placeId, label: placeText, radiusM }
           : null;
     const fields = JSON.stringify({ name, shape, drawnFrom });
+    const cutIds = cutFrom?.map((other) => other.id);
     startTransition(async () => {
       const result = await answerOf(
         zone
-          ? updateZoneAction(locationId, zone.id, fields)
-          : createZoneAction(locationId, fields),
+          ? updateZoneAction(locationId, zone.id, fields, cutIds)
+          : createZoneAction(locationId, fields, cutIds),
       );
       if ("error" in result) {
         setError(result.error);
         setOverlaps("overlaps" in result ? (result.overlaps ?? null) : null);
         return;
       }
+      const cut = cutFrom
+        ? ` and cut it out of ${andList(cutFrom.map((other) => other.label))}`
+        : "";
       toast.success(
-        zone ? `Saved the zone ${name}.` : `Added the zone ${name}.`,
+        zone
+          ? `Saved the zone ${name}${cut}.`
+          : `Added the zone ${name}${cut}.`,
       );
       router.push(locationTabHref(locationSlug, "coverage"));
     });
@@ -700,7 +737,7 @@ export function ZoneEditor({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={save} disabled={pending}>
+        <Button onClick={() => save()} disabled={pending}>
           {pending ? "Saving…" : zone ? "Save zone" : "Add zone"}
         </Button>
         <Link
@@ -715,17 +752,32 @@ export function ZoneEditor({
           </span>
         ) : null}
         <FormError error={error} />
-        {overlaps ? (
+      </div>
+      {overlaps ? (
+        <div className="-mt-3 flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
             onClick={cutThemOut}
             disabled={pending}
           >
-            {overlaps.length === 1 ? "Cut it out" : "Cut them out"}
+            {overlaps.length === 1
+              ? `Cut ${overlaps[0]?.label} out of this zone`
+              : "Cut them out of this zone"}
           </Button>
-        ) : null}
-      </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={cutOutOfThem}
+            disabled={pending}
+          >
+            {overlaps.length === 1
+              ? `Cut this zone out of ${overlaps[0]?.label}`
+              : "Cut this zone out of them"}
+          </Button>
+        </div>
+      ) : null}
+      {confirmDialog}
     </div>
   );
 }

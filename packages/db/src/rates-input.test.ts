@@ -14,6 +14,7 @@ import {
   parseOddHoursFields,
   parseRateCells,
   parseZoneFields,
+  reshapedFromDistrict,
   timeOfMinute,
 } from "./rates-input";
 
@@ -117,6 +118,25 @@ describe("parseZoneFields", () => {
       mukimCodes: ["langkawi:bandar-kuah"],
       label: "Langkawi",
     });
+  });
+
+  it("reshapes a district zone that loses ground, its mukims kept", () => {
+    assert.deepEqual(
+      reshapedFromDistrict({ districtCode: "langkawi", label: "Langkawi" }),
+      { reshapedFrom: "langkawi", label: "Langkawi" },
+    );
+    assert.deepEqual(
+      reshapedFromDistrict({
+        districtCode: "langkawi",
+        mukimCodes: ["langkawi:bandar-kuah"],
+        label: "Langkawi",
+      }),
+      {
+        reshapedFrom: "langkawi",
+        mukimCodes: ["langkawi:bandar-kuah"],
+        label: "Langkawi",
+      },
+    );
   });
 
   it("refuses a district zone of no mukims, and mukims that are not codes", () => {

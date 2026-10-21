@@ -1,11 +1,18 @@
 import { difference, intersection, union } from "polyclip-ts";
-import { bboxOf, boxesMeet, ringArea, type MultiPolygon } from "./geo";
+import {
+  bboxOf,
+  boxesMeet,
+  ringArea,
+  type MultiPolygon,
+  type Polygon,
+} from "./geo";
 import { polygonsOf, type ZoneShape } from "./zone-match";
 
 /**
  * The shape arithmetic zones need, on the server only (the clipping library
- * stays out of the browser): areas put together into one outline, how much
- * two shapes overlap, and a shape with others cut out of it. Shapes are in
+ * stays out of the browser): areas put together into one outline, a zone's
+ * own pieces joined where they overlap, how much two shapes overlap, and a
+ * shape with others cut out of it. Shapes are in
  * degrees; areas come out in square kilometres, flat with the longitude
  * scaled by the latitude, exact enough at the size of a district. See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
@@ -38,6 +45,40 @@ export function unionOf(shapes: readonly ZoneShape[]): MultiPolygon {
   const [first, ...rest] = shapes.map(polygonsOf);
   if (!first) return [];
   return rounded(union(first, ...rest));
+}
+
+/**
+ * A zone's pieces put together where they overlap or meet, as the zone
+ * maker's Merge does: pieces apart stay apart.
+ */
+export function joinPieces(pieces: MultiPolygon): MultiPolygon {
+  return unionOf(pieces.map((piece) => [piece]));
+}
+
+/**
+ * The shape with its pieces that overlap joined, so no ground of the zone
+ * is drawn twice; the shape as it is when none do. Every other piece stays
+ * as drawn, the two parts of a cut, which only meet, included.
+ */
+export function joinOverlaps(shape: ZoneShape): ZoneShape {
+  const pieces = polygonsOf(shape);
+  // Pieces that overlap, directly or through a chain of others, share a group.
+  const group = pieces.map((_, i) => i);
+  const root = (i: number): number =>
+    group[i] === i ? i : (group[i] = root(group[i]!));
+  for (const [i, piece] of pieces.entries()) {
+    for (const [j, other] of pieces.entries()) {
+      if (j > i && shapesOverlap([piece], [other])) group[root(j)] = root(i);
+    }
+  }
+  const groups = new Map<number, Polygon[]>();
+  for (const [i, piece] of pieces.entries()) {
+    groups.set(root(i), [...(groups.get(root(i)) ?? []), piece]);
+  }
+  if (groups.size === pieces.length) return shape;
+  return [...groups.values()].flatMap((together) =>
+    together.length === 1 ? together : joinPieces(together),
+  );
 }
 
 /** The area of polygons, their holes taken off, in square kilometres. */

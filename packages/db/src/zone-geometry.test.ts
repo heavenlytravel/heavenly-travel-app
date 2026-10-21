@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { circleRing, type Ring } from "./geo";
+import { polygonsOf } from "./zone-match";
 import {
   areaKm2,
   cutOut,
+  joinOverlaps,
+  joinPieces,
   overlapKm2,
   shapesOverlap,
   unionOf,
@@ -33,6 +36,51 @@ describe("unionOf", () => {
 
   it("keeps pieces that do not touch apart", () => {
     assert.equal(unionOf([west, square(99.8, 6.3, 0.01)]).length, 2);
+  });
+});
+
+describe("joinPieces", () => {
+  it("joins pieces that meet or overlap, and keeps one apart", () => {
+    const joined = joinPieces([
+      [west],
+      [square(99.71, 6.3, 0.02)],
+      [square(99.8, 6.3, 0.01)],
+    ]);
+    assert.equal(joined.length, 2);
+    const expected = areaKm2([
+      [box(99.7, 6.3, 0.03, 0.02)],
+      [square(99.8, 6.3, 0.01)],
+    ]);
+    assert.ok(Math.abs(areaKm2(joined) - expected) < 1e-6);
+  });
+});
+
+describe("joinOverlaps", () => {
+  it("joins the pieces that overlap, and leaves the others as drawn", () => {
+    const apart = square(99.8, 6.3, 0.01);
+    const circle = circleRing({ lat: 6.31, lng: 99.72 }, 800);
+    const joined = polygonsOf(joinOverlaps([[west], [apart], [circle]]));
+    assert.equal(joined.length, 2);
+    assert.ok(
+      Math.abs(areaKm2([joined[0]!]) - areaKm2(unionOf([west, circle]))) < 1e-6,
+    );
+    assert.equal(joined[1]![0], apart);
+  });
+
+  it("joins a chain of pieces, each overlapping the next", () => {
+    const joined = joinOverlaps([
+      [square(99.7, 6.3, 0.02)],
+      [square(99.75, 6.3, 0.02)],
+      [box(99.715, 6.3, 0.04, 0.01)],
+    ]);
+    assert.equal(polygonsOf(joined).length, 1);
+  });
+
+  it("keeps the shape as it is when no pieces overlap, pieces that only meet included", () => {
+    const shape = [[west], [east]];
+    assert.equal(joinOverlaps(shape), shape);
+    const ring = square(99.7, 6.3, 0.02);
+    assert.equal(joinOverlaps(ring), ring);
   });
 });
 

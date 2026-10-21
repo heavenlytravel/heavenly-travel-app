@@ -19,7 +19,7 @@ import {
   type RateCell,
   type ZoneFields,
 } from "./rates-input";
-import { cutOut, shapesOverlap } from "./zone-geometry";
+import { cutOut, joinOverlaps, shapesOverlap } from "./zone-geometry";
 import type { MultiPolygon } from "./geo";
 import { isZoneShape, type ZoneShape } from "./zone-match";
 
@@ -483,6 +483,22 @@ export async function cutOutOverlaps(
 }
 
 /**
+ * The fields as a zone write stores them, once checked: the shape's pieces
+ * that overlap joined (`joinOverlaps`), so the admin need not merge them
+ * first. A district as it is keeps its boundary as the data has it.
+ */
+function fieldsToWrite(
+  fields: ZoneFields,
+): { ok: true; fields: ZoneFields } | Refusal {
+  const check = checkZoneFields(fields);
+  if (!check.ok) return check;
+  if (isZoneDistrict(fields.drawnFrom)) return { ok: true, fields };
+  const shape = joinOverlaps(fields.shape);
+  const joined = checkZoneShape(shape);
+  return joined.ok ? { ok: true, fields: { ...fields, shape } } : joined;
+}
+
+/**
  * A zone write done, with the other locations whose pages it changes, by
  * id: those whose zones it cut, and those whose grids end at a zone it
  * changed. Their search keeps to those zones too, so they are refreshed
@@ -491,17 +507,19 @@ export async function cutOutOverlaps(
 export type ZoneChanged = { ok: true; alsoChanged: string[] };
 
 /**
- * A new zone, after the location's others. It may not overlap any zone,
- * unless `cutFrom` names the zones in the way to trim (`makeWay`).
+ * A new zone, after the location's others, its overlapping pieces joined
+ * (`fieldsToWrite`). It may not overlap any zone, unless `cutFrom` names
+ * the zones in the way to trim (`makeWay`).
  */
 export async function createZone(
   actor: Actor,
   locationId: string,
-  fields: ZoneFields,
+  posted: ZoneFields,
   cutFrom?: readonly string[],
 ): Promise<(ZoneChanged & { id: string }) | ZoneRefusal> {
-  const check = checkZoneFields(fields);
-  if (!check.ok) return check;
+  const ready = fieldsToWrite(posted);
+  if (!ready.ok) return ready;
+  const { fields } = ready;
 
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
@@ -550,18 +568,20 @@ export async function createZone(
 }
 
 /**
- * Renames or redraws a zone. Its rates stay, and other locations' routes to
- * it follow it. It may not overlap any other zone, unless `cutFrom` names
- * the zones in the way to trim (`makeWay`).
+ * Renames or redraws a zone, its overlapping pieces joined
+ * (`fieldsToWrite`). Its rates stay, and other locations' routes to it
+ * follow it. It may not overlap any other zone, unless `cutFrom` names the
+ * zones in the way to trim (`makeWay`).
  */
 export async function updateZone(
   actor: Actor,
   id: string,
-  fields: ZoneFields,
+  posted: ZoneFields,
   cutFrom?: readonly string[],
 ): Promise<ZoneChanged | ZoneRefusal> {
-  const check = checkZoneFields(fields);
-  if (!check.ok) return check;
+  const ready = fieldsToWrite(posted);
+  if (!ready.ok) return ready;
+  const { fields } = ready;
 
   return db.$transaction(async (tx) => {
     const zone = await tx.zone.findUnique({ where: { id } });

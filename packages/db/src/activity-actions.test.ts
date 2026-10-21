@@ -195,7 +195,7 @@ describe("describeActivity", () => {
         before: { zoneId: "z1", name: "Langkawi" },
         after: { zoneId: "z1", name: "Langkawi", cutFor: "Airport" },
       }),
-      "Cut Airport out of the zone Langkawi",
+      "Trimmed the zone Langkawi for Airport",
     );
     assert.equal(
       describeActivity({

@@ -11,11 +11,13 @@ import {
   mukimsByCode,
   mukimsOf,
   parseZoneFields,
+  previewTrims,
   unionOf,
   updateZone,
   type MultiPolygon,
   type ZoneFields,
   type ZoneInTheWay,
+  type ZoneTrim,
 } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
@@ -49,8 +51,8 @@ export type ZoneSaved =
   | { ok: false; error: string; overlaps?: ZoneInTheWay[] };
 
 /**
- * The zones in the way the admin chose to cut the zone out of, as the last
- * refusal named them, by id; none to keep every other zone as it is.
+ * The zones in the way the admin chose to trim, as the last refusal named
+ * them, by id; none to keep every other zone as it is.
  */
 function cutFromOf(cutFrom: unknown): string[] | undefined | null {
   if (cutFrom === undefined || cutFrom === null) return undefined;
@@ -131,7 +133,7 @@ async function zoneFieldsOf(
 
 /**
  * `fields` is the zone's name, shape and origin as JSON text; `cutFrom`,
- * the zones in the way to cut it out of, when the admin chose that.
+ * the zones in the way to trim, when the admin chose that.
  */
 export async function createZoneAction(
   locationId: string,
@@ -273,7 +275,7 @@ export async function mukimPolygonsAction(
   return shape.ok ? { ok: true, polygons: shape.shape } : shape;
 }
 
-/** The zone being made with the zones it overlaps cut out of it, or why not. */
+/** The zone being made trimmed of the zones it overlaps, or why not. */
 export type CutOut =
   { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
 
@@ -290,4 +292,32 @@ export async function cutOutAction(
   }
   const result = await cutOutOverlaps(shape, zoneId ?? undefined);
   return result.ok ? { ok: true, polygons: result.shape } : result;
+}
+
+/**
+ * The zones the zone being made overlaps, each trimmed of its ground, to
+ * show on the map before the save that trims them; or why not, as the
+ * save would refuse it.
+ */
+export type TrimPreview =
+  { ok: false; error: string } | { ok: true; zones: ZoneTrim[] };
+
+/** `shapeText` is the shape as JSON text, as the zone's fields are. */
+export async function previewTrimsAction(
+  locationId: string,
+  shapeText: string,
+  zoneId: string | null,
+): Promise<TrimPreview> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  const shape = fromJson(shapeText);
+  if (
+    typeof locationId !== "string" ||
+    !isZoneShape(shape) ||
+    (zoneId !== null && typeof zoneId !== "string")
+  ) {
+    return { ok: false, error: "The zone could not be read. Reload." };
+  }
+  const result = await previewTrims(locationId, shape, zoneId ?? undefined);
+  return result.ok ? result : { ok: false, error: result.error };
 }

@@ -89,8 +89,13 @@ async function zoneEditor({
     z.id !== zoneId && isZoneShape(z.shape)
       ? [
           z.locationId === id
-            ? { name: z.name, shape: z.shape }
-            : { name: z.name, shape: z.shape, location: z.location.name },
+            ? { id: z.id, name: z.name, shape: z.shape }
+            : {
+                id: z.id,
+                name: z.name,
+                shape: z.shape,
+                location: z.location.name,
+              },
         ]
       : [],
   );

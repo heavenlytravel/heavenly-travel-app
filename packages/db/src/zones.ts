@@ -241,8 +241,14 @@ export async function listPriceLists(
 export type ZoneInTheWay = { id: string; label: string };
 
 /**
+ * A zone in the way trimmed of a shape's ground, as the zone maker shows
+ * it before the save that trims it.
+ */
+export type ZoneTrim = ZoneInTheWay & { shape: MultiPolygon };
+
+/**
  * A zone write refused because the zone overlaps others, with those zones:
- * the zone maker offers to cut them out of it, or it out of them.
+ * the zone maker offers to trim this zone, or to trim them.
  */
 export type ZoneRefusal = Refusal & { overlaps?: ZoneInTheWay[] };
 
@@ -254,17 +260,15 @@ const ZONE_WRITE_LOCK = 261021;
 
 /**
  * The zones whose ground the shape covers, of this location or another, in
- * their order; `zoneId`, the zone being remade, is left out. Takes the
- * lock, so it runs first in the write's transaction.
+ * their order; `zoneId`, the zone being remade, is left out.
  */
 async function zonesInTheWay(
-  tx: Prisma.TransactionClient,
+  client: Prisma.TransactionClient,
   locationId: string,
   shape: ZoneShape,
   zoneId?: string,
 ) {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
-  const zones = await tx.zone.findMany({
+  const zones = await client.zone.findMany({
     where: zoneId ? { id: { not: zoneId } } : undefined,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: {
@@ -292,29 +296,95 @@ async function zonesInTheWay(
   );
 }
 
+/** A zone in the way, as `zonesInTheWay` answers it. */
+type InTheWay = Awaited<ReturnType<typeof zonesInTheWay>>[number];
+
 /**
  * Why a shape over the zones cannot be saved as it is: zones never overlap,
  * so a pickup falls in one zone of one location at most.
  */
 function overlapRefusal(zones: readonly ZoneInTheWay[]): ZoneRefusal {
   const labels = zones.map((zone) => zone.label);
-  const one = zones.length === 1;
   return {
     ok: false,
-    error: `This zone overlaps ${andList(labels)}. Zones never overlap: reshape it, cut ${one ? "that zone" : "those zones"} out of it, or cut it out of ${one ? "that zone" : "them"}.`,
+    error: `This zone overlaps ${andList(labels)}. Zones cannot overlap, so ${zones.length === 1 ? "one of them gives" : "either this zone or they give"} up the shared ground.`,
     overlaps: zones.map(({ id, label }) => ({ id, label })),
   };
 }
 
 /**
+ * The zones in the way, each trimmed of the shape's ground, or why they
+ * cannot be: one would be left with nothing, or with more corners than a
+ * zone keeps. The zone maker's preview and the write both ask it, so the
+ * preview refuses what the save would.
+ */
+function trimmed(
+  inTheWay: readonly InTheWay[],
+  shape: ZoneShape,
+): { ok: true; zones: (InTheWay & { left: MultiPolygon })[] } | ZoneRefusal {
+  const overlaps = inTheWay.map(({ id, label }) => ({ id, label }));
+  const zones = inTheWay.map((other) => ({
+    ...other,
+    left: cutOut(other.shape, [shape]),
+  }));
+  const emptied = zones.filter((other) => other.left.length === 0);
+  if (emptied.length > 0) {
+    // The other way, trimming this zone, is still open.
+    const labels = andList(emptied.map((other) => other.label));
+    return {
+      ...refuse(
+        `This zone covers all of ${labels}, so nothing of ${emptied.length === 1 ? "it" : "them"} would be left. Trim this zone instead, remove ${labels} on the Coverage tab, or reshape this zone.`,
+      ),
+      overlaps,
+    };
+  }
+  // A hole adds this zone's corners to theirs; past the limit, no editor
+  // could save them again.
+  const crowded = zones.filter((other) => !checkZoneShape(other.left).ok);
+  if (crowded.length > 0) {
+    return {
+      ...refuse(
+        `Trimmed, ${andList(crowded.map((other) => other.label))} would have more than ${ZONE_LIMITS.corners} corners. Trim this zone instead, or give this zone fewer corners.`,
+      ),
+      overlaps,
+    };
+  }
+  return { ok: true, zones };
+}
+
+/**
+ * The zones a shape overlaps, this location's or another's, each trimmed of
+ * the shape's ground, for the zone maker to show before the save that trims
+ * them (`makeWay`): `zoneId` is the zone being remade, which is left out.
+ * None once nothing is in the way; refused where the save would be.
+ */
+export async function previewTrims(
+  locationId: string,
+  shape: ZoneShape,
+  zoneId?: string,
+): Promise<{ ok: true; zones: ZoneTrim[] } | ZoneRefusal> {
+  const inTheWay = await zonesInTheWay(db, locationId, shape, zoneId);
+  const trims = trimmed(inTheWay, shape);
+  return trims.ok
+    ? {
+        ok: true,
+        zones: trims.zones.map(({ id, label, left }) => ({
+          id,
+          label,
+          shape: left,
+        })),
+      }
+    : trims;
+}
+
+/**
  * Makes way for a zone's shape. With no zone in the way, nothing to do.
- * Zones in the way refuse the write, unless the admin chose to cut this
- * zone out of them (`cutFrom`, their ids as the refusal named them): then
- * each loses the ground the shape covers, keeping its rates, and a district
- * as it is becomes reshaped from it. Refused when the zones in the way are
- * no longer the ones chosen, or when one would be left with nothing or
- * with more corners than a zone keeps.
- * Answers the zones cut, for the pages to refresh.
+ * Zones in the way refuse the write, unless the admin chose to trim them
+ * (`cutFrom`, their ids as the refusal named them): then each loses the
+ * ground the shape covers, keeping its rates, and a district as it is
+ * becomes reshaped from it. Refused when the zones in the way are no
+ * longer the ones chosen, or when `trimmed` refuses. Takes the zone write
+ * lock first. Answers the zones trimmed, for the pages to refresh.
  */
 async function makeWay(
   tx: Prisma.TransactionClient,
@@ -325,6 +395,7 @@ async function makeWay(
 ): Promise<
   { ok: true; cut: { id: string; locationId: string }[] } | ZoneRefusal
 > {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
   const inTheWay = await zonesInTheWay(tx, zone.locationId, zone.shape, zoneId);
   if (inTheWay.length === 0) return { ok: true, cut: [] };
   const refusal = overlapRefusal(inTheWay);
@@ -339,36 +410,11 @@ async function makeWay(
       error: `The zones in the way changed meanwhile. ${refusal.error}`,
     };
   }
-  // Every cut is worked out before any is written: a refusal returns
+  // Every trim is worked out before any is written: a refusal returns
   // from the transaction, which then commits what was written.
-  const cuts = inTheWay.map((other) => ({
-    ...other,
-    left: cutOut(other.shape, [zone.shape]),
-  }));
-  const emptied = cuts.filter((other) => other.left.length === 0);
-  if (emptied.length > 0) {
-    // The other way, cutting them out of this zone, is still open.
-    const one = emptied.length === 1;
-    return {
-      ...refuse(
-        `This zone covers all of ${andList(emptied.map((other) => other.label))}, so nothing of ${one ? "it" : "them"} would be left. Cut ${one ? "it" : "them"} out of this zone instead, remove ${one ? "it" : "them"} on the Coverage tab, or reshape this zone.`,
-      ),
-      overlaps: refusal.overlaps,
-    };
-  }
-  // A hole adds this zone's corners to theirs; past the limit, no editor
-  // could save them again.
-  const crowded = cuts.filter((other) => !checkZoneShape(other.left).ok);
-  if (crowded.length > 0) {
-    const one = crowded.length === 1;
-    return {
-      ...refuse(
-        `With this zone cut out, ${andList(crowded.map((other) => other.label))} would have more than ${ZONE_LIMITS.corners} corners. Cut ${one ? "it" : "them"} out of this zone instead, or give this zone fewer corners.`,
-      ),
-      overlaps: refusal.overlaps,
-    };
-  }
-  for (const other of cuts) {
+  const trims = trimmed(inTheWay, zone.shape);
+  if (!trims.ok) return trims;
+  for (const other of trims.zones) {
     await tx.zone.update({
       where: { id: other.id },
       data: {
@@ -387,7 +433,7 @@ async function makeWay(
   }
   return {
     ok: true,
-    cut: cuts.map(({ id, locationId }) => ({ id, locationId })),
+    cut: trims.zones.map(({ id, locationId }) => ({ id, locationId })),
   };
 }
 
@@ -412,7 +458,7 @@ async function alsoChangedBy(
 }
 
 /**
- * The shape with every zone it overlaps cut out of it, this location's or
+ * The shape trimmed of every zone it overlaps, this location's or
  * another's, for the zone maker to show before it is saved: `zoneId` is
  * the zone being remade, which is left out. Refused when nothing is left.
  */
@@ -430,7 +476,7 @@ export async function cutOutOverlaps(
   const left = cutOut(shape, overlapping);
   if (left.length === 0) {
     return refuse(
-      "Nothing of this zone is left once the zones it overlaps are cut out. Draw it somewhere else.",
+      "Trimmed, nothing of this zone would be left. Trim the zones in its way instead, or draw it somewhere else.",
     );
   }
   return { ok: true, shape: left };
@@ -446,7 +492,7 @@ export type ZoneChanged = { ok: true; alsoChanged: string[] };
 
 /**
  * A new zone, after the location's others. It may not overlap any zone,
- * unless `cutFrom` names the zones in the way to cut it out of (`makeWay`).
+ * unless `cutFrom` names the zones in the way to trim (`makeWay`).
  */
 export async function createZone(
   actor: Actor,
@@ -506,7 +552,7 @@ export async function createZone(
 /**
  * Renames or redraws a zone. Its rates stay, and other locations' routes to
  * it follow it. It may not overlap any other zone, unless `cutFrom` names
- * the zones in the way to cut it out of (`makeWay`).
+ * the zones in the way to trim (`makeWay`).
  */
 export async function updateZone(
   actor: Actor,

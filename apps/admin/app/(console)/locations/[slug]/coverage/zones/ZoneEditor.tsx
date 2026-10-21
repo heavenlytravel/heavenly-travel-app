@@ -13,7 +13,6 @@ import {
   type ZoneShape,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
-import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
@@ -21,6 +20,7 @@ import { Checkbox, Field, Input, Radio, inputClassName } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { PlaceInput } from "@repo/ui/place-input";
+import { Tooltip } from "@repo/ui/tooltip";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
@@ -32,7 +32,9 @@ import {
   districtPolygonsAction,
   mukimPolygonsAction,
   placePointAction,
+  previewTrimsAction,
   updateZoneAction,
+  type TrimPreview,
   type ZoneSaved,
 } from "../actions";
 import {
@@ -50,6 +52,9 @@ import { pricedFromSentence, type PricedFrom } from "../zone-lines";
 type InTheWay = NonNullable<
   Extract<ZoneSaved, { ok: false }>["overlaps"]
 >[number];
+
+/** A zone in the way as trimming it would leave it, as the preview gave it. */
+type Trim = Extract<TrimPreview, { ok: true }>["zones"][number];
 
 /** Where a zone starts: a district or its mukims, a circle around an address, or a circle or square put on the map. */
 type Source = "district" | "address" | "draw";
@@ -143,12 +148,12 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * added and removed with a right-click, a piece moved alone, resized,
  * deleted, or added, each step undone with Undo. A zone may not overlap any
  * other, this location's or another's: when the save is refused for it,
- * either "Cut them out of this zone" takes their ground off this one, to
- * check on the map before saving, or "Cut this zone out of them" saves
- * this one as it is and takes its ground off them, after asking: a small
- * zone drawn inside a big one keeps its shape. A district as it is
- * needs no map; everything else is drawn on it. A saved zone goes back to
- * the Coverage tab.
+ * one side gives up the shared ground. "Trim this zone" takes their ground
+ * off this one; "Trim <zone>" shows the zones in the way trimmed of this
+ * one's ground, and the save trims them, so a small zone drawn inside a big
+ * one keeps its shape. Either is checked on the map before anything is
+ * saved. A district as it is needs no map; everything else is drawn on it.
+ * A saved zone goes back to the Coverage tab.
  */
 export function ZoneEditor({
   locationId,
@@ -248,10 +253,16 @@ export function ZoneEditor({
   const [frame, setFrame] = useState(0);
   const reframe = () => setFrame((count) => count + 1);
   const [error, setError] = useState<string | null>(null);
-  // The zones the last save found this one overlapping: to cut out of
-  // this one, or to cut this one out of.
+  // The zones the last save found this one overlapping: to trim this one
+  // of, or to trim.
   const [overlaps, setOverlaps] = useState<InTheWay[] | null>(null);
-  const [confirmDialog, confirm] = useConfirm();
+  // The zones in the way as trimming them would leave them, once the admin
+  // chose that, for the shape they were worked out for: shown on the map,
+  // and trimmed by the save.
+  const [trims, setTrims] = useState<{
+    of: ZoneShape;
+    zones: Trim[];
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   // Each preview asked of the server is numbered; an answer that arrives
   // after a newer question is dropped, so quick ticks end on the last.
@@ -267,20 +278,34 @@ export function ZoneEditor({
   const pickedNames = mukims
     .filter((mukim) => picked.includes(mukim.code))
     .map((mukim) => mukim.name);
+  // A trim holds for the shape it was worked out for only.
+  const trimming = trims && sameShape(trims.of, shape) ? trims.zones : null;
+  const trimLabels = trimming
+    ? andList(trimming.map((other) => other.label))
+    : "";
+
+  /**
+   * Puts a shape on the map. What the last save found in the way, and a
+   * trim of it, were for the shape before.
+   */
+  function show(next: ZoneShape | null) {
+    setShape(next);
+    setError(null);
+    setOverlaps(null);
+    setTrims(null);
+  }
 
   function changeShape(next: ZoneShape | null) {
     if (sameShape(next, shape)) return;
     if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
-    setShape(next);
-    setError(null);
-    setOverlaps(null);
+    show(next);
   }
 
   function undo() {
     const previous = history.at(-1);
     if (!previous) return;
     setHistory((was) => was.slice(0, -1));
-    setShape(previous);
+    show(previous);
   }
 
   /** Names the zone after what it was made from, unless a name was typed over the last suggestion. */
@@ -296,19 +321,22 @@ export function ZoneEditor({
       const ring = circleRing(at, metres);
       setCircle(ring);
       // A new radius on a circle not yet reshaped is one step, not one per keystroke.
-      if (circleUntouched) setShape(ring);
+      if (circleUntouched) show(ring);
       else changeShape(ring);
     }
   }
 
-  /** Asks the server for a preview; the answer is applied unless a newer question was asked meanwhile. */
+  /**
+   * Asks the server for a preview; the answer is applied unless a newer
+   * question was asked meanwhile. What the last save found in the way stays
+   * until the shape changes: a refused preview leaves the other choice open.
+   */
   function preview<T extends object>(
     question: Promise<T>,
     apply: (answer: Exclude<T, { error: string }>) => void,
   ) {
     const ask = ++asked.current;
     setError(null);
-    setOverlaps(null);
     startTransition(async () => {
       const answer = await answerOf(question);
       if (ask !== asked.current) return;
@@ -392,39 +420,42 @@ export function ZoneEditor({
     });
   }
 
-  function cutThemOut() {
+  /** Takes the ground of the zones in the way off this one, to check on the map before saving. */
+  function trimThisZone() {
     if (!shape || !overlaps) return;
-    const cut = overlaps.map((other) => other.label);
+    const labels = andList(overlaps.map((other) => other.label));
     // With others' ground taken off, a district's boundary is the admin's
     // own shape, as after any change.
     preview(cutOutAction(JSON.stringify(shape), zone?.id ?? null), (result) => {
       changeShape(result.polygons);
       toast.success(
-        `Cut ${andList(cut)} out of this zone. Check it on the map, then save.`,
+        `Trimmed this zone where it overlapped ${labels}. Check it on the map, then save.`,
       );
     });
   }
 
   /**
-   * Keeps this zone as it is on the map and saves it, the zones in the way
-   * losing the ground it covers, once the admin agrees: it changes them too.
+   * Shows the zones in the way trimmed of this zone's ground, to check on
+   * the map; the save then trims them. Nothing changes until it does.
    */
-  async function cutOutOfThem() {
-    if (!overlaps) return;
-    const labels = overlaps.map((other) => other.label);
-    const one = overlaps.length === 1;
-    const go = await confirm({
-      title: one
-        ? `Cut this zone out of ${labels[0]}?`
-        : `Cut this zone out of ${overlaps.length} zones?`,
-      description: `${andList(labels)} ${one ? "loses" : "lose"} the ground this zone covers and ${one ? "keeps its" : "keep their"} rates; a pickup there becomes this zone's. This zone is saved as it is on the map.`,
-      action: "Cut and save",
-    });
-    if (go) save(overlaps);
+  function trimTheOthers() {
+    if (!shape || !overlaps) return;
+    const of = shape;
+    preview(
+      previewTrimsAction(locationId, JSON.stringify(of), zone?.id ?? null),
+      (result) => {
+        if (result.zones.length > 0) {
+          setTrims({ of, zones: result.zones });
+          return;
+        }
+        setOverlaps(null);
+        toast.success("Nothing is in this zone's way any more. Save it.");
+      },
+    );
   }
 
-  /** Saves the zone; `cutFrom`, the zones in the way, to cut it out of them. */
-  function save(cutFrom?: readonly InTheWay[]) {
+  /** Saves the zone, trimming the zones in the way when the admin chose that. */
+  function save() {
     if (!shape) {
       setError(
         source === "district"
@@ -455,7 +486,8 @@ export function ZoneEditor({
           ? { placeId, label: placeText, radiusM }
           : null;
     const fields = JSON.stringify({ name, shape, drawnFrom });
-    const cutIds = cutFrom?.map((other) => other.id);
+    const cutIds = trimming?.map((other) => other.id);
+    const trimmed = trimming ? ` and trimmed ${trimLabels}` : "";
     startTransition(async () => {
       const result = await answerOf(
         zone
@@ -465,15 +497,13 @@ export function ZoneEditor({
       if ("error" in result) {
         setError(result.error);
         setOverlaps("overlaps" in result ? (result.overlaps ?? null) : null);
+        setTrims(null);
         return;
       }
-      const cut = cutFrom
-        ? ` and cut it out of ${andList(cutFrom.map((other) => other.label))}`
-        : "";
       toast.success(
         zone
-          ? `Saved the zone ${name}${cut}.`
-          : `Added the zone ${name}${cut}.`,
+          ? `Saved the zone ${name}${trimmed}.`
+          : `Added the zone ${name}${trimmed}.`,
       );
       router.push(locationTabHref(locationSlug, "coverage"));
     });
@@ -733,12 +763,19 @@ export function ZoneEditor({
               ? mukims
               : undefined
           }
+          trims={trimming}
         />
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => save()} disabled={pending}>
-          {pending ? "Saving…" : zone ? "Save zone" : "Add zone"}
+        <Button onClick={save} disabled={pending}>
+          {pending
+            ? "Saving…"
+            : trimming
+              ? `Save and trim ${trimLabels}`
+              : zone
+                ? "Save zone"
+                : "Add zone"}
         </Button>
         <Link
           href={locationTabHref(locationSlug, "coverage")}
@@ -753,31 +790,77 @@ export function ZoneEditor({
         ) : null}
         <FormError error={error} />
       </div>
-      {overlaps ? (
-        <div className="-mt-3 flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={cutThemOut}
-            disabled={pending}
+      {trimming ? (
+        <p className="-mt-3 rounded-md bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+          {trimLabels} {trimming.length === 1 ? "gives" : "give"} up the ground
+          under this zone when you save, and{" "}
+          {trimming.length === 1 ? "keeps its" : "keep their"} rates. The map
+          shows {trimming.length === 1 ? "it" : "them"} trimmed.{" "}
+          <button
+            type="button"
+            onClick={() => setTrims(null)}
+            className="font-medium underline underline-offset-4"
           >
-            {overlaps.length === 1
-              ? `Cut ${overlaps[0]?.label} out of this zone`
-              : "Cut them out of this zone"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={cutOutOfThem}
-            disabled={pending}
-          >
-            {overlaps.length === 1
-              ? `Cut this zone out of ${overlaps[0]?.label}`
-              : "Cut this zone out of them"}
-          </Button>
-        </div>
+            Keep {trimLabels} as {trimming.length === 1 ? "it is" : "they are"}
+          </button>
+        </p>
+      ) : overlaps ? (
+        <OverlapChoice
+          labels={andList(overlaps.map((other) => other.label))}
+          one={overlaps.length === 1}
+          pending={pending}
+          onTrimThisZone={trimThisZone}
+          onTrimTheOthers={trimTheOthers}
+        />
       ) : null}
-      {confirmDialog}
+    </div>
+  );
+}
+
+/**
+ * The two ways out of an overlap, each naming the zone that shrinks: this
+ * one, or the zones in the way. Either shows on the map before a save.
+ */
+function OverlapChoice({
+  labels,
+  one,
+  pending,
+  onTrimThisZone,
+  onTrimTheOthers,
+}: {
+  labels: string;
+  /** One zone in the way, not several. */
+  one: boolean;
+  pending: boolean;
+  onTrimThisZone: () => void;
+  onTrimTheOthers: () => void;
+}) {
+  return (
+    <div className="-mt-3 flex flex-wrap items-center gap-2">
+      <Tooltip
+        content={`This zone gives up the ground it shares with ${labels}, which ${one ? "stays as it is" : "stay as they are"}. You check it on the map before you save.`}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onTrimThisZone}
+          disabled={pending}
+        >
+          Trim this zone
+        </Button>
+      </Tooltip>
+      <Tooltip
+        content={`${labels} ${one ? "gives" : "give"} up the ground under this zone and ${one ? "keeps its" : "keep their"} rates. You check it on the map before you save.`}
+      >
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onTrimTheOthers}
+          disabled={pending}
+        >
+          Trim {labels}
+        </Button>
+      </Tooltip>
     </div>
   );
 }

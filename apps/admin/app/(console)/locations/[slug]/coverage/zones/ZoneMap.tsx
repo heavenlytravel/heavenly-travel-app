@@ -71,6 +71,11 @@ const OTHER_LOCATION_STYLE: google.maps.PolygonOptions = {
   fillOpacity: 0.12,
   clickable: false,
 };
+/** On a zone in the way, as the trim chosen would leave it: drawn stronger, to be checked. */
+const TRIMMED_STYLE: google.maps.PolygonOptions = {
+  strokeWeight: 3,
+  fillOpacity: 0.3,
+};
 const ZONE_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#059669",
   strokeWeight: 2,
@@ -97,6 +102,10 @@ const MUKIM_STYLE: google.maps.PolygonOptions = {
 
 /** What a hand on the map does: edit the zone, or only move the map. */
 type Tool = "edit" | "pan";
+
+/** Another zone's look: this location's in blue, another's in amber. */
+const styleOf = (other: OtherZone) =>
+  other.location ? OTHER_LOCATION_STYLE : CONTEXT_STYLE;
 
 /** The view's centre and a length that fits well in it, in metres. */
 function viewOf(map: google.maps.Map) {
@@ -156,7 +165,8 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * nothing changes under a drag. The map pans and zooms with either. The
  * map frames the zone when `frame` changes, a district or a place newly
  * picked, and never on an edit or an undo. With `mukims`, the district's
- * mukims are outlined under the zone.
+ * mukims are outlined under the zone. With `trims`, the zones in the way
+ * are drawn as the trim chosen would leave them, for a look before saving.
  */
 export function ZoneMap({
   mapKey,
@@ -169,6 +179,7 @@ export function ZoneMap({
   onUndo,
   onShapeChange,
   mukims,
+  trims,
 }: {
   mapKey: string;
   districts: DistrictOutline[];
@@ -183,6 +194,8 @@ export function ZoneMap({
   onShapeChange: (shape: ZoneShape | null) => void;
   /** The district's mukims to outline under the zone; none while it is not made of them. */
   mukims?: MukimChoice[];
+  /** The zones in the way, by id, as the trim chosen would leave them; none while no trim is. */
+  trims?: readonly { id: string; shape: ZoneShape }[] | null;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts, {
     ownFullScreen: true,
@@ -191,6 +204,8 @@ export function ZoneMap({
   const wrapper = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   const editor = useRef<PieceEditor | null>(null);
+  // The other zones as drawn, by id, to show a trim on them.
+  const otherPolygons = useRef(new Map<string, google.maps.Polygon>());
   // The shape on the map, as last drawn or reported, to tell an edit made
   // here from a shape handed in.
   const shown = useRef<ZoneShape | null>(null);
@@ -226,12 +241,16 @@ export function ZoneMap({
   // and the view on the shape.
   useEffect(() => {
     if (!map || !library) return;
+    const drawn = otherPolygons.current;
     for (const other of others) {
-      new library.Polygon({
-        ...(other.location ? OTHER_LOCATION_STYLE : CONTEXT_STYLE),
-        paths: pathsOf(other.shape),
-        map,
-      });
+      drawn.set(
+        other.id,
+        new library.Polygon({
+          ...styleOf(other),
+          paths: pathsOf(other.shape),
+          map,
+        }),
+      );
     }
     if (toolbar) {
       map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
@@ -276,6 +295,8 @@ export function ZoneMap({
       window.clearTimeout(noticeTimer);
       editor.current?.destroy();
       editor.current = null;
+      for (const polygon of drawn.values()) polygon.setMap(null);
+      drawn.clear();
     };
     // The other zones and the districts are the page's, drawn once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,6 +324,26 @@ export function ZoneMap({
   useEffect(() => {
     editor.current?.setEditable(editing);
   }, [map, library, editing]);
+
+  // The zones in the way as the trim chosen would leave them; as they are
+  // once none is.
+  const wasTrimmed = useRef<string[]>([]);
+  useEffect(() => {
+    if (!map) return;
+    const trimmed = new Map(trims?.map((trim) => [trim.id, trim.shape]));
+    for (const other of others) {
+      const shape = trimmed.get(other.id);
+      if (!shape && !wasTrimmed.current.includes(other.id)) continue;
+      otherPolygons.current.get(other.id)?.setOptions({
+        ...styleOf(other),
+        ...(shape ? TRIMMED_STYLE : {}),
+        paths: pathsOf(shape ?? other.shape),
+      });
+    }
+    wasTrimmed.current = [...trimmed.keys()];
+    // The other zones are the page's, drawn once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, library, trims]);
 
   // The district's mukims under the zone, drawn afresh when the list changes.
   const mukimKey = mukims?.map((mukim) => mukim.code).join(" ") ?? "";

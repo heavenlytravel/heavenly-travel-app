@@ -38,7 +38,12 @@ export type MukimChoice = {
  * Another zone, drawn but not editable: one of the location's, or, with
  * `location`, another location's, which this one may not overlap either.
  */
-export type OtherZone = { name: string; shape: ZoneShape; location?: string };
+export type OtherZone = {
+  id: string;
+  name: string;
+  shape: ZoneShape;
+  location?: string;
+};
 
 export const toLatLng = ([lng, lat]: [
   number,

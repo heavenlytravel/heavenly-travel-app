@@ -110,10 +110,13 @@ export function ServiceTabsSearch() {
             const id = `svc-${f.key}`;
             const keys = fieldKeys(f);
             const issue = issues.find((x) => keys.includes(x.field));
+            // The field fills its box, its label laid over the top of it:
+            // a click anywhere in the box reaches the field, and its list
+            // or calendar opens under the box, lined up with its edges.
             return (
               <div
                 key={f.key}
-                className={`min-h-[68px] min-w-0 rounded-xl border bg-white px-[18px] py-2.5 focus-within:relative focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
+                className={`relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
                   issue ? "border-[#b3261e]" : "border-[#dce3e0]"
                 } ${i === 0 ? "lg:rounded-l-[14px]" : "lg:-ml-px"} ${
                   f.kind === "place"
@@ -125,7 +128,7 @@ export function ServiceTabsSearch() {
               >
                 <label
                   htmlFor={id}
-                  className="block text-[0.82rem] font-semibold text-[#253c38]"
+                  className="pointer-events-none absolute top-2.5 left-[18px] text-[0.82rem]/5 font-semibold text-[#253c38]"
                 >
                   {f.label}
                 </label>
@@ -135,7 +138,7 @@ export function ServiceTabsSearch() {
                   values={values}
                   presets={f.key === "to" ? dropoffs : undefined}
                   onChange={set}
-                  className="min-h-[30px] w-full border-0 bg-transparent px-0 pt-1 pb-0 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b] data-placeholder:text-[#64706d]/80"
+                  className="h-full min-h-[70px] w-full border-0 bg-transparent px-[18px] pt-[34px] pb-2.5 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b] data-placeholder:text-[#64706d]/80"
                 />
               </div>
             );

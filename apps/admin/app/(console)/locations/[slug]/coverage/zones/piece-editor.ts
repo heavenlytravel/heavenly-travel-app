@@ -9,26 +9,39 @@ import { openRing as open, pathOf } from "./map-shapes";
  * editing puts a handle on every corner of every piece and another halfway
  * along every edge, and drags the whole shape; on a coastline of 37
  * islands and 800 corners that is unworkable. Here a click selects a piece
- * and only its corners show. A drag moves a corner, or the piece alone. A
- * right-click removes a corner, adds one on an edge, or deletes a piece.
- * The map still pans and zooms around them. Every gesture reports the
- * whole shape once, when it ends, so each is one step of Undo. Browser
- * only.
+ * and only its corners show. A drag on a corner moves it, a drag inside
+ * the piece moves the piece alone, and a drag anywhere else moves the map.
+ * A right-click opens a menu of what can be done there: remove the corner,
+ * add one on the edge, delete the piece. Every change reports the whole
+ * shape once, when it is done, so each is one step of Undo. Browser only.
  */
 
 /** A piece as it is edited: its rings open, the first corner not repeated at the end. */
 type OpenPiece = LngLat[][];
+
+/** One choice of the right-click menu. */
+export type PieceMenuItem = {
+  label: string;
+  /** A choice that takes something away. */
+  danger?: boolean;
+  run: () => void;
+};
+
+/** The right-click menu, at a point of the map's box in pixels. */
+export type PieceMenu = { x: number; y: number; items: PieceMenuItem[] };
 
 export type PieceEditorOptions = {
   map: google.maps.Map;
   library: google.maps.MapsLibrary;
   style: google.maps.PolygonOptions;
   selectedStyle: google.maps.PolygonOptions;
-  /** The pieces after a gesture, each ring closed. */
+  /** The pieces after a change, each ring closed. */
   onChange: (pieces: MultiPolygon) => void;
   onSelect: (index: number | null) => void;
-  /** Why a gesture did nothing, in a sentence. */
+  /** Why a choice did nothing, in a sentence. */
   onRefuse: (message: string) => void;
+  /** Opens the right-click menu, or closes it with null. */
+  onMenu: (menu: PieceMenu | null) => void;
 };
 
 export type PieceEditor = {
@@ -46,16 +59,20 @@ export type PieceEditor = {
 
 /** Corners a ring keeps at least. */
 const MIN_CORNERS = 3;
-/** How near a right-click must be to an edge, in pixels, to add a corner there. */
-const EDGE_PX = 8;
+/** How near a right-click must be to an edge, in pixels, for the menu to offer a corner there. */
+const EDGE_PX = 12;
 const CORNER_RADIUS = 5;
 /**
  * Corners nearer the last one drawn than this, in pixels, are not drawn:
  * zoomed out, a coastline of corners is a blob; zoomed in, every one shows.
+ * A corner just added always shows.
  */
-const CORNER_GAP = 12;
-/** Room around the piece for its corners and its edges' reach. */
-const PAD = CORNER_RADIUS + EDGE_PX;
+const CORNER_GAP = 8;
+/** Room around the piece for its corners. */
+const PAD = CORNER_RADIUS + 2;
+/** The menu's size, near enough, to keep it inside the map. */
+const MENU_WIDTH = 200;
+const MENU_ITEM_HEIGHT = 36;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** The ring closed, its last corner a copy of the first, not the same array. */
@@ -63,8 +80,8 @@ const closed = (ring: LngLat[]): LngLat[] =>
   ring.length > 0 ? [...ring, [ring[0]![0], ring[0]![1]]] : ring;
 const latLngOf = ([lng, lat]: LngLat) => new google.maps.LatLng(lat, lng);
 
-/** How far p is from segment a-b, in pixels. */
-function pixelsToSegment(
+/** The point of segment a-b nearest p, and how far it is, in pixels. */
+function nearestOnSegment(
   p: google.maps.Point,
   a: google.maps.Point,
   b: google.maps.Point,
@@ -79,7 +96,9 @@ function pixelsToSegment(
           0,
           Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / length2),
         );
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  const x = a.x + t * dx;
+  const y = a.y + t * dy;
+  return { x, y, distance: Math.hypot(p.x - x, p.y - y) };
 }
 
 export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
@@ -89,23 +108,26 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   let selected: number | null = null;
   let editable = false;
   let frame = 0;
+  // The corner the menu just added, drawn however near its neighbours.
+  let added: { ring: number; corner: number } | null = null;
 
-  // The selected piece's corners and its body, over the map: an SVG in the
-  // pane that takes the mouse, positioned on every redraw.
+  // The selected piece's body and corners, over the map: an SVG in the
+  // pane, positioned on every redraw. Only the body and the corners take
+  // the mouse; the rest of the SVG's box lets it through to the map.
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.style.position = "absolute";
   svg.style.display = "none";
+  svg.style.pointerEvents = "none";
   const group = document.createElementNS(SVG_NS, "g");
   const body = document.createElementNS(SVG_NS, "path");
   body.setAttribute("fill", "#000");
   body.setAttribute("fill-opacity", "0");
   body.setAttribute("fill-rule", "evenodd");
-  body.setAttribute("stroke", "#000");
-  body.setAttribute("stroke-opacity", "0");
-  body.setAttribute("stroke-width", String(EDGE_PX * 2));
+  body.style.pointerEvents = "visiblePainted";
   body.style.cursor = "move";
   group.appendChild(body);
   const corners = document.createElementNS(SVG_NS, "g");
+  corners.style.pointerEvents = "visiblePainted";
   group.appendChild(corners);
   svg.appendChild(group);
 
@@ -123,9 +145,15 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     options.onChange(pieces.map((piece) => piece.map(closed)));
   }
 
+  /** Any other change forgets the corner just added. */
+  function forgetAdded() {
+    added = null;
+  }
+
   function select(index: number | null) {
     const next = index !== null && index < pieces.length ? index : null;
     if (next === selected) return;
+    forgetAdded();
     const was = selected;
     selected = next;
     if (was !== null) polygons[was]?.setOptions(style);
@@ -133,6 +161,31 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     drawHandles();
     options.onSelect(next);
   }
+
+  /** The menu at the pointer, kept inside the map. */
+  function openMenu(event: MouseEvent, items: PieceMenuItem[]) {
+    const box = map.getDiv().getBoundingClientRect();
+    options.onMenu({
+      x: Math.max(
+        4,
+        Math.min(event.clientX - box.left, box.width - MENU_WIDTH - 4),
+      ),
+      y: Math.max(
+        4,
+        Math.min(
+          event.clientY - box.top,
+          box.height - items.length * MENU_ITEM_HEIGHT - 12,
+        ),
+      ),
+      items,
+    });
+  }
+
+  const deleteItem = (index: number): PieceMenuItem => ({
+    label: "Delete this piece",
+    danger: true,
+    run: () => deletePiece(index),
+  });
 
   function drawPolygons() {
     for (const polygon of polygons) polygon.setMap(null);
@@ -144,10 +197,14 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
         map,
       });
       polygon.addListener("click", () => {
-        if (editable) select(index);
+        if (!editable) return;
+        options.onMenu(null);
+        select(index);
       });
-      polygon.addListener("rightclick", () => {
-        if (editable) deletePiece(index);
+      polygon.addListener("rightclick", (event: google.maps.PolyMouseEvent) => {
+        if (editable && event.domEvent instanceof MouseEvent) {
+          openMenu(event.domEvent, [deleteItem(index)]);
+        }
       });
       return polygon;
     });
@@ -204,11 +261,12 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     );
     const near = (a: google.maps.Point, b: google.maps.Point) =>
       Math.hypot(a.x - b.x, a.y - b.y) < CORNER_GAP;
-    const shown = rings.map((ring) => {
+    const shown = rings.map((ring, r) => {
       const kept: { p: google.maps.Point; i: number }[] = [];
       for (const [i, p] of ring.entries()) {
         const last = kept.at(-1);
-        if (!last || !near(p, last.p)) kept.push({ p, i });
+        const pinned = added?.ring === r && added.corner === i;
+        if (!last || pinned || !near(p, last.p)) kept.push({ p, i });
       }
       // The ring closes: its last corner drawn is next to its first.
       if (kept.length > 1 && near(kept.at(-1)!.p, kept[0]!.p)) kept.pop();
@@ -248,6 +306,67 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     return at ? [at.lng(), at.lat()] : null;
   }
 
+  /**
+   * The selected piece's edge nearest the pointer, and the point on it,
+   * when it is within reach; null otherwise.
+   */
+  function edgeNear(event: MouseEvent) {
+    const proj = projection();
+    const piece = selected === null ? undefined : pieces[selected];
+    const at = cornerAt(event);
+    if (!proj || !piece || !at) return null;
+    const p = proj.fromLatLngToDivPixel(latLngOf(at))!;
+    let best: {
+      ring: number;
+      after: number;
+      x: number;
+      y: number;
+      distance: number;
+    } | null = null;
+    for (const [r, ring] of piece.entries()) {
+      for (const [i, corner] of ring.entries()) {
+        const hit = nearestOnSegment(
+          p,
+          proj.fromLatLngToDivPixel(latLngOf(corner))!,
+          proj.fromLatLngToDivPixel(latLngOf(ring[(i + 1) % ring.length]!))!,
+        );
+        if (!best || hit.distance < best.distance) {
+          best = { ring: r, after: i, ...hit };
+        }
+      }
+    }
+    if (!best || best.distance > EDGE_PX) return null;
+    const point = proj.fromDivPixelToLatLng(
+      new google.maps.Point(best.x, best.y),
+    );
+    return point
+      ? {
+          ring: best.ring,
+          after: best.after,
+          corner: [point.lng(), point.lat()] as LngLat,
+        }
+      : null;
+  }
+
+  /** Puts the change on the map and reports it. */
+  function changed(index: number) {
+    polygons[index]?.setPaths(pieces[index]!.map(pathOf));
+    drawHandles();
+    report();
+  }
+
+  const addCornerItem = (
+    index: number,
+    edge: { ring: number; after: number; corner: LngLat },
+  ): PieceMenuItem => ({
+    label: "Add a corner here",
+    run: () => {
+      pieces[index]![edge.ring]!.splice(edge.after + 1, 0, edge.corner);
+      added = { ring: edge.ring, corner: edge.after + 1 };
+      changed(index);
+    },
+  });
+
   function deletePiece(index: number) {
     if (pieces.length <= 1) {
       options.onRefuse(
@@ -255,6 +374,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       );
       return;
     }
+    forgetAdded();
     pieces = pieces.filter((_, i) => i !== index);
     // Another piece keeps its selection, one place along if it came after.
     const was = selected;
@@ -266,8 +386,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     report();
   }
 
-  // While a hand is on a corner or a piece the map holds still; around
-  // them it pans and zooms as ever.
+  // While a hand is on a corner or inside the piece the map holds still;
+  // anywhere else it pans and zooms as ever.
   let drag:
     | { kind: "corner"; ring: number; corner: number; moved: boolean }
     | {
@@ -279,22 +399,25 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     | null = null;
   let gestures: google.maps.MapOptions["gestureHandling"] = "auto";
 
+  // The body and the corners keep their clicks from the map: a drag on
+  // them is not a pan, a click not a deselect.
   const stop = (event: Event) => event.stopPropagation();
   for (const type of ["mousedown", "click", "dblclick", "touchstart"]) {
-    svg.addEventListener(type, stop);
+    group.addEventListener(type, stop);
   }
 
-  svg.addEventListener("pointerdown", (event) => {
+  group.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 || selected === null) return;
     event.stopPropagation();
     event.preventDefault();
+    options.onMenu(null);
     const target = event.target as SVGElement;
     const from = cornerAt(event);
     if (!from) return;
     gestures = map.get("gestureHandling") ?? "auto";
     map.setOptions({ gestureHandling: "none" });
     try {
-      svg.setPointerCapture(event.pointerId);
+      group.setPointerCapture(event.pointerId);
     } catch {
       // A pointer the browser no longer tracks cannot be captured; the
       // drag still follows it while it stays over the piece.
@@ -315,7 +438,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
           };
   });
 
-  svg.addEventListener("pointermove", (event) => {
+  group.addEventListener("pointermove", (event) => {
     if (!drag || selected === null) return;
     const at = cornerAt(event);
     if (!at) return;
@@ -340,70 +463,86 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     map.setOptions({ gestureHandling: gestures });
     if (moved) report();
   }
-  svg.addEventListener("pointerup", endDrag);
-  svg.addEventListener("pointercancel", endDrag);
+  group.addEventListener("pointerup", endDrag);
+  group.addEventListener("pointercancel", endDrag);
 
-  svg.addEventListener("contextmenu", (event) => {
+  // A right-click on the selected piece: its corner, an edge it is near,
+  // or the piece itself.
+  group.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const proj = projection();
-    if (selected === null || !proj) return;
-    const piece = pieces[selected]!;
+    if (selected === null) return;
+    const index = selected;
     const target = event.target as SVGElement;
-
     if (target.dataset.corner !== undefined) {
-      const ring = piece[Number(target.dataset.ring)]!;
-      if (ring.length <= MIN_CORNERS) {
-        options.onRefuse("A piece keeps at least three corners.");
-        return;
-      }
-      ring.splice(Number(target.dataset.corner), 1);
-      polygons[selected]?.setPaths(piece.map(pathOf));
-      drawHandles();
-      report();
+      const ring = Number(target.dataset.ring);
+      const corner = Number(target.dataset.corner);
+      openMenu(event, [
+        {
+          label: "Remove this corner",
+          run: () => {
+            const corners = pieces[index]![ring]!;
+            if (corners.length <= MIN_CORNERS) {
+              options.onRefuse("A piece keeps at least three corners.");
+              return;
+            }
+            forgetAdded();
+            corners.splice(corner, 1);
+            changed(index);
+          },
+        },
+        deleteItem(index),
+      ]);
       return;
     }
-
-    // On an edge, a corner there; inside, the piece goes.
-    const at = cornerAt(event);
-    if (!at) return;
-    const p = proj.fromLatLngToDivPixel(latLngOf(at))!;
-    let edge: { ring: number; after: number; distance: number } | null = null;
-    for (const [r, ring] of piece.entries()) {
-      for (const [i, corner] of ring.entries()) {
-        const next = ring[(i + 1) % ring.length]!;
-        const distance = pixelsToSegment(
-          p,
-          proj.fromLatLngToDivPixel(latLngOf(corner))!,
-          proj.fromLatLngToDivPixel(latLngOf(next))!,
-        );
-        if (!edge || distance < edge.distance) {
-          edge = { ring: r, after: i, distance };
-        }
-      }
-    }
-    if (edge && edge.distance <= EDGE_PX) {
-      piece[edge.ring]!.splice(edge.after + 1, 0, at);
-      polygons[selected]?.setPaths(piece.map(pathOf));
-      drawHandles();
-      report();
-      return;
-    }
-    deletePiece(selected);
+    const edge = edgeNear(event);
+    openMenu(
+      event,
+      edge
+        ? [addCornerItem(index, edge), deleteItem(index)]
+        : [deleteItem(index)],
+    );
   });
 
-  const mapClick = map.addListener("click", () => select(null));
+  // Just outside the selected piece, a right-click near its edge adds a
+  // corner there too.
+  const mapRightClick = map.addListener(
+    "rightclick",
+    (event: google.maps.MapMouseEvent) => {
+      if (
+        !editable ||
+        selected === null ||
+        !(event.domEvent instanceof MouseEvent)
+      ) {
+        options.onMenu(null);
+        return;
+      }
+      const edge = edgeNear(event.domEvent);
+      if (edge) openMenu(event.domEvent, [addCornerItem(selected, edge)]);
+      else options.onMenu(null);
+    },
+  );
+  const mapClick = map.addListener("click", () => {
+    options.onMenu(null);
+    select(null);
+  });
+  const mapMoved = [
+    map.addListener("dragstart", () => options.onMenu(null)),
+    map.addListener("zoom_changed", () => options.onMenu(null)),
+  ];
 
   return {
     setPieces(next) {
       // A selection stays on a shape of as many pieces, an undone corner or
       // move; with pieces added or gone, it could name another one.
       const same = next.length === pieces.length;
+      forgetAdded();
       pieces = next.map((piece) => piece.map(open));
       if (selected !== null && !same) {
         selected = null;
         options.onSelect(null);
       }
+      options.onMenu(null);
       drawPolygons();
       drawHandles();
     },
@@ -411,6 +550,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       if (next === editable) return;
       editable = next;
       for (const polygon of polygons) polygon.setOptions({ clickable: next });
+      if (!next) options.onMenu(null);
       drawHandles();
     },
     select,
@@ -428,6 +568,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     destroy() {
       if (frame) cancelAnimationFrame(frame);
       mapClick.remove();
+      mapRightClick.remove();
+      for (const listener of mapMoved) listener.remove();
       for (const polygon of polygons) polygon.setMap(null);
       overlay.setMap(null);
     },

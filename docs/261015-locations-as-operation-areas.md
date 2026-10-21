@@ -147,13 +147,14 @@ The partner grid, as data:
   full screen too: the pencil to edit, the hand to only move the map, a square and a
   circle to add a piece in the middle of the view, the bin to delete the piece selected,
   and Undo. With the pencil a click selects a piece and only its corners show, thinned
-  where they crowd closer than 12 pixels until the map is zoomed in. Drag a corner to
-  move it, or the inside of the piece to move that piece alone; right-click a corner to
-  remove it, an edge to add one, or the inside of any piece to delete it. The map pans
-  and zooms around them all the while. Each gesture is one step of Undo, and neither an
-  edit nor an undo moves the view; the map frames the zone only when a district or a
-  place is newly picked (`piece-editor.ts`). A
-  district as it is works without the map, so a server without the browser key still
+  where they crowd closer than 8 pixels until the map is zoomed in. Drag a corner to
+  move it, or inside the piece to move that piece alone; a drag anywhere else moves the
+  map, as it does when no piece is selected. A right-click opens a menu of what can be
+  done there: remove the corner, add a corner on the edge it is near (placed on the
+  line, and shown), or delete the piece, which so always takes a second click. Each
+  change is one step of Undo, and neither an edit nor an undo moves the view; the map
+  frames the zone only when a district or a place is newly picked (`piece-editor.ts`).
+  A district as it is works without the map, so a server without the browser key still
   makes zones. A zone is stored as one closed ring or, a district's islands, as
   polygons, at most 2,000 corners in all (1,000 until 2026-10-21; Kuah and Kedawang
   together have 1,043), so the quote has one test, `zoneAt` in `zone-match.ts`, over

@@ -31,7 +31,11 @@ import {
   type MukimChoice,
   type OtherZone,
 } from "./map-shapes";
-import { createPieceEditor, type PieceEditor } from "./piece-editor";
+import {
+  createPieceEditor,
+  type PieceEditor,
+  type PieceMenu,
+} from "./piece-editor";
 
 export type {
   DistrictChoice,
@@ -141,8 +145,8 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * being made in green, each piece of land its own shape. The tools sit at
  * the bottom of the map, there in full screen too. With the pencil a click
  * selects a piece and shows its corners (./piece-editor): drag a corner,
- * or the piece alone; right-click a corner to remove it, an edge to add
- * one, the inside of a piece to delete it. The square and the circle add a
+ * or inside the piece to move it alone, and anywhere else to move the
+ * map; a right-click opens a menu of what can be done there. The square and the circle add a
  * piece in the middle of the view. With the hand nothing changes under a
  * drag. The map pans and zooms with either. The map frames the zone when
  * `frame` changes, a district or a place newly picked, and never on an
@@ -196,6 +200,12 @@ export function ZoneMap({
   const [toolbar] = useState(() =>
     typeof document === "undefined" ? null : document.createElement("div"),
   );
+  // The right-click menu, and its home inside the map, there in full screen too.
+  const [menu, setMenu] = useState<PieceMenu | null>(null);
+  const [menuHost] = useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
+  const menuRef = useRef<HTMLDivElement>(null);
   const editing = editable && tool === "edit";
   const canAdd = editable && (shape !== null || starters);
 
@@ -219,6 +229,7 @@ export function ZoneMap({
     if (toolbar) {
       map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
     }
+    if (menuHost) map.getDiv().appendChild(menuHost);
 
     let noticeTimer = 0;
     editor.current = createPieceEditor({
@@ -232,6 +243,7 @@ export function ZoneMap({
         report.current(next);
       },
       onSelect: setSelected,
+      onMenu: setMenu,
       onRefuse: (message) => {
         setNotice(message);
         window.clearTimeout(noticeTimer);
@@ -254,6 +266,7 @@ export function ZoneMap({
       window.clearTimeout(noticeTimer);
       editor.current?.destroy();
       editor.current = null;
+      menuHost?.remove();
     };
     // The other zones and the districts are the page's, drawn once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,6 +337,29 @@ export function ZoneMap({
     );
   }
 
+  // An open menu takes the keyboard's focus, and closes on Escape or on a
+  // press anywhere else.
+  useEffect(() => {
+    if (!menu) return;
+    menuRef.current?.querySelector("button")?.focus();
+    const close = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      if (
+        event instanceof PointerEvent &&
+        menuRef.current?.contains(event.target as Node)
+      ) {
+        return;
+      }
+      setMenu(null);
+    };
+    document.addEventListener("pointerdown", close, true);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close, true);
+      document.removeEventListener("keydown", close);
+    };
+  }, [menu]);
+
   const hint = failed
     ? MAP_FAILURES[failed]
     : notice
@@ -341,8 +377,8 @@ export function ZoneMap({
             : !editing
               ? "The hand only moves the map. Pick the pencil to edit the zone."
               : selected === null
-                ? "Click a piece to show its corners. Right-click a piece to delete it."
-                : "Drag a corner, or the piece to move it alone. Right-click a corner to remove it, an edge to add one, or the inside to delete the piece.";
+                ? "Click a piece to show its corners. Drag anywhere else to move the map. Right-click a piece to delete it."
+                : "Drag a corner to move it, or inside the piece to move the piece alone; drag anywhere else to move the map. Right-click a corner, an edge or the piece for what you can do there.";
 
   return (
     <div className="grid gap-2">
@@ -405,6 +441,39 @@ export function ZoneMap({
               </ToolButton>
             </div>,
             toolbar,
+          )
+        : null}
+      {menu && menuHost
+        ? createPortal(
+            <div
+              ref={menuRef}
+              role="menu"
+              aria-label="Edit the zone"
+              style={{ left: menu.x, top: menu.y }}
+              onContextMenu={(event) => event.preventDefault()}
+              className="absolute z-20 grid w-48 rounded-md border border-neutral-200 bg-white p-1 text-sm shadow-lg"
+            >
+              {menu.items.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenu(null);
+                    item.run();
+                  }}
+                  className={cx(
+                    "rounded px-2.5 py-2 text-left focus-visible:outline-2 focus-visible:outline-neutral-900",
+                    item.danger
+                      ? "text-red-700 hover:bg-red-50"
+                      : "text-neutral-800 hover:bg-neutral-100",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>,
+            menuHost,
           )
         : null}
       <p

@@ -146,15 +146,24 @@ The partner grid, as data:
 
   The zone is edited piece by piece (revised 2026-10-21: Google's own editing put a
   handle on all 800 corners of Kuah's 37 islands, another halfway along every edge, and
-  dragged them all together). The tools sit in a bar at the bottom of the map, there in
-  full screen too: the pencil to edit, the hand to only move the map, a square and a
-  circle to add a piece in the middle of the view, the scissors, the bin and Undo.
-  Every edit is a plain click, so a Mac trackpad needs no right-click. With the pencil
+  dragged them all together). The tools sit in a bar at the bottom of the map: the
+  pencil to edit, the hand to only move the map, a square and a circle (24 corners,
+  as is a circle around an address) to add a piece in the middle of the view, the
+  scissors, the bin, Undo and Redo, and an "i" that opens how the map works over its
+  top left corner. Each tool names itself in a tooltip, with its shortcut, and says
+  why while it cannot be pressed. The map's own full-screen button, top right, puts
+  the map and the line of hints under it on screen together (2026-10-21: Google's full
+  screen showed the map alone, its notices unseen); the bar, the button and the help
+  are drawn over the map by the zone maker, not as Google's controls, so they stay in
+  place in full screen too. Every edit is a plain click, so a Mac trackpad needs no
+  right-click. With the pencil
   a click selects a piece and only its corners show, thinned where they crowd closer
   than 8 pixels until the map is zoomed in; a click on a corner selects it. Drag a
   corner to move it, or inside the piece to move that piece alone; a drag anywhere
-  else moves the map. Pointing at an edge shows one "+" on it, under the pointer: a
-  click adds a corner there, a drag adds and moves it. The bin, or Delete or
+  else moves the map. A dashed box runs around the piece selected, a square at each of
+  its corners: a drag on one grows or shrinks the piece about its middle, so a circle
+  stays round and keeps its centre. Pointing at an edge shows one "+" on it, under the
+  pointer: a click adds a corner there, a drag adds and moves it. The bin, or Delete or
   Backspace, removes the corner selected, else the piece. The scissors cut the piece
   from the corner selected to another corner clicked, along the straight line between
   them, into two pieces, so a large part comes off with one more click on the bin; a

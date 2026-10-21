@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { cx } from "./cx.js";
-import { ModalBody, useModal } from "./modal.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 const WIDTHS = {
   md: "ui:w-[min(22rem,88vw)]",
@@ -47,7 +47,7 @@ export function Sheet({
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={() => onOpenChange(false)}
+      onClose={onModalClose(() => onOpenChange(false))}
       onClick={(event) => {
         // The dialog element itself is only hit through the backdrop.
         if (event.target === event.currentTarget) onOpenChange(false);

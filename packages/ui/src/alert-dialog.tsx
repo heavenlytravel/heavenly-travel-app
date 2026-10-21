@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./button.js";
-import { ModalBody, useModal } from "./modal.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 /** What an alert dialog asks: the question, what follows from it, and its two answers. */
 export type ConfirmRequest = {
@@ -48,9 +48,9 @@ export function AlertDialog({
       aria-describedby={request?.description ? descriptionId : undefined}
       // Closed by the browser, on Escape; a close that follows an answer
       // comes after `request` is cleared, and is not a second answer.
-      onClose={() => {
+      onClose={onModalClose(() => {
         if (open) onAnswer(false);
-      }}
+      })}
       className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45"
     >
       <ModalBody open={open} className="ui:max-h-[90dvh]">

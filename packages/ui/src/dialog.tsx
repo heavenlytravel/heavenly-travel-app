@@ -3,7 +3,7 @@
 import { useId, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { XIcon } from "./icons.js";
-import { ModalBody, useModal } from "./modal.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 const WIDTHS = {
   sm: "ui:w-[min(28rem,92vw)]",
@@ -48,7 +48,7 @@ export function Dialog({
       ref={ref}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
-      onClose={() => onOpenChange(false)}
+      onClose={onModalClose(() => onOpenChange(false))}
       onClick={(event) => {
         // The dialog element itself is only hit through the backdrop.
         if (event.target === event.currentTarget) onOpenChange(false);

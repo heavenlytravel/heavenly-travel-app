@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+  type SyntheticEvent,
+} from "react";
 import { RemoveScroll } from "react-remove-scroll";
 import { cx } from "./cx.js";
 
@@ -10,7 +16,7 @@ import { cx } from "./cx.js";
  * the top layer and handing the focus back on close come from the browser.
  * One taken off the page while open, its caller gone, is closed first, so
  * the focus still goes back to where it was. Put the ref on the
- * `<dialog>`.
+ * `<dialog>`, and `onModalClose` as its `onClose`.
  */
 export function useModal(open: boolean) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -32,6 +38,19 @@ export function useModal(open: boolean) {
   }, []);
 
   return ref;
+}
+
+/**
+ * A modal's `onClose`: runs `close` once the browser has closed it, on
+ * Escape or as `open` turns false. A close whose event comes after the
+ * dialog was shown again is no close: React's strict mode runs the effects
+ * of a dialog that mounts open twice, closing it and showing it again at
+ * once.
+ */
+export function onModalClose(close: () => void) {
+  return (event: SyntheticEvent<HTMLDialogElement>) => {
+    if (!event.currentTarget.open) close();
+  };
 }
 
 /**

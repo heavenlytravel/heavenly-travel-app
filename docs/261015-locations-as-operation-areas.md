@@ -161,7 +161,9 @@ The partner grid, as data:
   line that would leave the piece is refused (`cutPolygonBetween` in `geo.ts`). Esc
   stops a cut, then lets go of the corner, then of the piece. A right-click opens a
   menu of the same choices, as a shortcut (Control-click on a Mac). Each
-  change is one step of Undo, and neither an edit nor an undo moves the view; the map
+  change is one step of Undo, and Redo does again what Undo took back until a new
+  change; Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redo (⌘ on a Mac), except in a
+  field being typed in. Neither an edit nor an undo moves the view; the map
   frames the zone only when a district or a place is newly picked (`piece-editor.ts`).
   A district as it is works without the map, so a server without the browser key still
   makes zones. A zone is stored as one closed ring or, a district's islands, as

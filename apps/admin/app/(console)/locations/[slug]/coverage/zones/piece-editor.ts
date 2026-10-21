@@ -180,7 +180,7 @@ function resized(resize: Resize, pointer: Pixel): OpenPiece {
 }
 
 /** Whether a key press belongs to a field being typed in, not the map. */
-const typing = (target: EventTarget | null) =>
+export const typing = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable ||
     ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));

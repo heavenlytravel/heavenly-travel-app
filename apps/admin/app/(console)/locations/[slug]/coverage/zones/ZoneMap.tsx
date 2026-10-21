@@ -16,6 +16,7 @@ import {
   MaximizeIcon,
   MinimizeIcon,
   PencilIcon,
+  RedoIcon,
   ScissorsIcon,
   SquarePlusIcon,
   TrashIcon,
@@ -37,6 +38,7 @@ import {
 } from "./map-shapes";
 import {
   createPieceEditor,
+  typing,
   type PieceEditor,
   type PieceMenu,
   type PieceSelection,
@@ -177,6 +179,8 @@ export function ZoneMap({
   starters,
   canUndo,
   onUndo,
+  canRedo,
+  onRedo,
   onShapeChange,
   mukims,
   trims,
@@ -191,6 +195,8 @@ export function ZoneMap({
   starters: boolean;
   canUndo: boolean;
   onUndo: () => void;
+  canRedo: boolean;
+  onRedo: () => void;
   onShapeChange: (shape: ZoneShape | null) => void;
   /** The district's mukims to outline under the zone; none while it is not made of them. */
   mukims?: MukimChoice[];
@@ -377,6 +383,22 @@ export function ZoneMap({
     );
   }
 
+  // Ctrl+Z undoes, and Ctrl+Shift+Z or Ctrl+Y redoes, with ⌘ on a Mac, as
+  // the buttons do; not in a field being typed in, where they edit the text.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if ((key !== "z" && key !== "y") || typing(event.target)) return;
+      event.preventDefault();
+      if (key === "y" || event.shiftKey) {
+        if (canRedo) onRedo();
+      } else if (canUndo) onUndo();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [canUndo, canRedo, onUndo, onRedo]);
+
   // Full screen comes and goes by the button or by the browser's own Esc.
   useEffect(() => {
     const follow = () =>
@@ -472,7 +494,7 @@ export function ZoneMap({
             corner,
           )
         : null}
-      {toolbar && map && (canAdd || canUndo)
+      {toolbar && map && (canAdd || canUndo || canRedo)
         ? createPortal(
             <div className="mb-6 flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
               {shape ? (
@@ -536,6 +558,9 @@ export function ZoneMap({
               ) : null}
               <ToolButton label="Undo" disabled={!canUndo} onClick={onUndo}>
                 <UndoIcon />
+              </ToolButton>
+              <ToolButton label="Redo" disabled={!canRedo} onClick={onRedo}>
+                <RedoIcon />
               </ToolButton>
             </div>,
             toolbar,

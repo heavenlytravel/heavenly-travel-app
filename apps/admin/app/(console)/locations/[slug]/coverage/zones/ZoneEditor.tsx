@@ -146,7 +146,7 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * square or a circle in the view. From there every shape is the admin's
  * own, edited piece by piece on the map (./ZoneMap): corners dragged,
  * added and removed with a right-click, a piece moved alone, resized,
- * deleted, or added, each step undone with Undo. A zone may not overlap any
+ * deleted, or added, each step undone with Undo and done again with Redo. A zone may not overlap any
  * other, this location's or another's: when the save is refused for it,
  * one side gives up the shared ground. "Trim this zone" takes their ground
  * off this one; "Trim <zone>" shows the zones in the way trimmed of this
@@ -242,12 +242,14 @@ export function ZoneEditor({
     String(isZoneCircle(origin) ? origin.radiusM : DEFAULT_RADIUS_M),
   );
 
-  // The shape, and the shapes before it for Undo.
+  // The shape, the shapes before it for Undo, and the shapes Undo took
+  // back for Redo, which a new change forgets.
   const [shape, setShape] = useState<ZoneShape | null>(zone?.shape ?? null);
   // The circle last drawn around the address: while the shape is still it,
   // a new radius redraws it; once reshaped, only "Redraw the circle" does.
   const [circle, setCircle] = useState<ZoneShape | null>(null);
   const [history, setHistory] = useState<ZoneShape[]>([]);
+  const [future, setFuture] = useState<ZoneShape[]>([]);
   // Counts the shapes the map should frame: a district or a place newly
   // picked, not an edit, a tick or an undo.
   const [frame, setFrame] = useState(0);
@@ -298,6 +300,7 @@ export function ZoneEditor({
   function changeShape(next: ZoneShape | null) {
     if (sameShape(next, shape)) return;
     if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
+    setFuture([]);
     show(next);
   }
 
@@ -305,7 +308,16 @@ export function ZoneEditor({
     const previous = history.at(-1);
     if (!previous) return;
     setHistory((was) => was.slice(0, -1));
+    if (shape) setFuture((later) => [...later, shape]);
     show(previous);
+  }
+
+  function redo() {
+    const next = future.at(-1);
+    if (!next) return;
+    setFuture((later) => later.slice(0, -1));
+    if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
+    show(next);
   }
 
   /** Names the zone after what it was made from, unless a name was typed over the last suggestion. */
@@ -320,9 +332,12 @@ export function ZoneEditor({
     if (at && Number.isFinite(metres) && metres > 0) {
       const ring = circleRing(at, metres);
       setCircle(ring);
-      // A new radius on a circle not yet reshaped is one step, not one per keystroke.
-      if (circleUntouched) show(ring);
-      else changeShape(ring);
+      // A new radius on a circle not yet reshaped is one step, not one per
+      // keystroke; a change all the same, so Redo has nothing to bring back.
+      if (circleUntouched) {
+        setFuture([]);
+        show(ring);
+      } else changeShape(ring);
     }
   }
 
@@ -757,6 +772,8 @@ export function ZoneEditor({
           starters={source === "draw"}
           canUndo={history.length > 0}
           onUndo={undo}
+          canRedo={future.length > 0}
+          onRedo={redo}
           onShapeChange={changeShape}
           mukims={
             source === "district" && district && area === "some"

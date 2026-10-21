@@ -40,8 +40,16 @@ export type PieceMenuItem = {
   run: () => void;
 };
 
-/** The right-click menu, at a point of the map's box in pixels. */
-export type PieceMenu = { x: number; y: number; items: PieceMenuItem[] };
+/**
+ * The right-click menu, at a point of `within` in pixels: the element the
+ * map is on screen in, where the menu goes to be seen, in full screen too.
+ */
+export type PieceMenu = {
+  x: number;
+  y: number;
+  items: PieceMenuItem[];
+  within: HTMLElement;
+};
 
 /** What is selected: a piece, and maybe one of its corners. */
 export type PieceSelection = { piece: number; corner: boolean } | null;
@@ -123,6 +131,17 @@ function nearestOnSegment(
   const x = a.x + t * dx;
   const y = a.y + t * dy;
   return { x, y, distance: Math.hypot(p.x - x, p.y - y) };
+}
+
+/**
+ * The element the map is on screen in: its own box, or in full screen the
+ * element inside it that Google shows, the box staying where it was on the
+ * page.
+ */
+function onScreen(map: google.maps.Map): HTMLElement {
+  const box = map.getDiv();
+  const full = document.fullscreenElement;
+  return full instanceof HTMLElement && box.contains(full) ? full : box;
 }
 
 /** Whether a key press belongs to a field being typed in, not the map. */
@@ -239,8 +258,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   /** The menu at the pointer, kept inside the map. */
   function openMenu(event: MouseEvent, items: PieceMenuItem[]) {
-    const box = map.getDiv().getBoundingClientRect();
+    const within = onScreen(map);
+    const box = within.getBoundingClientRect();
     options.onMenu({
+      within,
       x: Math.max(
         4,
         Math.min(event.clientX - box.left, box.width - MENU_WIDTH - 4),
@@ -378,27 +399,25 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     });
   }
 
-  /** The map's point under the pointer. */
-  function latLngAt(event: MouseEvent) {
-    const proj = projection();
-    if (!proj) return null;
-    const box = map.getDiv().getBoundingClientRect();
-    return proj.fromContainerPixelToLatLng(
-      new google.maps.Point(event.clientX - box.left, event.clientY - box.top),
-    );
+  /**
+   * The pointer in the pane's pixels, measured from the pane the handles
+   * are drawn in, not from the map's box, which in full screen stays where
+   * it was on the page.
+   */
+  function pixelAt(event: MouseEvent) {
+    const pane = overlay.getPanes()?.overlayMouseTarget;
+    if (!pane) return null;
+    const box = pane.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
   }
 
   /** The map's point under the pointer, as a corner. */
   function cornerAt(event: MouseEvent): LngLat | null {
-    const at = latLngAt(event);
+    const p = pixelAt(event);
+    const at = p
+      ? projection()?.fromDivPixelToLatLng(new google.maps.Point(p.x, p.y))
+      : null;
     return at ? [at.lng(), at.lat()] : null;
-  }
-
-  /** The pointer in the pane's pixels. */
-  function pixelAt(event: MouseEvent) {
-    const at = latLngAt(event);
-    const p = at ? projection()?.fromLatLngToDivPixel(at) : null;
-    return p ? { x: p.x, y: p.y } : null;
   }
 
   /**

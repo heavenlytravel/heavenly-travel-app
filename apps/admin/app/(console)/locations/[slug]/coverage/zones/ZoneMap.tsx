@@ -198,11 +198,8 @@ export function ZoneMap({
   const [toolbar] = useState(() =>
     typeof document === "undefined" ? null : document.createElement("div"),
   );
-  // The right-click menu, and its home inside the map, there in full screen too.
+  // The right-click menu, inside the element the map is on screen in.
   const [menu, setMenu] = useState<PieceMenu | null>(null);
-  const [menuHost] = useState(() =>
-    typeof document === "undefined" ? null : document.createElement("div"),
-  );
   const menuRef = useRef<HTMLDivElement>(null);
   const editing = tool === "edit";
   const canAdd = shape !== null || starters;
@@ -226,7 +223,6 @@ export function ZoneMap({
     if (toolbar) {
       map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
     }
-    if (menuHost) map.getDiv().appendChild(menuHost);
 
     let noticeTimer = 0;
     editor.current = createPieceEditor({
@@ -264,7 +260,6 @@ export function ZoneMap({
       window.clearTimeout(noticeTimer);
       editor.current?.destroy();
       editor.current = null;
-      menuHost?.remove();
     };
     // The other zones and the districts are the page's, drawn once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -445,7 +440,7 @@ export function ZoneMap({
             toolbar,
           )
         : null}
-      {menu && menuHost
+      {menu
         ? createPortal(
             <div
               ref={menuRef}
@@ -475,7 +470,7 @@ export function ZoneMap({
                 </button>
               ))}
             </div>,
-            menuHost,
+            menu.within,
           )
         : null}
       <p

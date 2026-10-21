@@ -141,10 +141,18 @@ The partner grid, as data:
   - **Draw**: a circle or a square in the middle of the map's view, to move and reshape
     into a beach strip or a town (`drawnFrom: null`).
 
-  On the map the zone has two tools. "Edit shape" holds the map still, so a drag never
-  pans it: drag a corner to move it, the mark halfway along an edge to add a corner,
-  or the inside to move the whole zone; right-click a corner to remove it. "Move map"
-  pans and zooms with the zone left alone. Undo steps back through the changes. A
+  The zone is edited piece by piece (revised 2026-10-21: Google's own editing put a
+  handle on all 800 corners of Kuah's 37 islands, another halfway along every edge, and
+  dragged them all together). The tools sit in a bar at the bottom of the map, there in
+  full screen too: the pencil to edit, the hand to only move the map, a square and a
+  circle to add a piece in the middle of the view, the bin to delete the piece selected,
+  and Undo. With the pencil a click selects a piece and only its corners show, thinned
+  where they crowd closer than 12 pixels until the map is zoomed in. Drag a corner to
+  move it, or the inside of the piece to move that piece alone; right-click a corner to
+  remove it, an edge to add one, or the inside of any piece to delete it. The map pans
+  and zooms around them all the while. Each gesture is one step of Undo, and neither an
+  edit nor an undo moves the view; the map frames the zone only when a district or a
+  place is newly picked (`piece-editor.ts`). A
   district as it is works without the map, so a server without the browser key still
   makes zones. A zone is stored as one closed ring or, a district's islands, as
   polygons, at most 2,000 corners in all (1,000 until 2026-10-21; Kuah and Kedawang

@@ -2,23 +2,36 @@
 
 "use client";
 
-import { circleRing, type Ring, type ZoneShape } from "@repo/db";
+import {
+  circleRing,
+  isRing,
+  type MultiPolygon,
+  type Ring,
+  type ZoneShape,
+} from "@repo/db";
 import { cx } from "@repo/ui/cx";
+import {
+  CirclePlusIcon,
+  HandIcon,
+  PencilIcon,
+  SquarePlusIcon,
+  TrashIcon,
+  UndoIcon,
+} from "@repo/ui/icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   MAP_FAILURES,
   boundsOf,
-  layoutOf,
   pathOf,
   pathsOf,
-  ringOfPath,
   sameShape,
-  shapeOfRings,
   useGoogleMap,
   type DistrictOutline,
   type MukimChoice,
   type OtherZone,
 } from "./map-shapes";
+import { createPieceEditor, type PieceEditor } from "./piece-editor";
 
 export type {
   DistrictChoice,
@@ -27,14 +40,14 @@ export type {
   OtherZone,
 } from "./map-shapes";
 
-/** The fewest corners a piece of a shape keeps: a corner is not removed below it. */
-const MIN_CORNERS = 3;
-
 /** Corners of a circle placed on the map: round enough, and few enough to reshape by hand. */
 const CIRCLE_CORNERS = 24;
 
 /** How much of the view a new circle or square takes. */
 const STARTER_SHARE = 0.25;
+
+/** How long a refused gesture's reason stays under the map. */
+const NOTICE_MS = 4000;
 
 /** The other zones while one is being drawn: there, but not the point. */
 const CONTEXT_STYLE: google.maps.PolygonOptions = {
@@ -59,6 +72,13 @@ const ZONE_STYLE: google.maps.PolygonOptions = {
   fillOpacity: 0.22,
   zIndex: 1,
 };
+/** The piece whose corners show. */
+const SELECTED_STYLE: google.maps.PolygonOptions = {
+  ...ZONE_STYLE,
+  strokeColor: "#047857",
+  strokeWeight: 3,
+  fillOpacity: 0.35,
+};
 /** The district's mukims over the zone, each a click to tick or untick. */
 const MUKIM_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#404040",
@@ -70,7 +90,7 @@ const MUKIM_STYLE: google.maps.PolygonOptions = {
 };
 const MUKIM_HOVER_OPACITY = 0.14;
 
-/** What a hand on the map does: reshape the zone with the map held still, or move the map. */
+/** What a hand on the map does: edit the zone, or only move the map. */
 type Tool = "edit" | "pan";
 
 /** The view's centre and a length that fits well in it, in metres. */
@@ -105,25 +125,36 @@ function squareRing(center: { lat: number; lng: number }, size: number): Ring {
   return [...corners, corners[0]!];
 }
 
+/** A shape as its pieces, and back: one piece of one ring is stored as a ring. */
+const piecesOf = (shape: ZoneShape | null): MultiPolygon =>
+  !shape ? [] : isRing(shape) ? [[shape]] : shape;
+const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
+  pieces.length === 0
+    ? null
+    : pieces.length === 1 && pieces[0]!.length === 1
+      ? pieces[0]![0]!
+      : pieces;
+
 /**
  * The zone maker's map: the districts of the location's states in grey,
  * its other zones in blue, other locations' zones in amber, and the zone
- * being made in green. With `mukims`, the district's mukims are outlined
- * over it, and a click on one ticks or unticks it. A shape that
- * may be reshaped has two tools. "Edit shape" holds the map still so a
- * drag never pans it: drag a corner to move it, the small mark halfway
- * along an edge to add a corner there, or the inside to move the whole
- * zone; right-click a corner to remove it. "Move map" pans and zooms with
- * the shape left alone. With `starters`, "Circle" and "Square" put a new
- * shape in the middle of the view, to reshape from there; no corner is
- * clicked out by hand. Every change reports the whole shape, a district's
- * several pieces of land included.
+ * being made in green, each piece of land its own shape. The tools sit at
+ * the bottom of the map, there in full screen too. With the pencil a click
+ * selects a piece and shows its corners (./piece-editor): drag a corner,
+ * or the piece alone; right-click a corner to remove it, an edge to add
+ * one, the inside of a piece to delete it. The square and the circle add a
+ * piece in the middle of the view. With the hand nothing changes under a
+ * drag. The map pans and zooms with either. The map frames the zone when
+ * `frame` changes, a district or a place newly picked, and never on an
+ * edit or an undo. With `mukims`, the district's mukims are outlined over
+ * the zone, and a click on one ticks or unticks it.
  */
 export function ZoneMap({
   mapKey,
   districts,
   others,
   shape,
+  frame,
   editable,
   starters,
   canUndo,
@@ -136,27 +167,37 @@ export function ZoneMap({
   districts: DistrictOutline[];
   others: OtherZone[];
   shape: ZoneShape | null;
-  /** Whether the shape may be reshaped: not while it is a district as it is. */
+  /** Changes when the map should frame the zone afresh. */
+  frame: number;
+  /** Whether the shape may be reshaped: not while it is a district or its mukims as they are. */
   editable: boolean;
-  /** Whether to offer a new circle or square in the view. */
+  /** Whether to offer a new circle or square while there is no shape yet. */
   starters: boolean;
   canUndo: boolean;
   onUndo: () => void;
-  onShapeChange: (shape: ZoneShape) => void;
+  onShapeChange: (shape: ZoneShape | null) => void;
   /** The district's mukims to outline over the zone; none while it is not made of them. */
   mukims?: MukimChoice[];
   onToggleMukim?: (code: string) => void;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts);
-  const polygon = useRef<google.maps.Polygon | null>(null);
+  const editor = useRef<PieceEditor | null>(null);
   // The shape on the map, as last drawn or reported, to tell an edit made
   // here from a shape handed in.
   const shown = useRef<ZoneShape | null>(null);
   const report = useRef(onShapeChange);
   const toggle = useRef(onToggleMukim);
   const [tool, setTool] = useState<Tool>("edit");
+  const [selected, setSelected] = useState<number | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [hovered, setHovered] = useState<MukimChoice | null>(null);
-  const reshaping = editable && shape !== null && tool === "edit";
+  // The toolbar's home among the map's own controls, so it stays in full
+  // screen; made in the browser only, and shown once the map is there.
+  const [toolbar] = useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
+  const editing = editable && tool === "edit";
+  const canAdd = editable && (shape !== null || starters);
 
   // The map's listeners outlive a render, so they read the latest callbacks here.
   useEffect(() => {
@@ -164,7 +205,8 @@ export function ZoneMap({
     toggle.current = onToggleMukim;
   }, [onShapeChange, onToggleMukim]);
 
-  // Once the map is there: the other zones, and the view on the shape.
+  // Once the map is there: the other zones, the toolbar's place in the
+  // map's own controls, the zone's pieces, and the view on the shape.
   useEffect(() => {
     if (!map || !library) return;
     for (const other of others) {
@@ -174,6 +216,29 @@ export function ZoneMap({
         map,
       });
     }
+    if (toolbar) {
+      map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
+    }
+
+    let noticeTimer = 0;
+    editor.current = createPieceEditor({
+      map,
+      library,
+      style: ZONE_STYLE,
+      selectedStyle: SELECTED_STYLE,
+      onChange: (pieces) => {
+        const next = shapeOfPieces(pieces);
+        shown.current = next;
+        report.current(next);
+      },
+      onSelect: setSelected,
+      onRefuse: (message) => {
+        setNotice(message);
+        window.clearTimeout(noticeTimer);
+        noticeTimer = window.setTimeout(() => setNotice(null), NOTICE_MS);
+      },
+    });
+
     // The zone itself, else the location's other zones, where the work is,
     // else its states.
     const own = others.filter((other) => !other.location);
@@ -185,78 +250,37 @@ export function ZoneMap({
           : districts.map((district) => district.polygons),
     );
     if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
+    return () => {
+      window.clearTimeout(noticeTimer);
+      editor.current?.destroy();
+      editor.current = null;
+    };
     // The other zones and the districts are the page's, drawn once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, library]);
 
   // The zone itself: drawn afresh when a shape is handed in (a district, a
-  // circle around a place, a starter, an undo), left alone when the change
-  // came from a hand on the map.
+  // circle around a place, an undo), left alone when the change came from a
+  // hand on the map.
   useEffect(() => {
-    if (!map || !library) return;
-    if (sameShape(shape, shown.current)) return;
-    polygon.current?.setMap(null);
-    polygon.current = null;
+    if (!editor.current || sameShape(shape, shown.current)) return;
     shown.current = shape;
-    if (!shape) return;
-
-    const layout = layoutOf(shape);
-    const drawn = new library.Polygon({
-      ...ZONE_STYLE,
-      paths: pathsOf(shape),
-      map,
-    });
-    polygon.current = drawn;
-
-    let dragging = false;
-    let frame = 0;
-    const send = () => {
-      if (dragging) return;
-      const rings = drawn
-        .getPaths()
-        .getArray()
-        .map((path) => ringOfPath(path));
-      const next = shapeOfRings(rings, layout);
-      shown.current = next;
-      report.current(next);
-    };
-    // A drag fires one event per corner it moves; one report a frame is enough.
-    const schedule = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        send();
-      });
-    };
-    for (const path of drawn.getPaths().getArray()) {
-      path.addListener("set_at", schedule);
-      path.addListener("insert_at", schedule);
-      path.addListener("remove_at", schedule);
-    }
-    drawn.addListener("dragstart", () => {
-      dragging = true;
-    });
-    drawn.addListener("dragend", () => {
-      dragging = false;
-      send();
-    });
-    drawn.addListener("rightclick", (event: google.maps.PolyMouseEvent) => {
-      if (event.path === undefined || event.vertex === undefined) return;
-      const path = drawn.getPaths().getAt(event.path);
-      if (path.getLength() > MIN_CORNERS) path.removeAt(event.vertex);
-    });
-
-    // A shape out of view is brought into it; one in view stays where it is.
-    const view = map.getBounds();
-    const bounds = boundsOf([shape]);
-    if (
-      !view ||
-      !view.contains(bounds.getNorthEast()) ||
-      !view.contains(bounds.getSouthWest())
-    ) {
-      map.fitBounds(bounds, 48);
-    }
+    editor.current.setPieces(piecesOf(shape));
   }, [map, library, shape]);
+
+  // A new district or place is framed; an edit or an undo keeps the view.
+  const framed = useRef(frame);
+  useEffect(() => {
+    if (!map || frame === framed.current) return;
+    framed.current = frame;
+    if (!shape) return;
+    const bounds = boundsOf([shape]);
+    if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
+  }, [map, frame, shape]);
+
+  useEffect(() => {
+    editor.current?.setEditable(editing);
+  }, [map, library, editing]);
 
   // The district's mukims over the zone, drawn afresh when the list changes.
   const mukimKey = mukims?.map((mukim) => mukim.code).join(" ") ?? "";
@@ -287,115 +311,150 @@ export function ZoneMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, library, mukimKey]);
 
-  // The tool in hand: the map held still while reshaping, free otherwise.
-  useEffect(() => {
-    polygon.current?.setOptions({ editable: reshaping, draggable: reshaping });
-    map?.setOptions({ gestureHandling: reshaping ? "none" : "auto" });
-  }, [map, reshaping, shape]);
-
   function place(kind: "circle" | "square") {
     if (!map) return;
     const view = viewOf(map);
     if (!view) return;
     setTool("edit");
-    report.current(
+    editor.current?.setEditable(true);
+    editor.current?.addPiece(
       kind === "circle"
         ? circleRing(view.center, view.size / 2, CIRCLE_CORNERS)
         : squareRing(view.center, view.size),
     );
   }
 
+  const hint = failed
+    ? MAP_FAILURES[failed]
+    : notice
+      ? notice
+      : mukims
+        ? hovered
+          ? `${hovered.name}, ${hovered.kind.toLowerCase()}: click to tick or untick it.`
+          : "Click a mukim on the map to tick or untick it."
+        : !shape
+          ? canAdd
+            ? "Move the map to the area, then add a square or a circle from the tools to reshape."
+            : null
+          : !editable
+            ? null
+            : !editing
+              ? "The hand only moves the map. Pick the pencil to edit the zone."
+              : selected === null
+                ? "Click a piece to show its corners. Right-click a piece to delete it."
+                : "Drag a corner, or the piece to move it alone. Right-click a corner to remove it, an edge to add one, or the inside to delete the piece.";
+
   return (
     <div className="grid gap-2">
-      <div className="relative">
-        <div
-          ref={host}
-          role="application"
-          aria-label="Map of the zone"
-          className="h-[28rem] w-full rounded-md border border-neutral-200 bg-neutral-100"
-        />
-        {map ? (
-          <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-2">
-            {editable && shape ? (
-              <ToolGroup>
+      <div
+        ref={host}
+        role="application"
+        aria-label="Map of the zone"
+        className="h-[32rem] w-full rounded-md border border-neutral-200 bg-neutral-100"
+      />
+      {toolbar && map && (editable || canUndo)
+        ? createPortal(
+            <div className="mb-6 flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
+              {editable && shape ? (
+                <>
+                  <ToolButton
+                    label="Edit the zone"
+                    active={tool === "edit"}
+                    onClick={() => setTool("edit")}
+                  >
+                    <PencilIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label="Only move the map"
+                    active={tool === "pan"}
+                    onClick={() => setTool("pan")}
+                  >
+                    <HandIcon />
+                  </ToolButton>
+                  <Divider />
+                </>
+              ) : null}
+              {canAdd ? (
+                <>
+                  <ToolButton
+                    label="Add a square"
+                    onClick={() => place("square")}
+                  >
+                    <SquarePlusIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label="Add a circle"
+                    onClick={() => place("circle")}
+                  >
+                    <CirclePlusIcon />
+                  </ToolButton>
+                  <Divider />
+                </>
+              ) : null}
+              {editable && shape ? (
                 <ToolButton
-                  active={tool === "edit"}
-                  onClick={() => setTool("edit")}
+                  label="Delete the piece selected"
+                  disabled={!editing || selected === null}
+                  onClick={() => editor.current?.deleteSelected()}
                 >
-                  Edit shape
+                  <TrashIcon />
                 </ToolButton>
-                <ToolButton
-                  active={tool === "pan"}
-                  onClick={() => setTool("pan")}
-                >
-                  Move map
-                </ToolButton>
-              </ToolGroup>
-            ) : null}
-            {starters ? (
-              <ToolGroup>
-                <ToolButton onClick={() => place("circle")}>Circle</ToolButton>
-                <ToolButton onClick={() => place("square")}>Square</ToolButton>
-              </ToolGroup>
-            ) : null}
-            {canUndo ? (
-              <ToolGroup>
-                <ToolButton onClick={onUndo}>Undo</ToolButton>
-              </ToolGroup>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+              ) : null}
+              <ToolButton label="Undo" disabled={!canUndo} onClick={onUndo}>
+                <UndoIcon />
+              </ToolButton>
+            </div>,
+            toolbar,
+          )
+        : null}
       <p
-        className={cx("text-xs", failed ? "text-red-700" : "text-neutral-500")}
+        role={notice ? "status" : undefined}
+        className={cx(
+          "min-h-4 text-xs",
+          failed
+            ? "text-red-700"
+            : notice
+              ? "text-amber-800"
+              : "text-neutral-500",
+        )}
       >
-        {failed
-          ? MAP_FAILURES[failed]
-          : mukims
-            ? hovered
-              ? `${hovered.name}, ${hovered.kind.toLowerCase()}: click to tick or untick it.`
-              : "Click a mukim on the map to tick or untick it."
-            : !shape
-              ? starters
-                ? "Move the map to the area, then put a circle or a square on it to reshape."
-                : null
-              : !editable
-                ? null
-                : reshaping
-                  ? "The map is held still. Drag a corner to move it, the mark halfway along an edge to add one, or the inside to move the whole zone. Right-click a corner to remove it. Zoom with the control at the bottom right."
-                  : "Drag to move the map and scroll to zoom. Switch to Edit shape to reshape the zone."}
+        {hint}
       </p>
     </div>
   );
 }
 
-function ToolGroup({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex overflow-hidden rounded-md border border-neutral-300 bg-white shadow-sm">
-      {children}
-    </div>
-  );
+function Divider() {
+  return <span aria-hidden className="mx-0.5 h-5 w-px bg-neutral-200" />;
 }
 
+/** An icon button of the toolbar; `active` for a tool, which stays pressed while it is in hand. */
 function ToolButton({
-  active = false,
+  label,
+  active,
+  disabled = false,
   onClick,
   children,
 }: {
+  label: string;
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
+      title={label}
+      aria-label={label}
       aria-pressed={active}
+      disabled={disabled}
       onClick={onClick}
       className={cx(
-        "h-8 px-3 text-xs font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-neutral-900 [&+&]:border-l [&+&]:border-neutral-200",
+        "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
         active
           ? "bg-neutral-900 text-white"
-          : "text-neutral-700 hover:bg-neutral-100",
+          : "text-neutral-700 enabled:hover:bg-neutral-100",
       )}
     >
       {children}

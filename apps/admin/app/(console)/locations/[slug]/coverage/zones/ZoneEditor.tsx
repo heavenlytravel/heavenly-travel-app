@@ -130,9 +130,10 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * every save, until "Reshape by hand" frees it; a mukim is ticked in the
  * list or clicked on the map. An address draws a circle of the radius
  * around the place, the address kept as a reference only; "Draw" puts a
- * circle or a square in the view. From there every shape is the admin's
- * own: corners dragged, added at the edges, removed by a right-click, the
- * whole zone moved, each step undone with Undo. A zone may not overlap any
+ * square or a circle in the view. From there every shape is the admin's
+ * own, edited piece by piece on the map (./ZoneMap): corners dragged,
+ * added and removed with a right-click, a piece moved alone, deleted, or
+ * added, each step undone with Undo. A zone may not overlap any
  * other, this location's or another's: when the save is refused for it,
  * "Cut them out" takes their ground off this one. A district as it is
  * needs no map; everything else is drawn on it. A saved zone goes back to
@@ -224,6 +225,10 @@ export function ZoneEditor({
   // a new radius redraws it; once reshaped, only "Redraw the circle" does.
   const [circle, setCircle] = useState<ZoneShape | null>(null);
   const [history, setHistory] = useState<ZoneShape[]>([]);
+  // Counts the shapes the map should frame: a district or a place newly
+  // picked, not an edit, a tick or an undo.
+  const [frame, setFrame] = useState(0);
+  const reframe = () => setFrame((count) => count + 1);
   const [error, setError] = useState<string | null>(null);
   // The zones the last save found this one overlapping, to cut out.
   const [overlaps, setOverlaps] = useState<string[] | null>(null);
@@ -303,6 +308,7 @@ export function ZoneEditor({
       setPicked([]);
       setAsItIs(true);
       changeShape(result.polygons satisfies MultiPolygon);
+      reframe();
       suggest(result.label);
     });
   }
@@ -313,6 +319,7 @@ export function ZoneEditor({
     preview(districtPolygonsAction(district.code), (result) => {
       setAsItIs(true);
       changeShape(result.polygons);
+      reframe();
       suggest(district.label);
     });
   }
@@ -357,6 +364,7 @@ export function ZoneEditor({
       setPlaceText(point.label);
       setCenter(point);
       drawCircle(point, radiusM);
+      reframe();
       suggest(point.label);
     });
   }
@@ -683,6 +691,7 @@ export function ZoneEditor({
           districts={districts}
           others={others}
           shape={shape}
+          frame={frame}
           editable={!lockedDistrict}
           starters={source === "draw"}
           canUndo={history.length > 0}

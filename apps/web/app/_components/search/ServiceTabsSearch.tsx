@@ -34,17 +34,30 @@ const TABS: Product[] = [
  * disabled until their flows exist. Its state is the `SearchProvider`'s
  * above it, which is how a card elsewhere on the page fills a place in.
  * The button says so while the options page prices the trip, which is
- * the longest wait on the site.
+ * the longest wait on the site. On a location's pages the place fields
+ * keep to the location, and a place it cannot take says so at once and
+ * holds the search back.
  */
 export function ServiceTabsSearch() {
-  const { product, setProduct, values, set, dropoffs } = useSearchCard();
-  const { issues, pending, submit: sendTrip } = useTripSubmit();
+  const { product, setProduct, values, set, dropoffs, withinOf, placeIssues } =
+    useSearchCard();
+  const { issues: sendIssues, pending, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
+  // A place the location cannot take says so at once, over the reason the
+  // last send gave for the same field.
+  const issues = [
+    ...placeIssues,
+    ...sendIssues.filter(
+      (issue) => !placeIssues.some((place) => place.field === issue.field),
+    ),
+  ];
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const category = bookableCategory(product.key);
-    if (category) sendTrip(category, values);
+    if (category) {
+      sendTrip(category, values, undefined, placeIssues.length > 0);
+    }
   }
 
   return (
@@ -137,6 +150,7 @@ export function ServiceTabsSearch() {
                   id={id}
                   values={values}
                   presets={f.key === "to" ? dropoffs : undefined}
+                  within={withinOf(f.key)}
                   onChange={set}
                   className="h-full min-h-[70px] w-full border-0 bg-transparent px-[18px] pt-[34px] pb-2.5 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b] data-placeholder:text-[#64706d]/80"
                 />

@@ -1,6 +1,6 @@
 "use client";
 
-import { BOOKING_RULES } from "@repo/db";
+import { BOOKING_RULES, type BBox } from "@repo/db";
 import { DateField, DateTimeField } from "@repo/ui/date-field";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput, type PlacePresets } from "@repo/ui/place-input";
@@ -21,8 +21,9 @@ const { timeZone } = BOOKING_RULES;
  * from @repo/ui without a box of their own, so `className` draws it. A
  * day and a time are one field that sets two values, so `onChange` names
  * the value it sets. A place field is an autocomplete: `onChange` gets the
- * place id when a suggestion is picked and nothing when the text was typed.
- * `presets` are the places a place field offers before anything is typed.
+ * place id and the autocomplete session when a suggestion is picked, and
+ * nothing when the text was typed. `presets` are the places a place field
+ * offers before anything is typed, `within` the box it suggests places in.
  * Days and times are read in Malaysia, where the trip happens.
  */
 export function FieldInput({
@@ -30,6 +31,7 @@ export function FieldInput({
   id,
   values,
   presets,
+  within,
   onChange,
   onFocus,
   className,
@@ -38,7 +40,13 @@ export function FieldInput({
   id: string;
   values: SearchValues;
   presets?: PlacePresets;
-  onChange: (key: FieldKey, value: string, placeId?: string) => void;
+  within?: BBox;
+  onChange: (
+    key: FieldKey,
+    value: string,
+    placeId?: string,
+    sessionToken?: string,
+  ) => void;
   onFocus?: () => void;
   className?: string;
 }) {
@@ -50,7 +58,10 @@ export function FieldInput({
         placeId={values.placeIds[def.key]}
         placeholder={def.placeholder}
         presets={presets}
-        onChange={(value, placeId) => onChange(def.key, value, placeId)}
+        within={within}
+        onChange={(value, placeId, sessionToken) =>
+          onChange(def.key, value, placeId, sessionToken)
+        }
         onFocus={onFocus}
         className={className}
       />

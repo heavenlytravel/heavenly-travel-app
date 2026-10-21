@@ -67,15 +67,20 @@ export function useTripSubmit() {
   const [issues, setIssues] = useState<TripSearchIssue[]>([]);
   // Pending until the options page has priced the trip and is on screen.
   const { pending, go } = useNavigate();
-  /** True when the trip was sent. `passengers` is carried over, if given. */
+  /**
+   * True when the trip was sent. `passengers` is carried over, if given.
+   * With `hold`, the card already knows it cannot go: the reasons are
+   * kept, and nothing is sent.
+   */
   function submit(
     category: TripCategory,
     values: SearchValues,
     passengers?: number,
+    hold = false,
   ) {
     const result = tripSearchFromCard(values);
     setIssues(result.ok ? [] : result.issues);
-    if (!result.ok) return false;
+    if (!result.ok || hold) return false;
     go(tripBookingHref(category, result.params, passengers));
     return true;
   }

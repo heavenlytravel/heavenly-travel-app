@@ -31,6 +31,7 @@ export * from "./location-input";
 export * from "./images";
 export * from "./location-page-input";
 export * from "./location-view";
+export * from "./location-search";
 export * from "./cache-tags";
 export * from "./trip-input";
 export * from "./booking-input";

@@ -4,11 +4,13 @@ import {
   VEHICLE_CLASSES_TAG,
   checkLocationSlug,
   getLocationPreview,
+  getLocationSearch,
   getPublicLocation,
   listActiveOfferingsAt,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
+  type LocationSearch,
   type LocationView,
   type TripCategory,
 } from "@repo/db/server";
@@ -48,6 +50,25 @@ export const publicLocation = cache(
 
 /** The location at the slug as staff preview it: the drafts, read fresh. Once per request. */
 export const locationPreview = cache(getLocationPreview);
+
+/**
+ * What the search card on the location's pages keeps to, read off its
+ * zones and its drop-off rule. Tagged with the location, which the admin
+ * refreshes after a change to either. Once per request.
+ */
+export const publicLocationSearch = cache(
+  async (slug: string): Promise<LocationSearch | null> => {
+    if (!isLocationSlug(slug)) return null;
+    return unstable_cache(
+      () => getLocationSearch(slug),
+      ["public-location-search", slug],
+      { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
+    )();
+  },
+);
+
+/** The same for the staff preview, read fresh. */
+export const locationSearchPreview = cache(getLocationSearch);
 
 /** The home page's location cards. */
 export const topChoiceCards = unstable_cache(

@@ -55,6 +55,31 @@ export function bboxOf(shape: MultiPolygon): BBox {
   return box;
 }
 
+/** The box around all the boxes. */
+export function unionBox(boxes: readonly BBox[]): BBox {
+  const box: BBox = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const [west, south, east, north] of boxes) {
+    if (west < box[0]) box[0] = west;
+    if (south < box[1]) box[1] = south;
+    if (east > box[2]) box[2] = east;
+    if (north > box[3]) box[3] = north;
+  }
+  return box;
+}
+
+/** The box grown by `margin` degrees on every side. */
+export function widenBox(
+  [west, south, east, north]: BBox,
+  margin: number,
+): BBox {
+  return [west - margin, south - margin, east + margin, north + margin];
+}
+
+/** Whether two boxes share any ground or edge. */
+export function boxesMeet(a: BBox, b: BBox): boolean {
+  return a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
+}
+
 export function inBBox([x, y]: LngLat, box: BBox): boolean {
   return x >= box[0] && y >= box[1] && x <= box[2] && y <= box[3];
 }

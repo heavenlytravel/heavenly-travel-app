@@ -20,7 +20,8 @@ export type PlacePresets = {
  * so the caller knows whether the place is resolved. One Google
  * autocomplete session token lives from the first keystroke to a pick,
  * then a new one is minted, which is how Google bills a session as one
- * request. The input is unstyled: the caller passes the classes its form
+ * request; the pick reports the token, for the details call that ends the
+ * session. The input is unstyled: the caller passes the classes its form
  * uses. With `presets`, the field offers those places when it is opened
  * empty; typing brings the search. With `within`, a box, it suggests
  * places inside it only.
@@ -41,7 +42,7 @@ export function PlaceInput({
   placeId?: string;
   placeholder?: string;
   presets?: PlacePresets;
-  onChange: (value: string, placeId?: string) => void;
+  onChange: (value: string, placeId?: string, sessionToken?: string) => void;
   onFocus?: () => void;
   within?: Bounds;
   className?: string;
@@ -85,7 +86,7 @@ export function PlaceInput({
   }, [value, searchable, withinKey]);
 
   function pick(s: PlaceSuggestion) {
-    onChange(s.label, s.placeId);
+    onChange(s.label, s.placeId, session.current);
     setSuggestions([]);
     setOpen(false);
     session.current = undefined;

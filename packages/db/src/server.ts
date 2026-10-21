@@ -33,6 +33,8 @@ export {
 export type { State, District, DistrictWithState, ServedAt } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
 export { statesBounds } from "./location-places";
+export { getLocationSearch, checkPlaceAt } from "./search-areas";
+export type { PlaceCheckRequest } from "./search-areas";
 export { mukimsOf, mukimsByCode, MUKIM_KIND_LABELS } from "./mukim-index";
 export type { MukimShape, MukimKind } from "./mukim-index";
 export { unionOf, cutOut, shapesOverlap } from "./zone-geometry";
@@ -217,5 +219,6 @@ export * from "./location-input";
 export * from "./images";
 export * from "./location-page-input";
 export * from "./location-view";
+export * from "./location-search";
 export * from "./search";
 export * from "./cache-tags";

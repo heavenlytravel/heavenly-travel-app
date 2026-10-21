@@ -20,7 +20,8 @@ const WIDTHS = {
  * backdrop or the cross closes it, and the page under it holds still while
  * it is open. Controlled: the parent owns `open`. The
  * title and the line under it name the dialog for screen readers; the
- * caller puts the fields and the buttons inside.
+ * caller puts the fields and the buttons inside. The inside scrolls past
+ * `--dialog-height`, which a child that fits itself in, a photo, reads.
  */
 export function Dialog({
   open,
@@ -54,12 +55,12 @@ export function Dialog({
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
+        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45 ui:[--dialog-height:min(48rem,90dvh)]",
         WIDTHS[width],
         className,
       )}
     >
-      <ModalBody open={open} className="ui:max-h-[min(48rem,90dvh)]">
+      <ModalBody open={open} className="ui:max-h-(--dialog-height)">
         {open ? (
           <div className="ui:grid ui:gap-4 ui:p-5">
             <div className="ui:flex ui:items-start ui:gap-4">

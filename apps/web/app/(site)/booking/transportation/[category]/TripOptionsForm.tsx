@@ -66,8 +66,8 @@ export type ClassOption = {
   unavailable: string | null;
 };
 
-/** The gallery open over the form: a class's models, at one of them. */
-type OpenGallery = { option: ClassOption; modelId: string };
+/** The gallery open over the form: one model of a class. */
+type OpenGallery = { vehicleClass: string; model: GalleryModel };
 
 /**
  * The trip bar, then vehicle class, passengers, child seats where the
@@ -226,7 +226,9 @@ export function TripOptionsForm({
                     chargePercent={c.modelChoicePercent}
                     modelId={model?.id ?? null}
                     onChoose={setModelId}
-                    onPhotos={(id) => setGallery({ option: c, modelId: id })}
+                    onPhotos={(m) =>
+                      setGallery({ vehicleClass: c.name, model: m })
+                    }
                   />
                 ) : null}
               </div>
@@ -336,10 +338,9 @@ export function TripOptionsForm({
       </form>
       {gallery ? (
         <ModelGallery
-          key={`${gallery.option.id}:${gallery.modelId}`}
-          title={gallery.option.name}
-          models={gallery.option.models}
-          initialModelId={gallery.modelId}
+          title={gallery.model.name}
+          description={`One of the ${gallery.vehicleClass} models.`}
+          models={[gallery.model]}
           open
           onOpenChange={(open) => {
             if (!open) setGallery(null);

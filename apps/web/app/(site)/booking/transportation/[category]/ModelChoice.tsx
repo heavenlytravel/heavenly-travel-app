@@ -13,19 +13,19 @@ const sizes = "(min-width: 64rem) 340px, (min-width: 40rem) 45vw, 90vw";
 /** The models shown before "Show all": two rows of two. */
 const FIRST_MODELS = 4;
 
-/** "View" over a model's photos, opening them large in the gallery. Outside the tile's label, so it does not choose the model. */
+/** "View" over a model's photos, opening them large in the gallery, that model's alone. Outside the tile's label, so it does not choose the model. */
 function ViewButton({
   model,
   onPhotos,
 }: {
   model: GalleryModel;
-  onPhotos: (modelId: string) => void;
+  onPhotos: (model: GalleryModel) => void;
 }) {
   if (model.photos.length === 0) return null;
   return (
     <button
       type="button"
-      onClick={() => onPhotos(model.id)}
+      onClick={() => onPhotos(model)}
       aria-label={`See the photos of the ${model.name} larger`}
       className={`absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-[0.8rem] font-semibold text-[#073c36] shadow ${focus}`}
     >
@@ -117,7 +117,7 @@ export function ModelChoice({
   /** The model chosen; null for any. */
   modelId: string | null;
   onChoose: (modelId: string | null) => void;
-  onPhotos: (modelId: string) => void;
+  onPhotos: (model: GalleryModel) => void;
 }) {
   const radioIds = useId();
   if (models.length === 0) return null;

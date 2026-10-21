@@ -22,30 +22,32 @@ function hasPhotos(models: readonly GalleryModel[]) {
 const pill = `rounded-full border px-3.5 py-1.5 text-[0.88rem] font-semibold transition-colors ${focus}`;
 
 /**
- * The photos of a class's models in a dialog, one model at a time: the
- * models as toggle buttons when there are several, the one shown pressed, the photo large with its caption,
- * the one before and after, and the photos as thumbnails. Controlled: the
- * page owns `open`, so the options form keeps one gallery outside its
- * cards, whose clicks would otherwise choose the class. It opens at the
- * model asked for, or the first.
+ * The photos of a class's models, or of one model, in a dialog, one model
+ * at a time: the models as toggle buttons when there are several, the one
+ * shown pressed, the photo large with its caption, the one before and
+ * after, and the photos as thumbnails. The photo takes the room the rest
+ * leaves, shown whole in its frame, so the dialog fits the window without
+ * scrolling. Controlled: the page owns `open`, so the options form keeps
+ * one gallery outside its cards, whose clicks would otherwise choose the
+ * class. It opens at the first model.
  */
 export function ModelGallery({
   title,
+  description,
   models,
-  initialModelId = null,
   open,
   onOpenChange,
 }: {
-  /** The class: "MPV VIP". */
+  /** What the photos are of: a class, "MPV VIP", or one model. */
   title: string;
+  /** The line under the title. */
+  description: string;
   models: readonly GalleryModel[];
-  /** The model to open at; null for the first. */
-  initialModelId?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const shown = models.filter((model) => model.photos.length > 0);
-  const [modelId, setModelId] = useState<string | null>(initialModelId);
+  const [modelId, setModelId] = useState<string | null>(null);
   const [at, setAt] = useState(0);
   const model = shown.find((m) => m.id === modelId) ?? shown[0];
   if (!model) return null;
@@ -59,15 +61,17 @@ export function ModelGallery({
       open={open}
       onOpenChange={onOpenChange}
       title={`${title} photos`}
-      description="The models of this class we may send."
+      description={description}
       width="lg"
     >
-      <div className="grid gap-4">
+      {/* As tall as the dialog lets it be under its title: the photo
+          gives up the height the rest needs. */}
+      <div className="flex max-h-[calc(var(--dialog-height)-6.5rem)] min-w-0 flex-col gap-4">
         {shown.length > 1 ? (
           <div
             role="group"
             aria-label="Models"
-            className="flex flex-wrap gap-2"
+            className="flex shrink-0 flex-wrap gap-2"
           >
             {shown.map((m) => {
               const on = m.id === model.id;
@@ -93,8 +97,8 @@ export function ModelGallery({
           </div>
         ) : null}
 
-        <figure className="grid gap-2">
-          <div className="relative aspect-[3/2] overflow-hidden rounded-[12px] bg-[#f3f6f5]">
+        <figure className="flex min-h-0 flex-col gap-2">
+          <div className="relative aspect-[3/2] min-h-0 w-full overflow-hidden rounded-[12px] bg-[#f3f6f5]">
             <Image
               key={photo.url}
               src={photo.url}
@@ -124,7 +128,7 @@ export function ModelGallery({
               </>
             ) : null}
           </div>
-          <figcaption className="flex flex-wrap justify-between gap-x-4 text-[0.92rem] text-[#324844]">
+          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-[0.92rem] text-[#324844]">
             <span>
               <strong className="text-[#082f2b]">{model.name}</strong>
               {photo.caption ? `, ${photo.caption}` : null}
@@ -138,7 +142,7 @@ export function ModelGallery({
         </figure>
 
         {count > 1 ? (
-          <ol className="flex gap-2 overflow-x-auto pb-1">
+          <ol className="flex shrink-0 gap-2 overflow-x-auto pb-1">
             {model.photos.map((p, i) => (
               <li key={`${p.url}-${i}`} className="shrink-0">
                 <button
@@ -200,6 +204,7 @@ export function ModelPhotosButton({
       <ModelGallery
         key={opened}
         title={title}
+        description="The models of this class we may send."
         models={models}
         open={open}
         onOpenChange={setOpen}

@@ -567,8 +567,7 @@ export function ZoneEditor({
                       Some of its mukims
                     </span>
                     <span className="text-xs text-neutral-600">
-                      Tick one or more here, or click one beside the zone on the
-                      map; together they make one zone.
+                      Tick one or more; together they make one zone.
                     </span>
                   </span>
                 </label>
@@ -686,10 +685,6 @@ export function ZoneEditor({
               ? mukims
               : undefined
           }
-          pickedMukims={picked}
-          onAddMukim={(code) => {
-            if (!picked.includes(code)) toggleMukim(code);
-          }}
         />
       ) : null}
 

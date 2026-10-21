@@ -127,9 +127,8 @@ The partner grid, as data:
     the boundary). The boundaries
     are simplified already: 136 corners for the median district, 653 for Kudat, the
     most. Since 2026-10-21 the district can instead be **some of its mukims**: after
-    the district, "The whole district" or "Some of its mukims", ticked in a list or
-    clicked on the map beside the zone (a click inside the zone is the zone's, and a
-    mukim is taken out in the list). The mukims are the areas below a district from geoBoundaries
+    the district, "The whole district" or "Some of its mukims", ticked in a list; the
+    map outlines them under the zone. The mukims are the areas below a district from geoBoundaries
     ADM3 (see `260930-coverage.md`): Peninsular mukims with the bandar and pekan cut
     out of them, and Sarawak's land and town districts. Sabah and Putrajaya have none,
     so their districts offer the whole district only. Ticked mukims are put together
@@ -149,13 +148,19 @@ The partner grid, as data:
   handle on all 800 corners of Kuah's 37 islands, another halfway along every edge, and
   dragged them all together). The tools sit in a bar at the bottom of the map, there in
   full screen too: the pencil to edit, the hand to only move the map, a square and a
-  circle to add a piece in the middle of the view, the bin to delete the piece selected,
-  and Undo. With the pencil a click selects a piece and only its corners show, thinned
-  where they crowd closer than 8 pixels until the map is zoomed in. Drag a corner to
-  move it, or inside the piece to move that piece alone; a drag anywhere else moves the
-  map, as it does when no piece is selected. A right-click opens a menu of what can be
-  done there: remove the corner, add a corner on the edge it is near (placed on the
-  line, and shown), or delete the piece, which so always takes a second click. Each
+  circle to add a piece in the middle of the view, the scissors, the bin and Undo.
+  Every edit is a plain click, so a Mac trackpad needs no right-click. With the pencil
+  a click selects a piece and only its corners show, thinned where they crowd closer
+  than 8 pixels until the map is zoomed in; a click on a corner selects it. Drag a
+  corner to move it, or inside the piece to move that piece alone; a drag anywhere
+  else moves the map. Pointing at an edge shows one "+" on it, under the pointer: a
+  click adds a corner there, a drag adds and moves it. The bin, or Delete or
+  Backspace, removes the corner selected, else the piece. The scissors cut the piece
+  from the corner selected to another corner clicked, along the straight line between
+  them, into two pieces, so a large part comes off with one more click on the bin; a
+  line that would leave the piece is refused (`cutPolygonBetween` in `geo.ts`). Esc
+  stops a cut, then lets go of the corner, then of the piece. A right-click opens a
+  menu of the same choices, as a shortcut (Control-click on a Mac). Each
   change is one step of Undo, and neither an edit nor an undo moves the view; the map
   frames the zone only when a district or a place is newly picked (`piece-editor.ts`).
   A district as it is works without the map, so a server without the browser key still

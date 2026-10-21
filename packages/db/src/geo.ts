@@ -261,3 +261,87 @@ export function distanceToShapeKm(point: LngLat, shape: MultiPolygon): number {
 export function bboxArea(box: BBox) {
   return (box[2] - box[0]) * (box[3] - box[1]);
 }
+
+/** Which side of the line a-b the point c is: positive left, negative right, zero on it. */
+const turn = (a: LngLat, b: LngLat, c: LngLat) =>
+  (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+
+/** Whether c, on the line a-b, lies between a and b. */
+const within = (a: LngLat, b: LngLat, c: LngLat) =>
+  Math.min(a[0], b[0]) <= c[0] &&
+  c[0] <= Math.max(a[0], b[0]) &&
+  Math.min(a[1], b[1]) <= c[1] &&
+  c[1] <= Math.max(a[1], b[1]);
+
+/** Whether segments p1-p2 and q1-q2 cross or touch. */
+function segmentsMeet(p1: LngLat, p2: LngLat, q1: LngLat, q2: LngLat) {
+  const d1 = turn(q1, q2, p1);
+  const d2 = turn(q1, q2, p2);
+  const d3 = turn(p1, p2, q1);
+  const d4 = turn(p1, p2, q2);
+  if (d1 * d2 < 0 && d3 * d4 < 0) return true;
+  return (
+    (d1 === 0 && within(q1, q2, p1)) ||
+    (d2 === 0 && within(q1, q2, p2)) ||
+    (d3 === 0 && within(p1, p2, q1)) ||
+    (d4 === 0 && within(p1, p2, q2))
+  );
+}
+
+/** A polygon cut in two, or why it cannot be. */
+export type PolygonCut =
+  | { ok: true; parts: [Polygon, Polygon] }
+  | { ok: false; reason: "same" | "adjacent" | "outside" };
+
+/**
+ * A polygon cut in two along the straight line between two corners of its
+ * outer ring, `from` and `to` by their place in it. The rings are open,
+ * their first corner not repeated at the end, and so are the parts'. Each
+ * part keeps the holes that lie in it. Refused for the same corner, for two
+ * next to each other (nothing between them to cut), and for a line that
+ * leaves the polygon or touches its edge between the two.
+ */
+export function cutPolygonBetween(
+  polygon: Polygon,
+  from: number,
+  to: number,
+): PolygonCut {
+  const [outer, ...holes] = polygon;
+  if (!outer || from === to) return { ok: false, reason: "same" };
+  const n = outer.length;
+  if ((from + 1) % n === to || (to + 1) % n === from) {
+    return { ok: false, reason: "adjacent" };
+  }
+  const a = outer[from]!;
+  const b = outer[to]!;
+  // Every edge but the four that end at a or b may not meet the line.
+  for (const [i, corner] of outer.entries()) {
+    const next = (i + 1) % n;
+    if ([from, to].includes(i) || [from, to].includes(next)) continue;
+    if (segmentsMeet(a, b, corner, outer[next]!)) {
+      return { ok: false, reason: "outside" };
+    }
+  }
+  for (const hole of holes) {
+    for (const [i, corner] of hole.entries()) {
+      if (segmentsMeet(a, b, corner, hole[(i + 1) % hole.length]!)) {
+        return { ok: false, reason: "outside" };
+      }
+    }
+  }
+  const middle: LngLat = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  if (!pointInPolygon(middle, polygon)) return { ok: false, reason: "outside" };
+
+  const [low, high] = from < to ? [from, to] : [to, from];
+  const one = outer.slice(low, high + 1);
+  const other = [...outer.slice(high), ...outer.slice(0, low + 1)];
+  const holesIn = (ring: Ring) =>
+    holes.filter((hole) => hole[0] && pointInRing(hole[0], ring));
+  return {
+    ok: true,
+    parts: [
+      [one, ...holesIn(one)],
+      [other, ...holesIn(other)],
+    ],
+  };
+}

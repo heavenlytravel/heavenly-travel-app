@@ -6,6 +6,7 @@ import {
   PencilIcon,
   ScissorsIcon,
   SquarePlusIcon,
+  SquaresUniteIcon,
   TrashIcon,
   UndoIcon,
   XIcon,
@@ -104,6 +105,10 @@ export function ZoneMapHelp({
         <Step icon={<ScissorsIcon />}>
           Select a corner, press the scissors, click another corner: the piece
           is cut in two.
+        </Step>
+        <Step icon={<SquaresUniteIcon />}>
+          Merge joins the pieces selected where they overlap or meet. The save
+          joins pieces that overlap anyway.
         </Step>
         <Step icon={<TrashIcon />}>
           Remove the corner selected, or the pieces ({keys.remove.shown}). A

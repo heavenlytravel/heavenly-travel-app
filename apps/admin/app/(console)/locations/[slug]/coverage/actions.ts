@@ -3,11 +3,14 @@
 import {
   MUKIM_KIND_LABELS,
   checkOverlaps,
+  checkZoneShape,
   createZone,
   deleteZone,
   districtShape,
+  isRing,
   isZoneDistrict,
   isZoneShape,
+  joinPieces,
   mukimsByCode,
   mukimsOf,
   parseZoneFields,
@@ -305,4 +308,27 @@ export async function checkOverlapsAction(
     ok: true,
     ...(await checkOverlaps(locationId, shape, zoneId ?? undefined)),
   };
+}
+
+/** Pieces of the zone being made put together, or why not. */
+export type PiecesJoined =
+  { ok: false; error: string } | { ok: true; pieces: MultiPolygon };
+
+/**
+ * `piecesText` is the pieces selected as JSON text, as the zone's shape
+ * is: put together where they overlap or meet, for the zone maker's Merge.
+ * The shape arithmetic stays on the server.
+ */
+export async function joinPiecesAction(
+  piecesText: string,
+): Promise<PiecesJoined> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  const pieces = fromJson(piecesText);
+  if (!isZoneShape(pieces) || isRing(pieces)) {
+    return { ok: false, error: "The zone could not be read. Reload." };
+  }
+  const check = checkZoneShape(pieces);
+  if (!check.ok) return check;
+  return { ok: true, pieces: joinPieces(pieces) };
 }

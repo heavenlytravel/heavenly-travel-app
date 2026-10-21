@@ -9,6 +9,7 @@ import {
   type Ring,
   type ZoneShape,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { cx } from "@repo/ui/cx";
 import {
   CirclePlusIcon,
@@ -20,12 +21,14 @@ import {
   RedoIcon,
   ScissorsIcon,
   SquarePlusIcon,
+  SquaresUniteIcon,
   TrashIcon,
   UndoIcon,
 } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { joinPiecesAction } from "../actions";
 import {
   MAP_FAILURES,
   boundsOf,
@@ -162,7 +165,7 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * Google's would show the map alone, and the line's notices with it
  * unseen. With the pencil every
  * edit is a plain click (./piece-editor): select a piece or a corner, or
- * several pieces with Shift+click, drag it, grow or shrink a piece from the squares of its box, add a
+ * several pieces with Shift+click, to delete or merge, drag it, grow or shrink a piece from the squares of its box, add a
  * corner with the "+" on an edge, take away what is selected with the
  * bin, cut a piece in two with the scissors. The square
  * and the circle add a piece in the middle of the view. With the hand
@@ -233,6 +236,8 @@ export function ZoneMap({
   const [menu, setMenu] = useState<PieceMenu | null>(null);
   // How the map works, over the map while open.
   const [help, setHelp] = useState(false);
+  // A merge the server is working out.
+  const [joining, setJoining] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const editing = tool === "edit";
   const canAdd = shape !== null || starters;
@@ -275,6 +280,10 @@ export function ZoneMap({
         setNotice({ message, kind });
         window.clearTimeout(noticeTimer);
         noticeTimer = window.setTimeout(() => setNotice(null), NOTICE_MS);
+      },
+      join: async (pieces) => {
+        const answer = await answerOf(joinPiecesAction(JSON.stringify(pieces)));
+        return "ok" in answer ? answer : { ok: false, error: answer.error };
       },
     });
 
@@ -361,6 +370,15 @@ export function ZoneMap({
     // The list is redrawn when its mukims change, not when a new array holds the same.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, library, mukimKey]);
+
+  async function merge() {
+    setJoining(true);
+    try {
+      await editor.current?.joinSelected();
+    } finally {
+      setJoining(false);
+    }
+  }
 
   function place(kind: "circle" | "square") {
     if (!map) return;
@@ -461,7 +479,7 @@ export function ZoneMap({
             : !selection
               ? "Click a piece to edit it, or Shift+click several. Drag anywhere else to move the map. The i at the end of the tools says how each one works."
               : selection.pieces > 1
-                ? `${selection.pieces} pieces selected. The bin deletes them all. Shift+click a piece to add it or leave it out.`
+                ? `${selection.pieces} pieces selected. The bin deletes them all; Merge joins those that overlap or meet. Shift+click a piece to add it or leave it out.`
                 : selection.corner
                   ? "Drag the corner to move it. The bin removes it; the scissors cut the piece from it to another corner."
                   : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
@@ -561,6 +579,20 @@ export function ZoneMap({
                     onClick={() => editor.current?.startCut()}
                   >
                     <ScissorsIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label="Merge the pieces selected"
+                    why={
+                      editing
+                        ? `${keys.addClick} two or more pieces first.`
+                        : "Pick the pencil first."
+                    }
+                    disabled={
+                      !editing || (selection?.pieces ?? 0) < 2 || joining
+                    }
+                    onClick={merge}
+                  >
+                    <SquaresUniteIcon />
                   </ToolButton>
                   <ToolButton
                     label={

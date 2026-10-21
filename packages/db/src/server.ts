@@ -36,7 +36,7 @@ export { statesBounds } from "./location-places";
 export { getLocationSearch, checkTripAt } from "./search-areas";
 export { mukimsOf, mukimsByCode, MUKIM_KIND_LABELS } from "./mukim-index";
 export type { MukimShape, MukimKind } from "./mukim-index";
-export { unionOf, cutOut, shapesOverlap } from "./zone-geometry";
+export { unionOf, joinPieces, cutOut, shapesOverlap } from "./zone-geometry";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,

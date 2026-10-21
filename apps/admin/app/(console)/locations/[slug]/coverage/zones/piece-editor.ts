@@ -15,7 +15,8 @@ import { openRing as open, pathOf } from "./map-shapes";
  *   selects it;
  * - Shift+click, or Ctrl+click (⌘+click on a Mac, where Ctrl+click is the
  *   right-click), adds a piece to the selection or takes it out: several
- *   are deleted together, or merged, and show no corners;
+ *   are deleted together, or merged where they overlap or meet, and show
+ *   no corners;
  * - a drag on a corner moves it, a drag inside the piece moves the piece
  *   alone, and a drag anywhere else moves the map;
  * - a box runs around the piece selected, a square at each of its corners:
@@ -83,6 +84,15 @@ export type PieceEditorOptions = {
   onNotice: (message: string, kind: "refused" | "done") => void;
   /** Opens the right-click menu, or closes it with null. */
   onMenu: (menu: PieceMenu | null) => void;
+  /**
+   * The pieces put together where they overlap or meet, each ring closed,
+   * worked out on the server, where the shape arithmetic is; or why not.
+   */
+  join: (
+    pieces: MultiPolygon,
+  ) => Promise<
+    { ok: true; pieces: MultiPolygon } | { ok: false; error: string }
+  >;
 };
 
 export type PieceEditor = {
@@ -96,6 +106,8 @@ export type PieceEditor = {
   removeSelected: () => void;
   /** Starts a cut from the corner selected. */
   startCut: () => void;
+  /** Merges the pieces selected where they overlap or meet, in one step. */
+  joinSelected: () => Promise<void>;
   destroy: () => void;
 };
 
@@ -216,6 +228,9 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   // The click that ends a cut lands on a part it made; it is not a pick.
   let ignoreClickUntil = 0;
   const clickIgnored = () => performance.now() < ignoreClickUntil;
+  // Counts the changes and the shapes handed in: a merge worked out on the
+  // server applies only to the pieces it was asked for.
+  let version = 0;
 
   // The selected piece's body, its corners, the "+", the cut's line and the
   // box with its squares, over the map: an SVG in the pane, positioned on
@@ -287,6 +302,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const projection = () => overlay.getProjection();
 
   function report() {
+    version++;
     options.onChange(pieces.map((piece) => piece.map(closed)));
   }
 
@@ -964,6 +980,50 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     map.addListener("zoom_changed", () => options.onMenu(null)),
   ];
 
+  /**
+   * Merges the pieces selected where they overlap or meet: what joins takes
+   * the place of the first of them, selected; pieces apart stay apart.
+   * Dropped when the pieces changed while the server worked it out.
+   */
+  async function joinSelected() {
+    if (chosen.length < 2) return;
+    const at = version;
+    const joining = chosen;
+    const answer = await options.join(
+      joining.map((i) => pieces[i]!.map(closed)),
+    );
+    if (at !== version) return;
+    if (!answer.ok) {
+      options.onNotice(answer.error, "refused");
+      return;
+    }
+    if (answer.pieces.length >= joining.length) {
+      options.onNotice(
+        "Those pieces do not meet, so they stay apart. Move one onto another first.",
+        "refused",
+      );
+      return;
+    }
+    stopCut();
+    const first = joining[0]!;
+    const kept = pieces.filter((_, i) => !joining.includes(i));
+    const joined = answer.pieces.map((piece) => piece.map(open));
+    pieces = [...kept.slice(0, first), ...joined, ...kept.slice(first)];
+    chosen = joined.map((_, i) => first + i);
+    corner = null;
+    added = null;
+    drawPolygons();
+    drawHandles();
+    announce();
+    report();
+    options.onNotice(
+      joined.length === 1
+        ? "Merged into one piece."
+        : "Merged the pieces that meet; the others stay apart.",
+      "done",
+    );
+  }
+
   function removeSelected() {
     const selected = single();
     if (selected !== null && corner) removeCorner(selected, corner);
@@ -990,6 +1050,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       // A selection stays on a shape of as many pieces, an undone corner or
       // move; with pieces added or gone, it could name another one.
       const same = next.length === pieces.length;
+      version++;
       stopCut();
       pieces = next.map((piece) => piece.map(open));
       corner = null;
@@ -1025,6 +1086,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     },
     removeSelected,
     startCut,
+    joinSelected,
     destroy() {
       if (frame) cancelAnimationFrame(frame);
       host.removeEventListener("pointermove", onHover, true);

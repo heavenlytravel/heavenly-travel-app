@@ -36,6 +36,17 @@ not.
   own district. A district's state is found by where the district's inside point falls
   in the ADM1 shapes. Five geoBoundaries spellings are replaced: Malacca to Melaka, Ulu
   Langat and Ulu Selangor to Hulu, Kulaijaya to Kulai, "Nabawan / Persiangan" to Nabawan.
+- Below the districts, `packages/db/data/malaysia-mukims.json` (added 2026-10-21, 3.5 MB)
+  holds the 1,859 areas of geoBoundaries ADM3, boundaries of 2021, same licence and
+  credit: Peninsular mukims with the bandar and pekan cut out of them, and Sarawak's
+  land and town districts; Sabah and Putrajaya have none. Built by
+  `pnpm --filter @repo/db db:build-mukims <folder>` from the TopoJSON release, so a
+  border two areas share is simplified once to about 50 m and both keep the same edge.
+  Each area is filed under the district its inside point falls in. The build drops the
+  far-off specks the source has (a piece of Kedawang 100 km out at sea, a piece of
+  Johor's Jelutong in Kelantan) and rocks under 0.01 km². Some districts are not fully
+  covered by their areas (Timur Laut's cover 70 of its 128 km²). Only the zone maker
+  reads the file, loaded the first time it asks, by `mukim-index.ts`.
 - The file is loaded once per process on the server by `district-index.ts`, never sent to
   the browser. Rebuild it only when geoBoundaries publishes a new release; the codes are
   slugs of names, so a release that renames a district needs the seed to follow.

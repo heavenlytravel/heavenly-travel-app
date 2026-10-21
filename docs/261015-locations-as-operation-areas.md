@@ -54,13 +54,15 @@ the list of locations, the sidebar lists them, and every team works inside one.
 - A location serves a pickup when the pickup falls in one of its zones. There is no
   other switch: the zones an admin draws are the coverage, and the same zones are the
   rows of the price list. The first zone of a new location is usually the whole area
-  (the island, as one drawn shape or a 25 km circle around Kuah); the airport, the
-  jetty and the beach strips come as smaller zones inside it, for the grid. Where
-  zones overlap, the smallest wins; a pickup outside every zone is told the area is
-  not served.
+  (the island, as one drawn shape, its mukims or a 25 km circle around Kuah); the
+  airport, the jetty and the beach strips come as zones of their own, for the grid,
+  cut out of it. Zones never overlap, within a location or across locations (revised
+  2026-10-21, see "Zones and zone-to-zone rates"); a pickup outside every zone is told
+  the area is not served.
 - `locationAt(place)` answers the zone the point falls in and the location that zone
-  belongs to, among the locations that are public (live or paused); of zones that
-  overlap across locations the smallest wins, as within one. `quoteTrip` starts there.
+  belongs to, among the locations that are public (live or paused). Since zones never
+  overlap, a point is in one zone of one location at most; of two saved before that
+  rule, the smallest still wins. `quoteTrip` starts there.
   A draft location serves nothing, whatever it has drawn.
 - Districts stay as a fixed list for placing an address: a booking records the
   district its pickup fell in, for the record and the booking screens, and the
@@ -114,13 +116,23 @@ The partner grid, as data:
   the price list, and the two stay separate.
   A zone starts one of three ways and is reshaped from there; no corner is clicked out
   by hand (revised 2026-10-17, after the first try at corner-by-corner drawing):
-  - **A district**, picked from the list of Malaysia's districts (the location's own
-    states first): its official boundary from the same geoBoundaries data, islands
-    included, for a whole district such as Langkawi or Timur Laut. It stays the
-    boundary as it is (`drawnFrom: { districtCode, label }`), read again from the code
-    on every save so it never drifts from the data, until "Reshape by hand" frees it
-    (`{ reshapedFrom, label }`, the district a reference only). The boundaries are
-    simplified already: 136 corners for the median district, 653 for Kudat, the most.
+  - **A district or mukim**, picked from the list of Malaysia's districts (the
+    location's own states first): its official boundary from the same geoBoundaries
+    data, islands included, for a whole district such as Langkawi or Timur Laut. It
+    stays the boundary as it is (`drawnFrom: { districtCode, label }`), read again from
+    the code on every save so it never drifts from the data, until "Reshape by hand"
+    frees it (`{ reshapedFrom, label }`, the district a reference only). The boundaries
+    are simplified already: 136 corners for the median district, 653 for Kudat, the
+    most. Since 2026-10-21 the district can instead be **some of its mukims**: after
+    the district, "The whole district" or "Some of its mukims", ticked in a list or
+    clicked on the map. The mukims are the areas below a district from geoBoundaries
+    ADM3 (see `260930-coverage.md`): Peninsular mukims with the bandar and pekan cut
+    out of them, and Sarawak's land and town districts. Sabah and Putrajaya have none,
+    so their districts offer the whole district only. Ticked mukims are put together
+    into one outline, `{ districtCode, mukimCodes, label }`, read again from the codes
+    on every save like a district, until reshaped (`{ reshapedFrom, mukimCodes, label }`).
+    Neighbouring mukims share their borders exactly, so they merge with no slivers and
+    two zones of neighbouring mukims meet without overlapping.
   - **An address**, searched with the autocomplete the saved addresses use: a circle
     of the given radius around it, for an airport or a ferry terminal, then reshaped
     like any other. The place and the radius are a reference only
@@ -135,11 +147,12 @@ The partner grid, as data:
   pans and zooms with the zone left alone. Undo steps back through the changes. A
   district as it is works without the map, so a server without the browser key still
   makes zones. A zone is stored as one closed ring or, a district's islands, as
-  polygons, at most 1,000 corners in all, so the quote has one test, `zoneAt` in
-  `zone-match.ts`, over both. Only a district as it is has its shape read again by the
+  polygons, at most 2,000 corners in all (1,000 until 2026-10-21; Kuah and Kedawang
+  together have 1,043), so the quote has one test, `zoneAt` in `zone-match.ts`, over
+  both. Only a district or its mukims as they are have the shape read again by the
   server; every other shape is the admin's drawing and is stored as posted. The map
-  shows the location's districts in outline and its other zones, so a new one is made
-  in context.
+  shows the location's districts in outline, its other zones in blue and other
+  locations' zones in amber, so a new one is made in context and clear of them.
 
 - The Coverage tab draws every zone in its own colour on the map and lists them beside
   it, each row with its colour, how it was made and the priced routes it is an end
@@ -148,9 +161,16 @@ The partner grid, as data:
 - A zone may lie anywhere, inside the location's districts or far outside them. A zone
   is a line on the price list, not coverage. Penang can have a zone "Kuala Lumpur" and
   a row "Penang Airport to Kuala Lumpur" on its grid: outstation prices are the same
-  grid, not a second concept. Coverage stays what it is: the pickup's district.
-- Where zones overlap, the smallest wins, as with districts. The console home's "Test an
-  address" names the zone a place falls in, next to its location and district.
+  grid, not a second concept. Since the zones are the coverage, such a zone takes
+  pickups there for Penang too, and it may not overlap a zone of the location there.
+- Zones never overlap, this location's or another's (2026-10-21). `createZone` and
+  `updateZone` refuse a shape that covers more than 0.002 km² of another zone (about 45
+  m by 45 m: the rounding of borders drawn to meet), under an advisory lock so two
+  saves at once cannot both pass. The refusal names the zones in the way, and the zone
+  maker offers "Cut them out", which takes their ground off the new zone
+  (`cutOutOverlaps`); a district or its mukims cut that way become the admin's own
+  shape. The console home's "Test an address" names the zone a place falls in, next to
+  its location and district.
 - A **zone rate** is one cell: from zone, to zone, vehicle class, price. Entered on a
   grid, one row per route and one column per offered class, as in the contract. A route
   is read both ways: the quote looks up (from, to), then (to, from). A cell left empty
@@ -368,7 +388,9 @@ Zone
   id, locationId, name, sortOrder
   shape Json                    one closed ring of [lng, lat], or a district's polygons
   drawnFrom Json?               where it started: { districtCode, label } a district
-                                as it is; { reshapedFrom, label } a district reshaped;
+                                as it is, with mukimCodes some of its mukims as
+                                they are; { reshapedFrom, label } a district, or
+                                with mukimCodes its mukims, reshaped;
                                 { placeId, label, radiusM } a circle around an address;
                                 null a circle or square drawn on the map
 
@@ -420,8 +442,31 @@ One-off copies, run once per database after `db:push`, as
   as above. A class with no offering at that location is not shown.
 - The location pages' "from RM 80" (`startingPriceSen`) reads the location's offerings,
   not the catalogue.
-- Nothing else changes: the search card, confirm page, emails and account pages read the
-  booking's snapshot.
+- The confirm page, emails and account pages read the booking's snapshot.
+
+### The search card
+
+Added 2026-10-21. On a location's pages the search card keeps to the location
+(`location-search.ts` for the card, `search-areas.ts` on the server):
+
+- The pick-up suggests places in the box around the zones and the districts they lie
+  in (a zone lies in a district when 5% of it is there), with 5 km for the coast. The
+  districts, not the zones: with three small zones on Langkawi a customer still finds
+  every Langkawi hotel, and Alor Setar and Kuala Lumpur stay out. A box is all Google's
+  autocomplete takes, so a strip of a neighbouring district can fall inside it
+  (Butterworth's shore in Penang's).
+- A place picked is checked at once against the zones (`checkPlaceAt`, through the
+  web's `checkPlaceAction`, whose details call ends Google's autocomplete session):
+  "We do not pick up from The Datai Langkawi yet. Choose a pick-up in Langkawi." While a
+  field says so the search is held back, with every other reason shown.
+- The drop-off follows the location's rule. Anywhere: all of Malaysia. Inside this
+  location: the pick-up's box, and a zone checked on the pick. Only the routes on the
+  grid: the zones a route priced for a class on sale reaches from the pick-up's zone,
+  once that is known. The "Popular in" list offers only the saved addresses where the
+  rule lets a trip end.
+- The areas are cached with the location's pages under its tag; zone, grid and
+  drop-off rule changes refresh them. The home page and the options page's trip bar
+  search all of Malaysia. The quote stays the last word.
 
 ## Pieces
 

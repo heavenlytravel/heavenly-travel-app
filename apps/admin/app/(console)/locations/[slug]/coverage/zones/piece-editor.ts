@@ -15,6 +15,9 @@ import { openRing as open, pathOf } from "./map-shapes";
  *   selects it;
  * - a drag on a corner moves it, a drag inside the piece moves the piece
  *   alone, and a drag anywhere else moves the map;
+ * - a box runs around the piece selected, a square at each of its corners:
+ *   a drag on one grows or shrinks the piece about its middle, so a circle
+ *   stays round and keeps its centre;
  * - pointing at an edge shows one "+" on it, under the pointer: a click
  *   adds a corner there, a drag adds and moves it;
  * - the toolbar, or Delete and Backspace, removes the corner selected, or
@@ -31,6 +34,22 @@ type OpenPiece = LngLat[][];
 
 /** A corner of the piece selected, by its ring and its place in it. */
 type CornerAt = { ring: number; corner: number };
+
+/** A point in the pane's pixels. */
+type Pixel = { x: number; y: number };
+
+/** A drag on a square of the box around the piece selected. */
+type Resize = {
+  kind: "size";
+  /** The piece's middle, the corner of its box held, and the pointer on it, in the pane's pixels. */
+  middle: Pixel;
+  held: Pixel;
+  from: Pixel;
+  /** The piece's middle on the map, which stays put. */
+  pivot: LngLat;
+  original: OpenPiece;
+  moved: boolean;
+};
 
 /** One choice of the right-click menu. */
 export type PieceMenuItem = {
@@ -97,8 +116,21 @@ const CORNER_RADIUS = 5;
  * The corner selected and one just added always show.
  */
 const CORNER_GAP = 8;
-/** Room around the piece for its corners and the "+". */
-const PAD = CORNER_RADIUS + EDGE_PX;
+/** How far outside the piece its box runs, in pixels, clear of a square's corners. */
+const BOX_GAP = 12;
+/** The side of a square on the box's corners, in pixels. */
+const GRIP = 10;
+/** The box's corners, top left first and clockwise, as which way each lies from the middle. */
+const GRIP_SIDES = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+] as const;
+/** The least a piece shrinks to: its box's corners this far from its middle, in pixels. */
+const MIN_SIZE = 12;
+/** Room around the piece for its corners, the "+", its box and the squares on it. */
+const PAD = Math.max(CORNER_RADIUS + EDGE_PX, BOX_GAP + GRIP / 2) + 2;
 /** The menu's size, near enough, to keep it inside the map. */
 const MENU_WIDTH = 200;
 const MENU_ITEM_HEIGHT = 36;
@@ -113,11 +145,7 @@ const sameCorner = (a: CornerAt | null, b: CornerAt | null) =>
   a !== null && b !== null && a.ring === b.ring && a.corner === b.corner;
 
 /** The point of segment a-b nearest p, and how far it is, in pixels. */
-function nearestOnSegment(
-  p: { x: number; y: number },
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-) {
+function nearestOnSegment(p: Pixel, a: Pixel, b: Pixel) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const length2 = dx * dx + dy * dy;
@@ -131,6 +159,32 @@ function nearestOnSegment(
   const x = a.x + t * dx;
   const y = a.y + t * dy;
   return { x, y, distance: Math.hypot(p.x - x, p.y - y) };
+}
+
+/**
+ * The piece as a drag on a square of its box leaves it: the corner held
+ * follows the pointer along the line from the middle, and the piece grows
+ * or shrinks by as much about its middle, every way alike. It shrinks no
+ * smaller than MIN_SIZE, unless it already was.
+ */
+function resized(resize: Resize, pointer: Pixel): OpenPiece {
+  const ax = resize.held.x - resize.middle.x;
+  const ay = resize.held.y - resize.middle.y;
+  const reach = Math.hypot(ax, ay);
+  if (reach === 0) return resize.original;
+  const bx = ax + pointer.x - resize.from.x;
+  const by = ay + pointer.y - resize.from.y;
+  const scale = Math.max(
+    Math.min(1, MIN_SIZE / reach),
+    (bx * ax + by * ay) / (reach * reach),
+  );
+  const [lng0, lat0] = resize.pivot;
+  return resize.original.map((ring) =>
+    ring.map(([lng, lat]): LngLat => [
+      lng0 + (lng - lng0) * scale,
+      lat0 + (lat - lat0) * scale,
+    ]),
+  );
 }
 
 /**
@@ -159,19 +213,21 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   let corner: CornerAt | null = null;
   let added: CornerAt | null = null;
   let cutFrom: CornerAt | null = null;
-  // The selected piece's corners in the pane's pixels, and where its SVG sits.
-  let pixels: { x: number; y: number }[][] = [];
-  let origin = { x: 0, y: 0 };
+  // The selected piece's corners in the pane's pixels, the box around them,
+  // and where its SVG sits.
+  let pixels: Pixel[][] = [];
+  let bounds = { left: 0, top: 0, right: 0, bottom: 0 };
+  let origin: Pixel = { x: 0, y: 0 };
   let editable = false;
   let frame = 0;
   // The click that ends a cut lands on a part it made; it is not a pick.
   let ignoreClickUntil = 0;
   const clickIgnored = () => performance.now() < ignoreClickUntil;
 
-  // The selected piece's body, its corners, the "+" and the cut's line,
-  // over the map: an SVG in the pane, positioned on every redraw. Only the
-  // body, the corners and the "+" take the mouse; the rest of the SVG's box
-  // lets it through to the map.
+  // The selected piece's body, its corners, the "+", the cut's line and the
+  // box with its squares, over the map: an SVG in the pane, positioned on
+  // every redraw. Only the body, the corners, the "+" and the squares take
+  // the mouse; the rest of the SVG's box lets it through to the map.
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.style.position = "absolute";
   svg.style.display = "none";
@@ -205,7 +261,26 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   plusSign.setAttribute("stroke-width", "2");
   plusSign.style.pointerEvents = "none";
   plus.append(plusDot, plusSign);
-  group.append(body, line, corners, plus);
+  const outline = document.createElementNS(SVG_NS, "rect");
+  outline.setAttribute("fill", "none");
+  outline.setAttribute("stroke", GREEN);
+  outline.setAttribute("stroke-width", "1");
+  outline.setAttribute("stroke-dasharray", "4 3");
+  outline.style.pointerEvents = "none";
+  const grips = document.createElementNS(SVG_NS, "g");
+  grips.style.pointerEvents = "visiblePainted";
+  for (const [i, [sx, sy]] of GRIP_SIDES.entries()) {
+    const grip = document.createElementNS(SVG_NS, "rect");
+    grip.setAttribute("width", String(GRIP));
+    grip.setAttribute("height", String(GRIP));
+    grip.setAttribute("fill", "#fff");
+    grip.setAttribute("stroke", GREEN);
+    grip.setAttribute("stroke-width", "1.5");
+    grip.style.cursor = sx === sy ? "nwse-resize" : "nesw-resize";
+    grip.dataset.grip = String(i);
+    grips.appendChild(grip);
+  }
+  group.append(body, outline, line, corners, plus, grips);
   svg.appendChild(group);
 
   const overlay = new library.OverlayView();
@@ -228,10 +303,12 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     );
   }
 
+  /** Lets go of a cut waiting for its second corner, its line gone and the box back. */
   function stopCut() {
     if (!cutFrom) return;
     cutFrom = null;
     line.style.display = "none";
+    drawHandles();
     options.onCutting(false);
   }
 
@@ -324,25 +401,44 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
         return { x: p.x, y: p.y };
       }),
     );
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
+    bounds = {
+      left: Infinity,
+      top: Infinity,
+      right: -Infinity,
+      bottom: -Infinity,
+    };
     for (const ring of pixels) {
       for (const p of ring) {
-        minX = Math.min(minX, p.x);
-        minY = Math.min(minY, p.y);
-        maxX = Math.max(maxX, p.x);
-        maxY = Math.max(maxY, p.y);
+        bounds.left = Math.min(bounds.left, p.x);
+        bounds.top = Math.min(bounds.top, p.y);
+        bounds.right = Math.max(bounds.right, p.x);
+        bounds.bottom = Math.max(bounds.bottom, p.y);
       }
     }
     // The SVG covers the piece and a margin, so its own numbers stay small.
-    origin = { x: minX - PAD, y: minY - PAD };
+    origin = { x: bounds.left - PAD, y: bounds.top - PAD };
     svg.style.display = "block";
     svg.style.left = `${origin.x}px`;
     svg.style.top = `${origin.y}px`;
-    svg.setAttribute("width", String(maxX + PAD - origin.x));
-    svg.setAttribute("height", String(maxY + PAD - origin.y));
+    svg.setAttribute("width", String(bounds.right + PAD - origin.x));
+    svg.setAttribute("height", String(bounds.bottom + PAD - origin.y));
+    // The box and its squares, put away while a cut waits for its corner.
+    const boxWidth = bounds.right - bounds.left + 2 * BOX_GAP;
+    const boxHeight = bounds.bottom - bounds.top + 2 * BOX_GAP;
+    const boxDisplay = cutFrom ? "none" : "block";
+    outline.style.display = boxDisplay;
+    grips.style.display = boxDisplay;
+    outline.setAttribute("x", String(PAD - BOX_GAP));
+    outline.setAttribute("y", String(PAD - BOX_GAP));
+    outline.setAttribute("width", String(boxWidth));
+    outline.setAttribute("height", String(boxHeight));
+    for (const [i, [sx, sy]] of GRIP_SIDES.entries()) {
+      const grip = grips.childNodes[i] as SVGRectElement;
+      const x = PAD - BOX_GAP + ((sx + 1) / 2) * boxWidth;
+      const y = PAD - BOX_GAP + ((sy + 1) / 2) * boxHeight;
+      grip.setAttribute("x", String(x - GRIP / 2));
+      grip.setAttribute("y", String(y - GRIP / 2));
+    }
     body.style.cursor = cutFrom ? "crosshair" : "move";
     body.setAttribute(
       "d",
@@ -353,10 +449,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
         )
         .join(""),
     );
-    const near = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    const near = (a: Pixel, b: Pixel) =>
       Math.hypot(a.x - b.x, a.y - b.y) < CORNER_GAP;
     const shown = pixels.map((ring, r) => {
-      const kept: { p: { x: number; y: number }; i: number }[] = [];
+      const kept: { p: Pixel; i: number }[] = [];
       for (const [i, p] of ring.entries()) {
         const at = { ring: r, corner: i };
         const always =
@@ -404,20 +500,25 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
    * are drawn in, not from the map's box, which in full screen stays where
    * it was on the page.
    */
-  function pixelAt(event: MouseEvent) {
+  function pixelAt(event: MouseEvent): Pixel | null {
     const pane = overlay.getPanes()?.overlayMouseTarget;
     if (!pane) return null;
     const box = pane.getBoundingClientRect();
     return { x: event.clientX - box.left, y: event.clientY - box.top };
   }
 
+  /** The map's point at a pixel of the pane, as a corner. */
+  function cornerOf(p: Pixel): LngLat | null {
+    const at = projection()?.fromDivPixelToLatLng(
+      new google.maps.Point(p.x, p.y),
+    );
+    return at ? [at.lng(), at.lat()] : null;
+  }
+
   /** The map's point under the pointer, as a corner. */
   function cornerAt(event: MouseEvent): LngLat | null {
     const p = pixelAt(event);
-    const at = p
-      ? projection()?.fromDivPixelToLatLng(new google.maps.Point(p.x, p.y))
-      : null;
-    return at ? [at.lng(), at.lat()] : null;
+    return p ? cornerOf(p) : null;
   }
 
   /**
@@ -425,9 +526,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
    * a corner, when it is within `reach` pixels; null otherwise.
    */
   function edgeNear(event: MouseEvent, reach: number) {
-    const proj = projection();
     const p = pixelAt(event);
-    if (!proj || !p || pixels.length === 0) return null;
+    if (!p || pixels.length === 0) return null;
     let best: {
       ring: number;
       after: number;
@@ -444,17 +544,9 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       }
     }
     if (!best || best.distance > reach) return null;
-    const point = proj.fromDivPixelToLatLng(
-      new google.maps.Point(best.x, best.y),
-    );
-    return point
-      ? {
-          ring: best.ring,
-          after: best.after,
-          x: best.x,
-          y: best.y,
-          corner: [point.lng(), point.lat()] as LngLat,
-        }
+    const at = cornerOf(best);
+    return at
+      ? { ring: best.ring, after: best.after, x: best.x, y: best.y, corner: at }
       : null;
   }
 
@@ -563,7 +655,6 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
           "refused",
         );
       }
-      drawHandles();
       return;
     }
     pieces.splice(index, 1, ...cut.parts);
@@ -604,7 +695,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     }
     const target = event.target as Element;
     if (plus.contains(target)) return;
-    if (target instanceof SVGElement && target.dataset.corner !== undefined) {
+    if (
+      target instanceof SVGElement &&
+      (target.dataset.corner !== undefined || target.dataset.grip !== undefined)
+    ) {
       hidePlus();
       return;
     }
@@ -623,8 +717,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const host = map.getDiv();
   host.addEventListener("pointermove", onHover, true);
 
-  // While a hand is on a corner, the "+" or inside the piece, the map holds
-  // still; anywhere else it pans and zooms as ever.
+  // While a hand is on a corner, the "+", a square of the box or inside the
+  // piece, the map holds still; anywhere else it pans and zooms as ever.
   let drag:
     | {
         kind: "corner";
@@ -639,11 +733,35 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
         original: OpenPiece;
         moved: boolean;
       }
+    | Resize
     | null = null;
   let gestures: google.maps.MapOptions["gestureHandling"] = "auto";
 
-  // The body, the corners and the "+" keep their clicks from the map: a
-  // drag on them is not a pan, a click not a deselect.
+  /** A drag on the box's square `grip` of piece `index`, from the pointer on it. */
+  function resizeFrom(index: number, grip: number, from: Pixel): Resize | null {
+    const [sx, sy] = GRIP_SIDES[grip] ?? GRIP_SIDES[0];
+    const middle = {
+      x: (bounds.left + bounds.right) / 2,
+      y: (bounds.top + bounds.bottom) / 2,
+    };
+    const pivot = cornerOf(middle);
+    if (!pivot) return null;
+    return {
+      kind: "size",
+      middle,
+      held: {
+        x: middle.x + (sx * (bounds.right - bounds.left)) / 2,
+        y: middle.y + (sy * (bounds.bottom - bounds.top)) / 2,
+      },
+      from,
+      pivot,
+      original: pieces[index]!.map((ring) => [...ring]),
+      moved: false,
+    };
+  }
+
+  // The body, the corners, the "+" and the squares keep their clicks from
+  // the map: a drag on them is not a pan, a click not a deselect.
   const stop = (event: Event) => event.stopPropagation();
   for (const type of ["mousedown", "click", "dblclick", "touchstart"]) {
     group.addEventListener(type, stop);
@@ -665,14 +783,16 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     if (cutFrom) {
       // A cut waits for its second corner; a press elsewhere on the piece stops it.
       if (at) finishCut(at);
-      else {
-        stopCut();
-        drawHandles();
-      }
+      else stopCut();
       return;
     }
-    const from = cornerAt(event);
-    if (!from) return;
+    const p = pixelAt(event);
+    const from = p ? cornerOf(p) : null;
+    if (!p || !from) return;
+    const grip = target.dataset.grip;
+    const resize =
+      grip === undefined ? null : resizeFrom(selected, Number(grip), p);
+    if (grip !== undefined && !resize) return;
     gestures = map.get("gestureHandling") ?? "auto";
     map.setOptions({ gestureHandling: "none" });
     try {
@@ -681,7 +801,9 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       // A pointer the browser no longer tracks cannot be captured; the
       // drag still follows it while it stays over the piece.
     }
-    if (plus.contains(target) && edgeUnder) {
+    if (resize) {
+      drag = resize;
+    } else if (plus.contains(target) && edgeUnder) {
       const made = addCorner(selected, edgeUnder);
       hidePlus();
       polygons[selected]?.setPaths(pieces[selected]!.map(pathOf));
@@ -704,17 +826,22 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   group.addEventListener("pointermove", (event) => {
     if (!drag || selected === null) return;
-    const at = cornerAt(event);
-    if (!at) return;
-    const piece = pieces[selected]!;
-    if (drag.kind === "corner") {
-      piece[drag.at.ring]![drag.at.corner] = at;
+    if (drag.kind === "size") {
+      const p = pixelAt(event);
+      if (!p) return;
+      pieces[selected] = resized(drag, p);
     } else {
-      const dLng = at[0] - drag.from[0];
-      const dLat = at[1] - drag.from[1];
-      pieces[selected] = drag.original.map((ring) =>
-        ring.map(([lng, lat]): LngLat => [lng + dLng, lat + dLat]),
-      );
+      const at = cornerAt(event);
+      if (!at) return;
+      if (drag.kind === "corner") {
+        pieces[selected]![drag.at.ring]![drag.at.corner] = at;
+      } else {
+        const dLng = at[0] - drag.from[0];
+        const dLat = at[1] - drag.from[1];
+        pieces[selected] = drag.original.map((ring) =>
+          ring.map(([lng, lat]): LngLat => [lng + dLng, lat + dLat]),
+        );
+      }
     }
     drag.moved = true;
     redrawLive(selected);
@@ -800,10 +927,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   function onKey(event: KeyboardEvent) {
     if (!editable || selected === null || typing(event.target)) return;
     if (event.key === "Escape") {
-      if (cutFrom) {
-        stopCut();
-        drawHandles();
-      } else if (corner) selectCorner(null);
+      if (cutFrom) stopCut();
+      else if (corner) selectCorner(null);
       else select(null);
     } else if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();

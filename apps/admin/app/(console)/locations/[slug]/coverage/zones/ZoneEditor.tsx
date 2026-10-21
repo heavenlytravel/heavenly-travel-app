@@ -140,8 +140,8 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * around the place, the address kept as a reference only; "Draw" puts a
  * square or a circle in the view. From there every shape is the admin's
  * own, edited piece by piece on the map (./ZoneMap): corners dragged,
- * added and removed with a right-click, a piece moved alone, deleted, or
- * added, each step undone with Undo. A zone may not overlap any
+ * added and removed with a right-click, a piece moved alone, resized,
+ * deleted, or added, each step undone with Undo. A zone may not overlap any
  * other, this location's or another's: when the save is refused for it,
  * either "Cut them out of this zone" takes their ground off this one, to
  * check on the map before saving, or "Cut this zone out of them" saves

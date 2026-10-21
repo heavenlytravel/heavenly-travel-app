@@ -143,8 +143,9 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * being made in green, each piece of land its own shape. The tools sit at
  * the bottom of the map, there in full screen too. With the pencil every
  * edit is a plain click (./piece-editor): select a piece or a corner,
- * drag it, add a corner with the "+" on an edge, take away what is
- * selected with the bin, cut a piece in two with the scissors. The square
+ * drag it, grow or shrink a piece from the squares of its box, add a
+ * corner with the "+" on an edge, take away what is selected with the
+ * bin, cut a piece in two with the scissors. The square
  * and the circle add a piece in the middle of the view. With the hand
  * nothing changes under a drag. The map pans and zooms with either. The
  * map frames the zone when `frame` changes, a district or a place newly
@@ -358,7 +359,7 @@ export function ZoneMap({
               ? "Click a piece to edit it. Drag anywhere else to move the map."
               : selection.corner
                 ? "Drag the corner to move it. The bin removes it; the scissors cut the piece from it to another corner."
-                : "Drag a corner, or inside the piece to move it alone. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
+                : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
 
   return (
     <div className="grid gap-2">

@@ -120,12 +120,16 @@ The partner grid, as data:
     location's own states first): its official boundary from the same geoBoundaries
     data, islands included, for a whole district such as Langkawi or Timur Laut. It
     stays the boundary as it is (`drawnFrom: { districtCode, label }`), read again from
-    the code on every save so it never drifts from the data, until "Reshape by hand"
-    frees it (`{ reshapedFrom, label }`, the district a reference only). The boundaries
+    the code on every save so it never drifts from the data, until it is changed on the
+    map, which makes the shape the admin's own and the district a reference only
+    (`{ reshapedFrom, label }`; revised 2026-10-21: the shape is editable as soon as it is
+    picked, with no "Reshape by hand" to press, and Undo or picking it again goes back to
+    the boundary). The boundaries
     are simplified already: 136 corners for the median district, 653 for Kudat, the
     most. Since 2026-10-21 the district can instead be **some of its mukims**: after
     the district, "The whole district" or "Some of its mukims", ticked in a list or
-    clicked on the map. The mukims are the areas below a district from geoBoundaries
+    clicked on the map beside the zone (a click inside the zone is the zone's, and a
+    mukim is taken out in the list). The mukims are the areas below a district from geoBoundaries
     ADM3 (see `260930-coverage.md`): Peninsular mukims with the bandar and pekan cut
     out of them, and Sarawak's land and town districts. Sabah and Putrajaya have none,
     so their districts offer the whole district only. Ticked mukims are put together

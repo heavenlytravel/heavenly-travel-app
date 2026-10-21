@@ -127,8 +127,8 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * The zone maker: a name, and a shape started one of three ways, then
  * reshaped on the map. A district comes in as its official boundary, or
  * some of its mukims put together as theirs, and stays it, read again on
- * every save, until "Reshape by hand" frees it; a mukim is ticked in the
- * list or clicked on the map. An address draws a circle of the radius
+ * every save, until it is changed on the map, which makes the boundary a
+ * reference; a mukim is ticked in the list or clicked on the map. An address draws a circle of the radius
  * around the place, the address kept as a reference only; "Draw" puts a
  * square or a circle in the view. From there every shape is the admin's
  * own, edited piece by piece on the map (./ZoneMap): corners dragged,
@@ -181,8 +181,7 @@ export function ZoneEditor({
     zone ? sourceOf(origin) : mapKey ? "address" : "district",
   );
 
-  // A district: the one picked, its mukims, what of it the zone is, and
-  // whether it is still the boundary as it is.
+  // A district: the one picked, its mukims, and what of it the zone is.
   const [district, setDistrict] = useState<{
     code: string;
     label: string;
@@ -198,7 +197,12 @@ export function ZoneEditor({
   const [area, setArea] = useState<Area>(
     mukimCodesOf(origin).length > 0 ? "some" : "whole",
   );
-  const [asItIs, setAsItIs] = useState(!isZoneReshaped(origin));
+  // The district's or the mukims' boundary as last read: while the shape
+  // is still it, the zone is the boundary as it is; an edit on the map
+  // makes it the admin's own. Unknown for a zone saved reshaped.
+  const [official, setOfficial] = useState<ZoneShape | null>(
+    isZoneDistrict(origin) && zone ? zone.shape : null,
+  );
   // The name the editor last suggested, after what the zone was made from:
   // a name typed over it is kept.
   const [suggested, setSuggested] = useState(() =>
@@ -238,7 +242,11 @@ export function ZoneEditor({
   const asked = useRef(0);
 
   const radiusM = Number(radius);
-  const lockedDistrict = source === "district" && district !== null && asItIs;
+  const asItIs =
+    source === "district" &&
+    district !== null &&
+    official !== null &&
+    sameShape(shape, official);
   const circleUntouched = circle !== null && sameShape(shape, circle);
   const pickedNames = mukims
     .filter((mukim) => picked.includes(mukim.code))
@@ -306,7 +314,7 @@ export function ZoneEditor({
       setMukims(result.mukims);
       setArea("whole");
       setPicked([]);
-      setAsItIs(true);
+      setOfficial(result.polygons);
       changeShape(result.polygons satisfies MultiPolygon);
       reframe();
       suggest(result.label);
@@ -317,7 +325,7 @@ export function ZoneEditor({
     if (!district) return;
     setArea("whole");
     preview(districtPolygonsAction(district.code), (result) => {
-      setAsItIs(true);
+      setOfficial(result.polygons);
       changeShape(result.polygons);
       reframe();
       suggest(district.label);
@@ -334,7 +342,6 @@ export function ZoneEditor({
     setPicked(ordered);
     if (ordered.length === 0) {
       asked.current++;
-      setAsItIs(true);
       changeShape(null);
       return;
     }
@@ -342,7 +349,7 @@ export function ZoneEditor({
       .filter((mukim) => ordered.includes(mukim.code))
       .map((mukim) => mukim.name);
     preview(mukimPolygonsAction(district.code, ordered), (result) => {
-      setAsItIs(true);
+      setOfficial(result.polygons);
       changeShape(result.polygons);
       suggest(andList(names));
     });
@@ -372,10 +379,9 @@ export function ZoneEditor({
   function cutThemOut() {
     if (!shape || !overlaps) return;
     const cut = overlaps;
+    // With others' ground taken off, a district's boundary is the admin's
+    // own shape, as after any change.
     preview(cutOutAction(JSON.stringify(shape), zone?.id ?? null), (result) => {
-      // With others' ground taken off, a district's boundary is the
-      // admin's own shape now, not the district's.
-      if (source === "district") setAsItIs(false);
       changeShape(result.polygons);
       toast.success(
         `Cut ${andList(cut)} out of this zone. Check it on the map, then save.`,
@@ -528,7 +534,7 @@ export function ZoneEditor({
               </p>
             </div>
             {district && mukims.length > 0 ? (
-              <fieldset className="grid gap-1" disabled={!asItIs}>
+              <fieldset className="grid gap-1">
                 <legend className="mb-1.5 text-sm font-medium text-neutral-800">
                   Area
                 </legend>
@@ -561,8 +567,8 @@ export function ZoneEditor({
                       Some of its mukims
                     </span>
                     <span className="text-xs text-neutral-600">
-                      Tick one or more here or on the map; together they make
-                      one zone.
+                      Tick one or more here, or click one beside the zone on the
+                      map; together they make one zone.
                     </span>
                   </span>
                 </label>
@@ -595,32 +601,11 @@ export function ZoneEditor({
               </p>
             ) : null}
             {district && shape ? (
-              <div className="flex flex-wrap items-center gap-3 rounded-md bg-neutral-50 px-3 py-2.5 text-sm">
-                <p className="min-w-0 flex-1 text-neutral-700">
-                  {asItIs
-                    ? `The official boundary of ${madeOf}, read again on every save, so it always matches.`
-                    : `Reshaped from ${madeOf}: the shape is yours now, ${corners} corners.`}
-                </p>
-                {mapKey && asItIs ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setAsItIs(false)}
-                  >
-                    Reshape by hand
-                  </Button>
-                ) : !asItIs ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      area === "some" ? showMukims(picked) : showWhole()
-                    }
-                  >
-                    Back to the official boundary
-                  </Button>
-                ) : null}
-              </div>
+              <p className="rounded-md bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">
+                {asItIs
+                  ? `The official boundary of ${madeOf}, read again on every save while it is not changed on the map.`
+                  : `Changed on the map from ${madeOf}: the shape is yours now, ${corners} corners. Picking the district or its mukims again starts over from their boundaries.`}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -692,13 +677,19 @@ export function ZoneEditor({
           others={others}
           shape={shape}
           frame={frame}
-          editable={!lockedDistrict}
           starters={source === "draw"}
           canUndo={history.length > 0}
           onUndo={undo}
           onShapeChange={changeShape}
-          mukims={lockedDistrict && area === "some" ? mukims : undefined}
-          onToggleMukim={toggleMukim}
+          mukims={
+            source === "district" && district && area === "some"
+              ? mukims
+              : undefined
+          }
+          pickedMukims={picked}
+          onAddMukim={(code) => {
+            if (!picked.includes(code)) toggleMukim(code);
+          }}
         />
       ) : null}
 

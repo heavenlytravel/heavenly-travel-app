@@ -83,14 +83,17 @@ const SELECTED_STYLE: google.maps.PolygonOptions = {
   strokeWeight: 3,
   fillOpacity: 0.35,
 };
-/** The district's mukims over the zone, each a click to tick or untick. */
+/**
+ * The district's mukims under the zone: a click on one beside it ticks it;
+ * inside the zone a click is the zone's.
+ */
 const MUKIM_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#404040",
   strokeWeight: 1,
   strokeOpacity: 0.7,
   fillColor: "#404040",
   fillOpacity: 0,
-  zIndex: 2,
+  zIndex: 0,
 };
 const MUKIM_HOVER_OPACITY = 0.14;
 
@@ -150,8 +153,8 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * piece in the middle of the view. With the hand nothing changes under a
  * drag. The map pans and zooms with either. The map frames the zone when
  * `frame` changes, a district or a place newly picked, and never on an
- * edit or an undo. With `mukims`, the district's mukims are outlined over
- * the zone, and a click on one ticks or unticks it.
+ * edit or an undo. With `mukims`, the district's mukims are outlined under
+ * the zone, and a click on one beside it ticks it.
  */
 export function ZoneMap({
   mapKey,
@@ -159,13 +162,13 @@ export function ZoneMap({
   others,
   shape,
   frame,
-  editable,
   starters,
   canUndo,
   onUndo,
   onShapeChange,
   mukims,
-  onToggleMukim,
+  pickedMukims = [],
+  onAddMukim,
 }: {
   mapKey: string;
   districts: DistrictOutline[];
@@ -173,16 +176,16 @@ export function ZoneMap({
   shape: ZoneShape | null;
   /** Changes when the map should frame the zone afresh. */
   frame: number;
-  /** Whether the shape may be reshaped: not while it is a district or its mukims as they are. */
-  editable: boolean;
   /** Whether to offer a new circle or square while there is no shape yet. */
   starters: boolean;
   canUndo: boolean;
   onUndo: () => void;
   onShapeChange: (shape: ZoneShape | null) => void;
-  /** The district's mukims to outline over the zone; none while it is not made of them. */
+  /** The district's mukims to outline under the zone; none while it is not made of them. */
   mukims?: MukimChoice[];
-  onToggleMukim?: (code: string) => void;
+  /** The codes of those the zone is made of. */
+  pickedMukims?: readonly string[];
+  onAddMukim?: (code: string) => void;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts);
   const editor = useRef<PieceEditor | null>(null);
@@ -190,7 +193,7 @@ export function ZoneMap({
   // here from a shape handed in.
   const shown = useRef<ZoneShape | null>(null);
   const report = useRef(onShapeChange);
-  const toggle = useRef(onToggleMukim);
+  const addMukim = useRef(onAddMukim);
   const [tool, setTool] = useState<Tool>("edit");
   const [selected, setSelected] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -206,14 +209,14 @@ export function ZoneMap({
     typeof document === "undefined" ? null : document.createElement("div"),
   );
   const menuRef = useRef<HTMLDivElement>(null);
-  const editing = editable && tool === "edit";
-  const canAdd = editable && (shape !== null || starters);
+  const editing = tool === "edit";
+  const canAdd = shape !== null || starters;
 
   // The map's listeners outlive a render, so they read the latest callbacks here.
   useEffect(() => {
     report.current = onShapeChange;
-    toggle.current = onToggleMukim;
-  }, [onShapeChange, onToggleMukim]);
+    addMukim.current = onAddMukim;
+  }, [onShapeChange, onAddMukim]);
 
   // Once the map is there: the other zones, the toolbar's place in the
   // map's own controls, the zone's pieces, and the view on the shape.
@@ -305,7 +308,7 @@ export function ZoneMap({
         paths: mukim.polygons.flat().map(pathOf),
         map,
       });
-      outline.addListener("click", () => toggle.current?.(mukim.code));
+      outline.addListener("click", () => addMukim.current?.(mukim.code));
       outline.addListener("mouseover", () => {
         outline.setOptions({ fillOpacity: MUKIM_HOVER_OPACITY });
         setHovered(mukim);
@@ -364,21 +367,21 @@ export function ZoneMap({
     ? MAP_FAILURES[failed]
     : notice
       ? notice
-      : mukims
-        ? hovered
-          ? `${hovered.name}, ${hovered.kind.toLowerCase()}: click to tick or untick it.`
-          : "Click a mukim on the map to tick or untick it."
+      : hovered
+        ? pickedMukims.includes(hovered.code)
+          ? `${hovered.name}, ${hovered.kind.toLowerCase()}: in the zone. Untick it above to take it out.`
+          : `${hovered.name}, ${hovered.kind.toLowerCase()}: click it to add it to the zone.`
         : !shape
-          ? canAdd
-            ? "Move the map to the area, then add a square or a circle from the tools to reshape."
-            : null
-          : !editable
-            ? null
-            : !editing
-              ? "The hand only moves the map. Pick the pencil to edit the zone."
-              : selected === null
-                ? "Click a piece to show its corners. Drag anywhere else to move the map. Right-click a piece to delete it."
-                : "Drag a corner to move it, or inside the piece to move the piece alone; drag anywhere else to move the map. Right-click a corner, an edge or the piece for what you can do there.";
+          ? mukims
+            ? "Click a mukim on the map, or tick it above, to start the zone."
+            : canAdd
+              ? "Move the map to the area, then add a square or a circle from the tools to reshape."
+              : null
+          : !editing
+            ? "The hand only moves the map. Pick the pencil to edit the zone."
+            : selected === null
+              ? "Click a piece to show its corners. Drag anywhere else to move the map. Right-click a piece to delete it."
+              : "Drag a corner to move it, or inside the piece to move the piece alone; drag anywhere else to move the map. Right-click a corner, an edge or the piece for what you can do there.";
 
   return (
     <div className="grid gap-2">
@@ -388,10 +391,10 @@ export function ZoneMap({
         aria-label="Map of the zone"
         className="h-[32rem] w-full rounded-md border border-neutral-200 bg-neutral-100"
       />
-      {toolbar && map && (editable || canUndo)
+      {toolbar && map && (canAdd || canUndo)
         ? createPortal(
             <div className="mb-6 flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
-              {editable && shape ? (
+              {shape ? (
                 <>
                   <ToolButton
                     label="Edit the zone"
@@ -427,7 +430,7 @@ export function ZoneMap({
                   <Divider />
                 </>
               ) : null}
-              {editable && shape ? (
+              {shape ? (
                 <ToolButton
                   label="Delete the piece selected"
                   disabled={!editing || selected === null}

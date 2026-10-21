@@ -13,6 +13,7 @@ import { cx } from "@repo/ui/cx";
 import {
   CirclePlusIcon,
   HandIcon,
+  InfoIcon,
   MaximizeIcon,
   MinimizeIcon,
   PencilIcon,
@@ -43,6 +44,7 @@ import {
   type PieceMenu,
   type PieceSelection,
 } from "./piece-editor";
+import { ZoneMapHelp, shortcutsHere, type Shortcut } from "./ZoneMapHelp";
 
 export type {
   DistrictChoice,
@@ -223,16 +225,10 @@ export function ZoneMap({
     message: string;
     kind: "refused" | "done";
   } | null>(null);
-  // The homes of the toolbar and the full-screen button among the map's
-  // own controls; made in the browser only, and shown once the map is there.
-  const [toolbar] = useState(() =>
-    typeof document === "undefined" ? null : document.createElement("div"),
-  );
-  const [corner] = useState(() =>
-    typeof document === "undefined" ? null : document.createElement("div"),
-  );
   // The right-click menu, inside the map.
   const [menu, setMenu] = useState<PieceMenu | null>(null);
+  // How the map works, over the map while open.
+  const [help, setHelp] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const editing = tool === "edit";
   const canAdd = shape !== null || starters;
@@ -242,9 +238,8 @@ export function ZoneMap({
     report.current = onShapeChange;
   }, [onShapeChange]);
 
-  // Once the map is there: the other zones, the places of the toolbar and
-  // the full-screen button in the map's own controls, the zone's pieces,
-  // and the view on the shape.
+  // Once the map is there: the other zones, the zone's pieces, and the
+  // view on the shape.
   useEffect(() => {
     if (!map || !library) return;
     const drawn = otherPolygons.current;
@@ -258,13 +253,6 @@ export function ZoneMap({
         }),
       );
     }
-    if (toolbar) {
-      map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
-    }
-    if (corner) {
-      map.controls[google.maps.ControlPosition.RIGHT_TOP]?.push(corner);
-    }
-
     let noticeTimer = 0;
     editor.current = createPieceEditor({
       map,
@@ -399,6 +387,16 @@ export function ZoneMap({
     return () => document.removeEventListener("keydown", onKey);
   }, [canUndo, canRedo, onUndo, onRedo]);
 
+  // Esc closes the help as well as what it does on the map.
+  useEffect(() => {
+    if (!help) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setHelp(false);
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [help]);
+
   // Full screen comes and goes by the button or by the browser's own Esc.
   useEffect(() => {
     const follow = () =>
@@ -457,115 +455,145 @@ export function ZoneMap({
           : cutting
             ? "Click another corner of this piece to cut it in two along the line. Esc stops."
             : !selection
-              ? "Click a piece to edit it. Drag anywhere else to move the map."
+              ? "Click a piece to edit it. Drag anywhere else to move the map. The i at the end of the tools says how each one works."
               : selection.corner
                 ? "Drag the corner to move it. The bin removes it; the scissors cut the piece from it to another corner."
                 : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
+
+  // The shortcuts as this computer writes them, once the map is there: the
+  // toolbar shows in the browser only.
+  const keys = map ? shortcutsHere() : null;
 
   return (
     <div
       ref={wrapper}
       className={cx("grid gap-2", full && "grid-rows-[1fr_auto] bg-white p-3")}
     >
-      <div
-        ref={host}
-        role="application"
-        aria-label="Map of the zone"
-        className={cx(
-          "w-full rounded-md border border-neutral-200 bg-neutral-100",
-          full ? "h-full min-h-0" : "h-[32rem]",
-        )}
-      />
-      {corner && map && document.fullscreenEnabled
-        ? createPortal(
-            <Tooltip
-              content={full ? "Exit full screen" : "Full screen"}
-              side="left"
+      {/* The map, and over it the tools, the full-screen button and the help:
+          the zone maker's own, not Google's controls, so each stays where it
+          is put however it grows, in full screen too. */}
+      <div className={cx("relative", full && "min-h-0")}>
+        <div
+          ref={host}
+          role="application"
+          aria-label="Map of the zone"
+          className={cx(
+            "w-full rounded-md border border-neutral-200 bg-neutral-100",
+            full ? "h-full" : "h-[32rem]",
+          )}
+        />
+        {map && document.fullscreenEnabled ? (
+          <Tooltip
+            content={full ? "Exit full screen" : "Full screen"}
+            side="left"
+            className="absolute top-2.5 right-2.5 z-10"
+          >
+            <button
+              type="button"
+              aria-label={full ? "Exit full screen" : "Full screen"}
+              onClick={toggleFullScreen}
+              className="grid size-10 place-items-center rounded-sm bg-white text-neutral-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 [&_svg]:size-[18px]"
             >
-              <button
-                type="button"
-                aria-label={full ? "Exit full screen" : "Full screen"}
-                onClick={toggleFullScreen}
-                className="m-2.5 grid size-10 place-items-center rounded-sm bg-white text-neutral-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 [&_svg]:size-[18px]"
-              >
-                {full ? <MinimizeIcon /> : <MaximizeIcon />}
-              </button>
-            </Tooltip>,
-            corner,
-          )
-        : null}
-      {toolbar && map && (canAdd || canUndo || canRedo)
-        ? createPortal(
-            <div className="mb-6 flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
-              {shape ? (
-                <>
-                  <ToolButton
-                    label="Edit the zone"
-                    active={tool === "edit"}
-                    onClick={() => setTool("edit")}
-                  >
-                    <PencilIcon />
-                  </ToolButton>
-                  <ToolButton
-                    label="Only move the map"
-                    active={tool === "pan"}
-                    onClick={() => setTool("pan")}
-                  >
-                    <HandIcon />
-                  </ToolButton>
-                  <Divider />
-                </>
-              ) : null}
-              {canAdd ? (
-                <>
-                  <ToolButton
-                    label="Add a square"
-                    onClick={() => place("square")}
-                  >
-                    <SquarePlusIcon />
-                  </ToolButton>
-                  <ToolButton
-                    label="Add a circle"
-                    onClick={() => place("circle")}
-                  >
-                    <CirclePlusIcon />
-                  </ToolButton>
-                  <Divider />
-                </>
-              ) : null}
-              {shape ? (
-                <>
-                  <ToolButton
-                    label="Cut the piece from the corner selected"
-                    active={cutting}
-                    disabled={!editing || !selection?.corner}
-                    onClick={() => editor.current?.startCut()}
-                  >
-                    <ScissorsIcon />
-                  </ToolButton>
-                  <ToolButton
-                    label={
-                      selection?.corner
-                        ? "Remove the corner selected"
-                        : "Delete the piece selected"
-                    }
-                    disabled={!editing || !selection}
-                    onClick={() => editor.current?.removeSelected()}
-                  >
-                    <TrashIcon />
-                  </ToolButton>
-                </>
-              ) : null}
-              <ToolButton label="Undo" disabled={!canUndo} onClick={onUndo}>
-                <UndoIcon />
-              </ToolButton>
-              <ToolButton label="Redo" disabled={!canRedo} onClick={onRedo}>
-                <RedoIcon />
-              </ToolButton>
-            </div>,
-            toolbar,
-          )
-        : null}
+              {full ? <MinimizeIcon /> : <MaximizeIcon />}
+            </button>
+          </Tooltip>
+        ) : null}
+        {help && keys ? (
+          <ZoneMapHelp keys={keys} onClose={() => setHelp(false)} />
+        ) : null}
+        {keys && (canAdd || canUndo || canRedo) ? (
+          <Toolbar help={help} onHelp={() => setHelp((open) => !open)}>
+            {shape ? (
+              <>
+                <ToolButton
+                  label="Edit the zone"
+                  active={tool === "edit"}
+                  onClick={() => setTool("edit")}
+                >
+                  <PencilIcon />
+                </ToolButton>
+                <ToolButton
+                  label="Only move the map"
+                  active={tool === "pan"}
+                  onClick={() => setTool("pan")}
+                >
+                  <HandIcon />
+                </ToolButton>
+                <Divider />
+              </>
+            ) : null}
+            {canAdd ? (
+              <>
+                <ToolButton
+                  label="Add a square in the middle of the view"
+                  onClick={() => place("square")}
+                >
+                  <SquarePlusIcon />
+                </ToolButton>
+                <ToolButton
+                  label="Add a circle in the middle of the view"
+                  onClick={() => place("circle")}
+                >
+                  <CirclePlusIcon />
+                </ToolButton>
+                <Divider />
+              </>
+            ) : null}
+            {shape ? (
+              <>
+                <ToolButton
+                  label="Cut the piece from the corner selected"
+                  why={
+                    editing
+                      ? "Select a corner of a piece first."
+                      : "Pick the pencil first."
+                  }
+                  active={cutting}
+                  disabled={!editing || !selection?.corner}
+                  onClick={() => editor.current?.startCut()}
+                >
+                  <ScissorsIcon />
+                </ToolButton>
+                <ToolButton
+                  label={
+                    selection?.corner
+                      ? "Remove the corner selected"
+                      : "Delete the piece selected"
+                  }
+                  shortcut={keys.remove}
+                  why={
+                    editing
+                      ? "Select a piece or a corner first."
+                      : "Pick the pencil first."
+                  }
+                  disabled={!editing || !selection}
+                  onClick={() => editor.current?.removeSelected()}
+                >
+                  <TrashIcon />
+                </ToolButton>
+              </>
+            ) : null}
+            <ToolButton
+              label="Undo"
+              shortcut={keys.undo}
+              why="Nothing to undo yet."
+              disabled={!canUndo}
+              onClick={onUndo}
+            >
+              <UndoIcon />
+            </ToolButton>
+            <ToolButton
+              label="Redo"
+              shortcut={keys.redo}
+              why="Nothing to redo: Redo takes back an undo."
+              disabled={!canRedo}
+              onClick={onRedo}
+            >
+              <RedoIcon />
+            </ToolButton>
+          </Toolbar>
+        ) : null}
+      </div>
       {menu && map
         ? createPortal(
             <div
@@ -622,36 +650,83 @@ function Divider() {
   return <span aria-hidden className="mx-0.5 h-5 w-px bg-neutral-200" />;
 }
 
-/** An icon button of the toolbar; `active` for a tool, which stays pressed while it is in hand. */
+/**
+ * The toolbar at the bottom of the map, its tools first, then the "i" that
+ * opens how the map works.
+ */
+function Toolbar({
+  help,
+  onHelp,
+  children,
+}: {
+  help: boolean;
+  onHelp: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
+      {children}
+      <Divider />
+      <ToolButton label="How the map works" active={help} onClick={onHelp}>
+        <InfoIcon />
+      </ToolButton>
+    </div>
+  );
+}
+
+/**
+ * An icon button of the toolbar, named in a tooltip with its shortcut, and,
+ * while it cannot be pressed, `why`. `active` for a tool, which stays
+ * pressed while it is in hand.
+ */
 function ToolButton({
   label,
+  shortcut,
+  why,
   active,
   disabled = false,
   onClick,
   children,
 }: {
   label: string;
+  shortcut?: Shortcut;
+  /** Why it cannot be pressed now, for the tooltip while it cannot. */
+  why?: string;
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      disabled={disabled}
-      onClick={onClick}
-      className={cx(
-        "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
-        active
-          ? "bg-neutral-900 text-white"
-          : "text-neutral-700 enabled:hover:bg-neutral-100",
-      )}
+    <Tooltip
+      content={
+        <>
+          {label}
+          {shortcut ? (
+            <kbd className="ml-2 font-sans text-white/60">{shortcut.shown}</kbd>
+          ) : null}
+          {disabled && why ? (
+            <span className="block text-white/70">{why}</span>
+          ) : null}
+        </>
+      }
     >
-      {children}
-    </button>
+      <button
+        type="button"
+        aria-label={label}
+        aria-keyshortcuts={shortcut?.aria}
+        aria-pressed={active}
+        disabled={disabled}
+        onClick={onClick}
+        className={cx(
+          "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
+          active
+            ? "bg-neutral-900 text-white"
+            : "text-neutral-700 enabled:hover:bg-neutral-100",
+        )}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }

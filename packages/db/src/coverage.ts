@@ -80,8 +80,8 @@ export type ServedAt = {
 
 /**
  * The location that serves a pickup at the place: the one whose zone the
- * point falls in, among the locations that are public. Of zones that
- * overlap, the smallest wins, as it does within one location. Null when
+ * point falls in, among the locations that are public. Zones never
+ * overlap; of two from before that rule, the smallest wins. Null when
  * no zone holds the point: the area is not served.
  */
 export async function locationAt(place: {

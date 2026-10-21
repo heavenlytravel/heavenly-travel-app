@@ -81,6 +81,55 @@ describe("parseZoneFields", () => {
     assert.equal(isZoneDistrict(parsed.value.drawnFrom), false);
   });
 
+  it("keeps the mukims a district zone is made of, each once, as it is or reshaped", () => {
+    const parsed = parseZoneFields({
+      name: "Kuah and Kedawang",
+      shape: [[triangle]],
+      drawnFrom: {
+        districtCode: "langkawi",
+        mukimCodes: [
+          "langkawi:bandar-kuah",
+          "langkawi:mukim-kedawang",
+          "langkawi:bandar-kuah",
+        ],
+        label: "Langkawi",
+      },
+    });
+    assert.ok(parsed.ok);
+    assert.deepEqual(parsed.value.drawnFrom, {
+      districtCode: "langkawi",
+      mukimCodes: ["langkawi:bandar-kuah", "langkawi:mukim-kedawang"],
+      label: "Langkawi",
+    });
+    const reshaped = parseZoneFields({
+      name: "Kuah side",
+      shape: [[triangle]],
+      drawnFrom: {
+        reshapedFrom: "langkawi",
+        mukimCodes: ["langkawi:bandar-kuah"],
+        label: "Langkawi",
+      },
+    });
+    assert.ok(reshaped.ok);
+    assert.deepEqual(reshaped.value.drawnFrom, {
+      reshapedFrom: "langkawi",
+      mukimCodes: ["langkawi:bandar-kuah"],
+      label: "Langkawi",
+    });
+  });
+
+  it("refuses a district zone of no mukims, and mukims that are not codes", () => {
+    const zone = (mukimCodes: unknown) =>
+      parseZoneFields({
+        name: "Kuah",
+        shape: [[triangle]],
+        drawnFrom: { districtCode: "langkawi", mukimCodes, label: "Langkawi" },
+      });
+    assert.equal(zone([]).ok, false);
+    assert.equal(zone([7]).ok, false);
+    assert.equal(zone("langkawi:bandar-kuah").ok, false);
+  });
+
   it("refuses a missing name, a shape that is not a ring and a radius out of range", () => {
     assert.equal(parseZoneFields({ name: "", shape: triangle }).ok, false);
     assert.equal(parseZoneFields({ name: "Town", shape: [[1, 2]] }).ok, false);

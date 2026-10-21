@@ -17,8 +17,13 @@ export const ZONE_LIMITS = {
   name: 60,
   /** Zones per location. A price list, not a map of the country. */
   zones: 40,
-  /** Corners of a zone, all its pieces together: the largest district has 653. */
-  corners: 1000,
+  /**
+   * Corners of a zone, all its pieces together: the largest district has
+   * 653, and Langkawi's mukims with their islands 1,322 between them.
+   */
+  corners: 2000,
+  /** Mukims one zone is made of: every one of a district's. Kota Bharu, the most, has 85. */
+  mukims: 100,
   /** Metres, for a circle around a place. */
   radiusM: { min: 100, max: 50_000 },
 } as const;
@@ -44,35 +49,58 @@ export function isZoneCircle(value: unknown): value is ZoneCircle {
   );
 }
 
+/** Absent, or a list of codes. */
+const isCodes = (value: unknown): value is string[] | undefined =>
+  value === undefined ||
+  (Array.isArray(value) && value.every((code) => typeof code === "string"));
+
 /**
- * A zone that is a district as it is: the district's code, and its name as
- * the editor shows it. The official boundary, read again from the code on
- * every save, so it never drifts from the data.
+ * A zone that is a district as it is, or some of its mukims as they are:
+ * the district's code, the mukims' codes when it is some of them, and the
+ * district's name as the editor shows it. The official boundary, read
+ * again from the codes on every save, so it never drifts from the data.
  */
 export type ZoneDistrict = {
   districtCode: string;
+  /** The mukims the zone is made of, put together; absent for the whole district. */
+  mukimCodes?: string[];
   label: string;
 };
 
 export function isZoneDistrict(value: unknown): value is ZoneDistrict {
   if (typeof value !== "object" || value === null) return false;
   const d = value as Record<string, unknown>;
-  return typeof d.districtCode === "string" && typeof d.label === "string";
+  return (
+    typeof d.districtCode === "string" &&
+    typeof d.label === "string" &&
+    isCodes(d.mukimCodes)
+  );
 }
 
 /**
- * A zone started from a district's boundary and then reshaped by hand: the
- * district is a reference only, and the shape is stored as drawn.
+ * A zone started from a district's boundary, or some of its mukims', and
+ * then reshaped by hand or with other zones cut out of it: the district
+ * and the mukims are a reference only, and the shape is stored as drawn.
  */
 export type ZoneReshaped = {
   reshapedFrom: string;
+  mukimCodes?: string[];
   label: string;
 };
 
 export function isZoneReshaped(value: unknown): value is ZoneReshaped {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;
-  return typeof r.reshapedFrom === "string" && typeof r.label === "string";
+  return (
+    typeof r.reshapedFrom === "string" &&
+    typeof r.label === "string" &&
+    isCodes(r.mukimCodes)
+  );
+}
+
+/** The mukims a district zone names, without repeats; absent when it names none. */
+function mukimCodesOf(codes: string[] | undefined) {
+  return codes ? { mukimCodes: [...new Set(codes)] } : {};
 }
 
 /** Where a zone's shape came from, when it was not drawn from a plain circle or square. */
@@ -116,7 +144,7 @@ export function checkRadius(radiusM: number): Change {
 export function checkZoneShape(shape: unknown): Change {
   if (!isZoneShape(shape)) {
     return refuse(
-      "Draw the zone on the map, pick a place and a radius, or pick a district.",
+      "Draw the zone on the map, pick a place and a radius, or pick a district or its mukims.",
     );
   }
   const corners = ringsOf(shape).reduce((sum, ring) => sum + ring.length, 0);
@@ -156,6 +184,14 @@ export function checkZoneFields(fields: ZoneFields): Change {
   ) {
     return refuse("Pick a district.");
   }
+  const mukims =
+    isZoneDistrict(fields.drawnFrom) || isZoneReshaped(fields.drawnFrom)
+      ? fields.drawnFrom.mukimCodes
+      : undefined;
+  if (mukims && mukims.length === 0) return refuse("Tick at least one mukim.");
+  if (mukims && mukims.length > ZONE_LIMITS.mukims) {
+    return refuse(`A zone is made of at most ${ZONE_LIMITS.mukims} mukims.`);
+  }
   return { ok: true };
 }
 
@@ -192,9 +228,17 @@ export function parseZoneFields(value: unknown): Parsed<ZoneFields> {
           radiusM: drawnFrom.radiusM,
         }
       : isZoneDistrict(drawnFrom)
-        ? { districtCode: drawnFrom.districtCode, label: drawnFrom.label }
+        ? {
+            districtCode: drawnFrom.districtCode,
+            ...mukimCodesOf(drawnFrom.mukimCodes),
+            label: drawnFrom.label,
+          }
         : isZoneReshaped(drawnFrom)
-          ? { reshapedFrom: drawnFrom.reshapedFrom, label: drawnFrom.label }
+          ? {
+              reshapedFrom: drawnFrom.reshapedFrom,
+              ...mukimCodesOf(drawnFrom.mukimCodes),
+              label: drawnFrom.label,
+            }
           : null,
   };
   const checked = checkZoneFields(fields);

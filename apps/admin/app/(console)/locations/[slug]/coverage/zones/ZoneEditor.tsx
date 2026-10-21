@@ -2,6 +2,7 @@
 
 import {
   ZONE_LIMITS,
+  andList,
   circleRing,
   isZoneCircle,
   isZoneDistrict,
@@ -15,34 +16,44 @@ import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
-import { Field, Input, Radio, inputClassName } from "@repo/ui/field";
+import { Checkbox, Field, Input, Radio, inputClassName } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { PlaceInput } from "@repo/ui/place-input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { Card } from "../../../../../_components/Card";
 import { locationTabHref } from "../../../../../_lib/routes";
 import {
   createZoneAction,
+  cutOutAction,
   districtPolygonsAction,
+  mukimPolygonsAction,
   placePointAction,
   updateZoneAction,
 } from "../actions";
-import { ZoneMap, type DistrictChoice, type OtherZone } from "./ZoneMap";
+import {
+  ZoneMap,
+  type DistrictChoice,
+  type MukimChoice,
+  type OtherZone,
+} from "./ZoneMap";
 import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
 import { FormError } from "../../../../../_components/FormError";
 
-/** Where a zone starts: a district, a circle around an address, or a circle or square put on the map. */
+/** Where a zone starts: a district or its mukims, a circle around an address, or a circle or square put on the map. */
 type Source = "district" | "address" | "draw";
+
+/** What of the district a zone is: all of it, or the mukims ticked. */
+type Area = "whole" | "some";
 
 const SOURCES: { key: Source; label: string; hint: string }[] = [
   {
     key: "district",
-    label: "A district",
-    hint: "A whole district such as Langkawi or Timur Laut, islands included, by its official boundary.",
+    label: "A district or mukim",
+    hint: "A whole district such as Langkawi or Timur Laut, or some of its mukims, by the official boundaries, islands included.",
   },
   {
     key: "address",
@@ -68,6 +79,36 @@ function sourceOf(origin: ZoneOrigin | null | undefined): Source {
   return "draw";
 }
 
+/** The name the editor gives a zone after what it was made from: the district, its mukims or the place. */
+function suggestionOf(
+  origin: ZoneOrigin | null | undefined,
+  mukims: readonly MukimChoice[],
+): string {
+  const codes = mukimCodesOf(origin);
+  if (codes.length > 0) {
+    return andList(
+      mukims
+        .filter((mukim) => codes.includes(mukim.code))
+        .map((mukim) => mukim.name),
+    );
+  }
+  if (
+    isZoneDistrict(origin) ||
+    isZoneReshaped(origin) ||
+    isZoneCircle(origin)
+  ) {
+    return origin.label;
+  }
+  return "";
+}
+
+/** The mukims a saved zone was made of; none for a whole district or any other zone. */
+function mukimCodesOf(origin: ZoneOrigin | null | undefined): string[] {
+  return isZoneDistrict(origin) || isZoneReshaped(origin)
+    ? (origin.mukimCodes ?? [])
+    : [];
+}
+
 const cornersOf = (shape: ZoneShape) =>
   ringsOf(shape).reduce((sum, ring) => sum + ring.length - 1, 0);
 
@@ -84,19 +125,24 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
 
 /**
  * The zone maker: a name, and a shape started one of three ways, then
- * reshaped on the map. A district comes in as its official boundary and
- * stays it, read again on every save, until "Reshape by hand" frees it; an
- * address draws a circle of the radius around the place, the address kept
- * as a reference only; "Draw" puts a circle or a square in the view. From
- * there every shape is the admin's own: corners dragged, added at the
- * edges, removed by a right-click, the whole zone moved, each step undone
- * with Undo. A district as it is needs no map; everything else is drawn on
- * it. A saved zone goes back to the Coverage tab.
+ * reshaped on the map. A district comes in as its official boundary, or
+ * some of its mukims put together as theirs, and stays it, read again on
+ * every save, until "Reshape by hand" frees it; a mukim is ticked in the
+ * list or clicked on the map. An address draws a circle of the radius
+ * around the place, the address kept as a reference only; "Draw" puts a
+ * circle or a square in the view. From there every shape is the admin's
+ * own: corners dragged, added at the edges, removed by a right-click, the
+ * whole zone moved, each step undone with Undo. A zone may not overlap any
+ * other, this location's or another's: when the save is refused for it,
+ * "Cut them out" takes their ground off this one. A district as it is
+ * needs no map; everything else is drawn on it. A saved zone goes back to
+ * the Coverage tab.
  */
 export function ZoneEditor({
   locationId,
   locationSlug,
   zone,
+  mukims: initialMukims,
   districts,
   choices,
   others,
@@ -113,6 +159,8 @@ export function ZoneEditor({
     shape: ZoneShape;
     drawnFrom: ZoneOrigin | null;
   } | null;
+  /** The mukims of the district the zone was made from; none for any other zone. */
+  mukims: MukimChoice[];
   /** The outlines under the map. */
   districts: DistrictOutline[];
   /** The districts the zone may be, by state. */
@@ -132,7 +180,8 @@ export function ZoneEditor({
     zone ? sourceOf(origin) : mapKey ? "address" : "district",
   );
 
-  // A district: the one picked, and whether it is still the boundary as it is.
+  // A district: the one picked, its mukims, what of it the zone is, and
+  // whether it is still the boundary as it is.
   const [district, setDistrict] = useState<{
     code: string;
     label: string;
@@ -143,7 +192,17 @@ export function ZoneEditor({
         ? { code: origin.reshapedFrom, label: origin.label }
         : null,
   );
+  const [mukims, setMukims] = useState(initialMukims);
+  const [picked, setPicked] = useState<string[]>(mukimCodesOf(origin));
+  const [area, setArea] = useState<Area>(
+    mukimCodesOf(origin).length > 0 ? "some" : "whole",
+  );
   const [asItIs, setAsItIs] = useState(!isZoneReshaped(origin));
+  // The name the editor last suggested, after what the zone was made from:
+  // a name typed over it is kept.
+  const [suggested, setSuggested] = useState(() =>
+    suggestionOf(origin, initialMukims),
+  );
 
   // An address: the place, where it is, and the circle's radius.
   const [placeText, setPlaceText] = useState(
@@ -166,17 +225,26 @@ export function ZoneEditor({
   const [circle, setCircle] = useState<ZoneShape | null>(null);
   const [history, setHistory] = useState<ZoneShape[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // The zones the last save found this one overlapping, to cut out.
+  const [overlaps, setOverlaps] = useState<string[] | null>(null);
   const [pending, startTransition] = useTransition();
+  // Each preview asked of the server is numbered; an answer that arrives
+  // after a newer question is dropped, so quick ticks end on the last.
+  const asked = useRef(0);
 
   const radiusM = Number(radius);
   const lockedDistrict = source === "district" && district !== null && asItIs;
   const circleUntouched = circle !== null && sameShape(shape, circle);
+  const pickedNames = mukims
+    .filter((mukim) => picked.includes(mukim.code))
+    .map((mukim) => mukim.name);
 
   function changeShape(next: ZoneShape | null) {
     if (sameShape(next, shape)) return;
     if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
     setShape(next);
     setError(null);
+    setOverlaps(null);
   }
 
   function undo() {
@@ -184,6 +252,14 @@ export function ZoneEditor({
     if (!previous) return;
     setHistory((was) => was.slice(0, -1));
     setShape(previous);
+  }
+
+  /** Names the zone after what it was made from, unless a name was typed over the last suggestion. */
+  function suggest(next: string) {
+    setName((current) =>
+      current === "" || current === suggested ? next : current,
+    );
+    setSuggested(next);
   }
 
   function drawCircle(at: { lat: number; lng: number } | null, metres: number) {
@@ -196,43 +272,106 @@ export function ZoneEditor({
     }
   }
 
-  function pickDistrict(code: string) {
+  /** Asks the server for a preview; the answer is applied unless a newer question was asked meanwhile. */
+  function preview<T extends object>(
+    question: Promise<T>,
+    apply: (answer: Exclude<T, { error: string }>) => void,
+  ) {
+    const ask = ++asked.current;
     setError(null);
+    setOverlaps(null);
+    startTransition(async () => {
+      const answer = await answerOf(question);
+      if (ask !== asked.current) return;
+      if ("error" in answer) {
+        setError((answer as { error: string }).error);
+        return;
+      }
+      apply(answer as Exclude<T, { error: string }>);
+    });
+  }
+
+  function pickDistrict(code: string) {
     if (!code) {
       setDistrict(null);
       return;
     }
-    startTransition(async () => {
-      const result = await answerOf(districtPolygonsAction(code));
-      if ("error" in result) {
-        setError(result.error);
-        return;
-      }
+    preview(districtPolygonsAction(code), (result) => {
       setDistrict({ code, label: result.label });
+      setMukims(result.mukims);
+      setArea("whole");
+      setPicked([]);
       setAsItIs(true);
       changeShape(result.polygons satisfies MultiPolygon);
-      // The district's name is the natural name; a typed name is kept.
-      setName((current) =>
-        current === "" || current === district?.label ? result.label : current,
-      );
+      suggest(result.label);
     });
   }
 
-  function pickPlace(next: string, picked: string | undefined) {
+  function showWhole() {
+    if (!district) return;
+    setArea("whole");
+    preview(districtPolygonsAction(district.code), (result) => {
+      setAsItIs(true);
+      changeShape(result.polygons);
+      suggest(district.label);
+    });
+  }
+
+  function showMukims(codes: string[]) {
+    if (!district) return;
+    // In the district's order, whatever order they were ticked in.
+    const ordered = mukims
+      .filter((mukim) => codes.includes(mukim.code))
+      .map((mukim) => mukim.code);
+    setArea("some");
+    setPicked(ordered);
+    if (ordered.length === 0) {
+      asked.current++;
+      setAsItIs(true);
+      changeShape(null);
+      return;
+    }
+    const names = mukims
+      .filter((mukim) => ordered.includes(mukim.code))
+      .map((mukim) => mukim.name);
+    preview(mukimPolygonsAction(district.code, ordered), (result) => {
+      setAsItIs(true);
+      changeShape(result.polygons);
+      suggest(andList(names));
+    });
+  }
+
+  function toggleMukim(code: string) {
+    showMukims(
+      picked.includes(code)
+        ? picked.filter((c) => c !== code)
+        : [...picked, code],
+    );
+  }
+
+  function pickPlace(next: string, pickedId: string | undefined) {
     setPlaceText(next);
-    setPlaceId(picked);
-    setError(null);
-    if (!picked) return;
-    startTransition(async () => {
-      const point = await answerOf(placePointAction(picked));
-      if ("error" in point) {
-        setError(point.error);
-        return;
-      }
+    setPlaceId(pickedId);
+    if (!pickedId) return;
+    preview(placePointAction(pickedId), (point) => {
       setPlaceText(point.label);
       setCenter(point);
       drawCircle(point, radiusM);
-      setName((current) => (current === "" ? point.label : current));
+      suggest(point.label);
+    });
+  }
+
+  function cutThemOut() {
+    if (!shape || !overlaps) return;
+    const cut = overlaps;
+    preview(cutOutAction(shape, zone?.id ?? null), (result) => {
+      // With others' ground taken off, a district's boundary is the
+      // admin's own shape now, not the district's.
+      if (source === "district") setAsItIs(false);
+      changeShape(result.polygons);
+      toast.success(
+        `Cut ${andList(cut)} out of this zone. Check it on the map, then save.`,
+      );
     });
   }
 
@@ -240,18 +379,29 @@ export function ZoneEditor({
     if (!shape) {
       setError(
         source === "district"
-          ? "Pick a district."
+          ? district && area === "some"
+            ? "Tick at least one mukim."
+            : "Pick a district."
           : source === "address"
             ? "Pick a place for the circle."
             : "Put a circle or a square on the map.",
       );
       return;
     }
+    const mukimCodes = area === "some" ? { mukimCodes: picked } : {};
     const drawnFrom: ZoneOrigin | null =
       source === "district" && district
         ? asItIs
-          ? { districtCode: district.code, label: district.label }
-          : { reshapedFrom: district.code, label: district.label }
+          ? {
+              districtCode: district.code,
+              ...mukimCodes,
+              label: district.label,
+            }
+          : {
+              reshapedFrom: district.code,
+              ...mukimCodes,
+              label: district.label,
+            }
         : source === "address" && placeId
           ? { placeId, label: placeText, radiusM }
           : null;
@@ -264,6 +414,7 @@ export function ZoneEditor({
       );
       if ("error" in result) {
         setError(result.error);
+        setOverlaps("overlaps" in result ? (result.overlaps ?? null) : null);
         return;
       }
       toast.success(
@@ -274,6 +425,10 @@ export function ZoneEditor({
   }
 
   const corners = shape ? cornersOf(shape) : 0;
+  const madeOf =
+    district && area === "some" && pickedNames.length > 0
+      ? `${andList(pickedNames)} in ${district.label}`
+      : district?.label;
 
   return (
     <div className="grid gap-6">
@@ -317,6 +472,7 @@ export function ZoneEditor({
                     onChange={() => {
                       setSource(option.key);
                       setError(null);
+                      setOverlaps(null);
                     }}
                     className="mt-0.5"
                   />
@@ -337,7 +493,7 @@ export function ZoneEditor({
         </fieldset>
 
         {source === "district" ? (
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             <div className="grid gap-1.5 sm:max-w-sm">
               <label
                 htmlFor={districtSelectId}
@@ -363,31 +519,98 @@ export function ZoneEditor({
                 zone, for an outstation destination.
               </p>
             </div>
+            {district && mukims.length > 0 ? (
+              <fieldset className="grid gap-1" disabled={!asItIs}>
+                <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+                  Area
+                </legend>
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                  <Radio
+                    name="area"
+                    checked={area === "whole"}
+                    onChange={showWhole}
+                    className="mt-0.5"
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="font-medium text-neutral-900">
+                      The whole district
+                    </span>
+                    <span className="text-xs text-neutral-600">
+                      {district.label} by its official boundary, islands
+                      included.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                  <Radio
+                    name="area"
+                    checked={area === "some"}
+                    onChange={() => showMukims(picked)}
+                    className="mt-0.5"
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="font-medium text-neutral-900">
+                      Some of its mukims
+                    </span>
+                    <span className="text-xs text-neutral-600">
+                      Tick one or more here or on the map; together they make
+                      one zone.
+                    </span>
+                  </span>
+                </label>
+                {area === "some" ? (
+                  <div className="mt-1 ml-6 grid gap-x-5 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {mukims.map((mukim) => (
+                      <label
+                        key={mukim.code}
+                        className="flex cursor-pointer items-center gap-2 py-1 text-sm"
+                      >
+                        <Checkbox
+                          checked={picked.includes(mukim.code)}
+                          onChange={() => toggleMukim(mukim.code)}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-neutral-900">
+                          {mukim.name}
+                        </span>
+                        <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-px text-[11px] text-neutral-500">
+                          {mukim.kind}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </fieldset>
+            ) : district ? (
+              <p className="text-xs text-neutral-500">
+                {district.label} has no mukims in the boundary data, so the zone
+                is the whole district.
+              </p>
+            ) : null}
             {district && shape ? (
               <div className="flex flex-wrap items-center gap-3 rounded-md bg-neutral-50 px-3 py-2.5 text-sm">
                 <p className="min-w-0 flex-1 text-neutral-700">
                   {asItIs
-                    ? `The official boundary of ${district.label}, read again on every save, so it always matches.`
-                    : `Reshaped by hand from ${district.label}: the shape is yours now, ${corners} corners.`}
+                    ? `The official boundary of ${madeOf}, read again on every save, so it always matches.`
+                    : `Reshaped from ${madeOf}: the shape is yours now, ${corners} corners.`}
                 </p>
-                {mapKey ? (
-                  asItIs ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setAsItIs(false)}
-                    >
-                      Reshape by hand
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => pickDistrict(district.code)}
-                    >
-                      Back to the official boundary
-                    </Button>
-                  )
+                {mapKey && asItIs ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAsItIs(false)}
+                  >
+                    Reshape by hand
+                  </Button>
+                ) : !asItIs ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      area === "some" ? showMukims(picked) : showWhole()
+                    }
+                  >
+                    Back to the official boundary
+                  </Button>
                 ) : null}
               </div>
             ) : null}
@@ -465,6 +688,8 @@ export function ZoneEditor({
           canUndo={history.length > 0}
           onUndo={undo}
           onShapeChange={changeShape}
+          mukims={lockedDistrict && area === "some" ? mukims : undefined}
+          onToggleMukim={toggleMukim}
         />
       ) : null}
 
@@ -484,6 +709,16 @@ export function ZoneEditor({
           </span>
         ) : null}
         <FormError error={error} />
+        {overlaps ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={cutThemOut}
+            disabled={pending}
+          >
+            {overlaps.length === 1 ? "Cut it out" : "Cut them out"}
+          </Button>
+        ) : null}
       </div>
     </div>
   );

@@ -9,16 +9,23 @@ import {
   MAP_FAILURES,
   boundsOf,
   layoutOf,
+  pathOf,
   pathsOf,
   ringOfPath,
   sameShape,
   shapeOfRings,
   useGoogleMap,
   type DistrictOutline,
+  type MukimChoice,
   type OtherZone,
 } from "./map-shapes";
 
-export type { DistrictChoice, DistrictOutline, OtherZone } from "./map-shapes";
+export type {
+  DistrictChoice,
+  DistrictOutline,
+  MukimChoice,
+  OtherZone,
+} from "./map-shapes";
 
 /** The fewest corners a piece of a shape keeps: a corner is not removed below it. */
 const MIN_CORNERS = 3;
@@ -37,12 +44,31 @@ const CONTEXT_STYLE: google.maps.PolygonOptions = {
   fillOpacity: 0.12,
   clickable: false,
 };
+/** Another location's zones: this one may not overlap them either. */
+const OTHER_LOCATION_STYLE: google.maps.PolygonOptions = {
+  strokeColor: "#d97706",
+  strokeWeight: 1.5,
+  fillColor: "#d97706",
+  fillOpacity: 0.12,
+  clickable: false,
+};
 const ZONE_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#059669",
   strokeWeight: 2,
   fillColor: "#059669",
   fillOpacity: 0.22,
+  zIndex: 1,
 };
+/** The district's mukims over the zone, each a click to tick or untick. */
+const MUKIM_STYLE: google.maps.PolygonOptions = {
+  strokeColor: "#404040",
+  strokeWeight: 1,
+  strokeOpacity: 0.7,
+  fillColor: "#404040",
+  fillOpacity: 0,
+  zIndex: 2,
+};
+const MUKIM_HOVER_OPACITY = 0.14;
 
 /** What a hand on the map does: reshape the zone with the map held still, or move the map. */
 type Tool = "edit" | "pan";
@@ -81,7 +107,9 @@ function squareRing(center: { lat: number; lng: number }, size: number): Ring {
 
 /**
  * The zone maker's map: the districts of the location's states in grey,
- * its other zones in blue, and the zone being made in green. A shape that
+ * its other zones in blue, other locations' zones in amber, and the zone
+ * being made in green. With `mukims`, the district's mukims are outlined
+ * over it, and a click on one ticks or unticks it. A shape that
  * may be reshaped has two tools. "Edit shape" holds the map still so a
  * drag never pans it: drag a corner to move it, the small mark halfway
  * along an edge to add a corner there, or the inside to move the whole
@@ -101,6 +129,8 @@ export function ZoneMap({
   canUndo,
   onUndo,
   onShapeChange,
+  mukims,
+  onToggleMukim,
 }: {
   mapKey: string;
   districts: DistrictOutline[];
@@ -113,6 +143,9 @@ export function ZoneMap({
   canUndo: boolean;
   onUndo: () => void;
   onShapeChange: (shape: ZoneShape) => void;
+  /** The district's mukims to outline over the zone; none while it is not made of them. */
+  mukims?: MukimChoice[];
+  onToggleMukim?: (code: string) => void;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts);
   const polygon = useRef<google.maps.Polygon | null>(null);
@@ -120,31 +153,35 @@ export function ZoneMap({
   // here from a shape handed in.
   const shown = useRef<ZoneShape | null>(null);
   const report = useRef(onShapeChange);
+  const toggle = useRef(onToggleMukim);
   const [tool, setTool] = useState<Tool>("edit");
+  const [hovered, setHovered] = useState<MukimChoice | null>(null);
   const reshaping = editable && shape !== null && tool === "edit";
 
-  // The map's listeners outlive a render, so they read the latest callback here.
+  // The map's listeners outlive a render, so they read the latest callbacks here.
   useEffect(() => {
     report.current = onShapeChange;
-  }, [onShapeChange]);
+    toggle.current = onToggleMukim;
+  }, [onShapeChange, onToggleMukim]);
 
   // Once the map is there: the other zones, and the view on the shape.
   useEffect(() => {
     if (!map || !library) return;
     for (const other of others) {
       new library.Polygon({
-        ...CONTEXT_STYLE,
+        ...(other.location ? OTHER_LOCATION_STYLE : CONTEXT_STYLE),
         paths: pathsOf(other.shape),
         map,
       });
     }
     // The zone itself, else the location's other zones, where the work is,
     // else its states.
+    const own = others.filter((other) => !other.location);
     const bounds = boundsOf(
       shape
         ? [shape]
-        : others.length > 0
-          ? others.map((other) => other.shape)
+        : own.length > 0
+          ? own.map((other) => other.shape)
           : districts.map((district) => district.polygons),
     );
     if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
@@ -221,6 +258,35 @@ export function ZoneMap({
     }
   }, [map, library, shape]);
 
+  // The district's mukims over the zone, drawn afresh when the list changes.
+  const mukimKey = mukims?.map((mukim) => mukim.code).join(" ") ?? "";
+  useEffect(() => {
+    if (!map || !library || !mukims) return;
+    const outlines = mukims.map((mukim) => {
+      const outline = new library.Polygon({
+        ...MUKIM_STYLE,
+        paths: mukim.polygons.flat().map(pathOf),
+        map,
+      });
+      outline.addListener("click", () => toggle.current?.(mukim.code));
+      outline.addListener("mouseover", () => {
+        outline.setOptions({ fillOpacity: MUKIM_HOVER_OPACITY });
+        setHovered(mukim);
+      });
+      outline.addListener("mouseout", () => {
+        outline.setOptions({ fillOpacity: 0 });
+        setHovered((was) => (was === mukim ? null : was));
+      });
+      return outline;
+    });
+    return () => {
+      for (const outline of outlines) outline.setMap(null);
+      setHovered(null);
+    };
+    // The list is redrawn when its mukims change, not when a new array holds the same.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, library, mukimKey]);
+
   // The tool in hand: the map held still while reshaping, free otherwise.
   useEffect(() => {
     polygon.current?.setOptions({ editable: reshaping, draggable: reshaping });
@@ -285,15 +351,19 @@ export function ZoneMap({
       >
         {failed
           ? MAP_FAILURES[failed]
-          : !shape
-            ? starters
-              ? "Move the map to the area, then put a circle or a square on it to reshape."
-              : null
-            : !editable
-              ? null
-              : reshaping
-                ? "The map is held still. Drag a corner to move it, the mark halfway along an edge to add one, or the inside to move the whole zone. Right-click a corner to remove it. Zoom with the control at the bottom right."
-                : "Drag to move the map and scroll to zoom. Switch to Edit shape to reshape the zone."}
+          : mukims
+            ? hovered
+              ? `${hovered.name}, ${hovered.kind.toLowerCase()}: click to tick or untick it.`
+              : "Click a mukim on the map to tick or untick it."
+            : !shape
+              ? starters
+                ? "Move the map to the area, then put a circle or a square on it to reshape."
+                : null
+              : !editable
+                ? null
+                : reshaping
+                  ? "The map is held still. Drag a corner to move it, the mark halfway along an edge to add one, or the inside to move the whole zone. Right-click a corner to remove it. Zoom with the control at the bottom right."
+                  : "Drag to move the map and scroll to zoom. Switch to Edit shape to reshape the zone."}
       </p>
     </div>
   );

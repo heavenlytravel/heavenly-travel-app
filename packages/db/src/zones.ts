@@ -1,8 +1,9 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { refuse, type Change, type Created } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
+import { andList } from "./names";
 import { byClassOrder } from "./offerings";
 import {
   ZONE_LIMITS,
@@ -14,6 +15,9 @@ import {
   type RateCell,
   type ZoneFields,
 } from "./rates-input";
+import { cutOut, shapesOverlap } from "./zone-geometry";
+import type { MultiPolygon } from "./geo";
+import { isZoneShape, type ZoneShape } from "./zone-match";
 
 export type { Zone, ZoneRate };
 
@@ -49,6 +53,32 @@ export function listZoneNames(
     where: { locationId },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true, name: true },
+  });
+}
+
+/** A zone with its shape and its location, as the zone maker draws the zones around one. */
+export type ZoneOutline = Pick<
+  Zone,
+  "id" | "name" | "shape" | "drawnFrom" | "locationId"
+> & {
+  location: { name: string };
+};
+
+/**
+ * Every zone of every location, with its shape: what a zone being made
+ * may not overlap, this location's or another's.
+ */
+export function listZoneOutlines(): Promise<ZoneOutline[]> {
+  return db.zone.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      shape: true,
+      drawnFrom: true,
+      locationId: true,
+      location: { select: { name: true } },
+    },
   });
 }
 
@@ -122,12 +152,89 @@ export async function listPriceLists(
   }));
 }
 
-/** A new zone, after the location's others. */
+/**
+ * A zone write refused because the zone overlaps others, with their names:
+ * the zone maker offers to cut them out of it.
+ */
+export type ZoneRefusal = Refusal & { overlaps?: string[] };
+
+/**
+ * The key of the lock zone writes take, one at a time across the console,
+ * so two saves at once cannot both pass the overlap check.
+ */
+const ZONE_WRITE_LOCK = 261021;
+
+/**
+ * Why the shape cannot be saved: it covers ground another zone covers, of
+ * this location or another. Zones never overlap, so a pickup falls in one
+ * zone of one location at most. Null when it overlaps none. Takes the
+ * lock, so it runs first in the write's transaction.
+ */
+async function overlapRefusal(
+  tx: Prisma.TransactionClient,
+  locationId: string,
+  shape: ZoneShape,
+  zoneId?: string,
+): Promise<ZoneRefusal | null> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
+  const zones = await tx.zone.findMany({
+    where: zoneId ? { id: { not: zoneId } } : undefined,
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      name: true,
+      shape: true,
+      locationId: true,
+      location: { select: { name: true } },
+    },
+  });
+  const overlaps = zones.flatMap((zone) =>
+    isZoneShape(zone.shape) && shapesOverlap(shape, zone.shape)
+      ? [
+          zone.locationId === locationId
+            ? zone.name
+            : `${zone.name} (${zone.location.name})`,
+        ]
+      : [],
+  );
+  if (overlaps.length === 0) return null;
+  return {
+    ok: false,
+    error: `This zone overlaps ${andList(overlaps)}. Zones never overlap: reshape it, or cut ${overlaps.length === 1 ? "that zone" : "those zones"} out of it.`,
+    overlaps,
+  };
+}
+
+/**
+ * The shape with every zone it overlaps cut out of it, this location's or
+ * another's, for the zone maker to show before it is saved: `zoneId` is
+ * the zone being remade, which is left out. Refused when nothing is left.
+ */
+export async function cutOutOverlaps(
+  shape: ZoneShape,
+  zoneId?: string,
+): Promise<{ ok: true; shape: MultiPolygon } | Refusal> {
+  const zones = await db.zone.findMany({
+    where: zoneId ? { id: { not: zoneId } } : undefined,
+    select: { shape: true },
+  });
+  const overlapping = zones.flatMap(({ shape: other }) =>
+    isZoneShape(other) && shapesOverlap(shape, other) ? [other] : [],
+  );
+  const left = cutOut(shape, overlapping);
+  if (left.length === 0) {
+    return refuse(
+      "Nothing of this zone is left once the zones it overlaps are cut out. Draw it somewhere else.",
+    );
+  }
+  return { ok: true, shape: left };
+}
+
+/** A new zone, after the location's others. It may not overlap any zone. */
 export async function createZone(
   actor: Actor,
   locationId: string,
   fields: ZoneFields,
-): Promise<Created> {
+): Promise<Created | ZoneRefusal> {
   const check = checkZoneFields(fields);
   if (!check.ok) return check;
 
@@ -137,6 +244,8 @@ export async function createZone(
       select: { id: true, _count: { select: { zones: true } } },
     });
     if (!location) return NOT_FOUND;
+    const overlap = await overlapRefusal(tx, locationId, fields.shape);
+    if (overlap) return overlap;
     if (location._count.zones >= ZONE_LIMITS.zones) {
       return refuse(
         `A location keeps at most ${ZONE_LIMITS.zones} zones. Delete one first.`,
@@ -164,18 +273,20 @@ export async function createZone(
   });
 }
 
-/** Renames or redraws a zone. Its rates stay. */
+/** Renames or redraws a zone. Its rates stay. It may not overlap any other zone. */
 export async function updateZone(
   actor: Actor,
   id: string,
   fields: ZoneFields,
-): Promise<Change> {
+): Promise<Change | ZoneRefusal> {
   const check = checkZoneFields(fields);
   if (!check.ok) return check;
 
   return db.$transaction(async (tx) => {
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
+    const overlap = await overlapRefusal(tx, zone.locationId, fields.shape, id);
+    if (overlap) return overlap;
     await tx.zone.update({
       where: { id },
       data: {

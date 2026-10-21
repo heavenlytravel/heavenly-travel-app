@@ -26,8 +26,20 @@ export type DistrictChoice = {
   districts: { code: string; name: string }[];
 };
 
-/** Another zone of the location, drawn but not editable. */
-export type OtherZone = { name: string; shape: ZoneShape };
+/** A mukim of the district picked, to tick and to draw on the map. */
+export type MukimChoice = {
+  code: string;
+  name: string;
+  /** "Mukim", "Bandar", "Pekan", "Land district", "Town district". */
+  kind: string;
+  polygons: MultiPolygon;
+};
+
+/**
+ * Another zone, drawn but not editable: one of the location's, or, with
+ * `location`, another location's, which this one may not overlap either.
+ */
+export type OtherZone = { name: string; shape: ZoneShape; location?: string };
 
 export const toLatLng = ([lng, lat]: [
   number,

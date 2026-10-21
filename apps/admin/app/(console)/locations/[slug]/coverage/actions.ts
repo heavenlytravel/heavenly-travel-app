@@ -1,11 +1,17 @@
 "use server";
 
 import {
+  MUKIM_KIND_LABELS,
   createZone,
+  cutOutOverlaps,
   deleteZone,
   districtShape,
   isZoneDistrict,
+  isZoneShape,
+  mukimsByCode,
+  mukimsOf,
   parseZoneFields,
+  unionOf,
   updateZone,
   type MultiPolygon,
   type ZoneFields,
@@ -19,24 +25,44 @@ import {
   STALE,
   stateOf,
 } from "../../../../_lib/action-state";
+import { refreshLocationAfter } from "../../../../_lib/site";
 import { revalidateLocation } from "../../_lib/revalidate";
+import type { MukimChoice } from "./zones/map-shapes";
 
 /**
  * The Coverage tab's actions: the zones. Each checks `coverage.manage` again,
  * passes the admin as the actor and lets the writer in @repo/db check the
  * rest. Arguments passed directly, not through a form, are checked for
- * their type here: an action is reachable by direct POST. Nothing here is
- * public, so the customer site is not refreshed: the quote reads the rows.
+ * their type here: an action is reachable by direct POST. A change to the
+ * zones refreshes the location's pages on the customer site, whose search
+ * card keeps to the districts the zones lie in; the quote reads the rows.
  */
 
-/** A zone write's answer: the zone's id, or why not. */
-export type ZoneSaved = { ok: true; id: string } | { ok: false; error: string };
+/**
+ * A zone write's answer: the zone's id, or why not, with the zones it
+ * overlaps when that is why.
+ */
+export type ZoneSaved =
+  { ok: true; id: string } | { ok: false; error: string; overlaps?: string[] };
+
+/** Some of a district's mukims put together, or why not. */
+async function mukimShapeOf(
+  districtCode: string,
+  codes: readonly string[],
+): Promise<{ ok: true; shape: MultiPolygon } | { ok: false; error: string }> {
+  const mukims = await mukimsByCode(districtCode, codes);
+  if (!mukims || mukims.length === 0) {
+    return { ok: false, error: "Tick the mukims again from the list." };
+  }
+  return { ok: true, shape: unionOf(mukims.map((mukim) => mukim.polygons)) };
+}
 
 /**
- * The zone as posted, with a district kept as it is read again from its
- * code, so its boundary is always the data's and never the browser's.
- * Every other shape, a circle around a place included, is the admin's own
- * drawing, reshaped on the map, and is stored as posted once it is a shape.
+ * The zone as posted, with a district or its mukims kept as they are read
+ * again from their codes, so the boundary is always the data's and never
+ * the browser's. Every other shape, a circle around a place included, is
+ * the admin's own drawing, reshaped on the map, and is stored as posted
+ * once it is a shape.
  */
 async function zoneFieldsOf(
   input: unknown,
@@ -44,10 +70,10 @@ async function zoneFieldsOf(
   const parsed = parseZoneFields(input);
   if (!parsed.ok) return parsed;
   const { drawnFrom } = parsed.value;
-  if (isZoneDistrict(drawnFrom)) {
-    const district = districtShape(drawnFrom.districtCode);
-    if (!district)
-      return { ok: false, error: "Pick a district from the list." };
+  if (!isZoneDistrict(drawnFrom)) return parsed;
+  const district = districtShape(drawnFrom.districtCode);
+  if (!district) return { ok: false, error: "Pick a district from the list." };
+  if (!drawnFrom.mukimCodes) {
     return {
       ok: true,
       value: {
@@ -57,7 +83,20 @@ async function zoneFieldsOf(
       },
     };
   }
-  return parsed;
+  const mukims = await mukimShapeOf(district.code, drawnFrom.mukimCodes);
+  if (!mukims.ok) return mukims;
+  return {
+    ok: true,
+    value: {
+      ...parsed.value,
+      shape: mukims.shape,
+      drawnFrom: {
+        districtCode: district.code,
+        mukimCodes: drawnFrom.mukimCodes,
+        label: district.name,
+      },
+    },
+  };
 }
 
 export async function createZoneAction(
@@ -72,7 +111,10 @@ export async function createZoneAction(
   const fields = await zoneFieldsOf(input);
   if (!fields.ok) return fields;
   const result = await createZone(actorOf(admin), locationId, fields.value);
-  if (result.ok) revalidateLocation();
+  if (result.ok) {
+    revalidateLocation();
+    refreshLocationAfter(locationId);
+  }
   return result;
 }
 
@@ -89,7 +131,10 @@ export async function updateZoneAction(
   const fields = await zoneFieldsOf(input);
   if (!fields.ok) return fields;
   const result = await updateZone(actorOf(admin), zoneId, fields.value);
-  if (result.ok) revalidateLocation();
+  if (result.ok) {
+    revalidateLocation();
+    refreshLocationAfter(locationId);
+  }
   return result.ok ? { ok: true, id: zoneId } : result;
 }
 
@@ -103,7 +148,10 @@ export async function deleteZoneAction(
     return STALE;
   }
   const result = await deleteZone(actorOf(admin), zoneId);
-  if (result.ok) revalidateLocation();
+  if (result.ok) {
+    revalidateLocation();
+    refreshLocationAfter(locationId);
+  }
   return stateOf(result);
 }
 
@@ -123,10 +171,19 @@ export async function placePointAction(placeId: string): Promise<PlacePoint> {
   return { ok: true, label: place.label, lat: place.lat, lng: place.lng };
 }
 
-/** A district's boundary, for the preview of a zone that is the district. */
+/**
+ * A district's boundary, for the preview of a zone that is the district,
+ * and its mukims with theirs, to tick and to draw on the map; none for a
+ * district with no mukims, as in Sabah.
+ */
 export type DistrictPolygons =
   | { ok: false; error: string }
-  | { ok: true; label: string; polygons: MultiPolygon };
+  | {
+      ok: true;
+      label: string;
+      polygons: MultiPolygon;
+      mukims: MukimChoice[];
+    };
 
 export async function districtPolygonsAction(
   code: string,
@@ -135,5 +192,54 @@ export async function districtPolygonsAction(
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   const district = typeof code === "string" ? districtShape(code) : undefined;
   if (!district) return { ok: false, error: "Pick a district from the list." };
-  return { ok: true, label: district.name, polygons: district.polygons };
+  const mukims = await mukimsOf(district.code);
+  return {
+    ok: true,
+    label: district.name,
+    polygons: district.polygons,
+    mukims: mukims.map((mukim) => ({
+      code: mukim.code,
+      name: mukim.name,
+      kind: MUKIM_KIND_LABELS[mukim.kind],
+      polygons: mukim.polygons,
+    })),
+  };
+}
+
+/** Some of a district's mukims as one shape, for the preview of a zone made of them. */
+export type MukimPolygons =
+  { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
+
+export async function mukimPolygonsAction(
+  districtCode: string,
+  codes: string[],
+): Promise<MukimPolygons> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  if (
+    typeof districtCode !== "string" ||
+    !Array.isArray(codes) ||
+    !codes.every((code) => typeof code === "string")
+  ) {
+    return { ok: false, error: "Tick the mukims again from the list." };
+  }
+  const shape = await mukimShapeOf(districtCode, codes);
+  return shape.ok ? { ok: true, polygons: shape.shape } : shape;
+}
+
+/** The zone being made with the zones it overlaps cut out of it, or why not. */
+export type CutOut =
+  { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
+
+export async function cutOutAction(
+  shape: unknown,
+  zoneId: string | null,
+): Promise<CutOut> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  if (!isZoneShape(shape) || (zoneId !== null && typeof zoneId !== "string")) {
+    return { ok: false, error: "The zone could not be read. Reload." };
+  }
+  const result = await cutOutOverlaps(shape, zoneId ?? undefined);
+  return result.ok ? { ok: true, polygons: result.shape } : result;
 }

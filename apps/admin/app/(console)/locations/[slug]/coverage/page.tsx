@@ -111,7 +111,7 @@ async function coverage({
       >
         <span className="inline-flex items-center gap-1.5">
           Zones
-          <InfoTip text="A zone starts as a whole district, a circle around a place or a circle or square on the map, and can be reshaped from there. Where zones overlap, the smallest wins. A zone may lie outside the states, for an outstation destination." />
+          <InfoTip text="A zone starts as a whole district or some of its mukims, a circle around a place or a circle or square on the map, and can be reshaped from there. Zones never overlap, this location's or another's. A zone may lie outside the states, for an outstation destination." />
         </span>
       </CardTitle>
       <CoverageZones

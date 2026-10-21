@@ -33,6 +33,9 @@ export {
 export type { State, District, DistrictWithState, ServedAt } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
 export { statesBounds } from "./location-places";
+export { mukimsOf, mukimsByCode, MUKIM_KIND_LABELS } from "./mukim-index";
+export type { MukimShape, MukimKind } from "./mukim-index";
+export { unionOf, cutOut, shapesOverlap } from "./zone-geometry";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,
@@ -85,6 +88,7 @@ export type {
 export {
   listZones,
   listZoneNames,
+  listZoneOutlines,
   getZone,
   listZoneRates,
   listCoverage,
@@ -92,11 +96,18 @@ export {
   createZone,
   updateZone,
   deleteZone,
+  cutOutOverlaps,
   setZoneRates,
   setOddHours,
   setDropoffRule,
 } from "./zones";
-export type { Zone, ZoneRate, LocationPriceList } from "./zones";
+export type {
+  Zone,
+  ZoneRate,
+  LocationPriceList,
+  ZoneRefusal,
+  ZoneOutline,
+} from "./zones";
 export {
   listLocationNames,
   getLocation,

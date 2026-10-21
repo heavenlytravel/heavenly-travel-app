@@ -80,9 +80,12 @@ export type ServedAt = {
 
 /**
  * The location that serves a pickup at the place: the one whose zone the
- * point falls in, among the locations that are public. Zones never
- * overlap; of two from before that rule, the smallest wins. Null when
- * no zone holds the point: the area is not served.
+ * point falls in, among the zones that take pickups of the locations that
+ * are public; a destination, a zone a location only prices trips to, is
+ * none. Zones that take pickups never overlap; of two from before that
+ * rule, the smallest wins. Null when no zone holds the point: the area is
+ * not served. The location comes with all its zones, destinations
+ * included, for the drop-off.
  */
 export async function locationAt(place: {
   lat: number;
@@ -98,7 +101,10 @@ export async function locationAt(place: {
     area: number;
   } | null = null;
   for (const location of locations) {
-    const zone = zoneAt(location.zones, place);
+    const zone = zoneAt(
+      location.zones.filter((candidate) => candidate.takesPickups),
+      place,
+    );
     if (!zone) continue;
     // `zoneAt` answered the zone, so its shape is a shape.
     const area = zoneShapeArea(zone.shape as ZoneShape);

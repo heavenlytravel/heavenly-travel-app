@@ -23,8 +23,13 @@ import {
 } from "react";
 import { locationTabHref } from "../../../../_lib/routes";
 import { useLeaveGuard } from "../../../../_lib/use-leave-guard";
-import { setZoneRatesAction } from "./actions";
-import { AddRouteDialog, pairKey, type NewRoute } from "./AddRouteDialog";
+import { copyZoneAction, setZoneRatesAction } from "./actions";
+import {
+  AddRouteDialog,
+  pairKey,
+  type NewRoute,
+  type ZoneElsewhere,
+} from "./AddRouteDialog";
 import { errorOf } from "../../../../_lib/action-state";
 
 type Zone = { id: string; name: string };
@@ -127,13 +132,15 @@ const CELL_INPUT =
  * them, and leaving the page with any unsaved asks first. "Add route"
  * opens a dialog that offers only the pairs of zones not on the grid yet,
  * so a route has one row whichever way it is read, and saves the route
- * with its prices at once. What an empty cell means follows the
+ * with its prices at once; a route to another location's zone copies the
+ * zone here first, as a destination, and the grid gains it as a zone. What an empty cell means follows the
  * drop-off rule: metered, or not offered.
  */
 export function RateGrid({
   locationId,
   locationSlug,
-  zones,
+  zones: initialZones,
+  elsewhere = [],
   classes,
   cells,
   rule,
@@ -143,12 +150,16 @@ export function RateGrid({
   /** The location's slug, its address, for the links to the other tabs. */
   locationSlug: string;
   zones: Zone[];
+  /** Other locations' zones a route may be priced to, when the drop-off rule lets a trip leave. */
+  elsewhere?: ZoneElsewhere[];
   classes: ClassColumn[];
   cells: Cell[];
   rule: DropoffRule;
   /** For the teams that read the rates: the prices as text, nothing to change. */
   readOnly?: boolean;
 }) {
+  // The zones, and a destination copied here by "Add route".
+  const [zones, setZones] = useState(initialZones);
   const [saved, setSaved] = useState<Saved>(() => savedOf(cells, zones));
   const [routes, setRoutes] = useState<Route[]>(saved.routes);
   const [values, setValues] = useState(() => valuesOf(saved));
@@ -226,7 +237,7 @@ export function RateGrid({
   const freePairs = pairs - paired.size;
 
   const coverageHref = locationTabHref(locationSlug, "coverage");
-  if (zones.length < 2) {
+  if (zones.length === 0 || (zones.length < 2 && elsewhere.length === 0)) {
     return (
       <p className="border-t border-neutral-200 px-6 py-5 text-sm text-neutral-600">
         A route runs between two zones.{" "}
@@ -352,7 +363,15 @@ export function RateGrid({
   // A route from the dialog is saved at once, with its prices, and joins
   // the grid as saved; the grid's other changes stay as they were.
   async function addRoute(added: NewRoute): Promise<string | null> {
-    const route = { fromZoneId: added.fromZoneId, toZoneId: added.toZoneId };
+    let toZoneId = added.toZoneId;
+    if (added.copy) {
+      const copied = await answerOf(copyZoneAction(locationId, toZoneId));
+      if ("error" in copied) return copied.error;
+      const zone = { id: copied.id, name: copied.name };
+      setZones((was) => [...was, zone]);
+      toZoneId = zone.id;
+    }
+    const route = { fromZoneId: added.fromZoneId, toZoneId };
     const refused = errorOf(
       await answerOf(
         setZoneRatesAction(
@@ -700,7 +719,7 @@ export function RateGrid({
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           {readOnly ? (
             <span />
-          ) : freePairs > 0 ? (
+          ) : freePairs > 0 || elsewhere.length > 0 ? (
             <Button
               variant="secondary"
               disabled={pending}
@@ -736,6 +755,7 @@ export function RateGrid({
             open={adding}
             onOpenChange={setAdding}
             zones={zones}
+            elsewhere={elsewhere}
             classes={classes}
             paired={paired}
             rule={rule}

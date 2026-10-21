@@ -122,6 +122,7 @@ async function zoneEditor({
                   name: existing.name,
                   shape: existing.shape,
                   drawnFrom,
+                  takesPickups: existing.takesPickups,
                 }
               : null
           }

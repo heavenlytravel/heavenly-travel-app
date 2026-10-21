@@ -1,5 +1,6 @@
 import {
   isZoneCircle,
+  isZoneCopy,
   isZoneDistrict,
   isZoneReshaped,
   isZoneShape,
@@ -19,8 +20,21 @@ const kmOf = (metres: number) => {
   return km % 1 === 0 ? String(km) : km.toFixed(1);
 };
 
-/** How a zone was made, in a line: where it started, and its corners when drawn. */
-export function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
+/**
+ * How a zone was made, in a line: where it started, and its corners when
+ * drawn; a destination says so first.
+ */
+export function drawnAs(zone: {
+  shape: unknown;
+  drawnFrom: unknown;
+  takesPickups: boolean;
+}) {
+  const made = madeFrom(zone);
+  return zone.takesPickups ? made : `Drop-offs only · ${made}`;
+}
+
+function madeFrom(zone: { shape: unknown; drawnFrom: unknown }) {
+  if (isZoneCopy(zone.drawnFrom)) return `Copied from ${zone.drawnFrom.label}`;
   if (isZoneDistrict(zone.drawnFrom)) {
     return `The district ${zone.drawnFrom.label}, as it is`;
   }

@@ -90,6 +90,8 @@ export {
   listZones,
   listZoneNames,
   listZoneOutlines,
+  listZonesElsewhere,
+  copyZoneAsDestination,
   getZone,
   listZoneRates,
   listCoverage,
@@ -108,6 +110,7 @@ export type {
   LocationPriceList,
   ZoneRefusal,
   ZoneOutline,
+  ZoneElsewhere,
 } from "./zones";
 export {
   listLocationNames,

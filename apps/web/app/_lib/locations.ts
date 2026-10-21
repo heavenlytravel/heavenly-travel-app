@@ -56,7 +56,7 @@ export const locationPreview = cache(getLocationPreview);
  * a deploy, so a change to its shape bumps this, or the pages read the old
  * shape until it expires.
  */
-const LOCATION_SEARCH_VERSION = 2;
+const LOCATION_SEARCH_VERSION = 3;
 
 /**
  * What the search card on the location's pages keeps to, read off its

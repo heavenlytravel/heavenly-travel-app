@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  dropoffBox,
   isTripMode,
   offersDropoffAddress,
   type BBox,
@@ -107,7 +106,7 @@ export function SearchProvider({
   function withinOf(key: FieldKey): BBox | undefined {
     if (!location) return undefined;
     if (key === "from") return location.search.pickup ?? undefined;
-    if (key === "to") return dropoffBox(location.search) ?? undefined;
+    if (key === "to") return location.search.dropoff ?? undefined;
     return undefined;
   }
 

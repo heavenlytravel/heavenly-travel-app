@@ -247,17 +247,31 @@ export async function mukimPolygonsAction(
 export type CutOut =
   { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
 
-/** `shapeText` is the shape as JSON text, as the zone's fields are. */
+/**
+ * `shapeText` is the shape as JSON text, as the zone's fields are;
+ * `takesPickups`, whether the zone does, decides which zones it may not
+ * share ground with.
+ */
 export async function cutOutAction(
+  locationId: string,
   shapeText: string,
+  takesPickups: boolean,
   zoneId: string | null,
 ): Promise<CutOut> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   const shape = fromJson(shapeText);
-  if (!isZoneShape(shape) || (zoneId !== null && typeof zoneId !== "string")) {
+  if (
+    typeof locationId !== "string" ||
+    typeof takesPickups !== "boolean" ||
+    !isZoneShape(shape) ||
+    (zoneId !== null && typeof zoneId !== "string")
+  ) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }
-  const result = await cutOutOverlaps(shape, zoneId ?? undefined);
+  const result = await cutOutOverlaps(
+    { locationId, shape, takesPickups },
+    zoneId ?? undefined,
+  );
   return result.ok ? { ok: true, polygons: result.shape } : result;
 }

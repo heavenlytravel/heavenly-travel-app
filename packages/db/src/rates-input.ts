@@ -104,10 +104,32 @@ function mukimCodesOf(codes: string[] | undefined) {
 }
 
 /** Where a zone's shape came from, when it was not drawn from a plain circle or square. */
-export type ZoneOrigin = ZoneCircle | ZoneDistrict | ZoneReshaped;
+/**
+ * A zone copied from another location's, as a destination for routes
+ * priced from this one: the zone it was copied from, and its name and
+ * location as the copy was made. A reference only; the copy is the
+ * location's own, and a change to the other zone leaves it as it is.
+ */
+export type ZoneCopy = {
+  copiedFrom: string;
+  label: string;
+};
+
+export function isZoneCopy(value: unknown): value is ZoneCopy {
+  if (typeof value !== "object" || value === null) return false;
+  const c = value as Record<string, unknown>;
+  return typeof c.copiedFrom === "string" && typeof c.label === "string";
+}
+
+export type ZoneOrigin = ZoneCircle | ZoneDistrict | ZoneReshaped | ZoneCopy;
 
 export function isZoneOrigin(value: unknown): value is ZoneOrigin {
-  return isZoneCircle(value) || isZoneDistrict(value) || isZoneReshaped(value);
+  return (
+    isZoneCircle(value) ||
+    isZoneDistrict(value) ||
+    isZoneReshaped(value) ||
+    isZoneCopy(value)
+  );
 }
 
 /** What the zone editor saves. */
@@ -117,6 +139,12 @@ export type ZoneFields = {
   shape: ZoneShape;
   /** The place, the district or the boundary it was started from; null for a plain circle or square. */
   drawnFrom: ZoneOrigin | null;
+  /**
+   * Whether a pickup in the zone is the location's: false for a
+   * destination, which only ends trips priced from the location's other
+   * zones and may sit over other locations' zones.
+   */
+  takesPickups: boolean;
 };
 
 export function checkZoneName(name: string): Change {
@@ -201,14 +229,18 @@ const UNREADABLE_ZONE: Parsed<never> = {
 };
 
 /**
- * The zone editor's values, read and checked: `{ name, shape, drawnFrom }`
- * as the editor holds them. The shape arrives closed or open and is stored
+ * The zone editor's values, read and checked: `{ name, shape, drawnFrom,
+ * takesPickups }` as the editor holds them; a zone takes pickups unless it
+ * says otherwise. The shape arrives closed or open and is stored
  * closed. A district as it is has its boundary read again by the writer's
  * caller from its code; every other shape is stored as drawn.
  */
 export function parseZoneFields(value: unknown): Parsed<ZoneFields> {
   if (typeof value !== "object" || value === null) return UNREADABLE_ZONE;
-  const { name, shape, drawnFrom } = value as Record<string, unknown>;
+  const { name, shape, drawnFrom, takesPickups } = value as Record<
+    string,
+    unknown
+  >;
   if (
     drawnFrom !== null &&
     drawnFrom !== undefined &&
@@ -239,7 +271,10 @@ export function parseZoneFields(value: unknown): Parsed<ZoneFields> {
               ...mukimCodesOf(drawnFrom.mukimCodes),
               label: drawnFrom.label,
             }
-          : null,
+          : isZoneCopy(drawnFrom)
+            ? { copiedFrom: drawnFrom.copiedFrom, label: drawnFrom.label }
+            : null,
+    takesPickups: takesPickups !== false,
   };
   const checked = checkZoneFields(fields);
   return checked.ok ? { ok: true, value: fields } : checked;

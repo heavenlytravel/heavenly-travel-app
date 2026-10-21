@@ -5,6 +5,7 @@ import {
   andList,
   circleRing,
   isZoneCircle,
+  isZoneCopy,
   isZoneDistrict,
   isZoneReshaped,
   ringsOf,
@@ -159,6 +160,7 @@ export function ZoneEditor({
     name: string;
     shape: ZoneShape;
     drawnFrom: ZoneOrigin | null;
+    takesPickups: boolean;
   } | null;
   /** The mukims of the district the zone was made from; none for any other zone. */
   mukims: MukimChoice[];
@@ -177,6 +179,8 @@ export function ZoneEditor({
   const districtSelectId = useId();
   const origin = zone?.drawnFrom ?? null;
   const [name, setName] = useState(zone?.name ?? "");
+  // A destination: a zone this location only prices trips to.
+  const [takesPickups, setTakesPickups] = useState(zone?.takesPickups ?? true);
   const [source, setSource] = useState<Source>(
     zone ? sourceOf(origin) : mapKey ? "address" : "district",
   );
@@ -381,12 +385,20 @@ export function ZoneEditor({
     const cut = overlaps;
     // With others' ground taken off, a district's boundary is the admin's
     // own shape, as after any change.
-    preview(cutOutAction(JSON.stringify(shape), zone?.id ?? null), (result) => {
-      changeShape(result.polygons);
-      toast.success(
-        `Cut ${andList(cut)} out of this zone. Check it on the map, then save.`,
-      );
-    });
+    preview(
+      cutOutAction(
+        locationId,
+        JSON.stringify(shape),
+        takesPickups,
+        zone?.id ?? null,
+      ),
+      (result) => {
+        changeShape(result.polygons);
+        toast.success(
+          `Cut ${andList(cut)} out of this zone. Check it on the map, then save.`,
+        );
+      },
+    );
   }
 
   function save() {
@@ -418,8 +430,10 @@ export function ZoneEditor({
             }
         : source === "address" && placeId
           ? { placeId, label: placeText, radiusM }
-          : null;
-    const fields = JSON.stringify({ name, shape, drawnFrom });
+          : source === "draw" && isZoneCopy(origin)
+            ? origin
+            : null;
+    const fields = JSON.stringify({ name, shape, drawnFrom, takesPickups });
     startTransition(async () => {
       const result = await answerOf(
         zone
@@ -667,6 +681,34 @@ export function ZoneEditor({
             </Field>
           </div>
         ) : null}
+
+        {isZoneCopy(origin) ? (
+          <p className="text-xs text-neutral-500">
+            Copied from {origin.label}. The copy is this location&apos;s own: a
+            change to that zone leaves it as it is.
+          </p>
+        ) : null}
+
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+          <Checkbox
+            checked={!takesPickups}
+            onChange={(event) => {
+              setTakesPickups(!event.target.checked);
+              setError(null);
+              setOverlaps(null);
+            }}
+            className="mt-0.5"
+          />
+          <span className="grid gap-0.5">
+            <span className="font-medium text-neutral-900">Drop-offs only</span>
+            <span className="text-xs text-neutral-600">
+              A destination this location prices trips to, such as another
+              location&apos;s airport: no pickups here, and it may sit over
+              other locations&apos; zones. Leave it off for a zone this location
+              picks up from.
+            </span>
+          </span>
+        </label>
       </Card>
 
       {mapKey ? (

@@ -7,7 +7,7 @@ import {
   oddHoursLabel,
   oddHoursOf,
 } from "@repo/db";
-import { listZoneRates } from "@repo/db/server";
+import { listZoneRates, listZonesElsewhere } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
@@ -79,18 +79,30 @@ async function rates({
   slug: string;
   manages: boolean;
 }) {
-  const [location, zones, cells, offerings] = await Promise.all([
-    locationDetails(id),
-    locationZoneNames(id),
-    listZoneRates(id),
-    locationOfferings(id),
-  ]);
+  const [location, zones, cells, offerings, zonesElsewhere] = await Promise.all(
+    [
+      locationDetails(id),
+      locationZoneNames(id),
+      listZoneRates(id),
+      locationOfferings(id),
+      manages ? listZonesElsewhere(id) : [],
+    ],
+  );
   if (!location) notFound();
   const onSale = offerings.filter(
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
   const window = oddHoursOf(location);
   const rule = dropoffRuleOf(location);
+  // A route may end at another location's zone only where a trip may leave this one.
+  const elsewhere =
+    rule === "zones"
+      ? []
+      : zonesElsewhere.map((zone) => ({
+          id: zone.id,
+          name: zone.name,
+          location: zone.location.name,
+        }));
 
   return (
     <>
@@ -118,6 +130,7 @@ async function rates({
           locationId={id}
           locationSlug={slug}
           zones={zones}
+          elsewhere={elsewhere}
           classes={onSale.map((offering) => ({
             id: offering.vehicleClassId,
             name: offering.vehicleClass.name,

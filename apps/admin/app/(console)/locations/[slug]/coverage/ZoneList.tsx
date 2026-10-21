@@ -7,25 +7,30 @@ import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { deleteZoneAction } from "./actions";
+import { pricedFromSentence, type PricedFrom } from "./zone-lines";
 import { FormError } from "../../../../_components/FormError";
 import { errorOf } from "../../../../_lib/action-state";
 
 /**
  * The remove button of one zone's row, quiet beside "Edit" since a row
- * needs it rarely. Removing takes the zone's rates with it, so it asks
- * first in an alert dialog, and says how many priced routes go.
+ * needs it rarely. Removing takes the zone's rates with it, other
+ * locations' routes to it too, so it asks first in an alert dialog, and
+ * says how many priced routes go and whose.
  */
 export function ZoneList({
   locationId,
   zoneId,
   name,
   routes,
+  pricedFrom,
 }: {
   locationId: string;
   zoneId: string;
   name: string;
   /** The priced routes the zone is an end of. */
   routes: number;
+  /** The other locations whose grids end at the zone. */
+  pricedFrom: PricedFrom;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +49,13 @@ export function ZoneList({
             routes > 0
               ? `Its ${plural(routes, "priced route")} on the rate grid ${routes === 1 ? "goes" : "go"} with it, and a pickup there is no longer served unless another zone holds it.`
               : "A pickup there is no longer served unless another zone holds it.";
+          const elsewhere =
+            pricedFrom.length > 0
+              ? ` ${pricedFromSentence(pricedFrom)} on ${pricedFrom.length === 1 ? "its" : "their"} own rate ${pricedFrom.length === 1 ? "grid" : "grids"}; ${pricedFrom.reduce((sum, entry) => sum + entry.routes, 0) === 1 ? "that route goes" : "those routes go"} too.`
+              : "";
           const remove = await confirm({
             title: `Remove the zone ${name}?`,
-            description: rates,
+            description: rates + elsewhere,
             action: "Remove zone",
             danger: true,
           });

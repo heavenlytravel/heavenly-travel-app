@@ -96,7 +96,7 @@ async function overviewsOf(
         topChoiceOrder: true,
         _count: {
           select: {
-            zones: { where: { takesPickups: true } },
+            zones: true,
             vehicles: { where: { isActive: true } },
             drivers: { where: { isActive: true } },
           },

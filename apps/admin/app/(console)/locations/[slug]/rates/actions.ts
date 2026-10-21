@@ -1,7 +1,6 @@
 "use server";
 
 import {
-  copyZoneAsDestination,
   isDropoffRule,
   parseOddHoursFields,
   parseRateCells,
@@ -14,7 +13,6 @@ import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   FORBIDDEN,
-  FORBIDDEN_MESSAGE,
   refusalOf,
   STALE,
   stateOf,
@@ -23,8 +21,7 @@ import { refreshLocationAfter } from "../../../../_lib/site";
 import { revalidateLocation } from "../../_lib/revalidate";
 
 /**
- * The Rates tab's actions: the grid, with another location's zone copied
- * here as a destination for a route, the odd-hours surcharge and the
+ * The Rates tab's actions: the grid, the odd-hours surcharge and the
  * drop-off rule. Each checks `coverage.manage` again, passes the admin as
  * the actor and lets the writer in @repo/db check the rest. Arguments
  * passed directly, not through a form, are checked for their type here:
@@ -50,31 +47,6 @@ export async function setZoneRatesAction(
     refreshLocationAfter(locationId);
   }
   return stateOf(result);
-}
-
-/** A zone of another location copied here as a destination, for "Add route": its id and name, or why not. */
-export type CopiedZone =
-  { ok: true; id: string; name: string } | { ok: false; error: string };
-
-export async function copyZoneAction(
-  locationId: string,
-  sourceZoneId: string,
-): Promise<CopiedZone> {
-  const admin = await getAdmin("coverage.manage");
-  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  if (typeof locationId !== "string" || typeof sourceZoneId !== "string") {
-    return { ok: false, error: "Pick the zone again." };
-  }
-  const result = await copyZoneAsDestination(
-    actorOf(admin),
-    locationId,
-    sourceZoneId,
-  );
-  if (result.ok) {
-    revalidateLocation();
-    refreshLocationAfter(locationId);
-  }
-  return result;
 }
 
 export async function setOddHoursAction(

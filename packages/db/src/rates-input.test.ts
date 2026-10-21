@@ -5,6 +5,7 @@ import {
   closedRing,
   dropoffAllowed,
   dropoffRuleOf,
+  dropoffZonesOf,
   isDropoffRule,
   isInOddHours,
   isZoneDistrict,
@@ -118,24 +119,6 @@ describe("parseZoneFields", () => {
     });
   });
 
-  it("takes pickups unless it says otherwise, and keeps where a copy came from", () => {
-    const drawn = parseZoneFields({ name: "Town", shape: triangle });
-    assert.ok(drawn.ok);
-    assert.equal(drawn.value.takesPickups, true);
-    const copy = parseZoneFields({
-      name: "KLIA",
-      shape: triangle,
-      drawnFrom: { copiedFrom: "z1", label: "KLIA, Klang Valley" },
-      takesPickups: false,
-    });
-    assert.ok(copy.ok);
-    assert.equal(copy.value.takesPickups, false);
-    assert.deepEqual(copy.value.drawnFrom, {
-      copiedFrom: "z1",
-      label: "KLIA, Klang Valley",
-    });
-  });
-
   it("refuses a district zone of no mukims, and mukims that are not codes", () => {
     const zone = (mukimCodes: unknown) =>
       parseZoneFields({
@@ -176,6 +159,18 @@ describe("drop-off rule", () => {
     assert.equal(dropoffAllowed("grid", false), false);
     assert.equal(dropoffAllowed("zones", true), true);
     assert.equal(dropoffAllowed("grid", true), true);
+  });
+
+  it("looks for a drop-off in the zones routes out end at, unless trips stay inside", () => {
+    assert.deepEqual(dropoffZonesOf("zones", ["town"], ["klia"]), ["town"]);
+    assert.deepEqual(dropoffZonesOf("grid", ["town"], ["klia"]), [
+      "town",
+      "klia",
+    ]);
+    assert.deepEqual(dropoffZonesOf("anywhere", ["town"], ["klia"]), [
+      "town",
+      "klia",
+    ]);
   });
 });
 

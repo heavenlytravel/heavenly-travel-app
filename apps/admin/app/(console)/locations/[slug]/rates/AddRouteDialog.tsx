@@ -9,26 +9,18 @@ import { useState, useTransition, type FormEvent } from "react";
 import { FormError } from "../../../../_components/FormError";
 
 type Zone = { id: string; name: string };
-/** Another location's zone, offered to copy here as a destination. */
+/** Another location's zone, by name: a route out of this location may end at it. */
 export type ZoneElsewhere = { id: string; name: string; location: string };
-
-/** How the "To" list names another location's zone, apart from this location's own. */
-const ELSEWHERE = "elsewhere:";
 type ClassColumn = { id: string; name: string; category: string };
 
 /** The two zones in either order: a route is read both ways, so a pair has one row. */
 export const pairKey = (a: string, b: string) =>
   a < b ? `${a}|${b}` : `${b}|${a}`;
 
-/**
- * What the dialog hands back: the route and a price for each class given
- * one, in ringgit as typed. With `copy`, `toZoneId` is another location's
- * zone, to copy here as a destination before the route is saved.
- */
+/** What the dialog hands back: the route and a price for each class given one, in ringgit as typed. */
 export type NewRoute = {
   fromZoneId: string;
   toZoneId: string;
-  copy: boolean;
   prices: Record<string, string>;
 };
 
@@ -37,11 +29,11 @@ export type NewRoute = {
  * for each class on sale, grouped by category. Only the zones with a pair
  * still free are offered, and only the free partners of the zone picked
  * first, so a route cannot be added twice or the other way round. "To"
- * also offers other locations' zones, `elsewhere`, when the drop-off rule
- * lets a trip leave the location: one picked is copied here as a
- * destination, drop-offs only. At least one price is needed, since a
- * route with none is no row on the grid. `onAdd` saves the route; its
- * error, if any, stays in the dialog.
+ * also offers other locations' zones, `elsewhere`, by location, when the
+ * drop-off rule lets a trip leave this one: the route ends at that zone
+ * itself, which stays its location's, and prices trips from here to it. At
+ * least one price is needed, since a route with none is no row on the
+ * grid. `onAdd` saves the route; its error, if any, stays in the dialog.
  */
 export function AddRouteDialog({
   open,
@@ -56,6 +48,7 @@ export function AddRouteDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   zones: readonly Zone[];
+  /** Other locations' zones a route may end at; none while drop-offs stay inside this location. */
   elsewhere: readonly ZoneElsewhere[];
   classes: readonly ClassColumn[];
   /** The pairs on the grid already, by `pairKey`. */
@@ -69,11 +62,7 @@ export function AddRouteDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Add a route"
-      description={
-        elsewhere.length > 0
-          ? "Pick the two zones, then price the route for the classes it serves. A route costs the same both ways. A zone of another location is copied here as a destination, for trips from here."
-          : "Pick the two zones, then price the route for the classes it serves. A route costs the same both ways."
-      }
+      description={`Pick the two zones, then price the route for the classes it serves. A route costs the same both ways${elsewhere.length > 0 ? "; one to another location's zone prices the trip from here only" : ""}.`}
       width="md"
     >
       <RouteForm
@@ -107,24 +96,35 @@ function RouteForm({
   onAdd: (route: NewRoute) => Promise<string | null>;
   onCancel: () => void;
 }) {
-  const partnersOf = (id: string) =>
-    zones.filter((zone) => zone.id !== id && !paired.has(pairKey(id, zone.id)));
-  const routable = (id: string) =>
-    partnersOf(id).length > 0 || elsewhere.length > 0;
+  const partnersOf = (id: string): Zone[] =>
+    [...zones, ...elsewhere].filter(
+      (zone) => zone.id !== id && !paired.has(pairKey(id, zone.id)),
+    );
   const [from, setFrom] = useState(
-    () => zones.find((zone) => routable(zone.id))?.id ?? "",
+    () => zones.find((zone) => partnersOf(zone.id).length > 0)?.id ?? "",
   );
   const partners = from ? partnersOf(from) : [];
-  // The ends a route from `from` may have: this location's free partners,
-  // then other locations' zones.
-  const ends = from
-    ? [
-        ...partners.map((zone) => zone.id),
-        ...elsewhere.map((zone) => ELSEWHERE + zone.id),
-      ]
-    : [];
-  const [to, setTo] = useState(() => ends[0] ?? "");
-  const toId = ends.includes(to) ? to : (ends[0] ?? "");
+  const [to, setTo] = useState(() => partners[0]?.id ?? "");
+  const toId = partners.some((zone) => zone.id === to)
+    ? to
+    : (partners[0]?.id ?? "");
+  const out = elsewhere.find((zone) => zone.id === toId);
+  // The other locations' zones by location, in the order they came.
+  const byLocation = new Map<string, ZoneElsewhere[]>();
+  for (const zone of elsewhere) {
+    byLocation.set(zone.location, [
+      ...(byLocation.get(zone.location) ?? []),
+      zone,
+    ]);
+  }
+  const option = (zone: Zone) => {
+    const taken = paired.has(pairKey(from, zone.id));
+    return {
+      value: zone.id,
+      label: taken ? `${zone.name} (on the grid)` : zone.name,
+      disabled: taken,
+    };
+  };
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -150,13 +150,7 @@ function RouteForm({
     }
     setError(null);
     startTransition(async () => {
-      const copy = toId.startsWith(ELSEWHERE);
-      const failed = await onAdd({
-        fromZoneId: from,
-        toZoneId: copy ? toId.slice(ELSEWHERE.length) : toId,
-        copy,
-        prices,
-      });
+      const failed = await onAdd({ fromZoneId: from, toZoneId: toId, prices });
       if (failed) setError(failed);
     });
   }
@@ -174,43 +168,33 @@ function RouteForm({
             options={zones.map((zone) => ({
               value: zone.id,
               label: zone.name,
-              disabled: !routable(zone.id),
+              disabled: partnersOf(zone.id).length === 0,
             }))}
           />
         </Field>
         <span aria-hidden="true" className="pb-2.5 text-neutral-400">
-          ↔
+          {out ? "→" : "↔"}
         </span>
         <Field label="To">
           <Select
             value={toId}
             onValueChange={setTo}
             options={[
-              ...zones
-                .filter((zone) => zone.id !== from)
-                .map((zone) => {
-                  const taken = paired.has(pairKey(from, zone.id));
-                  return {
-                    value: zone.id,
-                    label: taken ? `${zone.name} (on the grid)` : zone.name,
-                    disabled: taken,
-                  };
-                }),
-              ...(elsewhere.length > 0
-                ? [
-                    {
-                      label: "Other locations, copied here as drop-offs only",
-                      options: elsewhere.map((zone) => ({
-                        value: ELSEWHERE + zone.id,
-                        label: `${zone.name} · ${zone.location}`,
-                      })),
-                    },
-                  ]
-                : []),
+              ...zones.filter((zone) => zone.id !== from).map(option),
+              ...[...byLocation].map(([location, list]) => ({
+                label: `In ${location}`,
+                options: list.map(option),
+              })),
             ]}
           />
         </Field>
       </div>
+      {out ? (
+        <p className="-mt-2 text-xs text-neutral-500">
+          {out.name} stays {out.location}'s zone: this prices trips from here to
+          it. A trip from it is priced on {out.location}'s own grid.
+        </p>
+      ) : null}
 
       <fieldset className="grid gap-4">
         <legend className="mb-1 text-sm font-medium text-neutral-800">

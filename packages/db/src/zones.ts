@@ -9,7 +9,7 @@ import {
   ZONE_LIMITS,
   checkOddHours,
   checkZoneFields,
-  isZoneCopy,
+  dropoffRuleOf,
   oddHoursOf,
   type DropoffRule,
   type OddHours,
@@ -60,7 +60,7 @@ export function listZoneNames(
 /** A zone with its shape and its location, as the zone maker draws the zones around one. */
 export type ZoneOutline = Pick<
   Zone,
-  "id" | "name" | "shape" | "drawnFrom" | "takesPickups" | "locationId"
+  "id" | "name" | "shape" | "drawnFrom" | "locationId"
 > & {
   location: { name: string };
 };
@@ -77,47 +77,88 @@ export function listZoneOutlines(): Promise<ZoneOutline[]> {
       name: true,
       shape: true,
       drawnFrom: true,
-      takesPickups: true,
       locationId: true,
       location: { select: { name: true } },
     },
   });
 }
 
-/** Another location's zone as "Add route" offers it, to copy as a destination. */
+/** A zone by name with its location's: how a grid names another location's zone. */
 export type ZoneElsewhere = {
   id: string;
   name: string;
+  locationId: string;
   location: { name: string };
 };
 
 /**
- * The zones of the other locations that take pickups, by location then in
- * their order: the places a route from this location may be priced to,
- * each copied here as a destination when it is. One copied here already
- * is left out.
+ * Every zone by name with its location, by location then in their order,
+ * leaving out the location's own when one is given: the zones a route out
+ * of it may end at, and the names of those its grid ends at already. A
+ * route stays on the zone itself, so a rename or a redraw by its location
+ * shows on every grid that prices it.
  */
-export async function listZonesElsewhere(
-  locationId: string,
+export function listZonesElsewhere(
+  exceptLocationId?: string,
 ): Promise<ZoneElsewhere[]> {
-  const [zones, own] = await Promise.all([
-    db.zone.findMany({
-      where: { locationId: { not: locationId }, takesPickups: true },
-      orderBy: [
-        { location: { name: "asc" } },
-        { sortOrder: "asc" },
-        { createdAt: "asc" },
-      ],
-      select: { id: true, name: true, location: { select: { name: true } } },
-    }),
-    db.zone.findMany({ where: { locationId }, select: { drawnFrom: true } }),
-  ]);
-  const copied = new Set(
-    own.flatMap(({ drawnFrom }) =>
-      isZoneCopy(drawnFrom) ? [drawnFrom.copiedFrom] : [],
-    ),
-  );
-  return zones.filter((zone) => !copied.has(zone.id));
+  return db.zone.findMany({
+    where: exceptLocationId
+      ? { locationId: { not: exceptLocationId } }
+      : undefined,
+    orderBy: [
+      { location: { name: "asc" } },
+      { sortOrder: "asc" },
+      { createdAt: "asc" },
+    ],
+    select: {
+      id: true,
+      name: true,
+      locationId: true,
+      location: { select: { name: true } },
+    },
+  });
+}
+
+/** A cell of another location's grid that ends at a zone of this one. */
+export type RateFromElsewhere = {
+  fromZoneId: string;
+  toZoneId: string;
+  location: { name: string };
+};
+
+/**
+ * The cells of other locations' grids that end at the location's zones, or
+ * at the one zone: routes out of those locations, such as Kuala Lumpur's to
+ * Selangor's KLIA. They go when the zone is removed, and a redraw moves
+ * where their trips end.
+ */
+export function listRatesFromElsewhere(
+  locationId: string,
+  zoneId?: string,
+): Promise<RateFromElsewhere[]> {
+  return db.zoneRate.findMany({
+    where: {
+      locationId: { not: locationId },
+      toZone: zoneId ? { id: zoneId, locationId } : { locationId },
+    },
+    select: {
+      fromZoneId: true,
+      toZoneId: true,
+      location: { select: { name: true } },
+    },
+  });
+}
+
+/** The other locations whose grids end at the zone: their pages change with it. */
+function gridsEndingAt(
+  tx: Prisma.TransactionClient,
+  zone: { id: string; locationId: string },
+): Promise<{ locationId: string; location: { name: string } }[]> {
+  return tx.zoneRate.findMany({
+    where: { toZoneId: zone.id, locationId: { not: zone.locationId } },
+    distinct: ["locationId"],
+    select: { locationId: true, location: { select: { name: true } } },
+  });
 }
 
 export function getZone(id: string): Promise<Zone | null> {
@@ -202,32 +243,16 @@ export type ZoneRefusal = Refusal & { overlaps?: string[] };
  */
 const ZONE_WRITE_LOCK = 261021;
 
-/** A zone as the overlap rule reads it: whose it is, its ground, and whether it takes pickups. */
-type ZoneGround = {
-  locationId: string;
-  shape: ZoneShape;
-  takesPickups: boolean;
-};
-
 /**
- * Whether two zones may not share ground: any two of one location, and two
- * of different locations that both take pickups, so a pickup falls in one
- * zone of one location at most. A destination may sit over another
- * location's zone: it takes no pickups there.
- */
-const mayNotShare = (
-  a: Omit<ZoneGround, "shape">,
-  b: Omit<ZoneGround, "shape">,
-) => a.locationId === b.locationId || (a.takesPickups && b.takesPickups);
-
-/**
- * Why the zone cannot be saved: it covers ground a zone it may not share
- * with covers (`mayNotShare`). Null when it overlaps none. Takes the lock,
- * so it runs first in the write's transaction.
+ * Why the shape cannot be saved: it covers ground another zone covers, of
+ * this location or another. Zones never overlap, so a pickup falls in one
+ * zone of one location at most. Null when it overlaps none. Takes the
+ * lock, so it runs first in the write's transaction.
  */
 async function overlapRefusal(
   tx: Prisma.TransactionClient,
-  zone: ZoneGround,
+  locationId: string,
+  shape: ZoneShape,
   zoneId?: string,
 ): Promise<ZoneRefusal | null> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
@@ -238,52 +263,43 @@ async function overlapRefusal(
       name: true,
       shape: true,
       locationId: true,
-      takesPickups: true,
       location: { select: { name: true } },
     },
   });
-  const locationId = zone.locationId;
-  const overlaps = zones.flatMap((other) =>
-    mayNotShare(zone, other) &&
-    isZoneShape(other.shape) &&
-    shapesOverlap(zone.shape, other.shape)
+  const overlaps = zones.flatMap((zone) =>
+    isZoneShape(zone.shape) && shapesOverlap(shape, zone.shape)
       ? [
-          other.locationId === locationId
-            ? other.name
-            : `${other.name} (${other.location.name})`,
+          zone.locationId === locationId
+            ? zone.name
+            : `${zone.name} (${zone.location.name})`,
         ]
       : [],
   );
   if (overlaps.length === 0) return null;
   return {
     ok: false,
-    error: `This zone overlaps ${andList(overlaps)}. Reshape it, or cut ${overlaps.length === 1 ? "that zone" : "those zones"} out of it.`,
+    error: `This zone overlaps ${andList(overlaps)}. Zones never overlap: reshape it, or cut ${overlaps.length === 1 ? "that zone" : "those zones"} out of it.`,
     overlaps,
   };
 }
 
 /**
- * The zone's shape with every zone it may not share ground with cut out of
- * it, this location's or another's, for the zone maker to show before it
- * is saved: `zoneId` is the zone being remade, which is left out. Refused
- * when nothing is left.
+ * The shape with every zone it overlaps cut out of it, this location's or
+ * another's, for the zone maker to show before it is saved: `zoneId` is
+ * the zone being remade, which is left out. Refused when nothing is left.
  */
 export async function cutOutOverlaps(
-  zone: ZoneGround,
+  shape: ZoneShape,
   zoneId?: string,
 ): Promise<{ ok: true; shape: MultiPolygon } | Refusal> {
   const zones = await db.zone.findMany({
     where: zoneId ? { id: { not: zoneId } } : undefined,
-    select: { shape: true, locationId: true, takesPickups: true },
+    select: { shape: true },
   });
-  const overlapping = zones.flatMap((other) =>
-    mayNotShare(zone, other) &&
-    isZoneShape(other.shape) &&
-    shapesOverlap(zone.shape, other.shape)
-      ? [other.shape]
-      : [],
+  const overlapping = zones.flatMap(({ shape: other }) =>
+    isZoneShape(other) && shapesOverlap(shape, other) ? [other] : [],
   );
-  const left = cutOut(zone.shape, overlapping);
+  const left = cutOut(shape, overlapping);
   if (left.length === 0) {
     return refuse(
       "Nothing of this zone is left once the zones it overlaps are cut out. Draw it somewhere else.",
@@ -292,7 +308,7 @@ export async function cutOutOverlaps(
   return { ok: true, shape: left };
 }
 
-/** A new zone, after the location's others, over no zone it may not share ground with. */
+/** A new zone, after the location's others. It may not overlap any zone. */
 export async function createZone(
   actor: Actor,
   locationId: string,
@@ -307,7 +323,7 @@ export async function createZone(
       select: { id: true, _count: { select: { zones: true } } },
     });
     if (!location) return NOT_FOUND;
-    const overlap = await overlapRefusal(tx, { locationId, ...fields });
+    const overlap = await overlapRefusal(tx, locationId, fields.shape);
     if (overlap) return overlap;
     if (location._count.zones >= ZONE_LIMITS.zones) {
       return refuse(
@@ -325,7 +341,6 @@ export async function createZone(
         sortOrder: (last._max.sortOrder ?? -1) + 1,
         shape: fields.shape,
         drawnFrom: fields.drawnFrom ?? undefined,
-        takesPickups: fields.takesPickups,
       },
     });
     await logActivity(tx, actor, {
@@ -338,64 +353,33 @@ export async function createZone(
 }
 
 /**
- * Another location's zone copied into this one as a destination, for a
- * route priced from here: its name and its shape, taking no pickups, with
- * the zone it came from as a reference. The copy is this location's own:
- * a later change to the other zone leaves it as it is. Refused for a zone
- * of this location, and for a copy over one of this location's zones.
+ * A zone write done, with the other locations whose grids end at the zone,
+ * by id: their pages' search keeps to the zone too, so they are refreshed
+ * with its own.
  */
-export async function copyZoneAsDestination(
-  actor: Actor,
-  locationId: string,
-  sourceZoneId: string,
-): Promise<{ ok: true; id: string; name: string } | ZoneRefusal> {
-  const source = await db.zone.findUnique({
-    where: { id: sourceZoneId },
-    include: { location: { select: { name: true } } },
-  });
-  if (!source || !isZoneShape(source.shape)) {
-    return refuse("That zone was deleted meanwhile. Pick another.");
-  }
-  if (source.locationId === locationId) {
-    return refuse("That zone is this location's own already.");
-  }
-  const made = await createZone(actor, locationId, {
-    name: source.name,
-    shape: source.shape,
-    drawnFrom: {
-      copiedFrom: source.id,
-      label: `${source.name}, ${source.location.name}`,
-    },
-    takesPickups: false,
-  });
-  return made.ok ? { ok: true, id: made.id, name: source.name } : made;
-}
+export type ZoneChanged = { ok: true; otherGrids: string[] };
 
-/** Renames or redraws a zone. Its rates stay. Over no zone it may not share ground with. */
+/** Renames or redraws a zone. Its rates stay, and other locations' routes to it follow it. It may not overlap any other zone. */
 export async function updateZone(
   actor: Actor,
   id: string,
   fields: ZoneFields,
-): Promise<Change | ZoneRefusal> {
+): Promise<ZoneChanged | ZoneRefusal> {
   const check = checkZoneFields(fields);
   if (!check.ok) return check;
 
   return db.$transaction(async (tx) => {
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
-    const overlap = await overlapRefusal(
-      tx,
-      { locationId: zone.locationId, ...fields },
-      id,
-    );
+    const overlap = await overlapRefusal(tx, zone.locationId, fields.shape, id);
     if (overlap) return overlap;
+    const grids = await gridsEndingAt(tx, zone);
     await tx.zone.update({
       where: { id },
       data: {
         name: fields.name,
         shape: fields.shape,
         drawnFrom: fields.drawnFrom ?? Prisma.DbNull,
-        takesPickups: fields.takesPickups,
       },
     });
     await logActivity(tx, actor, {
@@ -404,31 +388,46 @@ export async function updateZone(
       before: { zoneId: id, name: zone.name },
       after: { zoneId: id, name: fields.name },
     });
-    return { ok: true };
+    return { ok: true, otherGrids: grids.map((grid) => grid.locationId) };
   });
 }
 
-/** Removes a zone and every cell of the grid on it. */
-export async function deleteZone(actor: Actor, id: string): Promise<Change> {
+/**
+ * Removes a zone and every cell of a grid on it: this location's, and other
+ * locations' routes to it, which the Coverage tab names before it asks.
+ */
+export async function deleteZone(
+  actor: Actor,
+  id: string,
+): Promise<ZoneChanged | Refusal> {
   return db.$transaction(async (tx) => {
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
-    // Its cells go with it, by the schema's cascade.
+    const grids = await gridsEndingAt(tx, zone);
+    // Its cells go with it, other locations' too, by the schema's cascade.
     await tx.zone.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "location.zone.deleted",
       entityId: zone.locationId,
-      before: { zoneId: id, name: zone.name },
+      before: {
+        zoneId: id,
+        name: zone.name,
+        ...(grids.length > 0
+          ? { routesFrom: grids.map((grid) => grid.location.name) }
+          : {}),
+      },
     });
-    return { ok: true };
+    return { ok: true, otherGrids: grids.map((grid) => grid.locationId) };
   });
 }
 
 /**
  * Writes the cells of the grid as posted: a price sets the cell, null
- * clears it. Each cell names two zones of the location and a class it
- * offers. Cells that already hold what is posted are left alone; saving
- * what is already there logs nothing.
+ * clears it. Each cell runs from a zone of the location to another of its
+ * zones or, for a route out of it, to another location's zone, and names
+ * a class it offers. A new route out is refused while drop-offs are kept
+ * inside the location. Cells that already hold what is posted are left
+ * alone; saving what is already there logs nothing.
  */
 export async function setZoneRates(
   actor: Actor,
@@ -450,9 +449,33 @@ export async function setZoneRates(
       },
     });
     if (!location) return NOT_FOUND;
-    const zoneName = new Map(
-      location.zones.map((zone) => [zone.id, zone.name]),
-    );
+    const own = new Set(location.zones.map((zone) => zone.id));
+    // Another location's zone a cell ends at is named with its location.
+    const farIds = [
+      ...new Set(
+        cells.flatMap((cell) =>
+          own.has(cell.toZoneId) ? [] : [cell.toZoneId],
+        ),
+      ),
+    ];
+    const far =
+      farIds.length > 0
+        ? await tx.zone.findMany({
+            where: { id: { in: farIds } },
+            select: {
+              id: true,
+              name: true,
+              location: { select: { name: true } },
+            },
+          })
+        : [];
+    const zoneName = new Map([
+      ...location.zones.map((zone) => [zone.id, zone.name] as const),
+      ...far.map(
+        (zone) => [zone.id, `${zone.name} (${zone.location.name})`] as const,
+      ),
+    ]);
+    const keptInside = dropoffRuleOf(location) === "zones";
     const className = new Map(
       location.offerings.map((offering) => [
         offering.vehicleClassId,
@@ -472,7 +495,7 @@ export async function setZoneRates(
       after: number | null;
     }[] = [];
     for (const cell of cells) {
-      if (!zoneName.has(cell.fromZoneId) || !zoneName.has(cell.toZoneId)) {
+      if (!own.has(cell.fromZoneId) || !zoneName.has(cell.toZoneId)) {
         return refuse("A zone on the grid was deleted meanwhile. Reload.");
       }
       if (!className.has(cell.vehicleClassId)) {
@@ -481,6 +504,11 @@ export async function setZoneRates(
       const key = `${cell.fromZoneId}|${cell.toZoneId}|${cell.vehicleClassId}`;
       const was = stored.get(key) ?? null;
       if ((was?.priceSen ?? null) === cell.priceSen) continue;
+      if (!was && keptInside && !own.has(cell.toZoneId)) {
+        return refuse(
+          "Drop-offs are kept inside this location, so a route cannot end at another location's zone. Change the drop-off rule first.",
+        );
+      }
 
       if (cell.priceSen === null) {
         await tx.zoneRate.delete({ where: { id: was!.id } });

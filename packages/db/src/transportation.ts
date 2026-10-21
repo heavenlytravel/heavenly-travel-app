@@ -30,6 +30,7 @@ import {
 } from "./pricing";
 import {
   dropoffAllowed,
+  dropoffZonesOf,
   dropoffRuleOf,
   isInOddHours,
   oddHoursOf,
@@ -192,15 +193,17 @@ export async function quoteTrip(
   const offerings = await listActiveOfferings(location.id, category);
 
   // The drop-off rule: where a one-way trip may end. The pickup is in a
-  // zone already, whatever the rule; hourly hire has no drop-off. A
-  // destination is a zone for the grid, but no part of the location
-  // "inside this location only" keeps to.
+  // zone already, whatever the rule; hourly hire has no drop-off. A route
+  // out of the location ends in another location's zone.
   const rule = dropoffRuleOf(location);
   const dropoff = basis.mode === "oneway" ? request.dropoff : null;
-  const dropoffZone = dropoff ? zoneAt(location.zones, dropoff) : null;
-  const inZone =
-    dropoffZone !== null && (rule !== "zones" || dropoffZone.takesPickups);
-  if (dropoff && !dropoffAllowed(rule, inZone)) {
+  const dropoffZone = dropoff
+    ? zoneAt(
+        dropoffZonesOf(rule, location.zones, location.zonesElsewhere),
+        dropoff,
+      )
+    : null;
+  if (dropoff && !dropoffAllowed(rule, dropoffZone !== null)) {
     return rule === "grid"
       ? fail(
           "route-not-served",

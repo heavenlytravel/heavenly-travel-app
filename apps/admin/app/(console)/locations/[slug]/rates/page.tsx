@@ -79,30 +79,19 @@ async function rates({
   slug: string;
   manages: boolean;
 }) {
-  const [location, zones, cells, offerings, zonesElsewhere] = await Promise.all(
-    [
-      locationDetails(id),
-      locationZoneNames(id),
-      listZoneRates(id),
-      locationOfferings(id),
-      manages ? listZonesElsewhere(id) : [],
-    ],
-  );
+  const [location, zones, cells, offerings, elsewhere] = await Promise.all([
+    locationDetails(id),
+    locationZoneNames(id),
+    listZoneRates(id),
+    locationOfferings(id),
+    listZonesElsewhere(id),
+  ]);
   if (!location) notFound();
   const onSale = offerings.filter(
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
   const window = oddHoursOf(location);
   const rule = dropoffRuleOf(location);
-  // A route may end at another location's zone only where a trip may leave this one.
-  const elsewhere =
-    rule === "zones"
-      ? []
-      : zonesElsewhere.map((zone) => ({
-          id: zone.id,
-          name: zone.name,
-          location: zone.location.name,
-        }));
 
   return (
     <>
@@ -130,7 +119,11 @@ async function rates({
           locationId={id}
           locationSlug={slug}
           zones={zones}
-          elsewhere={elsewhere}
+          elsewhere={elsewhere.map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            location: zone.location.name,
+          }))}
           classes={onSale.map((offering) => ({
             id: offering.vehicleClassId,
             name: offering.vehicleClass.name,

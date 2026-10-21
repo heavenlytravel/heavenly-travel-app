@@ -10,7 +10,12 @@ import {
   oddHoursOf,
   surchargeLabel,
 } from "@repo/db";
-import { listPriceLists, type LocationPriceList } from "@repo/db/server";
+import {
+  listPriceLists,
+  listZonesElsewhere,
+  type LocationPriceList,
+  type ZoneElsewhere,
+} from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardTitle } from "../../_components/Card";
 import { LocationFilter } from "../../_components/LocationFilter";
@@ -71,8 +76,10 @@ export default async function RatesPage({ searchParams }: PageProps<"/rates">) {
 }
 
 async function priceLists({ locationId }: { locationId: string | undefined }) {
-  const [lists, permissions] = await Promise.all([
+  // Every zone by name, for the routes out of a location to another's.
+  const [lists, zones, permissions] = await Promise.all([
     listPriceLists(locationId),
+    listZonesElsewhere(),
     getPermissions(),
   ]);
   if (lists.length === 0) {
@@ -82,7 +89,12 @@ async function priceLists({ locationId }: { locationId: string | undefined }) {
   return (
     <div className="mt-6 grid gap-12">
       {lists.map((list) => (
-        <LocationRates key={list.id} list={list} manages={manages} />
+        <LocationRates
+          key={list.id}
+          list={list}
+          elsewhere={zones.filter((zone) => zone.locationId !== list.id)}
+          manages={manages}
+        />
       ))}
     </div>
   );
@@ -91,9 +103,12 @@ async function priceLists({ locationId }: { locationId: string | undefined }) {
 /** One location's price list: its classes, its grid, then its two rules in a line each. */
 function LocationRates({
   list,
+  elsewhere,
   manages,
 }: {
   list: LocationPriceList;
+  /** The other locations' zones, for the routes out of this one. */
+  elsewhere: ZoneElsewhere[];
   manages: boolean;
 }) {
   const classesHref = locationTabHref(list.slug, "vehicle-classes");
@@ -207,6 +222,11 @@ function LocationRates({
           locationId={list.id}
           locationSlug={list.slug}
           zones={list.zones.map((zone) => ({ id: zone.id, name: zone.name }))}
+          elsewhere={elsewhere.map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            location: zone.location.name,
+          }))}
           classes={onSale.map((offering) => ({
             id: offering.vehicleClassId,
             name: offering.vehicleClass.name,

@@ -91,7 +91,7 @@ export {
   listZoneNames,
   listZoneOutlines,
   listZonesElsewhere,
-  copyZoneAsDestination,
+  listRatesFromElsewhere,
   getZone,
   listZoneRates,
   listCoverage,
@@ -111,6 +111,8 @@ export type {
   ZoneRefusal,
   ZoneOutline,
   ZoneElsewhere,
+  ZoneChanged,
+  RateFromElsewhere,
 } from "./zones";
 export {
   listLocationNames,

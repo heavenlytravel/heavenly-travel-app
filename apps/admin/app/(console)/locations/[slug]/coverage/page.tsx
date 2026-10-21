@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { andList, isZoneShape, plural } from "@repo/db";
-import { listZoneRates, listZones } from "@repo/db/server";
+import {
+  listRatesFromElsewhere,
+  listZoneRates,
+  listZones,
+} from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
@@ -16,7 +20,12 @@ import {
 import { locationDetails, locationKey } from "../../_lib/location-data";
 import { stateOutlines } from "../../_lib/outlines";
 import { CoverageZones, type CoverageZone } from "./CoverageZones";
-import { drawnAs, pricedRoutesByZone } from "./zone-lines";
+import {
+  drawnAs,
+  pricedFromByZone,
+  pricedFromSentence,
+  pricedRoutesByZone,
+} from "./zone-lines";
 import { zoneColor } from "./zones/zone-colors";
 
 /**
@@ -62,18 +71,22 @@ async function coverage({
   slug: string;
   manages: boolean;
 }) {
-  const [location, zones, rates] = await Promise.all([
+  const [location, zones, rates, ratesFromElsewhere] = await Promise.all([
     locationDetails(id),
     listZones(id),
     listZoneRates(id),
+    listRatesFromElsewhere(id),
   ]);
   if (!location) notFound();
   const stateNames = andList(location.states.map((state) => state.name));
-  // The priced routes each zone is an end of, so a removal can be weighed.
+  // The priced routes each zone is an end of, this location's and other
+  // locations' routes out to it, so a removal can be weighed.
   const routesOf = pricedRoutesByZone(rates);
+  const pricedFromOf = pricedFromByZone(ratesFromElsewhere);
   const listed: CoverageZone[] = zones.flatMap((zone, index) => {
     if (!isZoneShape(zone.shape)) return [];
     const routes = routesOf.get(zone.id) ?? 0;
+    const pricedFrom = pricedFromOf.get(zone.id) ?? [];
     const made = drawnAs(zone);
     return [
       {
@@ -81,10 +94,16 @@ async function coverage({
         name: zone.name,
         shape: zone.shape,
         color: zoneColor(index),
-        note:
-          routes === 0 ? made : `${made} · ${plural(routes, "priced route")}`,
+        note: [
+          made,
+          routes > 0 ? plural(routes, "priced route") : null,
+          pricedFrom.length > 0 ? pricedFromSentence(pricedFrom) : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
         drawnAs: made,
         routes,
+        pricedFrom,
         href: locationZoneHref(slug, zone.id),
       },
     ];

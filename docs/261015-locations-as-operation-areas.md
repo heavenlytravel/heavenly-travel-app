@@ -176,25 +176,27 @@ The partner grid, as data:
   it, each row with its colour, how it was made and the priced routes it is an end
   of. Pointing at a zone on the map names it beside the pointer and lights its row;
   pointing at a row lights the zone; a click on either opens the zone maker.
-- A zone may lie anywhere, inside the location's districts or far outside them.
-  Outstation prices are the same grid, not a second concept: Penang prices "Penang
-  Airport to KLIA" with a row to a zone at KLIA. Since 2026-10-21 such a zone is a
-  **destination**, "Drop-offs only" in the zone maker (`Zone.takesPickups` false): it
-  ends trips priced from the location's other zones, takes no pickups, and stays out
-  of the location's pickup search. "Add route" on the Rates tab offers the other
-  locations' zones that take pickups, when the drop-off rule lets a trip leave the
-  location ("anywhere" or "grid"); one picked is copied here as a destination
-  (`copyZoneAsDestination`, `drawnFrom: { copiedFrom, label }`), and the route is saved
-  to the copy. The copy is the location's own: Selangor redrawing or deleting its KLIA
-  leaves Penang's as it is. The route is one way in effect, since the price follows
-  the pickup: KLIA to Penang Airport is Selangor's to price, on its own grid, if it
-  lets trips leave.
-- A zone may not overlap another of its location, nor another location's zone while
-  both take pickups (2026-10-21), so a pickup falls in one zone of one location at
-  most; a destination may sit over another location's zone. `createZone` and
-  `updateZone` refuse a shape that covers more than 0.002 km² of such a zone (about 45
-  m by 45 m: the rounding of borders drawn to meet), under an advisory lock so two
-  saves at once cannot both pass. The refusal names the zones in the way, and the zone
+- A zone may lie anywhere, inside the location's districts or far outside them, and
+  takes pickups for its location wherever it lies.
+- Outstation prices are the same grid, not a second concept. Since 2026-10-21 a route
+  may run **out of the location**, to another location's zone itself: Kuala Lumpur
+  prices "Kuala Lumpur to KLIA" with a row to Selangor's KLIA zone, not to a zone of
+  its own drawn over it. "Add route" on the Rates tab offers the other locations'
+  zones, by location, when the drop-off rule lets a trip leave ("anywhere" or "grid").
+  The cell's `from` is the location's zone and its `to` the other location's
+  (`setZoneRates` checks both); the grid shows the row with "→" and the other
+  location's name. The zone stays its location's: a redraw there moves where those
+  trips end, and a removal takes the routes with it. Selangor's Coverage tab names the
+  locations that price routes to a zone, in its row, in the zone maker and in the
+  remove dialog, and a change to the zone refreshes their pages too. The route is one
+  way in effect, since the price follows the pickup: KLIA to Kuala Lumpur is
+  Selangor's to price, on its own grid. While drop-offs stay inside the location such
+  a route is kept, marked "Not offered", and a new one is refused.
+- Zones never overlap, this location's or another's (2026-10-21), so a pickup falls in
+  one zone of one location at most. `createZone` and `updateZone` refuse a shape that
+  covers more than 0.002 km² of another zone (about 45 m by 45 m: the rounding of
+  borders drawn to meet), under an advisory lock so two saves at once cannot both
+  pass. The refusal names the zones in the way, and the zone
   maker offers "Cut them out", which takes their ground off the new zone
   (`cutOutOverlaps`); a district or its mukims cut that way become the admin's own
   shape. The console home's "Test an address" names the zone a place falls in, next to
@@ -210,7 +212,8 @@ The partner grid, as data:
   a price is marked, changed cells are shaded until saved, one bar at the foot counts,
   saves or discards the changes, and leaving with any unsaved asks first. "Add route"
   opens a dialog: the two zones, only the pairs not on the grid yet so a pair has one
-  row, then the route's price per class; it saves the route at once.
+  row, the other locations' zones among them as above, then the route's price per
+  class; it saves the route at once.
 - An **odd-hours surcharge** is set on the location: a window (23:00 to 07:00) and
   what it adds, either a percentage of the trip's price or a flat amount in RM
   (`oddHoursPercent` or `oddHoursFlatSen`, exactly one). It applies to every trip
@@ -241,20 +244,22 @@ way by Penang. This is today's rule (the quote checks the pickup only) kept.
 For the drop-off, the location chooses one of three rules, `Location.dropoffRule`,
 from the loosest to the strictest (`DROPOFF_RULES` in `rates-input.ts`):
 
-1. **Drop-offs anywhere** (`anywhere`, the default): both ends in the location's zones
-   with a rate for the class gets the grid price; since a zone may be an outstation
-   destination, a Penang to KL row prices that trip. Anything else is metered, from the
+1. **Drop-offs anywhere** (`anywhere`, the default): the pickup's zone and the
+   drop-off's, the location's own or another location's that a route out ends at,
+   with a rate for the class gets the grid price: a Kuala Lumpur to KLIA row prices
+   that trip. Anything else is metered, from the
    offering's base, per km and minimum and the road distance. A hotel outside every
    zone, or a town with no row on the grid, gets a price without anyone asking. Penang
    and Selangor keep this.
 2. **Drop-offs inside this location only** (`zones`): the drop-off must fall in one of
-   the location's zones that take pickups, its own ground, not a destination; the grid
-   price where the route has one, metered otherwise. A
+   the location's own zones; the grid price where the route has one, metered
+   otherwise. A
    drop-off outside every zone gets the quote error `dropoff-outside`: "We only serve
    drop-offs within Langkawi from that pickup." For a fleet that does not leave its
    island, where a road route to the mainland is a ferry crossing that no per-km rate
    should price.
-3. **Only the routes on the rate grid** (`grid`): the drop-off must fall in a zone, and
+3. **Only the routes on the rate grid** (`grid`): the drop-off must fall in a zone,
+   the location's or one its routes out end at, and
    the route between the two zones must have a price on the grid; a route with none
    gets the quote error `route-not-served`: "We only serve the routes on our price
    list from that pickup." The rule is strict per class: a class with an empty cell on
@@ -421,15 +426,15 @@ Zone
                                 they are; { reshapedFrom, label } a district, or
                                 with mukimCodes its mukims, reshaped;
                                 { placeId, label, radiusM } a circle around an address;
-                                { copiedFrom, label } another location's zone copied
-                                as a destination; null a circle or square drawn on
-                                the map
-  takesPickups Boolean          false for a destination: no pickups, may sit over
-                                other locations' zones (added 2026-10-21, db:push)
+                                null a circle or square drawn on the map
 
 ZoneRate
   id, locationId, fromZoneId, toZoneId, vehicleClassId, priceSen
-  @@unique([fromZoneId, toZoneId, vehicleClassId])
+                                from: a zone of the location; to: one of its zones,
+                                or another location's for a route out of it
+  @@unique([locationId, fromZoneId, toZoneId, vehicleClassId])
+                                with the location since 2026-10-21 (db:push), as two
+                                locations may price the same two zones
 
 BookingItem
   + locationId String?
@@ -458,16 +463,16 @@ One-off copies, run once per database after `db:push`, as
 
 ### The activity log
 
-| Action                                      | Logged                                           |
-| ------------------------------------------- | ------------------------------------------------ |
-| `location.updated`                          | as before, with the state codes among the fields |
-| `location.offering.created`                 | after: class, rates                              |
-| `location.offering.updated`                 | before and after of the changed fields           |
-| `location.zone.created / updated / deleted` | the zone's name and shape                        |
-| `location.dropoff.updated`                  | before and after: the drop-off rule              |
-| `location.rates.updated`                    | before and after: the changed cells              |
-| `location.surcharge.updated`                | before and after                                 |
-| `location.state.changed`                    | unchanged; now SUPER's                           |
+| Action                                      | Logged                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `location.updated`                          | as before, with the state codes among the fields                        |
+| `location.offering.created`                 | after: class, rates                                                     |
+| `location.offering.updated`                 | before and after of the changed fields                                  |
+| `location.zone.created / updated / deleted` | the zone's name; a removal, the other locations whose routes to it went |
+| `location.dropoff.updated`                  | before and after: the drop-off rule                                     |
+| `location.rates.updated`                    | before and after: the changed cells                                     |
+| `location.surcharge.updated`                | before and after                                                        |
+| `location.state.changed`                    | unchanged; now SUPER's                                                  |
 
 ## The customer site
 
@@ -482,8 +487,8 @@ One-off copies, run once per database after `db:push`, as
 Added 2026-10-21. On a location's pages the search card keeps to the location
 (`location-search.ts` for the card, `search-areas.ts` on the server):
 
-- The pick-up suggests places in the box around the zones that take pickups and the
-  districts they lie in (a zone lies in a district when 5% of it is there), with 5 km
+- The pick-up suggests places in the box around the zones and the districts they lie
+  in (a zone lies in a district when 5% of it is there), with 5 km
   for the coast. The
   districts, not the zones: with three small zones on Langkawi a customer still finds
   every Langkawi hotel, and Alor Setar and Kuala Lumpur stay out. A box is all Google's
@@ -497,9 +502,9 @@ Added 2026-10-21. On a location's pages the search card keeps to the location
   prices…" meanwhile. A check that cannot answer lets the search through; the options
   page checks again.
 - The drop-off follows the location's rule. Anywhere: all of Malaysia. Inside this
-  location: the pick-up's box, and a zone that takes pickups. Only the routes on the
-  grid: the box around every zone, destinations included, and the route from the
-  pick-up's zone, checked on "Get my price". The "Popular in" list offers only the saved
+  location: the pick-up's box, and one of its zones. Only the routes on the grid: the
+  box around its zones and the other locations' zones its routes out end at, and the
+  route from the pick-up's zone, checked on "Get my price". The "Popular in" list offers only the saved
   addresses a trip may end at under either.
 - The areas are cached with the location's pages under its tag; zone, grid and
   drop-off rule changes refresh them. The cache key carries a version: a cached answer

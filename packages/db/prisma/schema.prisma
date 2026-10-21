@@ -261,22 +261,18 @@ model LocationVehicleClass {
 /// circle around a place. A zone may lie outside the location's districts:
 /// an outstation destination is a zone too. Coverage is the district's.
 model Zone {
-  id           String   @id @default(cuid())
-  locationId   String
-  location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  name         String
-  sortOrder    Int      @default(0)
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int      @default(0)
   /// One closed ring of [lng, lat], as src/geo.ts reads it.
-  shape        Json
+  shape      Json
   /// `{ placeId, label, radiusM }` when drawn as a circle around a place,
   /// so the editor can show and redo it; null for a drawn polygon.
-  drawnFrom    Json?
-  /// False for a destination: a zone the location prices trips to, such as
-  /// another location's airport, that takes no pickups and may sit over
-  /// other locations' zones.
-  takesPickups Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  drawnFrom  Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   ratesFrom ZoneRate[] @relation("from")
   ratesTo   ZoneRate[] @relation("to")
@@ -285,7 +281,10 @@ model Zone {
 }
 
 /// One cell of a location's rate grid: the fixed price of a class between
-/// two zones. Read both ways: (from, to), then (to, from).
+/// two zones. Read both ways: (from, to), then (to, from). `from` is a zone
+/// of the location; `to` may be another location's, for a route out of it,
+/// such as Kuala Lumpur's to KLIA, which is Selangor's. Two locations may
+/// each price the same two zones, so the location is part of the key.
 model ZoneRate {
   id             String       @id @default(cuid())
   locationId     String
@@ -299,9 +298,9 @@ model ZoneRate {
   priceSen       Int
   updatedAt      DateTime     @updatedAt
 
-  @@unique([fromZoneId, toZoneId, vehicleClassId])
-  @@index([locationId])
+  @@unique([locationId, fromZoneId, toZoneId, vehicleClassId])
   @@index([vehicleClassId])
+  @@index([fromZoneId])
   @@index([toZoneId])
 }
 

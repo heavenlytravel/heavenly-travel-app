@@ -6,7 +6,12 @@ import {
   isZoneShape,
   type ZoneOrigin,
 } from "@repo/db";
-import { MUKIM_KIND_LABELS, listZoneOutlines, mukimsOf } from "@repo/db/server";
+import {
+  MUKIM_KIND_LABELS,
+  listRatesFromElsewhere,
+  listZoneOutlines,
+  mukimsOf,
+} from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { notFound } from "next/navigation";
 import { SectionHeader } from "../../../../../../_components/SectionHeader";
@@ -15,6 +20,7 @@ import { requireAdmin } from "../../../../../../_lib/access";
 import { locationTabHref } from "../../../../../../_lib/routes";
 import { locationDetails, locationKey } from "../../../../_lib/location-data";
 import { districtChoices, stateOutlines } from "../../../../_lib/outlines";
+import { pricedFromByZone } from "../../zone-lines";
 import { ZoneEditor } from "../ZoneEditor";
 import type { MukimChoice, OtherZone } from "../ZoneMap";
 
@@ -65,9 +71,10 @@ async function zoneEditor({
   slug: string;
   zoneId: string;
 }) {
-  const [location, zones] = await Promise.all([
+  const [location, zones, ratesFromElsewhere] = await Promise.all([
     locationDetails(id),
     listZoneOutlines(),
+    zoneId === "new" ? [] : listRatesFromElsewhere(id, zoneId),
   ]);
   if (!location) notFound();
   const existing =
@@ -122,7 +129,6 @@ async function zoneEditor({
                   name: existing.name,
                   shape: existing.shape,
                   drawnFrom,
-                  takesPickups: existing.takesPickups,
                 }
               : null
           }
@@ -132,6 +138,7 @@ async function zoneEditor({
           others={others}
           mapKey={mapKey}
           hasGoogle={hasGooglePlaces}
+          pricedFrom={pricedFromByZone(ratesFromElsewhere).get(zoneId) ?? []}
         />
       </div>
     </>

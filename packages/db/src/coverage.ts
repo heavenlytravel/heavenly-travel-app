@@ -4,6 +4,7 @@ import type {
   District,
   Prisma,
   State,
+  Zone,
   ZoneRate,
 } from "./generated/prisma/client";
 import { isPublicState, LOCATION_STATES } from "./location-input";
@@ -61,12 +62,15 @@ const withZones = {
 } satisfies Prisma.LocationDefaultArgs;
 
 /**
- * What pricing reads of a location: its rules, its zones, and the cells of
- * its grid on a route from the pickup's zone, the only ones a trip from it
- * can be priced by.
+ * What pricing reads of a location: its rules, its zones, the cells of its
+ * grid on a route from the pickup's zone, the only ones a trip from it can
+ * be priced by, and the other locations' zones those routes end at: a
+ * route out of the location, such as Kuala Lumpur's to KLIA, which is
+ * Selangor's.
  */
 export type LocationForQuote = Prisma.LocationGetPayload<typeof withZones> & {
   zoneRates: ZoneRate[];
+  zonesElsewhere: Zone[];
 };
 
 /** The states a location serves pickups in. */
@@ -80,12 +84,9 @@ export type ServedAt = {
 
 /**
  * The location that serves a pickup at the place: the one whose zone the
- * point falls in, among the zones that take pickups of the locations that
- * are public; a destination, a zone a location only prices trips to, is
- * none. Zones that take pickups never overlap; of two from before that
- * rule, the smallest wins. Null when no zone holds the point: the area is
- * not served. The location comes with all its zones, destinations
- * included, for the drop-off.
+ * point falls in, among the locations that are public. Zones never
+ * overlap; of two from before that rule, the smallest wins. Null when
+ * no zone holds the point: the area is not served.
  */
 export async function locationAt(place: {
   lat: number;
@@ -101,10 +102,7 @@ export async function locationAt(place: {
     area: number;
   } | null = null;
   for (const location of locations) {
-    const zone = zoneAt(
-      location.zones.filter((candidate) => candidate.takesPickups),
-      place,
-    );
+    const zone = zoneAt(location.zones, place);
     if (!zone) continue;
     // `zoneAt` answered the zone, so its shape is a shape.
     const area = zoneShapeArea(zone.shape as ZoneShape);
@@ -118,5 +116,18 @@ export async function locationAt(place: {
       OR: [{ fromZoneId: zone.id }, { toZoneId: zone.id }],
     },
   });
-  return { location: { ...location, zoneRates }, zone };
+  // A route out of the location ends at another location's zone, its `to`.
+  const own = new Set(location.zones.map((candidate) => candidate.id));
+  const farIds = [
+    ...new Set(
+      zoneRates.flatMap((rate) =>
+        own.has(rate.toZoneId) ? [] : [rate.toZoneId],
+      ),
+    ),
+  ];
+  const zonesElsewhere =
+    farIds.length > 0
+      ? await db.zone.findMany({ where: { id: { in: farIds } } })
+      : [];
+  return { location: { ...location, zoneRates, zonesElsewhere }, zone };
 }

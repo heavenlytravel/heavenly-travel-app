@@ -69,12 +69,21 @@ async function refreshSite(tags: string[]) {
  * Refreshes a location's pages on the customer site once the action has
  * answered, and the home page's cards with them: a card shows the
  * location's name and its landing page's tagline and hero image, and leaves
- * when it is paused.
+ * when it is paused. Other locations whose pages the change reaches, such
+ * as those whose routes end at a zone that changed, are refreshed with it.
  */
-export function refreshLocationAfter(locationId: string) {
+export function refreshLocationAfter(
+  locationId: string,
+  ...others: readonly string[]
+) {
   after(async () => {
-    const slug = await getLocationSlug(locationId);
-    await refreshSite([...(slug ? [locationTag(slug)] : []), TOP_CHOICES_TAG]);
+    const slugs = await Promise.all(
+      [locationId, ...others].map((id) => getLocationSlug(id)),
+    );
+    await refreshSite([
+      ...slugs.flatMap((slug) => (slug ? [locationTag(slug)] : [])),
+      TOP_CHOICES_TAG,
+    ]);
   });
 }
 

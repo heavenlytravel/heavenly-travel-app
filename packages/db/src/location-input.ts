@@ -74,7 +74,7 @@ export type OperationStanding = {
   stateNames: string[];
   /** Offerings on sale. */
   classesOnSale: number;
-  /** Zones that take pickups, which are the coverage, and routes with a price. */
+  /** Zones, which are the coverage, and routes between them with a price. */
   zones: number;
   routesPriced: number;
 };
@@ -175,12 +175,10 @@ export function setupSteps(
     ),
     step(
       "coverage",
-      operation.zones === 0
-        ? "No zone takes pickups yet"
-        : plural(operation.zones, "zone"),
+      operation.zones === 0 ? "No zones yet" : plural(operation.zones, "zone"),
       operation.zones === 0
         ? [
-            "Draw at least one zone that takes pickups on the Coverage tab; those zones are what the location serves",
+            "Draw at least one zone on the Coverage tab; the zones are what the location serves",
           ]
         : [],
     ),

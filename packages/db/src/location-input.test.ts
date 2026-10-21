@@ -133,7 +133,7 @@ describe("stateMoveBlockers", () => {
   it("does not go live with nothing to sell or no zone to serve", () => {
     assert.deepEqual(stateMoveBlockers("draft", "live", pages(), bare), [
       "Put at least one vehicle class on sale, with its rates, on the Vehicle classes tab",
-      "Draw at least one zone that takes pickups on the Coverage tab; those zones are what the location serves",
+      "Draw at least one zone on the Coverage tab; the zones are what the location serves",
     ]);
     // A grid is not required: a trip in a zone with no row is metered.
     assert.deepEqual(
@@ -186,7 +186,7 @@ describe("setupSteps", () => {
       [
         ["details", "Kuala Lumpur and Selangor", true],
         ["vehicle-classes", "1 class on sale", true],
-        ["coverage", "No zone takes pickups yet", false],
+        ["coverage", "No zones yet", false],
         [
           "pages",
           "Main page published, 1 product page published, edits waiting",

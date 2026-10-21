@@ -13,7 +13,7 @@ import {
   type TripPlaceIssues,
 } from "./location-search";
 import { isPlace, type Place } from "./place";
-import { dropoffAllowed, dropoffRuleOf, type DropoffRule } from "./rates-input";
+import { dropoffAllowed, dropoffRuleOf, dropoffZonesOf } from "./rates-input";
 import { isZoneShape, zoneAt, type ZoneShape } from "./zone-match";
 
 /**
@@ -24,6 +24,8 @@ import { isZoneShape, zoneAt, type ZoneShape } from "./zone-match";
  * search card".
  */
 
+const zoneFields = { id: true, name: true, shape: true } as const;
+
 const forSearch = {
   select: {
     name: true,
@@ -31,7 +33,7 @@ const forSearch = {
     dropoffRule: true,
     zones: {
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      select: { id: true, name: true, shape: true, takesPickups: true },
+      select: zoneFields,
     },
     zoneRates: {
       select: { fromZoneId: true, toZoneId: true, vehicleClassId: true },
@@ -45,6 +47,20 @@ const forSearch = {
 } satisfies Prisma.LocationDefaultArgs;
 
 type SearchRows = Prisma.LocationGetPayload<typeof forSearch>;
+
+/** The location by its slug, and the other locations' zones its routes out end at. */
+function searchRowsOf(slug: string) {
+  return Promise.all([
+    db.location.findUnique({ where: { slug }, ...forSearch }),
+    db.zone.findMany({
+      where: {
+        location: { slug: { not: slug } },
+        ratesTo: { some: { location: { slug } } },
+      },
+      select: zoneFields,
+    }),
+  ]);
+}
 
 /**
  * The zones a route on the grid runs to from each zone, either way, for a
@@ -67,9 +83,9 @@ function routesOf(rows: SearchRows): Map<string, Set<string>> {
   return routes;
 }
 
-/** The location's zones with a shape. */
-const zonesOf = (rows: SearchRows) =>
-  rows.zones.flatMap((zone) =>
+/** The zones with a shape. */
+const zonesOf = (zones: SearchRows["zones"]) =>
+  zones.flatMap((zone) =>
     isZoneShape(zone.shape) ? [{ ...zone, shape: zone.shape }] : [],
   );
 
@@ -83,22 +99,15 @@ function boxAround(zones: readonly { shape: ZoneShape }[]): BBox | null {
     : null;
 }
 
-/**
- * The zones a one-way trip may end in under a strict rule: those that take
- * pickups for "inside this location only", any of the location's,
- * destinations included, for "only the routes on the grid".
- */
-const endZonesOf = <Z extends { takesPickups: boolean }>(
-  rule: DropoffRule,
-  zones: readonly Z[],
-) => (rule === "zones" ? zones.filter((zone) => zone.takesPickups) : zones);
-
-function searchOf(rows: SearchRows): LocationSearch {
-  const zones = zonesOf(rows);
+function searchOf(
+  rows: SearchRows,
+  elsewhere: SearchRows["zones"],
+): LocationSearch {
+  const zones = zonesOf(rows.zones);
   const rule = dropoffRuleOf(rows);
-  const ends = endZonesOf(rule, zones);
+  const ends = dropoffZonesOf(rule, zones, zonesOf(elsewhere));
   return {
-    pickup: boxAround(zones.filter((zone) => zone.takesPickups)),
+    pickup: boxAround(zones),
     dropoff: rule === "anywhere" ? null : boxAround(ends),
     dropoffRule: rule,
     dropoffPlaces:
@@ -119,20 +128,18 @@ export async function getLocationSearch(
   slug: string,
 ): Promise<LocationSearch | null> {
   if (!checkLocationSlug(slug).ok) return null;
-  const location = await db.location.findUnique({
-    where: { slug },
-    ...forSearch,
-  });
-  return location ? searchOf(location) : null;
+  const [location, elsewhere] = await searchRowsOf(slug);
+  return location ? searchOf(location, elsewhere) : null;
 }
 
 /**
  * Whether the places of a trip asked for on the location's pages can be
  * booked there, as the quote will judge them: the pick-up in one of the
- * location's zones that take pickups, the drop-off where the location's
- * rule lets the trip end. Null for a slug no location has, and for one the public does not
- * see unless `preview`, for staff. The quote stays the last word: the grid
- * is read for any class on sale here, not the tab's category.
+ * location's zones, the drop-off where the location's rule lets the trip
+ * end, a route out of it included. Null for a slug no location has, and
+ * for one the public does not see unless `preview`, for staff. The quote
+ * stays the last word: the grid is read for any class on sale here, not
+ * the tab's category.
  */
 export async function checkTripAt(
   slug: string,
@@ -140,18 +147,12 @@ export async function checkTripAt(
   { preview }: { preview: boolean },
 ): Promise<TripPlaceIssues | null> {
   if (!checkLocationSlug(slug).ok) return null;
-  const location = await db.location.findUnique({
-    where: { slug },
-    ...forSearch,
-  });
+  const [location, elsewhere] = await searchRowsOf(slug);
   if (!location) return null;
   if (!preview && !isPublicState(locationStateOf(location.state))) return null;
 
-  const zones = zonesOf(location);
-  const pickupZone = zoneAt(
-    zones.filter((zone) => zone.takesPickups),
-    places.pickup,
-  );
+  const zones = zonesOf(location.zones);
+  const pickupZone = zoneAt(zones, places.pickup);
   const issues: TripPlaceIssues = {
     pickup: pickupZone
       ? null
@@ -161,7 +162,10 @@ export async function checkTripAt(
   if (!places.dropoff) return issues;
 
   const rule = dropoffRuleOf(location);
-  const zone = zoneAt(endZonesOf(rule, zones), places.dropoff);
+  const zone = zoneAt(
+    dropoffZonesOf(rule, zones, zonesOf(elsewhere)),
+    places.dropoff,
+  );
   if (rule === "grid") {
     // A pick-up outside every zone is its own reason; the drop-off need
     // only be in a zone then.

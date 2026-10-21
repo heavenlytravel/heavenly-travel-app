@@ -35,7 +35,8 @@ import type { MukimChoice } from "./zones/map-shapes";
  * rest. Arguments passed directly, not through a form, are checked for
  * their type here: an action is reachable by direct POST. A change to the
  * zones refreshes the location's pages on the customer site, whose search
- * card keeps to the districts the zones lie in; the quote reads the rows.
+ * card keeps to the districts the zones lie in, and those of the other
+ * locations whose routes end at a zone changed; the quote reads the rows.
  */
 
 /**
@@ -149,7 +150,7 @@ export async function updateZoneAction(
   const result = await updateZone(actorOf(admin), zoneId, zone.value);
   if (result.ok) {
     revalidateLocation();
-    refreshLocationAfter(locationId);
+    refreshLocationAfter(locationId, ...result.otherGrids);
   }
   return result.ok ? { ok: true, id: zoneId } : result;
 }
@@ -166,7 +167,7 @@ export async function deleteZoneAction(
   const result = await deleteZone(actorOf(admin), zoneId);
   if (result.ok) {
     revalidateLocation();
-    refreshLocationAfter(locationId);
+    refreshLocationAfter(locationId, ...result.otherGrids);
   }
   return stateOf(result);
 }
@@ -247,31 +248,17 @@ export async function mukimPolygonsAction(
 export type CutOut =
   { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
 
-/**
- * `shapeText` is the shape as JSON text, as the zone's fields are;
- * `takesPickups`, whether the zone does, decides which zones it may not
- * share ground with.
- */
+/** `shapeText` is the shape as JSON text, as the zone's fields are. */
 export async function cutOutAction(
-  locationId: string,
   shapeText: string,
-  takesPickups: boolean,
   zoneId: string | null,
 ): Promise<CutOut> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   const shape = fromJson(shapeText);
-  if (
-    typeof locationId !== "string" ||
-    typeof takesPickups !== "boolean" ||
-    !isZoneShape(shape) ||
-    (zoneId !== null && typeof zoneId !== "string")
-  ) {
+  if (!isZoneShape(shape) || (zoneId !== null && typeof zoneId !== "string")) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }
-  const result = await cutOutOverlaps(
-    { locationId, shape, takesPickups },
-    zoneId ?? undefined,
-  );
+  const result = await cutOutOverlaps(shape, zoneId ?? undefined);
   return result.ok ? { ok: true, polygons: result.shape } : result;
 }

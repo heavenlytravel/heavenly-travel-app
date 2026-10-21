@@ -35,29 +35,19 @@ const TABS: Product[] = [
  * above it, which is how a card elsewhere on the page fills a place in.
  * The button says so while the options page prices the trip, which is
  * the longest wait on the site. On a location's pages the place fields
- * keep to the location, and a place it cannot take says so at once and
- * holds the search back.
+ * keep to the location, and a place it cannot take is said at its field
+ * when the customer asks for prices.
  */
 export function ServiceTabsSearch() {
-  const { product, setProduct, values, set, dropoffs, withinOf, placeIssues } =
+  const { product, setProduct, values, set, dropoffs, withinOf, checkPlaces } =
     useSearchCard();
-  const { issues: sendIssues, pending, submit: sendTrip } = useTripSubmit();
+  const { issues, pending, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
-  // A place the location cannot take says so at once, over the reason the
-  // last send gave for the same field.
-  const issues = [
-    ...placeIssues,
-    ...sendIssues.filter(
-      (issue) => !placeIssues.some((place) => place.field === issue.field),
-    ),
-  ];
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const category = bookableCategory(product.key);
-    if (category) {
-      sendTrip(category, values, undefined, placeIssues.length > 0);
-    }
+    if (category) sendTrip(category, values, undefined, checkPlaces);
   }
 
   return (

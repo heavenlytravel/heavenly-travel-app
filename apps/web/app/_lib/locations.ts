@@ -52,6 +52,13 @@ export const publicLocation = cache(
 export const locationPreview = cache(getLocationPreview);
 
 /**
+ * The version of `LocationSearch` the cache holds. A cached answer outlives
+ * a deploy, so a change to its shape bumps this, or the pages read the old
+ * shape until it expires.
+ */
+const LOCATION_SEARCH_VERSION = 2;
+
+/**
  * What the search card on the location's pages keeps to, read off its
  * zones and its drop-off rule. Tagged with the location, which the admin
  * refreshes after a change to either. Once per request.
@@ -61,7 +68,7 @@ export const publicLocationSearch = cache(
     if (!isLocationSlug(slug)) return null;
     return unstable_cache(
       () => getLocationSearch(slug),
-      ["public-location-search", slug],
+      ["public-location-search", String(LOCATION_SEARCH_VERSION), slug],
       { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
     )();
   },

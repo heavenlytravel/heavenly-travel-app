@@ -65,24 +65,40 @@ export function useSearch(
  */
 export function useTripSubmit() {
   const [issues, setIssues] = useState<TripSearchIssue[]>([]);
-  // Pending until the options page has priced the trip and is on screen.
+  const [checking, setChecking] = useState(false);
+  // Pending while the places are checked, then until the options page has
+  // priced the trip and is on screen.
   const { pending, go } = useNavigate();
   /**
    * True when the trip was sent. `passengers` is carried over, if given.
-   * With `hold`, the card already knows it cannot go: the reasons are
-   * kept, and nothing is sent.
+   * With `check`, a trip the card can send is checked first, and sent
+   * once the check finds nothing; this answers false then, and the
+   * reasons it finds are kept like the card's own. A check that fails to
+   * answer sends the trip: the options page checks it again.
    */
   function submit(
     category: TripCategory,
     values: SearchValues,
     passengers?: number,
-    hold = false,
+    check?: (values: SearchValues) => Promise<TripSearchIssue[]>,
   ) {
     const result = tripSearchFromCard(values);
     setIssues(result.ok ? [] : result.issues);
-    if (!result.ok || hold) return false;
-    go(tripBookingHref(category, result.params, passengers));
-    return true;
+    if (!result.ok) return false;
+    const href = tripBookingHref(category, result.params, passengers);
+    if (!check) {
+      go(href);
+      return true;
+    }
+    setChecking(true);
+    check(values)
+      .catch((): TripSearchIssue[] => [])
+      .then((found) => {
+        setChecking(false);
+        if (found.length > 0) setIssues(found);
+        else go(href);
+      });
+    return false;
   }
-  return { issues, pending, submit };
+  return { issues, pending: pending || checking, submit };
 }

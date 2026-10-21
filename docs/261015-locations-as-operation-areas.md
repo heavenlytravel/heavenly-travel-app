@@ -463,18 +463,22 @@ Added 2026-10-21. On a location's pages the search card keeps to the location
   every Langkawi hotel, and Alor Setar and Kuala Lumpur stay out. A box is all Google's
   autocomplete takes, so a strip of a neighbouring district can fall inside it
   (Butterworth's shore in Penang's).
-- A place picked is checked at once against the zones (`checkPlaceAt`, through the
-  web's `checkPlaceAction`, whose details call ends Google's autocomplete session):
-  "We do not pick up from The Datai Langkawi yet. Choose a pick-up in Langkawi." While a
-  field says so the search is held back, with every other reason shown.
+- Nothing is checked while the customer picks. On "Get my price", once the card's own
+  checks pass, the places are checked against the zones (`checkTripAt`, through the
+  web's `checkTripAction`, whose details calls end Google's autocomplete sessions),
+  and a place the location cannot take is said at its field: "We do not pick up from
+  The Datai Langkawi yet. Choose a pick-up in Langkawi." The button reads "Finding
+  prices…" meanwhile. A check that cannot answer lets the search through; the options
+  page checks again.
 - The drop-off follows the location's rule. Anywhere: all of Malaysia. Inside this
-  location: the pick-up's box, and a zone checked on the pick. Only the routes on the
-  grid: the zones a route priced for a class on sale reaches from the pick-up's zone,
-  once that is known. The "Popular in" list offers only the saved addresses where the
-  rule lets a trip end.
+  location, or only the routes on the grid: the pick-up's box, with the zone, and for
+  the grid the route from the pick-up's zone, checked on "Get my price". The "Popular
+  in" list offers only the saved addresses in a zone under either.
 - The areas are cached with the location's pages under its tag; zone, grid and
-  drop-off rule changes refresh them. The home page and the options page's trip bar
-  search all of Malaysia. The quote stays the last word.
+  drop-off rule changes refresh them. The cache key carries a version: a cached answer
+  outlives a deploy, so a change to `LocationSearch`'s shape bumps it. The pages stay
+  static. The home page and the options page's trip bar search all of Malaysia. The
+  quote stays the last word.
 
 ## Pieces
 

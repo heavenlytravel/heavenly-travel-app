@@ -1,21 +1,27 @@
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { unionBox, widenBox } from "./geo";
 import {
   checkLocationSlug,
   isPublicState,
   locationStateOf,
 } from "./location-input";
 import { zoneSearchBox } from "./location-places";
-import type { LocationSearch, PlaceCheck } from "./location-search";
+import {
+  SEARCH_MARGIN,
+  type LocationSearch,
+  type TripPlaceIssues,
+} from "./location-search";
 import { isPlace, type Place } from "./place";
 import { dropoffAllowed, dropoffRuleOf } from "./rates-input";
 import { isZoneShape, zoneAt } from "./zone-match";
 
 /**
- * The search card's areas on a location's pages, and the check on a place
- * picked there, on the server: each zone's box is read off the district
- * shapes by ./location-places. The card's own logic is ./location-search. See docs/261015-locations-as-operation-areas.md,
- * "The search card".
+ * The search card's areas on a location's pages, and the check on the
+ * places of a trip asked for there, on the server: each zone's box is read
+ * off the district shapes by ./location-places. The card's own logic is
+ * ./location-search. See docs/261015-locations-as-operation-areas.md, "The
+ * search card".
  */
 
 const forSearch = {
@@ -69,20 +75,17 @@ const zonesOf = (rows: SearchRows) =>
 
 function searchOf(rows: SearchRows): LocationSearch {
   const zones = zonesOf(rows);
-  const routes = routesOf(rows);
   return {
+    pickup:
+      zones.length > 0
+        ? widenBox(
+            unionBox(zones.map((zone) => zoneSearchBox(zone.shape))),
+            SEARCH_MARGIN,
+          )
+        : null,
     dropoffRule: dropoffRuleOf(rows),
-    zones: zones.map((zone) => ({
-      id: zone.id,
-      box: zoneSearchBox(zone.shape),
-      routesTo: [...(routes.get(zone.id) ?? [])],
-    })),
-    addressZones: Object.fromEntries(
-      rows.addresses.flatMap(({ place }) => {
-        if (!isPlace(place)) return [];
-        const zone = zoneAt(zones, place);
-        return zone ? [[place.placeId, zone.id]] : [];
-      }),
+    placesInZones: rows.addresses.flatMap(({ place }) =>
+      isPlace(place) && zoneAt(zones, place) ? [place.placeId] : [],
     ),
   };
 }
@@ -103,24 +106,19 @@ export async function getLocationSearch(
   return location ? searchOf(location) : null;
 }
 
-/** Where a picked place is checked: the pick-up, or the drop-off after the pick-up's zone, when it is known. */
-export type PlaceCheckRequest =
-  { role: "pickup" } | { role: "dropoff"; pickupZoneId: string | null };
-
 /**
- * Whether a place picked in the search card on the location's pages can
- * be booked there, as the quote will judge it: a pick-up in one of the
- * location's zones, a drop-off where the location's rule lets the trip
+ * Whether the places of a trip asked for on the location's pages can be
+ * booked there, as the quote will judge them: the pick-up in one of the
+ * location's zones, the drop-off where the location's rule lets the trip
  * end. Null for a slug no location has, and for one the public does not
- * see unless `preview`, for staff. The quote stays the last word: the
- * grid is read for any class on sale here, not the tab's category.
+ * see unless `preview`, for staff. The quote stays the last word: the grid
+ * is read for any class on sale here, not the tab's category.
  */
-export async function checkPlaceAt(
+export async function checkTripAt(
   slug: string,
-  place: Place,
-  request: PlaceCheckRequest,
+  places: { pickup: Place; dropoff: Place | null },
   { preview }: { preview: boolean },
-): Promise<PlaceCheck | null> {
+): Promise<TripPlaceIssues | null> {
   if (!checkLocationSlug(slug).ok) return null;
   const location = await db.location.findUnique({
     where: { slug },
@@ -129,34 +127,31 @@ export async function checkPlaceAt(
   if (!location) return null;
   if (!preview && !isPublicState(locationStateOf(location.state))) return null;
 
-  const zone = zoneAt(zonesOf(location), place);
-  if (request.role === "pickup") {
-    return zone
-      ? { ok: true, zoneId: zone.id }
-      : {
-          ok: false,
-          message: `We do not pick up from ${place.label} yet. Choose a pick-up in ${location.name}.`,
-        };
-  }
+  const zones = zonesOf(location);
+  const pickupZone = zoneAt(zones, places.pickup);
+  const issues: TripPlaceIssues = {
+    pickup: pickupZone
+      ? null
+      : `We do not pick up from ${places.pickup.label} yet. Choose a pick-up in ${location.name}.`,
+    dropoff: null,
+  };
+  if (!places.dropoff) return issues;
 
   const rule = dropoffRuleOf(location);
-  const onGrid =
-    rule !== "grid" ||
-    !request.pickupZoneId ||
-    (zone !== null &&
-      (routesOf(location).get(request.pickupZoneId)?.has(zone.id) ?? false));
-  if (rule === "grid" && (!zone || !onGrid)) {
-    return {
-      ok: false,
-      message:
-        "We only drive the routes on our price list from that pick-up. Choose another drop-off.",
-    };
+  const zone = zoneAt(zones, places.dropoff);
+  if (rule === "grid") {
+    // A pick-up outside every zone is its own reason; the drop-off need
+    // only be in a zone then.
+    const onGrid =
+      zone !== null &&
+      (!pickupZone ||
+        (routesOf(location).get(pickupZone.id)?.has(zone.id) ?? false));
+    if (!onGrid) {
+      issues.dropoff =
+        "We only drive the routes on our price list from that pick-up. Choose another drop-off.";
+    }
+  } else if (!dropoffAllowed(rule, zone !== null)) {
+    issues.dropoff = `We only drop off within ${location.name}. Choose a drop-off there.`;
   }
-  if (!dropoffAllowed(rule, zone !== null)) {
-    return {
-      ok: false,
-      message: `We only drop off within ${location.name}. Choose a drop-off there.`,
-    };
-  }
-  return { ok: true, zoneId: zone?.id ?? null };
+  return issues;
 }

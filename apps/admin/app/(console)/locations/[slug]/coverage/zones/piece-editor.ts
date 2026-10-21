@@ -58,8 +58,9 @@ const CORNER_GAP = 12;
 const PAD = CORNER_RADIUS + EDGE_PX;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+/** The ring closed, its last corner a copy of the first, not the same array. */
 const closed = (ring: LngLat[]): LngLat[] =>
-  ring.length > 0 ? [...ring, ring[0]!] : ring;
+  ring.length > 0 ? [...ring, [ring[0]![0], ring[0]![1]]] : ring;
 const latLngOf = ([lng, lat]: LngLat) => new google.maps.LatLng(lat, lng);
 
 /** How far p is from segment a-b, in pixels. */

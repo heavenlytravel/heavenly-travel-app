@@ -372,7 +372,7 @@ export function ZoneEditor({
   function cutThemOut() {
     if (!shape || !overlaps) return;
     const cut = overlaps;
-    preview(cutOutAction(shape, zone?.id ?? null), (result) => {
+    preview(cutOutAction(JSON.stringify(shape), zone?.id ?? null), (result) => {
       // With others' ground taken off, a district's boundary is the
       // admin's own shape now, not the district's.
       if (source === "district") setAsItIs(false);
@@ -413,7 +413,7 @@ export function ZoneEditor({
         : source === "address" && placeId
           ? { placeId, label: placeText, radiusM }
           : null;
-    const fields = { name, shape, drawnFrom };
+    const fields = JSON.stringify({ name, shape, drawnFrom });
     startTransition(async () => {
       const result = await answerOf(
         zone

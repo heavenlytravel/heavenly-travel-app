@@ -58,6 +58,20 @@ async function mukimShapeOf(
 }
 
 /**
+ * What the zone maker posts a shape as: JSON text, not arrays. React counts
+ * the arrays a server action's arguments hold, and a coastline of many
+ * rings passes its limit; text is one value. Null for text that is not JSON.
+ */
+function fromJson(text: unknown): unknown {
+  if (typeof text !== "string") return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The zone as posted, with a district or its mukims kept as they are read
  * again from their codes, so the boundary is always the data's and never
  * the browser's. Every other shape, a circle around a place included, is
@@ -65,9 +79,9 @@ async function mukimShapeOf(
  * once it is a shape.
  */
 async function zoneFieldsOf(
-  input: unknown,
+  text: unknown,
 ): Promise<{ ok: true; value: ZoneFields } | { ok: false; error: string }> {
-  const parsed = parseZoneFields(input);
+  const parsed = parseZoneFields(fromJson(text));
   if (!parsed.ok) return parsed;
   const { drawnFrom } = parsed.value;
   if (!isZoneDistrict(drawnFrom)) return parsed;
@@ -99,18 +113,19 @@ async function zoneFieldsOf(
   };
 }
 
+/** `fields` is the zone's name, shape and origin as JSON text. */
 export async function createZoneAction(
   locationId: string,
-  input: unknown,
+  fields: string,
 ): Promise<ZoneSaved> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   if (typeof locationId !== "string") {
     return { ok: false, error: "Missing location." };
   }
-  const fields = await zoneFieldsOf(input);
-  if (!fields.ok) return fields;
-  const result = await createZone(actorOf(admin), locationId, fields.value);
+  const zone = await zoneFieldsOf(fields);
+  if (!zone.ok) return zone;
+  const result = await createZone(actorOf(admin), locationId, zone.value);
   if (result.ok) {
     revalidateLocation();
     refreshLocationAfter(locationId);
@@ -118,19 +133,20 @@ export async function createZoneAction(
   return result;
 }
 
+/** `fields` as for `createZoneAction`. */
 export async function updateZoneAction(
   locationId: string,
   zoneId: string,
-  input: unknown,
+  fields: string,
 ): Promise<ZoneSaved> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   if (typeof locationId !== "string" || typeof zoneId !== "string") {
     return { ok: false, error: "Missing zone." };
   }
-  const fields = await zoneFieldsOf(input);
-  if (!fields.ok) return fields;
-  const result = await updateZone(actorOf(admin), zoneId, fields.value);
+  const zone = await zoneFieldsOf(fields);
+  if (!zone.ok) return zone;
+  const result = await updateZone(actorOf(admin), zoneId, zone.value);
   if (result.ok) {
     revalidateLocation();
     refreshLocationAfter(locationId);
@@ -231,12 +247,14 @@ export async function mukimPolygonsAction(
 export type CutOut =
   { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
 
+/** `shapeText` is the shape as JSON text, as the zone's fields are. */
 export async function cutOutAction(
-  shape: unknown,
+  shapeText: string,
   zoneId: string | null,
 ): Promise<CutOut> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
+  const shape = fromJson(shapeText);
   if (!isZoneShape(shape) || (zoneId !== null && typeof zoneId !== "string")) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }

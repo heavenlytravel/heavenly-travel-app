@@ -167,21 +167,22 @@ function distanceToSegment(p: LngLat, a: LngLat, b: LngLat) {
 }
 
 /**
- * Douglas-Peucker: drops vertices that move the line by less than
- * `tolerance` degrees. Keeps the first and last vertex, so a closed ring
- * stays closed. Used once, when the data file is built.
+ * Douglas-Peucker on an open line: drops vertices that move it by less
+ * than `tolerance` degrees, and keeps both ends. A border two shapes share
+ * is simplified once this way, so both keep the same corners. Used when
+ * the data files are built.
  */
-export function simplifyRing(ring: Ring, tolerance: number): Ring {
-  if (ring.length <= 4) return ring;
-  const keep = new Array<boolean>(ring.length).fill(false);
-  keep[0] = keep[ring.length - 1] = true;
-  const stack: [number, number][] = [[0, ring.length - 1]];
+export function simplifyLine(line: LngLat[], tolerance: number): LngLat[] {
+  if (line.length <= 2) return line;
+  const keep = new Array<boolean>(line.length).fill(false);
+  keep[0] = keep[line.length - 1] = true;
+  const stack: [number, number][] = [[0, line.length - 1]];
   while (stack.length > 0) {
     const [first, last] = stack.pop()!;
     let farthest = 0;
     let index = -1;
     for (let i = first + 1; i < last; i++) {
-      const d = distanceToSegment(ring[i]!, ring[first]!, ring[last]!);
+      const d = distanceToSegment(line[i]!, line[first]!, line[last]!);
       if (d > farthest) {
         farthest = d;
         index = i;
@@ -192,7 +193,16 @@ export function simplifyRing(ring: Ring, tolerance: number): Ring {
       stack.push([first, index], [index, last]);
     }
   }
-  const out = ring.filter((_, i) => keep[i]);
+  return line.filter((_, i) => keep[i]);
+}
+
+/**
+ * `simplifyLine` on a closed ring: the first and last vertex stay, so it
+ * stays closed. Used once, when the data file is built.
+ */
+export function simplifyRing(ring: Ring, tolerance: number): Ring {
+  if (ring.length <= 4) return ring;
+  const out = simplifyLine(ring, tolerance);
   // A ring needs three distinct corners; keep the original otherwise.
   return out.length >= 4 ? out : ring;
 }

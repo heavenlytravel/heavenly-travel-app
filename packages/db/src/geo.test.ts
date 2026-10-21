@@ -8,6 +8,7 @@ import {
   pointInPolygon,
   pointInRing,
   pointOnSurface,
+  simplifyLine,
   simplifyRing,
   type MultiPolygon,
   type Ring,
@@ -110,6 +111,43 @@ describe("simplifyRing", () => {
 
   it("keeps a corner that matters", () => {
     assert.deepEqual(simplifyRing(crescent, 0.01), crescent);
+  });
+});
+
+describe("simplifyLine", () => {
+  it("keeps both ends of an open line, however straight it runs", () => {
+    assert.deepEqual(
+      simplifyLine(
+        [
+          [0, 0],
+          [5, 0.001],
+          [10, 0],
+        ],
+        0.01,
+      ),
+      [
+        [0, 0],
+        [10, 0],
+      ],
+    );
+  });
+
+  it("keeps a bend past the tolerance", () => {
+    assert.deepEqual(
+      simplifyLine(
+        [
+          [0, 0],
+          [5, 3],
+          [10, 0],
+        ],
+        0.01,
+      ),
+      [
+        [0, 0],
+        [5, 3],
+        [10, 0],
+      ],
+    );
   });
 });
 

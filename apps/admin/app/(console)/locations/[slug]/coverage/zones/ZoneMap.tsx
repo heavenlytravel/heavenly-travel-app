@@ -170,7 +170,8 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * map frames the zone when `frame` changes, a district or a place newly
  * picked, and never on an edit or an undo. With `mukims`, the district's
  * mukims are outlined under the zone. With `trims`, the zones in the way
- * are drawn as the trim chosen would leave them, for a look before saving.
+ * are drawn as the trim chosen would leave them, for a look before saving;
+ * `overlap`, what the zone overlaps and the ways out, shows above the tools.
  */
 export function ZoneMap({
   mapKey,
@@ -186,6 +187,7 @@ export function ZoneMap({
   onShapeChange,
   mukims,
   trims,
+  overlap,
 }: {
   mapKey: string;
   districts: DistrictOutline[];
@@ -204,6 +206,8 @@ export function ZoneMap({
   mukims?: MukimChoice[];
   /** The zones in the way, by id, as the trim chosen would leave them; none while no trim is. */
   trims?: readonly { id: string; shape: ZoneShape }[] | null;
+  /** What the zone overlaps and the ways out, over the map above the tools; none while nothing is in its way. */
+  overlap?: ReactNode;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts, {
     ownFullScreen: true,
@@ -501,98 +505,101 @@ export function ZoneMap({
         {help && keys ? (
           <ZoneMapHelp keys={keys} onClose={() => setHelp(false)} />
         ) : null}
-        {keys && (canAdd || canUndo || canRedo) ? (
-          <Toolbar help={help} onHelp={() => setHelp((open) => !open)}>
-            {shape ? (
-              <>
-                <ToolButton
-                  label="Edit the zone"
-                  active={tool === "edit"}
-                  onClick={() => setTool("edit")}
-                >
-                  <PencilIcon />
-                </ToolButton>
-                <ToolButton
-                  label="Only move the map"
-                  active={tool === "pan"}
-                  onClick={() => setTool("pan")}
-                >
-                  <HandIcon />
-                </ToolButton>
-                <Divider />
-              </>
-            ) : null}
-            {canAdd ? (
-              <>
-                <ToolButton
-                  label="Add a square in the middle of the view"
-                  onClick={() => place("square")}
-                >
-                  <SquarePlusIcon />
-                </ToolButton>
-                <ToolButton
-                  label="Add a circle in the middle of the view"
-                  onClick={() => place("circle")}
-                >
-                  <CirclePlusIcon />
-                </ToolButton>
-                <Divider />
-              </>
-            ) : null}
-            {shape ? (
-              <>
-                <ToolButton
-                  label="Cut the piece from the corner selected"
-                  why={
-                    editing
-                      ? "Select a corner of a piece first."
-                      : "Pick the pencil first."
-                  }
-                  active={cutting}
-                  disabled={!editing || !selection?.corner}
-                  onClick={() => editor.current?.startCut()}
-                >
-                  <ScissorsIcon />
-                </ToolButton>
-                <ToolButton
-                  label={
-                    selection?.corner
-                      ? "Remove the corner selected"
-                      : "Delete the piece selected"
-                  }
-                  shortcut={keys.remove}
-                  why={
-                    editing
-                      ? "Select a piece or a corner first."
-                      : "Pick the pencil first."
-                  }
-                  disabled={!editing || !selection}
-                  onClick={() => editor.current?.removeSelected()}
-                >
-                  <TrashIcon />
-                </ToolButton>
-              </>
-            ) : null}
-            <ToolButton
-              label="Undo"
-              shortcut={keys.undo}
-              why="Nothing to undo yet."
-              disabled={!canUndo}
-              onClick={onUndo}
-            >
-              <UndoIcon />
-            </ToolButton>
-            <ToolButton
-              label="Redo"
-              shortcut={keys.redo}
-              why="Nothing to redo: Redo takes back an undo."
-              disabled={!canRedo}
-              onClick={onRedo}
-            >
-              <RedoIcon />
-            </ToolButton>
-          </Toolbar>
-        ) : null}
+        <div className="absolute bottom-6 left-1/2 z-10 flex w-max max-w-[calc(100%-1.25rem)] -translate-x-1/2 flex-col items-center gap-2">
+          {overlap}
+          {keys && (canAdd || canUndo || canRedo) ? (
+            <Toolbar help={help} onHelp={() => setHelp((open) => !open)}>
+              {shape ? (
+                <>
+                  <ToolButton
+                    label="Edit the zone"
+                    active={tool === "edit"}
+                    onClick={() => setTool("edit")}
+                  >
+                    <PencilIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label="Only move the map"
+                    active={tool === "pan"}
+                    onClick={() => setTool("pan")}
+                  >
+                    <HandIcon />
+                  </ToolButton>
+                  <Divider />
+                </>
+              ) : null}
+              {canAdd ? (
+                <>
+                  <ToolButton
+                    label="Add a square in the middle of the view"
+                    onClick={() => place("square")}
+                  >
+                    <SquarePlusIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label="Add a circle in the middle of the view"
+                    onClick={() => place("circle")}
+                  >
+                    <CirclePlusIcon />
+                  </ToolButton>
+                  <Divider />
+                </>
+              ) : null}
+              {shape ? (
+                <>
+                  <ToolButton
+                    label="Cut the piece from the corner selected"
+                    why={
+                      editing
+                        ? "Select a corner of a piece first."
+                        : "Pick the pencil first."
+                    }
+                    active={cutting}
+                    disabled={!editing || !selection?.corner}
+                    onClick={() => editor.current?.startCut()}
+                  >
+                    <ScissorsIcon />
+                  </ToolButton>
+                  <ToolButton
+                    label={
+                      selection?.corner
+                        ? "Remove the corner selected"
+                        : "Delete the piece selected"
+                    }
+                    shortcut={keys.remove}
+                    why={
+                      editing
+                        ? "Select a piece or a corner first."
+                        : "Pick the pencil first."
+                    }
+                    disabled={!editing || !selection}
+                    onClick={() => editor.current?.removeSelected()}
+                  >
+                    <TrashIcon />
+                  </ToolButton>
+                </>
+              ) : null}
+              <ToolButton
+                label="Undo"
+                shortcut={keys.undo}
+                why="Nothing to undo yet."
+                disabled={!canUndo}
+                onClick={onUndo}
+              >
+                <UndoIcon />
+              </ToolButton>
+              <ToolButton
+                label="Redo"
+                shortcut={keys.redo}
+                why="Nothing to redo: Redo takes back an undo."
+                disabled={!canRedo}
+                onClick={onRedo}
+              >
+                <RedoIcon />
+              </ToolButton>
+            </Toolbar>
+          ) : null}
+        </div>
       </div>
       {menu && map
         ? createPortal(
@@ -651,8 +658,8 @@ function Divider() {
 }
 
 /**
- * The toolbar at the bottom of the map, its tools first, then the "i" that
- * opens how the map works.
+ * The toolbar at the bottom of the map, under what the zone overlaps, its
+ * tools first, then the "i" that opens how the map works.
  */
 function Toolbar({
   help,
@@ -664,7 +671,7 @@ function Toolbar({
   children: ReactNode;
 }) {
   return (
-    <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
+    <div className="flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
       {children}
       <Divider />
       <ToolButton label="How the map works" active={help} onClick={onHelp}>

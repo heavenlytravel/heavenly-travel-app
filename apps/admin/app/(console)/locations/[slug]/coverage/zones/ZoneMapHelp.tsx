@@ -110,6 +110,14 @@ export function ZoneMapHelp({
           Undo ({keys.undo.shown}), and Redo ({keys.redo.shown}) to take an undo
           back.
         </Step>
+        <Step
+          icon={
+            <span className="size-3 rounded-[3px] border border-amber-400 bg-amber-50" />
+          }
+        >
+          Over another zone, a bar above the tools offers to trim this zone or
+          the other one. The map shows the result before you save.
+        </Step>
       </ul>
       <p className="mt-3 border-t border-neutral-100 pt-3 text-xs text-neutral-500">
         Esc lets go of a cut, then the corner, then the piece. A right-click

@@ -2,8 +2,8 @@
 
 import {
   MUKIM_KIND_LABELS,
+  checkOverlaps,
   createZone,
-  cutOutOverlaps,
   deleteZone,
   districtShape,
   isZoneDistrict,
@@ -11,13 +11,12 @@ import {
   mukimsByCode,
   mukimsOf,
   parseZoneFields,
-  previewTrims,
   unionOf,
   updateZone,
   type MultiPolygon,
+  type OverlapCheck,
   type ZoneFields,
   type ZoneInTheWay,
-  type ZoneTrim,
 } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
@@ -275,39 +274,23 @@ export async function mukimPolygonsAction(
   return shape.ok ? { ok: true, polygons: shape.shape } : shape;
 }
 
-/** The zone being made trimmed of the zones it overlaps, or why not. */
-export type CutOut =
-  { ok: false; error: string } | { ok: true; polygons: MultiPolygon };
-
-/** `shapeText` is the shape as JSON text, as the zone's fields are. */
-export async function cutOutAction(
-  shapeText: string,
-  zoneId: string | null,
-): Promise<CutOut> {
-  const admin = await getAdmin("coverage.manage");
-  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  const shape = fromJson(shapeText);
-  if (!isZoneShape(shape) || (zoneId !== null && typeof zoneId !== "string")) {
-    return { ok: false, error: "The zone could not be read. Reload." };
-  }
-  const result = await cutOutOverlaps(shape, zoneId ?? undefined);
-  return result.ok ? { ok: true, polygons: result.shape } : result;
-}
+/**
+ * What the zone being made overlaps, and both ways out as the save would
+ * take them, or why the shape could not be read.
+ */
+export type OverlapAnswer =
+  { ok: false; error: string } | ({ ok: true } & OverlapCheck);
 
 /**
- * The zones the zone being made overlaps, each trimmed of its ground, to
- * show on the map before the save that trims them; or why not, as the
- * save would refuse it.
+ * `shapeText` is the shape as JSON text, as the zone's fields are. The zone
+ * maker asks after every change of the shape, so an overlap shows while
+ * the zone is drawn, its ways out ready, not first on the save.
  */
-export type TrimPreview =
-  { ok: false; error: string } | { ok: true; zones: ZoneTrim[] };
-
-/** `shapeText` is the shape as JSON text, as the zone's fields are. */
-export async function previewTrimsAction(
+export async function checkOverlapsAction(
   locationId: string,
   shapeText: string,
   zoneId: string | null,
-): Promise<TrimPreview> {
+): Promise<OverlapAnswer> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   const shape = fromJson(shapeText);
@@ -318,6 +301,8 @@ export async function previewTrimsAction(
   ) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }
-  const result = await previewTrims(locationId, shape, zoneId ?? undefined);
-  return result.ok ? result : { ok: false, error: result.error };
+  return {
+    ok: true,
+    ...(await checkOverlaps(locationId, shape, zoneId ?? undefined)),
+  };
 }

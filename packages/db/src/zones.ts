@@ -353,28 +353,53 @@ function trimmed(
 }
 
 /**
- * The zones a shape overlaps, this location's or another's, each trimmed of
- * the shape's ground, for the zone maker to show before the save that trims
- * them (`makeWay`): `zoneId` is the zone being remade, which is left out.
- * None once nothing is in the way; refused where the save would be.
+ * What a shape overlaps, and the two ways out, each worked out as the save
+ * would do it or refused as the save would refuse it.
  */
-export async function previewTrims(
+export type OverlapCheck = {
+  /** The zones in the way, this location's or another's, in their order; none when nothing is. */
+  zones: ZoneInTheWay[];
+  /** The zones in the way, each trimmed of the shape's ground, as the save trims them (`makeWay`). */
+  trimOthers: { ok: true; zones: ZoneTrim[] } | Refusal;
+  /** The shape trimmed of the zones in the way. */
+  trimThis: { ok: true; shape: MultiPolygon } | Refusal;
+};
+
+/**
+ * What a shape overlaps, for the zone maker to show while the zone is
+ * drawn, both ways out ready before a save: `zoneId` is the zone being
+ * remade, which is left out. One read of the zones.
+ */
+export async function checkOverlaps(
   locationId: string,
   shape: ZoneShape,
   zoneId?: string,
-): Promise<{ ok: true; zones: ZoneTrim[] } | ZoneRefusal> {
+): Promise<OverlapCheck> {
   const inTheWay = await zonesInTheWay(db, locationId, shape, zoneId);
   const trims = trimmed(inTheWay, shape);
-  return trims.ok
-    ? {
-        ok: true,
-        zones: trims.zones.map(({ id, label, left }) => ({
-          id,
-          label,
-          shape: left,
-        })),
-      }
-    : trims;
+  const left = cutOut(
+    shape,
+    inTheWay.map((other) => other.shape),
+  );
+  return {
+    zones: inTheWay.map(({ id, label }) => ({ id, label })),
+    trimOthers: trims.ok
+      ? {
+          ok: true,
+          zones: trims.zones.map(({ id, label, left }) => ({
+            id,
+            label,
+            shape: left,
+          })),
+        }
+      : refuse(trims.error),
+    trimThis:
+      left.length > 0
+        ? { ok: true, shape: left }
+        : refuse(
+            "Trimmed, nothing of this zone would be left. Trim the zones in its way instead, or draw it somewhere else.",
+          ),
+  };
 }
 
 /**
@@ -455,31 +480,6 @@ async function alsoChangedBy(
       ...grids.flat().map((grid) => grid.locationId),
     ]),
   ].filter((id) => id !== locationId);
-}
-
-/**
- * The shape trimmed of every zone it overlaps, this location's or
- * another's, for the zone maker to show before it is saved: `zoneId` is
- * the zone being remade, which is left out. Refused when nothing is left.
- */
-export async function cutOutOverlaps(
-  shape: ZoneShape,
-  zoneId?: string,
-): Promise<{ ok: true; shape: MultiPolygon } | Refusal> {
-  const zones = await db.zone.findMany({
-    where: zoneId ? { id: { not: zoneId } } : undefined,
-    select: { shape: true },
-  });
-  const overlapping = zones.flatMap(({ shape: other }) =>
-    isZoneShape(other) && shapesOverlap(shape, other) ? [other] : [],
-  );
-  const left = cutOut(shape, overlapping);
-  if (left.length === 0) {
-    return refuse(
-      "Trimmed, nothing of this zone would be left. Trim the zones in its way instead, or draw it somewhere else.",
-    );
-  }
-  return { ok: true, shape: left };
 }
 
 /**

@@ -13,12 +13,15 @@ import { cx } from "@repo/ui/cx";
 import {
   CirclePlusIcon,
   HandIcon,
+  MaximizeIcon,
+  MinimizeIcon,
   PencilIcon,
   ScissorsIcon,
   SquarePlusIcon,
   TrashIcon,
   UndoIcon,
 } from "@repo/ui/icons";
+import { Tooltip } from "@repo/ui/tooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -141,7 +144,10 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * The zone maker's map: the districts of the location's states in grey,
  * its other zones in blue, other locations' zones in amber, and the zone
  * being made in green, each piece of land its own shape. The tools sit at
- * the bottom of the map, there in full screen too. With the pencil every
+ * the bottom of the map. Its full-screen button, top right where Google
+ * keeps its own, puts the map and the line under it on screen together:
+ * Google's would show the map alone, and the line's notices with it
+ * unseen. With the pencil every
  * edit is a plain click (./piece-editor): select a piece or a corner,
  * drag it, grow or shrink a piece from the squares of its box, add a
  * corner with the "+" on an edge, take away what is selected with the
@@ -178,7 +184,12 @@ export function ZoneMap({
   /** The district's mukims to outline under the zone; none while it is not made of them. */
   mukims?: MukimChoice[];
 }) {
-  const { host, map, library, failed } = useGoogleMap(mapKey, districts);
+  const { host, map, library, failed } = useGoogleMap(mapKey, districts, {
+    ownFullScreen: true,
+  });
+  // The map and the line under it, which full screen shows together.
+  const wrapper = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
   const editor = useRef<PieceEditor | null>(null);
   // The shape on the map, as last drawn or reported, to tell an edit made
   // here from a shape handed in.
@@ -191,12 +202,15 @@ export function ZoneMap({
     message: string;
     kind: "refused" | "done";
   } | null>(null);
-  // The toolbar's home among the map's own controls, so it stays in full
-  // screen; made in the browser only, and shown once the map is there.
+  // The homes of the toolbar and the full-screen button among the map's
+  // own controls; made in the browser only, and shown once the map is there.
   const [toolbar] = useState(() =>
     typeof document === "undefined" ? null : document.createElement("div"),
   );
-  // The right-click menu, inside the element the map is on screen in.
+  const [corner] = useState(() =>
+    typeof document === "undefined" ? null : document.createElement("div"),
+  );
+  // The right-click menu, inside the map.
   const [menu, setMenu] = useState<PieceMenu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editing = tool === "edit";
@@ -207,8 +221,9 @@ export function ZoneMap({
     report.current = onShapeChange;
   }, [onShapeChange]);
 
-  // Once the map is there: the other zones, the toolbar's place in the
-  // map's own controls, the zone's pieces, and the view on the shape.
+  // Once the map is there: the other zones, the places of the toolbar and
+  // the full-screen button in the map's own controls, the zone's pieces,
+  // and the view on the shape.
   useEffect(() => {
     if (!map || !library) return;
     for (const other of others) {
@@ -220,6 +235,9 @@ export function ZoneMap({
     }
     if (toolbar) {
       map.controls[google.maps.ControlPosition.BOTTOM_CENTER]?.push(toolbar);
+    }
+    if (corner) {
+      map.controls[google.maps.ControlPosition.RIGHT_TOP]?.push(corner);
     }
 
     let noticeTimer = 0;
@@ -318,6 +336,26 @@ export function ZoneMap({
     );
   }
 
+  // Full screen comes and goes by the button or by the browser's own Esc.
+  useEffect(() => {
+    const follow = () =>
+      setFull(
+        wrapper.current !== null &&
+          document.fullscreenElement === wrapper.current,
+      );
+    document.addEventListener("fullscreenchange", follow);
+    return () => document.removeEventListener("fullscreenchange", follow);
+  }, []);
+
+  function toggleFullScreen() {
+    // A browser that refuses leaves the page as it is.
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    } else {
+      wrapper.current?.requestFullscreen().catch(() => undefined);
+    }
+  }
+
   // An open menu takes the keyboard's focus, and closes on Escape or on a
   // press anywhere else.
   useEffect(() => {
@@ -362,13 +400,37 @@ export function ZoneMap({
                 : "Drag a corner, or inside the piece to move it alone. Drag a square of the box around it to grow or shrink it. Point at an edge and click the + to add a corner. Click a corner to select it. The bin deletes the piece.";
 
   return (
-    <div className="grid gap-2">
+    <div
+      ref={wrapper}
+      className={cx("grid gap-2", full && "grid-rows-[1fr_auto] bg-white p-3")}
+    >
       <div
         ref={host}
         role="application"
         aria-label="Map of the zone"
-        className="h-[32rem] w-full rounded-md border border-neutral-200 bg-neutral-100"
+        className={cx(
+          "w-full rounded-md border border-neutral-200 bg-neutral-100",
+          full ? "h-full min-h-0" : "h-[32rem]",
+        )}
       />
+      {corner && map && document.fullscreenEnabled
+        ? createPortal(
+            <Tooltip
+              content={full ? "Exit full screen" : "Full screen"}
+              side="left"
+            >
+              <button
+                type="button"
+                aria-label={full ? "Exit full screen" : "Full screen"}
+                onClick={toggleFullScreen}
+                className="m-2.5 grid size-10 place-items-center rounded-sm bg-white text-neutral-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 [&_svg]:size-[18px]"
+              >
+                {full ? <MinimizeIcon /> : <MaximizeIcon />}
+              </button>
+            </Tooltip>,
+            corner,
+          )
+        : null}
       {toolbar && map && (canAdd || canUndo)
         ? createPortal(
             <div className="mb-6 flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
@@ -438,7 +500,7 @@ export function ZoneMap({
             toolbar,
           )
         : null}
-      {menu
+      {menu && map
         ? createPortal(
             <div
               ref={menuRef}
@@ -468,7 +530,7 @@ export function ZoneMap({
                 </button>
               ))}
             </div>,
-            menu.within,
+            map.getDiv(),
           )
         : null}
       <p

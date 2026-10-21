@@ -59,16 +59,8 @@ export type PieceMenuItem = {
   run: () => void;
 };
 
-/**
- * The right-click menu, at a point of `within` in pixels: the element the
- * map is on screen in, where the menu goes to be seen, in full screen too.
- */
-export type PieceMenu = {
-  x: number;
-  y: number;
-  items: PieceMenuItem[];
-  within: HTMLElement;
-};
+/** The right-click menu, at a point of the map's box in pixels. */
+export type PieceMenu = { x: number; y: number; items: PieceMenuItem[] };
 
 /** What is selected: a piece, and maybe one of its corners. */
 export type PieceSelection = { piece: number; corner: boolean } | null;
@@ -185,17 +177,6 @@ function resized(resize: Resize, pointer: Pixel): OpenPiece {
       lat0 + (lat - lat0) * scale,
     ]),
   );
-}
-
-/**
- * The element the map is on screen in: its own box, or in full screen the
- * element inside it that Google shows, the box staying where it was on the
- * page.
- */
-function onScreen(map: google.maps.Map): HTMLElement {
-  const box = map.getDiv();
-  const full = document.fullscreenElement;
-  return full instanceof HTMLElement && box.contains(full) ? full : box;
 }
 
 /** Whether a key press belongs to a field being typed in, not the map. */
@@ -335,10 +316,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   /** The menu at the pointer, kept inside the map. */
   function openMenu(event: MouseEvent, items: PieceMenuItem[]) {
-    const within = onScreen(map);
-    const box = within.getBoundingClientRect();
+    const box = map.getDiv().getBoundingClientRect();
     options.onMenu({
-      within,
       x: Math.max(
         4,
         Math.min(event.clientX - box.left, box.width - MENU_WIDTH - 4),
@@ -497,8 +476,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   /**
    * The pointer in the pane's pixels, measured from the pane the handles
-   * are drawn in, not from the map's box, which in full screen stays where
-   * it was on the page.
+   * are drawn in, so it holds wherever the map is on the screen.
    */
   function pixelAt(event: MouseEvent): Pixel | null {
     const pane = overlay.getPanes()?.overlayMouseTarget;
@@ -667,7 +645,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     announce();
     report();
     options.onNotice(
-      "Cut in two. Click the part you do not want, then delete it with the bin.",
+      "Cut in two. Click the part you do not want and delete it with the bin, or Undo to join them again.",
       "done",
     );
   }

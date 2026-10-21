@@ -103,11 +103,14 @@ const MALAYSIA = { center: { lat: 4.2, lng: 108.0 }, zoom: 6 };
 /**
  * Loads Google's map into `host` once, with the districts drawn in grey
  * under whatever the caller adds, and answers the map and its library once
- * they are there, or why there is no map.
+ * they are there, or why there is no map. With `ownFullScreen`, Google's
+ * full-screen button is left off: Google's full screen shows the map
+ * alone, and the caller puts more of its own on screen with it.
  */
 export function useGoogleMap(
   mapKey: string,
   districts: readonly DistrictOutline[],
+  { ownFullScreen = false }: { ownFullScreen?: boolean } = {},
 ) {
   const host = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState<{
@@ -128,7 +131,7 @@ export function useGoogleMap(
           ...MALAYSIA,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true,
+          fullscreenControl: !ownFullScreen,
           clickableIcons: false,
         });
         for (const district of districts) {
@@ -149,7 +152,8 @@ export function useGoogleMap(
       cancelled = true;
       stopListening();
     };
-    // The districts are the page's; they do not change while the map is open.
+    // The districts and the full-screen choice are the page's; they do not
+    // change while the map is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
 

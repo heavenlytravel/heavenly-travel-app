@@ -263,6 +263,14 @@ export function ScissorsIcon(props: IconProps) {
   );
 }
 
+export function SquaresUniteIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-2a2 2 0 0 0-2-2z" />
+    </Icon>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Icon {...props}>

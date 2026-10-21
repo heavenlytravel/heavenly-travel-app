@@ -149,7 +149,7 @@ The partner grid, as data:
   dragged them all together). The tools sit in a bar at the bottom of the map: the
   pencil to edit, the hand to only move the map, a square and a circle (24 corners,
   as is a circle around an address) to add a piece in the middle of the view, the
-  scissors, the bin, Undo and Redo, and an "i" that opens how the map works over its
+  scissors, Merge, the bin, Undo and Redo, and an "i" that opens how the map works over its
   top left corner. Each tool names itself in a tooltip, with its shortcut, and says
   why while it cannot be pressed. The map's own full-screen button, top right, puts
   the map and the line of hints under it on screen together (2026-10-21: Google's full
@@ -158,7 +158,14 @@ The partner grid, as data:
   place in full screen too. Every edit is a plain click, so a Mac trackpad needs no
   right-click. With the pencil
   a click selects a piece and only its corners show, thinned where they crowd closer
-  than 8 pixels until the map is zoomed in; a click on a corner selects it. Drag a
+  than 8 pixels until the map is zoomed in; a click on a corner selects it.
+  Shift+click, or Ctrl+click (⌘+click on a Mac, where Ctrl+click is the right-click),
+  adds a piece to the selection or takes it out (2026-10-21): the bin deletes every
+  piece selected in one step, a zone keeping one at least, and Merge joins them where
+  they overlap or meet (`joinPieces`, on the server, with the shape arithmetic);
+  several selected show no corners. A right-click on a piece also offers "Delete the
+  other pieces", so a district of many small islands keeps its main island in one
+  go. Drag a
   corner to move it, or inside the piece to move that piece alone; a drag anywhere
   else moves the map. A dashed box runs around the piece selected, a square at each of
   its corners: a drag on one grows or shrinks the piece about its middle, so a circle
@@ -168,7 +175,7 @@ The partner grid, as data:
   from the corner selected to another corner clicked, along the straight line between
   them, into two pieces, so a large part comes off with one more click on the bin; a
   line that would leave the piece is refused (`cutPolygonBetween` in `geo.ts`). Esc
-  stops a cut, then lets go of the corner, then of the piece. A right-click opens a
+  stops a cut, then lets go of the corner, then of the pieces. A right-click opens a
   menu of the same choices, as a shortcut (Control-click on a Mac). Each
   change is one step of Undo, and Redo does again what Undo took back until a new
   change; Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redo (⌘ on a Mac), except in a
@@ -179,7 +186,9 @@ The partner grid, as data:
   polygons, at most 2,000 corners in all (1,000 until 2026-10-21; Kuah and Kedawang
   together have 1,043), so the quote has one test, `zoneAt` in `zone-match.ts`, over
   both. Only a district or its mukims as they are have the shape read again by the
-  server; every other shape is the admin's drawing and is stored as posted. The map
+  server; every other shape is the admin's drawing and is stored as posted, its
+  pieces that overlap joined (`joinOverlaps`, since 2026-10-21: a circle and a square
+  drawn over each other were stored as two overlapping pieces). The map
   shows the location's districts in outline, its other zones in blue and other
   locations' zones in amber, so a new one is made in context and clear of them.
 
@@ -208,17 +217,22 @@ The partner grid, as data:
   covers more than 0.002 km² of another zone (about 45 m by 45 m: the rounding of
   borders drawn to meet), under an advisory lock so two saves at once cannot both
   pass. The refusal names the zones in the way ("Zones cannot overlap, so one of them
-  gives up the shared ground"), and the zone maker offers both ways out, each named
-  for the zone that shrinks, and each shown on the map before anything is saved.
-  "Trim this zone" takes their ground off the zone being saved (`cutOutOverlaps`), an
-  edit like any other, undone with Undo. "Trim Kuah Town" (2026-10-21) draws the
-  zones in the way as they would be left
-  (`previewTrims`), with a line under Save and a way back ("Keep Kuah Town as it is");
-  Save becomes "Save and trim Kuah Town" and takes this zone's ground off them in the
-  same transaction (`makeWay`, with the ids the refusal named): an airport drawn
-  inside a district zone keeps its circle and leaves a hole in the district. A change
-  to the shape drops the trim, and the next save asks again. The preview and the save
-  work the trim out the same way (`trimmed`), so the preview refuses what the save
+  gives up the shared ground"). The zone maker does not wait for it: 300 ms after
+  every change of the shape it asks the server what is in the way (`checkOverlaps`,
+  one read of the zones, the check the save makes; about 20 ms to read and under
+  60 ms of geometry on the dev data, about 0.6 s for a 2,000-corner zone against five
+  such zones). An overlap shows in a bar above the map's tools, in full screen too
+  (under Save without a map), with both ways out, each named for the zone that
+  shrinks, each worked out by that one check and shown on the map before anything is
+  saved; one that cannot be says why in its tooltip. "Trim this zone" takes their
+  ground off the zone being drawn, an edit like any other, undone with Undo. "Trim
+  Kuah Town" draws the zones in the way as they would be left, and the bar says so,
+  with a way back ("Keep Kuah Town as it is"); Save becomes "Save and trim Kuah Town"
+  and takes this zone's ground off them in the same transaction (`makeWay`, with the
+  ids chosen): an airport drawn inside a district zone keeps its circle and leaves a
+  hole in the district. The choice holds through further edits while the same zones
+  are in the way; when others come into it, the bar asks again. The check and the
+  save work the trim out the same way (`trimmed`), so the bar refuses what the save
   would: when one would be left with nothing, or with more corners than a zone keeps.
   The save also refuses when the zones in the way changed meanwhile. The trimmed zones
   keep their rates, the activity log says "Trimmed the zone Langkawi for Airport", and

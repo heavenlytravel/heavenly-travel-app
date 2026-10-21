@@ -129,7 +129,7 @@ export function ZoneMapHelp({
         </Step>
       </ul>
       <p className="mt-3 border-t border-neutral-100 pt-3 text-xs text-neutral-500">
-        Esc lets go of a cut, then the corner, then the piece. A right-click
+        Esc lets go of a cut, then the corner, then the pieces. A right-click
         opens a menu of the same choices. Full screen, top right, keeps the
         hints under the map in view.
       </p>

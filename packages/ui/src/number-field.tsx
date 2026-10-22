@@ -41,7 +41,7 @@ export function NumberField({
   }
 
   const button = cx(
-    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-neutral-600 ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:focus-visible:outline-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-40",
+    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-slate-600 ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:focus-visible:outline-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-40",
     bare
       ? "ui:size-8 ui:self-center ui:rounded-full ui:border ui:border-line"
       : "ui:size-10",
@@ -55,7 +55,7 @@ export function NumberField({
       className={cx(
         bare
           ? "ui:flex ui:w-full ui:items-center ui:gap-2"
-          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-md ui:border ui:border-neutral-300 ui:bg-white ui:has-[input:disabled]:bg-neutral-100 ui:has-[input[aria-invalid=true]]:border-red-500",
+          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-md ui:border ui:border-slate-300 ui:bg-white ui:has-[input:disabled]:bg-slate-100 ui:has-[input[aria-invalid=true]]:border-red-500",
         className,
       )}
     >
@@ -81,7 +81,7 @@ export function NumberField({
         className={cx(
           button,
           "ui:order-1",
-          !bare && "ui:border-r ui:border-neutral-200",
+          !bare && "ui:border-r ui:border-slate-200",
         )}
       >
         <MinusIcon />
@@ -95,7 +95,7 @@ export function NumberField({
         className={cx(
           button,
           "ui:order-3",
-          !bare && "ui:border-l ui:border-neutral-200",
+          !bare && "ui:border-l ui:border-slate-200",
         )}
       >
         <PlusIcon />

@@ -18,7 +18,7 @@ export function InfoTip({
       <button
         type="button"
         aria-label="More information"
-        className="ui:inline-flex ui:size-4 ui:items-center ui:justify-center ui:rounded-full ui:border ui:border-neutral-400 ui:text-[0.6rem] ui:font-semibold ui:leading-none ui:text-neutral-500 ui:hover:border-neutral-700 ui:hover:text-neutral-800 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900"
+        className="ui:inline-flex ui:size-4 ui:items-center ui:justify-center ui:rounded-full ui:border ui:border-slate-400 ui:text-[0.6rem] ui:font-semibold ui:leading-none ui:text-slate-500 ui:hover:border-slate-700 ui:hover:text-slate-800 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900"
       >
         i
       </button>
@@ -26,7 +26,7 @@ export function InfoTip({
         role="tooltip"
         // Out of the layout until shown: a hidden tip by the screen's right
         // edge would otherwise widen the page and let it scroll sideways.
-        className="ui:pointer-events-none ui:absolute ui:top-full ui:left-1/2 ui:z-30 ui:mt-1.5 ui:hidden ui:w-64 ui:max-w-[calc(100vw-2rem)] ui:-translate-x-1/2 ui:rounded-md ui:bg-neutral-900 ui:px-3 ui:py-2 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg ui:group-hover:block ui:group-focus-within:block"
+        className="ui:pointer-events-none ui:absolute ui:top-full ui:left-1/2 ui:z-30 ui:mt-1.5 ui:hidden ui:w-64 ui:max-w-[calc(100vw-2rem)] ui:-translate-x-1/2 ui:rounded-md ui:bg-ink ui:px-3 ui:py-2 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg ui:group-hover:block ui:group-focus-within:block"
       >
         {text}
       </span>

@@ -57,7 +57,7 @@ export function AlertDialog({
       onClose={onModalClose(() => {
         if (open) onAnswer(false);
       })}
-      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45"
+      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45"
     >
       <ModalBody open={open} className="ui:max-h-[90dvh]">
         {request ? (
@@ -72,7 +72,7 @@ export function AlertDialog({
               {request.description ? (
                 <div
                   id={descriptionId}
-                  className="ui:text-sm ui:text-neutral-600"
+                  className="ui:text-sm ui:text-slate-600"
                 >
                   {request.description}
                 </div>
@@ -113,9 +113,9 @@ function Answers({
     <>
       {wanted !== undefined ? (
         <label className="ui:grid ui:gap-1.5 ui:text-sm">
-          <span className="ui:font-medium ui:text-neutral-800">
+          <span className="ui:font-medium ui:text-slate-800">
             Type{" "}
-            <span className="ui:rounded ui:bg-neutral-100 ui:px-1 ui:font-mono">
+            <span className="ui:rounded ui:bg-slate-100 ui:px-1 ui:font-mono">
               {wanted}
             </span>{" "}
             to confirm

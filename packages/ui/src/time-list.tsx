@@ -181,7 +181,7 @@ export function TimeList({
               toggle,
               half === option
                 ? "ui:bg-popover ui:text-accent-foreground ui:shadow-sm"
-                : "ui:text-neutral-500 ui:hover:text-accent-foreground",
+                : "ui:text-slate-500 ui:hover:text-accent-foreground",
             )}
           >
             {option}
@@ -214,7 +214,7 @@ export function TimeList({
                   ? "ui:bg-accent ui:font-semibold ui:text-accent-foreground"
                   : ok
                     ? "ui:hover:bg-accent ui:hover:text-accent-foreground"
-                    : "ui:cursor-not-allowed ui:text-neutral-300",
+                    : "ui:cursor-not-allowed ui:text-slate-300",
               )}
             >
               {clockOf(minute)}

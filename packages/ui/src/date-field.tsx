@@ -18,7 +18,7 @@ import {
 
 const BOX = cx(
   inputClassName,
-  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-neutral-400",
+  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-slate-400",
 );
 /** A trigger with no box of its own, for a search card that draws the box. */
 const BARE =
@@ -409,7 +409,7 @@ function MomentPanel({
         />
       </div>
       <div className="ui:mt-4 ui:flex ui:items-center ui:justify-between ui:gap-3 ui:text-sm ui:sm:mt-0 ui:sm:border-t ui:sm:border-popover-line ui:sm:px-3 ui:sm:py-2.5">
-        <span className="ui:min-w-0 ui:truncate ui:text-neutral-600">
+        <span className="ui:min-w-0 ui:truncate ui:text-slate-600">
           {summary || "Pick a day and a time"}
         </span>
         <button

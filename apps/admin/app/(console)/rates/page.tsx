@@ -3,12 +3,9 @@ import {
   DROPOFF_RULE_LABELS,
   TRIP_CATEGORY_LABELS,
   dropoffRuleOf,
-  formatMyr,
   isTripCategory,
-  modelChoiceOf,
   oddHoursLabel,
   oddHoursOf,
-  surchargeLabel,
 } from "@repo/db";
 import {
   listPriceLists,
@@ -16,20 +13,22 @@ import {
   type LocationPriceList,
   type ZoneElsewhere,
 } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
 import { Card, CardTitle } from "../../_components/Card";
 import { LocationFilter } from "../../_components/LocationFilter";
 import { LocationMark } from "../../_components/LocationMark";
 import { PageHeader } from "../../_components/PageHeader";
 import { CardSkeleton, Streamed } from "../../_components/Skeleton";
 import { LocationStateBadge } from "../../_components/StatusBadges";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/location-filter";
-import { locationTabHref, ratesHref } from "../../_lib/routes";
+import {
+  locationRatesPartHref,
+  locationTabHref,
+  ratesHref,
+} from "../../_lib/routes";
 import { dropoffRuleNote } from "../locations/[slug]/rates/dropoff-note";
+import { MeteredRates } from "../locations/[slug]/rates/MeteredRates";
 import { RateGrid } from "../locations/[slug]/rates/RateGrid";
-import { rulesText } from "../vehicle-classes/_lib/class-text";
 import { locationNames } from "../../_lib/location-names";
 
 /**
@@ -37,8 +36,7 @@ import { locationNames } from "../../_lib/location-names";
  * location, narrowed by the filter: each location's classes at their
  * metered rates and under their rules, the fixed prices on its rate grid,
  * where a drop-off may be and the odd-hours surcharge. Read here, changed
- * inside the location, on its Vehicle classes and Rates tabs, which each
- * section links to. Behind `coverage.view`, as those tabs are. See
+ * inside the location, on its Rates tab, which each section links to. Behind `coverage.view`, as those tabs are. See
  * docs/261018-location-work-and-class-catalogue.md.
  */
 export default async function RatesPage({ searchParams }: PageProps<"/rates">) {
@@ -111,7 +109,6 @@ function LocationRates({
   elsewhere: ZoneElsewhere[];
   manages: boolean;
 }) {
-  const classesHref = locationTabHref(list.slug, "vehicle-classes");
   const ratesTab = locationTabHref(list.slug, "rates");
   const onSale = list.offerings.filter(
     (offering) => offering.isActive && offering.vehicleClass.isActive,
@@ -141,80 +138,19 @@ function LocationRates({
       <Card flush>
         <CardTitle
           inset
-          description="Every trip not on the grid is metered at these rates; choosing a model adds its charge to any trip. The rules are the location's own, per class."
-          action={editLink(classesHref)}
+          description="What a trip off the grid costs, and the rules every booking of the class keeps to."
+          action={editLink(locationRatesPartHref(list.slug, "metered"))}
         >
-          Vehicle classes
+          Metered rates and rules
         </CardTitle>
-        <Table bare>
-          <THead>
-            <Th>Class</Th>
-            <Th align="right">Base fare</Th>
-            <Th align="right">Per km</Th>
-            <Th align="right">Per hour</Th>
-            <Th align="right">Minimum</Th>
-            <Th align="right">To choose a model</Th>
-            <Th>Rules</Th>
-          </THead>
-          <TBody>
-            {list.offerings.length === 0 ? (
-              <EmptyRow colSpan={7}>Nothing is sold here yet.</EmptyRow>
-            ) : (
-              list.offerings.map((offering) => {
-                const { vehicleClass } = offering;
-                const selling = offering.isActive && vehicleClass.isActive;
-                const modelChoice = modelChoiceOf(offering);
-                return (
-                  <tr
-                    key={offering.id}
-                    className={selling ? undefined : "text-slate-500"}
-                  >
-                    <Td>
-                      <span className="flex items-center gap-2 font-medium whitespace-nowrap">
-                        {vehicleClass.name}
-                        {selling ? null : <Badge>Off sale</Badge>}
-                      </span>
-                      <span className="block text-xs text-slate-500">
-                        {isTripCategory(vehicleClass.category)
-                          ? TRIP_CATEGORY_LABELS[vehicleClass.category]
-                          : vehicleClass.category}
-                      </span>
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {formatMyr(offering.baseFareSen)}
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {formatMyr(offering.perKmSen)}
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {formatMyr(offering.hourlyRateSen)}
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {formatMyr(offering.minimumFareSen)}
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {modelChoice ? (
-                        surchargeLabel(modelChoice)
-                      ) : (
-                        <span className="text-slate-500">Not offered</span>
-                      )}
-                    </Td>
-                    <Td className="text-xs whitespace-nowrap text-slate-600">
-                      {rulesText(offering)}
-                    </Td>
-                  </tr>
-                );
-              })
-            )}
-          </TBody>
-        </Table>
+        <MeteredRates offerings={list.offerings} rule={rule} />
       </Card>
 
       <Card flush>
         <CardTitle
           inset
           description="Fixed prices in RM for the whole vehicle, one row per pair of zones, read both ways."
-          action={editLink(ratesTab)}
+          action={editLink(locationRatesPartHref(list.slug, "grid"))}
         >
           Rate grid
         </CardTitle>

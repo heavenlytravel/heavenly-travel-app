@@ -2,11 +2,13 @@
 
 import { parseRinggit, type DropoffRule } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { cx } from "@repo/ui/cx";
 import { Dialog } from "@repo/ui/dialog";
 import { Field } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
-import { useState, useTransition, type FormEvent } from "react";
+import { Fragment, useState, useTransition, type FormEvent } from "react";
 import { FormError } from "../../../../_components/FormError";
+import { CELL_INPUT, CellKey, EMPTY_CELL, emptyCellMeaning } from "./cells";
 
 type Zone = { id: string; name: string };
 /** Another location's zone, by name: a route out of this location may end at it. */
@@ -26,7 +28,8 @@ export type NewRoute = {
 
 /**
  * "Add route" as a dialog: the two zones of the route, then its price
- * for each class on sale, grouped by category. Only the zones with a pair
+ * for each class on sale, a row each in a table grouped by category,
+ * its cells drawn as the grid's, an empty one hatched. Only the zones with a pair
  * still free are offered, and only the free partners of the zone picked
  * first, so a route cannot be added twice or the other way round. "To"
  * also offers other locations' zones, `elsewhere`, by location, when the
@@ -196,52 +199,84 @@ function RouteForm({
         </p>
       ) : null}
 
-      <fieldset className="grid gap-4">
-        <legend className="mb-1 text-sm font-medium text-slate-800">
-          Prices, RM
-        </legend>
-        {groups.map((category) => (
-          <div key={category} className="grid gap-2">
-            {groups.length > 1 ? (
-              <p className="text-xs font-medium text-slate-500">{category}</p>
-            ) : null}
-            {classes
-              .filter((column) => column.category === category)
-              .map((column) => {
-                const bad = invalid.includes(column);
-                return (
-                  <label
-                    key={column.id}
-                    className="grid grid-cols-[1fr_8rem] items-center gap-3 text-sm"
-                  >
-                    <span className="truncate text-slate-800">
-                      {column.name}
-                    </span>
-                    <input
-                      inputMode="decimal"
-                      autoComplete="off"
-                      value={prices[column.id] ?? ""}
-                      placeholder={rule === "grid" ? "not offered" : "metered"}
-                      aria-invalid={bad || undefined}
-                      onChange={(event) =>
-                        setPrices((was) => ({
-                          ...was,
-                          [column.id]: event.target.value,
-                        }))
-                      }
-                      className={`h-9 w-full rounded-md border px-3 text-right tabular-nums outline-hidden placeholder:text-xs placeholder:text-slate-400 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand ${bad ? "border-red-300 bg-red-50 text-red-700" : "border-slate-300 bg-white"}`}
-                    />
-                  </label>
-                );
-              })}
-          </div>
-        ))}
+      <div className="grid gap-2">
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600">
+              <tr>
+                <th scope="col" className="px-3 py-2 text-left font-medium">
+                  Class
+                </th>
+                <th
+                  scope="col"
+                  className="w-36 border-l border-slate-200 px-3 py-2 text-right font-medium"
+                >
+                  Price, RM
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((category) => (
+                <Fragment key={category}>
+                  {groups.length > 1 ? (
+                    <tr>
+                      <th
+                        scope="colgroup"
+                        colSpan={2}
+                        className="border-t border-slate-200 bg-slate-50/60 px-3 py-1.5 text-left text-xs font-medium text-slate-500"
+                      >
+                        {category}
+                      </th>
+                    </tr>
+                  ) : null}
+                  {classes
+                    .filter((column) => column.category === category)
+                    .map((column) => {
+                      const bad = invalid.includes(column);
+                      const empty = !prices[column.id]?.trim();
+                      return (
+                        <tr key={column.id}>
+                          <th
+                            scope="row"
+                            className="border-t border-slate-200 px-3 text-left font-normal text-slate-800"
+                          >
+                            {column.name}
+                          </th>
+                          <td
+                            className={cx(
+                              "border-t border-l border-slate-200 p-0",
+                              bad ? "bg-red-50" : empty && EMPTY_CELL,
+                            )}
+                          >
+                            <input
+                              inputMode="decimal"
+                              autoComplete="off"
+                              aria-label={`${column.name}, price in RM`}
+                              aria-invalid={bad || undefined}
+                              value={prices[column.id] ?? ""}
+                              onChange={(event) =>
+                                setPrices((was) => ({
+                                  ...was,
+                                  [column.id]: event.target.value,
+                                }))
+                              }
+                              className={cx(CELL_INPUT, bad && "text-red-700")}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="text-xs text-slate-500">
-          {rule === "grid"
-            ? "A class left empty is not offered on this route."
-            : "A class left empty is metered at its rates on this route."}
+          <CellKey swatch={cx("border-slate-300", EMPTY_CELL)}>
+            {emptyCellMeaning(rule)}
+          </CellKey>
         </p>
-      </fieldset>
+      </div>
 
       <FormError error={error} />
       <div className="flex justify-end gap-2">

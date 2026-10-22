@@ -10,9 +10,18 @@ import {
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/field";
+import { InfoTip } from "@repo/ui/info-tip";
+import { Select } from "@repo/ui/select";
 import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
-import { PlusIcon, XIcon } from "@repo/ui/icons";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  PlusIcon,
+  TrashIcon,
+  UndoIcon,
+} from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
 import {
   useEffect,
@@ -32,6 +41,7 @@ import {
   type ZoneElsewhere,
 } from "./AddRouteDialog";
 import { errorOf } from "../../../../_lib/action-state";
+import { CELL_INPUT, CellKey, EMPTY_CELL, emptyCellMeaning } from "./cells";
 
 type Zone = { id: string; name: string };
 /** A column of the grid: a class on sale here, with the category it is sold under. */
@@ -47,6 +57,8 @@ type Route = { fromZoneId: string; toZoneId: string };
 type Saved = { routes: Route[]; prices: Record<string, number> };
 /** What the bar at the foot says, besides the count of unsaved changes. */
 type Notice = { tone: "error" | "done" | "info"; text: string };
+/** The column the rows are sorted by: a zone end, or a class by its id; none keeps the zones' order. */
+type Sort = { by: "from" | "to" | { classId: string }; dir: 1 | -1 } | null;
 
 const routeKey = (route: Route) => `${route.fromZoneId}|${route.toZoneId}`;
 const cellKey = (route: Route, classId: string) =>
@@ -117,28 +129,76 @@ function groupsOf(classes: readonly ClassColumn[]) {
   return groups;
 }
 
-/** The route column stays in view while the classes scroll under it. */
-const STICKY = "sticky left-0 z-1 border-r border-slate-200";
+/** A zone's name cut to the column's width, whole in its tooltip. */
+const ZONE_NAME = "block max-w-44 truncate font-medium text-slate-900";
 
-const CELL_INPUT =
-  "block h-10 w-full min-w-24 bg-transparent px-3 text-right text-sm tabular-nums outline-hidden placeholder:text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-brand focus:ring-inset read-only:cursor-wait";
+const byName = (a: string, b: string) =>
+  a.localeCompare(b, "en", { sensitivity: "base" });
+
+/** The heading of a column the rows sort by, with its arrow while it does. */
+function SortHeading({
+  label,
+  dir,
+  align = "left",
+  onSort,
+}: {
+  label: string;
+  /** The way the rows sort by it, or none. */
+  dir: 1 | -1 | null;
+  align?: "left" | "right";
+  onSort: () => void;
+}) {
+  const Arrow = dir === -1 ? ArrowDownIcon : ArrowUpIcon;
+  return (
+    <button
+      type="button"
+      onClick={onSort}
+      className={cx(
+        "group/sort inline-flex items-center gap-1 rounded-sm font-medium hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-brand",
+        align === "right" && "flex-row-reverse",
+      )}
+    >
+      {label}
+      <Arrow
+        className={cx(
+          "size-3",
+          dir === null
+            ? "text-slate-300 opacity-0 group-hover/sort:opacity-100"
+            : "text-slate-900",
+        )}
+      />
+    </button>
+  );
+}
 
 /**
  * The rate grid, edited as a spreadsheet: a row per route, a column per
  * class on sale, grouped by category, a price in RM in each cell. The
  * arrow keys and Enter move between cells, a block copied from a
  * spreadsheet pastes into the grid from the cell it lands in, and a cell
- * that is not a price is marked. Changed cells are shaded until saved;
- * the bar at the foot counts them, saves them all at once or discards
- * them, and leaving the page with any unsaved asks first. "Add route"
- * opens a dialog that offers only the pairs of zones not on the grid yet,
- * so a route has one row whichever way it is read, and saves the route
- * with its prices at once. A route out of the location ends at another
- * location's zone, named with its location and marked one way (→), since
- * a trip back starts there and is priced there; the dialog offers those
- * zones unless drop-offs stay inside the location, when such a route is
- * marked not offered. What an empty cell means follows the drop-off rule:
- * metered, or not offered.
+ * that is not a price is marked. Changed cells are shaded until saved and
+ * empty ones hatched; the bar over the grid counts the changes, saves
+ * them all at once or discards them, and leaving the page with any
+ * unsaved asks first. "Add route" opens a dialog that offers only the
+ * pairs of zones not on the grid yet, so a route has one row whichever
+ * way it is read, and saves the route with its prices at once. A route
+ * out of the location ends at another location's zone, named with its
+ * location and marked one way (→), since a trip back starts there and is
+ * priced there; the dialog offers those zones unless drop-offs stay
+ * inside the location, when such a route is marked not offered. What an
+ * empty cell means follows the drop-off rule: metered, or not offered.
+ *
+ * A route's zones are two columns, From and To, their names cut short and
+ * whole in a tooltip on hover or click; the heading stays in view while
+ * the routes scroll. The rows sort by either zone or by a class's price,
+ * on the prices as saved, so a row stays put while its cells are typed in
+ * and moves on the save. They can be narrowed to the routes of one zone,
+ * that zone then read as From, or to those with a class unpriced as
+ * saved. The keys and a paste follow the rows as shown. Ticked rows are
+ * marked for deletion: struck through, their prices locked, until the save
+ * deletes them or their undo or Discard keeps them. The bar of actions
+ * stays in view under the console's header while the page scrolls; each
+ * class's heading counts its priced routes.
  */
 export function RateGrid({
   locationId,
@@ -167,26 +227,28 @@ export function RateGrid({
   const [values, setValues] = useState(() => valuesOf(saved));
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [sort, setSort] = useState<Sort>(null);
+  /** The zone whose routes alone are shown, or "" for every route. */
+  const [zoneShown, setZoneShown] = useState("");
+  const [gapsOnly, setGapsOnly] = useState(false);
+  /** The ticked rows, by route key. */
+  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  /** The rows marked for deletion, by route key: deleted on the save. */
+  const [doomed, setDoomed] = useState<ReadonlySet<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const gridRef = useRef<HTMLDivElement>(null);
   // What the focused cell held when it took the focus, for Escape.
   const valueAtFocus = useRef("");
-  // Whether classes are scrolled out of view on either side, for the
-  // shadow at the route column and the fade at the right edge.
-  const [hidden, setHidden] = useState({ left: false, right: false });
+  // Whether classes are scrolled out of view on the right, for the fade.
+  const [moreRight, setMoreRight] = useState(false);
 
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
     const measure = () => {
-      // A cell that takes the focus scrolls clear of the route column.
-      const routeColumn = grid.querySelector("th");
-      grid.style.scrollPaddingLeft = `${routeColumn?.offsetWidth ?? 0}px`;
-      const left = grid.scrollLeft > 1;
-      const right = grid.scrollLeft + grid.clientWidth < grid.scrollWidth - 1;
-      setHidden((was) =>
-        was.left === left && was.right === right ? was : { left, right },
-      );
+      // A cell that takes the focus scrolls clear of the heading.
+      grid.style.scrollPaddingTop = `${grid.querySelector("thead")?.offsetHeight ?? 0}px`;
+      setMoreRight(grid.scrollLeft + grid.clientWidth < grid.scrollWidth - 1);
     };
     // The observer reports once on observing, so the first measure is its.
     const observer = new ResizeObserver(measure);
@@ -199,12 +261,14 @@ export function RateGrid({
     };
   }, []);
 
-  // The grid against what is saved: the cells changed, those that are not
-  // prices, and the saved prices of rows taken off.
-  const onGrid = new Set(routes.map(routeKey));
+  // The grid against what is saved: the cells changed and those that are
+  // not prices on the routes kept, and the routes marked for deletion,
+  // each counted once.
+  const kept = routes.filter((route) => !doomed.has(routeKey(route)));
+  const onGrid = new Set(kept.map(routeKey));
   const changed = new Set<string>();
   const invalid = new Set<string>();
-  for (const route of routes) {
+  for (const route of kept) {
     for (const column of classes) {
       const key = cellKey(route, column.id);
       const reading = readCell(values[key]);
@@ -212,10 +276,7 @@ export function RateGrid({
       else if (reading.sen !== (saved.prices[key] ?? null)) changed.add(key);
     }
   }
-  const removed = Object.keys(saved.prices).filter(
-    (key) => !onGrid.has(routeKeyOfCell(key)),
-  ).length;
-  const changes = changed.size + invalid.size + removed;
+  const changes = changed.size + invalid.size + doomed.size;
   const dirty = changes > 0;
   const leaveDialog = useLeaveGuard(
     dirty,
@@ -247,6 +308,73 @@ export function RateGrid({
     (rank.get(route.toZoneId) ?? rank.size)
       ? [route.fromZoneId, route.toZoneId]
       : [route.toZoneId, route.fromZoneId];
+  /** A route's zones as its row shows them: the zone narrowed to as From, unless the route runs out to it. */
+  const shownEndsOf = (route: Route): [string, string] => {
+    const [a, b] = endsOf(route);
+    return b === zoneShown && !isOut(route) ? [b, a] : [a, b];
+  };
+
+  // The rows as shown: narrowed, then sorted on the saved prices so that
+  // typing never moves a row, the zones' order breaking ties.
+  const hasGap = (route: Route) =>
+    classes.some(
+      (column) => saved.prices[cellKey(route, column.id)] === undefined,
+    );
+  const touches = (route: Route) =>
+    zoneShown === "" ||
+    route.fromZoneId === zoneShown ||
+    route.toZoneId === zoneShown;
+  const narrowed = routes.filter(
+    (route) => touches(route) && (!gapsOnly || hasGap(route)),
+  );
+  const filtering = zoneShown !== "" || gapsOnly;
+  const shown = sort ? [...narrowed].sort(compareRoutes(sort)) : narrowed;
+
+  function compareRoutes({ by, dir }: NonNullable<Sort>) {
+    return (x: Route, y: Route) => {
+      if (by === "from" || by === "to") {
+        const [x1, x2] = shownEndsOf(x).map(nameOf);
+        const [y1, y2] = shownEndsOf(y).map(nameOf);
+        return by === "from"
+          ? dir * (byName(x1 ?? "", y1 ?? "") || byName(x2 ?? "", y2 ?? ""))
+          : dir * (byName(x2 ?? "", y2 ?? "") || byName(x1 ?? "", y1 ?? ""));
+      }
+      // An unpriced cell sorts last whichever the way.
+      const p = saved.prices[cellKey(x, by.classId)];
+      const q = saved.prices[cellKey(y, by.classId)];
+      if (p === undefined || q === undefined) {
+        return p === q ? 0 : p === undefined ? 1 : -1;
+      }
+      return dir * (p - q);
+    };
+  }
+
+  /** The way the rows sort by a column, or none. */
+  const dirOf = (by: string) =>
+    sort &&
+    (typeof sort.by === "string" ? sort.by === by : sort.by.classId === by)
+      ? sort.dir
+      : null;
+  /** Up, down, then back to the zones' order. */
+  function sortBy(by: NonNullable<Sort>["by"]) {
+    const dir = dirOf(typeof by === "string" ? by : by.classId);
+    setSort(dir === null ? { by, dir: 1 } : dir === 1 ? { by, dir: -1 } : null);
+  }
+
+  // The ticked rows among those shown and kept: a narrowing unticks the
+  // rest.
+  const tickable = shown.filter((route) => !doomed.has(routeKey(route)));
+  const tickedShown = tickable.filter((route) => ticked.has(routeKey(route)));
+
+  // The zones a row can be narrowed to: this location's, then the other
+  // locations' that a route runs out to.
+  const zoneOptions = [
+    { value: "", label: "Every zone" },
+    ...zones.map((zone) => ({ value: zone.id, label: zone.name })),
+    ...elsewhere
+      .filter((zone) => routes.some((route) => route.toZoneId === zone.id))
+      .map((zone) => ({ value: zone.id, label: nameOf(zone.id) })),
+  ];
 
   // The pairs not on the grid yet, for "Add route": between this
   // location's zones, and out to other locations' unless drop-offs stay in.
@@ -347,8 +475,9 @@ export function RateGrid({
   }
 
   // A block copied from a spreadsheet: tab between cells, a line per row.
-  // It fills right and down from the cell it is pasted in; what falls past
-  // the grid's edge is left out and counted.
+  // It fills right and down from the cell it is pasted in, along the rows
+  // as shown, past the rows marked for deletion; what falls past the
+  // grid's edge is left out and counted.
   function onCellPaste(
     event: ClipboardEvent<HTMLInputElement>,
     row: number,
@@ -367,12 +496,13 @@ export function RateGrid({
     let outside = 0;
     lines.forEach((line, i) =>
       line.forEach((raw, j) => {
-        const route = routes[row + i];
+        const route = shown[row + i];
         const column = classes[col + j];
         if (!route || !column) {
           outside += 1;
           return;
         }
+        if (doomed.has(routeKey(route))) return;
         pasted[cellKey(route, column.id)] = tidy(raw);
         filled += 1;
       }),
@@ -441,12 +571,33 @@ export function RateGrid({
     return null;
   }
 
-  function removeRoute(route: Route) {
+  function narrowTo(zone: string, gaps: boolean) {
+    setZoneShown(zone);
+    setGapsOnly(gaps);
+    setTicked(new Set());
+  }
+
+  function tick(route: Route, on: boolean) {
+    setTicked((was) => {
+      const next = new Set(was);
+      if (on) next.add(routeKey(route));
+      else next.delete(routeKey(route));
+      return next;
+    });
+  }
+
+  // Marked, not taken off: the row stays, struck through, until the save
+  // deletes it; its undo or Discard keeps it.
+  function deleteTicked() {
+    setDoomed(new Set([...doomed, ...tickedShown.map(routeKey)]));
+    setTicked(new Set());
     setNotice(null);
-    setRoutes(routes.filter((r) => routeKey(r) !== routeKey(route)));
-    setValues((current) => {
-      const next = { ...current };
-      for (const column of classes) delete next[cellKey(route, column.id)];
+  }
+
+  function keep(route: Route) {
+    setDoomed((was) => {
+      const next = new Set(was);
+      next.delete(routeKey(route));
       return next;
     });
   }
@@ -455,19 +606,21 @@ export function RateGrid({
     setNotice(null);
     setRoutes(saved.routes);
     setValues(valuesOf(saved));
+    setTicked(new Set());
+    setDoomed(new Set());
   }
 
   function save() {
     if (invalid.size > 0) return;
-    // Every cell of the rows on the grid, and the saved prices of rows
-    // taken off as cleared: the writer stores what changed.
+    // Every cell of the rows kept, and the saved prices of the rows marked
+    // for deletion as cleared: the writer stores what changed.
     const rows: {
       fromZoneId: string;
       toZoneId: string;
       vehicleClassId: string;
       price: string;
     }[] = [];
-    for (const route of routes) {
+    for (const route of kept) {
       for (const column of classes) {
         rows.push({
           ...route,
@@ -496,7 +649,7 @@ export function RateGrid({
       for (const [key, sen] of Object.entries(saved.prices)) {
         if (onGrid.has(routeKeyOfCell(key))) prices[key] = sen;
       }
-      for (const route of routes) {
+      for (const route of kept) {
         for (const column of classes) {
           const key = cellKey(route, column.id);
           const reading = readCell(values[key]);
@@ -504,9 +657,12 @@ export function RateGrid({
           else delete prices[key];
         }
       }
-      const next = { routes, prices };
+      const next = { routes: kept, prices };
       setSaved(next);
+      setRoutes(kept);
       setValues(valuesOf(next));
+      setTicked(new Set());
+      setDoomed(new Set());
       setNotice(null);
       toast.success("Rates saved.");
     });
@@ -514,23 +670,59 @@ export function RateGrid({
 
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
-  const emptyMeans = rule === "grid" ? "not offered" : "metered";
-  const sticky = cx(
-    STICKY,
-    hidden.left && "shadow-[6px_0_8px_-6px_rgb(0_0_0/0.15)]",
-  );
-  const routeHeading = (
+  const emptyMeans = emptyCellMeaning(rule);
+  const ariaSortOf = (dir: 1 | -1 | null) =>
+    dir === null ? undefined : dir === 1 ? "ascending" : "descending";
+  const allTicked =
+    tickable.length > 0 && tickedShown.length === tickable.length;
+  const tickHeading = readOnly ? null : (
     <th
+      key="tick"
       scope="col"
       rowSpan={grouped ? 2 : undefined}
-      className={cx(
-        sticky,
-        "border-b bg-slate-50 py-2 pr-3 pl-6 text-left align-bottom font-medium",
-      )}
+      className="w-px border-b border-slate-200 py-2 pr-1 pl-6 text-left align-bottom"
     >
-      Route
+      <Checkbox
+        aria-label="Tick every route shown"
+        checked={allTicked}
+        disabled={tickable.length === 0}
+        ref={(input) => {
+          if (input) {
+            input.indeterminate = tickedShown.length > 0 && !allTicked;
+          }
+        }}
+        onChange={(event) =>
+          setTicked(new Set(event.target.checked ? tickable.map(routeKey) : []))
+        }
+      />
     </th>
   );
+  const zoneHeading = (by: "from" | "to") => (
+    <th
+      key={by}
+      scope="col"
+      rowSpan={grouped ? 2 : undefined}
+      aria-sort={ariaSortOf(dirOf(by))}
+      className={cx(
+        "border-b border-slate-200 py-2 text-left align-bottom",
+        by === "from" ? (readOnly ? "pr-3 pl-6" : "px-3") : "pr-3 pl-9",
+      )}
+    >
+      <SortHeading
+        label={by === "from" ? "From" : "To"}
+        dir={dirOf(by)}
+        onSort={() => sortBy(by)}
+      />
+    </th>
+  );
+  const leadHeadings = [tickHeading, zoneHeading("from"), zoneHeading("to")];
+  // A class's priced routes, as typed, among those kept.
+  const pricedOf = (classId: string) =>
+    kept.filter((route) => {
+      const reading = readCell(values[cellKey(route, classId)]);
+      return reading.ok && reading.sen !== null;
+    }).length;
+  const gaps = kept.filter(hasGap).length;
 
   let status: { tone: Notice["tone"] | "dirty" | "idle"; text: string };
   if (pending) status = { tone: "idle", text: "Saving…" };
@@ -548,27 +740,110 @@ export function RateGrid({
   } else if (notice) status = notice;
   else status = { tone: "idle", text: "No unsaved changes." };
 
+  const canAdd = freePairs > 0 || freeOut > 0;
+  const ticks = tickedShown.length;
+
   return (
     <>
+      {readOnly ? null : (
+        // Under the console's header (h-14) while the page scrolls.
+        <div className="sticky top-14 z-3 flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
+          <Tooltip content={canAdd ? null : "Every pair of zones has a row."}>
+            <Button
+              variant="secondary"
+              disabled={pending || !canAdd}
+              onClick={() => setAdding(true)}
+            >
+              <PlusIcon />
+              Add route
+            </Button>
+          </Tooltip>
+          <Tooltip content={ticks === 0 ? "Tick the routes to delete." : null}>
+            <Button
+              variant="secondary"
+              disabled={pending || ticks === 0}
+              onClick={deleteTicked}
+            >
+              <TrashIcon />
+              {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
+            </Button>
+          </Tooltip>
+          <p
+            aria-live="polite"
+            className={cx(
+              "ml-auto flex min-w-0 items-center gap-2 text-sm",
+              status.tone === "error"
+                ? "text-red-700"
+                : status.tone === "done"
+                  ? "text-emerald-700"
+                  : status.tone === "idle"
+                    ? "text-slate-500"
+                    : "text-slate-800",
+            )}
+          >
+            {status.tone === "dirty" ? (
+              <span
+                aria-hidden="true"
+                className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
+              />
+            ) : null}
+            {status.text}
+          </p>
+          <div className="flex items-center gap-2">
+            {dirty ? (
+              <Button variant="ghost" disabled={pending} onClick={discard}>
+                Discard
+              </Button>
+            ) : null}
+            <Button
+              disabled={pending || !dirty || invalid.size > 0}
+              onClick={save}
+            >
+              {pending ? "Saving…" : "Save rates"}
+            </Button>
+          </div>
+        </div>
+      )}
+      {routes.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
+          <Select
+            aria-label="Show the routes of one zone"
+            value={zoneShown}
+            onValueChange={(zone) => narrowTo(zone, gapsOnly)}
+            options={zoneOptions}
+            className="w-full sm:w-64"
+          />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={gapsOnly}
+              onChange={(event) => narrowTo(zoneShown, event.target.checked)}
+            />
+            Only routes with an empty cell ({gaps})
+            <InfoTip text="A route where a class has no saved price. A row filled in stays until the save." />
+          </label>
+          {filtering ? (
+            <p className="text-sm text-slate-500 tabular-nums sm:ml-auto">
+              {shown.length} of {plural(routes.length, "route")} shown
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="relative">
         <div
           ref={gridRef}
-          className="overflow-x-auto border-y border-slate-200"
+          className="max-h-[70vh] overflow-auto overscroll-x-contain border-y border-slate-200"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-600">
+            <thead className="sticky top-0 z-2 bg-slate-50 text-xs text-slate-600">
               {grouped ? (
                 <tr>
-                  {routeHeading}
+                  {leadHeadings}
                   {groups.map((group, index) => (
                     <th
                       key={`${group.label}-${index}`}
                       scope="colgroup"
                       colSpan={group.span}
-                      className={cx(
-                        "border-b border-slate-200 px-3 pt-2 pb-1.5 text-center font-medium text-slate-500",
-                        index > 0 && "border-l",
-                      )}
+                      className="border-b border-l border-slate-200 px-3 pt-2 pb-1.5 text-center font-medium text-slate-500"
                     >
                       {group.label}
                     </th>
@@ -576,76 +851,136 @@ export function RateGrid({
                 </tr>
               ) : null}
               <tr>
-                {grouped ? null : routeHeading}
-                {classes.map((column, col) => (
+                {grouped ? null : leadHeadings}
+                {classes.map((column) => (
                   <th
                     key={column.id}
                     scope="col"
-                    className={cx(
-                      "border-b border-slate-200 px-3 py-2 text-right align-bottom font-medium text-slate-800",
-                      col > 0 && "border-l",
-                    )}
+                    aria-sort={ariaSortOf(dirOf(column.id))}
+                    className="border-b border-l border-slate-200 px-3 py-2 text-right align-bottom text-slate-800"
                   >
-                    {column.name}
+                    <SortHeading
+                      label={column.name}
+                      dir={dirOf(column.id)}
+                      align="right"
+                      onSort={() => sortBy({ classId: column.id })}
+                    />
+                    {routes.length > 0 ? (
+                      <span className="block font-normal whitespace-nowrap text-slate-500 tabular-nums">
+                        {pricedOf(column.id)} of {kept.length} priced
+                      </span>
+                    ) : null}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {routes.length === 0 ? (
+              {shown.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={classes.length + 1}
+                    colSpan={classes.length + (readOnly ? 2 : 3)}
                     className="px-6 py-8 text-center text-slate-500"
                   >
-                    {rule === "grid"
-                      ? "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
-                      : "No routes yet: every trip is metered at the class's rates."}
+                    {routes.length > 0 ? (
+                      <>
+                        No route matches.{" "}
+                        <button
+                          type="button"
+                          onClick={() => narrowTo("", false)}
+                          className="font-medium text-slate-900 underline-offset-4 hover:underline"
+                        >
+                          Show every route
+                        </button>
+                      </>
+                    ) : rule === "grid" ? (
+                      "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
+                    ) : (
+                      "No routes yet: every trip is metered at the class's rates."
+                    )}
                   </td>
                 </tr>
               ) : (
-                routes.map((route, row) => {
-                  const [a, b] = endsOf(route);
+                shown.map((route, row) => {
+                  const [a, b] = shownEndsOf(route);
                   const out = isOut(route);
-                  const arrow = out ? "→" : "↔";
                   const label = `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
-                  const last = row === routes.length - 1;
+                  const whole = out
+                    ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
+                    : `${nameOf(a)} ↔ ${nameOf(b)}, the same price both ways.`;
+                  const isTicked = ticked.has(routeKey(route));
+                  const isDoomed = doomed.has(routeKey(route));
+                  const lead = cx(
+                    "py-0 text-left align-middle font-normal",
+                    isDoomed
+                      ? "bg-red-50/70 text-slate-400 line-through"
+                      : isTicked
+                        ? "bg-slate-50"
+                        : "group-hover:bg-slate-50",
+                    row < shown.length - 1 && "border-b border-slate-200",
+                  );
                   return (
                     <tr key={routeKey(route)} className="group">
+                      {readOnly ? null : (
+                        <td className={cx(lead, "w-px pr-1 pl-6")}>
+                          {isDoomed ? (
+                            <Tooltip content="Keep this route">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => keep(route)}
+                                aria-label={`Keep the route between ${label}`}
+                                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-slate-600 hover:bg-red-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
+                              >
+                                <UndoIcon className="size-3.5" />
+                              </button>
+                            </Tooltip>
+                          ) : (
+                            <Checkbox
+                              aria-label={`Tick the route between ${label}`}
+                              checked={isTicked}
+                              onChange={(event) =>
+                                tick(route, event.target.checked)
+                              }
+                            />
+                          )}
+                        </td>
+                      )}
                       <th
                         scope="row"
-                        className={cx(
-                          sticky,
-                          "bg-white py-0 pr-2 pl-6 text-left font-normal group-hover:bg-slate-50",
-                          !last && "border-b",
-                        )}
+                        className={cx(lead, readOnly ? "pr-3 pl-6" : "px-3")}
                       >
-                        {/* One line from `sm` up; on a phone the two zones stack, so the prices keep the width. */}
-                        <div className="flex min-h-10 items-center gap-2 py-1.5 sm:py-0">
-                          <Tooltip
-                            content={
-                              out
-                                ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
-                                : `${nameOf(a)} ↔ ${nameOf(b)}`
-                            }
-                            className="min-w-0 flex-1"
+                        <Tooltip content={whole} openOnClick>
+                          <span
+                            className={cx(
+                              ZONE_NAME,
+                              isDoomed && "text-slate-400 line-through",
+                            )}
                           >
-                            <span className="min-w-0 flex-1 font-medium text-slate-900 sm:block sm:max-w-64 sm:truncate">
-                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {zoneNameOf(a)}
-                              </span>
-                              <span
-                                aria-hidden="true"
-                                className="mx-1.5 hidden text-slate-400 sm:inline"
-                              >
-                                {arrow}
-                              </span>
-                              <span className="sr-only">
-                                {out ? " to " : " and "}
-                              </span>
-                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {zoneNameOf(b)}
-                              </span>
+                            {zoneNameOf(a)}
+                          </span>
+                        </Tooltip>
+                      </th>
+                      <td className={cx(lead, "pr-3")}>
+                        <span className="flex items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className="w-4 shrink-0 text-center text-slate-400"
+                          >
+                            {out ? "→" : "↔"}
+                          </span>
+                          <span className="sr-only">{out ? "to" : "and"}</span>
+                          <Tooltip
+                            content={whole}
+                            openOnClick
+                            className="min-w-0"
+                          >
+                            <span
+                              className={cx(
+                                ZONE_NAME,
+                                isDoomed && "text-slate-400 line-through",
+                              )}
+                            >
+                              {zoneNameOf(b)}
                             </span>
                           </Tooltip>
                           {out ? (
@@ -659,48 +994,36 @@ export function RateGrid({
                               <Badge tone="amber">Not offered</Badge>
                             </Tooltip>
                           ) : null}
-                          {readOnly ? null : (
-                            <Tooltip content="Remove route">
-                              <button
-                                type="button"
-                                disabled={pending}
-                                onClick={() => removeRoute(route)}
-                                aria-label={`Remove the route between ${label}`}
-                                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
-                              >
-                                <XIcon />
-                              </button>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </th>
+                        </span>
+                      </td>
                       {classes.map((column, col) => {
                         const key = cellKey(route, column.id);
                         const bad = invalid.has(key);
+                        const empty = !(values[key] ?? "").trim();
                         return (
                           <td
                             key={column.id}
                             className={cx(
-                              "border-slate-200 p-0",
-                              col > 0 && "border-l",
-                              !last && "border-b",
-                              bad
-                                ? "bg-red-50"
-                                : changed.has(key)
-                                  ? "bg-amber-50"
-                                  : "group-hover:bg-slate-50",
+                              "border-l border-slate-200 p-0",
+                              row < shown.length - 1 && "border-b",
+                              isDoomed
+                                ? "bg-red-50/70"
+                                : bad
+                                  ? "bg-red-50"
+                                  : changed.has(key)
+                                    ? "bg-amber-50"
+                                    : cx(
+                                        "group-hover:bg-slate-50",
+                                        empty && EMPTY_CELL,
+                                      ),
                             )}
                           >
                             {readOnly ? (
                               <span
-                                aria-label={`${label}, ${column.name}, price in RM`}
+                                aria-label={`${label}, ${column.name}, ${empty ? emptyMeans.toLowerCase() : "price in RM"}`}
                                 className="block h-10 min-w-24 px-3 text-right text-sm leading-10 tabular-nums"
                               >
-                                {values[key] || (
-                                  <span className="text-xs text-slate-400">
-                                    {emptyMeans}
-                                  </span>
-                                )}
+                                {values[key]}
                               </span>
                             ) : (
                               <input
@@ -710,8 +1033,8 @@ export function RateGrid({
                                 inputMode="decimal"
                                 autoComplete="off"
                                 spellCheck={false}
-                                readOnly={pending}
-                                placeholder={emptyMeans}
+                                readOnly={pending || isDoomed}
+                                tabIndex={isDoomed ? -1 : undefined}
                                 value={values[key] ?? ""}
                                 onChange={(event) =>
                                   edit(key, event.target.value)
@@ -733,7 +1056,9 @@ export function RateGrid({
                                 }
                                 className={cx(
                                   CELL_INPUT,
-                                  bad && "text-red-700",
+                                  isDoomed
+                                    ? "text-slate-400 line-through"
+                                    : bad && "text-red-700",
                                 )}
                               />
                             )}
@@ -747,7 +1072,7 @@ export function RateGrid({
             </tbody>
           </table>
         </div>
-        {hidden.right ? (
+        {moreRight ? (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-px right-0 w-12 bg-linear-to-l from-white to-transparent"
@@ -755,25 +1080,22 @@ export function RateGrid({
         ) : null}
       </div>
 
-      <div className="grid gap-3 px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          {readOnly ? (
-            <span />
-          ) : freePairs > 0 || freeOut > 0 ? (
-            <Button
-              variant="secondary"
-              disabled={pending}
-              onClick={() => setAdding(true)}
-            >
-              <PlusIcon />
-              Add route
-            </Button>
-          ) : (
-            <p className="text-sm text-slate-600">
-              Every pair of zones has a row.
-            </p>
+      <div className="grid gap-2 px-6 py-4 text-xs text-slate-500">
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <CellKey swatch={cx("border-slate-300", EMPTY_CELL)}>
+            {emptyMeans}
+          </CellKey>
+          {readOnly ? null : (
+            <>
+              <CellKey swatch="border-amber-300 bg-amber-50">
+                Changed, not saved
+              </CellKey>
+              <CellKey swatch="border-red-200 bg-red-50">
+                Deleted on save
+              </CellKey>
+            </>
           )}
-          <p className="text-xs text-slate-500 tabular-nums">
+          <span className="tabular-nums sm:ml-auto">
             {[
               pairs > 0
                 ? `${routes.length - routesOut} of ${plural(pairs, "pair")} of zones on the grid`
@@ -784,16 +1106,14 @@ export function RateGrid({
             ]
               .filter(Boolean)
               .join(", ")}
-          </p>
-        </div>
-        <p className="text-xs leading-relaxed text-slate-500">
-          {rule === "grid"
-            ? "An empty cell means the class is not offered on that route."
-            : "An empty cell is metered at the class's rates."}{" "}
+          </span>
+        </p>
+        <p className="leading-relaxed">
           A route costs the same both ways
           {routesOut > 0 || offered.length > 0
             ? "; one out to another location's zone (→) prices trips from here only."
-            : "."}
+            : "."}{" "}
+          Click a heading to sort by it, a cut-short name to read it whole.
           {readOnly
             ? null
             : " Paste a block of prices copied from a spreadsheet into any cell; Enter moves down a row, Escape undoes the cell."}
@@ -813,43 +1133,6 @@ export function RateGrid({
             rule={rule}
             onAdd={addRoute}
           />
-
-          <div className="sticky bottom-0 z-2 flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
-            <p
-              aria-live="polite"
-              className={cx(
-                "flex min-w-0 items-center gap-2 text-sm",
-                status.tone === "error"
-                  ? "text-red-700"
-                  : status.tone === "done"
-                    ? "text-emerald-700"
-                    : status.tone === "idle"
-                      ? "text-slate-500"
-                      : "text-slate-800",
-              )}
-            >
-              {status.tone === "dirty" ? (
-                <span
-                  aria-hidden="true"
-                  className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
-                />
-              ) : null}
-              {status.text}
-            </p>
-            <div className="flex items-center gap-2">
-              {dirty ? (
-                <Button variant="ghost" disabled={pending} onClick={discard}>
-                  Discard
-                </Button>
-              ) : null}
-              <Button
-                disabled={pending || !dirty || invalid.size > 0}
-                onClick={save}
-              >
-                {pending ? "Saving…" : "Save rates"}
-              </Button>
-            </div>
-          </div>
         </>
       )}
     </>

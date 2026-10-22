@@ -17,7 +17,12 @@ import {
   STALE,
   stateOf,
 } from "../../../../_lib/action-state";
-import { LOCATIONS_PATH, locationTabHref } from "../../../../_lib/routes";
+import {
+  LOCATIONS_PATH,
+  OFFERING_FROM_PARAM,
+  offeringBackHref,
+  offeringFromOf,
+} from "../../../../_lib/routes";
 import {
   refreshLocationAfter,
   refreshVehicleClassesAfter,
@@ -32,10 +37,12 @@ import { SOURCE_FIELD } from "./offering-form";
  * customer site, which list the classes with their starting prices.
  */
 
-/** Where a saved offering goes back to: the tab, at the location's slug, which the form does not carry. */
-async function tabHref(locationId: string) {
+/** Where a saved offering goes back to: the tab the form came from, at the location's slug, which the form does not carry. */
+async function tabHref(locationId: string, formData: FormData) {
   const slug = await getLocationSlug(locationId);
-  return slug ? locationTabHref(slug, "vehicle-classes") : LOCATIONS_PATH;
+  return slug
+    ? offeringBackHref(slug, offeringFromOf(formData.get(OFFERING_FROM_PARAM)))
+    : LOCATIONS_PATH;
 }
 
 /**
@@ -82,7 +89,7 @@ export async function createOfferingAction(
   revalidateLocation();
   refreshLocationAfter(locationId);
   if ("newClass" in choice) refreshVehicleClassesAfter();
-  return { href: await tabHref(locationId) };
+  return { href: await tabHref(locationId, formData) };
 }
 
 /** The rates and the switch of one offering, saved together. */
@@ -102,7 +109,7 @@ export async function updateOfferingAction(
   if (!result.ok) return refusalOf(result);
   revalidateLocation();
   refreshLocationAfter(locationId);
-  return { href: await tabHref(locationId) };
+  return { href: await tabHref(locationId, formData) };
 }
 
 export async function setOfferingActiveAction(

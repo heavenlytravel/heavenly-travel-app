@@ -12,9 +12,11 @@ import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
 import { VehiclesTable } from "../../../../../_components/VehiclesTable";
 import { getPermissions, requireAdmin } from "../../../../../_lib/access";
 import {
-  locationTabHref,
   newLocationVehicleHref,
+  offeringBackHref,
+  offeringFromOf,
   vehicleClassHref,
+  type OfferingFrom,
 } from "../../../../../_lib/routes";
 import { OfferingForm } from "../OfferingForm";
 import { locationKey } from "../../../_lib/location-data";
@@ -24,30 +26,33 @@ import { locationKey } from "../../../_lib/location-data";
  * /locations/[slug]/vehicle-classes/new for a class the location does not
  * offer yet. The form for one offering: the class, the rates and the rules;
  * under it, for an admin who manages the fleet, our vehicles of the class
- * based here.
+ * based here. Opened from the Rates tab (`?from=rates`), it goes back
+ * there.
  */
 export default async function LocationOfferingPage({
   params,
+  searchParams,
 }: PageProps<"/locations/[slug]/vehicle-classes/[offeringId]">) {
   await requireAdmin("coverage.manage");
   const { slug, offeringId } = await params;
+  const from = offeringFromOf((await searchParams).from);
   const { id } = await locationKey(slug);
 
   return (
     <>
       <p className="mb-4 text-sm">
         <Link
-          href={locationTabHref(slug, "vehicle-classes")}
+          href={offeringBackHref(slug, from)}
           className="text-slate-600 underline-offset-4 hover:underline"
         >
-          All classes here
+          {from === "rates" ? "All rates here" : "All classes here"}
         </Link>
       </p>
       <Streamed fallback={<FormSkeleton sections={2} fields={4} />}>
         {() =>
           offeringId === "new"
-            ? newOffering({ id, slug })
-            : existingOffering({ id, slug, offeringId })
+            ? newOffering({ id, slug, from })
+            : existingOffering({ id, slug, offeringId, from })
         }
       </Streamed>
     </>
@@ -55,7 +60,15 @@ export default async function LocationOfferingPage({
 }
 
 /** The form for a class the location does not offer yet, with the catalogue to pick from. */
-async function newOffering({ id, slug }: { id: string; slug: string }) {
+async function newOffering({
+  id,
+  slug,
+  from,
+}: {
+  id: string;
+  slug: string;
+  from: OfferingFrom;
+}) {
   const candidates = await listClassesNotOffered(id);
   return (
     <>
@@ -68,6 +81,7 @@ async function newOffering({ id, slug }: { id: string; slug: string }) {
           locationId={id}
           locationSlug={slug}
           candidates={candidates}
+          from={from}
         />
       </div>
     </>
@@ -79,10 +93,12 @@ async function existingOffering({
   id,
   slug,
   offeringId,
+  from,
 }: {
   id: string;
   slug: string;
   offeringId: string;
+  from: OfferingFrom;
 }) {
   const [offering, permissions] = await Promise.all([
     getOffering(offeringId),
@@ -115,6 +131,7 @@ async function existingOffering({
           locationId={id}
           locationSlug={slug}
           offering={offering}
+          from={from}
         />
       </div>
       {vehicles ? (

@@ -341,19 +341,36 @@ export function isSlugLocked(location: { wentLiveAt: Date | null }) {
 }
 
 /**
- * Whether a location can be deleted. One that has never been live goes on a
- * plain yes: nothing of it was public. One that has been live has a public
- * address, which the delete turns into a 404 that links break on and search
- * engines drop, so the admin types its slug to say they mean it. `typed`
- * is what they typed; null when nothing was asked.
+ * Whether deleting a location reaches past its own drafts, so the admin
+ * types its slug to say they mean it: it has been live, and has a public
+ * address the delete turns into a 404 that links break on and search
+ * engines drop; or other locations price routes to its zones, which go
+ * with it.
+ */
+export function deleteAsksSlug(beenLive: boolean, routesIn: number) {
+  return beenLive || routesIn > 0;
+}
+
+/**
+ * Whether a location can be deleted. One that has never been live, and
+ * that no other location prices routes to, goes on a plain yes; any other
+ * once its slug is typed (`deleteAsksSlug`). `typed` is what the admin
+ * typed; null when nothing was asked. `routesIn` counts the other
+ * locations' routes to its zones.
  */
 export function checkLocationDelete(
   location: { slug: string; wentLiveAt: Date | null },
   typed: string | null,
+  routesIn = 0,
 ): Change {
-  if (!hasBeenLive(location) || typed === location.slug) return { ok: true };
+  const beenLive = hasBeenLive(location);
+  if (!deleteAsksSlug(beenLive, routesIn) || typed === location.slug) {
+    return { ok: true };
+  }
   return refuse(
-    `Type the slug, ${location.slug}, to delete a location that has been live.`,
+    beenLive
+      ? `Type the slug, ${location.slug}, to delete a location that has been live.`
+      : `Type the slug, ${location.slug}, to delete a location other locations price routes to.`,
   );
 }
 

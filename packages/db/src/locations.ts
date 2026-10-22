@@ -60,6 +60,7 @@ import {
 } from "./location-view";
 import { andList, plural } from "./names";
 import { isPlace, type Place } from "./place";
+import { routesIntoLocation } from "./zones";
 
 export type { Location, LocationAddress };
 
@@ -902,23 +903,34 @@ export async function unpublishLocationPage(
   });
 }
 
-/** A delete's answer: the slug the location had, for the customer site's refresh, or why not. */
-export type LocationDeleted = { ok: true; slug: string } | Refusal;
+/**
+ * A delete's answer: the slug the location had, for the customer site's
+ * refresh, and the other locations whose routes to its zones went with
+ * it, by id, whose pages change too; or why not.
+ */
+export type LocationDeleted =
+  { ok: true; slug: string; alsoChanged: string[] } | Refusal;
 
 /**
  * Deletes a location, with its pages, its saved addresses, its offerings,
- * its zones and their rates. One that has been live is deleted only when `typedSlug` is its
- * slug: its address is public and becomes a 404. A top choice leaves the
- * home page first, so the places after it close up. What the location was
- * is logged, and its earlier entries stay in the log under the name it had.
- * The images its pages uploaded stay in storage; its bookings keep their
- * receipts and lose the pointer. One with vehicles or drivers based at it
- * is refused until they move.
+ * its zones and their rates, and other locations' routes to its zones
+ * (`routesIntoLocation`), such as Kuala Lumpur's to Selangor's KLIA. One
+ * that has been live, or that other locations price routes to, is deleted
+ * only when `typedSlug` is its slug (`checkLocationDelete`). `warnedOf`
+ * names the other locations the admin was told lose routes, by id: one
+ * that priced a route to it since is refused, to be read first. A top
+ * choice leaves the home page first, so the places after it close up.
+ * What the location was is logged, in the other locations' history too,
+ * and its earlier entries stay in the log under the name it had. The
+ * images its pages uploaded stay in storage until the Media screen
+ * deletes them; its bookings keep their receipts and lose the pointer.
+ * One with vehicles or drivers based at it is refused until they move.
  */
 export async function deleteLocation(
   actor: Actor,
   id: string,
   typedSlug: string | null,
+  warnedOf: readonly string[],
 ): Promise<LocationDeleted> {
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
@@ -929,7 +941,24 @@ export async function deleteLocation(
       },
     });
     if (!location) return NOT_FOUND;
-    const check = checkLocationDelete(location, typedSlug);
+    // Its zones held until the delete ends: a route priced to one meanwhile
+    // waits, then finds it gone, rather than going unwarned.
+    await tx.$executeRaw`SELECT id FROM "Zone" WHERE "locationId" = ${id} FOR UPDATE`;
+    const routesIn = await routesIntoLocation(id, tx);
+    const unwarned = routesIn.filter(
+      (entry) => !warnedOf.includes(entry.locationId),
+    );
+    if (unwarned.length > 0) {
+      const names = unwarned.map((entry) => entry.name);
+      return refuse(
+        `${andList(names)} ${names.length === 1 ? "has" : "have"} priced routes to its zones since this page opened. Read what the delete takes, then delete again.`,
+      );
+    }
+    const check = checkLocationDelete(
+      location,
+      typedSlug,
+      routesIn.reduce((sum, entry) => sum + entry.routes, 0),
+    );
     if (!check.ok) return check;
     // Our vehicles and drivers are not the location's to take with it.
     const based = [
@@ -951,7 +980,8 @@ export async function deleteLocation(
     const left = await changeTopChoiceIn(tx, actor, id, "remove");
     if (!left.ok) return left;
     // Its pages, saved addresses, offerings, zones and rates go with it, by
-    // the schema's cascade; the states stay, with the link rows gone.
+    // the schema's cascade, other locations' routes to its zones too; the
+    // states stay, with the link rows gone.
     await tx.location.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "location.deleted",
@@ -961,9 +991,18 @@ export async function deleteLocation(
         slug: location.slug,
         stateCodes: codesOf(location.states),
         state: locationStateOf(location.state),
+        ...(routesIn.length > 0
+          ? { routesFrom: routesIn.map((entry) => entry.name) }
+          : {}),
       },
+      // Their routes to its zones went too: the entry is in their history.
+      locationIds: routesIn.map((entry) => entry.locationId),
     });
-    return { ok: true, slug: location.slug };
+    return {
+      ok: true,
+      slug: location.slug,
+      alsoChanged: routesIn.map((entry) => entry.locationId),
+    };
   });
 }
 

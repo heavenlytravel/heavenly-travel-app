@@ -6,6 +6,7 @@ import {
   stateMoveBlockers,
   type LocationState,
 } from "@repo/db";
+import { routesIntoLocation } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { SectionHeader } from "../../../../_components/SectionHeader";
@@ -60,10 +61,13 @@ export default async function LocationStatusPage({
 }
 
 async function status({ id }: { id: string }) {
-  const [location, overview, permissions] = await Promise.all([
+  const permissions = await getPermissions();
+  const moves = permissions.includes("locations.activate");
+  const [location, overview, routesIn] = await Promise.all([
     locationDetails(id),
     locationOverview(id),
-    getPermissions(),
+    // What a delete takes from other locations, read for SUPER alone.
+    moves ? routesIntoLocation(id) : [],
   ]);
   if (!location || !overview) notFound();
   const state = locationStateOf(location.state);
@@ -73,7 +77,6 @@ async function status({ id }: { id: string }) {
     location.pages,
     overview,
   );
-  const moves = permissions.includes("locations.activate");
 
   return (
     <>
@@ -106,7 +109,7 @@ async function status({ id }: { id: string }) {
       </Card>
       {moves ? (
         <Card>
-          <CardTitle description="For good: its pages and saved addresses go with it.">
+          <CardTitle description="For good: its pages, saved addresses, zones and rates go with it.">
             Delete location
           </CardTitle>
           <DeleteLocation
@@ -114,6 +117,7 @@ async function status({ id }: { id: string }) {
             name={location.name}
             slug={location.slug}
             hasBeenLive={hasBeenLive(location)}
+            routesIn={routesIn}
           />
         </Card>
       ) : null}

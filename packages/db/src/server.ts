@@ -103,10 +103,12 @@ export {
   setZoneRates,
   setOddHours,
   setDropoffRule,
+  routesIntoLocation,
 } from "./zones";
 export type {
   Zone,
   ZoneRate,
+  RoutesIn,
   LocationPriceList,
   ZoneRefusal,
   ZoneInTheWay,

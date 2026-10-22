@@ -10,6 +10,7 @@ import {
   checkAddressNames,
   checkLocationDelete,
   checkLocationSlug,
+  deleteAsksSlug,
   checkPageUnpublish,
   hasBeenLive,
   stateCodesOf,
@@ -289,6 +290,18 @@ describe("checkLocationDelete", () => {
       assert.equal(checkLocationDelete(live, typed).ok, false, typed);
     }
     assert.equal(checkLocationDelete(live, "penang").ok, true);
+  });
+
+  it("asks for the slug of a draft that other locations price routes to", () => {
+    const draft = { slug: "selangor", wentLiveAt: null };
+    assert.equal(deleteAsksSlug(false, 0), false);
+    assert.equal(deleteAsksSlug(false, 2), true);
+    assert.equal(deleteAsksSlug(true, 0), true);
+    assert.match(
+      errorOf(checkLocationDelete(draft, null, 2)),
+      /Type the slug, selangor, to delete a location other locations price routes to/,
+    );
+    assert.equal(checkLocationDelete(draft, "selangor", 2).ok, true);
   });
 });
 

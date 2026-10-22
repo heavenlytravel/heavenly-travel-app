@@ -196,6 +196,24 @@ stronger gate once the location has been live.
 - The images its pages uploaded stay in UploadThing, as replaced images do.
 - Until the site is opened to search engines at cutover, a delete costs links only.
 
+Revised on 2026-10-22, once locations price routes to each other's zones
+(`261015-locations-as-operation-areas.md`):
+
+- Its zones go with it, and with them other locations' routes to them, such as Kuala
+  Lumpur's to Selangor's KLIA. The card names those locations in red, with the routes
+  they lose, and the delete asks for the slug, as a live location's does. Every delete
+  then asks again in the alert dialog, which names what goes.
+- The server refuses a delete that would take routes from a location the card did not
+  name, one that priced a route to it since the page opened. The card reads again and
+  keeps the slug typed. The location's zones are held for the delete's transaction, so
+  a route priced to one meanwhile waits and then finds it gone.
+- The `location.deleted` entry names those locations (`routesFrom`) and is in their
+  history too (`locationIds`); removing one zone does the same. Their pages on the
+  customer site are refreshed.
+- Weighed and set aside: a deleted flag on every table that SUPER could undo, since
+  Pause already keeps a location whole for its return; and leaving the routes behind
+  with no zone at their end, which every grid and quote would have to allow for.
+
 ## As built
 
 Choices made while the PR was built, where the decisions above left room or where

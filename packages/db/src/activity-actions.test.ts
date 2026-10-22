@@ -218,6 +218,33 @@ describe("describeActivity", () => {
     );
   });
 
+  it("names the other locations whose routes a removal took", () => {
+    assert.equal(
+      describeActivity({
+        action: "location.deleted",
+        before: { name: "Selangor", routesFrom: ["Kuala Lumpur"] },
+        after: null,
+      }),
+      "Deleted the location, and Kuala Lumpur's routes to its zones",
+    );
+    assert.equal(
+      describeActivity({
+        action: "location.zone.deleted",
+        before: { name: "KLIA", routesFrom: ["Kuala Lumpur", "Penang"] },
+        after: null,
+      }),
+      "Removed the zone KLIA, and Kuala Lumpur's and Penang's routes to it",
+    );
+    assert.equal(
+      describeActivity({
+        action: "location.zone.deleted",
+        before: { name: "KLIA" },
+        after: null,
+      }),
+      "Removed the zone KLIA",
+    );
+  });
+
   it("names a state move by the state it reached", () => {
     const move = (from: string, to: string) =>
       describeActivity({

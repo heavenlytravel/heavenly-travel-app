@@ -76,23 +76,36 @@ export function refreshLocationAfter(
   locationId: string,
   ...others: readonly string[]
 ) {
-  after(async () => {
-    const slugs = await Promise.all(
-      [locationId, ...others].map((id) => getLocationSlug(id)),
-    );
-    await refreshSite([
-      ...slugs.flatMap((slug) => (slug ? [locationTag(slug)] : [])),
+  after(async () =>
+    refreshSite([
+      ...(await locationTagsOf([locationId, ...others])),
       TOP_CHOICES_TAG,
-    ]);
-  });
+    ]),
+  );
 }
 
 /**
  * The same refresh for a location that was just deleted, by the slug it
- * had: its pages become a 404 and its card leaves the home page.
+ * had: its pages become a 404 and its card leaves the home page. `others`
+ * are the locations whose routes to its zones went with it.
  */
-export function refreshDeletedLocationAfter(slug: string) {
-  after(() => refreshSite([locationTag(slug), TOP_CHOICES_TAG]));
+export function refreshDeletedLocationAfter(
+  slug: string,
+  ...others: readonly string[]
+) {
+  after(async () =>
+    refreshSite([
+      locationTag(slug),
+      ...(await locationTagsOf(others)),
+      TOP_CHOICES_TAG,
+    ]),
+  );
+}
+
+/** The cache tags of the locations by id; one deleted meanwhile has none. */
+async function locationTagsOf(ids: readonly string[]) {
+  const slugs = await Promise.all(ids.map((id) => getLocationSlug(id)));
+  return slugs.flatMap((slug) => (slug ? [locationTag(slug)] : []));
 }
 
 /** Refreshes the home page's cards alone: their order changed. */

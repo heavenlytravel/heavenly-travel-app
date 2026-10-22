@@ -164,6 +164,46 @@ function gridsEndingAt(
   });
 }
 
+/** Other locations that price routes to a location's zones, each with how many. */
+export type RoutesIn = { locationId: string; name: string; routes: number }[];
+
+/**
+ * The other locations whose grids end at the location's zones, by name,
+ * each with how many routes, a route priced for several classes once:
+ * what deleting the location takes from them. `client` is the delete's
+ * transaction when it reads them.
+ */
+export async function routesIntoLocation(
+  locationId: string,
+  client: Prisma.TransactionClient = db,
+): Promise<RoutesIn> {
+  const cells = await client.zoneRate.findMany({
+    where: { locationId: { not: locationId }, toZone: { locationId } },
+    select: {
+      locationId: true,
+      fromZoneId: true,
+      toZoneId: true,
+      location: { select: { name: true } },
+    },
+  });
+  const byLocation = new Map<string, { name: string; routes: Set<string> }>();
+  for (const cell of cells) {
+    const entry = byLocation.get(cell.locationId) ?? {
+      name: cell.location.name,
+      routes: new Set<string>(),
+    };
+    entry.routes.add(`${cell.fromZoneId}|${cell.toZoneId}`);
+    byLocation.set(cell.locationId, entry);
+  }
+  return [...byLocation]
+    .map(([id, entry]) => ({
+      locationId: id,
+      name: entry.name,
+      routes: entry.routes.size,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function getZone(id: string): Promise<Zone | null> {
   return db.zone.findUnique({ where: { id } });
 }
@@ -665,6 +705,8 @@ export async function deleteZone(
           ? { routesFrom: grids.map((grid) => grid.location.name) }
           : {}),
       },
+      // Their routes to it went too: the entry is in their history.
+      locationIds: grids.map((grid) => grid.locationId),
     });
     return {
       ok: true,

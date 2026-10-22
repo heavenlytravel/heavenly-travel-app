@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TripCategory } from "@repo/db";
 import {
   tripBookingHref,
@@ -69,6 +69,15 @@ export function useTripSubmit() {
   // Pending while the places are checked, then until the options page has
   // priced the trip and is on screen.
   const { pending, go } = useNavigate();
+  // A check that answers once the customer has left the page, by a link or
+  // Back, sends nothing: the card that asked is gone.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   /**
    * True when the trip was sent. `passengers` is carried over, if given.
    * With `check`, a trip the card can send is checked first, and sent
@@ -94,6 +103,7 @@ export function useTripSubmit() {
     check(values)
       .catch((): TripSearchIssue[] => [])
       .then((found) => {
+        if (!mounted.current) return;
         setChecking(false);
         if (found.length > 0) setIssues(found);
         else go(href);

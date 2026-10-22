@@ -57,17 +57,15 @@ export function ZoneMapHelp({
     <div
       role="dialog"
       aria-label="How the map works"
-      className="absolute top-2.5 left-2.5 z-10 max-h-[calc(100%-6rem)] w-[25rem] max-w-[calc(100%-1.25rem)] overflow-y-auto rounded-lg border border-neutral-200 bg-white p-4 text-[13px] leading-snug text-neutral-700 shadow-lg"
+      className="absolute top-2.5 left-2.5 z-10 max-h-[calc(100%-6rem)] w-[25rem] max-w-[calc(100%-1.25rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 text-[13px] leading-snug text-slate-700 shadow-lg"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-neutral-900">
-          How the map works
-        </p>
+        <p className="text-sm font-medium text-slate-900">How the map works</p>
         <button
           type="button"
           aria-label="Close"
           onClick={onClose}
-          className="grid size-7 place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900"
+          className="grid size-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
         >
           <XIcon />
         </button>
@@ -128,7 +126,7 @@ export function ZoneMapHelp({
           the other one. The map shows the result before you save.
         </Step>
       </ul>
-      <p className="mt-3 border-t border-neutral-100 pt-3 text-xs text-neutral-500">
+      <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
         Esc lets go of a cut, then the corner, then the pieces. A right-click
         opens a menu of the same choices. Full screen, top right, keeps the
         hints under the map in view.
@@ -142,7 +140,7 @@ function Step({ icon, children }: { icon: ReactNode; children: ReactNode }) {
     <li className="grid grid-cols-[2.5rem_1fr] items-start gap-2">
       <span
         aria-hidden
-        className="flex h-[18px] items-center gap-0.5 text-neutral-800 [&_svg]:size-4"
+        className="flex h-[18px] items-center gap-0.5 text-slate-800 [&_svg]:size-4"
       >
         {icon}
       </span>

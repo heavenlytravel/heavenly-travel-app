@@ -84,8 +84,8 @@ export function PhotoList({
   return (
     <div className="grid gap-4">
       {photos.length === 0 && pending.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-lg border border-dashed border-neutral-300 px-4 py-6 text-sm text-neutral-500">
-          <ImageIcon className="size-5 text-neutral-400" />
+        <p className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+          <ImageIcon className="size-5 text-slate-400" />
           No photos yet. The outside first: it is the vehicle&apos;s cover.
         </p>
       ) : (
@@ -93,9 +93,9 @@ export function PhotoList({
           {photos.map((photo, i) => (
             <li
               key={photo.url}
-              className="grid gap-2 rounded-lg border border-neutral-200 p-2"
+              className="grid gap-2 rounded-lg border border-slate-200 p-2"
             >
-              <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-neutral-100">
+              <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-slate-100">
                 <Image
                   src={photo.url}
                   alt={photoAlt(shown, photo)}
@@ -152,12 +152,12 @@ export function PhotoList({
           {pending.map((file, i) => (
             <li
               key={`${file}-${i}`}
-              className="grid content-start gap-2 rounded-lg border border-dashed border-neutral-300 p-2"
+              className="grid content-start gap-2 rounded-lg border border-dashed border-slate-300 p-2"
             >
-              <div className="grid aspect-[3/2] animate-pulse place-items-center rounded-md bg-neutral-100 text-xs text-neutral-500">
+              <div className="grid aspect-[3/2] animate-pulse place-items-center rounded-md bg-slate-100 text-xs text-slate-500">
                 {i === 0 ? "Uploading…" : "Waiting…"}
               </div>
-              <p className="truncate px-1 text-xs text-neutral-600">{file}</p>
+              <p className="truncate px-1 text-xs text-slate-600">{file}</p>
             </li>
           ))}
         </ol>
@@ -187,7 +187,7 @@ export function PhotoList({
         >
           {uploading ? "Uploading…" : "Add photos"}
         </Button>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-slate-500">
           {room > 0
             ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
             : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}

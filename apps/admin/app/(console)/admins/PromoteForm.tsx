@@ -18,7 +18,7 @@ export function PromoteForm() {
     <Card className="mt-6">
       <form {...formProps}>
         <h2 className="text-xl font-semibold tracking-tight">Promote a user</h2>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-slate-600">
           They must have signed in on the customer site at least once. A REGULAR
           admin needs at least one team.
         </p>

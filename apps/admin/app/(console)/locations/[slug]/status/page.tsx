@@ -106,7 +106,7 @@ async function status({ id }: { id: string }) {
             blocked={blockers.length > 0}
           />
         ) : (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-slate-500">
             Only a SUPER admin takes a location live, pauses it or resumes it.
           </p>
         )}

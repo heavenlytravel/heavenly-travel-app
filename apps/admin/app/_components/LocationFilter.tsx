@@ -29,7 +29,7 @@ export function LocationFilter({
   const router = useRouter();
   return (
     <label htmlFor={id} className="flex items-center gap-2 text-sm">
-      <span className="text-neutral-600">Location</span>
+      <span className="text-slate-600">Location</span>
       <Select
         id={id}
         value={value}

@@ -172,7 +172,7 @@ function RouteForm({
             }))}
           />
         </Field>
-        <span aria-hidden="true" className="pb-2.5 text-neutral-400">
+        <span aria-hidden="true" className="pb-2.5 text-slate-400">
           {out ? "→" : "↔"}
         </span>
         <Field label="To">
@@ -190,20 +190,20 @@ function RouteForm({
         </Field>
       </div>
       {out ? (
-        <p className="-mt-2 text-xs text-neutral-500">
+        <p className="-mt-2 text-xs text-slate-500">
           {out.name} stays {out.location}'s zone: this prices trips from here to
           it. A trip from it is priced on {out.location}'s own grid.
         </p>
       ) : null}
 
       <fieldset className="grid gap-4">
-        <legend className="mb-1 text-sm font-medium text-neutral-800">
+        <legend className="mb-1 text-sm font-medium text-slate-800">
           Prices, RM
         </legend>
         {groups.map((category) => (
           <div key={category} className="grid gap-2">
             {groups.length > 1 ? (
-              <p className="text-xs font-medium text-neutral-500">{category}</p>
+              <p className="text-xs font-medium text-slate-500">{category}</p>
             ) : null}
             {classes
               .filter((column) => column.category === category)
@@ -214,7 +214,7 @@ function RouteForm({
                     key={column.id}
                     className="grid grid-cols-[1fr_8rem] items-center gap-3 text-sm"
                   >
-                    <span className="truncate text-neutral-800">
+                    <span className="truncate text-slate-800">
                       {column.name}
                     </span>
                     <input
@@ -229,14 +229,14 @@ function RouteForm({
                           [column.id]: event.target.value,
                         }))
                       }
-                      className={`h-9 w-full rounded-md border px-3 text-right tabular-nums outline-hidden placeholder:text-xs placeholder:text-neutral-400 focus-visible:border-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-900 ${bad ? "border-red-300 bg-red-50 text-red-700" : "border-neutral-300 bg-white"}`}
+                      className={`h-9 w-full rounded-md border px-3 text-right tabular-nums outline-hidden placeholder:text-xs placeholder:text-slate-400 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand ${bad ? "border-red-300 bg-red-50 text-red-700" : "border-slate-300 bg-white"}`}
                     />
                   </label>
                 );
               })}
           </div>
         ))}
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-slate-500">
           {rule === "grid"
             ? "A class left empty is not offered on this route."
             : "A class left empty is metered at its rates on this route."}

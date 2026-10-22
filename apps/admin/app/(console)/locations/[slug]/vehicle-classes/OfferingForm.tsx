@@ -116,11 +116,11 @@ function ModelChoiceField({ offering }: { offering?: Offering }) {
   );
   return (
     <div className="grid gap-2">
-      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-800">
+      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
         {OFFERING_FIELD_LABELS.modelChoicePercent}
         <InfoTip text="Customers choose among the models of this location's vehicles in service, once there are two or more. A booking keeps the charge it was made with." />
       </span>
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-neutral-700">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-slate-700">
         <span>Choosing a model costs</span>
         <ChargeInput
           name={MODEL_CHOICE_FIELDS.amount}
@@ -133,7 +133,7 @@ function ModelChoiceField({ offering }: { offering?: Offering }) {
         />
         <span>more.</span>
       </div>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-slate-500">
         {kind === "percent"
           ? "A whole percentage of the trip's price before any odd-hours surcharge."
           : "One amount added to the trip, whatever its price."}{" "}
@@ -220,7 +220,7 @@ export function OfferingForm({
           <>
             <Card className="grid gap-4">
               <fieldset className="grid gap-2">
-                <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+                <legend className="mb-1.5 text-sm font-medium text-slate-800">
                   Which class
                 </legend>
                 <label className="flex items-center gap-2 text-sm">
@@ -236,7 +236,7 @@ export function OfferingForm({
                   />
                   One from the catalogue
                   {candidates.length === 0 ? (
-                    <span className="text-neutral-500">
+                    <span className="text-slate-500">
                       (every class is offered here already)
                     </span>
                   ) : null}
@@ -289,7 +289,7 @@ export function OfferingForm({
             <h2 className="text-xl font-semibold tracking-tight">
               {offering.vehicleClass.name}
             </h2>
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-slate-600">
               {offering.vehicleClass.description} Its seats, luggage and picture
               are the catalogue&apos;s, the same at every location.
             </p>
@@ -385,7 +385,7 @@ export function OfferingForm({
           </Button>
           <Link
             href={locationTabHref(locationSlug, "vehicle-classes")}
-            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+            className="text-sm text-slate-600 underline-offset-4 hover:underline"
           >
             Cancel
           </Link>

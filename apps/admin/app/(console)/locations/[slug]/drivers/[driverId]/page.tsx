@@ -37,7 +37,7 @@ export default async function LocationDriverPage({
       <p className="mb-4 text-sm">
         <Link
           href={locationTabHref(slug, "drivers")}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           All drivers here
         </Link>

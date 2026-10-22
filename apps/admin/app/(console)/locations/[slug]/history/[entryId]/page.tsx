@@ -71,7 +71,7 @@ async function publishDetails({
       <p className="mb-4 text-sm">
         <Link
           href={locationTabHref(location.slug, "history")}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           History
         </Link>
@@ -99,7 +99,7 @@ async function publishDetails({
               addressNames={addressNames}
             />
           ) : (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-slate-500">
               Nothing: this was the page&apos;s first publish.
             </p>
           )}

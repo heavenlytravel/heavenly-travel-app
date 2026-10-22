@@ -40,7 +40,7 @@ export function ImageField({
         <div>
           <label
             htmlFor={altId}
-            className="mb-1.5 flex items-baseline justify-between gap-3 text-sm font-medium text-neutral-800"
+            className="mb-1.5 flex items-baseline justify-between gap-3 text-sm font-medium text-slate-800"
           >
             Alt text
             <Count

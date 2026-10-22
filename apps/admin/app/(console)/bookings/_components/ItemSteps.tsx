@@ -170,9 +170,9 @@ function TripFields({
     <div className="grid gap-5">
       <div className="flex flex-wrap gap-x-8 gap-y-4">
         <div className="grid gap-1.5">
-          <span className="text-sm font-medium text-neutral-800">Category</span>
+          <span className="text-sm font-medium text-slate-800">Category</span>
           {categoryLocked ? (
-            <span className="flex h-9 items-center text-sm text-neutral-700">
+            <span className="flex h-9 items-center text-sm text-slate-700">
               {TRIP_CATEGORY_LABELS[trip.category]}
             </span>
           ) : (
@@ -188,7 +188,7 @@ function TripFields({
           )}
         </div>
         <div className="grid gap-1.5">
-          <span className="text-sm font-medium text-neutral-800">Trip</span>
+          <span className="text-sm font-medium text-slate-800">Trip</span>
           <Choices
             label="Trip"
             value={trip.mode}
@@ -205,7 +205,7 @@ function TripFields({
         <div className="grid gap-1.5">
           <label
             htmlFor={`${ids}-pickup`}
-            className="text-sm font-medium text-neutral-800"
+            className="text-sm font-medium text-slate-800"
           >
             Pick-up
           </label>
@@ -222,7 +222,7 @@ function TripFields({
           <div className="grid gap-1.5">
             <label
               htmlFor={`${ids}-dropoff`}
-              className="text-sm font-medium text-neutral-800"
+              className="text-sm font-medium text-slate-800"
             >
               Drop-off
             </label>
@@ -266,7 +266,7 @@ function TripFields({
 
       <div aria-live="polite" className="min-h-5 text-sm">
         {quoting ? (
-          <p className="text-neutral-500">Pricing the trip…</p>
+          <p className="text-slate-500">Pricing the trip…</p>
         ) : draft.quoteError ? (
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-red-700">
             {draft.quoteError}
@@ -275,7 +275,7 @@ function TripFields({
             </Button>
           </p>
         ) : quote ? (
-          <p className="text-neutral-600">
+          <p className="text-slate-600">
             <span className="font-medium text-emerald-700">Priced.</span>{" "}
             {quoteSummary(quote)}
           </p>
@@ -295,7 +295,7 @@ function VehicleFields({
   const { quote } = draft;
   if (!quote) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-slate-500">
         Fill in the trip: the vehicles show here with their prices.
       </p>
     );
@@ -340,7 +340,7 @@ function VehicleFields({
       </Field>
 
       {quote.classes.length === 0 ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-slate-500">
           This location sells no class of this category. Put one on sale on its
           Vehicle classes tab first.
         </p>
@@ -364,13 +364,13 @@ function VehicleFields({
                 disabled={!ok}
                 onClick={() => chooseClass(c.id)}
                 className={cx(
-                  "grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 rounded-lg border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-50",
+                  "grid grid-cols-[4.5rem_1fr_auto] items-center gap-4 rounded-lg border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50",
                   on
-                    ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900"
-                    : "border-neutral-200 hover:border-neutral-400",
+                    ? "border-brand bg-brand-tint ring-1 ring-brand"
+                    : "border-slate-200 hover:border-slate-400",
                 )}
               >
-                <span className="relative aspect-[3/2] overflow-hidden rounded-md bg-neutral-100">
+                <span className="relative aspect-[3/2] overflow-hidden rounded-md bg-slate-100">
                   {c.imageUrl ? (
                     <Image
                       src={c.imageUrl}
@@ -382,8 +382,8 @@ function VehicleFields({
                   ) : null}
                 </span>
                 <span className="grid min-w-0 gap-0.5">
-                  <span className="font-medium text-neutral-900">{c.name}</span>
-                  <span className="text-xs text-neutral-500">
+                  <span className="font-medium text-slate-900">{c.name}</span>
+                  <span className="text-xs text-slate-500">
                     {seatsLabel(c)} · {c.luggage}
                     {c.unavailable
                       ? ` · ${c.unavailable}`
@@ -392,7 +392,7 @@ function VehicleFields({
                         : ""}
                   </span>
                 </span>
-                <span className="font-semibold text-neutral-900 tabular-nums">
+                <span className="font-semibold text-slate-900 tabular-nums">
                   {formatMyr(c.totalSen)}
                 </span>
               </button>
@@ -424,8 +424,8 @@ function ModelFields({
   if (chosen?.modelChoiceSen == null) return null;
   const charge = `+${formatMyr(chosen.modelChoiceSen)}`;
   return (
-    <div className="grid gap-1.5 border-t border-neutral-100 pt-4">
-      <p className="text-sm font-medium text-neutral-800">Model</p>
+    <div className="grid gap-1.5 border-t border-slate-100 pt-4">
+      <p className="text-sm font-medium text-slate-800">Model</p>
       <Choices
         label="Model"
         size="sm"
@@ -441,7 +441,7 @@ function ModelFields({
           onChange({ vehicleModelId: value === ANY_MODEL ? null : value })
         }
       />
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-slate-500">
         Any model is in the price. A model chosen costs {charge} more, and
         Operation sends that one.
       </p>

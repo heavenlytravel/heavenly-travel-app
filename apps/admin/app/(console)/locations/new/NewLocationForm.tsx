@@ -72,14 +72,14 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
         </Button>
         <Link
           href={LOCATIONS_PATH}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          className="text-sm text-slate-600 underline-offset-4 hover:underline"
         >
           Cancel
         </Link>
         {error ? (
           <FormError error={error} />
         ) : stateCodes.length === 0 ? (
-          <p className="text-sm text-neutral-500">Tick at least one state.</p>
+          <p className="text-sm text-slate-500">Tick at least one state.</p>
         ) : null}
       </div>
     </form>

@@ -81,7 +81,7 @@ async function mediaList({
   if (!stored.ok) {
     return (
       <Frame>
-        <p className="px-6 py-8 text-center text-sm text-neutral-500">
+        <p className="px-6 py-8 text-center text-sm text-slate-500">
           {stored.error}
         </p>
       </Frame>
@@ -179,20 +179,20 @@ function StatTile({
       className={cx(
         "grid content-start gap-1 rounded-xl border bg-white px-4 py-3 transition-colors",
         active
-          ? "border-neutral-900 ring-1 ring-neutral-900"
-          : "border-neutral-200 hover:border-neutral-300",
+          ? "border-brand ring-1 ring-brand"
+          : "border-slate-200 hover:border-slate-300",
       )}
     >
-      <span className="text-sm font-medium text-neutral-700">{label}</span>
+      <span className="text-sm font-medium text-slate-700">{label}</span>
       <span className="flex items-baseline gap-2">
-        <span className="text-2xl font-semibold tracking-tight text-neutral-900">
+        <span className="text-2xl font-semibold tracking-tight text-slate-900">
           {files.length}
         </span>
-        <span className="text-sm text-neutral-500">
+        <span className="text-sm text-slate-500">
           {formatBytes(files.reduce((sum, file) => sum + file.size, 0))}
         </span>
       </span>
-      <span className="text-xs text-neutral-500">{hint}</span>
+      <span className="text-xs text-slate-500">{hint}</span>
     </Link>
   );
 }

@@ -66,7 +66,7 @@ export function CoverageZones({
       )}
 
       {zones.length > 0 ? (
-        <ul aria-label="Zones" className="divide-y divide-neutral-100">
+        <ul aria-label="Zones" className="divide-y divide-slate-100">
           {zones.map((zone) => {
             const lit = zone.id === highlighted;
             return (
@@ -78,7 +78,7 @@ export function CoverageZones({
                 onBlur={() => setHighlighted(null)}
                 className={cx(
                   "-mx-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg px-2 py-3 transition-colors",
-                  lit && "bg-neutral-50",
+                  lit && "bg-slate-50",
                 )}
               >
                 <span
@@ -103,16 +103,16 @@ export function CoverageZones({
                   ) : (
                     <span className="text-sm font-medium">{zone.name}</span>
                   )}
-                  <span className="block text-xs text-neutral-500">
+                  <span className="block text-xs text-slate-500">
                     {zone.drawnAs}
                   </span>
                   {zone.pricedFrom.length > 0 ? (
-                    <span className="block text-xs text-neutral-500">
+                    <span className="block text-xs text-slate-500">
                       {pricedFromSentence(zone.pricedFrom)}
                     </span>
                   ) : null}
                 </div>
-                <span className="text-xs text-neutral-500 tabular-nums">
+                <span className="text-xs text-slate-500 tabular-nums">
                   {zone.routes === 0
                     ? "No priced route"
                     : plural(zone.routes, "priced route")}

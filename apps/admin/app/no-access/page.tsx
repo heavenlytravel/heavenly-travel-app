@@ -11,11 +11,11 @@ export default async function NoAccessPage() {
 
   return (
     <AuthShell tone="dark" eyebrow="Admin portal">
-      <div className="w-full max-w-[26rem] rounded-xl bg-white p-8 text-center text-neutral-900 shadow-[0_22px_55px_rgba(9,43,39,0.14)]">
+      <div className="w-full max-w-[26rem] rounded-xl bg-white p-8 text-center text-slate-900 shadow-[0_22px_55px_rgba(0,38,75,0.14)]">
         <h1 className="text-2xl font-semibold tracking-tight">
           No admin access
         </h1>
-        <p className="mt-3 text-neutral-600">
+        <p className="mt-3 text-slate-600">
           {access.user.email} is signed in but has no admin profile. Access is
           by invitation from a SUPER admin.
         </p>

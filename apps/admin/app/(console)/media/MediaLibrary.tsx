@@ -79,7 +79,7 @@ export function MediaLibrary({
   if (rows.length === 0) {
     return (
       <Frame>
-        <p className="px-6 py-8 text-center text-sm text-neutral-500">
+        <p className="px-6 py-8 text-center text-sm text-slate-500">
           {emptyMessage}
         </p>
       </Frame>
@@ -88,11 +88,11 @@ export function MediaLibrary({
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-2.5">
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
-            className="size-4 accent-neutral-900"
+            className="size-4 accent-brand"
             checked={all}
             disabled={choosable.length === 0}
             onChange={() =>
@@ -167,12 +167,12 @@ function MediaTile({
 
   return (
     <Tile>
-      <div className={cx("relative", chosen && "ring-2 ring-neutral-900")}>
+      <div className={cx("relative", chosen && "ring-2 ring-brand")}>
         <CardImage
           src={row.url}
           fit="contain"
           sizes="(min-width: 1024px) 14rem, (min-width: 640px) 50vw, 100vw"
-          fallback={<ImageIcon className="size-7 text-neutral-300" />}
+          fallback={<ImageIcon className="size-7 text-slate-300" />}
         >
           <Badge tone={STATUS_TONES[row.status]}>
             {MEDIA_STATUS_LABELS[row.status]}
@@ -188,7 +188,7 @@ function MediaTile({
         >
           <input
             type="checkbox"
-            className="size-4 accent-neutral-900"
+            className="size-4 accent-brand"
             aria-label={`Choose ${row.name}`}
             checked={chosen}
             disabled={onPage}
@@ -201,7 +201,7 @@ function MediaTile({
           <h3 className="truncate text-sm font-semibold" title={row.name}>
             {row.name}
           </h3>
-          <p className="text-xs text-neutral-500 tabular-nums">
+          <p className="text-xs text-slate-500 tabular-nums">
             {formatBytes(row.size)} ·{" "}
             {formatLocalDate(new Date(row.uploadedAt))}
           </p>
@@ -221,7 +221,7 @@ function MediaTile({
 }
 
 const LINK =
-  "text-neutral-700 underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900";
+  "text-slate-700 underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900";
 
 /** Where a use is, as a link to it: the page in its editor, the class, the vehicle, the past version. */
 function UseLink({ use }: { use: MediaUse }) {

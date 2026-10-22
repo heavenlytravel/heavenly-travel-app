@@ -132,7 +132,7 @@ export function DriverForm({
           <h2 className="text-xl font-semibold tracking-tight">
             {DRIVER_FIELD_LABELS.vehicleClassIds}
           </h2>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-slate-500">
             The classes they are licensed and trusted to drive. A coach driver
             is not a sedan driver.
           </p>
@@ -143,7 +143,7 @@ export function DriverForm({
             if (ofCategory.length === 0) return null;
             return (
               <fieldset key={category} className="grid content-start gap-2">
-                <legend className="mb-1 text-sm font-medium text-neutral-800">
+                <legend className="mb-1 text-sm font-medium text-slate-800">
                   {TRIP_CATEGORY_LABELS[category]}
                 </legend>
                 {ofCategory.map((c) => (
@@ -165,7 +165,7 @@ export function DriverForm({
       <Card className="grid gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Licences</h2>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-slate-500">
             The expiry dates of their driving licence and of the PSV licence
             that lets them drive paying passengers. A date within 30 days shows
             as due.
@@ -201,7 +201,7 @@ export function DriverForm({
         </Button>
         <Link
           href={backHref}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          className="text-sm text-slate-600 underline-offset-4 hover:underline"
         >
           Cancel
         </Link>

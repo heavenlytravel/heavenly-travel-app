@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 /** The surface every card and frame shares: white, a hairline edge, a soft shadow. */
 const SURFACE =
-  "rounded-xl border border-neutral-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+  "rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
 
 /**
  * A white card, the console's unit of layout: one part of a page, its
@@ -63,7 +63,7 @@ export function CardTitle({
       <div className="min-w-0 grow basis-64">
         <h2 className="text-xl font-semibold tracking-tight">{children}</h2>
         {description ? (
-          <p className="mt-1 text-sm text-neutral-500">{description}</p>
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -117,9 +117,9 @@ export function Tile({
     <li className="min-w-0">
       <article
         className={cx(
-          "relative flex h-full flex-col overflow-hidden transition-shadow hover:border-neutral-300 hover:shadow-md",
+          "relative flex h-full flex-col overflow-hidden transition-shadow hover:border-slate-300 hover:shadow-md",
           SURFACE,
-          dim && "bg-neutral-50",
+          dim && "bg-slate-50",
         )}
       >
         {children}
@@ -130,12 +130,12 @@ export function Tile({
 
 /** The class of a tile's title link, whose box covers the tile. */
 export const TILE_LINK =
-  "after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-neutral-900";
+  "after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand";
 
 /** The foot of a tile: its buttons, above the tile's link, on a hairline. */
 export function TileFoot({ children }: { children: ReactNode }) {
   return (
-    <div className="relative z-1 mt-auto flex items-center gap-2 border-t border-neutral-100 px-4 py-3">
+    <div className="relative z-1 mt-auto flex items-center gap-2 border-t border-slate-100 px-4 py-3">
       {children}
     </div>
   );

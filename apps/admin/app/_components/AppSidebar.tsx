@@ -88,7 +88,7 @@ export function AppSidebar({
                   <SidebarLabel className="text-sm font-semibold">
                     Heavenly Travel
                   </SidebarLabel>
-                  <SidebarLabel className="text-xs text-neutral-500">
+                  <SidebarLabel className="text-xs text-slate-500">
                     Admin console
                   </SidebarLabel>
                 </span>
@@ -138,12 +138,12 @@ export function AppSidebar({
                     asChild
                     active={pathname === NEW_LOCATION_PATH}
                     tooltip="Add location"
-                    className="text-neutral-500"
+                    className="text-slate-500"
                   >
                     <Link href={NEW_LOCATION_PATH} onClick={close}>
                       <span
                         aria-hidden="true"
-                        className="flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-neutral-400 text-xs leading-none"
+                        className="flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-400 text-xs leading-none"
                       >
                         +
                       </span>
@@ -187,7 +187,7 @@ export function AppSidebar({
               {name || email}
             </SidebarLabel>
             {name ? (
-              <SidebarLabel className="text-xs text-neutral-500">
+              <SidebarLabel className="text-xs text-slate-500">
                 {email}
               </SidebarLabel>
             ) : null}

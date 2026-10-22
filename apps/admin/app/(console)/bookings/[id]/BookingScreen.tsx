@@ -150,7 +150,7 @@ export async function bookingScreen({
           {email}
         </a>
       ) : (
-        <span key="e" className="font-normal text-neutral-500">
+        <span key="e" className="font-normal text-slate-500">
           None given, no emails sent
         </span>
       ),
@@ -164,7 +164,7 @@ export async function bookingScreen({
     booking.user ? (
       fullName(booking.user) || booking.user.email
     ) : (
-      <span key="a" className="font-normal text-neutral-500">
+      <span key="a" className="font-normal text-slate-500">
         None, booked as a guest
       </span>
     ),
@@ -263,7 +263,7 @@ function ItemCard({
       ) : (
         <Link
           href={bookingHref(item.bookingId, item.location.slug)}
-          className="underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900"
+          className="underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
         >
           {item.location.name}
         </Link>
@@ -285,7 +285,7 @@ function ItemCard({
       "Agreed price",
       <span key="o">
         <span className="block">{formatMyr(override.totalSen)}</span>
-        <span className="block text-xs font-normal text-neutral-500">
+        <span className="block text-xs font-normal text-slate-500">
           {override.reason}
         </span>
       </span>,
@@ -349,7 +349,7 @@ function ItemCard({
       <Rows rows={rows} />
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
         <div>
-          <h3 className="mb-1 text-xs font-medium tracking-wide text-neutral-500 uppercase">
+          <h3 className="mb-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
             Price
           </h3>
           <Rows rows={price} />
@@ -360,7 +360,7 @@ function ItemCard({
           ) : null}
         </div>
         <div>
-          <h3 className="mb-1 text-xs font-medium tracking-wide text-neutral-500 uppercase">
+          <h3 className="mb-1 text-xs font-medium tracking-wide text-slate-500 uppercase">
             Dates
           </h3>
           <Rows rows={dates} />

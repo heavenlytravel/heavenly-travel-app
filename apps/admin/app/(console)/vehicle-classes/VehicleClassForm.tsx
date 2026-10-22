@@ -55,7 +55,7 @@ export function VehicleClassForm({
           </Button>
           <Link
             href={VEHICLE_CLASSES_PATH}
-            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+            className="text-sm text-slate-600 underline-offset-4 hover:underline"
           >
             Cancel
           </Link>

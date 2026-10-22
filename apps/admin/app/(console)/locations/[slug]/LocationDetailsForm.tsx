@@ -68,7 +68,7 @@ export function LocationDetailsForm({
         {error ? (
           <FormError error={error} />
         ) : stateCodes.length === 0 ? (
-          <p className="text-sm text-neutral-500">Tick at least one state.</p>
+          <p className="text-sm text-slate-500">Tick at least one state.</p>
         ) : null}
       </div>
     </form>

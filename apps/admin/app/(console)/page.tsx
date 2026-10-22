@@ -92,7 +92,7 @@ async function locationCards({ opensBookings }: { opensBookings: boolean }) {
 
   if (locations.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500">
+      <p className="rounded-xl border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500">
         No locations yet. Add the first one.
       </p>
     );
@@ -135,7 +135,7 @@ function LocationCard({
         src={hero?.url ?? null}
         sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
         fallback={
-          <span className="text-5xl font-semibold text-neutral-300">
+          <span className="text-5xl font-semibold text-slate-300">
             {location.name.charAt(0).toUpperCase()}
           </span>
         }
@@ -151,7 +151,7 @@ function LocationCard({
               {location.name}
             </Link>
           </h2>
-          <p className="truncate text-xs text-neutral-500">
+          <p className="truncate text-xs text-slate-500">
             /{location.slug}
             {location.stateNames.length > 0
               ? ` · ${andList(location.stateNames)}`
@@ -195,7 +195,7 @@ function LocationCard({
         </dl>
       </div>
 
-      <div className="mt-auto grid gap-2 border-t border-neutral-100 px-4 py-3 text-xs text-neutral-500">
+      <div className="mt-auto grid gap-2 border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
         {progress.next ? (
           <div className="flex items-center gap-3">
             <SetupBar
@@ -232,11 +232,11 @@ function Figure({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="truncate text-xs text-neutral-500">{label}</dt>
+      <dt className="truncate text-xs text-slate-500">{label}</dt>
       <dd
         className={cx(
           "mt-0.5 text-lg font-semibold tabular-nums",
-          muted ? "text-neutral-400" : "text-neutral-900",
+          muted ? "text-slate-400" : "text-slate-900",
         )}
       >
         {value}

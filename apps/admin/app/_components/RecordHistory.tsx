@@ -10,7 +10,7 @@ export function HistoryLink({ href }: { href: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1.5 text-sm text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
+      className="inline-flex items-center gap-1.5 text-sm text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
     >
       <HistoryIcon className="size-4" />
       History
@@ -45,7 +45,7 @@ export function RecordHistory({
       <p className="mb-4 text-sm">
         <Link
           href={back.href}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           {back.label}
         </Link>

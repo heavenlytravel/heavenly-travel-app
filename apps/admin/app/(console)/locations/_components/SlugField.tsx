@@ -45,7 +45,7 @@ export function SlugField({
         aria-live="polite"
         className={cx(
           "mt-1.5 block text-xs",
-          wrong ? "text-red-700" : "text-neutral-500",
+          wrong ? "text-red-700" : "text-slate-500",
         )}
       >
         {locked

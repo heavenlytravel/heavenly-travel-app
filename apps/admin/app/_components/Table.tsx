@@ -17,7 +17,7 @@ export function Table({
 }) {
   const table = <table className="w-full text-left text-sm">{children}</table>;
   return bare ? (
-    <div className="min-w-0 overflow-x-auto rounded-b-xl border-t border-neutral-200 [&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_th:first-child]:pl-6 [&_th:last-child]:pr-6">
+    <div className="min-w-0 overflow-x-auto rounded-b-xl border-t border-slate-200 [&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_th:first-child]:pl-6 [&_th:last-child]:pr-6">
       {table}
     </div>
   ) : (
@@ -25,8 +25,7 @@ export function Table({
   );
 }
 
-const HEAD =
-  "border-b border-neutral-200 bg-neutral-50/70 text-xs text-neutral-500";
+const HEAD = "border-b border-slate-200 bg-slate-50/70 text-xs text-slate-500";
 
 /** The heading row; put `Th` cells inside. */
 export function THead({ children }: { children: ReactNode }) {
@@ -56,7 +55,7 @@ export function ThGroup({
   return (
     <th colSpan={span} className="px-4 pt-3 pb-0 font-medium">
       {children ? (
-        <span className="block border-b border-neutral-200 pb-1.5 text-center whitespace-nowrap text-neutral-600">
+        <span className="block border-b border-slate-200 pb-1.5 text-center whitespace-nowrap text-slate-600">
           {children}
         </span>
       ) : null}
@@ -65,7 +64,7 @@ export function ThGroup({
 }
 
 export function TBody({ children }: { children: ReactNode }) {
-  return <tbody className="divide-y divide-neutral-100">{children}</tbody>;
+  return <tbody className="divide-y divide-slate-100">{children}</tbody>;
 }
 
 export function Th({
@@ -107,7 +106,7 @@ export function EmptyRow({
 }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-8 text-center text-neutral-500">
+      <td colSpan={colSpan} className="px-4 py-8 text-center text-slate-500">
         {children}
       </td>
     </tr>

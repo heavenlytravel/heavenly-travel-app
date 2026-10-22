@@ -32,7 +32,7 @@ export function AdminFields({
         />
       </Field>
       <fieldset>
-        <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+        <legend className="mb-1.5 text-sm font-medium text-slate-800">
           Teams
         </legend>
         <div className="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-2">

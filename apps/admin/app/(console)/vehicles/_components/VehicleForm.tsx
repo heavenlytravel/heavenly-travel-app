@@ -91,7 +91,7 @@ function ModelNote({
     .filter(Boolean);
   const name = modelName({ brand: brand.trim(), name: model.trim() });
   return (
-    <p className="text-xs text-neutral-500 sm:col-span-2">
+    <p className="text-xs text-slate-500 sm:col-span-2">
       {elsewhere.length > 0
         ? `The ${name} is a model of ${elsewhere.join(" and ")}. Saving makes it a model of ${className(classId)} too.`
         : `A new model of ${className(classId)}. Saving adds it to the class's models.`}
@@ -283,7 +283,7 @@ export function VehicleForm({
             <h2 className="text-xl font-semibold tracking-tight">
               {VEHICLE_FIELD_LABELS.photos}
             </h2>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-slate-500">
               What the customers of the location it is based at see of its
               model, plate and all, and swipe through when they choose one. The
               first is its cover; the first cover of the class there is the
@@ -303,7 +303,7 @@ export function VehicleForm({
         <Card className="grid gap-4">
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Documents</h2>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-slate-500">
               The expiry dates of what a vehicle that carries paying passengers
               keeps valid. A date within 30 days shows as due.
             </p>
@@ -344,7 +344,7 @@ export function VehicleForm({
           </Button>
           <Link
             href={backHref}
-            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+            className="text-sm text-slate-600 underline-offset-4 hover:underline"
           >
             Cancel
           </Link>

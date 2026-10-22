@@ -22,13 +22,13 @@ export function Pager({
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   const link =
-    "rounded-md px-3 py-1.5 font-medium text-neutral-700 hover:bg-neutral-100";
+    "rounded-md px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100";
   return (
     <nav
       aria-label="Pages"
       className="mt-3 flex items-center justify-between gap-3 text-sm"
     >
-      <p className="text-neutral-600 tabular-nums">
+      <p className="text-slate-600 tabular-nums">
         {first}–{last} of {total}
       </p>
       <div className="flex gap-1">

@@ -6,7 +6,7 @@ import { Field } from "@repo/ui/field";
 import { useState } from "react";
 
 const STATE_TEXT = {
-  valid: "text-neutral-500",
+  valid: "text-slate-500",
   due: "text-amber-700",
   expired: "text-red-700",
 } as const;
@@ -53,7 +53,7 @@ export function ExpiryDateField({
         <button
           type="button"
           onClick={() => setDay("")}
-          className="justify-self-start text-xs text-neutral-600 underline-offset-4 hover:underline"
+          className="justify-self-start text-xs text-slate-600 underline-offset-4 hover:underline"
         >
           Clear
         </button>

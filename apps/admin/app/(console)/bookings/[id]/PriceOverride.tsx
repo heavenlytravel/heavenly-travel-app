@@ -69,7 +69,7 @@ export function PriceOverrideControl({
   return (
     <form
       {...save.formProps}
-      className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3"
+      className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3"
     >
       <input type="hidden" name="itemId" value={itemId} />
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">

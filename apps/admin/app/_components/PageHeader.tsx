@@ -50,7 +50,7 @@ export function Header({
         ) : null}
       </div>
       {description ? (
-        <p className="mt-1 text-sm text-neutral-600">{description}</p>
+        <p className="mt-1 text-sm text-slate-600">{description}</p>
       ) : null}
     </header>
   );

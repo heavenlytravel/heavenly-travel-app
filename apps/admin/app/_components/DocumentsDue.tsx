@@ -16,7 +16,7 @@ export function DocumentsDue({
 }) {
   if (due.length === 0) {
     return (
-      <span className="text-neutral-500">
+      <span className="text-slate-500">
         {anyEntered ? "In date" : "No dates yet"}
       </span>
     );
@@ -31,8 +31,8 @@ export function DocumentsDue({
           <Badge tone={document.state === "expired" ? "red" : "amber"}>
             {document.state === "expired" ? "Expired" : "Due"}
           </Badge>
-          <span className="text-neutral-700">{document.label}</span>
-          <span className="text-xs text-neutral-500 tabular-nums">
+          <span className="text-slate-700">{document.label}</span>
+          <span className="text-xs text-slate-500 tabular-nums">
             {formatDay(document.expiresOn)}
           </span>
         </li>

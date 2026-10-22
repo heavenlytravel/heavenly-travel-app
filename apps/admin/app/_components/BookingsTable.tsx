@@ -81,32 +81,32 @@ export function BookingsTable({
                 </Td>
                 <Td>
                   <span className="block">{booking.contactName}</span>
-                  <span className="block max-w-48 truncate text-xs text-neutral-500">
+                  <span className="block max-w-48 truncate text-xs text-slate-500">
                     {customerEmailOf(booking) ?? booking.contactPhone}
                   </span>
                 </Td>
-                <Td className="min-w-48 text-neutral-600">
+                <Td className="min-w-48 text-slate-600">
                   {trips.map(({ item, trip }) => (
                     <span key={item.id} className="block">
                       {tripHeadline(trip)}
-                      <span className="block text-xs text-neutral-500">
+                      <span className="block text-xs text-slate-500">
                         {itemSummary(item)}
                       </span>
                     </span>
                   ))}
                 </Td>
                 {showLocation ? (
-                  <Td className="whitespace-nowrap text-neutral-600">
+                  <Td className="whitespace-nowrap text-slate-600">
                     {locationsOf(booking) || (
-                      <span className="text-neutral-500">—</span>
+                      <span className="text-slate-500">—</span>
                     )}
                   </Td>
                 ) : null}
-                <Td className="whitespace-nowrap text-neutral-600 tabular-nums">
+                <Td className="whitespace-nowrap text-slate-600 tabular-nums">
                   <span className="block">
                     {formatLocalDate(booking.startsAt)}
                   </span>
-                  <span className="block text-xs text-neutral-500">
+                  <span className="block text-xs text-slate-500">
                     {formatLocalTime(booking.startsAt)}
                   </span>
                 </Td>

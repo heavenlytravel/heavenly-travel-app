@@ -2,7 +2,7 @@ import { locationStateOf, type LocationState } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 
 const MARK_TONES: Record<LocationState, string> = {
-  draft: "bg-neutral-200 text-neutral-700",
+  draft: "bg-slate-200 text-slate-700",
   live: "bg-emerald-100 text-emerald-800",
   paused: "bg-amber-100 text-amber-800",
 };

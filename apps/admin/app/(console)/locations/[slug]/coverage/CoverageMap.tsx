@@ -140,12 +140,12 @@ export function CoverageMap({
           ref={host}
           role="application"
           aria-label="Map of the zones"
-          className="h-96 w-full rounded-md border border-neutral-200 bg-neutral-100"
+          className="h-96 w-full rounded-md border border-slate-200 bg-slate-100"
         />
         {label && labelled ? (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 w-max max-w-64 rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs text-white shadow-lg"
+            className="pointer-events-none absolute z-10 w-max max-w-64 rounded-md bg-ink px-2.5 py-1.5 text-xs text-white shadow-lg"
             style={{
               top: label.y + 14,
               ...(label.flip
@@ -154,7 +154,7 @@ export function CoverageMap({
             }}
           >
             <span className="block font-medium">{labelled.name}</span>
-            <span className="block text-neutral-300">{labelled.note}</span>
+            <span className="block text-slate-300">{labelled.note}</span>
           </div>
         ) : null}
       </div>

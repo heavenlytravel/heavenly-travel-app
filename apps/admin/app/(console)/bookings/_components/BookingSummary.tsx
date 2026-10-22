@@ -54,31 +54,31 @@ export function BookingSummary({
   const agreed = canPrice ? parseRinggit(draft.agreedPrice) : null;
 
   return (
-    <div className="grid gap-5 rounded-xl border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <div className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <h2 className="text-base font-semibold tracking-tight">Summary</h2>
       <dl className="grid gap-3 text-sm">
         {rows.map((row) => (
           <div key={row.label} className="min-w-0">
-            <dt className="text-xs text-neutral-500">{row.label}</dt>
-            <dd className="text-neutral-900">{row.value}</dd>
+            <dt className="text-xs text-slate-500">{row.label}</dt>
+            <dd className="text-slate-900">{row.value}</dd>
           </div>
         ))}
       </dl>
 
-      <div className="grid gap-1.5 border-t border-neutral-100 pt-4 text-sm">
+      <div className="grid gap-1.5 border-t border-slate-100 pt-4 text-sm">
         <div className="flex justify-between gap-4">
-          <span className="text-neutral-600">Quoted price</span>
+          <span className="text-slate-600">Quoted price</span>
           <span className="tabular-nums">
             {quoted !== null ? formatMyr(quoted) : "—"}
           </span>
         </div>
         {agreed !== null ? (
           <div className="flex justify-between gap-4">
-            <span className="text-neutral-600">Agreed price</span>
+            <span className="text-slate-600">Agreed price</span>
             <span className="tabular-nums">{formatMyr(agreed)}</span>
           </div>
         ) : null}
-        <div className="mt-1 flex justify-between gap-4 border-t border-neutral-100 pt-2 text-base font-semibold">
+        <div className="mt-1 flex justify-between gap-4 border-t border-slate-100 pt-2 text-base font-semibold">
           <span>Total</span>
           <span className="tabular-nums">
             {quoted !== null ? formatMyr(agreed ?? quoted) : "—"}
@@ -101,11 +101,11 @@ export function BookingSummary({
             {error}
           </p>
         ) : missing ? (
-          <p className="text-xs text-neutral-500">{missing}</p>
+          <p className="text-xs text-slate-500">{missing}</p>
         ) : null}
         <Link
           href={cancelHref}
-          className="justify-self-start text-sm text-neutral-600 underline-offset-4 hover:underline"
+          className="justify-self-start text-sm text-slate-600 underline-offset-4 hover:underline"
         >
           Cancel
         </Link>
@@ -153,9 +153,9 @@ function AgreedPrice({
   }
 
   return (
-    <div className="mt-2 grid gap-3 rounded-lg border border-dashed border-neutral-300 p-3">
+    <div className="mt-2 grid gap-3 rounded-lg border border-dashed border-slate-300 p-3">
       <label htmlFor={`${ids}-amount`} className="grid gap-1.5">
-        <span className="text-xs font-medium text-neutral-700">
+        <span className="text-xs font-medium text-slate-700">
           Agreed price (RM)
         </span>
         <Input
@@ -168,7 +168,7 @@ function AgreedPrice({
         />
       </label>
       <div className="grid gap-1.5">
-        <span className="text-xs font-medium text-neutral-700">Why</span>
+        <span className="text-xs font-medium text-slate-700">Why</span>
         <Choices
           label="Why the price is agreed"
           size="sm"
@@ -198,9 +198,7 @@ function AgreedPrice({
           />
         ) : null}
       </div>
-      <p className="text-xs text-neutral-500">
-        The quote stays on the receipt.
-      </p>
+      <p className="text-xs text-slate-500">The quote stays on the receipt.</p>
       {note ? <p className="text-xs text-amber-800">{note}</p> : null}
       <Button
         variant="ghost"

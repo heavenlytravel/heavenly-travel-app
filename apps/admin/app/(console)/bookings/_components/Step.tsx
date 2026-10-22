@@ -55,7 +55,7 @@ export function Step({
       {open ? (
         <span
           aria-hidden="true"
-          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white tabular-nums"
+          className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white tabular-nums"
         >
           {number}
         </span>
@@ -64,7 +64,7 @@ export function Step({
       )}
       <span className="text-base font-semibold tracking-tight">{title}</span>
       {optional ? (
-        <span className="text-xs font-normal text-neutral-500">Optional</span>
+        <span className="text-xs font-normal text-slate-500">Optional</span>
       ) : null}
     </span>
   );
@@ -75,7 +75,7 @@ export function Step({
       aria-label={title}
       className={cx(
         "scroll-mt-20 rounded-xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
-        open ? "border-neutral-300 p-6" : "border-neutral-200",
+        open ? "border-slate-300 p-6" : "border-slate-200",
       )}
     >
       {open ? (
@@ -87,11 +87,11 @@ export function Step({
         <button
           type="button"
           onClick={onOpen}
-          className="grid w-full grid-cols-[1fr_auto] items-center gap-4 rounded-xl px-6 py-4 text-left transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-neutral-900"
+          className="grid w-full grid-cols-[1fr_auto] items-center gap-4 rounded-xl px-6 py-4 text-left transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-brand"
         >
           <span className="grid min-w-0 gap-1">
             {heading}
-            <span className="truncate pl-8 text-sm text-neutral-600">
+            <span className="truncate pl-8 text-sm text-slate-600">
               {summary}
             </span>
           </span>
@@ -123,7 +123,7 @@ export function StepFoot({
         {label}
       </Button>
       {missing ? (
-        <p aria-live="polite" className="text-sm text-neutral-500">
+        <p aria-live="polite" className="text-sm text-slate-500">
           {missing}
         </p>
       ) : null}

@@ -501,7 +501,7 @@ export function ZoneMap({
           role="application"
           aria-label="Map of the zone"
           className={cx(
-            "w-full rounded-md border border-neutral-200 bg-neutral-100",
+            "w-full rounded-md border border-slate-200 bg-slate-100",
             full ? "h-full" : "h-[32rem]",
           )}
         />
@@ -515,7 +515,7 @@ export function ZoneMap({
               type="button"
               aria-label={full ? "Exit full screen" : "Full screen"}
               onClick={toggleFullScreen}
-              className="grid size-10 place-items-center rounded-sm bg-white text-neutral-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 [&_svg]:size-[18px]"
+              className="grid size-10 place-items-center rounded-sm bg-white text-slate-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand [&_svg]:size-[18px]"
             >
               {full ? <MinimizeIcon /> : <MaximizeIcon />}
             </button>
@@ -644,7 +644,7 @@ export function ZoneMap({
               aria-label="Edit the zone"
               style={{ left: menu.x, top: menu.y }}
               onContextMenu={(event) => event.preventDefault()}
-              className="absolute z-20 grid w-48 rounded-md border border-neutral-200 bg-white p-1 text-sm shadow-lg"
+              className="absolute z-20 grid w-48 rounded-md border border-slate-200 bg-white p-1 text-sm shadow-lg"
             >
               {menu.items.map((item) => (
                 <button
@@ -656,10 +656,10 @@ export function ZoneMap({
                     item.run();
                   }}
                   className={cx(
-                    "rounded px-2.5 py-2 text-left focus-visible:outline-2 focus-visible:outline-neutral-900",
+                    "rounded px-2.5 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand",
                     item.danger
                       ? "text-red-700 hover:bg-red-50"
-                      : "text-neutral-800 hover:bg-neutral-100",
+                      : "text-slate-800 hover:bg-slate-100",
                   )}
                 >
                   {item.label}
@@ -679,7 +679,7 @@ export function ZoneMap({
               ? "text-amber-800"
               : notice
                 ? "text-emerald-800"
-                : "text-neutral-500",
+                : "text-slate-500",
         )}
       >
         {hint}
@@ -689,7 +689,7 @@ export function ZoneMap({
 }
 
 function Divider() {
-  return <span aria-hidden className="mx-0.5 h-5 w-px bg-neutral-200" />;
+  return <span aria-hidden className="mx-0.5 h-5 w-px bg-slate-200" />;
 }
 
 /**
@@ -706,7 +706,7 @@ function Toolbar({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-neutral-300 bg-white p-1 shadow-md">
+    <div className="flex items-center gap-0.5 rounded-lg border border-slate-300 bg-white p-1 shadow-md">
       {children}
       <Divider />
       <ToolButton label="How the map works" active={help} onClick={onHelp}>
@@ -761,10 +761,10 @@ function ToolButton({
         disabled={disabled}
         onClick={onClick}
         className={cx(
-          "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
+          "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
           active
-            ? "bg-neutral-900 text-white"
-            : "text-neutral-700 enabled:hover:bg-neutral-100",
+            ? "bg-brand text-white"
+            : "text-slate-700 enabled:hover:bg-slate-100",
         )}
       >
         {children}

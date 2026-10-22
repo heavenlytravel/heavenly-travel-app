@@ -141,7 +141,7 @@ async function coverage({
         editable={manages}
       />
       {zones.length > 1 ? (
-        <p className="mt-4 text-sm text-neutral-600">
+        <p className="mt-4 text-sm text-slate-600">
           Price the routes between them on the{" "}
           <Link
             href={locationTabHref(slug, "rates")}

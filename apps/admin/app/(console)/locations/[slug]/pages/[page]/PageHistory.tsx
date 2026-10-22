@@ -48,7 +48,7 @@ export function CompareDialog({
     >
       <div className="grid gap-6 md:grid-cols-2">
         <section className="min-w-0">
-          <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
             Published
           </h3>
           <PageContentView
@@ -58,8 +58,8 @@ export function CompareDialog({
             addressNames={addressNames}
           />
         </section>
-        <section className="min-w-0 md:border-l md:border-neutral-200 md:pl-6">
-          <h3 className="mb-3 text-sm font-semibold text-neutral-800">
+        <section className="min-w-0 md:border-l md:border-slate-200 md:pl-6">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">
             This draft
           </h3>
           <PageContentView
@@ -98,14 +98,14 @@ export function HistoryDialog({
       description="Every publish of this page, newest first. Open one to read the page before and after it; to roll back, copy the old text into the editor and publish again."
     >
       <div className="grid gap-4">
-        <ol className="divide-y divide-neutral-100 rounded-md border border-neutral-200 text-sm">
+        <ol className="divide-y divide-slate-100 rounded-md border border-slate-200 text-sm">
           {publishes.map((publish, index) => (
             <li
               key={publish.id}
               className="flex items-center justify-between gap-3 px-3 py-2.5"
             >
               <span className="min-w-0">
-                <span className="block text-neutral-900">
+                <span className="block text-slate-900">
                   {formatLocalDateTime(publish.at)}
                   {index === 0 ? (
                     <span className="ml-2 text-xs text-emerald-700">
@@ -113,7 +113,7 @@ export function HistoryDialog({
                     </span>
                   ) : null}
                 </span>
-                <span className="block truncate text-xs text-neutral-500">
+                <span className="block truncate text-xs text-slate-500">
                   {publish.actorName}
                 </span>
               </span>
@@ -128,7 +128,7 @@ export function HistoryDialog({
         </ol>
         <Link
           href={allHref}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          className="text-sm text-slate-600 underline-offset-4 hover:underline"
         >
           All changes to this location&apos;s pages
         </Link>

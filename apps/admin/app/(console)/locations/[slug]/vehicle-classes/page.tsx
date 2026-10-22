@@ -79,11 +79,11 @@ export default async function LocationVehicleClassesPage({
       >
         {() => categories({ id, slug, manages })}
       </Streamed>
-      <p className="mt-8 text-sm text-neutral-600">
+      <p className="mt-8 text-sm text-slate-600">
         The name, picture, seats and luggage are the same everywhere, set in the{" "}
         <Link
           href={VEHICLE_CLASSES_PATH}
-          className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+          className="font-medium text-slate-900 underline-offset-4 hover:underline"
         >
           class catalogue
         </Link>
@@ -137,13 +137,13 @@ function Category({
     <section className="min-w-0">
       <h3 className="mb-3 flex flex-wrap items-baseline gap-x-2 text-base font-semibold tracking-tight">
         {TRIP_CATEGORY_LABELS[category]}
-        <span className="text-sm font-normal text-neutral-500">
+        <span className="text-sm font-normal text-slate-500">
           {onSale} of {offerings.length} on sale
         </span>
         <InfoTip text="Off hides the class from this location's options page and search card. Bookings already made are not changed." />
       </h3>
       {offerings.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500">
+        <p className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
           No class of this category is sold here, so its tab has nothing to
           offer at this location.
         </p>
@@ -204,7 +204,7 @@ function OfferingCard({
         src={offering.coverUrl}
         fit="contain"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
-        fallback={<BusIcon className="size-7 text-neutral-300" />}
+        fallback={<BusIcon className="size-7 text-slate-300" />}
       />
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
@@ -217,7 +217,7 @@ function OfferingCard({
               vehicleClass.name
             )}
           </h4>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-slate-500">
             {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
           </p>
         </div>
@@ -243,14 +243,14 @@ function OfferingCard({
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4">
         {rates.map(([label, value]) => (
           <div key={label} className="min-w-0">
-            <dt className="text-xs text-neutral-500">{label}</dt>
-            <dd className="text-sm font-medium text-neutral-900 tabular-nums">
+            <dt className="text-xs text-slate-500">{label}</dt>
+            <dd className="text-sm font-medium text-slate-900 tabular-nums">
               {value}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="px-4 pt-3 pb-4 text-xs text-neutral-600">
+      <p className="px-4 pt-3 pb-4 text-xs text-slate-600">
         {rulesText(offering)}
       </p>
       {manages ? (
@@ -258,7 +258,7 @@ function OfferingCard({
           <Button asChild variant="secondary" size="sm">
             <Link href={href}>Edit rates and rules</Link>
           </Button>
-          <span className="ml-auto text-xs text-neutral-500">
+          <span className="ml-auto text-xs text-slate-500">
             {offering.isActive ? "On sale" : "Off sale"}
           </span>
         </TileFoot>

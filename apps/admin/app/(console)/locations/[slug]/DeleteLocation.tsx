@@ -41,14 +41,14 @@ export function DeleteLocation({
           </p>
         </div>
       ) : (
-        <p className="text-neutral-600">
+        <p className="text-slate-600">
           This location has never been live, so nothing public is lost. To try
           something out, keep a location in draft and use Preview: a draft is
           never public.
         </p>
       )}
-      <div className="grid gap-1 text-neutral-700">
-        <p className="font-medium text-neutral-900">What the delete takes</p>
+      <div className="grid gap-1 text-slate-700">
+        <p className="font-medium text-slate-900">What the delete takes</p>
         <ImpactList impact={impact} />
       </div>
       <DeleteButton

@@ -28,10 +28,7 @@ export function AddressTester({
   return (
     <div className="grid gap-4">
       <div className="grid gap-1.5">
-        <label
-          htmlFor={inputId}
-          className="text-sm font-medium text-neutral-800"
-        >
+        <label htmlFor={inputId} className="text-sm font-medium text-slate-800">
           Address
         </label>
         <PlaceInput
@@ -64,15 +61,15 @@ export function AddressTester({
       </div>
 
       {testing ? (
-        <p className="text-sm text-neutral-500">Checking…</p>
+        <p className="text-sm text-slate-500">Checking…</p>
       ) : result === null ? null : !result.ok ? (
         <p aria-live="polite" className="text-sm text-red-700">
           {result.error}
         </p>
       ) : (
         <div aria-live="polite" className="grid gap-1 text-sm">
-          <p className="text-neutral-900">{result.address}</p>
-          <p className="text-neutral-500 tabular-nums">
+          <p className="text-slate-900">{result.address}</p>
+          <p className="text-slate-500 tabular-nums">
             {result.lat.toFixed(5)}, {result.lng.toFixed(5)}
           </p>
           {result.served ? (
@@ -91,7 +88,7 @@ export function AddressTester({
               Not served: in no zone of a live location.
             </p>
           )}
-          <p className="text-neutral-600">
+          <p className="text-slate-600">
             {result.district
               ? `${result.district.name}, ${result.district.stateName}.`
               : "In no district: at sea, or outside Malaysia."}

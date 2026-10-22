@@ -32,22 +32,22 @@ export function SearchResultPreview({
 }) {
   return (
     <figure className="grid gap-1.5">
-      <figcaption className="text-xs font-medium text-neutral-500">
+      <figcaption className="text-xs font-medium text-slate-500">
         In search results
       </figcaption>
-      <div className="rounded-md border border-neutral-200 bg-white px-4 py-3 font-[arial,sans-serif]">
+      <div className="rounded-md border border-slate-200 bg-white px-4 py-3 font-[arial,sans-serif]">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex size-7 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600"
+            className="flex size-7 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600"
           >
             H
           </span>
           <span className="min-w-0 leading-tight">
-            <span className="block text-sm text-neutral-900">
+            <span className="block text-sm text-slate-900">
               Heavenly Travel
             </span>
-            <span className="block truncate text-xs text-neutral-600">
+            <span className="block truncate text-xs text-slate-600">
               {crumbsOf(url).join(" › ")}
             </span>
           </span>
@@ -59,7 +59,7 @@ export function SearchResultPreview({
           {description ? (
             cut(description, SHOWN.description)
           ) : (
-            <span className="text-neutral-400">
+            <span className="text-slate-400">
               No description: the search engine picks a line from the page.
             </span>
           )}
@@ -87,10 +87,10 @@ export function SharedLinkPreview({
 }) {
   return (
     <figure className="grid max-w-md gap-1.5">
-      <figcaption className="text-xs font-medium text-neutral-500">
+      <figcaption className="text-xs font-medium text-slate-500">
         As a shared link
       </figcaption>
-      <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+      <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
         {image ? (
           <div className="relative aspect-[1.91/1] w-full">
             <Image
@@ -102,18 +102,18 @@ export function SharedLinkPreview({
             />
           </div>
         ) : (
-          <div className="flex aspect-[1.91/1] w-full items-center justify-center bg-neutral-100 text-xs text-neutral-500">
+          <div className="flex aspect-[1.91/1] w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
             No image yet: add the hero image or a share image.
           </div>
         )}
-        <div className="grid gap-0.5 border-t border-neutral-200 bg-neutral-50 px-3 py-2.5">
-          <span className="text-[11px] tracking-wide text-neutral-500 uppercase">
+        <div className="grid gap-0.5 border-t border-slate-200 bg-slate-50 px-3 py-2.5">
+          <span className="text-[11px] tracking-wide text-slate-500 uppercase">
             {new URL(url).host.replace(/^www\./, "")}
           </span>
-          <span className="truncate text-sm font-semibold text-neutral-900">
+          <span className="truncate text-sm font-semibold text-slate-900">
             {title || "No meta title yet"}
           </span>
-          <span className="line-clamp-2 text-xs text-neutral-600">
+          <span className="line-clamp-2 text-xs text-slate-600">
             {description}
           </span>
         </div>

@@ -176,8 +176,10 @@ The partner grid, as data:
   them, into two pieces, so a large part comes off with one more click on the bin; a
   line that would leave the piece is refused (`cutPolygonBetween` in `geo.ts`). Esc
   stops a cut, then lets go of the corner, then of the pieces. A right-click opens a
-  menu of the same choices, as a shortcut (Control-click on a Mac). Each
-  change is one step of Undo, and Redo does again what Undo took back until a new
+  menu of the same choices, as a shortcut (Control-click on a Mac), and closes when
+  the pieces change under it. Each
+  change is one step of Undo, a pick of a district or its mukims with the shape it
+  brought, back in the controls too, and Redo does again what Undo took back until a new
   change; Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redo (⌘ on a Mac), except in a
   field being typed in. Neither an edit nor an undo moves the view; the map
   frames the zone only when a district or a place is newly picked (`piece-editor.ts`).
@@ -215,8 +217,10 @@ The partner grid, as data:
 - Zones never overlap, this location's or another's (2026-10-21), so a pickup falls in
   one zone of one location at most. `createZone` and `updateZone` refuse a shape that
   covers more than 0.002 km² of another zone (about 45 m by 45 m: the rounding of
-  borders drawn to meet), under an advisory lock so two saves at once cannot both
-  pass. The refusal names the zones in the way ("Zones cannot overlap, so one of them
+  borders drawn to meet), under an advisory lock that every zone write takes first,
+  so two saves at once cannot both pass. The shapes are compared and cut with their
+  corners as stored, to 6 decimals, so a border trimmed along another zone has its
+  corners exactly and the two meet, however long the border. The refusal names the zones in the way ("Zones cannot overlap, so one of them
   gives up the shared ground"). The zone maker does not wait for it: 300 ms after
   every change of the shape it asks the server what is in the way (`checkOverlaps`,
   one read of the zones, the check the save makes; about 20 ms to read and under
@@ -537,13 +541,14 @@ Added 2026-10-21. On a location's pages the search card keeps to the location
   web's `checkTripAction`, whose details calls end Google's autocomplete sessions),
   and a place the location cannot take is said at its field: "We do not pick up from
   The Datai Langkawi yet. Choose a pick-up in Langkawi." The button reads "Finding
-  prices…" meanwhile. A check that cannot answer lets the search through; the options
-  page checks again.
+  prices…" meanwhile. A check that cannot answer, Google returning no place among
+  them, lets the search through; the options page checks again.
 - The drop-off follows the location's rule. Anywhere: all of Malaysia. Inside this
   location: the pick-up's box, and one of its zones. Only the routes on the grid: the
   box around its zones and the other locations' zones its routes out end at, and the
   route from the pick-up's zone, checked on "Get my price". The "Popular in" list offers only the saved
-  addresses a trip may end at under either.
+  addresses a trip may end at under either, and a highlight shows "Take me here" only
+  for those.
 - The areas are cached with the location's pages under its tag; zone, grid and
   drop-off rule changes refresh them. The cache key carries a version: a cached answer
   outlives a deploy, so a change to `LocationSearch`'s shape bumps it. The pages stay

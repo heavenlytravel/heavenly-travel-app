@@ -12,6 +12,7 @@ import {
   UploadsContext,
   useUploadCount,
 } from "../../_components/use-image-upload";
+import { FORM_WIDTH } from "../../_components/PageColumn";
 
 /**
  * The form for one catalogue class, new or existing: its fields, then
@@ -38,7 +39,7 @@ export function VehicleClassForm({
 
   return (
     <UploadsContext value={uploads.track}>
-      <form {...formProps} className="grid gap-6">
+      <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
         {vehicleClass ? (
           <input type="hidden" name="id" value={vehicleClass.id} />
         ) : null}

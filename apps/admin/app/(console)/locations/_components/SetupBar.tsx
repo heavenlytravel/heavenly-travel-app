@@ -2,7 +2,7 @@ import { cx } from "@repo/ui/cx";
 
 /**
  * How far a location's setup has come, as a thin bar that fills in green:
- * in the location's panel, and on its card on the console's home.
+ * in the location's sidebar, and on its card on the console's home.
  */
 export function SetupBar({
   done,

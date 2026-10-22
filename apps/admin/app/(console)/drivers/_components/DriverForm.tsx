@@ -26,6 +26,7 @@ import { FormError } from "../../../_components/FormError";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
 import { createDriverAction, updateDriverAction } from "../actions";
+import { FORM_WIDTH } from "../../../_components/PageColumn";
 
 /**
  * The form for one of our drivers, new or existing: who they are and how
@@ -68,7 +69,7 @@ export function DriverForm({
   const ticked = new Set(fields?.vehicleClassIds ?? []);
 
   return (
-    <form {...formProps} className="grid gap-6">
+    <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
       {driver ? <input type="hidden" name="id" value={driver.id} /> : null}
       {backToList ? (
         <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />

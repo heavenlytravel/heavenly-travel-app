@@ -45,6 +45,7 @@ import {
   UploadsContext,
   useUploadCount,
 } from "../../../../_components/use-image-upload";
+import { FORM_WIDTH } from "../../../../_components/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {
   minimumFareSen:
@@ -217,7 +218,7 @@ export function OfferingForm({
 
   return (
     <UploadsContext value={uploads.track}>
-      <form {...formProps} className="grid gap-6">
+      <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
         <input type="hidden" name="locationId" value={locationId} />
         <input type="hidden" name={OFFERING_FROM_PARAM} value={from} />
         {offering ? (

@@ -9,20 +9,16 @@ import {
   tripViewOfItem,
 } from "@repo/db";
 import type { BookingWithItems } from "@repo/db/server";
+import { bookingLocations } from "../_lib/booking-locations";
 import { bookingHref } from "../_lib/routes";
 import { BookingStatusBadge } from "./StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
 
 /** "Langkawi", or "Langkawi, Penang" for a booking whose items pick up in two. */
 function locationsOf(booking: BookingWithItems) {
-  const names = [
-    ...new Set(
-      booking.items.flatMap((item) =>
-        item.location ? [item.location.name] : [],
-      ),
-    ),
-  ];
-  return names.join(", ");
+  return bookingLocations(booking)
+    .map((location) => location.name)
+    .join(", ");
 }
 
 /**

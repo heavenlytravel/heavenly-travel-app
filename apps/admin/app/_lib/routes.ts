@@ -97,13 +97,16 @@ export function bookingsHref(
 /**
  * One booking, by id. The customer site uses the reference; ops uses the
  * id. With a location's slug, the same booking inside that location, its
- * panel beside it, as the location's own lists open it.
+ * sections in the sidebar, as the location's own lists open it.
  */
 export function bookingHref(id: string, slug?: string) {
   return slug
     ? `${locationTabHref(slug, "bookings")}/${id}`
     : `${BOOKINGS_PATH}/${id}`;
 }
+
+/** Where the console header's search asks for the bookings that match. */
+export const BOOKING_SEARCH_PATH = "/api/bookings/search";
 
 /** Where staff enter a booking that arrived by phone, WhatsApp or email. */
 export const NEW_BOOKING_PATH = `${BOOKINGS_PATH}/new`;
@@ -236,8 +239,8 @@ const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
  * setup steps in the order an admin walks them, with the rates right after
  * the coverage whose zones they price, then the bookings, the vehicles and
  * drivers based there, the status, and the history. Each is its own
- * route behind its own permission, as every console page is; the panel
- * beside the location's page lists the tabs the admin may open. See
+ * route behind its own permission, as every console page is; the sidebar
+ * lists the tabs the admin may open while the picker is on the location. See
  * docs/261015-locations-as-operation-areas.md, "Who may do what".
  */
 export const LOCATION_TABS: readonly LocationTabDef[] = [
@@ -298,8 +301,8 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
 ];
 
 /**
- * Where a tab sits in the panel beside a location: the day's work, the
- * setup done once and rarely touched, or the panel's foot.
+ * Where a tab sits among a location's sections in the sidebar: the day's
+ * work, the setup done once and rarely touched, or the end, after both.
  */
 export type LocationTabGroup = "work" | "setup" | "foot";
 
@@ -347,10 +350,10 @@ function groupOf(
 }
 
 /**
- * The tabs of a location in this state, in the panel's order: the work,
- * then the setup, then the foot. The overview of a live or paused location
- * is its day, "Today". The panel and the strip of tabs on narrow screens
- * both read this. See docs/261018-location-work-and-class-catalogue.md.
+ * The tabs of a location in this state, in the sidebar's order: the work,
+ * then the setup, then the end. The overview of a live or paused location
+ * is its day, "Today". The sidebar, the strip of tabs on a phone and the
+ * header's trail all read this. See docs/261018-location-work-and-class-catalogue.md.
  */
 export function locationTabsFor(state: LocationState): PlacedTab[] {
   const placed = LOCATION_TABS.flatMap((tab): PlacedTab[] => {
@@ -368,6 +371,16 @@ export function locationTabsFor(state: LocationState): PlacedTab[] {
         : WORK_TABS.length + 1;
   // A stable sort, so the setup keeps the order the tabs are walked in.
   return placed.sort((a, b) => rank(a) - rank(b));
+}
+
+/** The tabs of a location in this state that an admin with these permissions may open, in order. */
+export function locationTabsMayOpen(
+  state: LocationState,
+  permissions: readonly Permission[],
+): PlacedTab[] {
+  return locationTabsFor(state).filter((tab) =>
+    permissions.includes(tab.permission),
+  );
 }
 
 /** The tab of a setup step. */
@@ -388,6 +401,95 @@ export function locationTabOf(slug: string, pathname: string): LocationTab {
   const segment = rest.split("/")[1];
   const tab = LOCATION_TABS.find((t) => t.key === segment);
   return tab?.key ?? "overview";
+}
+
+/**
+ * What the console works on, as the location picker in its header names
+ * it and the sidebar lists it: one location, by its slug, or every
+ * location at once. See docs/261022-console-scope.md.
+ */
+export type ConsoleScope = { slug: string } | "all";
+
+/**
+ * The sections across locations, each by the tab of a location it sums up.
+ * Two lists must name the same ones: `ALL_LOCATIONS_NAV` in
+ * `_components/nav.ts`, the sidebar's rows, and the folders of the
+ * `(console)/@scope` slot, each of which draws All locations on its path.
+ * A section left out of the slot keeps the menu of the scope before it.
+ */
+const ACROSS_LOCATIONS: readonly { path: string; tab: LocationTab }[] = [
+  { path: BOOKINGS_PATH, tab: "bookings" },
+  { path: VEHICLES_PATH, tab: "vehicles" },
+  { path: DRIVERS_PATH, tab: "drivers" },
+  { path: VEHICLE_CLASSES_PATH, tab: "vehicle-classes" },
+  { path: COVERAGE_PATH, tab: "coverage" },
+  { path: RATES_PATH, tab: "rates" },
+];
+
+const acrossOf = (pathname: string) =>
+  ACROSS_LOCATIONS.find(
+    (entry) => pathname === entry.path || pathname.startsWith(`${entry.path}/`),
+  );
+
+/**
+ * The scope a path is in: the location it is inside, or every location on
+ * the home and the sections across locations. Null on a page of the whole
+ * console (the home page's choices, the media, the users, the admins, the
+ * activity, adding a location), which keeps the scope last worked in.
+ */
+export function scopeOfPath(pathname: string): ConsoleScope | null {
+  const slug = locationSlugOf(pathname);
+  if (slug !== null) return { slug };
+  if (pathname === LOCATIONS_PATH || acrossOf(pathname)) return "all";
+  return null;
+}
+
+/** The cookie that remembers the scope last worked in, for a page of the whole console opened afresh. */
+export const SCOPE_COOKIE = "console_scope";
+
+/** How a location's key starts, apart from "all", which a slug may be too. */
+const LOCATION_KEY = "location:";
+
+/** A scope as its cookie holds it, and as a key to compare two by: "all", or "location:langkawi". */
+export function scopeKey(scope: ConsoleScope): string {
+  return scope === "all" ? "all" : `${LOCATION_KEY}${scope.slug}`;
+}
+
+/** The scope the cookie remembers; every location when there is none or it is not a key. */
+export function scopeOfKey(key: string | undefined): ConsoleScope {
+  return key?.startsWith(LOCATION_KEY) && key.length > LOCATION_KEY.length
+    ? { slug: key.slice(LOCATION_KEY.length) }
+    : "all";
+}
+
+/**
+ * Where the picker takes the admin from this path to another scope: the
+ * same section there when it has one the admin may open (Langkawi's Rates
+ * to Penang's, Langkawi's Bookings to the queue across locations, back
+ * again), its overview otherwise. `tabsOf` is the tabs of a location the
+ * admin may open, in the location's state.
+ */
+export function scopeSwitchHref(
+  pathname: string,
+  to: ConsoleScope,
+  tabsOf: (slug: string) => readonly LocationTab[],
+): string {
+  const slug = locationSlugOf(pathname);
+  const tab: LocationTab | null =
+    slug !== null
+      ? locationTabOf(slug, pathname)
+      : pathname === LOCATIONS_PATH
+        ? "overview"
+        : (acrossOf(pathname)?.tab ?? null);
+  if (to === "all") {
+    return (
+      ACROSS_LOCATIONS.find((entry) => entry.tab === tab)?.path ??
+      LOCATIONS_PATH
+    );
+  }
+  return tab && tabsOf(to.slug).includes(tab)
+    ? locationTabHref(to.slug, tab)
+    : locationHref(to.slug);
 }
 
 /** The ids of the Rates tab's four cards, and the link that lands on each. */

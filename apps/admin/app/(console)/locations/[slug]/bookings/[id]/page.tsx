@@ -11,8 +11,8 @@ import { locationKey } from "../../../_lib/location-data";
 /**
  * Route: /locations/[slug]/bookings/[id]. One booking inside the location
  * it picks up in, as the location's overview and its Bookings tab open
- * it: the location's header above it and its panel beside it, Bookings
- * marked, and the way back to the location's bookings. The same booking
+ * it: the location's header above it and its sections in the sidebar,
+ * Bookings marked, and the way back to the location's bookings. The same booking
  * as /bookings/[id], behind the same `bookings.view`. See
  * docs/261018-location-work-and-class-catalogue.md.
  */

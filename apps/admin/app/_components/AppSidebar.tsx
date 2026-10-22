@@ -3,12 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton, useUser } from "@clerk/nextjs";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -18,17 +15,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@repo/ui/sidebar";
-import { fullName, type Permission } from "@repo/db";
+import type { Permission } from "@repo/db";
+import type { MouseEvent, ReactNode } from "react";
 import {
-  LOCATIONS_PATH,
-  NEW_LOCATION_PATH,
-  locationHref,
-  locationSlugOf,
-} from "../_lib/routes";
-import { LocationMark } from "./LocationMark";
-import { LOCATIONS_NAV, isCurrentNav, navFor } from "./nav";
+  ALL_LOCATIONS_NAV,
+  groupFor,
+  isCurrentNav,
+  navFor,
+  type NavGroup,
+} from "./nav";
 
-/** A location as the sidebar lists it. */
+/** A location as the picker lists it. */
 export type SidebarLocation = {
   id: string;
   name: string;
@@ -37,37 +34,33 @@ export type SidebarLocation = {
 };
 
 /**
- * The console's sidebar: the brand mark on top, the locations first, then
- * the sections the admin may open in groups, the signed-in admin at the
- * bottom. The locations are their own group, one name per row behind a
- * disc coloured by its state, with "All locations" (the home) at its head
- * and "Add location" at its foot for Marketing: an admin picks a location
- * first and works inside it, and the location's own sections are in the
- * panel on the page's right, not here. Collapsed it is a rail of icons
- * with the labels as tooltips; below `md` it opens as a sheet.
+ * The console's sidebar: the brand mark on top, then the sections of the
+ * scope the picker in the header is on, then the sections of the console
+ * as a whole. The scope's sections come from the layout's `@scope` slot:
+ * a location's own, its day's work first and its setup folded under it,
+ * or the views across every location. Collapsed it is a rail of icons
+ * with the labels as tooltips; below `md` it opens as a sheet, which any
+ * link in it closes, one to the page on screen or a part of it included.
+ * See docs/261022-console-scope.md.
  */
 export function AppSidebar({
   permissions,
-  locations,
+  scope,
 }: {
   permissions: readonly Permission[];
-  locations: readonly SidebarLocation[];
+  /** The scope's sections, from the `@scope` slot. */
+  scope: ReactNode;
 }) {
-  const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  const { user } = useUser();
-  const name = user
-    ? fullName({ firstName: user.firstName, lastName: user.lastName })
-    : "";
-  const email = user?.primaryEmailAddress?.emailAddress ?? "";
-  const close = () => setOpenMobile(false);
-
-  const currentSlug = locationSlugOf(pathname);
-  const mayAdd = permissions.includes("locations.manage");
+  // A link pressed anywhere in the sheet closes it; a submenu's chevron,
+  // a button, does not. On a wide screen there is no sheet to close.
+  const closeOnLink = (event: MouseEvent<HTMLElement>) => {
+    if ((event.target as Element).closest("a")) setOpenMobile(false);
+  };
 
   return (
     <Sidebar title="Console menu">
-      <SidebarHeader>
+      <SidebarHeader onClick={closeOnLink}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -75,7 +68,7 @@ export function AppSidebar({
               size="lg"
               tooltip="Heavenly Travel Admin"
             >
-              <Link href="/" onClick={close}>
+              <Link href="/">
                 <Image
                   src="/brand/favicon.png"
                   alt=""
@@ -98,102 +91,48 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
-        {permissions.includes(LOCATIONS_NAV.permission) ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>{LOCATIONS_NAV.label}</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  active={pathname === LOCATIONS_PATH}
-                  tooltip="All locations"
-                >
-                  <Link href={LOCATIONS_PATH} onClick={close}>
-                    <LOCATIONS_NAV.icon />
-                    <SidebarLabel>All locations</SidebarLabel>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {locations.map((location) => (
-                <SidebarMenuItem key={location.id}>
-                  <SidebarMenuButton
-                    asChild
-                    active={location.slug === currentSlug}
-                    tooltip={location.name}
-                  >
-                    <Link href={locationHref(location.slug)} onClick={close}>
-                      <LocationMark
-                        name={location.name}
-                        state={location.state}
-                      />
-                      <SidebarLabel>{location.name}</SidebarLabel>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {mayAdd ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    active={pathname === NEW_LOCATION_PATH}
-                    tooltip="Add location"
-                    className="text-slate-500"
-                  >
-                    <Link href={NEW_LOCATION_PATH} onClick={close}>
-                      <span
-                        aria-hidden="true"
-                        className="flex size-4 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-400 text-xs leading-none"
-                      >
-                        +
-                      </span>
-                      <SidebarLabel>Add location</SidebarLabel>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
-            </SidebarMenu>
-          </SidebarGroup>
-        ) : null}
-
+      <SidebarContent onClick={closeOnLink}>
+        {scope}
         {navFor(permissions).map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarMenu>
-              {group.items.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    active={isCurrentNav(item, pathname)}
-                    tooltip={item.label}
-                  >
-                    <Link href={item.href} onClick={close}>
-                      <item.icon />
-                      <SidebarLabel>{item.label}</SidebarLabel>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          <NavGroupMenu key={group.label} group={group} />
         ))}
       </SidebarContent>
-
-      <SidebarFooter>
-        <div className="flex h-12 items-center gap-2 overflow-hidden rounded-md p-2">
-          <UserButton appearance={clerkUserButton} />
-          <span className="grid min-w-0 flex-1 leading-tight">
-            <SidebarLabel className="text-sm font-medium">
-              {name || email}
-            </SidebarLabel>
-            {name ? (
-              <SidebarLabel className="text-xs text-slate-500">
-                {email}
-              </SidebarLabel>
-            ) : null}
-          </span>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
+}
+
+/** A group of sections under its heading, the one on screen marked. */
+function NavGroupMenu({ group }: { group: NavGroup }) {
+  const pathname = usePathname();
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      <SidebarMenu>
+        {group.items.map((item) => (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+              asChild
+              active={isCurrentNav(item, pathname)}
+              tooltip={item.label}
+            >
+              <Link href={item.href}>
+                <item.icon />
+                <SidebarLabel>{item.label}</SidebarLabel>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+}
+
+/** The sidebar on All locations: the home and the views across locations the admin may open. */
+export function AllLocationsMenu({
+  permissions,
+}: {
+  permissions: readonly Permission[];
+}) {
+  const group = groupFor(ALL_LOCATIONS_NAV, permissions);
+  return group ? <NavGroupMenu group={group} /> : null;
 }

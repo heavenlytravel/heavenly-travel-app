@@ -183,6 +183,7 @@ export {
   listBookingsForUser,
   getBookingForUser,
   listBookings,
+  findBookingMatches,
   countBookings,
   getBooking,
   advanceItem,

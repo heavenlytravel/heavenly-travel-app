@@ -255,7 +255,7 @@ function ItemCard({
   }
   if (item.location) {
     // From the queue, the way to the same booking inside its location, with
-    // the location's panel beside it.
+    // the location's sections in the sidebar.
     rows.push([
       "Location",
       slug ? (

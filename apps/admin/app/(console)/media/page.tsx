@@ -1,73 +1,41 @@
 import {
   MEDIA_FILTERS,
+  MEDIA_FILTER_HINTS,
   MEDIA_FILTER_LABELS,
-  MEDIA_STATUS_LABELS,
-  formatLocalDate,
+  formatBytes,
   isMediaFilter,
   mediaStatusOf,
-  pageTitleOf,
-  plural,
   type MediaFilter,
   type MediaStatus,
-  type MediaUse,
 } from "@repo/db";
 import { listMediaUses } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
-import { ImageIcon } from "@repo/ui/icons";
+import { cx } from "@repo/ui/cx";
 import Link from "next/link";
-import { Frame, Tile, TileFoot, TileGrid } from "../../_components/Card";
-import { CardImage } from "../../_components/CardImage";
-import { FilterLinks } from "../../_components/FilterLinks";
+import { Frame } from "../../_components/Card";
 import { PageHeader } from "../../_components/PageHeader";
 import { Pager, pageOf } from "../../_components/Pager";
-import { Streamed, TileGridSkeleton } from "../../_components/Skeleton";
+import { Bone, Streamed, TileGridSkeleton } from "../../_components/Skeleton";
 import { requireAdmin } from "../../_lib/access";
-import {
-  PAGE_PARAM,
-  locationPageHref,
-  locationPublishHref,
-  locationVehicleHref,
-  mediaHref,
-  vehicleClassHref,
-} from "../../_lib/routes";
+import { PAGE_PARAM, mediaHref } from "../../_lib/routes";
 import {
   UPLOADS_NOT_SET_UP,
   listStoredFiles,
   type StoredFile,
 } from "../../_lib/uploads";
-import { MediaDelete } from "./MediaDelete";
+import { MediaLibrary, type MediaRow } from "./MediaLibrary";
 
 /** How many images a page of the screen holds. */
 const PAGE_SIZE = 48;
-
-const FILTER_OPTIONS = (Object.keys(MEDIA_FILTERS) as MediaFilter[]).map(
-  (value) => ({ value, label: MEDIA_FILTER_LABELS[value] }),
-);
-
-const STATUS_TONES: Record<MediaStatus, "green" | "blue" | "red" | "amber"> = {
-  used: "green",
-  earlier: "blue",
-  unused: "red",
-  recent: "amber",
-};
-
-/** A size in bytes as people read it: "820 KB", "3.7 MB". */
-function sizeOf(bytes: number) {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const totalOf = (files: readonly StoredFile[]) =>
-  files.reduce((sum, file) => sum + file.size, 0);
 
 /**
  * Route: /media?show=unused&page=2. Every image uploaded in the console,
  * newest first, as UploadThing keeps them, each with where it is used: a
  * location's page, working or published, a class's picture, a vehicle's
- * photo, or only an earlier publish a location's history shows. Those
- * nothing uses can be deleted, one from its card or all at once; one just
- * uploaded is kept for a day, since a form may not have saved it yet.
- * SUPER only. See docs/261001-locations-and-pages.md, "Images".
+ * photo, or only a page's past version, which its History shows. The
+ * tiles at the head count each standing and narrow the list to it. Images
+ * are chosen and deleted together; one on a page is replaced there first,
+ * and the delete names what loses the rest (`mediaDeleteImpact`). SUPER
+ * only. See docs/261001-locations-and-pages.md, "Images".
  */
 export default async function MediaPage({ searchParams }: PageProps<"/media">) {
   await requireAdmin("media.manage");
@@ -79,20 +47,21 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
     <>
       <PageHeader
         title="Media"
-        description="Every image uploaded in the console, newest first, and where each is used. Delete those nothing uses to free space. An image a location's history shows stays, so the history shows the page as it was."
+        description="Every image uploaded in the console, newest first, and where each is used. Choose images to delete them; the delete names what loses them first."
       />
       <div className="mt-6">
-        <FilterLinks
-          label="Filter by where an image stands"
-          options={FILTER_OPTIONS}
-          active={show}
-          hrefOf={(value) => mediaHref(value)}
-        />
-      </div>
-      <div className="mt-4">
         <Streamed
           key={`${show ?? "all"}:${page}`}
-          fallback={<TileGridSkeleton tiles={8} min="14rem" />}
+          fallback={
+            <div className="grid gap-6">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[0, 1, 2, 3].map((tile) => (
+                  <Bone key={tile} className="h-28 w-full" />
+                ))}
+              </div>
+              <TileGridSkeleton tiles={8} min="14rem" />
+            </div>
+          }
         >
           {() => mediaList({ show, page })}
         </Streamed>
@@ -101,7 +70,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
   );
 }
 
-/** The images of one page of the screen, the totals above them and the way to the others. */
+/** The tiles, then one page of the images and the way to the others. */
 async function mediaList({
   show,
   page,
@@ -128,164 +97,103 @@ async function mediaList({
       status: mediaStatusOf(file.uploadedAt, fileUses, now),
     };
   });
-  const shown = show
-    ? rows.filter((row) =>
-        (MEDIA_FILTERS[show] as readonly MediaStatus[]).includes(row.status),
-      )
-    : rows;
-  const free = rows.filter((row) => row.status === "unused").map((r) => r.file);
-  const onPage = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const of = (filter: MediaFilter) =>
+    rows.filter((row) =>
+      (MEDIA_FILTERS[filter] as readonly MediaStatus[]).includes(row.status),
+    );
+  const shown = show ? of(show) : rows;
+  const onPage: MediaRow[] = shown
+    .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    .map(({ file, uses: fileUses, status }) => ({
+      key: file.key,
+      name: file.name,
+      size: file.size,
+      uploadedAt: file.uploadedAt.toISOString(),
+      url: file.url,
+      status,
+      uses: fileUses,
+    }));
 
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <p className="text-sm text-neutral-600">
-          {plural(files.length, "image")}, {sizeOf(totalOf(files))}.{" "}
-          {free.length > 0
-            ? `${plural(free.length, "image")} nothing uses, ${sizeOf(totalOf(free))}.`
-            : "Nothing to delete: every image is in use or just uploaded."}
-        </p>
-        {free.length > 1 ? (
-          <MediaDelete
-            keys={free.map((file) => file.key)}
-            label={`Delete ${plural(free.length, "unused image")}`}
-            question={`Delete ${plural(free.length, "unused image")}?`}
-            description={`They are removed from storage for good, ${sizeOf(totalOf(free))} in all. Nothing uses them, not even a location's history.`}
-          />
-        ) : null}
-      </div>
-      {onPage.length === 0 ? (
-        <Frame>
-          <p className="px-6 py-8 text-center text-sm text-neutral-500">
-            {show
-              ? `No images ${MEDIA_FILTER_LABELS[show].toLowerCase()}.`
-              : "No images uploaded yet."}
-          </p>
-        </Frame>
-      ) : (
-        <TileGrid min="14rem">
-          {onPage.map((row) => (
-            <MediaTile key={row.file.key} {...row} />
-          ))}
-        </TileGrid>
-      )}
-      <Pager
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={shown.length}
-        hrefOf={(to) => mediaHref(show, to)}
-      />
-    </>
-  );
-}
-
-/** One image: its picture and where it stands, its name, size and day, and its uses or its delete. */
-function MediaTile({
-  file,
-  uses,
-  status,
-}: {
-  file: StoredFile;
-  uses: MediaUse[];
-  status: MediaStatus;
-}) {
-  // An earlier publish matters only while nothing else uses the image.
-  const listed =
-    status === "used" ? uses.filter((use) => use.kind !== "earlier") : uses;
-
-  return (
-    <Tile>
-      <CardImage
-        src={file.url}
-        fit="contain"
-        sizes="(min-width: 1024px) 14rem, (min-width: 640px) 50vw, 100vw"
-        fallback={<ImageIcon className="size-7 text-neutral-300" />}
+    <div className="grid gap-6">
+      <nav
+        aria-label="Filter by where an image stands"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
       >
-        <Badge tone={STATUS_TONES[status]}>{MEDIA_STATUS_LABELS[status]}</Badge>
-      </CardImage>
-      <div className="grid gap-2 px-4 pt-3 pb-4">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold" title={file.name}>
-            {file.name}
-          </h3>
-          <p className="text-xs text-neutral-500 tabular-nums">
-            {sizeOf(file.size)} · {formatLocalDate(file.uploadedAt)}
-          </p>
-        </div>
-        {listed.length > 0 ? (
-          <ul className="grid gap-1 text-xs">
-            {listed.map((use, index) => (
-              <li key={index} className="min-w-0 truncate">
-                <UseLink use={use} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-neutral-500">
-            {status === "recent"
-              ? "Nothing uses it yet. It is kept for a day after its upload, since a form may still save it."
-              : "Nothing uses it."}
-          </p>
-        )}
-      </div>
-      {status === "unused" ? (
-        <TileFoot>
-          <MediaDelete
-            keys={[file.key]}
-            label="Delete"
-            question={`Delete ${file.name}?`}
-            description={`It is removed from storage for good, ${sizeOf(file.size)}. Nothing uses it, not even a location's history.`}
+        <StatTile
+          label="All images"
+          files={rows.map((row) => row.file)}
+          hint="Every image uploaded in the console."
+          href={mediaHref()}
+          active={show === undefined}
+        />
+        {(Object.keys(MEDIA_FILTERS) as MediaFilter[]).map((filter) => (
+          <StatTile
+            key={filter}
+            label={MEDIA_FILTER_LABELS[filter]}
+            files={of(filter).map((row) => row.file)}
+            hint={MEDIA_FILTER_HINTS[filter]}
+            href={mediaHref(filter)}
+            active={show === filter}
           />
-        </TileFoot>
-      ) : null}
-    </Tile>
+        ))}
+      </nav>
+      <div>
+        <MediaLibrary
+          key={`${show ?? "all"}:${page}`}
+          rows={onPage}
+          emptyMessage={
+            show
+              ? `No images ${MEDIA_FILTER_LABELS[show].toLowerCase()}.`
+              : "No images uploaded yet."
+          }
+        />
+        <Pager
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={shown.length}
+          hrefOf={(to) => mediaHref(show, to)}
+        />
+      </div>
+    </div>
   );
 }
 
-/** Where a use is, as a link to it: the page in its editor, the class, the vehicle, the publish. */
-function UseLink({ use }: { use: MediaUse }) {
-  const link =
-    "text-neutral-700 underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900";
-  switch (use.kind) {
-    case "page": {
-      const copies =
-        use.draft && use.published
-          ? "published and draft"
-          : use.published
-            ? "published"
-            : "draft";
-      return (
-        <Link
-          href={locationPageHref(use.location.slug, use.page)}
-          className={link}
-        >
-          {use.location.name} · {pageTitleOf(use.page)}, {copies}
-        </Link>
-      );
-    }
-    case "earlier":
-      return (
-        <Link
-          href={locationPublishHref(use.location.slug, use.entryId)}
-          className={link}
-        >
-          {use.location.name} · {pageTitleOf(use.page)}, an earlier publish
-        </Link>
-      );
-    case "class":
-      return (
-        <Link href={vehicleClassHref(use.vehicleClass.id)} className={link}>
-          Class {use.vehicleClass.name}
-        </Link>
-      );
-    case "vehicle":
-      return (
-        <Link
-          href={locationVehicleHref(use.location.slug, use.vehicle.id)}
-          className={link}
-        >
-          Vehicle {use.vehicle.plate}
-        </Link>
-      );
-  }
+/** One standing at the head of the screen: how many images, how much they hold, and the list narrowed to it. */
+function StatTile({
+  label,
+  files,
+  hint,
+  href,
+  active,
+}: {
+  label: string;
+  files: readonly StoredFile[];
+  hint: string;
+  href: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cx(
+        "grid content-start gap-1 rounded-xl border bg-white px-4 py-3 transition-colors",
+        active
+          ? "border-neutral-900 ring-1 ring-neutral-900"
+          : "border-neutral-200 hover:border-neutral-300",
+      )}
+    >
+      <span className="text-sm font-medium text-neutral-700">{label}</span>
+      <span className="flex items-baseline gap-2">
+        <span className="text-2xl font-semibold tracking-tight text-neutral-900">
+          {files.length}
+        </span>
+        <span className="text-sm text-neutral-500">
+          {formatBytes(files.reduce((sum, file) => sum + file.size, 0))}
+        </span>
+      </span>
+      <span className="text-xs text-neutral-500">{hint}</span>
+    </Link>
+  );
 }

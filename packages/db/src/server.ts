@@ -19,8 +19,8 @@ export {
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
-export { listMediaUses, logMediaDeleted } from "./media";
-export type { DeletedMedia } from "./media";
+export { listMediaUses, logMediaDeleted, releaseMedia } from "./media";
+export type { DeletedMedia, MediaReleased, StoredMedia } from "./media";
 export {
   listLocationOverviews,
   getLocationOverview,

@@ -1,6 +1,8 @@
 import { logActivity } from "./activity";
 import { MEDIA_RECORD_ID, type Actor } from "./activity-actions";
+import { refuse, type Refusal } from "./change";
 import { db } from "./client";
+import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import { uploadKeyOf } from "./images";
 import {
   isLocationPageKey,
@@ -8,7 +10,13 @@ import {
   type LocationPageKey,
   type PageContent,
 } from "./location-page-input";
-import type { MediaUse } from "./media-status";
+import type { Prisma } from "./generated/prisma/client";
+import {
+  mediaDeleteImpact,
+  mediaDeleteRefusal,
+  mediaStatusOf,
+  type MediaUse,
+} from "./media-status";
 
 /**
  * Where the console's uploaded files are used, for the Media screen: the
@@ -41,23 +49,26 @@ function snapshotKeys(page: LocationPageKey, snapshot: unknown): string[] {
  * page's working and published copies are one use; an earlier publish is
  * named by the newest entry that showed the file, and only while the
  * location stands, since a deleted location's history has no page.
+ * `client` is the delete's transaction when it checks.
  */
-export async function listMediaUses(): Promise<Map<string, MediaUse[]>> {
+export async function listMediaUses(
+  client: Prisma.TransactionClient = db,
+): Promise<Map<string, MediaUse[]>> {
   const [locations, pages, publishes, classes, photos] = await Promise.all([
-    db.location.findMany({ select: { id: true, name: true, slug: true } }),
-    db.locationPage.findMany({
+    client.location.findMany({ select: { id: true, name: true, slug: true } }),
+    client.locationPage.findMany({
       select: { locationId: true, page: true, draft: true, published: true },
     }),
-    db.activityLog.findMany({
+    client.activityLog.findMany({
       where: { entityType: "location", action: "location.page.published" },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { id: true, entityId: true, before: true, after: true },
     }),
-    db.vehicleClass.findMany({
+    client.vehicleClass.findMany({
       where: { imageUrl: { not: null } },
       select: { id: true, name: true, imageUrl: true },
     }),
-    db.vehiclePhoto.findMany({
+    client.vehiclePhoto.findMany({
       select: {
         url: true,
         vehicle: {
@@ -153,4 +164,122 @@ export async function logMediaDeleted(
       before: { files: files.map((file) => ({ ...file })) },
     }),
   );
+}
+
+/** A stored file as a delete weighs it: UploadThing's record of it. */
+export type StoredMedia = {
+  key: string;
+  name: string;
+  size: number;
+  uploadedAt: Date;
+};
+
+/**
+ * What taking the files off their uses came to: the locations whose
+ * vehicles lost photos, by id, and whether any class lost its picture,
+ * for the pages to refresh; or why not.
+ */
+export type MediaReleased =
+  { ok: true; vehicleLocationIds: string[]; classPictures: number } | Refusal;
+
+/**
+ * Takes the files off what uses them, once the admin confirmed what that
+ * takes as it stands (`mediaDeleteImpact`, ./delete-impact): each vehicle
+ * loses those of its photos and each class its picture, logged in their
+ * own history; a page's past version stays in the log and shows without
+ * them. A file on a location's page is refused (`mediaDeleteRefusal`).
+ * The files themselves are deleted from storage after, by the admin.
+ */
+export async function releaseMedia(
+  actor: Actor,
+  files: readonly StoredMedia[],
+  confirmation: DeleteConfirmation,
+): Promise<MediaReleased> {
+  return db.$transaction(async (tx) => {
+    const uses = await listMediaUses(tx);
+    const now = new Date();
+    const weighed = files.map((file) => {
+      const fileUses = uses.get(file.key) ?? [];
+      return {
+        name: file.name,
+        size: file.size,
+        uses: fileUses,
+        status: mediaStatusOf(file.uploadedAt, fileUses, now),
+      };
+    });
+    const refusal = mediaDeleteRefusal(weighed);
+    if (refusal) return refuse(refusal);
+    const confirmed = checkDeleteConfirmed(
+      mediaDeleteImpact(weighed),
+      confirmation,
+    );
+    if (!confirmed.ok) return confirmed;
+
+    const keys = new Set(files.map((file) => file.key));
+    const isReleased = (url: string) => keys.has(uploadKeyOf(url) ?? "");
+    const [photos, classes] = await Promise.all([
+      tx.vehiclePhoto.findMany({
+        select: {
+          id: true,
+          url: true,
+          vehicleId: true,
+          vehicle: {
+            select: { locationId: true, _count: { select: { photos: true } } },
+          },
+        },
+      }),
+      tx.vehicleClass.findMany({
+        where: { imageUrl: { not: null } },
+        select: { id: true, imageUrl: true },
+      }),
+    ]);
+
+    const byVehicle = new Map<string, typeof photos>();
+    for (const photo of photos.filter((photo) => isReleased(photo.url))) {
+      byVehicle.set(photo.vehicleId, [
+        ...(byVehicle.get(photo.vehicleId) ?? []),
+        photo,
+      ]);
+    }
+    for (const [vehicleId, released] of byVehicle) {
+      const { vehicle } = released[0]!;
+      await tx.vehiclePhoto.deleteMany({
+        where: { id: { in: released.map((photo) => photo.id) } },
+      });
+      await logActivity(tx, actor, {
+        action: "vehicle.updated",
+        entityId: vehicleId,
+        before: { photos: vehicle._count.photos },
+        after: { photos: vehicle._count.photos - released.length },
+        locationIds: [vehicle.locationId],
+      });
+    }
+
+    const pictures = classes.filter(
+      (vehicleClass) =>
+        vehicleClass.imageUrl !== null && isReleased(vehicleClass.imageUrl),
+    );
+    for (const vehicleClass of pictures) {
+      await tx.vehicleClass.update({
+        where: { id: vehicleClass.id },
+        data: { imageUrl: null },
+      });
+      await logActivity(tx, actor, {
+        action: "vehicle-class.updated",
+        entityId: vehicleClass.id,
+        before: { imageUrl: vehicleClass.imageUrl },
+        after: { imageUrl: null },
+      });
+    }
+
+    return {
+      ok: true,
+      vehicleLocationIds: [
+        ...new Set(
+          [...byVehicle.values()].map(([photo]) => photo!.vehicle.locationId),
+        ),
+      ],
+      classPictures: pictures.length,
+    };
+  });
 }

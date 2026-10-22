@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   IMAGE_MAX_BYTES,
   checkImageFile,
+  formatBytes,
   isUploadUrl,
   uploadKeyOf,
 } from "./images";
@@ -58,5 +59,15 @@ describe("uploadKeyOf", () => {
     ]) {
       assert.equal(uploadKeyOf(value), null, value);
     }
+  });
+});
+
+describe("formatBytes", () => {
+  it("says a size as people read it", () => {
+    assert.equal(formatBytes(0), "0 KB");
+    assert.equal(formatBytes(300), "1 KB");
+    assert.equal(formatBytes(555 * 1024), "555 KB");
+    assert.equal(formatBytes(3.7 * 1024 * 1024), "3.7 MB");
+    assert.equal(formatBytes(1.2 * 1024 * 1024 * 1024), "1.2 GB");
   });
 });

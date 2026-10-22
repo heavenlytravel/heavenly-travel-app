@@ -37,6 +37,15 @@ export function checkImageFile(file: { type: string; size: number }): Change {
   return { ok: true };
 }
 
+/** A size in bytes as people read it: "820 KB", "3.7 MB", "1.2 GB". */
+export function formatBytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (bytes === 0) return "0 KB";
+  if (mb < 1) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
+}
+
 /** Where UploadThing serves a file: https://<app id>.ufs.sh/f/<key>. */
 const UPLOAD_HOST_SUFFIX = ".ufs.sh";
 

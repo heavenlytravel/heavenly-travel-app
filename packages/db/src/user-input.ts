@@ -5,7 +5,7 @@ import { isValidPhone, normalizePhone } from "./phone";
 
 /**
  * What the Users screen asks to create an account on someone's behalf,
- * and the rules it checks, pure and browser-safe. The writer in ./users
+ * and the rules it checks, pure and browser-safe. The writer in ./accounts
  * makes the account in Clerk and mirrors it here.
  */
 

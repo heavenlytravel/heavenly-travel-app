@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fullName, searchTermOf } from "@repo/db";
+import { formatLocalDate, fullName, searchTermOf } from "@repo/db";
 import { listUsers } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -91,7 +91,11 @@ async function usersList({ q, page }: { q?: string; page: number }) {
           <TBody>
             {users.length === 0 ? (
               <EmptyRow colSpan={6}>
-                {q ? `No user matches “${q}”.` : "No users yet."}
+                {total > 0
+                  ? "No users on this page."
+                  : q
+                    ? `No user matches “${q}”.`
+                    : "No users yet."}
               </EmptyRow>
             ) : null}
             {users.map((user) => {
@@ -104,9 +108,7 @@ async function usersList({ q, page }: { q?: string; page: number }) {
                     {user.phone ?? "—"}
                   </Td>
                   <Td className="text-slate-600 tabular-nums">
-                    {user.createdAt.toLocaleDateString("en-MY", {
-                      dateStyle: "medium",
-                    })}
+                    {formatLocalDate(user.createdAt)}
                   </Td>
                   <Td>
                     {level ? (

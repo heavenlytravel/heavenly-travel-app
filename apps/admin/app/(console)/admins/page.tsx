@@ -1,6 +1,7 @@
 import {
   ADMIN_TEAM_LABELS,
   adminTeamsOf,
+  formatLocalDate,
   fullName,
   needsTeam,
   searchTermOf,
@@ -166,9 +167,7 @@ async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
                     )}
                   </Td>
                   <Td className="text-slate-600 tabular-nums">
-                    {createdAt.toLocaleDateString("en-MY", {
-                      dateStyle: "medium",
-                    })}
+                    {formatLocalDate(createdAt)}
                   </Td>
                   <Td>
                     {isSelf ? null : (

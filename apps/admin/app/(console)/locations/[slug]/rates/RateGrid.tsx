@@ -17,10 +17,10 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
 import {
   ArrowDownIcon,
-  ArrowRightToLineIcon,
   ArrowUpIcon,
   PlusIcon,
   TrashIcon,
+  UndoIcon,
 } from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
 import {
@@ -213,9 +213,11 @@ const CELL_INPUT =
  * on the prices as saved, so a row stays put while its cells are typed in
  * and moves on the save. They can be narrowed to the routes of one zone,
  * that zone then read as From, or to those with a class unpriced as
- * saved. The keys and a paste follow the rows as shown. Rows are ticked
- * to be taken off the grid, or to have each category's first price copied
- * into their empty cells; each class's heading counts its priced routes.
+ * saved. The keys and a paste follow the rows as shown. Ticked rows are
+ * marked for deletion: struck through, their prices locked, until the save
+ * deletes them or their undo or Discard keeps them. The bar of actions
+ * stays in view under the console's header while the page scrolls; each
+ * class's heading counts its priced routes.
  */
 export function RateGrid({
   locationId,
@@ -250,6 +252,8 @@ export function RateGrid({
   const [gapsOnly, setGapsOnly] = useState(false);
   /** The ticked rows, by route key. */
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  /** The rows marked for deletion, by route key: deleted on the save. */
+  const [doomed, setDoomed] = useState<ReadonlySet<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const gridRef = useRef<HTMLDivElement>(null);
   // What the focused cell held when it took the focus, for Escape.
@@ -276,12 +280,14 @@ export function RateGrid({
     };
   }, []);
 
-  // The grid against what is saved: the cells changed, those that are not
-  // prices, and the saved prices of rows taken off.
-  const onGrid = new Set(routes.map(routeKey));
+  // The grid against what is saved: the cells changed and those that are
+  // not prices on the routes kept, and the routes marked for deletion,
+  // each counted once.
+  const kept = routes.filter((route) => !doomed.has(routeKey(route)));
+  const onGrid = new Set(kept.map(routeKey));
   const changed = new Set<string>();
   const invalid = new Set<string>();
-  for (const route of routes) {
+  for (const route of kept) {
     for (const column of classes) {
       const key = cellKey(route, column.id);
       const reading = readCell(values[key]);
@@ -289,13 +295,7 @@ export function RateGrid({
       else if (reading.sen !== (saved.prices[key] ?? null)) changed.add(key);
     }
   }
-  // A route taken off counts once, however many prices it had.
-  const removed = new Set(
-    Object.keys(saved.prices)
-      .map(routeKeyOfCell)
-      .filter((key) => !onGrid.has(key)),
-  ).size;
-  const changes = changed.size + invalid.size + removed;
+  const changes = changed.size + invalid.size + doomed.size;
   const dirty = changes > 0;
   const leaveDialog = useLeaveGuard(
     dirty,
@@ -380,35 +380,10 @@ export function RateGrid({
     setSort(dir === null ? { by, dir: 1 } : dir === 1 ? { by, dir: -1 } : null);
   }
 
-  // What a row's fill writes: in each category, the first price typed
-  // into the cells left empty.
-  function fillOf(route: Route): Record<string, string> {
-    const first = new Map<string, string>();
-    for (const column of classes) {
-      const text = values[cellKey(route, column.id)] ?? "";
-      const reading = readCell(text);
-      if (!first.has(column.category) && reading.ok && reading.sen !== null) {
-        first.set(column.category, tidy(text));
-      }
-    }
-    const fill: Record<string, string> = {};
-    for (const column of classes) {
-      const key = cellKey(route, column.id);
-      const price = first.get(column.category);
-      if (price !== undefined && (values[key] ?? "").trim() === "") {
-        fill[key] = price;
-      }
-    }
-    return fill;
-  }
-
-  // The ticked rows among those shown: a narrowing unticks the rest.
-  const tickedShown = shown.filter((route) => ticked.has(routeKey(route)));
-  const fills = tickedShown.map(fillOf);
-  const fillable = fills.reduce(
-    (count, fill) => count + Object.keys(fill).length,
-    0,
-  );
+  // The ticked rows among those shown and kept: a narrowing unticks the
+  // rest.
+  const tickable = shown.filter((route) => !doomed.has(routeKey(route)));
+  const tickedShown = tickable.filter((route) => ticked.has(routeKey(route)));
 
   // The zones a row can be narrowed to: this location's, then the other
   // locations' that a route runs out to.
@@ -520,7 +495,8 @@ export function RateGrid({
 
   // A block copied from a spreadsheet: tab between cells, a line per row.
   // It fills right and down from the cell it is pasted in, along the rows
-  // as shown; what falls past the grid's edge is left out and counted.
+  // as shown, past the rows marked for deletion; what falls past the
+  // grid's edge is left out and counted.
   function onCellPaste(
     event: ClipboardEvent<HTMLInputElement>,
     row: number,
@@ -545,6 +521,7 @@ export function RateGrid({
           outside += 1;
           return;
         }
+        if (doomed.has(routeKey(route))) return;
         pasted[cellKey(route, column.id)] = tidy(raw);
         filled += 1;
       }),
@@ -628,30 +605,19 @@ export function RateGrid({
     });
   }
 
-  function fillTicked() {
-    setValues((current) => Object.assign({ ...current }, ...fills));
-    setNotice({
-      tone: "info",
-      text: `Filled ${plural(fillable, "cell")} in ${plural(tickedShown.length, "route")}.`,
-    });
+  // Marked, not taken off: the row stays, struck through, until the save
+  // deletes it; its undo or Discard keeps it.
+  function deleteTicked() {
+    setDoomed(new Set([...doomed, ...tickedShown.map(routeKey)]));
+    setTicked(new Set());
+    setNotice(null);
   }
 
-  // Taken off the grid until the save, as any change; Discard brings
-  // them back.
-  function removeTicked() {
-    const gone = new Set(tickedShown.map(routeKey));
-    setRoutes(routes.filter((route) => !gone.has(routeKey(route))));
-    setValues((current) => {
-      const next = { ...current };
-      for (const route of tickedShown) {
-        for (const column of classes) delete next[cellKey(route, column.id)];
-      }
+  function keep(route: Route) {
+    setDoomed((was) => {
+      const next = new Set(was);
+      next.delete(routeKey(route));
       return next;
-    });
-    setTicked(new Set());
-    setNotice({
-      tone: "info",
-      text: `Deleted ${plural(gone.size, "route")}.`,
     });
   }
 
@@ -660,19 +626,20 @@ export function RateGrid({
     setRoutes(saved.routes);
     setValues(valuesOf(saved));
     setTicked(new Set());
+    setDoomed(new Set());
   }
 
   function save() {
     if (invalid.size > 0) return;
-    // Every cell of the rows on the grid, and the saved prices of rows
-    // taken off as cleared: the writer stores what changed.
+    // Every cell of the rows kept, and the saved prices of the rows marked
+    // for deletion as cleared: the writer stores what changed.
     const rows: {
       fromZoneId: string;
       toZoneId: string;
       vehicleClassId: string;
       price: string;
     }[] = [];
-    for (const route of routes) {
+    for (const route of kept) {
       for (const column of classes) {
         rows.push({
           ...route,
@@ -701,7 +668,7 @@ export function RateGrid({
       for (const [key, sen] of Object.entries(saved.prices)) {
         if (onGrid.has(routeKeyOfCell(key))) prices[key] = sen;
       }
-      for (const route of routes) {
+      for (const route of kept) {
         for (const column of classes) {
           const key = cellKey(route, column.id);
           const reading = readCell(values[key]);
@@ -709,10 +676,12 @@ export function RateGrid({
           else delete prices[key];
         }
       }
-      const next = { routes, prices };
+      const next = { routes: kept, prices };
       setSaved(next);
+      setRoutes(kept);
       setValues(valuesOf(next));
       setTicked(new Set());
+      setDoomed(new Set());
       setNotice(null);
       toast.success("Rates saved.");
     });
@@ -726,7 +695,8 @@ export function RateGrid({
       : "Empty: metered at the class's rates";
   const ariaSortOf = (dir: 1 | -1 | null) =>
     dir === null ? undefined : dir === 1 ? "ascending" : "descending";
-  const allTicked = shown.length > 0 && tickedShown.length === shown.length;
+  const allTicked =
+    tickable.length > 0 && tickedShown.length === tickable.length;
   const tickHeading = readOnly ? null : (
     <th
       key="tick"
@@ -737,14 +707,14 @@ export function RateGrid({
       <Checkbox
         aria-label="Tick every route shown"
         checked={allTicked}
-        disabled={shown.length === 0}
+        disabled={tickable.length === 0}
         ref={(input) => {
           if (input) {
             input.indeterminate = tickedShown.length > 0 && !allTicked;
           }
         }}
         onChange={(event) =>
-          setTicked(new Set(event.target.checked ? shown.map(routeKey) : []))
+          setTicked(new Set(event.target.checked ? tickable.map(routeKey) : []))
         }
       />
     </th>
@@ -768,13 +738,13 @@ export function RateGrid({
     </th>
   );
   const leadHeadings = [tickHeading, zoneHeading("from"), zoneHeading("to")];
-  // A class's priced routes, as typed.
+  // A class's priced routes, as typed, among those kept.
   const pricedOf = (classId: string) =>
-    routes.filter((route) => {
+    kept.filter((route) => {
       const reading = readCell(values[cellKey(route, classId)]);
       return reading.ok && reading.sen !== null;
     }).length;
-  const gaps = routes.filter(hasGap).length;
+  const gaps = kept.filter(hasGap).length;
 
   let status: { tone: Notice["tone"] | "dirty" | "idle"; text: string };
   if (pending) status = { tone: "idle", text: "Saving…" };
@@ -797,110 +767,89 @@ export function RateGrid({
 
   return (
     <>
-      <div className="grid gap-4 px-6 pb-4">
-        {readOnly ? null : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Tooltip content={canAdd ? null : "Every pair of zones has a row."}>
-              <Button
-                variant="secondary"
-                disabled={pending || !canAdd}
-                onClick={() => setAdding(true)}
-              >
-                <PlusIcon />
-                Add route
-              </Button>
-            </Tooltip>
-            <Tooltip
-              content={
-                ticks === 0
-                  ? "Tick the routes to fill."
-                  : fillable === 0
-                    ? "The ticked routes have no empty cell beside a price."
-                    : "Copy each category's first price into the empty cells of the ticked routes."
-              }
+      {readOnly ? null : (
+        // Under the console's header (h-14) while the page scrolls.
+        <div className="sticky top-14 z-3 flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
+          <Tooltip content={canAdd ? null : "Every pair of zones has a row."}>
+            <Button
+              variant="secondary"
+              disabled={pending || !canAdd}
+              onClick={() => setAdding(true)}
             >
-              <Button
-                variant="secondary"
-                disabled={pending || fillable === 0}
-                onClick={fillTicked}
-              >
-                <ArrowRightToLineIcon />
-                Fill empty cells
-              </Button>
-            </Tooltip>
-            <Tooltip
-              content={ticks === 0 ? "Tick the routes to delete." : null}
+              <PlusIcon />
+              Add route
+            </Button>
+          </Tooltip>
+          <Tooltip content={ticks === 0 ? "Tick the routes to delete." : null}>
+            <Button
+              variant="secondary"
+              disabled={pending || ticks === 0}
+              onClick={deleteTicked}
             >
-              <Button
-                variant="secondary"
-                disabled={pending || ticks === 0}
-                onClick={removeTicked}
-              >
-                <TrashIcon />
-                {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
-              </Button>
-            </Tooltip>
-            <div className="ml-auto flex items-center gap-2">
-              {dirty ? (
-                <Button variant="ghost" disabled={pending} onClick={discard}>
-                  Discard
-                </Button>
-              ) : null}
-              <Button
-                disabled={pending || !dirty || invalid.size > 0}
-                onClick={save}
-              >
-                {pending ? "Saving…" : "Save rates"}
-              </Button>
-            </div>
-            <p
-              aria-live="polite"
-              className={cx(
-                "flex basis-full items-center justify-end gap-2 text-right text-sm",
-                status.tone === "error"
-                  ? "text-red-700"
-                  : status.tone === "done"
-                    ? "text-emerald-700"
-                    : status.tone === "idle"
-                      ? "text-slate-500"
-                      : "text-slate-800",
-              )}
-            >
-              {status.tone === "dirty" ? (
-                <span
-                  aria-hidden="true"
-                  className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
-                />
-              ) : null}
-              {status.text}
-            </p>
-          </div>
-        )}
-        {routes.length > 1 ? (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Select
-              aria-label="Show the routes of one zone"
-              value={zoneShown}
-              onValueChange={(zone) => narrowTo(zone, gapsOnly)}
-              options={zoneOptions}
-              className="w-full sm:w-64"
-            />
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <Checkbox
-                checked={gapsOnly}
-                onChange={(event) => narrowTo(zoneShown, event.target.checked)}
+              <TrashIcon />
+              {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
+            </Button>
+          </Tooltip>
+          <p
+            aria-live="polite"
+            className={cx(
+              "ml-auto flex min-w-0 items-center gap-2 text-sm",
+              status.tone === "error"
+                ? "text-red-700"
+                : status.tone === "done"
+                  ? "text-emerald-700"
+                  : status.tone === "idle"
+                    ? "text-slate-500"
+                    : "text-slate-800",
+            )}
+          >
+            {status.tone === "dirty" ? (
+              <span
+                aria-hidden="true"
+                className="size-3 shrink-0 rounded-sm border border-amber-300 bg-amber-50"
               />
-              Only routes with an empty cell ({gaps})
-              <InfoTip text="A route where a class has no saved price. A row filled in stays until the save." />
-            </label>
-            {filtering ? (
-              <p className="text-sm text-slate-500 tabular-nums sm:ml-auto">
-                {shown.length} of {plural(routes.length, "route")} shown
-              </p>
             ) : null}
+            {status.text}
+          </p>
+          <div className="flex items-center gap-2">
+            {dirty ? (
+              <Button variant="ghost" disabled={pending} onClick={discard}>
+                Discard
+              </Button>
+            ) : null}
+            <Button
+              disabled={pending || !dirty || invalid.size > 0}
+              onClick={save}
+            >
+              {pending ? "Saving…" : "Save rates"}
+            </Button>
           </div>
-        ) : null}
-      </div>
+        </div>
+      )}
+      {routes.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
+          <Select
+            aria-label="Show the routes of one zone"
+            value={zoneShown}
+            onValueChange={(zone) => narrowTo(zone, gapsOnly)}
+            options={zoneOptions}
+            className="w-full sm:w-64"
+          />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={gapsOnly}
+              onChange={(event) => narrowTo(zoneShown, event.target.checked)}
+            />
+            Only routes with an empty cell ({gaps})
+            <InfoTip text="A route where a class has no saved price. A row filled in stays until the save." />
+          </label>
+          {filtering ? (
+            <p className="text-sm text-slate-500 tabular-nums sm:ml-auto">
+              {shown.length} of {plural(routes.length, "route")} shown
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="relative">
         <div
           ref={gridRef}
@@ -940,7 +889,7 @@ export function RateGrid({
                     />
                     {routes.length > 0 ? (
                       <span className="block font-normal whitespace-nowrap text-slate-500 tabular-nums">
-                        {pricedOf(column.id)} of {routes.length} priced
+                        {pricedOf(column.id)} of {kept.length} priced
                       </span>
                     ) : null}
                   </th>
@@ -981,22 +930,41 @@ export function RateGrid({
                     ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
                     : `${nameOf(a)} ↔ ${nameOf(b)}, the same price both ways.`;
                   const isTicked = ticked.has(routeKey(route));
+                  const isDoomed = doomed.has(routeKey(route));
                   const lead = cx(
                     "py-0 text-left align-middle font-normal",
-                    isTicked ? "bg-slate-50" : "group-hover:bg-slate-50",
+                    isDoomed
+                      ? "bg-red-50/70 text-slate-400 line-through"
+                      : isTicked
+                        ? "bg-slate-50"
+                        : "group-hover:bg-slate-50",
                     row < shown.length - 1 && "border-b border-slate-200",
                   );
                   return (
                     <tr key={routeKey(route)} className="group">
                       {readOnly ? null : (
                         <td className={cx(lead, "w-px pr-1 pl-6")}>
-                          <Checkbox
-                            aria-label={`Tick the route between ${label}`}
-                            checked={isTicked}
-                            onChange={(event) =>
-                              tick(route, event.target.checked)
-                            }
-                          />
+                          {isDoomed ? (
+                            <Tooltip content="Keep this route">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() => keep(route)}
+                                aria-label={`Keep the route between ${label}`}
+                                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-slate-600 hover:bg-red-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
+                              >
+                                <UndoIcon className="size-3.5" />
+                              </button>
+                            </Tooltip>
+                          ) : (
+                            <Checkbox
+                              aria-label={`Tick the route between ${label}`}
+                              checked={isTicked}
+                              onChange={(event) =>
+                                tick(route, event.target.checked)
+                              }
+                            />
+                          )}
                         </td>
                       )}
                       <th
@@ -1046,14 +1014,16 @@ export function RateGrid({
                             className={cx(
                               "border-l border-slate-200 p-0",
                               row < shown.length - 1 && "border-b",
-                              bad
-                                ? "bg-red-50"
-                                : changed.has(key)
-                                  ? "bg-amber-50"
-                                  : cx(
-                                      "group-hover:bg-slate-50",
-                                      empty && EMPTY_CELL,
-                                    ),
+                              isDoomed
+                                ? "bg-red-50/70"
+                                : bad
+                                  ? "bg-red-50"
+                                  : changed.has(key)
+                                    ? "bg-amber-50"
+                                    : cx(
+                                        "group-hover:bg-slate-50",
+                                        empty && EMPTY_CELL,
+                                      ),
                             )}
                           >
                             {readOnly ? (
@@ -1071,7 +1041,8 @@ export function RateGrid({
                                 inputMode="decimal"
                                 autoComplete="off"
                                 spellCheck={false}
-                                readOnly={pending}
+                                readOnly={pending || isDoomed}
+                                tabIndex={isDoomed ? -1 : undefined}
                                 value={values[key] ?? ""}
                                 onChange={(event) =>
                                   edit(key, event.target.value)
@@ -1093,7 +1064,9 @@ export function RateGrid({
                                 }
                                 className={cx(
                                   CELL_INPUT,
-                                  bad && "text-red-700",
+                                  isDoomed
+                                    ? "text-slate-400 line-through"
+                                    : bad && "text-red-700",
                                 )}
                               />
                             )}
@@ -1119,7 +1092,12 @@ export function RateGrid({
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Key swatch={cx("border-slate-300", EMPTY_CELL)}>{emptyMeans}</Key>
           {readOnly ? null : (
-            <Key swatch="border-amber-300 bg-amber-50">Changed, not saved</Key>
+            <>
+              <Key swatch="border-amber-300 bg-amber-50">
+                Changed, not saved
+              </Key>
+              <Key swatch="border-red-200 bg-red-50">Deleted on save</Key>
+            </>
           )}
           <span className="tabular-nums sm:ml-auto">
             {[

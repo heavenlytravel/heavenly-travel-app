@@ -4,9 +4,10 @@ import {
   getVehicle,
   listModelSuggestions,
   listClassOptions,
+  vehicleDeleteImpactOf,
 } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
-import { DeleteRecord } from "../../../../../_components/DeleteRecord";
+import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DetailColumns } from "../../../../../_components/PageColumn";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
@@ -75,8 +76,9 @@ async function vehicleScreen({
   startClassId: string | undefined;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, classes, suggestions, locations] = await Promise.all([
+  const [vehicle, impact, classes, suggestions, locations] = await Promise.all([
     isNew ? null : getVehicle(vehicleId),
+    isNew ? null : vehicleDeleteImpactOf(vehicleId),
     listClassOptions(),
     listModelSuggestions(),
     locationNames(),
@@ -98,15 +100,17 @@ async function vehicleScreen({
             : "One of our vehicles, based here. Its class is what customers book, and its model what they may choose."
         }
         action={
-          vehicle ? (
+          vehicle && impact ? (
             <>
               <HistoryLink
                 href={recordHistoryHref(locationVehicleHref(slug, vehicle.id))}
               />
-              <DeleteRecord
+              <DeleteButton
+                look="header"
                 label="Delete vehicle"
                 title={`Delete ${vehicle.plate}?`}
-                description="For a vehicle entered by mistake: one that has served is taken out of service instead. Its history stays in the log. This cannot be undone."
+                impact={impact}
+                note="For a vehicle entered by mistake: one that has served is taken out of service instead. Its history stays in the log. This cannot be undone."
                 action={deleteVehicleAction.bind(null, vehicle.id)}
                 doneHref={locationTabHref(slug, "vehicles")}
                 doneMessage={`Deleted ${vehicle.plate}.`}

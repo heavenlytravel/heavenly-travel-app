@@ -2,6 +2,7 @@
 
 import {
   createLocation,
+  deleteConfirmationOf,
   deleteLocation,
   isLocationPageKey,
   isLocationState,
@@ -259,27 +260,27 @@ export async function unpublishPageAction(
 }
 
 /**
- * Deletes a location and opens the list. `typedSlug` is what the admin
- * typed to confirm, which a location that has been live asks for; null
- * when nothing was asked. The customer site drops the pages and the home
- * page card it may have shown.
+ * Deletes a location and opens the list. `seen` and `typed` are what the
+ * dialog showed and what the admin typed: the slug, for a location that
+ * has been live or that other locations price routes to (@repo/db's
+ * delete-impact). The customer site drops the pages and the home page
+ * card it may have shown, and refreshes those other locations' pages.
  */
 export async function deleteLocationAction(
   locationId: string,
-  typedSlug: string | null,
+  seen: string[],
+  typed: string | null,
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string") return STALE;
-  if (typedSlug !== null && typeof typedSlug !== "string") {
-    return { error: "Type the slug to confirm." };
-  }
+  const confirmation = deleteConfirmationOf(seen, typed);
+  if (typeof locationId !== "string" || !confirmation) return STALE;
 
-  const result = await deleteLocation(actorOf(admin), locationId, typedSlug);
+  const result = await deleteLocation(actorOf(admin), locationId, confirmation);
   if (!result.ok) return stateOf(result);
   revalidateLocations();
   revalidatePath(HOME_PAGE_PATH);
-  refreshDeletedLocationAfter(result.slug);
+  refreshDeletedLocationAfter(result.slug, ...result.alsoChanged);
   return { href: LOCATIONS_PATH };
 }
 

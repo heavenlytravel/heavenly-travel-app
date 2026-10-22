@@ -9,6 +9,7 @@ import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
+import { deletedMediaRefusal } from "./media";
 
 export type { VehicleClass };
 
@@ -123,6 +124,13 @@ export async function createVehicleClass(
         "name",
       );
     }
+    const gone = await deletedMediaRefusal(
+      tx,
+      [fields.imageUrl],
+      "The picture",
+      "imageUrl",
+    );
+    if (gone) return gone;
     const vehicleClass = await tx.vehicleClass.create({
       data: { slug, ...fields },
     });
@@ -154,6 +162,15 @@ export async function updateVehicleClass(
 
     const changed = changedFields(vehicleClass, patch);
     if (!changed) return { ok: true };
+    if (changed.after.imageUrl) {
+      const gone = await deletedMediaRefusal(
+        tx,
+        [changed.after.imageUrl],
+        "The picture",
+        "imageUrl",
+      );
+      if (gone) return gone;
+    }
 
     await tx.vehicleClass.update({ where: { id }, data: changed.after });
     await logActivity(tx, actor, {

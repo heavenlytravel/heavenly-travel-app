@@ -304,6 +304,31 @@ is gone. "Unpublish" shows only where the page may be unpublished.
 - Alt text is required on every image. JPEG, PNG and WebP, at most 4 MB each.
 - The upload route is in the admin app and checks `locations.manage`.
 - A file that is replaced stays in UploadThing; clearing unused files is future work.
+  Built on 2026-10-22 as the Media screen, `/media`, for SUPER alone (`media.manage`),
+  in place of a clean-up that runs by itself:
+  - It lists every file of the UploadThing app, newest first, with where each is used:
+    a location's page, working or published, a vehicle class's picture, a vehicle's
+    photo, or only a page's past version, which its History shows as it was published.
+    Tiles at the head count each standing, with its size, and narrow the list to it.
+  - Each database has its own UploadThing app (production `heavenly-travel-app`,
+    development `heavenly-travel-app-dev`), so a file this database does not use is no
+    other's. A shared app would make that unsafe.
+  - Images are chosen with a box on each card and deleted together, after the dialog
+    lists what loses them: a vehicle its photos, a class its catalogue picture, a page's
+    History the past version that showed them, and a form not saved yet one uploaded in
+    the last day. Any of those asks for "delete" to be typed. A vehicle's photo and a
+    class's picture go from them in the same transaction, logged in their history.
+  - An image on a location's page, working or published, cannot be chosen: it is
+    replaced in the page editor and published, so a public page never changes without a
+    publish (the Tech Lead, 2026-10-22).
+  - The server works out the impact again and refuses when it changed since the dialog
+    showed it (`@repo/db`'s `delete-impact`), and logs what it removed
+    (`media.deleted`). The photos and pictures it takes off are those of the same read.
+    If storage then fails, the vehicles and classes are refreshed anyway, only the files
+    that went are logged, and the screen says to delete the rest again.
+  - A form opened before the delete that still holds a deleted file is refused on save,
+    at its field: a vehicle's photos, a class's picture, a page's images. The
+    `media.deleted` entries name the files.
 - For scale: the WordPress site holds about 680 images in 168 MB, checked on
   2026-10-01. UploadThing's free plan holds 2 GB.
 

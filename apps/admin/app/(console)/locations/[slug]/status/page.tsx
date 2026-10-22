@@ -2,10 +2,12 @@ import {
   LOCATION_STATE_LABELS,
   LOCATION_STATE_MOVE,
   hasBeenLive,
+  locationDeleteImpact,
   locationStateOf,
   stateMoveBlockers,
   type LocationState,
 } from "@repo/db";
+import { routesIntoLocation } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
 import { SectionHeader } from "../../../../_components/SectionHeader";
@@ -60,11 +62,17 @@ export default async function LocationStatusPage({
 }
 
 async function status({ id }: { id: string }) {
-  const [location, overview, permissions] = await Promise.all([
+  const asked = getPermissions();
+  const [location, overview, permissions, routesIn] = await Promise.all([
     locationDetails(id),
     locationOverview(id),
-    getPermissions(),
+    asked,
+    // What a delete takes from other locations, read for SUPER alone.
+    asked.then((held) =>
+      held.includes("locations.activate") ? routesIntoLocation(id) : [],
+    ),
   ]);
+  const moves = permissions.includes("locations.activate");
   if (!location || !overview) notFound();
   const state = locationStateOf(location.state);
   const blockers = stateMoveBlockers(
@@ -73,7 +81,6 @@ async function status({ id }: { id: string }) {
     location.pages,
     overview,
   );
-  const moves = permissions.includes("locations.activate");
 
   return (
     <>
@@ -106,7 +113,7 @@ async function status({ id }: { id: string }) {
       </Card>
       {moves ? (
         <Card>
-          <CardTitle description="For good: its pages and saved addresses go with it.">
+          <CardTitle description="Removes the location for good.">
             Delete location
           </CardTitle>
           <DeleteLocation
@@ -114,6 +121,7 @@ async function status({ id }: { id: string }) {
             name={location.name}
             slug={location.slug}
             hasBeenLive={hasBeenLive(location)}
+            impact={locationDeleteImpact(location, routesIn)}
           />
         </Card>
       ) : null}

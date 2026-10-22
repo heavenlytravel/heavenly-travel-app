@@ -20,6 +20,13 @@ export {
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {
+  deletedMediaRefusal,
+  listMediaUses,
+  logMediaDeleted,
+  releaseMedia,
+} from "./media";
+export type { DeletedMedia, MediaReleased, StoredMedia } from "./media";
+export {
   listLocationOverviews,
   getLocationOverview,
 } from "./location-overview";
@@ -59,6 +66,7 @@ export {
   createVehicle,
   updateVehicle,
   deleteVehicle,
+  vehicleDeleteImpactOf,
 } from "./vehicles";
 export type { ListedVehicle, VehicleWithModel, FleetFilter } from "./vehicles";
 export {
@@ -103,6 +111,7 @@ export {
   setZoneRates,
   setOddHours,
   setDropoffRule,
+  routesIntoLocation,
 } from "./zones";
 export type {
   Zone,
@@ -224,6 +233,9 @@ export * from "./driver-input";
 export * from "./expiry";
 export * from "./location-input";
 export * from "./images";
+export * from "./media-status";
+export * from "./delete-impact";
+export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./location-view";
 export * from "./location-search";

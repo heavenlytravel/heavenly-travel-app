@@ -1,146 +1,101 @@
-import Link from "next/link";
-import { describeActivity, formatLocalDateTime } from "@repo/db";
-import { listActivity, type ActivityEntry } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
+import { isActivityEntityType, type ActivityEntityType } from "@repo/db";
+import { listActivity } from "@repo/db/server";
+import { FilterLinks } from "../../_components/FilterLinks";
+import { HistoryPager } from "../../_components/HistoryPager";
+import { HistoryTimeline } from "../../_components/HistoryTimeline";
 import { PageHeader } from "../../_components/PageHeader";
-import { Streamed, TableSkeleton } from "../../_components/Skeleton";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
-import { requireAdmin } from "../../_lib/access";
-import { activityHref, bookingHref, locationHref } from "../../_lib/routes";
+import { CardSkeleton, Streamed } from "../../_components/Skeleton";
+import { getPermissions, requireAdmin } from "../../_lib/access";
+import {
+  ACTIVITY_RECORD_NAMES,
+  activityEntryHref,
+  activityEntryTag,
+} from "../../_lib/activity-links";
 import { locationNames } from "../../_lib/location-names";
+import { activityHref } from "../../_lib/routes";
 
 const PAGE_SIZE = 50;
 
-/** Where the record's label leads, when it has a page; a location's is at its slug. */
-function entityLink(entry: ActivityEntry, slugs: ReadonlyMap<string, string>) {
-  if (entry.isDeleted) return null;
-  if (entry.entityType === "booking") return bookingHref(entry.entityId);
-  if (entry.entityType === "location") {
-    const slug = slugs.get(entry.entityId);
-    return slug ? locationHref(slug) : null;
-  }
-  return null;
-}
+/** The filter's types of record, in their order. */
+const TYPE_OPTIONS = (
+  Object.keys(ACTIVITY_RECORD_NAMES) as ActivityEntityType[]
+).map((type) => ({ value: type, label: ACTIVITY_RECORD_NAMES[type].many }));
 
 /**
- * Route: /activity?before=<id>. Every admin, customer and system action
- * across the app, newest first, a page at a time. SUPER only; one
- * booking's history is on its own page for every team.
+ * Route: /activity?type=vehicle&before=<id>. Every admin, customer and
+ * system action across the app, newest first, a page at a time, by the
+ * day it was made, as a location's History reads its own, and narrowed to
+ * one type of record by the row of filters. Each line names its record at
+ * the right and opens it: a booking, a location, a class, a vehicle or a
+ * driver inside the location it is based at, a publish as the page was
+ * before and after. SUPER only; one record's history is on its own page.
  */
 export default async function ActivityPage({
   searchParams,
 }: PageProps<"/activity">) {
   await requireAdmin("activity.view");
-  const { before: cursor } = await searchParams;
+  const { type, before: cursor } = await searchParams;
+  const filter = isActivityEntityType(type) ? type : undefined;
   const before = typeof cursor === "string" && cursor ? cursor : undefined;
 
   return (
     <>
       <PageHeader
         title="Activity"
-        description="Every action on bookings, admins and settings, with who did it and when. Entries are never edited or deleted."
+        description="Every change across the console, newest first: who made it and when. Entries are never edited or deleted."
       />
-
-      <Streamed
-        key={before ?? "newest"}
-        fallback={
-          <div className="mt-6">
-            <TableSkeleton columns={4} rows={10} />
-          </div>
-        }
-      >
-        {() => activityList({ before })}
-      </Streamed>
+      <div className="mt-6">
+        <FilterLinks
+          label="Filter by type of record"
+          options={TYPE_OPTIONS}
+          active={filter}
+          hrefOf={(value) => activityHref(value)}
+        />
+      </div>
+      <div className="mt-4">
+        <Streamed
+          key={`${filter ?? "all"}:${before ?? "newest"}`}
+          fallback={<CardSkeleton rows={6} />}
+        >
+          {() => activityList({ filter, before })}
+        </Streamed>
+      </div>
     </>
   );
 }
 
 /** One page of the log, and the links to the pages around it. */
-async function activityList({ before }: { before: string | undefined }) {
-  const [{ entries, nextCursor }, locations] = await Promise.all([
-    listActivity({ before, take: PAGE_SIZE }),
+async function activityList({
+  filter,
+  before,
+}: {
+  filter: ActivityEntityType | undefined;
+  before: string | undefined;
+}) {
+  const [{ entries, nextCursor }, locations, permissions] = await Promise.all([
+    listActivity({ entityType: filter, before, take: PAGE_SIZE }),
     locationNames(),
+    getPermissions(),
   ]);
   const slugs = new Map(locations.map((l) => [l.id, l.slug]));
 
   return (
     <>
-      <div className="mt-6">
-        <Table>
-          <THead>
-            <Th>When</Th>
-            <Th>Who</Th>
-            <Th>What</Th>
-            <Th>Record</Th>
-          </THead>
-          <TBody>
-            {entries.length === 0 ? (
-              <EmptyRow colSpan={4}>
-                {before ? "No older activity." : "No activity yet."}
-              </EmptyRow>
-            ) : (
-              entries.map((entry) => {
-                const href = entityLink(entry, slugs);
-                return (
-                  <tr key={entry.id}>
-                    <Td className="whitespace-nowrap text-neutral-600 tabular-nums">
-                      {formatLocalDateTime(entry.createdAt)}
-                    </Td>
-                    <Td>
-                      <span className="block">{entry.actorName}</span>
-                      <span className="block text-xs text-neutral-500 capitalize">
-                        {entry.actorKind}
-                      </span>
-                    </Td>
-                    <Td className="font-medium">{describeActivity(entry)}</Td>
-                    <Td>
-                      <span className="flex items-center gap-2">
-                        <Badge>{entry.entityType}</Badge>
-                        {href ? (
-                          <Link
-                            href={href}
-                            className="tabular-nums underline-offset-4 hover:underline"
-                          >
-                            {entry.entityLabel}
-                          </Link>
-                        ) : (
-                          <span className="text-neutral-600">
-                            {entry.entityLabel}
-                          </span>
-                        )}
-                      </span>
-                    </Td>
-                  </tr>
-                );
-              })
-            )}
-          </TBody>
-        </Table>
-      </div>
-
-      <nav
-        aria-label="Pages"
-        className="mt-4 flex items-center justify-between text-sm"
-      >
-        {before ? (
-          <Link
-            href={activityHref()}
-            className="font-medium text-neutral-600 underline-offset-4 hover:underline"
-          >
-            Newest
-          </Link>
-        ) : (
-          <span />
-        )}
-        {nextCursor ? (
-          <Link
-            href={activityHref(nextCursor)}
-            className="font-medium text-neutral-600 underline-offset-4 hover:underline"
-          >
-            Older
-          </Link>
-        ) : null}
-      </nav>
+      <HistoryTimeline
+        // The timeline reads entries oldest first.
+        entries={[...entries].reverse()}
+        emptyMessage={
+          filter
+            ? `No changes to ${ACTIVITY_RECORD_NAMES[filter].many.toLowerCase()} recorded.`
+            : "No activity yet."
+        }
+        hrefOf={(entry) => activityEntryHref(entry, { slugs, permissions })}
+        tagOf={(entry) => activityEntryTag(entry)}
+      />
+      <HistoryPager
+        newestHref={before ? activityHref(filter) : null}
+        olderHref={nextCursor ? activityHref(filter, nextCursor) : null}
+      />
     </>
   );
 }

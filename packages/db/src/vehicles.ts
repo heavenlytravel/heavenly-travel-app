@@ -3,13 +3,26 @@ import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
+import {
+  checkDeleteConfirmed,
+  type DeleteConfirmation,
+  type DeleteImpact,
+} from "./delete-impact";
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
-import { checkPhotos, samePhotos, type Photo } from "./photos-input";
+import { deletedMediaRefusal } from "./media";
+import {
+  checkPhotos,
+  PHOTOS_FIELD,
+  samePhotos,
+  type Photo,
+} from "./photos-input";
+import { modelChoiceOf } from "./offering-input";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   checkVehicleFields,
   VEHICLE_DOCUMENTS,
+  vehicleDeleteImpact,
   vehicleFieldsOf,
   type VehicleDocument,
   type VehicleFields,
@@ -202,6 +215,13 @@ export async function createVehicle(
     return await db.$transaction(async (tx) => {
       const locationName = await locationNameOf(tx, fields.locationId);
       if (!locationName) return NO_LOCATION;
+      const gone = await deletedMediaRefusal(
+        tx,
+        photos.map((photo) => photo.url),
+        "A photo",
+        PHOTOS_FIELD,
+      );
+      if (gone) return gone;
       const model = await modelFor(tx, actor, {
         vehicleClassId: fields.vehicleClassId,
         brand: fields.brand,
@@ -264,6 +284,15 @@ export async function updateVehicle(
       const changed = changedFields(current, fieldsPatch);
       const photosChanged =
         photos !== undefined && !samePhotos(vehicle.photos, photos);
+      if (photos && photosChanged) {
+        const gone = await deletedMediaRefusal(
+          tx,
+          photos.map((photo) => photo.url),
+          "A photo",
+          PHOTOS_FIELD,
+        );
+        if (gone) return gone;
+      }
       const before: Partial<VehicleFields> = changed?.before ?? {};
       const after: Partial<VehicleFields> = changed?.after ?? {};
 
@@ -335,10 +364,120 @@ export async function updateVehicle(
 }
 
 /**
- * Deletes a vehicle entered by mistake, with its photos, and its model when
- * it leaves it unused. One that served is taken out of service instead.
+ * What deleting the vehicle takes as it stands (`vehicleDeleteImpact`),
+ * read as the customer site reads its class at the vehicle's location:
+ * the vehicles in service there, the models they make choosable where the
+ * location charges for a choice, and the class's picture, the first photo
+ * of the first of them with one (`classCoverOf`). Null for a vehicle gone.
+ * `client` is the delete's transaction when it checks.
  */
-export function deleteVehicle(actor: Actor, id: string): Promise<Change> {
+export async function vehicleDeleteImpactOf(
+  id: string,
+  client: Prisma.TransactionClient = db,
+): Promise<DeleteImpact | null> {
+  const vehicle = await client.vehicle.findUnique({
+    where: { id },
+    select: {
+      plate: true,
+      isActive: true,
+      locationId: true,
+      vehicleModelId: true,
+      _count: { select: { photos: true } },
+      location: { select: { name: true } },
+      vehicleModel: {
+        select: {
+          brand: true,
+          name: true,
+          vehicleClassId: true,
+          vehicleClass: {
+            select: { name: true, isActive: true, imageUrl: true },
+          },
+        },
+      },
+    },
+  });
+  if (!vehicle) return null;
+  const { vehicleModel } = vehicle;
+  const [others, chosen, offering, shown] = await Promise.all([
+    client.vehicle.count({
+      where: { vehicleModelId: vehicle.vehicleModelId, id: { not: id } },
+    }),
+    client.tripItemDetails.count({
+      where: { vehicleModelId: vehicle.vehicleModelId },
+    }),
+    client.locationVehicleClass.findUnique({
+      where: {
+        locationId_vehicleClassId: {
+          locationId: vehicle.locationId,
+          vehicleClassId: vehicleModel.vehicleClassId,
+        },
+      },
+      select: {
+        isActive: true,
+        modelChoicePercent: true,
+        modelChoiceFlatSen: true,
+      },
+    }),
+    client.vehicle.findMany({
+      where: {
+        isActive: true,
+        locationId: vehicle.locationId,
+        vehicleModel: { vehicleClassId: vehicleModel.vehicleClassId },
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        vehicleModelId: true,
+        _count: { select: { photos: true } },
+      },
+    }),
+  ]);
+  // What the vehicle shows customers: in service, of a class on sale there.
+  const shows =
+    vehicle.isActive &&
+    vehicleModel.vehicleClass.isActive &&
+    offering?.isActive === true;
+  const models = new Set(shown.map((other) => other.vehicleModelId));
+  const lost =
+    shows &&
+    offering !== null &&
+    modelChoiceOf(offering) !== null &&
+    models.size >= 2 &&
+    !shown.some(
+      (other) =>
+        other.id !== id && other.vehicleModelId === vehicle.vehicleModelId,
+    );
+  const withPhotos = shown.filter((other) => other._count.photos > 0);
+  const cover =
+    shows && withPhotos[0]?.id === id
+      ? withPhotos.length > 1
+        ? "photo"
+        : vehicleModel.vehicleClass.imageUrl
+          ? "catalogue"
+          : "none"
+      : null;
+  return vehicleDeleteImpact({
+    plate: vehicle.plate,
+    photos: vehicle._count.photos,
+    model: { name: modelName(vehicleModel), leaves: others + chosen === 0 },
+    className: vehicleModel.vehicleClass.name,
+    locationName: vehicle.location.name,
+    choice: lost ? { lost, endsChoice: models.size === 2 } : null,
+    cover,
+  });
+}
+
+/**
+ * Deletes a vehicle entered by mistake, with its photos, and its model when
+ * it leaves it unused, once the admin confirmed what that takes as it
+ * stands (`vehicleDeleteImpactOf`, ./delete-impact). One that served is
+ * taken out of service instead.
+ */
+export function deleteVehicle(
+  actor: Actor,
+  id: string,
+  confirmation: DeleteConfirmation,
+): Promise<Change> {
   return db.$transaction(async (tx) => {
     const vehicle = await tx.vehicle.findUnique({
       where: { id },
@@ -348,6 +487,10 @@ export function deleteVehicle(actor: Actor, id: string): Promise<Change> {
       },
     });
     if (!vehicle) return NOT_FOUND;
+    const impact = await vehicleDeleteImpactOf(id, tx);
+    if (!impact) return NOT_FOUND;
+    const confirmed = checkDeleteConfirmed(impact, confirmation);
+    if (!confirmed.ok) return confirmed;
     await tx.vehicle.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "vehicle.deleted",

@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { describeActivity, formatLocalDate, formatLocalTime } from "@repo/db";
+import {
+  ANONYMOUS_ACTOR_NAMES,
+  describeActivity,
+  formatLocalDate,
+  formatLocalTime,
+} from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
 import { Frame } from "./Card";
 
@@ -17,8 +22,8 @@ function byDay(entries: readonly ActivityEntry[]) {
  * A history, newest first, by the day each change was made: the time,
  * what happened and who did it. An entry with more to show than its
  * sentence links to the page `hrefOf` names for it, and `tagOf` names the
- * part of the record it changed, at the right. A location's history page
- * and each record's read it.
+ * part of the record it changed, at the right. The Activity screen, a
+ * location's history page and each record's read it.
  */
 export function HistoryTimeline({
   entries,
@@ -76,7 +81,11 @@ export function HistoryTimeline({
                         )}
                       </span>
                       <span className="block truncate text-xs text-neutral-500">
-                        {entry.actorName}
+                        {/* A customer by name, told apart from staff. */}
+                        {entry.actorKind === "customer" &&
+                        entry.actorName !== ANONYMOUS_ACTOR_NAMES.customer
+                          ? `${entry.actorName}, customer`
+                          : entry.actorName}
                       </span>
                     </span>
                     {tag ? (

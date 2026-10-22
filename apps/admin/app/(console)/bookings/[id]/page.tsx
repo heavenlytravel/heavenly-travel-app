@@ -7,7 +7,8 @@ import { BookingSkeleton, bookingScreen } from "./BookingScreen";
 /**
  * Route: /bookings/[id]. One booking, opened from the queue across
  * locations, an email or the activity log. A location's lists open the
- * same booking inside the location, at /locations/[slug]/bookings/[id].
+ * same booking inside the location, at /locations/[slug]/bookings/[id],
+ * and each item's location here links there.
  */
 export default async function BookingPage({
   params,

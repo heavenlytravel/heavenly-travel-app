@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { IMAGE_MAX_BYTES, checkImageFile, isUploadUrl } from "./images";
+import {
+  IMAGE_MAX_BYTES,
+  checkImageFile,
+  formatBytes,
+  isUploadUrl,
+  uploadKeyOf,
+} from "./images";
 
 const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
   result.ok ? "" : result.error;
@@ -36,5 +42,33 @@ describe("isUploadUrl", () => {
     ]) {
       assert.equal(isUploadUrl(value), false, String(value));
     }
+  });
+});
+
+describe("uploadKeyOf", () => {
+  it("reads the key after /f/ of a file on UploadThing", () => {
+    assert.equal(uploadKeyOf("https://abc123.ufs.sh/f/key-1"), "key-1");
+    assert.equal(
+      uploadKeyOf("https://abc123.ufs.sh/f/a%20b_photo.jpg"),
+      "a b_photo.jpg",
+    );
+    for (const value of [
+      "https://abc123.ufs.sh/f/",
+      "https://abc123.ufs.sh/f/abc%zz",
+      "https://example.com/f/key-1",
+      "",
+    ]) {
+      assert.equal(uploadKeyOf(value), null, value);
+    }
+  });
+});
+
+describe("formatBytes", () => {
+  it("says a size as people read it", () => {
+    assert.equal(formatBytes(0), "0 KB");
+    assert.equal(formatBytes(300), "1 KB");
+    assert.equal(formatBytes(555 * 1024), "555 KB");
+    assert.equal(formatBytes(3.7 * 1024 * 1024), "3.7 MB");
+    assert.equal(formatBytes(1.2 * 1024 * 1024 * 1024), "1.2 GB");
   });
 });

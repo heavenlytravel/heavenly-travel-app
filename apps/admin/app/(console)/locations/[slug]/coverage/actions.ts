@@ -16,6 +16,7 @@ import {
   parseZoneFields,
   unionOf,
   updateZone,
+  deleteConfirmationOf,
   type MultiPolygon,
   type OverlapCheck,
   type ZoneFields,
@@ -186,11 +187,20 @@ export async function updateZoneAction(
   return { ok: true, id: zoneId, trimmed: result.trimmed };
 }
 
-export async function deleteZoneAction(zoneId: string): Promise<ActionState> {
+/**
+ * Removes a zone. `seen` and `typed` are what the dialog showed and what
+ * the admin typed (@repo/db's delete-impact).
+ */
+export async function deleteZoneAction(
+  zoneId: string,
+  seen: string[],
+  typed: string | null,
+): Promise<ActionState> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof zoneId !== "string") return STALE;
-  const result = await deleteZone(actorOf(admin), zoneId);
+  const confirmation = deleteConfirmationOf(seen, typed);
+  if (typeof zoneId !== "string" || !confirmation) return STALE;
+  const result = await deleteZone(actorOf(admin), zoneId, confirmation);
   if (result.ok) {
     revalidateLocation();
     refreshLocationAfter(result.locationId, ...result.alsoChanged);

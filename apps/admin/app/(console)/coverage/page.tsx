@@ -1,4 +1,4 @@
-import { isZoneShape, plural } from "@repo/db";
+import { isZoneShape, plural, pricedRoutesByZone } from "@repo/db";
 import { listCoverage } from "@repo/db/server";
 import { LocationFilter } from "../../_components/LocationFilter";
 import { Card, CardTitle } from "../../_components/Card";
@@ -12,10 +12,7 @@ import {
   locationZoneHref,
 } from "../../_lib/routes";
 import { stateOutlines } from "../locations/_lib/outlines";
-import {
-  drawnAs,
-  pricedRoutesByZone,
-} from "../locations/[slug]/coverage/zone-lines";
+import { drawnAs } from "../locations/[slug]/coverage/zone-lines";
 import { zoneColor } from "../locations/[slug]/coverage/zones/zone-colors";
 import { CoverageAcross, type AcrossLocation } from "./CoverageAcross";
 import { locationNames } from "../../_lib/location-names";

@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./button.js";
+import { Input } from "./field.js";
 import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 /** What an alert dialog asks: the question, what follows from it, and its two answers. */
@@ -16,6 +17,11 @@ export type ConfirmRequest = {
   cancel?: string;
   /** Going ahead deletes or loses something for good: the action button is red. */
   danger?: boolean;
+  /**
+   * What the admin types before the action works, for a move that reaches
+   * past the record itself: a location's slug, a vehicle's plate.
+   */
+  typeToConfirm?: string;
 };
 
 /**
@@ -72,22 +78,75 @@ export function AlertDialog({
                 </div>
               ) : null}
             </div>
-            {/* "Cancel" first, so the browser gives it the focus; reversed on a phone, the action on top. */}
-            <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
-              <Button variant="secondary" onClick={() => onAnswer(false)}>
-                {request.cancel ?? "Cancel"}
-              </Button>
-              <Button
-                variant={request.danger ? "destructive" : "primary"}
-                onClick={() => onAnswer(true)}
-              >
-                {request.action}
-              </Button>
-            </div>
+            <Answers
+              // A new question starts with nothing typed.
+              key={`${request.title}|${request.typeToConfirm ?? ""}`}
+              request={request}
+              onAnswer={onAnswer}
+            />
           </div>
         ) : null}
       </ModalBody>
     </dialog>
+  );
+}
+
+/**
+ * The two answers, and above them, when the question asks for it, the box
+ * the admin types `typeToConfirm` in; the action works once it matches,
+ * and Enter there answers with it. Without the box "Cancel" comes first,
+ * so the browser gives it the focus; with it the box takes the focus.
+ * Reversed on a phone, the action on top.
+ */
+function Answers({
+  request,
+  onAnswer,
+}: {
+  request: ConfirmRequest;
+  onAnswer: (goAhead: boolean) => void;
+}) {
+  const [typed, setTyped] = useState("");
+  const wanted = request.typeToConfirm;
+  const ready = wanted === undefined || typed === wanted;
+
+  return (
+    <>
+      {wanted !== undefined ? (
+        <label className="ui:grid ui:gap-1.5 ui:text-sm">
+          <span className="ui:font-medium ui:text-neutral-800">
+            Type{" "}
+            <span className="ui:rounded ui:bg-neutral-100 ui:px-1 ui:font-mono">
+              {wanted}
+            </span>{" "}
+            to confirm
+          </span>
+          <Input
+            autoComplete="off"
+            spellCheck={false}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && ready) {
+                event.preventDefault();
+                onAnswer(true);
+              }
+            }}
+          />
+        </label>
+      ) : null}
+      <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+        <Button variant="secondary" onClick={() => onAnswer(false)}>
+          {request.cancel ?? "Cancel"}
+        </Button>
+        <Button
+          variant={request.danger ? "destructive" : "primary"}
+          disabled={!ready}
+          onClick={() => onAnswer(true)}
+        >
+          {request.action}
+        </Button>
+      </div>
+    </>
   );
 }
 

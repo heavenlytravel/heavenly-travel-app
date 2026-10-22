@@ -37,8 +37,33 @@ export function checkImageFile(file: { type: string; size: number }): Change {
   return { ok: true };
 }
 
+/** A size in bytes as people read it: "820 KB", "3.7 MB", "1.2 GB". */
+export function formatBytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (bytes === 0) return "0 KB";
+  if (mb < 1) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
+}
+
 /** Where UploadThing serves a file: https://<app id>.ufs.sh/f/<key>. */
 const UPLOAD_HOST_SUFFIX = ".ufs.sh";
+
+/**
+ * The UploadThing key of a file by its address, the part after /f/: how
+ * a vehicle class's picture and a vehicle's photo, kept as addresses, are
+ * matched to the stored files. Null for any other address.
+ */
+export function uploadKeyOf(url: string): string | null {
+  if (!isUploadUrl(url)) return null;
+  try {
+    const key = decodeURIComponent(new URL(url).pathname.slice("/f/".length));
+    return key === "" ? null : key;
+  } catch {
+    // A broken escape, "%zz": no file of ours is named so.
+    return null;
+  }
+}
 
 /** Whether the address is a file on UploadThing, the one host the sites load images from. */
 export function isUploadUrl(value: unknown): value is string {

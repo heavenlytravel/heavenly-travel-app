@@ -22,7 +22,7 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, state or district code, class, admin user, setting, location, vehicle or driver the action touched. */
+  /** The booking, state or district code, class, admin user, setting, location, vehicle, driver or `MEDIA_RECORD_ID` the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
@@ -79,10 +79,12 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "VLE1234", a driver's name; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "Media", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
+  /** Where a vehicle or a driver is based now, whose screens hold its page; null for any other record. */
+  recordLocationId: string | null;
 };
 
 function nameOf(user: {
@@ -167,16 +169,19 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     read(ids.vehicle, () =>
       db.vehicle.findMany({
         where: { id: { in: ids.vehicle } },
-        select: { id: true, plate: true },
+        select: { id: true, plate: true, locationId: true },
       }),
     ),
     read(ids.driver, () =>
       db.driver.findMany({
         where: { id: { in: ids.driver } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, locationId: true },
       }),
     ),
   ]);
+  const basedAt = new Map(
+    [...vehicles, ...drivers].map((record) => [record.id, record.locationId]),
+  );
   const userById = new Map(users.map((u) => [u.id, u]));
   const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
     deletedNames(
@@ -218,6 +223,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
+    media: new Map(),
     location: withDeleted(
       locations.map((l) => [l.id, l.name] as const),
       deleted,
@@ -242,6 +248,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       entityLabel: entityLabelOf(row, labels),
       isDeleted:
         gone[row.entityType as ActivityEntityType]?.has(row.entityId) ?? false,
+      recordLocationId:
+        row.entityType === "vehicle" || row.entityType === "driver"
+          ? (basedAt.get(row.entityId) ?? null)
+          : null,
     };
   });
 }
@@ -285,6 +295,8 @@ function entityLabelOf(
       return labels.admin.get(row.entityId) ?? "Former user";
     case "setting":
       return "The wall";
+    case "media":
+      return "Media";
     case "booking":
     case "state":
     case "district":
@@ -402,17 +414,21 @@ export type ActivityPage = {
 };
 
 /**
- * The full log across the app, newest first, one page at a time. `before`
+ * The full log across the app, newest first, one page at a time, or the
+ * entries of one type of record: the bookings', the vehicles'. `before`
  * is the id of the last entry of the previous page.
  */
 export async function listActivity({
+  entityType,
   before,
   take,
 }: {
+  entityType?: ActivityEntityType;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
   const rows = await db.activityLog.findMany({
+    where: entityType ? { entityType } : undefined,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(before ? { cursor: { id: before }, skip: 1 } : {}),

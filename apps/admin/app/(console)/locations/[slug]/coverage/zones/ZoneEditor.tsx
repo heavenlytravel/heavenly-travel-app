@@ -10,6 +10,7 @@ import {
   isZoneReshaped,
   ringsOf,
   type MultiPolygon,
+  type PricedFrom,
   type ZoneOrigin,
   type ZoneShape,
 } from "@repo/db";
@@ -45,7 +46,7 @@ import {
 import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
 import { FormError } from "../../../../../_components/FormError";
-import { pricedFromSentence, type PricedFrom } from "../zone-lines";
+import { pricedFromSentence } from "../zone-lines";
 
 /** What the check after a change found in the way of a shape, with the shape it was asked for. */
 type Overlap = Extract<OverlapAnswer, { ok: true }> & { of: ZoneShape };

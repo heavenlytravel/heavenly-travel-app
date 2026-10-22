@@ -7,6 +7,7 @@ import {
 import type { ActivityEntityType, Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
+import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import type {
   Location,
   LocationAddress,
@@ -18,12 +19,12 @@ import {
   NEW_LOCATION_STATE,
   TOP_CHOICE_CAP,
   checkAddressNames,
-  checkLocationDelete,
   checkLocationFields,
   checkLocationSlug,
   checkPageUnpublish,
   locationStateOf,
   isSlugLocked,
+  locationDeleteImpact,
   stateMoveBlockers,
   type LocationFields,
   type LocationState,
@@ -60,6 +61,8 @@ import {
 } from "./location-view";
 import { andList, plural } from "./names";
 import { isPlace, type Place } from "./place";
+import { deletedMediaRefusal } from "./media";
+import { routesIntoLocation } from "./zones";
 
 export type { Location, LocationAddress };
 
@@ -751,6 +754,17 @@ async function writePageContent(
     where: pageKey(locationId, page),
   });
   if (versionOf(was) !== version) return PAGE_CHANGED;
+  // An image uploaded in this form and deleted on Media before it saved.
+  const gone = await deletedMediaRefusal(
+    tx,
+    [
+      content.shareImage,
+      content.heroImage,
+      ...content.highlights.map((highlight) => highlight.image),
+    ].map((image) => image?.url ?? null),
+    "An image",
+  );
+  if (gone) return gone;
 
   const addressIds = new Set(location.addresses.map((address) => address.id));
   const clean: PageContent = {
@@ -902,23 +916,32 @@ export async function unpublishLocationPage(
   });
 }
 
-/** A delete's answer: the slug the location had, for the customer site's refresh, or why not. */
-export type LocationDeleted = { ok: true; slug: string } | Refusal;
+/**
+ * A delete's answer: the slug the location had, for the customer site's
+ * refresh, and the other locations whose routes to its zones went with
+ * it, by id, whose pages change too; or why not.
+ */
+export type LocationDeleted =
+  { ok: true; slug: string; alsoChanged: string[] } | Refusal;
 
 /**
  * Deletes a location, with its pages, its saved addresses, its offerings,
- * its zones and their rates. One that has been live is deleted only when `typedSlug` is its
- * slug: its address is public and becomes a 404. A top choice leaves the
- * home page first, so the places after it close up. What the location was
- * is logged, and its earlier entries stay in the log under the name it had.
- * The images its pages uploaded stay in storage; its bookings keep their
- * receipts and lose the pointer. One with vehicles or drivers based at it
- * is refused until they move.
+ * its zones and their rates, and other locations' routes to its zones
+ * (`routesIntoLocation`), such as Kuala Lumpur's to Selangor's KLIA, once
+ * the admin confirmed what that takes as it stands
+ * (`locationDeleteImpact`, ./delete-impact): one that priced a route to it
+ * since the Status tab was read is refused, to be read first. A top
+ * choice leaves the home page first, so the places after it close up.
+ * What the location was is logged, in the other locations' history too,
+ * and its earlier entries stay in the log under the name it had. The
+ * images its pages uploaded stay in storage until the Media screen
+ * deletes them; its bookings keep their receipts and lose the pointer.
+ * One with vehicles or drivers based at it is refused until they move.
  */
 export async function deleteLocation(
   actor: Actor,
   id: string,
-  typedSlug: string | null,
+  confirmation: DeleteConfirmation,
 ): Promise<LocationDeleted> {
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
@@ -929,8 +952,10 @@ export async function deleteLocation(
       },
     });
     if (!location) return NOT_FOUND;
-    const check = checkLocationDelete(location, typedSlug);
-    if (!check.ok) return check;
+    // Its zones held until the delete ends: a route priced to one meanwhile
+    // waits, then finds it gone, rather than going unannounced.
+    await tx.$executeRaw`SELECT id FROM "Zone" WHERE "locationId" = ${id} FOR UPDATE`;
+    const routesIn = await routesIntoLocation(id, tx);
     // Our vehicles and drivers are not the location's to take with it.
     const based = [
       location._count.vehicles > 0
@@ -947,11 +972,17 @@ export async function deleteLocation(
         error: `${andList(based)} ${one ? "is" : "are"} based here. Move ${one ? "it" : "them"} to another location first.`,
       };
     }
+    const confirmed = checkDeleteConfirmed(
+      locationDeleteImpact(location, routesIn),
+      confirmation,
+    );
+    if (!confirmed.ok) return confirmed;
 
     const left = await changeTopChoiceIn(tx, actor, id, "remove");
     if (!left.ok) return left;
     // Its pages, saved addresses, offerings, zones and rates go with it, by
-    // the schema's cascade; the states stay, with the link rows gone.
+    // the schema's cascade, other locations' routes to its zones too; the
+    // states stay, with the link rows gone.
     await tx.location.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "location.deleted",
@@ -961,9 +992,18 @@ export async function deleteLocation(
         slug: location.slug,
         stateCodes: codesOf(location.states),
         state: locationStateOf(location.state),
+        ...(routesIn.length > 0
+          ? { routesFrom: routesIn.map((entry) => entry.name) }
+          : {}),
       },
+      // Their routes to its zones went too: the entry is in their history.
+      locationIds: routesIn.map((entry) => entry.locationId),
     });
-    return { ok: true, slug: location.slug };
+    return {
+      ok: true,
+      slug: location.slug,
+      alsoChanged: routesIn.map((entry) => entry.locationId),
+    };
   });
 }
 

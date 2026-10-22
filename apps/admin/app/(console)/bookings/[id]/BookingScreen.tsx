@@ -20,6 +20,7 @@ import {
   listBookingNotes,
   type BookingItemWithDetails,
 } from "@repo/db/server";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { DetailColumns } from "../../../_components/PageColumn";
@@ -252,7 +253,23 @@ function ItemCard({
       `${item.district.name}, ${item.district.state.name}`,
     ]);
   }
-  if (item.location) rows.push(["Location", item.location.name]);
+  if (item.location) {
+    // From the queue, the way to the same booking inside its location, with
+    // the location's panel beside it.
+    rows.push([
+      "Location",
+      slug ? (
+        item.location.name
+      ) : (
+        <Link
+          href={bookingHref(item.bookingId, item.location.slug)}
+          className="underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900"
+        >
+          {item.location.name}
+        </Link>
+      ),
+    ]);
+  }
 
   // The receipt, then the agreed price when one replaces it. The receipt's
   // total stays on record next to what is charged.

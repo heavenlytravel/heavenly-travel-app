@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { andList, isZoneShape, plural } from "@repo/db";
+import {
+  andList,
+  isZoneShape,
+  plural,
+  pricedFromByZone,
+  pricedRoutesByZone,
+} from "@repo/db";
 import {
   listRatesFromElsewhere,
   listZoneRates,
@@ -20,12 +26,7 @@ import {
 import { locationDetails, locationKey } from "../../_lib/location-data";
 import { stateOutlines } from "../../_lib/outlines";
 import { CoverageZones, type CoverageZone } from "./CoverageZones";
-import {
-  drawnAs,
-  pricedFromByZone,
-  pricedFromSentence,
-  pricedRoutesByZone,
-} from "./zone-lines";
+import { drawnAs, pricedFromSentence } from "./zone-lines";
 import { zoneColor } from "./zones/zone-colors";
 
 /**

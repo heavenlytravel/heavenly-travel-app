@@ -57,6 +57,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "location",
   "vehicle",
   "driver",
+  "media",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -143,6 +144,8 @@ const ACTIONS = {
   /**
    * The name, the slug, the state codes and the state it had, in
    * `before`: the row is gone, and its other entries are named from this one.
+   * `routesFrom` names the other locations whose routes to its zones went
+   * with it; the entry is in their history too.
    */
   "location.deleted": { entityType: "location", customerVisible: false },
   /** The class's name and the rates, in `after`. */
@@ -155,7 +158,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
-  /** The zone's name; its shape stays on the row. */
+  /**
+   * The zone's name; its shape stays on the row. A removal's `routesFrom`
+   * names the other locations whose routes to it went with it; the entry is
+   * in their history too.
+   */
   "location.zone.created": { entityType: "location", customerVisible: false },
   "location.zone.updated": { entityType: "location", customerVisible: false },
   "location.zone.deleted": { entityType: "location", customerVisible: false },
@@ -171,6 +178,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /**
+   * The files the Media screen deleted, each with its key, name and size,
+   * in `before`. Logged against `MEDIA_RECORD_ID`.
+   */
+  "media.deleted": { entityType: "media", customerVisible: false },
 } as const satisfies Record<
   string,
   { entityType: ActivityEntityType; customerVisible: boolean }
@@ -262,6 +274,9 @@ export const ITEM_ACTIONS = {
 /** The id of the one `AppSetting` row, which setting entries log against. */
 export const APP_SETTING_ID = "app";
 
+/** What the Media screen's entries log against: the uploaded files as a whole. */
+export const MEDIA_RECORD_ID = "media";
+
 /**
  * What an amend logs, before and after, as scalars: places by their labels,
  * the time as an ISO instant, the class by its name and the charged price.
@@ -313,6 +328,21 @@ function field(json: unknown, key: string): unknown {
 
 function keysOf(json: unknown): string[] {
   return json !== null && typeof json === "object" ? Object.keys(json) : [];
+}
+
+/**
+ * ", and Kuala Lumpur's routes to it" for a removal that took other
+ * locations' routes (`routesFrom`); empty for one that took none.
+ */
+function routesGone(json: unknown, toWhat: string) {
+  const names = field(json, "routesFrom");
+  if (!Array.isArray(names)) return "";
+  const owners = names
+    .filter((name): name is string => typeof name === "string")
+    .map((name) => `${name}'s`);
+  return owners.length > 0
+    ? `, and ${andList(owners)} routes to ${toWhat}`
+    : "";
 }
 
 function itemName(json: unknown) {
@@ -687,7 +717,7 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.state.changed":
       return stateMove(entry.before, entry.after);
     case "location.deleted":
-      return "Deleted the location";
+      return `Deleted the location${routesGone(entry.before, "its zones")}`;
     case "location.page.published":
       return `Published ${pageName(entry.after)}`;
     case "location.page.updated":
@@ -715,7 +745,7 @@ export function describeActivity(entry: DescribableActivity): string {
         : `Redrew ${zoneName(entry.after)}`;
     }
     case "location.zone.deleted":
-      return `Removed ${zoneName(entry.before)}`;
+      return `Removed ${zoneName(entry.before)}${routesGone(entry.before, "it")}`;
     case "location.rates.updated": {
       const cells = field(entry.after, "cells");
       const count = Array.isArray(cells) ? cells.length : 0;
@@ -732,6 +762,11 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.dropoff.updated": {
       const rule = field(entry.after, "dropoffRule");
       return `Set ${dropoffRuleLabel(isDropoffRule(rule) ? rule : "anywhere").toLowerCase()}`;
+    }
+    case "media.deleted": {
+      const files = field(entry.before, "files");
+      const count = Array.isArray(files) ? files.length : 0;
+      return count === 1 ? "Deleted an image" : `Deleted ${count} images`;
     }
   }
 }

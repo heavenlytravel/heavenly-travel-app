@@ -9,7 +9,9 @@ import {
   type LocationPageKey,
   type PageStatus,
 } from "./location-page-input";
+import type { DeleteImpact } from "./delete-impact";
 import { andList, plural } from "./names";
+import { routesLostLine } from "./zone-routes";
 import { slugify } from "./slug";
 
 /**
@@ -341,20 +343,32 @@ export function isSlugLocked(location: { wentLiveAt: Date | null }) {
 }
 
 /**
- * Whether a location can be deleted. One that has never been live goes on a
- * plain yes: nothing of it was public. One that has been live has a public
- * address, which the delete turns into a 404 that links break on and search
- * engines drop, so the admin types its slug to say they mean it. `typed`
- * is what they typed; null when nothing was asked.
+ * What deleting a location takes (./delete-impact): its pages, saved
+ * addresses, zones and rates; its public address, once it has been live,
+ * which turns into a 404 that links break on and search engines drop; and
+ * the routes other locations price to its zones (`routesIn`, by name),
+ * which go too. Either of the last two reaches past the location, so its
+ * slug is typed to confirm.
  */
-export function checkLocationDelete(
+export function locationDeleteImpact(
   location: { slug: string; wentLiveAt: Date | null },
-  typed: string | null,
-): Change {
-  if (!hasBeenLive(location) || typed === location.slug) return { ok: true };
-  return refuse(
-    `Type the slug, ${location.slug}, to delete a location that has been live.`,
-  );
+  routesIn: readonly { name: string; routes: number }[],
+): DeleteImpact {
+  const beenLive = hasBeenLive(location);
+  return {
+    lines: [
+      "Its pages, saved addresses, zones and rates are deleted with it.",
+      ...(beenLive
+        ? [
+            `/${location.slug} turns into “page not found”: links to it break and search engines drop it.`,
+          ]
+        : []),
+      ...routesIn.map((entry) =>
+        routesLostLine(entry.name, entry.routes, "these zones"),
+      ),
+    ],
+    confirmWith: beenLive || routesIn.length > 0 ? location.slug : null,
+  };
 }
 
 /**

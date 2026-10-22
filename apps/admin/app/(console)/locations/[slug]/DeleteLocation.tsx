@@ -1,115 +1,64 @@
 "use client";
 
-import { answerOf } from "@repo/ui/action-answer";
-import { useConfirm } from "@repo/ui/alert-dialog";
-import { Button } from "@repo/ui/button";
-import { Field, Input } from "@repo/ui/field";
-import { toast } from "@repo/ui/toast";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { FormError } from "../../../_components/FormError";
-import { errorOf } from "../../../_lib/action-state";
+import type { DeleteImpact } from "@repo/db";
+import { DeleteButton, ImpactList } from "../../../_components/DeleteButton";
 import { deleteLocationAction } from "../actions";
 
 /**
- * Deletes a location. One that has never been live goes after a plain
- * question in an alert dialog: nothing of it was public. One that has been live has a public
- * address, so the card says what the delete costs and the button works only
- * once the admin has typed the location's slug. A deleted location opens
- * the list.
+ * Deletes a location. The card says what the delete takes
+ * (`locationDeleteImpact`) before it is asked, then the button asks again
+ * in an alert dialog. One that has been live, or that other locations
+ * price routes to, asks for its slug to be typed there: a public address
+ * breaks, or other locations' routes to its zones, such as Kuala Lumpur's
+ * to Selangor's KLIA, go with it. A deleted location opens the list.
  */
 export function DeleteLocation({
   locationId,
   name,
   slug,
   hasBeenLive,
+  impact,
 }: {
   locationId: string;
   name: string;
   slug: string;
   hasBeenLive: boolean;
+  /** What the delete takes, as the server worked it out. */
+  impact: DeleteImpact;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [typed, setTyped] = useState("");
-  const [dialog, confirm] = useConfirm();
-
-  async function remove() {
-    if (
-      !hasBeenLive &&
-      !(await confirm({
-        title: `Delete ${name}?`,
-        description:
-          "Its pages and saved addresses are deleted with it. This cannot be undone.",
-        action: "Delete location",
-        danger: true,
-      }))
-    ) {
-      return;
-    }
-    startTransition(async () => {
-      const answer = await answerOf(
-        deleteLocationAction(locationId, hasBeenLive ? typed : null),
-      );
-      const refused = errorOf(answer);
-      setError(refused);
-      if (refused) return;
-      toast.success(`Deleted ${name}.`);
-      if (answer && "href" in answer) router.push(answer.href);
-    });
-  }
-
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 text-sm">
       {hasBeenLive ? (
-        <>
-          <div className="grid gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-            <p>
-              This location is public at /{slug}. Deleting it turns that address
-              into “page not found”: every link to it breaks, search engines
-              drop it, and its ranking is not given back if the location is
-              added again.
-            </p>
-            <p>
-              To stop selling it for a while, pause it instead. Delete it only
-              to remove it for good, or to put a wrong slug right by adding the
-              location again. Its pages and saved addresses are deleted with it,
-              and this cannot be undone.
-            </p>
-          </div>
-          <Field label={`Type ${slug} to confirm`} className="max-w-xs">
-            <Input
-              aria-label="Slug of the location to delete"
-              autoComplete="off"
-              spellCheck={false}
-              value={typed}
-              onChange={(event) => {
-                setTyped(event.target.value);
-                setError(null);
-              }}
-            />
-          </Field>
-        </>
+        <div className="grid gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-red-900">
+          <p>
+            This location is public at /{slug}. Its ranking in search engines is
+            not given back if the location is added again.
+          </p>
+          <p>
+            To stop selling it for a while, pause it instead. Delete it only to
+            remove it for good, or to put a wrong slug right by adding the
+            location again.
+          </p>
+        </div>
       ) : (
-        <p className="text-sm text-neutral-600">
-          This location has never been live, so nothing public is lost. Its
-          pages and saved addresses are deleted with it. To try something out,
-          keep a location in draft and use Preview: a draft is never public.
+        <p className="text-neutral-600">
+          This location has never been live, so nothing public is lost. To try
+          something out, keep a location in draft and use Preview: a draft is
+          never public.
         </p>
       )}
-      <div>
-        <Button
-          variant="danger"
-          size="sm"
-          disabled={pending || (hasBeenLive && typed !== slug)}
-          onClick={remove}
-        >
-          {pending ? "Deleting…" : "Delete location"}
-        </Button>
+      <div className="grid gap-1 text-neutral-700">
+        <p className="font-medium text-neutral-900">What the delete takes</p>
+        <ImpactList impact={impact} />
       </div>
-      <FormError error={error} size="xs" />
-      {dialog}
+      <DeleteButton
+        label="Delete location"
+        title={`Delete ${name}?`}
+        impact={impact}
+        note="This cannot be undone."
+        action={(seen, typed) => deleteLocationAction(locationId, seen, typed)}
+        doneMessage={`Deleted ${name}.`}
+      />
     </div>
   );
 }

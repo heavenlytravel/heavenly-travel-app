@@ -133,7 +133,9 @@ export function CoverageMap({
 
   return (
     <div className="grid gap-2">
-      <div className="relative">
+      {/* Isolated: the map's layers and its label stay under the console's
+          sticky header on a scroll. */}
+      <div className="relative isolate">
         <div
           ref={host}
           role="application"

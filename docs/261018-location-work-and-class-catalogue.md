@@ -165,7 +165,6 @@ The defaults are for the push only. In each database, in this order:
 
 - Drop the rule columns of `VehicleClass` once the copy has run on every database, with
   the columns BL-58 drops.
-- A link from a booking opened from the queue to the same booking inside its location.
 - Rules for an amend, so a booking stays the receipt of what was bought. Today an amend
   prices the whole trip again with the rules of the day: today's rates, cutoff and
   notice, the class only if still on sale, and the model only if still choosable (the

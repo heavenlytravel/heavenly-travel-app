@@ -28,13 +28,12 @@ describe("mukimsOf", () => {
   });
 
   it("files every mukim under a district the boundary data has", async () => {
+    const { default: data } = await import("../data/malaysia-mukims.json");
     const codes = new Set(DISTRICT_DATA.districts.map((d) => d.code));
-    for (const district of DISTRICT_DATA.districts) {
-      for (const mukim of await mukimsOf(district.code)) {
-        assert.ok(codes.has(mukim.districtCode));
-        assert.ok(mukim.code.startsWith(`${district.code}:`));
-        assert.ok(mukim.polygons.length > 0);
-      }
+    for (const mukim of data.mukims) {
+      assert.ok(codes.has(mukim.districtCode), mukim.code);
+      assert.ok(mukim.code.startsWith(`${mukim.districtCode}:`), mukim.code);
+      assert.ok(mukim.polygons.length > 0, mukim.code);
     }
   });
 });

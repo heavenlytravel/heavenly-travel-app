@@ -4,6 +4,7 @@ import {
   ZONE_LIMITS,
   andList,
   circleRing,
+  cornerCount,
   isZoneCircle,
   isZoneDistrict,
   isZoneReshaped,
@@ -142,9 +143,6 @@ function mukimCodesOf(origin: ZoneOrigin | null | undefined): string[] {
     ? (origin.mukimCodes ?? [])
     : [];
 }
-
-const cornersOf = (shape: ZoneShape) =>
-  ringsOf(shape).reduce((sum, ring) => sum + ring.length - 1, 0);
 
 /** The middle of a shape's corners: for a circle, its centre, near enough once reshaped. */
 function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
@@ -618,7 +616,7 @@ export function ZoneEditor({
     });
   }
 
-  const corners = shape ? cornersOf(shape) : 0;
+  const corners = shape ? cornerCount(shape) : 0;
   const overlapBar = inTheWay ? (
     <OverlapBar
       labels={andList(inTheWay.zones.map((other) => other.label))}

@@ -144,7 +144,7 @@ export function RateGrid({
   locationId,
   locationSlug,
   zones,
-  elsewhere = [],
+  elsewhere,
   classes,
   cells,
   rule,
@@ -155,7 +155,7 @@ export function RateGrid({
   locationSlug: string;
   zones: Zone[];
   /** Other locations' zones by name: where the routes out end, and where a new one may. */
-  elsewhere?: ZoneElsewhere[];
+  elsewhere: ZoneElsewhere[];
   classes: ClassColumn[];
   cells: Cell[];
   rule: DropoffRule;

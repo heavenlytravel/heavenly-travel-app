@@ -45,10 +45,10 @@ export type OtherZone = {
   location?: string;
 };
 
-export const toLatLng = ([lng, lat]: [
-  number,
-  number,
-]): google.maps.LatLngLiteral => ({ lat, lng });
+const toLatLng = ([lng, lat]: [number, number]): google.maps.LatLngLiteral => ({
+  lat,
+  lng,
+});
 
 /** The ring without its first corner repeated at the end, as Google and the piece editor take it. */
 export function openRing(ring: Ring): Ring {
@@ -87,7 +87,7 @@ export function boundsOf(shapes: readonly ZoneShape[]) {
 export const sameShape = (a: ZoneShape | null, b: ZoneShape | null) =>
   JSON.stringify(a) === JSON.stringify(b);
 
-export const DISTRICT_STYLE: google.maps.PolygonOptions = {
+const DISTRICT_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#737373",
   strokeWeight: 1,
   fillColor: "#737373",

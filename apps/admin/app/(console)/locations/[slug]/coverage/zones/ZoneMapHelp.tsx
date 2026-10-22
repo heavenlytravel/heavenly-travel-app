@@ -38,7 +38,7 @@ export function shortcutsHere() {
   };
 }
 
-export type Shortcuts = ReturnType<typeof shortcutsHere>;
+type Shortcuts = ReturnType<typeof shortcutsHere>;
 
 /**
  * How the zone maker's map works, tool by tool, opened from the "i" at the

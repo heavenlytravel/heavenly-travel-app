@@ -65,6 +65,11 @@ export function ringsOf(shape: ZoneShape): Ring[] {
   return isRing(shape) ? [shape] : shape.flat();
 }
 
+/** The corners of a shape, as the screens count them: a closed ring's last, its first again, not counted. */
+export function cornerCount(shape: ZoneShape): number {
+  return ringsOf(shape).reduce((sum, ring) => sum + ring.length - 1, 0);
+}
+
 /** A zone's shape as polygons: a drawn ring is one polygon without holes. */
 export function polygonsOf(shape: ZoneShape): MultiPolygon {
   return isRing(shape) ? [[shape]] : shape;

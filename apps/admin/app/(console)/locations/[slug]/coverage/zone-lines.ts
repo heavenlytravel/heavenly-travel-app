@@ -1,11 +1,11 @@
 import {
   andList,
+  cornerCount,
   isZoneCircle,
   isZoneDistrict,
   isZoneReshaped,
   isZoneShape,
   plural,
-  ringsOf,
 } from "@repo/db";
 
 /**
@@ -42,9 +42,7 @@ export function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
   if (isZoneCircle(zone.drawnFrom)) {
     return `Started as a ${kmOf(zone.drawnFrom.radiusM)} km circle around ${zone.drawnFrom.label}`;
   }
-  const corners = isZoneShape(zone.shape)
-    ? ringsOf(zone.shape).reduce((sum, ring) => sum + ring.length - 1, 0)
-    : 0;
+  const corners = isZoneShape(zone.shape) ? cornerCount(zone.shape) : 0;
   return corners > 0 ? `Drawn, ${plural(corners, "corner")}` : "Drawn";
 }
 

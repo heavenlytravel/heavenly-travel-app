@@ -4,7 +4,7 @@
 
 import {
   circleRing,
-  isRing,
+  polygonsOf,
   type MultiPolygon,
   type Ring,
   type ZoneShape,
@@ -146,9 +146,7 @@ function squareRing(center: { lat: number; lng: number }, size: number): Ring {
   return [...corners, corners[0]!];
 }
 
-/** A shape as its pieces, and back: one piece of one ring is stored as a ring. */
-const piecesOf = (shape: ZoneShape | null): MultiPolygon =>
-  !shape ? [] : isRing(shape) ? [[shape]] : shape;
+/** A shape of pieces, as the piece editor keeps it: one piece of one ring is stored as a ring. */
 const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
   pieces.length === 0
     ? null
@@ -315,7 +313,7 @@ export function ZoneMap({
   useEffect(() => {
     if (!editor.current || sameShape(shape, shown.current)) return;
     shown.current = shape;
-    editor.current.setPieces(piecesOf(shape));
+    editor.current.setPieces(shape ? polygonsOf(shape) : []);
   }, [map, library, shape]);
 
   // A new district or place is framed; an edit or an undo keeps the view.

@@ -70,7 +70,7 @@ export type PieceMenu = { x: number; y: number; items: PieceMenuItem[] };
 /** What is selected: how many pieces, and whether a corner of the one is. */
 export type PieceSelection = { pieces: number; corner: boolean } | null;
 
-export type PieceEditorOptions = {
+type PieceEditorOptions = {
   map: google.maps.Map;
   library: google.maps.MapsLibrary;
   style: google.maps.PolygonOptions;

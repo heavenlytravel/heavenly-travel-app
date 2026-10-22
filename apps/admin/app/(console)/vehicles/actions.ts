@@ -6,6 +6,7 @@ import {
   parseVehicleFields,
   textOf,
   updateVehicle,
+  deleteConfirmationOf,
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../_lib/access";
 import {
@@ -59,12 +60,21 @@ export async function updateVehicleAction(
   };
 }
 
-/** Deletes a vehicle entered by mistake; the button then opens the tab. */
-export async function deleteVehicleAction(id: string): Promise<ActionState> {
+/**
+ * Deletes a vehicle entered by mistake; the button then opens the tab.
+ * `seen` and `typed` are what the delete's dialog showed and what the
+ * admin typed (@repo/db's delete-impact).
+ */
+export async function deleteVehicleAction(
+  id: string,
+  seen: string[],
+  typed: string | null,
+): Promise<ActionState> {
   const admin = await getAdmin("fleet.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof id !== "string" || !id) return STALE;
-  const result = await deleteVehicle(actorOf(admin), id);
+  const confirmation = deleteConfirmationOf(seen, typed);
+  if (typeof id !== "string" || !id || !confirmation) return STALE;
+  const result = await deleteVehicle(actorOf(admin), id, confirmation);
   if (result.ok) revalidateFleet("vehicles");
   return stateOf(result);
 }

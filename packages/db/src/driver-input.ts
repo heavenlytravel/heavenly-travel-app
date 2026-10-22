@@ -1,4 +1,5 @@
 import { refuse, type Change } from "./change";
+import type { DeleteImpact } from "./delete-impact";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import { isValidPhone, normalizePhone } from "./phone";
@@ -148,3 +149,12 @@ export function parseDriverFields(
   const check = checkDriverFields(fields);
   return check.ok ? { ok: true, value: fields } : check;
 }
+
+/**
+ * What deleting a driver takes (./delete-impact): nothing beyond them
+ * while jobs are not assigned to drivers, so a plain yes confirms it.
+ */
+export const DRIVER_DELETE_IMPACT: DeleteImpact = {
+  lines: ["Nothing else changes: no job is assigned to a driver yet."],
+  confirmWith: null,
+};

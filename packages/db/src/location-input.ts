@@ -9,6 +9,7 @@ import {
   type LocationPageKey,
   type PageStatus,
 } from "./location-page-input";
+import type { DeleteImpact } from "./delete-impact";
 import { andList, plural } from "./names";
 import { slugify } from "./slug";
 
@@ -341,37 +342,33 @@ export function isSlugLocked(location: { wentLiveAt: Date | null }) {
 }
 
 /**
- * Whether deleting a location reaches past its own drafts, so the admin
- * types its slug to say they mean it: it has been live, and has a public
- * address the delete turns into a 404 that links break on and search
- * engines drop; or other locations price routes to its zones, which go
- * with it.
+ * What deleting a location takes (./delete-impact): its pages, saved
+ * addresses, zones and rates; its public address, once it has been live,
+ * which turns into a 404 that links break on and search engines drop; and
+ * the routes other locations price to its zones (`routesIn`, by name),
+ * which go too. Either of the last two reaches past the location, so its
+ * slug is typed to confirm.
  */
-export function deleteAsksSlug(beenLive: boolean, routesIn: number) {
-  return beenLive || routesIn > 0;
-}
-
-/**
- * Whether a location can be deleted. One that has never been live, and
- * that no other location prices routes to, goes on a plain yes; any other
- * once its slug is typed (`deleteAsksSlug`). `typed` is what the admin
- * typed; null when nothing was asked. `routesIn` counts the other
- * locations' routes to its zones.
- */
-export function checkLocationDelete(
+export function locationDeleteImpact(
   location: { slug: string; wentLiveAt: Date | null },
-  typed: string | null,
-  routesIn = 0,
-): Change {
+  routesIn: readonly { name: string; routes: number }[],
+): DeleteImpact {
   const beenLive = hasBeenLive(location);
-  if (!deleteAsksSlug(beenLive, routesIn) || typed === location.slug) {
-    return { ok: true };
-  }
-  return refuse(
-    beenLive
-      ? `Type the slug, ${location.slug}, to delete a location that has been live.`
-      : `Type the slug, ${location.slug}, to delete a location other locations price routes to.`,
-  );
+  return {
+    lines: [
+      "Its pages, saved addresses, zones and rates are deleted with it.",
+      ...(beenLive
+        ? [
+            `/${location.slug} turns into “page not found”: links to it break and search engines drop it.`,
+          ]
+        : []),
+      ...routesIn.map(
+        (entry) =>
+          `${entry.name} loses ${entry.routes === 1 ? "its route" : `its ${plural(entry.routes, "route")}`} to these zones and stops selling ${entry.routes === 1 ? "that trip" : "those trips"}.`,
+      ),
+    ],
+    confirmWith: beenLive || routesIn.length > 0 ? location.slug : null,
+  };
 }
 
 /**

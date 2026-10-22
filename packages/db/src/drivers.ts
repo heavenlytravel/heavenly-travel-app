@@ -2,9 +2,11 @@ import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
+import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import {
   checkDriverFields,
   DRIVER_CLASSES_FIELD,
+  DRIVER_DELETE_IMPACT,
   DRIVER_DOCUMENTS,
   driverFieldsOf,
   type DriverDocument,
@@ -238,8 +240,18 @@ export async function updateDriver(
   });
 }
 
-/** Deletes a driver entered by mistake. One who has driven for us is made inactive instead. */
-export function deleteDriver(actor: Actor, id: string): Promise<Change> {
+/**
+ * Deletes a driver entered by mistake, once the admin confirmed what that
+ * takes (`DRIVER_DELETE_IMPACT`, ./delete-impact). One who has driven for
+ * us is made inactive instead.
+ */
+export function deleteDriver(
+  actor: Actor,
+  id: string,
+  confirmation: DeleteConfirmation,
+): Promise<Change> {
+  const confirmed = checkDeleteConfirmed(DRIVER_DELETE_IMPACT, confirmation);
+  if (!confirmed.ok) return Promise.resolve(confirmed);
   return db.$transaction(async (tx) => {
     const driver = await tx.driver.findUnique({
       where: { id },

@@ -30,6 +30,8 @@ export * from "./expiry";
 export * from "./location-input";
 export * from "./images";
 export * from "./media-status";
+export * from "./delete-impact";
+export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./location-view";
 export * from "./location-search";

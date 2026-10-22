@@ -6,13 +6,14 @@ import {
   isZoneReshaped,
   isZoneShape,
   plural,
+  type PricedFrom,
 } from "@repo/db";
 
 /**
- * How the coverage screens describe a zone: how it was made, how many
- * priced routes it is an end of, and which other locations price routes to
- * it. The Coverage tab, its zone editor and the Coverage screen across
- * locations read these.
+ * How the coverage screens describe a zone: how it was made, and which
+ * other locations price routes to it. The Coverage tab, its zone editor
+ * and the Coverage screen across locations read these; the counting is
+ * @repo/db's (zone-routes).
  */
 
 /** "km" with one decimal at most: 1.5, 25. */
@@ -44,58 +45,6 @@ export function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
   }
   const corners = isZoneShape(zone.shape) ? cornerCount(zone.shape) : 0;
   return corners > 0 ? `Drawn, ${plural(corners, "corner")}` : "Drawn";
-}
-
-/** How many priced routes each zone is an end of, by the zone's id. */
-export function pricedRoutesByZone(
-  rates: readonly { fromZoneId: string; toZoneId: string }[],
-): Map<string, number> {
-  const routesOf = new Map<string, Set<string>>();
-  for (const rate of rates) {
-    const route = `${rate.fromZoneId}|${rate.toZoneId}`;
-    for (const zoneId of [rate.fromZoneId, rate.toZoneId]) {
-      const routes = routesOf.get(zoneId) ?? new Set<string>();
-      routes.add(route);
-      routesOf.set(zoneId, routes);
-    }
-  }
-  return new Map(
-    [...routesOf].map(([zoneId, routes]) => [zoneId, routes.size]),
-  );
-}
-
-/** The other locations that price routes to a zone, each with how many. */
-export type PricedFrom = { location: string; routes: number }[];
-
-/**
- * The other locations whose grids end at each zone, by the zone's id: their
- * routes out, such as Kuala Lumpur's to Selangor's KLIA, which go when the
- * zone is removed.
- */
-export function pricedFromByZone(
-  rates: readonly {
-    fromZoneId: string;
-    toZoneId: string;
-    location: { name: string };
-  }[],
-): Map<string, PricedFrom> {
-  const routesOf = new Map<string, Map<string, Set<string>>>();
-  for (const rate of rates) {
-    const locations =
-      routesOf.get(rate.toZoneId) ?? new Map<string, Set<string>>();
-    const routes = locations.get(rate.location.name) ?? new Set<string>();
-    routes.add(rate.fromZoneId);
-    locations.set(rate.location.name, routes);
-    routesOf.set(rate.toZoneId, locations);
-  }
-  return new Map(
-    [...routesOf].map(([zoneId, locations]) => [
-      zoneId,
-      [...locations]
-        .map(([location, routes]) => ({ location, routes: routes.size }))
-        .sort((a, b) => a.location.localeCompare(b.location)),
-    ]),
-  );
 }
 
 /** "Kuala Lumpur prices 1 route to it", or "Kuala Lumpur and Penang price routes to it". */

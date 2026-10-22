@@ -2,6 +2,7 @@ import {
   LOCATION_STATE_LABELS,
   LOCATION_STATE_MOVE,
   hasBeenLive,
+  locationDeleteImpact,
   locationStateOf,
   stateMoveBlockers,
   type LocationState,
@@ -109,7 +110,7 @@ async function status({ id }: { id: string }) {
       </Card>
       {moves ? (
         <Card>
-          <CardTitle description="For good: its pages, saved addresses, zones and rates go with it.">
+          <CardTitle description="Removes the location for good.">
             Delete location
           </CardTitle>
           <DeleteLocation
@@ -117,7 +118,7 @@ async function status({ id }: { id: string }) {
             name={location.name}
             slug={location.slug}
             hasBeenLive={hasBeenLive(location)}
-            routesIn={routesIn}
+            impact={locationDeleteImpact(location, routesIn)}
           />
         </Card>
       ) : null}

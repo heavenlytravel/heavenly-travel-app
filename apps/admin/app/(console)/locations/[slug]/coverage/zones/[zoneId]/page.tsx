@@ -4,6 +4,7 @@ import {
   isZoneOrigin,
   isZoneReshaped,
   isZoneShape,
+  pricedFromByZone,
   type ZoneOrigin,
 } from "@repo/db";
 import {
@@ -20,7 +21,6 @@ import { requireAdmin } from "../../../../../../_lib/access";
 import { locationTabHref } from "../../../../../../_lib/routes";
 import { locationDetails, locationKey } from "../../../../_lib/location-data";
 import { districtChoices, stateOutlines } from "../../../../_lib/outlines";
-import { pricedFromByZone } from "../../zone-lines";
 import { ZoneEditor } from "../ZoneEditor";
 import type { MukimChoice, OtherZone } from "../ZoneMap";
 

@@ -1,4 +1,5 @@
 import { refuse, type Change } from "./change";
+import type { DeleteImpact } from "./delete-impact";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import {
@@ -213,4 +214,72 @@ export function parseVehicleFields(
   };
   const check = checkVehicleFields(fields, now);
   return check.ok ? { ok: true, value: { ...fields, photos } } : check;
+}
+
+/** What deleting a vehicle changes beyond it, as `vehicleDeleteImpactOf` (./vehicles) reads it. */
+export type VehicleDeleteFacts = {
+  plate: string;
+  /** How many photos it has. */
+  photos: number;
+  /** "Toyota Alphard", and whether the model leaves the catalogue with it: no other vehicle is of it and no booking chose it. */
+  model: { name: string; leaves: boolean };
+  /** The class and the location, as the customer site names them. */
+  className: string;
+  locationName: string;
+  /**
+   * Where customers there choose the model: whether it stops being
+   * choosable, as its only vehicle in service there, and whether the class
+   * then shows one model only, so no choice is offered at all.
+   */
+  choice: { lost: boolean; endsChoice: boolean } | null;
+  /** What the class's picture there becomes when this vehicle supplied it; null when it did not. */
+  cover: "photo" | "catalogue" | "none" | null;
+};
+
+/**
+ * What deleting a vehicle takes (./delete-impact): its photos, its model
+ * when nothing else is of it, and what customers at its location see of
+ * its class: the model to choose and the class's picture. Those reach the
+ * customer site, so the plate is typed to confirm.
+ */
+export function vehicleDeleteImpact(facts: VehicleDeleteFacts): DeleteImpact {
+  const { model, className, locationName, choice, cover } = facts;
+  const lines: string[] = [];
+  if (facts.photos > 0) {
+    lines.push(
+      `${facts.photos === 1 ? "Its photo is" : `Its ${facts.photos} photos are`} taken off it; the files stay in Media until deleted there.`,
+    );
+  }
+  if (model.leaves) {
+    lines.push(
+      `${model.name} leaves the catalogue: no other vehicle is of it and no booking chose it.`,
+    );
+  }
+  if (choice?.lost) {
+    lines.push(
+      `Customers in ${locationName} can no longer choose the ${model.name} for ${className}: it is the model's only vehicle in service there.`,
+    );
+  }
+  if (choice?.endsChoice) {
+    lines.push(
+      `${className} then shows one model in ${locationName}, so customers there no longer choose a model.`,
+    );
+  }
+  if (cover === "photo") {
+    lines.push(
+      `${className}'s picture in ${locationName} changes to another vehicle's photo.`,
+    );
+  } else if (cover === "catalogue") {
+    lines.push(
+      `${className}'s picture in ${locationName} changes to the catalogue's picture.`,
+    );
+  } else if (cover === "none") {
+    lines.push(
+      `${className} has no picture in ${locationName} until a vehicle there has a photo.`,
+    );
+  }
+  return {
+    lines,
+    confirmWith: choice?.lost || cover !== null ? facts.plate : null,
+  };
 }

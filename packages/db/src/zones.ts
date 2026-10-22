@@ -2,6 +2,11 @@ import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
+import {
+  checkDeleteConfirmed,
+  type DeleteConfirmation,
+  type DeleteImpact,
+} from "./delete-impact";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
 import { andList } from "./names";
 import { byClassOrder } from "./offerings";
@@ -20,6 +25,11 @@ import {
   type ZoneFields,
 } from "./rates-input";
 import { cutOut, joinOverlaps, shapesOverlap } from "./zone-geometry";
+import {
+  pricedFromByZone,
+  pricedRoutesByZone,
+  zoneDeleteImpact,
+} from "./zone-routes";
 import type { MultiPolygon } from "./geo";
 import { isZoneShape, type ZoneShape } from "./zone-match";
 
@@ -680,18 +690,58 @@ export async function updateZone(
 }
 
 /**
+ * What removing the zone takes as it stands (`zoneDeleteImpact`), counted
+ * as the Coverage tab counts it: the location's routes with the zone at an
+ * end, and other locations' routes to it.
+ */
+async function zoneImpactOf(
+  tx: Prisma.TransactionClient,
+  zone: { id: string; locationId: string; name: string },
+): Promise<DeleteImpact> {
+  const [own, fromElsewhere] = await Promise.all([
+    tx.zoneRate.findMany({
+      where: {
+        locationId: zone.locationId,
+        OR: [{ fromZoneId: zone.id }, { toZoneId: zone.id }],
+      },
+      select: { fromZoneId: true, toZoneId: true },
+    }),
+    tx.zoneRate.findMany({
+      where: { toZoneId: zone.id, locationId: { not: zone.locationId } },
+      select: {
+        fromZoneId: true,
+        toZoneId: true,
+        location: { select: { name: true } },
+      },
+    }),
+  ]);
+  return zoneDeleteImpact(
+    zone,
+    pricedRoutesByZone(own).get(zone.id) ?? 0,
+    pricedFromByZone(fromElsewhere).get(zone.id) ?? [],
+  );
+}
+
+/**
  * Removes a zone and every cell of a grid on it: this location's, and other
- * locations' routes to it, which the Coverage tab names before it asks.
+ * locations' routes to it, once the admin confirmed what that takes as it
+ * stands (./delete-impact), as the Coverage tab says it.
  */
 export async function deleteZone(
   actor: Actor,
   id: string,
+  confirmation: DeleteConfirmation,
 ): Promise<ZoneChanged | Refusal> {
   return db.$transaction(async (tx) => {
     // A save trimming this zone meanwhile would otherwise find it gone.
     await lockZoneWrites(tx);
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
+    const confirmed = checkDeleteConfirmed(
+      await zoneImpactOf(tx, zone),
+      confirmation,
+    );
+    if (!confirmed.ok) return confirmed;
     const grids = await gridsEndingAt(tx, zone);
     // Its cells go with it, other locations' too, by the schema's cascade.
     await tx.zone.delete({ where: { id } });

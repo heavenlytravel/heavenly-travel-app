@@ -8,14 +8,13 @@ import {
   LOCATION_STATE_MOVE,
   RESERVED_SLUGS,
   checkAddressNames,
-  checkLocationDelete,
   checkLocationSlug,
-  deleteAsksSlug,
   checkPageUnpublish,
   hasBeenLive,
   stateCodesOf,
   isLocationState,
   isSlugLocked,
+  locationDeleteImpact,
   parseAddressEntries,
   parseLocationFields,
   setupProgress,
@@ -272,36 +271,43 @@ describe("checkLocationSlug", () => {
   });
 });
 
-describe("checkLocationDelete", () => {
-  it("lets go of a location that has never been live on a plain yes", () => {
+describe("locationDeleteImpact", () => {
+  it("lets go of a draft no other location prices routes to on a plain yes", () => {
     const draft = { slug: "penang-test", wentLiveAt: null };
     assert.equal(hasBeenLive(draft), false);
-    assert.equal(checkLocationDelete(draft, null).ok, true);
+    assert.deepEqual(locationDeleteImpact(draft, []), {
+      lines: [
+        "Its pages, saved addresses, zones and rates are deleted with it.",
+      ],
+      confirmWith: null,
+    });
   });
 
-  it("asks for the slug, typed exactly, once the location has been live", () => {
-    const live = { slug: "penang", wentLiveAt: new Date() };
-    assert.equal(hasBeenLive(live), true);
-    assert.match(
-      errorOf(checkLocationDelete(live, null)),
-      /Type the slug, penang, to delete/,
+  it("names the public address and asks for the slug once it has been live", () => {
+    const impact = locationDeleteImpact(
+      { slug: "penang", wentLiveAt: new Date() },
+      [],
     );
-    for (const typed of ["", "Penang", "penang ", "penan"]) {
-      assert.equal(checkLocationDelete(live, typed).ok, false, typed);
-    }
-    assert.equal(checkLocationDelete(live, "penang").ok, true);
+    assert.equal(
+      impact.lines[1],
+      "/penang turns into “page not found”: links to it break and search engines drop it.",
+    );
+    assert.equal(impact.confirmWith, "penang");
   });
 
-  it("asks for the slug of a draft that other locations price routes to", () => {
-    const draft = { slug: "selangor", wentLiveAt: null };
-    assert.equal(deleteAsksSlug(false, 0), false);
-    assert.equal(deleteAsksSlug(false, 2), true);
-    assert.equal(deleteAsksSlug(true, 0), true);
-    assert.match(
-      errorOf(checkLocationDelete(draft, null, 2)),
-      /Type the slug, selangor, to delete a location other locations price routes to/,
+  it("names each location losing routes and asks for the slug", () => {
+    const impact = locationDeleteImpact(
+      { slug: "selangor", wentLiveAt: null },
+      [
+        { name: "Kuala Lumpur", routes: 2 },
+        { name: "Penang", routes: 1 },
+      ],
     );
-    assert.equal(checkLocationDelete(draft, "selangor", 2).ok, true);
+    assert.deepEqual(impact.lines.slice(1), [
+      "Kuala Lumpur loses its 2 routes to these zones and stops selling those trips.",
+      "Penang loses its route to these zones and stops selling that trip.",
+    ]);
+    assert.equal(impact.confirmWith, "selangor");
   });
 });
 

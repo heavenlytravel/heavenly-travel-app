@@ -200,13 +200,21 @@ Revised on 2026-10-22, once locations price routes to each other's zones
 (`261015-locations-as-operation-areas.md`):
 
 - Its zones go with it, and with them other locations' routes to them, such as Kuala
-  Lumpur's to Selangor's KLIA. The card names those locations in red, with the routes
-  they lose, and the delete asks for the slug, as a live location's does. Every delete
-  then asks again in the alert dialog, which names what goes.
-- The server refuses a delete that would take routes from a location the card did not
-  name, one that priced a route to it since the page opened. The card reads again and
-  keeps the slug typed. The location's zones are held for the delete's transaction, so
-  a route priced to one meanwhile waits and then finds it gone.
+  Lumpur's to Selangor's KLIA. The card lists what the delete takes, those locations
+  and their routes among it, before it is asked; the alert dialog lists it again, and
+  asks for the slug there when the location has been live or other locations lose
+  routes.
+- The server works out what the delete takes again and refuses when it is not what
+  the dialog showed, such as a route priced to it since the page opened; the page
+  then reads again. The location's zones are held for the delete's transaction, so a
+  route priced to one meanwhile waits and then finds it gone.
+- This became the rule for every delete in the console, in `@repo/db`'s
+  `delete-impact`: a location, a zone, a vehicle, a driver and an uploaded image. Each
+  works out its impact on the server, a sentence per thing that goes or changes. The
+  dialog lists it. A delete that reaches past the record (another location, a public
+  address, what customers see, something still in use) asks for its name to be typed.
+  The server refuses an impact that changed since it was shown. One shared button,
+  `_components/DeleteButton`, runs it.
 - The `location.deleted` entry names those locations (`routesFrom`) and is in their
   history too (`locationIds`); removing one zone does the same. Their pages on the
   customer site are refreshed.

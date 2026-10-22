@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { plural } from "@repo/db";
+import { plural, type PricedFrom } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CoverageMap, type MappedZone } from "./CoverageMap";
-import { ZoneList } from "./ZoneList";
-import { pricedFromSentence, type PricedFrom } from "./zone-lines";
+import { RemoveZone } from "./RemoveZone";
+import { pricedFromSentence } from "./zone-lines";
 import type { DistrictOutline } from "./zones/map-shapes";
 
 /** A zone as the Coverage tab lists it. */
@@ -125,7 +125,7 @@ export function CoverageZones({
                     >
                       Edit
                     </Link>
-                    <ZoneList
+                    <RemoveZone
                       zoneId={zone.id}
                       name={zone.name}
                       routes={zone.routes}

@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { DRIVER_DELETE_IMPACT } from "@repo/db";
 import { getDriver, listClassOptions } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
-import { DeleteRecord } from "../../../../../_components/DeleteRecord";
+import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DetailColumns } from "../../../../../_components/PageColumn";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { SectionHeader } from "../../../../../_components/SectionHeader";
@@ -88,10 +89,12 @@ async function driverScreen({
               <HistoryLink
                 href={recordHistoryHref(locationDriverHref(slug, driver.id))}
               />
-              <DeleteRecord
+              <DeleteButton
+                look="header"
                 label="Delete driver"
                 title={`Delete ${driver.name}?`}
-                description="For a driver entered by mistake: one who has driven for us is made inactive instead. Their history stays in the log. This cannot be undone."
+                impact={DRIVER_DELETE_IMPACT}
+                note="For a driver entered by mistake: one who has driven for us is made inactive instead. Their history stays in the log. This cannot be undone."
                 action={deleteDriverAction.bind(null, driver.id)}
                 doneHref={locationTabHref(slug, "drivers")}
                 doneMessage={`Deleted ${driver.name}.`}

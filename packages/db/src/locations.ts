@@ -7,6 +7,7 @@ import {
 import type { ActivityEntityType, Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
+import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import type {
   Location,
   LocationAddress,
@@ -18,12 +19,12 @@ import {
   NEW_LOCATION_STATE,
   TOP_CHOICE_CAP,
   checkAddressNames,
-  checkLocationDelete,
   checkLocationFields,
   checkLocationSlug,
   checkPageUnpublish,
   locationStateOf,
   isSlugLocked,
+  locationDeleteImpact,
   stateMoveBlockers,
   type LocationFields,
   type LocationState,
@@ -914,11 +915,10 @@ export type LocationDeleted =
 /**
  * Deletes a location, with its pages, its saved addresses, its offerings,
  * its zones and their rates, and other locations' routes to its zones
- * (`routesIntoLocation`), such as Kuala Lumpur's to Selangor's KLIA. One
- * that has been live, or that other locations price routes to, is deleted
- * only when `typedSlug` is its slug (`checkLocationDelete`). `warnedOf`
- * names the other locations the admin was told lose routes, by id: one
- * that priced a route to it since is refused, to be read first. A top
+ * (`routesIntoLocation`), such as Kuala Lumpur's to Selangor's KLIA, once
+ * the admin confirmed what that takes as it stands
+ * (`locationDeleteImpact`, ./delete-impact): one that priced a route to it
+ * since the Status tab was read is refused, to be read first. A top
  * choice leaves the home page first, so the places after it close up.
  * What the location was is logged, in the other locations' history too,
  * and its earlier entries stay in the log under the name it had. The
@@ -929,8 +929,7 @@ export type LocationDeleted =
 export async function deleteLocation(
   actor: Actor,
   id: string,
-  typedSlug: string | null,
-  warnedOf: readonly string[],
+  confirmation: DeleteConfirmation,
 ): Promise<LocationDeleted> {
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
@@ -942,24 +941,9 @@ export async function deleteLocation(
     });
     if (!location) return NOT_FOUND;
     // Its zones held until the delete ends: a route priced to one meanwhile
-    // waits, then finds it gone, rather than going unwarned.
+    // waits, then finds it gone, rather than going unannounced.
     await tx.$executeRaw`SELECT id FROM "Zone" WHERE "locationId" = ${id} FOR UPDATE`;
     const routesIn = await routesIntoLocation(id, tx);
-    const unwarned = routesIn.filter(
-      (entry) => !warnedOf.includes(entry.locationId),
-    );
-    if (unwarned.length > 0) {
-      const names = unwarned.map((entry) => entry.name);
-      return refuse(
-        `${andList(names)} ${names.length === 1 ? "has" : "have"} priced routes to its zones since this page opened. Read what the delete takes, then delete again.`,
-      );
-    }
-    const check = checkLocationDelete(
-      location,
-      typedSlug,
-      routesIn.reduce((sum, entry) => sum + entry.routes, 0),
-    );
-    if (!check.ok) return check;
     // Our vehicles and drivers are not the location's to take with it.
     const based = [
       location._count.vehicles > 0
@@ -976,6 +960,11 @@ export async function deleteLocation(
         error: `${andList(based)} ${one ? "is" : "are"} based here. Move ${one ? "it" : "them"} to another location first.`,
       };
     }
+    const confirmed = checkDeleteConfirmed(
+      locationDeleteImpact(location, routesIn),
+      confirmation,
+    );
+    if (!confirmed.ok) return confirmed;
 
     const left = await changeTopChoiceIn(tx, actor, id, "remove");
     if (!left.ok) return left;

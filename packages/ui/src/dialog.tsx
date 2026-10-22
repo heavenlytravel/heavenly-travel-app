@@ -55,7 +55,7 @@ export function Dialog({
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-xl ui:border ui:border-neutral-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45 ui:[--dialog-height:min(48rem,90dvh)]",
+        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45 ui:[--dialog-height:min(48rem,90dvh)]",
         WIDTHS[width],
         className,
       )}
@@ -74,7 +74,7 @@ export function Dialog({
                 {description ? (
                   <p
                     id={descriptionId}
-                    className="ui:mt-1 ui:text-sm ui:text-neutral-600"
+                    className="ui:mt-1 ui:text-sm ui:text-slate-600"
                   >
                     {description}
                   </p>
@@ -84,7 +84,7 @@ export function Dialog({
                 type="button"
                 aria-label="Close"
                 onClick={() => onOpenChange(false)}
-                className="ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-neutral-900"
+                className="ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-slate-900"
               >
                 <XIcon />
               </button>

@@ -20,16 +20,16 @@ function Part({
 }) {
   return (
     <div>
-      <dt className="flex items-center gap-2 text-xs font-medium text-neutral-500">
+      <dt className="flex items-center gap-2 text-xs font-medium text-slate-500">
         {label}
         {changed ? <Badge tone="amber">Changed</Badge> : null}
       </dt>
-      <dd className="mt-1 text-sm text-neutral-900">{children}</dd>
+      <dd className="mt-1 text-sm text-slate-900">{children}</dd>
     </div>
   );
 }
 
-const NONE = <span className="text-neutral-400">None</span>;
+const NONE = <span className="text-slate-400">None</span>;
 
 function Paragraphs({ text }: { text: string }) {
   const paragraphs = paragraphsOf(text);
@@ -53,14 +53,14 @@ function Picture({ image }: { image: PageImage | null }) {
         height={image.height}
         alt={image.alt}
         sizes="240px"
-        className="h-28 w-auto max-w-full rounded-md border border-neutral-200 object-contain"
+        className="h-28 w-auto max-w-full rounded-md border border-slate-200 object-contain"
       />
-      <span className="text-xs text-neutral-600">Alt text: {image.alt}</span>
+      <span className="text-xs text-slate-600">Alt text: {image.alt}</span>
       <a
         href={image.url}
         target="_blank"
         rel="noreferrer"
-        className="text-xs text-neutral-600 underline underline-offset-4"
+        className="text-xs text-slate-600 underline underline-offset-4"
       >
         Open the file
       </a>
@@ -102,7 +102,7 @@ export function PageContentView({
         {content.shareImage ? (
           <Picture image={content.shareImage} />
         ) : (
-          <span className="text-neutral-500">The hero image</span>
+          <span className="text-slate-500">The hero image</span>
         )}
       </Part>
       {page === LANDING_PAGE ? (
@@ -130,7 +130,7 @@ export function PageContentView({
             {content.faqs.map((faq, i) => (
               <li key={i}>
                 <p className="font-medium">{faq.question}</p>
-                <div className="mt-1 text-neutral-700">
+                <div className="mt-1 text-slate-700">
                   <Paragraphs text={faq.answer} />
                 </div>
               </li>
@@ -152,9 +152,9 @@ export function PageContentView({
                 return (
                   <li key={i} className="grid gap-1.5">
                     <p className="font-medium">{highlight.name}</p>
-                    <p className="text-neutral-700">{highlight.text}</p>
+                    <p className="text-slate-700">{highlight.text}</p>
                     <Picture image={highlight.image} />
-                    <p className="text-xs text-neutral-600">
+                    <p className="text-xs text-slate-600">
                       Saved address:{" "}
                       {highlight.addressId === null
                         ? "none"

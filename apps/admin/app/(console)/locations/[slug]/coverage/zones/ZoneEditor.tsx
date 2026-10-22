@@ -656,7 +656,7 @@ export function ZoneEditor({
         </Field>
 
         <fieldset className="grid gap-3">
-          <legend className="mb-2 text-sm font-medium text-neutral-800">
+          <legend className="mb-2 text-sm font-medium text-slate-800">
             Start from
           </legend>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -669,11 +669,11 @@ export function ZoneEditor({
                   className={cx(
                     "flex items-start gap-2.5 rounded-lg border p-3 text-sm transition-colors",
                     chosen
-                      ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900"
-                      : "border-neutral-200",
+                      ? "border-brand bg-brand-tint ring-1 ring-brand"
+                      : "border-slate-200",
                     unavailable
                       ? "cursor-not-allowed opacity-60"
-                      : !chosen && "cursor-pointer hover:border-neutral-300",
+                      : !chosen && "cursor-pointer hover:border-slate-300",
                   )}
                 >
                   <Radio
@@ -687,10 +687,10 @@ export function ZoneEditor({
                     className="mt-0.5"
                   />
                   <span className="grid gap-0.5">
-                    <span className="font-medium text-neutral-900">
+                    <span className="font-medium text-slate-900">
                       {option.label}
                     </span>
-                    <span className="text-xs text-neutral-600">
+                    <span className="text-xs text-slate-600">
                       {unavailable
                         ? "Needs the browser key for Google Maps."
                         : option.hint}
@@ -707,7 +707,7 @@ export function ZoneEditor({
             <div className="grid gap-1.5 sm:max-w-sm">
               <label
                 htmlFor={districtSelectId}
-                className="text-sm font-medium text-neutral-800"
+                className="text-sm font-medium text-slate-800"
               >
                 District
               </label>
@@ -724,14 +724,14 @@ export function ZoneEditor({
                   })),
                 }))}
               />
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-slate-500">
                 The location&apos;s own states come first; any district may be a
                 zone, for an outstation destination.
               </p>
             </div>
             {district && mukims.length > 0 ? (
               <fieldset className="grid gap-1">
-                <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+                <legend className="mb-1.5 text-sm font-medium text-slate-800">
                   Area
                 </legend>
                 <label className="flex cursor-pointer items-start gap-2.5 text-sm">
@@ -742,10 +742,10 @@ export function ZoneEditor({
                     className="mt-0.5"
                   />
                   <span className="grid gap-0.5">
-                    <span className="font-medium text-neutral-900">
+                    <span className="font-medium text-slate-900">
                       The whole district
                     </span>
-                    <span className="text-xs text-neutral-600">
+                    <span className="text-xs text-slate-600">
                       {district.label} by its official boundary, islands
                       included.
                     </span>
@@ -759,10 +759,10 @@ export function ZoneEditor({
                     className="mt-0.5"
                   />
                   <span className="grid gap-0.5">
-                    <span className="font-medium text-neutral-900">
+                    <span className="font-medium text-slate-900">
                       Some of its mukims
                     </span>
-                    <span className="text-xs text-neutral-600">
+                    <span className="text-xs text-slate-600">
                       Tick one or more; together they make one zone.
                     </span>
                   </span>
@@ -778,10 +778,10 @@ export function ZoneEditor({
                           checked={picked.includes(mukim.code)}
                           onChange={() => toggleMukim(mukim.code)}
                         />
-                        <span className="min-w-0 flex-1 truncate text-neutral-900">
+                        <span className="min-w-0 flex-1 truncate text-slate-900">
                           {mukim.name}
                         </span>
-                        <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-px text-[11px] text-neutral-500">
+                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-px text-[11px] text-slate-500">
                           {mukim.kind}
                         </span>
                       </label>
@@ -790,13 +790,13 @@ export function ZoneEditor({
                 ) : null}
               </fieldset>
             ) : district ? (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-slate-500">
                 {district.label} has no mukims in the boundary data, so the zone
                 is the whole district.
               </p>
             ) : null}
             {district && shape ? (
-              <p className="rounded-md bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">
+              <p className="rounded-md bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
                 {asItIs
                   ? `The official boundary of ${madeOf}, read again on every save while it is not changed on the map.`
                   : `Changed on the map from ${madeOf}: the shape is yours now, ${corners} corners. Picking the district or its mukims again starts over from their boundaries.`}
@@ -810,7 +810,7 @@ export function ZoneEditor({
             <div className="grid gap-1.5">
               <label
                 htmlFor={placeInputId}
-                className="text-sm font-medium text-neutral-800"
+                className="text-sm font-medium text-slate-800"
               >
                 Address
               </label>
@@ -828,7 +828,7 @@ export function ZoneEditor({
                   districts themselves instead of real places.
                 </p>
               ) : (
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-slate-500">
                   A reference only: the zone is the shape on the map, which you
                   can move and reshape.
                 </p>
@@ -841,7 +841,7 @@ export function ZoneEditor({
                   <button
                     type="button"
                     onClick={() => drawCircle(center, radiusM)}
-                    className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+                    className="font-medium text-slate-900 underline-offset-4 hover:underline"
                   >
                     Redraw the circle
                   </button>
@@ -865,7 +865,7 @@ export function ZoneEditor({
         ) : null}
 
         {pricedFrom.length > 0 ? (
-          <p className="rounded-md bg-neutral-50 px-3 py-2.5 text-sm text-neutral-700">
+          <p className="rounded-md bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
             {pricedFromSentence(pricedFrom)}: a new shape moves where those
             trips end, and removing the zone removes those routes.
           </p>
@@ -907,12 +907,12 @@ export function ZoneEditor({
         </Button>
         <Link
           href={locationTabHref(locationSlug, "coverage")}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+          className="text-sm text-slate-600 underline-offset-4 hover:underline"
         >
           Cancel
         </Link>
         {shape ? (
-          <span className="text-xs text-neutral-500 tabular-nums">
+          <span className="text-xs text-slate-500 tabular-nums">
             {corners} of {ZONE_LIMITS.corners} corners
           </span>
         ) : null}

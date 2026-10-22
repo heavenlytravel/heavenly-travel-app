@@ -81,7 +81,7 @@ export function TopChoiceControl({
                 src={choice.heroImage?.url ?? null}
                 sizes="(min-width: 1024px) 18rem, (min-width: 640px) 50vw, 100vw"
                 fallback={
-                  <span className="text-5xl font-semibold text-neutral-300">
+                  <span className="text-5xl font-semibold text-slate-300">
                     {choice.name.charAt(0).toUpperCase()}
                   </span>
                 }
@@ -95,7 +95,7 @@ export function TopChoiceControl({
                     {choice.name}
                   </Link>
                 </h3>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-slate-500">
                   {choice.state === "paused"
                     ? "Left off the home page while paused"
                     : `/${choice.slug}`}
@@ -140,8 +140,8 @@ export function TopChoiceControl({
             </Tile>
           ) : (
             <li key={`empty-${place}`} className="min-w-0">
-              <div className="flex h-full min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-neutral-300 p-4 text-center">
-                <span className="text-sm text-neutral-500">
+              <div className="flex h-full min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 p-4 text-center">
+                <span className="text-sm text-slate-500">
                   Slot {place + 1} is empty
                 </span>
                 {place === choices.length && candidates.length > 0 ? (
@@ -171,7 +171,7 @@ export function TopChoiceControl({
         )}
       </TileGrid>
 
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-slate-500">
         {full
           ? `The home page shows at most ${TOP_CHOICE_CAP}. Remove one to add another.`
           : candidates.length === 0

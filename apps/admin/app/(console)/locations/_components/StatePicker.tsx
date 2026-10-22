@@ -25,7 +25,7 @@ export function StatePicker({
 }) {
   return (
     <fieldset>
-      <legend className="mb-1.5 text-sm font-medium text-neutral-800">
+      <legend className="mb-1.5 text-sm font-medium text-slate-800">
         <span className="inline-flex items-center gap-1.5">
           State
           <InfoTip text="Tick each state the location lies in. Its saved addresses have to be in one of them, and its zones are drawn within them. Which places it serves is the Coverage tab's." />

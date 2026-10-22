@@ -38,7 +38,7 @@ export default async function LocationOfferingPage({
       <p className="mb-4 text-sm">
         <Link
           href={locationTabHref(slug, "vehicle-classes")}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           All classes here
         </Link>
@@ -103,7 +103,7 @@ async function existingOffering({
         action={
           <Link
             href={vehicleClassHref(offering.vehicleClassId)}
-            className="text-sm text-neutral-600 underline-offset-4 hover:underline"
+            className="text-sm text-slate-600 underline-offset-4 hover:underline"
           >
             The class in the catalogue
           </Link>

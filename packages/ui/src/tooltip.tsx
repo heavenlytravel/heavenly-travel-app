@@ -41,10 +41,10 @@ export function Tooltip({
             side={side}
             sideOffset={6}
             collisionPadding={8}
-            className="ui:z-50 ui:max-w-64 ui:rounded-md ui:bg-neutral-900 ui:px-2.5 ui:py-1.5 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg"
+            className="ui:z-50 ui:max-w-64 ui:rounded-md ui:bg-ink ui:px-2.5 ui:py-1.5 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg"
           >
             {content}
-            <Primitive.Arrow className="ui:fill-neutral-900" />
+            <Primitive.Arrow className="ui:fill-ink" />
           </Primitive.Content>
         </Primitive.Portal>
       </Primitive.Root>

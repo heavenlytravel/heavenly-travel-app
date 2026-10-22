@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const LINK = "font-medium text-neutral-600 underline-offset-4 hover:underline";
+const LINK = "font-medium text-slate-600 underline-offset-4 hover:underline";
 
 /**
  * The way between the pages of a history read newest first: back to the

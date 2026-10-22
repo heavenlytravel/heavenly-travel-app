@@ -1,23 +1,23 @@
 /**
  * The one Clerk theme for both apps, passed to `ClerkProvider` so every
- * prebuilt component (sign in, sign up, user button) matches. The palette is
- * the home page's (`docs/260923-home-design.md`). The font is inherited from the
+ * prebuilt component (sign in, sign up, user button) matches. The colours are
+ * the brand's custom properties from @repo/tailwind-config, which Clerk reads
+ * where it draws (`docs/260923-home-design.md`). The font is inherited from the
  * page, so the card takes the home page fonts on the customer site and Geist
  * on the admin console. The logo is drawn by `AuthShell`, not by Clerk.
  * `@repo/ui` does not depend on Clerk, so this is a plain object; the apps
  * type-check it when they pass it to the provider.
  */
 
-const deep = "#073c36";
-const ink = "#082f2b";
-const gold = "#caa243";
-const muted = "#4a5f5b";
-const line = "#d5dedb";
+const brand = "var(--brand)";
+const ink = "var(--ink)";
+const muted = "#45556c";
+const line = "#cad5e2";
 
 export const clerkAppearance = {
   options: { logoPlacement: "none" },
   variables: {
-    colorPrimary: deep,
+    colorPrimary: brand,
     colorPrimaryForeground: "#ffffff",
     colorForeground: ink,
     colorMutedForeground: muted,
@@ -25,7 +25,7 @@ export const clerkAppearance = {
     colorInput: "#ffffff",
     colorInputForeground: ink,
     colorBorder: line,
-    colorRing: gold,
+    colorRing: brand,
     colorNeutral: ink,
     colorDanger: "#b42318",
     colorSuccess: "#157a74",
@@ -37,7 +37,7 @@ export const clerkAppearance = {
     rootBox: { width: "100%", maxWidth: "26rem" },
     cardBox: {
       width: "100%",
-      boxShadow: "0 22px 55px rgba(9, 43, 39, 0.14)",
+      boxShadow: "0 22px 55px rgba(0, 38, 75, 0.14)",
     },
     card: { padding: "2rem" },
     headerTitle: {
@@ -55,7 +55,7 @@ export const clerkAppearance = {
     },
     formFieldInput: { height: "2.75rem" },
     otpCodeFieldInput: { height: "3rem" },
-    footerActionLink: { color: deep, fontWeight: 600 },
+    footerActionLink: { color: brand, fontWeight: 600 },
   },
 } as const;
 
@@ -75,6 +75,6 @@ export const clerkUserButton = {
 export const clerkAdminSignIn = {
   elements: {
     footerAction: { display: "none" },
-    cardBox: { boxShadow: "0 22px 55px rgba(1, 23, 21, 0.5)" },
+    cardBox: { boxShadow: "0 22px 55px rgba(0, 15, 32, 0.5)" },
   },
 } as const;

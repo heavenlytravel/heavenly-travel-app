@@ -156,10 +156,10 @@ async function rates({
           />
         ) : (
           <p className="text-sm">
-            <span className="font-medium text-neutral-900">
+            <span className="font-medium text-slate-900">
               {DROPOFF_RULE_LABELS[rule]}.
             </span>{" "}
-            <span className="text-neutral-600">
+            <span className="text-slate-600">
               {dropoffRuleNote(rule, location.name)}
             </span>
           </p>
@@ -180,7 +180,7 @@ async function rates({
         {manages ? (
           <OddHoursForm locationId={id} window={window} />
         ) : (
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-slate-600">
             {window
               ? `Trips that start from ${oddHoursLabel(window)}.`
               : "No surcharge: a trip costs its grid or metered price at any hour."}

@@ -83,7 +83,7 @@ async function priceLists({ locationId }: { locationId: string | undefined }) {
     getPermissions(),
   ]);
   if (lists.length === 0) {
-    return <p className="mt-6 text-sm text-neutral-500">No location yet.</p>;
+    return <p className="mt-6 text-sm text-slate-500">No location yet.</p>;
   }
   const manages = permissions.includes("coverage.manage");
   return (
@@ -167,14 +167,14 @@ function LocationRates({
                 return (
                   <tr
                     key={offering.id}
-                    className={selling ? undefined : "text-neutral-500"}
+                    className={selling ? undefined : "text-slate-500"}
                   >
                     <Td>
                       <span className="flex items-center gap-2 font-medium whitespace-nowrap">
                         {vehicleClass.name}
                         {selling ? null : <Badge>Off sale</Badge>}
                       </span>
-                      <span className="block text-xs text-neutral-500">
+                      <span className="block text-xs text-slate-500">
                         {isTripCategory(vehicleClass.category)
                           ? TRIP_CATEGORY_LABELS[vehicleClass.category]
                           : vehicleClass.category}
@@ -196,10 +196,10 @@ function LocationRates({
                       {modelChoice ? (
                         surchargeLabel(modelChoice)
                       ) : (
-                        <span className="text-neutral-500">Not offered</span>
+                        <span className="text-slate-500">Not offered</span>
                       )}
                     </Td>
-                    <Td className="text-xs whitespace-nowrap text-neutral-600">
+                    <Td className="text-xs whitespace-nowrap text-slate-600">
                       {rulesText(offering)}
                     </Td>
                   </tr>
@@ -246,17 +246,17 @@ function LocationRates({
       </Card>
 
       <dl className="grid gap-2 text-sm sm:grid-cols-[8rem_1fr]">
-        <dt className="text-neutral-500">Drop-offs</dt>
+        <dt className="text-slate-500">Drop-offs</dt>
         <dd>
-          <span className="font-medium text-neutral-900">
+          <span className="font-medium text-slate-900">
             {DROPOFF_RULE_LABELS[rule]}.
           </span>{" "}
-          <span className="text-neutral-600">
+          <span className="text-slate-600">
             {dropoffRuleNote(rule, list.name)}
           </span>
         </dd>
-        <dt className="text-neutral-500">Odd hours</dt>
-        <dd className="text-neutral-600">
+        <dt className="text-slate-500">Odd hours</dt>
+        <dd className="text-slate-600">
           {window
             ? `Trips that start from ${oddHoursLabel(window)}.`
             : "No surcharge."}

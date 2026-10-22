@@ -44,19 +44,19 @@ export function ConsoleHeader({
   if (tabLabel) trail.push({ label: tabLabel });
 
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-neutral-200 bg-white/90 px-4 backdrop-blur">
+    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
       <NavigationProgress
         className="absolute inset-x-0 top-0"
-        gradient={["#00283e", "#0f86ce"]}
+        gradient={["var(--navy)", "var(--azure)"]}
       />
       <SidebarTrigger className="-ml-1" />
-      <span aria-hidden="true" className="mx-1 h-4 w-px bg-neutral-200" />
+      <span aria-hidden="true" className="mx-1 h-4 w-px bg-slate-200" />
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-2 text-sm"
       >
-        <span className="hidden text-neutral-500 md:inline">Admin</span>
-        <span aria-hidden="true" className="hidden text-neutral-300 md:inline">
+        <span className="hidden text-slate-500 md:inline">Admin</span>
+        <span aria-hidden="true" className="hidden text-slate-300 md:inline">
           /
         </span>
         {trail.map((crumb, index) => {
@@ -64,20 +64,20 @@ export function ConsoleHeader({
           return (
             <span key={crumb.label} className="flex min-w-0 items-center gap-2">
               {index > 0 ? (
-                <span aria-hidden="true" className="text-neutral-300">
+                <span aria-hidden="true" className="text-slate-300">
                   /
                 </span>
               ) : null}
               {last || !crumb.href ? (
                 <span
-                  className={`truncate ${last ? "font-medium text-neutral-900" : "text-neutral-500"}`}
+                  className={`truncate ${last ? "font-medium text-slate-900" : "text-slate-500"}`}
                 >
                   {crumb.label}
                 </span>
               ) : (
                 <Link
                   href={crumb.href}
-                  className="truncate text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline"
+                  className="truncate text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline"
                 >
                   {crumb.label}
                 </Link>

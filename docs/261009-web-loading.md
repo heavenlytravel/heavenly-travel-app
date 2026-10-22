@@ -25,7 +25,7 @@ the site, and the header's links showed nothing until the next page arrived.
 `NavigationProgress` moved from the admin into `@repo/ui` (`navigation-progress.tsx`,
 styles in `styles.css`). It takes a `className` for where it sits and a `gradient` of two
 colours. The admin keeps it inside its sticky header in navy and blue; the site mounts it
-once in the root layout, fixed to the top of the window, in the brand green and gold.
+once in the root layout, fixed to the top of the window, in the brand blue and azure.
 
 The rules are the admin's: it listens for link clicks at the document, shows only when
 the wait passes 400 ms, stops when the address changes, and gives up after 20 seconds.

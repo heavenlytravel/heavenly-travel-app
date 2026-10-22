@@ -38,7 +38,7 @@ export function DriversTable({
           drivers.map((driver) => (
             <tr
               key={driver.id}
-              className={driver.isActive ? undefined : "text-neutral-500"}
+              className={driver.isActive ? undefined : "text-slate-500"}
             >
               <Td className="whitespace-nowrap">
                 <Link
@@ -47,15 +47,15 @@ export function DriversTable({
                 >
                   {driver.name}
                 </Link>
-                <span className="block text-xs text-neutral-500 tabular-nums">
+                <span className="block text-xs text-slate-500 tabular-nums">
                   {driver.phone}
                 </span>
               </Td>
-              <Td className="min-w-40 text-neutral-600">
+              <Td className="min-w-40 text-slate-600">
                 {driver.vehicleClasses.map((c) => c.name).join(", ")}
               </Td>
               {showLocation ? (
-                <Td className="whitespace-nowrap text-neutral-600">
+                <Td className="whitespace-nowrap text-slate-600">
                   {driver.location.name}
                 </Td>
               ) : null}
@@ -66,7 +66,7 @@ export function DriversTable({
                     anyEntered={DRIVER_DOCUMENTS.some((key) => driver[key])}
                   />
                 ) : (
-                  <span className="text-neutral-500">Not checked</span>
+                  <span className="text-slate-500">Not checked</span>
                 )}
               </Td>
               <Td className="whitespace-nowrap">

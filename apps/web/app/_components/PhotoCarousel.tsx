@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { focus } from "../(site)/_components/Page";
 
-const arrow = `absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#073c36] shadow transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 ${focus}`;
+const arrow = `absolute top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 ${focus}`;
 
 /**
  * Photos in a frame, swiped through one at a time: side by side, snapping
@@ -59,9 +59,9 @@ export function PhotoCarousel({
   }
 
   return (
-    <span className="group relative block aspect-[4/3] overflow-hidden rounded-[10px] bg-[#f3f6f5]">
+    <span className="group relative block aspect-[4/3] overflow-hidden rounded-[10px] bg-mist">
       {count === 0 ? (
-        <span className="grid h-full place-items-center text-[#b9c4c1]">
+        <span className="grid h-full place-items-center text-slate-400">
           <CarIcon className="size-10" />
         </span>
       ) : (

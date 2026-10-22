@@ -64,10 +64,10 @@ export function PublishDialog({
         ) : null}
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-neutral-800">
+          <h3 className="text-sm font-medium text-slate-800">
             Before publishing
           </h3>
-          <ol className="divide-y divide-neutral-100 rounded-md border border-neutral-200">
+          <ol className="divide-y divide-slate-100 rounded-md border border-slate-200">
             {checks.map((check) => {
               const done = check.missing.length === 0;
               return (
@@ -84,9 +84,7 @@ export function PublishDialog({
                     {done ? "✓" : "!"}
                   </span>
                   <div className="min-w-0 flex-1 text-sm">
-                    <p
-                      className={done ? "text-neutral-700" : "text-neutral-900"}
-                    >
+                    <p className={done ? "text-slate-700" : "text-slate-900"}>
                       <span className="sr-only">
                         {done ? "Done: " : "Not done: "}
                       </span>
@@ -104,7 +102,7 @@ export function PublishDialog({
                     <button
                       type="button"
                       onClick={() => onGoTo(check)}
-                      className="shrink-0 self-start text-xs font-medium text-neutral-900 underline-offset-4 hover:underline"
+                      className="shrink-0 self-start text-xs font-medium text-slate-900 underline-offset-4 hover:underline"
                     >
                       Go to it
                     </button>
@@ -119,13 +117,13 @@ export function PublishDialog({
         </section>
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-neutral-800">What changes</h3>
+          <h3 className="text-sm font-medium text-slate-800">What changes</h3>
           {changes === null ? (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-slate-600">
               Nothing is published yet: this is the page&apos;s first publish.
             </p>
           ) : changes.length === 0 ? (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-slate-600">
               Nothing: the draft is the published copy.
             </p>
           ) : (

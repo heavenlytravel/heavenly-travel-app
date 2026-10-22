@@ -27,7 +27,7 @@ function ViewButton({
       type="button"
       onClick={() => onPhotos(model)}
       aria-label={`See the photos of the ${model.name} larger`}
-      className={`absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-[0.8rem] font-semibold text-[#073c36] shadow ${focus}`}
+      className={`absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-[0.8rem] font-semibold text-brand shadow ${focus}`}
     >
       View
     </button>
@@ -121,13 +121,13 @@ export function ModelChoice({
 }) {
   const radioIds = useId();
   if (models.length === 0) return null;
-  const heading = "text-[0.98rem] font-semibold text-[#082f2b]";
-  const note = "mt-0.5 text-[0.88rem] text-[#5d6966]";
-  const name = "text-[0.98rem] font-semibold text-[#082f2b]";
+  const heading = "text-[0.98rem] font-semibold text-ink";
+  const note = "mt-0.5 text-[0.88rem] text-slate-600";
+  const name = "text-[0.98rem] font-semibold text-ink";
 
   if (chargeSen === null) {
     return (
-      <div className="border-t border-[#073c36]/15 px-5 pt-4 pb-5">
+      <div className="border-t border-brand/15 px-5 pt-4 pb-5">
         <p className={heading}>What we may send</p>
         <p className={note}>
           Whichever of these is free on the day, at the same price.
@@ -135,7 +135,7 @@ export function ModelChoice({
         <ModelGrid
           models={models}
           tile={(model) => (
-            <li key={model.id} className={`relative ${tile} border-[#dce3e0]`}>
+            <li key={model.id} className={`relative ${tile} border-slate-200`}>
               <PhotoCarousel
                 name={model.name}
                 photos={model.photos}
@@ -151,13 +151,13 @@ export function ModelChoice({
   }
 
   const chosen = (on: boolean) =>
-    on ? "border-[#073c36]" : "border-[#dce3e0] hover:border-[#073c36]/50";
+    on ? "border-brand" : "border-slate-200 hover:border-brand/50";
   return (
-    <fieldset className="border-t border-[#073c36]/15 px-5 pt-4 pb-5">
+    <fieldset className="border-t border-brand/15 px-5 pt-4 pb-5">
       <legend className="sr-only">Model</legend>
       <p className={heading}>
         Choose your model{" "}
-        <span className="font-normal text-[#67726f]">(optional)</span>
+        <span className="font-normal text-slate-500">(optional)</span>
       </p>
       <p className={note}>
         Any {vehicleClassName} is in the price. To ride in a particular model,
@@ -176,7 +176,7 @@ export function ModelChoice({
         />
         <span className="grid gap-0.5">
           <span className={name}>Any {vehicleClassName}</span>
-          <span className="text-[0.88rem] text-[#5d6966]">
+          <span className="text-[0.88rem] text-slate-600">
             Included: whichever is free on the day
           </span>
         </span>
@@ -218,7 +218,7 @@ export function ModelChoice({
                     className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3"
                   >
                     <span className={name}>{model.name}</span>
-                    <span className="text-[0.92rem] font-semibold text-[#073c36]">
+                    <span className="text-[0.92rem] font-semibold text-brand">
                       +{formatMyr(chargeSen)}
                     </span>
                   </span>

@@ -29,17 +29,15 @@ export function Notes({
   return (
     <div className="grid gap-4">
       {notes.length === 0 ? (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-slate-500">
           No notes yet. Only staff see these.
         </p>
       ) : (
-        <ol className="divide-y divide-neutral-100 text-sm">
+        <ol className="divide-y divide-slate-100 text-sm">
           {notes.map((note) => (
             <li key={note.id} className="py-2">
-              <p className="whitespace-pre-wrap text-neutral-900">
-                {note.body}
-              </p>
-              <p className="mt-1 text-xs text-neutral-500">
+              <p className="whitespace-pre-wrap text-slate-900">{note.body}</p>
+              <p className="mt-1 text-xs text-slate-500">
                 {note.authorName}, {formatLocalDateTime(note.createdAt)}
               </p>
             </li>

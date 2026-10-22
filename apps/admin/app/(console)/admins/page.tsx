@@ -82,7 +82,7 @@ async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
                 {wallActive ? "On" : "Off"}
               </Badge>
             </h2>
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-1 text-sm text-slate-600">
               {wallActive
                 ? "Each admin reaches only the screens and actions of their teams."
                 : "Every admin reaches every team screen and action."}{" "}
@@ -141,12 +141,12 @@ async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
                   <Td className="font-medium">
                     {name || "—"}
                     {isSelf ? (
-                      <span className="ml-2 text-xs font-normal text-neutral-500">
+                      <span className="ml-2 text-xs font-normal text-slate-500">
                         you
                       </span>
                     ) : null}
                   </Td>
-                  <Td className="text-neutral-600">{user.email}</Td>
+                  <Td className="text-slate-600">{user.email}</Td>
                   <Td>
                     <Badge tone={level === "SUPER" ? "blue" : "neutral"}>
                       {level}
@@ -156,7 +156,7 @@ async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
                     {needsTeam(profile) ? (
                       <Badge tone="amber">No team</Badge>
                     ) : teams.length === 0 ? (
-                      <span className="text-neutral-500">—</span>
+                      <span className="text-slate-500">—</span>
                     ) : (
                       <span className="flex flex-wrap gap-1">
                         {teams.map((team) => (
@@ -165,7 +165,7 @@ async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
                       </span>
                     )}
                   </Td>
-                  <Td className="text-neutral-600 tabular-nums">
+                  <Td className="text-slate-600 tabular-nums">
                     {createdAt.toLocaleDateString("en-MY", {
                       dateStyle: "medium",
                     })}

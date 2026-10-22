@@ -18,7 +18,7 @@ export default async function RestrictedPage() {
       <p className="mt-6 text-sm">
         <Link
           href="/"
-          className="font-medium text-neutral-600 underline-offset-4 hover:underline"
+          className="font-medium text-slate-600 underline-offset-4 hover:underline"
         >
           Back to the locations
         </Link>

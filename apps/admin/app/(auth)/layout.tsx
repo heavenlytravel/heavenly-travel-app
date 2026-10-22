@@ -32,7 +32,7 @@ export default async function AuthLayout({
           width={120}
           height={28}
           priority
-          // The logo is navy; drawn white on the dark green.
+          // The logo is navy; drawn white on the navy page.
           className="h-9 w-auto brightness-0 invert"
         />
       }

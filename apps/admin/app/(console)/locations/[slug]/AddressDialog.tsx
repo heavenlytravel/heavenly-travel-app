@@ -134,7 +134,7 @@ function AddressForm({
         <div className="grid gap-1.5">
           <label
             htmlFor={searchId}
-            className="text-sm font-medium text-neutral-800"
+            className="text-sm font-medium text-slate-800"
           >
             Place
           </label>
@@ -152,7 +152,7 @@ function AddressForm({
             }}
           />
           {checking ? (
-            <p aria-live="polite" className="text-xs text-neutral-500">
+            <p aria-live="polite" className="text-xs text-slate-500">
               Checking where it is…
             </p>
           ) : error ? (
@@ -160,11 +160,11 @@ function AddressForm({
               {error}
             </p>
           ) : place ? (
-            <p className="text-xs text-neutral-500">{place.detail}</p>
+            <p className="text-xs text-slate-500">{place.detail}</p>
           ) : null}
         </div>
       ) : (
-        <p className="text-sm text-neutral-600">{mode.detail}</p>
+        <p className="text-sm text-slate-600">{mode.detail}</p>
       )}
 
       {mode.kind === "rename" || place ? (

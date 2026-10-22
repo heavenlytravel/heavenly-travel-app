@@ -64,7 +64,7 @@ export function SearchBox({
     <div role="search" className="relative w-full sm:w-72">
       <SearchIcon
         className={`pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 ${
-          pending ? "animate-pulse text-neutral-700" : "text-neutral-400"
+          pending ? "animate-pulse text-slate-700" : "text-slate-400"
         }`}
       />
       <input

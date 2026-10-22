@@ -65,7 +65,7 @@ export function OddHoursForm({
   return (
     <form {...formProps} className="grid gap-4">
       <input type="hidden" name="locationId" value={locationId} />
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-sm text-neutral-700">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-sm text-slate-700">
         <span>Trips that start between</span>
         <TimeField
           name="from"
@@ -94,7 +94,7 @@ export function OddHoursForm({
         />
         <span>more.</span>
       </div>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-slate-500">
         {kind === "percent"
           ? `A whole percentage of the trip's price, up to ${CHARGE_LIMITS.maxPercent}%.`
           : "One amount added to every trip in the window, whatever its price."}{" "}

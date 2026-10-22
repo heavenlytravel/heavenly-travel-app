@@ -62,7 +62,7 @@ export function ClassVehicles({
 }) {
   if (vehicles.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-slate-500">
         No vehicle of this class yet. They are added on each location&apos;s
         Vehicles tab, or under Vehicles.
       </p>
@@ -74,24 +74,24 @@ export function ClassVehicles({
         <li key={group.location.id}>
           <Link
             href={locationVehiclesHref(group.location.slug)}
-            className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-md px-2 py-2 transition-colors hover:bg-neutral-50"
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-md px-2 py-2 transition-colors hover:bg-slate-50"
           >
             <LocationMark
               name={group.location.name}
               state={group.location.state}
             />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-neutral-900">
+              <span className="block truncate text-sm font-medium text-slate-900">
                 {group.location.name}
               </span>
-              <span className="block text-xs text-neutral-500">
+              <span className="block text-xs text-slate-500">
                 {group.models || "None in service"}
                 {group.outOfService > 0
                   ? ` · ${group.outOfService} out of service`
                   : ""}
               </span>
             </span>
-            <span className="text-sm font-semibold text-neutral-900 tabular-nums">
+            <span className="text-sm font-semibold text-slate-900 tabular-nums">
               {plural(group.inService, "vehicle")}
             </span>
           </Link>

@@ -51,7 +51,7 @@ export function ImageUpload({
             const { naturalWidth, naturalHeight } = event.currentTarget;
             setSize(`${naturalWidth} × ${naturalHeight}`);
           }}
-          className="h-40 w-auto max-w-full rounded-md border border-neutral-200 object-contain"
+          className="h-40 w-auto max-w-full rounded-md border border-slate-200 object-contain"
         />
       ) : null}
 
@@ -89,12 +89,12 @@ export function ImageUpload({
             Remove
           </Button>
         ) : (
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-slate-500">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
           </span>
         )}
         {src && size ? (
-          <span className="text-xs text-neutral-500 tabular-nums">{size}</span>
+          <span className="text-xs text-slate-500 tabular-nums">{size}</span>
         ) : null}
       </div>
       <FormError error={error} size="xs" />

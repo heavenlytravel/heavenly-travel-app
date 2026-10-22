@@ -46,11 +46,11 @@ export function Choices<T extends string>({
             tabIndex={keys.tabIndexOf(index)}
             onClick={() => onChange(option.value)}
             className={cx(
-              "rounded-full border font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900",
+              "rounded-full border font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
               size === "md" ? "h-9 px-4 text-sm" : "h-7 px-3 text-xs",
               on
-                ? "border-neutral-900 bg-neutral-900 text-white"
-                : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400 hover:text-neutral-900",
+                ? "border-brand bg-brand text-white"
+                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900",
             )}
           >
             {option.label}

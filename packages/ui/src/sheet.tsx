@@ -53,7 +53,7 @@ export function Sheet({
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(9,43,39,0.25)] ui:backdrop:bg-[#082f2b]/45",
+        "ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45",
         side !== "bottom" && WIDTHS[width],
         SIDES[side],
         className,

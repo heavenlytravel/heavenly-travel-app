@@ -68,7 +68,7 @@ async function Loaded({ content }: { content: Promise<ReactNode> }) {
 
 /** One grey bar in place of a line of text. The class gives its size. */
 export function Bone({ className }: { className: string }) {
-  return <span className={cx("block rounded bg-neutral-200", className)} />;
+  return <span className={cx("block rounded bg-slate-200", className)} />;
 }
 
 /** A `PageHeader` whose title is the record's name, so it loads with it. */
@@ -128,7 +128,7 @@ export function TableSkeleton({
 /** Label and value lines, as `Rows` lays them out. */
 export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-neutral-100">
+    <div className="divide-y divide-slate-100">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex justify-between gap-6 py-2.5">
           <Bone className="h-4 w-20" />
@@ -205,7 +205,7 @@ export function PanelSkeleton({
   return (
     <SidebarPanel title={title} className={placement}>
       <WhenExpanded>
-        <div className="flex items-center gap-3 border-b border-neutral-200 p-4">
+        <div className="flex items-center gap-3 border-b border-slate-200 p-4">
           <Bone className="size-8 rounded-full" />
           <div className="grid flex-1 gap-1.5">
             <Bone className="h-4 w-28" />

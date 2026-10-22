@@ -42,7 +42,7 @@ export function HistoryTimeline({
   if (entries.length === 0) {
     return (
       <Frame>
-        <p className="px-6 py-8 text-center text-sm text-neutral-500">
+        <p className="px-6 py-8 text-center text-sm text-slate-500">
           {emptyMessage}
         </p>
       </Frame>
@@ -53,9 +53,9 @@ export function HistoryTimeline({
     <div className="grid gap-6">
       {byDay(entries).map(([day, dayEntries]) => (
         <section key={day} className="min-w-0">
-          <h3 className="mb-2 text-sm font-semibold text-neutral-700">{day}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">{day}</h3>
           <Frame>
-            <ol className="divide-y divide-neutral-100 text-sm">
+            <ol className="divide-y divide-slate-100 text-sm">
               {dayEntries.map((entry) => {
                 const href = hrefOf?.(entry) ?? null;
                 const tag = tagOf?.(entry) ?? null;
@@ -64,15 +64,15 @@ export function HistoryTimeline({
                     key={entry.id}
                     className="grid grid-cols-[3.5rem_1fr] gap-3 px-6 py-3 sm:grid-cols-[3.5rem_1fr_auto]"
                   >
-                    <span className="text-neutral-500 tabular-nums">
+                    <span className="text-slate-500 tabular-nums">
                       {formatLocalTime(entry.createdAt)}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-medium text-neutral-900">
+                      <span className="block font-medium text-slate-900">
                         {href ? (
                           <Link
                             href={href}
-                            className="underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900"
+                            className="underline decoration-slate-300 underline-offset-4 hover:decoration-slate-900"
                           >
                             {describeActivity(entry)}
                           </Link>
@@ -80,7 +80,7 @@ export function HistoryTimeline({
                           describeActivity(entry)
                         )}
                       </span>
-                      <span className="block truncate text-xs text-neutral-500">
+                      <span className="block truncate text-xs text-slate-500">
                         {/* A customer by name, told apart from staff. */}
                         {entry.actorKind === "customer" &&
                         entry.actorName !== ANONYMOUS_ACTOR_NAMES.customer
@@ -89,7 +89,7 @@ export function HistoryTimeline({
                       </span>
                     </span>
                     {tag ? (
-                      <span className="col-start-2 text-xs text-neutral-500 sm:col-start-auto sm:text-right">
+                      <span className="col-start-2 text-xs text-slate-500 sm:col-start-auto sm:text-right">
                         {tag}
                       </span>
                     ) : null}

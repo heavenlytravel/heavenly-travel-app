@@ -28,7 +28,7 @@ export default async function LocationBookingPage({
       <p className="mb-4 text-sm">
         <Link
           href={locationBookingsHref(slug)}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           All bookings here
         </Link>

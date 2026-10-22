@@ -107,13 +107,13 @@ function Category({
     <section className="min-w-0">
       <h2 className="mb-3 flex flex-wrap items-baseline gap-x-2 text-base font-semibold tracking-tight">
         {TRIP_CATEGORY_LABELS[category]}
-        <span className="text-sm font-normal text-neutral-500">
+        <span className="text-sm font-normal text-slate-500">
           {activeCount} of {classes.length} active
         </span>
         <InfoTip text="Off hides the class from every location's options page and search card. Bookings already made are not changed." />
       </h2>
       {classes.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500">
+        <p className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
           No class in this category, so its tab has nothing to sell.
         </p>
       ) : (
@@ -161,7 +161,7 @@ function ClassCard({
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={
           <span className="grid justify-items-center gap-1.5 text-xs">
-            <BusIcon className="size-7 text-neutral-300" />
+            <BusIcon className="size-7 text-slate-300" />
             No picture yet
           </span>
         }
@@ -177,17 +177,17 @@ function ClassCard({
               vehicleClass.name
             )}
           </h3>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-slate-500">
             {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
           </p>
-          <p className="mt-1.5 line-clamp-2 text-sm text-neutral-600">
+          <p className="mt-1.5 line-clamp-2 text-sm text-slate-600">
             {vehicleClass.description}
           </p>
         </div>
         <div>
-          <p className="text-xs text-neutral-500">Sold in</p>
+          <p className="text-xs text-slate-500">Sold in</p>
           {offerings.length === 0 ? (
-            <p className="mt-1 text-sm text-neutral-500">No location yet</p>
+            <p className="mt-1 text-sm text-slate-500">No location yet</p>
           ) : (
             // Above the card's link, so each row opens its location's rates.
             <ul className="relative z-1 mt-1 -mx-2 grid">
@@ -196,10 +196,8 @@ function ClassCard({
                   <Link
                     href={ratesHref(offering.location.id)}
                     className={cx(
-                      "grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-md px-2 py-1 transition-colors hover:bg-neutral-50",
-                      offering.isActive
-                        ? "text-neutral-900"
-                        : "text-neutral-400",
+                      "grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-md px-2 py-1 transition-colors hover:bg-slate-50",
+                      offering.isActive ? "text-slate-900" : "text-slate-400",
                     )}
                   >
                     <LocationMark
@@ -211,14 +209,14 @@ function ClassCard({
                       {offering.isActive ? null : (
                         <span className="text-xs font-normal">Off sale</span>
                       )}
-                      <span className="ml-auto text-xs font-normal text-neutral-500 tabular-nums">
+                      <span className="ml-auto text-xs font-normal text-slate-500 tabular-nums">
                         {plural(
                           vehicleClass.inServiceAt[offering.location.id] ?? 0,
                           "vehicle",
                         )}
                       </span>
                     </span>
-                    <span className="col-start-2 text-xs text-neutral-500 tabular-nums">
+                    <span className="col-start-2 text-xs text-slate-500 tabular-nums">
                       {formatMyr(offering.baseFareSen)} +{" "}
                       {formatMyr(offering.perKmSen)}/km ·{" "}
                       {formatMyr(offering.hourlyRateSen)}/h

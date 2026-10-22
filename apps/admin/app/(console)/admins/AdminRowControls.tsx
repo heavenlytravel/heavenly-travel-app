@@ -71,11 +71,11 @@ export function AdminRowControls({
             <h2 className="text-base font-semibold tracking-tight">
               Level and teams
             </h2>
-            <p className="mt-1 text-sm break-all text-neutral-600">{email}</p>
+            <p className="mt-1 text-sm break-all text-slate-600">{email}</p>
           </div>
           <input type="hidden" name="email" value={email} />
           <AdminFields level={level} teams={teams} />
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-slate-500">
             A REGULAR admin needs at least one team. SUPER reaches every screen
             and needs none.
           </p>

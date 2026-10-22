@@ -86,8 +86,8 @@ export function ModelGallery({
                   }}
                   className={`${pill} ${
                     on
-                      ? "border-[#073c36] bg-[#073c36] text-white"
-                      : "border-[#dce3e0] bg-white text-[#073c36] hover:border-[#073c36]"
+                      ? "border-brand bg-brand text-white"
+                      : "border-slate-200 bg-white text-brand hover:border-brand"
                   }`}
                 >
                   {m.name}
@@ -98,7 +98,7 @@ export function ModelGallery({
         ) : null}
 
         <figure className="flex min-h-0 flex-col gap-2">
-          <div className="relative aspect-[3/2] min-h-0 w-full overflow-hidden rounded-[12px] bg-[#f3f6f5]">
+          <div className="relative aspect-[3/2] min-h-0 w-full overflow-hidden rounded-[12px] bg-mist">
             <Image
               key={photo.url}
               src={photo.url}
@@ -113,7 +113,7 @@ export function ModelGallery({
                   type="button"
                   aria-label="Previous photo"
                   onClick={() => go(-1)}
-                  className={`absolute top-1/2 left-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#073c36] shadow ${focus}`}
+                  className={`absolute top-1/2 left-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow ${focus}`}
                 >
                   <ChevronLeftIcon className="size-5" />
                 </button>
@@ -121,20 +121,20 @@ export function ModelGallery({
                   type="button"
                   aria-label="Next photo"
                   onClick={() => go(1)}
-                  className={`absolute top-1/2 right-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-[#073c36] shadow ${focus}`}
+                  className={`absolute top-1/2 right-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow ${focus}`}
                 >
                   <ChevronRightIcon className="size-5" />
                 </button>
               </>
             ) : null}
           </div>
-          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-[0.92rem] text-[#324844]">
+          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-[0.92rem] text-slate-700">
             <span>
-              <strong className="text-[#082f2b]">{model.name}</strong>
+              <strong className="text-ink">{model.name}</strong>
               {photo.caption ? `, ${photo.caption}` : null}
             </span>
             {count > 1 ? (
-              <span className="text-[#67726f] tabular-nums">
+              <span className="text-slate-500 tabular-nums">
                 {index + 1} of {count}
               </span>
             ) : null}
@@ -150,8 +150,8 @@ export function ModelGallery({
                   aria-label={`Photo ${i + 1}${p.caption ? `, ${p.caption}` : ""}`}
                   aria-current={i === index}
                   onClick={() => setAt(i)}
-                  className={`relative block aspect-[3/2] w-20 overflow-hidden rounded-[8px] border-2 bg-[#f3f6f5] ${
-                    i === index ? "border-[#073c36]" : "border-transparent"
+                  className={`relative block aspect-[3/2] w-20 overflow-hidden rounded-[8px] border-2 bg-mist ${
+                    i === index ? "border-brand" : "border-transparent"
                   } ${focus}`}
                 >
                   <Image
@@ -197,7 +197,7 @@ export function ModelPhotosButton({
           setOpened((count) => count + 1);
           setOpen(true);
         }}
-        className={`font-semibold text-[#073c36] underline-offset-4 hover:underline ${focus} ${className}`}
+        className={`font-semibold text-brand underline-offset-4 hover:underline ${focus} ${className}`}
       >
         See photos
       </button>

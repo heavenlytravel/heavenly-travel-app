@@ -34,7 +34,7 @@ export function SetupChecklist({
       >
         {title}
       </CardTitle>
-      <ol className="divide-y divide-neutral-100">
+      <ol className="divide-y divide-slate-100">
         {steps.map((step, index) => {
           const href = hrefOf(step);
           const next = progress.next?.key === step.key;
@@ -49,7 +49,7 @@ export function SetupChecklist({
                   {step.title}
                   {next ? <Badge tone="amber">Next</Badge> : null}
                 </p>
-                <p className="mt-0.5 text-sm text-neutral-600">{step.status}</p>
+                <p className="mt-0.5 text-sm text-slate-600">{step.status}</p>
                 {step.todos.map((todo) => (
                   <p key={todo} className="mt-1 text-sm text-amber-800">
                     {todo}.

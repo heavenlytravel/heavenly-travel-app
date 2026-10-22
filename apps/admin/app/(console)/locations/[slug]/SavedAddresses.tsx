@@ -206,29 +206,29 @@ export function SavedAddresses({
       </CardTitle>
 
       {rows.length === 0 ? (
-        <p className="border-t border-neutral-200 px-6 py-8 text-center text-sm text-neutral-500">
+        <p className="border-t border-slate-200 px-6 py-8 text-center text-sm text-slate-500">
           None yet. The drop-off then shows the normal search.
         </p>
       ) : (
-        <ol className="divide-y divide-neutral-100 border-t border-neutral-200">
+        <ol className="divide-y divide-slate-100 border-t border-slate-200">
           {rows.map((row, index) => (
             <li
               key={row.key}
               className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3.5"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-xs font-semibold text-neutral-600 tabular-nums">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 tabular-nums">
                 {index + 1}
               </span>
               <div className="min-w-48 flex-1">
-                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-900">
+                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-900">
                   {row.name}
                   {row.id ? null : <Badge tone="blue">New</Badge>}
                 </span>
-                <span className="block text-xs text-neutral-500">
+                <span className="block text-xs text-slate-500">
                   {row.detail}
                 </span>
                 {usedBy(row).length > 0 ? (
-                  <span className="block text-xs text-neutral-500">
+                  <span className="block text-xs text-slate-500">
                     “Take me here” on {namesOf(usedBy(row))}
                   </span>
                 ) : null}
@@ -274,13 +274,13 @@ export function SavedAddresses({
       )}
 
       {changed || error ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-neutral-200 bg-neutral-50/70 px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 bg-slate-50/70 px-6 py-3">
           {error ? (
             <p aria-live="polite" className="text-sm text-red-700">
               {error}
             </p>
           ) : (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-slate-600">
               Unsaved changes. Customers see the list once it is saved.
             </p>
           )}

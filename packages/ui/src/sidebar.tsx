@@ -125,7 +125,7 @@ export function Sidebar({
       <aside
         data-state={open ? "expanded" : "collapsed"}
         className={cx(
-          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:border-r ui:border-neutral-200 ui:bg-white ui:text-neutral-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
+          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
           open ? "ui:w-64" : "ui:w-12",
         )}
       >
@@ -140,7 +140,7 @@ export function Sidebar({
         onOpenChange={setOpenMobile}
         side="left"
         title={title}
-        className="ui:text-neutral-900"
+        className="ui:text-slate-900"
       >
         <div className="ui:flex ui:min-h-full ui:flex-col">
           <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
@@ -148,7 +148,7 @@ export function Sidebar({
               type="button"
               aria-label="Close menu"
               onClick={() => setOpenMobile(false)}
-              className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:hover:bg-neutral-100 ui:hover:text-neutral-900"
+              className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:hover:bg-slate-100 ui:hover:text-slate-900"
             >
               <XIcon />
             </button>
@@ -258,7 +258,7 @@ export function SidebarPanelToggle({
         aria-expanded={!collapsed}
         onClick={toggleCollapsed}
         className={cx(
-          "ui:hidden ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:inline-flex",
+          "ui:hidden ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900 ui:xl:inline-flex",
           className,
         )}
         {...props}
@@ -280,7 +280,7 @@ function SidebarPanelRail() {
       tabIndex={-1}
       onClick={toggleCollapsed}
       className={cx(
-        "ui:absolute ui:inset-y-0 ui:-left-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-neutral-200",
+        "ui:absolute ui:inset-y-0 ui:-left-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-slate-200",
         collapsed ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}
     />
@@ -300,7 +300,7 @@ export function SidebarPanelTrigger({
       aria-expanded={open}
       onClick={() => setOpen(!open)}
       className={cx(
-        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-600 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900 ui:xl:hidden",
+        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900 ui:xl:hidden",
         className,
       )}
       {...props}
@@ -339,7 +339,7 @@ export function SidebarPanel({
         aria-label={title}
         data-state={collapsed ? "collapsed" : "expanded"}
         className={cx(
-          "ui:sticky ui:hidden ui:shrink-0 ui:flex-col ui:border-l ui:border-neutral-200 ui:bg-white ui:text-neutral-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:xl:flex",
+          "ui:sticky ui:hidden ui:shrink-0 ui:flex-col ui:border-l ui:border-slate-200 ui:bg-white ui:text-slate-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:xl:flex",
           collapsed ? "ui:w-12" : "ui:w-72",
           className,
         )}
@@ -356,7 +356,7 @@ export function SidebarPanel({
           onOpenChange={panel.setOpen}
           side="right"
           title={title}
-          className="ui:text-neutral-900"
+          className="ui:text-slate-900"
         >
           <div className="ui:flex ui:min-h-full ui:flex-col">
             <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
@@ -364,7 +364,7 @@ export function SidebarPanel({
                 type="button"
                 aria-label="Close panel"
                 onClick={() => panel.setOpen(false)}
-                className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:hover:bg-neutral-100 ui:hover:text-neutral-900"
+                className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:hover:bg-slate-100 ui:hover:text-slate-900"
               >
                 <XIcon />
               </button>
@@ -390,7 +390,7 @@ function SidebarRail() {
       tabIndex={-1}
       onClick={toggleSidebar}
       className={cx(
-        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-neutral-200",
+        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-slate-200",
         open ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}
     />
@@ -409,7 +409,7 @@ export function SidebarTrigger({
       aria-label="Toggle sidebar"
       onClick={toggleSidebar}
       className={cx(
-        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-600 ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-neutral-900",
+        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900",
         className,
       )}
       {...props}
@@ -485,7 +485,7 @@ export function SidebarGroupLabel({
   return (
     <div
       className={cx(
-        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2 ui:text-xs ui:font-medium ui:text-neutral-500",
+        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2 ui:text-xs ui:font-medium ui:text-slate-500",
         className,
       )}
       {...props}
@@ -510,7 +510,7 @@ export function SidebarMenuItem({ className, ...props }: ComponentProps<"li">) {
 }
 
 const MENU_BUTTON =
-  "ui:flex ui:w-full ui:items-center ui:gap-2 ui:overflow-hidden ui:rounded-md ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900 ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+  "ui:flex ui:w-full ui:items-center ui:gap-2 ui:overflow-hidden ui:rounded-md ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
 
 const MENU_SIZES = {
   default: "ui:h-8",
@@ -547,7 +547,7 @@ export function SidebarMenuButton({
     MENU_BUTTON,
     MENU_SIZES[size],
     active &&
-      "ui:bg-neutral-900 ui:text-white ui:hover:bg-neutral-900 ui:hover:text-white",
+      "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:hover:bg-accent ui:hover:text-accent-foreground ui:[&>svg]:text-brand",
     // Collapsed, every row is a square: padded around a 1rem icon, or edge
     // to edge around a 2rem mark.
     collapsed && (size === "lg" ? "ui:size-8! ui:p-0!" : "ui:size-8! ui:p-2!"),
@@ -592,7 +592,7 @@ export function SidebarMenuAction({
     <button
       type="button"
       className={cx(
-        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-neutral-500 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-200 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
+        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-200 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
         className,
       )}
       {...props}
@@ -607,7 +607,7 @@ export function SidebarMenuSub({ className, ...props }: ComponentProps<"ul">) {
   return (
     <ul
       className={cx(
-        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-neutral-200 ui:py-0.5 ui:pl-2.5",
+        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-slate-200 ui:py-0.5 ui:pl-2.5",
         className,
       )}
       {...props}
@@ -635,8 +635,8 @@ export function SidebarMenuSubButton({
 }: ComponentProps<"button"> & { asChild?: boolean; active?: boolean }) {
   const shared = {
     className: cx(
-      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-neutral-600 ui:outline-hidden ui:transition-colors ui:hover:bg-neutral-100 ui:hover:text-neutral-900 ui:focus-visible:ring-2 ui:focus-visible:ring-neutral-900",
-      active && "ui:bg-neutral-100 ui:font-medium ui:text-neutral-900",
+      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-slate-600 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
+      active && "ui:bg-accent ui:font-medium ui:text-accent-foreground",
       className,
     ),
     "data-active": active || undefined,
@@ -669,7 +669,7 @@ export function SidebarSeparator({
   return (
     <hr
       className={cx(
-        "ui:mx-2 ui:border-0 ui:border-t ui:border-neutral-200",
+        "ui:mx-2 ui:border-0 ui:border-t ui:border-slate-200",
         className,
       )}
       {...props}

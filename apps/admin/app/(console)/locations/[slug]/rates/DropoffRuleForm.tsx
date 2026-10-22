@@ -56,8 +56,8 @@ export function DropoffRuleForm({
               className={cx(
                 "flex items-start gap-3 rounded-lg border p-3.5 text-sm transition-colors",
                 checked
-                  ? "border-neutral-900 bg-neutral-50 ring-1 ring-neutral-900"
-                  : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50",
+                  ? "border-brand bg-brand-tint ring-1 ring-brand"
+                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50",
                 pending ? "cursor-wait" : "cursor-pointer",
               )}
             >
@@ -69,10 +69,10 @@ export function DropoffRuleForm({
                 className="mt-0.5"
               />
               <span className="grid gap-0.5">
-                <span className="font-medium text-neutral-900">
+                <span className="font-medium text-slate-900">
                   {DROPOFF_RULE_LABELS[option]}
                 </span>
-                <span className="text-neutral-600">
+                <span className="text-slate-600">
                   {dropoffRuleNote(option, locationName)}
                 </span>
               </span>
@@ -85,7 +85,7 @@ export function DropoffRuleForm({
           aria-live="polite"
           className={cx(
             "mt-3 text-sm",
-            error ? "text-red-700" : "text-neutral-500",
+            error ? "text-red-700" : "text-slate-500",
           )}
         >
           {error ?? "Saving…"}

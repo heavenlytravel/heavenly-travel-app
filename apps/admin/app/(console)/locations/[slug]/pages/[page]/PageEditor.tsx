@@ -114,7 +114,7 @@ const partId = (key: PageCheck["key"]) => `page-${key}`;
 const PART_SCROLL = "scroll-mt-44";
 
 /** A list of rows in a part, the FAQs or the highlights: hairlines between them, no frames. */
-const ROWS = "divide-y divide-neutral-100";
+const ROWS = "divide-y divide-slate-100";
 
 /** A quiet button in the publish bar's second line. */
 function BarLink({
@@ -135,7 +135,7 @@ function BarLink({
       onClick={onClick}
       className={cx(
         "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline disabled:opacity-50",
-        danger ? "text-red-700" : "text-neutral-900",
+        danger ? "text-red-700" : "text-slate-900",
       )}
     >
       {children}
@@ -356,15 +356,15 @@ export function PageEditor({
   }, []);
 
   const message = uploads.uploading ? (
-    <span className="text-neutral-500">Uploading the image…</span>
+    <span className="text-slate-500">Uploading the image…</span>
   ) : pending ? (
-    <span className="text-neutral-500">Saving…</span>
+    <span className="text-slate-500">Saving…</span>
   ) : error ? (
     <span className="text-red-700">{error}</span>
   ) : !limits.ok ? (
     <span className="text-red-700">{limits.error}</span>
   ) : (
-    <span className="text-neutral-600">{standingNote}</span>
+    <span className="text-slate-600">{standingNote}</span>
   );
 
   // The quiet moves after the note; the main page of a public location
@@ -396,7 +396,7 @@ export function PageEditor({
     <UploadsContext value={uploads.track}>
       <div className="grid gap-6">
         {/* Runs to the column's edges, so the form scrolls out of sight under it. */}
-        <div className="sticky top-14 z-[5] -mx-5 border-b border-neutral-200 bg-neutral-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
+        <div className="sticky top-14 z-[5] -mx-5 border-b border-slate-200 bg-slate-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
               <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
@@ -443,7 +443,7 @@ export function PageEditor({
             </div>
           </div>
           <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-            <span className="text-neutral-500">{path}</span>
+            <span className="text-slate-500">{path}</span>
             <span aria-live="polite">{message}</span>
             {moves.length > 0 ? (
               <span className="flex flex-wrap gap-x-3">{moves}</span>
@@ -454,7 +454,7 @@ export function PageEditor({
         <div
           role="tablist"
           aria-label="Parts of the page"
-          className="flex gap-1 border-b border-neutral-200"
+          className="flex gap-1 border-b border-slate-200"
         >
           {TABS.map((entry) => {
             const selected = tab === entry.key;
@@ -471,8 +471,8 @@ export function PageEditor({
                 className={cx(
                   "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
                   selected
-                    ? "border-neutral-900 text-neutral-900"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900",
+                    ? "border-brand text-brand"
+                    : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900",
                 )}
               >
                 {entry.label}
@@ -518,7 +518,7 @@ export function PageEditor({
                         edit({ tagline: event.target.value })
                       }
                     />
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-slate-500">
                       The short line over the headline, and under the name on a
                       home page card. Optional.
                     </p>
@@ -559,7 +559,7 @@ export function PageEditor({
                   />
                 </Field>
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                  <p className="mb-1.5 text-sm font-medium text-slate-800">
                     Image
                   </p>
                   <ImageField
@@ -579,7 +579,7 @@ export function PageEditor({
                   <span className="flex items-baseline justify-between gap-3">
                     <span>
                       Text{" "}
-                      <span className="text-xs font-normal text-neutral-500 tabular-nums">
+                      <span className="text-xs font-normal text-slate-500 tabular-nums">
                         · {words} {words === 1 ? "word" : "words"}, at least{" "}
                         {PAGE_LIMITS.introWords}
                       </span>
@@ -606,7 +606,7 @@ export function PageEditor({
               </CardTitle>
               <div className="grid gap-4">
                 {content.faqs.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No FAQs yet.</p>
+                  <p className="text-sm text-slate-500">No FAQs yet.</p>
                 ) : (
                   <ol className={ROWS}>
                     {content.faqs.map((faq, index) => (
@@ -697,9 +697,7 @@ export function PageEditor({
                 </CardTitle>
                 <div className="grid gap-4">
                   {content.highlights.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      No highlights yet.
-                    </p>
+                    <p className="text-sm text-slate-500">No highlights yet.</p>
                   ) : (
                     <ol className={ROWS}>
                       {content.highlights.map((highlight, index) => (
@@ -772,7 +770,7 @@ export function PageEditor({
                             />
                           </Field>
                           <div>
-                            <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                            <p className="mb-1.5 text-sm font-medium text-slate-800">
                               Image
                             </p>
                             <ImageField
@@ -794,7 +792,7 @@ export function PageEditor({
                               addresses.length === 0 ? (
                                 <Link
                                   href={locationAddressesHref(locationSlug)}
-                                  className="underline underline-offset-4 hover:text-neutral-900"
+                                  className="underline underline-offset-4 hover:text-slate-900"
                                 >
                                   Add saved addresses on the location first
                                 </Link>
@@ -921,7 +919,7 @@ export function PageEditor({
               </CardTitle>
               <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-neutral-800">
+                  <p className="mb-1.5 text-sm font-medium text-slate-800">
                     Share image
                   </p>
                   <ImageField
@@ -929,7 +927,7 @@ export function PageEditor({
                     image={content.shareImage}
                     onChange={(shareImage) => edit({ shareImage })}
                   />
-                  <p className="mt-1.5 text-xs text-neutral-500">
+                  <p className="mt-1.5 text-xs text-slate-500">
                     Optional. Without one, a shared link shows the hero image.
                     Best at 1200 by 630 pixels, with what matters in the middle.
                   </p>
@@ -950,7 +948,7 @@ export function PageEditor({
                 asked not to list any of its pages. These fields count from
                 then; shared links use them already.
               </p>
-              <ul className="grid gap-1.5 text-sm text-neutral-600">
+              <ul className="grid gap-1.5 text-sm text-slate-600">
                 <li>
                   The page&apos;s address and its canonical link, so search
                   engines list one address for it.

@@ -1,7 +1,43 @@
-@import "tailwindcss";
-
 @theme {
   --color-blue-1000: #2a8af6;
   --color-purple-1000: #a853ba;
   --color-red-1000: #e92a67;
+}
+
+/*
+ * Heavenly Travel's colours, read from heavenlytravel.my and its logo, for
+ * both apps and @repo/ui. They are plain custom properties so the apps, the
+ * `ui:`-prefixed build of @repo/ui and inline styles all read one name; the
+ * theme below makes each a utility (`bg-brand`, `text-ink`, `ui:bg-brand`).
+ * The greys are Tailwind's slate, the cool grey of the site's own text.
+ * The colour notes are in docs/260923-home-design.md.
+ */
+:root {
+  /* The site's primary: buttons, links, the active tab, prices. */
+  --brand: #046bd2;
+  /* The primary under the pointer, and pressed. */
+  --brand-strong: #045cb4;
+  /* A pale wash of the primary behind what is selected or active. */
+  --brand-tint: #e8f1fb;
+  /* The site's menu links and icons; the dark bands. */
+  --navy: #003876;
+  /* The site's headings, and the darkest surfaces. */
+  --ink: #00264b;
+  /* The logo's light blue: focus rings, accent bars and lines. */
+  --azure: #0f86ce;
+  /* The same light blue lifted for words on navy and ink. */
+  --azure-light: #8fcdf4;
+  /* The site's pale section background, and empty photo frames. */
+  --mist: #f0f5fa;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-tint: var(--brand-tint);
+  --color-navy: var(--navy);
+  --color-ink: var(--ink);
+  --color-azure: var(--azure);
+  --color-azure-light: var(--azure-light);
+  --color-mist: var(--mist);
 }

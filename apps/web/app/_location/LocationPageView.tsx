@@ -42,7 +42,7 @@ import { crumbsOf, structuredDataOf, type Crumb } from "./seo";
 const gutter = "px-5 sm:px-[clamp(20px,5vw,78px)]";
 const column = "mx-auto w-full max-w-[1240px]";
 const heading =
-  "font-(family-name:--font-display) text-[clamp(2rem,3.6vw,3rem)] leading-[1.05] text-[#082f2b]";
+  "font-(family-name:--font-display) text-[clamp(2rem,3.6vw,3rem)] leading-[1.05] text-ink";
 
 export async function LocationPageView({
   location,
@@ -79,7 +79,7 @@ export async function LocationPageView({
       >
         {/* Below lg the stacked card outgrows the photo, so the photo stops
             at a fixed height and the card rests across its lower edge. */}
-        <div className="absolute inset-x-0 top-0 h-[460px] overflow-hidden bg-[#dce9ec] lg:h-full">
+        <div className="absolute inset-x-0 top-0 h-[460px] overflow-hidden bg-mist lg:h-full">
           {content.heroImage && (
             <Image
               src={content.heroImage.url}
@@ -104,12 +104,12 @@ export async function LocationPageView({
             </p>
             <h1
               id="hero-title"
-              className="max-w-[18ch] font-(family-name:--font-display) text-[clamp(2.5rem,6vw,4.6rem)] leading-[0.98] text-[#082c29]"
+              className="max-w-[18ch] font-(family-name:--font-display) text-[clamp(2.5rem,6vw,4.6rem)] leading-[0.98] text-ink"
             >
               {content.heroHeadline || label}
             </h1>
             {content.heroSubheadline && (
-              <p className="mt-4 max-w-[540px] text-[#334744] sm:text-[1.14rem]">
+              <p className="mt-4 max-w-[540px] text-slate-700 sm:text-[1.14rem]">
                 {content.heroSubheadline}
               </p>
             )}
@@ -206,7 +206,7 @@ export async function LocationPageView({
 function Crumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-[#334744]">
+      <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-slate-700">
         {crumbs.map((crumb, i) => {
           const last = i === crumbs.length - 1;
           return (
@@ -237,14 +237,14 @@ function Crumbs({ crumbs }: { crumbs: Crumb[] }) {
 /** What takes the search card's place while the location is paused. */
 function PausedNotice({ name }: { name: string }) {
   return (
-    <div className="rounded-[18px] bg-white px-6 py-7 text-[#102825] shadow-[0_22px_55px_rgba(9,43,39,0.16)] sm:rounded-[22px] sm:px-9 sm:py-8">
+    <div className="rounded-[18px] bg-white px-6 py-7 text-slate-900 shadow-[0_22px_55px_rgba(0,38,75,0.16)] sm:rounded-[22px] sm:px-9 sm:py-8">
       <p className={eyebrow}>Not taking bookings for now</p>
-      <p className="mt-2 max-w-[62ch] text-[1.05rem] text-[#324844]">
+      <p className="mt-2 max-w-[62ch] text-[1.05rem] text-slate-700">
         We are not taking new bookings for {name} at the moment. Please check
         back soon, or{" "}
         <Link
           href="/"
-          className={`font-semibold text-[#073c36] underline underline-offset-4 ${focus}`}
+          className={`font-semibold text-brand underline underline-offset-4 ${focus}`}
         >
           see where else we go
         </Link>
@@ -291,19 +291,19 @@ function ProductLink({
   return (
     <Link
       href={href}
-      className={`${panel} group flex h-full items-start gap-4 border border-transparent hover:border-[#073c36]/40 ${focus}`}
+      className={`${panel} group flex h-full items-start gap-4 border border-transparent hover:border-brand/40 ${focus}`}
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e8f2ef] text-[#073c36]">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand">
         <ProductIcon service={product} className="h-6 w-6 stroke-[1.8]" />
       </span>
       <span className="min-w-0">
-        <strong className="block font-(family-name:--font-display) text-[1.5rem] leading-tight font-normal text-[#082f2b]">
+        <strong className="block font-(family-name:--font-display) text-[1.5rem] leading-tight font-normal text-ink">
           {LOCATION_PAGE_LABELS[product]}
         </strong>
-        <span className="mt-1 block text-[#67726f]">
+        <span className="mt-1 block text-slate-500">
           {PRODUCTS[product].note}
         </span>
-        <span className="mt-3 block text-[0.92rem] font-bold text-[#073c36] underline-offset-4 group-hover:underline">
+        <span className="mt-3 block text-[0.92rem] font-bold text-brand underline-offset-4 group-hover:underline">
           See vehicles and prices <span className="ml-1.5">→</span>
         </span>
       </span>
@@ -324,7 +324,7 @@ function Intro({ title, text }: { title: string; text: string }) {
         <h2 id="intro-title" className={heading}>
           {title}
         </h2>
-        <div className="grid max-w-[70ch] gap-4 text-[1.05rem] leading-relaxed text-[#324844]">
+        <div className="grid max-w-[70ch] gap-4 text-[1.05rem] leading-relaxed text-slate-700">
           {paragraphs.map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
@@ -358,7 +358,7 @@ function Highlights({
             : undefined;
           return (
             <li key={i} className="flex flex-col items-start">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[17px] bg-[#dce9ec]">
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[17px] bg-mist">
                 {highlight.image && (
                   <Image
                     src={highlight.image.url}
@@ -369,10 +369,10 @@ function Highlights({
                   />
                 )}
               </div>
-              <h3 className="mt-4 font-(family-name:--font-display) text-[1.5rem] leading-tight text-[#082f2b]">
+              <h3 className="mt-4 font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
                 {highlight.name}
               </h3>
-              <p className="mt-1.5 text-[#324844]">{highlight.text}</p>
+              <p className="mt-1.5 text-slate-700">{highlight.text}</p>
               {address && <TakeMeHere address={address} />}
             </li>
           );
@@ -409,13 +409,13 @@ async function VehicleClasses({
                 className="mb-4"
               />
             ) : null}
-            <h3 className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-[#082f2b]">
+            <h3 className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
               {vehicleClass.name}
             </h3>
-            <p className="mt-1.5 text-[#324844]">{vehicleClass.description}</p>
+            <p className="mt-1.5 text-slate-700">{vehicleClass.description}</p>
             {vehicleClass.models.length > 0 ? (
               // A div, not a p: the gallery's dialog is not phrasing content.
-              <div className="mt-2 text-[0.95rem] text-[#324844]">
+              <div className="mt-2 text-[0.95rem] text-slate-700">
                 {modelsLine(vehicleClass.models.map((m) => m.name))}, or
                 similar.{" "}
                 <ModelPhotosButton
@@ -424,19 +424,19 @@ async function VehicleClasses({
                 />
               </div>
             ) : null}
-            <p className="mt-3 text-[0.9rem] text-[#67726f]">
+            <p className="mt-3 text-[0.9rem] text-slate-500">
               {seatsLabel(vehicleClass)} · {vehicleClass.luggage}
             </p>
-            <p className="mt-auto pt-5 text-[#67726f]">
+            <p className="mt-auto pt-5 text-slate-500">
               From{" "}
-              <strong className="text-[1.3rem] font-bold text-[#073c36]">
+              <strong className="text-[1.3rem] font-bold text-brand">
                 {formatMyr(vehicleClass.fromSen)}
               </strong>
             </p>
           </li>
         ))}
       </ul>
-      <p className="mt-5 text-[0.92rem] text-[#67726f]">
+      <p className="mt-5 text-[0.92rem] text-slate-500">
         The price of a trip depends on its distance or its hours. Search above
         for yours: the driver and fuel are included.
       </p>
@@ -449,21 +449,21 @@ function Faqs({ title, faqs }: { title: string; faqs: PageFaq[] }) {
   if (filled.length === 0) return null;
   return (
     <Section id="faqs" eyebrow="Good to know" title={title}>
-      <div className="max-w-[820px] border-t border-[#dce3e0]">
+      <div className="max-w-[820px] border-t border-slate-200">
         {filled.map((faq, i) => (
-          <details key={i} className="group border-b border-[#dce3e0]">
+          <details key={i} className="group border-b border-slate-200">
             <summary
-              className={`flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-[1.08rem] font-semibold text-[#082f2b] [&::-webkit-details-marker]:hidden ${focus}`}
+              className={`flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-[1.08rem] font-semibold text-ink [&::-webkit-details-marker]:hidden ${focus}`}
             >
               {faq.question}
               <span
                 aria-hidden
-                className="mt-0.5 text-[1.3rem] leading-none text-[#073c36] transition-transform group-open:rotate-45 motion-reduce:transition-none"
+                className="mt-0.5 text-[1.3rem] leading-none text-brand transition-transform group-open:rotate-45 motion-reduce:transition-none"
               >
                 +
               </span>
             </summary>
-            <div className="grid max-w-[70ch] gap-3 pb-6 text-[#324844]">
+            <div className="grid max-w-[70ch] gap-3 pb-6 text-slate-700">
               {paragraphsOf(faq.answer).map((paragraph, j) => (
                 <p key={j}>{paragraph}</p>
               ))}
@@ -479,7 +479,7 @@ function MoreLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
-      className={`font-bold text-[#073c36] underline-offset-4 hover:underline ${focus}`}
+      className={`font-bold text-brand underline-offset-4 hover:underline ${focus}`}
     >
       {children} <span className="ml-1.5">→</span>
     </Link>

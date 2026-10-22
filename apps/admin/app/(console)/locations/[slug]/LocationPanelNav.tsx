@@ -70,7 +70,7 @@ export type PanelGroup = {
 const DOTS = {
   green: "bg-emerald-500",
   amber: "bg-amber-500",
-  grey: "bg-neutral-300",
+  grey: "bg-slate-300",
 } as const;
 
 /** The path on screen with its query, as a submenu row's link is spelled. */
@@ -160,7 +160,7 @@ export function LocationPanelNav({
                     onClick={() =>
                       setUnfolded((was) => ({ ...was, [group.key]: !open }))
                     }
-                    className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-xs font-medium text-neutral-500 outline-hidden transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-neutral-900"
+                    className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-xs font-medium text-slate-500 outline-hidden transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand"
                   >
                     {group.label}
                     {group.note ? (
@@ -206,7 +206,7 @@ export function LocationPanelNav({
                   </SidebarMenu>
                 </>
               ) : (
-                <p className="truncate px-2 pb-1 text-xs text-neutral-400">
+                <p className="truncate px-2 pb-1 text-xs text-slate-400">
                   {group.sections.map((section) => section.label).join(", ")}
                 </p>
               )}
@@ -254,7 +254,7 @@ function SectionRow({
                 done={section.step.done}
                 className={
                   current && !section.step.done
-                    ? "border-neutral-300 text-white"
+                    ? "border-brand text-brand"
                     : undefined
                 }
               />
@@ -267,7 +267,7 @@ function SectionRow({
                   {section.label}
                 </span>
                 <span
-                  className={`truncate text-xs ${current ? "text-neutral-300" : "text-neutral-500"}`}
+                  className={`truncate text-xs ${current ? "text-navy/70" : "text-slate-500"}`}
                 >
                   {section.detail}
                 </span>
@@ -282,7 +282,7 @@ function SectionRow({
             onClick={() => onToggle(!open)}
             className={
               current
-                ? "text-neutral-300 hover:bg-neutral-700 hover:text-white"
+                ? "text-navy/70 hover:bg-brand/10 hover:text-navy"
                 : undefined
             }
           >
@@ -312,7 +312,7 @@ function SectionRow({
                   ) : null}
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.note ? (
-                    <span className="shrink-0 text-xs text-neutral-500 tabular-nums">
+                    <span className="shrink-0 text-xs text-slate-500 tabular-nums">
                       {item.note}
                     </span>
                   ) : null}

@@ -15,17 +15,8 @@
   }
 }
 
-/* The form controls from @repo/ui in the site's green and gold. */
+/* The menus of the form controls from @repo/ui, rounder on the site. */
 :root {
-  --ui-primary: #073c36;
-  --ui-primary-foreground: #ffffff;
-  --ui-accent: #e8f2ef;
-  --ui-accent-foreground: #073c36;
-  --ui-ring: #caa243;
-  --ui-line: #c9d3cf;
-  --ui-popover: #ffffff;
-  --ui-popover-foreground: #082f2b;
-  --ui-popover-line: #dce3e0;
   --ui-popover-radius: 16px;
 }
 

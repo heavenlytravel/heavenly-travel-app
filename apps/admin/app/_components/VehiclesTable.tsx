@@ -44,7 +44,7 @@ export function VehiclesTable({
           vehicles.map((vehicle) => (
             <tr
               key={vehicle.id}
-              className={vehicle.isActive ? undefined : "text-neutral-500"}
+              className={vehicle.isActive ? undefined : "text-slate-500"}
             >
               <Td className="whitespace-nowrap">
                 <Link
@@ -53,24 +53,24 @@ export function VehiclesTable({
                 >
                   {vehicle.plate}
                 </Link>
-                <span className="block text-xs text-neutral-500">
+                <span className="block text-xs text-slate-500">
                   {modelName(vehicle.vehicleModel)}
                 </span>
               </Td>
               {showClass ? (
-                <Td className="whitespace-nowrap text-neutral-600">
+                <Td className="whitespace-nowrap text-slate-600">
                   {vehicle.vehicleModel.vehicleClass.name}
                 </Td>
               ) : null}
               {showLocation ? (
-                <Td className="whitespace-nowrap text-neutral-600">
+                <Td className="whitespace-nowrap text-slate-600">
                   {vehicle.location.name}
                 </Td>
               ) : null}
-              <Td className="whitespace-nowrap text-neutral-600">
+              <Td className="whitespace-nowrap text-slate-600">
                 {vehicle.colour}
                 {vehicle.year ? (
-                  <span className="block text-xs text-neutral-500 tabular-nums">
+                  <span className="block text-xs text-slate-500 tabular-nums">
                     {vehicle.year}
                   </span>
                 ) : null}
@@ -82,7 +82,7 @@ export function VehiclesTable({
                     anyEntered={VEHICLE_DOCUMENTS.some((key) => vehicle[key])}
                   />
                 ) : (
-                  <span className="text-neutral-500">Not checked</span>
+                  <span className="text-slate-500">Not checked</span>
                 )}
               </Td>
               <Td className="whitespace-nowrap">

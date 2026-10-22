@@ -59,7 +59,7 @@ const PICKUPS_SHOWN = 6;
 const RECEIVED_SHOWN = 5;
 
 const PAGE_DOTS: Record<PageStatus, string> = {
-  unpublished: "bg-neutral-300",
+  unpublished: "bg-slate-300",
   published: "bg-emerald-500",
   changed: "bg-amber-500",
 };
@@ -239,25 +239,25 @@ async function overview({ id, slug }: { id: string; slug: string }) {
           >
             At a glance
           </CardTitle>
-          <ul className="divide-y divide-neutral-100 overflow-hidden rounded-b-xl border-t border-neutral-200">
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-b-xl border-t border-slate-200">
             {glances.map((tab) => (
               <li key={tab.key}>
                 <Link
                   href={locationTabHref(slug, tab.key)}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4 transition-colors hover:bg-neutral-50"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
                 >
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                     {LOCATION_TAB_ICONS[tab.key]}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-neutral-900">
+                    <span className="block text-sm font-medium text-slate-900">
                       {tab.label}
                     </span>
-                    <span className="block truncate text-sm text-neutral-500">
+                    <span className="block truncate text-sm text-slate-500">
                       {lines[tab.key]}
                     </span>
                   </span>
-                  <ChevronRightIcon className="text-neutral-400" />
+                  <ChevronRightIcon className="text-slate-400" />
                 </Link>
               </li>
             ))}
@@ -303,8 +303,8 @@ function Operation({
       <dl className="grid grid-cols-3 gap-3 sm:gap-4">
         {figures.map((figure) => (
           <Link key={figure.label} href={figure.href} className="group min-w-0">
-            <Frame className="h-full p-4 transition-shadow group-hover:border-neutral-300 group-hover:shadow-md sm:p-5">
-              <dt className="text-xs text-neutral-500 sm:text-sm">
+            <Frame className="h-full p-4 transition-shadow group-hover:border-slate-300 group-hover:shadow-md sm:p-5">
+              <dt className="text-xs text-slate-500 sm:text-sm">
                 {figure.label}
               </dt>
               <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:mt-2 sm:text-3xl">

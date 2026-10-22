@@ -85,7 +85,7 @@ export function CoverageAcross({
               {location.name}
             </Link>
             <LocationStateBadge state={location.state} />
-            <span className="font-normal text-neutral-500">
+            <span className="font-normal text-slate-500">
               {location.zones.length === 0
                 ? "No zone yet, so no pickup is served"
                 : plural(location.zones.length, "zone")}
@@ -94,7 +94,7 @@ export function CoverageAcross({
           {location.zones.length > 0 ? (
             <ul
               aria-label={`Zones of ${location.name}`}
-              className="mt-2 divide-y divide-neutral-100"
+              className="mt-2 divide-y divide-slate-100"
             >
               {location.zones.map((zone) => {
                 const lit = zone.id === highlighted;
@@ -107,7 +107,7 @@ export function CoverageAcross({
                     onBlur={() => setHighlighted(null)}
                     className={cx(
                       "-mx-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-2 py-2.5 transition-colors",
-                      lit && "bg-neutral-50",
+                      lit && "bg-slate-50",
                     )}
                   >
                     <span
@@ -128,11 +128,11 @@ export function CoverageAcross({
                       >
                         {zone.name}
                       </Link>
-                      <span className="block text-xs text-neutral-500">
+                      <span className="block text-xs text-slate-500">
                         {zone.drawnAs}
                       </span>
                     </div>
-                    <span className="text-xs text-neutral-500 tabular-nums">
+                    <span className="text-xs text-slate-500 tabular-nums">
                       {zone.routes === 0
                         ? "No priced route"
                         : plural(zone.routes, "priced route")}

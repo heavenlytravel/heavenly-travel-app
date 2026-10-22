@@ -25,7 +25,7 @@ export function CardImage({
   children?: ReactNode;
 }) {
   return (
-    <div className="relative aspect-[16/9] overflow-hidden bg-neutral-100">
+    <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
       {src ? (
         <Image
           src={src}
@@ -35,7 +35,7 @@ export function CardImage({
           className={cx(fit === "cover" ? "object-cover" : "object-contain")}
         />
       ) : (
-        <div className="flex h-full items-center justify-center text-neutral-400">
+        <div className="flex h-full items-center justify-center text-slate-400">
           {fallback}
         </div>
       )}

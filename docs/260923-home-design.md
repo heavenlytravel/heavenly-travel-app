@@ -12,8 +12,8 @@ pre-written WhatsApp message until a product becomes a real booking.
 | Trait        | Home                      |
 | ------------ | ------------------------- |
 | Mood         | Calm, editorial           |
-| Lead colour  | Deep green `#073C36`      |
-| Accent       | Gold `#CAA243`            |
+| Lead colour  | Brand blue `#046BD2`      |
+| Accent       | Azure `#0F86CE`           |
 | Display type | DM Serif Display 400      |
 | Body type    | DM Sans                   |
 | Corners      | 22px cards, 14px fields   |
@@ -22,18 +22,33 @@ pre-written WhatsApp message until a product becomes a real booking.
 
 ## Palette
 
-| Hex       | Name       | Role                                                  |
-| --------- | ---------- | ----------------------------------------------------- |
-| `#073C36` | Deep green | Search button, closing band, active tab text, eyebrow |
-| `#082F2B` | Ink        | Header text and headline                              |
-| `#CAA243` | Gold       | Active tab bar, focus ring, airport card line         |
-| `#E8F2EF` | Mint       | Active tab background, hover on the closing button    |
-| `#FBFCFA` | Paper      | Page background                                       |
-| `#67726F` | Muted      | Secondary text                                        |
-| `#DCE3E0` | Line       | Field and card borders                                |
+Since 2026-10-22 both apps use the brand's blues, read from heavenlytravel.my and the
+logo; until then the site was deep green `#073C36` and gold `#CAA243`. The colours are
+custom properties in `packages/tailwind-config/shared-styles.css`, each also a
+utility (`bg-brand`, `text-ink`, `ui:bg-brand`), so a colour changes in one place.
 
-The gold `#CAA243` is only ever used for lines, bars and focus rings, never for text,
-because it fails contrast on light backgrounds.
+| Token          | Hex       | Source                       | Role                                                |
+| -------------- | --------- | ---------------------------- | --------------------------------------------------- |
+| `brand`        | `#046BD2` | Site primary                 | Buttons, links, active tab, prices, eyebrows, focus |
+| `brand-strong` | `#045CB4` | Site primary on hover        | Primary under the pointer                           |
+| `brand-tint`   | `#E8F1FB` | Derived from `brand`         | Selected and active backgrounds, sidebar row        |
+| `navy`         | `#003876` | Site menu links and icons    | Closing band, destination cards, admin sign-in      |
+| `ink`          | `#00264B` | Site headings                | Headlines, header text, tooltips, dialog backdrop   |
+| `azure`        | `#0F86CE` | Logo light blue              | Active tab bar, focus outline, accent lines         |
+| `azure-light`  | `#8FCDF4` | Derived from `azure`         | Words in the accent colour on navy and ink          |
+| `mist`         | `#F0F5FA` | Site pale section background | Empty photo frames, hero placeholder                |
+
+The greys are Tailwind's `slate`, the cool grey of the site's own text (`#334155`,
+`#475569`, `#1E293B` there): `slate-50` paper, `slate-200` lines, `slate-500` muted
+text, `slate-700` body copy. Red stays for errors and refusals, and amber, emerald and red
+for booking states.
+
+White text on `brand` is 5.2:1 and on `navy` 11.5:1. `azure` on white is 3.9:1, enough
+for lines, bars and focus rings but not for small text, so words take `brand`, or
+`azure-light` on a dark field.
+
+The logo itself is drawn in navy `#00283E` with a `#0F86CE` blue; the site's `#003876`
+is a lighter navy than the logo's.
 
 ## Type
 

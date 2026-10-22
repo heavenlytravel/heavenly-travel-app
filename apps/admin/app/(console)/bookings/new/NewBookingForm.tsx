@@ -127,7 +127,7 @@ export function NewBookingForm({
                 value: customer.ok ? (
                   <>
                     {contact.name}
-                    <span className="block text-neutral-600">
+                    <span className="block text-slate-600">
                       {contact.phone}
                     </span>
                   </>
@@ -160,7 +160,7 @@ export function NewBookingForm({
             error={create.error}
             cancelHref={BOOKINGS_PATH}
           />
-          <p className="mt-3 px-1 text-xs text-neutral-500">
+          <p className="mt-3 px-1 text-xs text-slate-500">
             The booking is received until Reservation confirms it, as one from
             the website is, and the customer gets the received email.
           </p>

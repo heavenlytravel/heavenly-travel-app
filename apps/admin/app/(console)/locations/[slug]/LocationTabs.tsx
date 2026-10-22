@@ -46,7 +46,7 @@ export function LocationTabs({
     <nav aria-label="Location tabs" className="mt-6 xl:hidden">
       <ul
         ref={strip}
-        className="-mx-5 flex gap-1 overflow-x-auto border-b border-neutral-200 px-5 [scrollbar-width:none] md:mx-0 md:px-0"
+        className="-mx-5 flex gap-1 overflow-x-auto border-b border-slate-200 px-5 [scrollbar-width:none] md:mx-0 md:px-0"
       >
         {tabs.map((tab) => {
           const current = tab.key === active;
@@ -58,8 +58,8 @@ export function LocationTabs({
                 className={cx(
                   "-mb-px block border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
                   current
-                    ? "border-neutral-900 text-neutral-900"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900",
+                    ? "border-brand text-brand"
+                    : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900",
                 )}
               >
                 {tab.label}

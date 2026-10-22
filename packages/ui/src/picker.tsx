@@ -45,7 +45,7 @@ export function Picker({
             <div className="ui:px-4 ui:pt-2.5 ui:pb-5">
               <div
                 aria-hidden="true"
-                className="ui:mx-auto ui:mb-3 ui:h-1 ui:w-10 ui:rounded-full ui:bg-neutral-300"
+                className="ui:mx-auto ui:mb-3 ui:h-1 ui:w-10 ui:rounded-full ui:bg-slate-300"
               />
               <p className="ui:mb-3 ui:text-base ui:font-semibold">{title}</p>
               {open ? children : null}

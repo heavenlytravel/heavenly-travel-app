@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Photo } from "../_components/Brand";
 
 const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
+  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
 const LINKS = [
   { href: "#destinations", label: "Destinations" },
@@ -22,7 +22,7 @@ export function SiteHeader() {
   const link = `text-[0.92rem] font-semibold ${focus}`;
 
   return (
-    <header className="absolute inset-x-0 top-0 z-10 flex h-[66px] items-center justify-between px-5 text-[#082f2b] sm:h-[76px] sm:px-[clamp(20px,5vw,76px)]">
+    <header className="absolute inset-x-0 top-0 z-10 flex h-[66px] items-center justify-between px-5 text-ink sm:h-[76px] sm:px-[clamp(20px,5vw,76px)]">
       <a href="#top" aria-label="Heavenly Travel home" className={focus}>
         <Photo
           src="/brand/logo-blue.svg"
@@ -47,7 +47,7 @@ export function SiteHeader() {
       <nav
         id="site-nav"
         aria-label="Main navigation"
-        className={`absolute top-[68px] right-[18px] left-[18px] flex-col items-stretch gap-7 rounded-2xl bg-white p-5 shadow-[0_22px_55px_rgba(9,43,39,0.16)] lg:static lg:flex lg:flex-row lg:items-center lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none ${
+        className={`absolute top-[68px] right-[18px] left-[18px] flex-col items-stretch gap-7 rounded-2xl bg-white p-5 shadow-[0_22px_55px_rgba(0,38,75,0.16)] lg:static lg:flex lg:flex-row lg:items-center lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none ${
           open ? "flex" : "hidden"
         }`}
       >

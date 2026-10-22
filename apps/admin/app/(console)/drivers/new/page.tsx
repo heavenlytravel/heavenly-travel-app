@@ -25,7 +25,7 @@ export default async function NewDriverPage({
       <p className="mb-4 text-sm">
         <Link
           href={DRIVERS_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           All drivers
         </Link>

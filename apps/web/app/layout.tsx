@@ -25,7 +25,7 @@ export default function RootLayout({
           {/* The line along the top while a link opens the next page. */}
           <NavigationProgress
             className="fixed inset-x-0 top-0 z-50"
-            gradient={["#073c36", "#caa243"]}
+            gradient={["var(--brand)", "var(--azure)"]}
           />
           {children}
         </body>

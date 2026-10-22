@@ -22,7 +22,7 @@ export function StepMark({
         "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
         done
           ? "bg-emerald-600 text-white"
-          : "border border-neutral-400 text-neutral-600",
+          : "border border-slate-400 text-slate-600",
         className,
       )}
     >

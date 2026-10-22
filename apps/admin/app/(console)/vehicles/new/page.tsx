@@ -25,7 +25,7 @@ export default async function NewVehiclePage({
       <p className="mb-4 text-sm">
         <Link
           href={VEHICLES_PATH}
-          className="text-neutral-600 underline-offset-4 hover:underline"
+          className="text-slate-600 underline-offset-4 hover:underline"
         >
           All vehicles
         </Link>

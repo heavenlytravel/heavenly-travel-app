@@ -29,7 +29,7 @@ export default async function Page() {
   return (
     <div
       id="top"
-      className={`${fontVars} ${styles.page} relative min-h-screen font-(family-name:--font-body) leading-normal antialiased`}
+      className={`${fontVars} relative min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
       <SiteHeader />
 
@@ -43,7 +43,7 @@ export default async function Page() {
                 window the same at any zoom. The clip keeps it inside the hero
                 without clipping the booking card's menus. Below lg the stacked
                 card outgrows the screen, so the photo stops at the first one. */}
-            <div className="absolute inset-x-0 top-0 h-svh bg-[#dce9ec] [clip-path:inset(0)] lg:h-full">
+            <div className="absolute inset-x-0 top-0 h-svh bg-mist [clip-path:inset(0)] lg:h-full">
               <Photo
                 src="/brand/hero-langkawi.jpg"
                 alt="Eagle Square in Langkawi from the air"
@@ -59,24 +59,24 @@ export default async function Page() {
                 sized from it, so the pair keeps its proportions. */}
             <div className="relative z-[1] flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
               <div className="text-[3.75rem] sm:text-[clamp(3.75rem,min(9vw,12svh),6.5rem)]">
-                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-[#071f1d] sm:text-[0.83em]">
+                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
                   Travel
                 </p>
                 <h1
                   id="hero-title"
-                  className="mt-[0.1em] mb-[0.25em] font-(family-name:--font-display) text-[1em] leading-[0.9] text-[#082c29] sm:whitespace-nowrap"
+                  className="mt-[0.1em] mb-[0.25em] font-(family-name:--font-display) text-[1em] leading-[0.9] text-ink sm:whitespace-nowrap"
                 >
                   made simple.
                 </h1>
               </div>
-              <p className="max-w-[330px] text-[#334744] sm:max-w-[500px] sm:text-[1.18rem]">
+              <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-[1.18rem]">
                 Cars, drivers, coaches, stays and experiences—thoughtfully
                 brought together for your journey.
               </p>
             </div>
             <p
               aria-hidden
-              className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-[#caa243] font-(family-name:--font-script) text-[2rem] leading-[0.85] text-white lg:block"
+              className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-(family-name:--font-script) text-[2rem] leading-[0.85] text-white lg:block"
             >
               More
               <br />
@@ -100,7 +100,7 @@ export default async function Page() {
             >
               Choose your destination
             </h2>
-            <p className="mt-[13px] mb-[34px] text-[1.06rem] text-[#67726f]">
+            <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
               Start with where you are going.
             </p>
             <DestinationCards choices={choices} />

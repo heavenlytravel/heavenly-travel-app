@@ -333,19 +333,19 @@ export function LocationPanel({
     <div className="px-2 pb-2">
       <SetupBar done={progress.done} total={progress.total} />
       {progress.next ? (
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-slate-600">
           Next: {progress.next.todos[0]}.{" "}
           {nextHref ? (
             <Link
               href={nextHref}
-              className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+              className="font-medium text-slate-900 underline-offset-4 hover:underline"
             >
               Open {progress.next.title}
             </Link>
           ) : null}
         </p>
       ) : (
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-slate-600">
           Every step is done;{" "}
           {may("locations.activate")
             ? "take it live when ready."
@@ -376,7 +376,7 @@ export function LocationPanel({
 
   return (
     <SidebarPanel title={PANEL_TITLE} className={PANEL_PLACEMENT}>
-      <SidebarHeader className="border-b border-neutral-200">
+      <SidebarHeader className="border-b border-slate-200">
         <WhenExpanded>
           <div className="flex items-center gap-3 p-2">
             <LocationMark name={location.name} state={state} size="lg" />
@@ -384,7 +384,7 @@ export function LocationPanel({
               <span className="truncate text-sm font-semibold">
                 {location.name}
               </span>
-              <span className="truncate text-xs text-neutral-500">
+              <span className="truncate text-xs text-slate-500">
                 /{location.slug}
               </span>
             </span>
@@ -410,7 +410,7 @@ export function LocationPanel({
         <LocationPanelNav slug={slug} groups={groups} />
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-neutral-200">
+      <SidebarFooter className="border-t border-slate-200">
         <SidebarMenu>
           {foot.map((section) => (
             <SidebarMenuItem key={section.key}>
@@ -425,7 +425,7 @@ export function LocationPanel({
         </SidebarMenu>
         {isPublicState(state) ? null : (
           <WhenExpanded>
-            <p className="px-2 py-1.5 text-xs text-neutral-500">
+            <p className="px-2 py-1.5 text-xs text-slate-500">
               Not public yet. Staff read the pages through Preview.
             </p>
           </WhenExpanded>

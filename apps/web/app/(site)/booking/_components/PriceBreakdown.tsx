@@ -7,7 +7,7 @@ export function PriceBreakdown({ price }: { price: TripPriceBreakdown }) {
     ...priceRows(price),
     [
       "Total",
-      <span key="total" className="text-[1.15rem] font-bold text-[#073c36]">
+      <span key="total" className="text-[1.15rem] font-bold text-brand">
         {formatMyr(price.totalSen)}
       </span>,
     ],

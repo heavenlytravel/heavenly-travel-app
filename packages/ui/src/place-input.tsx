@@ -153,12 +153,12 @@ export function PlaceInput({
           id={listId}
           role="listbox"
           aria-label={offered?.heading}
-          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-1 ui:max-h-72 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-[#dce3e0] ui:bg-white ui:py-1.5 ui:text-left ui:text-[#102825] ui:shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
+          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-1 ui:max-h-72 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-popover-line ui:bg-white ui:py-1.5 ui:text-left ui:text-slate-900 ui:shadow-[0_18px_40px_rgba(0,38,75,0.18)]"
         >
           {offered && (
             <li
               role="presentation"
-              className="ui:px-3.5 ui:pt-1.5 ui:pb-1 ui:text-[0.7rem] ui:font-bold ui:tracking-[0.16em] ui:text-[#64706d] ui:uppercase"
+              className="ui:px-3.5 ui:pt-1.5 ui:pb-1 ui:text-[0.7rem] ui:font-bold ui:tracking-[0.16em] ui:text-slate-500 ui:uppercase"
             >
               {offered.heading}
             </li>
@@ -175,14 +175,14 @@ export function PlaceInput({
               onMouseEnter={() => setActive(i)}
               className={cx(
                 "ui:cursor-pointer ui:px-3.5 ui:py-2",
-                i === active && "ui:bg-[#e8f2ef]",
+                i === active && "ui:bg-accent",
               )}
             >
-              <span className="ui:block ui:text-[0.95rem] ui:font-semibold ui:text-[#082f2b]">
+              <span className="ui:block ui:text-[0.95rem] ui:font-semibold ui:text-ink">
                 {s.label}
               </span>
               {s.detail && (
-                <span className="ui:block ui:text-[0.8rem] ui:text-[#64706d]">
+                <span className="ui:block ui:text-[0.8rem] ui:text-slate-500">
                   {s.detail}
                 </span>
               )}

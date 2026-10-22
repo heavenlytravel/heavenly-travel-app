@@ -90,7 +90,7 @@ async function pages({ id }: { id: string }) {
                 sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
                 fallback={
                   <span className="grid justify-items-center gap-1.5 text-xs">
-                    <FileTextIcon className="size-7 text-neutral-300" />
+                    <FileTextIcon className="size-7 text-slate-300" />
                     No hero image yet
                   </span>
                 }
@@ -104,7 +104,7 @@ async function pages({ id }: { id: string }) {
                     {LOCATION_PAGE_LABELS[page.page]}
                   </Link>
                 </h2>
-                <p className="truncate text-xs text-neutral-500">
+                <p className="truncate text-xs text-slate-500">
                   {locationPagePath(location.slug, page.page)}
                 </p>
               </div>

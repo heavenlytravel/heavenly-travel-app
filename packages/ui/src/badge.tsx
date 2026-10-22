@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { cx } from "./cx.js";
 
 const TONES = {
-  neutral: "ui:bg-neutral-100 ui:text-neutral-700",
+  neutral: "ui:bg-slate-100 ui:text-slate-700",
   green: "ui:bg-emerald-50 ui:text-emerald-700",
   amber: "ui:bg-amber-50 ui:text-amber-800",
   blue: "ui:bg-blue-50 ui:text-blue-700",

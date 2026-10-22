@@ -75,7 +75,7 @@ export async function amendItemScreen({
     <p className="mb-4 text-sm">
       <Link
         href={bookingHref(booking.id, slug)}
-        className="text-neutral-600 underline-offset-4 hover:underline"
+        className="text-slate-600 underline-offset-4 hover:underline"
       >
         Back to {booking.reference}
       </Link>

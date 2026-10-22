@@ -118,10 +118,10 @@ function groupsOf(classes: readonly ClassColumn[]) {
 }
 
 /** The route column stays in view while the classes scroll under it. */
-const STICKY = "sticky left-0 z-1 border-r border-neutral-200";
+const STICKY = "sticky left-0 z-1 border-r border-slate-200";
 
 const CELL_INPUT =
-  "block h-10 w-full min-w-24 bg-transparent px-3 text-right text-sm tabular-nums outline-hidden placeholder:text-xs placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-900 focus:ring-inset read-only:cursor-wait";
+  "block h-10 w-full min-w-24 bg-transparent px-3 text-right text-sm tabular-nums outline-hidden placeholder:text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-brand focus:ring-inset read-only:cursor-wait";
 
 /**
  * The rate grid, edited as a spreadsheet: a row per route, a column per
@@ -266,12 +266,12 @@ export function RateGrid({
     (zones.length === 1 && offered.length === 0 && routes.length === 0)
   ) {
     return (
-      <p className="border-t border-neutral-200 px-6 py-5 text-sm text-neutral-600">
+      <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
         A route runs between two zones.{" "}
         {zones.length === 0 ? "Draw the zones" : "Draw a second zone"} on the{" "}
         <Link
           href={coverageHref}
-          className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+          className="font-medium text-slate-900 underline-offset-4 hover:underline"
         >
           Coverage tab
         </Link>{" "}
@@ -281,11 +281,11 @@ export function RateGrid({
   }
   if (classes.length === 0) {
     return (
-      <p className="border-t border-neutral-200 px-6 py-5 text-sm text-neutral-600">
+      <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
         Each class on sale is a column of the grid. Put a class on sale on the{" "}
         <Link
           href={locationTabHref(locationSlug, "vehicle-classes")}
-          className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+          className="font-medium text-slate-900 underline-offset-4 hover:underline"
         >
           Vehicle classes tab
         </Link>{" "}
@@ -525,7 +525,7 @@ export function RateGrid({
       rowSpan={grouped ? 2 : undefined}
       className={cx(
         sticky,
-        "border-b bg-neutral-50 py-2 pr-3 pl-6 text-left align-bottom font-medium",
+        "border-b bg-slate-50 py-2 pr-3 pl-6 text-left align-bottom font-medium",
       )}
     >
       Route
@@ -553,10 +553,10 @@ export function RateGrid({
       <div className="relative">
         <div
           ref={gridRef}
-          className="overflow-x-auto border-y border-neutral-200"
+          className="overflow-x-auto border-y border-slate-200"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-neutral-50 text-xs text-neutral-600">
+            <thead className="bg-slate-50 text-xs text-slate-600">
               {grouped ? (
                 <tr>
                   {routeHeading}
@@ -566,7 +566,7 @@ export function RateGrid({
                       scope="colgroup"
                       colSpan={group.span}
                       className={cx(
-                        "border-b border-neutral-200 px-3 pt-2 pb-1.5 text-center font-medium text-neutral-500",
+                        "border-b border-slate-200 px-3 pt-2 pb-1.5 text-center font-medium text-slate-500",
                         index > 0 && "border-l",
                       )}
                     >
@@ -582,7 +582,7 @@ export function RateGrid({
                     key={column.id}
                     scope="col"
                     className={cx(
-                      "border-b border-neutral-200 px-3 py-2 text-right align-bottom font-medium text-neutral-800",
+                      "border-b border-slate-200 px-3 py-2 text-right align-bottom font-medium text-slate-800",
                       col > 0 && "border-l",
                     )}
                   >
@@ -596,7 +596,7 @@ export function RateGrid({
                 <tr>
                   <td
                     colSpan={classes.length + 1}
-                    className="px-6 py-8 text-center text-neutral-500"
+                    className="px-6 py-8 text-center text-slate-500"
                   >
                     {rule === "grid"
                       ? "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
@@ -616,7 +616,7 @@ export function RateGrid({
                         scope="row"
                         className={cx(
                           sticky,
-                          "bg-white py-0 pr-2 pl-6 text-left font-normal group-hover:bg-neutral-50",
+                          "bg-white py-0 pr-2 pl-6 text-left font-normal group-hover:bg-slate-50",
                           !last && "border-b",
                         )}
                       >
@@ -630,13 +630,13 @@ export function RateGrid({
                             }
                             className="min-w-0 flex-1"
                           >
-                            <span className="min-w-0 flex-1 font-medium text-neutral-900 sm:block sm:max-w-64 sm:truncate">
+                            <span className="min-w-0 flex-1 font-medium text-slate-900 sm:block sm:max-w-64 sm:truncate">
                               <span className="block max-w-32 truncate sm:inline sm:max-w-none">
                                 {zoneNameOf(a)}
                               </span>
                               <span
                                 aria-hidden="true"
-                                className="mx-1.5 hidden text-neutral-400 sm:inline"
+                                className="mx-1.5 hidden text-slate-400 sm:inline"
                               >
                                 {arrow}
                               </span>
@@ -666,7 +666,7 @@ export function RateGrid({
                                 disabled={pending}
                                 onClick={() => removeRoute(route)}
                                 aria-label={`Remove the route between ${label}`}
-                                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-200/70 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-neutral-900 disabled:opacity-50"
+                                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
                               >
                                 <XIcon />
                               </button>
@@ -681,14 +681,14 @@ export function RateGrid({
                           <td
                             key={column.id}
                             className={cx(
-                              "border-neutral-200 p-0",
+                              "border-slate-200 p-0",
                               col > 0 && "border-l",
                               !last && "border-b",
                               bad
                                 ? "bg-red-50"
                                 : changed.has(key)
                                   ? "bg-amber-50"
-                                  : "group-hover:bg-neutral-50",
+                                  : "group-hover:bg-slate-50",
                             )}
                           >
                             {readOnly ? (
@@ -697,7 +697,7 @@ export function RateGrid({
                                 className="block h-10 min-w-24 px-3 text-right text-sm leading-10 tabular-nums"
                               >
                                 {values[key] || (
-                                  <span className="text-xs text-neutral-400">
+                                  <span className="text-xs text-slate-400">
                                     {emptyMeans}
                                   </span>
                                 )}
@@ -769,11 +769,11 @@ export function RateGrid({
               Add route
             </Button>
           ) : (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-slate-600">
               Every pair of zones has a row.
             </p>
           )}
-          <p className="text-xs text-neutral-500 tabular-nums">
+          <p className="text-xs text-slate-500 tabular-nums">
             {[
               pairs > 0
                 ? `${routes.length - routesOut} of ${plural(pairs, "pair")} of zones on the grid`
@@ -786,7 +786,7 @@ export function RateGrid({
               .join(", ")}
           </p>
         </div>
-        <p className="text-xs leading-relaxed text-neutral-500">
+        <p className="text-xs leading-relaxed text-slate-500">
           {rule === "grid"
             ? "An empty cell means the class is not offered on that route."
             : "An empty cell is metered at the class's rates."}{" "}
@@ -814,7 +814,7 @@ export function RateGrid({
             onAdd={addRoute}
           />
 
-          <div className="sticky bottom-0 z-2 flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-neutral-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
+          <div className="sticky bottom-0 z-2 flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur-sm">
             <p
               aria-live="polite"
               className={cx(
@@ -824,8 +824,8 @@ export function RateGrid({
                   : status.tone === "done"
                     ? "text-emerald-700"
                     : status.tone === "idle"
-                      ? "text-neutral-500"
-                      : "text-neutral-800",
+                      ? "text-slate-500"
+                      : "text-slate-800",
               )}
             >
               {status.tone === "dirty" ? (

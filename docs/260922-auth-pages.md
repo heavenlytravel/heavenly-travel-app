@@ -23,8 +23,8 @@ resend, errors and the return URL. What changes is everything around and inside 
 - **`AuthShell` in `packages/ui`** owns the page layout for both apps: an optional
   photo panel on the left from `lg` up, the form column with a brand slot at the top,
   an eyebrow line above the form and a footer link. Light and dark tones.
-- **`clerkAppearance` in `packages/ui`** is the one Clerk theme: the home page palette
-  (deep green `#073c36`, ink `#082f2b`, gold `#caa243`), the card radius and shadow,
+- **`clerkAppearance` in `packages/ui`** is the one Clerk theme: the brand palette
+  (`260923-home-design.md`, read from the tokens' custom properties), the card radius and shadow,
   and `fontFamily: inherit` so the card takes the fonts of the page it sits on. Both
   apps pass it to `ClerkProvider`, so `UserButton` and every other Clerk component
   match too.

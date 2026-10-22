@@ -84,7 +84,7 @@ export function TakeMeHere({ address }: { address: LocationViewAddress }) {
       onClick={() =>
         fillDropoff({ label: address.name, placeId: address.placeId })
       }
-      className={`mt-4 inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-[#073c36]/35 px-[17px] text-[0.9rem] font-bold text-[#073c36] hover:border-[#073c36] hover:bg-[#e8f2ef] ${focus}`}
+      className={`mt-4 inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-brand/35 px-[17px] text-[0.9rem] font-bold text-brand hover:border-brand hover:bg-brand-tint ${focus}`}
     >
       Take me here <span className="ml-2.5">→</span>
     </button>

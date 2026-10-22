@@ -170,8 +170,8 @@ export function TripOptionsForm({
                 key={c.id}
                 className={`overflow-hidden rounded-[16px] border-2 transition-colors has-[:disabled]:opacity-50 ${
                   on
-                    ? "border-[#073c36] bg-[#e8f2ef]"
-                    : "border-[#dce3e0] bg-white hover:border-[#073c36]/50"
+                    ? "border-brand bg-brand-tint"
+                    : "border-slate-200 bg-white hover:border-brand/50"
                 }`}
               >
                 <label className="flex cursor-pointer items-start gap-4 p-5 has-[:disabled]:cursor-not-allowed">
@@ -193,22 +193,22 @@ export function TripOptionsForm({
                   ) : null}
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="flex flex-wrap items-baseline justify-between gap-x-4">
-                      <span className="text-[1.1rem] font-bold text-[#082f2b]">
+                      <span className="text-[1.1rem] font-bold text-ink">
                         {c.name}
                       </span>
-                      <span className="text-[1.15rem] font-bold text-[#073c36]">
+                      <span className="text-[1.15rem] font-bold text-brand">
                         {formatMyr(c.totalSen)}
                       </span>
                     </span>
-                    <span className="text-[0.95rem] text-[#324844]">
+                    <span className="text-[0.95rem] text-slate-700">
                       {c.description}
                     </span>
                     {c.models.length > 0 ? (
-                      <span className="text-[0.9rem] text-[#324844]">
+                      <span className="text-[0.9rem] text-slate-700">
                         {modelsLine(c.models.map((m) => m.name))}, or similar
                       </span>
                     ) : null}
-                    <span className="text-[0.85rem] text-[#67726f]">
+                    <span className="text-[0.85rem] text-slate-500">
                       {seatsLabel(c)}
                       {" · "}
                       {c.luggage}
@@ -236,12 +236,12 @@ export function TripOptionsForm({
           })}
         </fieldset>
 
-        <div className="grid gap-4 rounded-[18px] bg-white p-5 shadow-[0_12px_35px_rgba(9,43,39,0.08)] sm:p-6">
+        <div className="grid gap-4 rounded-[18px] bg-white p-5 shadow-[0_12px_35px_rgba(0,38,75,0.08)] sm:p-6">
           <h2 className="font-(family-name:--font-display) text-[1.5rem]">
             Your details
           </h2>
           <label className="block">
-            <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+            <span className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800">
               Passengers
             </span>
             <NumberField
@@ -271,13 +271,13 @@ export function TripOptionsForm({
               </span>
             )}
           </label>
-          <p className="-mt-2.5 text-[0.85rem] text-[#67726f]">
+          <p className="-mt-2.5 text-[0.85rem] text-slate-500">
             Up to {maxPassengers} passengers. Larger group?{" "}
             <LargerGroupLink category={category} search={search} />
           </p>
           {offersChildSeats(category) && (
             <label className="block">
-              <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+              <span className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800">
                 Child seats
               </span>
               <Select
@@ -296,9 +296,9 @@ export function TripOptionsForm({
             </label>
           )}
           <label className="block">
-            <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+            <span className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800">
               Flight number{" "}
-              <span className="font-normal text-[#67726f]">(optional)</span>
+              <span className="font-normal text-slate-500">(optional)</span>
             </span>
             <input
               name={TRIP_OPTION_FIELDS.flightNumber}
@@ -309,9 +309,9 @@ export function TripOptionsForm({
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]">
+            <span className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800">
               Notes for the driver{" "}
-              <span className="font-normal text-[#67726f]">(optional)</span>
+              <span className="font-normal text-slate-500">(optional)</span>
             </span>
             <textarea
               name={TRIP_OPTION_FIELDS.notes}

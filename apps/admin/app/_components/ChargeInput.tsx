@@ -55,7 +55,7 @@ export function ChargeInput({
         {kind === "flat" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-neutral-500"
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500"
           >
             RM
           </span>
@@ -78,7 +78,7 @@ export function ChargeInput({
         {kind === "percent" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-neutral-500"
+            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500"
           >
             %
           </span>
@@ -88,7 +88,7 @@ export function ChargeInput({
         role="radiogroup"
         aria-label={`The ${label.toLowerCase()} is`}
         onKeyDown={keys.onKeyDown}
-        className="inline-flex overflow-hidden rounded-md border border-neutral-300 bg-white"
+        className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white"
       >
         {KINDS.map(([value, text], index) => (
           <button
@@ -100,11 +100,11 @@ export function ChargeInput({
             aria-label={value === "percent" ? "A percentage" : "A flat amount"}
             onClick={() => choose(value)}
             className={cx(
-              "h-10 px-3 text-sm font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-neutral-900",
-              value === "flat" && "border-l border-neutral-300",
+              "h-10 px-3 text-sm font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-brand",
+              value === "flat" && "border-l border-slate-300",
               kind === value
-                ? "bg-neutral-900 text-white"
-                : "text-neutral-600 hover:bg-neutral-100",
+                ? "bg-brand text-white"
+                : "text-slate-600 hover:bg-slate-100",
             )}
           >
             {text}

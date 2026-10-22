@@ -7,7 +7,7 @@ import { Photo } from "../_components/Brand";
 import { fontVars } from "../_home/fonts";
 
 const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
+  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
 /**
  * The customer site's sign-in and sign-up pages: the home page fonts, the
@@ -57,7 +57,7 @@ export default async function AuthLayout({
   );
 }
 
-/** The hero photo under a deep green wash, with the home page headline. */
+/** The hero photo under a navy wash, with the home page headline. */
 function HeroPanel() {
   return (
     <>
@@ -67,9 +67,9 @@ function HeroPanel() {
         className="absolute inset-0 h-full w-full object-cover object-center"
         loading="eager"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,60,54,0.2)_0%,rgba(7,60,54,0.55)_55%,rgba(2,27,25,0.9)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,56,118,0.2)_0%,rgba(0,56,118,0.55)_55%,rgba(0,20,40,0.9)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 p-[clamp(32px,5vw,72px)] text-white">
-        <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[3.4rem] leading-[0.75] text-[#f3dfa2]">
+        <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[3.4rem] leading-[0.75] text-azure-light">
           Travel
         </p>
         <p className="mt-2 font-(family-name:--font-display) text-[3.6rem] leading-[0.9]">

@@ -98,7 +98,7 @@ export function Select({
               ? "ui:flex ui:w-full ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:outline-none"
               : cx(
                   inputClassName,
-                  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-neutral-400",
+                  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-slate-400",
                 ),
             className,
           )}
@@ -107,7 +107,7 @@ export function Select({
             <Primitive.Value placeholder={placeholder} />
           </span>
           <Primitive.Icon asChild>
-            <ChevronDownIcon className="ui:text-neutral-500" />
+            <ChevronDownIcon className="ui:text-slate-500" />
           </Primitive.Icon>
         </Primitive.Trigger>
         <Primitive.Portal container={container}>
@@ -117,14 +117,14 @@ export function Select({
             collisionPadding={8}
             className="ui:z-50 ui:max-h-[min(var(--radix-select-content-available-height),20rem)] ui:min-w-[var(--radix-select-trigger-width)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg"
           >
-            <Primitive.ScrollUpButton className="ui:flex ui:h-6 ui:items-center ui:justify-center ui:text-neutral-500">
+            <Primitive.ScrollUpButton className="ui:flex ui:h-6 ui:items-center ui:justify-center ui:text-slate-500">
               <ChevronUpIcon />
             </Primitive.ScrollUpButton>
             <Primitive.Viewport className="ui:p-1">
               {options.map((entry) =>
                 isGroup(entry) ? (
                   <Primitive.Group key={entry.label}>
-                    <Primitive.Label className="ui:px-2 ui:pt-2 ui:pb-1 ui:text-xs ui:font-medium ui:text-neutral-500">
+                    <Primitive.Label className="ui:px-2 ui:pt-2 ui:pb-1 ui:text-xs ui:font-medium ui:text-slate-500">
                       {entry.label}
                     </Primitive.Label>
                     {entry.options.map(item)}
@@ -134,7 +134,7 @@ export function Select({
                 ),
               )}
             </Primitive.Viewport>
-            <Primitive.ScrollDownButton className="ui:flex ui:h-6 ui:items-center ui:justify-center ui:text-neutral-500">
+            <Primitive.ScrollDownButton className="ui:flex ui:h-6 ui:items-center ui:justify-center ui:text-slate-500">
               <ChevronDownIcon />
             </Primitive.ScrollDownButton>
           </Primitive.Content>

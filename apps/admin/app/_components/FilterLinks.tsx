@@ -52,8 +52,8 @@ function FilterLink({
       aria-current={active ? "page" : undefined}
       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-neutral-900 text-white"
-          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+          ? "bg-brand-tint text-navy"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       }`}
     >
       {children}

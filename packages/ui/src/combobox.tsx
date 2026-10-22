@@ -98,12 +98,12 @@ export function Combobox({
           <span
             className={cx(
               "ui:min-w-0 ui:truncate",
-              !value && "ui:text-neutral-400",
+              !value && "ui:text-slate-400",
             )}
           >
             {value || placeholder}
           </span>
-          <ChevronDownIcon className="ui:shrink-0 ui:text-neutral-500" />
+          <ChevronDownIcon className="ui:shrink-0 ui:text-slate-500" />
         </Popover.Trigger>
         <Popover.Portal container={container}>
           <Popover.Content
@@ -129,10 +129,10 @@ export function Combobox({
                 onInput={(event) => event.stopPropagation()}
                 maxLength={maxLength}
                 placeholder={searchPlaceholder}
-                className="ui:h-10 ui:w-full ui:border-b ui:border-popover-line ui:bg-transparent ui:px-3 ui:text-sm ui:outline-none ui:placeholder:text-neutral-400"
+                className="ui:h-10 ui:w-full ui:border-b ui:border-popover-line ui:bg-transparent ui:px-3 ui:text-sm ui:outline-none ui:placeholder:text-slate-400"
               />
               <Command.List className="ui:max-h-[min(18rem,calc(var(--radix-popover-content-available-height)_-_2.5rem))] ui:scroll-py-1 ui:overflow-y-auto ui:p-1">
-                <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-neutral-500">
+                <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-slate-500">
                   None yet. Type one to add it.
                 </Command.Empty>
                 {shown.map((option) => (
@@ -156,7 +156,7 @@ export function Combobox({
                     onSelect={() => choose(typed)}
                     className={row}
                   >
-                    <PlusIcon className="ui:shrink-0 ui:text-neutral-500" />
+                    <PlusIcon className="ui:shrink-0 ui:text-slate-500" />
                     <span className="ui:min-w-0 ui:truncate">
                       Create{" "}
                       <span className="ui:font-medium">

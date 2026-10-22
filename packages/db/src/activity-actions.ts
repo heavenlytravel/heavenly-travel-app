@@ -52,6 +52,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "state",
   "district",
   "vehicle-class",
+  "user",
   "admin",
   "setting",
   "location",
@@ -82,6 +83,11 @@ const ACTIONS = {
   "booking.item.priced": { entityType: "booking", customerVisible: false },
   /** The note's id only; the text stays in `BookingNote`. */
   "booking.note.added": { entityType: "booking", customerVisible: false },
+  /**
+   * An account staff created: its email, names and phone in `after`;
+   * `existing` when Clerk held it already and it was only mirrored here.
+   */
+  "user.created": { entityType: "user", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
@@ -654,6 +660,10 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.cancelled":
       return "Cancelled the booking";
+    case "user.created":
+      return field(entry.after, "existing") === true
+        ? "Added the account Clerk already held"
+        : "Created the account";
     case "admin.promoted":
       return `Promoted to ${adminState(entry.after)}`;
     case "admin.updated":

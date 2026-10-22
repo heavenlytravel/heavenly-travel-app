@@ -19,8 +19,8 @@ export function PromoteForm() {
       <form {...formProps}>
         <h2 className="text-xl font-semibold tracking-tight">Promote a user</h2>
         <p className="mt-1 text-sm text-slate-600">
-          They must have signed in on the customer site at least once. A REGULAR
-          admin needs at least one team.
+          They need an account: made on the site, or created on the Users page.
+          A REGULAR admin needs at least one team.
         </p>
 
         <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-4">

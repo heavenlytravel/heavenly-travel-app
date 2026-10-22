@@ -31,6 +31,7 @@ export const ACTIVITY_RECORD_NAMES: Record<
   vehicle: { one: "Vehicle", many: "Vehicles" },
   driver: { one: "Driver", many: "Drivers" },
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
+  user: { one: "User", many: "Users" },
   admin: { one: "Admin", many: "Admins" },
   media: { one: "Media", many: "Media" },
   setting: { one: "Setting", many: "Settings" },
@@ -112,7 +113,7 @@ export function activityEntryHref(
     case "media":
       return may("media.manage") ? MEDIA_PATH : null;
     default:
-      // An admin, the wall, a state or a district has no page of its own.
+      // A user, an admin, the wall, a state or a district has no page of its own.
       return null;
   }
 }

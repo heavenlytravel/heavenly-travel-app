@@ -14,6 +14,7 @@ const superAdmin = { level: "SUPER", teams: [] };
 
 const SUPER_ONLY: Permission[] = [
   "admins.manage",
+  "users.manage",
   "wall.switch",
   "activity.view",
   "locations.activate",

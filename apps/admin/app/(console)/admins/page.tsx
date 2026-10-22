@@ -36,7 +36,7 @@ export default async function AdminsPage({
     <>
       <PageHeader
         title="Admins"
-        description="Staff access is invite-only. A SUPER admin promotes an existing customer account and sets its teams."
+        description="Staff access is invite-only. A SUPER admin promotes an existing account, here or from the Users page, and sets its teams."
       />
 
       <Streamed

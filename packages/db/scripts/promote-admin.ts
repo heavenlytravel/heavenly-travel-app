@@ -1,7 +1,7 @@
 // Usage: pnpm --filter @repo/db db:promote-admin <email> [SUPER|REGULAR] [team ...]
 // A REGULAR admin needs at least one team: OPERATION, RESERVATION, SALES or
 // FINANCE. Runs against the DATABASE_URL in packages/db/.env. The user must
-// have signed in at least once so their User row exists.
+// have an account: made on the site, or created on the Users page.
 import {
   ADMIN_LEVELS,
   ADMIN_TEAMS,

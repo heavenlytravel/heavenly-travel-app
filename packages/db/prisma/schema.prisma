@@ -67,7 +67,7 @@ model ActivityLog {
   actorKind       String
   /// "booking.item.confirmed", "wall.switched", ...
   action          String
-  /// "booking" | "state" | "district" | "vehicle-class" | "admin" | "setting"
+  /// "booking" | "state" | "district" | "vehicle-class" | "user" | "admin" | "setting"
   /// | "location" | "vehicle" | "driver"
   entityType      String
   entityId        String

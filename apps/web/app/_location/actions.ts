@@ -30,9 +30,6 @@ const isPicked = (value: unknown): value is PickedPlace => {
   );
 };
 
-const UNKNOWN_PLACE =
-  "We could not find that place. Choose it from the list again.";
-
 export async function checkTripAction(input: {
   slug: string;
   preview: boolean;
@@ -61,16 +58,16 @@ export async function checkTripAction(input: {
     resolve(pickup),
     dropoff ? resolve(dropoff) : null,
   ]);
-  const issues: TripSearchIssue[] = [];
-  if (!from) issues.push({ field: "from", message: UNKNOWN_PLACE });
-  if (dropoff && !to) issues.push({ field: "to", message: UNKNOWN_PLACE });
-  if (!from || (dropoff && !to)) return issues;
+  // No place back is Google down or refusing as often as a bad id, and
+  // the two read the same: no verdict, as the options page looks again.
+  if (!from || (dropoff && !to)) return [];
 
   const found = await checkTripAt(
     slug,
     { pickup: from, dropoff: to },
     { preview },
   );
+  const issues: TripSearchIssue[] = [];
   if (found?.pickup) issues.push({ field: "from", message: found.pickup });
   if (found?.dropoff) issues.push({ field: "to", message: found.dropoff });
   return issues;

@@ -51,7 +51,11 @@ export function SearchMenu({
   options: readonly SearchMenuOption[];
   /** A line under the rows; none for none. */
   status?: ReactNode;
-  /** A search is on its way: the icon pulses. */
+  /**
+   * A search is on its way: the icon pulses, and the rows, the last
+   * answer's, stand dimmed and cannot be chosen, so Enter never opens a
+   * match for text since changed.
+   */
   pending?: boolean;
   onChoose: (key: string) => void;
   /** On the box's wrapper from `sm` up: its width, say. */
@@ -169,7 +173,8 @@ export function SearchMenu({
                   event.preventDefault();
                   step(-1);
                 } else if (event.key === "Enter") {
-                  const option = shown ? options[active] : undefined;
+                  const option =
+                    shown && !pending ? options[active] : undefined;
                   if (option) {
                     event.preventDefault();
                     choose(option.key);
@@ -218,11 +223,14 @@ export function SearchMenu({
                 id={`${listId}-${index}`}
                 role="option"
                 aria-selected={index === active}
+                aria-disabled={pending || undefined}
                 onMouseMove={() => setActive(index)}
                 // The press keeps the cursor in the box; the click chooses.
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(option.key)}
-                className="ui:cursor-pointer ui:rounded-sm ui:px-2 ui:py-1.5 ui:text-sm ui:aria-selected:bg-accent ui:aria-selected:text-accent-foreground"
+                onClick={() => {
+                  if (!pending) choose(option.key);
+                }}
+                className="ui:cursor-pointer ui:rounded-sm ui:px-2 ui:py-1.5 ui:text-sm ui:aria-selected:bg-accent ui:aria-selected:text-accent-foreground ui:aria-disabled:cursor-default ui:aria-disabled:opacity-50"
               >
                 {option.content}
               </div>

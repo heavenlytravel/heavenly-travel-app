@@ -59,12 +59,12 @@ export function MenuItem({
   className,
   ...props
 }: ComponentProps<typeof Primitive.Item> & {
-  /** The row in force: ticked at its end, and `aria-current`. */
+  /** The row in force, such as the scope picked: ticked at its end, and `aria-current`, which says chosen, not the page on screen. */
   current?: boolean;
 }) {
   return (
     <Primitive.Item
-      aria-current={current ? "page" : undefined}
+      aria-current={current ? "true" : undefined}
       className={cx(
         "ui:relative ui:flex ui:w-full ui:cursor-default ui:items-center ui:gap-2 ui:rounded-sm ui:py-1.5 ui:pr-8 ui:pl-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-disabled:pointer-events-none ui:data-disabled:opacity-50 ui:data-highlighted:bg-accent ui:data-highlighted:text-accent-foreground ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
         current && "ui:font-medium",

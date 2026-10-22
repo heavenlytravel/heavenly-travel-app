@@ -218,6 +218,20 @@ describe("describeActivity", () => {
     );
   });
 
+  it("counts the images the Media screen deleted", () => {
+    const deleted = (files: unknown[]) =>
+      describeActivity({
+        action: "media.deleted",
+        before: { files },
+        after: null,
+      });
+    assert.equal(deleted([{ key: "a" }]), "Deleted an unused image");
+    assert.equal(
+      deleted([{ key: "a" }, { key: "b" }]),
+      "Deleted 2 unused images",
+    );
+  });
+
   it("names the other locations whose routes a removal took", () => {
     assert.equal(
       describeActivity({

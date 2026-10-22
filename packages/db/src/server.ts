@@ -19,6 +19,8 @@ export {
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
+export { listMediaUses, logMediaDeleted } from "./media";
+export type { DeletedMedia } from "./media";
 export {
   listLocationOverviews,
   getLocationOverview,
@@ -226,6 +228,7 @@ export * from "./driver-input";
 export * from "./expiry";
 export * from "./location-input";
 export * from "./images";
+export * from "./media-status";
 export * from "./location-page-input";
 export * from "./location-view";
 export * from "./location-search";

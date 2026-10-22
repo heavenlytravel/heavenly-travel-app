@@ -370,7 +370,8 @@ Later:
 - A cover picked for each class at each location, should the first photo of its
   vehicles there not be the best picture of the class.
 - A vehicle's cover beside its plate in the console's lists.
-- Removing an unused photo's file from UploadThing: a removed photo stays stored, as a
+- Removing an unused photo's file from UploadThing by itself: a removed photo stays
+  stored until SUPER deletes it on the Media screen (2026-10-22), as a
   page's replaced image does.
 - Delete `db:set-class-list` once it has run on every database, drop `DriverProfile`, and
   drop the default of `VehicleModel.brand`, with BL-58.

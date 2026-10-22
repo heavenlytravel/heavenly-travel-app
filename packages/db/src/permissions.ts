@@ -35,6 +35,8 @@ const RULES = {
   "admins.manage": "super",
   "wall.switch": "super",
   "activity.view": "super",
+  /** Every uploaded image and where it is used; delete those nothing uses. */
+  "media.manage": "super",
 } as const satisfies Record<string, "any" | "super" | readonly AdminTeam[]>;
 
 export type Permission = keyof typeof RULES;

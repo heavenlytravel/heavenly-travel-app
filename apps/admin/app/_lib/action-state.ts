@@ -16,10 +16,11 @@ export const FORBIDDEN_MESSAGE =
 
 export const FORBIDDEN: ActionState = { error: FORBIDDEN_MESSAGE };
 
+export const STALE_MESSAGE =
+  "This page is out of date. Reload it and try again.";
+
 /** What an action answers when the form lacks what the page put in it: a page left open too long, or edited. */
-export const STALE: ActionState = {
-  error: "This page is out of date. Reload it and try again.",
-};
+export const STALE: ActionState = { error: STALE_MESSAGE };
 
 /** A writer's refusal as the form's state, naming its field when it has one. */
 export function refusalOf(refusal: Refusal): ActionState {

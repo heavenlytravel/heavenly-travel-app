@@ -11,6 +11,7 @@ import {
   locationHref,
   locationPublishHref,
   locationVehicleHref,
+  MEDIA_PATH,
   vehicleClassHref,
 } from "./routes";
 
@@ -31,6 +32,7 @@ export const ACTIVITY_RECORD_NAMES: Record<
   driver: { one: "Driver", many: "Drivers" },
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
   admin: { one: "Admin", many: "Admins" },
+  media: { one: "Media", many: "Media" },
   setting: { one: "Setting", many: "Settings" },
   state: { one: "State", many: "States" },
   district: { one: "District", many: "Districts" },
@@ -52,8 +54,10 @@ export function activityEntryTag(
     if (entry.entityId === here) return part;
     return part ? `${entry.entityLabel} · ${part}` : entry.entityLabel;
   }
-  // "The wall" says what it is.
-  if (entry.entityType === "setting") return entry.entityLabel;
+  // "The wall" and "Media" say what they are.
+  if (entry.entityType === "setting" || entry.entityType === "media") {
+    return entry.entityLabel;
+  }
   const names = ACTIVITY_RECORD_NAMES[entry.entityType as ActivityEntityType];
   return names ? `${names.one} ${entry.entityLabel}` : entry.entityLabel;
 }
@@ -105,6 +109,8 @@ export function activityEntryHref(
         : null;
     case "vehicle-class":
       return may("coverage.view") ? vehicleClassHref(entry.entityId) : null;
+    case "media":
+      return may("media.manage") ? MEDIA_PATH : null;
     default:
       // An admin, the wall, a state or a district has no page of its own.
       return null;

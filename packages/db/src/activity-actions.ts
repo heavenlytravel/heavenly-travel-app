@@ -57,6 +57,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "location",
   "vehicle",
   "driver",
+  "media",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -177,6 +178,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /**
+   * The files the Media screen deleted, each with its key, name and size,
+   * in `before`. Logged against `MEDIA_RECORD_ID`.
+   */
+  "media.deleted": { entityType: "media", customerVisible: false },
 } as const satisfies Record<
   string,
   { entityType: ActivityEntityType; customerVisible: boolean }
@@ -267,6 +273,9 @@ export const ITEM_ACTIONS = {
 
 /** The id of the one `AppSetting` row, which setting entries log against. */
 export const APP_SETTING_ID = "app";
+
+/** What the Media screen's entries log against: the uploaded files as a whole. */
+export const MEDIA_RECORD_ID = "media";
 
 /**
  * What an amend logs, before and after, as scalars: places by their labels,
@@ -753,6 +762,13 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.dropoff.updated": {
       const rule = field(entry.after, "dropoffRule");
       return `Set ${dropoffRuleLabel(isDropoffRule(rule) ? rule : "anywhere").toLowerCase()}`;
+    }
+    case "media.deleted": {
+      const files = field(entry.before, "files");
+      const count = Array.isArray(files) ? files.length : 0;
+      return count === 1
+        ? "Deleted an unused image"
+        : `Deleted ${count} unused images`;
     }
   }
 }

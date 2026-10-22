@@ -6,6 +6,7 @@ import {
   type LocationHistoryKind,
   type LocationPageKey,
   type LocationState,
+  type MediaFilter,
   type Permission,
   type SetupStepKey,
 } from "@repo/db";
@@ -50,6 +51,13 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
 /** The page as the address names it: none for the first. */
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
+
+export const MEDIA_PATH = "/media";
+
+/** Every uploaded image, or those of one standing, at a page. */
+export function mediaHref(show?: MediaFilter, page?: number) {
+  return listHref(MEDIA_PATH, { show, [PAGE_PARAM]: pageParam(page) });
+}
 
 /** What a bookings list narrows to, and the page of it. */
 export type BookingsListFilter = {

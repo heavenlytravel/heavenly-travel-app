@@ -304,6 +304,19 @@ is gone. "Unpublish" shows only where the page may be unpublished.
 - Alt text is required on every image. JPEG, PNG and WebP, at most 4 MB each.
 - The upload route is in the admin app and checks `locations.manage`.
 - A file that is replaced stays in UploadThing; clearing unused files is future work.
+  Built on 2026-10-22 as the Media screen, `/media`, for SUPER alone (`media.manage`),
+  in place of a clean-up that runs by itself:
+  - It lists every file of the UploadThing app, newest first, with where each is used:
+    a location's page, working or published, a vehicle class's picture, a vehicle's
+    photo, or only an earlier publish that a location's history shows.
+  - Each database has its own UploadThing app (production `heavenly-travel-app`,
+    development `heavenly-travel-app-dev`), so a file this database does not use is no
+    other's. A shared app would make that unsafe.
+  - A file nothing uses can be deleted from its card, or every one at once. A file an
+    earlier publish shows stays, so the history shows the page as it was. A file
+    uploaded in the last 24 hours stays too, since a form may hold it unsaved.
+  - The delete checks each file again on the server, keeps any no longer free to go,
+    and logs what it removed (`media.deleted`).
 - For scale: the WordPress site holds about 680 images in 168 MB, checked on
   2026-10-01. UploadThing's free plan holds 2 GB.
 

@@ -22,7 +22,7 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, state or district code, class, admin user, setting, location, vehicle or driver the action touched. */
+  /** The booking, state or district code, class, admin user, setting, location, vehicle, driver or `MEDIA_RECORD_ID` the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
@@ -79,7 +79,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "VLE1234", a driver's name; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "Media", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
@@ -223,6 +223,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
+    media: new Map(),
     location: withDeleted(
       locations.map((l) => [l.id, l.name] as const),
       deleted,
@@ -294,6 +295,8 @@ function entityLabelOf(
       return labels.admin.get(row.entityId) ?? "Former user";
     case "setting":
       return "The wall";
+    case "media":
+      return "Media";
     case "booking":
     case "state":
     case "district":

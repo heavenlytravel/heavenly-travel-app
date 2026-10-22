@@ -40,6 +40,17 @@ export function checkImageFile(file: { type: string; size: number }): Change {
 /** Where UploadThing serves a file: https://<app id>.ufs.sh/f/<key>. */
 const UPLOAD_HOST_SUFFIX = ".ufs.sh";
 
+/**
+ * The UploadThing key of a file by its address, the part after /f/: how
+ * a vehicle class's picture and a vehicle's photo, kept as addresses, are
+ * matched to the stored files. Null for any other address.
+ */
+export function uploadKeyOf(url: string): string | null {
+  if (!isUploadUrl(url)) return null;
+  const key = decodeURIComponent(new URL(url).pathname.slice("/f/".length));
+  return key === "" ? null : key;
+}
+
 /** Whether the address is a file on UploadThing, the one host the sites load images from. */
 export function isUploadUrl(value: unknown): value is string {
   if (typeof value !== "string" || !URL.canParse(value)) return false;

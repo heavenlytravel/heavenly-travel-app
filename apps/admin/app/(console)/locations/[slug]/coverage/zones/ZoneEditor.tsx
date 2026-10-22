@@ -65,6 +65,24 @@ type Source = "district" | "address" | "draw";
 /** What of the district a zone is: all of it, or the mukims ticked. */
 type Area = "whole" | "some";
 
+/** A district, with its mukims to tick, and those ticked: none for the whole district. */
+type DistrictPick = {
+  district: { code: string; label: string };
+  mukims: MukimChoice[];
+  picked: string[];
+};
+
+/**
+ * The boundary a shape was read from: while the shape is still it, the
+ * zone is the boundary as it is. Each step of Undo and Redo keeps the
+ * boundary its shape came with, so stepping back over a pick brings the
+ * pick back too.
+ */
+type Boundary = DistrictPick & { shape: ZoneShape };
+
+/** One step of Undo or Redo: a shape and the boundary it came with. */
+type Step = { shape: ZoneShape; boundary: Boundary | null };
+
 const SOURCES: { key: Source; label: string; hint: string }[] = [
   {
     key: "district",
@@ -223,11 +241,19 @@ export function ZoneEditor({
   const [area, setArea] = useState<Area>(
     mukimCodesOf(origin).length > 0 ? "some" : "whole",
   );
-  // The district's or the mukims' boundary as last read: while the shape
-  // is still it, the zone is the boundary as it is; an edit on the map
-  // makes it the admin's own. Unknown for a zone saved reshaped.
-  const [official, setOfficial] = useState<ZoneShape | null>(
-    isZoneDistrict(origin) && zone ? zone.shape : null,
+  // The boundary the shape came from, as last read: what the zone is made
+  // from, whatever the controls above show after a request that failed.
+  // An edit on the map makes the shape the admin's own. Unknown for a zone
+  // saved reshaped.
+  const [boundary, setBoundary] = useState<Boundary | null>(
+    isZoneDistrict(origin) && zone
+      ? {
+          district: { code: origin.districtCode, label: origin.label },
+          mukims: initialMukims,
+          picked: mukimCodesOf(origin),
+          shape: zone.shape,
+        }
+      : null,
   );
   // The name the editor last suggested, after what the zone was made from:
   // a name typed over it is kept.
@@ -255,8 +281,8 @@ export function ZoneEditor({
   // The circle last drawn around the address: while the shape is still it,
   // a new radius redraws it; once reshaped, only "Redraw the circle" does.
   const [circle, setCircle] = useState<ZoneShape | null>(null);
-  const [history, setHistory] = useState<ZoneShape[]>([]);
-  const [future, setFuture] = useState<ZoneShape[]>([]);
+  const [history, setHistory] = useState<Step[]>([]);
+  const [future, setFuture] = useState<Step[]>([]);
   // Counts the shapes the map should frame: a district or a place newly
   // picked, not an edit, a tick or an undo.
   const [frame, setFrame] = useState(0);
@@ -280,13 +306,16 @@ export function ZoneEditor({
   const radiusM = Number(radius);
   const asItIs =
     source === "district" &&
-    district !== null &&
-    official !== null &&
-    sameShape(shape, official);
+    boundary !== null &&
+    sameShape(shape, boundary.shape);
+  // What the zone is made from: the boundary its shape came from, else,
+  // for a zone saved reshaped, the district and mukims it names.
+  const madeFrom: DistrictPick | null =
+    boundary ??
+    (district
+      ? { district, mukims, picked: area === "some" ? picked : [] }
+      : null);
   const circleUntouched = circle !== null && sameShape(shape, circle);
-  const pickedNames = mukims
-    .filter((mukim) => picked.includes(mukim.code))
-    .map((mukim) => mukim.name);
   // What is in the way of the shape as last checked, shown until the shape
   // as it is now is checked; trimming this zone waits for that.
   const inTheWay =
@@ -326,27 +355,48 @@ export function ZoneEditor({
     setError(null);
   }
 
-  function changeShape(next: ZoneShape | null) {
+  /** A change of the shape, one step of Undo; `from`, a boundary newly read. */
+  function changeShape(
+    next: ZoneShape | null,
+    from: Boundary | null = boundary,
+  ) {
+    setBoundary(from);
     if (sameShape(next, shape)) return;
-    if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
+    if (shape) {
+      setHistory((was) => [...was, { shape, boundary }].slice(-HISTORY));
+    }
     setFuture([]);
     show(next);
+  }
+
+  /** Brings back a step of Undo or Redo, the pick it came with in the controls. */
+  function restore(step: Step) {
+    setBoundary(step.boundary);
+    if (step.boundary && step.boundary !== boundary) {
+      setDistrict(step.boundary.district);
+      setMukims(step.boundary.mukims);
+      setPicked(step.boundary.picked);
+      setArea(step.boundary.picked.length > 0 ? "some" : "whole");
+    }
+    show(step.shape);
   }
 
   function undo() {
     const previous = history.at(-1);
     if (!previous) return;
     setHistory((was) => was.slice(0, -1));
-    if (shape) setFuture((later) => [...later, shape]);
-    show(previous);
+    if (shape) setFuture((later) => [...later, { shape, boundary }]);
+    restore(previous);
   }
 
   function redo() {
     const next = future.at(-1);
     if (!next) return;
     setFuture((later) => later.slice(0, -1));
-    if (shape) setHistory((was) => [...was, shape].slice(-HISTORY));
-    show(next);
+    if (shape) {
+      setHistory((was) => [...was, { shape, boundary }].slice(-HISTORY));
+    }
+    restore(next);
   }
 
   /** Names the zone after what it was made from, unless a name was typed over the last suggestion. */
@@ -397,12 +447,17 @@ export function ZoneEditor({
       return;
     }
     preview(districtPolygonsAction(code), (result) => {
-      setDistrict({ code, label: result.label });
+      const chosen = { code, label: result.label };
+      setDistrict(chosen);
       setMukims(result.mukims);
       setArea("whole");
       setPicked([]);
-      setOfficial(result.polygons);
-      changeShape(result.polygons satisfies MultiPolygon);
+      changeShape(result.polygons satisfies MultiPolygon, {
+        district: chosen,
+        mukims: result.mukims,
+        picked: [],
+        shape: result.polygons,
+      });
       reframe();
       suggest(result.label);
     });
@@ -412,8 +467,12 @@ export function ZoneEditor({
     if (!district) return;
     setArea("whole");
     preview(districtPolygonsAction(district.code), (result) => {
-      setOfficial(result.polygons);
-      changeShape(result.polygons);
+      changeShape(result.polygons, {
+        district,
+        mukims,
+        picked: [],
+        shape: result.polygons,
+      });
       reframe();
       suggest(district.label);
     });
@@ -436,8 +495,12 @@ export function ZoneEditor({
       .filter((mukim) => ordered.includes(mukim.code))
       .map((mukim) => mukim.name);
     preview(mukimPolygonsAction(district.code, ordered), (result) => {
-      setOfficial(result.polygons);
-      changeShape(result.polygons);
+      changeShape(result.polygons, {
+        district,
+        mukims,
+        picked: ordered,
+        shape: result.polygons,
+      });
       suggest(andList(names));
     });
   }
@@ -503,19 +566,22 @@ export function ZoneEditor({
       );
       return;
     }
-    const mukimCodes = area === "some" ? { mukimCodes: picked } : {};
+    const mukimCodes =
+      madeFrom && madeFrom.picked.length > 0
+        ? { mukimCodes: madeFrom.picked }
+        : {};
     const drawnFrom: ZoneOrigin | null =
-      source === "district" && district
+      source === "district" && madeFrom
         ? asItIs
           ? {
-              districtCode: district.code,
+              districtCode: madeFrom.district.code,
               ...mukimCodes,
-              label: district.label,
+              label: madeFrom.district.label,
             }
           : {
-              reshapedFrom: district.code,
+              reshapedFrom: madeFrom.district.code,
               ...mukimCodes,
-              label: district.label,
+              label: madeFrom.district.label,
             }
         : source === "address" && placeId
           ? { placeId, label: placeText, radiusM }
@@ -559,10 +625,15 @@ export function ZoneEditor({
       onKeep={() => setTrimIds(null)}
     />
   ) : null;
+  const madeOfNames = madeFrom
+    ? madeFrom.mukims
+        .filter((mukim) => madeFrom.picked.includes(mukim.code))
+        .map((mukim) => mukim.name)
+    : [];
   const madeOf =
-    district && area === "some" && pickedNames.length > 0
-      ? `${andList(pickedNames)} in ${district.label}`
-      : district?.label;
+    madeFrom && madeOfNames.length > 0
+      ? `${andList(madeOfNames)} in ${madeFrom.district.label}`
+      : madeFrom?.district.label;
 
   return (
     <div className="grid gap-6">

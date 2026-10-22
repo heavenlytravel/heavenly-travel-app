@@ -21,13 +21,23 @@ const kmOf = (metres: number) => {
   return km % 1 === 0 ? String(km) : km.toFixed(1);
 };
 
-/** How a zone was made, in a line: where it started, and its corners when drawn. */
+/**
+ * How a zone was made, in a line: where it started, and its corners when
+ * drawn. A zone of some mukims counts them; their names are in the zone
+ * maker, which reads the mukims' file.
+ */
 export function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
   if (isZoneDistrict(zone.drawnFrom)) {
-    return `The district ${zone.drawnFrom.label}, as it is`;
+    const { label, mukimCodes = [] } = zone.drawnFrom;
+    return mukimCodes.length > 0
+      ? `${plural(mukimCodes.length, "mukim")} of the district ${label}, as ${mukimCodes.length === 1 ? "it is" : "they are"}`
+      : `The district ${label}, as it is`;
   }
   if (isZoneReshaped(zone.drawnFrom)) {
-    return `Reshaped from the district ${zone.drawnFrom.label}`;
+    const { label, mukimCodes = [] } = zone.drawnFrom;
+    return mukimCodes.length > 0
+      ? `Reshaped from ${plural(mukimCodes.length, "mukim")} of the district ${label}`
+      : `Reshaped from the district ${label}`;
   }
   if (isZoneCircle(zone.drawnFrom)) {
     return `Started as a ${kmOf(zone.drawnFrom.radiusM)} km circle around ${zone.drawnFrom.label}`;

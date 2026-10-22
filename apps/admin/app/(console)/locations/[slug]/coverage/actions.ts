@@ -297,6 +297,10 @@ export async function checkOverlapsAction(
   ) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }
+  // Past the corners a zone keeps, the save refuses it anyway; the shape
+  // arithmetic is not worked out for nothing.
+  const size = checkZoneShape(shape);
+  if (!size.ok) return size;
   return {
     ok: true,
     ...(await checkOverlaps(locationId, shape, zoneId ?? undefined)),

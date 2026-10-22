@@ -13,8 +13,11 @@ import { polygonsOf, type ZoneShape } from "./zone-match";
  * stays out of the browser): areas put together into one outline, a zone's
  * own pieces joined where they overlap, how much two shapes overlap, and a
  * shape with others cut out of it. Shapes are in
- * degrees; areas come out in square kilometres, flat with the longitude
- * scaled by the latitude, exact enough at the size of a district. See
+ * degrees, worked on with their corners as stored: a border cut along
+ * another zone then has that zone's corners exactly, and the two meet
+ * without overlapping however long it runs. Areas come out in square
+ * kilometres, flat with the longitude scaled by the latitude, exact enough
+ * at the size of a district. See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
  * rates".
  */
@@ -40,9 +43,16 @@ const rounded = (shape: MultiPolygon): MultiPolygon =>
     ),
   );
 
+/**
+ * The shape's polygons with their corners as stored. The browser posts
+ * corners to many more decimals than a trimmed zone keeps, and along 250 km
+ * of border the difference adds up past the overlap's tolerance.
+ */
+const asStored = (shape: ZoneShape): MultiPolygon => rounded(polygonsOf(shape));
+
 /** The shapes as one: the borders they share are gone, holes where none covers. */
 export function unionOf(shapes: readonly ZoneShape[]): MultiPolygon {
-  const [first, ...rest] = shapes.map(polygonsOf);
+  const [first, ...rest] = shapes.map(asStored);
   if (!first) return [];
   return rounded(union(first, ...rest));
 }
@@ -97,10 +107,8 @@ export function areaKm2(shape: MultiPolygon): number {
 
 /** How much ground two shapes both cover, in square kilometres. */
 export function overlapKm2(a: ZoneShape, b: ZoneShape): number {
-  const pa = polygonsOf(a);
-  const pb = polygonsOf(b);
-  if (!boxesMeet(bboxOf(pa), bboxOf(pb))) return 0;
-  return areaKm2(intersection(pa, pb));
+  if (!boxesMeet(bboxOf(polygonsOf(a)), bboxOf(polygonsOf(b)))) return 0;
+  return areaKm2(intersection(asStored(a), asStored(b)));
 }
 
 /** Whether two shapes cover the same ground, past the rounding of borders drawn to meet. */
@@ -110,14 +118,14 @@ export function shapesOverlap(a: ZoneShape, b: ZoneShape): boolean {
 
 /**
  * The shape with the others cut out of it, to the polygons that are left;
- * none when nothing is. Slivers thinner than the overlap's tolerance go too.
+ * none when nothing is. Pieces smaller than the overlap's tolerance go too.
  */
 export function cutOut(
   shape: ZoneShape,
   others: readonly ZoneShape[],
 ): MultiPolygon {
   if (others.length === 0) return polygonsOf(shape);
-  const left = difference(polygonsOf(shape), ...others.map(polygonsOf));
+  const left = difference(asStored(shape), ...others.map(asStored));
   return rounded(left).filter(
     (polygon) => areaKm2([polygon]) > OVERLAP_TOLERANCE_KM2,
   );

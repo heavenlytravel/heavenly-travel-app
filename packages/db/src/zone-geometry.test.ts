@@ -136,4 +136,20 @@ describe("cutOut", () => {
   it("leaves nothing when the others cover it all", () => {
     assert.deepEqual(cutOut(square(99.705, 6.305, 0.005), [west]), []);
   });
+
+  it("meets a zone drawn finer than corners are stored, along a long border", () => {
+    // Corners as the browser posts them, to many more decimals than a
+    // trimmed zone keeps: a 40 km circle, and a shape of 1,000 corners.
+    const area = square(99.0, 5.6, 1.6);
+    const circle = circleRing({ lat: 6.35, lng: 99.8 }, 40_000);
+    const corners = Array.from({ length: 1000 }, (_, i): [number, number] => {
+      const angle = (2 * Math.PI * i) / 1000;
+      const r = 0.45 + 0.02 * Math.sin(7 * angle);
+      return [99.8 + r * Math.cos(angle), 6.4 + r * Math.sin(angle)];
+    });
+    const drawn: Ring = [...corners, corners[0]!];
+    for (const zone of [circle, drawn]) {
+      assert.equal(shapesOverlap(cutOut(area, [zone]), zone), false);
+    }
+  });
 });

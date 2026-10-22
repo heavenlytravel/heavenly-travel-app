@@ -303,6 +303,10 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
 
   function report() {
     version++;
+    // A menu still open names pieces and corners by their place, which
+    // the change may have moved: Delete pressed while it has the focus, or
+    // a merge answered meanwhile.
+    options.onMenu(null);
     options.onChange(pieces.map((piece) => piece.map(closed)));
   }
 

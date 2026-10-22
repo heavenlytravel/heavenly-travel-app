@@ -49,7 +49,7 @@ export function ConsoleScopeProvider({
 
   useEffect(() => {
     if (pathKey === null) return;
-    document.cookie = `${SCOPE_COOKIE}=${encodeURIComponent(pathKey)}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+    document.cookie = `${SCOPE_COOKIE}=${pathKey}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
   }, [pathKey]);
 
   const key = pathKey ?? lastKey;

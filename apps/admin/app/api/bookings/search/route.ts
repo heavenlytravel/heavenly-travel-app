@@ -1,5 +1,5 @@
 import { formatLocalDate, formatLocalTime, searchTermOf } from "@repo/db";
-import { listBookings } from "@repo/db/server";
+import { findBookingMatches } from "@repo/db/server";
 import { getAdmin } from "../../../_lib/access";
 import { FORBIDDEN_MESSAGE } from "../../../_lib/action-state";
 import { bookingLocations } from "../../../_lib/booking-locations";
@@ -28,10 +28,7 @@ export async function GET(request: Request) {
   if (!search) {
     return Response.json({ matches: [] } satisfies BookingSearchResponse);
   }
-  const bookings = await listBookings(
-    { search },
-    { take: BOOKING_SEARCH_LIMIT },
-  );
+  const bookings = await findBookingMatches(search, BOOKING_SEARCH_LIMIT);
   return Response.json({
     matches: bookings.map((booking) => {
       const locations = bookingLocations(booking);

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "../../../_components/PageHeader";
 import { HeaderSkeleton, Streamed } from "../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
-import { locationTabsFor } from "../../../_lib/routes";
+import { locationTabsMayOpen } from "../../../_lib/routes";
 import { locationDetails, locationKey } from "../_lib/location-data";
 import { LocationTabs } from "./LocationTabs";
 
@@ -55,9 +55,10 @@ async function locationHeader({
       <PageHeader title={location.name} />
       <LocationTabs
         slug={location.slug}
-        tabs={locationTabsFor(locationStateOf(location.state))
-          .filter((tab) => permissions.includes(tab.permission))
-          .map((tab) => ({ key: tab.key, label: tab.label }))}
+        tabs={locationTabsMayOpen(
+          locationStateOf(location.state),
+          permissions,
+        ).map((tab) => ({ key: tab.key, label: tab.label }))}
       />
     </>
   );

@@ -30,7 +30,7 @@ import {
   locationPageHref,
   locationRatesPartHref,
   locationTabHref,
-  locationTabsFor,
+  locationTabsMayOpen,
   locationVehiclesHref,
   locationZoneHref,
   newLocationDriverHref,
@@ -351,7 +351,7 @@ export function LocationNav({
         return [];
     }
   };
-  const tabs = locationTabsFor(state).filter((tab) => may(tab.permission));
+  const tabs = locationTabsMayOpen(state, permissions);
   const countFor = (tab: LocationTab) =>
     tab === "bookings"
       ? countOf(overview.awaitingConfirmation, "brand")

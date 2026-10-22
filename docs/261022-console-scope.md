@@ -37,7 +37,8 @@ booking search, for an admin with `bookings.view`, and the signed-in admin's own
 - A page of the whole console (Home page, Media, Users, Admins, Activity, Add
   location) keeps the scope last worked in, so opening Media from Langkawi does not
   swap the menu. The `console_scope` cookie remembers it for such a page opened
-  afresh. A location since deleted falls back to All locations.
+  afresh, as `all` or `location:langkawi`, so a location slugged `all` stays a
+  location. A location since deleted falls back to All locations.
 - Picking keeps the section on screen where the other scope has it: Langkawi's Rates to
   Penang's, a location's Bookings to the queue across locations and back. A tab the
   admin may not open there, or a draft's missing Bookings, lands on the overview.
@@ -71,12 +72,14 @@ booking search, for an admin with `bookings.view`, and the signed-in admin's own
 - The matches list under the box as the admin types, newest first, six at most, each
   with its reference, status, location, customer and pick-up. Enter or a click opens
   one inside the location it picks up in; one across two locations opens on its own
-  page. The last row opens the Bookings list with the same search.
+  page. The last row opens the Bookings list with the same search. While a newer
+  search is on its way the last answer's rows stand dimmed and cannot be chosen, so
+  Enter never opens a match for text since changed.
 - Ctrl or Cmd + K puts the cursor in the box from anywhere. On a phone the box is a
   button until tapped, then lies across the top bar.
 - `GET /api/bookings/search?q=`, behind `bookings.view`, as the place search is a route
   handler: a read the browser makes as the admin types, cancelled when the text
-  changes.
+  changes. It reads only what a row shows (`findBookingMatches` in `@repo/db`).
 
 ### Page width
 
@@ -96,7 +99,10 @@ location's tabs.
   (`LocationScopeNav` in `locations/[slug]/LocationNav.tsx`); its pages are empty.
 - `@scope/page.tsx` and a `page.tsx` plus `[...rest]` under each view across locations
   draw All locations. An optional catch-all is not allowed beside a page at the same
-  path.
+  path. The views are listed three times, which must agree: `ACROSS_LOCATIONS` in
+  `_lib/routes.ts`, `ALL_LOCATIONS_NAV` in `_components/nav.ts`, and these folders.
+  `@scope/coverage` needs its own line in the root `.gitignore`, which ignores every
+  `coverage` folder as test output.
 - A page of the whole console has no route in the slot, so a move to it keeps the
   slot as it was, which is the scope last worked in. `@scope/default.tsx` answers such a
   page opened afresh from the cookie; `@scope/locations/new` does the same.

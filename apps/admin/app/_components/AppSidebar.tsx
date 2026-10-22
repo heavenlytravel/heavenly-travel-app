@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@repo/ui/sidebar";
 import type { Permission } from "@repo/db";
-import { useEffect, useRef, type ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   ALL_LOCATIONS_NAV,
   groupFor,
@@ -39,8 +39,9 @@ export type SidebarLocation = {
  * as a whole. The scope's sections come from the layout's `@scope` slot:
  * a location's own, its day's work first and its setup folded under it,
  * or the views across every location. Collapsed it is a rail of icons
- * with the labels as tooltips; below `md` it opens as a sheet, which a
- * move to another path closes. See docs/261022-console-scope.md.
+ * with the labels as tooltips; below `md` it opens as a sheet, which any
+ * link in it closes, one to the page on screen or a part of it included.
+ * See docs/261022-console-scope.md.
  */
 export function AppSidebar({
   permissions,
@@ -50,18 +51,16 @@ export function AppSidebar({
   /** The scope's sections, from the `@scope` slot. */
   scope: ReactNode;
 }) {
-  const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
-  const lastPathname = useRef(pathname);
-  useEffect(() => {
-    if (lastPathname.current === pathname) return;
-    lastPathname.current = pathname;
-    setOpenMobile(false);
-  }, [pathname, setOpenMobile]);
+  // A link pressed anywhere in the sheet closes it; a submenu's chevron,
+  // a button, does not. On a wide screen there is no sheet to close.
+  const closeOnLink = (event: MouseEvent<HTMLElement>) => {
+    if ((event.target as Element).closest("a")) setOpenMobile(false);
+  };
 
   return (
     <Sidebar title="Console menu">
-      <SidebarHeader>
+      <SidebarHeader onClick={closeOnLink}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -92,7 +91,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent onClick={closeOnLink}>
         {scope}
         {navFor(permissions).map((group) => (
           <NavGroupMenu key={group.label} group={group} />

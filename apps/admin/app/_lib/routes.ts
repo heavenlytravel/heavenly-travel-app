@@ -373,6 +373,16 @@ export function locationTabsFor(state: LocationState): PlacedTab[] {
   return placed.sort((a, b) => rank(a) - rank(b));
 }
 
+/** The tabs of a location in this state that an admin with these permissions may open, in order. */
+export function locationTabsMayOpen(
+  state: LocationState,
+  permissions: readonly Permission[],
+): PlacedTab[] {
+  return locationTabsFor(state).filter((tab) =>
+    permissions.includes(tab.permission),
+  );
+}
+
 /** The tab of a setup step. */
 export function setupStepTab(step: SetupStepKey): LocationTabDef {
   return LOCATION_TABS.find((tab) => tab.step === step)!;
@@ -400,7 +410,13 @@ export function locationTabOf(slug: string, pathname: string): LocationTab {
  */
 export type ConsoleScope = { slug: string } | "all";
 
-/** The sections across locations, each by the tab of a location it sums up. */
+/**
+ * The sections across locations, each by the tab of a location it sums up.
+ * Two lists must name the same ones: `ALL_LOCATIONS_NAV` in
+ * `_components/nav.ts`, the sidebar's rows, and the folders of the
+ * `(console)/@scope` slot, each of which draws All locations on its path.
+ * A section left out of the slot keeps the menu of the scope before it.
+ */
 const ACROSS_LOCATIONS: readonly { path: string; tab: LocationTab }[] = [
   { path: BOOKINGS_PATH, tab: "bookings" },
   { path: VEHICLES_PATH, tab: "vehicles" },
@@ -431,14 +447,19 @@ export function scopeOfPath(pathname: string): ConsoleScope | null {
 /** The cookie that remembers the scope last worked in, for a page of the whole console opened afresh. */
 export const SCOPE_COOKIE = "console_scope";
 
-/** A scope as its cookie holds it, and as a key to compare two by. */
+/** How a location's key starts, apart from "all", which a slug may be too. */
+const LOCATION_KEY = "location:";
+
+/** A scope as its cookie holds it, and as a key to compare two by: "all", or "location:langkawi". */
 export function scopeKey(scope: ConsoleScope): string {
-  return scope === "all" ? "all" : scope.slug;
+  return scope === "all" ? "all" : `${LOCATION_KEY}${scope.slug}`;
 }
 
-/** The scope the cookie remembers; every location when there is none. */
+/** The scope the cookie remembers; every location when there is none or it is not a key. */
 export function scopeOfKey(key: string | undefined): ConsoleScope {
-  return !key || key === "all" ? "all" : { slug: key };
+  return key?.startsWith(LOCATION_KEY) && key.length > LOCATION_KEY.length
+    ? { slug: key.slice(LOCATION_KEY.length) }
+    : "all";
 }
 
 /**

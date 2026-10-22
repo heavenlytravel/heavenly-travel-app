@@ -331,6 +331,30 @@ export function listBookings(
   });
 }
 
+/**
+ * The bookings a search finds, newest first, with only what a line of
+ * them shows: for the console header's search, which asks as the admin
+ * types.
+ */
+export function findBookingMatches(search: string, take: number) {
+  return db.booking.findMany({
+    where: whereOf({ search }),
+    orderBy: ORDERS.newest,
+    take,
+    select: {
+      id: true,
+      reference: true,
+      status: true,
+      contactName: true,
+      startsAt: true,
+      items: {
+        orderBy: { position: "asc" },
+        select: { location: { select: { id: true, name: true, slug: true } } },
+      },
+    },
+  });
+}
+
 export function countBookings(filter: BookingFilter = {}): Promise<number> {
   return db.booking.count({ where: whereOf(filter) });
 }

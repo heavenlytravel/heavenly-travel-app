@@ -38,7 +38,7 @@ import {
   locationDriversHref,
   locationTabHref,
   locationVehiclesHref,
-  locationTabsFor,
+  locationTabsMayOpen,
   setupStepTab,
   type LocationTab,
 } from "../../../_lib/routes";
@@ -217,8 +217,8 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   };
   // The tabs with a line, the admin may open, in the sidebar's order.
   const glances = glance
-    ? locationTabsFor(state).filter(
-        (tab) => lines[tab.key] !== undefined && may(tab.permission),
+    ? locationTabsMayOpen(state, permissions).filter(
+        (tab) => lines[tab.key] !== undefined,
       )
     : [];
 

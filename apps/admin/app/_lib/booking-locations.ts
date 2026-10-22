@@ -1,8 +1,13 @@
-import type { BookingWithItems } from "@repo/db/server";
+/** A booking as far as where it picks up: its items' locations, in order. */
+type WithItemLocations = {
+  items: readonly {
+    location: { id: string; name: string; slug: string } | null;
+  }[];
+};
 
 /** The locations a booking's items pick up in, each once, in the items' order. */
 export function bookingLocations(
-  booking: BookingWithItems,
+  booking: WithItemLocations,
 ): { name: string; slug: string }[] {
   const seen = new Map<string, { name: string; slug: string }>();
   for (const item of booking.items) {

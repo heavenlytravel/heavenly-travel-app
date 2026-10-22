@@ -17,7 +17,7 @@ import {
 } from "@repo/ui/menu";
 import {
   NEW_LOCATION_PATH,
-  locationTabsFor,
+  locationTabsMayOpen,
   scopeSwitchHref,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
@@ -49,9 +49,10 @@ export function ScopePicker({
   const tabsOf = (slug: string) => {
     const location = locations.find((entry) => entry.slug === slug);
     if (!location) return [];
-    return locationTabsFor(locationStateOf(location.state))
-      .filter((tab) => permissions.includes(tab.permission))
-      .map((tab) => tab.key);
+    return locationTabsMayOpen(
+      locationStateOf(location.state),
+      permissions,
+    ).map((tab) => tab.key);
   };
 
   return (

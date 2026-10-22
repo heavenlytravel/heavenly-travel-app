@@ -359,6 +359,7 @@ is gone. "Unpublish" shows only where the page may be unpublished.
   last, "Up" and "Down" move one a place, "Remove" takes it off. The places are kept as
   1, 2, 3 with no gaps, and every location whose place moves is logged.
 - The KLIA card stays as it is, hard-coded, filling the pickup into the search card.
+  (Removed on 2026-10-22: the home page shows the top choices alone.)
 - The row is centred, so fewer cards make a shorter row and not a gap. A location card
   says "Explore this location" where the KLIA card says "Book for this location" (PR 4).
 - A top choice that is `paused` is left off the home page. It keeps its place and comes

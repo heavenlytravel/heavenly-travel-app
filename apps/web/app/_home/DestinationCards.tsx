@@ -1,23 +1,17 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { locationPagePath, type TopChoiceCard } from "@repo/db";
-import { useSearchCard } from "../_components/search/SearchProvider";
-import { AIRPORT_CARD } from "./destinations";
 import styles from "./home.module.css";
 
 /**
- * The home page's cards: the airport, then Marketing's top choices. A
- * location card opens the location's page. The airport is not somewhere to
- * go but something to choose: its card fills the pick-up into the booking
- * card and brings the card back into view.
+ * The home page's cards: Marketing's top choices, each opening the
+ * location's page.
  */
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
-// A row of up to four, centred, so fewer cards make a shorter row.
+// A quarter of the row each, centred, so fewer cards make a shorter row.
 const cell = "w-full sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]";
 
 const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-[17px] bg-navy p-[25px] text-left text-white sm:h-[330px] ${focus}`;
@@ -52,34 +46,8 @@ function CardText({
 }
 
 export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
-  const { values, fillPickup } = useSearchCard();
-
   return (
     <ul className="mx-auto flex max-w-[1450px] flex-wrap justify-center gap-3 sm:gap-4">
-      <li className={cell}>
-        <button
-          type="button"
-          aria-pressed={values.from === AIRPORT_CARD.name}
-          onClick={() => fillPickup(AIRPORT_CARD.name)}
-          className={`${card} ${styles.airport} cursor-pointer aria-pressed:ring-3 aria-pressed:ring-azure aria-pressed:ring-offset-2`}
-        >
-          <span
-            aria-hidden
-            className="absolute top-[25px] right-[18px] font-(family-name:--font-display) text-[6rem] leading-none text-white/10"
-          >
-            {AIRPORT_CARD.code}
-          </span>
-          <span
-            aria-hidden
-            className="absolute top-[74px] left-[25px] h-0.5 w-[65px] bg-azure"
-          />
-          <CardText
-            tag={AIRPORT_CARD.tag}
-            name={AIRPORT_CARD.name}
-            line="Book for this location"
-          />
-        </button>
-      </li>
       {choices.map((choice) => (
         <li key={choice.slug} className={cell}>
           <Link href={locationPagePath(choice.slug)} className={card}>

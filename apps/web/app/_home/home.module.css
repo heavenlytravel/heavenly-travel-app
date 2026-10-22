@@ -1,5 +1,5 @@
 /* Heavenly Travel — home page, /
-   Washes and the drawn airport card live here; the rest is
+   Washes and the cards' photo effects live here; the rest is
    Tailwind in the components. */
 
 /* Two pale washes over the aerial photo: one from the left so the ink headline
@@ -50,29 +50,6 @@
 .card:hover img,
 .card:focus-visible img {
   transform: scale(1.045);
-}
-
-/* The airport card has no photo: a navy field, an azure glow and a hairline. */
-.airport {
-  background: linear-gradient(145deg, var(--navy), var(--ink));
-  isolation: isolate;
-}
-.airport::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(
-      circle at 82% 18%,
-      rgba(15, 134, 206, 0.45),
-      transparent 31%
-    ),
-    linear-gradient(
-      115deg,
-      transparent 49%,
-      rgba(255, 255, 255, 0.05) 50%,
-      transparent 51%
-    );
 }
 
 @media (prefers-reduced-motion: reduce) {

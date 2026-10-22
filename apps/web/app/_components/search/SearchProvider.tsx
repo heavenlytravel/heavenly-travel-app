@@ -21,8 +21,8 @@ import { useSearch } from "../../_lib/useSearch";
 
 /**
  * Holds the search card's state above the card, so something else on the
- * page can fill a place into it: the home page's airport card fills the
- * pick-up, a highlight's "Take me here" fills the drop-off. Filling brings
+ * page can fill a place into it: a highlight's "Take me here" fills the
+ * drop-off. Filling brings
  * the card into view. On a location's pages the provider sits in the
  * layout, so what was typed stays while the customer moves between them,
  * and with `location` the card keeps to the location: the pick-up
@@ -51,8 +51,6 @@ type SearchCard = ReturnType<typeof useSearch> & {
    * one per field; asked once the card has a trip to send. None elsewhere.
    */
   checkPlaces?: (values: SearchValues) => Promise<TripSearchIssue[]>;
-  /** Fills the pick-up with a name. It is text, not a place: the customer picks from the list. */
-  fillPickup: (name: string) => void;
   /** Fills the drop-off with an exact place, ready to send, on a one-way trip. */
   fillDropoff: (place: { label: string; placeId: string }) => void;
   /** Whether a trip may end at a saved address: on a location's pages, by its rule. */
@@ -151,12 +149,6 @@ export function SearchProvider({
       }
     : dropoffs;
 
-  function fillPickup(name: string) {
-    set("from", name);
-    set("place", name);
-    bringIntoView();
-  }
-
   function fillDropoff(place: { label: string; placeId: string }) {
     // An hourly trip has no drop-off.
     set("mode", "oneway");
@@ -172,7 +164,6 @@ export function SearchProvider({
         dropoffs: offered,
         withinOf,
         checkPlaces,
-        fillPickup,
         fillDropoff,
         offersDropoff,
       }}

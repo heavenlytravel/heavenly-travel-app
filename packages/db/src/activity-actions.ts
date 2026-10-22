@@ -11,11 +11,13 @@ import {
   oddHoursLabel,
   type OddHours,
 } from "./rates-input";
+import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
   type VehicleClassField,
 } from "./vehicle-class-input";
+import { VEHICLE_FIELD_LABELS } from "./vehicle-input";
 
 /**
  * The activity log's vocabulary, browser-safe: who can act, what an entry
@@ -53,6 +55,8 @@ export const ACTIVITY_ENTITY_TYPES = [
   "admin",
   "setting",
   "location",
+  "vehicle",
+  "driver",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -91,6 +95,28 @@ const ACTIONS = {
     entityType: "vehicle-class",
     customerVisible: false,
   },
+  /** A model the vehicle form added to the class, by its name in `modelName`. */
+  "vehicle-class.model.created": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
+  /** A model no vehicle or booking was of any more, by its name in `modelName`. */
+  "vehicle-class.model.deleted": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
+  /** Its fields, with the model's and the location's names beside their ids. */
+  "vehicle.created": { entityType: "vehicle", customerVisible: false },
+  /** The changed fields; a new model or location with its name too. */
+  "vehicle.updated": { entityType: "vehicle", customerVisible: false },
+  /** The plate in `before`: the row is gone. */
+  "vehicle.deleted": { entityType: "vehicle", customerVisible: false },
+  /** Its fields, the classes by name in `classes`, the location's name. */
+  "driver.created": { entityType: "driver", customerVisible: false },
+  /** The changed fields; changed classes by name, a new location with its name. */
+  "driver.updated": { entityType: "driver", customerVisible: false },
+  /** The name in `before`: the row is gone. */
+  "driver.deleted": { entityType: "driver", customerVisible: false },
   "location.created": { entityType: "location", customerVisible: false },
   /**
    * The states are logged by their codes, a top choice by its place on
@@ -163,6 +189,7 @@ export const LOCATION_HISTORY_KINDS = [
   "details",
   "classes",
   "coverage",
+  "fleet",
   "pages",
   "status",
 ] as const;
@@ -173,6 +200,7 @@ export const LOCATION_HISTORY_KIND_LABELS: Record<LocationHistoryKind, string> =
     details: "Details",
     classes: "Vehicle classes",
     coverage: "Coverage and rates",
+    fleet: "Vehicles and drivers",
     pages: "Pages",
     status: "Status",
   };
@@ -183,7 +211,6 @@ export function locationHistoryKindOf(
 ): LocationHistoryKind | null {
   switch (action) {
     case "location.updated":
-    case "location.addresses.updated":
       return "details";
     case "location.offering.created":
     case "location.offering.updated":
@@ -195,8 +222,16 @@ export function locationHistoryKindOf(
     case "location.surcharge.updated":
     case "location.dropoff.updated":
       return "coverage";
+    case "vehicle.created":
+    case "vehicle.updated":
+    case "vehicle.deleted":
+    case "driver.created":
+    case "driver.updated":
+    case "driver.deleted":
+      return "fleet";
     case "location.page.published":
     case "location.page.updated":
+    case "location.addresses.updated":
       return "pages";
     case "location.created":
     case "location.state.changed":
@@ -205,6 +240,15 @@ export function locationHistoryKindOf(
     default:
       return null;
   }
+}
+
+/** The actions one part of a location's history holds. */
+export function locationHistoryActions(
+  kind: LocationHistoryKind,
+): ActivityAction[] {
+  return ACTIVITY_ACTIONS.filter(
+    (action) => locationHistoryKindOf(action) === kind,
+  );
 }
 
 /** The action that moves an item to each status, for `advanceItem`. */
@@ -231,6 +275,8 @@ export type AmendedFields = {
   startsAt: string;
   hours: number | null;
   vehicleClassName: string;
+  /** The model chosen, by name; null when any would do. */
+  vehicleModel: string | null;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -245,6 +291,7 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
   startsAt: "the pick-up time",
   hours: "the hours",
   vehicleClassName: "the vehicle",
+  vehicleModel: "the model",
   passengers: "the passengers",
   childSeats: "the child seats",
   flightNumber: "the flight",
@@ -301,8 +348,9 @@ function vehicleClassChanges(after: unknown) {
   if (typeof isActive === "boolean") {
     phrases.push(isActive ? "Turned the class on" : "Turned the class off");
   }
-  // Entries from before rates moved to the location's offering name the
-  // class's old rate fields, which the offering's labels still spell.
+  // Entries from before the rates and the rules moved to the location's
+  // offering name the class's old fields, which the offering's labels
+  // still spell.
   const labelOf = (key: string) =>
     key in VEHICLE_CLASS_FIELD_LABELS
       ? VEHICLE_CLASS_FIELD_LABELS[key as VehicleClassField]
@@ -319,13 +367,66 @@ function vehicleClassChanges(after: unknown) {
   return sentence(phrases, "Changed the class");
 }
 
+/** "Toyota Alphard", or "a model" when the entry names none. */
+function modelName(json: unknown) {
+  const name = field(json, "modelName");
+  return typeof name === "string" ? name : "a model";
+}
+
+/**
+ * "Moved to Penang, changed the colour and the road tax": a vehicle's or a
+ * driver's changes. The switch, the location and the model or the classes
+ * read as their own phrases; the rest are named by their labels.
+ */
+function recordChanges(
+  after: unknown,
+  labels: Record<string, string>,
+  switched: [on: string, off: string],
+  fallback: string,
+) {
+  const phrases: string[] = [];
+  const isActive = field(after, "isActive");
+  if (typeof isActive === "boolean") {
+    phrases.push(isActive ? switched[0] : switched[1]);
+  }
+  const locationName = field(after, "locationName");
+  if (typeof locationName === "string") {
+    phrases.push(`Moved to ${locationName}`);
+  }
+  const model = field(after, "modelName");
+  if (typeof model === "string") phrases.push(`Changed the model to ${model}`);
+  const classes = field(after, "classes");
+  if (Array.isArray(classes)) {
+    phrases.push(
+      `Changed the classes they may drive to ${andList(classes.map(String))}`,
+    );
+  }
+  const others = keysOf(after)
+    .filter(
+      (key) =>
+        key in labels &&
+        ![
+          "isActive",
+          "locationId",
+          "vehicleClassId",
+          "brand",
+          "model",
+          // Entries from before a vehicle named its model by brand and name.
+          "vehicleModelId",
+        ].includes(key),
+    )
+    .map((key) => `the ${labels[key]!.toLowerCase()}`);
+  if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
+  return sentence(phrases, fallback);
+}
+
 /** "Executive sedan", or "the class" when the entry names none. */
 function className(json: unknown) {
   const name = field(json, "vehicleClassName");
   return typeof name === "string" ? name : "the class";
 }
 
-/** "Put Executive sedan on sale, changed the base fare and the per km" */
+/** "Put Executive sedan on sale, changed the base fare and the notice needed" */
 function offeringChanges(after: unknown) {
   const name = className(after);
   const phrases: string[] = [];
@@ -333,12 +434,17 @@ function offeringChanges(after: unknown) {
   if (typeof isActive === "boolean") {
     phrases.push(isActive ? `Put ${name} on sale` : `Took ${name} off sale`);
   }
-  const others = keysOf(after)
-    .filter(
-      (key): key is OfferingField =>
-        key in OFFERING_FIELD_LABELS && key !== "isActive",
-    )
-    .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`);
+  // The charge to choose a model is two columns under one label.
+  const others = [
+    ...new Set(
+      keysOf(after)
+        .filter(
+          (key): key is OfferingField =>
+            key in OFFERING_FIELD_LABELS && key !== "isActive",
+        )
+        .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`),
+    ),
+  ];
   if (others.length > 0) {
     phrases.push(
       phrases.length > 0
@@ -346,7 +452,7 @@ function offeringChanges(after: unknown) {
         : `Changed ${andList(others)} of ${name}`,
     );
   }
-  return sentence(phrases, `Changed the rates of ${name}`);
+  return sentence(phrases, `Changed ${name}`);
 }
 
 /** "the zone Langkawi Airport", or "a zone". */
@@ -542,6 +648,36 @@ export function describeActivity(entry: DescribableActivity): string {
       return "Created the class";
     case "vehicle-class.updated":
       return vehicleClassChanges(entry.after);
+    case "vehicle-class.model.created":
+      return `Added the model ${modelName(entry.after)}`;
+    case "vehicle-class.model.deleted":
+      return `Removed the model ${modelName(entry.before)}`;
+    case "vehicle.created":
+      return "Added the vehicle";
+    case "vehicle.updated":
+      return recordChanges(
+        entry.after,
+        VEHICLE_FIELD_LABELS,
+        ["Put the vehicle in service", "Took the vehicle out of service"],
+        "Changed the vehicle",
+      );
+    case "vehicle.deleted": {
+      const model = field(entry.before, "modelName");
+      return typeof model === "string"
+        ? `Deleted the ${model}`
+        : "Deleted the vehicle";
+    }
+    case "driver.created":
+      return "Added the driver";
+    case "driver.updated":
+      return recordChanges(
+        entry.after,
+        DRIVER_FIELD_LABELS,
+        ["Made the driver active", "Made the driver inactive"],
+        "Changed the driver",
+      );
+    case "driver.deleted":
+      return "Deleted the driver";
     case "location.created":
       return "Created the location";
     case "location.updated":
@@ -567,6 +703,11 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.zone.created":
       return `Added ${zoneName(entry.after)}`;
     case "location.zone.updated": {
+      // Another zone saved over this one trimmed it of its ground.
+      const cutFor = field(entry.after, "cutFor");
+      if (typeof cutFor === "string") {
+        return `Trimmed ${zoneName(entry.after)} for ${cutFor}`;
+      }
       const was = field(entry.before, "name");
       const now = field(entry.after, "name");
       return typeof was === "string" && typeof now === "string" && was !== now

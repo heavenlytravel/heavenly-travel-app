@@ -9,9 +9,15 @@ export {
   deleteUserFromClerk,
 } from "./sync";
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
-export type { AdminWithUser, AdminChange } from "./admins";
+export type { AdminWithUser } from "./admins";
 export { isWallActive, setWallActive } from "./settings";
-export { listActivityFor, listActivityForMany, listActivity } from "./activity";
+export {
+  listActivityFor,
+  listActivityForMany,
+  listLocationHistory,
+  listPagePublishes,
+  listActivity,
+} from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {
   listLocationOverviews,
@@ -27,16 +33,45 @@ export {
 export type { State, District, DistrictWithState, ServedAt } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
 export { statesBounds } from "./location-places";
+export { getLocationSearch, checkTripAt } from "./search-areas";
+export { mukimsOf, mukimsByCode, MUKIM_KIND_LABELS } from "./mukim-index";
+export type { MukimShape, MukimKind } from "./mukim-index";
+export { unionOf, joinPieces, cutOut, shapesOverlap } from "./zone-geometry";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,
+  listClassOptions,
   getVehicleClass,
   createVehicleClass,
   updateVehicleClass,
 } from "./vehicle-classes";
-export type { VehicleClass } from "./vehicle-classes";
+export type {
+  VehicleClass,
+  CatalogueClass,
+  ClassOption,
+} from "./vehicle-classes";
+export { listModelSuggestions } from "./vehicle-models";
+export type { ModelSuggestion } from "./vehicle-models";
+export type { ShownModel } from "./models-shown";
+export {
+  listVehicles,
+  getVehicle,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+} from "./vehicles";
+export type { ListedVehicle, VehicleWithModel, FleetFilter } from "./vehicles";
+export {
+  listDrivers,
+  getDriver,
+  createDriver,
+  updateDriver,
+  deleteDriver,
+} from "./drivers";
+export type { DriverWithClasses } from "./drivers";
 export {
   listOfferings,
+  listPicturedOfferings,
   listActiveOfferings,
   listActiveOfferingsAt,
   getOffering,
@@ -46,21 +81,42 @@ export {
 } from "./offerings";
 export type {
   Offering,
+  OfferingOnSale,
+  PicturedOffering,
   LocationVehicleClass,
   OfferingClassChoice,
 } from "./offerings";
 export {
   listZones,
+  listZoneNames,
+  listZoneOutlines,
+  listZonesElsewhere,
+  listRatesFromElsewhere,
   getZone,
   listZoneRates,
+  listCoverage,
+  listPriceLists,
   createZone,
   updateZone,
   deleteZone,
+  checkOverlaps,
   setZoneRates,
   setOddHours,
   setDropoffRule,
 } from "./zones";
-export type { Zone, ZoneRate } from "./zones";
+export type {
+  Zone,
+  ZoneRate,
+  LocationPriceList,
+  ZoneRefusal,
+  ZoneInTheWay,
+  ZoneTrim,
+  OverlapCheck,
+  ZoneOutline,
+  ZoneElsewhere,
+  ZoneChanged,
+  RateFromElsewhere,
+} from "./zones";
 export {
   listLocationNames,
   getLocation,
@@ -162,7 +218,14 @@ export * from "./zone-match";
 export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
+export * from "./vehicle-model-input";
+export * from "./vehicle-input";
+export * from "./driver-input";
+export * from "./expiry";
 export * from "./location-input";
+export * from "./images";
 export * from "./location-page-input";
 export * from "./location-view";
+export * from "./location-search";
+export * from "./search";
 export * from "./cache-tags";

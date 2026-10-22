@@ -28,8 +28,8 @@ export function SetupChecklist({
       <CardTitle
         description={
           progress.next
-            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, listed in the panel beside the page; the location goes live once every step is done.`
-            : "Every step is done."
+            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, listed in the panel beside the page; the location goes live on its Status tab once every step is done.`
+            : "Every step is done: the location goes live on its Status tab."
         }
       >
         {title}

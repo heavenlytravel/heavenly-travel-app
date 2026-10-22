@@ -1,9 +1,8 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { RemoveScroll } from "react-remove-scroll";
 import { cx } from "./cx.js";
-import { useModal } from "./modal.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 const WIDTHS = {
   md: "ui:w-[min(22rem,88vw)]",
@@ -48,7 +47,7 @@ export function Sheet({
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={() => onOpenChange(false)}
+      onClose={onModalClose(() => onOpenChange(false))}
       onClick={(event) => {
         // The dialog element itself is only hit through the backdrop.
         if (event.target === event.currentTarget) onOpenChange(false);
@@ -60,18 +59,9 @@ export function Sheet({
         className,
       )}
     >
-      {/* While it is open the page under it holds still, as under Radix's
-          own dialogs: the wheel and touch outside this layer are stopped, the
-          backdrop's too, and the sheet scrolls in it. The page keeps its
-          scroll bar, so nothing on it changes width or moves. */}
-      <RemoveScroll
-        enabled={open}
-        allowPinchZoom
-        removeScrollBar={false}
-        className="ui:h-full ui:max-h-[inherit] ui:overflow-y-auto"
-      >
+      <ModalBody open={open} className="ui:h-full ui:max-h-[inherit]">
         {children}
-      </RemoveScroll>
+      </ModalBody>
     </dialog>
   );
 }

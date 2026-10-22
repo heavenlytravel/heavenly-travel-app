@@ -14,9 +14,7 @@ const FORM: Record<string, string> = {
   minPassengers: "1",
   maxPassengers: "3",
   luggage: "2 large bags",
-  minLeadHours: "4",
-  cancellationCutoffHours: "24",
-  minHourlyHours: "3",
+  imageUrl: "https://abc123.ufs.sh/f/key-1",
   isActive: "on",
 };
 
@@ -39,9 +37,7 @@ describe("parseVehicleClassFields", () => {
       minPassengers: 1,
       maxPassengers: 3,
       luggage: "2 large bags",
-      minLeadHours: 4,
-      cancellationCutoffHours: 24,
-      minHourlyHours: 3,
+      imageUrl: "https://abc123.ufs.sh/f/key-1",
       isActive: true,
     });
   });
@@ -70,14 +66,12 @@ describe("parseVehicleClassFields", () => {
     assert.equal(errorOf({ minPassengers: "3", maxPassengers: "3" }), null);
   });
 
-  it("keeps the hours whole and the minimum hire inside the global range", () => {
-    assert.match(errorOf({ minLeadHours: "-1" }) ?? "", /Notice needed/);
-    assert.match(errorOf({ cancellationCutoffHours: "1.5" }) ?? "", /Cancel/);
-    assert.match(errorOf({ minHourlyHours: "2" }) ?? "", /between 3 and 12/);
-    assert.match(errorOf({ minHourlyHours: "13" }) ?? "", /between 3 and 12/);
-    assert.equal(
-      errorOf({ minLeadHours: "0", cancellationCutoffHours: "0" }),
-      null,
+  it("reads no picture as null and takes a picture on UploadThing only", () => {
+    const result = parseVehicleClassFields({ ...FORM, imageUrl: "" });
+    assert.equal(result.ok && result.value.imageUrl, null);
+    assert.match(
+      errorOf({ imageUrl: "https://example.com/sedan.jpg" }) ?? "",
+      /picture/,
     );
   });
 });

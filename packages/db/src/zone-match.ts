@@ -12,8 +12,10 @@ import {
 /**
  * Where a place falls among a location's zones, and which cell of the rate
  * grid a route reads, pure and browser-safe. A zone's shape is one closed
- * ring (drawn, or a circle around a place) or a district's boundary as it
- * is, which may be several pieces of land; of zones that overlap the
+ * ring (drawn, or a circle around a place) or polygons: a district's
+ * boundary or its mukims' as they are, which may be several pieces of
+ * land, or a shape with other zones cut out of it. Zones never overlap, a
+ * save refuses one that does; should two from before the rule, the
  * smallest wins, as districts do. See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
  * rates".
@@ -61,6 +63,16 @@ export function isZoneShape(value: unknown): value is ZoneShape {
 /** Every ring of a shape, outer rings and holes alike: for drawing it and counting its corners. */
 export function ringsOf(shape: ZoneShape): Ring[] {
   return isRing(shape) ? [shape] : shape.flat();
+}
+
+/** The corners of a shape, as the screens count them: a closed ring's last, its first again, not counted. */
+export function cornerCount(shape: ZoneShape): number {
+  return ringsOf(shape).reduce((sum, ring) => sum + ring.length - 1, 0);
+}
+
+/** A zone's shape as polygons: a drawn ring is one polygon without holes. */
+export function polygonsOf(shape: ZoneShape): MultiPolygon {
+  return isRing(shape) ? [[shape]] : shape;
 }
 
 /** Whether the point is inside the shape: in the ring, or in one of the polygons. */

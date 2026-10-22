@@ -2,6 +2,7 @@
 
 import { LOCATION_LIMITS, andList } from "@repo/db";
 import type { Bounds } from "@repo/places";
+import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { Field, Input, inputClassName } from "@repo/ui/field";
@@ -115,8 +116,10 @@ function AddressForm({
       return;
     }
     startCheck(async () => {
-      const result = await checkAddressPlaceAction(locationId, placeId, label);
-      if (!result.ok) {
+      const result = await answerOf(
+        checkAddressPlaceAction(locationId, placeId, label),
+      );
+      if ("error" in result) {
         setError(result.error);
         return;
       }

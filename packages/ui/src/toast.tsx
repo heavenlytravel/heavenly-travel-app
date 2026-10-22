@@ -6,8 +6,10 @@ import { Toaster as Sonner, toast } from "sonner";
  * A short message that a change went through, at the corner of the screen,
  * after shadcn's toast (Sonner): "Draft saved", "Booking confirmed". It
  * fades by itself. Mount `Toaster` once in the app's layout and call
- * `toast.success("…")` after a write. A problem the admin must act on stays
- * beside the field or the button it is about, not in a toast.
+ * `toast.success("…")` after a write; work that takes a while, an
+ * upload, shows `toast.loading` under an id and turns into its success.
+ * A problem the admin must act on stays beside the field or the button it
+ * is about, not in a toast.
  */
 export function Toaster() {
   return (

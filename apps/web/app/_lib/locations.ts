@@ -4,11 +4,13 @@ import {
   VEHICLE_CLASSES_TAG,
   checkLocationSlug,
   getLocationPreview,
+  getLocationSearch,
   getPublicLocation,
   listActiveOfferingsAt,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
+  type LocationSearch,
   type LocationView,
   type TripCategory,
 } from "@repo/db/server";
@@ -49,6 +51,32 @@ export const publicLocation = cache(
 /** The location at the slug as staff preview it: the drafts, read fresh. Once per request. */
 export const locationPreview = cache(getLocationPreview);
 
+/**
+ * The version of `LocationSearch` the cache holds. A cached answer outlives
+ * a deploy, so a change to its shape bumps this, or the pages read the old
+ * shape until it expires.
+ */
+const LOCATION_SEARCH_VERSION = 3;
+
+/**
+ * What the search card on the location's pages keeps to, read off its
+ * zones and its drop-off rule. Tagged with the location, which the admin
+ * refreshes after a change to either. Once per request.
+ */
+export const publicLocationSearch = cache(
+  async (slug: string): Promise<LocationSearch | null> => {
+    if (!isLocationSlug(slug)) return null;
+    return unstable_cache(
+      () => getLocationSearch(slug),
+      ["public-location-search", String(LOCATION_SEARCH_VERSION), slug],
+      { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
+    )();
+  },
+);
+
+/** The same for the staff preview, read fresh. */
+export const locationSearchPreview = cache(getLocationSearch);
+
 /** The home page's location cards. */
 export const topChoiceCards = unstable_cache(
   listTopChoiceCards,
@@ -64,13 +92,21 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
+  /** Its picture at the location: a photo of a vehicle there, or the catalogue's; null for none. */
+  imageUrl: string | null;
+  /** The models of the location's vehicles in service, by name, with their photos. */
+  models: {
+    id: string;
+    name: string;
+    photos: { url: string; caption: string }[];
+  }[];
   /** The least it can cost there, in sen. */
   fromSen: number;
 };
 
 /**
  * The classes a location sells in a product, in their order, at the
- * location's rates. Tagged with the location, which the admin refreshes
+ * location's rates, each with its models. Tagged with the location, which the admin refreshes
  * after a change to what it sells, and with the catalogue, which it
  * refreshes after a change to a class.
  */
@@ -86,10 +122,9 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
-          fromSen: startingPriceSen({
-            ...offering,
-            minHourlyHours: vehicleClass.minHourlyHours,
-          }),
+          imageUrl: offering.coverUrl,
+          models: vehicleClass.models,
+          fromSen: startingPriceSen(offering),
         }));
       },
       ["vehicle-class-cards", slug, category],

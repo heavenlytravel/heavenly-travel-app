@@ -107,18 +107,22 @@ export function tripRows(trip: TripView): DetailRow[] {
   return rows;
 }
 
-/** The rows after the trip: what was chosen on the options page. */
+/**
+ * The rows after the trip: what was chosen on the options page. The model
+ * shows only when the customer chose one; otherwise any of the class's
+ * comes.
+ */
 export function tripDetailRows(details: {
   vehicleClassName: string;
+  vehicleModelName?: string | null;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
-  const rows: [string, string][] = [
-    ["Vehicle", details.vehicleClassName],
-    ["Passengers", String(details.passengers)],
-  ];
+  const rows: [string, string][] = [["Vehicle", details.vehicleClassName]];
+  if (details.vehicleModelName) rows.push(["Model", details.vehicleModelName]);
+  rows.push(["Passengers", String(details.passengers)]);
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
   }
@@ -129,8 +133,8 @@ export function tripDetailRows(details: {
 
 /**
  * The receipt behind a price, without the total: the route's fixed rate or
- * the rates used with the distance or hours, then the surcharge. The app
- * adds the total in its own emphasis.
+ * the rates used with the distance or hours, then the surcharge, then the
+ * model chosen. The app adds the total in its own emphasis.
  */
 export function priceRows(
   price: TripPriceBreakdown,
@@ -169,6 +173,14 @@ export function priceRows(
         ? `Odd hours, +${price.surcharge.percent}%`
         : "Odd hours",
       formatMyr(price.surcharge.amountSen),
+    ]);
+  }
+  if (price.model) {
+    rows.push([
+      price.model.percent !== null
+        ? `${price.model.name}, chosen, +${price.model.percent}%`
+        : `${price.model.name}, chosen`,
+      formatMyr(price.model.amountSen),
     ]);
   }
   return rows;

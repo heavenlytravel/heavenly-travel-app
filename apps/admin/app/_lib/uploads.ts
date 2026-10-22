@@ -2,19 +2,23 @@ import "server-only";
 import {
   checkImageFile,
   type ImageType,
+  type Permission,
   type UploadedImage,
 } from "@repo/db/server";
 import { imageSize } from "image-size";
 import { UTApi } from "uploadthing/server";
+import { getAdmin } from "./access";
+import { FORBIDDEN_MESSAGE } from "./action-state";
 
 /**
- * Image uploads to UploadThing, for the location pages. The file goes
- * through this server: the browser never holds the token. What the file is
- * and how large it draws are read from its bytes, not from what the browser
- * says. See docs/261001-locations-and-pages.md, "Images".
+ * Image uploads to UploadThing, for the location pages, the vehicle
+ * classes' pictures and the vehicles' photos. The file goes through this
+ * server: the browser never holds the token. What the file is and how
+ * large it draws are read from its bytes, not from what the browser says.
+ * See docs/261001-locations-and-pages.md, "Images".
  */
 
-export type ImageUpload =
+type ImageUpload =
   | { ok: true; image: UploadedImage }
   | { ok: false; status: number; error: string };
 
@@ -47,7 +51,7 @@ function drawnSize(bytes: Uint8Array) {
 }
 
 /** Stores one image and answers its address, key and size. */
-export async function uploadImage(file: File): Promise<ImageUpload> {
+async function uploadImage(file: File): Promise<ImageUpload> {
   const check = checkImageFile(file);
   if (!check.ok) return refuse(400, check.error);
 
@@ -79,4 +83,32 @@ export async function uploadImage(file: File): Promise<ImageUpload> {
       height: size.height,
     },
   };
+}
+
+/**
+ * The answer to an upload route: the image as the form field `file`, from
+ * an admin with `permission`. Answers the stored file as an
+ * `UploadedImage`, or `{ error }` with the sentence the form shows.
+ */
+export async function answerImageUpload(
+  request: Request,
+  permission: Permission,
+): Promise<Response> {
+  const admin = await getAdmin(permission);
+  if (!admin) {
+    return Response.json({ error: FORBIDDEN_MESSAGE }, { status: 403 });
+  }
+
+  const file = await request
+    .formData()
+    .then((form) => form.get("file"))
+    .catch(() => null);
+  if (!(file instanceof File)) {
+    return Response.json({ error: "Choose an image." }, { status: 400 });
+  }
+
+  const result = await uploadImage(file);
+  return result.ok
+    ? Response.json(result.image)
+    : Response.json({ error: result.error }, { status: result.status });
 }

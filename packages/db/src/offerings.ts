@@ -1,7 +1,7 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type {
   LocationVehicleClass,
@@ -14,17 +14,21 @@ import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
+import { classCoverOf, shownModel, type ShownModel } from "./models-shown";
+import { modelsShownAt } from "./vehicle-models";
 
 export type { LocationVehicleClass };
 
 /**
  * Offerings: the classes a location sells, each at the location's own
- * rates. The catalogue class (./vehicle-classes) carries the seats, the
- * luggage and the rules; the offering carries the rates and whether the
- * class is on sale there. The readers serve the location's Vehicle classes
- * tab and the customer site; the writers are the tab's, each taking the
- * actor and logging against the location inside its transaction. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes".
+ * rates and under its own rules. The catalogue class (./vehicle-classes)
+ * carries what the vehicle is, its seats, its luggage and its picture; the
+ * offering carries the rates, the three rules and whether the class is on
+ * sale there. The readers serve the location's Vehicle classes tab and the
+ * customer site; the writers are the tab's, each taking the actor and
+ * logging against the location inside its transaction. See
+ * docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 
 const withClass = {
@@ -34,12 +38,53 @@ const withClass = {
 /** An offering with its catalogue class. */
 export type Offering = Prisma.LocationVehicleClassGetPayload<typeof withClass>;
 
-const NOT_FOUND: Change = { ok: false, error: "Offering not found." };
+/** The offering's class with the models of the location's vehicles in service. */
+const withModelsAt = (location: Prisma.LocationWhereInput) =>
+  ({
+    include: { vehicleClass: { include: { models: modelsShownAt(location) } } },
+  }) satisfies Prisma.LocationVehicleClassDefaultArgs;
+
+type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
+  ReturnType<typeof withModelsAt>
+>;
+
+/** An offering with its class's picture at the location, as `classCoverOf` finds it. */
+export type PicturedOffering = Offering & { coverUrl: string | null };
+
+/** An offering on sale, pictured, its class with the models the location's customers see. */
+export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
+  vehicleClass: VehicleClass & { models: ShownModel[] };
+  coverUrl: string | null;
+};
+
+/** Offerings as they are read, named, pictured and in the class's order. */
+function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
+  return rows
+    .map(
+      ({
+        vehicleClass: { models: modelRows, ...vehicleClass },
+        ...offering
+      }) => ({
+        ...offering,
+        vehicleClass: { ...vehicleClass, models: modelRows.map(shownModel) },
+        coverUrl: classCoverOf(modelRows, vehicleClass.imageUrl),
+      }),
+    )
+    .sort(byClassOrder);
+}
+
+const NOT_FOUND: Change = refuse(
+  "This class was taken off this location meanwhile. Go back to the list.",
+);
 
 const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
 
-const byClassOrder = (a: Offering, b: Offering) =>
+/** Car with driver first, then by the class's order and name. */
+export const byClassOrder = (
+  a: Pick<Offering, "vehicleClass">,
+  b: Pick<Offering, "vehicleClass">,
+) =>
   categoryRank(a.vehicleClass.category) -
     categoryRank(b.vehicleClass.category) ||
   a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||
@@ -55,38 +100,59 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
 }
 
 /**
+ * Every offering of the location, as `listOfferings`, each with its
+ * class's picture there: the Vehicle classes tab shows what customers see.
+ */
+export async function listPicturedOfferings(
+  locationId: string,
+): Promise<PicturedOffering[]> {
+  const rows = await db.locationVehicleClass.findMany({
+    where: { locationId },
+    ...withModelsAt({ id: locationId }),
+  });
+  return rows
+    .map(({ vehicleClass: { models, ...vehicleClass }, ...offering }) => ({
+      ...offering,
+      vehicleClass,
+      coverUrl: classCoverOf(models, vehicleClass.imageUrl),
+    }))
+    .sort(byClassOrder);
+}
+
+/**
  * The offerings the location sells in the category right now: on sale, of
- * an active class, in the class's order. What the options page prices.
+ * an active class, in the class's order, each class with the models of
+ * the location's vehicles in service. What the options page prices.
  */
 export async function listActiveOfferings(
   locationId: string,
   category: TripCategory,
-): Promise<Offering[]> {
+): Promise<OfferingOnSale[]> {
   const rows = await db.locationVehicleClass.findMany({
     where: {
       locationId,
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withClass,
+    ...withModelsAt({ id: locationId }),
   });
-  return rows.sort(byClassOrder);
+  return onSale(rows);
 }
 
 /** The same, for the customer site, which knows the location by its slug. */
 export async function listActiveOfferingsAt(
   slug: string,
   category: TripCategory,
-): Promise<Offering[]> {
+): Promise<OfferingOnSale[]> {
   const rows = await db.locationVehicleClass.findMany({
     where: {
       location: { slug },
       isActive: true,
       vehicleClass: { category, isActive: true },
     },
-    ...withClass,
+    ...withModelsAt({ slug }),
   });
-  return rows.sort(byClassOrder);
+  return onSale(rows);
 }
 
 export function getOffering(id: string): Promise<Offering | null> {
@@ -111,7 +177,8 @@ export type OfferingClassChoice =
   { vehicleClassId: string } | { newClass: VehicleClassFields };
 
 /**
- * Starts selling a class at the location, at the rates given. A new
+ * Starts selling a class at the location, at the rates and under the rules
+ * given. A new
  * catalogue class is created first, with its slug from its name, and
  * logged against itself as the Vehicle classes screen would. A class the
  * location already offers is refused.
@@ -134,26 +201,35 @@ export async function createOffering(
       where: { id: locationId },
       select: { id: true },
     });
-    if (!location) return { ok: false, error: "Location not found." };
+    if (!location) {
+      return refuse(
+        "This location was deleted meanwhile. Go back to Locations.",
+      );
+    }
 
     let vehicleClass: VehicleClass;
     if ("vehicleClassId" in choice) {
       const found = await tx.vehicleClass.findUnique({
         where: { id: choice.vehicleClassId },
       });
-      if (!found) return { ok: false, error: "Vehicle class not found." };
+      if (!found) {
+        return refuse(
+          "That class was just deleted. Choose the class again.",
+          "vehicleClassId",
+        );
+      }
       vehicleClass = found;
     } else {
       const slug = slugify(choice.newClass.name);
       if (!slug) {
-        return { ok: false, error: "Enter a name with a letter or digit." };
+        return refuse("Enter a name with a letter or digit.", "name");
       }
       const taken = await tx.vehicleClass.findUnique({ where: { slug } });
       if (taken) {
-        return {
-          ok: false,
-          error: `${taken.name} already has the slug ${slug}. Pick it from the catalogue instead.`,
-        };
+        return refuse(
+          `${taken.name} is in the catalogue already. Choose it from the catalogue instead.`,
+          "name",
+        );
       }
       vehicleClass = await tx.vehicleClass.create({
         data: { slug, ...choice.newClass },
@@ -174,10 +250,10 @@ export async function createOffering(
       },
     });
     if (already) {
-      return {
-        ok: false,
-        error: `${vehicleClass.name} is already offered here. Edit its rates instead.`,
-      };
+      return refuse(
+        `${vehicleClass.name} is already offered here. Edit its rates instead.`,
+        "vehicleClassId",
+      );
     }
     const offering = await tx.locationVehicleClass.create({
       data: { locationId, vehicleClassId: vehicleClass.id, ...fields },
@@ -192,8 +268,9 @@ export async function createOffering(
 }
 
 /**
- * Changes the rates or the switch of an offering. A rate change applies to
- * new quotes at once; a booking keeps its receipt. Saving what is already
+ * Changes the rates, the rules or the switch of an offering. A change
+ * applies to new quotes at once; a booking keeps its receipt and its
+ * cancellation cutoff. Saving what is already
  * there logs nothing.
  */
 export async function updateOffering(
@@ -210,6 +287,19 @@ export async function updateOffering(
       ...withClass,
     });
     if (!offering) return NOT_FOUND;
+    // A patch of one charge column meets the other as stored: checked
+    // together, so an offering never charges both a share and an amount.
+    const charge = checkOfferingFields({
+      modelChoicePercent:
+        "modelChoicePercent" in patch
+          ? patch.modelChoicePercent
+          : offering.modelChoicePercent,
+      modelChoiceFlatSen:
+        "modelChoiceFlatSen" in patch
+          ? patch.modelChoiceFlatSen
+          : offering.modelChoiceFlatSen,
+    });
+    if (!charge.ok) return charge;
 
     const changed = changedFields(offering, patch);
     if (!changed) return { ok: true };

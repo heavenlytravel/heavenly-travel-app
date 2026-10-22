@@ -1,6 +1,7 @@
 import { TRIP_CATEGORIES, TRIP_CATEGORY_LABELS } from "./booking-status";
 import type { Change } from "./change";
 import { guardFor } from "./const-enum";
+import { isUploadUrl, type UploadedImage } from "./images";
 
 /**
  * The content of a location's pages and the rules it is checked against,
@@ -44,19 +45,8 @@ export function pageNameOf(page: LocationPageKey) {
 /** The locale every page row is written in. Malay pages are future work. */
 export const PAGE_LOCALE = "en";
 
-/** An uploaded image as the content keeps it. */
-export type PageImage = {
-  /** The file's address on UploadThing. */
-  url: string;
-  /** Its UploadThing key, for clearing unused files later. */
-  key: string;
-  width: number;
-  height: number;
-  alt: string;
-};
-
-/** A file as the upload answers it, before Marketing writes its alt text. */
-export type UploadedImage = Omit<PageImage, "alt">;
+/** An uploaded image as the content keeps it, with the alt text Marketing writes. */
+export type PageImage = UploadedImage & { alt: string };
 
 export type PageFaq = { question: string; answer: string };
 
@@ -115,39 +105,7 @@ export const PAGE_LIMITS = {
   maxHighlights: 8,
 } as const;
 
-export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-export type ImageType = (typeof IMAGE_TYPES)[number];
-export const isImageType = guardFor(IMAGE_TYPES);
-
-export const IMAGE_MAX_MB = 4;
-export const IMAGE_MAX_BYTES = IMAGE_MAX_MB * 1024 * 1024;
-
 const fail = (error: string): Change => ({ ok: false, error });
-
-/** A file is an image the pages take: a JPEG, a PNG or a WebP within the size limit. */
-export function checkImageFile(file: { type: string; size: number }): Change {
-  if (!isImageType(file.type)) {
-    return fail("Upload a JPEG, a PNG or a WebP image.");
-  }
-  if (file.size > IMAGE_MAX_BYTES) {
-    return fail(`An image is at most ${IMAGE_MAX_MB} MB.`);
-  }
-  return { ok: true };
-}
-
-/** Where UploadThing serves a file: https://<app id>.ufs.sh/f/<key>. */
-const UPLOAD_HOST_SUFFIX = ".ufs.sh";
-
-/** Whether the address is a file on UploadThing, the one host the pages load images from. */
-export function isUploadUrl(value: unknown): value is string {
-  if (typeof value !== "string" || !URL.canParse(value)) return false;
-  const url = new URL(value);
-  return (
-    url.protocol === "https:" &&
-    url.hostname.endsWith(UPLOAD_HOST_SUFFIX) &&
-    url.pathname.startsWith("/f/")
-  );
-}
 
 export function wordCount(text: string) {
   return text.split(/\s+/).filter(Boolean).length;

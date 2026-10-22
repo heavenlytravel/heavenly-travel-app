@@ -1,16 +1,19 @@
-import type { VehicleClass } from "@repo/db/server";
+import type { OfferingRules } from "@repo/db";
 
-/** How the tables spell a class's rules: "Notice 4 h · Cancel up to 24 h · Minimum 3 h" */
-export function rulesText(vehicleClass: VehicleClass) {
+/** How a card spells an offering's rules: "4 h notice · cancel up to 24 h · at least 3 h hourly" */
+export function rulesText(rules: OfferingRules) {
   return [
-    `Notice ${vehicleClass.minLeadHours} h`,
-    `Cancel up to ${vehicleClass.cancellationCutoffHours} h`,
-    `Minimum ${vehicleClass.minHourlyHours} h`,
+    `${rules.minLeadHours} h notice`,
+    `cancel up to ${rules.cancellationCutoffHours} h`,
+    `at least ${rules.minHourlyHours} h hourly`,
   ].join(" · ");
 }
 
-/** How the tables spell a class's seats: "3" or "1 to 6" */
-export function seatsText(vehicleClass: VehicleClass) {
+/** How a card spells a class's seats: "3" or "1 to 6" */
+export function seatsText(vehicleClass: {
+  minPassengers: number;
+  maxPassengers: number;
+}) {
   return vehicleClass.minPassengers === vehicleClass.maxPassengers
     ? String(vehicleClass.maxPassengers)
     : `${vehicleClass.minPassengers} to ${vehicleClass.maxPassengers}`;

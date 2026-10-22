@@ -5,7 +5,7 @@ import {
   type ActivityEntry,
 } from "./activity";
 import type { ActivityEntityType, Actor } from "./activity-actions";
-import type { Change, Created } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import type {
   Location,
@@ -58,6 +58,7 @@ import {
   type LocationView,
   type TopChoiceCard,
 } from "./location-view";
+import { andList, plural } from "./names";
 import { isPlace, type Place } from "./place";
 
 export type { Location, LocationAddress };
@@ -82,15 +83,14 @@ export type { Location, LocationAddress };
 
 const LOCATION: ActivityEntityType = "location";
 
-/** Why a write did not happen; fits both `Change` and `Created`. */
-type Refusal = { ok: false; error: string };
+const NOT_FOUND = refuse(
+  "This location was deleted meanwhile. Go back to Locations.",
+);
 
-const NOT_FOUND: Refusal = { ok: false, error: "Location not found." };
-
-const UNKNOWN_STATE: Refusal = {
-  ok: false,
-  error: "One of the states is not known. Reload and tick them again.",
-};
+const UNKNOWN_STATE = refuse(
+  "One of the states is not known. Reload and tick them again.",
+  "states",
+);
 
 /** A location's states as every reader includes them: by name. */
 const withStates = {
@@ -452,10 +452,10 @@ async function slugTaken(
 ): Promise<Refusal | null> {
   const taken = await tx.location.findUnique({ where: { slug } });
   if (!taken || taken.id === exceptId) return null;
-  return {
-    ok: false,
-    error: `Another location already uses /${slug}. Choose another slug.`,
-  };
+  return refuse(
+    `Another location already uses /${slug}. Choose another slug.`,
+    "slug",
+  );
 }
 
 const sameCodes = (a: readonly string[], b: readonly string[]) =>
@@ -532,10 +532,10 @@ export async function updateLocation(
     const changed = changedFields(location, text);
     if (changed?.after.slug !== undefined) {
       if (isSlugLocked(location)) {
-        return {
-          ok: false,
-          error: "The slug is locked once a location has been live.",
-        };
+        return refuse(
+          "The slug is locked once a location has been live. Put the slug back as it was.",
+          "slug",
+        );
       }
       const taken = await slugTaken(tx, fields.slug, id);
       if (taken) return taken;
@@ -547,12 +547,12 @@ export async function updateLocation(
       if (refusal) return refusal;
       const stray = strayAddresses(location.addresses, stateCodes);
       if (stray.length > 0) {
-        return {
-          ok: false,
-          error: `${strayAddressesPhrase(stray)}. ${ADDRESS_RULE} Remove ${
+        return refuse(
+          `${strayAddressesPhrase(stray)}. ${ADDRESS_RULE} Remove ${
             stray.length > 1 ? "those addresses" : "that address"
           } first, or keep the state ticked.`,
-        };
+          "states",
+        );
       }
     }
     if (!changed && !moved) return { ok: true };
@@ -912,7 +912,8 @@ export type LocationDeleted = { ok: true; slug: string } | Refusal;
  * home page first, so the places after it close up. What the location was
  * is logged, and its earlier entries stay in the log under the name it had.
  * The images its pages uploaded stay in storage; its bookings keep their
- * receipts and lose the pointer.
+ * receipts and lose the pointer. One with vehicles or drivers based at it
+ * is refused until they move.
  */
 export async function deleteLocation(
   actor: Actor,
@@ -922,11 +923,30 @@ export async function deleteLocation(
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
       where: { id },
-      include: { states: { select: { code: true } } },
+      include: {
+        states: { select: { code: true } },
+        _count: { select: { vehicles: true, drivers: true } },
+      },
     });
     if (!location) return NOT_FOUND;
     const check = checkLocationDelete(location, typedSlug);
     if (!check.ok) return check;
+    // Our vehicles and drivers are not the location's to take with it.
+    const based = [
+      location._count.vehicles > 0
+        ? plural(location._count.vehicles, "vehicle")
+        : null,
+      location._count.drivers > 0
+        ? plural(location._count.drivers, "driver")
+        : null,
+    ].filter((part) => part !== null);
+    if (based.length > 0) {
+      const one = location._count.vehicles + location._count.drivers === 1;
+      return {
+        ok: false,
+        error: `${andList(based)} ${one ? "is" : "are"} based here. Move ${one ? "it" : "them"} to another location first.`,
+      };
+    }
 
     const left = await changeTopChoiceIn(tx, actor, id, "remove");
     if (!left.ok) return left;
@@ -1071,7 +1091,7 @@ async function changeTopChoiceIn(
     // Removing what is not there is done; moving it is a stale screen.
     return change === "remove"
       ? { ok: true }
-      : { ok: false, error: "This location is not a top choice." };
+      : refuse("This location is no longer a top choice. Reload to see them.");
   } else if (change === "remove") {
     ids.splice(index, 1);
   } else {

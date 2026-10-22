@@ -8,6 +8,7 @@ import {
   type LocationView,
   type LocationViewPage,
 } from "@repo/db/server";
+import { locationSearchPreview, publicLocationSearch } from "../_lib/locations";
 import { Closing, SiteFooter } from "../_home/Sections";
 import { fontVars } from "../_home/fonts";
 import styles from "../_home/home.module.css";
@@ -17,10 +18,11 @@ import { LocationHeader, LocationSearch } from "./LocationSearch";
  * What every page of a location shares: the home page's type and palette,
  * the site header, the search card's state, the closing call and the
  * footer. The public pages get it from their layout, so the search card
- * keeps what was typed from page to page. `previewOf` is the page a staff
- * preview is showing, and puts the preview bar on top.
+ * keeps what was typed from page to page; the card keeps to the location's
+ * zones and drop-off rule. `previewOf` is the page a staff preview is
+ * showing, and puts the preview bar on top.
  */
-export function LocationFrame({
+export async function LocationFrame({
   location,
   previewOf,
   children,
@@ -29,13 +31,22 @@ export function LocationFrame({
   previewOf?: LocationViewPage;
   children: ReactNode;
 }) {
+  const search = previewOf
+    ? await locationSearchPreview(location.slug)
+    : await publicLocationSearch(location.slug);
   return (
     <div
       className={`${fontVars} ${styles.page} min-h-screen font-(family-name:--font-body) leading-normal antialiased`}
     >
       {previewOf && <PreviewBar location={location} page={previewOf} />}
       <LocationHeader />
-      <LocationSearch name={location.name} addresses={location.addresses}>
+      <LocationSearch
+        slug={location.slug}
+        name={location.name}
+        addresses={location.addresses}
+        search={search}
+        preview={previewOf !== undefined}
+      >
         <main className="pb-[60px] sm:pb-[88px]">{children}</main>
         <Closing />
       </LocationSearch>

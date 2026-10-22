@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
-import type { LocationViewAddress } from "@repo/db";
+import type {
+  LocationSearch as SearchAreas,
+  LocationViewAddress,
+} from "@repo/db";
 import { usePathname } from "next/navigation";
 import { SiteHeader } from "../(site)/_components/SiteHeader";
 import { focus } from "../(site)/_components/Page";
@@ -25,24 +28,34 @@ export function LocationHeader() {
 }
 
 /**
- * The search card's state for a location's pages. The empty drop-off offers
- * the location's saved addresses, and on a product page the card opens on
- * that product's tab: the product is the last part of the address, which no
- * location's slug can be.
+ * The search card's state for a location's pages. The card keeps to the
+ * location: `search`, read off its zones and its drop-off rule. The empty
+ * drop-off offers the location's saved addresses where a trip may end, and
+ * on a product page the card opens on that product's tab: the product is
+ * the last part of the address, which no location's slug can be.
  */
 export function LocationSearch({
+  slug,
   name,
   addresses,
+  search,
+  preview,
   children,
 }: {
+  slug: string;
   name: string;
   addresses: LocationViewAddress[];
+  /** What the card keeps to; null searches all of Malaysia. */
+  search: SearchAreas | null;
+  /** Whether this is the staff preview, whose checks read a location the public may not see. */
+  preview: boolean;
   children: ReactNode;
 }) {
   const product = bookableCategory(usePathname().split("/").at(-1));
   return (
     <SearchProvider
       product={product ?? undefined}
+      location={search ? { slug, preview, search } : undefined}
       dropoffs={{
         heading: `Popular in ${name}`,
         options: addresses.map((address) => ({
@@ -57,9 +70,14 @@ export function LocationSearch({
   );
 }
 
-/** Fills a highlight's saved address into the drop-off and brings the card into view. */
+/**
+ * Fills a highlight's saved address into the drop-off and brings the card
+ * into view; nothing where the location's rule does not let a trip end, as
+ * the card would refuse it.
+ */
 export function TakeMeHere({ address }: { address: LocationViewAddress }) {
-  const { fillDropoff } = useSearchCard();
+  const { fillDropoff, offersDropoff } = useSearchCard();
+  if (!offersDropoff(address.placeId)) return null;
   return (
     <button
       type="button"

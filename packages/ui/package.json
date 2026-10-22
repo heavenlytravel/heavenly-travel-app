@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@repo/places": "workspace:*",
+    "cmdk": "1.1.1",
     "radix-ui": "1.8.1",
     "react-day-picker": "9.14.0",
     "react-remove-scroll": "2.7.2",

@@ -21,28 +21,36 @@ import {
 } from "@repo/db/server";
 import { sendBookingChangeEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
 import {
-  FORBIDDEN,
-  stateOf,
   type ActionState,
+  FORBIDDEN,
+  refusalOf,
+  STALE,
+  stateOf,
 } from "../../../_lib/action-state";
-import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
+import {
+  BOOKINGS_PATH,
+  LOCATION_ROUTE,
+  bookingHref,
+} from "../../../_lib/routes";
 import { prepareFormItem } from "../_lib/trip-server";
 
 /**
  * Every transition re-checks the session and the permission (actions are
  * reachable by direct POST), passes the admin as the actor for the log and
  * lets the booking core check the status. The result's `event` sends the
- * confirmed or cancelled emails once the response is out.
+ * confirmed or cancelled emails once the response is out. A change moves
+ * the queue, the home's counts and every location's pages, whose panel
+ * counts the queue and which open the booking inside the location.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return refusalOf(result);
   after(() => sendBookingChangeEmail(result));
   revalidatePath(bookingHref(result.booking.id));
   revalidatePath(BOOKINGS_PATH);
+  revalidatePath(LOCATION_ROUTE, "layout");
   revalidatePath("/");
   return null;
 }
@@ -55,7 +63,7 @@ export async function advanceItemAction(
   const itemId = String(formData.get("itemId") ?? "");
   const to = formData.get("to");
   if (!itemId || !isNextItemStatus(to)) {
-    return { error: "Missing item or step." };
+    return STALE;
   }
   const admin = await getAdmin(ADVANCE_PERMISSIONS[to]);
   if (!admin) return FORBIDDEN;
@@ -69,7 +77,7 @@ export async function cancelItemAction(
   const admin = await getAdmin("bookings.manage");
   if (!admin) return FORBIDDEN;
   const itemId = String(formData.get("itemId") ?? "");
-  if (!itemId) return { error: "Missing item." };
+  if (!itemId) return STALE;
   return finish(await cancelItem(actorOf(admin), itemId));
 }
 
@@ -80,7 +88,7 @@ export async function cancelBookingAction(
   const admin = await getAdmin("bookings.manage");
   if (!admin) return FORBIDDEN;
   const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) return { error: "Missing booking." };
+  if (!bookingId) return STALE;
   return finish(await cancelBookingAsAdmin(actorOf(admin), bookingId));
 }
 
@@ -92,13 +100,16 @@ export async function addNoteAction(
   const admin = await getAdmin("bookings.notes");
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
-  if (!bookingId) return { error: "Missing booking." };
+  if (!bookingId) return STALE;
   const result = await addBookingNote(
     actorOf(admin),
     bookingId,
     String(formData.get("body") ?? ""),
   );
-  if (result.ok) revalidatePath(bookingHref(bookingId));
+  if (result.ok) {
+    revalidatePath(bookingHref(bookingId));
+    revalidatePath(LOCATION_ROUTE, "layout");
+  }
   return stateOf(result);
 }
 
@@ -114,7 +125,7 @@ export async function overrideItemPriceAction(
   const admin = await getAdmin("bookings.create");
   if (!admin) return FORBIDDEN;
   const itemId = textOf(formData.get("itemId"));
-  if (!itemId) return { error: "Missing item." };
+  if (!itemId) return STALE;
 
   let override: PriceOverride | null = null;
   if (!flagOf(formData.get("remove"))) {
@@ -122,7 +133,7 @@ export async function overrideItemPriceAction(
       amount: formData.get(PRICE_OVERRIDE_FIELDS.amount),
       reason: formData.get(PRICE_OVERRIDE_FIELDS.reason),
     });
-    if (!parsed.ok) return { error: parsed.error };
+    if (!parsed.ok) return refusalOf(parsed);
     if (!parsed.value) {
       return { error: "Enter the agreed price and the reason." };
     }
@@ -135,7 +146,7 @@ export async function overrideItemPriceAction(
  * Replaces one item's trip, vehicle and details with the amend form's,
  * priced again on the server. Reservation and Sales. The "Booking
  * updated" email goes out through `finish`; on success the admin lands
- * back on the booking.
+ * back on the booking, inside the location when the form was opened there.
  */
 export async function amendItemAction(
   _previous: ActionState,
@@ -145,10 +156,10 @@ export async function amendItemAction(
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
   const itemId = textOf(formData.get("itemId"));
-  if (!bookingId || !itemId) return { error: "Missing item." };
+  if (!bookingId || !itemId) return STALE;
 
   const prepared = await prepareFormItem(tripItemParams(formData, 0));
-  if (!prepared.ok) return { error: prepared.error };
+  if (!prepared.ok) return refusalOf(prepared);
   // An agreed price is its own permission, checked only when one is posted.
   if (prepared.override && !(await getAdmin("bookings.create"))) {
     return FORBIDDEN;
@@ -157,5 +168,10 @@ export async function amendItemAction(
     await amendItem(actorOf(admin), itemId, prepared),
   );
   if (result) return result;
-  redirect(bookingHref(bookingId));
+  return {
+    href: bookingHref(
+      bookingId,
+      textOf(formData.get("locationSlug")) || undefined,
+    ),
+  };
 }

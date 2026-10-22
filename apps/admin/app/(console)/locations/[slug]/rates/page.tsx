@@ -7,7 +7,7 @@ import {
   oddHoursLabel,
   oddHoursOf,
 } from "@repo/db";
-import { listOfferings, listZoneRates, listZones } from "@repo/db/server";
+import { listZoneRates, listZonesElsewhere } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
@@ -16,7 +16,12 @@ import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import { RATES_PARTS, locationTabHref } from "../../../../_lib/routes";
-import { locationDetails, locationKey } from "../../_lib/location-data";
+import {
+  locationDetails,
+  locationKey,
+  locationOfferings,
+  locationZoneNames,
+} from "../../_lib/location-data";
 import { DropoffRuleForm } from "./DropoffRuleForm";
 import { dropoffRuleNote } from "./dropoff-note";
 import { OddHoursForm } from "./OddHoursForm";
@@ -74,11 +79,12 @@ async function rates({
   slug: string;
   manages: boolean;
 }) {
-  const [location, zones, cells, offerings] = await Promise.all([
+  const [location, zones, cells, offerings, elsewhere] = await Promise.all([
     locationDetails(id),
-    listZones(id),
+    locationZoneNames(id),
     listZoneRates(id),
-    listOfferings(id),
+    locationOfferings(id),
+    listZonesElsewhere(id),
   ]);
   if (!location) notFound();
   const onSale = offerings.filter(
@@ -112,7 +118,12 @@ async function rates({
         <RateGrid
           locationId={id}
           locationSlug={slug}
-          zones={zones.map((zone) => ({ id: zone.id, name: zone.name }))}
+          zones={zones}
+          elsewhere={elsewhere.map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            location: zone.location.name,
+          }))}
           classes={onSale.map((offering) => ({
             id: offering.vehicleClassId,
             name: offering.vehicleClass.name,

@@ -1,4 +1,10 @@
-import { ADMIN_TEAM_LABELS, adminTeamsOf, fullName, needsTeam } from "@repo/db";
+import {
+  ADMIN_TEAM_LABELS,
+  adminTeamsOf,
+  fullName,
+  needsTeam,
+  searchTermOf,
+} from "@repo/db";
 import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
@@ -8,15 +14,23 @@ import {
   Streamed,
   TableSkeleton,
 } from "../../_components/Skeleton";
-import { Table, TBody, Td, Th, THead } from "../../_components/Table";
+import { SearchBox } from "../../_components/SearchBox";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
+import { ADMINS_PATH, SEARCH_PARAM } from "../../_lib/routes";
 import { AdminRowControls } from "./AdminRowControls";
 import { PromoteForm } from "./PromoteForm";
 import { WallSwitch } from "./WallSwitch";
 
-/** Route: /admins. Who is staff, their level and teams, and the wall. SUPER only. */
-export default async function AdminsPage() {
+/**
+ * Route: /admins?q=…. Who is staff, their level and teams, and the wall;
+ * the list narrowed by a search of names and emails. SUPER only.
+ */
+export default async function AdminsPage({
+  searchParams,
+}: PageProps<"/admins">) {
   const admin = await requireAdmin("admins.manage");
+  const q = searchTermOf((await searchParams)[SEARCH_PARAM]) ?? undefined;
 
   return (
     <>
@@ -40,19 +54,22 @@ export default async function AdminsPage() {
           </>
         }
       >
-        {() => adminsList({ selfId: admin.id })}
+        {() => adminsList({ selfId: admin.id, q })}
       </Streamed>
     </>
   );
 }
 
-/** The wall, the promote form and every admin with their level and teams. */
-async function adminsList({ selfId }: { selfId: string }) {
-  const [admins, wallActive] = await Promise.all([
+/** The wall, the promote form and every admin, or those the search finds, with their level and teams. */
+async function adminsList({ selfId, q }: { selfId: string; q?: string }) {
+  const [admins, found, wallActive] = await Promise.all([
     listAdmins(),
+    q ? listAdmins(q) : null,
     isWallActive(),
   ]);
+  // The warning counts every admin, whatever the search shows.
   const withoutTeam = admins.filter(needsTeam).length;
+  const shown = found ?? admins;
 
   return (
     <>
@@ -88,7 +105,19 @@ async function adminsList({ selfId }: { selfId: string }) {
       <PromoteForm />
 
       <Card flush className="mt-6">
-        <CardTitle inset>Every admin</CardTitle>
+        <CardTitle
+          inset
+          action={
+            <SearchBox
+              href={ADMINS_PATH}
+              value={q ?? ""}
+              label="Search admins"
+              placeholder="Name or email"
+            />
+          }
+        >
+          Every admin
+        </CardTitle>
         <Table bare>
           <THead>
             <Th>Name</Th>
@@ -99,7 +128,10 @@ async function adminsList({ selfId }: { selfId: string }) {
             <Th />
           </THead>
           <TBody>
-            {admins.map((profile) => {
+            {shown.length === 0 ? (
+              <EmptyRow colSpan={6}>No admin matches “{q}”.</EmptyRow>
+            ) : null}
+            {shown.map((profile) => {
               const { user, level, createdAt } = profile;
               const isSelf = user.id === selfId;
               const name = fullName(user);

@@ -10,9 +10,10 @@ const INCOMPLETE_TRIP =
   "Fill in the trip first: pick-up, drop-off or hours, date and time.";
 
 /**
- * "Get prices" on the item editor: every class of the category priced for
- * the trip, for an admin who may enter or amend a booking. Nothing is
- * written; the create and amend actions price the trip again themselves.
+ * The item editor's prices, asked for once the trip is filled in: every
+ * class of the category priced for the trip, for an admin who may enter
+ * or amend a booking. Nothing is written; the create and amend actions
+ * price the trip again themselves.
  */
 export async function quoteTripAction(
   input: Record<string, string>,

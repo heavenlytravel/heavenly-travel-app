@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { describeActivity, formatLocalDateTime } from "@repo/db";
-import {
-  listActivity,
-  listLocationNames,
-  type ActivityEntry,
-} from "@repo/db/server";
+import { listActivity, type ActivityEntry } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { PageHeader } from "../../_components/PageHeader";
 import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
 import { requireAdmin } from "../../_lib/access";
 import { activityHref, bookingHref, locationHref } from "../../_lib/routes";
+import { locationNames } from "../../_lib/location-names";
 
 const PAGE_SIZE = 50;
 
@@ -62,7 +59,7 @@ export default async function ActivityPage({
 async function activityList({ before }: { before: string | undefined }) {
   const [{ entries, nextCursor }, locations] = await Promise.all([
     listActivity({ before, take: PAGE_SIZE }),
-    listLocationNames(),
+    locationNames(),
   ]);
   const slugs = new Map(locations.map((l) => [l.id, l.slug]));
 

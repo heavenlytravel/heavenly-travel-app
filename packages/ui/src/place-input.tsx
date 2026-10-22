@@ -14,15 +14,17 @@ export type PlacePresets = {
 };
 
 /**
- * A text input with a suggestion list underneath, fed by the app's
- * /api/places/search. Picking a row reports the label and the place id;
- * typing reports the text alone, so the caller knows whether the place is
- * resolved. One Google autocomplete session token lives from the first
- * keystroke to a pick, then a new one is minted, which is how Google bills
- * a session as one request. The input is unstyled: the caller passes the
- * classes its form uses. With `presets`, the field offers those places
- * when it is opened empty; typing brings the search. With `within`, a box,
- * it suggests places inside it only.
+ * A text input with a suggestion list underneath, as wide as the input
+ * and lined up with it, fed by the app's /api/places/search. Picking a
+ * row reports the label and the place id; typing reports the text alone,
+ * so the caller knows whether the place is resolved. One Google
+ * autocomplete session token lives from the first keystroke to a pick,
+ * then a new one is minted, which is how Google bills a session as one
+ * request; the pick reports the token, for the details call that ends the
+ * session. The input is unstyled: the caller passes the classes its form
+ * uses. With `presets`, the field offers those places when it is opened
+ * empty; typing brings the search. With `within`, a box, it suggests
+ * places inside it only.
  */
 export function PlaceInput({
   id,
@@ -40,7 +42,7 @@ export function PlaceInput({
   placeId?: string;
   placeholder?: string;
   presets?: PlacePresets;
-  onChange: (value: string, placeId?: string) => void;
+  onChange: (value: string, placeId?: string, sessionToken?: string) => void;
   onFocus?: () => void;
   within?: Bounds;
   className?: string;
@@ -84,7 +86,7 @@ export function PlaceInput({
   }, [value, searchable, withinKey]);
 
   function pick(s: PlaceSuggestion) {
-    onChange(s.label, s.placeId);
+    onChange(s.label, s.placeId, session.current);
     setSuggestions([]);
     setOpen(false);
     session.current = undefined;
@@ -151,7 +153,7 @@ export function PlaceInput({
           id={listId}
           role="listbox"
           aria-label={offered?.heading}
-          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-2 ui:max-h-72 ui:w-max ui:max-w-[min(90vw,26rem)] ui:min-w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-[#dce3e0] ui:bg-white ui:py-1.5 ui:text-left ui:text-[#102825] ui:shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
+          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-1 ui:max-h-72 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-[#dce3e0] ui:bg-white ui:py-1.5 ui:text-left ui:text-[#102825] ui:shadow-[0_18px_40px_rgba(9,43,39,0.18)]"
         >
           {offered && (
             <li

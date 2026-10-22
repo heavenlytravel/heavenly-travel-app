@@ -7,10 +7,10 @@ import {
   type PriceOverride,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { toast } from "@repo/ui/toast";
 import { Field, Input } from "@repo/ui/field";
-import { useActionState, useState } from "react";
-import type { ActionState } from "../../../_lib/action-state";
+import { useState } from "react";
+import { FormError } from "../../../_components/FormError";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { overrideItemPriceAction } from "./actions";
 
 /**
@@ -28,17 +28,13 @@ export function PriceOverrideControl({
   current: PriceOverride | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    async (previous, formData) => {
-      const result = await overrideItemPriceAction(previous, formData);
-      if (result === null) {
-        setOpen(false);
-        toast.success("Agreed price saved.");
-      }
-      return result;
-    },
-    null,
-  );
+  const save = useActionForm(overrideItemPriceAction, {
+    done: "Agreed price saved.",
+    onDone: () => setOpen(false),
+  });
+  const remove = useActionForm(overrideItemPriceAction, {
+    done: "Agreed price removed. The rates' price stands.",
+  });
 
   if (!open) {
     return (
@@ -52,26 +48,27 @@ export function PriceOverrideControl({
           {current ? "Change agreed price" : "Change price"}
         </Button>
         {current ? (
-          <form action={action}>
+          <form {...remove.formProps}>
             <input type="hidden" name="itemId" value={itemId} />
             <input type="hidden" name="remove" value="true" />
-            <Button type="submit" variant="ghost" size="sm" disabled={pending}>
-              {pending ? "Removing…" : "Remove override"}
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              disabled={remove.pending}
+            >
+              {remove.pending ? "Removing…" : "Remove override"}
             </Button>
           </form>
         ) : null}
-        {state?.error ? (
-          <p aria-live="polite" className="text-xs text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={remove.error} size="xs" />
       </div>
     );
   }
 
   return (
     <form
-      action={action}
+      {...save.formProps}
       className="grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3"
     >
       <input type="hidden" name="itemId" value={itemId} />
@@ -97,8 +94,8 @@ export function PriceOverrideControl({
         </Field>
       </div>
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Saving…" : "Save price"}
+        <Button type="submit" size="sm" disabled={save.pending}>
+          {save.pending ? "Saving…" : "Save price"}
         </Button>
         <Button
           type="button"
@@ -108,11 +105,7 @@ export function PriceOverrideControl({
         >
           Cancel
         </Button>
-        {state?.error ? (
-          <p aria-live="polite" className="text-xs text-red-700">
-            {state.error}
-          </p>
-        ) : null}
+        <FormError error={save.error} size="xs" />
       </div>
     </form>
   );

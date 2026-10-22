@@ -27,17 +27,22 @@ function locationsOf(booking: BookingWithItems) {
 
 /**
  * The bookings table, shared by the queue across locations and a location's
- * own list. `showLocation` adds the column the queue needs and a location's
- * list does not; `bare` is for the table inside a `flush` card.
+ * own lists. `showLocation` adds the column the queue needs and a
+ * location's list does not; a location's list gives its `locationSlug`,
+ * so a booking opens inside the location. `bare` is for the table inside
+ * a `flush` card.
  */
 export function BookingsTable({
   bookings,
   showLocation = false,
+  locationSlug,
   bare = false,
   emptyMessage,
 }: {
   bookings: BookingWithItems[];
   showLocation?: boolean;
+  /** The location whose list this is; absent in the queue across locations. */
+  locationSlug?: string;
   bare?: boolean;
   emptyMessage: string;
 }) {
@@ -65,7 +70,7 @@ export function BookingsTable({
               <tr key={booking.id}>
                 <Td className="font-medium whitespace-nowrap tabular-nums">
                   <Link
-                    href={bookingHref(booking.id)}
+                    href={bookingHref(booking.id, locationSlug)}
                     className="underline-offset-4 hover:underline"
                   >
                     {booking.reference}

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { inBBox } from "./geo";
+import { circleRing, inBBox } from "./geo";
 import {
   isInStates,
   statesBounds,
   strayAddresses,
   strayAddressesPhrase,
+  zoneSearchBox,
 } from "./location-places";
 import type { Place } from "./place";
 
@@ -54,6 +55,25 @@ describe("statesBounds", () => {
 
   it("is null for no state", () => {
     assert.equal(statesBounds([]), null);
+  });
+});
+
+describe("zoneSearchBox", () => {
+  const airport = circleRing({ lat: 6.3333, lng: 99.7287 }, 1500);
+  const datai = place("The Datai", 6.4281, 99.6655);
+  const alorSetar = place("Alor Setar", 6.1248, 100.3678);
+
+  it("reaches the whole district a small zone lies in, and no further", () => {
+    const box = zoneSearchBox(airport);
+    assert.equal(inBBox([datai.lng, datai.lat], box), true);
+    assert.equal(inBBox([alorSetar.lng, alorSetar.lat], box), false);
+    assert.equal(inBBox([georgeTown.lng, georgeTown.lat], box), false);
+  });
+
+  it("is the zone's own box out at sea", () => {
+    const offshore = circleRing({ lat: 3.0, lng: 100.5 }, 1000);
+    const box = zoneSearchBox(offshore);
+    assert.ok(box[2] - box[0] < 0.05);
   });
 });
 

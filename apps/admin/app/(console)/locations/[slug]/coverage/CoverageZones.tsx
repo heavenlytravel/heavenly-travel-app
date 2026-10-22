@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CoverageMap, type MappedZone } from "./CoverageMap";
 import { ZoneList } from "./ZoneList";
+import { pricedFromSentence, type PricedFrom } from "./zone-lines";
 import type { DistrictOutline } from "./zones/map-shapes";
 
 /** A zone as the Coverage tab lists it. */
@@ -15,6 +16,8 @@ export type CoverageZone = MappedZone & {
   drawnAs: string;
   /** The priced routes the zone is an end of. */
   routes: number;
+  /** The other locations whose grids end at the zone. */
+  pricedFrom: PricedFrom;
   href: string;
 };
 
@@ -26,13 +29,11 @@ export type CoverageZone = MappedZone & {
  * way to remove a zone.
  */
 export function CoverageZones({
-  locationId,
   mapKey,
   districts,
   zones,
   editable,
 }: {
-  locationId: string;
   mapKey: string | null;
   districts: DistrictOutline[];
   zones: CoverageZone[];
@@ -105,6 +106,11 @@ export function CoverageZones({
                   <span className="block text-xs text-neutral-500">
                     {zone.drawnAs}
                   </span>
+                  {zone.pricedFrom.length > 0 ? (
+                    <span className="block text-xs text-neutral-500">
+                      {pricedFromSentence(zone.pricedFrom)}
+                    </span>
+                  ) : null}
                 </div>
                 <span className="text-xs text-neutral-500 tabular-nums">
                   {zone.routes === 0
@@ -120,10 +126,10 @@ export function CoverageZones({
                       Edit
                     </Link>
                     <ZoneList
-                      locationId={locationId}
                       zoneId={zone.id}
                       name={zone.name}
                       routes={zone.routes}
+                      pricedFrom={zone.pricedFrom}
                     />
                   </>
                 ) : null}

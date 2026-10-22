@@ -1,9 +1,14 @@
 "use client";
 
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
+import { toast } from "@repo/ui/toast";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { FormError } from "../../../_components/FormError";
+import { errorOf } from "../../../_lib/action-state";
 import { deleteLocationAction } from "../actions";
 
 /**
@@ -24,6 +29,7 @@ export function DeleteLocation({
   slug: string;
   hasBeenLive: boolean;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
@@ -43,11 +49,14 @@ export function DeleteLocation({
       return;
     }
     startTransition(async () => {
-      const result = await deleteLocationAction(
-        locationId,
-        hasBeenLive ? typed : null,
+      const answer = await answerOf(
+        deleteLocationAction(locationId, hasBeenLive ? typed : null),
       );
-      setError(result?.error ?? null);
+      const refused = errorOf(answer);
+      setError(refused);
+      if (refused) return;
+      toast.success(`Deleted ${name}.`);
+      if (answer && "href" in answer) router.push(answer.href);
     });
   }
 
@@ -99,11 +108,7 @@ export function DeleteLocation({
           {pending ? "Deleting…" : "Delete location"}
         </Button>
       </div>
-      {error ? (
-        <p aria-live="polite" className="text-xs text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} size="xs" />
       {dialog}
     </div>
   );

@@ -70,7 +70,11 @@ describe("parseContact", () => {
 
   it("requires the email, saying why", () => {
     const blank = parseContact({ name: "Ali", phone: "0123456789", email: "" });
-    assert.deepEqual(blank, { ok: false, error: EMAIL_REQUIRED_MESSAGE });
+    assert.deepEqual(blank, {
+      ok: false,
+      error: EMAIL_REQUIRED_MESSAGE,
+      field: "email",
+    });
     const missing = parseContact({
       name: "Ali",
       phone: "0123456789",

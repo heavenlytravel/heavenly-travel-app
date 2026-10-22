@@ -4,10 +4,11 @@ import { LOCATION_LIMITS, slugify } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Card } from "../../../_components/Card";
-import type { ActionState } from "../../../_lib/action-state";
+import { FormError } from "../../../_components/FormError";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { SlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { createLocationAction } from "../actions";
@@ -19,18 +20,16 @@ import { createLocationAction } from "../actions";
  * with the rest of the setup ahead.
  */
 export function NewLocationForm({ states }: { states: StateOption[] }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    createLocationAction,
-    null,
-  );
-  // Controlled, so a refused save does not clear what was entered.
+  const { pending, error, formProps } = useActionForm(createLocationAction, {
+    done: "Location added, as a draft.",
+  });
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTyped, setSlugTyped] = useState(false);
   const [stateCodes, setStateCodes] = useState<string[]>([]);
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...formProps} className="grid gap-6">
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">
@@ -77,10 +76,8 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
         >
           Cancel
         </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
+        {error ? (
+          <FormError error={error} />
         ) : stateCodes.length === 0 ? (
           <p className="text-sm text-neutral-500">Tick at least one state.</p>
         ) : null}

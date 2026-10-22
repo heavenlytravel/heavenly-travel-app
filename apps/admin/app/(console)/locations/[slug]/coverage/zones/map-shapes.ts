@@ -1,7 +1,6 @@
 /// <reference types="google.maps" />
 
 import {
-  isRing,
   ringsOf,
   type MultiPolygon,
   type Ring,
@@ -12,7 +11,7 @@ import { loadMapsLibrary, onKeyRefused } from "./google-maps";
 
 /**
  * What the coverage map and the zone maker share: our shapes as Google's
- * paths and back, the map loaded once with the districts drawn under it,
+ * paths, the map loaded once with the districts drawn under it,
  * and why a map shows nothing useful. Browser only; the zones' colours are
  * in ./zone-colors, for the server page too.
  */
@@ -26,66 +25,52 @@ export type DistrictChoice = {
   districts: { code: string; name: string }[];
 };
 
-/** Another zone of the location, drawn but not editable. */
-export type OtherZone = { name: string; shape: ZoneShape };
+/** A mukim of the district picked, to tick and to draw on the map. */
+export type MukimChoice = {
+  code: string;
+  name: string;
+  /** "Mukim", "Bandar", "Pekan", "Land district", "Town district". */
+  kind: string;
+  polygons: MultiPolygon;
+};
 
-export const toLatLng = ([lng, lat]: [
-  number,
-  number,
-]): google.maps.LatLngLiteral => ({ lat, lng });
+/**
+ * Another zone, drawn but not editable: one of the location's, or, with
+ * `location`, another location's, which this one may not overlap either.
+ */
+export type OtherZone = {
+  id: string;
+  name: string;
+  shape: ZoneShape;
+  location?: string;
+};
 
-/** An open path for Google: our rings repeat the first corner at the end. */
-export function pathOf(ring: Ring): google.maps.LatLngLiteral[] {
+const toLatLng = ([lng, lat]: [number, number]): google.maps.LatLngLiteral => ({
+  lat,
+  lng,
+});
+
+/** The ring without its first corner repeated at the end, as Google and the piece editor take it. */
+export function openRing(ring: Ring): Ring {
   const first = ring[0];
   const last = ring[ring.length - 1];
-  const open =
-    ring.length > 1 &&
+  return ring.length > 1 &&
     first &&
     last &&
     first[0] === last[0] &&
     first[1] === last[1]
-      ? ring.slice(0, -1)
-      : ring;
-  return open.map(toLatLng);
+    ? ring.slice(0, -1)
+    : ring;
+}
+
+/** An open path for Google: our rings repeat the first corner at the end. */
+export function pathOf(ring: Ring): google.maps.LatLngLiteral[] {
+  return openRing(ring).map(toLatLng);
 }
 
 /** Every ring of a shape as Google paths: one for a drawn zone, several for a district of islands. */
 export function pathsOf(shape: ZoneShape): google.maps.LatLngLiteral[][] {
   return ringsOf(shape).map(pathOf);
-}
-
-/** A Google path back to our ring, closed. */
-export function ringOfPath(
-  path: google.maps.MVCArray<google.maps.LatLng>,
-): Ring {
-  const ring: Ring = path
-    .getArray()
-    .map((point: google.maps.LatLng) => [point.lng(), point.lat()]);
-  if (ring.length > 0) ring.push(ring[0]!);
-  return ring;
-}
-
-/**
- * How many rings each polygon of a shape has, so the flat list of paths a
- * Google polygon holds can be put back into polygons; null for one ring.
- */
-export function layoutOf(shape: ZoneShape): number[] | null {
-  return isRing(shape) ? null : shape.map((polygon) => polygon.length);
-}
-
-/** The rings of a Google polygon as our shape again, in the layout it was drawn from. */
-export function shapeOfRings(
-  rings: readonly Ring[],
-  layout: readonly number[] | null,
-): ZoneShape {
-  if (layout === null) return rings[0] ?? [];
-  const polygons: MultiPolygon = [];
-  let at = 0;
-  for (const count of layout) {
-    polygons.push(rings.slice(at, at + count));
-    at += count;
-  }
-  return polygons;
 }
 
 /** The bounds of every corner of the shapes given. */
@@ -102,7 +87,7 @@ export function boundsOf(shapes: readonly ZoneShape[]) {
 export const sameShape = (a: ZoneShape | null, b: ZoneShape | null) =>
   JSON.stringify(a) === JSON.stringify(b);
 
-export const DISTRICT_STYLE: google.maps.PolygonOptions = {
+const DISTRICT_STYLE: google.maps.PolygonOptions = {
   strokeColor: "#737373",
   strokeWeight: 1,
   fillColor: "#737373",
@@ -123,11 +108,14 @@ const MALAYSIA = { center: { lat: 4.2, lng: 108.0 }, zoom: 6 };
 /**
  * Loads Google's map into `host` once, with the districts drawn in grey
  * under whatever the caller adds, and answers the map and its library once
- * they are there, or why there is no map.
+ * they are there, or why there is no map. With `ownFullScreen`, Google's
+ * full-screen button is left off: Google's full screen shows the map
+ * alone, and the caller puts more of its own on screen with it.
  */
 export function useGoogleMap(
   mapKey: string,
   districts: readonly DistrictOutline[],
+  { ownFullScreen = false }: { ownFullScreen?: boolean } = {},
 ) {
   const host = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState<{
@@ -148,7 +136,7 @@ export function useGoogleMap(
           ...MALAYSIA,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true,
+          fullscreenControl: !ownFullScreen,
           clickableIcons: false,
         });
         for (const district of districts) {
@@ -169,7 +157,8 @@ export function useGoogleMap(
       cancelled = true;
       stopListening();
     };
-    // The districts are the page's; they do not change while the map is open.
+    // The districts and the full-screen choice are the page's; they do not
+    // change while the map is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapKey]);
 

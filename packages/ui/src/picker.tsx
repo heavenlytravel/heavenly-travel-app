@@ -58,7 +58,7 @@ export function Picker({
             // The picker focuses its own day or time, not the first button.
             onOpenAutoFocus={(event) => event.preventDefault()}
             align="start"
-            sideOffset={6}
+            sideOffset={4}
             collisionPadding={8}
             className="ui:z-50 ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
           >

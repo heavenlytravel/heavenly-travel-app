@@ -17,8 +17,6 @@ import {
 } from "@repo/db";
 import {
   listBookings,
-  listOfferings,
-  listZones,
   type BookingWithItems,
   type LocationOverview,
 } from "@repo/db/server";
@@ -36,9 +34,11 @@ import {
 } from "../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
-  LOCATION_TABS,
   locationBookingsHref,
+  locationDriversHref,
   locationTabHref,
+  locationVehiclesHref,
+  locationTabsFor,
   setupStepTab,
   type LocationTab,
 } from "../../../_lib/routes";
@@ -46,7 +46,9 @@ import { LOCATION_TAB_ICONS } from "../_components/TabIcon";
 import {
   locationDetails,
   locationKey,
+  locationOfferings,
   locationOverview,
+  locationZoneNames,
 } from "../_lib/location-data";
 import { SetupChecklist } from "./SetupChecklist";
 
@@ -65,11 +67,14 @@ const PAGE_DOTS: Record<PageStatus, string> = {
 /**
  * Route: /locations/[slug]. The Overview tab, for every team. A draft
  * location opens on its setup checklist: the four steps, where each
- * stands, and what to do next. A live or paused one opens on the day's
- * operation: its queue in numbers, today's pick-ups and the bookings
- * awaiting confirmation, for the teams that work the queue. Under either,
- * the location's parts at a glance, a line each and a way in; its history
- * is its own tab.
+ * stands, and what to do next. A live or paused one opens on its day, the
+ * tab named Today: its queue in numbers, today's pick-ups and the bookings
+ * awaiting confirmation, for the teams that work the queue, and for
+ * Operation the vehicles with a document due and the drivers with a licence
+ * due. A team that does not, such as Marketing, sees the location's parts
+ * at a glance instead, a line each and a way in, which the panel also
+ * lists. See
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 export default async function LocationOverviewPage({
   params,
@@ -110,11 +115,14 @@ async function overview({ id, slug }: { id: string; slug: string }) {
 
   const may = (permission: Permission) => permissions.includes(permission);
   const state = locationStateOf(location.state);
-  const worksQueue = state !== "draft" && may("bookings.view");
-  const operates = may("coverage.view");
+  const draft = state === "draft";
+  const worksQueue = !draft && may("bookings.view");
+  // A live location's parts at a glance, for a team with no queue to work.
+  const glance = !draft && !worksQueue;
+  const operates = glance && may("coverage.view");
   const [zones, offerings, pickups, received] = await Promise.all([
-    operates ? listZones(id) : [],
-    operates ? listOfferings(id) : [],
+    operates ? locationZoneNames(id) : [],
+    operates ? locationOfferings(id) : [],
     worksQueue
       ? listBookings(
           { locationId: id, pickupOn: new Date() },
@@ -130,7 +138,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   ]);
 
   let top: ReactNode = null;
-  if (state === "draft") {
+  if (draft) {
     const steps = setupSteps(location.pages, numbers);
     const hrefOf = (step: SetupStep) => {
       const tab = setupStepTab(step.key);
@@ -163,7 +171,6 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   const lines: Partial<Record<LocationTab, ReactNode>> = {
     details: [
       andList(numbers.stateNames) || "No state yet",
-      plural(location.addresses.length, "saved address", "saved addresses"),
       location.topChoiceOrder === null
         ? null
         : `Top choice ${location.topChoiceOrder}`,
@@ -198,17 +205,32 @@ async function overview({ id, slug }: { id: string; slug: string }) {
             {LOCATION_PAGE_LABELS[page.page]}
           </span>
         ))}
+        <span>
+          {plural(
+            location.addresses.length,
+            "saved address",
+            "saved addresses",
+          )}
+        </span>
       </span>
     ),
   };
   // The tabs with a line, the admin may open, in the panel's order.
-  const glances = LOCATION_TABS.filter(
-    (tab) => lines[tab.key] !== undefined && may(tab.permission),
-  );
+  const glances = glance
+    ? locationTabsFor(state).filter(
+        (tab) => lines[tab.key] !== undefined && may(tab.permission),
+      )
+    : [];
+
+  const documentsDue =
+    !draft &&
+    may("fleet.manage") &&
+    numbers.vehiclesDue + numbers.driversDue > 0;
 
   return (
     <div className="grid gap-6">
       {top}
+      {documentsDue ? <DocumentsDueCard slug={slug} numbers={numbers} /> : null}
       {glances.length > 0 ? (
         <Card flush>
           <CardTitle
@@ -258,7 +280,8 @@ function Operation({
   pickups: BookingWithItems[];
   received: BookingWithItems[];
 }) {
-  const queue = (status?: BookingStatus) => locationBookingsHref(slug, status);
+  const queue = (status?: BookingStatus) =>
+    locationBookingsHref(slug, { status });
   const figures: Figure[] = [
     {
       label: BOOKING_STATUS_LABELS.received,
@@ -305,6 +328,7 @@ function Operation({
         </CardTitle>
         <BookingsTable
           bare
+          locationSlug={slug}
           bookings={pickups}
           emptyMessage="No pick-ups today."
         />
@@ -324,12 +348,57 @@ function Operation({
           </CardTitle>
           <BookingsTable
             bare
+            locationSlug={slug}
             bookings={received}
             emptyMessage="Nothing awaiting confirmation."
           />
         </Card>
       ) : null}
     </>
+  );
+}
+
+/** Operation's reminder of the documents due here within 30 days or expired, each a link to the list of them. */
+function DocumentsDueCard({
+  slug,
+  numbers,
+}: {
+  slug: string;
+  numbers: LocationOverview;
+}) {
+  const lines = [
+    numbers.vehiclesDue > 0
+      ? {
+          text: `${plural(numbers.vehiclesDue, "vehicle has", "vehicles have")} a document due`,
+          href: locationVehiclesHref(slug, { due: true }),
+        }
+      : null,
+    numbers.driversDue > 0
+      ? {
+          text: `${plural(numbers.driversDue, "driver has", "drivers have")} a licence due`,
+          href: locationDriversHref(slug, { due: true }),
+        }
+      : null,
+  ].filter((line) => line !== null);
+  return (
+    <Card>
+      <CardTitle description="Within 30 days or already expired. Renew them before the vehicle or the driver is sent out.">
+        Documents due
+      </CardTitle>
+      <ul className="grid gap-2">
+        {lines.map((line) => (
+          <li key={line.href}>
+            <Link
+              href={line.href}
+              className="flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+            >
+              {line.text}
+              <ChevronRightIcon />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

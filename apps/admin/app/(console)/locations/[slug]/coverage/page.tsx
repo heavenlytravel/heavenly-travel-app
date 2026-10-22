@@ -1,14 +1,10 @@
 import Link from "next/link";
+import { andList, isZoneShape, plural } from "@repo/db";
 import {
-  andList,
-  isZoneCircle,
-  isZoneDistrict,
-  isZoneReshaped,
-  isZoneShape,
-  plural,
-  ringsOf,
-} from "@repo/db";
-import { listZoneRates, listZones } from "@repo/db/server";
+  listRatesFromElsewhere,
+  listZoneRates,
+  listZones,
+} from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
@@ -24,6 +20,12 @@ import {
 import { locationDetails, locationKey } from "../../_lib/location-data";
 import { stateOutlines } from "../../_lib/outlines";
 import { CoverageZones, type CoverageZone } from "./CoverageZones";
+import {
+  drawnAs,
+  pricedFromByZone,
+  pricedFromSentence,
+  pricedRoutesByZone,
+} from "./zone-lines";
 import { zoneColor } from "./zones/zone-colors";
 
 /**
@@ -60,29 +62,6 @@ export default async function LocationCoveragePage({
   );
 }
 
-/** "km" with one decimal at most: 1.5, 25. */
-const kmOf = (metres: number) => {
-  const km = metres / 1000;
-  return km % 1 === 0 ? String(km) : km.toFixed(1);
-};
-
-/** How a zone was made, in a line: where it started, and its corners when drawn. */
-function drawnAs(zone: { shape: unknown; drawnFrom: unknown }) {
-  if (isZoneDistrict(zone.drawnFrom)) {
-    return `The district ${zone.drawnFrom.label}, as it is`;
-  }
-  if (isZoneReshaped(zone.drawnFrom)) {
-    return `Reshaped from the district ${zone.drawnFrom.label}`;
-  }
-  if (isZoneCircle(zone.drawnFrom)) {
-    return `Started as a ${kmOf(zone.drawnFrom.radiusM)} km circle around ${zone.drawnFrom.label}`;
-  }
-  const corners = isZoneShape(zone.shape)
-    ? ringsOf(zone.shape).reduce((sum, ring) => sum + ring.length - 1, 0)
-    : 0;
-  return corners > 0 ? `Drawn, ${plural(corners, "corner")}` : "Drawn";
-}
-
 async function coverage({
   id,
   slug,
@@ -92,26 +71,22 @@ async function coverage({
   slug: string;
   manages: boolean;
 }) {
-  const [location, zones, rates] = await Promise.all([
+  const [location, zones, rates, ratesFromElsewhere] = await Promise.all([
     locationDetails(id),
     listZones(id),
     listZoneRates(id),
+    listRatesFromElsewhere(id),
   ]);
   if (!location) notFound();
   const stateNames = andList(location.states.map((state) => state.name));
-  // The priced routes each zone is an end of, so a removal can be weighed.
-  const routesOf = new Map<string, Set<string>>();
-  for (const rate of rates) {
-    const route = `${rate.fromZoneId}|${rate.toZoneId}`;
-    for (const zoneId of [rate.fromZoneId, rate.toZoneId]) {
-      const routes = routesOf.get(zoneId) ?? new Set<string>();
-      routes.add(route);
-      routesOf.set(zoneId, routes);
-    }
-  }
+  // The priced routes each zone is an end of, this location's and other
+  // locations' routes out to it, so a removal can be weighed.
+  const routesOf = pricedRoutesByZone(rates);
+  const pricedFromOf = pricedFromByZone(ratesFromElsewhere);
   const listed: CoverageZone[] = zones.flatMap((zone, index) => {
     if (!isZoneShape(zone.shape)) return [];
-    const routes = routesOf.get(zone.id)?.size ?? 0;
+    const routes = routesOf.get(zone.id) ?? 0;
+    const pricedFrom = pricedFromOf.get(zone.id) ?? [];
     const made = drawnAs(zone);
     return [
       {
@@ -119,10 +94,16 @@ async function coverage({
         name: zone.name,
         shape: zone.shape,
         color: zoneColor(index),
-        note:
-          routes === 0 ? made : `${made} · ${plural(routes, "priced route")}`,
+        note: [
+          made,
+          routes > 0 ? plural(routes, "priced route") : null,
+          pricedFrom.length > 0 ? pricedFromSentence(pricedFrom) : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
         drawnAs: made,
         routes,
+        pricedFrom,
         href: locationZoneHref(slug, zone.id),
       },
     ];
@@ -149,11 +130,10 @@ async function coverage({
       >
         <span className="inline-flex items-center gap-1.5">
           Zones
-          <InfoTip text="A zone starts as a whole district, a circle around a place or a circle or square on the map, and can be reshaped from there. Where zones overlap, the smallest wins. A zone may lie outside the states, for an outstation destination." />
+          <InfoTip text="A zone starts as a whole district or some of its mukims, a circle around a place or a circle or square on the map, and can be reshaped from there. Zones never overlap, this location's or another's. A zone may lie outside the states, for an outstation destination." />
         </span>
       </CardTitle>
       <CoverageZones
-        locationId={id}
         mapKey={mapKey}
         districts={stateOutlines(location.states.map((s) => s.code))}
         zones={listed}

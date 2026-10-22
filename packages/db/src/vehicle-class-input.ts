@@ -1,14 +1,15 @@
-import { BOOKING_RULES } from "./booking-rules";
 import { isTripCategory, type TripCategory } from "./booking-status";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
+import { isUploadUrl } from "./images";
 
 /**
  * What the Vehicle classes screen edits of a catalogue class and the rules
  * it checks, pure and browser-safe: the form displays the messages, the
  * writers in ./vehicle-classes apply the same checks before they write.
- * The rates a location sells a class at are ./offering-input. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes".
+ * The rates and rules a location sells a class under are ./offering-input.
+ * See docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
 
 /** Every editable column of `VehicleClass`. */
@@ -20,9 +21,8 @@ export type VehicleClassFields = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  minLeadHours: number;
-  cancellationCutoffHours: number;
-  minHourlyHours: number;
+  /** Its picture on UploadThing; null for none. */
+  imageUrl: string | null;
   isActive: boolean;
 };
 
@@ -37,9 +37,7 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
-  minLeadHours: "Notice needed",
-  cancellationCutoffHours: "Cancel up to",
-  minHourlyHours: "Minimum hours",
+  imageUrl: "Picture",
   isActive: "Active",
 };
 
@@ -55,11 +53,8 @@ export function seatsLabel(vehicleClass: {
 }
 
 const TEXT_FIELDS = ["name", "description", "luggage"] as const;
-const HOUR_FIELDS = ["minLeadHours", "cancellationCutoffHours"] as const;
 
 const isWhole = (n: number) => Number.isInteger(n);
-
-const fail = (error: string): Change => ({ ok: false, error });
 
 const lowerLabel = (key: VehicleClassField) =>
   VEHICLE_CLASS_FIELD_LABELS[key].toLowerCase();
@@ -71,19 +66,19 @@ export function checkVehicleClassFields(
   for (const key of TEXT_FIELDS) {
     const value = fields[key];
     if (value !== undefined && value.trim() === "") {
-      return fail(`Enter the ${lowerLabel(key)}.`);
+      return refuse(`Enter the ${lowerLabel(key)}.`, key);
     }
   }
   if (fields.category !== undefined && !isTripCategory(fields.category)) {
-    return fail("Choose a category.");
+    return refuse("Choose a category.", "category");
   }
   if (fields.sortOrder !== undefined && !isWhole(fields.sortOrder)) {
-    return fail("The sort order is a whole number.");
+    return refuse("The sort order is a whole number.", "sortOrder");
   }
   for (const key of ["minPassengers", "maxPassengers"] as const) {
     const value = fields[key];
     if (value !== undefined && (!isWhole(value) || value < 1)) {
-      return fail("Seats are whole numbers from 1.");
+      return refuse("Seats are whole numbers from 1.", key);
     }
   }
   if (
@@ -91,35 +86,34 @@ export function checkVehicleClassFields(
     fields.maxPassengers !== undefined &&
     fields.maxPassengers < fields.minPassengers
   ) {
-    return fail("Seats to is at least seats from.");
+    return refuse(
+      "Seats to is at least seats from. Raise it, or lower seats from.",
+      "maxPassengers",
+    );
   }
-  for (const key of HOUR_FIELDS) {
-    const value = fields[key];
-    if (value !== undefined && (!isWhole(value) || value < 0)) {
-      return fail(
-        `${VEHICLE_CLASS_FIELD_LABELS[key]} is a whole number of hours, 0 or more.`,
-      );
-    }
-  }
-  if (fields.minHourlyHours !== undefined) {
-    const { hourlyFloorHours, maxHourlyHours } = BOOKING_RULES;
-    const value = fields.minHourlyHours;
-    if (!isWhole(value) || value < hourlyFloorHours || value > maxHourlyHours) {
-      return fail(
-        `Minimum hours is a whole number between ${hourlyFloorHours} and ${maxHourlyHours}.`,
-      );
-    }
+  if (
+    fields.imageUrl !== undefined &&
+    fields.imageUrl !== null &&
+    !isUploadUrl(fields.imageUrl)
+  ) {
+    return refuse(
+      "The picture did not finish uploading. Upload it again.",
+      "imageUrl",
+    );
   }
   return { ok: true };
 }
 
-/** The class form's values, read and checked. `isActive` is a checkbox. */
+/**
+ * The class form's values, read and checked. `isActive` is a checkbox;
+ * `imageUrl` is the address the upload answered, empty for no picture.
+ */
 export function parseVehicleClassFields(
   values: Record<string, unknown>,
 ): Parsed<VehicleClassFields> {
   const category = textOf(values.category);
   if (!isTripCategory(category)) {
-    return { ok: false, error: "Choose a category." };
+    return refuse("Choose a category.", "category");
   }
 
   const fields: VehicleClassFields = {
@@ -130,9 +124,7 @@ export function parseVehicleClassFields(
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),
-    minLeadHours: numberOf(values.minLeadHours),
-    cancellationCutoffHours: numberOf(values.cancellationCutoffHours),
-    minHourlyHours: numberOf(values.minHourlyHours),
+    imageUrl: textOf(values.imageUrl) || null,
     isActive: flagOf(values.isActive),
   };
   const check = checkVehicleClassFields(fields);

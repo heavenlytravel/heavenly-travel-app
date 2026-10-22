@@ -3,7 +3,12 @@
 import { changeTopChoice, isTopChoiceChange } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
-import { FORBIDDEN, stateOf, type ActionState } from "../../_lib/action-state";
+import {
+  type ActionState,
+  FORBIDDEN,
+  STALE,
+  stateOf,
+} from "../../_lib/action-state";
 import { HOME_PAGE_PATH, LOCATIONS_PATH } from "../../_lib/routes";
 import { refreshTopChoicesAfter } from "../../_lib/site";
 
@@ -20,10 +25,8 @@ export async function changeTopChoiceAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string" || locationId === "") {
-    return { error: "Choose a location." };
-  }
-  if (!isTopChoiceChange(change)) return { error: "Choose a change." };
+  if (typeof locationId !== "string" || locationId === "") return STALE;
+  if (!isTopChoiceChange(change)) return STALE;
 
   const result = await changeTopChoice(actorOf(admin), locationId, change);
   if (result.ok) {

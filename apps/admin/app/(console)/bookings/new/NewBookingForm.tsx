@@ -1,29 +1,46 @@
 "use client";
 
-import { CONTACT_NAME_MAX_LENGTH, formatMyr } from "@repo/db";
+import { CONTACT_NAME_MAX_LENGTH, formatMyr, parseContact } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
-import { Card, CardTitle } from "../../../_components/Card";
-import type { ActionState } from "../../../_lib/action-state";
+import { useState } from "react";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
-import { ItemEditor } from "../_components/ItemEditor";
+import { useActionForm } from "../../../_lib/use-action-form";
+import { BookingSummary } from "../_components/BookingSummary";
+import { ItemHiddenFields } from "../_components/ItemHiddenFields";
 import {
+  ItemSteps,
+  itemStepsDone,
+  type ItemStep,
+} from "../_components/ItemSteps";
+import { Step, StepFoot } from "../_components/Step";
+import {
+  agreedPriceIssue,
   chosenClass,
   CONTACT_FIELDS,
   EMPTY_ITEM_DRAFT,
+  itemTotalSen,
+  tripLine,
+  vehicleLine,
   type ItemDraft,
 } from "../_lib/trip-form";
 import { createManualBookingAction } from "./actions";
 
-/** One vehicle of the form, under a key that survives a removal above it. */
-type Entry = { key: number; draft: ItemDraft };
+type Contact = { name: string; phone: string; email: string };
+type StepKey = "customer" | ItemStep;
+
+const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
 
 /**
- * The manual booking: one item editor per vehicle, each priced on its own,
- * then the customer once for the whole booking. The button sums the
- * quoted prices; an agreed price is applied on the server, per item.
+ * The manual booking, in four steps on one page: the customer, the trip,
+ * the vehicle and the details. One step is open at a time; a finished one
+ * folds to a line with "Edit", so a detail that changes mid-call is one
+ * click away and nothing entered is lost. The summary beside the steps
+ * keeps what was entered, the price and the button in view; the agreed
+ * price is set there, under the total. The server prices the trip again
+ * and applies the agreed price itself. One vehicle per booking: the
+ * create action takes several items, but the form offers one for now.
+ * See docs/261018-location-work-and-class-catalogue.md.
  */
 export function NewBookingForm({
   hasGoogle,
@@ -31,123 +48,166 @@ export function NewBookingForm({
   /** False when the server runs without a Google key and offers the districts themselves. */
   hasGoogle: boolean;
 }) {
-  const nextKey = useRef(1);
-  const [items, setItems] = useState<Entry[]>([
-    { key: 0, draft: EMPTY_ITEM_DRAFT },
-  ]);
-  const [state, create, creating] = useActionState<ActionState, FormData>(
-    createManualBookingAction,
-    null,
-  );
+  const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
+  const [draft, setDraft] = useState<ItemDraft>(EMPTY_ITEM_DRAFT);
+  const [open, setOpen] = useState<StepKey | null>("customer");
+  const create = useActionForm(createManualBookingAction, {
+    done: "Booking created. The customer gets the received email.",
+  });
 
-  function patch(key: number, changes: Partial<ItemDraft>) {
-    setItems((current) =>
-      current.map((entry) =>
-        entry.key === key
-          ? { ...entry, draft: { ...entry.draft, ...changes } }
-          : entry,
-      ),
-    );
-  }
-
-  function add() {
-    setItems((current) => [
-      ...current,
-      { key: nextKey.current++, draft: EMPTY_ITEM_DRAFT },
-    ]);
-  }
-
-  function remove(key: number) {
-    setItems((current) => current.filter((entry) => entry.key !== key));
-  }
-
-  const chosen = items.map((entry) => chosenClass(entry.draft));
-  const ready = chosen.every((c) => c !== null);
-  const totalSen = chosen.reduce((sum, c) => sum + (c?.totalSen ?? 0), 0);
-  const several = items.length > 1;
+  const patch = (changes: Partial<ItemDraft>) =>
+    setDraft((current) => ({ ...current, ...changes }));
+  const customer = parseContact(contact);
+  const done = itemStepsDone(draft);
+  const chosen = chosenClass(draft);
+  const priceIssue = agreedPriceIssue(draft);
+  const missing = !customer.ok
+    ? "Fill in the customer."
+    : !done.trip
+      ? "Fill in the trip."
+      : !done.vehicle
+        ? "Choose a vehicle."
+        : priceIssue;
+  const totalSen = itemTotalSen(draft);
 
   return (
-    <form action={create} className="grid gap-6">
-      {items.map((entry, index) => (
-        <ItemEditor
-          key={entry.key}
-          index={index}
-          draft={entry.draft}
-          onChange={(changes) => patch(entry.key, changes)}
-          hasGoogle={hasGoogle}
-          canPrice
-          heading={
-            several
-              ? {
-                  title: `Vehicle ${index + 1}`,
-                  onRemove: () => remove(entry.key),
-                }
-              : undefined
-          }
-        />
-      ))}
+    <form
+      {...create.formProps}
+      // Enter in a field does not create the booking: the button does.
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+          event.preventDefault();
+        }
+      }}
+      className="@container"
+    >
+      <input type="hidden" name={CONTACT_FIELDS.name} value={contact.name} />
+      <input type="hidden" name={CONTACT_FIELDS.phone} value={contact.phone} />
+      <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
+      <ItemHiddenFields index={0} draft={draft} canPrice />
 
-      <div>
-        <Button type="button" variant="secondary" onClick={add}>
-          Add another vehicle
-        </Button>
-      </div>
-
-      <Card>
-        <CardTitle description="The booking emails go to this address. An email that belongs to an account links the booking to it; otherwise the booking joins the account the customer later creates with it.">
-          Customer
-        </CardTitle>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Name for the driver">
-            <Input
-              name={CONTACT_FIELDS.name}
-              required
-              maxLength={CONTACT_NAME_MAX_LENGTH}
-              autoComplete="off"
+      <div className="grid gap-6 @3xl:grid-cols-[1fr_20rem] @3xl:items-start">
+        <div className="grid min-w-0 gap-3">
+          <Step
+            number={1}
+            title="Customer"
+            done={customer.ok}
+            summary={
+              customer.ok
+                ? [contact.name, contact.phone, contact.email].join(" · ")
+                : "Who the booking is for"
+            }
+            open={open === "customer"}
+            onOpen={() => setOpen("customer")}
+          >
+            <CustomerFields contact={contact} onChange={setContact} />
+            <StepFoot
+              disabled={!customer.ok}
+              missing={
+                customer.ok || contact === EMPTY_CONTACT ? null : customer.error
+              }
+              onNext={() => setOpen("trip")}
             />
-          </Field>
-          <Field label="Phone">
-            <Input
-              name={CONTACT_FIELDS.phone}
-              type="tel"
-              required
-              placeholder="+60 12 345 6789"
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Email">
-            <Input
-              name={CONTACT_FIELDS.email}
-              type="email"
-              required
-              autoComplete="off"
-            />
-          </Field>
+          </Step>
+          <ItemSteps
+            first={2}
+            draft={draft}
+            onChange={patch}
+            open={open}
+            onOpen={setOpen}
+            hasGoogle={hasGoogle}
+          />
         </div>
-      </Card>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={creating || !ready}>
-          {creating
-            ? "Creating…"
-            : ready
-              ? `Create booking · ${formatMyr(totalSen)}`
-              : several
-                ? "Choose a vehicle for each trip to continue"
-                : "Choose a vehicle to continue"}
-        </Button>
-        <Link
-          href={BOOKINGS_PATH}
-          className="text-sm text-neutral-600 underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
+        <aside className="@3xl:sticky @3xl:top-20">
+          <BookingSummary
+            rows={[
+              {
+                label: "Customer",
+                value: customer.ok ? (
+                  <>
+                    {contact.name}
+                    <span className="block text-neutral-600">
+                      {contact.phone}
+                    </span>
+                  </>
+                ) : (
+                  "—"
+                ),
+              },
+              { label: "Trip", value: draft.quote ? tripLine(draft) : "—" },
+              {
+                label: "Vehicle",
+                value: chosen ? vehicleLine(draft, { price: false }) : "—",
+              },
+            ]}
+            draft={draft}
+            onChange={patch}
+            canPrice
+            submit={
+              <Button
+                type="submit"
+                disabled={create.pending || missing !== null}
+              >
+                {create.pending
+                  ? "Creating…"
+                  : totalSen !== null
+                    ? `Create booking · ${formatMyr(totalSen)}`
+                    : "Create booking"}
+              </Button>
+            }
+            missing={missing}
+            error={create.error}
+            cancelHref={BOOKINGS_PATH}
+          />
+          <p className="mt-3 px-1 text-xs text-neutral-500">
+            The booking is received until Reservation confirms it, as one from
+            the website is, and the customer gets the received email.
           </p>
-        ) : null}
+        </aside>
       </div>
     </form>
+  );
+}
+
+/** Who the booking is for: the name the driver asks for, a phone and an email. */
+function CustomerFields({
+  contact,
+  onChange,
+}: {
+  contact: Contact;
+  onChange: (contact: Contact) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Name for the driver" className="sm:col-span-2">
+        <Input
+          maxLength={CONTACT_NAME_MAX_LENGTH}
+          autoComplete="off"
+          value={contact.name}
+          onChange={(e) => onChange({ ...contact, name: e.target.value })}
+        />
+      </Field>
+      <Field label="Phone">
+        <Input
+          type="tel"
+          placeholder="+60 12 345 6789"
+          autoComplete="off"
+          value={contact.phone}
+          onChange={(e) => onChange({ ...contact, phone: e.target.value })}
+        />
+      </Field>
+      <Field
+        label="Email"
+        hint="The booking emails go here. An email with an account puts the booking under it."
+      >
+        <Input
+          type="email"
+          autoComplete="off"
+          value={contact.email}
+          onChange={(e) => onChange({ ...contact, email: e.target.value })}
+        />
+      </Field>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   hiddenSearchFields,
+  isTripId,
   tripItemField,
   tripItemIndexes,
   tripItemParams,
@@ -86,6 +87,7 @@ describe("parseTripOptions", () => {
       ),
       {
         vehicleClassId: "vc1",
+        vehicleModelId: null,
         passengers: 3,
         childSeats: 1,
         flightNumber: "MH 123",
@@ -102,6 +104,29 @@ describe("parseTripOptions", () => {
     assert.equal(options?.childSeats, 0);
   });
 
+  it("reads the model chosen, and none for an empty one", () => {
+    const chosen = parseTripOptions(
+      "car-with-driver",
+      "class=vc1&model=vm2&passengers=2",
+    );
+    assert.equal(chosen?.vehicleModelId, "vm2");
+    const none = parseTripOptions(
+      "car-with-driver",
+      "class=vc1&model=&passengers=2",
+    );
+    assert.equal(none?.vehicleModelId, null);
+  });
+
+  it("refuses a model id that is not an id", () => {
+    assert.equal(
+      parseTripOptions(
+        "car-with-driver",
+        "class=vc1&model=%3Cb%3E&passengers=2",
+      ),
+      null,
+    );
+  });
+
   it("needs a class and a passenger count", () => {
     assert.equal(parseTripOptions("car-with-driver", "passengers=2"), null);
     assert.equal(parseTripOptions("car-with-driver", "class=vc1"), null);
@@ -109,6 +134,16 @@ describe("parseTripOptions", () => {
       parseTripOptions("car-with-driver", "class=vc1&passengers=0"),
       null,
     );
+  });
+});
+
+describe("isTripId", () => {
+  it("takes a place id as Google gives it, and refuses anything else", () => {
+    assert.equal(isTripId("ChIJN1t_tDeuEmsRUsoyG83frY4"), true);
+    assert.equal(isTripId(""), false);
+    assert.equal(isTripId("x".repeat(201)), false);
+    assert.equal(isTripId("<script>"), false);
+    assert.equal(isTripId(42), false);
   });
 });
 

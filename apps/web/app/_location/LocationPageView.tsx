@@ -7,6 +7,7 @@ import {
   isProductPage,
   locationPagePath,
   locationPreviewPath,
+  modelsLine,
   paragraphsOf,
   productPagesOf,
   seatsLabel,
@@ -18,6 +19,8 @@ import {
 } from "@repo/db/server";
 import { eyebrow, focus, panel } from "../(site)/_components/Page";
 import { ProductIcon } from "../_components/Brand";
+import { ClassPicture } from "../_components/ClassPicture";
+import { ModelPhotosButton } from "../_components/ModelGallery";
 import { SEARCH_CARD_ID } from "../_components/search/SearchProvider";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
@@ -379,7 +382,7 @@ function Highlights({
   );
 }
 
-/** The classes the location sells in the product, each with its seats, luggage and starting price there. */
+/** The classes the location sells in the product, each with its picture, its models and their photos, seats, luggage and starting price there. */
 async function VehicleClasses({
   slug,
   category,
@@ -389,6 +392,7 @@ async function VehicleClasses({
 }) {
   const classes = await vehicleClassCards(slug, category);
   if (classes.length === 0) return null;
+  const pictured = classes.some((c) => c.imageUrl !== null);
   return (
     <Section
       id="vehicles"
@@ -398,10 +402,28 @@ async function VehicleClasses({
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {classes.map((vehicleClass) => (
           <li key={vehicleClass.id} className={`${panel} flex flex-col`}>
+            {pictured ? (
+              <ClassPicture
+                src={vehicleClass.imageUrl}
+                sizes="(min-width: 64rem) 400px, (min-width: 40rem) 50vw, 100vw"
+                className="mb-4"
+              />
+            ) : null}
             <h3 className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-[#082f2b]">
               {vehicleClass.name}
             </h3>
             <p className="mt-1.5 text-[#324844]">{vehicleClass.description}</p>
+            {vehicleClass.models.length > 0 ? (
+              // A div, not a p: the gallery's dialog is not phrasing content.
+              <div className="mt-2 text-[0.95rem] text-[#324844]">
+                {modelsLine(vehicleClass.models.map((m) => m.name))}, or
+                similar.{" "}
+                <ModelPhotosButton
+                  title={vehicleClass.name}
+                  models={vehicleClass.models}
+                />
+              </div>
+            ) : null}
             <p className="mt-3 text-[0.9rem] text-[#67726f]">
               {seatsLabel(vehicleClass)} · {vehicleClass.luggage}
             </p>

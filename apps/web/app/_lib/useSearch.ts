@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TripCategory } from "@repo/db";
 import {
   tripBookingHref,
@@ -65,19 +65,50 @@ export function useSearch(
  */
 export function useTripSubmit() {
   const [issues, setIssues] = useState<TripSearchIssue[]>([]);
-  // Pending until the options page has priced the trip and is on screen.
+  const [checking, setChecking] = useState(false);
+  // Pending while the places are checked, then until the options page has
+  // priced the trip and is on screen.
   const { pending, go } = useNavigate();
-  /** True when the trip was sent. `passengers` is carried over, if given. */
+  // A check that answers once the customer has left the page, by a link or
+  // Back, sends nothing: the card that asked is gone.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  /**
+   * True when the trip was sent. `passengers` is carried over, if given.
+   * With `check`, a trip the card can send is checked first, and sent
+   * once the check finds nothing; this answers false then, and the
+   * reasons it finds are kept like the card's own. A check that fails to
+   * answer sends the trip: the options page checks it again.
+   */
   function submit(
     category: TripCategory,
     values: SearchValues,
     passengers?: number,
+    check?: (values: SearchValues) => Promise<TripSearchIssue[]>,
   ) {
     const result = tripSearchFromCard(values);
     setIssues(result.ok ? [] : result.issues);
     if (!result.ok) return false;
-    go(tripBookingHref(category, result.params, passengers));
-    return true;
+    const href = tripBookingHref(category, result.params, passengers);
+    if (!check) {
+      go(href);
+      return true;
+    }
+    setChecking(true);
+    check(values)
+      .catch((): TripSearchIssue[] => [])
+      .then((found) => {
+        if (!mounted.current) return;
+        setChecking(false);
+        if (found.length > 0) setIssues(found);
+        else go(href);
+      });
+    return false;
   }
-  return { issues, pending, submit };
+  return { issues, pending: pending || checking, submit };
 }

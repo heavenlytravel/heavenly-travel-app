@@ -1,7 +1,13 @@
 import { db } from "./client";
 import { districtCodeAt } from "./district-index";
-import type { District, Prisma, State } from "./generated/prisma/client";
-import { isPublicState, locationStateOf } from "./location-input";
+import type {
+  District,
+  Prisma,
+  State,
+  Zone,
+  ZoneRate,
+} from "./generated/prisma/client";
+import { isPublicState, LOCATION_STATES } from "./location-input";
 import { zoneAt, zoneShapeArea, type ZoneShape } from "./zone-match";
 
 export type { District, State };
@@ -49,15 +55,26 @@ export async function resolveDistrict(place: {
   return db.district.findUnique({ where: { code }, ...withState });
 }
 
-/** What pricing reads of a location: its zones, its grid and its rules. */
-export const forQuote = {
+const withZones = {
   include: {
     zones: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-    zoneRates: true,
   },
 } satisfies Prisma.LocationDefaultArgs;
 
-export type LocationForQuote = Prisma.LocationGetPayload<typeof forQuote>;
+/**
+ * What pricing reads of a location: its rules, its zones, the cells of its
+ * grid on a route from the pickup's zone, the only ones a trip from it can
+ * be priced by, and the other locations' zones those routes end at: a
+ * route out of the location, such as Kuala Lumpur's to KLIA, which is
+ * Selangor's.
+ */
+export type LocationForQuote = Prisma.LocationGetPayload<typeof withZones> & {
+  zoneRates: ZoneRate[];
+  zonesElsewhere: Zone[];
+};
+
+/** The states a location serves pickups in. */
+const PUBLIC_STATES = LOCATION_STATES.filter(isPublicState);
 
 /** A served pickup: the zone it fell in and the location that zone is. */
 export type ServedAt = {
@@ -67,27 +84,50 @@ export type ServedAt = {
 
 /**
  * The location that serves a pickup at the place: the one whose zone the
- * point falls in, among the locations that are public. Of zones that
- * overlap, the smallest wins, as it does within one location. Null when
+ * point falls in, among the locations that are public. Zones never
+ * overlap; of two from before that rule, the smallest wins. Null when
  * no zone holds the point: the area is not served.
  */
 export async function locationAt(place: {
   lat: number;
   lng: number;
 }): Promise<ServedAt | null> {
-  const locations = await db.location.findMany(forQuote);
-  let served: ServedAt | null = null;
-  let servedArea = Infinity;
+  const locations = await db.location.findMany({
+    where: { state: { in: PUBLIC_STATES } },
+    ...withZones,
+  });
+  let best: {
+    location: (typeof locations)[number];
+    zone: ServedAt["zone"];
+    area: number;
+  } | null = null;
   for (const location of locations) {
-    if (!isPublicState(locationStateOf(location.state))) continue;
     const zone = zoneAt(location.zones, place);
     if (!zone) continue;
     // `zoneAt` answered the zone, so its shape is a shape.
     const area = zoneShapeArea(zone.shape as ZoneShape);
-    if (area < servedArea) {
-      served = { location, zone };
-      servedArea = area;
-    }
+    if (!best || area < best.area) best = { location, zone, area };
   }
-  return served;
+  if (!best) return null;
+  const { location, zone } = best;
+  const zoneRates = await db.zoneRate.findMany({
+    where: {
+      locationId: location.id,
+      OR: [{ fromZoneId: zone.id }, { toZoneId: zone.id }],
+    },
+  });
+  // A route out of the location ends at another location's zone, its `to`.
+  const own = new Set(location.zones.map((candidate) => candidate.id));
+  const farIds = [
+    ...new Set(
+      zoneRates.flatMap((rate) =>
+        own.has(rate.toZoneId) ? [] : [rate.toZoneId],
+      ),
+    ),
+  ];
+  const zonesElsewhere =
+    farIds.length > 0
+      ? await db.zone.findMany({ where: { id: { in: farIds } } })
+      : [];
+  return { location: { ...location, zoneRates, zonesElsewhere }, zone };
 }

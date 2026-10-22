@@ -1,5 +1,6 @@
 import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
+import { refuse, type Change } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { adminTeamsOf, type AdminLevel, type AdminTeam } from "./roles";
@@ -10,14 +11,28 @@ const withUser = {
 
 export type AdminWithUser = Prisma.AdminProfileGetPayload<typeof withUser>;
 
-export type AdminChange = { ok: true } | { ok: false; error: string };
-
 const LAST_SUPER_ERROR =
   "This is the only SUPER admin. Promote another SUPER admin first.";
-const NO_TEAM_ERROR = "A REGULAR admin needs at least one team.";
+const NO_TEAM_ERROR = "A REGULAR admin needs at least one team. Tick one.";
 
-export function listAdmins(): Promise<AdminWithUser[]> {
+/**
+ * Every admin, in the order they were made one, or those a search finds:
+ * each word of it in their first name, last name or email.
+ */
+export function listAdmins(search?: string): Promise<AdminWithUser[]> {
+  const words = search ? search.split(" ") : [];
   return db.adminProfile.findMany({
+    where: {
+      AND: words.map((word) => ({
+        user: {
+          OR: [
+            { firstName: { contains: word, mode: "insensitive" } },
+            { lastName: { contains: word, mode: "insensitive" } },
+            { email: { contains: word, mode: "insensitive" } },
+          ],
+        },
+      })),
+    },
     ...withUser,
     orderBy: { createdAt: "asc" },
   });
@@ -55,10 +70,10 @@ export async function setAdmin(
   email: string,
   level: AdminLevel,
   teams: readonly AdminTeam[],
-): Promise<AdminChange> {
+): Promise<Change> {
   const held = adminTeamsOf(teams);
   if (level !== "SUPER" && held.length === 0) {
-    return { ok: false, error: NO_TEAM_ERROR };
+    return refuse(NO_TEAM_ERROR, "teams");
   }
 
   return db.$transaction(async (tx) => {
@@ -67,10 +82,10 @@ export async function setAdmin(
       include: { adminProfile: true },
     });
     if (!user) {
-      return {
-        ok: false,
-        error: `No user with email ${email}. They must sign in once first.`,
-      };
+      return refuse(
+        `No user with email ${email}. Ask them to sign in to the console once, then try again.`,
+        "email",
+      );
     }
     const existing = user.adminProfile;
     if (
@@ -78,7 +93,7 @@ export async function setAdmin(
       level !== "SUPER" &&
       (await isLastSuper(tx))
     ) {
-      return { ok: false, error: LAST_SUPER_ERROR };
+      return refuse(LAST_SUPER_ERROR, "level");
     }
 
     const after = { level, teams: held };
@@ -106,15 +121,12 @@ export async function setAdmin(
 }
 
 /** Removes admin access. The user stays a customer. */
-export function revokeAdmin(
-  actor: Actor,
-  userId: string,
-): Promise<AdminChange> {
+export function revokeAdmin(actor: Actor, userId: string): Promise<Change> {
   return db.$transaction(async (tx) => {
     const profile = await tx.adminProfile.findUnique({ where: { userId } });
     if (!profile) return { ok: true };
     if (profile.level === "SUPER" && (await isLastSuper(tx))) {
-      return { ok: false, error: LAST_SUPER_ERROR };
+      return refuse(LAST_SUPER_ERROR);
     }
 
     await tx.adminProfile.delete({ where: { userId } });

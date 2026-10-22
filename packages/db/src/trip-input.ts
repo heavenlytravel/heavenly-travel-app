@@ -10,7 +10,7 @@ import type { TripView } from "./trip-view";
 /**
  * A trip as it travels between screens before it is a booking: the search
  * (mode, places, date, time, hours) and the options chosen after pricing
- * (class, passengers, child seats, flight, notes). The website carries it
+ * (class, the model chosen, passengers, child seats, flight, notes). The website carries it
  * in the URL from the search card to the confirm page; the console's manual
  * booking form posts the same names. One parser reads both, so a booking
  * can never be built from a trip the options list did not show.
@@ -45,6 +45,8 @@ export type TripSearch = {
 /** What is chosen once the trip is priced. */
 export type TripOptions = {
   vehicleClassId: string;
+  /** The model the customer chose, at the class's charge; null when any will do. */
+  vehicleModelId: string | null;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -61,6 +63,7 @@ export const TRIP_PARAM = {
   hours: "hours",
   passengers: "passengers",
   vehicleClass: "class",
+  vehicleModel: "model",
   childSeats: "childSeats",
   flightNumber: "flight",
   notes: "notes",
@@ -69,6 +72,7 @@ export const TRIP_PARAM = {
 /** The input names an options form posts, so they match what is parsed. */
 export const TRIP_OPTION_FIELDS = {
   vehicleClass: TRIP_PARAM.vehicleClass,
+  vehicleModel: TRIP_PARAM.vehicleModel,
   passengers: TRIP_PARAM.passengers,
   childSeats: TRIP_PARAM.childSeats,
   flightNumber: TRIP_PARAM.flightNumber,
@@ -108,6 +112,11 @@ export function toParams(input: QueryInput): URLSearchParams {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 const ID_RE = /^[\w:/ .-]{1,200}$/;
+
+/** Whether the value is an id as a trip's address carries one: a place's, a class's or a model's. */
+export function isTripId(value: unknown): value is string {
+  return typeof value === "string" && ID_RE.test(value);
+}
 
 const intIn = (raw: string | null, min: number, max: number) => {
   if (raw === null || !/^\d+$/.test(raw)) return null;
@@ -161,6 +170,8 @@ const text = (raw: string | null, max: number) => {
 /**
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
+ * A model is optional; whether the class lets the customer choose it is
+ * the pricing's to check.
  */
 export function parseTripOptions(
   category: TripCategory,
@@ -172,10 +183,13 @@ export function parseTripOptions(
   const childSeats = offersChildSeats(category)
     ? intIn(params.get(TRIP_PARAM.childSeats), 0, TRIP_MAX_CHILD_SEATS)
     : null;
+  const vehicleModelId = params.get(TRIP_PARAM.vehicleModel) || null;
   if (!vehicleClassId || !ID_RE.test(vehicleClassId)) return null;
+  if (vehicleModelId !== null && !ID_RE.test(vehicleModelId)) return null;
   if (passengers === null) return null;
   return {
     vehicleClassId,
+    vehicleModelId,
     passengers,
     childSeats: childSeats ?? 0,
     flightNumber:

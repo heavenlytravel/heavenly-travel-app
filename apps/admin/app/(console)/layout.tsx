@@ -1,4 +1,3 @@
-import { listLocationNames } from "@repo/db/server";
 import {
   SidebarInset,
   SidebarPanelProvider,
@@ -10,6 +9,7 @@ import { AppSidebar } from "../_components/AppSidebar";
 import { ConsoleBody } from "../_components/ConsoleBody";
 import { ConsoleHeader } from "../_components/ConsoleHeader";
 import { getPermissions } from "../_lib/access";
+import { locationNames } from "../_lib/location-names";
 
 // Chrome only. Access is checked by each page with `requireAdmin`, which
 // redirects before anything here reaches the browser. The permissions read
@@ -25,7 +25,7 @@ export default async function ConsoleLayout({
   const [store, permissions, locations] = await Promise.all([
     cookies(),
     getPermissions(),
-    listLocationNames(),
+    locationNames(),
   ]);
   const defaultOpen = store.get("sidebar_state")?.value !== "false";
   // The location panel remembers its own collapse, apart from the sidebar's.

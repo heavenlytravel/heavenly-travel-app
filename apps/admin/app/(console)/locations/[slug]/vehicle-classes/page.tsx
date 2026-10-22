@@ -3,11 +3,14 @@ import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   formatMyr,
+  modelChoiceOf,
+  surchargeLabel,
   type TripCategory,
 } from "@repo/db";
-import { listOfferings, type Offering } from "@repo/db/server";
+import { listPicturedOfferings, type PicturedOffering } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { BusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
 import {
   TILE_LINK,
@@ -15,6 +18,7 @@ import {
   TileFoot,
   TileGrid,
 } from "../../../../_components/Card";
+import { CardImage } from "../../../../_components/CardImage";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import {
   Bone,
@@ -27,18 +31,18 @@ import {
   locationOfferingHref,
   newLocationOfferingHref,
 } from "../../../../_lib/routes";
-import { seatsText } from "../../../vehicle-classes/_lib/class-text";
+import { rulesText, seatsText } from "../../../vehicle-classes/_lib/class-text";
 import { locationKey } from "../../_lib/location-data";
 import { OfferingActiveSwitch } from "./OfferingControls";
 
 /**
  * Route: /locations/[slug]/vehicle-classes. Operation's tab, step 2 of the
  * setup: the classes the location sells, by category, a card each with
- * its seats, luggage and notice, which are the catalogue's, its four rates
- * at this location, its switch, and its editor. The rest of the catalogue
- * is on its own screen. Operation changes them (`coverage.manage`);
- * Reservation and Sales read them, without the switch or the editor
- * (`coverage.view`).
+ * the catalogue's picture, seats and luggage, then its four rates and its
+ * three rules at this location, its switch, and its editor. The rest of
+ * the catalogue is on its own screen. Operation changes them
+ * (`coverage.manage`); Reservation and Sales read them, without the switch
+ * or the editor (`coverage.view`).
  */
 export default async function LocationVehicleClassesPage({
   params,
@@ -52,7 +56,7 @@ export default async function LocationVehicleClassesPage({
     <>
       <SectionHeader
         title="Vehicle classes"
-        description="What this location sells, at this location's own metered rates. A route with a price on the rate grid costs that price instead."
+        description="What this location sells, at its own metered rates and under its own rules. A route with a price on the rate grid costs that price instead."
         action={
           manages ? (
             <Button asChild>
@@ -67,7 +71,7 @@ export default async function LocationVehicleClassesPage({
             {TRIP_CATEGORIES.map((category) => (
               <div key={category}>
                 <Bone className="mb-3 h-6 w-40" />
-                <TileGridSkeleton image={false} />
+                <TileGridSkeleton />
               </div>
             ))}
           </div>
@@ -76,7 +80,7 @@ export default async function LocationVehicleClassesPage({
         {() => categories({ id, slug, manages })}
       </Streamed>
       <p className="mt-8 text-sm text-neutral-600">
-        Seats, luggage and booking rules are the same everywhere, set in the{" "}
+        The name, picture, seats and luggage are the same everywhere, set in the{" "}
         <Link
           href={VEHICLE_CLASSES_PATH}
           className="font-medium text-neutral-900 underline-offset-4 hover:underline"
@@ -98,7 +102,7 @@ async function categories({
   slug: string;
   manages: boolean;
 }) {
-  const offerings = await listOfferings(id);
+  const offerings = await listPicturedOfferings(id);
   return (
     <div className="mt-6 grid gap-8">
       {TRIP_CATEGORIES.map((category) => (
@@ -126,7 +130,7 @@ function Category({
   slug: string;
   category: TripCategory;
   manages: boolean;
-  offerings: Offering[];
+  offerings: PicturedOffering[];
 }) {
   const onSale = offerings.filter((o) => o.isActive).length;
   return (
@@ -161,10 +165,12 @@ function Category({
 }
 
 /**
- * One class at this location: its name over the catalogue's seats,
- * luggage and notice, the switch that puts it on sale here, its four rates,
- * and its editor. The whole card opens the editor; off, it is in grey.
- * Read only, the switch is a badge and there is no editor.
+ * One class at this location: its picture here, as customers see it, then its name over
+ * the catalogue's seats and luggage, the switch that puts it on sale here,
+ * its four rates, the charge to choose a model and its three rules here,
+ * and its editor. The whole card
+ * opens the editor; off, it is in grey. Read only, the switch is a badge
+ * and there is no editor.
  */
 function OfferingCard({
   slug,
@@ -173,26 +179,33 @@ function OfferingCard({
   lastOnSale,
 }: {
   slug: string;
-  offering: Offering;
+  offering: PicturedOffering;
   manages: boolean;
   /** It is the last of its category on sale here, so turning it off asks first. */
   lastOnSale: boolean;
 }) {
   const { vehicleClass } = offering;
   const href = locationOfferingHref(slug, offering.id);
-  const rates: [label: string, value: string, note?: string][] = [
+  const modelChoice = modelChoiceOf(offering);
+  const rates: [label: string, value: string][] = [
     ["Base fare", formatMyr(offering.baseFareSen)],
     ["Per km", formatMyr(offering.perKmSen)],
-    [
-      "Per hour",
-      formatMyr(offering.hourlyRateSen),
-      `at least ${vehicleClass.minHourlyHours} h`,
-    ],
+    ["Per hour", formatMyr(offering.hourlyRateSen)],
     ["Minimum fare", formatMyr(offering.minimumFareSen)],
+    [
+      "To choose a model",
+      modelChoice ? surchargeLabel(modelChoice) : "Not offered",
+    ],
   ];
 
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
+      <CardImage
+        src={offering.coverUrl}
+        fit="contain"
+        sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
+        fallback={<BusIcon className="size-7 text-neutral-300" />}
+      />
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
           <h4 className="truncate text-base font-semibold tracking-tight">
@@ -205,8 +218,7 @@ function OfferingCard({
             )}
           </h4>
           <p className="text-xs text-neutral-500">
-            {seatsText(vehicleClass)} passengers · {vehicleClass.luggage} ·{" "}
-            {vehicleClass.minLeadHours} h notice
+            {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
           </p>
         </div>
         {/* Above the card's link, so it switches instead of opening. */}
@@ -228,25 +240,23 @@ function OfferingCard({
           Off in the catalogue, so sold nowhere.
         </p>
       ) : null}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4 pb-4">
-        {rates.map(([label, value, note]) => (
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4">
+        {rates.map(([label, value]) => (
           <div key={label} className="min-w-0">
             <dt className="text-xs text-neutral-500">{label}</dt>
             <dd className="text-sm font-medium text-neutral-900 tabular-nums">
               {value}
-              {note ? (
-                <span className="block text-xs font-normal text-neutral-500">
-                  {note}
-                </span>
-              ) : null}
             </dd>
           </div>
         ))}
       </dl>
+      <p className="px-4 pt-3 pb-4 text-xs text-neutral-600">
+        {rulesText(offering)}
+      </p>
       {manages ? (
         <TileFoot>
           <Button asChild variant="secondary" size="sm">
-            <Link href={href}>Edit rates</Link>
+            <Link href={href}>Edit rates and rules</Link>
           </Button>
           <span className="ml-auto text-xs text-neutral-500">
             {offering.isActive ? "On sale" : "Off sale"}

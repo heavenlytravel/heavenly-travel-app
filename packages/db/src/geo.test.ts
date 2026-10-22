@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   bboxOf,
+  cutPolygonBetween,
   distanceToShapeKm,
   inBBox,
   pointInMultiPolygon,
   pointInPolygon,
   pointInRing,
   pointOnSurface,
+  simplifyLine,
   simplifyRing,
   type MultiPolygon,
   type Ring,
@@ -113,6 +115,43 @@ describe("simplifyRing", () => {
   });
 });
 
+describe("simplifyLine", () => {
+  it("keeps both ends of an open line, however straight it runs", () => {
+    assert.deepEqual(
+      simplifyLine(
+        [
+          [0, 0],
+          [5, 0.001],
+          [10, 0],
+        ],
+        0.01,
+      ),
+      [
+        [0, 0],
+        [10, 0],
+      ],
+    );
+  });
+
+  it("keeps a bend past the tolerance", () => {
+    assert.deepEqual(
+      simplifyLine(
+        [
+          [0, 0],
+          [5, 3],
+          [10, 0],
+        ],
+        0.01,
+      ),
+      [
+        [0, 0],
+        [5, 3],
+        [10, 0],
+      ],
+    );
+  });
+});
+
 describe("distanceToShapeKm", () => {
   it("is the distance to the nearest edge, in kilometres", () => {
     const unit: Ring = [
@@ -125,5 +164,68 @@ describe("distanceToShapeKm", () => {
     const km = distanceToShapeKm([101.01, 0.5], [[unit]]);
     assert.ok(km > 1.05 && km < 1.2, String(km));
     assert.equal(distanceToShapeKm([101, 0.5], [[unit]]), 0);
+  });
+});
+
+describe("cutPolygonBetween", () => {
+  // An open square, then a C whose bite a straight cut would cross.
+  const open = (ring: Ring) => ring.slice(0, -1);
+
+  it("cuts a square in two along its diagonal", () => {
+    const cut = cutPolygonBetween([open(square)], 0, 2);
+    assert.ok(cut.ok);
+    assert.deepEqual(cut.parts[0], [
+      [
+        [0, 0],
+        [10, 0],
+        [10, 10],
+      ],
+    ]);
+    assert.deepEqual(cut.parts[1], [
+      [
+        [10, 10],
+        [0, 10],
+        [0, 0],
+      ],
+    ]);
+  });
+
+  it("keeps each hole in the part it lies in", () => {
+    const smallHole: Ring = [
+      [1, 6],
+      [2, 6],
+      [2, 7],
+      [1, 6],
+    ];
+    const cut = cutPolygonBetween([open(square), open(smallHole)], 0, 2);
+    assert.ok(cut.ok);
+    assert.equal(cut.parts[0].length, 1);
+    assert.equal(cut.parts[1].length, 2);
+  });
+
+  it("refuses the same corner, and two next to each other", () => {
+    assert.deepEqual(cutPolygonBetween([open(square)], 1, 1), {
+      ok: false,
+      reason: "same",
+    });
+    assert.deepEqual(cutPolygonBetween([open(square)], 0, 3), {
+      ok: false,
+      reason: "adjacent",
+    });
+  });
+
+  it("refuses a line that leaves the polygon", () => {
+    // From the top of the bite to the bottom of it: the line runs outside.
+    assert.deepEqual(cutPolygonBetween([open(crescent)], 2, 5), {
+      ok: false,
+      reason: "outside",
+    });
+  });
+
+  it("refuses a line through a hole", () => {
+    assert.deepEqual(cutPolygonBetween([open(square), open(hole)], 0, 2), {
+      ok: false,
+      reason: "outside",
+    });
   });
 });

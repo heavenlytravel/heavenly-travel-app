@@ -3,9 +3,9 @@
 import { LOCATION_LIMITS } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { toast } from "@repo/ui/toast";
-import { useActionState, useState } from "react";
-import type { ActionState } from "../../../_lib/action-state";
+import { useState } from "react";
+import { FormError } from "../../../_components/FormError";
+import { useActionForm } from "../../../_lib/use-action-form";
 import { SlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { updateLocationAction } from "../actions";
@@ -27,21 +27,15 @@ export function LocationDetailsForm({
   };
   states: StateOption[];
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    async (previous, formData) => {
-      const result = await updateLocationAction(previous, formData);
-      if (result === null) toast.success("Details saved.");
-      return result;
-    },
-    null,
-  );
-  // Controlled, so a refused save does not put the stored values back.
+  const { pending, error, formProps } = useActionForm(updateLocationAction, {
+    done: "Details saved.",
+  });
   const [name, setName] = useState(location.name);
   const [slug, setSlug] = useState(location.slug);
   const [stateCodes, setStateCodes] = useState(location.stateCodes);
 
   return (
-    <form action={action} className="grid gap-4">
+    <form {...formProps} className="grid gap-4">
       <input type="hidden" name="id" value={location.id} />
       <input type="hidden" name="previousSlug" value={location.slug} />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -71,10 +65,8 @@ export function LocationDetailsForm({
         <Button type="submit" disabled={pending || stateCodes.length === 0}>
           {pending ? "Saving…" : "Save"}
         </Button>
-        {state?.error ? (
-          <p aria-live="polite" className="text-sm text-red-700">
-            {state.error}
-          </p>
+        {error ? (
+          <FormError error={error} />
         ) : stateCodes.length === 0 ? (
           <p className="text-sm text-neutral-500">Tick at least one state.</p>
         ) : null}

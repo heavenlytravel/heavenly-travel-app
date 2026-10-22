@@ -6,10 +6,8 @@ import {
   LOCATION_PAGE_LABELS,
   LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
-  andList,
   dropoffRuleOf,
   formatLocalDate,
-  formatLocalDateTime,
   isPublicState,
   oddHoursLabel,
   oddHoursOf,
@@ -24,14 +22,11 @@ import type { LocationOverview, LocationWithDetails } from "@repo/db/server";
 import {
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarPanel,
   SidebarPanelToggle,
-  SidebarSeparator,
 } from "@repo/ui/sidebar";
 import { Tooltip } from "@repo/ui/tooltip";
 import { LocationMark } from "../../../_components/LocationMark";
@@ -41,14 +36,19 @@ import {
 } from "../../../_components/PanelVisibility";
 import { LocationStateBadge } from "../../../_components/StatusBadges";
 import {
-  LOCATION_TABS,
   locationBookingsHref,
+  locationDriversHref,
   locationOfferingHref,
+  locationAddressesHref,
   locationPageHref,
   locationRatesPartHref,
   locationTabHref,
+  locationTabsFor,
+  locationVehiclesHref,
   locationZoneHref,
+  newLocationDriverHref,
   newLocationOfferingHref,
+  newLocationVehicleHref,
   newLocationZoneHref,
   setupStepTab,
   type LocationTab,
@@ -58,6 +58,8 @@ import { SetupBar } from "../_components/SetupBar";
 import { LOCATION_TAB_ICONS } from "../_components/TabIcon";
 import {
   LocationPanelNav,
+  PanelFootLink,
+  type PanelGroup,
   type PanelItem,
   type PanelSection,
 } from "./LocationPanelNav";
@@ -75,17 +77,33 @@ const PAGE_DOTS: Record<PageStatus, PanelItem["dot"]> = {
   changed: "amber",
 };
 
+/** "3 vehicles in service, 1 with a document due": a vehicles or drivers tab's line, a driver's documents being licences. */
+function fleetLine(
+  count: string,
+  state: string,
+  due: number,
+  document: "document" | "licence",
+) {
+  const line = `${count} ${state}`;
+  return due === 0 ? line : `${line}, ${due} with a ${document} due`;
+}
+
 /**
  * The panel beside a location's page, after shadcn's sidebar-15 right
- * sidebar: the location's name and state on top, then its sections, each
- * with one line on where it stands (the queue on Bookings and Overview,
- * the pages on Pages) and, where it has something to list, a submenu of
- * it: the classes, the zones, the three parts of the rates, the pages,
- * the bookings by status. Then where its setup has come while it is a
- * draft, the facts about it, and at the foot its public page.
- * Every admin sees the panel; each group shows only what the admin may
- * open. On screens too narrow for the column it opens as a sheet from the
- * console header's button.
+ * sidebar: the location's name and state on top, then its sections in two
+ * groups, each section with one line on where it stands and, where it has
+ * something to list, a submenu of it: the classes, the zones, the three
+ * parts of the rates, the pages and their saved addresses, the bookings by
+ * status, the vehicles with a document due and the drivers with a licence
+ * due. A draft is set up before anything else: its overview stands alone
+ * on top, then the Setup group with how far it has come and what to do
+ * next, its steps numbered.
+ * Once live or paused the day comes first: Work holds Today, the bookings,
+ * the vehicles, the drivers and the pages; the setup, done once and rarely touched, folds away under
+ * it. At the foot, the history and the public page. Every admin sees the
+ * panel; each group shows only what the admin may open. On screens too
+ * narrow for the column it opens as a sheet from the console header's
+ * button. See docs/261018-location-work-and-class-catalogue.md.
  */
 export function LocationPanel({
   location,
@@ -129,13 +147,37 @@ export function LocationPanel({
         ? "No routes priced; trips are metered"
         : `${plural(overview.routesPriced, "route")} priced`;
     }
+    if (tab === "vehicles") {
+      return fleetLine(
+        plural(overview.vehicles, "vehicle"),
+        "in service",
+        overview.vehiclesDue,
+        "document",
+      );
+    }
+    if (tab === "drivers") {
+      return fleetLine(
+        plural(overview.drivers, "driver"),
+        "active",
+        overview.driversDue,
+        "licence",
+      );
+    }
+    if (tab === "status") {
+      if (state === "live") return "Live, taking bookings";
+      if (state === "paused") return "Paused, taking no bookings";
+      return progress.next
+        ? "Goes live once the setup is done"
+        : "Ready to go live";
+    }
     if (tab === "history") {
       return overview.changedAt
         ? `Last change ${formatLocalDate(overview.changedAt)}`
         : "No changes recorded";
     }
     if (settingUp) return "Setup checklist";
-    if (!may("bookings.view")) return "Pages and history";
+    // A team with no queue to work sees the location at a glance.
+    if (!may("bookings.view")) return "Every part at a glance";
     const today =
       overview.pickupsToday === 0
         ? "No pick-ups today"
@@ -207,18 +249,58 @@ export function LocationPanel({
           },
         ];
       case "pages":
-        return overview.pages.map((page) => ({
-          key: page.page,
-          label: LOCATION_PAGE_LABELS[page.page],
-          href: locationPageHref(slug, page.page),
-          dot: PAGE_DOTS[page.status],
-          note: PAGE_STATUS_LABELS[page.status],
-        }));
+        return [
+          ...overview.pages.map((page) => ({
+            key: page.page,
+            label: LOCATION_PAGE_LABELS[page.page],
+            href: locationPageHref(slug, page.page),
+            dot: PAGE_DOTS[page.status],
+            note: PAGE_STATUS_LABELS[page.status],
+          })),
+          {
+            key: "addresses",
+            label: "Saved addresses",
+            href: locationAddressesHref(slug),
+            note: String(location.addresses.length),
+          },
+        ];
+      case "vehicles":
+        return [
+          {
+            key: "due",
+            label: "Documents due",
+            href: locationVehiclesHref(slug, { due: true }),
+            note:
+              overview.vehiclesDue > 0
+                ? String(overview.vehiclesDue)
+                : undefined,
+          },
+          {
+            key: "new",
+            label: "Add vehicle",
+            href: newLocationVehicleHref(slug),
+          },
+        ];
+      case "drivers":
+        return [
+          {
+            key: "due",
+            label: "Licences due",
+            href: locationDriversHref(slug, { due: true }),
+            note:
+              overview.driversDue > 0 ? String(overview.driversDue) : undefined,
+          },
+          {
+            key: "new",
+            label: "Add driver",
+            href: newLocationDriverHref(slug),
+          },
+        ];
       case "bookings":
         return BOOKING_STATUSES.map((status) => ({
           key: status,
           label: BOOKING_STATUS_LABELS[status],
-          href: locationBookingsHref(slug, status),
+          href: locationBookingsHref(slug, { status }),
           note:
             status === "received" && overview.awaitingConfirmation > 0
               ? String(overview.awaitingConfirmation)
@@ -228,9 +310,8 @@ export function LocationPanel({
         return [];
     }
   };
-  const sections: PanelSection[] = LOCATION_TABS.filter((tab) =>
-    may(tab.permission),
-  ).map((tab) => {
+  const tabs = locationTabsFor(state).filter((tab) => may(tab.permission));
+  const sectionOf = (tab: (typeof tabs)[number]): PanelSection => {
     const index = steps.findIndex((step) => step.key === tab.step);
     return {
       key: tab.key,
@@ -244,39 +325,54 @@ export function LocationPanel({
       icon: LOCATION_TAB_ICONS[tab.key],
       items: itemsOf(tab.key),
     };
-  });
+  };
+  const sectionsIn = (group: "work" | "setup" | "foot") =>
+    tabs.filter((tab) => tab.group === group).map(sectionOf);
 
-  const facts: { label: string; value: string }[] = [
+  const setupIntro = settingUp ? (
+    <div className="px-2 pb-2">
+      <SetupBar done={progress.done} total={progress.total} />
+      {progress.next ? (
+        <p className="mt-2 text-xs text-neutral-600">
+          Next: {progress.next.todos[0]}.{" "}
+          {nextHref ? (
+            <Link
+              href={nextHref}
+              className="font-medium text-neutral-900 underline-offset-4 hover:underline"
+            >
+              Open {progress.next.title}
+            </Link>
+          ) : null}
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-neutral-600">
+          Every step is done;{" "}
+          {may("locations.activate")
+            ? "take it live when ready."
+            : "SUPER takes it live."}
+        </p>
+      )}
+    </div>
+  ) : null;
+  const groups: PanelGroup[] = [
     {
-      label: "States",
-      value: andList(overview.stateNames) || "None yet",
+      key: "work" as const,
+      label: settingUp ? null : "Work",
+      foldable: false,
+      sections: sectionsIn("work"),
     },
     {
-      label: "Saved addresses",
-      value: String(location.addresses.length),
+      key: "setup" as const,
+      label: "Setup",
+      note: settingUp
+        ? `${progress.done} of ${progress.total} done`
+        : "Set once",
+      intro: setupIntro,
+      foldable: !settingUp,
+      sections: sectionsIn("setup"),
     },
-    {
-      label: "Home page",
-      value:
-        location.topChoiceOrder === null
-          ? "Not a top choice"
-          : `Top choice ${location.topChoiceOrder}`,
-    },
-    ...(location.wentLiveAt
-      ? [
-          {
-            label: "Went live",
-            value: formatLocalDateTime(location.wentLiveAt),
-          },
-        ]
-      : []),
-    {
-      label: "Last change",
-      value: overview.changedAt
-        ? formatLocalDateTime(overview.changedAt)
-        : "None recorded",
-    },
-  ];
+  ].filter((group) => group.sections.length > 0);
+  const foot = sectionsIn("foot");
 
   return (
     <SidebarPanel title={PANEL_TITLE} className={PANEL_PLACEMENT}>
@@ -311,84 +407,23 @@ export function LocationPanel({
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Sections</SidebarGroupLabel>
-          <LocationPanelNav slug={slug} sections={sections} />
-        </SidebarGroup>
-        {/* The rail keeps the sections alone; the numbers and facts need their words. */}
-        <WhenExpanded>
-          {settingUp ? (
-            <>
-              <SidebarSeparator />
-              <SidebarGroup>
-                <SidebarGroupLabel>Setup</SidebarGroupLabel>
-                <div className="px-2 pb-1">
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="font-medium">
-                      {progress.done} of {progress.total} steps done
-                    </span>
-                    <span className="text-xs text-neutral-500 tabular-nums">
-                      {Math.round((progress.done / progress.total) * 100)}%
-                    </span>
-                  </div>
-                  <SetupBar
-                    done={progress.done}
-                    total={progress.total}
-                    className="mt-2"
-                  />
-                  {progress.next ? (
-                    <p className="mt-3 text-sm text-neutral-600">
-                      Next: {progress.next.todos[0]}.{" "}
-                      {nextHref ? (
-                        <Link
-                          href={nextHref}
-                          className="font-medium text-neutral-900 underline-offset-4 hover:underline"
-                        >
-                          Open {progress.next.title}
-                        </Link>
-                      ) : null}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-sm text-neutral-600">
-                      Every step is done;{" "}
-                      {may("locations.activate")
-                        ? "take it live when ready."
-                        : "SUPER takes it live."}
-                    </p>
-                  )}
-                </div>
-              </SidebarGroup>
-            </>
-          ) : null}
-
-          <SidebarSeparator />
-          <SidebarGroup>
-            <SidebarGroupLabel>About</SidebarGroupLabel>
-            <dl className="divide-y divide-neutral-100 px-2 text-sm">
-              {facts.map((fact) => (
-                <div
-                  key={fact.label}
-                  className="flex items-baseline justify-between gap-4 py-2"
-                >
-                  <dt className="shrink-0 text-neutral-500">{fact.label}</dt>
-                  <dd className="truncate text-right text-neutral-900">
-                    {fact.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </SidebarGroup>
-        </WhenExpanded>
+        <LocationPanelNav slug={slug} groups={groups} />
       </SidebarContent>
 
       <SidebarFooter className="border-t border-neutral-200">
-        {isPublicState(state) ? (
-          <SidebarMenu>
+        <SidebarMenu>
+          {foot.map((section) => (
+            <SidebarMenuItem key={section.key}>
+              <PanelFootLink slug={slug} section={section} />
+            </SidebarMenuItem>
+          ))}
+          {isPublicState(state) ? (
             <SidebarMenuItem>
               <PublicPageLink href={locationPublicUrl(location.slug)} />
             </SidebarMenuItem>
-          </SidebarMenu>
-        ) : (
+          ) : null}
+        </SidebarMenu>
+        {isPublicState(state) ? null : (
           <WhenExpanded>
             <p className="px-2 py-1.5 text-xs text-neutral-500">
               Not public yet. Staff read the pages through Preview.

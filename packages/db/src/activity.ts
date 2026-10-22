@@ -2,9 +2,11 @@ import {
   activityActionMeta,
   ANONYMOUS_ACTOR_NAMES,
   isActorKind,
+  locationHistoryActions,
   type ActivityAction,
   type ActivityEntityType,
   type Actor,
+  type LocationHistoryKind,
 } from "./activity-actions";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
@@ -20,10 +22,12 @@ export type { ActivityLog };
 
 export type ActivityWrite = {
   action: ActivityAction;
-  /** The booking, state or district code, class, admin user, setting or location the action touched. */
+  /** The booking, state or district code, class, admin user, setting, location, vehicle or driver the action touched. */
   entityId: string;
   before?: Prisma.InputJsonObject;
   after?: Prisma.InputJsonObject;
+  /** The locations whose history it belongs in too: where a vehicle or a driver is based, before and after a move. */
+  locationIds?: readonly string[];
 };
 
 /** Writes one entry inside the caller's transaction. */
@@ -43,6 +47,7 @@ export function logActivity(
       before: entry.before,
       after: entry.after,
       customerVisible: meta.customerVisible,
+      locationIds: [...new Set(entry.locationIds ?? [])],
     },
   });
 }
@@ -74,7 +79,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall"; the id when unknown. */
+  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
@@ -100,39 +105,112 @@ function idsOf(rows: ActivityLog[], entityType: ActivityEntityType) {
 async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   const userIds = new Set<string>(idsOf(rows, "admin"));
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
+  // A record type the rows do not name costs no query.
+  const read = <T>(ids: readonly string[], query: () => Promise<T[]>) =>
+    ids.length > 0 ? query() : Promise.resolve<T[]>([]);
+  const ids = {
+    booking: idsOf(rows, "booking"),
+    state: idsOf(rows, "state"),
+    district: idsOf(rows, "district"),
+    vehicleClass: idsOf(rows, "vehicle-class"),
+    location: idsOf(rows, "location"),
+    vehicle: idsOf(rows, "vehicle"),
+    driver: idsOf(rows, "driver"),
+  };
 
-  const [users, bookings, states, districts, vehicleClasses, locations] =
-    await Promise.all([
+  const [
+    users,
+    bookings,
+    states,
+    districts,
+    vehicleClasses,
+    locations,
+    vehicles,
+    drivers,
+  ] = await Promise.all([
+    read([...userIds], () =>
       db.user.findMany({
         where: { id: { in: [...userIds] } },
         select: { id: true, email: true, firstName: true, lastName: true },
       }),
+    ),
+    read(ids.booking, () =>
       db.booking.findMany({
-        where: { id: { in: idsOf(rows, "booking") } },
+        where: { id: { in: ids.booking } },
         select: { id: true, reference: true },
       }),
+    ),
+    read(ids.state, () =>
       db.state.findMany({
-        where: { code: { in: idsOf(rows, "state") } },
+        where: { code: { in: ids.state } },
         select: { code: true, name: true },
       }),
+    ),
+    read(ids.district, () =>
       db.district.findMany({
-        where: { code: { in: idsOf(rows, "district") } },
+        where: { code: { in: ids.district } },
         select: { code: true, name: true },
       }),
+    ),
+    read(ids.vehicleClass, () =>
       db.vehicleClass.findMany({
-        where: { id: { in: idsOf(rows, "vehicle-class") } },
+        where: { id: { in: ids.vehicleClass } },
         select: { id: true, name: true },
       }),
+    ),
+    read(ids.location, () =>
       db.location.findMany({
-        where: { id: { in: idsOf(rows, "location") } },
+        where: { id: { in: ids.location } },
         select: { id: true, name: true },
       }),
-    ]);
+    ),
+    read(ids.vehicle, () =>
+      db.vehicle.findMany({
+        where: { id: { in: ids.vehicle } },
+        select: { id: true, plate: true },
+      }),
+    ),
+    read(ids.driver, () =>
+      db.driver.findMany({
+        where: { id: { in: ids.driver } },
+        select: { id: true, name: true },
+      }),
+    ),
+  ]);
   const userById = new Map(users.map((u) => [u.id, u]));
-  const deleted = await deletedLocationNames(
-    idsOf(rows, "location"),
-    new Set(locations.map((l) => l.id)),
-  );
+  const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
+    deletedNames(
+      "location.deleted",
+      "name",
+      ids.location,
+      new Set(locations.map((l) => l.id)),
+    ),
+    deletedNames(
+      "vehicle.deleted",
+      "plate",
+      ids.vehicle,
+      new Set(vehicles.map((v) => v.id)),
+    ),
+    deletedNames(
+      "driver.deleted",
+      "name",
+      ids.driver,
+      new Set(drivers.map((d) => d.id)),
+    ),
+  ]);
+  const withDeleted = (
+    live: readonly (readonly [string, string])[],
+    gone: Map<string, string>,
+  ) =>
+    new Map([
+      ...live,
+      ...[...gone].map(([id, name]) => [id, `${name} (deleted)`] as const),
+    ]);
+  const gone: Partial<Record<ActivityEntityType, Map<string, string>>> = {
+    location: deleted,
+    vehicle: deletedVehicles,
+    driver: deletedDrivers,
+  };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, b.reference])),
     state: new Map(states.map((s) => [s.code, s.name])),
@@ -140,10 +218,18 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
     admin: new Map(users.map((u) => [u.id, u.email])),
     setting: new Map(),
-    location: new Map([
-      ...locations.map((l) => [l.id, l.name] as const),
-      ...[...deleted].map(([id, name]) => [id, `${name} (deleted)`] as const),
-    ]),
+    location: withDeleted(
+      locations.map((l) => [l.id, l.name] as const),
+      deleted,
+    ),
+    vehicle: withDeleted(
+      vehicles.map((v) => [v.id, v.plate] as const),
+      deletedVehicles,
+    ),
+    driver: withDeleted(
+      drivers.map((d) => [d.id, d.name] as const),
+      deletedDrivers,
+    ),
   };
 
   return rows.map((row) => {
@@ -154,16 +240,20 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       ...row,
       actorName,
       entityLabel: entityLabelOf(row, labels),
-      isDeleted: row.entityType === "location" && deleted.has(row.entityId),
+      isDeleted:
+        gone[row.entityType as ActivityEntityType]?.has(row.entityId) ?? false,
     };
   });
 }
 
 /**
- * The names of the locations among the ids that no longer exist, from the
- * entry their deletion logged. Asked only when one is missing.
+ * The names of the records among the ids that no longer exist, from the
+ * `key` of the entry their deletion logged: a location's name, a
+ * vehicle's plate. Asked only when one is missing.
  */
-async function deletedLocationNames(
+async function deletedNames(
+  action: ActivityAction,
+  key: string,
   ids: readonly string[],
   existing: ReadonlySet<string>,
 ): Promise<Map<string, string>> {
@@ -171,14 +261,15 @@ async function deletedLocationNames(
   if (missing.length === 0) return new Map();
   const entries = await db.activityLog.findMany({
     where: {
-      action: "location.deleted" satisfies ActivityAction,
+      entityType: activityActionMeta(action).entityType,
       entityId: { in: missing },
+      action,
     },
     select: { entityId: true, before: true },
   });
   return new Map(
     entries.flatMap(({ entityId, before }) => {
-      const name = (before as { name?: unknown } | null)?.name;
+      const name = (before as Record<string, unknown> | null)?.[key];
       return typeof name === "string" ? [[entityId, name] as const] : [];
     }),
   );
@@ -199,6 +290,8 @@ function entityLabelOf(
     case "district":
     case "vehicle-class":
     case "location":
+    case "vehicle":
+    case "driver":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:
       return row.entityId;
@@ -234,6 +327,72 @@ export async function listActivityForMany(
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   return decorate(rows);
+}
+
+/**
+ * A location's history, newest first, one page at a time: the changes to
+ * the location itself, and to the vehicles and drivers based there when
+ * each was made, or those of one part of it. `fleet` false leaves the
+ * vehicles' and drivers' out, for an admin who does not manage them.
+ * `before` is the id of the last entry of the previous page.
+ */
+export async function listLocationHistory({
+  locationId,
+  kind,
+  fleet,
+  before,
+  take,
+}: {
+  locationId: string;
+  kind?: LocationHistoryKind;
+  fleet: boolean;
+  before?: string;
+  take: number;
+}): Promise<ActivityPage> {
+  const rows = await db.activityLog.findMany({
+    where: {
+      AND: [
+        {
+          OR: [
+            { entityType: "location", entityId: locationId },
+            { locationIds: { has: locationId } },
+          ],
+        },
+        kind ? { action: { in: locationHistoryActions(kind) } } : {},
+        fleet ? {} : { entityType: { notIn: ["vehicle", "driver"] } },
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(before ? { cursor: { id: before }, skip: 1 } : {}),
+  });
+  const page = rows.slice(0, take);
+  return {
+    entries: await decorate(page),
+    nextCursor: rows.length > take ? (page.at(-1)?.id ?? null) : null,
+  };
+}
+
+/**
+ * The publishes of one page of a location, newest first: who published it
+ * and when. What each put on the page is read on its own page, so the
+ * snapshots are left unread here.
+ */
+export async function listPagePublishes(
+  locationId: string,
+  page: string,
+): Promise<ActivityEntry[]> {
+  const rows = await db.activityLog.findMany({
+    where: {
+      entityType: "location",
+      entityId: locationId,
+      action: "location.page.published",
+      after: { path: ["page"], equals: page },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    omit: { before: true, after: true },
+  });
+  return decorate(rows.map((row) => ({ ...row, before: null, after: null })));
 }
 
 export type ActivityPage = {

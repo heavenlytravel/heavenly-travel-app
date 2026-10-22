@@ -1,12 +1,14 @@
 "use client";
 
 import { DROPOFF_RULES, DROPOFF_RULE_LABELS, type DropoffRule } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { cx } from "@repo/ui/cx";
 import { Radio } from "@repo/ui/field";
 import { toast } from "@repo/ui/toast";
 import { useOptimistic, useState, useTransition } from "react";
 import { setDropoffRuleAction } from "./actions";
 import { dropoffRuleNote } from "./dropoff-note";
+import { errorOf } from "../../../../_lib/action-state";
 
 /**
  * Where a one-way trip from the location may end: the three rules as
@@ -31,9 +33,11 @@ export function DropoffRuleForm({
     setError(null);
     startTransition(async () => {
       setShown(option);
-      const result = await setDropoffRuleAction(locationId, option);
-      if (result?.error) {
-        setError(result.error);
+      const refused = errorOf(
+        await answerOf(setDropoffRuleAction(locationId, option)),
+      );
+      if (refused) {
+        setError(refused);
       } else {
         toast.success(`Drop-offs: ${DROPOFF_RULE_LABELS[option]}.`);
       }

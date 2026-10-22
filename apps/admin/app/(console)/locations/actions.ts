@@ -21,13 +21,14 @@ import {
 } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { actorOf, getAdmin } from "../../_lib/access";
 import {
+  type ActionState,
   FORBIDDEN,
   FORBIDDEN_MESSAGE,
+  refusalOf,
+  STALE,
   stateOf,
-  type ActionState,
 } from "../../_lib/action-state";
 import {
   HOME_PAGE_PATH,
@@ -57,8 +58,6 @@ function revalidateEverywhere(id: string) {
   refreshLocationAfter(id);
 }
 
-const MISSING_LOCATION: ActionState = { error: "Missing location." };
-
 /** The location form's values; the ticked states arrive as one field each. */
 function locationValues(formData: FormData) {
   return {
@@ -74,12 +73,12 @@ export async function createLocationAction(
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
   const parsed = parseLocationFields(locationValues(formData));
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return refusalOf(parsed);
 
   const result = await createLocation(actorOf(admin), parsed.value);
   if (!result.ok) return stateOf(result);
   revalidateLocation();
-  redirect(locationHref(parsed.value.slug));
+  return { href: locationHref(parsed.value.slug) };
 }
 
 export async function updateLocationAction(
@@ -89,16 +88,16 @@ export async function updateLocationAction(
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
   const id = textOf(formData.get("id"));
-  if (!id) return MISSING_LOCATION;
+  if (!id) return STALE;
   const parsed = parseLocationFields(locationValues(formData));
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return refusalOf(parsed);
 
   const result = await updateLocation(actorOf(admin), id, parsed.value);
   if (!result.ok) return stateOf(result);
   revalidateEverywhere(id);
   // A draft's new slug is its new address in the console too.
   if (parsed.value.slug !== textOf(formData.get("previousSlug"))) {
-    redirect(locationTabHref(parsed.value.slug, "details"));
+    return { href: locationTabHref(parsed.value.slug, "details") };
   }
   return null;
 }
@@ -120,11 +119,10 @@ export async function setLocationAddressesAction(
     typeof locationId !== "string" ||
     !Array.isArray(expected) ||
     expected.some((id) => typeof id !== "string")
-  ) {
-    return MISSING_LOCATION;
-  }
+  )
+    return STALE;
   const parsed = parseAddressEntries(rows);
-  if (!parsed.ok) return { error: parsed.error };
+  if (!parsed.ok) return refusalOf(parsed);
 
   const entries: AddressWrite[] = [];
   for (const entry of parsed.value) {
@@ -251,9 +249,7 @@ export async function unpublishPageAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string" || !isLocationPageKey(page)) {
-    return { error: "Missing page." };
-  }
+  if (typeof locationId !== "string" || !isLocationPageKey(page)) return STALE;
 
   const result = await unpublishLocationPage(actorOf(admin), locationId, page);
   if (result.ok) {
@@ -274,7 +270,7 @@ export async function deleteLocationAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string") return MISSING_LOCATION;
+  if (typeof locationId !== "string") return STALE;
   if (typedSlug !== null && typeof typedSlug !== "string") {
     return { error: "Type the slug to confirm." };
   }
@@ -284,7 +280,7 @@ export async function deleteLocationAction(
   revalidateLocations();
   revalidatePath(HOME_PAGE_PATH);
   refreshDeletedLocationAfter(result.slug);
-  redirect(LOCATIONS_PATH);
+  return { href: LOCATIONS_PATH };
 }
 
 export async function moveLocationStateAction(
@@ -293,8 +289,8 @@ export async function moveLocationStateAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("locations.activate");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string") return MISSING_LOCATION;
-  if (!isLocationState(to)) return { error: "Choose a state." };
+  if (typeof locationId !== "string") return STALE;
+  if (!isLocationState(to)) return STALE;
 
   const result = await moveLocationState(actorOf(admin), locationId, to);
   if (result.ok) revalidateEverywhere(locationId);

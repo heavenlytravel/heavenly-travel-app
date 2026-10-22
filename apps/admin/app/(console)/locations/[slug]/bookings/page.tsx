@@ -1,21 +1,20 @@
-import { isBookingStatus, type BookingStatus } from "@repo/db";
-import { listBookings } from "@repo/db/server";
-import {
-  BookingStatusFilter,
-  emptyBookingsMessage,
-} from "../../../../_components/BookingFilters";
-import { BookingsTable } from "../../../../_components/BookingsTable";
+import { isBookingStatus, searchTermOf } from "@repo/db";
 import { SectionHeader } from "../../../../_components/SectionHeader";
-import { Streamed, TableSkeleton } from "../../../../_components/Skeleton";
+import { pageOf } from "../../../../_components/Pager";
 import { requireAdmin } from "../../../../_lib/access";
-import { locationBookingsHref } from "../../../../_lib/routes";
+import {
+  locationBookingsHref,
+  PAGE_PARAM,
+  SEARCH_PARAM,
+} from "../../../../_lib/routes";
+import { BookingsList } from "../../../bookings/_components/BookingsList";
 import { locationKey } from "../../_lib/location-data";
 
 /**
- * Route: /locations/[slug]/bookings?status=received. The location's
- * bookings, newest first: every booking with a pickup in one of its
- * zones, priced by its rates. The same list and filters as the queue
- * across locations.
+ * Route: /locations/[slug]/bookings?status=received&q=…&page=2. The
+ * location's bookings, newest first: every booking with a pickup in one
+ * of its zones, priced by its rates. The same list, filters and search as
+ * the queue across locations; a booking opens inside the location.
  */
 export default async function LocationBookingsPage({
   params,
@@ -24,8 +23,10 @@ export default async function LocationBookingsPage({
   await requireAdmin("bookings.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
-  const { status } = await searchParams;
-  const filter = isBookingStatus(status) ? status : undefined;
+  const query = await searchParams;
+  const status = isBookingStatus(query.status) ? query.status : undefined;
+  const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
+  const page = pageOf(query[PAGE_PARAM]);
 
   return (
     <>
@@ -34,35 +35,13 @@ export default async function LocationBookingsPage({
         description="Every booking with a pickup in this location. Open one to confirm it, mark it assigned or completed, or cancel it."
       />
       <div className="mt-4">
-        <BookingStatusFilter
-          active={filter}
-          hrefOf={(status) => locationBookingsHref(slug, status)}
+        <BookingsList
+          filter={{ status, q, page }}
+          hrefOf={(filter) => locationBookingsHref(slug, filter)}
+          locationId={id}
+          locationSlug={slug}
         />
       </div>
-      <div className="mt-4">
-        <Streamed
-          key={filter ?? "all"}
-          fallback={<TableSkeleton columns={5} />}
-        >
-          {() => bookingsList({ id, filter })}
-        </Streamed>
-      </div>
     </>
-  );
-}
-
-async function bookingsList({
-  id,
-  filter,
-}: {
-  id: string;
-  filter: BookingStatus | undefined;
-}) {
-  const bookings = await listBookings({ status: filter, locationId: id });
-  return (
-    <BookingsTable
-      bookings={bookings}
-      emptyMessage={emptyBookingsMessage(filter)}
-    />
   );
 }

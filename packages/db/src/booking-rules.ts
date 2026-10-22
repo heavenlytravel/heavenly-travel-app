@@ -3,9 +3,10 @@ import type { TripCategory } from "./booking-status";
 /**
  * Global business rules and the pure checks built on them. Pure: no database
  * and no `server-only`, so it runs in unit tests and in the browser. The
- * notice, the cancellation cutoff and the minimum hire are set per vehicle
- * class; the rest is global. See docs/260928-coach-charter.md, "Rules live on the
- * vehicle class".
+ * notice, the cancellation cutoff and the minimum hire are each location's
+ * for each class it sells, on its offering (./offering-input); the rest is
+ * global. See docs/261018-location-work-and-class-catalogue.md, "The rules
+ * per location and class".
  */
 
 export const BOOKING_RULES = {
@@ -66,24 +67,23 @@ export const HOURLY_OPTIONS: readonly number[] = Array.from(
   (_, i) => BOOKING_RULES.hourlyFloorHours + i,
 );
 
-/** The rules a vehicle class sets for a trip, as stored on `VehicleClass`. */
+/** The rules a location sets for a trip in one class, as stored on its offering. */
 export type ClassRules = {
   minLeadHours: number;
   minHourlyHours: number;
 };
 
-/** The three rules a class carries, as stored on `VehicleClass`. */
-export type VehicleClassRules = ClassRules & {
+/** The three rules an offering carries, as stored on `LocationVehicleClass`. */
+export type OfferingRules = ClassRules & {
   cancellationCutoffHours: number;
 };
 
 /**
- * Each category's usual rules. A new class on the Vehicle classes screen
- * starts with them and the seed's classes carry them; a class may differ,
- * it is only a row. The coach values are placeholders until ops confirms
- * them.
+ * Each category's usual rules. A class a location starts selling starts
+ * with them; the location may differ, per class, it is only a row. The
+ * coach values are placeholders until ops confirms them.
  */
-export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, VehicleClassRules> = {
+export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, OfferingRules> = {
   "car-with-driver": {
     minLeadHours: 4,
     cancellationCutoffHours: 24,

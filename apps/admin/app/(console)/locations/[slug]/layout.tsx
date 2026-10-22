@@ -1,12 +1,4 @@
-import {
-  LOCATION_STATE_MOVE,
-  locationStateOf,
-  setupSteps,
-  stateMoveBlockers,
-  type LocationState,
-  type Permission,
-} from "@repo/db";
-import { listOfferings, listZones } from "@repo/db/server";
+import { locationStateOf, setupSteps, type Permission } from "@repo/db";
 import { notFound } from "next/navigation";
 import { PageColumn } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
@@ -15,41 +7,31 @@ import {
   PanelSkeleton,
   Streamed,
 } from "../../../_components/Skeleton";
-import { LocationStateBadge } from "../../../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
-import { LOCATION_TABS } from "../../../_lib/routes";
+import { locationTabsFor } from "../../../_lib/routes";
 import {
   locationDetails,
   locationKey,
+  locationOfferings,
   locationOverview,
+  locationZoneNames,
 } from "../_lib/location-data";
 import { LocationPanel, PANEL_PLACEMENT, PANEL_TITLE } from "./LocationPanel";
 import { LocationTabs } from "./LocationTabs";
-import { StateMove } from "./StateMove";
-
-/** What the state means for the public, under the name. */
-function stateNote(state: LocationState, slug: string) {
-  switch (state) {
-    case "draft":
-      return `Not public yet. Its address will be /${slug}.`;
-    case "live":
-      return `Public at /${slug}.`;
-    case "paused":
-      return `Public at /${slug}, with a notice in place of the search card.`;
-  }
-}
 
 /**
  * Route: /locations/[slug] and its tabs. The page in its column, with the
  * location's panel beside it. The header every tab shares: the location's
- * name, and level with it its state and, for SUPER, the one move the state
- * allows. Preview is on the Pages tab and in each page's editor. The panel lists the location's sections with where
- * each stands, its setup and the facts about it; on screens too narrow for
- * it, the button at the right end of the console header opens the same
- * panel as a sheet, and a strip of the tabs under the header keeps the
- * sections in reach. Every admin may open a location; each tab is its own
- * route behind its own permission. See
- * docs/261015-locations-as-operation-areas.md, "Setting a location up".
+ * name. Its state is in the panel, and the move the state allows on the
+ * Status tab. Preview is on the Pages tab and in each page's editor. The panel
+ * lists the location's sections with where each stands: a draft's setup
+ * first, a live location's day's work first. On screens too narrow for it,
+ * the button at the right end of the console header opens the same panel
+ * as a sheet, and a strip of the tabs under the header, in the panel's
+ * order, keeps the sections in reach. Every admin may open a location;
+ * each tab is its own route behind its own permission. See
+ * docs/261015-locations-as-operation-areas.md, "Setting a location up",
+ * and docs/261018-location-work-and-class-catalogue.md.
  */
 export default async function LocationLayout({
   params,
@@ -66,12 +48,6 @@ export default async function LocationLayout({
         <Streamed fallback={<HeaderSkeleton />}>
           {() => locationHeader({ id, permissions })}
         </Streamed>
-        <LocationTabs
-          slug={slug}
-          tabs={LOCATION_TABS.filter((tab) =>
-            permissions.includes(tab.permission),
-          ).map((tab) => ({ key: tab.key, label: tab.label }))}
-        />
         <div className="mt-6">{children}</div>
       </PageColumn>
       <Streamed
@@ -100,7 +76,7 @@ async function locationStanding(id: string) {
   };
 }
 
-/** The header: the name, what the state means under it, the state and its move at the right. */
+/** The header: the name; under it, on narrow screens, the strip of tabs. */
 async function locationHeader({
   id,
   permissions,
@@ -108,33 +84,18 @@ async function locationHeader({
   id: string;
   permissions: readonly Permission[];
 }) {
-  const { location, overview, state } = await locationStanding(id);
-  const blocked =
-    stateMoveBlockers(
-      state,
-      LOCATION_STATE_MOVE[state],
-      location.pages,
-      overview,
-    ).length > 0;
+  const { location, state } = await locationStanding(id);
 
   return (
-    <PageHeader
-      title={location.name}
-      description={stateNote(state, location.slug)}
-      action={
-        <>
-          <LocationStateBadge state={state} />
-          {permissions.includes("locations.activate") ? (
-            <StateMove
-              locationId={location.id}
-              name={location.name}
-              state={state}
-              blocked={blocked}
-            />
-          ) : null}
-        </>
-      }
-    />
+    <>
+      <PageHeader title={location.name} />
+      <LocationTabs
+        slug={location.slug}
+        tabs={locationTabsFor(state)
+          .filter((tab) => permissions.includes(tab.permission))
+          .map((tab) => ({ key: tab.key, label: tab.label }))}
+      />
+    </>
   );
 }
 
@@ -150,14 +111,14 @@ async function locationPanel({
   const listsThem = permissions.includes("coverage.manage");
   const [standing, zones, offerings] = await Promise.all([
     locationStanding(id),
-    listsThem ? listZones(id) : [],
-    listsThem ? listOfferings(id) : [],
+    listsThem ? locationZoneNames(id) : [],
+    listsThem ? locationOfferings(id) : [],
   ]);
   return (
     <LocationPanel
       {...standing}
       permissions={permissions}
-      zones={zones.map((zone) => ({ id: zone.id, name: zone.name }))}
+      zones={zones}
       offerings={offerings.map((offering) => ({
         id: offering.id,
         name: offering.vehicleClass.name,

@@ -1,5 +1,5 @@
 import { TRIP_CATEGORIES } from "./booking-status";
-import type { Change } from "./change";
+import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
 import {
@@ -18,8 +18,6 @@ import { slugify } from "./slug";
  * apply the same checks before they write. See
  * docs/261001-locations-and-pages.md and docs/261003-location-flow.md.
  */
-
-const fail = (error: string): Change => ({ ok: false, error });
 
 /** What the public sees of a location. The state is the location's, not its district's. */
 export const LOCATION_STATES = ["draft", "live", "paused"] as const;
@@ -243,7 +241,7 @@ export function checkPageUnpublish(
   page: LocationPageKey,
 ): Change {
   if (page === LANDING_PAGE && state !== "draft") {
-    return fail(
+    return refuse(
       "The main page stays published once the location has left draft. Pause the location instead.",
     );
   }
@@ -306,17 +304,24 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
 
 /** A slug is what `slugify` makes, within the limit and not reserved. */
 export function checkLocationSlug(slug: string): Change {
-  if (slug === "") return fail("Enter the slug.");
+  if (slug === "") return refuse("Enter the slug.", "slug");
   if (slug !== slugify(slug)) {
-    return fail(
+    return refuse(
       "A slug is lower-case letters, digits and dashes, such as kuala-kubu-bharu.",
+      "slug",
     );
   }
   if (slug.length > LOCATION_LIMITS.slug) {
-    return fail(`The slug is at most ${LOCATION_LIMITS.slug} characters.`);
+    return refuse(
+      `The slug is at most ${LOCATION_LIMITS.slug} characters.`,
+      "slug",
+    );
   }
   if (RESERVED_SLUGS.has(slug)) {
-    return fail(`The site uses /${slug} for something else. Choose another.`);
+    return refuse(
+      `The site uses /${slug} for something else. Choose another.`,
+      "slug",
+    );
   }
   return { ok: true };
 }
@@ -347,7 +352,7 @@ export function checkLocationDelete(
   typed: string | null,
 ): Change {
   if (!hasBeenLive(location) || typed === location.slug) return { ok: true };
-  return fail(
+  return refuse(
     `Type the slug, ${location.slug}, to delete a location that has been live.`,
   );
 }
@@ -371,14 +376,17 @@ export const LOCATION_FIELD_LABELS = {
 } as const;
 
 export function checkLocationFields(fields: LocationFields): Change {
-  if (fields.name === "") return fail("Enter the name.");
+  if (fields.name === "") return refuse("Enter the name.", "name");
   if (fields.name.length > LOCATION_LIMITS.name) {
-    return fail(`The name is at most ${LOCATION_LIMITS.name} characters.`);
+    return refuse(
+      `The name is at most ${LOCATION_LIMITS.name} characters.`,
+      "name",
+    );
   }
   const slug = checkLocationSlug(fields.slug);
   if (!slug.ok) return slug;
   if (fields.stateCodes.length === 0) {
-    return fail("Tick at least one state.");
+    return refuse("Tick at least one state.", "states");
   }
   return { ok: true };
 }
@@ -417,20 +425,20 @@ export type AddressEntry =
 /** The names of a list of saved addresses: each filled, in the limit, used once. */
 export function checkAddressNames(names: readonly string[]): Change {
   if (names.length > LOCATION_LIMITS.addresses) {
-    return fail(
+    return refuse(
       `A location keeps at most ${LOCATION_LIMITS.addresses} saved addresses.`,
     );
   }
   const seen = new Set<string>();
   for (const name of names) {
-    if (name === "") return fail("Give every address a name.");
+    if (name === "") return refuse("Give every address a name.");
     if (name.length > LOCATION_LIMITS.addressName) {
-      return fail(
+      return refuse(
         `An address name is at most ${LOCATION_LIMITS.addressName} characters.`,
       );
     }
     const key = name.toLowerCase();
-    if (seen.has(key)) return fail(`Two addresses are named ${name}.`);
+    if (seen.has(key)) return refuse(`Two addresses are named ${name}.`);
     seen.add(key);
   }
   return { ok: true };

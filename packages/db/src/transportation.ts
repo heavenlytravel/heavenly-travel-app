@@ -18,16 +18,19 @@ import {
   type DistrictWithState,
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
-import { listActiveOfferings, type Offering } from "./offerings";
+import { modelChoiceOf } from "./offering-input";
+import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
 import {
   priceTrip,
+  withModelChoice,
   type PricingBasis,
   type RouteRate,
   type TripPriceBreakdown,
 } from "./pricing";
 import {
   dropoffAllowed,
+  dropoffZonesOf,
   dropoffRuleOf,
   isInOddHours,
   oddHoursOf,
@@ -35,6 +38,11 @@ import {
 } from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
 import { routeRateOf, zoneAt } from "./zone-match";
+import {
+  choosableModel,
+  modelChoiceQuote,
+  type ModelChoiceQuote,
+} from "./model-choice";
 
 /**
  * The transportation product, car with driver and coach charter alike: what
@@ -62,6 +70,8 @@ export type TripRequest = {
 
 export type TripItemRequest = TripRequest & {
   vehicleClassId: string;
+  /** The model the customer chose, at the class's charge; null when any will do. */
+  vehicleModelId: string | null;
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
@@ -79,17 +89,27 @@ export type TripQuoteErrorCode =
   | "class-unavailable"
   | "too-soon"
   | "too-few-hours"
-  | "passengers";
+  | "passengers"
+  | "model-unavailable";
 
 export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
 
+/** What choosing a model of a class adds to a trip: the location's charge, and its amount for the trip. */
+
 export type ClassQuote = {
-  /** The catalogue class: its name, seats, luggage and rules. */
-  vehicleClass: VehicleClass;
-  /** The location's offering of it: the rates. */
-  offering: Offering;
+  /** The catalogue class: its name, seats, luggage, and the models of the location's vehicles in service. */
+  vehicleClass: OfferingOnSale["vehicleClass"];
+  /** The location's offering of it: the rates and the rules. */
+  offering: OfferingOnSale;
+  /** With any model of the class. */
   price: TripPriceBreakdown;
-  /** Whether the class's own rules accept this trip. */
+  /**
+   * What choosing one of the models adds; null when the customer cannot
+   * choose: the location sets no charge for it, or has fewer than two
+   * models of the class.
+   */
+  modelChoice: ModelChoiceQuote | null;
+  /** Whether the offering's rules accept this trip. */
   availability: ClassAvailability;
 };
 
@@ -133,7 +153,11 @@ export async function quoteTrip(
   request: TripRequest,
   now: Date = new Date(),
 ): Promise<TripQuoteResult> {
-  const served = await locationAt(request.pickup);
+  // The district is the record's: read alongside the location.
+  const [served, district] = await Promise.all([
+    locationAt(request.pickup),
+    resolveDistrict(request.pickup),
+  ]);
   if (!served) {
     return fail("not-served", "We do not serve that pickup area yet.");
   }
@@ -166,16 +190,19 @@ export async function quoteTrip(
     basis = { mode: "hourly", hours };
   }
 
-  const [district, offerings] = await Promise.all([
-    resolveDistrict(request.pickup),
-    listActiveOfferings(location.id, category),
-  ]);
+  const offerings = await listActiveOfferings(location.id, category);
 
   // The drop-off rule: where a one-way trip may end. The pickup is in a
-  // zone already, whatever the rule; hourly hire has no drop-off.
+  // zone already, whatever the rule; hourly hire has no drop-off. A route
+  // out of the location ends in another location's zone.
   const rule = dropoffRuleOf(location);
   const dropoff = basis.mode === "oneway" ? request.dropoff : null;
-  const dropoffZone = dropoff ? zoneAt(location.zones, dropoff) : null;
+  const dropoffZone = dropoff
+    ? zoneAt(
+        dropoffZonesOf(rule, location.zones, location.zonesElsewhere),
+        dropoff,
+      )
+    : null;
   if (dropoff && !dropoffAllowed(rule, dropoffZone !== null)) {
     return rule === "grid"
       ? fail(
@@ -233,19 +260,20 @@ export async function quoteTrip(
       dropoff && rule === "grid" && !cell
         ? { ok: false, reason: "not-on-route" }
         : classAvailability(
-            vehicleClass,
+            offering,
             { startsAt: request.startsAt, hours },
             now,
           );
+    const price = priceTrip({ trip: basis, rates: offering, route, surcharge });
     return {
       vehicleClass,
       offering,
-      price: priceTrip({
-        trip: basis,
-        rates: offering,
-        route,
-        surcharge,
-      }),
+      price,
+      modelChoice: modelChoiceQuote(
+        modelChoiceOf(offering),
+        vehicleClass.models.length,
+        price.subtotalSen,
+      ),
       availability,
     };
   });
@@ -275,15 +303,19 @@ export type PrepareTripItemResult =
       item: PreparedItem;
       /** The same values as `item`, typed for display. */
       vehicleClass: VehicleClass;
+      /** The model chosen; null when any will do. */
+      vehicleModel: { id: string; name: string } | null;
       price: TripPriceBreakdown;
     }
   | { ok: false; error: TripQuoteError };
 
 /**
  * A customer's choice, validated and priced, ready for `createBooking`. The
- * item snapshots the class's name, category and cancellation cutoff, and
- * the location that priced it, so what was booked never changes when ops
- * edits or retires the class or redraws a zone.
+ * item snapshots the class's name and category, the chosen model's name,
+ * the offering's cancellation cutoff, and the location that priced it, so
+ * what was booked never changes when ops edits or retires the class or the
+ * model or redraws a zone. A model must be one the quote lets the customer
+ * choose, and the receipt charges for it.
  */
 export async function prepareTripItem(
   category: TripCategory,
@@ -303,7 +335,7 @@ export async function prepareTripItem(
       "That vehicle class is no longer available.",
     );
   }
-  const { vehicleClass, price, availability } = chosen;
+  const { vehicleClass, offering, modelChoice, availability } = chosen;
   if (!availability.ok) {
     switch (availability.reason) {
       case "too-soon":
@@ -329,10 +361,28 @@ export async function prepareTripItem(
       `${vehicleClass.name} seats up to ${vehicleClass.maxPassengers} passengers.`,
     );
   }
+  let price = chosen.price;
+  let model: { id: string; name: string } | null = null;
+  if (request.vehicleModelId) {
+    const found = choosableModel(
+      vehicleClass.models,
+      modelChoice !== null,
+      request.vehicleModelId,
+    );
+    if (!found || !modelChoice) {
+      return fail(
+        "model-unavailable",
+        `That model of ${vehicleClass.name} can no longer be chosen. Choose again.`,
+      );
+    }
+    model = { id: found.id, name: found.name };
+    price = withModelChoice(price, found.name, modelChoice.charge);
+  }
 
   return {
     ok: true,
     vehicleClass,
+    vehicleModel: model,
     price,
     item: {
       product: "transportation",
@@ -341,7 +391,7 @@ export async function prepareTripItem(
         basis.mode === "hourly"
           ? new Date(request.startsAt.getTime() + basis.hours * HOUR_MS)
           : null,
-      cancellationCutoffHours: vehicleClass.cancellationCutoffHours,
+      cancellationCutoffHours: offering.cancellationCutoffHours,
       districtCode: district?.code ?? null,
       locationId: location.id,
       priceTotalSen: price.totalSen,
@@ -350,6 +400,8 @@ export async function prepareTripItem(
         vehicleClass: { connect: { id: vehicleClass.id } },
         vehicleClassName: vehicleClass.name,
         vehicleClassCategory: category,
+        ...(model ? { vehicleModel: { connect: { id: model.id } } } : {}),
+        vehicleModelName: model?.name ?? null,
         mode: basis.mode,
         pickupPlace: request.pickup,
         dropoffPlace:

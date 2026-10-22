@@ -56,11 +56,13 @@ export async function quoteTripView(
     classes: quote.classes.map((c) => ({
       id: c.vehicleClass.id,
       name: c.vehicleClass.name,
-      description: c.vehicleClass.description,
       luggage: c.vehicleClass.luggage,
       minPassengers: c.vehicleClass.minPassengers,
       maxPassengers: c.vehicleClass.maxPassengers,
+      imageUrl: c.offering.coverUrl,
+      models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
       totalSen: c.price.totalSen,
+      modelChoiceSen: c.modelChoice?.amountSen ?? null,
       unavailable: unavailableReason(c.availability),
     })),
   };
@@ -81,7 +83,7 @@ export async function prepareFormItem(
   const category = textOf(params.get(CATEGORY_FIELD));
   const search = parseTripSearch(params);
   if (!isTripCategory(category) || !search) {
-    return { ok: false, error: "Fill in the trip and get prices first." };
+    return { ok: false, error: "Fill in the trip first." };
   }
   const options = parseTripOptions(category, params);
   if (!options) {

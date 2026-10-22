@@ -1,27 +1,22 @@
 "use client";
 
-import type { AdminChange } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { toast } from "@repo/ui/toast";
-import { useActionState } from "react";
 import { Card } from "../../_components/Card";
+import { FormError } from "../../_components/FormError";
+import { useActionForm } from "../../_lib/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
 
 export function PromoteForm() {
-  const [result, action, pending] = useActionState(
-    async (previous: AdminChange | null, formData: FormData) => {
-      const next = await setAdminAction(previous, formData);
-      if (next.ok) toast.success("Admin access granted.");
-      return next;
-    },
-    null,
-  );
+  const { pending, error, formProps } = useActionForm(setAdminAction, {
+    done: "Admin access granted.",
+    reset: true,
+  });
 
   return (
     <Card className="mt-6">
-      <form action={action}>
+      <form {...formProps}>
         <h2 className="text-xl font-semibold tracking-tight">Promote a user</h2>
         <p className="mt-1 text-sm text-neutral-600">
           They must have signed in on the customer site at least once. A REGULAR
@@ -44,11 +39,7 @@ export function PromoteForm() {
           </Button>
         </div>
 
-        {result?.ok === false ? (
-          <p aria-live="polite" className="mt-3 text-sm text-red-700">
-            {result.error}
-          </p>
-        ) : null}
+        <FormError error={error} className="mt-3" />
       </form>
     </Card>
   );

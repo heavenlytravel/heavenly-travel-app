@@ -7,6 +7,8 @@ import {
   ringgitInputValue,
   type DropoffRule,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
+import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
@@ -23,7 +25,13 @@ import {
 import { locationTabHref } from "../../../../_lib/routes";
 import { useLeaveGuard } from "../../../../_lib/use-leave-guard";
 import { setZoneRatesAction } from "./actions";
-import { AddRouteDialog, pairKey, type NewRoute } from "./AddRouteDialog";
+import {
+  AddRouteDialog,
+  pairKey,
+  type NewRoute,
+  type ZoneElsewhere,
+} from "./AddRouteDialog";
+import { errorOf } from "../../../../_lib/action-state";
 
 type Zone = { id: string; name: string };
 /** A column of the grid: a class on sale here, with the category it is sold under. */
@@ -125,13 +133,18 @@ const CELL_INPUT =
  * them, and leaving the page with any unsaved asks first. "Add route"
  * opens a dialog that offers only the pairs of zones not on the grid yet,
  * so a route has one row whichever way it is read, and saves the route
- * with its prices at once. What an empty cell means follows the
- * drop-off rule: metered, or not offered.
+ * with its prices at once. A route out of the location ends at another
+ * location's zone, named with its location and marked one way (→), since
+ * a trip back starts there and is priced there; the dialog offers those
+ * zones unless drop-offs stay inside the location, when such a route is
+ * marked not offered. What an empty cell means follows the drop-off rule:
+ * metered, or not offered.
  */
 export function RateGrid({
   locationId,
   locationSlug,
   zones,
+  elsewhere,
   classes,
   cells,
   rule,
@@ -141,6 +154,8 @@ export function RateGrid({
   /** The location's slug, its address, for the links to the other tabs. */
   locationSlug: string;
   zones: Zone[];
+  /** Other locations' zones by name: where the routes out end, and where a new one may. */
+  elsewhere: ZoneElsewhere[];
   classes: ClassColumn[];
   cells: Cell[];
   rule: DropoffRule;
@@ -207,24 +222,49 @@ export function RateGrid({
     "The prices changed since the last save are lost.",
   );
 
-  const rank = new Map(zones.map((zone, index) => [zone.id, index]));
-  const nameOf = (id: string) =>
-    zones.find((zone) => zone.id === id)?.name ?? "A removed zone";
+  // This location's zones first, then the other locations'.
+  const rank = new Map(
+    [...zones, ...elsewhere].map((zone, index) => [zone.id, index]),
+  );
+  const own = new Set(zones.map((zone) => zone.id));
+  const awayOf = (id: string) =>
+    elsewhere.find((candidate) => candidate.id === id);
+  /** A zone's name as its row shows it; another location's has its location beside it. */
+  const zoneNameOf = (id: string) =>
+    zones.find((candidate) => candidate.id === id)?.name ??
+    awayOf(id)?.name ??
+    "A removed zone";
+  /** A zone's name with its location's for another location's, as the labels and messages say it. */
+  const nameOf = (id: string) => {
+    const away = awayOf(id);
+    return away ? `${away.name} · ${away.location}` : zoneNameOf(id);
+  };
+  /** Whether the route runs out of the location: its `to` is another location's zone. */
+  const isOut = (route: Route) => !own.has(route.toZoneId);
   /** A route's zones in the zones' order, whichever way it is stored. */
   const endsOf = (route: Route): [string, string] =>
-    (rank.get(route.fromZoneId) ?? 0) <= (rank.get(route.toZoneId) ?? 0)
+    (rank.get(route.fromZoneId) ?? rank.size) <=
+    (rank.get(route.toZoneId) ?? rank.size)
       ? [route.fromZoneId, route.toZoneId]
       : [route.toZoneId, route.fromZoneId];
 
-  // The pairs not on the grid yet, for "Add route".
+  // The pairs not on the grid yet, for "Add route": between this
+  // location's zones, and out to other locations' unless drop-offs stay in.
   const paired = new Set(
     routes.map((route) => pairKey(route.fromZoneId, route.toZoneId)),
   );
+  const routesOut = routes.filter(isOut).length;
   const pairs = (zones.length * (zones.length - 1)) / 2;
-  const freePairs = pairs - paired.size;
+  const freePairs = pairs - (routes.length - routesOut);
+  const offered = rule === "zones" ? [] : elsewhere;
+  const freeOut =
+    zones.length * offered.length - (offered.length > 0 ? routesOut : 0);
 
   const coverageHref = locationTabHref(locationSlug, "coverage");
-  if (zones.length < 2) {
+  if (
+    zones.length === 0 ||
+    (zones.length === 1 && offered.length === 0 && routes.length === 0)
+  ) {
     return (
       <p className="border-t border-neutral-200 px-6 py-5 text-sm text-neutral-600">
         A route runs between two zones.{" "}
@@ -351,15 +391,19 @@ export function RateGrid({
   // the grid as saved; the grid's other changes stay as they were.
   async function addRoute(added: NewRoute): Promise<string | null> {
     const route = { fromZoneId: added.fromZoneId, toZoneId: added.toZoneId };
-    const result = await setZoneRatesAction(
-      locationId,
-      classes.map((column) => ({
-        ...route,
-        vehicleClassId: column.id,
-        price: added.prices[column.id] ?? "",
-      })),
+    const refused = errorOf(
+      await answerOf(
+        setZoneRatesAction(
+          locationId,
+          classes.map((column) => ({
+            ...route,
+            vehicleClassId: column.id,
+            price: added.prices[column.id] ?? "",
+          })),
+        ),
+      ),
     );
-    if (result?.error) return result.error;
+    if (refused) return refused;
     const stored: Record<string, number> = {};
     for (const column of classes) {
       const reading = readCell(added.prices[column.id]);
@@ -391,7 +435,9 @@ export function RateGrid({
     setAdding(false);
     const [a, b] = endsOf(route);
     setNotice(null);
-    toast.success(`Added the route ${nameOf(a)} ↔ ${nameOf(b)}.`);
+    toast.success(
+      `Added the route ${nameOf(a)} ${isOut(route) ? "→" : "↔"} ${nameOf(b)}.`,
+    );
     return null;
   }
 
@@ -437,9 +483,11 @@ export function RateGrid({
       rows.push({ fromZoneId, toZoneId, vehicleClassId, price: "" });
     }
     startTransition(async () => {
-      const result = await setZoneRatesAction(locationId, rows);
-      if (result?.error) {
-        setNotice({ tone: "error", text: result.error });
+      const refused = errorOf(
+        await answerOf(setZoneRatesAction(locationId, rows)),
+      );
+      if (refused) {
+        setNotice({ tone: "error", text: refused });
         return;
       }
       // What was just saved is what the next changes count from: the
@@ -558,7 +606,9 @@ export function RateGrid({
               ) : (
                 routes.map((route, row) => {
                   const [a, b] = endsOf(route);
-                  const label = `${nameOf(a)} and ${nameOf(b)}`;
+                  const out = isOut(route);
+                  const arrow = out ? "→" : "↔";
+                  const label = `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
                   const last = row === routes.length - 1;
                   return (
                     <tr key={routeKey(route)} className="group">
@@ -573,25 +623,42 @@ export function RateGrid({
                         {/* One line from `sm` up; on a phone the two zones stack, so the prices keep the width. */}
                         <div className="flex min-h-10 items-center gap-2 py-1.5 sm:py-0">
                           <Tooltip
-                            content={`${nameOf(a)} ↔ ${nameOf(b)}`}
+                            content={
+                              out
+                                ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
+                                : `${nameOf(a)} ↔ ${nameOf(b)}`
+                            }
                             className="min-w-0 flex-1"
                           >
                             <span className="min-w-0 flex-1 font-medium text-neutral-900 sm:block sm:max-w-64 sm:truncate">
                               <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {nameOf(a)}
+                                {zoneNameOf(a)}
                               </span>
                               <span
                                 aria-hidden="true"
                                 className="mx-1.5 hidden text-neutral-400 sm:inline"
                               >
-                                ↔
+                                {arrow}
                               </span>
-                              <span className="sr-only"> and </span>
+                              <span className="sr-only">
+                                {out ? " to " : " and "}
+                              </span>
                               <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {nameOf(b)}
+                                {zoneNameOf(b)}
                               </span>
                             </span>
                           </Tooltip>
+                          {out ? (
+                            <Badge>
+                              {awayOf(route.toZoneId)?.location ??
+                                "Another location"}
+                            </Badge>
+                          ) : null}
+                          {out && rule === "zones" ? (
+                            <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
+                              <Badge tone="amber">Not offered</Badge>
+                            </Tooltip>
+                          ) : null}
                           {readOnly ? null : (
                             <Tooltip content="Remove route">
                               <button
@@ -692,7 +759,7 @@ export function RateGrid({
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           {readOnly ? (
             <span />
-          ) : freePairs > 0 ? (
+          ) : freePairs > 0 || freeOut > 0 ? (
             <Button
               variant="secondary"
               disabled={pending}
@@ -707,14 +774,26 @@ export function RateGrid({
             </p>
           )}
           <p className="text-xs text-neutral-500 tabular-nums">
-            {routes.length} of {plural(pairs, "pair")} of zones on the grid
+            {[
+              pairs > 0
+                ? `${routes.length - routesOut} of ${plural(pairs, "pair")} of zones on the grid`
+                : null,
+              routesOut > 0
+                ? `${plural(routesOut, "route")} out to other locations`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(", ")}
           </p>
         </div>
         <p className="text-xs leading-relaxed text-neutral-500">
           {rule === "grid"
             ? "An empty cell means the class is not offered on that route."
             : "An empty cell is metered at the class's rates."}{" "}
-          A route costs the same both ways.
+          A route costs the same both ways
+          {routesOut > 0 || offered.length > 0
+            ? "; one out to another location's zone (→) prices trips from here only."
+            : "."}
           {readOnly
             ? null
             : " Paste a block of prices copied from a spreadsheet into any cell; Enter moves down a row, Escape undoes the cell."}
@@ -728,6 +807,7 @@ export function RateGrid({
             open={adding}
             onOpenChange={setAdding}
             zones={zones}
+            elsewhere={offered}
             classes={classes}
             paired={paired}
             rule={rule}

@@ -1,10 +1,12 @@
+import type { Refusal } from "./change";
+
 /**
  * Readers for form values, which reach a server action as strings, or as a
  * `File`, or not at all. Each parser in this package reads its raw values
  * through these and answers a `Parsed`. Browser-safe.
  */
 
-export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
+export type Parsed<T> = { ok: true; value: T } | Refusal;
 
 /** The trimmed text, or "" for anything that is not a string. */
 export function textOf(value: unknown): string {

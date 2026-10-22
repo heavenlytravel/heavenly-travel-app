@@ -2,6 +2,7 @@
 
 import { TOP_CHOICE_CAP, type TopChoiceChange } from "@repo/db";
 import type { TopChoice, TopChoiceCandidate } from "@repo/db/server";
+import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Tooltip } from "@repo/ui/tooltip";
 import { toast } from "@repo/ui/toast";
@@ -13,8 +14,10 @@ import { useState, useTransition } from "react";
 import { TILE_LINK, Tile, TileFoot, TileGrid } from "../../_components/Card";
 import { LocationStateBadge } from "../../_components/StatusBadges";
 import { locationHref } from "../../_lib/routes";
-import { CardImage } from "../locations/_components/CardImage";
+import { CardImage } from "../../_components/CardImage";
 import { changeTopChoiceAction } from "./actions";
+import { FormError } from "../../_components/FormError";
+import { errorOf } from "../../_lib/action-state";
 
 /**
  * The home page's top choices as the cards they become there, in their
@@ -52,9 +55,11 @@ export function TopChoiceControl({
       candidates.find((candidate) => candidate.id === locationId)?.name ??
       "The location";
     startTransition(async () => {
-      const result = await changeTopChoiceAction(locationId, what);
-      setError(result?.error ?? null);
-      if (!result?.error) {
+      const refused = errorOf(
+        await answerOf(changeTopChoiceAction(locationId, what)),
+      );
+      setError(refused);
+      if (!refused) {
         toast.success(
           what === "add"
             ? `${name} is on the home page.`
@@ -73,7 +78,7 @@ export function TopChoiceControl({
           choice ? (
             <Tile key={choice.id}>
               <CardImage
-                image={choice.heroImage}
+                src={choice.heroImage?.url ?? null}
                 sizes="(min-width: 1024px) 18rem, (min-width: 640px) 50vw, 100vw"
                 fallback={
                   <span className="text-5xl font-semibold text-neutral-300">
@@ -173,11 +178,7 @@ export function TopChoiceControl({
             ? "Every live location is a top choice already. Only a live location can be added."
             : "A location is added in the first empty slot. Only a live location can be added."}
       </p>
-      {error ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <FormError error={error} />
     </div>
   );
 }

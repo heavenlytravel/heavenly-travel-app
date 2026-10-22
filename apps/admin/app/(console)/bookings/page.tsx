@@ -1,34 +1,40 @@
 import Link from "next/link";
-import { isBookingStatus, type BookingStatus } from "@repo/db";
-import { listBookings, listLocationNames } from "@repo/db/server";
+import { isBookingStatus, searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import {
-  BookingStatusFilter,
-  emptyBookingsMessage,
-} from "../../_components/BookingFilters";
-import { BookingsTable } from "../../_components/BookingsTable";
+import { LocationFilter } from "../../_components/LocationFilter";
 import { PageHeader } from "../../_components/PageHeader";
-import { Streamed, TableSkeleton } from "../../_components/Skeleton";
+import { pageOf } from "../../_components/Pager";
 import { getPermissions, requireAdmin } from "../../_lib/access";
-import { bookingsHref, NEW_BOOKING_PATH } from "../../_lib/routes";
-import { LocationFilter } from "./LocationFilter";
+import { locationFilterOptions } from "../../_lib/location-filter";
+import {
+  bookingsHref,
+  NEW_BOOKING_PATH,
+  PAGE_PARAM,
+  SEARCH_PARAM,
+} from "../../_lib/routes";
+import { BookingsList } from "./_components/BookingsList";
+import { locationNames } from "../../_lib/location-names";
 
 /**
- * Route: /bookings?status=received&location=…. The queue across locations,
- * newest first, narrowed by status, by location, or both. A location's own
- * list is its Bookings tab.
+ * Route: /bookings?status=received&location=…&q=…&page=2. The queue
+ * across locations, newest first, narrowed by status, by location, by a
+ * search, or any of them. A location's own list is its Bookings tab.
  */
 export default async function BookingsPage({
   searchParams,
 }: PageProps<"/bookings">) {
   await requireAdmin("bookings.view");
-  const { status, location } = await searchParams;
-  const filter = isBookingStatus(status) ? status : undefined;
-  const locationId =
-    typeof location === "string" && location ? location : undefined;
+  const params = await searchParams;
+  const status = isBookingStatus(params.status) ? params.status : undefined;
+  const location =
+    typeof params.location === "string" && params.location
+      ? params.location
+      : undefined;
+  const q = searchTermOf(params[SEARCH_PARAM]) ?? undefined;
+  const page = pageOf(params[PAGE_PARAM]);
   const [permissions, locations] = await Promise.all([
     getPermissions(),
-    listLocationNames(),
+    locationNames(),
   ]);
 
   return (
@@ -44,47 +50,21 @@ export default async function BookingsPage({
           ) : null
         }
       />
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <BookingStatusFilter
-          active={filter}
-          hrefOf={(status) => bookingsHref({ status, location: locationId })}
+      <div className="mt-6">
+        <BookingsList
+          filter={{ status, q, page }}
+          hrefOf={(filter) => bookingsHref({ ...filter, location })}
+          locationId={location}
+          locationFilter={
+            <LocationFilter
+              value={location ?? ""}
+              options={locationFilterOptions(locations, (next) =>
+                bookingsHref({ status, q, location: next }),
+              )}
+            />
+          }
         />
-        <LocationFilter
-          locations={locations}
-          value={locationId ?? ""}
-          status={filter}
-        />
-      </div>
-
-      <div className="mt-4">
-        {/* Keyed by the filter, so another filter shows the skeleton, not
-            the rows of the one before. */}
-        <Streamed
-          key={`${filter ?? "all"}:${locationId ?? "all"}`}
-          fallback={<TableSkeleton columns={6} />}
-        >
-          {() => bookingsList({ filter, locationId })}
-        </Streamed>
       </div>
     </>
-  );
-}
-
-/** The bookings the filters leave, newest first. */
-async function bookingsList({
-  filter,
-  locationId,
-}: {
-  filter: BookingStatus | undefined;
-  locationId: string | undefined;
-}) {
-  const bookings = await listBookings({ status: filter, locationId });
-  return (
-    <BookingsTable
-      bookings={bookings}
-      showLocation
-      emptyMessage={emptyBookingsMessage(filter)}
-    />
   );
 }

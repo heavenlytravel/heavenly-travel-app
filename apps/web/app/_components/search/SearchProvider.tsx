@@ -118,14 +118,23 @@ export function SearchProvider({
         const dropoffId = values.placeIds.to;
         if (!pickupId) return Promise.resolve([]);
         const oneway = !isTripMode(values.mode) || values.mode === "oneway";
+        const pickup = {
+          placeId: pickupId,
+          sessionToken: sessions.current.from,
+        };
+        const dropoff =
+          oneway && dropoffId
+            ? { placeId: dropoffId, sessionToken: sessions.current.to }
+            : null;
+        // The check's details calls end these sessions: a second check, after
+        // a place refused, sends none for the place kept.
+        sessions.current.from = undefined;
+        if (dropoff) sessions.current.to = undefined;
         return checkTripAction({
           slug: location.slug,
           preview: location.preview,
-          pickup: { placeId: pickupId, sessionToken: sessions.current.from },
-          dropoff:
-            oneway && dropoffId
-              ? { placeId: dropoffId, sessionToken: sessions.current.to }
-              : null,
+          pickup,
+          dropoff,
         });
       }
     : undefined;

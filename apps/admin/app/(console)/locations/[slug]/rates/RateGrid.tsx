@@ -10,9 +10,18 @@ import {
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/field";
+import { InfoTip } from "@repo/ui/info-tip";
+import { Select } from "@repo/ui/select";
 import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
-import { PlusIcon, XIcon } from "@repo/ui/icons";
+import {
+  ArrowDownIcon,
+  ArrowRightToLineIcon,
+  ArrowUpIcon,
+  PlusIcon,
+  XIcon,
+} from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
 import {
   useEffect,
@@ -47,6 +56,8 @@ type Route = { fromZoneId: string; toZoneId: string };
 type Saved = { routes: Route[]; prices: Record<string, number> };
 /** What the bar at the foot says, besides the count of unsaved changes. */
 type Notice = { tone: "error" | "done" | "info"; text: string };
+/** The column the rows are sorted by: a zone end, or a class by its id; none keeps the zones' order. */
+type Sort = { by: "from" | "to" | { classId: string }; dir: 1 | -1 } | null;
 
 const routeKey = (route: Route) => `${route.fromZoneId}|${route.toZoneId}`;
 const cellKey = (route: Route, classId: string) =>
@@ -117,8 +128,54 @@ function groupsOf(classes: readonly ClassColumn[]) {
   return groups;
 }
 
-/** The route column stays in view while the classes scroll under it. */
-const STICKY = "sticky left-0 z-1 border-r border-slate-200";
+/** A route's two zone columns stay in view while the classes scroll under them, from `sm` up. */
+const FROM_COLUMN =
+  "w-32 min-w-32 max-w-32 sm:sticky sm:left-0 sm:w-40 sm:min-w-40 sm:max-w-40";
+const TO_COLUMN =
+  "relative w-36 min-w-36 max-w-36 border-r border-slate-200 sm:sticky sm:left-40 sm:w-48 sm:min-w-48 sm:max-w-48";
+
+const byName = (a: string, b: string) =>
+  a.localeCompare(b, "en", { sensitivity: "base" });
+
+/** The heading of a column the rows sort by, with its arrow while it does. */
+function SortHeading({
+  label,
+  dir,
+  align = "left",
+  onSort,
+}: {
+  label: string;
+  /** The way the rows sort by it, or none. */
+  dir: 1 | -1 | null;
+  align?: "left" | "right";
+  onSort: () => void;
+}) {
+  const Arrow = dir === -1 ? ArrowDownIcon : ArrowUpIcon;
+  return (
+    <button
+      type="button"
+      onClick={onSort}
+      className={cx(
+        "group/sort inline-flex items-center gap-1 rounded-sm font-medium hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-brand",
+        align === "right" && "flex-row-reverse",
+      )}
+    >
+      {label}
+      <Arrow
+        className={cx(
+          "size-3",
+          dir === null
+            ? "text-slate-300 opacity-0 group-hover/sort:opacity-100"
+            : "text-slate-900",
+        )}
+      />
+    </button>
+  );
+}
+
+/** A row's fill and remove buttons. */
+const ROW_ACTION =
+  "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50";
 
 const CELL_INPUT =
   "block h-10 w-full min-w-24 bg-transparent px-3 text-right text-sm tabular-nums outline-hidden placeholder:text-xs placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-brand focus:ring-inset read-only:cursor-wait";
@@ -139,6 +196,16 @@ const CELL_INPUT =
  * zones unless drop-offs stay inside the location, when such a route is
  * marked not offered. What an empty cell means follows the drop-off rule:
  * metered, or not offered.
+ *
+ * A route's zones are two columns, From and To, pinned while the classes
+ * scroll and the heading pinned while the routes do. The rows sort by
+ * either zone or by a class's price, on the prices as saved, so a row
+ * stays put while its cells are typed in and moves on the save. They can
+ * be narrowed to the routes of one zone, that zone then read as From, or
+ * to those with a class unpriced as saved. The keys and a paste follow
+ * the rows as shown. A row's fill copies each category's first price
+ * across its empty cells, and each class's heading counts its priced
+ * routes.
  */
 export function RateGrid({
   locationId,
@@ -167,6 +234,10 @@ export function RateGrid({
   const [values, setValues] = useState(() => valuesOf(saved));
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [sort, setSort] = useState<Sort>(null);
+  /** The zone whose routes alone are shown, or "" for every route. */
+  const [zoneShown, setZoneShown] = useState("");
+  const [gapsOnly, setGapsOnly] = useState(false);
   const [pending, startTransition] = useTransition();
   const gridRef = useRef<HTMLDivElement>(null);
   // What the focused cell held when it took the focus, for Escape.
@@ -179,9 +250,13 @@ export function RateGrid({
     const grid = gridRef.current;
     if (!grid) return;
     const measure = () => {
-      // A cell that takes the focus scrolls clear of the route column.
-      const routeColumn = grid.querySelector("th");
-      grid.style.scrollPaddingLeft = `${routeColumn?.offsetWidth ?? 0}px`;
+      // A cell that takes the focus scrolls clear of the zone columns,
+      // when they are pinned, and of the heading.
+      const pinned = [...grid.querySelectorAll<HTMLElement>("th[data-pin]")]
+        .slice(0, 2)
+        .filter((th) => getComputedStyle(th).position === "sticky");
+      grid.style.scrollPaddingLeft = `${pinned.reduce((sum, th) => sum + th.offsetWidth, 0)}px`;
+      grid.style.scrollPaddingTop = `${grid.querySelector("thead")?.offsetHeight ?? 0}px`;
       const left = grid.scrollLeft > 1;
       const right = grid.scrollLeft + grid.clientWidth < grid.scrollWidth - 1;
       setHidden((was) =>
@@ -247,6 +322,90 @@ export function RateGrid({
     (rank.get(route.toZoneId) ?? rank.size)
       ? [route.fromZoneId, route.toZoneId]
       : [route.toZoneId, route.fromZoneId];
+  /** A route's zones as its row shows them: the zone narrowed to as From, unless the route runs out to it. */
+  const shownEndsOf = (route: Route): [string, string] => {
+    const [a, b] = endsOf(route);
+    return b === zoneShown && !isOut(route) ? [b, a] : [a, b];
+  };
+
+  // The rows as shown: narrowed, then sorted on the saved prices so that
+  // typing never moves a row, the zones' order breaking ties.
+  const hasGap = (route: Route) =>
+    classes.some(
+      (column) => saved.prices[cellKey(route, column.id)] === undefined,
+    );
+  const touches = (route: Route) =>
+    zoneShown === "" ||
+    route.fromZoneId === zoneShown ||
+    route.toZoneId === zoneShown;
+  const narrowed = routes.filter(
+    (route) => touches(route) && (!gapsOnly || hasGap(route)),
+  );
+  const filtering = zoneShown !== "" || gapsOnly;
+  const shown = sort ? [...narrowed].sort(compareRoutes(sort)) : narrowed;
+
+  function compareRoutes({ by, dir }: NonNullable<Sort>) {
+    return (x: Route, y: Route) => {
+      if (by === "from" || by === "to") {
+        const [x1, x2] = shownEndsOf(x).map(nameOf);
+        const [y1, y2] = shownEndsOf(y).map(nameOf);
+        return by === "from"
+          ? dir * (byName(x1 ?? "", y1 ?? "") || byName(x2 ?? "", y2 ?? ""))
+          : dir * (byName(x2 ?? "", y2 ?? "") || byName(x1 ?? "", y1 ?? ""));
+      }
+      // An unpriced cell sorts last whichever the way.
+      const p = saved.prices[cellKey(x, by.classId)];
+      const q = saved.prices[cellKey(y, by.classId)];
+      if (p === undefined || q === undefined) {
+        return p === q ? 0 : p === undefined ? 1 : -1;
+      }
+      return dir * (p - q);
+    };
+  }
+
+  /** The way the rows sort by a column, or none. */
+  const dirOf = (by: string) =>
+    sort &&
+    (typeof sort.by === "string" ? sort.by === by : sort.by.classId === by)
+      ? sort.dir
+      : null;
+  /** Up, down, then back to the zones' order. */
+  function sortBy(by: NonNullable<Sort>["by"]) {
+    const dir = dirOf(typeof by === "string" ? by : by.classId);
+    setSort(dir === null ? { by, dir: 1 } : dir === 1 ? { by, dir: -1 } : null);
+  }
+
+  // What a row's fill writes: in each category, the first price typed
+  // into the cells left empty.
+  function fillOf(route: Route): Record<string, string> {
+    const first = new Map<string, string>();
+    for (const column of classes) {
+      const text = values[cellKey(route, column.id)] ?? "";
+      const reading = readCell(text);
+      if (!first.has(column.category) && reading.ok && reading.sen !== null) {
+        first.set(column.category, tidy(text));
+      }
+    }
+    const fill: Record<string, string> = {};
+    for (const column of classes) {
+      const key = cellKey(route, column.id);
+      const price = first.get(column.category);
+      if (price !== undefined && (values[key] ?? "").trim() === "") {
+        fill[key] = price;
+      }
+    }
+    return fill;
+  }
+
+  // The zones a row can be narrowed to: this location's, then the other
+  // locations' that a route runs out to.
+  const zoneOptions = [
+    { value: "", label: "Every zone" },
+    ...zones.map((zone) => ({ value: zone.id, label: zone.name })),
+    ...elsewhere
+      .filter((zone) => routes.some((route) => route.toZoneId === zone.id))
+      .map((zone) => ({ value: zone.id, label: nameOf(zone.id) })),
+  ];
 
   // The pairs not on the grid yet, for "Add route": between this
   // location's zones, and out to other locations' unless drop-offs stay in.
@@ -347,7 +506,8 @@ export function RateGrid({
   }
 
   // A block copied from a spreadsheet: tab between cells, a line per row.
-  // It fills right and down from the cell it is pasted in; what falls past
+  // It fills right and down from the cell it is pasted in, along the rows
+  // as shown; what falls past
   // the grid's edge is left out and counted.
   function onCellPaste(
     event: ClipboardEvent<HTMLInputElement>,
@@ -367,7 +527,7 @@ export function RateGrid({
     let outside = 0;
     lines.forEach((line, i) =>
       line.forEach((raw, j) => {
-        const route = routes[row + i];
+        const route = shown[row + i];
         const column = classes[col + j];
         if (!route || !column) {
           outside += 1;
@@ -439,6 +599,16 @@ export function RateGrid({
       `Added the route ${nameOf(a)} ${isOut(route) ? "→" : "↔"} ${nameOf(b)}.`,
     );
     return null;
+  }
+
+  function fillRow(route: Route, label: string) {
+    const fill = fillOf(route);
+    const count = Object.keys(fill).length;
+    setValues((current) => ({ ...current, ...fill }));
+    setNotice({
+      tone: "info",
+      text: `Filled ${plural(count, "cell")} of ${label}.`,
+    });
   }
 
   function removeRoute(route: Route) {
@@ -515,22 +685,39 @@ export function RateGrid({
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
   const emptyMeans = rule === "grid" ? "not offered" : "metered";
-  const sticky = cx(
-    STICKY,
-    hidden.left && "shadow-[6px_0_8px_-6px_rgb(0_0_0/0.15)]",
+  const toColumn = cx(
+    TO_COLUMN,
+    hidden.left && "sm:shadow-[6px_0_8px_-6px_rgb(0_0_0/0.15)]",
   );
-  const routeHeading = (
+  const ariaSortOf = (dir: 1 | -1 | null) =>
+    dir === null ? undefined : dir === 1 ? "ascending" : "descending";
+  const zoneHeading = (by: "from" | "to") => (
     <th
+      key={by}
+      data-pin=""
       scope="col"
       rowSpan={grouped ? 2 : undefined}
+      aria-sort={ariaSortOf(dirOf(by))}
       className={cx(
-        sticky,
-        "border-b bg-slate-50 py-2 pr-3 pl-6 text-left align-bottom font-medium",
+        by === "from" ? cx(FROM_COLUMN, "pl-6") : cx(toColumn, "pl-9"),
+        "z-1 border-b border-slate-200 bg-slate-50 py-2 pr-3 text-left align-bottom",
       )}
     >
-      Route
+      <SortHeading
+        label={by === "from" ? "From" : "To"}
+        dir={dirOf(by)}
+        onSort={() => sortBy(by)}
+      />
     </th>
   );
+  const zoneHeadings = [zoneHeading("from"), zoneHeading("to")];
+  // A class's priced routes, as typed.
+  const pricedOf = (classId: string) =>
+    routes.filter((route) => {
+      const reading = readCell(values[cellKey(route, classId)]);
+      return reading.ok && reading.sen !== null;
+    }).length;
+  const gaps = routes.filter(hasGap).length;
 
   let status: { tone: Notice["tone"] | "dirty" | "idle"; text: string };
   if (pending) status = { tone: "idle", text: "Saving…" };
@@ -550,16 +737,42 @@ export function RateGrid({
 
   return (
     <>
+      {routes.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-6 pb-4">
+          <Select
+            aria-label="Show the routes of one zone"
+            value={zoneShown}
+            onValueChange={setZoneShown}
+            options={zoneOptions}
+            className="w-full sm:w-64"
+          />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox
+              checked={gapsOnly}
+              onChange={(event) => setGapsOnly(event.target.checked)}
+            />
+            Only routes with an empty cell ({gaps})
+            <InfoTip
+              text={`A route where a class has no saved price, so the class is ${emptyMeans} on it. A row filled in stays until the save.`}
+            />
+          </label>
+          {filtering ? (
+            <p className="text-sm text-slate-500 tabular-nums sm:ml-auto">
+              {shown.length} of {plural(routes.length, "route")} shown
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="relative">
         <div
           ref={gridRef}
-          className="overflow-x-auto border-y border-slate-200"
+          className="max-h-[70vh] overflow-auto overscroll-x-contain border-y border-slate-200"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-600">
+            <thead className="sticky top-0 z-2 bg-slate-50 text-xs text-slate-600">
               {grouped ? (
                 <tr>
-                  {routeHeading}
+                  {zoneHeadings}
                   {groups.map((group, index) => (
                     <th
                       key={`${group.label}-${index}`}
@@ -576,104 +789,154 @@ export function RateGrid({
                 </tr>
               ) : null}
               <tr>
-                {grouped ? null : routeHeading}
+                {grouped ? null : zoneHeadings}
                 {classes.map((column, col) => (
                   <th
                     key={column.id}
                     scope="col"
+                    aria-sort={ariaSortOf(dirOf(column.id))}
                     className={cx(
-                      "border-b border-slate-200 px-3 py-2 text-right align-bottom font-medium text-slate-800",
+                      "border-b border-slate-200 px-3 py-2 text-right align-bottom text-slate-800",
                       col > 0 && "border-l",
                     )}
                   >
-                    {column.name}
+                    <SortHeading
+                      label={column.name}
+                      dir={dirOf(column.id)}
+                      align="right"
+                      onSort={() => sortBy({ classId: column.id })}
+                    />
+                    {routes.length > 0 ? (
+                      <span className="block font-normal whitespace-nowrap text-slate-500 tabular-nums">
+                        {pricedOf(column.id)} of {routes.length} priced
+                      </span>
+                    ) : null}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {routes.length === 0 ? (
+              {shown.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={classes.length + 1}
+                    colSpan={classes.length + 2}
                     className="px-6 py-8 text-center text-slate-500"
                   >
-                    {rule === "grid"
-                      ? "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
-                      : "No routes yet: every trip is metered at the class's rates."}
+                    {routes.length > 0 ? (
+                      <>
+                        No route matches.{" "}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setZoneShown("");
+                            setGapsOnly(false);
+                          }}
+                          className="font-medium text-slate-900 underline-offset-4 hover:underline"
+                        >
+                          Show every route
+                        </button>
+                      </>
+                    ) : rule === "grid" ? (
+                      "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
+                    ) : (
+                      "No routes yet: every trip is metered at the class's rates."
+                    )}
                   </td>
                 </tr>
               ) : (
-                routes.map((route, row) => {
-                  const [a, b] = endsOf(route);
+                shown.map((route, row) => {
+                  const [a, b] = shownEndsOf(route);
                   const out = isOut(route);
-                  const arrow = out ? "→" : "↔";
                   const label = `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
-                  const last = row === routes.length - 1;
+                  const last = row === shown.length - 1;
+                  const fillable =
+                    !readOnly && Object.keys(fillOf(route)).length > 0;
+                  const pinned = cx(
+                    "z-1 bg-white py-1.5 text-left align-middle font-normal group-hover:bg-slate-50",
+                    !last && "border-b border-slate-200",
+                  );
                   return (
                     <tr key={routeKey(route)} className="group">
                       <th
+                        data-pin=""
                         scope="row"
-                        className={cx(
-                          sticky,
-                          "bg-white py-0 pr-2 pl-6 text-left font-normal group-hover:bg-slate-50",
-                          !last && "border-b",
-                        )}
+                        className={cx(FROM_COLUMN, pinned, "pr-3 pl-6")}
                       >
-                        {/* One line from `sm` up; on a phone the two zones stack, so the prices keep the width. */}
-                        <div className="flex min-h-10 items-center gap-2 py-1.5 sm:py-0">
+                        <span className="block font-medium break-words text-slate-900">
+                          {zoneNameOf(a)}
+                        </span>
+                      </th>
+                      <td
+                        data-pin=""
+                        className={cx(toColumn, pinned, "pr-2 pl-3")}
+                      >
+                        <div className="flex min-h-7 items-center gap-2">
                           <Tooltip
                             content={
                               out
-                                ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
-                                : `${nameOf(a)} ↔ ${nameOf(b)}`
+                                ? "Trips from here only; a trip back is priced where it starts."
+                                : "The same price both ways."
                             }
-                            className="min-w-0 flex-1"
                           >
-                            <span className="min-w-0 flex-1 font-medium text-slate-900 sm:block sm:max-w-64 sm:truncate">
-                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {zoneNameOf(a)}
-                              </span>
-                              <span
-                                aria-hidden="true"
-                                className="mx-1.5 hidden text-slate-400 sm:inline"
-                              >
-                                {arrow}
-                              </span>
-                              <span className="sr-only">
-                                {out ? " to " : " and "}
-                              </span>
-                              <span className="block max-w-32 truncate sm:inline sm:max-w-none">
-                                {zoneNameOf(b)}
-                              </span>
+                            <span
+                              aria-hidden="true"
+                              className="w-4 shrink-0 text-center text-slate-400"
+                            >
+                              {out ? "→" : "↔"}
                             </span>
                           </Tooltip>
-                          {out ? (
-                            <Badge>
-                              {awayOf(route.toZoneId)?.location ??
-                                "Another location"}
-                            </Badge>
-                          ) : null}
-                          {out && rule === "zones" ? (
-                            <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
-                              <Badge tone="amber">Not offered</Badge>
-                            </Tooltip>
-                          ) : null}
+                          <span className="sr-only">{out ? "to" : "and"}</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="block font-medium break-words text-slate-900">
+                              {zoneNameOf(b)}
+                            </span>
+                            {out ? (
+                              <span className="mt-1 flex flex-wrap gap-1">
+                                <Badge>
+                                  {awayOf(route.toZoneId)?.location ??
+                                    "Another location"}
+                                </Badge>
+                                {rule === "zones" ? (
+                                  <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
+                                    <Badge tone="amber">Not offered</Badge>
+                                  </Tooltip>
+                                ) : null}
+                              </span>
+                            ) : null}
+                          </div>
                           {readOnly ? null : (
-                            <Tooltip content="Remove route">
-                              <button
-                                type="button"
-                                disabled={pending}
-                                onClick={() => removeRoute(route)}
-                                aria-label={`Remove the route between ${label}`}
-                                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"
-                              >
-                                <XIcon />
-                              </button>
-                            </Tooltip>
+                            // Over the zone name while the row is hovered or
+                            // a button has the focus, so the names keep the
+                            // width; always shown on a touch screen.
+                            <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 bg-slate-50 pr-2 pl-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+                              {fillable ? (
+                                <Tooltip content="Copy each category's first price into its empty cells">
+                                  <button
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={() => fillRow(route, label)}
+                                    aria-label={`Fill the empty cells of ${label}`}
+                                    className={ROW_ACTION}
+                                  >
+                                    <ArrowRightToLineIcon />
+                                  </button>
+                                </Tooltip>
+                              ) : null}
+                              <Tooltip content="Remove route">
+                                <button
+                                  type="button"
+                                  disabled={pending}
+                                  onClick={() => removeRoute(route)}
+                                  aria-label={`Remove the route between ${label}`}
+                                  className={ROW_ACTION}
+                                >
+                                  <XIcon />
+                                </button>
+                              </Tooltip>
+                            </div>
                           )}
                         </div>
-                      </th>
+                      </td>
                       {classes.map((column, col) => {
                         const key = cellKey(route, column.id);
                         const bad = invalid.has(key);
@@ -793,7 +1056,8 @@ export function RateGrid({
           A route costs the same both ways
           {routesOut > 0 || offered.length > 0
             ? "; one out to another location's zone (→) prices trips from here only."
-            : "."}
+            : "."}{" "}
+          Click a heading to sort by it.
           {readOnly
             ? null
             : " Paste a block of prices copied from a spreadsheet into any cell; Enter moves down a row, Escape undoes the cell."}

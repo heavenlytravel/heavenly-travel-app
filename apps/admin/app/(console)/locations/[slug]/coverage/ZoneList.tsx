@@ -18,13 +18,11 @@ import { errorOf } from "../../../../_lib/action-state";
  * says how many priced routes go and whose.
  */
 export function ZoneList({
-  locationId,
   zoneId,
   name,
   routes,
   pricedFrom,
 }: {
-  locationId: string;
   zoneId: string;
   name: string;
   /** The priced routes the zone is an end of. */
@@ -61,9 +59,7 @@ export function ZoneList({
           });
           if (!remove) return;
           startTransition(async () => {
-            const refused = errorOf(
-              await answerOf(deleteZoneAction(locationId, zoneId)),
-            );
+            const refused = errorOf(await answerOf(deleteZoneAction(zoneId)));
             setError(refused);
             if (!refused) toast.success(`Removed the zone ${name}.`);
           });

@@ -45,11 +45,11 @@ import type { MukimChoice } from "./zones/map-shapes";
  */
 
 /**
- * A zone write's answer: the zone's id, or why not, with the zones it
- * overlaps when that is why.
+ * A zone write's answer: the zone's id and the zones in its way it
+ * trimmed, or why not, with the zones it overlaps when that is why.
  */
 export type ZoneSaved =
-  | { ok: true; id: string }
+  | { ok: true; id: string; trimmed: string[] }
   | { ok: false; error: string; overlaps?: ZoneInTheWay[] };
 
 /**
@@ -158,13 +158,15 @@ export async function createZoneAction(
   );
   if (!result.ok) return result;
   revalidateLocation();
-  refreshLocationAfter(locationId, ...result.alsoChanged);
-  return { ok: true, id: result.id };
+  refreshLocationAfter(result.locationId, ...result.alsoChanged);
+  return { ok: true, id: result.id, trimmed: result.trimmed };
 }
 
-/** `fields` and `cutFrom` as for `createZoneAction`. */
+/**
+ * `fields` and `cutFrom` as for `createZoneAction`. The pages refreshed
+ * are those of the zone's own location, as the writer reads it.
+ */
 export async function updateZoneAction(
-  locationId: string,
   zoneId: string,
   fields: string,
   cutFrom?: string[],
@@ -172,11 +174,7 @@ export async function updateZoneAction(
   const admin = await getAdmin("coverage.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
   const chosen = cutFromOf(cutFrom);
-  if (
-    typeof locationId !== "string" ||
-    typeof zoneId !== "string" ||
-    chosen === null
-  ) {
+  if (typeof zoneId !== "string" || chosen === null) {
     return { ok: false, error: "The zone could not be read. Reload." };
   }
   const zone = await zoneFieldsOf(fields);
@@ -184,23 +182,18 @@ export async function updateZoneAction(
   const result = await updateZone(actorOf(admin), zoneId, zone.value, chosen);
   if (!result.ok) return result;
   revalidateLocation();
-  refreshLocationAfter(locationId, ...result.alsoChanged);
-  return { ok: true, id: zoneId };
+  refreshLocationAfter(result.locationId, ...result.alsoChanged);
+  return { ok: true, id: zoneId, trimmed: result.trimmed };
 }
 
-export async function deleteZoneAction(
-  locationId: string,
-  zoneId: string,
-): Promise<ActionState> {
+export async function deleteZoneAction(zoneId: string): Promise<ActionState> {
   const admin = await getAdmin("coverage.manage");
   if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string" || typeof zoneId !== "string") {
-    return STALE;
-  }
+  if (typeof zoneId !== "string") return STALE;
   const result = await deleteZone(actorOf(admin), zoneId);
   if (result.ok) {
     revalidateLocation();
-    refreshLocationAfter(locationId, ...result.alsoChanged);
+    refreshLocationAfter(result.locationId, ...result.alsoChanged);
   }
   return stateOf(result);
 }

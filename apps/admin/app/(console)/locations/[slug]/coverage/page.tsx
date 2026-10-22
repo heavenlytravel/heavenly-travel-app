@@ -134,7 +134,6 @@ async function coverage({
         </span>
       </CardTitle>
       <CoverageZones
-        locationId={id}
         mapKey={mapKey}
         districts={stateOutlines(location.states.map((s) => s.code))}
         zones={listed}

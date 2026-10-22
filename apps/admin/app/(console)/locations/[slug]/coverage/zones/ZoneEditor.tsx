@@ -588,11 +588,10 @@ export function ZoneEditor({
           : null;
     const fields = JSON.stringify({ name, shape, drawnFrom });
     const cutIds = trimming?.map((other) => other.id);
-    const trimmed = trimming ? ` and trimmed ${trimLabels}` : "";
     startTransition(async () => {
       const result = await answerOf(
         zone
-          ? updateZoneAction(locationId, zone.id, fields, cutIds)
+          ? updateZoneAction(zone.id, fields, cutIds)
           : createZoneAction(locationId, fields, cutIds),
       );
       if ("error" in result) {
@@ -602,6 +601,14 @@ export function ZoneEditor({
         }
         return;
       }
+      // The zones the save trimmed: none when the shape had moved off them
+      // before the check after the move had answered.
+      const cut = andList(
+        (trimming ?? [])
+          .filter((other) => result.trimmed.includes(other.id))
+          .map((other) => other.label),
+      );
+      const trimmed = cut ? ` and trimmed ${cut}` : "";
       toast.success(
         zone
           ? `Saved the zone ${name}${trimmed}.`

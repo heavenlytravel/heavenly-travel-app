@@ -507,12 +507,22 @@ function fieldsToWrite(
 }
 
 /**
- * A zone write done, with the other locations whose pages it changes, by
- * id: those whose zones it cut, and those whose grids end at a zone it
- * changed. Their search keeps to those zones too, so they are refreshed
- * with the location's own.
+ * A zone write done: the location whose zone it is, and the other
+ * locations whose pages it changes, by id: those whose zones it cut, and
+ * those whose grids end at a zone it changed. Their search keeps to those
+ * zones too, so they are refreshed with the location's own.
  */
-export type ZoneChanged = { ok: true; alsoChanged: string[] };
+export type ZoneChanged = {
+  ok: true;
+  locationId: string;
+  alsoChanged: string[];
+};
+
+/**
+ * A zone saved, with the zones in its way it trimmed, by id: none when
+ * nothing was in its way any more, whatever the admin chose.
+ */
+export type ZoneSaved = ZoneChanged & { trimmed: string[] };
 
 /**
  * A new zone, after the location's others, its overlapping pieces joined
@@ -524,7 +534,7 @@ export async function createZone(
   locationId: string,
   posted: ZoneFields,
   cutFrom?: readonly string[],
-): Promise<(ZoneChanged & { id: string }) | ZoneRefusal> {
+): Promise<(ZoneSaved & { id: string }) | ZoneRefusal> {
   const ready = fieldsToWrite(posted);
   if (!ready.ok) return ready;
   const { fields } = ready;
@@ -571,7 +581,9 @@ export async function createZone(
     return {
       ok: true,
       id: zone.id,
+      locationId,
       alsoChanged: await alsoChangedBy(tx, locationId, way.cut),
+      trimmed: way.cut.map((other) => other.id),
     };
   });
 }
@@ -587,7 +599,7 @@ export async function updateZone(
   id: string,
   posted: ZoneFields,
   cutFrom?: readonly string[],
-): Promise<ZoneChanged | ZoneRefusal> {
+): Promise<ZoneSaved | ZoneRefusal> {
   const ready = fieldsToWrite(posted);
   if (!ready.ok) return ready;
   const { fields } = ready;
@@ -620,7 +632,9 @@ export async function updateZone(
     });
     return {
       ok: true,
+      locationId: zone.locationId,
       alsoChanged: await alsoChangedBy(tx, zone.locationId, [zone, ...way.cut]),
+      trimmed: way.cut.map((other) => other.id),
     };
   });
 }
@@ -652,7 +666,11 @@ export async function deleteZone(
           : {}),
       },
     });
-    return { ok: true, alsoChanged: grids.map((grid) => grid.locationId) };
+    return {
+      ok: true,
+      locationId: zone.locationId,
+      alsoChanged: grids.map((grid) => grid.locationId),
+    };
   });
 }
 

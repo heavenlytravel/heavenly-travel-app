@@ -29,13 +29,11 @@ export type CoverageZone = MappedZone & {
  * way to remove a zone.
  */
 export function CoverageZones({
-  locationId,
   mapKey,
   districts,
   zones,
   editable,
 }: {
-  locationId: string;
   mapKey: string | null;
   districts: DistrictOutline[];
   zones: CoverageZone[];
@@ -128,7 +126,6 @@ export function CoverageZones({
                       Edit
                     </Link>
                     <ZoneList
-                      locationId={locationId}
                       zoneId={zone.id}
                       name={zone.name}
                       routes={zone.routes}

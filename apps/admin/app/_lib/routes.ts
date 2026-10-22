@@ -376,8 +376,9 @@ export function locationTabOf(slug: string, pathname: string): LocationTab {
   return tab?.key ?? "overview";
 }
 
-/** The ids of the Rates tab's three cards, and the link that lands on each. */
+/** The ids of the Rates tab's four cards, and the link that lands on each. */
 export const RATES_PARTS = {
+  metered: "metered-rates",
   grid: "rate-grid",
   dropoffs: "dropoffs",
   oddHours: "odd-hours",
@@ -429,9 +430,31 @@ export function locationBookingsHref(
   });
 }
 
+/**
+ * The tab a class's editor goes back to: the Vehicle classes tab, or the
+ * Rates tab's metered rates when it was opened from there. Carried as
+ * `?from=` to the editor and by its form to the save.
+ */
+export const OFFERING_FROM_PARAM = "from";
+export type OfferingFrom = "vehicle-classes" | "rates";
+export function offeringFromOf(value: unknown): OfferingFrom {
+  return value === "rates" ? "rates" : "vehicle-classes";
+}
+export function offeringBackHref(slug: string, from: OfferingFrom) {
+  return from === "rates"
+    ? locationRatesPartHref(slug, "metered")
+    : locationTabHref(slug, "vehicle-classes");
+}
+
 /** One offering of a location: the rates it sells a class at; "new" for the add page. */
-export function locationOfferingHref(slug: string, offeringId: string) {
-  return `${locationTabHref(slug, "vehicle-classes")}/${offeringId}`;
+export function locationOfferingHref(
+  slug: string,
+  offeringId: string,
+  from: OfferingFrom = "vehicle-classes",
+) {
+  return listHref(`${locationTabHref(slug, "vehicle-classes")}/${offeringId}`, {
+    [OFFERING_FROM_PARAM]: from === "rates" ? from : undefined,
+  });
 }
 export function newLocationOfferingHref(slug: string) {
   return locationOfferingHref(slug, "new");

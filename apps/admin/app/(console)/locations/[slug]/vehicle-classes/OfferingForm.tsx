@@ -29,7 +29,11 @@ import { useState } from "react";
 import { Card } from "../../../../_components/Card";
 import { ChargeInput } from "../../../../_components/ChargeInput";
 import { FormError } from "../../../../_components/FormError";
-import { locationTabHref } from "../../../../_lib/routes";
+import {
+  OFFERING_FROM_PARAM,
+  offeringBackHref,
+  type OfferingFrom,
+} from "../../../../_lib/routes";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import {
   DEFAULT_CATEGORY,
@@ -149,17 +153,20 @@ function ModelChoiceField({ offering }: { offering?: Offering }) {
  * rules start from the usual ones of the class's category, and start again
  * when the category changes. An existing one edits its rates, its rules,
  * the charge to choose a model and its switch. Money is typed in ringgit,
- * the rules in hours. A saved offering goes back to the tab.
+ * the rules in hours. A saved offering goes back to the tab it came from.
  */
 export function OfferingForm({
   locationId,
   locationSlug,
   offering,
   candidates = [],
+  from = "vehicle-classes",
 }: {
   locationId: string;
   /** The location's slug, its address, for the way back to the tab. */
   locationSlug: string;
+  /** The tab the editor was opened from, which Cancel and a save go back to. */
+  from?: OfferingFrom;
   /** Absent on the "new" page. */
   offering?: Offering;
   /** The catalogue classes the location does not offer yet, for a new offering. */
@@ -212,6 +219,7 @@ export function OfferingForm({
     <UploadsContext value={uploads.track}>
       <form {...formProps} className="grid gap-6">
         <input type="hidden" name="locationId" value={locationId} />
+        <input type="hidden" name={OFFERING_FROM_PARAM} value={from} />
         {offering ? (
           <input type="hidden" name="id" value={offering.id} />
         ) : null}
@@ -384,7 +392,7 @@ export function OfferingForm({
                   : "Save"}
           </Button>
           <Link
-            href={locationTabHref(locationSlug, "vehicle-classes")}
+            href={offeringBackHref(locationSlug, from)}
             className="text-sm text-slate-600 underline-offset-4 hover:underline"
           >
             Cancel

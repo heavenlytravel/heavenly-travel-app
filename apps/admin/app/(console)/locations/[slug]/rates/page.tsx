@@ -15,7 +15,11 @@ import { Card, CardTitle } from "../../../../_components/Card";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { RATES_PARTS, locationTabHref } from "../../../../_lib/routes";
+import {
+  RATES_PARTS,
+  locationOfferingHref,
+  locationTabHref,
+} from "../../../../_lib/routes";
 import {
   locationDetails,
   locationKey,
@@ -23,19 +27,21 @@ import {
   locationZoneNames,
 } from "../../_lib/location-data";
 import { DropoffRuleForm } from "./DropoffRuleForm";
+import { MeteredRates } from "./MeteredRates";
 import { dropoffRuleNote } from "./dropoff-note";
 import { OddHoursForm } from "./OddHoursForm";
 import { RateGrid } from "./RateGrid";
 
 /**
  * Route: /locations/[slug]/rates. Operation's tab, beside the setup: what
- * the location charges, in one column. The rate grid between its zones,
- * one row per route and one column per class on sale, runs to its card's
- * edges; under it, where a drop-off may be, which decides what an empty
+ * the location charges, in one column. The classes it sells at their
+ * metered rates and under their rules, each opening its editor; the rate
+ * grid between its zones, one row per route and one column per class on
+ * sale; both run to their cards' edges. Under them, where a drop-off may be, which decides what an empty
  * cell means, then the odd-hours surcharge. The zones themselves are drawn
- * on the Coverage tab. Operation changes them (`coverage.manage`);
- * Reservation and Sales read the grid and the two rules, for quoting a
- * customer (`coverage.view`). See
+ * on the Coverage tab, the classes put on sale on the Vehicle classes
+ * tab. Operation changes them (`coverage.manage`); Reservation and Sales
+ * read the rates, the grid and the two rules, for quoting a customer (`coverage.view`). See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
  * rates".
  */
@@ -57,6 +63,7 @@ export default async function LocationRatesPage({
         <Streamed
           fallback={
             <div className="grid gap-6">
+              <CardSkeleton rows={3} />
               <CardSkeleton rows={4} />
               <CardSkeleton rows={3} />
               <CardSkeleton rows={2} />
@@ -95,6 +102,34 @@ async function rates({
 
   return (
     <>
+      <Card id={RATES_PARTS.metered} flush>
+        <CardTitle
+          inset
+          description="What a trip off the grid costs, and the rules every booking of the class keeps to."
+          action={
+            manages ? (
+              <Link
+                href={locationTabHref(slug, "vehicle-classes")}
+                className="text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline"
+              >
+                Edit classes on sale
+              </Link>
+            ) : null
+          }
+        >
+          Metered rates and rules
+        </CardTitle>
+        <MeteredRates
+          offerings={offerings}
+          rule={rule}
+          editHref={
+            manages
+              ? (offeringId) => locationOfferingHref(slug, offeringId, "rates")
+              : undefined
+          }
+        />
+      </Card>
+
       <Card id={RATES_PARTS.grid} flush>
         <CardTitle
           inset

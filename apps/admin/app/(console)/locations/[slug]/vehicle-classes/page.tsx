@@ -2,9 +2,6 @@ import Link from "next/link";
 import {
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
-  formatMyr,
-  modelChoiceOf,
-  surchargeLabel,
   type TripCategory,
 } from "@repo/db";
 import { listPicturedOfferings, type PicturedOffering } from "@repo/db/server";
@@ -29,18 +26,19 @@ import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   VEHICLE_CLASSES_PATH,
   locationOfferingHref,
+  locationRatesPartHref,
   newLocationOfferingHref,
 } from "../../../../_lib/routes";
-import { rulesText, seatsText } from "../../../vehicle-classes/_lib/class-text";
+import { seatsText } from "../../../vehicle-classes/_lib/class-text";
 import { locationKey } from "../../_lib/location-data";
 import { OfferingActiveSwitch } from "./OfferingControls";
 
 /**
  * Route: /locations/[slug]/vehicle-classes. Operation's tab, step 2 of the
  * setup: the classes the location sells, by category, a card each with
- * the catalogue's picture, seats and luggage, then its four rates and its
- * three rules at this location, its switch, and its editor. The rest of
- * the catalogue is on its own screen. Operation changes them
+ * the catalogue's picture, seats and luggage, its switch and its editor.
+ * Their rates and rules here are read on the Rates tab; the rest of the
+ * catalogue is on its own screen. Operation changes them
  * (`coverage.manage`); Reservation and Sales read them, without the switch
  * or the editor (`coverage.view`).
  */
@@ -56,7 +54,7 @@ export default async function LocationVehicleClassesPage({
     <>
       <SectionHeader
         title="Vehicle classes"
-        description="What this location sells, at its own metered rates and under its own rules. A route with a price on the rate grid costs that price instead."
+        description="The classes this location sells. Their rates and rules here are on the Rates tab."
         action={
           manages ? (
             <Button asChild>
@@ -86,6 +84,13 @@ export default async function LocationVehicleClassesPage({
           className="font-medium text-slate-900 underline-offset-4 hover:underline"
         >
           class catalogue
+        </Link>
+        ; what each costs here is on the{" "}
+        <Link
+          href={locationRatesPartHref(slug, "metered")}
+          className="font-medium text-slate-900 underline-offset-4 hover:underline"
+        >
+          Rates tab
         </Link>
         .
       </p>
@@ -165,12 +170,10 @@ function Category({
 }
 
 /**
- * One class at this location: its picture here, as customers see it, then its name over
- * the catalogue's seats and luggage, the switch that puts it on sale here,
- * its four rates, the charge to choose a model and its three rules here,
- * and its editor. The whole card
- * opens the editor; off, it is in grey. Read only, the switch is a badge
- * and there is no editor.
+ * One class at this location: its picture here, as customers see it, then
+ * its name over the catalogue's seats and luggage, the switch that puts it
+ * on sale here, and its editor. The whole card opens the editor; off, it
+ * is in grey. Read only, the switch is a badge and there is no editor.
  */
 function OfferingCard({
   slug,
@@ -186,17 +189,6 @@ function OfferingCard({
 }) {
   const { vehicleClass } = offering;
   const href = locationOfferingHref(slug, offering.id);
-  const modelChoice = modelChoiceOf(offering);
-  const rates: [label: string, value: string][] = [
-    ["Base fare", formatMyr(offering.baseFareSen)],
-    ["Per km", formatMyr(offering.perKmSen)],
-    ["Per hour", formatMyr(offering.hourlyRateSen)],
-    ["Minimum fare", formatMyr(offering.minimumFareSen)],
-    [
-      "To choose a model",
-      modelChoice ? surchargeLabel(modelChoice) : "Not offered",
-    ],
-  ];
 
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
@@ -206,57 +198,46 @@ function OfferingCard({
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={<BusIcon className="size-7 text-slate-300" />}
       />
-      <div className="flex items-start justify-between gap-3 px-4 pt-4">
-        <div className="min-w-0">
-          <h4 className="truncate text-base font-semibold tracking-tight">
-            {manages ? (
-              <Link href={href} className={TILE_LINK}>
-                {vehicleClass.name}
-              </Link>
-            ) : (
-              vehicleClass.name
-            )}
-          </h4>
-          <p className="text-xs text-slate-500">
-            {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
-          </p>
-        </div>
-        {/* Above the card's link, so it switches instead of opening. */}
-        <div className="relative z-1 shrink-0">
-          {manages ? (
-            <OfferingActiveSwitch
-              offering={offering}
-              lastOnSaleInCategory={lastOnSale}
-            />
-          ) : (
-            <Badge tone={offering.isActive ? "green" : "neutral"}>
-              {offering.isActive ? "On sale" : "Off sale"}
-            </Badge>
-          )}
-        </div>
-      </div>
-      {!vehicleClass.isActive ? (
-        <p className="px-4 pt-2 text-xs text-amber-700">
-          Off in the catalogue, so sold nowhere.
-        </p>
-      ) : null}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 pt-4">
-        {rates.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-xs text-slate-500">{label}</dt>
-            <dd className="text-sm font-medium text-slate-900 tabular-nums">
-              {value}
-            </dd>
+      <div className="grid gap-2 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h4 className="truncate text-base font-semibold tracking-tight">
+              {manages ? (
+                <Link href={href} className={TILE_LINK}>
+                  {vehicleClass.name}
+                </Link>
+              ) : (
+                vehicleClass.name
+              )}
+            </h4>
+            <p className="text-xs text-slate-500">
+              {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
+            </p>
           </div>
-        ))}
-      </dl>
-      <p className="px-4 pt-3 pb-4 text-xs text-slate-600">
-        {rulesText(offering)}
-      </p>
+          {/* Above the card's link, so it switches instead of opening. */}
+          <div className="relative z-1 shrink-0">
+            {manages ? (
+              <OfferingActiveSwitch
+                offering={offering}
+                lastOnSaleInCategory={lastOnSale}
+              />
+            ) : (
+              <Badge tone={offering.isActive ? "green" : "neutral"}>
+                {offering.isActive ? "On sale" : "Off sale"}
+              </Badge>
+            )}
+          </div>
+        </div>
+        {!vehicleClass.isActive ? (
+          <p className="text-xs text-amber-700">
+            Off in the catalogue, so sold nowhere.
+          </p>
+        ) : null}
+      </div>
       {manages ? (
         <TileFoot>
           <Button asChild variant="secondary" size="sm">
-            <Link href={href}>Edit rates and rules</Link>
+            <Link href={href}>Edit</Link>
           </Button>
           <span className="ml-auto text-xs text-slate-500">
             {offering.isActive ? "On sale" : "Off sale"}

@@ -230,6 +230,16 @@ export function LocationPanel({
       case "rates":
         return [
           {
+            key: "metered",
+            label: "Metered rates",
+            href: locationRatesPartHref(slug, "metered"),
+            note: plural(
+              offerings.filter((offering) => offering.onSale).length,
+              "class",
+              "classes",
+            ),
+          },
+          {
             key: "grid",
             label: "Rate grid",
             href: locationRatesPartHref(slug, "grid"),

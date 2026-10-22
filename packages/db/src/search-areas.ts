@@ -89,14 +89,9 @@ const zonesOf = (zones: SearchRows["zones"]) =>
     isZoneShape(zone.shape) ? [{ ...zone, shape: zone.shape }] : [],
   );
 
-/** The box around the zones and the districts they lie in, with the margin; null for none. */
-function boxAround(zones: readonly { shape: ZoneShape }[]): BBox | null {
-  return zones.length > 0
-    ? widenBox(
-        unionBox(zones.map((zone) => zoneSearchBox(zone.shape))),
-        SEARCH_MARGIN,
-      )
-    : null;
+/** The box around the zones' boxes, with the margin; null for none. */
+function boxAround(boxes: readonly BBox[]): BBox | null {
+  return boxes.length > 0 ? widenBox(unionBox(boxes), SEARCH_MARGIN) : null;
 }
 
 function searchOf(
@@ -106,9 +101,17 @@ function searchOf(
   const zones = zonesOf(rows.zones);
   const rule = dropoffRuleOf(rows);
   const ends = dropoffZonesOf(rule, zones, zonesOf(elsewhere));
+  // Each zone's box once, the district shapes' arithmetic: the pick-up's
+  // zones are among the drop-off's.
+  const boxes = new Map<string, BBox>();
+  const boxOf = (zone: { id: string; shape: ZoneShape }) => {
+    let box = boxes.get(zone.id);
+    if (!box) boxes.set(zone.id, (box = zoneSearchBox(zone.shape)));
+    return box;
+  };
   return {
-    pickup: boxAround(zones),
-    dropoff: rule === "anywhere" ? null : boxAround(ends),
+    pickup: boxAround(zones.map(boxOf)),
+    dropoff: rule === "anywhere" ? null : boxAround(ends.map(boxOf)),
     dropoffRule: rule,
     dropoffPlaces:
       rule === "anywhere"

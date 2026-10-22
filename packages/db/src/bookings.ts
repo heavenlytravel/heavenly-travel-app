@@ -48,7 +48,7 @@ const withItems = {
         district: {
           select: { code: true, name: true, state: { select: { name: true } } },
         },
-        location: { select: { id: true, name: true } },
+        location: { select: { id: true, name: true, slug: true } },
       },
     },
   },

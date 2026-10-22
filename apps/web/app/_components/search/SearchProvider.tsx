@@ -55,6 +55,8 @@ type SearchCard = ReturnType<typeof useSearch> & {
   fillPickup: (name: string) => void;
   /** Fills the drop-off with an exact place, ready to send, on a one-way trip. */
   fillDropoff: (place: { label: string; placeId: string }) => void;
+  /** Whether a trip may end at a saved address: on a location's pages, by its rule. */
+  offersDropoff: (placeId: string) => boolean;
 };
 
 const SearchCardContext = createContext<SearchCard | null>(null);
@@ -128,11 +130,14 @@ export function SearchProvider({
       }
     : undefined;
 
+  const offersDropoff = (placeId: string) =>
+    !location || offersDropoffAddress(location.search, placeId);
+
   const offered = location
     ? dropoffs && {
         ...dropoffs,
         options: dropoffs.options.filter((option) =>
-          offersDropoffAddress(location.search, option.placeId),
+          offersDropoff(option.placeId),
         ),
       }
     : dropoffs;
@@ -160,6 +165,7 @@ export function SearchProvider({
         checkPlaces,
         fillPickup,
         fillDropoff,
+        offersDropoff,
       }}
     >
       {children}

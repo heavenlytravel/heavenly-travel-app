@@ -70,9 +70,14 @@ export function LocationSearch({
   );
 }
 
-/** Fills a highlight's saved address into the drop-off and brings the card into view. */
+/**
+ * Fills a highlight's saved address into the drop-off and brings the card
+ * into view; nothing where the location's rule does not let a trip end, as
+ * the card would refuse it.
+ */
 export function TakeMeHere({ address }: { address: LocationViewAddress }) {
-  const { fillDropoff } = useSearchCard();
+  const { fillDropoff, offersDropoff } = useSearchCard();
+  if (!offersDropoff(address.placeId)) return null;
   return (
     <button
       type="button"

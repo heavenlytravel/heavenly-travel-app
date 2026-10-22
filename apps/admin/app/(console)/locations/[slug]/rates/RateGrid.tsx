@@ -128,11 +128,17 @@ function groupsOf(classes: readonly ClassColumn[]) {
   return groups;
 }
 
-/** A route's two zone columns stay in view while the classes scroll under them, from `sm` up. */
-const FROM_COLUMN =
-  "w-32 min-w-32 max-w-32 sm:sticky sm:left-0 sm:w-40 sm:min-w-40 sm:max-w-40";
+/**
+ * A route's two zone columns stay in view while the classes scroll under
+ * them, from `sm` up. Each is as wide as its longest name, so a name keeps
+ * to one line and a row to one height; To is pinned at From's width, which
+ * the grid measures into `--from-width`.
+ */
+const FROM_COLUMN = "sm:sticky sm:left-0";
 const TO_COLUMN =
-  "relative w-36 min-w-36 max-w-36 border-r border-slate-200 sm:sticky sm:left-40 sm:w-48 sm:min-w-48 sm:max-w-48";
+  "relative border-r border-slate-200 sm:sticky sm:left-[var(--from-width,0px)]";
+/** A zone's name on one line, wrapping only past 15rem. */
+const ZONE_NAME = "block w-max max-w-60 font-medium text-slate-900";
 
 const byName = (a: string, b: string) =>
   a.localeCompare(b, "en", { sensitivity: "base" });
@@ -256,6 +262,8 @@ export function RateGrid({
         .slice(0, 2)
         .filter((th) => getComputedStyle(th).position === "sticky");
       grid.style.scrollPaddingLeft = `${pinned.reduce((sum, th) => sum + th.offsetWidth, 0)}px`;
+      const from = grid.querySelector<HTMLElement>("th[data-pin]");
+      grid.style.setProperty("--from-width", `${from?.offsetWidth ?? 0}px`);
       grid.style.scrollPaddingTop = `${grid.querySelector("thead")?.offsetHeight ?? 0}px`;
       const left = grid.scrollLeft > 1;
       const right = grid.scrollLeft + grid.clientWidth < grid.scrollWidth - 1;
@@ -267,6 +275,9 @@ export function RateGrid({
     const observer = new ResizeObserver(measure);
     observer.observe(grid);
     if (grid.firstElementChild) observer.observe(grid.firstElementChild);
+    // From widens and narrows with the names shown, the table's width aside.
+    const from = grid.querySelector("th[data-pin]");
+    if (from) observer.observe(from);
     grid.addEventListener("scroll", measure, { passive: true });
     return () => {
       observer.disconnect();
@@ -862,9 +873,7 @@ export function RateGrid({
                         scope="row"
                         className={cx(FROM_COLUMN, pinned, "pr-3 pl-6")}
                       >
-                        <span className="block font-medium break-words text-slate-900">
-                          {zoneNameOf(a)}
-                        </span>
+                        <span className={ZONE_NAME}>{zoneNameOf(a)}</span>
                       </th>
                       <td
                         data-pin=""
@@ -886,24 +895,20 @@ export function RateGrid({
                             </span>
                           </Tooltip>
                           <span className="sr-only">{out ? "to" : "and"}</span>
-                          <div className="min-w-0 flex-1">
-                            <span className="block font-medium break-words text-slate-900">
-                              {zoneNameOf(b)}
+                          <span className={ZONE_NAME}>{zoneNameOf(b)}</span>
+                          {out ? (
+                            <span className="flex shrink-0 gap-1">
+                              <Badge>
+                                {awayOf(route.toZoneId)?.location ??
+                                  "Another location"}
+                              </Badge>
+                              {rule === "zones" ? (
+                                <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
+                                  <Badge tone="amber">Not offered</Badge>
+                                </Tooltip>
+                              ) : null}
                             </span>
-                            {out ? (
-                              <span className="mt-1 flex flex-wrap gap-1">
-                                <Badge>
-                                  {awayOf(route.toZoneId)?.location ??
-                                    "Another location"}
-                                </Badge>
-                                {rule === "zones" ? (
-                                  <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
-                                    <Badge tone="amber">Not offered</Badge>
-                                  </Tooltip>
-                                ) : null}
-                              </span>
-                            ) : null}
-                          </div>
+                          ) : null}
                           {readOnly ? null : (
                             // Over the zone name while the row is hovered or
                             // a button has the focus, so the names keep the

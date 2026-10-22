@@ -33,6 +33,8 @@ const RULES = {
   /** Take a location live, pause it, resume it, delete it. */
   "locations.activate": "super",
   "admins.manage": "super",
+  /** Every account: list them and create one on someone's behalf. */
+  "users.manage": "super",
   "wall.switch": "super",
   "activity.view": "super",
   /** Every uploaded image and where it is used; delete those on no page. */

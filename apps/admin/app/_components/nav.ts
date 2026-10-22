@@ -11,6 +11,7 @@ import {
   MapIcon,
   MapPinIcon,
   ShieldCheckIcon,
+  UsersIcon,
 } from "@repo/ui/icons";
 import type { ComponentType, SVGProps } from "react";
 import {
@@ -23,6 +24,7 @@ import {
   LOCATIONS_PATH,
   MEDIA_PATH,
   RATES_PATH,
+  USERS_PATH,
   VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,
 } from "../_lib/routes";
@@ -121,6 +123,12 @@ export const NAV: NavGroup[] = [
   {
     label: "Access",
     items: [
+      {
+        href: USERS_PATH,
+        label: "Users",
+        icon: UsersIcon,
+        permission: "users.manage",
+      },
       {
         href: ADMINS_PATH,
         label: "Admins",

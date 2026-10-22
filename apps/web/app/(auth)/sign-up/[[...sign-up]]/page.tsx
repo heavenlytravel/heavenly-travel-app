@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SignUp } from "@clerk/nextjs";
 import { isValidEmail } from "@repo/db";
+import { clerkAuthCard } from "@repo/ui/clerk-appearance";
 
 export const metadata: Metadata = {
   title: "Create an account | Heavenly Travel",
@@ -18,5 +19,10 @@ export default async function SignUpPage({
   const { email } = await searchParams;
   const emailAddress =
     typeof email === "string" && isValidEmail(email) ? email : undefined;
-  return <SignUp initialValues={emailAddress ? { emailAddress } : undefined} />;
+  return (
+    <SignUp
+      appearance={clerkAuthCard}
+      initialValues={emailAddress ? { emailAddress } : undefined}
+    />
+  );
 }

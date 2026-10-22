@@ -205,7 +205,9 @@ export type {
 } from "./bookings";
 export { listBookingNotes, addBookingNote } from "./booking-notes";
 export type { BookingNoteEntry } from "./booking-notes";
-export { findUserByEmail } from "./users";
+export { findUserByEmail, listUsers } from "./users";
+export { createUser } from "./accounts";
+export type { ListedUser } from "./users";
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";
@@ -230,6 +232,7 @@ export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./user-input";
 export * from "./expiry";
 export * from "./location-input";
 export * from "./images";

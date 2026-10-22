@@ -105,7 +105,10 @@ function idsOf(rows: ActivityLog[], entityType: ActivityEntityType) {
  * The log holds ids only, so a renamed or deleted record never rewrites it.
  */
 async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
-  const userIds = new Set<string>(idsOf(rows, "admin"));
+  const userIds = new Set<string>([
+    ...idsOf(rows, "user"),
+    ...idsOf(rows, "admin"),
+  ]);
   for (const row of rows) if (row.actorId) userIds.add(row.actorId);
   // A record type the rows do not name costs no query.
   const read = <T>(ids: readonly string[], query: () => Promise<T[]>) =>
@@ -183,6 +186,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     [...vehicles, ...drivers].map((record) => [record.id, record.locationId]),
   );
   const userById = new Map(users.map((u) => [u.id, u]));
+  const emails = new Map(users.map((u) => [u.id, u.email]));
   const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
     deletedNames(
       "location.deleted",
@@ -221,7 +225,8 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     state: new Map(states.map((s) => [s.code, s.name])),
     district: new Map(districts.map((d) => [d.code, d.name])),
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
-    admin: new Map(users.map((u) => [u.id, u.email])),
+    user: emails,
+    admin: emails,
     setting: new Map(),
     media: new Map(),
     location: withDeleted(
@@ -291,8 +296,9 @@ function entityLabelOf(
 ) {
   const entityType = row.entityType as ActivityEntityType;
   switch (entityType) {
+    case "user":
     case "admin":
-      return labels.admin.get(row.entityId) ?? "Former user";
+      return labels[entityType].get(row.entityId) ?? "Former user";
     case "setting":
       return "The wall";
     case "media":

@@ -4,6 +4,7 @@ import { refuse, type Change } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { adminTeamsOf, type AdminLevel, type AdminTeam } from "./roles";
+import { userSearchWhere } from "./users";
 
 const withUser = {
   include: { user: true },
@@ -20,19 +21,8 @@ const NO_TEAM_ERROR = "A REGULAR admin needs at least one team. Tick one.";
  * each word of it in their first name, last name or email.
  */
 export function listAdmins(search?: string): Promise<AdminWithUser[]> {
-  const words = search ? search.split(" ") : [];
   return db.adminProfile.findMany({
-    where: {
-      AND: words.map((word) => ({
-        user: {
-          OR: [
-            { firstName: { contains: word, mode: "insensitive" } },
-            { lastName: { contains: word, mode: "insensitive" } },
-            { email: { contains: word, mode: "insensitive" } },
-          ],
-        },
-      })),
-    },
+    where: { user: userSearchWhere(search) },
     ...withUser,
     orderBy: { createdAt: "asc" },
   });
@@ -83,7 +73,7 @@ export async function setAdmin(
     });
     if (!user) {
       return refuse(
-        `No user with email ${email}. Ask them to sign in to the console once, then try again.`,
+        `No account with email ${email}. Create it on the Users page first.`,
         "email",
       );
     }

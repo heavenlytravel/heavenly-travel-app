@@ -15,6 +15,20 @@ import {
 
 export const ADMINS_PATH = "/admins";
 
+/** One admin found by their email on the Admins screen. */
+export function adminHref(email: string) {
+  return listHref(ADMINS_PATH, { [SEARCH_PARAM]: email });
+}
+
+/** Every account, the newest first, narrowed by a search, at a page. */
+export const USERS_PATH = "/users";
+export function usersHref(filter: { q?: string; page?: number } = {}) {
+  return listHref(USERS_PATH, {
+    [SEARCH_PARAM]: filter.q,
+    [PAGE_PARAM]: pageParam(filter.page),
+  });
+}
+
 export const ACTIVITY_PATH = "/activity";
 
 /**

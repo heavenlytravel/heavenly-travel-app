@@ -3,12 +3,11 @@
 import type { AdminTeam } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
-import { Sheet } from "@repo/ui/sheet";
 import { useState } from "react";
 import { FormError } from "../../_components/FormError";
 import { useActionForm } from "../../_lib/use-action-form";
-import { AdminFields } from "./AdminFields";
-import { revokeAdminAction, setAdminAction } from "./actions";
+import { AdminAccessSheet } from "./AdminAccessSheet";
+import { revokeAdminAction } from "./actions";
 
 /** Edit the level and teams, and revoke, for one row of the admins table. */
 export function AdminRowControls({
@@ -23,10 +22,6 @@ export function AdminRowControls({
   teams: readonly AdminTeam[];
 }) {
   const [editing, setEditing] = useState(false);
-  const edit = useActionForm(setAdminAction, {
-    done: `Saved the level and teams of ${email}.`,
-    onDone: () => setEditing(false),
-  });
   const [dialog, confirm] = useConfirm();
   const revoke = useActionForm(revokeAdminAction, {
     ask: () =>
@@ -61,39 +56,15 @@ export function AdminRowControls({
       {dialog}
       <FormError error={revoke.error} size="xs" />
 
-      <Sheet
+      <AdminAccessSheet
         open={editing}
         onOpenChange={setEditing}
-        title={`Level and teams for ${email}`}
-      >
-        <form {...edit.formProps} className="grid gap-5 p-6 text-left">
-          <div>
-            <h2 className="text-base font-semibold tracking-tight">
-              Level and teams
-            </h2>
-            <p className="mt-1 text-sm break-all text-slate-600">{email}</p>
-          </div>
-          <input type="hidden" name="email" value={email} />
-          <AdminFields level={level} teams={teams} />
-          <p className="text-xs text-slate-500">
-            A REGULAR admin needs at least one team. SUPER reaches every screen
-            and needs none.
-          </p>
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={edit.pending}>
-              {edit.pending ? "Saving…" : "Save"}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={edit.pending}
-              onClick={() => setEditing(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-          <FormError error={edit.error} />
-        </form>
-      </Sheet>
+        email={email}
+        level={level}
+        teams={teams}
+        submit="Save"
+        done={`Saved the level and teams of ${email}.`}
+      />
     </div>
   );
 }

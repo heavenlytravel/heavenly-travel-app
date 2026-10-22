@@ -1,6 +1,10 @@
 /**
  * The one Clerk theme for both apps, passed to `ClerkProvider` so every
- * prebuilt component (sign in, sign up, user button) matches. The colours are
+ * prebuilt component (sign in, sign up, user button, the account window)
+ * matches. Only colours, font and fields live here: the sizing of the
+ * sign-in card is `clerkAuthCard`, given to the sign-in and sign-up pages
+ * alone, since the account window is a wider card of two columns that the
+ * same rules would squeeze. The colours are
  * the brand's custom properties from @repo/tailwind-config, which Clerk reads
  * where it draws (`docs/260923-home-design.md`). The font is inherited from the
  * page, so the card takes the home page fonts on the customer site and Geist
@@ -33,19 +37,6 @@ export const clerkAppearance = {
     borderRadius: "0.75rem",
   },
   elements: {
-    // Clerk's root has a fixed width; let it shrink on narrow screens.
-    rootBox: { width: "100%", maxWidth: "26rem" },
-    cardBox: {
-      width: "100%",
-      boxShadow: "0 22px 55px rgba(0, 38, 75, 0.14)",
-    },
-    card: { padding: "2rem" },
-    headerTitle: {
-      fontFamily: "var(--font-display, inherit)",
-      fontWeight: 400,
-      fontSize: "1.65rem",
-      letterSpacing: "-0.01em",
-    },
     headerSubtitle: { color: muted },
     formButtonPrimary: {
       height: "2.75rem",
@@ -60,21 +51,42 @@ export const clerkAppearance = {
 } as const;
 
 /**
- * The user button in a header. The shared `rootBox` rule above sizes the
- * sign-in card, and would stretch the button's box to 26rem too, pushing
- * the avatar away from the header's edge; this undoes it.
+ * The sign-in and sign-up card: as wide as the page allows up to 26rem,
+ * the title in the display font. Given to `<SignIn>` and `<SignUp>` only.
  */
+export const clerkAuthCard = {
+  elements: {
+    // Clerk's root has a fixed width; let it shrink on narrow screens.
+    rootBox: { width: "100%", maxWidth: "26rem" },
+    cardBox: {
+      width: "100%",
+      boxShadow: "0 22px 55px rgba(0, 38, 75, 0.14)",
+    },
+    card: { padding: "2rem" },
+    headerTitle: {
+      fontFamily: "var(--font-display, inherit)",
+      fontWeight: 400,
+      fontSize: "1.65rem",
+      letterSpacing: "-0.01em",
+    },
+  },
+} as const;
+
+/** The user button in a header. */
 export const clerkUserButton = {
   elements: {
-    rootBox: { width: "auto", maxWidth: "none" },
     userButtonTrigger: { boxShadow: "none" },
   },
 } as const;
 
-/** The admin sign-in: no sign-up link, and a deeper shadow for the dark page. */
+/** The admin sign-in: the card with no sign-up link, and a deeper shadow for the dark page. */
 export const clerkAdminSignIn = {
   elements: {
+    ...clerkAuthCard.elements,
     footerAction: { display: "none" },
-    cardBox: { boxShadow: "0 22px 55px rgba(0, 15, 32, 0.5)" },
+    cardBox: {
+      ...clerkAuthCard.elements.cardBox,
+      boxShadow: "0 22px 55px rgba(0, 15, 32, 0.5)",
+    },
   },
 } as const;

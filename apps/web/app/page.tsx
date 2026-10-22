@@ -4,8 +4,7 @@
  * One page: a full-screen pale photo hero with the booking card for all six
  * services resting on its floor, why to book with us, the locations we cover
  * and a closing call. The location cards are Marketing's top choices and open
- * their pages; the airport card fills the pick-up into the booking card. Its
- * pieces live in ./_home.
+ * their pages. Its pieces live in ./_home.
  */
 
 import type { Metadata } from "next";

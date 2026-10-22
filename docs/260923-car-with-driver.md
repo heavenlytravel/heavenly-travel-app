@@ -310,8 +310,8 @@ As built in step 4:
 - The booking and account pages live in the `(site)` route group with one layout:
   the site header (links from `lg` up, a `Sheet` from `@repo/ui` below that) and
   one centred column. Clerk's account menu gains My bookings and Account entries
-  ahead of the built-ins. `clerkUserButton` in `@repo/ui` undoes the sign-in card's
-  `rootBox` width for header buttons in both apps.
+  ahead of the built-ins. The sign-in card's sizing is `clerkAuthCard` in `@repo/ui`,
+  given to the sign-in and sign-up pages only, so the account window keeps its width.
 - `BookingDetail` renders a booking for its owner on both the success page and the
   My bookings detail page; the pages differ only in title and the side panel's
   action. `requireOwnBooking` does the reference parsing, sign-in redirect and

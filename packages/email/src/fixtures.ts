@@ -77,7 +77,7 @@ export function sampleItem(
     districtCode: "sepang",
     district: { code: "sepang", name: "Sepang", state: { name: "Selangor" } },
     locationId: "loc1",
-    location: { id: "loc1", name: "Klang Valley" },
+    location: { id: "loc1", name: "Klang Valley", slug: "klang-valley" },
     priceTotalSen: sedanPrice.totalSen,
     priceBreakdown: sedanPrice,
     priceOverrideSen: null,

@@ -11,6 +11,7 @@ import {
 } from "./location-page-input";
 import type { DeleteImpact } from "./delete-impact";
 import { andList, plural } from "./names";
+import { routesLostLine } from "./zone-routes";
 import { slugify } from "./slug";
 
 /**
@@ -362,9 +363,8 @@ export function locationDeleteImpact(
             `/${location.slug} turns into “page not found”: links to it break and search engines drop it.`,
           ]
         : []),
-      ...routesIn.map(
-        (entry) =>
-          `${entry.name} loses ${entry.routes === 1 ? "its route" : `its ${plural(entry.routes, "route")}`} to these zones and stops selling ${entry.routes === 1 ? "that trip" : "those trips"}.`,
+      ...routesIn.map((entry) =>
+        routesLostLine(entry.name, entry.routes, "these zones"),
       ),
     ],
     confirmWith: beenLive || routesIn.length > 0 ? location.slug : null,

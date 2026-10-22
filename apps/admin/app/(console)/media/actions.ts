@@ -13,11 +13,7 @@ import {
   type ActionState,
 } from "../../_lib/action-state";
 import { revalidateFleet } from "../../_lib/fleet-actions";
-import {
-  UPLOADS_NOT_SET_UP,
-  deleteStoredFiles,
-  listStoredFiles,
-} from "../../_lib/uploads";
+import { deleteStoredFiles, listStoredFiles } from "../../_lib/uploads";
 
 /** The most files one delete takes: more than a page of the screen holds. */
 const MAX_KEYS = 500;
@@ -49,21 +45,35 @@ export async function deleteMediaAction(
     return STALE;
   }
 
-  const files = await listStoredFiles();
-  if (!files) return { error: UPLOADS_NOT_SET_UP };
+  const stored = await listStoredFiles();
+  if (!stored.ok) return { error: stored.error };
   const asked = new Set(keys);
   // One gone meanwhile leaves the impact short of what was shown.
-  const chosen = files.filter((file) => asked.has(file.key));
+  const chosen = stored.files.filter((file) => asked.has(file.key));
   const released = await releaseMedia(actorOf(admin), chosen, confirmation);
   if (!released.ok) return refusalOf(released);
+  // The vehicles and classes changed, whatever storage does next.
+  if (released.fleetChanged) revalidateFleet("vehicles");
 
-  await deleteStoredFiles(chosen.map((file) => file.key));
+  const deleted = await deleteStoredFiles(chosen.map((file) => file.key));
+  // What went is logged, and only that: the log is how a form opened
+  // before the delete is kept from saving a file that is gone.
+  const left = deleted ? null : await listStoredFiles();
+  const remaining = new Set(left?.ok ? left.files.map((file) => file.key) : []);
+  const gone = deleted
+    ? chosen
+    : left?.ok
+      ? chosen.filter((file) => !remaining.has(file.key))
+      : [];
   await logMediaDeleted(
     actorOf(admin),
-    chosen.map(({ key, name, size }) => ({ key, name, size })),
+    gone.map(({ key, name, size }) => ({ key, name, size })),
   );
-  if (released.vehicleLocationIds.length > 0 || released.classPictures > 0) {
-    revalidateFleet("vehicles");
+  if (!deleted) {
+    return {
+      error:
+        "Storage did not delete every image. They are off the vehicles and classes now: choose those still listed and delete again.",
+    };
   }
   return null;
 }

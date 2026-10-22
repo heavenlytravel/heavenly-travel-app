@@ -62,14 +62,17 @@ export default async function LocationStatusPage({
 }
 
 async function status({ id }: { id: string }) {
-  const permissions = await getPermissions();
-  const moves = permissions.includes("locations.activate");
-  const [location, overview, routesIn] = await Promise.all([
+  const asked = getPermissions();
+  const [location, overview, permissions, routesIn] = await Promise.all([
     locationDetails(id),
     locationOverview(id),
+    asked,
     // What a delete takes from other locations, read for SUPER alone.
-    moves ? routesIntoLocation(id) : [],
+    asked.then((held) =>
+      held.includes("locations.activate") ? routesIntoLocation(id) : [],
+    ),
   ]);
+  const moves = permissions.includes("locations.activate");
   if (!location || !overview) notFound();
   const state = locationStateOf(location.state);
   const blockers = stateMoveBlockers(

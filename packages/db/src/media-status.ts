@@ -1,7 +1,7 @@
 import type { DeleteImpact } from "./delete-impact";
 import { formatBytes } from "./images";
 import { pageTitleOf, type LocationPageKey } from "./location-page-input";
-import { andList, plural } from "./names";
+import { andList, compareNames, plural } from "./names";
 
 /**
  * The Media screen's rules, pure and browser-safe: where an uploaded file
@@ -152,7 +152,7 @@ export function mediaDeleteImpact(
     }
   }
   for (const [plate, count] of [...photos].sort(([a], [b]) =>
-    a.localeCompare(b),
+    compareNames(a, b),
   )) {
     lines.push(
       `Vehicle ${plate} loses ${count === 1 ? "a photo" : plural(count, "photo")}.`,
@@ -163,7 +163,7 @@ export function mediaDeleteImpact(
   for (const use of uses) {
     if (use.kind === "class") classes.add(use.vehicleClass.name);
   }
-  for (const name of [...classes].sort((a, b) => a.localeCompare(b))) {
+  for (const name of [...classes].sort((a, b) => compareNames(a, b))) {
     lines.push(`${name} loses its catalogue picture.`);
   }
 
@@ -175,7 +175,7 @@ export function mediaDeleteImpact(
     }
   }
   for (const [where, count] of [...pages].sort(([a], [b]) =>
-    a.localeCompare(b),
+    compareNames(a, b),
   )) {
     lines.push(
       `${where}: its History shows a past version without ${count === 1 ? "it" : "them"}.`,

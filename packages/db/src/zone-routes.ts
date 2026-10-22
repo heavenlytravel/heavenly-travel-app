@@ -1,5 +1,5 @@
 import type { DeleteImpact } from "./delete-impact";
-import { plural } from "./names";
+import { compareNames, plural } from "./names";
 
 /**
  * The priced routes each zone is an end of, counted from a grid's cells,
@@ -55,9 +55,52 @@ export function pricedFromByZone(
       zoneId,
       [...locations]
         .map(([location, routes]) => ({ location, routes: routes.size }))
-        .sort((a, b) => a.location.localeCompare(b.location)),
+        .sort((a, b) => compareNames(a.location, b.location)),
     ]),
   );
+}
+
+/** Other locations that price routes to a location's zones, by id and name, each with how many. */
+export type RoutesIn = { locationId: string; name: string; routes: number }[];
+
+/**
+ * The other locations whose grids end at a location's zones, from those
+ * cells, by name, each with how many routes: what deleting the location
+ * takes from them.
+ */
+export function routesByLocation(
+  cells: readonly {
+    locationId: string;
+    fromZoneId: string;
+    toZoneId: string;
+    location: { name: string };
+  }[],
+): RoutesIn {
+  const byLocation = new Map<string, { name: string; routes: Set<string> }>();
+  for (const cell of cells) {
+    const entry = byLocation.get(cell.locationId) ?? {
+      name: cell.location.name,
+      routes: new Set<string>(),
+    };
+    entry.routes.add(`${cell.fromZoneId}|${cell.toZoneId}`);
+    byLocation.set(cell.locationId, entry);
+  }
+  return [...byLocation]
+    .map(([locationId, entry]) => ({
+      locationId,
+      name: entry.name,
+      routes: entry.routes.size,
+    }))
+    .sort((a, b) => compareNames(a.name, b.name));
+}
+
+/**
+ * "Kuala Lumpur loses its 2 routes to it and stops selling those trips":
+ * what a removal takes from another location, ending at `toWhat`, a zone
+ * ("it") or a location's zones ("these zones").
+ */
+export function routesLostLine(owner: string, routes: number, toWhat: string) {
+  return `${owner} loses ${routes === 1 ? "its route" : `its ${plural(routes, "route")}`} to ${toWhat} and stops selling ${routes === 1 ? "that trip" : "those trips"}.`;
 }
 
 /**
@@ -81,9 +124,8 @@ export function zoneDeleteImpact(
           ]
         : []),
       "A pickup there is no longer served, unless another zone holds it.",
-      ...pricedFrom.map(
-        (entry) =>
-          `${entry.location} loses ${entry.routes === 1 ? "its route" : `its ${plural(entry.routes, "route")}`} to it and stops selling ${entry.routes === 1 ? "that trip" : "those trips"}.`,
+      ...pricedFrom.map((entry) =>
+        routesLostLine(entry.location, entry.routes, "it"),
       ),
     ],
     confirmWith: pricedFrom.length > 0 ? zone.name : null,

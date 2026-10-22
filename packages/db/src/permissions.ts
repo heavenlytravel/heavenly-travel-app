@@ -35,7 +35,7 @@ const RULES = {
   "admins.manage": "super",
   "wall.switch": "super",
   "activity.view": "super",
-  /** Every uploaded image and where it is used; delete those nothing uses. */
+  /** Every uploaded image and where it is used; delete those on no page. */
   "media.manage": "super",
 } as const satisfies Record<string, "any" | "super" | readonly AdminTeam[]>;
 

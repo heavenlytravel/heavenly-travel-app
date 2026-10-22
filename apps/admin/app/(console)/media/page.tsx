@@ -17,11 +17,7 @@ import { Pager, pageOf } from "../../_components/Pager";
 import { Bone, Streamed, TileGridSkeleton } from "../../_components/Skeleton";
 import { requireAdmin } from "../../_lib/access";
 import { PAGE_PARAM, mediaHref } from "../../_lib/routes";
-import {
-  UPLOADS_NOT_SET_UP,
-  listStoredFiles,
-  type StoredFile,
-} from "../../_lib/uploads";
+import { listStoredFiles, type StoredFile } from "../../_lib/uploads";
 import { MediaLibrary, type MediaRow } from "./MediaLibrary";
 
 /** How many images a page of the screen holds. */
@@ -78,18 +74,21 @@ async function mediaList({
   show: MediaFilter | undefined;
   page: number;
 }) {
-  const [files, uses] = await Promise.all([listStoredFiles(), listMediaUses()]);
-  if (!files) {
+  const [stored, uses] = await Promise.all([
+    listStoredFiles(),
+    listMediaUses(),
+  ]);
+  if (!stored.ok) {
     return (
       <Frame>
         <p className="px-6 py-8 text-center text-sm text-neutral-500">
-          {UPLOADS_NOT_SET_UP}
+          {stored.error}
         </p>
       </Frame>
     );
   }
   const now = new Date();
-  const rows = files.map((file) => {
+  const rows = stored.files.map((file) => {
     const fileUses = uses.get(file.key) ?? [];
     return {
       file,

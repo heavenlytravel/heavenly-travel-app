@@ -32,7 +32,7 @@ const TYPES: Record<string, ImageType> = {
 };
 
 /** What uploads and the Media screen say when no UploadThing token is set. */
-export const UPLOADS_NOT_SET_UP =
+const UPLOADS_NOT_SET_UP =
   "Image uploads are not set up: UPLOADTHING_TOKEN is missing.";
 
 const refuse = (status: number, error: string): ImageUpload => ({
@@ -130,31 +130,43 @@ export type StoredFile = {
 /** How many files UploadThing lists at a time. */
 const LIST_PAGE = 500;
 
+/** What the Media screen says of a token it cannot read the app's id from. */
+const TOKEN_UNREADABLE =
+  "UPLOADTHING_TOKEN cannot be read. Copy it again from the app's API Keys page on UploadThing.";
+
 /**
  * The app's id, read from the token: where its files are served,
- * https://<app id>.ufs.sh/f/<key>. Null without a token, or with one that
+ * https://<app id>.ufs.sh/f/<key>. Or why not: no token, or one that
  * cannot be read.
  */
-function uploadAppId(): string | null {
+function uploadAppId():
+  { ok: true; appId: string } | { ok: false; error: string } {
   const token = process.env.UPLOADTHING_TOKEN;
-  if (!token) return null;
+  if (!token) return { ok: false, error: UPLOADS_NOT_SET_UP };
   try {
     const { appId } = JSON.parse(
       Buffer.from(token, "base64").toString("utf8"),
     ) as { appId?: unknown };
-    return typeof appId === "string" && appId !== "" ? appId : null;
+    return typeof appId === "string" && appId !== ""
+      ? { ok: true, appId }
+      : { ok: false, error: TOKEN_UNREADABLE };
   } catch {
-    return null;
+    return { ok: false, error: TOKEN_UNREADABLE };
   }
 }
 
+/** Every file stored, or why the list cannot be read. */
+export type StoredFiles =
+  { ok: true; files: StoredFile[] } | { ok: false; error: string };
+
 /**
- * Every file stored, newest first, read a page at a time; null when
- * uploads are not set up. A file being deleted is left out.
+ * Every file stored, newest first, read a page at a time. A file being
+ * deleted is left out.
  */
-export async function listStoredFiles(): Promise<StoredFile[] | null> {
-  const appId = uploadAppId();
-  if (!appId) return null;
+export async function listStoredFiles(): Promise<StoredFiles> {
+  const app = uploadAppId();
+  if (!app.ok) return app;
+  const { appId } = app;
   const api = new UTApi();
   const files: StoredFile[] = [];
   for (let offset = 0; ; offset += LIST_PAGE) {
@@ -171,14 +183,27 @@ export async function listStoredFiles(): Promise<StoredFile[] | null> {
     }
     if (!page.hasMore || page.files.length === 0) break;
   }
-  return files.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+  return {
+    ok: true,
+    files: files.sort(
+      (a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime(),
+    ),
+  };
 }
 
-/** Removes the files from storage for good; answers how many went. */
+/**
+ * Removes the files from storage for good. Answers whether every one
+ * went; false when UploadThing refused or failed, or removed fewer.
+ */
 export async function deleteStoredFiles(
   keys: readonly string[],
-): Promise<number> {
-  if (keys.length === 0) return 0;
-  const { deletedCount } = await new UTApi().deleteFiles([...keys]);
-  return deletedCount;
+): Promise<boolean> {
+  if (keys.length === 0) return true;
+  try {
+    const { success, deletedCount } = await new UTApi().deleteFiles([...keys]);
+    return success && deletedCount === keys.length;
+  } catch (error) {
+    console.error("UploadThing did not delete the files", error);
+    return false;
+  }
 }

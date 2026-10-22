@@ -766,9 +766,7 @@ export function describeActivity(entry: DescribableActivity): string {
     case "media.deleted": {
       const files = field(entry.before, "files");
       const count = Array.isArray(files) ? files.length : 0;
-      return count === 1
-        ? "Deleted an unused image"
-        : `Deleted ${count} unused images`;
+      return count === 1 ? "Deleted an image" : `Deleted ${count} images`;
     }
   }
 }

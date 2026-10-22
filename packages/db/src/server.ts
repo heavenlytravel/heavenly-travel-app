@@ -19,7 +19,12 @@ export {
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
-export { listMediaUses, logMediaDeleted, releaseMedia } from "./media";
+export {
+  deletedMediaRefusal,
+  listMediaUses,
+  logMediaDeleted,
+  releaseMedia,
+} from "./media";
 export type { DeletedMedia, MediaReleased, StoredMedia } from "./media";
 export {
   listLocationOverviews,
@@ -111,7 +116,6 @@ export {
 export type {
   Zone,
   ZoneRate,
-  RoutesIn,
   LocationPriceList,
   ZoneRefusal,
   ZoneInTheWay,

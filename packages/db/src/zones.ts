@@ -28,7 +28,9 @@ import { cutOut, joinOverlaps, shapesOverlap } from "./zone-geometry";
 import {
   pricedFromByZone,
   pricedRoutesByZone,
+  routesByLocation,
   zoneDeleteImpact,
+  type RoutesIn,
 } from "./zone-routes";
 import type { MultiPolygon } from "./geo";
 import { isZoneShape, type ZoneShape } from "./zone-match";
@@ -174,9 +176,6 @@ function gridsEndingAt(
   });
 }
 
-/** Other locations that price routes to a location's zones, each with how many. */
-export type RoutesIn = { locationId: string; name: string; routes: number }[];
-
 /**
  * The other locations whose grids end at the location's zones, by name,
  * each with how many routes, a route priced for several classes once:
@@ -196,22 +195,7 @@ export async function routesIntoLocation(
       location: { select: { name: true } },
     },
   });
-  const byLocation = new Map<string, { name: string; routes: Set<string> }>();
-  for (const cell of cells) {
-    const entry = byLocation.get(cell.locationId) ?? {
-      name: cell.location.name,
-      routes: new Set<string>(),
-    };
-    entry.routes.add(`${cell.fromZoneId}|${cell.toZoneId}`);
-    byLocation.set(cell.locationId, entry);
-  }
-  return [...byLocation]
-    .map(([id, entry]) => ({
-      locationId: id,
-      name: entry.name,
-      routes: entry.routes.size,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return routesByLocation(cells);
 }
 
 export function getZone(id: string): Promise<Zone | null> {
@@ -737,6 +721,10 @@ export async function deleteZone(
     await lockZoneWrites(tx);
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
+    // The zone held until the delete ends: a route priced to it meanwhile,
+    // which takes no zone write lock, waits, then finds it gone, rather
+    // than going unannounced.
+    await tx.$executeRaw`SELECT id FROM "Zone" WHERE id = ${id} FOR UPDATE`;
     const confirmed = checkDeleteConfirmed(
       await zoneImpactOf(tx, zone),
       confirmation,

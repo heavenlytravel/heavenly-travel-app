@@ -56,8 +56,13 @@ const UPLOAD_HOST_SUFFIX = ".ufs.sh";
  */
 export function uploadKeyOf(url: string): string | null {
   if (!isUploadUrl(url)) return null;
-  const key = decodeURIComponent(new URL(url).pathname.slice("/f/".length));
-  return key === "" ? null : key;
+  try {
+    const key = decodeURIComponent(new URL(url).pathname.slice("/f/".length));
+    return key === "" ? null : key;
+  } catch {
+    // A broken escape, "%zz": no file of ours is named so.
+    return null;
+  }
 }
 
 /** Whether the address is a file on UploadThing, the one host the sites load images from. */

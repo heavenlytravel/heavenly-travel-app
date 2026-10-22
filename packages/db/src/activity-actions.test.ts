@@ -225,11 +225,8 @@ describe("describeActivity", () => {
         before: { files },
         after: null,
       });
-    assert.equal(deleted([{ key: "a" }]), "Deleted an unused image");
-    assert.equal(
-      deleted([{ key: "a" }, { key: "b" }]),
-      "Deleted 2 unused images",
-    );
+    assert.equal(deleted([{ key: "a" }]), "Deleted an image");
+    assert.equal(deleted([{ key: "a" }, { key: "b" }]), "Deleted 2 images");
   });
 
   it("names the other locations whose routes a removal took", () => {

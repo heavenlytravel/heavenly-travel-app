@@ -54,6 +54,7 @@ describe("uploadKeyOf", () => {
     );
     for (const value of [
       "https://abc123.ufs.sh/f/",
+      "https://abc123.ufs.sh/f/abc%zz",
       "https://example.com/f/key-1",
       "",
     ]) {

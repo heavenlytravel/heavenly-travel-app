@@ -16,3 +16,13 @@ export function andList(items: readonly string[]) {
 export function plural(n: number, one: string, many = `${one}s`) {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/**
+ * Two names in a fixed order, the same in every browser and on the
+ * server, unlike `localeCompare`, whose order follows the locale: for a
+ * list that the browser and the server must both build alike, such as a
+ * delete's impact (./delete-impact).
+ */
+export function compareNames(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}

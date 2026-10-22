@@ -103,6 +103,9 @@ export function DeleteButton({
     });
     if (!yes) return;
     startTransition(async () => {
+      // The dialog's action works only once its box holds `confirmWith`, so
+      // that is what was typed. The server checks it again, against a call
+      // that skips this dialog.
       const answer = await answerOf(action(impact.lines, impact.confirmWith));
       const refused = errorOf(answer);
       setError(refused);

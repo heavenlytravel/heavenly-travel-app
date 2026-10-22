@@ -3,6 +3,7 @@ import { MEDIA_RECORD_ID, type Actor } from "./activity-actions";
 import { refuse, type Refusal } from "./change";
 import { db } from "./client";
 import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
+import type { Prisma } from "./generated/prisma/client";
 import { uploadKeyOf } from "./images";
 import {
   isLocationPageKey,
@@ -10,7 +11,6 @@ import {
   type LocationPageKey,
   type PageContent,
 } from "./location-page-input";
-import type { Prisma } from "./generated/prisma/client";
 import {
   mediaDeleteImpact,
   mediaDeleteRefusal,
@@ -21,9 +21,11 @@ import {
 /**
  * Where the console's uploaded files are used, for the Media screen: the
  * locations' pages, working and published, the vehicle classes' pictures,
- * the vehicles' photos, and the earlier publishes a location's history
- * shows. The rules are in ./media-status. See
- * docs/261001-locations-and-pages.md, "Images".
+ * the vehicles' photos, and the past versions a location's History
+ * shows; the delete that takes files off them; and the check that keeps a
+ * form opened before the delete from putting a deleted file back. The
+ * rules are in ./media-status. See docs/261001-locations-and-pages.md,
+ * "Images".
  */
 
 /** The keys of the images on a page: its share image, its hero and its highlights'. */
@@ -44,16 +46,8 @@ function snapshotKeys(page: LocationPageKey, snapshot: unknown): string[] {
   return content ? pageImageKeys(pageContentOf(page, content)) : [];
 }
 
-/**
- * Every use of every file, by its UploadThing key, in a few queries. A
- * page's working and published copies are one use; an earlier publish is
- * named by the newest entry that showed the file, and only while the
- * location stands, since a deleted location's history has no page.
- * `client` is the delete's transaction when it checks.
- */
-export async function listMediaUses(
-  client: Prisma.TransactionClient = db,
-): Promise<Map<string, MediaUse[]>> {
+/** The rows the uses are read from, in one read. */
+async function readSources(client: Prisma.TransactionClient) {
   const [locations, pages, publishes, classes, photos] = await Promise.all([
     client.location.findMany({ select: { id: true, name: true, slug: true } }),
     client.locationPage.findMany({
@@ -70,17 +64,33 @@ export async function listMediaUses(
     }),
     client.vehiclePhoto.findMany({
       select: {
+        id: true,
         url: true,
         vehicle: {
           select: {
             id: true,
             plate: true,
+            locationId: true,
             location: { select: { slug: true } },
+            _count: { select: { photos: true } },
           },
         },
       },
     }),
   ]);
+  return { locations, pages, publishes, classes, photos };
+}
+
+type Sources = Awaited<ReturnType<typeof readSources>>;
+
+/**
+ * Every use of every file, by its UploadThing key. A page's working and
+ * published copies are one use; a past version is named by the newest
+ * publish that showed the file, and only while the location stands, since
+ * a deleted location's history has no page.
+ */
+function usesOf(sources: Sources): Map<string, MediaUse[]> {
+  const { locations, pages, publishes, classes, photos } = sources;
   const locationById = new Map(locations.map((l) => [l.id, l]));
   const uses = new Map<string, MediaUse[]>();
   const add = (key: string | null, use: MediaUse) => {
@@ -144,6 +154,11 @@ export async function listMediaUses(
   return uses;
 }
 
+/** Every use of every file, by its UploadThing key, in a few queries. */
+export async function listMediaUses(): Promise<Map<string, MediaUse[]>> {
+  return usesOf(await readSources(db));
+}
+
 /** One file as the Media screen deleted it. */
 export type DeletedMedia = { key: string; name: string; size: number };
 
@@ -166,6 +181,48 @@ export async function logMediaDeleted(
   );
 }
 
+/**
+ * Why a save may not store these addresses, or null when it may: one is a
+ * file the Media screen deleted (its log entries name them), held by a
+ * form opened before the delete. Saving it would put a file that is gone
+ * back on a page, a class or a vehicle. `what` names it in the sentence,
+ * "A photo"; `field` is the form's field it is about.
+ */
+export async function deletedMediaRefusal(
+  client: Prisma.TransactionClient,
+  urls: readonly (string | null)[],
+  what: string,
+  field?: string,
+): Promise<Refusal | null> {
+  const keys = urls.flatMap((url) => {
+    const key = url ? uploadKeyOf(url) : null;
+    return key ? [key] : [];
+  });
+  if (keys.length === 0) return null;
+  const entries = await client.activityLog.findMany({
+    where: { action: "media.deleted", entityId: MEDIA_RECORD_ID },
+    select: { before: true },
+  });
+  const deleted = new Set(
+    entries.flatMap(({ before }) => {
+      const files = (before as { files?: unknown } | null)?.files;
+      return Array.isArray(files)
+        ? files.flatMap((file) =>
+            file && typeof file === "object" && "key" in file
+              ? [String(file.key)]
+              : [],
+          )
+        : [];
+    }),
+  );
+  return keys.some((key) => deleted.has(key))
+    ? refuse(
+        `${what} was deleted on the Media screen since this form opened. Take it out, then save.`,
+        field,
+      )
+    : null;
+}
+
 /** A stored file as a delete weighs it: UploadThing's record of it. */
 export type StoredMedia = {
   key: string;
@@ -174,13 +231,8 @@ export type StoredMedia = {
   uploadedAt: Date;
 };
 
-/**
- * What taking the files off their uses came to: the locations whose
- * vehicles lost photos, by id, and whether any class lost its picture,
- * for the pages to refresh; or why not.
- */
-export type MediaReleased =
-  { ok: true; vehicleLocationIds: string[]; classPictures: number } | Refusal;
+/** What taking the files off their uses came to: whether a vehicle or a class changed, for the pages to refresh; or why not. */
+export type MediaReleased = { ok: true; fleetChanged: boolean } | Refusal;
 
 /**
  * Takes the files off what uses them, once the admin confirmed what that
@@ -188,98 +240,82 @@ export type MediaReleased =
  * loses those of its photos and each class its picture, logged in their
  * own history; a page's past version stays in the log and shows without
  * them. A file on a location's page is refused (`mediaDeleteRefusal`).
- * The files themselves are deleted from storage after, by the admin.
+ * The photos and pictures changed are those of the same read the impact
+ * was weighed on, so nothing is taken that was not shown. The files
+ * themselves are deleted from storage after, by the admin.
  */
 export async function releaseMedia(
   actor: Actor,
   files: readonly StoredMedia[],
   confirmation: DeleteConfirmation,
 ): Promise<MediaReleased> {
-  return db.$transaction(async (tx) => {
-    const uses = await listMediaUses(tx);
-    const now = new Date();
-    const weighed = files.map((file) => {
-      const fileUses = uses.get(file.key) ?? [];
-      return {
-        name: file.name,
-        size: file.size,
-        uses: fileUses,
-        status: mediaStatusOf(file.uploadedAt, fileUses, now),
-      };
-    });
-    const refusal = mediaDeleteRefusal(weighed);
-    if (refusal) return refuse(refusal);
-    const confirmed = checkDeleteConfirmed(
-      mediaDeleteImpact(weighed),
-      confirmation,
-    );
-    if (!confirmed.ok) return confirmed;
-
-    const keys = new Set(files.map((file) => file.key));
-    const isReleased = (url: string) => keys.has(uploadKeyOf(url) ?? "");
-    const [photos, classes] = await Promise.all([
-      tx.vehiclePhoto.findMany({
-        select: {
-          id: true,
-          url: true,
-          vehicleId: true,
-          vehicle: {
-            select: { locationId: true, _count: { select: { photos: true } } },
-          },
-        },
-      }),
-      tx.vehicleClass.findMany({
-        where: { imageUrl: { not: null } },
-        select: { id: true, imageUrl: true },
-      }),
-    ]);
-
-    const byVehicle = new Map<string, typeof photos>();
-    for (const photo of photos.filter((photo) => isReleased(photo.url))) {
-      byVehicle.set(photo.vehicleId, [
-        ...(byVehicle.get(photo.vehicleId) ?? []),
-        photo,
-      ]);
-    }
-    for (const [vehicleId, released] of byVehicle) {
-      const { vehicle } = released[0]!;
-      await tx.vehiclePhoto.deleteMany({
-        where: { id: { in: released.map((photo) => photo.id) } },
+  return db.$transaction(
+    async (tx) => {
+      const sources = await readSources(tx);
+      const uses = usesOf(sources);
+      const now = new Date();
+      const weighed = files.map((file) => {
+        const fileUses = uses.get(file.key) ?? [];
+        return {
+          name: file.name,
+          size: file.size,
+          uses: fileUses,
+          status: mediaStatusOf(file.uploadedAt, fileUses, now),
+        };
       });
-      await logActivity(tx, actor, {
-        action: "vehicle.updated",
-        entityId: vehicleId,
-        before: { photos: vehicle._count.photos },
-        after: { photos: vehicle._count.photos - released.length },
-        locationIds: [vehicle.locationId],
-      });
-    }
+      const refusal = mediaDeleteRefusal(weighed);
+      if (refusal) return refuse(refusal);
+      const confirmed = checkDeleteConfirmed(
+        mediaDeleteImpact(weighed),
+        confirmation,
+      );
+      if (!confirmed.ok) return confirmed;
 
-    const pictures = classes.filter(
-      (vehicleClass) =>
-        vehicleClass.imageUrl !== null && isReleased(vehicleClass.imageUrl),
-    );
-    for (const vehicleClass of pictures) {
-      await tx.vehicleClass.update({
-        where: { id: vehicleClass.id },
-        data: { imageUrl: null },
-      });
-      await logActivity(tx, actor, {
-        action: "vehicle-class.updated",
-        entityId: vehicleClass.id,
-        before: { imageUrl: vehicleClass.imageUrl },
-        after: { imageUrl: null },
-      });
-    }
+      const keys = new Set(files.map((file) => file.key));
+      const isReleased = (url: string) => keys.has(uploadKeyOf(url) ?? "");
 
-    return {
-      ok: true,
-      vehicleLocationIds: [
-        ...new Set(
-          [...byVehicle.values()].map(([photo]) => photo!.vehicle.locationId),
-        ),
-      ],
-      classPictures: pictures.length,
-    };
-  });
+      const byVehicle = new Map<string, Sources["photos"]>();
+      for (const photo of sources.photos.filter((p) => isReleased(p.url))) {
+        byVehicle.set(photo.vehicle.id, [
+          ...(byVehicle.get(photo.vehicle.id) ?? []),
+          photo,
+        ]);
+      }
+      for (const [vehicleId, released] of byVehicle) {
+        const { vehicle } = released[0]!;
+        await tx.vehiclePhoto.deleteMany({
+          where: { id: { in: released.map((photo) => photo.id) } },
+        });
+        await logActivity(tx, actor, {
+          action: "vehicle.updated",
+          entityId: vehicleId,
+          before: { photos: vehicle._count.photos },
+          after: { photos: vehicle._count.photos - released.length },
+          locationIds: [vehicle.locationId],
+        });
+      }
+
+      const pictures = sources.classes.filter(
+        (vehicleClass) =>
+          vehicleClass.imageUrl !== null && isReleased(vehicleClass.imageUrl),
+      );
+      for (const vehicleClass of pictures) {
+        // Cleared only while it is still that picture.
+        await tx.vehicleClass.updateMany({
+          where: { id: vehicleClass.id, imageUrl: vehicleClass.imageUrl },
+          data: { imageUrl: null },
+        });
+        await logActivity(tx, actor, {
+          action: "vehicle-class.updated",
+          entityId: vehicleClass.id,
+          before: { imageUrl: vehicleClass.imageUrl },
+          after: { imageUrl: null },
+        });
+      }
+
+      return { ok: true, fleetChanged: byVehicle.size + pictures.length > 0 };
+    },
+    // Every page, publish and photo is read to weigh the delete.
+    { timeout: 20_000 },
+  );
 }

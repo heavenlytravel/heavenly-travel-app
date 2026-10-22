@@ -323,7 +323,12 @@ is gone. "Unpublish" shows only where the page may be unpublished.
     publish (the Tech Lead, 2026-10-22).
   - The server works out the impact again and refuses when it changed since the dialog
     showed it (`@repo/db`'s `delete-impact`), and logs what it removed
-    (`media.deleted`).
+    (`media.deleted`). The photos and pictures it takes off are those of the same read.
+    If storage then fails, the vehicles and classes are refreshed anyway, only the files
+    that went are logged, and the screen says to delete the rest again.
+  - A form opened before the delete that still holds a deleted file is refused on save,
+    at its field: a vehicle's photos, a class's picture, a page's images. The
+    `media.deleted` entries name the files.
 - For scale: the WordPress site holds about 680 images in 168 MB, checked on
   2026-10-01. UploadThing's free plan holds 2 GB.
 

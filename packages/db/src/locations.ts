@@ -61,6 +61,7 @@ import {
 } from "./location-view";
 import { andList, plural } from "./names";
 import { isPlace, type Place } from "./place";
+import { deletedMediaRefusal } from "./media";
 import { routesIntoLocation } from "./zones";
 
 export type { Location, LocationAddress };
@@ -753,6 +754,17 @@ async function writePageContent(
     where: pageKey(locationId, page),
   });
   if (versionOf(was) !== version) return PAGE_CHANGED;
+  // An image uploaded in this form and deleted on Media before it saved.
+  const gone = await deletedMediaRefusal(
+    tx,
+    [
+      content.shareImage,
+      content.heroImage,
+      ...content.highlights.map((highlight) => highlight.image),
+    ].map((image) => image?.url ?? null),
+    "An image",
+  );
+  if (gone) return gone;
 
   const addressIds = new Set(location.addresses.map((address) => address.id));
   const clean: PageContent = {

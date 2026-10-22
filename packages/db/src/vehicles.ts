@@ -10,7 +10,13 @@ import {
 } from "./delete-impact";
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
-import { checkPhotos, samePhotos, type Photo } from "./photos-input";
+import { deletedMediaRefusal } from "./media";
+import {
+  checkPhotos,
+  PHOTOS_FIELD,
+  samePhotos,
+  type Photo,
+} from "./photos-input";
 import { modelChoiceOf } from "./offering-input";
 import { isUniqueViolation } from "./prisma-errors";
 import {
@@ -209,6 +215,13 @@ export async function createVehicle(
     return await db.$transaction(async (tx) => {
       const locationName = await locationNameOf(tx, fields.locationId);
       if (!locationName) return NO_LOCATION;
+      const gone = await deletedMediaRefusal(
+        tx,
+        photos.map((photo) => photo.url),
+        "A photo",
+        PHOTOS_FIELD,
+      );
+      if (gone) return gone;
       const model = await modelFor(tx, actor, {
         vehicleClassId: fields.vehicleClassId,
         brand: fields.brand,
@@ -271,6 +284,15 @@ export async function updateVehicle(
       const changed = changedFields(current, fieldsPatch);
       const photosChanged =
         photos !== undefined && !samePhotos(vehicle.photos, photos);
+      if (photos && photosChanged) {
+        const gone = await deletedMediaRefusal(
+          tx,
+          photos.map((photo) => photo.url),
+          "A photo",
+          PHOTOS_FIELD,
+        );
+        if (gone) return gone;
+      }
       const before: Partial<VehicleFields> = changed?.before ?? {};
       const after: Partial<VehicleFields> = changed?.after ?? {};
 

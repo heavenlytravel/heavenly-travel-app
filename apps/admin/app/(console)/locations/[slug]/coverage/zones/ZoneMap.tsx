@@ -493,8 +493,9 @@ export function ZoneMap({
     >
       {/* The map, and over it the tools, the full-screen button and the help:
           the zone maker's own, not Google's controls, so each stays where it
-          is put however it grows, in full screen too. */}
-      <div className={cx("relative", full && "min-h-0")}>
+          is put however it grows, in full screen too. Isolated, so their
+          layers stay under the console's sticky header on a scroll. */}
+      <div className={cx("relative isolate", full && "min-h-0")}>
         <div
           ref={host}
           role="application"

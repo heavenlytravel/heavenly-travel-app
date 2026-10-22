@@ -113,6 +113,11 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 const ID_RE = /^[\w:/ .-]{1,200}$/;
 
+/** Whether the value is an id as a trip's address carries one: a place's, a class's or a model's. */
+export function isTripId(value: unknown): value is string {
+  return typeof value === "string" && ID_RE.test(value);
+}
+
 const intIn = (raw: string | null, min: number, max: number) => {
   if (raw === null || !/^\d+$/.test(raw)) return null;
   const n = Number(raw);

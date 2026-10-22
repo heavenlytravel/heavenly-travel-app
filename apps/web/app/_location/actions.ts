@@ -1,5 +1,6 @@
 "use server";
 
+import { isTripId } from "@repo/db";
 import { checkTripAt, getAdminAccess } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import type { TripSearchIssue } from "../_lib/transportation-booking";
@@ -24,8 +25,7 @@ const isPicked = (value: unknown): value is PickedPlace => {
   if (typeof value !== "object" || value === null) return false;
   const { placeId, sessionToken } = value as Record<string, unknown>;
   return (
-    typeof placeId === "string" &&
-    placeId !== "" &&
+    isTripId(placeId) &&
     (sessionToken === undefined || typeof sessionToken === "string")
   );
 };

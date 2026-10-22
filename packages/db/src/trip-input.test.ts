@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   hiddenSearchFields,
+  isTripId,
   tripItemField,
   tripItemIndexes,
   tripItemParams,
@@ -133,6 +134,16 @@ describe("parseTripOptions", () => {
       parseTripOptions("car-with-driver", "class=vc1&passengers=0"),
       null,
     );
+  });
+});
+
+describe("isTripId", () => {
+  it("takes a place id as Google gives it, and refuses anything else", () => {
+    assert.equal(isTripId("ChIJN1t_tDeuEmsRUsoyG83frY4"), true);
+    assert.equal(isTripId(""), false);
+    assert.equal(isTripId("x".repeat(201)), false);
+    assert.equal(isTripId("<script>"), false);
+    assert.equal(isTripId(42), false);
   });
 });
 

@@ -9,7 +9,7 @@ import { StepMark } from "../_components/StepMark";
  * left to do, and a link to its tab for an admin who may open it. The
  * first step not done is marked as the next one. The Overview tab of a
  * draft location; once live, the overview turns to the day's operation and
- * the panel beside the page keeps each step's standing.
+ * the steps fold away under Setup in the sidebar.
  */
 export function SetupChecklist({
   title,
@@ -28,7 +28,7 @@ export function SetupChecklist({
       <CardTitle
         description={
           progress.next
-            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, listed in the panel beside the page; the location goes live on its Status tab once every step is done.`
+            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, listed in the sidebar; the location goes live on its Status tab once every step is done.`
             : "Every step is done: the location goes live on its Status tab."
         }
       >

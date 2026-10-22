@@ -12,6 +12,7 @@ import { useActionForm } from "../../../_lib/use-action-form";
 import { SlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { createLocationAction } from "../actions";
+import { FORM_WIDTH } from "../../../_components/PageColumn";
 
 /**
  * The form for a new location: the three things only a person can say. The
@@ -29,7 +30,7 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
   const [stateCodes, setStateCodes] = useState<string[]>([]);
 
   return (
-    <form {...formProps} className="grid gap-6">
+    <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">

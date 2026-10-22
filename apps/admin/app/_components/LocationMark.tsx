@@ -10,13 +10,15 @@ const MARK_TONES: Record<LocationState, string> = {
 const MARK_SIZES = {
   /** Beside a row's label, in a list. */
   sm: "size-4 text-[10px]",
-  /** The icon of a panel's header. */
+  /** Beside a name in the location picker and its menu. */
+  md: "size-5 text-[11px]",
+  /** Beside a heading. */
   lg: "size-8 text-sm",
 } as const;
 
 /**
- * A location's initial in a disc coloured by its state: the icon of its
- * row in the sidebar and of its panel's header.
+ * A location's initial in a disc coloured by its state: beside its name
+ * in the location picker, a list or a heading.
  */
 export function LocationMark({
   name,

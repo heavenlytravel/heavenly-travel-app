@@ -4,37 +4,24 @@ import {
   BOOKING_STATUS_LABELS,
   DROPOFF_RULE_SHORT_LABELS,
   LOCATION_PAGE_LABELS,
-  LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
   dropoffRuleOf,
   formatLocalDate,
   isPublicState,
+  locationStateOf,
   oddHoursLabel,
   oddHoursOf,
   plural,
   setupProgress,
+  setupSteps,
   type LocationState,
   type PageStatus,
   type Permission,
   type SetupStep,
 } from "@repo/db";
 import type { LocationOverview, LocationWithDetails } from "@repo/db/server";
-import {
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarPanel,
-  SidebarPanelToggle,
-} from "@repo/ui/sidebar";
-import { Tooltip } from "@repo/ui/tooltip";
-import { LocationMark } from "../../../_components/LocationMark";
-import {
-  WhenCollapsed,
-  WhenExpanded,
-} from "../../../_components/PanelVisibility";
-import { LocationStateBadge } from "../../../_components/StatusBadges";
+import { AllLocationsMenu } from "../../../_components/AppSidebar";
+import { getPermissions } from "../../../_lib/access";
 import {
   locationBookingsHref,
   locationDriversHref,
@@ -57,21 +44,20 @@ import { locationPublicUrl } from "../../../_lib/site";
 import { SetupBar } from "../_components/SetupBar";
 import { LOCATION_TAB_ICONS } from "../_components/TabIcon";
 import {
-  LocationPanelNav,
-  PanelFootLink,
-  type PanelGroup,
-  type PanelItem,
-  type PanelSection,
-} from "./LocationPanelNav";
-import { PublicPageLink } from "./PublicPageLink";
+  locationDetails,
+  locationIdOf,
+  locationOfferings,
+  locationOverview,
+  locationZoneNames,
+} from "../_lib/location-data";
+import {
+  LocationNavMenu,
+  type LocationNavGroup,
+  type LocationNavItem,
+  type LocationNavSection,
+} from "./LocationNavMenu";
 
-/** Where the panel's column sticks: under the console header, as tall as what is left. */
-export const PANEL_PLACEMENT = "top-14 h-[calc(100svh-3.5rem)]";
-
-/** The panel's accessible name, as a column and as a sheet. */
-export const PANEL_TITLE = "Location panel";
-
-const PAGE_DOTS: Record<PageStatus, PanelItem["dot"]> = {
+const PAGE_DOTS: Record<PageStatus, LocationNavItem["dot"]> = {
   unpublished: "grey",
   published: "green",
   changed: "amber",
@@ -88,24 +74,69 @@ function fleetLine(
   return due === 0 ? line : `${line}, ${due} with a ${document} due`;
 }
 
+/** A count at a row's end, or none while there is nothing to count. */
+const countOf = (value: number, tone: "brand" | "amber") =>
+  value > 0 ? { value, tone } : undefined;
+
 /**
- * The panel beside a location's page, after shadcn's sidebar-15 right
- * sidebar: the location's name and state on top, then its sections in two
- * groups, each section with one line on where it stands and, where it has
- * something to list, a submenu of it: the classes, the zones, the three
- * parts of the rates, the pages and their saved addresses, the bookings by
- * status, the vehicles with a document due and the drivers with a licence
+ * The sidebar's sections while the picker is on a location, read for the
+ * `@scope` slot: the location, its numbers, and for an admin who may
+ * change the coverage its zones and classes, which fill the submenus of
+ * the tabs Operation opens. A slug no location has (an address from
+ * before the slugs, on its way to its location) falls back to every
+ * location.
+ */
+export async function LocationScopeNav({ slug }: { slug: string }) {
+  const [id, permissions] = await Promise.all([
+    locationIdOf(slug),
+    getPermissions(),
+  ]);
+  if (!id) return <AllLocationsMenu permissions={permissions} />;
+  const listsThem = permissions.includes("coverage.manage");
+  const [location, overview, zones, offerings] = await Promise.all([
+    locationDetails(id),
+    locationOverview(id),
+    listsThem ? locationZoneNames(id) : [],
+    listsThem ? locationOfferings(id) : [],
+  ]);
+  if (!location || !overview) {
+    return <AllLocationsMenu permissions={permissions} />;
+  }
+  return (
+    <LocationNav
+      location={location}
+      overview={overview}
+      state={locationStateOf(location.state)}
+      steps={setupSteps(location.pages, overview)}
+      permissions={permissions}
+      zones={zones}
+      offerings={offerings.map((offering) => ({
+        id: offering.id,
+        name: offering.vehicleClass.name,
+        onSale: offering.isActive && offering.vehicleClass.isActive,
+      }))}
+    />
+  );
+}
+
+/**
+ * A location's sections in the sidebar, under its name, each a row with
+ * its icon and, where something waits on it, a count: the bookings
+ * awaiting confirmation, the vehicles with a document due, the drivers
+ * with a licence due. Where a section has something to list, a submenu
+ * holds it: the classes, the zones, the parts of the rates, the pages and
+ * their saved addresses, the bookings by status, the vehicles and drivers
  * due. A draft is set up before anything else: its overview stands alone
  * on top, then the Setup group with how far it has come and what to do
- * next, its steps numbered.
- * Once live or paused the day comes first: Work holds Today, the bookings,
- * the vehicles, the drivers and the pages; the setup, done once and rarely touched, folds away under
- * it. At the foot, the history and the public page. Every admin sees the
- * panel; each group shows only what the admin may open. On screens too
- * narrow for the column it opens as a sheet from the console header's
- * button. See docs/261018-location-work-and-class-catalogue.md.
+ * next, its steps numbered. Once live or paused the day comes first: Today,
+ * the bookings, the vehicles, the drivers and the pages; the setup, done
+ * once and rarely touched, folds away under it. Last, the history and the
+ * public page. Each group shows only what the admin may open. Where each
+ * section stands, in a line, is its row's tooltip on the rail. See
+ * docs/261022-console-scope.md and
+ * docs/261018-location-work-and-class-catalogue.md.
  */
-export function LocationPanel({
+export function LocationNav({
   location,
   overview,
   steps,
@@ -189,7 +220,7 @@ export function LocationPanel({
   const surcharge = oddHoursOf(location);
   // Adding a class or a zone is Operation's; the teams that read see the tab.
   const adds = may("coverage.manage");
-  const itemsOf = (tab: LocationTab): PanelItem[] => {
+  const itemsOf = (tab: LocationTab): LocationNavItem[] => {
     switch (tab) {
       case "vehicle-classes":
         return [
@@ -321,13 +352,22 @@ export function LocationPanel({
     }
   };
   const tabs = locationTabsFor(state).filter((tab) => may(tab.permission));
-  const sectionOf = (tab: (typeof tabs)[number]): PanelSection => {
+  const countFor = (tab: LocationTab) =>
+    tab === "bookings"
+      ? countOf(overview.awaitingConfirmation, "brand")
+      : tab === "vehicles"
+        ? countOf(overview.vehiclesDue, "amber")
+        : tab === "drivers"
+          ? countOf(overview.driversDue, "amber")
+          : undefined;
+  const sectionOf = (tab: (typeof tabs)[number]): LocationNavSection => {
     const index = steps.findIndex((step) => step.key === tab.step);
     return {
       key: tab.key,
       href: locationTabHref(slug, tab.key),
       label: tab.label,
       detail: detailOf(tab.key),
+      count: countFor(tab.key),
       step:
         settingUp && index >= 0
           ? { number: index + 1, done: steps[index]!.done }
@@ -364,10 +404,10 @@ export function LocationPanel({
       )}
     </div>
   ) : null;
-  const groups: PanelGroup[] = [
+  const groups: LocationNavGroup[] = [
     {
       key: "work" as const,
-      label: settingUp ? null : "Work",
+      label: location.name,
       foldable: false,
       sections: sectionsIn("work"),
     },
@@ -381,66 +421,19 @@ export function LocationPanel({
       foldable: !settingUp,
       sections: sectionsIn("setup"),
     },
+    {
+      key: "foot" as const,
+      label: null,
+      foldable: false,
+      sections: sectionsIn("foot"),
+    },
   ].filter((group) => group.sections.length > 0);
-  const foot = sectionsIn("foot");
 
   return (
-    <SidebarPanel title={PANEL_TITLE} className={PANEL_PLACEMENT}>
-      <SidebarHeader className="border-b border-slate-200">
-        <WhenExpanded>
-          <div className="flex items-center gap-3 p-2">
-            <LocationMark name={location.name} state={state} size="lg" />
-            <span className="grid min-w-0 flex-1 leading-tight">
-              <span className="truncate text-sm font-semibold">
-                {location.name}
-              </span>
-              <span className="truncate text-xs text-slate-500">
-                /{location.slug}
-              </span>
-            </span>
-            <LocationStateBadge state={state} />
-            <SidebarPanelToggle className="-mr-1" />
-          </div>
-        </WhenExpanded>
-        {/* Collapsed: the toggle, then the location's mark with its name and state as the tooltip. */}
-        <WhenCollapsed>
-          <div className="grid justify-items-center gap-2 py-1">
-            <SidebarPanelToggle />
-            <Tooltip
-              content={`${location.name}, ${LOCATION_STATE_LABELS[state].toLowerCase()}`}
-              side="right"
-            >
-              <LocationMark name={location.name} state={state} size="lg" />
-            </Tooltip>
-          </div>
-        </WhenCollapsed>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <LocationPanelNav slug={slug} groups={groups} />
-      </SidebarContent>
-
-      <SidebarFooter className="border-t border-slate-200">
-        <SidebarMenu>
-          {foot.map((section) => (
-            <SidebarMenuItem key={section.key}>
-              <PanelFootLink slug={slug} section={section} />
-            </SidebarMenuItem>
-          ))}
-          {isPublicState(state) ? (
-            <SidebarMenuItem>
-              <PublicPageLink href={locationPublicUrl(location.slug)} />
-            </SidebarMenuItem>
-          ) : null}
-        </SidebarMenu>
-        {isPublicState(state) ? null : (
-          <WhenExpanded>
-            <p className="px-2 py-1.5 text-xs text-slate-500">
-              Not public yet. Staff read the pages through Preview.
-            </p>
-          </WhenExpanded>
-        )}
-      </SidebarFooter>
-    </SidebarPanel>
+    <LocationNavMenu
+      slug={slug}
+      groups={groups}
+      publicHref={isPublicState(state) ? locationPublicUrl(slug) : null}
+    />
   );
 }

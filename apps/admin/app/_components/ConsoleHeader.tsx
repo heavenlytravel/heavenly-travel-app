@@ -2,46 +2,67 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserButton } from "@clerk/nextjs";
+import { locationStateOf, type Permission } from "@repo/db";
+import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import { NavigationProgress } from "@repo/ui/navigation-progress";
-import { SidebarPanelTrigger, SidebarTrigger } from "@repo/ui/sidebar";
+import { SidebarTrigger } from "@repo/ui/sidebar";
 import {
   LOCATION_TABS,
-  locationHref,
+  NEW_LOCATION_PATH,
   locationSlugOf,
+  locationTabHref,
   locationTabOf,
+  locationTabsFor,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
+import { BookingSearch } from "./BookingSearch";
 import { currentNav } from "./nav";
+import { ScopePicker } from "./ScopePicker";
+
+/** The section on screen, for the trail after the picker: a location's tab, or a section of the console. */
+function sectionOf(
+  pathname: string,
+  locations: readonly SidebarLocation[],
+): { label: string; href: string } | null {
+  const slug = locationSlugOf(pathname);
+  if (slug !== null) {
+    const tab = locationTabOf(slug, pathname);
+    const location = locations.find((entry) => entry.slug === slug);
+    // The overview of a live location is its day, "Today".
+    const placed = location
+      ? locationTabsFor(locationStateOf(location.state)).find(
+          (entry) => entry.key === tab,
+        )
+      : undefined;
+    const label =
+      placed?.label ?? LOCATION_TABS.find((entry) => entry.key === tab)?.label;
+    return label ? { label, href: locationTabHref(slug, tab) } : null;
+  }
+  if (pathname === NEW_LOCATION_PATH) {
+    return { label: "Add location", href: NEW_LOCATION_PATH };
+  }
+  const section = currentNav(pathname);
+  return section ? { label: section.label, href: section.href } : null;
+}
 
 /**
- * The bar above every console page: the sidebar toggle and where you are.
- * Inside a location the trail goes on with the location's name and the
- * tab on screen: "Locations / Langkawi / Coverage", and on
- * screens too narrow for the location's panel a button at the right end
- * opens it as a sheet.
+ * The bar above every console page. On the left the sidebar's toggle,
+ * the location picker, which sets the scope the sidebar lists, and the
+ * section on screen: "Langkawi / Rates", a link back to the section from
+ * a record inside it. On the right the search for a booking, for an
+ * admin who may open the bookings, and the signed-in admin's own menu.
+ * See docs/261022-console-scope.md.
  */
 export function ConsoleHeader({
   locations,
+  permissions,
 }: {
   locations: readonly SidebarLocation[];
+  permissions: readonly Permission[];
 }) {
   const pathname = usePathname();
-  const section = currentNav(pathname);
-  const slug = locationSlugOf(pathname);
-  const location = slug ? locations.find((entry) => entry.slug === slug) : null;
-  const tab = slug ? locationTabOf(slug, pathname) : null;
-  const tabLabel =
-    tab && tab !== "overview"
-      ? LOCATION_TABS.find((entry) => entry.key === tab)?.label
-      : null;
-
-  const trail: { label: string; href?: string }[] = [
-    { label: section?.label ?? "Console", href: section?.href },
-  ];
-  if (location) {
-    trail.push({ label: location.name, href: locationHref(location.slug) });
-  }
-  if (tabLabel) trail.push({ label: tabLabel });
+  const section = sectionOf(pathname, locations);
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
@@ -51,47 +72,39 @@ export function ConsoleHeader({
       />
       <SidebarTrigger className="-ml-1" />
       <span aria-hidden="true" className="mx-1 h-4 w-px bg-slate-200" />
-      <nav
-        aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-2 text-sm"
-      >
-        <span className="hidden text-slate-500 md:inline">Admin</span>
-        <span aria-hidden="true" className="hidden text-slate-300 md:inline">
-          /
-        </span>
-        {trail.map((crumb, index) => {
-          const last = index === trail.length - 1;
-          return (
-            <span key={crumb.label} className="flex min-w-0 items-center gap-2">
-              {index > 0 ? (
-                <span aria-hidden="true" className="text-slate-300">
-                  /
-                </span>
-              ) : null}
-              {last || !crumb.href ? (
-                <span
-                  className={`truncate ${last ? "font-medium text-slate-900" : "text-slate-500"}`}
-                >
-                  {crumb.label}
-                </span>
-              ) : (
-                <Link
-                  href={crumb.href}
-                  className="truncate text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline"
-                >
-                  {crumb.label}
-                </Link>
-              )}
+      <ScopePicker locations={locations} permissions={permissions} />
+      {section ? (
+        <nav
+          aria-label="Breadcrumb"
+          className="hidden min-w-0 items-center gap-2 text-sm md:flex"
+        >
+          <span aria-hidden="true" className="text-slate-300">
+            /
+          </span>
+          {section.href === pathname ? (
+            <span
+              aria-current="page"
+              className="truncate font-medium text-slate-900"
+            >
+              {section.label}
             </span>
-          );
-        })}
-      </nav>
-      {slug ? (
-        <SidebarPanelTrigger
-          aria-label="Toggle location panel"
-          className="-mr-1 ml-auto"
-        />
+          ) : (
+            <Link
+              href={section.href}
+              className="truncate text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline"
+            >
+              {section.label}
+            </Link>
+          )}
+        </nav>
       ) : null}
+      <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 pl-2">
+        {permissions.includes("bookings.view") ? <BookingSearch /> : null}
+        {/* The box holds the button's place while Clerk loads, so the bar does not shift. */}
+        <span className="flex size-7 shrink-0 items-center justify-center">
+          <UserButton appearance={clerkUserButton} />
+        </span>
+      </div>
     </header>
   );
 }

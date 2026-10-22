@@ -4,7 +4,7 @@ import { ExternalLinkIcon } from "@repo/ui/icons";
 import { SidebarLabel, SidebarMenuButton } from "@repo/ui/sidebar";
 
 /**
- * The row at the panel's foot that opens the location's public page in a
+ * The row at the end of a location's sections that opens its public page in a
  * new tab; collapsed to a rail, the icon alone with the label as its
  * tooltip. A client component so the row's whole content, icon included,
  * is made on the client: a row handed over from the server with a server

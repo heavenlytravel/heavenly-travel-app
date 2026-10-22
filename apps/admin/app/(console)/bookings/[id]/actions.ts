@@ -42,7 +42,7 @@ import { prepareFormItem } from "../_lib/trip-server";
  * reachable by direct POST), passes the admin as the actor for the log and
  * lets the booking core check the status. The result's `event` sends the
  * confirmed or cancelled emails once the response is out. A change moves
- * the queue, the home's counts and every location's pages, whose panel
+ * the queue, the home's counts and every location's pages, whose sidebar
  * counts the queue and which open the booking inside the location.
  */
 async function finish(result: BookingChange): Promise<ActionState> {

@@ -11,10 +11,9 @@ import {
 } from "../../../_lib/routes";
 
 /**
- * The location's tabs as a strip under its header, on screens too narrow
- * for the panel's column, where the panel is a sheet: the sections stay
- * one tap away. From `xl` up the panel lists them and the strip is
- * hidden. The tab of the path on screen is marked. The strip scrolls
+ * The location's tabs as a strip under its header, on a phone, where the
+ * sidebar that lists them is a sheet: the sections stay one tap away.
+ * From `md` up the sidebar is on screen and the strip is hidden. The tab of the path on screen is marked. The strip scrolls
  * sideways with no bar, as the customer site's service tabs do, and keeps
  * the marked tab in view.
  */
@@ -43,7 +42,7 @@ export function LocationTabs({
   }, [active]);
 
   return (
-    <nav aria-label="Location tabs" className="mt-6 xl:hidden">
+    <nav aria-label="Location tabs" className="mt-6 md:hidden">
       <ul
         ref={strip}
         className="-mx-5 flex gap-1 overflow-x-auto border-b border-slate-200 px-5 [scrollbar-width:none] md:mx-0 md:px-0"

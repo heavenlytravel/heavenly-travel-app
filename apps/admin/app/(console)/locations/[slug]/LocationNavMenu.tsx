@@ -7,7 +7,6 @@ import { ChevronRightIcon } from "@repo/ui/icons";
 import {
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -15,20 +14,20 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarSeparator,
+  SidebarLabel,
   useSidebarCollapsed,
-  useSidebarPanel,
 } from "@repo/ui/sidebar";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   locationTabOf,
   type LocationTab,
   type LocationTabGroup,
 } from "../../../_lib/routes";
 import { StepMark } from "../_components/StepMark";
+import { PublicPageLink } from "./PublicPageLink";
 
 /** One row of a section's submenu: a zone, a class, a page, a status of the bookings. */
-export type PanelItem = {
+export type LocationNavItem = {
   key: string;
   label: string;
   href: string;
@@ -38,25 +37,27 @@ export type PanelItem = {
   dot?: "green" | "amber" | "grey";
 };
 
-/** A section of a location as the panel lists it: its tab, with one line on where it stands. */
-export type PanelSection = {
+/** A section of a location as the sidebar lists it: its tab, with one line on where it stands. */
+export type LocationNavSection = {
   key: LocationTab;
   href: string;
   label: string;
-  /** Where the section stands, one line: "2 classes on sale". */
+  /** Where the section stands, one line: "2 classes on sale". The row's tooltip on the rail. */
   detail: string;
+  /** What waits on the section, at its row's end: the bookings awaiting confirmation. None when nothing does. */
+  count?: { value: number; tone: "brand" | "amber" };
   /** The setup step the section is and whether it is done; null off the setup, or once the location is live. */
   step: { number: number; done: boolean } | null;
   /** The section's icon, drawn when it is not a step. */
   icon: ReactNode;
   /** What the section holds, as the rows of its submenu; none for a section without one. */
-  items: PanelItem[];
+  items: LocationNavItem[];
 };
 
-/** A group of the panel's sections: the day's work, or the setup. */
-export type PanelGroup = {
-  key: Exclude<LocationTabGroup, "foot">;
-  /** The group's heading; null for a draft's overview, which stands alone on top. */
+/** A group of the location's sections: the day's work, the setup, or the history at the end. */
+export type LocationNavGroup = {
+  key: LocationTabGroup;
+  /** The group's heading: the location's name over its work; none for the end. */
   label: string | null;
   /** What stands at the heading's right: "2 of 4 done". */
   note?: string;
@@ -64,13 +65,18 @@ export type PanelGroup = {
   intro?: ReactNode;
   /** Folded under its heading until opened by hand or one of its tabs is on screen. */
   foldable: boolean;
-  sections: PanelSection[];
+  sections: LocationNavSection[];
 };
 
 const DOTS = {
   green: "bg-emerald-500",
   amber: "bg-amber-500",
   grey: "bg-slate-300",
+} as const;
+
+const COUNT_TONES = {
+  brand: "bg-brand text-white",
+  amber: "bg-amber-100 text-amber-800",
 } as const;
 
 /** The path on screen with its query, as a submenu row's link is spelled. */
@@ -81,33 +87,35 @@ function useHere() {
 }
 
 /**
- * The sections of a location in the panel beside its page, in their
- * groups: the day's work on top, then the setup. Each section is a row
- * of two lines: the tab's name and where it stands. A section with
- * something to list (its zones, its classes, its pages, its bookings by
- * status) has a chevron that opens it as a submenu; the section on screen
- * opens by itself, and a toggled one stays as it was left while the admin
- * moves around the location. A foldable group, the setup of a live
- * location, works the same way: folded under its heading, which names
- * what it holds, it opens by itself on one of its tabs. The row of the
- * path on screen is marked. While the location is a draft, each setup
- * step's row carries its number, ticked once the step is done. Collapsed
- * to a rail, every row is its mark or icon alone, groups unfolded. On
- * narrow screens the panel is a sheet; a move to another path, from any
- * link in it, closes the sheet.
+ * The sections of a location in the sidebar, in their groups: the day's
+ * work under the location's name, then the setup, then the history and
+ * the public page. Each section is a row with its icon and, where
+ * something waits on it, a count. A section with something to list (its
+ * zones, its classes, its pages, its bookings by status) has a chevron
+ * that opens it as a submenu; the section on screen opens by itself, and
+ * a toggled one stays as it was left while the admin moves around the
+ * location. A foldable group, the setup of a live location, works the
+ * same way: folded under its heading, which names what it holds, it
+ * opens by itself on one of its tabs. The row of the path on screen is
+ * marked. While the location is a draft, each setup step's row carries
+ * its number, ticked once the step is done. Collapsed to a rail, every
+ * row is its mark or icon alone, groups unfolded, with the section's
+ * line as its tooltip.
  */
-export function LocationPanelNav({
+export function LocationNavMenu({
   slug,
   groups,
+  publicHref,
 }: {
   /** The location's slug, its address. */
   slug: string;
-  groups: readonly PanelGroup[];
+  groups: readonly LocationNavGroup[];
+  /** The location's public page; null while it is not public. */
+  publicHref: string | null;
 }) {
   const pathname = usePathname();
   const here = useHere();
   const active = locationTabOf(slug, pathname);
-  const { setOpen } = useSidebarPanel();
   const collapsed = useSidebarCollapsed();
   // The submenus and groups the admin opened or closed by hand; the rest
   // follow the tab on screen.
@@ -115,7 +123,7 @@ export function LocationPanelNav({
     {},
   );
   const [unfolded, setUnfolded] = useState<
-    Partial<Record<PanelGroup["key"], boolean>>
+    Partial<Record<LocationTabGroup, boolean>>
   >({});
   // A tab opened inside a group folded by hand opens the group: the fold
   // is forgotten, and the group follows the tab on screen again.
@@ -133,85 +141,86 @@ export function LocationPanelNav({
       });
     }
   }
-  const lastPathname = useRef(pathname);
-  useEffect(() => {
-    if (lastPathname.current === pathname) return;
-    lastPathname.current = pathname;
-    setOpen(false);
-  }, [pathname, setOpen]);
 
   return (
     <nav aria-label="Location sections">
-      {groups.map((group, index) => {
+      {groups.map((group) => {
         const holdsActive = group.sections.some(
           (section) => section.key === active,
         );
         const open =
           collapsed || !group.foldable || (unfolded[group.key] ?? holdsActive);
         return (
-          <Fragment key={group.key}>
-            {index > 0 ? <SidebarSeparator /> : null}
-            <SidebarGroup>
-              {group.label && !collapsed ? (
-                group.foldable ? (
-                  <button
-                    type="button"
-                    aria-expanded={open}
-                    onClick={() =>
-                      setUnfolded((was) => ({ ...was, [group.key]: !open }))
-                    }
-                    className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-xs font-medium text-slate-500 outline-hidden transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    {group.label}
-                    {group.note ? (
-                      <span className="ml-auto font-normal">{group.note}</span>
-                    ) : null}
-                    <ChevronRightIcon
-                      className={cx(
-                        "size-4 shrink-0 transition-transform duration-150",
-                        !group.note && "ml-auto",
-                        open && "rotate-90",
-                      )}
-                    />
-                  </button>
-                ) : (
-                  <SidebarGroupLabel className="justify-between gap-2">
-                    {group.label}
-                    {group.note ? (
-                      <span className="font-normal">{group.note}</span>
-                    ) : null}
-                  </SidebarGroupLabel>
-                )
-              ) : null}
-              {open ? (
-                <>
-                  {collapsed ? null : group.intro}
-                  <SidebarMenu aria-label={group.label ?? undefined}>
-                    {group.sections.map((section) => (
-                      <SectionRow
-                        key={section.key}
-                        section={section}
-                        current={section.key === active}
-                        here={here}
-                        open={
-                          section.items.length > 0 &&
-                          !collapsed &&
-                          (toggled[section.key] ?? section.key === active)
-                        }
-                        onToggle={(next) =>
-                          setToggled((was) => ({ ...was, [section.key]: next }))
-                        }
-                      />
-                    ))}
-                  </SidebarMenu>
-                </>
+          <SidebarGroup key={group.key}>
+            {group.label && !collapsed ? (
+              group.foldable ? (
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() =>
+                    setUnfolded((was) => ({ ...was, [group.key]: !open }))
+                  }
+                  className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-xs font-medium text-slate-500 outline-hidden transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  {group.label}
+                  {group.note ? (
+                    <span className="ml-auto font-normal">{group.note}</span>
+                  ) : null}
+                  <ChevronRightIcon
+                    className={cx(
+                      "size-4 shrink-0 transition-transform duration-150",
+                      !group.note && "ml-auto",
+                      open && "rotate-90",
+                    )}
+                  />
+                </button>
               ) : (
-                <p className="truncate px-2 pb-1 text-xs text-slate-400">
-                  {group.sections.map((section) => section.label).join(", ")}
-                </p>
-              )}
-            </SidebarGroup>
-          </Fragment>
+                <SidebarGroupLabel className="justify-between gap-2">
+                  <span className="truncate">{group.label}</span>
+                  {group.note ? (
+                    <span className="shrink-0 font-normal">{group.note}</span>
+                  ) : null}
+                </SidebarGroupLabel>
+              )
+            ) : null}
+            {open ? (
+              <>
+                {collapsed ? null : group.intro}
+                <SidebarMenu aria-label={group.label ?? undefined}>
+                  {group.sections.map((section) => (
+                    <SectionRow
+                      key={section.key}
+                      section={section}
+                      current={section.key === active}
+                      here={here}
+                      open={
+                        section.items.length > 0 &&
+                        !collapsed &&
+                        (toggled[section.key] ?? section.key === active)
+                      }
+                      onToggle={(next) =>
+                        setToggled((was) => ({ ...was, [section.key]: next }))
+                      }
+                    />
+                  ))}
+                  {group.key === "foot" && publicHref ? (
+                    <SidebarMenuItem>
+                      <PublicPageLink href={publicHref} />
+                    </SidebarMenuItem>
+                  ) : null}
+                </SidebarMenu>
+                {group.key === "foot" && !publicHref && !collapsed ? (
+                  <p className="px-2 py-1.5 text-xs text-slate-500">
+                    Not public yet. Staff read the pages through Preview.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="truncate px-2 pb-1 text-xs text-slate-400">
+                {group.sections.map((section) => section.label).join(", ")}
+              </p>
+            )}
+          </SidebarGroup>
         );
       })}
     </nav>
@@ -226,7 +235,7 @@ function SectionRow({
   open,
   onToggle,
 }: {
-  section: PanelSection;
+  section: LocationNavSection;
   /** The section's tab is on screen. */
   current: boolean;
   /** The path on screen with its query, to mark a submenu row. */
@@ -243,7 +252,6 @@ function SectionRow({
       <div className="relative">
         <SidebarMenuButton
           asChild
-          size={collapsed ? "default" : "lg"}
           active={current}
           tooltip={`${section.label}: ${section.detail}`}
         >
@@ -261,18 +269,23 @@ function SectionRow({
             ) : (
               section.icon
             )}
-            {collapsed ? null : (
-              <span className="grid min-w-0 flex-1 leading-tight">
-                <span className="truncate text-sm font-medium">
-                  {section.label}
-                </span>
+            <SidebarLabel className="min-w-0 flex-1">
+              {section.label}
+            </SidebarLabel>
+            {section.count && !collapsed ? (
+              <>
                 <span
-                  className={`truncate text-xs ${current ? "text-navy/70" : "text-slate-500"}`}
+                  aria-hidden="true"
+                  className={cx(
+                    "shrink-0 rounded-full px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums",
+                    COUNT_TONES[section.count.tone],
+                  )}
                 >
-                  {section.detail}
+                  {section.count.value}
                 </span>
-              </span>
-            )}
+                <span className="sr-only">, {section.detail}</span>
+              </>
+            ) : null}
           </Link>
         </SidebarMenuButton>
         {hasItems ? (
@@ -312,7 +325,7 @@ function SectionRow({
                   ) : null}
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.note ? (
-                    <span className="shrink-0 text-xs text-slate-500 tabular-nums">
+                    <span className="max-w-[60%] shrink-0 truncate text-xs text-slate-500 tabular-nums">
                       {item.note}
                     </span>
                   ) : null}
@@ -323,32 +336,5 @@ function SectionRow({
         </SidebarMenuSub>
       ) : null}
     </SidebarMenuItem>
-  );
-}
-
-/**
- * A tab at the panel's foot, the history: one line, its icon and its
- * name, marked while it is on screen; collapsed to a rail, the icon alone
- * with the section's line as its tooltip.
- */
-export function PanelFootLink({
-  slug,
-  section,
-}: {
-  slug: string;
-  section: PanelSection;
-}) {
-  const active = locationTabOf(slug, usePathname());
-  return (
-    <SidebarMenuButton
-      asChild
-      active={section.key === active}
-      tooltip={`${section.label}: ${section.detail}`}
-    >
-      <Link href={section.href}>
-        {section.icon}
-        <SidebarLabel>{section.label}</SidebarLabel>
-      </Link>
-    </SidebarMenuButton>
   );
 }

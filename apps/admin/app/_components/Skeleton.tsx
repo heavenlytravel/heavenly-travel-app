@@ -1,9 +1,8 @@
 import { cx } from "@repo/ui/cx";
-import { SidebarPanel } from "@repo/ui/sidebar";
 import { Suspense, type ComponentProps, type ReactNode } from "react";
 import { Card, Frame, TileGrid } from "./Card";
 import { DetailColumns } from "./PageColumn";
-import { WhenCollapsed, WhenExpanded } from "./PanelVisibility";
+import { WhenExpanded } from "./SidebarVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
 /**
@@ -191,51 +190,24 @@ export function DetailSkeleton({
 }
 
 /**
- * The panel beside a location's page while the location loads: its header
- * line and the two-line rows of its sections. `title` and `placement` are
- * the panel's own, so the skeleton stands exactly where it will.
+ * The scope's sections in the sidebar while they load: a heading, then
+ * rows of an icon and a name; collapsed to a rail, the icons alone.
  */
-export function PanelSkeleton({
-  title,
-  placement,
-}: {
-  title: string;
-  placement: string;
-}) {
+export function ScopeNavSkeleton() {
   return (
-    <SidebarPanel title={title} className={placement}>
+    <div className="grid gap-3 p-4">
       <WhenExpanded>
-        <div className="flex items-center gap-3 border-b border-slate-200 p-4">
-          <Bone className="size-8 rounded-full" />
-          <div className="grid flex-1 gap-1.5">
-            <Bone className="h-4 w-28" />
-            <Bone className="h-3 w-16" />
-          </div>
-        </div>
-        <div className="grid gap-3 p-4">
-          {Array.from({ length: 6 }, (_, row) => (
-            <div key={row} className="flex items-center gap-3">
-              <Bone className="size-4 rounded-full" />
-              <div className="grid flex-1 gap-1.5">
-                <Bone className="h-4 w-32" />
-                <Bone className="h-3 w-40" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <Bone className="h-3 w-24" />
       </WhenExpanded>
-      {/* Collapsed to a rail: the marks alone. */}
-      <WhenCollapsed>
-        <div className="grid justify-items-center gap-3 py-3">
-          {Array.from({ length: 7 }, (_, row) => (
-            <Bone
-              key={row}
-              className={row === 0 ? "size-8 rounded-full" : "size-4 rounded"}
-            />
-          ))}
+      {Array.from({ length: 6 }, (_, row) => (
+        <div key={row} className="flex items-center gap-3">
+          <Bone className="size-4 shrink-0 rounded" />
+          <WhenExpanded>
+            <Bone className={cx("h-4", row % 2 ? "w-20" : "w-28")} />
+          </WhenExpanded>
         </div>
-      </WhenCollapsed>
-    </SidebarPanel>
+      ))}
+    </div>
   );
 }
 

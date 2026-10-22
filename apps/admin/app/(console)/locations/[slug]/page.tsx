@@ -72,7 +72,7 @@ const PAGE_DOTS: Record<PageStatus, string> = {
  * awaiting confirmation, for the teams that work the queue, and for
  * Operation the vehicles with a document due and the drivers with a licence
  * due. A team that does not, such as Marketing, sees the location's parts
- * at a glance instead, a line each and a way in, which the panel also
+ * at a glance instead, a line each and a way in, which the sidebar also
  * lists. See
  * docs/261018-location-work-and-class-catalogue.md.
  */
@@ -215,7 +215,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
       </span>
     ),
   };
-  // The tabs with a line, the admin may open, in the panel's order.
+  // The tabs with a line, the admin may open, in the sidebar's order.
   const glances = glance
     ? locationTabsFor(state).filter(
         (tab) => lines[tab.key] !== undefined && may(tab.permission),

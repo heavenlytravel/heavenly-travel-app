@@ -38,6 +38,7 @@ import {
   UploadsContext,
   useUploadCount,
 } from "../../../_components/use-image-upload";
+import { FORM_WIDTH } from "../../../_components/PageColumn";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {
@@ -156,7 +157,7 @@ export function VehicleForm({
 
   return (
     <UploadsContext value={uploads.track}>
-      <form {...formProps} className="grid gap-6">
+      <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
         {vehicle ? <input type="hidden" name="id" value={vehicle.id} /> : null}
         <input
           type="hidden"

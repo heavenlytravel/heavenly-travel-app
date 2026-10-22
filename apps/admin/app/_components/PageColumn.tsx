@@ -1,21 +1,28 @@
 import type { ReactNode } from "react";
 
-/** The column a console page is read in: centred, no wider than a form reads well at. */
+/**
+ * The column a console page is read in: centred, up to 80rem, so a list,
+ * the rate grid and a map take the room the sidebar leaves. A form keeps
+ * its own narrower width (`FORM_WIDTH`).
+ */
 export function PageColumn({ children }: { children: ReactNode }) {
   return (
     <div className="min-w-0 flex-1">
-      <div className="mx-auto w-full max-w-5xl px-5 pt-8 pb-32 md:px-10 md:pt-10">
+      <div className="mx-auto w-full max-w-7xl px-5 pt-8 pb-32 md:px-10 md:pt-10">
         {children}
       </div>
     </div>
   );
 }
 
+/** How wide a form grows in the page's column: as wide as its fields read well at. */
+export const FORM_WIDTH = "max-w-5xl";
+
 /**
  * A detail page under its header: the record's cards in the wide column,
  * and a narrow column of cards beside it. The two stand side by side when
  * the page's column has room for both, read off the column and not the
- * screen, since a location's page is narrower beside its panel; otherwise
+ * screen, since the column is narrower beside an open sidebar; otherwise
  * the narrow one follows the record. Without `side` the record has the
  * wide column alone.
  */

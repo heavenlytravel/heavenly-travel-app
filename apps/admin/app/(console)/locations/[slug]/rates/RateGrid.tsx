@@ -41,6 +41,7 @@ import {
   type ZoneElsewhere,
 } from "./AddRouteDialog";
 import { errorOf } from "../../../../_lib/action-state";
+import { CELL_INPUT, CellKey, EMPTY_CELL, emptyCellMeaning } from "./cells";
 
 type Zone = { id: string; name: string };
 /** A column of the grid: a class on sale here, with the category it is sold under. */
@@ -131,10 +132,6 @@ function groupsOf(classes: readonly ClassColumn[]) {
 /** A zone's name cut to the column's width, whole in its tooltip. */
 const ZONE_NAME = "block max-w-44 truncate font-medium text-slate-900";
 
-/** An empty cell, hatched: metered or not offered, as the legend says. */
-const EMPTY_CELL =
-  "bg-[image:repeating-linear-gradient(-45deg,var(--color-slate-200)_0_1px,transparent_1px_6px)]";
-
 const byName = (a: string, b: string) =>
   a.localeCompare(b, "en", { sensitivity: "base" });
 
@@ -173,22 +170,6 @@ function SortHeading({
     </button>
   );
 }
-
-/** A swatch and what it marks, for the legend under the grid. */
-function Key({ swatch, children }: { swatch: string; children: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        aria-hidden="true"
-        className={cx("size-3 shrink-0 rounded-sm border", swatch)}
-      />
-      {children}
-    </span>
-  );
-}
-
-const CELL_INPUT =
-  "block h-10 w-full min-w-24 bg-transparent px-3 text-right text-sm tabular-nums outline-hidden focus:bg-white focus:ring-2 focus:ring-brand focus:ring-inset read-only:cursor-wait";
 
 /**
  * The rate grid, edited as a spreadsheet: a row per route, a column per
@@ -689,10 +670,7 @@ export function RateGrid({
 
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
-  const emptyMeans =
-    rule === "grid"
-      ? "Empty: the class is not offered on the route"
-      : "Empty: metered at the class's rates";
+  const emptyMeans = emptyCellMeaning(rule);
   const ariaSortOf = (dir: 1 | -1 | null) =>
     dir === null ? undefined : dir === 1 ? "ascending" : "descending";
   const allTicked =
@@ -972,7 +950,14 @@ export function RateGrid({
                         className={cx(lead, readOnly ? "pr-3 pl-6" : "px-3")}
                       >
                         <Tooltip content={whole} openOnClick>
-                          <span className={ZONE_NAME}>{zoneNameOf(a)}</span>
+                          <span
+                            className={cx(
+                              ZONE_NAME,
+                              isDoomed && "text-slate-400 line-through",
+                            )}
+                          >
+                            {zoneNameOf(a)}
+                          </span>
                         </Tooltip>
                       </th>
                       <td className={cx(lead, "pr-3")}>
@@ -989,7 +974,14 @@ export function RateGrid({
                             openOnClick
                             className="min-w-0"
                           >
-                            <span className={ZONE_NAME}>{zoneNameOf(b)}</span>
+                            <span
+                              className={cx(
+                                ZONE_NAME,
+                                isDoomed && "text-slate-400 line-through",
+                              )}
+                            >
+                              {zoneNameOf(b)}
+                            </span>
                           </Tooltip>
                           {out ? (
                             <Badge>
@@ -1090,13 +1082,17 @@ export function RateGrid({
 
       <div className="grid gap-2 px-6 py-4 text-xs text-slate-500">
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Key swatch={cx("border-slate-300", EMPTY_CELL)}>{emptyMeans}</Key>
+          <CellKey swatch={cx("border-slate-300", EMPTY_CELL)}>
+            {emptyMeans}
+          </CellKey>
           {readOnly ? null : (
             <>
-              <Key swatch="border-amber-300 bg-amber-50">
+              <CellKey swatch="border-amber-300 bg-amber-50">
                 Changed, not saved
-              </Key>
-              <Key swatch="border-red-200 bg-red-50">Deleted on save</Key>
+              </CellKey>
+              <CellKey swatch="border-red-200 bg-red-50">
+                Deleted on save
+              </CellKey>
             </>
           )}
           <span className="tabular-nums sm:ml-auto">

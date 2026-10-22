@@ -259,6 +259,14 @@ export type ZoneRefusal = Refusal & { overlaps?: ZoneInTheWay[] };
 const ZONE_WRITE_LOCK = 261021;
 
 /**
+ * Takes the zone write lock, held until the transaction ends. Every zone
+ * write takes it first, before it reads what it checks.
+ */
+async function lockZoneWrites(tx: Prisma.TransactionClient) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
+}
+
+/**
  * The zones whose ground the shape covers, of this location or another, in
  * their order; `zoneId`, the zone being remade, is left out.
  */
@@ -408,8 +416,9 @@ export async function checkOverlaps(
  * (`cutFrom`, their ids as the refusal named them): then each loses the
  * ground the shape covers, keeping its rates, and a district as it is
  * becomes reshaped from it. Refused when the zones in the way are no
- * longer the ones chosen, or when `trimmed` refuses. Takes the zone write
- * lock first. Answers the zones trimmed, for the pages to refresh.
+ * longer the ones chosen, or when `trimmed` refuses. Under the zone write
+ * lock (`lockZoneWrites`). Answers the zones trimmed, for the pages to
+ * refresh.
  */
 async function makeWay(
   tx: Prisma.TransactionClient,
@@ -420,7 +429,6 @@ async function makeWay(
 ): Promise<
   { ok: true; cut: { id: string; locationId: string }[] } | ZoneRefusal
 > {
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ZONE_WRITE_LOCK})`;
   const inTheWay = await zonesInTheWay(tx, zone.locationId, zone.shape, zoneId);
   if (inTheWay.length === 0) return { ok: true, cut: [] };
   const refusal = overlapRefusal(inTheWay);
@@ -522,6 +530,7 @@ export async function createZone(
   const { fields } = ready;
 
   return db.$transaction(async (tx) => {
+    await lockZoneWrites(tx);
     const location = await tx.location.findUnique({
       where: { id: locationId },
       select: { id: true, _count: { select: { zones: true } } },
@@ -584,6 +593,7 @@ export async function updateZone(
   const { fields } = ready;
 
   return db.$transaction(async (tx) => {
+    await lockZoneWrites(tx);
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
     const way = await makeWay(
@@ -624,6 +634,8 @@ export async function deleteZone(
   id: string,
 ): Promise<ZoneChanged | Refusal> {
   return db.$transaction(async (tx) => {
+    // A save trimming this zone meanwhile would otherwise find it gone.
+    await lockZoneWrites(tx);
     const zone = await tx.zone.findUnique({ where: { id } });
     if (!zone) return ZONE_NOT_FOUND;
     const grids = await gridsEndingAt(tx, zone);

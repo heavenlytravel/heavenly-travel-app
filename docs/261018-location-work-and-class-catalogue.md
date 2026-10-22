@@ -4,7 +4,9 @@ Decided on 2026-10-18, after the first week of `261015-locations-as-operation-ar
 in use. This document wins over that one where they differ: "Vehicle classes: one
 catalogue", "Who may do what" (the panel and the overview) and "Setting a location up"
 (what the panel shows once a location is live). The work is built in one thread on
-`feat/admin-location-workflow`.
+`feat/admin-location-workflow`. Since 2026-10-22 the panel's groups below stand in the
+sidebar instead, under the location picked in the console header; see
+`261022-console-scope.md`.
 
 ## Why
 

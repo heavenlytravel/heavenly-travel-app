@@ -379,7 +379,9 @@ setup step: a location with no row on the grid is metered.
   row with a disc coloured by its state, and "Add location" at its foot for Marketing.
   Under it, Operations (Bookings, Vehicle classes), Marketing (Home page) and Access
   (Admins, Activity). Coverage goes. The header's trail reads "Locations / Langkawi /
-  Coverage".
+  Coverage". Revised on 2026-10-22: the locations moved to a picker in the console
+  header, and the sidebar lists the picked location's sections; see
+  `261022-console-scope.md`.
 - Location panel: inside a location a second column sits on the page's right, after
   shadcn's sidebar-15. On top, the location's name, slug and state. Then its sections
   (the tabs the admin may open), each with one line on where it stands ("2 classes on
@@ -402,6 +404,9 @@ setup step: a location with no row on the grid is metered.
   same panel opens as a sheet from the right, from a button at the right end of the
   console header, and closes on a move to another path; there a strip of the tabs
   under the location's header keeps the sections one tap away on a tablet or a phone.
+  Revised on 2026-10-22: the panel is gone, for the page's width. Its sections are the
+  sidebar's while the picker is on the location, one line each with a count where
+  something waits; see `261022-console-scope.md`.
 
 ### Setting a location up
 

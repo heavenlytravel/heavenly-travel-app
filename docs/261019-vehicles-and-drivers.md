@@ -372,6 +372,5 @@ Later:
 - A vehicle's cover beside its plate in the console's lists.
 - Removing an unused photo's file from UploadThing: a removed photo stays stored, as a
   page's replaced image does.
-- Links from the Activity screen to a vehicle's or a driver's page.
 - Delete `db:set-class-list` once it has run on every database, drop `DriverProfile`, and
   drop the default of `VehicleModel.brand`, with BL-58.

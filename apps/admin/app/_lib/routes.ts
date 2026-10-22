@@ -1,6 +1,7 @@
 import {
   SETUP_STEPS,
   SETUP_STEP_LABELS,
+  type ActivityEntityType,
   type BookingStatus,
   type LocationHistoryKind,
   type LocationPageKey,
@@ -15,9 +16,12 @@ export const ADMINS_PATH = "/admins";
 
 export const ACTIVITY_PATH = "/activity";
 
-/** The full log, or the page of it older than the entry with this id. */
-export function activityHref(before?: string) {
-  return before ? `${ACTIVITY_PATH}?before=${before}` : ACTIVITY_PATH;
+/**
+ * The full log, or the entries of one type of record, at the page of it
+ * older than the entry with the id `before`.
+ */
+export function activityHref(type?: ActivityEntityType, before?: string) {
+  return listHref(ACTIVITY_PATH, { type, before });
 }
 /** A record's history page, under the record's own page: a vehicle's, a driver's, a class's, a booking's. */
 export function recordHistoryHref(recordHref: string) {

@@ -2,23 +2,22 @@ import {
   LOCATION_HISTORY_KINDS,
   LOCATION_HISTORY_KIND_LABELS,
   isLocationHistoryKind,
-  locationHistoryKindOf,
   type LocationHistoryKind,
   type Permission,
 } from "@repo/db";
 import { listLocationHistory } from "@repo/db/server";
-import Link from "next/link";
 import { FilterLinks } from "../../../../_components/FilterLinks";
+import { HistoryPager } from "../../../../_components/HistoryPager";
 import { HistoryTimeline } from "../../../../_components/HistoryTimeline";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
-  locationDriverHref,
-  locationHistoryHref,
-  locationPublishHref,
-  locationVehicleHref,
-} from "../../../../_lib/routes";
+  activityEntryHref,
+  activityEntryTag,
+} from "../../../../_lib/activity-links";
+import { locationNames } from "../../../../_lib/location-names";
+import { locationHistoryHref } from "../../../../_lib/routes";
 import { locationKey } from "../../_lib/location-data";
 
 /** The parts the filter offers: the fleet's only to an admin who manages it. */
@@ -38,7 +37,11 @@ const PAGE_SIZE = 50;
  * filters: its details, its classes, its coverage and rates, its vehicles
  * and drivers, its pages or its status. A publish opens the page as it
  * was before and after, for Marketing; a vehicle's or a driver's change,
- * which Operation alone sees, opens the record while it exists.
+ * which Operation alone sees, opens the record where it is based while it
+ * exists; another location's change that reached this one, such as a
+ * removal that took its routes to that location's zones, opens that
+ * location. The Activity screen reads the entries the same way
+ * (`_lib/activity-links`).
  */
 export default async function LocationHistoryPage({
   params,
@@ -98,16 +101,17 @@ async function history({
   before: string | undefined;
   permissions: readonly Permission[];
 }) {
-  const { entries, nextCursor } = await listLocationHistory({
-    locationId: id,
-    kind: filter,
-    fleet,
-    before,
-    take: PAGE_SIZE,
-  });
-  const readsPublishes = permissions.includes("locations.manage");
-  const link =
-    "font-medium text-neutral-600 underline-offset-4 hover:underline";
+  const [{ entries, nextCursor }, locations] = await Promise.all([
+    listLocationHistory({
+      locationId: id,
+      kind: filter,
+      fleet,
+      before,
+      take: PAGE_SIZE,
+    }),
+    locationNames(),
+  ]);
+  const slugs = new Map(locations.map((l) => [l.id, l.slug]));
 
   return (
     <>
@@ -119,50 +123,17 @@ async function history({
             ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
             : "No changes recorded for this location."
         }
-        hrefOf={(entry) => {
-          if (readsPublishes && entry.action === "location.page.published") {
-            return locationPublishHref(slug, entry.id);
-          }
-          if (entry.isDeleted) return null;
-          if (entry.entityType === "vehicle") {
-            return locationVehicleHref(slug, entry.entityId);
-          }
-          if (entry.entityType === "driver") {
-            return locationDriverHref(slug, entry.entityId);
-          }
-          return null;
-        }}
-        tagOf={(entry) => {
-          if (entry.entityType === "vehicle")
-            return `Vehicle ${entry.entityLabel}`;
-          if (entry.entityType === "driver")
-            return `Driver ${entry.entityLabel}`;
-          const kind = locationHistoryKindOf(entry.action);
-          return kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
-        }}
+        hrefOf={(entry) =>
+          activityEntryHref(entry, { slugs, permissions, here: id })
+        }
+        tagOf={(entry) => activityEntryTag(entry, id)}
       />
-      {before || nextCursor ? (
-        <nav
-          aria-label="Pages"
-          className="mt-4 flex items-center justify-between text-sm"
-        >
-          {before ? (
-            <Link href={locationHistoryHref(slug, filter)} className={link}>
-              Newest
-            </Link>
-          ) : (
-            <span />
-          )}
-          {nextCursor ? (
-            <Link
-              href={locationHistoryHref(slug, filter, nextCursor)}
-              className={link}
-            >
-              Older changes
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
+      <HistoryPager
+        newestHref={before ? locationHistoryHref(slug, filter) : null}
+        olderHref={
+          nextCursor ? locationHistoryHref(slug, filter, nextCursor) : null
+        }
+      />
     </>
   );
 }

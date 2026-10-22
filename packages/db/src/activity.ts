@@ -83,6 +83,8 @@ export type ActivityEntry = ActivityLog & {
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
+  /** Where a vehicle or a driver is based now, whose screens hold its page; null for any other record. */
+  recordLocationId: string | null;
 };
 
 function nameOf(user: {
@@ -167,16 +169,19 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     read(ids.vehicle, () =>
       db.vehicle.findMany({
         where: { id: { in: ids.vehicle } },
-        select: { id: true, plate: true },
+        select: { id: true, plate: true, locationId: true },
       }),
     ),
     read(ids.driver, () =>
       db.driver.findMany({
         where: { id: { in: ids.driver } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, locationId: true },
       }),
     ),
   ]);
+  const basedAt = new Map(
+    [...vehicles, ...drivers].map((record) => [record.id, record.locationId]),
+  );
   const userById = new Map(users.map((u) => [u.id, u]));
   const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
     deletedNames(
@@ -242,6 +247,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       entityLabel: entityLabelOf(row, labels),
       isDeleted:
         gone[row.entityType as ActivityEntityType]?.has(row.entityId) ?? false,
+      recordLocationId:
+        row.entityType === "vehicle" || row.entityType === "driver"
+          ? (basedAt.get(row.entityId) ?? null)
+          : null,
     };
   });
 }
@@ -402,17 +411,21 @@ export type ActivityPage = {
 };
 
 /**
- * The full log across the app, newest first, one page at a time. `before`
+ * The full log across the app, newest first, one page at a time, or the
+ * entries of one type of record: the bookings', the vehicles'. `before`
  * is the id of the last entry of the previous page.
  */
 export async function listActivity({
+  entityType,
   before,
   take,
 }: {
+  entityType?: ActivityEntityType;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
   const rows = await db.activityLog.findMany({
+    where: entityType ? { entityType } : undefined,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(before ? { cursor: { id: before }, skip: 1 } : {}),

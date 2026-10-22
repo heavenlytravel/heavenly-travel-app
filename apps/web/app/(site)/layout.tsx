@@ -17,7 +17,7 @@ export default async function SiteLayout({
   const { userId } = await auth();
   return (
     <div
-      className={`${fontVars} min-h-screen bg-[#fbfcfa] font-(family-name:--font-body) leading-normal text-[#102825] antialiased`}
+      className={`${fontVars} min-h-screen bg-slate-50 font-(family-name:--font-body) leading-normal text-slate-900 antialiased`}
     >
       <SiteHeader signedIn={userId !== null} />
       <main className="mx-auto w-full max-w-[1100px] px-5 pt-6 pb-24 sm:px-8 sm:pt-10">

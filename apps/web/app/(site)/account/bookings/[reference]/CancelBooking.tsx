@@ -41,7 +41,7 @@ export function CancelBooking({
         >
           Cancel booking
         </button>
-        <p className="mt-2 text-center text-[0.85rem] text-[#67726f]">{hint}</p>
+        <p className="mt-2 text-center text-[0.85rem] text-slate-500">{hint}</p>
       </>
     );
   }
@@ -49,7 +49,7 @@ export function CancelBooking({
   return (
     <form action={action} className="grid gap-3">
       <input type="hidden" name="reference" value={reference} />
-      <p className="text-[0.95rem] text-[#324844]">
+      <p className="text-[0.95rem] text-slate-700">
         Cancel booking {reference}? This cannot be undone.
       </p>
       <button type="submit" disabled={pending} className={dangerButton}>

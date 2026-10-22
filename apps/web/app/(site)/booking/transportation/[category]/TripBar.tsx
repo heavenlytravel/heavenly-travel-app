@@ -81,8 +81,8 @@ export function TripBar({
             <dl className="grid flex-1 gap-x-8 gap-y-3 sm:grid-cols-3">
               {facts.map(([label, value]) => (
                 <div key={label} className="min-w-0">
-                  <dt className="text-[0.8rem] text-[#67726f]">{label}</dt>
-                  <dd className="font-semibold text-[#082f2b]">{value}</dd>
+                  <dt className="text-[0.8rem] text-slate-500">{label}</dt>
+                  <dd className="font-semibold text-ink">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -163,7 +163,7 @@ function TripEditor({
             <div key={f.key} className="min-w-0">
               <label
                 htmlFor={id}
-                className="mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]"
+                className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800"
               >
                 {f.label}
               </label>
@@ -191,7 +191,7 @@ function TripEditor({
           Cancel
         </button>
       </div>
-      <p className="mt-3 text-[0.85rem] text-[#67726f]">
+      <p className="mt-3 text-[0.85rem] text-slate-500">
         A changed trip is priced again, so you choose your vehicle after.
       </p>
     </form>

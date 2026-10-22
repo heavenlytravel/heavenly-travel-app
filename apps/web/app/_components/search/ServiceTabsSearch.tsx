@@ -14,7 +14,7 @@ import { useSearchCard } from "./SearchProvider";
 import { FieldInput } from "./fields";
 
 const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
+  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
 /** All six services, in the order the tabs show them. */
 const TABS: Product[] = [
@@ -28,7 +28,7 @@ const TABS: Product[] = [
 
 /**
  * Six services as a row of icon tabs, then one joined row of fields that
- * changes with the service, and a deep green button of fixed width at the end.
+ * changes with the service, and a blue button of fixed width at the end.
  * Car with driver and coach charter can be sent: each goes to the options
  * page of its category with the search in the URL. The other tabs are
  * disabled until their flows exist. Its state is the `SearchProvider`'s
@@ -53,11 +53,11 @@ export function ServiceTabsSearch() {
   return (
     // No overflow clip on the card: the place fields open a suggestion list
     // below themselves that must be free to hang past its bottom edge.
-    <div className="rounded-[18px] bg-white text-[#102825] shadow-[0_22px_55px_rgba(9,43,39,0.16)] sm:rounded-[22px]">
+    <div className="rounded-[18px] bg-white text-slate-900 shadow-[0_22px_55px_rgba(0,38,75,0.16)] sm:rounded-[22px]">
       <div
         role="tablist"
         aria-label="Choose a travel service"
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-t-[inherit] border-b border-[#dce3e0] [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-t-[inherit] border-b border-slate-200 [scrollbar-width:none] sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6"
       >
         {TABS.map((p) => {
           const on = p.key === product.key;
@@ -72,10 +72,10 @@ export function ServiceTabsSearch() {
               disabled={!p.bookable}
               title={p.bookable ? undefined : "Coming soon"}
               onClick={() => setProduct(p.key)}
-              className={`relative flex min-h-[54px] shrink-0 snap-start items-center justify-center gap-2.5 border-r border-[#edf0ef] px-4 py-3 text-[0.83rem] font-semibold whitespace-nowrap last:border-r-0 disabled:cursor-not-allowed disabled:text-[#64706d]/60 sm:text-[0.95rem] lg:min-h-[58px] ${
+              className={`relative flex min-h-[54px] shrink-0 snap-start items-center justify-center gap-2.5 border-r border-slate-100 px-4 py-3 text-[0.83rem] font-semibold whitespace-nowrap last:border-r-0 disabled:cursor-not-allowed disabled:text-slate-500/60 sm:text-[0.95rem] lg:min-h-[58px] ${
                 on
-                  ? "bg-[#e8f2ef] text-[#073c36]"
-                  : "bg-white enabled:hover:bg-[#f5f9f7]"
+                  ? "bg-brand-tint text-brand"
+                  : "bg-white enabled:hover:bg-slate-50"
               } ${focus}`}
             >
               <ProductIcon
@@ -85,14 +85,14 @@ export function ServiceTabsSearch() {
               <span>{p.label}</span>
               {!p.bookable && (
                 // Out of the flow, so it never widens the tab past its column.
-                <span className="absolute top-1.5 right-2 text-[0.55rem] leading-none font-bold tracking-[0.12em] text-[#caa243] uppercase">
+                <span className="absolute top-1.5 right-2 text-[0.55rem] leading-none font-bold tracking-[0.12em] text-azure uppercase">
                   Soon
                 </span>
               )}
               {on && (
                 <span
                   aria-hidden
-                  className="absolute bottom-0 h-[3px] w-[50px] rounded-[3px] bg-[#caa243]"
+                  className="absolute bottom-0 h-[3px] w-[50px] rounded-[3px] bg-azure"
                 />
               )}
             </button>
@@ -119,8 +119,8 @@ export function ServiceTabsSearch() {
             return (
               <div
                 key={f.key}
-                className={`relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-[#073c36] lg:rounded-none ${
-                  issue ? "border-[#b3261e]" : "border-[#dce3e0]"
+                className={`relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand lg:rounded-none ${
+                  issue ? "border-[#b3261e]" : "border-slate-200"
                 } ${i === 0 ? "lg:rounded-l-[14px]" : "lg:-ml-px"} ${
                   f.kind === "place"
                     ? "lg:flex-[2]"
@@ -131,7 +131,7 @@ export function ServiceTabsSearch() {
               >
                 <label
                   htmlFor={id}
-                  className="pointer-events-none absolute top-2.5 left-[18px] text-[0.82rem]/5 font-semibold text-[#253c38]"
+                  className="pointer-events-none absolute top-2.5 left-[18px] text-[0.82rem]/5 font-semibold text-slate-800"
                 >
                   {f.label}
                 </label>
@@ -142,7 +142,7 @@ export function ServiceTabsSearch() {
                   presets={f.key === "to" ? dropoffs : undefined}
                   within={withinOf(f.key)}
                   onChange={set}
-                  className="h-full min-h-[70px] w-full border-0 bg-transparent px-[18px] pt-[34px] pb-2.5 text-[#64706d] outline-none placeholder:text-[#64706d]/80 focus:text-[#082f2b] data-placeholder:text-[#64706d]/80"
+                  className="h-full min-h-[70px] w-full border-0 bg-transparent px-[18px] pt-[34px] pb-2.5 text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80"
                 />
               </div>
             );
@@ -150,7 +150,7 @@ export function ServiceTabsSearch() {
           <button
             type="submit"
             disabled={pending}
-            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-[#073c36] px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(7,60,54,0.18)] hover:bg-[#0b5048] disabled:cursor-wait disabled:opacity-70 lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
+            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-brand px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70 lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
           >
             {pending ? (
               <Pending>Finding prices…</Pending>

@@ -39,7 +39,7 @@ export default async function BookingPage({
         booking={booking}
         aside={
           <>
-            <p className="mt-4 text-[0.85rem] text-[#67726f]">
+            <p className="mt-4 text-[0.85rem] text-slate-500">
               Keep this reference. Quote it when you contact us about the trip.
             </p>
             <Link href="/" className={`${primaryButton} mt-6 w-full`}>

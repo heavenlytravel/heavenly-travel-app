@@ -6,7 +6,7 @@ function placeLine(place: Place) {
     <>
       <span className="block">{place.label}</span>
       {place.address !== place.label && (
-        <span className="block text-[0.85rem] font-normal text-[#67726f]">
+        <span className="block text-[0.85rem] font-normal text-slate-500">
           {place.address}
         </span>
       )}

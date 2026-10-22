@@ -14,8 +14,8 @@ import {
 import { createTripBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
-const label = "mb-1.5 block text-[0.9rem] font-semibold text-[#253c38]";
-const hint = "mt-1.5 block text-[0.85rem] text-[#67726f]";
+const label = "mb-1.5 block text-[0.9rem] font-semibold text-slate-800";
+const hint = "mt-1.5 block text-[0.85rem] text-slate-500";
 const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
 
 /**
@@ -83,7 +83,7 @@ export function ConfirmForm({
       <input type="hidden" name={CONFIRM_FIELDS.category} value={category} />
       <input type="hidden" name={CONFIRM_FIELDS.trip} value={trip} />
       {signInHref && (
-        <p className="text-[0.9rem] text-[#67726f]">
+        <p className="text-[0.9rem] text-slate-500">
           Have an account?{" "}
           <Link href={signInHref} className={textLink}>
             Sign in
@@ -130,7 +130,7 @@ export function ConfirmForm({
           onChange={(e) => setEmail(e.target.value)}
           readOnly={locked}
           autoComplete="email"
-          className={`${control} ${locked ? "bg-[#f3f6f5] text-[#324844]" : ""}`}
+          className={`${control} ${locked ? "bg-mist text-slate-700" : ""}`}
         />
         {note(
           CONFIRM_FIELDS.email,
@@ -162,7 +162,7 @@ export function ConfirmForm({
       <button type="submit" disabled={pending} className={primaryButton}>
         {pending ? <Pending>Booking…</Pending> : "Confirm booking"}
       </button>
-      <p className="text-[0.85rem] text-[#67726f]">
+      <p className="text-[0.85rem] text-slate-500">
         No payment now. We will confirm your booking by email.
       </p>
     </form>

@@ -81,7 +81,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean | null }) {
             </button>
             <Sheet open={open} onOpenChange={setOpen} title="Site menu">
               <div className="flex h-[66px] items-center justify-between px-5 sm:h-[76px]">
-                <span className="text-[0.76rem] font-bold tracking-[0.25em] text-[#073c36] uppercase">
+                <span className="text-[0.76rem] font-bold tracking-[0.25em] text-brand uppercase">
                   Menu
                 </span>
                 <button
@@ -100,7 +100,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean | null }) {
                     href={link.href}
                     onClick={close}
                     aria-current={isCurrent(link) ? "page" : undefined}
-                    className={`border-b border-[#edf0ef] py-4 text-[1.05rem] font-semibold aria-[current]:text-[#073c36] ${focus}`}
+                    className={`border-b border-slate-100 py-4 text-[1.05rem] font-semibold aria-[current]:text-brand ${focus}`}
                   >
                     {link.label}
                   </Link>

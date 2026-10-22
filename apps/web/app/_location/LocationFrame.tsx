@@ -11,7 +11,6 @@ import {
 import { locationSearchPreview, publicLocationSearch } from "../_lib/locations";
 import { Closing, SiteFooter } from "../_home/Sections";
 import { fontVars } from "../_home/fonts";
-import styles from "../_home/home.module.css";
 import { LocationHeader, LocationSearch } from "./LocationSearch";
 
 /**
@@ -36,7 +35,7 @@ export async function LocationFrame({
     : await publicLocationSearch(location.slug);
   return (
     <div
-      className={`${fontVars} ${styles.page} min-h-screen font-(family-name:--font-body) leading-normal antialiased`}
+      className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
       {previewOf && <PreviewBar location={location} page={previewOf} />}
       <LocationHeader />
@@ -70,7 +69,7 @@ function PreviewBar({
   return (
     <aside
       aria-label="Preview"
-      className="sticky top-0 z-30 flex flex-wrap items-center gap-x-6 gap-y-1.5 border-b-[3px] border-[#caa243] bg-[#082f2b] px-5 py-2.5 text-[0.85rem] text-white sm:px-[clamp(20px,5vw,76px)]"
+      className="sticky top-0 z-30 flex flex-wrap items-center gap-x-6 gap-y-1.5 border-b-[3px] border-azure bg-ink px-5 py-2.5 text-[0.85rem] text-white sm:px-[clamp(20px,5vw,76px)]"
     >
       <p>
         <strong className="mr-2.5 tracking-[0.16em] uppercase">Preview</strong>
@@ -83,7 +82,7 @@ function PreviewBar({
             key={page}
             href={locationPreviewPath(location.slug, page)}
             aria-current={page === shown.page ? "page" : undefined}
-            className="font-semibold underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243] aria-[current]:underline"
+            className="font-semibold underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure aria-[current]:underline"
           >
             {LOCATION_PAGE_LABELS[page]}
           </Link>

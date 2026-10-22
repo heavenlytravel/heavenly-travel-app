@@ -45,7 +45,7 @@ export function BookingDetail({
   ];
   rows.push([
     "Total",
-    <span key="total" className="text-[1.15rem] font-bold text-[#073c36]">
+    <span key="total" className="text-[1.15rem] font-bold text-brand">
       {formatMyr(booking.priceTotalSen)}
     </span>,
   ]);

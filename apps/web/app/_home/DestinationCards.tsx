@@ -15,12 +15,12 @@ import styles from "./home.module.css";
  */
 
 const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-[#caa243]";
+  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
 // A row of up to four, centred, so fewer cards make a shorter row.
 const cell = "w-full sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]";
 
-const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-[17px] bg-[#073c36] p-[25px] text-left text-white sm:h-[330px] ${focus}`;
+const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-[17px] bg-navy p-[25px] text-left text-white sm:h-[330px] ${focus}`;
 
 function CardText({
   tag,
@@ -61,7 +61,7 @@ export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
           type="button"
           aria-pressed={values.from === AIRPORT_CARD.name}
           onClick={() => fillPickup(AIRPORT_CARD.name)}
-          className={`${card} ${styles.airport} cursor-pointer aria-pressed:ring-3 aria-pressed:ring-[#caa243] aria-pressed:ring-offset-2`}
+          className={`${card} ${styles.airport} cursor-pointer aria-pressed:ring-3 aria-pressed:ring-azure aria-pressed:ring-offset-2`}
         >
           <span
             aria-hidden
@@ -71,7 +71,7 @@ export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
           </span>
           <span
             aria-hidden
-            className="absolute top-[74px] left-[25px] h-0.5 w-[65px] bg-[#caa243]"
+            className="absolute top-[74px] left-[25px] h-0.5 w-[65px] bg-azure"
           />
           <CardText
             tag={AIRPORT_CARD.tag}

@@ -52,7 +52,7 @@ export default async function BookingsPage() {
               <li key={booking.id}>
                 <Link
                   href={accountBookingHref(booking.reference)}
-                  className={`${panel} block transition-shadow hover:shadow-[0_16px_40px_rgba(9,43,39,0.14)] ${focus}`}
+                  className={`${panel} block transition-shadow hover:shadow-[0_16px_40px_rgba(0,38,75,0.14)] ${focus}`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="font-(family-name:--font-display) text-[1.35rem]">
@@ -65,14 +65,14 @@ export default async function BookingsPage() {
                       {trips.map(({ item, trip }) => (
                         <div key={item.id}>
                           <p className="font-medium">{tripHeadline(trip)}</p>
-                          <p className="text-[#67726f]">{itemSummary(item)}</p>
+                          <p className="text-slate-500">{itemSummary(item)}</p>
                         </div>
                       ))}
-                      <p className="text-[#67726f]">
+                      <p className="text-slate-500">
                         Pick-up {formatLocalDateTime(booking.startsAt)}
                       </p>
                     </div>
-                    <p className="font-bold text-[#073c36]">
+                    <p className="font-bold text-brand">
                       {formatMyr(booking.priceTotalSen)}
                     </p>
                   </div>

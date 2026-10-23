@@ -5,8 +5,8 @@ the zones and the rate grid as they are. It replaces two things. The first is th
 2026-10-21 rule of "no per km anywhere": per km comes back, but only for the road past a
 zone's edge. The second is the metered fallback and the three drop-off rules of
 `261015-locations-as-operation-areas.md` ("Pickup here, drop-off anywhere"). This is a
-plan. Nothing in it is built yet. The open questions are under
-"Decisions to confirm" and are answered before any code.
+plan. Nothing in it is built yet. The user's answers of 2026-10-23 are under
+"Decisions".
 
 ## Why
 
@@ -117,81 +117,140 @@ Kuah Town, or a hotel in Cenang to the beach in Cenang.
 - `routeRateOf` already finds it (forward and backward are the same row).
 - A route out (to another location's zone) never has a diagonal.
 
-## The drop-off rules: suggestion
+## Where a location's trips may go
 
-**Why "In Penang" shows in Langkawi's Add route dialog.** The dialog's "To" list
-offers every other location's zones (`listZonesElsewhere`) whenever the drop-off rule
-is not "inside this location only". Langkawi's rule is "Only the routes on the rate
-grid", which allows routes out. Nothing checks that a road connects the two locations,
-so Penang's districts (Barat Daya, Timur Laut) are offered to an island.
+Decided on 2026-10-23. **The drop-off rule goes** (`Location.dropoffRule`,
+`DROPOFF_RULES`, its form on the Rates tab, `dropoffAllowed`, `dropoffZonesOf`).
+Nearest-zone pricing gives a price to every address that a road connects to a zone, so
+"anywhere", "inside the zones" and "grid only" have nothing left to decide. Two
+settings per location replace it, on the Rates tab:
 
-**With nearest-zone pricing, the three rules have nothing left to decide.** Every
-address that a road connects to a zone gets a price, and there is no metered price any
-more, so "anywhere", "inside the zones" and "grid only" collapse into one behaviour.
-What a location still needs to say is **how far past its zones it drives**. Without
-that, a Kuala Lumpur pickup to Penang would be priced as the nearest KL zone plus
-350 km of extra road.
+1. **Furthest extra road**, `Location.maxExtraKm` (whole km, required). An end whose
+   extra road is longer than this cannot be priced, and the customer is sent to
+   WhatsApp. Without it, a Kuala Lumpur pickup to Penang would be priced as the nearest
+   KL zone plus 350 km of extra road. Suggested to start at 15 km; Ops sets each
+   location's.
+2. **Trips across locations**, `Location.crossLocation` (on or off):
+   - **Off, "This location only"**: both ends must map to this location's own zones.
+     Routes to other locations' zones are not offered. Langkawi sets this, being an
+     island. A Langkawi pickup to Penang finds no Langkawi zone within its furthest
+     extra road (the road would have to cross the sea), so it is refused. It is never
+     priced.
+   - **On, "Also routes to other locations"**: as above, plus the routes out that this
+     location prices to another location's zones. Penang can set this to sell
+     Penang to KLIA.
 
-Suggested, for discussion before any code:
+Hourly hire has no drop-off, so neither setting touches it.
 
-1. **Remove the drop-off rule** (`Location.dropoffRule`, `DROPOFF_RULES`, the form on
-   the Rates tab, `dropoffAllowed`, `dropoffZonesOf`, the "Not offered" logic tied to
-   "grid"). Remove the metered fallback with it: an offering's base fare and minimum
-   fare stop pricing anything. Its per km becomes **the rate per extra km**. Hourly
-   hire stays as it is.
-2. **Add one setting per location: the furthest extra road**, `Location.maxExtraKm`
-   (whole km, required, suggested default 15 km for Langkawi; Ops to say). An end whose
-   extra road is longer, or with no road to any zone, cannot be priced. The customer
-   is sent to WhatsApp, as today's refusals are.
-3. **Ferries never count as road.** The route request sets Google's `avoidFerries`, so
-   Langkawi to the mainland has no road and is refused by point 2, not priced.
-4. **Routes out stay, in their own place.** A priced route to another location's zone,
-   such as Kuala Lumpur to KLIA, still wins over everything above. The Add route dialog
-   offers only this location's zones (and the within-zone cell). A second button, "Add
-   a route to another location", lists the other locations' zones by location. This
-   ends the Penang entries in Langkawi's everyday dialog without deciding reachability
-   in code.
-5. **A pickup outside every zone is served**, by the location of its nearest zone by
-   road, within that location's furthest extra road. Today it is refused.
+### Cross-location routes
 
-This also closes the gap parked on 2026-10-21, where Kuala Lumpur wanted metered trips
-inside KL, a fixed price to KLIA and no metered trip to Penang. KL's grid and KLIA's
-route out price the first two, and the furthest extra road refuses the third.
+A cross-location route is a **route out**: a row on the pickup location's grid from one
+of its own zones to another location's zone. Penang to KLIA is a row on Penang's grid,
+from Timur Laut to KLIA (Selangor's zone). Routes out exist today (`ZoneRate.toZoneId`
+may be another location's zone). What changes is how they are added and when they count.
+
+- **Adding one.** The everyday Add route dialog lists this location's zones only, plus
+  the within-zone cell. A second button, **"Add a route to another location"**, shows
+  only when trips across locations are on. Its "To" lists the other locations' zones,
+  grouped by location ("In Selangor: KLIA"). This is also why "In Penang" showed in
+  Langkawi's dialog today: the dialog offers every other location's zones whenever the
+  drop-off rule is not "inside this location only", and Langkawi's is "grid only".
+  Nothing checked that a road connects the two.
+- **Pricing with one.** The price follows the pickup, as today. For a pickup in Penang,
+  the zones its drop-off can map to are Penang's own, plus the zones its routes out end
+  at. The nearest-zone rule then works as it does inside a location:
+
+| Penang pickup in Timur Laut to | Drop-off maps to | Price |
+|---|---|---|
+| KLIA Terminal 1 (inside the KLIA zone) | KLIA, by the route out | the Timur Laut to KLIA cell |
+| A hotel 3 km past the KLIA zone's edge | KLIA, its nearest zone by road (extra 3 km) | the cell + 3 km x the rate, if the trip is longer than the grid trip |
+| Kuala Lumpur city (no route out to it) | no zone within Penang's furthest extra road | refused, WhatsApp |
+
+- **One way only.** The row prices Penang to KLIA. KLIA to Penang starts in Selangor, so
+  Selangor's grid prices it, with its own route out to a Penang zone. This is today's
+  rule ("the price follows the pickup"), kept.
+- **Switching trips across locations off** hides the routes out on the grid as "Not
+  sold while trips stay in this location". It does not delete them, so switching it back
+  on restores them.
+
+### A pickup outside every zone
+
+A pickup outside every zone is now served. It takes its nearest zone by road among all
+the public locations' own zones (not their routes out). That zone's location prices
+the trip, within that location's furthest extra road. Today such a pickup is refused.
+
+## What a class's rates keep
+
+Each location's offering of a class (`LocationVehicleClass`) keeps:
+
+| Field | Becomes | Why |
+|---|---|---|
+| `perKmSen` | **Rate per extra km** | prices the extra road |
+| `hourlyRateSen` | stays, **Per hour** | hourly hire is a separate trip mode, priced by the hour |
+| `baseFareSen` | **removed** | only the metered price used it |
+| `minimumFareSen` | **removed** | only the metered price, and the options page's "from RM", used it |
+
+- **"From RM" on the options page** (`startingPriceSen`) becomes the class's cheapest
+  cell on the location's grid, or its shortest hourly hire when that is less.
+- **The catalogue's old rate columns** on `VehicleClass` (`baseFareSen`, `perKmSen`,
+  `hourlyRateSen`, `minimumFareSen`, unread since 2026-10-15) go in the same clean-up.
+- **Old receipts** keep their base fare and minimum fare in their JSON and still show
+  them. `TripRates` makes the two fields optional for reading old receipts only.
+- **The rates for MPV, Van and Coach** are placeholders until Ops gives them: RM3.50,
+  RM4.50 and RM9.00 per extra km, beside Sedan's RM2.50. They are set in the offering
+  form like any rate, not written by a script.
+- The Rates tab's "Metered rates and rules" card becomes **"Rates and rules"**, with
+  Rate per extra km, Per hour and the rules.
 
 ## When a trip cannot be priced
 
 | Case | What the customer sees |
 |---|---|
-| No zone within the furthest extra road, or no road at all (an island, a ferry) | "We do not serve that area yet. Message us on WhatsApp." |
+| No zone within the furthest extra road, or the road would cross the sea | "We do not serve that area yet. Message us on WhatsApp." |
+| The drop-off is in another location's zone with no route out (or trips across locations are off) | the same |
 | The cell is empty for every class | "We do not have a price for that trip yet. Message us on WhatsApp." |
 | The cell is empty for some classes | Those classes show "Not offered on this trip", as today's "Not offered on this route" |
 | Google cannot route right now | "We cannot price that route right now. Try again later." (today's `distance-unavailable`) |
 
-## Measuring with Google
+## Measuring with Google: how many calls, and why
 
-Google's Routes API gives a road distance between two places. It cannot answer "where
-does the road first enter a zone". The quote works that out from the route's line.
+Google's Routes API answers one question: the road from A to B, with its length and,
+when asked, its line on the map. It cannot answer "which zone does this road reach
+first" or "how far is it from this address to that zone's edge". The quote works those
+out itself, from the route lines. So it asks Google for more routes than today.
 
-- **Route with a line.** `roadDistance` becomes `route(from, to)` and asks for
-  `routes.polyline.encodedPolyline` with `distanceMeters`, `DRIVE`, `TRAFFIC_UNAWARE`
-  and `avoidFerries`. It stays memoised per pair of place ids.
-- **Entry and exit along a line** (pure, in `@repo/db`): walk the decoded line, find
-  where it first enters a given zone and where it last leaves one, and measure along
-  the line. Lengths are scaled so that the whole line equals Google's
-  `distanceMeters`.
-- **Nearest zone by road** for an address outside every zone: take the zones whose
-  edge is within the furthest extra road in a straight line (usually one to three).
-  Route from the address to a point inside each, and take the first entry along each
-  line. The nearest entry wins. That is one to three calls, memoised per address.
-- **Trip**: one route between the two places. The part inside a starting zone is cut
-  off at its last exit, and the part inside an ending zone at its first entry.
-- **Grid trip**: one route between the two stand-ins (the zone's edge spot or the end's
-  entry spot), cut the same way.
+**Today**, a one-way quote makes **one** route call (pickup to drop-off, length only),
+plus the place lookups the search already makes.
 
-About four calls for a trip with one end outside every zone. That is two today: one
-for the distance, plus the resolve. Calls are memoised, so the options, confirm and
-create steps of one search pay once. The keyless provider used in local development
-keeps answering with straight lines, so the app still runs without a key.
+**With nearest-zone pricing**, it needs up to three kinds of route:
+
+| Route | What it is for | When it is needed | Calls |
+|---|---|---|---|
+| **A. Address to a nearby zone** | Finding an end's nearest zone, its entry spot and its extra road. The quote routes from the address to a point inside each candidate zone and finds where each line first crosses into the zone. The shortest wins. | For each end outside every zone | 1 per candidate zone: the zones whose edge is within the furthest extra road in a straight line, at most 3, nearest first |
+| **B. The trip** | The trip's length from the zone edge, or from the address. One route pickup to drop-off; the part inside a starting zone is cut at its last exit, and the part inside the ending zone at its first entry. | Whenever an end is outside every zone. Also kept for the receipt's full distance. | 1 |
+| **C. The grid trip** | The same, between the two stand-ins: the zone's edge or the end's entry spot | Whenever an end is outside every zone | 1 |
+
+| Trip | Today | New |
+|---|---|---|
+| Zone to zone (Airport to Pantai Kok) | 1 | 1 (B, for the receipt only; the price needs no distance) |
+| Zone to no zone (Airport to Orange) | 1 | up to 3 (A) + 1 (B) + 1 (C) = **up to 5** |
+| No zone to no zone (Orange to Blue) | 1 | up to 3 + 3 (A) + 1 + 1 = **up to 8** |
+
+How this is kept small:
+
+- **The candidate zones are few.** Only zones within the furthest extra road in a
+  straight line, nearest first, at most 3. Usually one or two.
+- **Caching.** Route A depends only on the address and the zones, so its answer
+  (nearest zone, entry spot, extra road) is kept per place for a day. It is dropped when
+  a zone of the location changes. Every route is memoised for 10 minutes, as today, so
+  the options, confirm and create steps of one search pay once.
+- **Zone to zone**, the most common trip, stays at one call.
+- Each call is billed by Google. Asking for the line (`polyline`) may move a call to a
+  higher-priced tier. That is checked against Google's current price list before
+  build step 2, and noted in its PR.
+
+The keyless provider used in local development answers with straight lines, so the app
+and the tests run without a key.
 
 ## The receipt
 
@@ -213,10 +272,35 @@ zoneTrip: {
 The price breakdown on the website and in the console reads "Airport to Pantai Kok
 RM50.00, extra road 0.77 km x RM2.50 RM1.94".
 
+## Try a trip, on the Rates tab
+
+Wanted by the user on 2026-10-23, to test prices before customers see them. It is a
+card on the location's Rates tab, for anyone who can see the tab. It makes no booking
+and writes nothing.
+
+- **Inputs**: pickup and drop-off, each a place field (the booking form's) or a click on
+  the map, which drops a pin there. Also the class, Sedan first, and the time, for the
+  odd-hours surcharge.
+- **The map** (Google Maps, as the zone editor uses) shows the location's zones, the
+  trip in dark ink, each extra road dashed in orange, the zone edges the grid trip runs
+  between in green, and the entry spots in purple. Pins can be dragged, and the price
+  updates when one is dropped.
+- **The calculation**, step by step beside the map, as in the demo:
+  1. Each end's zone: "inside Airport", or "outside every zone; nearest by road is
+     Pantai Kok, 0.77 km to its edge".
+  2. The base price: "grid Airport to Pantai Kok = RM50.00", or "not on the grid yet",
+     with a link to the cell.
+  3. The grid trip and the trip, in km, each saying where it is measured from.
+  4. Longer or not, and what is added: "0.77 km x RM2.50 = RM1.94".
+  5. The fare, then the surcharge and the model charge, as the receipt shows them.
+- **One code path.** It calls the same `quoteTrip` as the website, with the location
+  pinned, so what it shows is what a customer is charged. It also shows the refusals
+  ("beyond the furthest extra road: 18.2 km, the limit is 15 km").
+
 ## Testing
 
-Asked: test in the app, or run a test backend? Suggested: both, in three layers, with
-the first two as the gate.
+Asked: test in the app, or run a test backend? Both, in three layers, with the first two
+as the gate. Try a trip is the fourth, for people.
 
 1. **Unit tests of the pure pieces** (`node --test`, as `pricing.test.ts` today): the
    fare arithmetic, the entry and exit along a line, the trimming of a trip at zone
@@ -225,19 +309,17 @@ the first two as the gate.
    lengths. No network, no database, no licence questions over stored map data.
 2. **Quote tests with a fake router.** `quoteTrip` takes the router as an argument (the
    app binds Google's), so a test hands it a fake whose lines are drawn by hand to
-   rebuild the five Langkawi examples: Orange passes through Pantai Kok, Blue is
-   reached before Datai. Each row of the examples table above becomes a test with its
-   expected fare. A change that breaks the rule fails `pnpm test` before it is merged.
+   rebuild the Langkawi examples: Orange passes through Pantai Kok, Blue is reached
+   before Datai, Langkawi to Penang has no road. Each row of the examples becomes a
+   test with its expected fare, and so do the furthest extra road, trips across
+   locations on and off, and a route out. A change that breaks the rule fails
+   `pnpm test` before it is merged.
 3. **A live check, run by hand** (`pnpm --filter @repo/db price:check`, like
-   `packages/places/scripts/check-coverage.ts`). It reads the zones and the grid from
-   a database, read only, and real routes from Google. It prices a list of named
-   trips (`scripts/price-check.json`: two places and the expected fare) and prints a
-   table, with a non-zero exit on any difference. Ops adds a row whenever a price is
+   `packages/places/scripts/check-coverage.ts`). It reads the zones and the grid from a
+   database, read only, and real routes from Google. It prices a list of named trips
+   (`scripts/price-check.json`: two places and the expected fare) and prints a table,
+   with a non-zero exit on any difference. Ops adds a row whenever a price is
    questioned. It writes nothing, so it is safe during official testing.
-
-Later, in the app: a **"Try a trip"** panel on the location's Rates tab (pickup,
-drop-off, class). It shows the receipt and the map of the demo: zone edges, entry
-spots, the trip and the extra road, so Ops can check a price without making a booking.
 
 ## Build order
 
@@ -247,34 +329,40 @@ One PR each, in this order:
    trimming, nearest zone, and the fare with its receipt. `priceTrip` takes the zone
    trip, the metered branch goes, and `priceBreakdownOf` reads old receipts. Layer 1
    tests. Nothing calls it yet.
-2. **Routes with lines.** `route(from, to)` with the polyline and `avoidFerries`, the
-   polyline decoder, and the keyless provider's straight lines. `tripResolver` hands
-   the quote a router instead of a distance.
-3. **The quote.** `quoteTrip` prices by the rule. Pickups outside every zone are served
-   by their nearest zone's location, and refusals follow the furthest extra road.
-   Layer 2 tests. The website's and the console's price breakdown show the extra road.
-4. **The grid and the rules.** The within-zone cell (parse, grid row, dialog). The
-   furthest extra road replaces the drop-off rule on the Rates tab. Routes out get
-   their own button. "Per km" is renamed "Rate per extra km", and base fare and minimum
-   fare leave the screens. Schema: `Location.maxExtraKm` added. The user runs
-   `db:push`.
-5. **The live check script** (layer 3), with Langkawi's rows.
-6. **Clean-up**, once every database has run 4: drop `Location.dropoffRule`, and the
-   offerings' `baseFareSen` and `minimumFareSen`.
+2. **Routes with lines.** `route(from, to)` with the polyline, the polyline decoder, the
+   keyless provider's straight lines, and the day-long cache of nearest zones.
+   `tripResolver` hands the quote a router instead of a distance.
+3. **The quote and the settings.** `quoteTrip` prices by the rule. Pickups outside every
+   zone are served, and the furthest extra road and trips across locations decide the
+   refusals. Schema: `Location.maxExtraKm` and `Location.crossLocation` are added, and
+   the drop-off rule stops being read. The user runs `db:push`. Layer 2 tests. The
+   website's and the console's price breakdown show the extra road.
+4. **The grid and the Rates tab.** The within-zone cell (parse, grid row, dialog). The
+   two settings replace the drop-off rule's form. "Add a route to another location" is
+   its own button. The offering form and the rates card lose base fare and minimum
+   fare, and per km is renamed "Rate per extra km". "From RM" reads the grid.
+5. **Try a trip** on the Rates tab.
+6. **The live check script** (layer 3), with Langkawi's rows.
+7. **Clean-up**, once every database has run 3 and 4: drop `Location.dropoffRule`,
+   the offerings' `baseFareSen` and `minimumFareSen`, and the catalogue's old rate
+   columns.
 
-"Try a trip" comes after, in its own PR.
+## Decisions
 
-## Decisions to confirm
+Answered by the user on 2026-10-23:
 
-1. The drop-off rules go and the furthest extra road replaces them (above). Is that
-   right, and what is Langkawi's furthest extra road?
-2. Routes out move to their own button, so the everyday dialog lists this location's
-   zones only.
-3. The metered fallback goes: base fare and minimum fare stop pricing, and per km
-   becomes the rate per extra km. Does anything still need a minimum fare?
-4. The rate per extra km for MPV, Van and Coach. Only Sedan's RM2.50 is known.
-5. The within-zone prices Ops wants first, and the missing pairs (Pantai Kok to Datai,
-   Kuah Town, Tanjung Rhu and Cenang).
-6. A pickup outside every zone is served (case 3). Confirmed by the four kinds of
-   trip; listed so the refusal text can change.
-7. Coach charter follows the same rule (it shares the grid today).
+- The drop-off rule goes. In its place are the furthest extra road and trips across
+  locations, per location.
+- Langkawi keeps to itself (trips across locations off). Penang may sell routes out,
+  such as Penang to KLIA.
+- Routes out are added from their own button.
+- Base fare and minimum fare go; per km is the rate per extra km. Hourly hire stays.
+- MPV, Van and Coach take placeholder rates per extra km until Ops gives theirs.
+- Ops fills the within-zone prices and the missing pairs later.
+- Coach charter follows the same rule; both are transportation.
+- Try a trip is built, with the map and the calculation.
+
+Still open:
+
+1. Each location's furthest extra road. The plan starts Langkawi at 15 km.
+2. Google's price tier for routes with a line, checked in build step 2.

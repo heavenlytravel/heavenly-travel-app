@@ -8,6 +8,7 @@ import {
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
 import type { TripPriceBreakdown } from "./pricing";
+import { chargedKmOf } from "./zone-trip";
 
 /**
  * A trip as every screen describes it, before and after booking: the
@@ -131,10 +132,15 @@ export function tripDetailRows(details: {
   return rows;
 }
 
+/** "0.78 km": a distance on a receipt, to ten metres. */
+const kmLabel = (km: number) => `${km.toFixed(2)} km`;
+
 /**
- * The receipt behind a price, without the total: the route's fixed rate or
- * the rates used with the distance or hours, then the surcharge, then the
- * model chosen. The app adds the total in its own emphasis.
+ * The receipt behind a price, without the total: the grid's cell and the
+ * extra road past a zone's edge, or the hourly rate with the hours, then
+ * the surcharge, then the model chosen. Receipts from before nearest-zone
+ * pricing that were metered show their base fare and distance. The app
+ * adds the total in its own emphasis.
  */
 export function priceRows(
   price: TripPriceBreakdown,
@@ -142,19 +148,27 @@ export function priceRows(
   const rows: [string, string][] = [];
   if (price.route) {
     rows.push([
-      `Fixed rate, ${price.route.fromZone} to ${price.route.toZone}`,
+      price.route.fromZone === price.route.toZone
+        ? `Within ${price.route.fromZone}`
+        : `${price.route.fromZone} to ${price.route.toZone}`,
       formatMyr(price.route.rateSen),
     ]);
+    const extra = price.zoneTrip;
+    if (extra && extra.extraSen > 0) {
+      rows.push([
+        `Extra road, ${kmLabel(chargedKmOf(extra))} × ${formatMyr(extra.perKmSen)}`,
+        formatMyr(extra.extraSen),
+      ]);
+    }
   } else if (price.mode === "oneway" && price.distanceKm !== null) {
-    const metered =
-      price.rates.baseFareSen +
-      Math.round(price.rates.perKmSen * price.distanceKm);
-    rows.push(["Base fare", formatMyr(price.rates.baseFareSen)]);
+    const { baseFareSen = 0, minimumFareSen = 0, perKmSen } = price.rates;
+    const metered = baseFareSen + Math.round(perKmSen * price.distanceKm);
+    rows.push(["Base fare", formatMyr(baseFareSen)]);
     rows.push([
-      `${formatMyr(price.rates.perKmSen)} per km × ${price.distanceKm.toFixed(1)} km`,
-      formatMyr(metered - price.rates.baseFareSen),
+      `${formatMyr(perKmSen)} per km × ${price.distanceKm.toFixed(1)} km`,
+      formatMyr(metered - baseFareSen),
     ]);
-    if (metered < price.rates.minimumFareSen) {
+    if (metered < minimumFareSen) {
       rows.push(["Minimum fare applies", formatMyr(price.subtotalSen)]);
     }
   } else if (price.hours !== null) {

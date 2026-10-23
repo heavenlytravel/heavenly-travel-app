@@ -1,15 +1,21 @@
 import type { OfferingRules } from "./booking-rules";
 import { isTripMode, type TripMode } from "./booking-status";
 import type { SurchargeCharge } from "./rates-input";
+import {
+  zoneTripCharge,
+  zoneTripChargeOf,
+  type ZoneTripCharge,
+  type ZoneTripMeasure,
+} from "./zone-trip";
 
 /**
  * Instant pricing for a trip with a driver, car or coach. Pure and
  * unit-tested; the server calls it and never trusts a price from the client.
- * Money is integer sen. See docs/261015-locations-as-operation-areas.md,
- * "Zones and zone-to-zone rates".
+ * Money is integer sen. See docs/261023-nearest-zone-pricing.md.
  *
- *   one-way, on a route with a fixed rate: the rate
- *   one-way, metered: max(minimumFare, baseFare + perKm x distanceKm)
+ *   one-way: the grid's cell for the two zones, plus the extra road at
+ *   the rate per extra km when an end is outside every zone and the trip
+ *   is longer than the grid trip (./zone-trip)
  *   hourly:  hourlyRate x hours
  *   then the odd-hours surcharge, when the pickup is in the window: a
  *   percentage of the price, or a flat amount
@@ -17,12 +23,21 @@ import type { SurchargeCharge } from "./rates-input";
  *   one: a percentage of the price before the surcharge, or a flat amount
  */
 
-/** The metered rates a location sells a class at, as stored on `LocationVehicleClass`. */
+/** The rates a location sells a class at, as stored on `LocationVehicleClass`. */
 export type TripRates = {
-  baseFareSen: number;
+  /** The rate per extra km: the road past a zone's edge. */
   perKmSen: number;
   hourlyRateSen: number;
-  minimumFareSen: number;
+};
+
+/**
+ * The rates a receipt keeps. Receipts from before nearest-zone pricing
+ * also keep the base fare and the minimum fare of the metered price they
+ * may have been priced by; none written since does.
+ */
+export type ReceiptRates = TripRates & {
+  baseFareSen?: number;
+  minimumFareSen?: number;
 };
 
 /** What a trip is priced by: the road distance, or the hours of the hire. */
@@ -39,8 +54,10 @@ export type RouteRate = {
 export type TripPriceInput = {
   trip: PricingBasis;
   rates: TripRates;
-  /** The grid's price for a one-way trip between two zones; null when the trip is metered. */
+  /** The grid's cell for a one-way trip's two zones; required for one-way, none for hourly. */
   route?: RouteRate | null;
+  /** What a one-way trip with an end outside every zone measured; null when both ends are in zones. */
+  zoneTrip?: ZoneTripMeasure | null;
   /** What the odd-hours surcharge adds, when the pickup is in the window; null otherwise. */
   surcharge?: SurchargeCharge | null;
 };
@@ -48,11 +65,19 @@ export type TripPriceInput = {
 /** The receipt stored on the booking item: every input and the result. */
 export type TripPriceBreakdown = {
   mode: TripMode;
-  rates: TripRates;
+  rates: ReceiptRates;
+  /** One-way: the full road distance, pin to pin. */
   distanceKm: number | null;
   hours: number | null;
-  /** The fixed rate the price is, or null when the trip was metered. */
+  /** The grid's cell the price is; null for hourly hire, and on receipts that were metered. */
   route: RouteRate | null;
+  /**
+   * The road past a zone's edge, for a trip with an end outside every
+   * zone: both ends' zones, the distances and what the extra road added.
+   * Null when both ends were in zones, for hourly hire, and on receipts
+   * from before nearest-zone pricing.
+   */
+  zoneTrip: ZoneTripCharge | null;
   /** The surcharge that was added, and its percentage when it was one; null when none applied. */
   surcharge: { percent: number | null; amountSen: number } | null;
   /** The model the customer chose, by name, and what choosing it added; null when any model would do. */
@@ -70,6 +95,7 @@ export type TripPriceBreakdown = {
 export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   const { trip, rates } = input;
   const route = input.route ?? null;
+  const measure = input.zoneTrip ?? null;
   const charge = input.surcharge ?? null;
   if (charge?.percent != null && !(charge.percent >= 0)) {
     throw new RangeError("the surcharge percent must be zero or more");
@@ -79,23 +105,20 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   }
 
   let subtotalSen: number;
+  let zoneTrip: ZoneTripCharge | null = null;
   if (trip.mode === "oneway") {
     if (!(trip.distanceKm >= 0)) {
       throw new RangeError("distanceKm must be zero or more");
     }
-    if (route) {
-      if (!(route.rateSen >= 0)) {
-        throw new RangeError("rateSen must be zero or more");
-      }
-      subtotalSen = route.rateSen;
-    } else {
-      const metered =
-        rates.baseFareSen + Math.round(rates.perKmSen * trip.distanceKm);
-      subtotalSen = Math.max(rates.minimumFareSen, metered);
+    if (!route) throw new RangeError("a one-way trip is priced by a route");
+    if (!(route.rateSen >= 0)) {
+      throw new RangeError("rateSen must be zero or more");
     }
+    zoneTrip = measure ? zoneTripCharge(measure, rates.perKmSen) : null;
+    subtotalSen = route.rateSen + (zoneTrip?.extraSen ?? 0);
   } else {
     if (!(trip.hours > 0)) throw new RangeError("hours must be positive");
-    if (route) throw new RangeError("an hourly hire has no route");
+    if (route || measure) throw new RangeError("an hourly hire has no route");
     subtotalSen = rates.hourlyRateSen * trip.hours;
   }
 
@@ -109,12 +132,7 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
 
   return {
     mode: trip.mode,
-    rates: {
-      baseFareSen: rates.baseFareSen,
-      perKmSen: rates.perKmSen,
-      hourlyRateSen: rates.hourlyRateSen,
-      minimumFareSen: rates.minimumFareSen,
-    },
+    rates: { perKmSen: rates.perKmSen, hourlyRateSen: rates.hourlyRateSen },
     distanceKm: trip.mode === "oneway" ? trip.distanceKm : null,
     hours: trip.mode === "hourly" ? trip.hours : null,
     route: route
@@ -124,6 +142,7 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
           rateSen: route.rateSen,
         }
       : null,
+    zoneTrip,
     surcharge,
     model: null,
     subtotalSen,
@@ -161,29 +180,37 @@ export function withModelChoice(
 }
 
 /**
- * The least a class can cost at a location: its minimum one-way fare, or
- * its shortest hourly hire when that is less. For "from RM 80" where no
- * trip is known yet.
+ * The least a class can cost at a location: its cheapest cell on the
+ * location's grid, or its shortest hourly hire when that is less. For
+ * "from RM 80" where no trip is known yet. `cheapestCellSen` is null when
+ * the grid prices no route for the class.
  */
 export function startingPriceSen(
-  offering: Pick<TripRates, "minimumFareSen" | "hourlyRateSen"> &
+  offering: Pick<TripRates, "hourlyRateSen"> &
     Pick<OfferingRules, "minHourlyHours">,
+  cheapestCellSen: number | null,
 ) {
-  return Math.min(
-    offering.minimumFareSen,
-    offering.hourlyRateSen * offering.minHourlyHours,
-  );
+  const hourly = offering.hourlyRateSen * offering.minHourlyHours;
+  return cheapestCellSen === null ? hourly : Math.min(cheapestCellSen, hourly);
 }
 
-function isTripRates(value: unknown): value is TripRates {
-  if (typeof value !== "object" || value === null) return false;
+/** The rates on a receipt: the two kept since, and the old metered pair where it has them. */
+function receiptRatesOf(value: unknown): ReceiptRates | null {
+  if (typeof value !== "object" || value === null) return null;
   const r = value as Record<string, unknown>;
-  return (
-    typeof r.baseFareSen === "number" &&
-    typeof r.perKmSen === "number" &&
-    typeof r.hourlyRateSen === "number" &&
-    typeof r.minimumFareSen === "number"
-  );
+  if (typeof r.perKmSen !== "number" || typeof r.hourlyRateSen !== "number") {
+    return null;
+  }
+  return {
+    perKmSen: r.perKmSen,
+    hourlyRateSen: r.hourlyRateSen,
+    ...(typeof r.baseFareSen === "number"
+      ? { baseFareSen: r.baseFareSen }
+      : {}),
+    ...(typeof r.minimumFareSen === "number"
+      ? { minimumFareSen: r.minimumFareSen }
+      : {}),
+  };
 }
 
 function isRouteRate(value: unknown): value is RouteRate {
@@ -217,16 +244,17 @@ function isModelCharge(
 
 /**
  * Reads a stored `priceBreakdown` back from JSON, in the shape above or one
- * before it (a multiplier, no route, no surcharge, no model). Null when the
- * value is not a receipt.
+ * before it (a multiplier, no route, no surcharge, no model, no zone trip,
+ * a base fare and a minimum fare). Null when the value is not a receipt.
  */
 export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
   if (typeof value !== "object" || value === null) return null;
   const p = value as Record<string, unknown>;
   const nullableNumber = (v: unknown) => v === null || typeof v === "number";
+  const rates = receiptRatesOf(p.rates);
   if (
     !isTripMode(p.mode) ||
-    !isTripRates(p.rates) ||
+    !rates ||
     !nullableNumber(p.distanceKm) ||
     !nullableNumber(p.hours) ||
     typeof p.subtotalSen !== "number" ||
@@ -236,10 +264,11 @@ export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
   }
   return {
     mode: p.mode,
-    rates: p.rates,
+    rates,
     distanceKm: p.distanceKm as number | null,
     hours: p.hours as number | null,
     route: isRouteRate(p.route) ? p.route : null,
+    zoneTrip: zoneTripChargeOf(p.zoneTrip),
     surcharge: isSurcharge(p.surcharge) ? p.surcharge : null,
     model: isModelCharge(p.model) ? p.model : null,
     subtotalSen: p.subtotalSen,

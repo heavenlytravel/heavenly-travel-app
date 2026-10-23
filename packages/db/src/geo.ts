@@ -177,7 +177,8 @@ export function pointOnSurface(shape: MultiPolygon): LngLat {
   return best;
 }
 
-function distanceToSegment(p: LngLat, a: LngLat, b: LngLat) {
+/** The point of segment a-b nearest to p. */
+function nearestOnSegment(p: LngLat, a: LngLat, b: LngLat): LngLat {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const length2 = dx * dx + dy * dy;
@@ -188,9 +189,12 @@ function distanceToSegment(p: LngLat, a: LngLat, b: LngLat) {
           0,
           Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length2),
         );
-  const x = a[0] + t * dx - p[0];
-  const y = a[1] + t * dy - p[1];
-  return Math.sqrt(x * x + y * y);
+  return [a[0] + t * dx, a[1] + t * dy];
+}
+
+function distanceToSegment(p: LngLat, a: LngLat, b: LngLat) {
+  const [x, y] = nearestOnSegment(p, a, b);
+  return Math.hypot(x - p[0], y - p[1]);
 }
 
 /**
@@ -257,6 +261,34 @@ export function distanceToShapeKm(point: LngLat, shape: MultiPolygon): number {
     }
   }
   return best * KM_PER_DEGREE;
+}
+
+/**
+ * The point on a shape's edges nearest to a point, measured as
+ * `distanceToShapeKm` measures: where a straight line to the shape lands.
+ */
+export function nearestPointOnShape(
+  point: LngLat,
+  shape: MultiPolygon,
+): LngLat {
+  const scale = Math.cos((point[1] * Math.PI) / 180);
+  const scaled = ([x, y]: LngLat): LngLat => [x * scale, y];
+  const p = scaled(point);
+  let best: LngLat = point;
+  let bestDistance = Infinity;
+  for (const polygon of shape) {
+    for (const ring of polygon) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [x, y] = nearestOnSegment(p, scaled(ring[i]!), scaled(ring[j]!));
+        const d = Math.hypot(x - p[0], y - p[1]);
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = [x / scale, y];
+        }
+      }
+    }
+  }
+  return best;
 }
 
 /** The area of a bounding box in square degrees, for picking the smallest of nested shapes. */

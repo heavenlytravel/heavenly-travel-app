@@ -105,7 +105,7 @@ export type ClassAvailability =
   | { ok: true }
   | { ok: false; reason: "too-soon"; minLeadHours: number }
   | { ok: false; reason: "too-few-hours"; minHourlyHours: number }
-  /** The location only serves the routes on its grid, and this class has no price on this one. */
+  /** The grid has no price for this class on this trip. */
   | { ok: false; reason: "not-on-route" };
 
 export function classAvailability(
@@ -139,7 +139,7 @@ export function unavailableReason(availability: ClassAvailability) {
     case "too-few-hours":
       return `Minimum ${availability.minHourlyHours} hours`;
     case "not-on-route":
-      return "Not offered on this route";
+      return "Not offered on this trip";
   }
 }
 

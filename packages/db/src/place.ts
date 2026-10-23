@@ -20,6 +20,28 @@ export type Place = {
   locality: string | null;
 };
 
+/**
+ * A spot with no Google place, as a place: a pin on Try a trip's map, or
+ * one of the live check's. No place id, so a route is taken from its
+ * point. Never booked.
+ */
+export function pinPlace(pin: {
+  lat: number;
+  lng: number;
+  label: string;
+}): Place {
+  return {
+    placeId: "",
+    label: pin.label,
+    address: `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`,
+    lat: pin.lat,
+    lng: pin.lng,
+    state: null,
+    district: null,
+    locality: null,
+  };
+}
+
 export function isPlace(value: unknown): value is Place {
   if (typeof value !== "object" || value === null) return false;
   const p = value as Record<string, unknown>;

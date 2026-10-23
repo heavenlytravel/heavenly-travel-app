@@ -40,7 +40,6 @@ const withOfferings = {
       select: {
         id: true,
         isActive: true,
-        baseFareSen: true,
         perKmSen: true,
         hourlyRateSen: true,
         location: {
@@ -56,7 +55,7 @@ type CatalogueRow = Prisma.VehicleClassGetPayload<typeof withOfferings>;
 
 /**
  * A class with the locations that sell it, on sale or off, by name, with
- * its metered rates at each, and how many of its vehicles are in service
+ * its rates at each, and how many of its vehicles are in service
  * at each location, by the location's id.
  */
 export type CatalogueClass = Omit<CatalogueRow, "models"> & {

@@ -1,6 +1,6 @@
 import { formatClock } from "./booking-rules";
 import { refuse, type Change } from "./change";
-import { numberOf, textOf, type Parsed } from "./fields";
+import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import type { Ring } from "./geo";
 import { formatMyr, parseRinggit } from "./money";
 import { isRing, isZoneShape, ringsOf, type ZoneShape } from "./zone-match";
@@ -274,6 +274,7 @@ const UNREADABLE_CELLS: Parsed<never> = {
 /**
  * The grid's cells as posted: `[{ fromZoneId, toZoneId, vehicleClassId,
  * price }]` with the price in ringgit as typed, or "" to clear the cell.
+ * A cell with the same zone at both ends is the zone's within-zone price.
  * Whether the zones and classes are the location's is the writer's check.
  */
 export function parseRateCells(rows: unknown): Parsed<RateCell[]> {
@@ -295,9 +296,6 @@ export function parseRateCells(rows: unknown): Parsed<RateCell[]> {
       !vehicleClassId
     ) {
       return UNREADABLE_CELLS;
-    }
-    if (fromZoneId === toZoneId) {
-      return { ok: false, error: "A route runs between two different zones." };
     }
     const key = `${fromZoneId}|${toZoneId}|${vehicleClassId}`;
     if (seen.has(key)) return UNREADABLE_CELLS;
@@ -526,66 +524,76 @@ export function oddHoursOf(location: {
 }
 
 /**
- * Where a one-way trip from the location may end, from the loosest to the
- * strictest: anywhere in Malaysia, metered where the grid has no price;
- * inside one of the location's zones, metered where the grid has no
- * price; or only on a route the grid prices, and only in a class the
- * route has a price for. The pickup is always in a zone, whatever the
- * rule, and hourly hire has no drop-off. See
- * docs/261015-locations-as-operation-areas.md, "Pickup here, drop-off
- * anywhere".
+ * Where a location's trips may go, under nearest-zone pricing: how far
+ * past its nearest zone an end may be by road, and whether trips may end
+ * in another location's zone on the routes out it prices. Hourly hire has
+ * no drop-off, so neither touches it. See
+ * docs/261023-nearest-zone-pricing.md, "Where a location's trips may go".
  */
-export const DROPOFF_RULES = ["anywhere", "zones", "grid"] as const;
-export type DropoffRule = (typeof DROPOFF_RULES)[number];
-
-export function isDropoffRule(value: unknown): value is DropoffRule {
-  return DROPOFF_RULES.includes(value as DropoffRule);
-}
-
-/** The rule a location row holds; a value from before the rules were named reads as the loosest. */
-export function dropoffRuleOf(location: { dropoffRule: string }): DropoffRule {
-  return isDropoffRule(location.dropoffRule)
-    ? location.dropoffRule
-    : "anywhere";
-}
-
-/** What each setting of the drop-off rule says on the location's tab. */
-export const DROPOFF_RULE_LABELS: Record<DropoffRule, string> = {
-  anywhere: "Drop-offs anywhere",
-  zones: "Drop-offs inside this location only",
-  grid: "Only the routes on the rate grid",
+export type TripReach = {
+  /** The furthest extra road, in whole km. */
+  maxExtraKm: number;
+  crossLocation: boolean;
 };
 
-/** The rule in a word or two, where a summary names it: the location's panel, its overview. */
-export const DROPOFF_RULE_SHORT_LABELS: Record<DropoffRule, string> = {
-  anywhere: "Anywhere",
-  zones: "Inside the zones",
-  grid: "Grid routes only",
-};
+export const TRIP_REACH_LIMITS = {
+  /** Km. Past 100 km a trip is no longer the zone's price plus a little road. */
+  maxExtraKm: { min: 1, max: 100 },
+} as const;
 
-export function dropoffRuleLabel(rule: DropoffRule) {
-  return DROPOFF_RULE_LABELS[rule];
+/** The form names of the two settings. */
+export const TRIP_REACH_FIELDS = {
+  maxExtraKm: "maxExtraKm",
+  crossLocation: "crossLocation",
+} as const;
+
+/** How the screens name the two settings of trips across locations. */
+export const CROSS_LOCATION_LABELS = {
+  off: "This location only",
+  on: "Also routes to other locations",
+} as const;
+
+export function crossLocationLabel(crossLocation: boolean) {
+  return CROSS_LOCATION_LABELS[crossLocation ? "on" : "off"];
 }
 
-/**
- * Whether a drop-off that fell in a zone, or in none, is allowed under the
- * rule. Under "grid" a drop-off in a zone still needs a priced route; that
- * is the quote's check, per class, since a route may be priced for some
- * classes and not others.
- */
-export function dropoffAllowed(rule: DropoffRule, inZone: boolean): boolean {
-  return rule === "anywhere" || inZone;
+/** "Up to 15 km past a zone, this location only": the settings in a line. */
+export function tripReachLabel(reach: TripReach) {
+  return `Up to ${reach.maxExtraKm} km past a zone, ${crossLocationLabel(reach.crossLocation).toLowerCase()}`;
 }
 
-/**
- * The zones a drop-off is looked for in, under the rule: the location's
- * own, and the other locations' zones its routes out end at, such as
- * Kuala Lumpur's to KLIA, unless the rule keeps trips inside the location.
- */
-export function dropoffZonesOf<Z>(
-  rule: DropoffRule,
+export function checkTripReach(reach: TripReach): Change {
+  const { min, max } = TRIP_REACH_LIMITS.maxExtraKm;
+  if (
+    !Number.isInteger(reach.maxExtraKm) ||
+    reach.maxExtraKm < min ||
+    reach.maxExtraKm > max
+  ) {
+    return refuse(
+      `The furthest extra road is a whole number of km between ${min} and ${max}.`,
+      TRIP_REACH_FIELDS.maxExtraKm,
+    );
+  }
+  return { ok: true };
+}
+
+/** The settings form's `maxExtraKm` and `crossLocation`, read and checked; the switch is a checkbox. */
+export function parseTripReachFields(
+  values: Record<string, unknown>,
+): Parsed<TripReach> {
+  const reach: TripReach = {
+    maxExtraKm: numberOf(values[TRIP_REACH_FIELDS.maxExtraKm]),
+    crossLocation: flagOf(values[TRIP_REACH_FIELDS.crossLocation]),
+  };
+  const check = checkTripReach(reach);
+  return check.ok ? { ok: true, value: reach } : check;
+}
+
+/** The zones a location's drop-offs map to: its own, and the zones its routes out end at when trips across locations are on. */
+export function reachableZones<Z>(
+  crossLocation: boolean,
   own: readonly Z[],
   elsewhere: readonly Z[],
 ): readonly Z[] {
-  return rule === "zones" ? own : [...own, ...elsewhere];
+  return crossLocation ? [...own, ...elsewhere] : own;
 }

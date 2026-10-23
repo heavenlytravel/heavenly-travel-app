@@ -1,21 +1,25 @@
 import { db } from "./client";
 import { districtCodeAt } from "./district-index";
-import type {
-  District,
-  Prisma,
-  State,
-  Zone,
-  ZoneRate,
-} from "./generated/prisma/client";
+import type { District, Prisma, State, Zone } from "./generated/prisma/client";
+import { pointOnSurface } from "./geo";
 import { isPublicState, LOCATION_STATES } from "./location-input";
-import { zoneAt, zoneShapeArea, type ZoneShape } from "./zone-match";
+import { oddHoursOf } from "./rates-input";
+import type { QuoteLocation, QuoteZone } from "./zone-quote";
+import {
+  isZoneShape,
+  polygonsOf,
+  zoneAt,
+  zoneShapeArea,
+  type ZoneShape,
+} from "./zone-match";
 
 export type { District, State };
 
 /**
  * Coverage: where the site serves a pickup. A location draws its zones,
- * and a pickup is served when it falls in a zone of a location that is
- * public; that location's offerings, zones and rates price the trip.
+ * and a pickup is served by a location that is public when it falls in
+ * one of its zones, or when its nearest zone by road is one; that
+ * location's offerings, zones and rates price the trip.
  * Malaysia's states and districts are a fixed list, seeded from
  * data/malaysia-districts.json: a location ticks the states it lies in,
  * and a booking records the district its pickup fell in. See
@@ -61,32 +65,98 @@ const withZones = {
   },
 } satisfies Prisma.LocationDefaultArgs;
 
-/**
- * What pricing reads of a location: its rules, its zones, the cells of its
- * grid on a route from the pickup's zone, the only ones a trip from it can
- * be priced by, and the other locations' zones those routes end at: a
- * route out of the location, such as Kuala Lumpur's to KLIA, which is
- * Selangor's.
- */
-export type LocationForQuote = Prisma.LocationGetPayload<typeof withZones> & {
-  zoneRates: ZoneRate[];
-  zonesElsewhere: Zone[];
-};
-
 /** The states a location serves pickups in. */
 const PUBLIC_STATES = LOCATION_STATES.filter(isPublicState);
 
-/** A served pickup: the zone it fell in and the location that zone is. */
+/** A zone as a quote reads it, its shape checked and a point inside it found. */
+function quoteZoneOf(zone: Zone): QuoteZone | null {
+  if (!isZoneShape(zone.shape)) return null;
+  return {
+    id: zone.id,
+    name: zone.name,
+    shape: zone.shape,
+    inside: pointOnSurface(polygonsOf(zone.shape)),
+    version: zone.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Every public location as a quote reads it: its zones, its whole grid,
+ * the other locations' zones its routes out end at, its two settings on
+ * where trips may go and its surcharge. A quote places both ends of a trip
+ * among them (./zone-quote). `alsoId` adds one location whatever its
+ * state, for Try a trip on a location not yet live. See
+ * docs/261023-nearest-zone-pricing.md.
+ */
+export async function listQuoteLocations(
+  alsoId?: string,
+): Promise<QuoteLocation[]> {
+  const locations = await db.location.findMany({
+    where: {
+      OR: [
+        { state: { in: PUBLIC_STATES } },
+        ...(alsoId ? [{ id: alsoId }] : []),
+      ],
+    },
+    include: { ...withZones.include, zoneRates: true },
+  });
+  const own = new Set(locations.flatMap((l) => l.zones.map((z) => z.id)));
+  const outIds = [
+    ...new Set(
+      locations.flatMap((l) =>
+        l.zoneRates.flatMap((rate) =>
+          l.zones.some((z) => z.id === rate.toZoneId) ? [] : [rate.toZoneId],
+        ),
+      ),
+    ),
+  ];
+  // A route out may end at a zone of a location the public does not see.
+  const missing = outIds.filter((id) => !own.has(id));
+  const far = new Map(
+    [
+      ...locations.flatMap((l) => l.zones),
+      ...(missing.length > 0
+        ? await db.zone.findMany({ where: { id: { in: missing } } })
+        : []),
+    ].map((zone) => [zone.id, zone]),
+  );
+  const zonesOf = (zones: readonly Zone[]) =>
+    zones.flatMap((zone) => quoteZoneOf(zone) ?? []);
+  return locations.map((location) => {
+    const ownIds = new Set(location.zones.map((z) => z.id));
+    const outs = [
+      ...new Set(
+        location.zoneRates.flatMap((rate) =>
+          ownIds.has(rate.toZoneId) ? [] : [rate.toZoneId],
+        ),
+      ),
+    ].flatMap((id) => far.get(id) ?? []);
+    return {
+      id: location.id,
+      name: location.name,
+      slug: location.slug,
+      maxExtraKm: location.maxExtraKm,
+      crossLocation: location.crossLocation,
+      zones: zonesOf(location.zones),
+      zonesOut: zonesOf(outs),
+      zoneRates: location.zoneRates,
+      oddHours: oddHoursOf(location),
+    };
+  });
+}
+
+/** A pickup placed by its point: the zone it falls in and the location that zone is. */
 export type ServedAt = {
-  location: LocationForQuote;
-  zone: LocationForQuote["zones"][number];
+  location: Prisma.LocationGetPayload<typeof withZones>;
+  zone: Zone;
 };
 
 /**
- * The location that serves a pickup at the place: the one whose zone the
- * point falls in, among the locations that are public. Zones never
- * overlap; of two from before that rule, the smallest wins. Null when
- * no zone holds the point: the area is not served.
+ * The location whose zone holds a point, among the locations that are
+ * public. Zones never overlap; of two from before that rule, the smallest
+ * wins. Null when no zone holds the point. A quote serves a pickup outside
+ * every zone too, by its nearest zone by road; this is where the point
+ * itself falls, for "Test an address".
  */
 export async function locationAt(place: {
   lat: number;
@@ -97,8 +167,8 @@ export async function locationAt(place: {
     ...withZones,
   });
   let best: {
-    location: (typeof locations)[number];
-    zone: ServedAt["zone"];
+    location: ServedAt["location"];
+    zone: Zone;
     area: number;
   } | null = null;
   for (const location of locations) {
@@ -108,26 +178,5 @@ export async function locationAt(place: {
     const area = zoneShapeArea(zone.shape as ZoneShape);
     if (!best || area < best.area) best = { location, zone, area };
   }
-  if (!best) return null;
-  const { location, zone } = best;
-  const zoneRates = await db.zoneRate.findMany({
-    where: {
-      locationId: location.id,
-      OR: [{ fromZoneId: zone.id }, { toZoneId: zone.id }],
-    },
-  });
-  // A route out of the location ends at another location's zone, its `to`.
-  const own = new Set(location.zones.map((candidate) => candidate.id));
-  const farIds = [
-    ...new Set(
-      zoneRates.flatMap((rate) =>
-        own.has(rate.toZoneId) ? [] : [rate.toZoneId],
-      ),
-    ),
-  ];
-  const zonesElsewhere =
-    farIds.length > 0
-      ? await db.zone.findMany({ where: { id: { in: farIds } } })
-      : [];
-  return { location: { ...location, zoneRates, zonesElsewhere }, zone };
+  return best ? { location: best.location, zone: best.zone } : null;
 }

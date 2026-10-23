@@ -82,6 +82,7 @@ export {
   listPicturedOfferings,
   listActiveOfferings,
   listActiveOfferingsAt,
+  cheapestCellsAt,
   getOffering,
   listClassesNotOffered,
   createOffering,
@@ -110,7 +111,7 @@ export {
   checkOverlaps,
   setZoneRates,
   setOddHours,
-  setDropoffRule,
+  setTripReach,
   routesIntoLocation,
 } from "./zones";
 export type {
@@ -165,6 +166,7 @@ export type {
   AddressWrite,
 } from "./locations";
 export { quoteTrip, prepareTripItem } from "./transportation";
+export { listQuoteLocations } from "./coverage";
 export type {
   TripRequest,
   TripItemRequest,
@@ -173,6 +175,8 @@ export type {
   TripQuoteErrorCode,
   TripQuoteResult,
   QuotedLocation,
+  QuotedEnd,
+  QuoteOptions,
   ClassQuote,
   PrepareTripItemResult,
 } from "./transportation";
@@ -227,6 +231,9 @@ export * from "./fields";
 export * from "./slug";
 export * from "./geo";
 export * from "./zone-match";
+export * from "./zone-trip";
+export * from "./zone-quote";
+export * from "./price-check";
 export * from "./rates-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";

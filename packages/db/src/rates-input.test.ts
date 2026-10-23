@@ -3,19 +3,18 @@ import { describe, it } from "node:test";
 import {
   checkOddHours,
   closedRing,
-  dropoffAllowed,
-  dropoffRuleOf,
-  dropoffZonesOf,
-  isDropoffRule,
   isInOddHours,
   isZoneDistrict,
   minuteOfDay,
   oddHoursOf,
   parseOddHoursFields,
   parseRateCells,
+  parseTripReachFields,
   parseZoneFields,
+  reachableZones,
   reshapedFromDistrict,
   timeOfMinute,
+  tripReachLabel,
 } from "./rates-input";
 
 const triangle = [
@@ -165,32 +164,39 @@ describe("parseZoneFields", () => {
   });
 });
 
-describe("drop-off rule", () => {
-  it("reads a row's rule, the loosest for a value it does not know", () => {
-    assert.equal(dropoffRuleOf({ dropoffRule: "grid" }), "grid");
-    assert.equal(dropoffRuleOf({ dropoffRule: "zones" }), "zones");
-    assert.equal(dropoffRuleOf({ dropoffRule: "" }), "anywhere");
-    assert.equal(isDropoffRule("within"), false);
+describe("trip reach", () => {
+  it("reads the furthest extra road in whole km and the switch", () => {
+    assert.deepEqual(parseTripReachFields({ maxExtraKm: "15" }), {
+      ok: true,
+      value: { maxExtraKm: 15, crossLocation: false },
+    });
+    assert.deepEqual(
+      parseTripReachFields({ maxExtraKm: "20", crossLocation: "on" }),
+      { ok: true, value: { maxExtraKm: 20, crossLocation: true } },
+    );
   });
 
-  it("allows a drop-off outside every zone only under the loosest rule", () => {
-    assert.equal(dropoffAllowed("anywhere", false), true);
-    assert.equal(dropoffAllowed("zones", false), false);
-    assert.equal(dropoffAllowed("grid", false), false);
-    assert.equal(dropoffAllowed("zones", true), true);
-    assert.equal(dropoffAllowed("grid", true), true);
+  it("refuses a furthest extra road that is empty, not whole or out of range", () => {
+    for (const maxExtraKm of ["", "1.5", "0", "101", "abc"]) {
+      const parsed = parseTripReachFields({ maxExtraKm });
+      assert.equal(parsed.ok, false, maxExtraKm);
+      assert.equal(!parsed.ok && parsed.field, "maxExtraKm");
+    }
   });
 
-  it("looks for a drop-off in the zones routes out end at, unless trips stay inside", () => {
-    assert.deepEqual(dropoffZonesOf("zones", ["town"], ["klia"]), ["town"]);
-    assert.deepEqual(dropoffZonesOf("grid", ["town"], ["klia"]), [
+  it("maps drop-offs to the zones routes out end at only when trips across locations are on", () => {
+    assert.deepEqual(reachableZones(false, ["town"], ["klia"]), ["town"]);
+    assert.deepEqual(reachableZones(true, ["town"], ["klia"]), [
       "town",
       "klia",
     ]);
-    assert.deepEqual(dropoffZonesOf("anywhere", ["town"], ["klia"]), [
-      "town",
-      "klia",
-    ]);
+  });
+
+  it("names the settings in a line", () => {
+    assert.equal(
+      tripReachLabel({ maxExtraKm: 15, crossLocation: false }),
+      "Up to 15 km past a zone, this location only",
+    );
   });
 });
 
@@ -212,13 +218,17 @@ describe("parseRateCells", () => {
     ]);
   });
 
-  it("refuses a price that is not money, a route to the same zone and a repeated cell", () => {
+  it("reads a cell with the same zone at both ends: the within-zone price", () => {
+    const parsed = parseRateCells([
+      { fromZoneId: "a", toZoneId: "a", vehicleClassId: "sedan", price: "25" },
+    ]);
+    assert.ok(parsed.ok);
+    assert.equal(parsed.value[0]?.priceSen, 2_500);
+  });
+
+  it("refuses a price that is not money and a repeated cell", () => {
     const cell = { fromZoneId: "a", toZoneId: "b", vehicleClassId: "sedan" };
     assert.equal(parseRateCells([{ ...cell, price: "abc" }]).ok, false);
-    assert.equal(
-      parseRateCells([{ ...cell, toZoneId: "a", price: "1" }]).ok,
-      false,
-    );
     assert.equal(
       parseRateCells([
         { ...cell, price: "1" },

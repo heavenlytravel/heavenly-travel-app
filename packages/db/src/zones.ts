@@ -14,14 +14,14 @@ import {
   ZONE_LIMITS,
   checkOddHours,
   checkZoneFields,
+  checkTripReach,
   checkZoneShape,
-  dropoffRuleOf,
   isZoneDistrict,
   oddHoursOf,
   reshapedFromDistrict,
-  type DropoffRule,
   type OddHours,
   type RateCell,
+  type TripReach,
   type ZoneFields,
 } from "./rates-input";
 import { cutOut, joinOverlaps, shapesOverlap } from "./zone-geometry";
@@ -39,7 +39,7 @@ export type { Zone, ZoneRate };
 
 /**
  * A location's price list: its zones, the rate grid between them, the
- * odd-hours surcharge and the drop-off rule. The readers serve the Zones
+ * odd-hours surcharge and where its trips may go. The readers serve the Zones
  * and rates tab and the quote; the writers are the tab's, each taking the
  * actor and logging against the location inside its transaction. See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
@@ -808,7 +808,7 @@ export async function setZoneRates(
         (zone) => [zone.id, `${zone.name} (${zone.location.name})`] as const,
       ),
     ]);
-    const keptInside = dropoffRuleOf(location) === "zones";
+    const keptInside = !location.crossLocation;
     const className = new Map(
       location.offerings.map((offering) => [
         offering.vehicleClassId,
@@ -839,7 +839,7 @@ export async function setZoneRates(
       if ((was?.priceSen ?? null) === cell.priceSen) continue;
       if (!was && keptInside && !own.has(cell.toZoneId)) {
         return refuse(
-          "Drop-offs are kept inside this location, so a route cannot end at another location's zone. Change the drop-off rule first.",
+          "Trips stay in this location, so a route cannot end at another location's zone. Turn on trips across locations first.",
         );
       }
 
@@ -920,25 +920,35 @@ export async function setOddHours(
   });
 }
 
-/** Sets where a one-way trip may end. Setting what is already there logs nothing. */
-export async function setDropoffRule(
+/**
+ * Sets where the location's trips may go: the furthest extra road and
+ * trips across locations. Switching trips across locations off keeps the
+ * routes out on the grid, unsold, so switching it back on restores them.
+ * Setting what is already there logs nothing.
+ */
+export async function setTripReach(
   actor: Actor,
   locationId: string,
-  dropoffRule: DropoffRule,
+  reach: TripReach,
 ): Promise<Change> {
+  const check = checkTripReach(reach);
+  if (!check.ok) return check;
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
       where: { id: locationId },
     });
     if (!location) return NOT_FOUND;
-    const changed = changedFields(location, { dropoffRule });
+    const changed = changedFields(location, {
+      maxExtraKm: reach.maxExtraKm,
+      crossLocation: reach.crossLocation,
+    });
     if (!changed) return { ok: true };
     await tx.location.update({
       where: { id: locationId },
       data: changed.after,
     });
     await logActivity(tx, actor, {
-      action: "location.dropoff.updated",
+      action: "location.reach.updated",
       entityId: locationId,
       before: changed.before,
       after: changed.after,

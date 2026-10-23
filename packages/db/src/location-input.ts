@@ -121,8 +121,8 @@ export type SetupStep = {
  * on the preview page is what goes public; a class on sale, so the search
  * card has something to sell; and a zone, since the zones are the
  * coverage and a location with none serves no pickup. A route on the grid
- * is not required: a trip inside a zone with no row is metered at the
- * class's rates. No product page is needed: a landing page with none
+ * is not required: hourly hire needs none, and a one-way trip with no cell
+ * is sent to WhatsApp. No product page is needed: a landing page with none
  * published shows no product links and still carries the search card.
  */
 export function setupSteps(

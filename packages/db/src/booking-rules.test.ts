@@ -116,7 +116,7 @@ describe("classAvailability", () => {
     assert.equal(unavailableReason({ ok: true }), null);
     assert.equal(
       unavailableReason({ ok: false, reason: "not-on-route" }),
-      "Not offered on this route",
+      "Not offered on this trip",
     );
     assert.equal(
       unavailableReason({

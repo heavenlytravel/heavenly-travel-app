@@ -368,28 +368,89 @@ RM50.00, extra road 0.77 km x RM2.50 RM1.94".
 
 ## Try a trip, on the Rates tab
 
-Wanted by the user on 2026-10-23, to test prices before customers see them. It is a
-card on the location's Rates tab, for anyone who can see the tab. It makes no booking
-and writes nothing.
+Wanted by the user on 2026-10-23, to test prices in the app before customers see them,
+and to see how each price is worked out. It does in the console what the two demo
+pages did (`pricing-map.html` and `calls.html`, outside the repo in
+`C:UsersUser.claude-workprojectsC--Users-User-Desktop-project-heavenly-travel-appeview-shotsosm`):
+a map, and the calculation step by step. It is a card on the location's Rates tab,
+shown to anyone who can see the tab, with the page's own access check. It makes no
+booking and writes nothing.
 
-- **Inputs**: pickup and drop-off, each a place field (the booking form's) or a click on
-  the map, which drops a pin there. Also the class, Sedan first, and the time, for the
-  odd-hours surcharge.
-- **The map** (Google Maps, as the zone editor uses) shows the location's zones, the
-  trip in dark ink, each extra road dashed in orange, the zone edges the grid trip runs
-  between in green, and the entry spots in purple. Pins can be dragged, and the price
-  updates when one is dropped.
-- **The calculation**, step by step beside the map, as in the demo:
-  1. Each end's zone: "inside Airport", or "outside every zone; nearest by road is
-     Pantai Kok, 0.77 km to its edge".
-  2. The base price: "grid Airport to Pantai Kok = RM50.00", or "not on the grid yet",
-     with a link to the cell.
-  3. The grid trip and the trip, in km, each saying where it is measured from.
-  4. Longer or not, and what is added: "0.77 km x RM2.50 = RM1.94".
-  5. The fare, then the surcharge and the model charge, as the receipt shows them.
-- **One code path.** It calls the same `quoteTrip` as the website, with the location
-  pinned, so what it shows is what a customer is charged. It also shows the refusals
-  ("beyond the furthest extra road: 18.2 km, the limit is 15 km").
+### Inputs
+
+- **Pickup and drop-off**: each a place field (the booking form's), or a click on the
+  map, which drops a pin there. Pins can be dragged. The price is worked out again
+  when a pin is dropped, not while it moves, since every try makes real Google calls.
+- **Class** (Sedan first) and **pickup time** (for the odd-hours surcharge).
+- **Examples**: one button per row of the live check list for this location
+  (`scripts/price-check.json`, see "Testing"), so the plan's examples are one click
+  away. For Langkawi these are Airport to Pantai Kok, Airport to Orange, Airport to Blue,
+  Orange to Airport, Orange to Blue, Kuah Town to Kuah Town, Airport to Mak Ngah Kotiaw
+  and Kuah Town to Homestay Mahsuri. One list serves both the script and the buttons.
+  A row names its places by place id, or by a pin (lat, lng) for a spot with no place,
+  such as Orange and Blue.
+
+### The map
+
+Google Maps, as the zone editor uses. It shows:
+
+- the location's zones, filled and named;
+- the pins;
+- the trip in dark ink, from the zone edge or the address;
+- each extra road, dashed orange;
+- the grid trip, dotted green, between the green zone-edge dots and the purple entry
+  spots;
+- in the step view, each Google route's full line in grey, and the point inside each
+  candidate zone it was routed to.
+
+### Two views of the result
+
+**The calculation** (shown first), as in the pricing demo:
+
+1. Each end's zone: "inside Airport", or "outside every zone; nearest by road is
+   Tanjung Rhu, 4.95 km to its edge". When it differs, also "nearest in a straight line
+   is Datai, 3.4 km, but its road is longer".
+2. The base price: "grid Airport to Tanjung Rhu = RM80.00", or "not on the grid yet",
+   with a link to the cell on the grid below.
+3. The grid trip and the trip, in km, each saying where it is measured from.
+4. Longer or not, and what is added: "0.77 km x RM2.50 = RM1.94". If the cap applies, it
+   says so: "the trip adds 3.51 km over the grid trip, less than the 4.95 km extra road".
+5. The fare, then the surcharge and the model charge, as the receipt shows them.
+
+**Step by step** (a tab beside it), as in the call-by-call demo. Back and Next walk
+through every step of the quote. Each step says what we asked Google (or "no call"),
+what Google answered, and what we worked out. The map redraws for that step only:
+
+1. Which zone each end is in (no call).
+2. The zones near an address outside every zone, in straight-line order (no call; the
+   straight lines drawn).
+3. One step per route to a candidate zone (call A): the grey line, the first crossing
+   into the zone, that zone's extra road.
+4. The nearest zone, and the others it beat (no call). Shows "from the cache" when the
+   answer was kept from an earlier quote, and that no call was made.
+5. The trip (call B): the full line grey, the part measured dark.
+6. The grid trip (call C): the full line grey, the part measured dotted green.
+7. The price (no call).
+
+Under the steps: **calls made by this try**, and what they would cost past Google's
+free allowance (US$0.005 each).
+
+### How it is built
+
+- **One code path.** It calls the same `quoteTrip` as the website, so what it shows is
+  what a customer would be charged, with the pickup's location pinned to the tab's.
+  It also shows the refusals as the customer would see them, with the reason in Ops'
+  words: "beyond the furthest extra road: 18.2 km, the limit is 15 km", "the drop-off is
+  in Penang, and trips across locations are off".
+- **The trace.** `quoteTrip` takes an optional recorder. When one is given, each step
+  above is recorded with its geometry: the route lines (decoded), the crossing points,
+  and the distances. The recorder wraps the router, so every Google call is logged as it
+  is made, and a cached answer is logged as such. The website passes no recorder and
+  pays nothing for it. The server action behind Try a trip returns the quote and the
+  trace; the card draws both. The trace is never stored.
+- **Tests.** The layer 2 quote tests also check the trace for the Langkawi examples:
+  the steps in order, the number of calls, and that the trace's figures are the
+  receipt's.
 
 ## Testing
 
@@ -411,7 +472,8 @@ as the gate. Try a trip is the fourth, for people.
 3. **A live check, run by hand** (`pnpm --filter @repo/db price:check`, like
    `packages/places/scripts/check-coverage.ts`). It reads the zones and the grid from a
    database, read only, and real routes from Google. It prices a list of named trips
-   (`scripts/price-check.json`: two places and the expected fare) and prints a table,
+   (`scripts/price-check.json`: two places and the expected fare, also Try a trip's
+   example buttons) and prints a table,
    with a non-zero exit on any difference. Ops adds a row whenever a price is
    questioned. It writes nothing, so it is safe during official testing.
 
@@ -436,8 +498,8 @@ as the gate. Try a trip is the fourth, for people.
    two settings replace the drop-off rule's form. "Add a route to another location" is
    its own button. The offering form and the rates card lose base fare and minimum
    fare, and per km is renamed "Rate per extra km". "From RM" reads the grid.
-5. **Try a trip** on the Rates tab, with the list of calls it made (as in "Call by
-   call" above).
+5. **Try a trip** on the Rates tab: the map, the calculation and the step by step view,
+   from `quoteTrip`'s trace (see "Try a trip, on the Rates tab").
 6. **The live check script** (layer 3), with Langkawi's rows.
 
 **Not in this PR**: dropping the columns that stop being read (`Location.dropoffRule`,

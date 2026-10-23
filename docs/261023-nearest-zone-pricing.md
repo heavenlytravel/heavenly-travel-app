@@ -103,6 +103,46 @@ What the examples show:
 The interactive map used for the CEO is outside the repo (review-shots/osm in the
 assistant's workspace). It can go to the docs repo's `presentations/` if wanted.
 
+### Nearest in a straight line is not nearest by road
+
+The zone is always decided **by road**. The straight line only orders the zones to ask
+about (see "Measuring with Google"). Two real places in Langkawi, checked with Google
+routes on 2026-10-23, to test with:
+
+- **Mak Ngah Kotiaw** (restaurant at Teluk Ewa, 6.41679, 99.76731, place id
+  `ChIJh5KKPAB7TDARfUAC1-UxPqs`). In a straight line its nearest zone is Datai (3.4 km).
+  By road, Tanjung Rhu's edge is 4.95 km and Datai's 5.16 km, so its zone is **Tanjung
+  Rhu**.
+- **Homestay Mahsuri** (Ulu Melaka, 6.33895, 99.77426, place id
+  `ChIJoxCjvp15TDARAwF6y1Ad4e8`). In a straight line its nearest zone is Kuah Town. By
+  road, Kuah Town's edge is 5.73 km and the Airport's 5.75 km. Twenty metres decide
+  which family of prices it gets, so it is a good test of a near tie: a small change in
+  Google's roads can flip it.
+
+### A trip that does not pass through the nearest zone
+
+Airport to Mak Ngah Kotiaw, by Google: the road goes north to Teluk Ewa directly, and
+never passes through Tanjung Rhu.
+
+| | km |
+|---|---|
+| Extra road, Mak Ngah Kotiaw to Tanjung Rhu's edge | 4.95 |
+| Grid trip, Airport edge to the Tanjung Rhu entry spot | 15.62 |
+| Trip, Airport edge to Mak Ngah Kotiaw | 19.13 |
+| What the trip really adds over the grid trip | 3.51 |
+
+- **If the trip were shorter than the grid trip**, nothing is added, as for Blue: the
+  fare is the Airport to Tanjung Rhu cell, RM80.
+- **It is longer, but by less than the extra road.** The rule as agreed adds the whole
+  extra road: RM80 + 4.95 x RM2.50 = **RM92.38**, for 4.95 km the car does not
+  drive past the grid trip.
+- **Proposed fix, open:** add the smaller of the extra road and what the trip adds over
+  the grid trip: RM80 + 3.51 x RM2.50 = **RM88.78**. When the road does pass through the
+  zone, as for Orange, the two are the same (9.57 - 8.80 = 0.77 km, the extra road), so
+  every agreed example keeps its fare. It only trims trips like this one. It reverses
+  the earlier answer "the whole extra road, even 10 m longer", so it goes back to the
+  CEO.
+
 ## Within-zone prices
 
 The grid gets its diagonal: a cell with the same zone at both ends prices a trip that
@@ -226,7 +266,7 @@ plus the place lookups the search already makes.
 
 | Route | What it is for | When it is needed | Calls |
 |---|---|---|---|
-| **A. Address to a nearby zone** | Finding an end's nearest zone, its entry spot and its extra road. The quote routes from the address to a point inside each candidate zone and finds where each line first crosses into the zone. The shortest wins. | For each end outside every zone | 1 per candidate zone: the zones whose edge is within the furthest extra road in a straight line, at most 3, nearest first |
+| **A. Address to a nearby zone** | Finding an end's nearest zone, its entry spot and its extra road. The quote routes from the address to a point inside each candidate zone and finds where each line first crosses into the zone. The shortest wins. | For each end outside every zone | 1 per candidate zone, in straight-line order, stopping as below |
 | **B. The trip** | The trip's length from the zone edge, or from the address. One route pickup to drop-off; the part inside a starting zone is cut at its last exit, and the part inside the ending zone at its first entry. | Whenever an end is outside every zone. Also kept for the receipt's full distance. | 1 |
 | **C. The grid trip** | The same, between the two stand-ins: the zone's edge or the end's entry spot | Whenever an end is outside every zone | 1 |
 
@@ -238,8 +278,13 @@ plus the place lookups the search already makes.
 
 How this is kept small:
 
-- **The candidate zones are few.** Only zones within the furthest extra road in a
-  straight line, nearest first, at most 3. Usually one or two.
+- **The candidate zones are few, and none is skipped wrongly.** The zones are taken in
+  order of their straight-line distance to the address, within the furthest extra road.
+  The quote routes to each in turn, and stops when the next zone's straight-line
+  distance is longer than the shortest extra road found so far. A road is never shorter
+  than the straight line, so no zone left unasked could be nearer by road. There is no
+  fixed cap: a cap of 3 could drop the zone that is nearest by road. Usually one or two
+  calls.
 - **Caching.** Route A depends only on the address and the zones, so its answer
   (nearest zone, entry spot, extra road) is kept per place for a day. It is dropped when
   a zone of the location changes. Every route is memoised for 10 minutes, as today, so
@@ -254,7 +299,7 @@ Simulated on the demo's roads (OpenStreetMap). Google's lines will differ a litt
 | Step | Google call | We ask | Google answers | We work out | The map |
 |---|---|---|---|---|---|
 | 1 | none | - | - | The Airport pin is inside Airport; Orange is outside every zone | the two pins |
-| 2 | none | - | - | Zones within 15 km of Orange in a straight line, nearest first, at most 3: Pantai Kok, Datai, Airport | dotted straight lines to the three zone edges |
+| 2 | none | - | - | Zones within 15 km of Orange in a straight line, nearest first: Pantai Kok, Datai, Airport, and on | dotted straight lines to the three zone edges |
 | 3 | A | Orange to The Danna (inside Pantai Kok), with the line | a road and its line | The line first enters Pantai Kok after 0.77 km | grey route; orange dashes to a purple entry spot |
 | 4 | A | Orange to The Datai (inside Datai) | a road and its line | It first enters Datai after 3.65 km | the same, for Datai |
 | 5 | A | Orange to the airport (inside Airport) | a road and its line | It first enters Airport after 9.61 km | the same, for Airport |
@@ -417,6 +462,10 @@ Answered by the user on 2026-10-23:
 - Try a trip is built, with the map and the calculation.
 
 Still open:
+
+0. The cap on the extra (see "A trip that does not pass through the nearest zone"):
+   the whole extra road, or the smaller of it and what the trip adds. Proposed: the
+   smaller. Build it behind one function so the answer is a one-line change.
 
 1. Each location's furthest extra road. The plan starts Langkawi at 15 km.
 2. Google's tier for routes with a line: Essentials (checked 2026-10-23). Confirm the

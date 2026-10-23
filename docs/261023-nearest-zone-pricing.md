@@ -245,9 +245,58 @@ How this is kept small:
   a zone of the location changes. Every route is memoised for 10 minutes, as today, so
   the options, confirm and create steps of one search pay once.
 - **Zone to zone**, the most common trip, stays at one call.
-- Each call is billed by Google. Asking for the line (`polyline`) may move a call to a
-  higher-priced tier. That is checked against Google's current price list before
-  build step 2, and noted in its PR.
+- Each call is billed by Google; see "What it costs" below.
+
+### Call by call: Airport to Orange
+
+Simulated on the demo's roads (OpenStreetMap). Google's lines will differ a little.
+
+| Step | Google call | We ask | Google answers | We work out | The map |
+|---|---|---|---|---|---|
+| 1 | none | - | - | The Airport pin is inside Airport; Orange is outside every zone | the two pins |
+| 2 | none | - | - | Zones within 15 km of Orange in a straight line, nearest first, at most 3: Pantai Kok, Datai, Airport | dotted straight lines to the three zone edges |
+| 3 | A | Orange to The Danna (inside Pantai Kok), with the line | a road and its line | The line first enters Pantai Kok after 0.77 km | grey route; orange dashes to a purple entry spot |
+| 4 | A | Orange to The Datai (inside Datai) | a road and its line | It first enters Datai after 3.65 km | the same, for Datai |
+| 5 | A | Orange to the airport (inside Airport) | a road and its line | It first enters Airport after 9.61 km | the same, for Airport |
+| 6 | none | - | - | Nearest is Pantai Kok, extra road 0.77 km. Kept for a day for Orange | the winning dashes stay, the others fade |
+| 7 | B | Airport pin to Orange, with the line | 10.65 km (kept on the receipt) | Cut at the line's last exit from Airport: the trip is 9.57 km | grey full route; dark from the green Airport edge to Orange |
+| 8 | C | Airport pin to Orange's entry spot, with the line | a road and its line | Cut the same way: the grid trip is 8.80 km | green dots, Airport edge to the purple spot |
+| 9 | none | - | - | 9.57 km is longer than 8.80 km, so RM50 + 0.77 km x RM2.50 = RM51.94 | trip, extra road and grid trip together |
+
+Five calls. A second quote to Orange within the day makes two (steps 7 and 8), and
+Airport to Pantai Kok makes one. The steps are also an interactive page (outside the
+repo, review-shots/osm/calls.html); Try a trip shows the same list for a real trip.
+
+### What it costs
+
+Google bills each successful route request. Asking for the line and avoiding ferries
+keep a request in the cheapest tier, **Compute Routes Essentials**. Pro is only
+triggered by traffic-aware routing, 11 to 25 waypoints, waypoint optimisation, or side
+of the road, heading and stopover. Enterprise is triggered by tolls, traffic on lines,
+and two-wheeled or large-vehicle routing. None of these are used. Prices are from
+Google's price list as read on 2026-10-23:
+
+| Monthly route requests | Price per 1,000 |
+|---|---|
+| First 10,000 | free |
+| 10,001 to 100,000 | US$5.00 |
+| 100,001 to 500,000 | US$4.00 |
+
+So a call costs US$0.005 once past the free 10,000 a month. A quote with five calls
+costs US$0.025.
+
+| Quotes a month | Calls at about 3 a quote | Cost a month |
+|---|---|---|
+| 1,000 | 3,000 | US$0 (free) |
+| 3,000 | 9,000 | US$0 (free) |
+| 10,000 | 30,000 | about US$100 |
+| 30,000 | 90,000 | about US$400 |
+
+"About 3 a quote" assumes most trips are zone to zone (1 call) and caching saves the
+repeats. The free 10,000 is per billing account, shared by every app on it. Autocomplete
+and place details are billed as today and do not change. Try a trip and the live check
+make real calls too, so both are for people who need them. The live check prints its
+call count.
 
 The keyless provider used in local development answers with straight lines, so the app
 and the tests run without a key.
@@ -323,12 +372,13 @@ as the gate. Try a trip is the fourth, for people.
 
 ## Build order
 
-One PR each, in this order:
+**One PR** (the user, 2026-10-23), built in this order of commits, each passing
+`pnpm lint`, `pnpm check-types` and `pnpm test`:
 
 1. **The rule, pure.** `zone-trip.ts` in `@repo/db`: entry and exit along a line,
    trimming, nearest zone, and the fare with its receipt. `priceTrip` takes the zone
    trip, the metered branch goes, and `priceBreakdownOf` reads old receipts. Layer 1
-   tests. Nothing calls it yet.
+   tests.
 2. **Routes with lines.** `route(from, to)` with the polyline, the polyline decoder, the
    keyless provider's straight lines, and the day-long cache of nearest zones.
    `tripResolver` hands the quote a router instead of a distance.
@@ -341,11 +391,15 @@ One PR each, in this order:
    two settings replace the drop-off rule's form. "Add a route to another location" is
    its own button. The offering form and the rates card lose base fare and minimum
    fare, and per km is renamed "Rate per extra km". "From RM" reads the grid.
-5. **Try a trip** on the Rates tab.
+5. **Try a trip** on the Rates tab, with the list of calls it made (as in "Call by
+   call" above).
 6. **The live check script** (layer 3), with Langkawi's rows.
-7. **Clean-up**, once every database has run 3 and 4: drop `Location.dropoffRule`,
-   the offerings' `baseFareSen` and `minimumFareSen`, and the catalogue's old rate
-   columns.
+
+**Not in this PR**: dropping the columns that stop being read (`Location.dropoffRule`,
+the offerings' `baseFareSen` and `minimumFareSen`, the catalogue's old rate columns).
+As with every column before, they are dropped in a small follow-up once this PR runs on
+every database, so a `db:push` can never remove a column the deployed code still
+reads.
 
 ## Decisions
 
@@ -365,4 +419,5 @@ Answered by the user on 2026-10-23:
 Still open:
 
 1. Each location's furthest extra road. The plan starts Langkawi at 15 km.
-2. Google's price tier for routes with a line, checked in build step 2.
+2. Google's tier for routes with a line: Essentials (checked 2026-10-23). Confirm the
+   bill after the first month.

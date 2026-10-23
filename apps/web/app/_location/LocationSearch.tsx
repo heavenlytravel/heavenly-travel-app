@@ -29,7 +29,7 @@ export function LocationHeader() {
 
 /**
  * The search card's state for a location's pages. The card keeps to the
- * location: `search`, read off its zones and its drop-off rule. The empty
+ * location: `search`, read off its zones and where its trips may go. The empty
  * drop-off offers the location's saved addresses where a trip may end, and
  * on a product page the card opens on that product's tab: the product is
  * the last part of the address, which no location's slug can be.

@@ -87,10 +87,11 @@ export async function createTripBookingAction(
   const trip = await resolveTrip(search);
   if (!trip.ok) return { error: trip.message };
 
-  const prepared = await prepareTripItem(category, {
-    ...trip.request,
-    ...options,
-  });
+  const prepared = await prepareTripItem(
+    category,
+    { ...trip.request, ...options },
+    trip.routing,
+  );
   if (!prepared.ok) return { error: prepared.error.message };
 
   const actor: Actor = user

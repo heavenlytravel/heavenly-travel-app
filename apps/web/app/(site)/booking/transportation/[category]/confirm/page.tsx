@@ -65,10 +65,11 @@ export default async function ConfirmPage({
   ]);
   if (!trip.ok) return <Stop title={trip.title} message={trip.message} />;
 
-  const prepared = await prepareTripItem(category, {
-    ...trip.request,
-    ...options,
-  });
+  const prepared = await prepareTripItem(
+    category,
+    { ...trip.request, ...options },
+    trip.routing,
+  );
   if (!prepared.ok) {
     return (
       <Stop
@@ -107,7 +108,10 @@ export default async function ConfirmPage({
                 Change
               </Link>
             </div>
-            <TripSummary trip={trip.request} extra={extra} />
+            <TripSummary
+              trip={{ ...trip.request, distanceKm: prepared.price.distanceKm }}
+              extra={extra}
+            />
           </Panel>
           <Panel>
             <h2 className="mb-3 font-(family-name:--font-display) text-[1.5rem]">

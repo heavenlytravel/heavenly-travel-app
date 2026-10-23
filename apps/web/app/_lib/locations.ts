@@ -7,6 +7,7 @@ import {
   getLocationSearch,
   getPublicLocation,
   listActiveOfferingsAt,
+  cheapestCellsAt,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
@@ -60,7 +61,7 @@ const LOCATION_SEARCH_VERSION = 3;
 
 /**
  * What the search card on the location's pages keeps to, read off its
- * zones and its drop-off rule. Tagged with the location, which the admin
+ * zones and where its trips may go. Tagged with the location, which the admin
  * refreshes after a change to either. Once per request.
  */
 export const publicLocationSearch = cache(
@@ -114,7 +115,10 @@ export const vehicleClassCards = cache(
   (slug: string, category: TripCategory): Promise<VehicleClassCard[]> =>
     unstable_cache(
       async () => {
-        const offerings = await listActiveOfferingsAt(slug, category);
+        const [offerings, cheapest] = await Promise.all([
+          listActiveOfferingsAt(slug, category),
+          cheapestCellsAt(slug),
+        ]);
         return offerings.map(({ vehicleClass, ...offering }) => ({
           id: vehicleClass.id,
           name: vehicleClass.name,
@@ -124,7 +128,10 @@ export const vehicleClassCards = cache(
           luggage: vehicleClass.luggage,
           imageUrl: offering.coverUrl,
           models: vehicleClass.models,
-          fromSen: startingPriceSen(offering),
+          fromSen: startingPriceSen(
+            offering,
+            cheapest.get(vehicleClass.id) ?? null,
+          ),
         }));
       },
       ["vehicle-class-cards", slug, category],

@@ -29,7 +29,8 @@ type Props = {
   /** The trip as the URL carries it: what the editor starts from. */
   search: TripSearch;
   /** The same trip resolved, for the names of the places. */
-  trip: TripView;
+  /** The trip asked for; its road distance is the quote's, not shown here. */
+  trip: Omit<TripView, "distanceKm">;
   /** The passenger count typed so far, carried over a changed trip. */
   passengers?: number;
   /** What depends on the trip's prices: dimmed and inert while they are updated. */
@@ -111,7 +112,10 @@ export function TripBar({
 }
 
 /** The current trip as the values the search fields hold. */
-function presetOf(search: TripSearch, trip: TripView): Partial<SearchValues> {
+function presetOf(
+  search: TripSearch,
+  trip: Omit<TripView, "distanceKm">,
+): Partial<SearchValues> {
   const preset: Partial<SearchValues> = {
     mode: search.mode,
     from: trip.pickup.label,

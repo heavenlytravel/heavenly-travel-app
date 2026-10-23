@@ -18,7 +18,7 @@ import { LocationHeader, LocationSearch } from "./LocationSearch";
  * the site header, the search card's state, the closing call and the
  * footer. The public pages get it from their layout, so the search card
  * keeps what was typed from page to page; the card keeps to the location's
- * zones and drop-off rule. `previewOf` is the page a staff preview is
+ * zones and where its trips may go. `previewOf` is the page a staff preview is
  * showing, and puts the preview bar on top.
  */
 export async function LocationFrame({

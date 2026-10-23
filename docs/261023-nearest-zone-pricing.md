@@ -4,9 +4,9 @@ Decided by the CEO on 2026-10-23, after the interactive map of Langkawi (Sedan) 
 the zones and the rate grid as they are. It replaces two things. The first is the
 2026-10-21 rule of "no per km anywhere": per km comes back, but only for the road past a
 zone's edge. The second is the metered fallback and the three drop-off rules of
-`261015-locations-as-operation-areas.md` ("Pickup here, drop-off anywhere"). This is a
-plan. Nothing in it is built yet. The user's answers of 2026-10-23 are under
-"Decisions".
+`261015-locations-as-operation-areas.md` ("Pickup here, drop-off anywhere"). Built on
+this branch on 2026-10-23; "As built" below lists where the build differs from the plan.
+The user's answers of 2026-10-23 are under "Decisions".
 
 ## Why
 
@@ -507,6 +507,32 @@ the offerings' `baseFareSen` and `minimumFareSen`, the catalogue's old rate colu
 As with every column before, they are dropped in a small follow-up once this PR runs on
 every database, so a `db:push` can never remove a column the deployed code still
 reads.
+
+## As built
+
+Where the build differs from the plan above, or settles what it left open:
+
+- **The live check lives in `@repo/places`**: `pnpm --filter @repo/places price:check`,
+  beside `check-coverage`, because it needs Google's router and `@repo/db` does not
+  depend on `@repo/places`. The named trips are `packages/db/data/price-check.json`,
+  read by `priceChecksAt` for Try a trip's examples. Rows whose fare depends on Google's
+  kilometres print without an expected fare until Ops confirms one.
+- **The cap on the extra** is `EXTRA_CAPPED` in `packages/db/src/zone-trip.ts`, off:
+  the whole extra road, as agreed. Turning it on is that one line.
+- **The pure rule** is `zone-trip.ts` (geometry, nearest zone by road, the fare), and
+  **the placing of a trip** is `zone-quote.ts` (both ends, the measures, the trace),
+  pure but for the router, so the layer 2 tests hand it a fake one. `quoteTrip` loads
+  the rows and prices the classes.
+- **Trips across locations defaults to off** for every location after `db:push`, and
+  `maxExtraKm` to 15. A location that sold routes out before (Kuala Lumpur to KLIA)
+  stops selling them until Ops switches it on; the rows stay on the grid.
+- **A class with no cell** is in the quote with no price and "Not offered on this
+  trip". With no cell for any class, the trip is refused.
+- **Try a trip's map** uses Google's classic markers for the draggable pins. A route
+  asked again within ten minutes is answered from memory and not billed, but the trace
+  still counts it, so the count is an upper bound.
+- **"Test an address"** on the console's home page still names only the zone a point
+  falls in; a pickup outside every zone is placed by Try a trip, which routes.
 
 ## Decisions
 

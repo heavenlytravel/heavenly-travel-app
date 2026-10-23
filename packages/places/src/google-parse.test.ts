@@ -131,15 +131,29 @@ describe("parsePlace", () => {
 });
 
 describe("parseRoute", () => {
-  it("rounds metres to a tenth of a kilometre and seconds to minutes", () => {
+  it("reads the length in km and decodes the line", () => {
     assert.deepEqual(
-      parseRoute({ routes: [{ distanceMeters: 56789, duration: "4212s" }] }),
-      { distanceKm: 56.8, durationMinutes: 70 },
+      parseRoute({
+        routes: [
+          {
+            distanceMeters: 56789,
+            polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC" },
+          },
+        ],
+      }),
+      {
+        distanceKm: 56.789,
+        line: [
+          [-120.2, 38.5],
+          [-120.95, 40.7],
+        ],
+      },
     );
   });
 
-  it("returns null when no route came back", () => {
+  it("returns null when no route or no line came back", () => {
     assert.equal(parseRoute({}), null);
     assert.equal(parseRoute({ routes: [] }), null);
+    assert.equal(parseRoute({ routes: [{ distanceMeters: 10 }] }), null);
   });
 });

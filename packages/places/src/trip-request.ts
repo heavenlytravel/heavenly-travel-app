@@ -1,17 +1,23 @@
-import { pickupInstant, type Place, type TripSearch } from "@repo/db";
+import {
+  pickupInstant,
+  type NearestZone,
+  type TripRouting,
+  type TripSearch,
+} from "@repo/db";
 import type { TripRequest } from "@repo/db/server";
+import { ttlStore } from "./cache";
 import type { PlacesProvider } from "./types";
 
 /**
  * From a parsed search to what the domain layer prices: the places
- * resolved, the pickup instant computed, the road distance fetched. The
- * website's options, confirm and create steps and the console's manual
- * booking all start here, so a booking can never be built from a trip the
- * priced list did not show.
+ * resolved and the pickup instant computed, with the routing the quote
+ * measures the trip by. The website's options, confirm and create steps
+ * and the console's manual booking all start here, so a booking can never
+ * be built from a trip the priced list did not show.
  */
 
 export type ResolvedTrip =
-  | { ok: true; request: TripRequest }
+  | { ok: true; request: TripRequest; routing: TripRouting }
   | { ok: false; title: string; message: string };
 
 const stop = (title: string, message: string): ResolvedTrip => ({
@@ -20,13 +26,23 @@ const stop = (title: string, message: string): ResolvedTrip => ({
   message,
 });
 
-/** `resolveTrip` for one provider; the server entry point binds the app's. */
-export function tripResolver(provider: PlacesProvider) {
-  async function distanceBetween(from: Place, to: Place) {
-    const route = await provider.roadDistance(from, to);
-    return route ? route.distanceKm : null;
-  }
+const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * How a quote reaches the provider's roads: its routes, and the nearest
+ * zone of each address kept for a day. The cache's keys name the zones
+ * asked about and when each last changed, so a redrawn zone is asked
+ * again. See docs/261023-nearest-zone-pricing.md, "Measuring with Google".
+ */
+export function routingOf(provider: PlacesProvider): TripRouting {
+  return {
+    route: (from, to) => provider.route(from, to),
+    nearest: ttlStore<NearestZone | null>({ ttlMs: DAY, max: 5_000 }),
+  };
+}
+
+/** `resolveTrip` for one provider and its routing; the server entry point binds the app's. */
+export function tripResolver(provider: PlacesProvider, routing: TripRouting) {
   return async function resolveTrip(search: TripSearch): Promise<ResolvedTrip> {
     const startsAt = pickupInstant(search.date, search.time);
     if (!startsAt) {
@@ -35,7 +51,6 @@ export function tripResolver(provider: PlacesProvider) {
         "That pick-up date and time are not valid.",
       );
     }
-
     const [pickup, dropoff] = await Promise.all([
       provider.resolvePlace(search.pickupId),
       search.dropoffId ? provider.resolvePlace(search.dropoffId) : null,
@@ -52,12 +67,6 @@ export function tripResolver(provider: PlacesProvider) {
         "We could not find that drop-off place. Please search again.",
       );
     }
-
-    const distanceKm =
-      search.mode === "oneway" && dropoff
-        ? await distanceBetween(pickup, dropoff)
-        : null;
-
     return {
       ok: true,
       request: {
@@ -66,8 +75,8 @@ export function tripResolver(provider: PlacesProvider) {
         dropoff: search.mode === "oneway" ? dropoff : null,
         startsAt,
         hours: search.hours,
-        distanceKm,
       },
+      routing,
     };
   };
 }

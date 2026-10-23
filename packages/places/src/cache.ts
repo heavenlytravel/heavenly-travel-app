@@ -5,6 +5,41 @@
  * from one person typing. Concurrent calls for the same key share one
  * promise, and a rejected promise is forgotten so the next call retries.
  */
+/**
+ * A plain store with a time-to-live and a size limit, for answers worked
+ * out from several calls: the nearest zone of an address, kept a day. One
+ * instance per server process, as `memoize`.
+ */
+export function ttlStore<T>({
+  ttlMs,
+  max,
+  now = Date.now,
+}: {
+  ttlMs: number;
+  max: number;
+  now?: () => number;
+}) {
+  const entries = new Map<string, { expires: number; value: T }>();
+  return {
+    get(key: string): T | undefined {
+      const hit = entries.get(key);
+      if (!hit) return undefined;
+      if (hit.expires > now()) return hit.value;
+      entries.delete(key);
+      return undefined;
+    },
+    set(key: string, value: T) {
+      entries.delete(key);
+      entries.set(key, { expires: now() + ttlMs, value });
+      if (entries.size > max) {
+        // Map iterates in insertion order, so the first key is the oldest.
+        const oldest = entries.keys().next().value;
+        if (oldest !== undefined) entries.delete(oldest);
+      }
+    },
+  };
+}
+
 export function memoize<A extends unknown[], T>(
   fn: (...args: A) => Promise<T>,
   {

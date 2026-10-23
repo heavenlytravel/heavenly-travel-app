@@ -1,4 +1,4 @@
-import type { Place } from "@repo/db";
+import type { Place, RoadRoute, RoutePoint } from "@repo/db";
 
 /** One row in the autocomplete list. Resolves to a `Place` on selection. */
 export type PlaceSuggestion = {
@@ -11,11 +11,6 @@ export type PlaceSuggestion = {
 
 /** Body of GET /api/places/search. */
 export type PlaceSearchResponse = { suggestions: PlaceSuggestion[] };
-
-export type RoadDistance = {
-  distanceKm: number;
-  durationMinutes: number;
-};
 
 /** Shorter queries return nothing, so the field does not ask for them. */
 export const PLACE_QUERY_MIN_LENGTH = 2;
@@ -52,14 +47,16 @@ export type SearchOptions = {
  */
 export type PlacesProvider = {
   name: string;
-  /** False when one-way trips cannot be priced because there is no routing. */
-  canRoute: boolean;
   searchPlaces(
     query: string,
     options?: SearchOptions,
   ): Promise<PlaceSuggestion[]>;
   /** Null when the id is unknown or the place is outside Malaysia. */
   resolvePlace(placeId: string, options?: SearchOptions): Promise<Place | null>;
-  /** Driving distance, or null when there is no road route. */
-  roadDistance(from: Place, to: Place): Promise<RoadDistance | null>;
+  /**
+   * The road between two points, its length and its line, avoiding
+   * ferries; null when no road joins them or the router cannot answer.
+   * A point with a place id is routed from the place.
+   */
+  route(from: RoutePoint, to: RoutePoint): Promise<RoadRoute | null>;
 };

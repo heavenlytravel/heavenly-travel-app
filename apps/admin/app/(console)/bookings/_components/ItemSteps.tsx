@@ -393,7 +393,7 @@ function VehicleFields({
                   </span>
                 </span>
                 <span className="font-semibold text-slate-900 tabular-nums">
-                  {formatMyr(c.totalSen)}
+                  {c.totalSen !== null ? formatMyr(c.totalSen) : null}
                 </span>
               </button>
             );

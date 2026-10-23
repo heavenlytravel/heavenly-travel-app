@@ -1,15 +1,14 @@
 import Link from "next/link";
 import {
   BOOKING_STATUS_LABELS,
-  DROPOFF_RULE_SHORT_LABELS,
   LOCATION_PAGE_LABELS,
   andList,
-  dropoffRuleOf,
   locationStateOf,
   oddHoursLabel,
   oddHoursOf,
   plural,
   setupSteps,
+  tripReachLabel,
   type BookingStatus,
   type PageStatus,
   type Permission,
@@ -166,7 +165,8 @@ async function overview({ id, slug }: { id: string; slug: string }) {
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
   const off = offerings.length - onSale.length;
-  const pairs = (numbers.zones * (numbers.zones - 1)) / 2;
+  // Every pair of zones, and each zone with itself: its within-zone price.
+  const pairs = (numbers.zones * (numbers.zones + 1)) / 2;
   const surcharge = oddHoursOf(location);
   const lines: Partial<Record<LocationTab, ReactNode>> = {
     details: [
@@ -187,9 +187,9 @@ async function overview({ id, slug }: { id: string; slug: string }) {
         : `${plural(zones.length, "zone")}: ${zones.map((zone) => zone.name).join(", ")}`,
     rates: [
       pairs === 0
-        ? "Needs two zones"
-        : `${numbers.routesPriced} of ${plural(pairs, "pair")} priced`,
-      `drop-offs: ${DROPOFF_RULE_SHORT_LABELS[dropoffRuleOf(location)].toLowerCase()}`,
+        ? "Needs a zone"
+        : `${numbers.routesPriced} of ${plural(pairs, "route")} priced`,
+      `trips ${tripReachLabel(location).toLowerCase()}`,
       surcharge
         ? `odd hours ${oddHoursLabel(surcharge)}`
         : "no odd-hours surcharge",

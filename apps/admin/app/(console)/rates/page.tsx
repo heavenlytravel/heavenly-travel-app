@@ -1,8 +1,7 @@
 import Link from "next/link";
 import {
-  DROPOFF_RULE_LABELS,
+  CROSS_LOCATION_LABELS,
   TRIP_CATEGORY_LABELS,
-  dropoffRuleOf,
   isTripCategory,
   oddHoursLabel,
   oddHoursOf,
@@ -26,16 +25,16 @@ import {
   locationTabHref,
   ratesHref,
 } from "../../_lib/routes";
-import { dropoffRuleNote } from "../locations/[slug]/rates/dropoff-note";
-import { MeteredRates } from "../locations/[slug]/rates/MeteredRates";
+import { ClassRates } from "../locations/[slug]/rates/ClassRates";
+import { crossLocationNote } from "../locations/[slug]/rates/trip-reach-note";
 import { RateGrid } from "../locations/[slug]/rates/RateGrid";
 import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /rates?location=…. What every location charges, or one
  * location, narrowed by the filter: each location's classes at their
- * metered rates and under their rules, the fixed prices on its rate grid,
- * where a drop-off may be and the odd-hours surcharge. Read here, changed
+ * rates and under their rules, the prices on its rate grid, where its
+ * trips may go and the odd-hours surcharge. Read here, changed
  * inside the location, on its Rates tab, which each section links to. Behind `coverage.view`, as those tabs are. See
  * docs/261018-location-work-and-class-catalogue.md.
  */
@@ -50,7 +49,7 @@ export default async function RatesPage({ searchParams }: PageProps<"/rates">) {
     <>
       <PageHeader
         title="Rates"
-        description="What each location charges. A trip between two zones with a price on the grid costs that price; any other is metered at the class's rates there. Each is changed inside its location."
+        description="What each location charges. Every one-way trip is a cell of its grid, plus the road past a zone's edge for an address outside every zone. Each is changed inside its location."
         action={
           <LocationFilter
             value={locationId ?? ""}
@@ -114,7 +113,6 @@ function LocationRates({
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
   const window = oddHoursOf(list);
-  const rule = dropoffRuleOf(list);
   const editLink = (href: string) =>
     manages ? (
       <Link
@@ -138,18 +136,18 @@ function LocationRates({
       <Card flush>
         <CardTitle
           inset
-          description="What a trip off the grid costs, and the rules every booking of the class keeps to."
-          action={editLink(locationRatesPartHref(list.slug, "metered"))}
+          description="The rate per extra km and per hour each class is sold at, and the rules every booking of it keeps to."
+          action={editLink(locationRatesPartHref(list.slug, "classes"))}
         >
-          Metered rates and rules
+          Rates and rules
         </CardTitle>
-        <MeteredRates offerings={list.offerings} rule={rule} />
+        <ClassRates offerings={list.offerings} />
       </Card>
 
       <Card flush>
         <CardTitle
           inset
-          description="Fixed prices in RM for the whole vehicle, one row per pair of zones, read both ways."
+          description="Prices in RM for the whole vehicle, one row per pair of zones and one per zone for a trip within it, read both ways."
           action={editLink(locationRatesPartHref(list.slug, "grid"))}
         >
           Rate grid
@@ -176,19 +174,23 @@ function LocationRates({
             vehicleClassId: cell.vehicleClassId,
             priceSen: cell.priceSen,
           }))}
-          rule={rule}
+          crossLocation={list.crossLocation}
           readOnly
         />
       </Card>
 
       <dl className="grid gap-2 text-sm sm:grid-cols-[8rem_1fr]">
-        <dt className="text-slate-500">Drop-offs</dt>
+        <dt className="text-slate-500">Where trips go</dt>
         <dd>
           <span className="font-medium text-slate-900">
-            {DROPOFF_RULE_LABELS[rule]}.
+            Up to {list.maxExtraKm} km past a zone;{" "}
+            {CROSS_LOCATION_LABELS[
+              list.crossLocation ? "on" : "off"
+            ].toLowerCase()}
+            .
           </span>{" "}
           <span className="text-slate-600">
-            {dropoffRuleNote(rule, list.name)}
+            {crossLocationNote(list.crossLocation, list.name)}
           </span>
         </dd>
         <dt className="text-slate-500">Odd hours</dt>

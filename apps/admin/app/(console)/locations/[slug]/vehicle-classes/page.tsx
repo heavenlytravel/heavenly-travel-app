@@ -87,7 +87,7 @@ export default async function LocationVehicleClassesPage({
         </Link>
         ; what each costs here is on the{" "}
         <Link
-          href={locationRatesPartHref(slug, "metered")}
+          href={locationRatesPartHref(slug, "classes")}
           className="font-medium text-slate-900 underline-offset-4 hover:underline"
         >
           Rates tab

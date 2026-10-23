@@ -44,8 +44,8 @@ export type ClassQuoteView = {
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];
-  /** With any model of the class. */
-  totalSen: number;
+  /** With any model of the class; null when it is not offered on this trip. */
+  totalSen: number | null;
   /** What choosing one of the models adds to this trip; null when the customer cannot choose one here. */
   modelChoiceSen: number | null;
   /** Why the class cannot take this trip, or null when it can. */
@@ -67,8 +67,10 @@ export type TripQuoteView =
       district: string | null;
       /** The location whose rates price the trip: the one whose zone the pickup is in. */
       location: string;
-      /** "Langkawi Airport to Cenang" when both ends are in a zone; null when metered. */
+      /** The grid's cell the trip is priced by, "Langkawi Airport to Cenang"; null for hourly hire. */
       route: string | null;
+      /** The km of road past a zone's edge the trip is charged; null when none. */
+      extraKm: number | null;
       /** The odd-hours surcharge that applies, "+20%" or "+RM 30.00"; null for none. */
       surcharge: string | null;
       classes: ClassQuoteView[];
@@ -212,11 +214,14 @@ export function tripInput(trip: TripValues): Record<string, string> {
   return input;
 }
 
-/** "Klang Valley rates · Petaling, Selangor · 55.2 km by road · odd hours +50%" */
+/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · extra road 0.78 km · 55.2 km by road · odd hours +50%" */
 export function quoteSummary(quote: PricedTrip) {
   const parts = [`${quote.location} rates`];
   if (quote.district) parts.push(quote.district);
-  if (quote.route) parts.push(`fixed rate, ${quote.route}`);
+  if (quote.route) parts.push(`grid ${quote.route}`);
+  if (quote.extraKm !== null) {
+    parts.push(`extra road ${quote.extraKm.toFixed(2)} km`);
+  }
   if (quote.distanceKm !== null) {
     parts.push(`${quote.distanceKm.toFixed(1)} km by road`);
   }
@@ -255,7 +260,7 @@ export function chosenModel(draft: ItemDraft) {
 /** What the item costs at the quote: the class's price, and the charge for the model chosen; null before a vehicle is chosen. */
 export function quotedTotalSen(draft: ItemDraft): number | null {
   const chosen = chosenClass(draft);
-  if (!chosen) return null;
+  if (!chosen || chosen.totalSen === null) return null;
   return chosenModel(draft)
     ? chosen.totalSen + (chosen.modelChoiceSen ?? 0)
     : chosen.totalSen;

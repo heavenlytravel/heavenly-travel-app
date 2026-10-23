@@ -29,7 +29,7 @@ import { VehicleClassActiveSwitch } from "./VehicleClassControls";
 /**
  * Route: /vehicle-classes. The catalogue: what each class is, a card each
  * by category, with its picture, seats and luggage, and the locations
- * that sell it with its metered rates and its vehicles in service at
+ * that sell it with its rates and its vehicles in service at
  * each, a link to that location on the Rates screen. One Sedan for every
  * location, so the customer sees the same name wherever they book, and a
  * picture of the vehicles based there. Operation's screen,
@@ -134,8 +134,8 @@ function Category({
 
 /**
  * One class: its picture, its name over its seats and luggage, its line,
- * and where it is sold, each location with the class's base fare, per km
- * and per hour there and how many of its vehicles are in service there,
+ * and where it is sold, each location with the class's rate per extra
+ * km and per hour there and how many of its vehicles are in service there,
  * in grey where it is off sale.
  * For Operation the whole card opens the editor and the foot holds the
  * switch; off, it is in grey.
@@ -217,8 +217,7 @@ function ClassCard({
                       </span>
                     </span>
                     <span className="col-start-2 text-xs text-slate-500 tabular-nums">
-                      {formatMyr(offering.baseFareSen)} +{" "}
-                      {formatMyr(offering.perKmSen)}/km ·{" "}
+                      {formatMyr(offering.perKmSen)} per extra km ·{" "}
                       {formatMyr(offering.hourlyRateSen)}/h
                     </span>
                   </Link>

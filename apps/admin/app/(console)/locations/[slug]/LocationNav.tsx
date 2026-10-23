@@ -2,10 +2,8 @@ import Link from "next/link";
 import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
-  DROPOFF_RULE_SHORT_LABELS,
   LOCATION_PAGE_LABELS,
   PAGE_STATUS_LABELS,
-  dropoffRuleOf,
   formatLocalDate,
   isPublicState,
   locationStateOf,
@@ -14,6 +12,7 @@ import {
   plural,
   setupProgress,
   setupSteps,
+  tripReachLabel,
   type LocationState,
   type PageStatus,
   type Permission,
@@ -175,7 +174,7 @@ export function LocationNav({
     }
     if (tab === "rates") {
       return overview.routesPriced === 0
-        ? "No routes priced; trips are metered"
+        ? "No routes priced; only hourly hire is sold"
         : `${plural(overview.routesPriced, "route")} priced`;
     }
     if (tab === "vehicles") {
@@ -261,9 +260,9 @@ export function LocationNav({
       case "rates":
         return [
           {
-            key: "metered",
-            label: "Metered rates",
-            href: locationRatesPartHref(slug, "metered"),
+            key: "classes",
+            label: "Rates and rules",
+            href: locationRatesPartHref(slug, "classes"),
             note: plural(
               offerings.filter((offering) => offering.onSale).length,
               "class",
@@ -277,16 +276,22 @@ export function LocationNav({
             note: plural(overview.routesPriced, "route"),
           },
           {
-            key: "dropoffs",
-            label: "Drop-offs",
-            href: locationRatesPartHref(slug, "dropoffs"),
-            note: DROPOFF_RULE_SHORT_LABELS[dropoffRuleOf(location)],
+            key: "reach",
+            label: "Where trips go",
+            href: locationRatesPartHref(slug, "reach"),
+            note: tripReachLabel(location),
           },
           {
             key: "odd-hours",
             label: "Odd hours",
             href: locationRatesPartHref(slug, "oddHours"),
             note: surcharge ? oddHoursLabel(surcharge) : "Off",
+          },
+          {
+            key: "try",
+            label: "Try a trip",
+            href: locationRatesPartHref(slug, "tryTrip"),
+            note: "A price worked out step by step",
           },
         ];
       case "pages":

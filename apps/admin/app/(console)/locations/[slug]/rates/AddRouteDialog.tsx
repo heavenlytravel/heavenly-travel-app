@@ -1,6 +1,6 @@
 "use client";
 
-import { parseRinggit, type DropoffRule } from "@repo/db";
+import { parseRinggit } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Dialog } from "@repo/ui/dialog";
@@ -8,7 +8,7 @@ import { Field } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { Fragment, useState, useTransition, type FormEvent } from "react";
 import { FormError } from "../../../../_components/FormError";
-import { CELL_INPUT, CellKey, EMPTY_CELL, emptyCellMeaning } from "./cells";
+import { CELL_INPUT, CellKey, EMPTY_CELL, EMPTY_CELL_MEANING } from "./cells";
 
 type Zone = { id: string; name: string };
 /** Another location's zone, by name: a route out of this location may end at it. */
@@ -31,12 +31,14 @@ export type NewRoute = {
  * for each class on sale, a row each in a table grouped by category,
  * its cells drawn as the grid's, an empty one hatched. Only the zones with a pair
  * still free are offered, and only the free partners of the zone picked
- * first, so a route cannot be added twice or the other way round. "To"
- * also offers other locations' zones, `elsewhere`, by location, when the
- * drop-off rule lets a trip leave this one: the route ends at that zone
- * itself, which stays its location's, and prices trips from here to it. At
- * least one price is needed, since a route with none is no row on the
- * grid. `onAdd` saves the route; its error, if any, stays in the dialog.
+ * first, so a route cannot be added twice or the other way round. Given
+ * no `elsewhere`, "To" offers this location's zones, the one picked first
+ * among them as "Within this zone": the zone's within-zone price. Given
+ * other locations' zones, it is "Add a route to another location", and
+ * "To" offers only those, by location: the route ends at that zone itself,
+ * which stays its location's, and prices trips from here to it. At least
+ * one price is needed, since a route with none is no row on the grid.
+ * `onAdd` saves the route; its error, if any, stays in the dialog.
  */
 export function AddRouteDialog({
   open,
@@ -45,27 +47,30 @@ export function AddRouteDialog({
   elsewhere,
   classes,
   paired,
-  rule,
   onAdd,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   zones: readonly Zone[];
-  /** Other locations' zones a route may end at; none while drop-offs stay inside this location. */
+  /** Other locations' zones a route out may end at; none for a route between this location's zones. */
   elsewhere: readonly ZoneElsewhere[];
   classes: readonly ClassColumn[];
   /** The pairs on the grid already, by `pairKey`. */
   paired: ReadonlySet<string>;
-  rule: DropoffRule;
   /** Saves the route; answers an error to show, or null once saved. */
   onAdd: (route: NewRoute) => Promise<string | null>;
 }) {
+  const out = elsewhere.length > 0;
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add a route"
-      description={`Pick the two zones, then price the route for the classes it serves. A route costs the same both ways${elsewhere.length > 0 ? "; one to another location's zone prices the trip from here only" : ""}.`}
+      title={out ? "Add a route to another location" : "Add a route"}
+      description={
+        out
+          ? "Pick a zone here and another location's zone, then price the route for the classes it serves. It prices trips from here to that zone only."
+          : "Pick the two zones, the same one for a trip within it, then price the route for the classes it serves. A route costs the same both ways."
+      }
       width="md"
     >
       <RouteForm
@@ -73,7 +78,6 @@ export function AddRouteDialog({
         elsewhere={elsewhere}
         classes={classes}
         paired={paired}
-        rule={rule}
         onAdd={onAdd}
         onCancel={() => onOpenChange(false)}
       />
@@ -87,7 +91,6 @@ function RouteForm({
   elsewhere,
   classes,
   paired,
-  rule,
   onAdd,
   onCancel,
 }: {
@@ -95,14 +98,12 @@ function RouteForm({
   elsewhere: readonly ZoneElsewhere[];
   classes: readonly ClassColumn[];
   paired: ReadonlySet<string>;
-  rule: DropoffRule;
   onAdd: (route: NewRoute) => Promise<string | null>;
   onCancel: () => void;
 }) {
+  const ends = elsewhere.length > 0 ? elsewhere : zones;
   const partnersOf = (id: string): Zone[] =>
-    [...zones, ...elsewhere].filter(
-      (zone) => zone.id !== id && !paired.has(pairKey(id, zone.id)),
-    );
+    ends.filter((zone) => !paired.has(pairKey(id, zone.id)));
   const [from, setFrom] = useState(
     () => zones.find((zone) => partnersOf(zone.id).length > 0)?.id ?? "",
   );
@@ -122,9 +123,10 @@ function RouteForm({
   }
   const option = (zone: Zone) => {
     const taken = paired.has(pairKey(from, zone.id));
+    const name = zone.id === from ? "Within this zone" : zone.name;
     return {
       value: zone.id,
-      label: taken ? `${zone.name} (on the grid)` : zone.name,
+      label: taken ? `${name} (on the grid)` : name,
       disabled: taken,
     };
   };
@@ -182,13 +184,14 @@ function RouteForm({
           <Select
             value={toId}
             onValueChange={setTo}
-            options={[
-              ...zones.filter((zone) => zone.id !== from).map(option),
-              ...[...byLocation].map(([location, list]) => ({
-                label: `In ${location}`,
-                options: list.map(option),
-              })),
-            ]}
+            options={
+              out
+                ? [...byLocation].map(([location, list]) => ({
+                    label: `In ${location}`,
+                    options: list.map(option),
+                  }))
+                : zones.map(option)
+            }
           />
         </Field>
       </div>
@@ -273,7 +276,7 @@ function RouteForm({
         </div>
         <p className="text-xs text-slate-500">
           <CellKey swatch={cx("border-slate-300", EMPTY_CELL)}>
-            {emptyCellMeaning(rule)}
+            {EMPTY_CELL_MEANING}
           </CellKey>
         </p>
       </div>

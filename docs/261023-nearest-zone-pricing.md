@@ -371,7 +371,7 @@ RM50.00, extra road 0.77 km x RM2.50 RM1.94".
 Wanted by the user on 2026-10-23, to test prices in the app before customers see them,
 and to see how each price is worked out. It does in the console what the two demo
 pages did (`pricing-map.html` and `calls.html`, outside the repo in
-`C:UsersUser.claude-workprojectsC--Users-User-Desktop-project-heavenly-travel-appeview-shotsosm`):
+`C:/Users/User/.claude-work/projects/C--Users-User-Desktop-project-heavenly-travel-app/review-shots/osm/`):
 a map, and the calculation step by step. It is a card on the location's Rates tab,
 shown to anyone who can see the tab, with the page's own access check. It makes no
 booking and writes nothing.

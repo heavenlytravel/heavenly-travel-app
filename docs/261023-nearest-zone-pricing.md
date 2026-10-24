@@ -344,7 +344,11 @@ make real calls too, so both are for people who need them. The live check prints
 call count.
 
 The keyless provider used in local development answers with straight lines, so the app
-and the tests run without a key.
+and the tests run without a key. In production without a key it refuses one-way trips,
+since straight lines would underprice them. When Google cannot answer, the quote is
+refused ("We cannot price that route right now") and nothing is cached, so an outage is
+never kept as "no road". A nearest-zone answer is cached with its reason, under a key
+holding each zone, when it last changed and its location's limit.
 
 ## The receipt
 

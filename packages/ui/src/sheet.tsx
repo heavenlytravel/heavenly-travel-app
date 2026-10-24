@@ -18,9 +18,11 @@ const SIDES = {
 
 /**
  * A panel that slides in from an edge over a dimmed page: mobile navigation,
- * filters, a quick form, a picker on a phone from the bottom. Built on the native `<dialog>`, so focus trapping,
- * Escape and the top layer come from the browser; a click on the dim
- * backdrop closes it too. Controlled: the parent owns `open`.
+ * filters, a quick form, a picker on a phone from the bottom. Built on the
+ * native `<dialog>`, so focus trapping, Escape and the top layer come from
+ * the browser; a click on the dim backdrop closes it too. It slides out
+ * the way it came (`.ui-sheet` in styles.css). Controlled: the parent
+ * owns `open`.
  */
 export function Sheet({
   open,
@@ -47,13 +49,14 @@ export function Sheet({
     <dialog
       ref={ref}
       aria-label={title}
+      data-side={side}
       onClose={onModalClose(() => onOpenChange(false))}
       onClick={(event) => {
         // The dialog element itself is only hit through the backdrop.
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
       className={cx(
-        "ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45",
+        "ui-sheet ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45",
         side !== "bottom" && WIDTHS[width],
         SIDES[side],
         className,

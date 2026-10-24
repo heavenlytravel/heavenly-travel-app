@@ -8,15 +8,14 @@ import {
   plural,
   setupProgress,
   setupSteps,
-  type LocationState,
   type PageStatus,
   type Permission,
-  type SetupStep,
 } from "@repo/db";
 import type { LocationOverview, LocationWithDetails } from "@repo/db/server";
 import { ConsoleMenu } from "../../../_components/ConsoleMenu";
 import type {
   Menu,
+  MenuCount,
   MenuEntry,
   MenuMark,
   MenuRow,
@@ -44,20 +43,12 @@ const PAGE_DOTS: Record<PageStatus, MenuEntry["dot"]> = {
   changed: "amber",
 };
 
-/** "3 vehicles in service, 1 with a document due": a vehicles or drivers row's line, a driver's documents being licences. */
-function fleetLine(
-  count: string,
-  state: string,
-  due: number,
-  document: "document" | "licence",
-) {
-  const line = `${count} ${state}`;
-  return due === 0 ? line : `${line}, ${due} with a ${document} due`;
-}
-
-/** A count at a row's end, or none while there is nothing to count. */
-const countOf = (value: number, tone: "brand" | "amber") =>
-  value > 0 ? { value, tone } : undefined;
+/** A count at a row's end with what it stands for, or none while there is nothing to count. */
+const countOf = (
+  value: number,
+  tone: MenuCount["tone"],
+  label: string,
+): MenuCount | undefined => (value > 0 ? { value, tone, label } : undefined);
 
 /** The tabs Fleet holds, in its drill's order: a vehicle is of a model of a class. */
 const FLEET_TABS: readonly LocationTab[] = [
@@ -68,27 +59,28 @@ const FLEET_TABS: readonly LocationTab[] = [
 
 /**
  * The Fleet row over the rows of its tabs the admin may open, each a page
- * of its drill with its own count, setup mark and line, and its own icon
- * on the rail. The row sums the documents due and carries the classes'
- * setup mark; its line is theirs together. One tab alone is its own row,
- * none is no row.
+ * of its drill with its own count and setup mark, and its own icon on the
+ * rail. The row sums the documents due, in their words together, and
+ * carries the classes' setup mark. One tab alone is its own row, none is
+ * no row.
  */
 function fleetRow(rows: readonly MenuRow[]): MenuRow[] {
   const [first] = rows;
   if (!first) return [];
   if (rows.length === 1) return [first];
-  const due = rows.reduce((sum, row) => sum + (row.count?.value ?? 0), 0);
+  const counts = rows.flatMap((row) => (row.count ? [row.count] : []));
+  const due = counts.reduce((sum, count) => sum + count.value, 0);
   return [
     {
       key: "fleet",
       label: "Fleet",
       href: first.href,
       icon: "fleet",
-      detail: rows
-        .map((row) => row.detail)
-        .filter(Boolean)
-        .join("; "),
-      count: countOf(due, "amber"),
+      count: countOf(
+        due,
+        "amber",
+        counts.map((count) => count.label).join(", "),
+      ),
       mark: rows.find((row) => row.mark)?.mark,
       drill: {
         label: "Fleet",
@@ -99,7 +91,6 @@ function fleetRow(rows: readonly MenuRow[]): MenuRow[] {
           icon: row.icon,
           count: row.count,
           mark: row.mark,
-          detail: row.detail,
         })),
         spreadOnRail: true,
       },
@@ -144,8 +135,7 @@ export async function LocationScopeNav({ slug }: { slug: string }) {
  * draft takes no bookings, so it has no Bookings row; the rows of its
  * setup steps carry a mark, ticked once done, and its overview, the
  * checklist, how far it has come. Each row shows only for an admin who may
- * open it. Where a section stands, in a line, is its row's tooltip on the
- * rail. See docs/261023-console-sidebar.md.
+ * open it. See docs/261023-console-sidebar.md.
  */
 function locationMenu({
   location,
@@ -175,14 +165,6 @@ function locationMenu({
       label: tab.label,
       href: locationTabHref(slug, tab.key),
       icon: tab.key,
-      detail: detailOf({
-        tab: tab.key,
-        step: stepOf(tab),
-        state,
-        overview,
-        permissions,
-        progress,
-      }),
       mark: markOf(tab),
     };
     switch (tab.key) {
@@ -196,12 +178,30 @@ function locationMenu({
       case "bookings":
         return {
           ...row,
-          count: countOf(overview.awaitingConfirmation, "brand"),
+          count: countOf(
+            overview.awaitingConfirmation,
+            "brand",
+            `${overview.awaitingConfirmation} awaiting confirmation`,
+          ),
         };
       case "vehicles":
-        return { ...row, count: countOf(overview.vehiclesDue, "amber") };
+        return {
+          ...row,
+          count: countOf(
+            overview.vehiclesDue,
+            "amber",
+            `${plural(overview.vehiclesDue, "vehicle")} with a document due`,
+          ),
+        };
       case "drivers":
-        return { ...row, count: countOf(overview.driversDue, "amber") };
+        return {
+          ...row,
+          count: countOf(
+            overview.driversDue,
+            "amber",
+            `${plural(overview.driversDue, "driver")} with a licence due`,
+          ),
+        };
       case "pages":
         return {
           ...row,
@@ -244,7 +244,6 @@ function locationMenu({
                 href: row.href,
                 icon: "general",
                 note: LOCATION_STATE_LABELS[state],
-                detail: row.detail,
               },
               {
                 key: "history",
@@ -298,70 +297,4 @@ function locationMenu({
       ? undefined
       : "Not public yet. Staff read the pages through Preview.",
   };
-}
-
-/** Where a section of the location stands, in a line: its row's tooltip on the rail. */
-function detailOf({
-  tab,
-  step,
-  state,
-  overview,
-  permissions,
-  progress,
-}: {
-  tab: LocationTab;
-  step: SetupStep | undefined;
-  state: LocationState;
-  overview: LocationOverview;
-  permissions: readonly Permission[];
-  progress: ReturnType<typeof setupProgress>;
-}): string {
-  switch (tab) {
-    case "overview": {
-      if (state === "draft") {
-        return `Setup checklist, ${progress.done} of ${progress.total} done`;
-      }
-      // A team with no queue to work sees the location at a glance.
-      if (!permissions.includes("bookings.view")) {
-        return "Every part at a glance";
-      }
-      const today =
-        overview.pickupsToday === 0
-          ? "No pick-ups today"
-          : `${plural(overview.pickupsToday, "pick-up")} today`;
-      return overview.awaitingDriver === 0
-        ? today
-        : `${today}, ${overview.awaitingDriver} awaiting a driver`;
-    }
-    case "bookings":
-      return overview.awaitingConfirmation === 0
-        ? "Nothing awaiting confirmation"
-        : `${overview.awaitingConfirmation} awaiting confirmation`;
-    case "vehicles":
-      return fleetLine(
-        plural(overview.vehicles, "vehicle"),
-        "in service",
-        overview.vehiclesDue,
-        "document",
-      );
-    case "drivers":
-      return fleetLine(
-        plural(overview.drivers, "driver"),
-        "active",
-        overview.driversDue,
-        "licence",
-      );
-    case "rates":
-      return overview.routesPriced === 0
-        ? "No routes priced; only hourly hire is sold"
-        : `${plural(overview.routesPriced, "route")} priced`;
-    case "settings":
-      if (state === "live") return "Live, taking bookings";
-      if (state === "paused") return "Paused, taking no bookings";
-      return progress.next
-        ? "Goes live once the setup is done"
-        : "Ready to go live";
-    default:
-      return step?.status ?? "";
-  }
 }

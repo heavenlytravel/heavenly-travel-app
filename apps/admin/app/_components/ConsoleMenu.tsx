@@ -54,7 +54,7 @@ const COUNT_TONES = {
  * comes in from the side, as the menu does coming back (`.ui-swap-in`).
  * Back shows the menu again with the page left as it is; the drill
  * returns with the next page of it opened, or its row pressed. Collapsed
- * to a rail, the menu is its rows' icons alone, with each row's line as
+ * to a rail, the menu is its rows' icons alone, with each row's name as
  * its tooltip, and no drill opens: a drill's pages stand there as icons of
  * their own instead (`RailPages`), unless they are records, as a
  * location's Pages are. See docs/261023-console-sidebar.md.
@@ -198,11 +198,7 @@ function Row({
   );
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        active={current}
-        tooltip={row.detail ? `${row.label}: ${row.detail}` : row.label}
-      >
+      <SidebarMenuButton asChild active={current} tooltip={row.label}>
         {row.external ? (
           <a
             href={row.href}
@@ -234,8 +230,8 @@ function Row({
 /**
  * A drill's pages on the rail, where no drill opens: an icon each, together
  * on a tint, the page on screen marked. The rail shows no icon of the
- * drill's own; each page's tooltip names it under the drill, with its line
- * where it has one: "Fleet / Vehicles: 3 vehicles in service".
+ * drill's own; each page's tooltip names it under the drill: "Fleet /
+ * Vehicles".
  */
 function RailPages({ row, pathname }: { row: MenuRow; pathname: string }) {
   const drill = row.drill!;
@@ -245,13 +241,12 @@ function RailPages({ row, pathname }: { row: MenuRow; pathname: string }) {
     <SidebarMenuCluster label={drill.label}>
       {pages.map((entry) => {
         const Icon = MENU_ICONS[entry.icon];
-        const name = `${drill.label} / ${entry.label}`;
         return (
           <SidebarMenuItem key={entry.key}>
             <SidebarMenuButton
               asChild
               active={entry === on}
-              tooltip={entry.detail ? `${name}: ${entry.detail}` : name}
+              tooltip={`${drill.label} / ${entry.label}`}
             >
               <Link href={entry.href} data-row={entry.key}>
                 <Icon />
@@ -274,30 +269,28 @@ function RowEnd({ row }: { row: MenuRow }) {
           {row.note}
         </span>
       ) : null}
-      {row.count ? (
-        <>
-          <Count count={row.count} />
-          {row.detail ? <span className="sr-only">, {row.detail}</span> : null}
-        </>
-      ) : null}
+      {row.count ? <Count count={row.count} /> : null}
       <Mark mark={row.mark} />
       {row.drill ? <ChevronRightIcon className="text-slate-400" /> : null}
     </>
   );
 }
 
-/** What waits on a row, in a pill at its end. */
+/** What waits on a row, in a pill at its end, read out in words: "3 awaiting confirmation". */
 function Count({ count }: { count: MenuCount }) {
   return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        "shrink-0 rounded-full px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums",
-        COUNT_TONES[count.tone],
-      )}
-    >
-      {count.value}
-    </span>
+    <>
+      <span
+        aria-hidden="true"
+        className={cx(
+          "shrink-0 rounded-full px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums",
+          COUNT_TONES[count.tone],
+        )}
+      >
+        {count.value}
+      </span>
+      <span className="sr-only">, {count.label}</span>
+    </>
   );
 }
 

@@ -67,8 +67,12 @@ export type MenuIcon = keyof typeof MENU_ICONS;
 /** Where a setup step of a draft stands, at the end of the row that holds it. */
 export type MenuMark = "todo" | "done";
 
-/** What waits on a row, at its end. */
-export type MenuCount = { value: number; tone: "brand" | "amber" };
+/** What waits on a row, at its end, and what it stands for, read out in place of the pill: "3 awaiting confirmation". */
+export type MenuCount = {
+  value: number;
+  tone: "brand" | "amber";
+  label: string;
+};
 
 /** One row of a drill's menu: a page of its section. */
 export type MenuEntry = {
@@ -84,8 +88,6 @@ export type MenuEntry = {
   mark?: MenuMark;
   /** A disc before the label: a page's standing. */
   dot?: "green" | "amber" | "grey";
-  /** Where the page stands, in a line: its tooltip on the rail. */
-  detail?: string;
 };
 
 /** A section's pages, listed in place of the menu while one of them is on screen. */
@@ -94,7 +96,8 @@ export type MenuDrill = {
   entries: readonly MenuEntry[];
   /**
    * Collapsed to a rail, where no drill opens, each page is an icon of its
-   * own, together on a tint and named under the drill: Fleet's lists,
+   * own, together on a tint, its tooltip naming it under the drill
+   * ("Fleet / Drivers"): Fleet's lists,
    * Settings' pages. Without it the rail has the row's icon alone: a
    * location's Pages, whose pages are its editors under one icon.
    */
@@ -114,8 +117,6 @@ export type MenuRow = {
   paths?: readonly string[];
   /** Only the row's own address is its section, not the paths under it: an overview. */
   exact?: boolean;
-  /** Where the section stands, in a line: the row's tooltip on the rail. */
-  detail?: string;
   /** What waits on the section, at the row's end. None while nothing does. */
   count?: MenuCount;
   /** A short note at the row's end: how far a draft's setup has come. */

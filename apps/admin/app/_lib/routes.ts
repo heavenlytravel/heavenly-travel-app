@@ -492,12 +492,12 @@ export function scopeSwitchHref(
     : locationHref(to.slug);
 }
 
-/** The ids of the Rates tab's four cards, and the link that lands on each. */
+/** The ids of the Rates tab's cards, and the link that lands on each. */
 export const RATES_PARTS = {
-  metered: "metered-rates",
+  classes: "class-rates",
   grid: "rate-grid",
-  dropoffs: "dropoffs",
-  oddHours: "odd-hours",
+  rules: "trip-rules",
+  tryTrip: "try-a-trip",
 } as const;
 export function locationRatesPartHref(
   slug: string,
@@ -548,7 +548,7 @@ export function locationBookingsHref(
 
 /**
  * The tab a class's editor goes back to: the Vehicle classes tab, or the
- * Rates tab's metered rates when it was opened from there. Carried as
+ * Rates tab's rates and rules when it was opened from there. Carried as
  * `?from=` to the editor and by its form to the save.
  */
 export const OFFERING_FROM_PARAM = "from";
@@ -558,7 +558,7 @@ export function offeringFromOf(value: unknown): OfferingFrom {
 }
 export function offeringBackHref(slug: string, from: OfferingFrom) {
   return from === "rates"
-    ? locationRatesPartHref(slug, "metered")
+    ? locationRatesPartHref(slug, "classes")
     : locationTabHref(slug, "vehicle-classes");
 }
 

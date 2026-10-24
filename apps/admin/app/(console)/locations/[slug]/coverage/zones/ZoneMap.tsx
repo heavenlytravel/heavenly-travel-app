@@ -15,8 +15,6 @@ import {
   CirclePlusIcon,
   HandIcon,
   InfoIcon,
-  MaximizeIcon,
-  MinimizeIcon,
   PencilIcon,
   RedoIcon,
   ScissorsIcon,
@@ -29,6 +27,7 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { joinPiecesAction } from "../actions";
+import { FullScreenButton, useFullScreen } from "./full-screen";
 import {
   MAP_FAILURES,
   boundsOf,
@@ -214,8 +213,7 @@ export function ZoneMap({
     ownFullScreen: true,
   });
   // The map and the line under it, which full screen shows together.
-  const wrapper = useRef<HTMLDivElement>(null);
-  const [full, setFull] = useState(false);
+  const { ref: wrapper, full, toggle } = useFullScreen<HTMLDivElement>();
   const editor = useRef<PieceEditor | null>(null);
   // The other zones as drawn, by id, to show a trim on them.
   const otherPolygons = useRef(new Map<string, google.maps.Polygon>());
@@ -417,26 +415,6 @@ export function ZoneMap({
     return () => document.removeEventListener("keydown", close);
   }, [help]);
 
-  // Full screen comes and goes by the button or by the browser's own Esc.
-  useEffect(() => {
-    const follow = () =>
-      setFull(
-        wrapper.current !== null &&
-          document.fullscreenElement === wrapper.current,
-      );
-    document.addEventListener("fullscreenchange", follow);
-    return () => document.removeEventListener("fullscreenchange", follow);
-  }, []);
-
-  function toggleFullScreen() {
-    // A browser that refuses leaves the page as it is.
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => undefined);
-    } else {
-      wrapper.current?.requestFullscreen().catch(() => undefined);
-    }
-  }
-
   // An open menu takes the keyboard's focus, and closes on Escape or on a
   // press anywhere else.
   useEffect(() => {
@@ -505,22 +483,7 @@ export function ZoneMap({
             full ? "h-full" : "h-[32rem]",
           )}
         />
-        {map && document.fullscreenEnabled ? (
-          <Tooltip
-            content={full ? "Exit full screen" : "Full screen"}
-            side="left"
-            className="absolute top-2.5 right-2.5 z-10"
-          >
-            <button
-              type="button"
-              aria-label={full ? "Exit full screen" : "Full screen"}
-              onClick={toggleFullScreen}
-              className="grid size-10 place-items-center rounded-sm bg-white text-slate-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand [&_svg]:size-[18px]"
-            >
-              {full ? <MinimizeIcon /> : <MaximizeIcon />}
-            </button>
-          </Tooltip>
-        ) : null}
+        {map ? <FullScreenButton full={full} onToggle={toggle} /> : null}
         {help && keys ? (
           <ZoneMapHelp keys={keys} onClose={() => setHelp(false)} />
         ) : null}

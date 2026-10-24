@@ -10,7 +10,6 @@ import {
   OFFERING_RULE_FIELDS,
   TRIP_CATEGORY_LABELS,
   isTripCategory,
-  parseRinggit,
   ringgitInputValue,
   type OfferingField,
   type OfferingRules,
@@ -48,8 +47,8 @@ import {
 import { FORM_WIDTH } from "../../../../_components/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {
-  minimumFareSen:
-    "The least a metered one-way trip costs. Below the base fare it never applies. A route on the rate grid is not metered.",
+  perKmSen:
+    "A one-way trip costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge.",
   minLeadHours: "Hours before pickup a booking must be made.",
   cancellationCutoffHours:
     "Hours before pickup a customer may still cancel. A booking keeps the cutoff it was made with.",
@@ -81,11 +80,9 @@ function FieldLabel({ field, unit }: { field: OfferingField; unit: string }) {
 function MoneyInput({
   field,
   defaultSen,
-  onChange,
 }: {
   field: keyof TripRates;
   defaultSen: number | undefined;
-  onChange?: (text: string) => void;
 }) {
   return (
     <Field label={<FieldLabel field={field} unit="RM" />}>
@@ -96,7 +93,6 @@ function MoneyInput({
         defaultValue={
           defaultSen === undefined ? "" : ringgitInputValue(defaultSen)
         }
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
       />
     </Field>
   );
@@ -205,16 +201,6 @@ export function OfferingForm({
       setRules(ruleTexts(CATEGORY_RULE_DEFAULTS[next]));
     }
   }
-  const [baseFare, setBaseFare] = useState(
-    offering ? ringgitInputValue(offering.baseFareSen) : "",
-  );
-  const [minimumFare, setMinimumFare] = useState(
-    offering ? ringgitInputValue(offering.minimumFareSen) : "",
-  );
-  const baseSen = parseRinggit(baseFare);
-  const minimumSen = parseRinggit(minimumFare);
-  const minimumBelowBase =
-    baseSen !== null && minimumSen !== null && minimumSen < baseSen;
 
   return (
     <UploadsContext value={uploads.track}>
@@ -309,29 +295,13 @@ export function OfferingForm({
           <h2 className="text-xl font-semibold tracking-tight">
             Rates at this location
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MoneyInput
-              field="baseFareSen"
-              defaultSen={offering?.baseFareSen}
-              onChange={setBaseFare}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
             <MoneyInput field="perKmSen" defaultSen={offering?.perKmSen} />
             <MoneyInput
               field="hourlyRateSen"
               defaultSen={offering?.hourlyRateSen}
             />
-            <MoneyInput
-              field="minimumFareSen"
-              defaultSen={offering?.minimumFareSen}
-              onChange={setMinimumFare}
-            />
           </div>
-          {minimumBelowBase ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              The minimum fare is below the base fare, so it never applies.
-              Allowed, but check it is what you mean.
-            </p>
-          ) : null}
           <ModelChoiceField offering={offering} />
           <label className="flex items-center gap-2 text-sm">
             <Checkbox

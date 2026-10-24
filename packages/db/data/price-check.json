@@ -1,0 +1,86 @@
+{
+  "about": "Named trips priced by the live check (pnpm --filter @repo/db price:check) and offered as Try a trip's examples on each location's Rates tab, but for those marked liveCheckOnly: the CEO demo's made-up spots. Each end is a Google place id, or a pin for a spot with no place. expected is the total in sen, or the refusal's code; null prints the price without checking it. Add a row whenever a price is questioned. See docs/261023-nearest-zone-pricing.md, Testing.",
+  "trips": [
+    {
+      "location": "langkawi",
+      "name": "Airport to Pantai Kok",
+      "class": "sedan",
+      "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
+      "dropoff": { "label": "Pantai Kok", "lat": 6.36423, "lng": 99.68209 },
+      "expected": { "totalSen": 5000 }
+    },
+    {
+      "location": "langkawi",
+      "name": "Airport to Orange",
+      "liveCheckOnly": true,
+      "class": "sedan",
+      "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
+      "dropoff": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
+      "expected": null,
+      "note": "RM52.50 on the demo's roads: the Pantai Kok cell plus about 0.77 km of extra road, rounded up to 1 km."
+    },
+    {
+      "location": "langkawi",
+      "name": "Orange to Airport",
+      "liveCheckOnly": true,
+      "class": "sedan",
+      "pickup": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
+      "dropoff": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
+      "expected": null,
+      "note": "The same as Airport to Orange, read the other way."
+    },
+    {
+      "location": "langkawi",
+      "name": "Airport to Blue",
+      "liveCheckOnly": true,
+      "class": "sedan",
+      "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
+      "dropoff": { "label": "Blue", "lat": 6.3898, "lng": 99.7084 },
+      "expected": { "totalSen": 8000 },
+      "note": "Blue is reached before the Datai zone, so it pays the plain Airport to Datai cell."
+    },
+    {
+      "location": "langkawi",
+      "name": "Orange to Blue",
+      "liveCheckOnly": true,
+      "class": "sedan",
+      "pickup": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
+      "dropoff": { "label": "Blue", "lat": 6.3898, "lng": 99.7084 },
+      "expected": { "refused": "route-not-served" },
+      "note": "Needs the Pantai Kok to Datai cell, empty until Ops fills it."
+    },
+    {
+      "location": "langkawi",
+      "name": "Kuah Town to Kuah Town",
+      "class": "sedan",
+      "pickup": { "label": "Kuah Town", "lat": 6.32333, "lng": 99.8466 },
+      "dropoff": { "label": "Kuah Town, east", "lat": 6.326, "lng": 99.85 },
+      "expected": { "refused": "route-not-served" },
+      "note": "Needs Kuah Town's within-zone cell, empty until Ops fills it."
+    },
+    {
+      "location": "langkawi",
+      "name": "Airport to Mak Ngah Kotiaw",
+      "class": "sedan",
+      "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
+      "dropoff": {
+        "label": "Mak Ngah Kotiaw",
+        "placeId": "ChIJh5KKPAB7TDARfUAC1-UxPqs"
+      },
+      "expected": null,
+      "note": "Nearest in a straight line is Datai, by road Tanjung Rhu."
+    },
+    {
+      "location": "langkawi",
+      "name": "Kuah Town to Homestay Mahsuri",
+      "class": "sedan",
+      "pickup": { "label": "Kuah Town", "lat": 6.32333, "lng": 99.8466 },
+      "dropoff": {
+        "label": "Homestay Mahsuri",
+        "placeId": "ChIJoxCjvp15TDARAwF6y1Ad4e8"
+      },
+      "expected": null,
+      "note": "A near tie: Kuah Town's edge is 5.73 km by road, the Airport's 5.75 km."
+    }
+  ]
+}

@@ -4,12 +4,12 @@ import { LOCATION_FIELD_LABELS } from "./location-input";
 import { andList } from "./names";
 import { isLocationPageKey, pageNameOf } from "./location-page-input";
 import { formatMyr } from "./money";
-import { OFFERING_FIELD_LABELS, type OfferingField } from "./offering-input";
+import { OFFERING_FIELD_LABELS } from "./offering-input";
 import {
-  dropoffRuleLabel,
-  isDropoffRule,
   oddHoursLabel,
+  weekendLabel,
   type OddHours,
+  type WeekendSurcharge,
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
@@ -179,8 +179,21 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
-  /** `dropoffRule`, before and after. */
+  /**
+   * `dropoffRule`, before and after: the drop-off rule, set before
+   * nearest-zone pricing replaced it. Kept so its entries still read.
+   */
   "location.dropoff.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** `freeExtraKm`, `maxExtraKm` and `crossLocation`, those that changed, before and after. */
+  "location.reach.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /** The weekend and holiday surcharge, before and after; empty for none. */
+  "location.weekend.updated": {
     entityType: "location",
     customerVisible: false,
   },
@@ -239,6 +252,8 @@ export function locationHistoryKindOf(
     case "location.rates.updated":
     case "location.surcharge.updated":
     case "location.dropoff.updated":
+    case "location.reach.updated":
+    case "location.weekend.updated":
       return "coverage";
     case "vehicle.created":
     case "vehicle.updated":
@@ -326,6 +341,24 @@ export type DescribableActivity = {
   after: unknown;
 };
 
+/**
+ * The labels of an offering's fields as its entries name them: today's,
+ * and the base fare and the minimum fare, which nearest-zone pricing
+ * removed, so an entry written before still reads as it happened.
+ */
+const OFFERING_ENTRY_LABELS: Record<string, string> = {
+  ...OFFERING_FIELD_LABELS,
+  baseFareSen: "Base fare",
+  minimumFareSen: "Minimum fare",
+};
+
+/** The drop-off rules as their entries named them, before nearest-zone pricing replaced the rule. */
+const OLD_DROPOFF_RULES: Record<string, string> = {
+  anywhere: "drop-offs anywhere",
+  zones: "drop-offs inside this location only",
+  grid: "only the routes on the rate grid",
+};
+
 function field(json: unknown, key: string): unknown {
   return json !== null && typeof json === "object" && key in json
     ? (json as Record<string, unknown>)[key]
@@ -390,9 +423,7 @@ function vehicleClassChanges(after: unknown) {
   const labelOf = (key: string) =>
     key in VEHICLE_CLASS_FIELD_LABELS
       ? VEHICLE_CLASS_FIELD_LABELS[key as VehicleClassField]
-      : key in OFFERING_FIELD_LABELS
-        ? OFFERING_FIELD_LABELS[key as OfferingField]
-        : null;
+      : (OFFERING_ENTRY_LABELS[key] ?? null);
   const others = keysOf(after)
     .filter((key) => key !== "name" && key !== "isActive")
     .flatMap((key) => {
@@ -474,11 +505,8 @@ function offeringChanges(after: unknown) {
   const others = [
     ...new Set(
       keysOf(after)
-        .filter(
-          (key): key is OfferingField =>
-            key in OFFERING_FIELD_LABELS && key !== "isActive",
-        )
-        .map((key) => `the ${OFFERING_FIELD_LABELS[key].toLowerCase()}`),
+        .filter((key) => key in OFFERING_ENTRY_LABELS && key !== "isActive")
+        .map((key) => `the ${OFFERING_ENTRY_LABELS[key]!.toLowerCase()}`),
     ),
   ];
   if (others.length > 0) {
@@ -497,7 +525,22 @@ function zoneName(json: unknown) {
   return typeof name === "string" ? `the zone ${name}` : "a zone";
 }
 
-/** The odd-hours window an entry holds, as the rules read it; null for none. */
+/** The weekend and holiday surcharge an entry holds; null for none. */
+function weekendIn(json: unknown): WeekendSurcharge | null {
+  const days = field(json, "days");
+  const dates = field(json, "dates");
+  const percent = field(json, "percent");
+  const flatSen = field(json, "flatSen");
+  if (!Array.isArray(days) || !Array.isArray(dates)) return null;
+  const list = {
+    days: days.filter((day): day is number => typeof day === "number"),
+    dates: dates.filter((date): date is string => typeof date === "string"),
+  };
+  if (typeof percent === "number") return { ...list, percent, flatSen: null };
+  if (typeof flatSen === "number") return { ...list, percent: null, flatSen };
+  return null;
+}
+
 /** The surcharge an entry logged: a window and a percentage, or since a flat amount too. */
 function oddHoursIn(json: unknown): OddHours | null {
   const fromMinute = field(json, "fromMinute");
@@ -771,7 +814,30 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "location.dropoff.updated": {
       const rule = field(entry.after, "dropoffRule");
-      return `Set ${dropoffRuleLabel(isDropoffRule(rule) ? rule : "anywhere").toLowerCase()}`;
+      return `Set ${OLD_DROPOFF_RULES[String(rule)] ?? OLD_DROPOFF_RULES.anywhere}`;
+    }
+    case "location.reach.updated": {
+      const freeExtraKm = field(entry.after, "freeExtraKm");
+      const maxExtraKm = field(entry.after, "maxExtraKm");
+      const crossLocation = field(entry.after, "crossLocation");
+      const parts = [
+        ...(typeof freeExtraKm === "number"
+          ? [`the free extra road to ${freeExtraKm} km`]
+          : []),
+        ...(typeof maxExtraKm === "number"
+          ? [`the furthest extra road to ${maxExtraKm} km`]
+          : []),
+        ...(typeof crossLocation === "boolean"
+          ? [`cross-location ${crossLocation ? "on" : "off"}`]
+          : []),
+      ];
+      return `Set ${andList(parts)}`;
+    }
+    case "location.weekend.updated": {
+      const weekend = weekendIn(entry.after);
+      return weekend
+        ? `Set the weekend and holiday surcharge to ${weekendLabel(weekend)}`
+        : "Removed the weekend and holiday surcharge";
     }
     case "media.deleted": {
       const files = field(entry.before, "files");

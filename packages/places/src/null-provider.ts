@@ -1,3 +1,4 @@
+import { kmBetween, type LngLat } from "@repo/db";
 import { listDistricts, districtShape } from "@repo/db/server";
 import { memoize } from "./cache";
 import type { PlacesProvider } from "./types";
@@ -5,10 +6,9 @@ import type { PlacesProvider } from "./types";
 /**
  * The provider when no Google key is configured: local development and
  * previews. It offers Malaysia's districts as places, each at a point
- * inside its boundary, so a pickup still resolves to a district and hourly
- * bookings work end to end. It cannot route, so one-way trips report
- * distance unavailable, exactly as the domain layer expects. Its ids never
- * reach Google: they carry a `local:` prefix.
+ * inside its boundary, so a pickup still resolves to a district, and
+ * routes in straight lines, so one-way trips are priced end to end. Its
+ * ids never reach Google: they carry a `local:` prefix.
  */
 
 const PREFIX = "local:";
@@ -22,7 +22,6 @@ const districts = memoize(() => listDistricts(), {
 
 export const nullProvider: PlacesProvider = {
   name: "null",
-  canRoute: false,
 
   async searchPlaces(query) {
     const needle = query.trim().toLowerCase();
@@ -56,7 +55,11 @@ export const nullProvider: PlacesProvider = {
     };
   },
 
-  async roadDistance() {
-    return null;
+  async route(from, to) {
+    const line: LngLat[] = [
+      [from.lng, from.lat],
+      [to.lng, to.lat],
+    ];
+    return { distanceKm: kmBetween(line[0]!, line[1]!), line };
   },
 };

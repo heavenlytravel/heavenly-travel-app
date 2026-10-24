@@ -155,6 +155,35 @@ export async function listActiveOfferingsAt(
   return onSale(rows);
 }
 
+/**
+ * Each class's cheapest cell on the location's grid, by the class's id:
+ * the routes between its own zones, and its routes out when trips across
+ * locations are on. A class the grid prices no route for is not in it.
+ * For "from RM" (`startingPriceSen`).
+ */
+export async function cheapestCellsAt(
+  slug: string,
+): Promise<Map<string, number>> {
+  const rows = await db.zoneRate.groupBy({
+    by: ["vehicleClassId"],
+    where: {
+      location: { slug },
+      OR: [
+        { toZone: { location: { slug } } },
+        { location: { crossLocation: true } },
+      ],
+    },
+    _min: { priceSen: true },
+  });
+  return new Map(
+    rows.flatMap((row) =>
+      row._min.priceSen === null
+        ? []
+        : [[row.vehicleClassId, row._min.priceSen] as const],
+    ),
+  );
+}
+
 export function getOffering(id: string): Promise<Offering | null> {
   return db.locationVehicleClass.findUnique({ where: { id }, ...withClass });
 }

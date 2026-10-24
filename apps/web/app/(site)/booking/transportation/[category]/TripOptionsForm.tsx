@@ -56,8 +56,8 @@ export type ClassOption = {
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order, with their photos. */
   models: GalleryModel[];
-  /** With any model of the class. */
-  totalSen: number;
+  /** With any model of the class; null when it is not offered on this trip. */
+  totalSen: number | null;
   /** What choosing one of the models adds; null when the customer cannot choose here. */
   modelChoiceSen: number | null;
   /** The share of the fare that charge is, 10 for 10%; null for an amount of its own. */
@@ -96,7 +96,8 @@ export function TripOptionsForm({
 }: {
   category: TripCategory;
   search: TripSearch;
-  trip: TripView;
+  /** The trip asked for; its road distance is the quote's, not shown here. */
+  trip: Omit<TripView, "distanceKm">;
   classes: ClassOption[];
   initialPassengers: number;
 }) {
@@ -117,9 +118,10 @@ export function TripOptionsForm({
   const model = selected
     ? choosableModel(selected.models, selected.modelChoiceSen !== null, modelId)
     : null;
-  const totalSen = selected
-    ? selected.totalSen + (model ? (selected.modelChoiceSen ?? 0) : 0)
-    : null;
+  const totalSen =
+    selected && selected.totalSen !== null
+      ? selected.totalSen + (model ? (selected.modelChoiceSen ?? 0) : 0)
+      : null;
 
   function choose(id: string) {
     if (id === chosen) return;
@@ -196,9 +198,11 @@ export function TripOptionsForm({
                       <span className="text-[1.1rem] font-bold text-ink">
                         {c.name}
                       </span>
-                      <span className="text-[1.15rem] font-bold text-brand">
-                        {formatMyr(c.totalSen)}
-                      </span>
+                      {c.totalSen !== null ? (
+                        <span className="text-[1.15rem] font-bold text-brand">
+                          {formatMyr(c.totalSen)}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="text-[0.95rem] text-slate-700">
                       {c.description}

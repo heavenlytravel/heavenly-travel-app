@@ -1,5 +1,6 @@
-import type { Place } from "@repo/db";
-import type { PlaceSuggestion, RoadDistance } from "./types";
+import type { Place, RoadRoute } from "@repo/db";
+import { decodePolyline } from "./polyline";
+import type { PlaceSuggestion } from "./types";
 
 /**
  * Pure readers for the Google Places API (New) and Routes API response
@@ -116,17 +117,22 @@ export function parsePlace(body: unknown): Place | null {
 }
 
 type RoutesResponse = {
-  routes?: { distanceMeters?: number; duration?: string }[];
+  routes?: {
+    distanceMeters?: number;
+    polyline?: { encodedPolyline?: string };
+  }[];
 };
 
-/** Distance and duration of the first route; null when Google found none. */
-export function parseRoute(body: unknown): RoadDistance | null {
+/**
+ * The first route's length in km and its line; null when Google found
+ * none, or answered without a line. A route of 0 m, from a point to
+ * itself, may come with no distance at all.
+ */
+export function parseRoute(body: unknown): RoadRoute | null {
   const route = (body as RoutesResponse).routes?.[0];
-  if (!route || typeof route.distanceMeters !== "number") return null;
-  // Durations arrive as protobuf strings: "4212s".
-  const seconds = Number.parseFloat(route.duration ?? "");
-  return {
-    distanceKm: Math.round(route.distanceMeters / 100) / 10,
-    durationMinutes: Number.isFinite(seconds) ? Math.round(seconds / 60) : 0,
-  };
+  const encoded = route?.polyline?.encodedPolyline;
+  if (!route || typeof encoded !== "string") return null;
+  const line = decodePolyline(encoded);
+  if (line.length === 0) return null;
+  return { distanceKm: (route.distanceMeters ?? 0) / 1000, line };
 }

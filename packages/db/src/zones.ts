@@ -13,15 +13,16 @@ import { byClassOrder } from "./offerings";
 import {
   ZONE_LIMITS,
   checkOddHours,
+  checkWeekend,
   checkZoneFields,
+  checkTripReach,
   checkZoneShape,
-  dropoffRuleOf,
   isZoneDistrict,
   oddHoursOf,
+  weekendOf,
   reshapedFromDistrict,
-  type DropoffRule,
-  type OddHours,
   type RateCell,
+  type TripRules,
   type ZoneFields,
 } from "./rates-input";
 import { cutOut, joinOverlaps, shapesOverlap } from "./zone-geometry";
@@ -39,7 +40,7 @@ export type { Zone, ZoneRate };
 
 /**
  * A location's price list: its zones, the rate grid between them, the
- * odd-hours surcharge and the drop-off rule. The readers serve the Zones
+ * odd-hours surcharge and where its trips may go. The readers serve the Zones
  * and rates tab and the quote; the writers are the tab's, each taking the
  * actor and logging against the location inside its transaction. See
  * docs/261015-locations-as-operation-areas.md, "Zones and zone-to-zone
@@ -808,7 +809,7 @@ export async function setZoneRates(
         (zone) => [zone.id, `${zone.name} (${zone.location.name})`] as const,
       ),
     ]);
-    const keptInside = dropoffRuleOf(location) === "zones";
+    const keptInside = !location.crossLocation;
     const className = new Map(
       location.offerings.map((offering) => [
         offering.vehicleClassId,
@@ -839,7 +840,7 @@ export async function setZoneRates(
       if ((was?.priceSen ?? null) === cell.priceSen) continue;
       if (!was && keptInside && !own.has(cell.toZoneId)) {
         return refuse(
-          "Drop-offs are kept inside this location, so a route cannot end at another location's zone. Change the drop-off rule first.",
+          "Trips stay in this location, so a route cannot end at another location's zone. Turn on trips across locations first.",
         );
       }
 
@@ -883,66 +884,91 @@ export async function setZoneRates(
   });
 }
 
-/** Sets the odd-hours surcharge, or removes it with null. Saving what is already there logs nothing. */
-export async function setOddHours(
+/**
+ * Sets the location's rules on its trips' prices, as the Rates tab saves
+ * them together: where trips may go, the odd-hours surcharge and the
+ * weekend and holiday surcharge. Each part that changed is logged as its
+ * own entry; saving what is already there logs nothing. Switching
+ * cross-location off keeps the routes out on the grid, unsold, so
+ * switching it back on restores them.
+ */
+export async function setTripRules(
   actor: Actor,
   locationId: string,
-  window: OddHours | null,
+  rules: TripRules,
 ): Promise<Change> {
-  if (window) {
-    const check = checkOddHours(window);
-    if (!check.ok) return check;
+  const { reach, oddHours, weekend } = rules;
+  for (const check of [
+    checkTripReach(reach),
+    oddHours ? checkOddHours(oddHours) : null,
+    weekend ? checkWeekend(weekend) : null,
+  ]) {
+    if (check && !check.ok) return check;
   }
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
       where: { id: locationId },
     });
     if (!location) return NOT_FOUND;
-    const changed = changedFields(location, {
-      oddHoursFromMinute: window?.fromMinute ?? null,
-      oddHoursToMinute: window?.toMinute ?? null,
-      oddHoursPercent: window?.percent ?? null,
-      oddHoursFlatSen: window?.flatSen ?? null,
-    });
-    if (!changed) return { ok: true };
-    await tx.location.update({
-      where: { id: locationId },
-      data: changed.after,
-    });
-    const before = oddHoursOf(location);
-    await logActivity(tx, actor, {
-      action: "location.surcharge.updated",
-      entityId: locationId,
-      before: before ? { ...before } : {},
-      after: window ? { ...window } : {},
-    });
-    return { ok: true };
-  });
-}
 
-/** Sets where a one-way trip may end. Setting what is already there logs nothing. */
-export async function setDropoffRule(
-  actor: Actor,
-  locationId: string,
-  dropoffRule: DropoffRule,
-): Promise<Change> {
-  return db.$transaction(async (tx) => {
-    const location = await tx.location.findUnique({
-      where: { id: locationId },
+    const reachChanged = changedFields(location, {
+      freeExtraKm: reach.freeExtraKm,
+      maxExtraKm: reach.maxExtraKm,
+      crossLocation: reach.crossLocation,
     });
-    if (!location) return NOT_FOUND;
-    const changed = changedFields(location, { dropoffRule });
-    if (!changed) return { ok: true };
+    const oddHoursChanged = changedFields(location, {
+      oddHoursFromMinute: oddHours?.fromMinute ?? null,
+      oddHoursToMinute: oddHours?.toMinute ?? null,
+      oddHoursPercent: oddHours?.percent ?? null,
+      oddHoursFlatSen: oddHours?.flatSen ?? null,
+    });
+    const weekendBefore = weekendOf(location);
+    const weekendChanged =
+      JSON.stringify(weekendBefore) !== JSON.stringify(weekend);
+    if (!reachChanged && !oddHoursChanged && !weekendChanged) {
+      return { ok: true };
+    }
+
     await tx.location.update({
       where: { id: locationId },
-      data: changed.after,
+      data: {
+        ...reachChanged?.after,
+        ...oddHoursChanged?.after,
+        ...(weekendChanged
+          ? {
+              weekendDays: weekend?.days ?? [],
+              holidayDates: weekend?.dates ?? [],
+              weekendPercent: weekend?.percent ?? null,
+              weekendFlatSen: weekend?.flatSen ?? null,
+            }
+          : {}),
+      },
     });
-    await logActivity(tx, actor, {
-      action: "location.dropoff.updated",
-      entityId: locationId,
-      before: changed.before,
-      after: changed.after,
-    });
+    if (reachChanged) {
+      await logActivity(tx, actor, {
+        action: "location.reach.updated",
+        entityId: locationId,
+        before: reachChanged.before,
+        after: reachChanged.after,
+      });
+    }
+    if (oddHoursChanged) {
+      const before = oddHoursOf(location);
+      await logActivity(tx, actor, {
+        action: "location.surcharge.updated",
+        entityId: locationId,
+        before: before ? { ...before } : {},
+        after: oddHours ? { ...oddHours } : {},
+      });
+    }
+    if (weekendChanged) {
+      await logActivity(tx, actor, {
+        action: "location.weekend.updated",
+        entityId: locationId,
+        before: weekendBefore ? { ...weekendBefore } : {},
+        after: weekend ? { ...weekend } : {},
+      });
+    }
     return { ok: true };
   });
 }

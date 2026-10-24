@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  parseRinggit,
-  plural,
-  ringgitInputValue,
-  type DropoffRule,
-} from "@repo/db";
+import { parseRinggit, plural, ringgitInputValue } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -41,7 +36,7 @@ import {
   type ZoneElsewhere,
 } from "./AddRouteDialog";
 import { errorOf } from "../../../../_lib/action-state";
-import { CELL_INPUT, CellKey, EMPTY_CELL, emptyCellMeaning } from "./cells";
+import { CELL_INPUT, CellKey, EMPTY_CELL, EMPTY_CELL_MEANING } from "./cells";
 
 type Zone = { id: string; name: string };
 /** A column of the grid: a class on sale here, with the category it is sold under. */
@@ -181,12 +176,14 @@ function SortHeading({
  * them all at once or discards them, and leaving the page with any
  * unsaved asks first. "Add route" opens a dialog that offers only the
  * pairs of zones not on the grid yet, so a route has one row whichever
- * way it is read, and saves the route with its prices at once. A route
- * out of the location ends at another location's zone, named with its
- * location and marked one way (→), since a trip back starts there and is
- * priced there; the dialog offers those zones unless drop-offs stay
- * inside the location, when such a route is marked not offered. What an
- * empty cell means follows the drop-off rule: metered, or not offered.
+ * way it is read, and saves the route with its prices at once. A zone
+ * paired with itself is its within-zone price, "Within Kuah Town", first
+ * in that zone's rows. A route out of the location ends at another
+ * location's zone, named with its location and marked one way (→), since
+ * a trip back starts there and is priced there; "Add route" offers those
+ * zones too, by location, while cross-location is on, and while it is off
+ * such a route is kept, marked not sold. An empty cell
+ * is a class not offered on the route.
  *
  * A route's zones are two columns, From and To, their names cut short and
  * whole in a tooltip on hover or click; the heading stays in view while
@@ -207,7 +204,7 @@ export function RateGrid({
   elsewhere,
   classes,
   cells,
-  rule,
+  crossLocation,
   readOnly = false,
 }: {
   locationId: string;
@@ -218,13 +215,15 @@ export function RateGrid({
   elsewhere: ZoneElsewhere[];
   classes: ClassColumn[];
   cells: Cell[];
-  rule: DropoffRule;
+  /** Whether cross-location is on: the routes out are sold, and more may be added. */
+  crossLocation: boolean;
   /** For the teams that read the rates: the prices as text, nothing to change. */
   readOnly?: boolean;
 }) {
   const [saved, setSaved] = useState<Saved>(() => savedOf(cells, zones));
   const [routes, setRoutes] = useState<Route[]>(saved.routes);
   const [values, setValues] = useState(() => valuesOf(saved));
+  /** Whether "Add route" is open. */
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [sort, setSort] = useState<Sort>(null);
@@ -302,6 +301,8 @@ export function RateGrid({
   };
   /** Whether the route runs out of the location: its `to` is another location's zone. */
   const isOut = (route: Route) => !own.has(route.toZoneId);
+  /** Whether the route is a zone's within-zone price: the zone at both ends. */
+  const isWithin = (route: Route) => route.fromZoneId === route.toZoneId;
   /** A route's zones in the zones' order, whichever way it is stored. */
   const endsOf = (route: Route): [string, string] =>
     (rank.get(route.fromZoneId) ?? rank.size) <=
@@ -377,26 +378,23 @@ export function RateGrid({
   ];
 
   // The pairs not on the grid yet, for "Add route": between this
-  // location's zones, and out to other locations' unless drop-offs stay in.
+  // location's zones, each with itself, and out to other locations' while
+  // cross-location is on.
   const paired = new Set(
     routes.map((route) => pairKey(route.fromZoneId, route.toZoneId)),
   );
   const routesOut = routes.filter(isOut).length;
-  const pairs = (zones.length * (zones.length - 1)) / 2;
+  const pairs = (zones.length * (zones.length + 1)) / 2;
   const freePairs = pairs - (routes.length - routesOut);
-  const offered = rule === "zones" ? [] : elsewhere;
-  const freeOut =
-    zones.length * offered.length - (offered.length > 0 ? routesOut : 0);
+  const freeOut = crossLocation
+    ? zones.length * elsewhere.length - routesOut
+    : 0;
 
   const coverageHref = locationTabHref(locationSlug, "coverage");
-  if (
-    zones.length === 0 ||
-    (zones.length === 1 && offered.length === 0 && routes.length === 0)
-  ) {
+  if (zones.length === 0) {
     return (
       <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
-        A route runs between two zones.{" "}
-        {zones.length === 0 ? "Draw the zones" : "Draw a second zone"} on the{" "}
+        A route runs between two zones, or within one. Draw the zones on the{" "}
         <Link
           href={coverageHref}
           className="font-medium text-slate-900 underline-offset-4 hover:underline"
@@ -566,7 +564,9 @@ export function RateGrid({
     const [a, b] = endsOf(route);
     setNotice(null);
     toast.success(
-      `Added the route ${nameOf(a)} ${isOut(route) ? "→" : "↔"} ${nameOf(b)}.`,
+      isWithin(route)
+        ? `Added the route within ${nameOf(a)}.`
+        : `Added the route ${nameOf(a)} ${isOut(route) ? "→" : "↔"} ${nameOf(b)}.`,
     );
     return null;
   }
@@ -670,7 +670,7 @@ export function RateGrid({
 
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
-  const emptyMeans = emptyCellMeaning(rule);
+  const emptyMeans = EMPTY_CELL_MEANING;
   const ariaSortOf = (dir: 1 | -1 | null) =>
     dir === null ? undefined : dir === 1 ? "ascending" : "descending";
   const allTicked =
@@ -740,7 +740,7 @@ export function RateGrid({
   } else if (notice) status = notice;
   else status = { tone: "idle", text: "No unsaved changes." };
 
-  const canAdd = freePairs > 0 || freeOut > 0;
+  const canAdd = freePairs + freeOut > 0;
   const ticks = tickedShown.length;
 
   return (
@@ -892,10 +892,8 @@ export function RateGrid({
                           Show every route
                         </button>
                       </>
-                    ) : rule === "grid" ? (
-                      "No routes yet, so nothing can be booked here: this location serves only the routes on its grid."
                     ) : (
-                      "No routes yet: every trip is metered at the class's rates."
+                      "No routes yet, so no one-way trip can be priced here: every trip is priced from the grid."
                     )}
                   </td>
                 </tr>
@@ -903,10 +901,15 @@ export function RateGrid({
                 shown.map((route, row) => {
                   const [a, b] = shownEndsOf(route);
                   const out = isOut(route);
-                  const label = `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
-                  const whole = out
-                    ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
-                    : `${nameOf(a)} ↔ ${nameOf(b)}, the same price both ways.`;
+                  const within = isWithin(route);
+                  const label = within
+                    ? `within ${nameOf(a)}`
+                    : `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
+                  const whole = within
+                    ? `Within ${nameOf(a)}: a trip that starts and ends in it, or maps to it at both ends.`
+                    : out
+                      ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
+                      : `${nameOf(a)} ↔ ${nameOf(b)}, the same price both ways.`;
                   const isTicked = ticked.has(routeKey(route));
                   const isDoomed = doomed.has(routeKey(route));
                   const lead = cx(
@@ -966,32 +969,49 @@ export function RateGrid({
                             aria-hidden="true"
                             className="w-4 shrink-0 text-center text-slate-400"
                           >
-                            {out ? "→" : "↔"}
+                            {within ? "↺" : out ? "→" : "↔"}
                           </span>
-                          <span className="sr-only">{out ? "to" : "and"}</span>
-                          <Tooltip
-                            content={whole}
-                            openOnClick
-                            className="min-w-0"
-                          >
+                          {within ? (
                             <span
                               className={cx(
-                                ZONE_NAME,
-                                isDoomed && "text-slate-400 line-through",
+                                "text-slate-500 italic",
+                                isDoomed && "line-through",
                               )}
                             >
-                              {zoneNameOf(b)}
+                              Within the zone
                             </span>
-                          </Tooltip>
+                          ) : (
+                            <>
+                              <span className="sr-only">
+                                {out ? "to" : "and"}
+                              </span>
+                              <Tooltip
+                                content={whole}
+                                openOnClick
+                                className="min-w-0"
+                              >
+                                <span
+                                  className={cx(
+                                    ZONE_NAME,
+                                    isDoomed && "text-slate-400 line-through",
+                                  )}
+                                >
+                                  {zoneNameOf(b)}
+                                </span>
+                              </Tooltip>
+                            </>
+                          )}
                           {out ? (
                             <Badge>
                               {awayOf(route.toZoneId)?.location ??
                                 "Another location"}
                             </Badge>
                           ) : null}
-                          {out && rule === "zones" ? (
-                            <Tooltip content="Drop-offs stay inside this location, so this route is not offered. Change the drop-off rule to offer it.">
-                              <Badge tone="amber">Not offered</Badge>
+                          {out && !crossLocation ? (
+                            <Tooltip content="Trips stay in this location, so this route is not sold. Turn on trips across locations, under the grid, to sell it again.">
+                              <Badge tone="amber">
+                                Not sold while trips stay in this location
+                              </Badge>
                             </Tooltip>
                           ) : null}
                         </span>
@@ -1098,7 +1118,7 @@ export function RateGrid({
           <span className="tabular-nums sm:ml-auto">
             {[
               pairs > 0
-                ? `${routes.length - routesOut} of ${plural(pairs, "pair")} of zones on the grid`
+                ? `${routes.length - routesOut} of ${plural(pairs, "route")} between and within the zones on the grid`
                 : null,
               routesOut > 0
                 ? `${plural(routesOut, "route")} out to other locations`
@@ -1109,8 +1129,9 @@ export function RateGrid({
           </span>
         </p>
         <p className="leading-relaxed">
-          A route costs the same both ways
-          {routesOut > 0 || offered.length > 0
+          A route costs the same both ways, and one within a zone (↺) prices the
+          trips that start and end in it
+          {routesOut > 0 || crossLocation
             ? "; one out to another location's zone (→) prices trips from here only."
             : "."}{" "}
           Click a heading to sort by it, a cut-short name to read it whole.
@@ -1127,10 +1148,9 @@ export function RateGrid({
             open={adding}
             onOpenChange={setAdding}
             zones={zones}
-            elsewhere={offered}
+            elsewhere={crossLocation ? elsewhere : []}
             classes={classes}
             paired={paired}
-            rule={rule}
             onAdd={addRoute}
           />
         </>

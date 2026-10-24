@@ -2,7 +2,7 @@ import "server-only";
 import { googleProvider } from "./google";
 import { nullProvider } from "./null-provider";
 import { placeSearchHandler } from "./route";
-import { tripResolver } from "./trip-request";
+import { routingOf, tripResolver } from "./trip-request";
 import type { PlacesProvider } from "./types";
 
 export type { PlacesProvider, SearchOptions } from "./types";
@@ -21,6 +21,12 @@ function pick(): PlacesProvider {
     console.warn(
       "[places] GOOGLE_MAPS_SERVER_KEY is not set; one-way trips cannot be priced",
     );
+    // Straight lines are for development only: they would underprice a trip.
+    return {
+      ...nullProvider,
+      route: () =>
+        Promise.reject(new Error("GOOGLE_MAPS_SERVER_KEY is not set")),
+    };
   }
   return nullProvider;
 }
@@ -36,14 +42,15 @@ export const resolvePlace: PlacesProvider["resolvePlace"] = (
   placeId,
   options,
 ) => places.resolvePlace(placeId, options);
-export const roadDistance: PlacesProvider["roadDistance"] = (from, to) =>
-  places.roadDistance(from, to);
 
 /** `export const GET = handlePlaceSearch;` in each app's `api/places/search/route.ts`. */
 export const handlePlaceSearch = placeSearchHandler(places);
 
+/** How quotes reach the roads: the provider's routes and the nearest zones kept for a day. */
+export const tripRouting = routingOf(places);
+
 /**
- * A parsed trip search as a `TripRequest`, places resolved and distance
- * fetched, or why it cannot be. See ./trip-request.
+ * A parsed trip search as a `TripRequest`, places resolved, with the
+ * routing to price it by, or why it cannot be. See ./trip-request.
  */
-export const resolveTrip = tripResolver(places);
+export const resolveTrip = tripResolver(places, tripRouting);

@@ -68,7 +68,7 @@ export default async function TripOptionsPage({ params, searchParams }: Props) {
     </>
   );
 
-  const quoted = await quoteTrip(category, trip.request);
+  const quoted = await quoteTrip(category, trip.request, trip.routing);
   if (!quoted.ok) return stop(quoted.error.message);
   if (quoted.quote.classes.length === 0) {
     return stop("We have no vehicle to offer for this trip right now.");
@@ -83,7 +83,7 @@ export default async function TripOptionsPage({ params, searchParams }: Props) {
     maxPassengers: c.vehicleClass.maxPassengers,
     imageUrl: c.offering.coverUrl,
     models: c.vehicleClass.models,
-    totalSen: c.price.totalSen,
+    totalSen: c.price?.totalSen ?? null,
     modelChoiceSen: c.modelChoice?.amountSen ?? null,
     modelChoicePercent: c.modelChoice?.charge.percent ?? null,
     unavailable: unavailableReason(c.availability),

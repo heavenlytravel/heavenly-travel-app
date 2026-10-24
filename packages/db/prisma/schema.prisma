@@ -189,10 +189,19 @@ model Location {
   wentLiveAt         DateTime?
   /// Its place among the home page's top choices; null when it is not one.
   topChoiceOrder     Int?
-  /// Where a one-way trip may end: "anywhere" | "zones" (inside one of the
-  /// location's zones) | "grid" (only a route priced on the rate grid, for
-  /// the class chosen). See DROPOFF_RULES in src/rates-input.ts.
+  /// No longer read: nearest-zone pricing replaced the drop-off rule with
+  /// maxExtraKm and crossLocation (docs/261023-nearest-zone-pricing.md).
+  /// Dropped in a follow-up once the change runs on every database.
   dropoffRule        String    @default("anywhere")
+  /// The furthest extra road, in whole km: an end of a trip outside every
+  /// zone further than this by road from its nearest zone is not priced.
+  maxExtraKm         Int       @default(15)
+  /// The free extra road, in whole km: each end outside every zone pays
+  /// only for its road past this. 0 charges all of it.
+  freeExtraKm        Int       @default(0)
+  /// Whether trips may end in another location's zone, on the routes out
+  /// this location prices to it. Off keeps every trip to its own zones.
+  crossLocation      Boolean   @default(false)
   /// The odd-hours surcharge: a window as minutes of the local day (23:00
   /// is 1380, 07:00 is 420), and what it adds, a percentage of the price or
   /// a flat amount in sen, exactly one of the two. All null when there is
@@ -201,6 +210,15 @@ model Location {
   oddHoursToMinute   Int?
   oddHoursPercent    Int?
   oddHoursFlatSen    Int?
+  /// The weekend and holiday surcharge: the days of the week it applies
+  /// on (0 is Sunday, 6 Saturday), the dates it also applies on
+  /// ("2026-12-25"), and what it adds, a percentage or a flat amount in
+  /// sen, exactly one of the two. The amounts null when there is none.
+  /// See WeekendSurcharge in src/rates-input.ts.
+  weekendDays        Int[]     @default([])
+  holidayDates       String[]  @default([])
+  weekendPercent     Int?
+  weekendFlatSen     Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -233,10 +251,14 @@ model LocationVehicleClass {
   vehicleClassId          String
   vehicleClass            VehicleClass @relation(fields: [vehicleClassId], references: [id])
   isActive                Boolean      @default(true)
-  baseFareSen             Int
+  /// No longer read: only the metered price used them, and nearest-zone
+  /// pricing has none (docs/261023-nearest-zone-pricing.md). Dropped in a
+  /// follow-up once the change runs on every database.
+  baseFareSen             Int          @default(0)
+  minimumFareSen          Int          @default(0)
+  /// The rate per extra km: the road past a zone's edge.
   perKmSen                Int
   hourlyRateSen           Int
-  minimumFareSen          Int
   /// A pickup must be at least this far in the future.
   minLeadHours            Int          @default(0)
   /// Customers may cancel until this long before pickup.

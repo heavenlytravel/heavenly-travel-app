@@ -6,12 +6,10 @@ import {
   isTripCategory,
   modelChoiceOf,
   surchargeLabel,
-  type DropoffRule,
 } from "@repo/db";
 import type { Offering } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { InfoTip } from "@repo/ui/info-tip";
-import { cx } from "@repo/ui/cx";
 import {
   EmptyRow,
   Table,
@@ -25,43 +23,32 @@ import {
 const hours = (n: number) => `${n} h`;
 
 /**
- * A location's classes at their metered rates and under their rules, a
- * row each, on sale or not: what a trip off the grid costs, and what
- * every booking of the class must keep to. The one-way rates go unused
- * when only the routes on the grid can be booked, so they are greyed
- * then; hourly hire is metered under every drop-off rule. With
- * `editHref` each row links to its class's editor at the location. Shown
- * on the location's Rates tab and on Rates across locations.
+ * A location's classes at their rates and under their rules, a row each,
+ * on sale or not: the rate per extra km a one-way trip pays for the road
+ * past a zone's edge, the hourly rate, and what every booking of the
+ * class must keep to. A one-way trip is otherwise its cell on the grid.
+ * With `editHref` each row links to its class's editor at the location.
+ * Shown on the location's Rates tab and on Rates across locations.
  */
-export function MeteredRates({
+export function ClassRates({
   offerings,
-  rule,
   editHref,
 }: {
   offerings: Offering[];
-  rule: DropoffRule;
   /** The editor of an offering, for the admins who change the rates. */
   editHref?: (offeringId: string) => string;
 }) {
-  const oneWayUnused = rule === "grid";
-  const columns = editHref ? 10 : 9;
-  const unused = oneWayUnused ? "text-slate-400" : undefined;
+  const columns = editHref ? 8 : 7;
 
   return (
     <Table bare>
       <THeadRows>
         <tr>
           <ThGroup />
-          <ThGroup span={3}>
+          <ThGroup>
             <span className="inline-flex items-center gap-1.5">
-              {oneWayUnused ? "One-way, not used" : "One-way, off the grid"}
-              <InfoTip
-                text={
-                  oneWayUnused
-                    ? "Only the routes on the rate grid can be booked here, so no one-way trip is metered. Change the drop-off rule to meter the rest."
-                    : "A one-way trip with no price on the grid costs the base fare plus the road distance at the rate per km, and never less than the minimum."
-                }
-              />
+              One-way
+              <InfoTip text="A one-way trip costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge." />
             </span>
           </ThGroup>
           <ThGroup span={2}>Hourly hire</ThGroup>
@@ -71,9 +58,7 @@ export function MeteredRates({
         </tr>
         <tr>
           <Th>Class</Th>
-          <Th align="right">{OFFERING_FIELD_LABELS.baseFareSen}</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.perKmSen}</Th>
-          <Th align="right">{OFFERING_FIELD_LABELS.minimumFareSen}</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.hourlyRateSen}</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.minHourlyHours}</Th>
           <Th align="right">To choose a model</Th>
@@ -94,10 +79,8 @@ export function MeteredRates({
             const { vehicleClass } = offering;
             const selling = offering.isActive && vehicleClass.isActive;
             const modelChoice = modelChoiceOf(offering);
-            const money = (sen: number, dim?: string) => (
-              <Td
-                className={cx("text-right whitespace-nowrap tabular-nums", dim)}
-              >
+            const money = (sen: number) => (
+              <Td className="text-right whitespace-nowrap tabular-nums">
                 {formatMyr(sen)}
               </Td>
             );
@@ -117,9 +100,7 @@ export function MeteredRates({
                       : vehicleClass.category}
                   </span>
                 </Td>
-                {money(offering.baseFareSen, unused)}
-                {money(offering.perKmSen, unused)}
-                {money(offering.minimumFareSen, unused)}
+                {money(offering.perKmSen)}
                 {money(offering.hourlyRateSen)}
                 <Td className="text-right whitespace-nowrap tabular-nums">
                   {hours(offering.minHourlyHours)}

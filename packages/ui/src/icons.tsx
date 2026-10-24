@@ -303,6 +303,26 @@ export function ArrowRightIcon(props: IconProps) {
   );
 }
 
+export function ArrowLeftRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M8 3 4 7l4 4" />
+      <path d="M4 7h16" />
+      <path d="m16 21 4-4-4-4" />
+      <path d="M20 17H4" />
+    </Icon>
+  );
+}
+
+export function CopyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </Icon>
+  );
+}
+
 export function ArrowUpIcon(props: IconProps) {
   return (
     <Icon {...props}>

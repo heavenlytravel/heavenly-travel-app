@@ -1,11 +1,11 @@
-import type { Place } from "@repo/db";
+import { pointKey, type RoutePoint } from "@repo/db";
 import { memoize } from "./cache";
 import { parsePlace, parseRoute, parseSuggestions } from "./google-parse";
 import type { Bounds, PlacesProvider } from "./types";
 
 /**
  * Google behind the `PlacesProvider` interface: Places API (New) for
- * autocomplete and details, Routes API for driving distance. One server-side
+ * autocomplete and details, Routes API for the road and its line. One server-side
  * key, never sent to the browser. Details responses include address
  * components, so the Geocoding API is not needed.
  */
@@ -41,6 +41,16 @@ async function call(
   }
   return res.json();
 }
+
+/** A route's end as the Routes API takes it: the place when there is one, else the point. */
+const waypointOf = (point: RoutePoint) =>
+  point.placeId
+    ? { placeId: point.placeId }
+    : {
+        location: {
+          latLng: { latitude: point.lat, longitude: point.lng },
+        },
+      };
 
 /** Logged, never thrown: a Google failure degrades the page, not crashes it. */
 async function attempt<T>(what: string, run: () => Promise<T>, fallback: T) {
@@ -108,23 +118,29 @@ export function googleProvider(key: string): PlacesProvider {
     { key: ([placeId]) => placeId, ttlMs: 10 * MINUTE, max: 1_000 },
   );
 
+  // The line prices a trip from the zone edges
+  // (docs/261023-nearest-zone-pricing.md). Asking for it and avoiding
+  // ferries keep a request in the cheapest tier, Compute Routes Essentials:
+  // no traffic, no waypoints, no tolls.
   const route = memoize(
-    (from: Place, to: Place) =>
+    (from: RoutePoint, to: RoutePoint) =>
       call(key, ROUTES, {
         method: "POST",
-        fieldMask: "routes.distanceMeters,routes.duration",
+        fieldMask: "routes.distanceMeters,routes.polyline.encodedPolyline",
         body: {
-          origin: { placeId: from.placeId },
-          destination: { placeId: to.placeId },
+          origin: waypointOf(from),
+          destination: waypointOf(to),
           travelMode: "DRIVE",
           routingPreference: "TRAFFIC_UNAWARE",
+          routeModifiers: { avoidFerries: true },
+          polylineQuality: "HIGH_QUALITY",
           units: "METRIC",
           languageCode: LANGUAGE,
           regionCode: REGION,
         },
       }).then(parseRoute),
     {
-      key: ([from, to]) => `${from.placeId}|${to.placeId}`,
+      key: ([from, to]) => `${pointKey(from)}|${pointKey(to)}`,
       ttlMs: 10 * MINUTE,
       max: 1_000,
     },
@@ -132,7 +148,6 @@ export function googleProvider(key: string): PlacesProvider {
 
   return {
     name: "google",
-    canRoute: true,
     searchPlaces: (query, options) =>
       attempt(
         "autocomplete",
@@ -151,6 +166,10 @@ export function googleProvider(key: string): PlacesProvider {
         () => details(placeId, options?.sessionToken),
         null,
       ),
-    roadDistance: (from, to) => attempt("route", () => route(from, to), null),
+    route: (from, to) =>
+      route(from, to).catch((error: unknown) => {
+        console.error("[places] route failed", error);
+        throw error;
+      }),
   };
 }

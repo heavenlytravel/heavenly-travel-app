@@ -2,18 +2,16 @@ import Link from "next/link";
 import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
-  DROPOFF_RULE_SHORT_LABELS,
   LOCATION_PAGE_LABELS,
   PAGE_STATUS_LABELS,
-  dropoffRuleOf,
   formatLocalDate,
   isPublicState,
   locationStateOf,
-  oddHoursLabel,
-  oddHoursOf,
   plural,
   setupProgress,
   setupSteps,
+  tripRulesLabel,
+  tripRulesOf,
   type LocationState,
   type PageStatus,
   type Permission,
@@ -175,7 +173,7 @@ export function LocationNav({
     }
     if (tab === "rates") {
       return overview.routesPriced === 0
-        ? "No routes priced; trips are metered"
+        ? "No routes priced; only hourly hire is sold"
         : `${plural(overview.routesPriced, "route")} priced`;
     }
     if (tab === "vehicles") {
@@ -217,7 +215,6 @@ export function LocationNav({
       ? today
       : `${today}, ${overview.awaitingDriver} awaiting a driver`;
   };
-  const surcharge = oddHoursOf(location);
   // Adding a class or a zone is Operation's; the teams that read see the tab.
   const adds = may("coverage.manage");
   const itemsOf = (tab: LocationTab): LocationNavItem[] => {
@@ -261,9 +258,9 @@ export function LocationNav({
       case "rates":
         return [
           {
-            key: "metered",
-            label: "Metered rates",
-            href: locationRatesPartHref(slug, "metered"),
+            key: "classes",
+            label: "Rates and rules",
+            href: locationRatesPartHref(slug, "classes"),
             note: plural(
               offerings.filter((offering) => offering.onSale).length,
               "class",
@@ -277,16 +274,16 @@ export function LocationNav({
             note: plural(overview.routesPriced, "route"),
           },
           {
-            key: "dropoffs",
-            label: "Drop-offs",
-            href: locationRatesPartHref(slug, "dropoffs"),
-            note: DROPOFF_RULE_SHORT_LABELS[dropoffRuleOf(location)],
+            key: "rules",
+            label: "Trip rules",
+            href: locationRatesPartHref(slug, "rules"),
+            note: tripRulesLabel(tripRulesOf(location)),
           },
           {
-            key: "odd-hours",
-            label: "Odd hours",
-            href: locationRatesPartHref(slug, "oddHours"),
-            note: surcharge ? oddHoursLabel(surcharge) : "Off",
+            key: "try",
+            label: "Try a trip",
+            href: locationRatesPartHref(slug, "tryTrip"),
+            note: "A price worked out step by step",
           },
         ];
       case "pages":

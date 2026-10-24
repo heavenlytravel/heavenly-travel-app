@@ -38,10 +38,8 @@ export type OfferingField = keyof OfferingFields;
 
 /** How the screen and the activity log name each field. */
 export const OFFERING_FIELD_LABELS: Record<OfferingField, string> = {
-  baseFareSen: "Base fare",
-  perKmSen: "Per km",
+  perKmSen: "Rate per extra km",
   hourlyRateSen: "Per hour",
-  minimumFareSen: "Minimum fare",
   minLeadHours: "Notice needed",
   cancellationCutoffHours: "Cancel up to",
   minHourlyHours: "Minimum hours",
@@ -72,10 +70,8 @@ export function modelChoiceOf(
 
 /** The money fields, entered in ringgit under these form names. */
 export const OFFERING_MONEY_FIELDS = {
-  baseFareSen: "baseFare",
   perKmSen: "perKm",
   hourlyRateSen: "hourlyRate",
-  minimumFareSen: "minimumFare",
 } as const satisfies Record<keyof TripRates, string>;
 
 /** The three rules, in the order the form shows them; entered in hours under their own names. */

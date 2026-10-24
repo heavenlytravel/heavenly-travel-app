@@ -1,9 +1,10 @@
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
-import { unionBox, widenBox, type BBox } from "./geo";
+import { distanceToShapeKm, unionBox, widenBox, type BBox } from "./geo";
 import {
   checkLocationSlug,
   isPublicState,
+  LOCATION_STATES,
   locationStateOf,
 } from "./location-input";
 import { zoneSearchBox } from "./location-places";
@@ -13,15 +14,21 @@ import {
   type TripPlaceIssues,
 } from "./location-search";
 import { isPlace, type Place } from "./place";
-import { dropoffAllowed, dropoffRuleOf, dropoffZonesOf } from "./rates-input";
-import { isZoneShape, zoneAt, type ZoneShape } from "./zone-match";
+import { reachableZones } from "./rates-input";
+import {
+  isZoneShape,
+  polygonsOf,
+  zoneAt,
+  type ZoneLike,
+  type ZoneShape,
+} from "./zone-match";
 
 /**
  * The search card's areas on a location's pages, and the check on the
  * places of a trip asked for there, on the server: each zone's box is read
  * off the district shapes by ./location-places. The card's own logic is
  * ./location-search. See docs/261015-locations-as-operation-areas.md, "The
- * search card".
+ * search card", and docs/261023-nearest-zone-pricing.md.
  */
 
 const zoneFields = { id: true, name: true, shape: true } as const;
@@ -30,17 +37,11 @@ const forSearch = {
   select: {
     name: true,
     state: true,
-    dropoffRule: true,
+    maxExtraKm: true,
+    crossLocation: true,
     zones: {
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: zoneFields,
-    },
-    zoneRates: {
-      select: { fromZoneId: true, toZoneId: true, vehicleClassId: true },
-    },
-    offerings: {
-      where: { isActive: true, vehicleClass: { isActive: true } },
-      select: { vehicleClassId: true },
     },
     addresses: { select: { place: true } },
   },
@@ -62,32 +63,45 @@ function searchRowsOf(slug: string) {
   ]);
 }
 
-/**
- * The zones a route on the grid runs to from each zone, either way, for a
- * class the location has on sale: what "only the routes on the grid" lets
- * a trip from it end in.
- */
-function routesOf(rows: SearchRows): Map<string, Set<string>> {
-  const onSale = new Set(rows.offerings.map((o) => o.vehicleClassId));
-  const routes = new Map<string, Set<string>>();
-  const add = (from: string, to: string) => {
-    const set = routes.get(from) ?? new Set<string>();
-    set.add(to);
-    routes.set(from, set);
-  };
-  for (const cell of rows.zoneRates) {
-    if (!onSale.has(cell.vehicleClassId)) continue;
-    add(cell.fromZoneId, cell.toZoneId);
-    add(cell.toZoneId, cell.fromZoneId);
-  }
-  return routes;
+/** The zones of the other public locations: a drop-off in one is theirs, unless a route out reaches it. */
+function otherZones(slug: string) {
+  return db.zone.findMany({
+    where: {
+      location: {
+        slug: { not: slug },
+        state: { in: LOCATION_STATES.filter(isPublicState) },
+      },
+    },
+    select: zoneFields,
+  });
 }
 
+type ShapedZone = ZoneLike & { shape: ZoneShape };
+
 /** The zones with a shape. */
-const zonesOf = (zones: SearchRows["zones"]) =>
+const zonesOf = (zones: SearchRows["zones"]): ShapedZone[] =>
   zones.flatMap((zone) =>
     isZoneShape(zone.shape) ? [{ ...zone, shape: zone.shape }] : [],
   );
+
+/**
+ * Whether a place is in one of the zones, or near enough in a straight
+ * line for its road to reach one within the furthest extra road. No road
+ * is shorter than the straight line, so a place this refuses the quote
+ * would refuse too; one it lets through, the quote judges by road.
+ */
+function withinReach(
+  place: { lat: number; lng: number },
+  zones: readonly ShapedZone[],
+  maxExtraKm: number,
+) {
+  if (zoneAt(zones, place)) return true;
+  return zones.some(
+    (zone) =>
+      distanceToShapeKm([place.lng, place.lat], polygonsOf(zone.shape)) <=
+      maxExtraKm,
+  );
+}
 
 /** The box around the zones' boxes, with the margin; null for none. */
 function boxAround(boxes: readonly BBox[]): BBox | null {
@@ -99,8 +113,7 @@ function searchOf(
   elsewhere: SearchRows["zones"],
 ): LocationSearch {
   const zones = zonesOf(rows.zones);
-  const rule = dropoffRuleOf(rows);
-  const ends = dropoffZonesOf(rule, zones, zonesOf(elsewhere));
+  const ends = reachableZones(rows.crossLocation, zones, zonesOf(elsewhere));
   // Each zone's box once, the district shapes' arithmetic: the pick-up's
   // zones are among the drop-off's.
   const boxes = new Map<string, BBox>();
@@ -111,14 +124,12 @@ function searchOf(
   };
   return {
     pickup: boxAround(zones.map(boxOf)),
-    dropoff: rule === "anywhere" ? null : boxAround(ends.map(boxOf)),
-    dropoffRule: rule,
-    dropoffPlaces:
-      rule === "anywhere"
-        ? []
-        : rows.addresses.flatMap(({ place }) =>
-            isPlace(place) && zoneAt(ends, place) ? [place.placeId] : [],
-          ),
+    dropoff: boxAround(ends.map(boxOf)),
+    dropoffPlaces: rows.addresses.flatMap(({ place }) =>
+      isPlace(place) && withinReach(place, ends, rows.maxExtraKm)
+        ? [place.placeId]
+        : [],
+    ),
   };
 }
 
@@ -137,12 +148,13 @@ export async function getLocationSearch(
 
 /**
  * Whether the places of a trip asked for on the location's pages can be
- * booked there, as the quote will judge them: the pick-up in one of the
- * location's zones, the drop-off where the location's rule lets the trip
- * end, a route out of it included. Null for a slug no location has, and
- * for one the public does not see unless `preview`, for staff. The quote
- * stays the last word: the grid is read for any class on sale here, not
- * the tab's category.
+ * booked there, as far as can be told without a road: the pick-up in one
+ * of the location's zones or near enough to one, the drop-off near enough
+ * to a zone the location's trips may end in, a route out of it included,
+ * and not in another location's zone it does not price to. Null for a
+ * slug no location has, and for one the public does not see unless
+ * `preview`, for staff. The quote stays the last word: it measures by
+ * road, and reads the grid.
  */
 export async function checkTripAt(
   slug: string,
@@ -155,33 +167,24 @@ export async function checkTripAt(
   if (!preview && !isPublicState(locationStateOf(location.state))) return null;
 
   const zones = zonesOf(location.zones);
-  const pickupZone = zoneAt(zones, places.pickup);
   const issues: TripPlaceIssues = {
-    pickup: pickupZone
+    pickup: withinReach(places.pickup, zones, location.maxExtraKm)
       ? null
       : `We do not pick up from ${places.pickup.label} yet. Choose a pick-up in ${location.name}.`,
     dropoff: null,
   };
   if (!places.dropoff) return issues;
 
-  const rule = dropoffRuleOf(location);
-  const zone = zoneAt(
-    dropoffZonesOf(rule, zones, zonesOf(elsewhere)),
-    places.dropoff,
+  const ends = reachableZones(
+    location.crossLocation,
+    zones,
+    zonesOf(elsewhere),
   );
-  if (rule === "grid") {
-    // A pick-up outside every zone is its own reason; the drop-off need
-    // only be in a zone then.
-    const onGrid =
-      zone !== null &&
-      (!pickupZone ||
-        (routesOf(location).get(pickupZone.id)?.has(zone.id) ?? false));
-    if (!onGrid) {
-      issues.dropoff =
-        "We only drive the routes on our price list from that pick-up. Choose another drop-off.";
-    }
-  } else if (!dropoffAllowed(rule, zone !== null)) {
-    issues.dropoff = `We only drop off within ${location.name}. Choose a drop-off there.`;
+  const theirs =
+    !zoneAt(ends, places.dropoff) &&
+    zoneAt(zonesOf(await otherZones(slug)), places.dropoff) !== null;
+  if (theirs || !withinReach(places.dropoff, ends, location.maxExtraKm)) {
+    issues.dropoff = `We do not drive from ${location.name} to ${places.dropoff.label} yet. Choose another drop-off.`;
   }
   return issues;
 }

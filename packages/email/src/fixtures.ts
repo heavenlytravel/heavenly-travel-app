@@ -36,16 +36,12 @@ const kl: Place = {
 
 const at = new Date("2026-10-03T01:30:00Z");
 
-/** The sedan's receipt: 55.2 km metered, and the Camry chosen at 10%. */
+/** The sedan's receipt: the grid's KLIA to Kuala Lumpur, and the Camry chosen at 10%. */
 const sedanPrice = withModelChoice(
   priceTrip({
     trip: { mode: "oneway", distanceKm: 55.2 },
-    rates: {
-      baseFareSen: 3000,
-      perKmSen: 250,
-      hourlyRateSen: 8000,
-      minimumFareSen: 5000,
-    },
+    rates: { perKmSen: 250, hourlyRateSen: 8000 },
+    route: { fromZone: "KLIA", toZone: "Kuala Lumpur", rateSen: 16800 },
   }),
   "Toyota Camry",
   { percent: 10, flatSen: null },
@@ -54,12 +50,7 @@ const sedanPrice = withModelChoice(
 /** The coach's receipt: 8 hours, any coach of the class. */
 const coachPrice = priceTrip({
   trip: { mode: "hourly", hours: 8 },
-  rates: {
-    baseFareSen: 0,
-    perKmSen: 0,
-    hourlyRateSen: 18000,
-    minimumFareSen: 0,
-  },
+  rates: { perKmSen: 0, hourlyRateSen: 18000 },
 });
 
 export function sampleItem(

@@ -1,8 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { memoize } from "./cache";
+import { memoize, ttlStore } from "./cache";
 
 const byFirst = ([key]: [string, ...unknown[]]) => key;
+
+describe("ttlStore", () => {
+  it("keeps a value until it expires, and drops the oldest past the limit", () => {
+    let clock = 0;
+    const store = ttlStore<string>({ ttlMs: 100, max: 2, now: () => clock });
+    store.set("a", "A");
+    assert.equal(store.get("a"), "A");
+    clock = 100;
+    assert.equal(store.get("a"), undefined);
+    store.set("a", "A");
+    store.set("b", "B");
+    store.set("c", "C");
+    assert.equal(store.get("a"), undefined);
+    assert.equal(store.get("c"), "C");
+  });
+});
 
 describe("memoize", () => {
   it("calls once per key until the entry expires", async () => {

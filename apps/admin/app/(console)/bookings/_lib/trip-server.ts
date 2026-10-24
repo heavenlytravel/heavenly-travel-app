@@ -6,6 +6,8 @@ import {
   parseTripOptions,
   parseTripSearch,
   PRICE_OVERRIDE_FIELDS,
+  WEEKEND_REASON_LABELS,
+  chargedKmOf,
   surchargeLabel,
   textOf,
   unavailableReason,
@@ -31,11 +33,14 @@ export async function quoteTripView(
 ): Promise<TripQuoteView> {
   const trip = await resolveTrip(search);
   if (!trip.ok) return { ok: false, error: trip.message };
-  const quoted = await quoteTrip(category, trip.request);
+  const quoted = await quoteTrip(category, trip.request, trip.routing);
   if (!quoted.ok) return { ok: false, error: quoted.error.message };
 
   const { request } = trip;
   const { quote } = quoted;
+  const extraKmCharged = quote.zoneTrip
+    ? chargedKmOf(quote.zoneTrip, quote.location.freeExtraKm)
+    : 0;
   return {
     ok: true,
     category,
@@ -48,11 +53,16 @@ export async function quoteTripView(
       ? `${quote.district.name}, ${quote.district.state.name}`
       : null,
     location: quote.location.name,
-    route:
-      quote.pickupZone && quote.dropoffZone
-        ? `${quote.pickupZone} to ${quote.dropoffZone}`
-        : null,
+    route: quote.dropoff
+      ? quote.pickup.zone === quote.dropoff.zone
+        ? `Within ${quote.pickup.zone}`
+        : `${quote.pickup.zone} to ${quote.dropoff.zone}`
+      : null,
+    extraKm: extraKmCharged || null,
     surcharge: quote.surcharge ? surchargeLabel(quote.surcharge) : null,
+    weekend: quote.weekend
+      ? `${WEEKEND_REASON_LABELS[quote.weekend.reason].toLowerCase()} ${surchargeLabel(quote.weekend.charge)}`
+      : null,
     classes: quote.classes.map((c) => ({
       id: c.vehicleClass.id,
       name: c.vehicleClass.name,
@@ -61,7 +71,7 @@ export async function quoteTripView(
       maxPassengers: c.vehicleClass.maxPassengers,
       imageUrl: c.offering.coverUrl,
       models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
-      totalSen: c.price.totalSen,
+      totalSen: c.price?.totalSen ?? null,
       modelChoiceSen: c.modelChoice?.amountSen ?? null,
       unavailable: unavailableReason(c.availability),
     })),
@@ -100,10 +110,11 @@ export async function prepareFormItem(
 
   const trip = await resolveTrip(search);
   if (!trip.ok) return { ok: false, error: trip.message };
-  const prepared = await prepareTripItem(category, {
-    ...trip.request,
-    ...options,
-  });
+  const prepared = await prepareTripItem(
+    category,
+    { ...trip.request, ...options },
+    trip.routing,
+  );
   if (!prepared.ok) return { ok: false, error: prepared.error.message };
   return { ok: true, item: prepared.item, override: override.value };
 }

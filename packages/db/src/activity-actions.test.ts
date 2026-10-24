@@ -145,7 +145,7 @@ describe("describeActivity", () => {
         before: { baseFareSen: 3000, perKmSen: 180, minLeadHours: 4 },
         after: { baseFareSen: 3500, perKmSen: 200, minLeadHours: 6 },
       }),
-      "Changed the base fare, the per km and the notice needed",
+      "Changed the base fare, the rate per extra km and the notice needed",
     );
     assert.equal(
       describeActivity({

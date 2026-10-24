@@ -6,7 +6,9 @@ import { Frame } from "./Card";
  * The console's one table style: small text, a shaded heading row and
  * hairlines between rows, in a frame of its own when it stands alone.
  * `bare` is for a table inside a `flush` card: no frame, a hairline over
- * it, the card's edges for its own. Pages supply the cells.
+ * it, the card's edges for its own. Pages supply the cells. The scroller
+ * is positioned so an `sr-only` heading scrolls with the table instead
+ * of widening the page.
  */
 export function Table({
   bare = false,
@@ -17,11 +19,11 @@ export function Table({
 }) {
   const table = <table className="w-full text-left text-sm">{children}</table>;
   return bare ? (
-    <div className="min-w-0 overflow-x-auto rounded-b-xl border-t border-slate-200 [&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_th:first-child]:pl-6 [&_th:last-child]:pr-6">
+    <div className="relative min-w-0 overflow-x-auto rounded-b-xl border-t border-slate-200 [&_td:first-child]:pl-6 [&_td:last-child]:pr-6 [&_th:first-child]:pl-6 [&_th:last-child]:pr-6">
       {table}
     </div>
   ) : (
-    <Frame className="overflow-x-auto">{table}</Frame>
+    <Frame className="relative overflow-x-auto">{table}</Frame>
   );
 }
 

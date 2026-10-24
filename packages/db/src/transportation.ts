@@ -3,6 +3,7 @@ import {
   classAvailability,
   fitsPassengers,
   isWithinHorizon,
+  localDateTimeInputs,
   localMinuteOfDay,
   type ClassAvailability,
 } from "./booking-rules";
@@ -13,7 +14,7 @@ import {
 } from "./booking-status";
 import type { PreparedItem } from "./bookings";
 import {
-  locationAt,
+  listQuoteLocations,
   resolveDistrict,
   type DistrictWithState,
 } from "./coverage";
@@ -25,19 +26,19 @@ import {
   priceTrip,
   withModelChoice,
   type PricingBasis,
-  type RouteRate,
   type TripPriceBreakdown,
+  type WeekendReason,
 } from "./pricing";
 import {
-  dropoffAllowed,
-  dropoffZonesOf,
-  dropoffRuleOf,
+  TRIP_REACH_LIMITS,
   isInOddHours,
-  oddHoursOf,
+  weekendReason,
   type SurchargeCharge,
 } from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
-import { routeRateOf, zoneAt } from "./zone-match";
+import { routeRateOf } from "./zone-match";
+import { placeTrip, type TripRouting, type TripTrace } from "./zone-quote";
+import type { NearestZone, ZoneTripMeasure } from "./zone-trip";
 import {
   choosableModel,
   modelChoiceQuote,
@@ -46,14 +47,15 @@ import {
 
 /**
  * The transportation product, car with driver and coach charter alike: what
- * a customer asks for, what it costs, and how it becomes a booking item. The
- * zone the pickup falls in names the location, and the location's
- * offerings, zones and rates price the trip, wherever the drop-off is. The
- * category only
- * decides which offerings are priced. Everything product-specific lives
- * here; the booking core in bookings.ts only sees a `PreparedItem`. See
- * docs/260928-coach-charter.md and
- * docs/261015-locations-as-operation-areas.md.
+ * a customer asks for, what it costs, and how it becomes a booking item.
+ * The pickup names the location, by the zone it falls in or its nearest
+ * zone by road, and the location's offerings, zones and rates price the
+ * trip: one cell of its grid, plus the road past a zone's edge
+ * (./zone-quote, ./zone-trip). The category only decides which offerings
+ * are priced. Everything product-specific lives here; the booking core in
+ * bookings.ts only sees a `PreparedItem`. See docs/260928-coach-charter.md,
+ * docs/261015-locations-as-operation-areas.md and
+ * docs/261023-nearest-zone-pricing.md.
  */
 
 export type TripRequest = {
@@ -64,8 +66,6 @@ export type TripRequest = {
   startsAt: Date;
   /** Hourly only. */
   hours: number | null;
-  /** One-way only; null when the places provider cannot route. */
-  distanceKm: number | null;
 };
 
 export type TripItemRequest = TripRequest & {
@@ -92,51 +92,87 @@ export type TripQuoteErrorCode =
   | "passengers"
   | "model-unavailable";
 
-export type TripQuoteError = { code: TripQuoteErrorCode; message: string };
-
-/** What choosing a model of a class adds to a trip: the location's charge, and its amount for the trip. */
+export type TripQuoteError = {
+  code: TripQuoteErrorCode;
+  /** For the customer. */
+  message: string;
+  /** Why, in Ops' words, where the customer's message does not say: for Try a trip. */
+  reason?: string;
+};
 
 export type ClassQuote = {
   /** The catalogue class: its name, seats, luggage, and the models of the location's vehicles in service. */
   vehicleClass: OfferingOnSale["vehicleClass"];
   /** The location's offering of it: the rates and the rules. */
   offering: OfferingOnSale;
-  /** With any model of the class. */
-  price: TripPriceBreakdown;
+  /** With any model of the class; null when the grid has no price for it on this trip. */
+  price: TripPriceBreakdown | null;
   /**
    * What choosing one of the models adds; null when the customer cannot
    * choose: the location sets no charge for it, or has fewer than two
-   * models of the class.
+   * models of the class, or the class is not offered on this trip.
    */
   modelChoice: ModelChoiceQuote | null;
   /** Whether the offering's rules accept this trip. */
   availability: ClassAvailability;
 };
 
-/** The location that priced a quote, as the screens name it. */
-export type QuotedLocation = { id: string; name: string; slug: string };
+/** The location that priced a quote, as the screens name it, with its extra road settings. */
+export type QuotedLocation = {
+  id: string;
+  name: string;
+  slug: string;
+  freeExtraKm: number;
+  maxExtraKm: number;
+};
+
+/** An end of a quoted trip: its zone, and the road to it when it is outside every zone. */
+export type QuotedEnd = {
+  zone: string;
+  nearest: Omit<NearestZone, "zoneId"> | null;
+};
 
 export type TripQuote = {
   category: TripCategory;
   /** The district the pickup is in, for the record; null at sea. */
   district: DistrictWithState | null;
-  /** The location whose rates priced the trip: the one whose zone the pickup is in. */
+  /** The location whose rates priced the trip: the one the pickup's zone is. */
   location: QuotedLocation;
   basis: PricingBasis;
-  /** The zone the pickup is in, by name, and the drop-off's; null outside every zone. */
-  pickupZone: string;
-  dropoffZone: string | null;
+  pickup: QuotedEnd;
+  /** Null for hourly hire. */
+  dropoff: QuotedEnd | null;
+  /** What a trip with an end outside every zone measured; null otherwise. */
+  zoneTrip: ZoneTripMeasure | null;
   /** The odd-hours surcharge that applies to this pickup time; null when none. */
   surcharge: SurchargeCharge | null;
+  /** The weekend and holiday surcharge that applies to this pickup's day, and why; null when none. */
+  weekend: { charge: SurchargeCharge; reason: WeekendReason } | null;
   classes: ClassQuote[];
 };
 
 export type TripQuoteResult =
   { ok: true; quote: TripQuote } | { ok: false; error: TripQuoteError };
 
-const fail = (code: TripQuoteErrorCode, message: string) => ({
+/** How a quote is asked for beyond the trip. */
+export type QuoteOptions = {
+  now?: Date;
+  /** Try a trip: the pickup's location, pinned to the tab's, public or not. */
+  locationId?: string;
+  /** Records every step of the quote, for Try a trip. */
+  trace?: TripTrace;
+  /**
+   * Try a trip: no limits, so a trip can be priced to see how. Any day,
+   * however far ahead, and an end as far past its zone as any location
+   * may let it be. The quote's location still says its own furthest extra
+   * road, so the screen can say a customer would be refused.
+   */
+  unlimited?: boolean;
+};
+
+const fail = (code: TripQuoteErrorCode, message: string, reason?: string) => ({
   ok: false as const,
-  error: { code, message },
+  error: reason === undefined ? { code, message } : { code, message, reason },
 });
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -146,125 +182,145 @@ const HOUR_MS = 60 * 60 * 1000;
  * trip, each with its availability, or the reason the trip cannot be
  * booked at all. The options page shows the result; `prepareTripItem`
  * reuses it so a booking is never created from a trip the options page
- * would have refused.
+ * would have refused. `routing` reaches the roads (@repo/places binds
+ * Google's, the tests a fake).
  */
 export async function quoteTrip(
   category: TripCategory,
   request: TripRequest,
-  now: Date = new Date(),
+  routing: TripRouting,
+  { now = new Date(), locationId, trace, unlimited = false }: QuoteOptions = {},
 ): Promise<TripQuoteResult> {
-  // The district is the record's: read alongside the location.
-  const [served, district] = await Promise.all([
-    locationAt(request.pickup),
-    resolveDistrict(request.pickup),
-  ]);
-  if (!served) {
-    return fail("not-served", "We do not serve that pickup area yet.");
-  }
-  const { location, zone: pickupZone } = served;
-
-  if (!isWithinHorizon(request.startsAt, now)) {
+  if (!unlimited && !isWithinHorizon(request.startsAt, now)) {
     return fail(
       "too-far",
       "That pickup is too far ahead. Choose an earlier date.",
     );
   }
 
-  let basis: PricingBasis;
+  let hours: number | null = null;
   if (request.mode === "oneway") {
     if (!request.dropoff) {
       return fail("dropoff-required", "Choose a drop-off for a one-way trip.");
     }
-    if (request.distanceKm === null) {
-      return fail(
-        "distance-unavailable",
-        "We cannot price that route right now. Try again later.",
-      );
-    }
-    basis = { mode: "oneway", distanceKm: request.distanceKm };
   } else {
-    const hours = request.hours ?? 0;
+    hours = request.hours ?? 0;
     if (!checkHours(hours).ok) {
       return fail("hours", "Choose how many hours you need the driver for.");
     }
-    basis = { mode: "hourly", hours };
   }
+
+  // The district is the record's: read alongside the locations.
+  const [loaded, district] = await Promise.all([
+    listQuoteLocations(locationId),
+    resolveDistrict(request.pickup),
+  ]);
+  const locations = unlimited
+    ? loaded.map((location) => ({
+        ...location,
+        maxExtraKm: TRIP_REACH_LIMITS.maxExtraKm.max,
+      }))
+    : loaded;
+  const pinned = locationId
+    ? (locations.find((location) => location.id === locationId) ?? null)
+    : null;
+  if (locationId && !pinned) {
+    return fail("not-served", "That location was deleted meanwhile.");
+  }
+  const placed = await placeTrip(
+    locations,
+    {
+      pickup: request.pickup,
+      dropoff: request.mode === "oneway" ? request.dropoff : null,
+    },
+    routing,
+    { pinned, trace },
+  );
+  if (!placed.ok) {
+    return fail(placed.error.code, placed.error.message, placed.error.reason);
+  }
+  const { location, pickup, dropoff } = placed;
+  const basis: PricingBasis =
+    hours === null
+      ? { mode: "oneway", distanceKm: placed.distanceKm ?? 0 }
+      : { mode: "hourly", hours };
 
   const offerings = await listActiveOfferings(location.id, category);
-
-  // The drop-off rule: where a one-way trip may end. The pickup is in a
-  // zone already, whatever the rule; hourly hire has no drop-off. A route
-  // out of the location ends in another location's zone.
-  const rule = dropoffRuleOf(location);
-  const dropoff = basis.mode === "oneway" ? request.dropoff : null;
-  const dropoffZone = dropoff
-    ? zoneAt(
-        dropoffZonesOf(rule, location.zones, location.zonesElsewhere),
-        dropoff,
-      )
-    : null;
-  if (dropoff && !dropoffAllowed(rule, dropoffZone !== null)) {
-    return rule === "grid"
-      ? fail(
-          "route-not-served",
-          `We only serve the routes on our price list from that pickup.`,
-        )
-      : fail(
-          "dropoff-outside",
-          `We only serve drop-offs within ${location.name} from that pickup.`,
-        );
-  }
   const cellOf = (vehicleClassId: string) =>
-    dropoffZone
+    dropoff
       ? routeRateOf(
           location.zoneRates,
-          pickupZone.id,
-          dropoffZone.id,
+          pickup.zone.id,
+          dropoff.zone.id,
           vehicleClassId,
         )
       : null;
-  // Under "grid" the route itself must be priced, for some class: a route
-  // with no cell at all is not on the price list.
+  // A one-way trip is one cell of the grid: with no cell for any class,
+  // the trip has no price yet.
   if (
     dropoff &&
-    rule === "grid" &&
+    offerings.length > 0 &&
     !offerings.some((offering) => cellOf(offering.vehicleClass.id))
   ) {
     return fail(
       "route-not-served",
-      `We only serve the routes on our price list from that pickup.`,
+      "We do not have a price for that trip yet. Message us on WhatsApp.",
+      `the grid has no price from ${pickup.zone.name} to ${dropoff.zone.name}`,
     );
   }
-  const window = oddHoursOf(location);
+
+  const window = location.oddHours;
   const surcharge: SurchargeCharge | null =
     window && isInOddHours(window, localMinuteOfDay(request.startsAt))
       ? window.percent !== null
         ? { percent: window.percent, flatSen: null }
         : { percent: null, flatSen: window.flatSen }
       : null;
+  const weekendWhy = location.weekend
+    ? weekendReason(
+        location.weekend,
+        localDateTimeInputs(request.startsAt).date,
+      )
+    : null;
+  const weekend =
+    location.weekend && weekendWhy
+      ? {
+          charge:
+            location.weekend.percent !== null
+              ? { percent: location.weekend.percent, flatSen: null }
+              : { percent: null, flatSen: location.weekend.flatSen },
+          reason: weekendWhy,
+        }
+      : null;
 
-  const hours = basis.mode === "hourly" ? basis.hours : null;
-  const classes = offerings.map((offering) => {
+  const classes = offerings.map((offering): ClassQuote => {
     const { vehicleClass } = offering;
     const cell = cellOf(vehicleClass.id);
-    const route: RouteRate | null =
-      cell && dropoffZone
-        ? {
-            fromZone: pickupZone.name,
-            toZone: dropoffZone.name,
-            rateSen: cell.priceSen,
-          }
-        : null;
-    // Under "grid" a class with no price on the route is not offered on it.
-    const availability: ClassAvailability =
-      dropoff && rule === "grid" && !cell
-        ? { ok: false, reason: "not-on-route" }
-        : classAvailability(
-            offering,
-            { startsAt: request.startsAt, hours },
-            now,
-          );
-    const price = priceTrip({ trip: basis, rates: offering, route, surcharge });
+    if (dropoff && !cell) {
+      return {
+        vehicleClass,
+        offering,
+        price: null,
+        modelChoice: null,
+        availability: { ok: false, reason: "not-on-route" },
+      };
+    }
+    const price = priceTrip({
+      trip: basis,
+      rates: offering,
+      route:
+        cell && dropoff
+          ? {
+              fromZone: pickup.zone.name,
+              toZone: dropoff.zone.name,
+              rateSen: cell.priceSen,
+            }
+          : null,
+      zoneTrip: placed.measure,
+      freeExtraKm: location.freeExtraKm,
+      surcharge,
+      weekend,
+    });
     return {
       vehicleClass,
       offering,
@@ -274,10 +330,20 @@ export async function quoteTrip(
         vehicleClass.models.length,
         price.subtotalSen,
       ),
-      availability,
+      availability: classAvailability(
+        offering,
+        { startsAt: request.startsAt, hours },
+        now,
+      ),
     };
   });
 
+  const endOf = (end: typeof pickup): QuotedEnd => ({
+    zone: end.zone.name,
+    nearest: end.nearest
+      ? { extraKm: end.nearest.extraKm, entry: end.nearest.entry }
+      : null,
+  });
   return {
     ok: true,
     quote: {
@@ -287,11 +353,18 @@ export async function quoteTrip(
         id: location.id,
         name: location.name,
         slug: location.slug,
+        freeExtraKm: location.freeExtraKm,
+        // The location's own, even when the quote was unlimited.
+        maxExtraKm:
+          loaded.find((l) => l.id === location.id)?.maxExtraKm ??
+          location.maxExtraKm,
       },
       basis,
-      pickupZone: pickupZone.name,
-      dropoffZone: dropoffZone?.name ?? null,
+      pickup: endOf(pickup),
+      dropoff: dropoff ? endOf(dropoff) : null,
+      zoneTrip: placed.measure,
       surcharge,
+      weekend,
       classes,
     },
   };
@@ -320,9 +393,10 @@ export type PrepareTripItemResult =
 export async function prepareTripItem(
   category: TripCategory,
   request: TripItemRequest,
+  routing: TripRouting,
   now: Date = new Date(),
 ): Promise<PrepareTripItemResult> {
-  const quoted = await quoteTrip(category, request, now);
+  const quoted = await quoteTrip(category, request, routing, { now });
   if (!quoted.ok) return quoted;
   const { district, location, basis, classes } = quoted.quote;
 
@@ -351,9 +425,15 @@ export async function prepareTripItem(
       case "not-on-route":
         return fail(
           "route-not-served",
-          `${vehicleClass.name} is not offered on that route.`,
+          `${vehicleClass.name} is not offered on that trip.`,
         );
     }
+  }
+  if (!chosen.price) {
+    return fail(
+      "route-not-served",
+      `${vehicleClass.name} is not offered on that trip.`,
+    );
   }
   if (!fitsPassengers(vehicleClass, request.passengers)) {
     return fail(

@@ -429,17 +429,24 @@ export function scopeSwitchHref(
     : locationHref(to.slug);
 }
 
-/** The ids of the Rates tab's cards, and the link that lands on each. */
+/** The ids of the Rates tab's cards, in their order, and the link that lands on each. */
 export const RATES_PARTS = {
   classes: "class-rates",
   grid: "rate-grid",
   rules: "trip-rules",
   tryTrip: "try-a-trip",
 } as const;
-export function locationRatesPartHref(
-  slug: string,
-  part: keyof typeof RATES_PARTS,
-) {
+export type RatesPart = keyof typeof RATES_PARTS;
+
+/** Each card's name: its title, its jump under the tab's header, its line in the search. */
+export const RATES_PART_LABELS: Record<RatesPart, string> = {
+  classes: "Rates and rules",
+  grid: "Rate grid",
+  rules: "Trip rules",
+  tryTrip: "Try a trip",
+};
+
+export function locationRatesPartHref(slug: string, part: RatesPart) {
   return `${locationTabHref(slug, "rates")}#${RATES_PARTS[part]}`;
 }
 

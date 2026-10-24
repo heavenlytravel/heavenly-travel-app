@@ -15,6 +15,7 @@ import { LocationStateBadge } from "../../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/location-filter";
 import {
+  RATES_PART_LABELS,
   locationRatesPartHref,
   locationTabHref,
   ratesHref,
@@ -132,7 +133,7 @@ function LocationRates({
           description="The rate per extra km and per hour each class is sold at, and the rules every booking of it keeps to."
           action={editLink(locationRatesPartHref(list.slug, "classes"))}
         >
-          Rates and rules
+          {RATES_PART_LABELS.classes}
         </CardTitle>
         <ClassRates offerings={list.offerings} />
       </Card>
@@ -143,7 +144,7 @@ function LocationRates({
           description="Prices in RM for the whole vehicle, one row per pair of zones and one per zone for a trip within it, read both ways."
           action={editLink(locationRatesPartHref(list.slug, "grid"))}
         >
-          Rate grid
+          {RATES_PART_LABELS.grid}
         </CardTitle>
         <RateGrid
           locationId={list.id}
@@ -174,7 +175,7 @@ function LocationRates({
 
       <Card>
         <CardTitle action={editLink(locationRatesPartHref(list.slug, "rules"))}>
-          Trip rules
+          {RATES_PART_LABELS.rules}
         </CardTitle>
         <TripRulesList rules={tripRulesOf(list)} locationName={list.name} />
       </Card>

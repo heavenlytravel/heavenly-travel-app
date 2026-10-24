@@ -15,8 +15,10 @@ import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   RATES_PARTS,
+  RATES_PART_LABELS,
   locationOfferingHref,
   locationTabHref,
+  type RatesPart,
 } from "../../../../_lib/routes";
 import {
   locationDetails,
@@ -31,12 +33,7 @@ import { TripRulesList } from "./TripRulesList";
 import { TryTrip } from "./try-trip/TryTrip";
 
 /** The tab's four parts, in their order, for the jumps under its header. */
-const PARTS: readonly { part: keyof typeof RATES_PARTS; label: string }[] = [
-  { part: "classes", label: "Rates and rules" },
-  { part: "grid", label: "Rate grid" },
-  { part: "rules", label: "Trip rules" },
-  { part: "tryTrip", label: "Try a trip" },
-];
+const PARTS = Object.keys(RATES_PARTS) as RatesPart[];
 
 /**
  * Route: /locations/[slug]/rates. Operation's tab, beside the setup: what
@@ -71,13 +68,13 @@ export default async function LocationRatesPage({
         aria-label="Parts of the rates"
         className="mt-4 flex flex-wrap gap-2"
       >
-        {PARTS.map(({ part, label }) => (
+        {PARTS.map((part) => (
           <a
             key={part}
             href={`#${RATES_PARTS[part]}`}
             className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
           >
-            {label}
+            {RATES_PART_LABELS[part]}
           </a>
         ))}
       </nav>
@@ -147,7 +144,7 @@ async function rates({
             ) : null
           }
         >
-          Rates and rules
+          {RATES_PART_LABELS.classes}
         </CardTitle>
         <ClassRates
           offerings={offerings}
@@ -175,7 +172,7 @@ async function rates({
           }
         >
           <span className="inline-flex items-center gap-1.5">
-            Rate grid
+            {RATES_PART_LABELS.grid}
             <InfoTip text="The rows are the routes between the zones drawn on the Coverage tab, and within each; the columns are the classes on sale on the Vehicle classes tab. A route is read both ways: Airport to Town prices Town to Airport too." />
           </span>
         </CardTitle>
@@ -204,7 +201,7 @@ async function rates({
         <CardTitle
           description={`How far past a zone ${location.name} serves an address, and what is added to a trip's price.`}
         >
-          Trip rules
+          {RATES_PART_LABELS.rules}
         </CardTitle>
         {manages ? (
           <TripRulesForm
@@ -224,7 +221,7 @@ async function rates({
           inset
           description="Price a trip as a customer would be charged, and see how: each end's zone, the distances, and every call to Google. Nothing is booked or saved."
         >
-          Try a trip
+          {RATES_PART_LABELS.tryTrip}
         </CardTitle>
         <TryTrip
           locationId={id}

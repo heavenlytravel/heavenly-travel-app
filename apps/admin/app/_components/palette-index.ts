@@ -7,13 +7,16 @@ import {
   NEW_BOOKING_PATH,
   NEW_LOCATION_PATH,
   NEW_VEHICLE_CLASS_PATH,
+  RATES_PART_LABELS,
   locationHref,
+  locationRatesPartHref,
   locationTabHref,
   locationTabsMayOpen,
   newDriverHref,
   newLocationOfferingHref,
   newLocationZoneHref,
   newVehicleHref,
+  type RatesPart,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
 import type { MenuIcon } from "./menu";
@@ -63,6 +66,16 @@ const PAGE_WORDS: Partial<Record<MenuIcon, string>> = {
   media: "images uploads",
 };
 
+/**
+ * The parts of a location's Rates found by their own names, beside the
+ * tab: the trip rules and Try a trip, which staff look for by name. The
+ * class rates and the grid are what the tab itself is found by.
+ */
+const RATES_PARTS_FOUND: Partial<Record<RatesPart, string>> = {
+  rules: "surcharge odd hours weekend holiday extra km cross-location",
+  tryTrip: "quote price check",
+};
+
 /** The console's pages, actions and locations an admin with these permissions may open. */
 export function paletteIndex({
   permissions,
@@ -85,14 +98,25 @@ export function paletteIndex({
     ),
   );
   const tabsOf = (location: SidebarLocation): PaletteEntry[] =>
-    locationTabsMayOpen(locationStateOf(location.state), permissions).map(
-      (tab) => ({
-        href: locationTabHref(location.slug, tab.key),
-        title: tab.label,
-        meta: location.name,
-        icon: tab.key,
-        words: PAGE_WORDS[tab.key],
-      }),
+    locationTabsMayOpen(locationStateOf(location.state), permissions).flatMap(
+      (tab) => [
+        {
+          href: locationTabHref(location.slug, tab.key),
+          title: tab.label,
+          meta: location.name,
+          icon: tab.key,
+          words: PAGE_WORDS[tab.key],
+        },
+        ...(tab.key === "rates"
+          ? (Object.keys(RATES_PARTS_FOUND) as RatesPart[]).map((part) => ({
+              href: locationRatesPartHref(location.slug, part),
+              title: RATES_PART_LABELS[part],
+              meta: location.name,
+              icon: tab.key,
+              words: RATES_PARTS_FOUND[part],
+            }))
+          : []),
+      ],
     );
 
   const actions: PaletteEntry[] = [

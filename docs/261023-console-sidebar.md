@@ -89,13 +89,16 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 
 Decided on 2026-10-25, once a review found that the rail reached only a drill's first page:
 with the sidebar collapsed, nothing led to Drivers, Vehicle classes, Admins, Activity, Media
-or a location's History. Two ways were drawn and both liked; the first is built.
+or a location's History. Three ways were drawn: the first is built, the second kept for later
+and the third declined.
 
 - **Built: each page its own icon.** Collapsed to a rail, Fleet and Settings, in either
   scope, lay their pages out as icons of their own, together on a tint, so each is one
   click away, as every page was on the rail before the drills. The rail shows no Fleet or
   Settings icon: each page's tooltip names it under the drill, as "Fleet / Vehicle
-  classes", with its line where it has one ("Fleet / Vehicles: 3 vehicles in service").
+  classes".
+- A tooltip in the sidebar is the name alone, on every row (2026-10-25): where a section
+  stands is on its page. A count's pill is read out in words ("3 awaiting confirmation").
   The icons are the drill's own, so the rail and the open drill show the same three. A
   location's Pages stays one icon: its pages are its editors, all reached from All pages.
 - **Kept for later: a list beside the rail.** The rail stays one icon per section, and a
@@ -103,6 +106,11 @@ or a location's History. Two ways were drawn and both liked; the first is built.
   the drill: a shorter rail for two clicks. Worth taking up if the rail grows too long,
   say once BL-42's settings join All locations' Settings. `@repo/ui`'s `Menu`, opened to
   the right, would draw it.
+- **Declined: the section opening in place.** Fleet's icon, with a chevron, unfolds its
+  pages under it on the rail; they stay while a page of Fleet is on screen and fold away
+  once another section opens. Small to build (the drill's open and Back state, drawn
+  under the icon), but every icon below it moves as it opens and folds, the fault this
+  sidebar was redone to remove, and Drivers is two clicks from elsewhere.
 
 ### A location's settings
 

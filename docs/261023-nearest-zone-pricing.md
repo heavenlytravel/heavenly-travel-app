@@ -562,8 +562,12 @@ Asked by the user after the first review on staging:
   other locations' zones, by location. The separate "Add a route to another location"
   button is gone, which changes the decision "routes out are added from their own
   button".
-- **Try a trip opens in full screen**: the trip's settings along the top, the map on
-  the left, the price and the calculation on the right; stacked on a phone. The class
+- **Try a trip on the Rates tab, full screen if wanted**: the trip's settings along
+  the top, the map on the left, the price and the calculation on the right. A button
+  over the map puts all three in the browser's full screen, as the zone maker does;
+  there is none where the browser cannot (an iPhone). Below a wide screen the parts
+  stack, a tap on a road says what it measures, and picking a calculation line brings
+  the map back into view. The class
   starts on Sedan and the day on tomorrow, any day can be picked, and an end may be as
   far as 100 km past its zone: a try is not held to a booking's limits. What a customer
   would meet instead (sent to WhatsApp, too far ahead, the class's booking rules) is

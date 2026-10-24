@@ -272,7 +272,7 @@ export type BookingFilter = {
   status?: BookingStatus;
   locationId?: string;
   pickupOn?: Date;
-  /** As `searchTermOf` reads it: part of the reference, or of the customer's name, phone or email. */
+  /** As `searchTermOf` reads it: the id, part of the reference, or of the customer's name, phone or email. */
   search?: string;
 };
 
@@ -293,6 +293,8 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   if (filter.search) {
     const phone = phoneDigitsOf(filter.search);
     where.OR = [
+      // A booking id pasted whole, from a log or a link.
+      { id: filter.search },
       { reference: { contains: filter.search.toUpperCase() } },
       { contactName: { contains: filter.search, mode: "insensitive" } },
       { contactEmail: { contains: filter.search, mode: "insensitive" } },

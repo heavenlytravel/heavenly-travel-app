@@ -44,7 +44,7 @@ const NOT_FOUND: Change = refuse(
 );
 
 /** Where a driver matches a search: their name or their phone. */
-function driverSearchWhere(search: string): Prisma.DriverWhereInput {
+export function driverSearchWhere(search: string): Prisma.DriverWhereInput {
   const phone = phoneDigitsOf(search);
   return {
     OR: [

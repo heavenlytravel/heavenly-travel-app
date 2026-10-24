@@ -73,6 +73,9 @@ the sidebar as it was.
 
 ### Booking search
 
+Replaced on 2026-10-25 by the console's search, the command palette of
+`261023-console-sidebar.md`, which finds bookings the same way among everything else.
+
 - Finds a booking by part of its reference, or of the customer's name, phone or email,
   the Bookings list's own search, across every location whatever the picker is on: a
   caller's booking is found from anywhere.

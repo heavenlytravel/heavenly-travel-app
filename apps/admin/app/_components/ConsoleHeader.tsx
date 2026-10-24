@@ -15,7 +15,7 @@ import {
   locationTabOf,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
-import { BookingSearch } from "./BookingSearch";
+import { ConsoleSearch } from "./ConsoleSearch";
 import { sectionOnScreen } from "./nav";
 import { ScopePicker } from "./ScopePicker";
 
@@ -37,8 +37,9 @@ function sectionOf(pathname: string): { label: string; href: string } | null {
  * The bar above every console page. On the left the sidebar's toggle,
  * the location picker, which sets the scope the sidebar lists, and the
  * section on screen: "Langkawi / Rates", a link back to the section from
- * a record inside it. On the right the search for a booking, for an
- * admin who may open the bookings, and the signed-in admin's own menu.
+ * a record inside it. On the right the search, which opens the command
+ * palette over every page and record the admin may open, and the
+ * signed-in admin's own menu.
  * See docs/261022-console-scope.md and docs/261023-console-sidebar.md.
  */
 export function ConsoleHeader({
@@ -86,7 +87,7 @@ export function ConsoleHeader({
         </nav>
       ) : null}
       <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 pl-2">
-        {permissions.includes("bookings.view") ? <BookingSearch /> : null}
+        <ConsoleSearch locations={locations} permissions={permissions} />
         {/* The box holds the button's place while Clerk loads, so the bar does not shift. */}
         <span className="flex size-7 shrink-0 items-center justify-center">
           <UserButton appearance={clerkUserButton} />

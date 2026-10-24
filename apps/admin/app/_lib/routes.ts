@@ -106,8 +106,8 @@ export function bookingHref(id: string, slug?: string) {
     : `${BOOKINGS_PATH}/${id}`;
 }
 
-/** Where the console header's search asks for the bookings that match. */
-export const BOOKING_SEARCH_PATH = "/api/bookings/search";
+/** Where the console's search asks for the records that match: bookings, vehicles, drivers, users, classes and zones. */
+export const SEARCH_PATH = "/api/search";
 
 /** Where staff enter a booking that arrived by phone, WhatsApp or email. */
 export const NEW_BOOKING_PATH = `${BOOKINGS_PATH}/new`;

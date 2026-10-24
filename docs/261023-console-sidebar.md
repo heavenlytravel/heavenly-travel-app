@@ -99,6 +99,33 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 - The picker keeps the section across the two scopes as before, and a location's Pages
   and the home page are now one section in it.
 
+### Search
+
+Added on 2026-10-25, after shadcn's command menu, with no AI: the box in the top bar, or
+Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over the page.
+
+- Before anything is typed it lists the pages of the scope on screen and what the admin
+  may add.
+- As they type it finds, in groups in this order: Pages (across locations and each
+  location's, "Rates · Langkawi"), Actions (New booking, Add vehicle, driver, class or
+  location, and for each location Add zone and Put a class on sale), Locations, then
+  Bookings, Vehicles, Drivers, Users, Vehicle classes and Zones. A group shows only when
+  something in it matches, and only to an admin who may open it. "abd" can list a
+  booking and a plate together.
+- Pages, actions and locations are found in the browser, out of what the console
+  already holds, at the first key. Records are asked of the server from two letters, a
+  moment after the typing rests, cancelled when it changes: each kind matched as its own
+  list matches it, or by its id pasted whole, five at most, all kinds at once. Each
+  opens inside its location, where it lives.
+- A search that takes longer than 150 ms shows a spinner in the box and "Searching…"
+  under the rows; a quick one shows neither, so nothing flickers. Enter opens the row
+  marked, the first unless the arrows moved it.
+- Not searched: Activity, a log rather than records to open, and Media, whose file names
+  nobody searches by. Admins are found among Users.
+- Cost: plain `contains` queries on our own database, a handful per pause in the typing,
+  each capped; no outside service. Trigram indexes (`pg_trgm`) are the remedy if one
+  grows slow.
+
 ### Still open
 
 - Where a location's classes on sale belong for good: in Rates, whose fields they are but
@@ -127,6 +154,12 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 - The console's layout draws no sidebar or header for someone who is not an admin. The only
   page they reach under it is a page not found, which now includes any path the catch-all
   takes; this way not even the picker's location names reach them.
+- Search: `_components/ConsoleSearch.tsx` (the palette in the header),
+  `_components/palette-index.ts` (pages, actions and locations), `GET /api/search`
+  (`_lib/console-search.ts` for its answer) over `findBookingMatches` and the finders of
+  `@repo/db`'s `console-search.ts`; `@repo/ui`'s `command-palette` (cmdk in a native
+  `<dialog>`). The booking search, its route and `@repo/ui`'s `search-menu` go.
+- `@repo/ui`'s `Sheet` slides from its edge (`.ui-sheet` in its styles).
 - `@repo/ui` gains `SettingsIcon`, `CarFrontIcon` (Fleet), `ActivityIcon`,
   `SlidersHorizontalIcon` (General) and `FilesIcon` (All pages).
 

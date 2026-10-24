@@ -86,10 +86,10 @@ function Keys({ children }: { children: ReactNode }) {
  * dialog): a box on top, its text ready to type, and under it the rows
  * that match in groups under their headings. The arrows walk the rows
  * across the groups, Enter or a click chooses one, Escape closes, as the
- * Esc at the box's end says; on a phone, with no Escape, that is a close
- * button. Ctrl or Cmd + K opens it from anywhere on the page, and again
- * closes it. The caller owns the text and the rows, and filters them
- * itself; `pending` says a search is on its way, shown as a spinner once
+ * Esc at the box's end says; on a phone, with no Escape, the `dock`
+ * closes it, or a close button there. Ctrl or Cmd + K opens it from
+ * anywhere on the page, and again closes it. The caller owns the text and
+ * the rows, and filters them itself; `pending` says a search is on its way, shown as a spinner once
  * it takes a moment, and `status` is a line under the rows: "Searching…",
  * "No results". From `md` up it is a box high on the page; on a phone it
  * takes the room the sidebar's panel does. It fades in and rises a little
@@ -107,6 +107,7 @@ export function CommandPalette({
   pending = false,
   status,
   onChoose,
+  dock,
 }: {
   /** The palette's name for screen readers: "Search the console". */
   label: string;
@@ -119,6 +120,12 @@ export function CommandPalette({
   pending?: boolean;
   status?: ReactNode;
   onChoose: (value: string) => void;
+  /**
+   * The bar floating at a phone's foot that opened it, drawn over it too,
+   * holding the way to close it there (`SidebarDock`). Without one a
+   * phone has a close button at the box's end.
+   */
+  dock?: ReactNode;
 }) {
   const ref = useModal(open);
   const input = useRef<HTMLInputElement>(null);
@@ -202,7 +209,10 @@ export function CommandPalette({
               aria-label="Close"
               aria-keyshortcuts="Escape"
               onClick={() => onOpenChange(false)}
-              className="ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring"
+              className={cx(
+                dock ? "ui:max-md:hidden" : null,
+                "ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
+              )}
             >
               <span className="ui:max-md:hidden">
                 <Keys>Esc</Keys>
@@ -212,7 +222,11 @@ export function CommandPalette({
           </div>
           <ModalBody
             open={open}
-            className="ui:min-h-0 ui:flex-1 ui:md:max-h-[min(24rem,60dvh)]"
+            className={cx(
+              "ui:min-h-0 ui:flex-1 ui:md:max-h-[min(24rem,60dvh)]",
+              // Room at the foot for the dock, so the last row scrolls clear of it.
+              dock ? "ui:max-md:pb-20" : null,
+            )}
           >
             <Command.List className="ui:scroll-py-1 ui:p-1">
               {groups.map((group) => (
@@ -242,6 +256,7 @@ export function CommandPalette({
           </ModalBody>
         </Command>
       ) : null}
+      {dock}
     </dialog>
   );
 }

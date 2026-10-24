@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "./cx.js";
+import { haptic } from "./haptic.js";
 import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
 import { ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
@@ -180,13 +181,21 @@ const PANEL =
  * what `children` hold (the search, say), then the button that opens the
  * menu, which turns into the way to close it. Gone from `md` up, where the
  * sidebar stands beside the page. Hand the same bar to `Sidebar` as its
- * `dock`, so it shows over the menu's panel too. A page keeps room at
- * its foot for it, and toasts rise above it (`--ui-dock-room`).
+ * `dock`, so it shows over the menu's panel too, and to any other panel
+ * it opens. A page keeps room at its foot for it, and toasts rise above
+ * it (`--ui-dock-room`).
  */
-export function SidebarDock({ children }: { children?: ReactNode }) {
+export function SidebarDock({
+  onMenu,
+  children,
+}: {
+  /** The menu button is pressed: close what else the dock opened. */
+  onMenu?: () => void;
+  children?: ReactNode;
+}) {
   const { openMobile, setOpenMobile } = useSidebar();
   return (
-    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-200 ui:bg-white/95 ui:p-1 ui:shadow-[0_10px_30px_rgba(15,23,42,0.16)] ui:backdrop-blur ui:md:hidden">
+    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-300 ui:bg-white/95 ui:p-1 ui:shadow-[0_12px_32px_rgba(15,23,42,0.22),0_2px_6px_rgba(15,23,42,0.1)] ui:backdrop-blur ui:md:hidden">
       {children}
       {children ? (
         <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-slate-200" />
@@ -194,7 +203,10 @@ export function SidebarDock({ children }: { children?: ReactNode }) {
       <SidebarDockButton
         aria-label={openMobile ? "Close menu" : "Open menu"}
         aria-expanded={openMobile}
-        onClick={() => setOpenMobile(!openMobile)}
+        onClick={() => {
+          onMenu?.();
+          setOpenMobile(!openMobile);
+        }}
       >
         {openMobile ? <XIcon /> : <MenuIcon />}
       </SidebarDockButton>
@@ -202,14 +214,19 @@ export function SidebarDock({ children }: { children?: ReactNode }) {
   );
 }
 
-/** A button in the dock: an icon, and a word beside it if it has one. */
+/** A button in the dock: an icon, and a word beside it if it has one. A phone feels it pressed. */
 export function SidebarDockButton({
   className,
+  onClick,
   ...props
 }: ComponentProps<"button">) {
   return (
     <button
       type="button"
+      onClick={(event) => {
+        haptic();
+        onClick?.(event);
+      }}
       className={cx(
         "ui:inline-flex ui:h-9 ui:min-w-9 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-2.5 ui:text-sm ui:font-medium ui:text-slate-700 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-[18px]",
         className,

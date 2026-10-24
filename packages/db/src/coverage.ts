@@ -3,7 +3,7 @@ import { districtCodeAt } from "./district-index";
 import type { District, Prisma, State, Zone } from "./generated/prisma/client";
 import { pointOnSurface } from "./geo";
 import { isPublicState, LOCATION_STATES } from "./location-input";
-import { oddHoursOf } from "./rates-input";
+import { oddHoursOf, weekendOf } from "./rates-input";
 import type { QuoteLocation, QuoteZone } from "./zone-quote";
 import {
   isZoneShape,
@@ -136,11 +136,13 @@ export async function listQuoteLocations(
       name: location.name,
       slug: location.slug,
       maxExtraKm: location.maxExtraKm,
+      freeExtraKm: location.freeExtraKm,
       crossLocation: location.crossLocation,
       zones: zonesOf(location.zones),
       zonesOut: zonesOf(outs),
       zoneRates: location.zoneRates,
       oddHours: oddHoursOf(location),
+      weekend: weekendOf(location),
     };
   });
 }

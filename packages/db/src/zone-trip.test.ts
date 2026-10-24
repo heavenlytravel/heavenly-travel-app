@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import type { LngLat, Ring } from "./geo";
 import {
   chargedExtraKm,
+  chargedKmOf,
   extraKmOf,
   firstEntryKm,
   kmBetween,
@@ -10,10 +11,12 @@ import {
   lineBetweenKm,
   lineKm,
   nearestZoneByRoad,
+  payableExtraKmOf,
   pointAtKm,
   roundKm,
   stretchesInside,
   trimmedKm,
+  wholeKmUp,
   zoneCandidates,
   zoneTripCharge,
   zoneTripChargeOf,
@@ -278,15 +281,16 @@ const measure = (
 describe("zoneTripCharge", () => {
   const airport = { zone: "Airport", nearest: false, extraKm: 0 };
 
-  it("adds the whole extra road when the trip is longer than the grid trip", () => {
+  it("adds the whole extra road, rounded up to the km, when the trip is longer than the grid trip", () => {
     const orange = { zone: "Pantai Kok", nearest: true, extraKm: 0.776 };
     const charge = zoneTripCharge(measure(airport, orange, 8.8, 9.57), 250);
-    assert.equal(charge.extraSen, 194);
+    assert.equal(charge.chargedKm, 1);
+    assert.equal(charge.extraSen, 250);
     assert.equal(charge.perKmSen, 250);
     // Read back the other way, the same.
     assert.equal(
       zoneTripCharge(measure(orange, airport, 8.8, 9.57), 250).extraSen,
-      194,
+      250,
     );
   });
 
@@ -298,18 +302,45 @@ describe("zoneTripCharge", () => {
     );
   });
 
-  it("adds both ends' extra road for two ends outside every zone", () => {
+  it("adds both ends' extra road for two ends outside every zone, rounded once", () => {
     const orange = { zone: "Pantai Kok", nearest: true, extraKm: 0.77 };
     const blue = { zone: "Datai", nearest: true, extraKm: 0.62 };
     const both = measure(orange, blue, 3.61, 4);
     assert.equal(extraKmOf(both), 1.39);
-    assert.equal(zoneTripCharge(both, 250).extraSen, Math.round(1.39 * 250));
+    assert.equal(chargedKmOf(both, 0), 2);
+    assert.equal(zoneTripCharge(both, 250).extraSen, 500);
   });
 
   it("adds the extra road within one zone, from its edge", () => {
     const kuah = { zone: "Kuah Town", nearest: false, extraKm: 0 };
     const past = { zone: "Kuah Town", nearest: true, extraKm: 2 };
     assert.equal(zoneTripCharge(measure(kuah, past, 0, 2), 250).extraSen, 500);
+  });
+
+  it("charges only the road past the free km, of each end", () => {
+    const five = { zone: "Datai", nearest: true, extraKm: 5 };
+    const charge = zoneTripCharge(measure(airport, five, 10, 15), 250, 3);
+    assert.equal(charge.freeKm, 3);
+    assert.equal(charge.chargedKm, 2);
+    assert.equal(charge.extraSen, 500);
+    const two = { zone: "Pantai Kok", nearest: true, extraKm: 2.5 };
+    assert.equal(payableExtraKmOf(measure(two, five, 10, 20), 3), 2);
+    assert.equal(chargedKmOf(measure(two, five, 10, 20), 3), 2);
+  });
+
+  it("charges nothing within the free km", () => {
+    const near = { zone: "Datai", nearest: true, extraKm: 2.9 };
+    assert.equal(
+      zoneTripCharge(measure(airport, near, 10, 13), 250, 3).extraSen,
+      0,
+    );
+  });
+
+  it("rounds up to the whole km, but not float noise", () => {
+    assert.equal(wholeKmUp(0.3), 1);
+    assert.equal(wholeKmUp(2), 2);
+    assert.equal(wholeKmUp(2.0000001), 2);
+    assert.equal(wholeKmUp(0), 0);
   });
 
   it("charges the whole extra road, even when the trip adds less", () => {
@@ -320,6 +351,7 @@ describe("zoneTripCharge", () => {
     const charge = zoneTripCharge(
       measure(airport, { zone: "Datai", nearest: true, extraKm: 1 }, 1, 2),
       250,
+      0,
     );
     assert.deepEqual(
       zoneTripChargeOf(JSON.parse(JSON.stringify(charge))),
@@ -329,9 +361,28 @@ describe("zoneTripCharge", () => {
     assert.equal(zoneTripChargeOf({ pickup: {} }), null);
   });
 
-  it("rejects a negative rate", () => {
+  it("reads a receipt from before the free km as the whole extra road, unrounded", () => {
+    const old = {
+      pickup: airport,
+      dropoff: { zone: "Pantai Kok", nearest: true, extraKm: 0.776 },
+      gridTripKm: 8.8,
+      tripKm: 9.57,
+      perKmSen: 250,
+      extraSen: 194,
+    };
+    const read = zoneTripChargeOf(old);
+    assert.equal(read?.freeKm, 0);
+    assert.equal(read?.chargedKm, 0.776);
+    assert.equal(read?.extraSen, 194);
+  });
+
+  it("rejects a negative rate or free km", () => {
     assert.throws(
       () => zoneTripCharge(measure(airport, airport, 0, 0), -1),
+      RangeError,
+    );
+    assert.throws(
+      () => zoneTripCharge(measure(airport, airport, 0, 0), 1, -1),
       RangeError,
     );
   });

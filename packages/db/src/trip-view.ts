@@ -7,8 +7,7 @@ import {
 } from "./booking-status";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
-import type { TripPriceBreakdown } from "./pricing";
-import { chargedKmOf } from "./zone-trip";
+import { WEEKEND_REASON_LABELS, type TripPriceBreakdown } from "./pricing";
 
 /**
  * A trip as every screen describes it, before and after booking: the
@@ -132,13 +131,14 @@ export function tripDetailRows(details: {
   return rows;
 }
 
-/** "0.78 km": a distance on a receipt, to ten metres. */
-const kmLabel = (km: number) => `${km.toFixed(2)} km`;
+/** "2 km", or "0.78 km" to ten metres on receipts from before whole km. */
+const kmLabel = (km: number) =>
+  `${Number.isInteger(km) ? km : km.toFixed(2)} km`;
 
 /**
  * The receipt behind a price, without the total: the grid's cell and the
  * extra road past a zone's edge, or the hourly rate with the hours, then
- * the surcharge, then the model chosen. Receipts from before nearest-zone
+ * the surcharges, then the model chosen. Receipts from before nearest-zone
  * pricing that were metered show their base fare and distance. The app
  * adds the total in its own emphasis.
  */
@@ -156,7 +156,7 @@ export function priceRows(
     const extra = price.zoneTrip;
     if (extra && extra.extraSen > 0) {
       rows.push([
-        `Extra road, ${kmLabel(chargedKmOf(extra))} × ${formatMyr(extra.perKmSen)}`,
+        `Extra road, ${kmLabel(extra.chargedKm)} × ${formatMyr(extra.perKmSen)}`,
         formatMyr(extra.extraSen),
       ]);
     }
@@ -187,6 +187,15 @@ export function priceRows(
         ? `Odd hours, +${price.surcharge.percent}%`
         : "Odd hours",
       formatMyr(price.surcharge.amountSen),
+    ]);
+  }
+  if (price.weekend) {
+    const name = WEEKEND_REASON_LABELS[price.weekend.reason];
+    rows.push([
+      price.weekend.percent !== null
+        ? `${name}, +${price.weekend.percent}%`
+        : name,
+      formatMyr(price.weekend.amountSen),
     ]);
   }
   if (price.model) {

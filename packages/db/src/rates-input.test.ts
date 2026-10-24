@@ -10,11 +10,16 @@ import {
   parseOddHoursFields,
   parseRateCells,
   parseTripReachFields,
+  parseTripRulesFields,
+  parseWeekendFields,
   parseZoneFields,
   reachableZones,
   reshapedFromDistrict,
   timeOfMinute,
   tripReachLabel,
+  weekendLabel,
+  weekendOf,
+  weekendReason,
 } from "./rates-input";
 
 const triangle = [
@@ -165,14 +170,21 @@ describe("parseZoneFields", () => {
 });
 
 describe("trip reach", () => {
-  it("reads the furthest extra road in whole km and the switch", () => {
+  it("reads the extra road in whole km and the switch, an empty free km as 0", () => {
     assert.deepEqual(parseTripReachFields({ maxExtraKm: "15" }), {
       ok: true,
-      value: { maxExtraKm: 15, crossLocation: false },
+      value: { freeExtraKm: 0, maxExtraKm: 15, crossLocation: false },
     });
     assert.deepEqual(
-      parseTripReachFields({ maxExtraKm: "20", crossLocation: "on" }),
-      { ok: true, value: { maxExtraKm: 20, crossLocation: true } },
+      parseTripReachFields({
+        freeExtraKm: "3",
+        maxExtraKm: "20",
+        crossLocation: "on",
+      }),
+      {
+        ok: true,
+        value: { freeExtraKm: 3, maxExtraKm: 20, crossLocation: true },
+      },
     );
   });
 
@@ -184,7 +196,19 @@ describe("trip reach", () => {
     }
   });
 
-  it("maps drop-offs to the zones routes out end at only when trips across locations are on", () => {
+  it("refuses a free extra road that is not whole, negative or past the furthest", () => {
+    for (const freeExtraKm of ["1.5", "-1", "16", "abc"]) {
+      const parsed = parseTripReachFields({ freeExtraKm, maxExtraKm: "15" });
+      assert.equal(parsed.ok, false, freeExtraKm);
+      assert.equal(!parsed.ok && parsed.field, "freeExtraKm");
+    }
+    assert.equal(
+      parseTripReachFields({ freeExtraKm: "15", maxExtraKm: "15" }).ok,
+      true,
+    );
+  });
+
+  it("maps drop-offs to the zones routes out end at only when cross-location is on", () => {
     assert.deepEqual(reachableZones(false, ["town"], ["klia"]), ["town"]);
     assert.deepEqual(reachableZones(true, ["town"], ["klia"]), [
       "town",
@@ -194,12 +218,173 @@ describe("trip reach", () => {
 
   it("names the settings in a line", () => {
     assert.equal(
-      tripReachLabel({ maxExtraKm: 15, crossLocation: false }),
-      "Up to 15 km past a zone, this location only",
+      tripReachLabel({ freeExtraKm: 0, maxExtraKm: 15, crossLocation: false }),
+      "Up to 15 km past a zone, cross-location off",
+    );
+    assert.equal(
+      tripReachLabel({ freeExtraKm: 3, maxExtraKm: 15, crossLocation: true }),
+      "First 3 km free, up to 15 km past a zone, cross-location on",
     );
   });
 });
 
+describe("weekend and holiday surcharge", () => {
+  const on = {
+    weekendOn: "on",
+    weekendDays: "6,0",
+    holidayDates: "2026-12-25, 2026-08-31",
+    weekendKind: "percent",
+    weekendAmount: "20",
+  };
+
+  it("is none when switched off, whatever else is filled", () => {
+    assert.deepEqual(parseWeekendFields({ ...on, weekendOn: "" }), {
+      ok: true,
+      value: null,
+    });
+  });
+
+  it("reads the days in order, the dates sorted, and the charge", () => {
+    assert.deepEqual(parseWeekendFields(on), {
+      ok: true,
+      value: {
+        days: [0, 6],
+        dates: ["2026-08-31", "2026-12-25"],
+        percent: 20,
+        flatSen: null,
+      },
+    });
+    assert.deepEqual(
+      parseWeekendFields({ ...on, weekendKind: "flat", weekendAmount: "30" }),
+      {
+        ok: true,
+        value: {
+          days: [0, 6],
+          dates: ["2026-08-31", "2026-12-25"],
+          percent: null,
+          flatSen: 3_000,
+        },
+      },
+    );
+  });
+
+  it("refuses no day and no date, a date that is not one, a date twice and no amount", () => {
+    const field = (values: Record<string, unknown>) => {
+      const parsed = parseWeekendFields(values);
+      return parsed.ok ? null : parsed.field;
+    };
+    assert.equal(
+      field({ ...on, weekendDays: "", holidayDates: "" }),
+      "weekendDays",
+    );
+    assert.equal(field({ ...on, holidayDates: "2026-02-30" }), "holidayDates");
+    assert.equal(
+      field({ ...on, holidayDates: "2026-12-25,2026-12-25" }),
+      "holidayDates",
+    );
+    assert.equal(field({ ...on, weekendDays: "7" }), "weekendDays");
+    assert.equal(field({ ...on, weekendAmount: "" }), "weekendAmount");
+  });
+
+  it("applies on a holiday first, then on a weekend day, by the local date", () => {
+    const weekend = {
+      days: [5, 6],
+      dates: ["2026-12-25"],
+      percent: 20,
+      flatSen: null,
+    };
+    // 2026-12-25 is a Friday: a holiday first.
+    assert.equal(weekendReason(weekend, "2026-12-25"), "holiday");
+    assert.equal(weekendReason(weekend, "2026-10-24"), "weekend");
+    assert.equal(weekendReason(weekend, "2026-10-25"), null);
+  });
+
+  it("reads the columns, none without an amount or without a day or a date", () => {
+    const columns = {
+      weekendDays: [0, 6],
+      holidayDates: [],
+      weekendPercent: 20,
+      weekendFlatSen: null,
+    };
+    assert.deepEqual(weekendOf(columns), {
+      days: [0, 6],
+      dates: [],
+      percent: 20,
+      flatSen: null,
+    });
+    assert.equal(weekendOf({ ...columns, weekendPercent: null }), null);
+    assert.equal(weekendOf({ ...columns, weekendDays: [] }), null);
+  });
+
+  it("names the surcharge in a line, Monday first", () => {
+    assert.equal(
+      weekendLabel({
+        days: [0, 6],
+        dates: ["2026-12-25", "2026-08-31"],
+        percent: 20,
+        flatSen: null,
+      }),
+      "Sat, Sun and 2 holidays, +20%",
+    );
+    assert.equal(
+      weekendLabel({
+        days: [],
+        dates: ["2026-12-25"],
+        percent: null,
+        flatSen: 3_000,
+      }),
+      "1 holiday, +RM 30.00",
+    );
+  });
+});
+
+describe("parseTripRulesFields", () => {
+  const reach = { maxExtraKm: "15" };
+
+  it("reads the reach, and each surcharge only when switched on", () => {
+    assert.deepEqual(
+      parseTripRulesFields({
+        ...reach,
+        from: "23:00",
+        to: "07:00",
+        amount: "50",
+      }),
+      {
+        ok: true,
+        value: {
+          reach: { freeExtraKm: 0, maxExtraKm: 15, crossLocation: false },
+          oddHours: null,
+          weekend: null,
+        },
+      },
+    );
+    const parsed = parseTripRulesFields({
+      ...reach,
+      oddHoursOn: "on",
+      from: "23:00",
+      to: "07:00",
+      kind: "percent",
+      amount: "50",
+    });
+    assert.deepEqual(parsed.ok && parsed.value.oddHours, {
+      fromMinute: 1380,
+      toMinute: 420,
+      percent: 50,
+      flatSen: null,
+    });
+  });
+
+  it("refuses odd hours switched on with nothing filled", () => {
+    const parsed = parseTripRulesFields({ ...reach, oddHoursOn: "on" });
+    assert.equal(parsed.ok, false);
+    assert.equal(!parsed.ok && parsed.field, "from");
+  });
+
+  it("refuses the reach before the surcharges", () => {
+    const parsed = parseTripRulesFields({ maxExtraKm: "0", oddHoursOn: "on" });
+    assert.equal(!parsed.ok && parsed.field, "maxExtraKm");
+  });
+});
 describe("parseRateCells", () => {
   it("reads prices in ringgit and empty cells as cleared", () => {
     const parsed = parseRateCells([

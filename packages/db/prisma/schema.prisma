@@ -196,6 +196,9 @@ model Location {
   /// The furthest extra road, in whole km: an end of a trip outside every
   /// zone further than this by road from its nearest zone is not priced.
   maxExtraKm         Int       @default(15)
+  /// The free extra road, in whole km: each end outside every zone pays
+  /// only for its road past this. 0 charges all of it.
+  freeExtraKm        Int       @default(0)
   /// Whether trips may end in another location's zone, on the routes out
   /// this location prices to it. Off keeps every trip to its own zones.
   crossLocation      Boolean   @default(false)
@@ -207,6 +210,15 @@ model Location {
   oddHoursToMinute   Int?
   oddHoursPercent    Int?
   oddHoursFlatSen    Int?
+  /// The weekend and holiday surcharge: the days of the week it applies
+  /// on (0 is Sunday, 6 Saturday), the dates it also applies on
+  /// ("2026-12-25"), and what it adds, a percentage or a flat amount in
+  /// sen, exactly one of the two. The amounts null when there is none.
+  /// See WeekendSurcharge in src/rates-input.ts.
+  weekendDays        Int[]     @default([])
+  holidayDates       String[]  @default([])
+  weekendPercent     Int?
+  weekendFlatSen     Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

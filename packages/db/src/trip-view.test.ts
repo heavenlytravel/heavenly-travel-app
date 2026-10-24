@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { priceTrip, withModelChoice } from "./pricing";
+import { priceBreakdownOf, priceTrip, withModelChoice } from "./pricing";
 import {
   itemHeading,
   itemSummary,
@@ -84,7 +84,46 @@ describe("priceRows", () => {
     });
     assert.deepEqual(priceRows(price), [
       ["Airport to Pantai Kok", "RM 50.00"],
-      ["Extra road, 0.78 km × RM 2.50", "RM 1.94"],
+      ["Extra road, 1 km × RM 2.50", "RM 2.50"],
+    ]);
+  });
+
+  it("shows a receipt from before whole km as it was charged", () => {
+    const old = priceBreakdownOf({
+      mode: "oneway",
+      rates: { perKmSen: 250, hourlyRateSen: 5000 },
+      distanceKm: 10.65,
+      hours: null,
+      route: { fromZone: "Airport", toZone: "Pantai Kok", rateSen: 5000 },
+      zoneTrip: {
+        pickup: { zone: "Airport", nearest: false, extraKm: 0 },
+        dropoff: { zone: "Pantai Kok", nearest: true, extraKm: 0.776 },
+        gridTripKm: 8.8,
+        tripKm: 9.57,
+        perKmSen: 250,
+        extraSen: 194,
+      },
+      surcharge: null,
+      model: null,
+      subtotalSen: 5194,
+      totalSen: 5194,
+      multiplier: 1,
+    })!;
+    assert.deepEqual(priceRows(old)[1], [
+      "Extra road, 0.78 km × RM 2.50",
+      "RM 1.94",
+    ]);
+  });
+
+  it("names the weekend surcharge by why it applied", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates: { perKmSen: 0, hourlyRateSen: 5000 },
+      weekend: { charge: { percent: 20, flatSen: null }, reason: "holiday" },
+    });
+    assert.deepEqual(priceRows(price).at(-1), [
+      "Public holiday, +20%",
+      "RM 40.00",
     ]);
   });
 

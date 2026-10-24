@@ -17,8 +17,9 @@ import {
  *   the rate per extra km when an end is outside every zone and the trip
  *   is longer than the grid trip (./zone-trip)
  *   hourly:  hourlyRate x hours
- *   then the odd-hours surcharge, when the pickup is in the window: a
- *   percentage of the price, or a flat amount
+ *   then the odd-hours surcharge, when the pickup is in the window, and
+ *   the weekend and holiday surcharge, when the pickup's day is one: each
+ *   a percentage of the price, or a flat amount
  *   then the charge for the model the customer chose, when they chose
  *   one: a percentage of the price before the surcharge, or a flat amount
  */
@@ -58,8 +59,21 @@ export type TripPriceInput = {
   route?: RouteRate | null;
   /** What a one-way trip with an end outside every zone measured; null when both ends are in zones. */
   zoneTrip?: ZoneTripMeasure | null;
+  /** The location's free extra road of each end, in whole km; 0 when none. */
+  freeExtraKm?: number;
   /** What the odd-hours surcharge adds, when the pickup is in the window; null otherwise. */
   surcharge?: SurchargeCharge | null;
+  /** What the weekend and holiday surcharge adds, and why, when the pickup's day is one; null otherwise. */
+  weekend?: { charge: SurchargeCharge; reason: WeekendReason } | null;
+};
+
+/** Why the weekend and holiday surcharge applied. */
+export type WeekendReason = "weekend" | "holiday";
+
+/** How a receipt names the surcharge, by why it applied. */
+export const WEEKEND_REASON_LABELS: Record<WeekendReason, string> = {
+  weekend: "Weekend",
+  holiday: "Public holiday",
 };
 
 /** The receipt stored on the booking item: every input and the result. */
@@ -80,9 +94,15 @@ export type TripPriceBreakdown = {
   zoneTrip: ZoneTripCharge | null;
   /** The surcharge that was added, and its percentage when it was one; null when none applied. */
   surcharge: { percent: number | null; amountSen: number } | null;
+  /** The weekend and holiday surcharge that was added, and why; null when none applied, and on receipts from before it. */
+  weekend: {
+    reason: WeekendReason;
+    percent: number | null;
+    amountSen: number;
+  } | null;
   /** The model the customer chose, by name, and what choosing it added; null when any model would do. */
   model: { name: string; percent: number | null; amountSen: number } | null;
-  /** Before the surcharge and the model. */
+  /** Before the surcharges and the model. */
   subtotalSen: number;
   totalSen: number;
   /**
@@ -97,11 +117,14 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   const route = input.route ?? null;
   const measure = input.zoneTrip ?? null;
   const charge = input.surcharge ?? null;
-  if (charge?.percent != null && !(charge.percent >= 0)) {
-    throw new RangeError("the surcharge percent must be zero or more");
-  }
-  if (charge?.flatSen != null && !(charge.flatSen >= 0)) {
-    throw new RangeError("the flat surcharge must be zero or more");
+  const weekendCharge = input.weekend ?? null;
+  for (const c of [charge, weekendCharge?.charge ?? null]) {
+    if (c?.percent != null && !(c.percent >= 0)) {
+      throw new RangeError("the surcharge percent must be zero or more");
+    }
+    if (c?.flatSen != null && !(c.flatSen >= 0)) {
+      throw new RangeError("the flat surcharge must be zero or more");
+    }
   }
 
   let subtotalSen: number;
@@ -114,7 +137,9 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
     if (!(route.rateSen >= 0)) {
       throw new RangeError("rateSen must be zero or more");
     }
-    zoneTrip = measure ? zoneTripCharge(measure, rates.perKmSen) : null;
+    zoneTrip = measure
+      ? zoneTripCharge(measure, rates.perKmSen, input.freeExtraKm ?? 0)
+      : null;
     subtotalSen = route.rateSen + (zoneTrip?.extraSen ?? 0);
   } else {
     if (!(trip.hours > 0)) throw new RangeError("hours must be positive");
@@ -122,12 +147,15 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
     subtotalSen = rates.hourlyRateSen * trip.hours;
   }
 
-  const surcharge: TripPriceBreakdown["surcharge"] =
-    charge && (charge.percent !== null ? charge.percent : charge.flatSen) > 0
-      ? {
-          percent: charge.percent,
-          amountSen: chargeAmountSen(charge, subtotalSen),
-        }
+  const adds = (c: SurchargeCharge | null) =>
+    c && (c.percent !== null ? c.percent : c.flatSen) > 0
+      ? { percent: c.percent, amountSen: chargeAmountSen(c, subtotalSen) }
+      : null;
+  const surcharge: TripPriceBreakdown["surcharge"] = adds(charge);
+  const weekendAdds = adds(weekendCharge?.charge ?? null);
+  const weekend: TripPriceBreakdown["weekend"] =
+    weekendCharge && weekendAdds
+      ? { reason: weekendCharge.reason, ...weekendAdds }
       : null;
 
   return {
@@ -144,9 +172,11 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
       : null,
     zoneTrip,
     surcharge,
+    weekend,
     model: null,
     subtotalSen,
-    totalSen: subtotalSen + (surcharge?.amountSen ?? 0),
+    totalSen:
+      subtotalSen + (surcharge?.amountSen ?? 0) + (weekend?.amountSen ?? 0),
     multiplier: 1,
   };
 }
@@ -160,7 +190,7 @@ export function chargeAmountSen(charge: SurchargeCharge, priceSen: number) {
 
 /**
  * The receipt with the model the customer chose: the charge for choosing
- * it, worked on the price before the surcharge, added to the total. A
+ * it, worked on the price before the surcharges, added to the total. A
  * model already on the receipt is replaced.
  */
 export function withModelChoice(
@@ -234,6 +264,14 @@ function isSurcharge(
   );
 }
 
+function isWeekendCharge(
+  value: unknown,
+): value is NonNullable<TripPriceBreakdown["weekend"]> {
+  if (!isSurcharge(value)) return false;
+  const reason = (value as { reason?: unknown }).reason;
+  return reason === "weekend" || reason === "holiday";
+}
+
 function isModelCharge(
   value: unknown,
 ): value is NonNullable<TripPriceBreakdown["model"]> {
@@ -245,7 +283,7 @@ function isModelCharge(
 /**
  * Reads a stored `priceBreakdown` back from JSON, in the shape above or one
  * before it (a multiplier, no route, no surcharge, no model, no zone trip,
- * a base fare and a minimum fare). Null when the value is not a receipt.
+ * a base fare and a minimum fare, no weekend surcharge). Null when the value is not a receipt.
  */
 export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
   if (typeof value !== "object" || value === null) return null;
@@ -270,6 +308,7 @@ export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
     route: isRouteRate(p.route) ? p.route : null,
     zoneTrip: zoneTripChargeOf(p.zoneTrip),
     surcharge: isSurcharge(p.surcharge) ? p.surcharge : null,
+    weekend: isWeekendCharge(p.weekend) ? p.weekend : null,
     model: isModelCharge(p.model) ? p.model : null,
     subtotalSen: p.subtotalSen,
     totalSen: p.totalSen,

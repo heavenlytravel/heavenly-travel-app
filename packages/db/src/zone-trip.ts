@@ -312,6 +312,10 @@ export type ZoneTripMeasure = {
 export type ZoneTripCharge = ZoneTripMeasure & {
   /** The class's rate per extra km when priced. */
   perKmSen: number;
+  /** The free extra road of each end outside every zone, in whole km. */
+  freeKm: number;
+  /** The km charged at the rate: whole km since the free extra road; 0 when none. */
+  chargedKm: number;
   /** 0 when the trip was not longer than the grid trip. */
   extraSen: number;
 };
@@ -326,8 +330,8 @@ export const EXTRA_CAPPED = false;
 
 /**
  * The km of extra road charged for a trip longer than its grid trip: the
- * whole extra road of its ends outside every zone, or, capped, the smaller
- * of it and what the trip adds over the grid trip.
+ * extra road past the free km, or, capped, the smaller of it and what the
+ * trip adds over the grid trip.
  */
 export function chargedExtraKm(extraKm: number, addedKm: number): number {
   return EXTRA_CAPPED ? roundKm(Math.min(extraKm, addedKm)) : extraKm;
@@ -341,30 +345,55 @@ export function extraKmOf(measure: ZoneTripMeasure): number {
   );
 }
 
-/** The km of extra road a trip is charged: none unless it is longer than its grid trip. */
-export function chargedKmOf(measure: ZoneTripMeasure): number {
-  return measure.tripKm > measure.gridTripKm
-    ? chargedExtraKm(extraKmOf(measure), measure.tripKm - measure.gridTripKm)
-    : 0;
+/** The extra road both ends pay for: each end's road past its first `freeKm`. */
+export function payableExtraKmOf(
+  measure: ZoneTripMeasure,
+  freeKm: number,
+): number {
+  const past = (end: ZoneTripEnd) =>
+    end.nearest ? Math.max(0, end.extraKm - freeKm) : 0;
+  return roundKm(past(measure.pickup) + past(measure.dropoff));
+}
+
+/** Km up to the next whole km: 0.3 is 1, 2 is 2. Rounded to the metre first, so 2.0000001 is 2. */
+export const wholeKmUp = (km: number) => Math.ceil(roundKm(km));
+
+/**
+ * The km of extra road a trip is charged: none unless it is longer than
+ * its grid trip; then each end's road past the free km, rounded up to the
+ * whole km.
+ */
+export function chargedKmOf(measure: ZoneTripMeasure, freeKm: number): number {
+  if (!(measure.tripKm > measure.gridTripKm)) return 0;
+  return wholeKmUp(
+    chargedExtraKm(
+      payableExtraKmOf(measure, freeKm),
+      measure.tripKm - measure.gridTripKm,
+    ),
+  );
 }
 
 /**
  * What the extra road adds for a class: the km charged at the rate per
- * extra km, rounded to the sen once.
+ * extra km. `freeKm` is the location's free extra road, a whole km.
  */
 export function zoneTripCharge(
   measure: ZoneTripMeasure,
   perKmSen: number,
+  freeKm = 0,
 ): ZoneTripCharge {
   if (!(perKmSen >= 0)) throw new RangeError("perKmSen must be zero or more");
-  const km = chargedKmOf(measure);
+  if (!(freeKm >= 0)) throw new RangeError("freeKm must be zero or more");
+  const chargedKm = chargedKmOf(measure, freeKm);
   return {
     pickup: { ...measure.pickup },
     dropoff: { ...measure.dropoff },
     gridTripKm: measure.gridTripKm,
     tripKm: measure.tripKm,
     perKmSen,
-    extraSen: Math.round(perKmSen * km),
+    freeKm,
+    chargedKm,
+    extraSen: Math.round(perKmSen * chargedKm),
   };
 }
 
@@ -378,7 +407,11 @@ function isZoneTripEnd(value: unknown): value is ZoneTripEnd {
   );
 }
 
-/** A stored `zoneTrip` read back; null for anything else, as on receipts from before it. */
+/**
+ * A stored `zoneTrip` read back; null for anything else, as on receipts
+ * from before it. Receipts from before the free extra road and whole km
+ * kept neither: theirs was the whole extra road, unrounded.
+ */
 export function zoneTripChargeOf(value: unknown): ZoneTripCharge | null {
   if (typeof value !== "object" || value === null) return null;
   const z = value as Record<string, unknown>;
@@ -398,6 +431,18 @@ export function zoneTripChargeOf(value: unknown): ZoneTripCharge | null {
     gridTripKm: z.gridTripKm,
     tripKm: z.tripKm,
     perKmSen: z.perKmSen,
+    freeKm: typeof z.freeKm === "number" ? z.freeKm : 0,
+    chargedKm:
+      typeof z.chargedKm === "number"
+        ? z.chargedKm
+        : z.tripKm > z.gridTripKm
+          ? extraKmOf({
+              pickup: z.pickup,
+              dropoff: z.dropoff,
+              gridTripKm: z.gridTripKm,
+              tripKm: z.tripKm,
+            })
+          : 0,
     extraSen: z.extraSen,
   };
 }

@@ -39,10 +39,30 @@ describe("priceTrip", () => {
         tripKm: 9.57,
       },
     });
-    assert.equal(price.zoneTrip?.extraSen, 194);
+    // 0.776 km, rounded up to 1 km.
+    assert.equal(price.zoneTrip?.chargedKm, 1);
+    assert.equal(price.zoneTrip?.extraSen, 250);
     assert.equal(price.zoneTrip?.perKmSen, 250);
-    assert.equal(price.subtotalSen, 4_500 + 194);
+    assert.equal(price.subtotalSen, 4_500 + 250);
     assert.equal(price.distanceKm, 10.65);
+  });
+
+  it("charges only the road past the location's free extra road", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 20 },
+      rates,
+      route,
+      freeExtraKm: 3,
+      zoneTrip: {
+        pickup: { zone: "Langkawi Airport", nearest: false, extraKm: 0 },
+        dropoff: { zone: "Cenang", nearest: true, extraKm: 5 },
+        gridTripKm: 10,
+        tripKm: 15,
+      },
+    });
+    assert.equal(price.zoneTrip?.freeKm, 3);
+    assert.equal(price.zoneTrip?.chargedKm, 2);
+    assert.equal(price.subtotalSen, 4_500 + 500);
   });
 
   it("adds nothing for an address reached before the zone", () => {
@@ -90,6 +110,25 @@ describe("priceTrip", () => {
     assert.equal(price.subtotalSen, 18_000);
     assert.deepEqual(price.surcharge, { percent: 50, amountSen: 9_000 });
     assert.equal(price.totalSen, 27_000);
+  });
+
+  it("adds the weekend surcharge beside the odd-hours one, each on the subtotal", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 3 },
+      rates,
+      surcharge: { percent: 50, flatSen: null },
+      weekend: { charge: { percent: 20, flatSen: null }, reason: "holiday" },
+    });
+    assert.deepEqual(price.weekend, {
+      reason: "holiday",
+      percent: 20,
+      amountSen: 3_600,
+    });
+    assert.equal(price.totalSen, 18_000 + 9_000 + 3_600);
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(price))),
+      price,
+    );
   });
 
   it("adds the surcharge to a route's rate too", () => {
@@ -239,6 +278,7 @@ describe("priceBreakdownOf", () => {
       route: null,
       zoneTrip: null,
       surcharge: null,
+      weekend: null,
       model: null,
     });
   });

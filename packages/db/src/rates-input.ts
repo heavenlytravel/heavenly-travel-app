@@ -525,12 +525,14 @@ export function oddHoursOf(location: {
 
 /**
  * Where a location's trips may go, under nearest-zone pricing: how far
- * past its nearest zone an end may be by road, and whether trips may end
- * in another location's zone on the routes out it prices. Hourly hire has
- * no drop-off, so neither touches it. See
- * docs/261023-nearest-zone-pricing.md, "Where a location's trips may go".
+ * past its nearest zone an end may be by road, how much of that road is
+ * free, and whether trips may end in another location's zone on the
+ * routes out it prices. Hourly hire has no drop-off, so none touches it.
+ * See docs/261023-nearest-zone-pricing.md, "Where a location's trips may go".
  */
 export type TripReach = {
+  /** The free extra road of each end, in whole km: only the road past it is charged. */
+  freeExtraKm: number;
   /** The furthest extra road, in whole km. */
   maxExtraKm: number;
   crossLocation: boolean;
@@ -541,25 +543,31 @@ export const TRIP_REACH_LIMITS = {
   maxExtraKm: { min: 1, max: 100 },
 } as const;
 
-/** The form names of the two settings. */
+/** The form names of the settings. */
 export const TRIP_REACH_FIELDS = {
+  freeExtraKm: "freeExtraKm",
   maxExtraKm: "maxExtraKm",
   crossLocation: "crossLocation",
 } as const;
 
-/** How the screens name the two settings of trips across locations. */
-export const CROSS_LOCATION_LABELS = {
-  off: "This location only",
-  on: "Also routes to other locations",
-} as const;
+/** How the screens name trips across locations. */
+export const CROSS_LOCATION_NAME = "Cross-location";
 
+/** "Cross-location on" or "Cross-location off". */
 export function crossLocationLabel(crossLocation: boolean) {
-  return CROSS_LOCATION_LABELS[crossLocation ? "on" : "off"];
+  return `${CROSS_LOCATION_NAME} ${crossLocation ? "on" : "off"}`;
 }
 
-/** "Up to 15 km past a zone, this location only": the settings in a line. */
+/** "First 3 km free, up to 15 km": the extra road's two settings in a line. */
+export function extraRoadLabel(reach: Omit<TripReach, "crossLocation">) {
+  return reach.freeExtraKm > 0
+    ? `First ${reach.freeExtraKm} km free, up to ${reach.maxExtraKm} km`
+    : `Up to ${reach.maxExtraKm} km`;
+}
+
+/** "Up to 15 km past a zone, cross-location off": the settings in a line. */
 export function tripReachLabel(reach: TripReach) {
-  return `Up to ${reach.maxExtraKm} km past a zone, ${crossLocationLabel(reach.crossLocation).toLowerCase()}`;
+  return `${extraRoadLabel(reach)} past a zone, ${crossLocationLabel(reach.crossLocation).toLowerCase()}`;
 }
 
 export function checkTripReach(reach: TripReach): Change {
@@ -574,14 +582,26 @@ export function checkTripReach(reach: TripReach): Change {
       TRIP_REACH_FIELDS.maxExtraKm,
     );
   }
+  if (
+    !Number.isInteger(reach.freeExtraKm) ||
+    reach.freeExtraKm < 0 ||
+    reach.freeExtraKm > reach.maxExtraKm
+  ) {
+    return refuse(
+      `The free extra road is a whole number of km from 0 up to the furthest, ${reach.maxExtraKm} km.`,
+      TRIP_REACH_FIELDS.freeExtraKm,
+    );
+  }
   return { ok: true };
 }
 
-/** The settings form's `maxExtraKm` and `crossLocation`, read and checked; the switch is a checkbox. */
+/** The settings form's reach fields, read and checked; the switch is a checkbox and an empty free km is 0. */
 export function parseTripReachFields(
   values: Record<string, unknown>,
 ): Parsed<TripReach> {
+  const free = textOf(values[TRIP_REACH_FIELDS.freeExtraKm]);
   const reach: TripReach = {
+    freeExtraKm: free === "" ? 0 : numberOf(free),
     maxExtraKm: numberOf(values[TRIP_REACH_FIELDS.maxExtraKm]),
     crossLocation: flagOf(values[TRIP_REACH_FIELDS.crossLocation]),
   };
@@ -589,7 +609,241 @@ export function parseTripReachFields(
   return check.ok ? { ok: true, value: reach } : check;
 }
 
-/** The zones a location's drop-offs map to: its own, and the zones its routes out end at when trips across locations are on. */
+/**
+ * The weekend and holiday surcharge: the days of the week it applies on
+ * (0 is Sunday, 6 Saturday, as `Date.getDay`), the dates it also applies
+ * on ("2026-12-25", the location's local day), and what it adds. The
+ * weekend is the location's to say: Kedah's is Friday and Saturday.
+ */
+export type WeekendSurcharge = {
+  days: number[];
+  dates: string[];
+} & SurchargeCharge;
+
+export const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+/** Monday first, as the form lists the days. */
+export const WEEKDAYS_FROM_MONDAY = [1, 2, 3, 4, 5, 6, 0] as const;
+
+/** The most holiday dates a location keeps. */
+export const MAX_HOLIDAY_DATES = 100;
+
+/** The form names of the surcharge's fields; the days and the dates are each one comma-separated field. */
+export const WEEKEND_FIELDS = {
+  on: "weekendOn",
+  days: "weekendDays",
+  dates: "holidayDates",
+  kind: "weekendKind",
+  amount: "weekendAmount",
+} as const;
+
+/** "Sat, Sun and 3 holidays, +20%" */
+export function weekendLabel(weekend: WeekendSurcharge) {
+  const days = WEEKDAYS_FROM_MONDAY.filter((day) =>
+    weekend.days.includes(day),
+  ).map((day) => WEEKDAY_NAMES[day].slice(0, 3));
+  const holidays =
+    weekend.dates.length === 0
+      ? []
+      : [
+          weekend.dates.length === 1
+            ? "1 holiday"
+            : `${weekend.dates.length} holidays`,
+        ];
+  const parts = [...days, ...holidays];
+  const list =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
+      : (parts[0] ?? "");
+  return `${list}, ${surchargeLabel(weekend)}`;
+}
+
+/** Whether "2026-12-25" is a real date. */
+export function isIsoDate(text: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
+}
+
+/** The weekday of "2026-12-25", 0 for Sunday. */
+export const weekdayOfDate = (date: string) =>
+  new Date(`${date}T00:00:00Z`).getUTCDay();
+
+/**
+ * Why the surcharge applies on a local date, "2026-12-25": "holiday" when
+ * it is one of the dates, "weekend" when its weekday is one of the days;
+ * null when neither.
+ */
+export function weekendReason(
+  weekend: WeekendSurcharge,
+  date: string,
+): "holiday" | "weekend" | null {
+  if (weekend.dates.includes(date)) return "holiday";
+  return weekend.days.includes(weekdayOfDate(date)) ? "weekend" : null;
+}
+
+export function checkWeekend(weekend: WeekendSurcharge): Change {
+  if (weekend.days.length === 0 && weekend.dates.length === 0) {
+    return refuse(
+      "Pick the weekend days or add a holiday the surcharge applies on.",
+      WEEKEND_FIELDS.days,
+    );
+  }
+  if (
+    weekend.days.some((day) => !Number.isInteger(day) || day < 0 || day > 6) ||
+    new Set(weekend.days).size !== weekend.days.length
+  ) {
+    return refuse("Pick the weekend days again.", WEEKEND_FIELDS.days);
+  }
+  if (weekend.dates.length > MAX_HOLIDAY_DATES) {
+    return refuse(
+      `Keep at most ${MAX_HOLIDAY_DATES} holidays. Remove the ones that are past.`,
+      WEEKEND_FIELDS.dates,
+    );
+  }
+  const bad = weekend.dates.find((date) => !isIsoDate(date));
+  if (bad !== undefined) {
+    return refuse(
+      `"${bad}" is not a date. Pick it again.`,
+      WEEKEND_FIELDS.dates,
+    );
+  }
+  if (new Set(weekend.dates).size !== weekend.dates.length) {
+    return refuse("A holiday is listed twice.", WEEKEND_FIELDS.dates);
+  }
+  return checkCharge(weekend, "the surcharge", WEEKEND_FIELDS.amount);
+}
+
+const listOf = (value: unknown) =>
+  textOf(value)
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
+
+/**
+ * The weekend and holiday surcharge's fields, read and checked: off is
+ * none; on needs a day or a date, and what it adds. The days are kept in
+ * order and the dates sorted.
+ */
+export function parseWeekendFields(
+  values: Record<string, unknown>,
+): Parsed<WeekendSurcharge | null> {
+  if (!flagOf(values[WEEKEND_FIELDS.on])) return { ok: true, value: null };
+  const charge = parseCharge(
+    values[WEEKEND_FIELDS.kind],
+    textOf(values[WEEKEND_FIELDS.amount]),
+    "the surcharge",
+    WEEKEND_FIELDS.amount,
+  );
+  if (!charge.ok) return charge;
+  const weekend: WeekendSurcharge = {
+    days: listOf(values[WEEKEND_FIELDS.days])
+      .map(Number)
+      .sort((a, b) => a - b),
+    dates: listOf(values[WEEKEND_FIELDS.dates]).sort(),
+    ...charge.value,
+  };
+  const check = checkWeekend(weekend);
+  return check.ok ? { ok: true, value: weekend } : check;
+}
+
+/** The surcharge's columns of a location as the rules read them; null when it has none. */
+export function weekendOf(location: {
+  weekendDays: number[];
+  holidayDates: string[];
+  weekendPercent: number | null;
+  weekendFlatSen: number | null;
+}): WeekendSurcharge | null {
+  const charge = chargeOf(location.weekendPercent, location.weekendFlatSen);
+  if (
+    !charge ||
+    (location.weekendDays.length === 0 && location.holidayDates.length === 0)
+  ) {
+    return null;
+  }
+  return {
+    days: [...location.weekendDays],
+    dates: [...location.holidayDates],
+    ...charge,
+  };
+}
+
+/** The odd-hours surcharge's switch; its other fields are `from`, `to`, `kind` and `amount`. */
+export const ODD_HOURS_ON = "oddHoursOn";
+
+/** A location's rules on its trips' prices, as the Rates tab saves them together. */
+export type TripRules = {
+  reach: TripReach;
+  oddHours: OddHours | null;
+  weekend: WeekendSurcharge | null;
+};
+
+/** "Up to 15 km, cross-location, odd hours, weekends": the rules in force, short. */
+export function tripRulesLabel(rules: TripRules) {
+  return [
+    extraRoadLabel(rules.reach),
+    ...(rules.reach.crossLocation ? ["cross-location"] : []),
+    ...(rules.oddHours ? ["odd hours"] : []),
+    ...(rules.weekend ? ["weekends"] : []),
+  ].join(", ");
+}
+
+/** A location's columns as its trip rules. */
+export function tripRulesOf(
+  location: TripReach &
+    Parameters<typeof oddHoursOf>[0] &
+    Parameters<typeof weekendOf>[0],
+): TripRules {
+  return {
+    reach: {
+      freeExtraKm: location.freeExtraKm,
+      maxExtraKm: location.maxExtraKm,
+      crossLocation: location.crossLocation,
+    },
+    oddHours: oddHoursOf(location),
+    weekend: weekendOf(location),
+  };
+}
+
+/** The rules form, read and checked: the reach, and each surcharge when its switch is on. */
+export function parseTripRulesFields(
+  values: Record<string, unknown>,
+): Parsed<TripRules> {
+  const reach = parseTripReachFields(values);
+  if (!reach.ok) return reach;
+  let oddHours: Parsed<OddHours | null> = { ok: true, value: null };
+  if (flagOf(values[ODD_HOURS_ON])) {
+    oddHours = parseOddHoursFields(values);
+    // Switched on, an empty window is not "none".
+    if (oddHours.ok && oddHours.value === null) {
+      oddHours = refuse(
+        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+        "from",
+      );
+    }
+  }
+  if (!oddHours.ok) return oddHours;
+  const weekend = parseWeekendFields(values);
+  if (!weekend.ok) return weekend;
+  return {
+    ok: true,
+    value: {
+      reach: reach.value,
+      oddHours: oddHours.value,
+      weekend: weekend.value,
+    },
+  };
+}
+
+/** The zones a location's drop-offs map to: its own, and the zones its routes out end at when cross-location is on. */
 export function reachableZones<Z>(
   crossLocation: boolean,
   own: readonly Z[],

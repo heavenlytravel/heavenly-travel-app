@@ -1,5 +1,5 @@
 {
-  "about": "Named trips priced by the live check (pnpm --filter @repo/db price:check) and offered as Try a trip's examples on each location's Rates tab. Each end is a Google place id, or a pin for a spot with no place. expected is the total in sen, or the refusal's code; null prints the price without checking it. Add a row whenever a price is questioned. See docs/261023-nearest-zone-pricing.md, Testing.",
+  "about": "Named trips priced by the live check (pnpm --filter @repo/db price:check) and offered as Try a trip's examples on each location's Rates tab, but for those marked liveCheckOnly: the CEO demo's made-up spots. Each end is a Google place id, or a pin for a spot with no place. expected is the total in sen, or the refusal's code; null prints the price without checking it. Add a row whenever a price is questioned. See docs/261023-nearest-zone-pricing.md, Testing.",
   "trips": [
     {
       "location": "langkawi",
@@ -12,15 +12,17 @@
     {
       "location": "langkawi",
       "name": "Airport to Orange",
+      "liveCheckOnly": true,
       "class": "sedan",
       "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
       "dropoff": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
       "expected": null,
-      "note": "RM51.94 on the demo's roads: the Pantai Kok cell plus about 0.77 km of extra road."
+      "note": "RM52.50 on the demo's roads: the Pantai Kok cell plus about 0.77 km of extra road, rounded up to 1 km."
     },
     {
       "location": "langkawi",
       "name": "Orange to Airport",
+      "liveCheckOnly": true,
       "class": "sedan",
       "pickup": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
       "dropoff": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
@@ -30,6 +32,7 @@
     {
       "location": "langkawi",
       "name": "Airport to Blue",
+      "liveCheckOnly": true,
       "class": "sedan",
       "pickup": { "label": "Airport", "lat": 6.34237, "lng": 99.73121 },
       "dropoff": { "label": "Blue", "lat": 6.3898, "lng": 99.7084 },
@@ -39,6 +42,7 @@
     {
       "location": "langkawi",
       "name": "Orange to Blue",
+      "liveCheckOnly": true,
       "class": "sedan",
       "pickup": { "label": "Orange", "lat": 6.3802, "lng": 99.6923 },
       "dropoff": { "label": "Blue", "lat": 6.3898, "lng": 99.7084 },

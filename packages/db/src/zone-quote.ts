@@ -1,5 +1,5 @@
 import { nearestPointOnShape, type LngLat } from "./geo";
-import type { OddHours } from "./rates-input";
+import type { OddHours, WeekendSurcharge } from "./rates-input";
 import { polygonsOf, zoneAt, type RateCellLike } from "./zone-match";
 import {
   nearestZoneByRoad,
@@ -22,8 +22,7 @@ import {
  * pickup names the location, as before; an end outside every zone takes
  * its nearest zone by road, within the location's furthest extra road.
  * The drop-off maps to the location's own zones, and to the other
- * locations' zones its routes out end at when trips across locations are
- * on. When a trace is given, every step is recorded in it with its
+ * locations' zones its routes out end at when cross-location is on. When a trace is given, every step is recorded in it with its
  * geometry, for Try a trip. See docs/261023-nearest-zone-pricing.md.
  */
 
@@ -37,6 +36,8 @@ export type QuoteLocation = {
   slug: string;
   /** The longest extra road an end may have, in whole km. */
   maxExtraKm: number;
+  /** The free extra road of each end, in whole km. */
+  freeExtraKm: number;
   /** Whether its routes out to other locations' zones are sold. */
   crossLocation: boolean;
   zones: QuoteZone[];
@@ -45,6 +46,8 @@ export type QuoteLocation = {
   zoneRates: (RateCellLike & { id?: string })[];
   /** The odd-hours surcharge; null when it has none. */
   oddHours: OddHours | null;
+  /** The weekend and holiday surcharge; null when it has none. */
+  weekend: WeekendSurcharge | null;
 };
 
 /** Nearest-zone answers kept between quotes: an address's zone by road changes only when a zone does. */
@@ -381,7 +384,7 @@ export async function placeTrip(
         "dropoff-outside",
         location.crossLocation
           ? `the drop-off is in ${other.location.name}'s zone ${other.zone.name}, and ${location.name} has no route out to it`
-          : `the drop-off is in ${other.location.name}, and trips across locations are off`,
+          : `the drop-off is in ${other.location.name}, and cross-location is off`,
       );
     }
     const found = await nearestFor(

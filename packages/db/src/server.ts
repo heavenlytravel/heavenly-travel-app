@@ -110,8 +110,7 @@ export {
   deleteZone,
   checkOverlaps,
   setZoneRates,
-  setOddHours,
-  setTripReach,
+  setTripRules,
   routesIntoLocation,
 } from "./zones";
 export type {

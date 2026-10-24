@@ -3,6 +3,7 @@ import {
   classAvailability,
   fitsPassengers,
   isWithinHorizon,
+  localDateTimeInputs,
   localMinuteOfDay,
   type ClassAvailability,
 } from "./booking-rules";
@@ -26,8 +27,14 @@ import {
   withModelChoice,
   type PricingBasis,
   type TripPriceBreakdown,
+  type WeekendReason,
 } from "./pricing";
-import { isInOddHours, type SurchargeCharge } from "./rates-input";
+import {
+  TRIP_REACH_LIMITS,
+  isInOddHours,
+  weekendReason,
+  type SurchargeCharge,
+} from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
 import { routeRateOf } from "./zone-match";
 import { placeTrip, type TripRouting, type TripTrace } from "./zone-quote";
@@ -110,8 +117,14 @@ export type ClassQuote = {
   availability: ClassAvailability;
 };
 
-/** The location that priced a quote, as the screens name it. */
-export type QuotedLocation = { id: string; name: string; slug: string };
+/** The location that priced a quote, as the screens name it, with its extra road settings. */
+export type QuotedLocation = {
+  id: string;
+  name: string;
+  slug: string;
+  freeExtraKm: number;
+  maxExtraKm: number;
+};
 
 /** An end of a quoted trip: its zone, and the road to it when it is outside every zone. */
 export type QuotedEnd = {
@@ -133,6 +146,8 @@ export type TripQuote = {
   zoneTrip: ZoneTripMeasure | null;
   /** The odd-hours surcharge that applies to this pickup time; null when none. */
   surcharge: SurchargeCharge | null;
+  /** The weekend and holiday surcharge that applies to this pickup's day, and why; null when none. */
+  weekend: { charge: SurchargeCharge; reason: WeekendReason } | null;
   classes: ClassQuote[];
 };
 
@@ -146,6 +161,13 @@ export type QuoteOptions = {
   locationId?: string;
   /** Records every step of the quote, for Try a trip. */
   trace?: TripTrace;
+  /**
+   * Try a trip: no limits, so a trip can be priced to see how. Any day,
+   * however far ahead, and an end as far past its zone as any location
+   * may let it be. The quote's location still says its own furthest extra
+   * road, so the screen can say a customer would be refused.
+   */
+  unlimited?: boolean;
 };
 
 const fail = (code: TripQuoteErrorCode, message: string, reason?: string) => ({
@@ -167,9 +189,9 @@ export async function quoteTrip(
   category: TripCategory,
   request: TripRequest,
   routing: TripRouting,
-  { now = new Date(), locationId, trace }: QuoteOptions = {},
+  { now = new Date(), locationId, trace, unlimited = false }: QuoteOptions = {},
 ): Promise<TripQuoteResult> {
-  if (!isWithinHorizon(request.startsAt, now)) {
+  if (!unlimited && !isWithinHorizon(request.startsAt, now)) {
     return fail(
       "too-far",
       "That pickup is too far ahead. Choose an earlier date.",
@@ -189,10 +211,16 @@ export async function quoteTrip(
   }
 
   // The district is the record's: read alongside the locations.
-  const [locations, district] = await Promise.all([
+  const [loaded, district] = await Promise.all([
     listQuoteLocations(locationId),
     resolveDistrict(request.pickup),
   ]);
+  const locations = unlimited
+    ? loaded.map((location) => ({
+        ...location,
+        maxExtraKm: TRIP_REACH_LIMITS.maxExtraKm.max,
+      }))
+    : loaded;
   const pinned = locationId
     ? (locations.find((location) => location.id === locationId) ?? null)
     : null;
@@ -248,6 +276,22 @@ export async function quoteTrip(
         ? { percent: window.percent, flatSen: null }
         : { percent: null, flatSen: window.flatSen }
       : null;
+  const weekendWhy = location.weekend
+    ? weekendReason(
+        location.weekend,
+        localDateTimeInputs(request.startsAt).date,
+      )
+    : null;
+  const weekend =
+    location.weekend && weekendWhy
+      ? {
+          charge:
+            location.weekend.percent !== null
+              ? { percent: location.weekend.percent, flatSen: null }
+              : { percent: null, flatSen: location.weekend.flatSen },
+          reason: weekendWhy,
+        }
+      : null;
 
   const classes = offerings.map((offering): ClassQuote => {
     const { vehicleClass } = offering;
@@ -273,7 +317,9 @@ export async function quoteTrip(
             }
           : null,
       zoneTrip: placed.measure,
+      freeExtraKm: location.freeExtraKm,
       surcharge,
+      weekend,
     });
     return {
       vehicleClass,
@@ -307,12 +353,18 @@ export async function quoteTrip(
         id: location.id,
         name: location.name,
         slug: location.slug,
+        freeExtraKm: location.freeExtraKm,
+        // The location's own, even when the quote was unlimited.
+        maxExtraKm:
+          loaded.find((l) => l.id === location.id)?.maxExtraKm ??
+          location.maxExtraKm,
       },
       basis,
       pickup: endOf(pickup),
       dropoff: dropoff ? endOf(dropoff) : null,
       zoneTrip: placed.measure,
       surcharge,
+      weekend,
       classes,
     },
   };

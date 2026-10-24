@@ -71,6 +71,7 @@ function langkawi(extra: Partial<QuoteLocation> = {}): QuoteLocation {
     name: "Langkawi",
     slug: "langkawi",
     maxExtraKm: 15,
+    freeExtraKm: 0,
     crossLocation: false,
     zones: [airport, pantaiKok, datai, kuah],
     zonesOut: [],
@@ -80,6 +81,7 @@ function langkawi(extra: Partial<QuoteLocation> = {}): QuoteLocation {
       cell(kuah, kuah, 2_500),
     ],
     oddHours: null,
+    weekend: null,
     ...extra,
   };
 }
@@ -95,6 +97,8 @@ function penang(crossLocation: boolean): QuoteLocation {
     zonesOut: [klia],
     zoneRates: [cell(timurLaut, klia, 30_000)],
     oddHours: null,
+    weekend: null,
+    freeExtraKm: 0,
   };
 }
 
@@ -108,6 +112,8 @@ const selangor: QuoteLocation = {
   zonesOut: [],
   zoneRates: [],
   oddHours: null,
+  weekend: null,
+  freeExtraKm: 0,
 };
 
 const at = (lng: number, lat: number): RoutePoint => ({ lng, lat });
@@ -200,7 +206,7 @@ describe("nearest-zone quotes, Langkawi", () => {
     near(measure.tripKm, 0.25 * DEG);
     assert.equal(
       price?.totalSen,
-      5_000 + Math.round(PER_KM * measure.dropoff.extraKm),
+      5_000 + PER_KM * Math.ceil(measure.dropoff.extraKm),
     );
   });
 
@@ -239,7 +245,7 @@ describe("nearest-zone quotes, Langkawi", () => {
     near(placed.measure!.tripKm, 0.05 * DEG);
     assert.equal(
       price?.totalSen,
-      2_500 + Math.round(PER_KM * placed.measure!.dropoff.extraKm),
+      2_500 + PER_KM * Math.ceil(placed.measure!.dropoff.extraKm),
     );
   });
 
@@ -276,7 +282,7 @@ describe("where trips may go", () => {
     assert.equal(!placed.ok && placed.error.code, "dropoff-outside");
     assert.match(
       !placed.ok ? placed.error.reason : "",
-      /in Penang, and trips across locations are off/,
+      /in Penang, and cross-location is off/,
     );
   });
 
@@ -300,7 +306,7 @@ describe("where trips may go", () => {
     assert.ok(past.price!.totalSen > 30_000);
   });
 
-  it("refuses the route out when trips across locations are off", async () => {
+  it("refuses the route out when cross-location is off", async () => {
     const placed = await placeTrip(
       [langkawi(), penang(false), selangor],
       { pickup: at(3.05, 0.05), dropoff: at(5.05, 0.05) },

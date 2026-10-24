@@ -26,11 +26,15 @@ export type PriceCheck = {
   expected: { totalSen: number } | { refused: TripQuoteErrorCode } | null;
   /** Why the trip is on the list, or what the price was on the demo's roads. */
   note?: string;
+  /** Checked live but not offered on Try a trip: the CEO demo's made-up spots. */
+  liveCheckOnly?: boolean;
 };
 
 export const PRICE_CHECKS = data.trips as PriceCheck[];
 
-/** The named trips of a location, for its Try a trip. */
-export function priceChecksAt(slug: string): PriceCheck[] {
-  return PRICE_CHECKS.filter((check) => check.location === slug);
+/** The named trips of a location that its Try a trip offers as examples. */
+export function tryTripExamplesAt(slug: string): PriceCheck[] {
+  return PRICE_CHECKS.filter(
+    (check) => check.location === slug && !check.liveCheckOnly,
+  );
 }

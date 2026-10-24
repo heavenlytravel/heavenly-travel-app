@@ -7,7 +7,7 @@ import type { BBox } from "./geo";
  * zones are three circles on the island, so a hotel the customer knows is
  * found, and Kuala Lumpur's is not. The drop-off keeps to the zones the
  * location's trips may end in: its own, and the other locations' zones its
- * routes out end at when trips across locations are on. A box is all the
+ * routes out end at when cross-location is on. A box is all the
  * search can keep to; whether the places picked are served is checked
  * when the customer asks for prices, and by the quote after that. Plain data, because the customer site
  * caches it with the location's pages. See docs/261015-locations-as-operation-areas.md,

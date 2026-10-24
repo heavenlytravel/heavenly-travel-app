@@ -377,6 +377,16 @@ export function XIcon(props: IconProps) {
   );
 }
 
+export function MenuIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5h16" />
+      <path d="M4 12h16" />
+      <path d="M4 19h16" />
+    </Icon>
+  );
+}
+
 export function BusIcon(props: IconProps) {
   return (
     <Icon {...props}>

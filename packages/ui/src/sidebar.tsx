@@ -14,15 +14,16 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "./cx.js";
-import { PanelLeftIcon, XIcon } from "./icons.js";
-import { Sheet } from "./sheet.js";
+import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
 
 /**
  * An app sidebar that collapses to a rail of icons, after shadcn's sidebar:
  * a provider owns the open state, a keyboard shortcut (Ctrl or Cmd + B)
  * and a rail toggle it, the state survives reloads in a cookie, and below
- * `md` the same content opens in a sheet instead. Composed from small
+ * `md` the same content opens in a panel over the page instead, from a bar
+ * that floats at the bottom of the screen. Composed from small
  * pieces so each app decides what goes in the header, the groups and the
  * footer.
  */
@@ -107,18 +108,25 @@ export function SidebarProvider({
 
 /**
  * The sidebar itself. From `md` up it is a sticky column that is 16rem
- * wide open and 3rem collapsed; below that it is a sheet from the left,
- * always drawn open.
+ * wide open and 3rem collapsed. Below that it is a panel that fills the
+ * screen but for a narrow margin, always drawn open, with `dock`, the bar
+ * that opened it, floating over its foot where it was: its menu button is
+ * now the way to close it. The panel fades in and rises a little
+ * (`.ui-pop` in styles.css).
  */
 export function Sidebar({
   title,
+  dock,
   children,
 }: {
-  /** The sheet's accessible name: "Console menu". */
+  /** The panel's accessible name: "Console menu". */
   title: string;
+  /** The `SidebarDock` the page has, drawn again over the panel. */
+  dock?: ReactNode;
   children: ReactNode;
 }) {
   const { open, openMobile, setOpenMobile } = useSidebar();
+  const ref = useModal(openMobile);
 
   return (
     <>
@@ -135,30 +143,79 @@ export function Sidebar({
         <SidebarRail />
       </aside>
       {/* No display class on the dialog itself: closed, it must stay hidden. */}
-      <Sheet
-        open={openMobile}
-        onOpenChange={setOpenMobile}
-        side="left"
-        title={title}
-        className="ui:text-slate-900"
+      <dialog
+        ref={ref}
+        aria-label={title}
+        onClose={onModalClose(() => setOpenMobile(false))}
+        onClick={(event) => {
+          // The dialog itself, clear around the panel, is the margin over the page.
+          if (event.target === event.currentTarget) setOpenMobile(false);
+        }}
+        className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-slate-900 ui:backdrop:bg-ink/45"
       >
-        <div className="ui:flex ui:min-h-full ui:flex-col">
-          <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={() => setOpenMobile(false)}
-              className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:hover:bg-slate-100 ui:hover:text-slate-900"
-            >
-              <XIcon />
-            </button>
-          </div>
-          <CollapsedContext.Provider value={false}>
-            {children}
-          </CollapsedContext.Provider>
+        <div className={cx("ui-pop-panel", PANEL)}>
+          {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
+          <ModalBody open={openMobile} className="ui:h-full ui:pt-2 ui:pb-20">
+            <CollapsedContext.Provider value={false}>
+              {children}
+            </CollapsedContext.Provider>
+          </ModalBody>
         </div>
-      </Sheet>
+        {dock}
+      </dialog>
     </>
+  );
+}
+
+/**
+ * The room a panel over the page takes on a phone: all of it but a narrow
+ * margin, so the page shows round it and a tap there closes it. The
+ * command palette takes the same room.
+ */
+const PANEL =
+  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)]";
+
+/**
+ * The bar that floats at the bottom of a phone's screen, over every page:
+ * what `children` hold (the search, say), then the button that opens the
+ * menu, which turns into the way to close it. Gone from `md` up, where the
+ * sidebar stands beside the page. Hand the same bar to `Sidebar` as its
+ * `dock`, so it shows over the menu's panel too. A page keeps room at
+ * its foot for it, and toasts rise above it (`--ui-dock-room`).
+ */
+export function SidebarDock({ children }: { children?: ReactNode }) {
+  const { openMobile, setOpenMobile } = useSidebar();
+  return (
+    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-200 ui:bg-white/95 ui:p-1 ui:shadow-[0_10px_30px_rgba(15,23,42,0.16)] ui:backdrop-blur ui:md:hidden">
+      {children}
+      {children ? (
+        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-slate-200" />
+      ) : null}
+      <SidebarDockButton
+        aria-label={openMobile ? "Close menu" : "Open menu"}
+        aria-expanded={openMobile}
+        onClick={() => setOpenMobile(!openMobile)}
+      >
+        {openMobile ? <XIcon /> : <MenuIcon />}
+      </SidebarDockButton>
+    </div>
+  );
+}
+
+/** A button in the dock: an icon, and a word beside it if it has one. */
+export function SidebarDockButton({
+  className,
+  ...props
+}: ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      className={cx(
+        "ui:inline-flex ui:h-9 ui:min-w-9 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-2.5 ui:text-sm ui:font-medium ui:text-slate-700 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-[18px]",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -180,7 +237,7 @@ function SidebarRail() {
   );
 }
 
-/** The button in the page header that opens or collapses the sidebar. */
+/** The button in the page header that opens or collapses the sidebar; on a phone the dock's does. */
 export function SidebarTrigger({
   className,
   ...props

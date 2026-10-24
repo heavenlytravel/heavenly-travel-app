@@ -3,12 +3,13 @@
 import { Command } from "cmdk";
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { cx } from "./cx.js";
-import { SearchIcon, SpinnerIcon } from "./icons.js";
+import { SearchIcon, SpinnerIcon, XIcon } from "./icons.js";
 import { ModalBody, onModalClose, useModal } from "./modal.js";
 
 /** One row of the palette: what it shows, and the value `onChoose` is handed. */
@@ -38,11 +39,7 @@ export function useShortcutLabel() {
     : "Ctrl K";
 }
 
-/**
- * The button in a bar that opens the palette: a box that reads like a
- * search field with its keys at the end from `sm` up, the search icon
- * alone on a phone.
- */
+/** The button in a bar that opens the palette: a box that reads like a search field, with its keys at the end. */
 export function CommandPaletteTrigger({
   label,
   onOpen,
@@ -61,35 +58,42 @@ export function CommandPaletteTrigger({
       aria-label={label}
       aria-keyshortcuts="Control+K Meta+K"
       className={cx(
-        "ui:inline-flex ui:h-9 ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-md ui:text-sm ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
-        "ui:max-sm:size-8 ui:max-sm:justify-center ui:max-sm:text-slate-600 ui:max-sm:hover:bg-slate-100 ui:max-sm:hover:text-slate-900",
-        "ui:sm:w-full ui:sm:border ui:sm:border-line ui:sm:bg-white ui:sm:px-3 ui:sm:hover:border-slate-400",
+        "ui:inline-flex ui:h-9 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-md ui:border ui:border-line ui:bg-white ui:px-3 ui:text-sm ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:hover:border-slate-400 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
         className,
       )}
     >
-      <SearchIcon className="ui:sm:text-slate-400" />
-      <span className="ui:hidden ui:flex-1 ui:text-left ui:sm:inline">
-        {label}…
-      </span>
-      <kbd
-        aria-hidden="true"
-        className="ui:hidden ui:rounded ui:border ui:border-slate-200 ui:bg-white ui:px-1.5 ui:font-sans ui:text-[11px] ui:text-slate-500 ui:sm:block"
-      >
-        {shortcut}
-      </kbd>
+      <SearchIcon className="ui:text-slate-400" />
+      <span className="ui:flex-1 ui:text-left">{label}…</span>
+      <Keys>{shortcut}</Keys>
     </button>
+  );
+}
+
+/** Keys to press, as a key cap: "Ctrl K", "Esc". */
+function Keys({ children }: { children: ReactNode }) {
+  return (
+    <kbd
+      aria-hidden="true"
+      className="ui:rounded ui:border ui:border-slate-200 ui:bg-white ui:px-1.5 ui:font-sans ui:text-[11px] ui:text-slate-500"
+    >
+      {children}
+    </kbd>
   );
 }
 
 /**
  * A command palette over a dimmed page, after shadcn's (cmdk inside a
- * dialog): a box on top and, under it, the rows that match in groups under
- * their headings. The arrows walk the rows across the groups, Enter or a
- * click chooses one, Escape closes. Ctrl or Cmd + K opens it from anywhere
- * on the page, and again closes it. The caller owns the text and the rows,
- * and filters them itself; `pending` says a search is on its way, shown
- * as a spinner once it takes a moment, and `status` is a line under the
- * rows: "Searching…", "No results". Built on the native `<dialog>`, as the
+ * dialog): a box on top, its text ready to type, and under it the rows
+ * that match in groups under their headings. The arrows walk the rows
+ * across the groups, Enter or a click chooses one, Escape closes, as the
+ * Esc at the box's end says; on a phone, with no Escape, that is a close
+ * button. Ctrl or Cmd + K opens it from anywhere on the page, and again
+ * closes it. The caller owns the text and the rows, and filters them
+ * itself; `pending` says a search is on its way, shown as a spinner once
+ * it takes a moment, and `status` is a line under the rows: "Searching…",
+ * "No results". From `md` up it is a box high on the page; on a phone it
+ * takes the room the sidebar's panel does. It fades in and rises a little
+ * (`.ui-pop` in styles.css). Built on the native `<dialog>`, as the
  * dialog and the sheet are.
  */
 export function CommandPalette({
@@ -117,6 +121,7 @@ export function CommandPalette({
   onChoose: (value: string) => void;
 }) {
   const ref = useModal(open);
+  const input = useRef<HTMLInputElement>(null);
   const [slow, setSlow] = useState(false);
   // The row marked: the first again as the text changes, and the first
   // when the rows change under it, so Enter always has a row to open.
@@ -128,6 +133,12 @@ export function CommandPalette({
   }
   const keys = groups.flatMap((group) => group.items.map((item) => item.key));
   const current = keys.includes(marked) ? marked : (keys[0] ?? "");
+
+  // Once it is shown (`useModal`'s effect runs first), the box takes the
+  // keys, not cmdk's list, which the dialog would focus first.
+  useEffect(() => {
+    if (open) input.current?.focus();
+  }, [open]);
 
   useEffect(() => {
     if (!pending) return;
@@ -157,10 +168,10 @@ export function CommandPalette({
       aria-label={label}
       onClose={onModalClose(() => onOpenChange(false))}
       onClick={(event) => {
-        // The dialog element itself is only hit through the backdrop.
+        // The dialog itself, clear around the panel, is the page's dimmed margin.
         if (event.target === event.currentTarget) onOpenChange(false);
       }}
-      className="ui:mx-auto ui:mt-[12dvh] ui:max-h-none ui:w-[min(36rem,calc(100vw-1rem))] ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45"
+      className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-inherit ui:backdrop:bg-ink/45"
     >
       {open ? (
         <Command
@@ -169,13 +180,15 @@ export function CommandPalette({
           loop
           value={current}
           onValueChange={setMarked}
+          className="ui-pop-panel ui:absolute ui:inset-2 ui:flex ui:flex-col ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:md:inset-x-0 ui:md:top-[12dvh] ui:md:bottom-auto ui:md:mx-auto ui:md:w-[36rem] ui:md:rounded-xl"
         >
-          <div className="ui:flex ui:items-center ui:gap-2 ui:border-b ui:border-slate-200 ui:px-3">
+          <div className="ui:flex ui:shrink-0 ui:items-center ui:gap-2 ui:border-b ui:border-slate-200 ui:pr-2 ui:pl-3">
             <SearchIcon className="ui:text-slate-400" />
             <Command.Input
               value={value}
               onValueChange={onValueChange}
               placeholder={placeholder}
+              ref={input}
               className="ui:h-12 ui:min-w-0 ui:flex-1 ui:bg-transparent ui:text-sm ui:outline-hidden ui:placeholder:text-slate-400"
             />
             {searching ? (
@@ -184,8 +197,23 @@ export function CommandPalette({
                 className="ui:text-slate-400"
               />
             ) : null}
+            <button
+              type="button"
+              aria-label="Close"
+              aria-keyshortcuts="Escape"
+              onClick={() => onOpenChange(false)}
+              className="ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring"
+            >
+              <span className="ui:max-md:hidden">
+                <Keys>Esc</Keys>
+              </span>
+              <XIcon className="ui:md:hidden" />
+            </button>
           </div>
-          <ModalBody open={open} className="ui:max-h-[min(24rem,60dvh)]">
+          <ModalBody
+            open={open}
+            className="ui:min-h-0 ui:flex-1 ui:md:max-h-[min(24rem,60dvh)]"
+          >
             <Command.List className="ui:scroll-py-1 ui:p-1">
               {groups.map((group) => (
                 <Command.Group

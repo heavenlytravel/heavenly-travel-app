@@ -3,6 +3,7 @@ import { Toaster } from "@repo/ui/toast";
 import { cookies } from "next/headers";
 import { AppSidebar } from "../_components/AppSidebar";
 import { ConsoleHeader } from "../_components/ConsoleHeader";
+import { ConsoleSearch } from "../_components/ConsoleSearch";
 import { PageColumn } from "../_components/PageColumn";
 import { getPermissions } from "../_lib/access";
 import { locationNames } from "../_lib/location-names";
@@ -31,11 +32,13 @@ export default async function ConsoleLayout({
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <AppSidebar scope={scope} />
-      <SidebarInset>
-        <ConsoleHeader locations={locations} permissions={permissions} />
-        <PageColumn>{children}</PageColumn>
-      </SidebarInset>
+      <ConsoleSearch locations={locations} permissions={permissions}>
+        <AppSidebar scope={scope} />
+        <SidebarInset>
+          <ConsoleHeader locations={locations} permissions={permissions} />
+          <PageColumn>{children}</PageColumn>
+        </SidebarInset>
+      </ConsoleSearch>
       {/* The console's one place for "Saved" and the like, at the corner. */}
       <Toaster />
     </SidebarProvider>

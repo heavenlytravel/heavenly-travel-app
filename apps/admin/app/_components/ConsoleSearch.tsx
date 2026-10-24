@@ -6,9 +6,18 @@ import {
   CommandPaletteTrigger,
   type CommandPaletteGroup,
 } from "@repo/ui/command-palette";
-import { CirclePlusIcon } from "@repo/ui/icons";
+import { CirclePlusIcon, SearchIcon } from "@repo/ui/icons";
+import { SidebarDockButton, useSidebar } from "@repo/ui/sidebar";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   RECORD_KIND_LABELS,
   type RecordKind,
@@ -52,9 +61,20 @@ type Answer = {
   failed: boolean;
 };
 
+/** Opens the palette, for a button that does: the header's box, the dock's search. */
+const OpenSearchContext = createContext<(() => void) | null>(null);
+
+function useOpenSearch() {
+  const open = useContext(OpenSearchContext);
+  if (!open) throw new Error("A search button needs ConsoleSearch round it.");
+  return open;
+}
+
 /**
- * The search in the console header: a box that opens the command palette,
- * as Ctrl or Cmd + K does from anywhere. Before anything is typed it lists
+ * The console's search: the command palette, which the box in the header
+ * (`SearchBox`) and the search in a phone's dock (`DockSearch`) open, as
+ * Ctrl or Cmd + K does from anywhere. Round the console, so each of them
+ * reaches it. Before anything is typed it lists
  * the pages of the scope on screen and what the admin may add. As they
  * type it finds, in groups, the pages (across locations and each
  * location's), the actions, the locations, and, asked of the server, the
@@ -65,9 +85,11 @@ type Answer = {
 export function ConsoleSearch({
   locations,
   permissions,
+  children,
 }: {
   locations: readonly SidebarLocation[];
   permissions: readonly Permission[];
+  children: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -179,6 +201,8 @@ export function ConsoleSearch({
         ? "The search failed. Try again."
         : `No results for “${term}”.`;
 
+  const openSearch = useCallback(() => setOpen(true), []);
+
   const close = (next: boolean) => {
     setOpen(next);
     // Closed, it starts afresh: no text, and no records of the last search.
@@ -189,12 +213,8 @@ export function ConsoleSearch({
   };
 
   return (
-    <>
-      <CommandPaletteTrigger
-        label="Search"
-        onOpen={() => setOpen(true)}
-        className="sm:max-w-xs"
-      />
+    <OpenSearchContext.Provider value={openSearch}>
+      {children}
       <CommandPalette
         label="Search the console"
         placeholder="Search pages, bookings, plates, people…"
@@ -210,7 +230,36 @@ export function ConsoleSearch({
           router.push(href);
         }}
       />
-    </>
+    </OpenSearchContext.Provider>
+  );
+}
+
+/** The box in the header that opens the search, from `md` up; a phone has the dock's. */
+export function SearchBox() {
+  const openSearch = useOpenSearch();
+  return (
+    <CommandPaletteTrigger
+      label="Search"
+      onOpen={openSearch}
+      className="max-w-xs max-md:hidden"
+    />
+  );
+}
+
+/** The search in a phone's dock. Pressed over the menu, the menu makes way for it. */
+export function DockSearch() {
+  const openSearch = useOpenSearch();
+  const { setOpenMobile } = useSidebar();
+  return (
+    <SidebarDockButton
+      onClick={() => {
+        setOpenMobile(false);
+        openSearch();
+      }}
+    >
+      <SearchIcon />
+      Search
+    </SidebarDockButton>
   );
 }
 

@@ -15,7 +15,7 @@ import {
   locationTabOf,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
-import { ConsoleSearch } from "./ConsoleSearch";
+import { SearchBox } from "./ConsoleSearch";
 import { sectionOnScreen } from "./nav";
 import { ScopePicker } from "./ScopePicker";
 
@@ -39,7 +39,8 @@ function sectionOf(pathname: string): { label: string; href: string } | null {
  * section on screen: "Langkawi / Rates", a link back to the section from
  * a record inside it. On the right the search, which opens the command
  * palette over every page and record the admin may open, and the
- * signed-in admin's own menu.
+ * signed-in admin's own menu. On a phone the toggle and the search are
+ * in the dock at the screen's foot instead.
  * See docs/261022-console-scope.md and docs/261023-console-sidebar.md.
  */
 export function ConsoleHeader({
@@ -58,8 +59,11 @@ export function ConsoleHeader({
         className="absolute inset-x-0 top-0"
         gradient={["var(--navy)", "var(--azure)"]}
       />
-      <SidebarTrigger className="-ml-1" />
-      <span aria-hidden="true" className="mx-1 h-4 w-px bg-slate-200" />
+      <SidebarTrigger className="-ml-1 max-md:hidden" />
+      <span
+        aria-hidden="true"
+        className="mx-1 h-4 w-px bg-slate-200 max-md:hidden"
+      />
       <ScopePicker locations={locations} permissions={permissions} />
       {section ? (
         <nav
@@ -87,7 +91,7 @@ export function ConsoleHeader({
         </nav>
       ) : null}
       <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 pl-2">
-        <ConsoleSearch locations={locations} permissions={permissions} />
+        <SearchBox />
         {/* The box holds the button's place while Clerk loads, so the bar does not shift. */}
         <span className="flex size-7 shrink-0 items-center justify-center">
           <UserButton appearance={clerkUserButton} />

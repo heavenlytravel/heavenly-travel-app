@@ -68,8 +68,11 @@ sections open in its place, under a way back. This replaces "The sidebar" of
   the menu, and its pages. While one of its pages is on screen the drill stays open. Back
   shows the menu with the page left as it is; the drill returns once another of its pages
   opens, or its row is pressed. Each page of a drill has its own icon, as each row has;
-  a location's pages keep their standing's dot beside it. On a phone the drill's row keeps the sheet open, so its
-  pages show there. Collapsed to a rail there is no drill: the rows' icons alone.
+  a location's pages keep their standing's dot beside it. On a phone the drill's row keeps the menu's panel open,
+  so its pages show there. Collapsed to a rail there is no drill: the rows' icons alone.
+- A drill opens as its row is pressed, before its page has come. Its pages come in from
+  the right out of a slight blur as the menu goes, and the menu comes back from the left
+  (added 2026-10-25, after the way Vercel's dashboard moves between its menus).
 - Fleet, decided by the CEO on 2026-10-25: Vehicles, Drivers, Vehicle classes, in either
   scope. An admin who may open one of them alone (Reservation and Sales read the classes,
   not the vehicles) sees that page's row in Fleet's place, with no drill.
@@ -119,7 +122,21 @@ Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over 
   opens inside its location, where it lives.
 - A search that takes longer than 150 ms shows a spinner in the box and "Searching…"
   under the rows; a quick one shows neither, so nothing flickers. Enter opens the row
-  marked, the first unless the arrows moved it.
+  marked, the first unless the arrows moved it. The box takes the keys as the palette
+  opens, and an Esc at its end says how to close it.
+
+### On a phone
+
+Added on 2026-10-25, after Vercel's dashboard on a phone. The top bar keeps the picker and
+the admin's own menu; the sidebar's toggle and the search move to a bar floating at the
+foot of every page: Search, then the menu button.
+
+- The menu opens as a panel over the page, all of it but a narrow margin, with no brand
+  mark. The bar stays over its foot, its menu button now an X to close it; Search there
+  closes the menu and opens the palette. A tap in the margin closes it too.
+- The palette takes the same room as the menu, with an X in place of the Esc.
+- Both fade in and rise a little. Pages keep room at their foot for the bar, and toasts
+  stand above it.
 - Not searched: Activity, a log rather than records to open, and Media, whose file names
   nobody searches by. Admins are found among Users.
 - Cost: plain `contains` queries on our own database, a handful per pause in the typing,
@@ -154,12 +171,16 @@ Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over 
 - The console's layout draws no sidebar or header for someone who is not an admin. The only
   page they reach under it is a page not found, which now includes any path the catch-all
   takes; this way not even the picker's location names reach them.
-- Search: `_components/ConsoleSearch.tsx` (the palette in the header),
+- Search: `_components/ConsoleSearch.tsx` (the palette),
   `_components/palette-index.ts` (pages, actions and locations), `GET /api/search`
   (`_lib/console-search.ts` for its answer) over `findBookingMatches` and the finders of
   `@repo/db`'s `console-search.ts`; `@repo/ui`'s `command-palette` (cmdk in a native
   `<dialog>`). The booking search, its route and `@repo/ui`'s `search-menu` go.
 - `@repo/ui`'s `Sheet` slides from its edge (`.ui-sheet` in its styles).
+- On a phone: `@repo/ui`'s `SidebarDock` (the floating bar) and the sidebar's panel in
+  place of its sheet (`.ui-pop`); the palette's `ConsoleSearch` sits round the
+  console so the header's `SearchBox` and the dock's `DockSearch` both open it. A
+  drill's way in is `.ui-swap-in`. `@repo/ui` gains `MenuIcon`.
 - `@repo/ui` gains `SettingsIcon`, `CarFrontIcon` (Fleet), `ActivityIcon`,
   `SlidersHorizontalIcon` (General) and `FilesIcon` (All pages).
 

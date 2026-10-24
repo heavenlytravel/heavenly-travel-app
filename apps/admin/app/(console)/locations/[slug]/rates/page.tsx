@@ -30,6 +30,14 @@ import { TripRulesForm } from "./TripRulesForm";
 import { TripRulesList } from "./TripRulesList";
 import { TryTrip } from "./try-trip/TryTrip";
 
+/** The tab's four parts, in their order, for the jumps under its header. */
+const PARTS: readonly { part: keyof typeof RATES_PARTS; label: string }[] = [
+  { part: "classes", label: "Rates and rules" },
+  { part: "grid", label: "Rate grid" },
+  { part: "rules", label: "Trip rules" },
+  { part: "tryTrip", label: "Try a trip" },
+];
+
 /**
  * Route: /locations/[slug]/rates. Operation's tab, beside the setup: what
  * the location charges, in one column. The classes it sells at their
@@ -37,7 +45,8 @@ import { TryTrip } from "./try-trip/TryTrip";
  * between its zones, one row per route and one column per class on sale;
  * both run to their cards' edges. Under them, the trip rules (the extra
  * road, cross-location and the two surcharges), then Try a trip, which prices a
- * trip as a customer would be charged and shows how. The zones themselves
+ * trip as a customer would be charged and shows how. Under the header, a
+ * jump to each part, the grid being long. The zones themselves
  * are drawn on the Coverage tab, the classes put on sale on the Vehicle
  * classes tab. Operation changes them (`coverage.manage`); Reservation
  * and Sales read the rates, the grid and the rules, and try trips, for
@@ -58,6 +67,20 @@ export default async function LocationRatesPage({
         title="Rates"
         description="Every one-way trip is a cell of the grid. An address outside every zone takes its nearest zone by road, and adds the road past the zone's edge at the class's rate per extra km when the trip runs past it."
       />
+      <nav
+        aria-label="Parts of the rates"
+        className="mt-4 flex flex-wrap gap-2"
+      >
+        {PARTS.map(({ part, label }) => (
+          <a
+            key={part}
+            href={`#${RATES_PARTS[part]}`}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
       <div className="mt-6 grid gap-6">
         <Streamed
           fallback={

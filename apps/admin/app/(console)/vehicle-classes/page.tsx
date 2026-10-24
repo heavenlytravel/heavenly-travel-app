@@ -15,11 +15,14 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { TILE_LINK, Tile, TileFoot, TileGrid } from "../../_components/Card";
 import { CardImage } from "../../_components/CardImage";
 import { LocationMark } from "../../_components/LocationMark";
+import { VEHICLES_SECTION } from "../../_components/nav";
 import { PageHeader } from "../../_components/PageHeader";
+import { SectionTabs } from "../../_components/SectionTabs";
 import { Bone, Streamed, TileGridSkeleton } from "../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import {
   NEW_VEHICLE_CLASS_PATH,
+  VEHICLE_CLASSES_PATH,
   ratesHref,
   vehicleClassHref,
 } from "../../_lib/routes";
@@ -35,18 +38,21 @@ import { VehicleClassActiveSwitch } from "./VehicleClassControls";
  * picture of the vehicles based there. Operation's screen,
  * behind `coverage.manage` for adding, editing and the switch; Reservation
  * and Sales read it behind `coverage.view`. Classes are never deleted,
- * only turned off; a booking keeps its snapshot of the class. See
- * docs/261018-location-work-and-class-catalogue.md.
+ * only turned off; a booking keeps its snapshot of the class. The
+ * catalogue is the second tab of Vehicles, a vehicle being of a model of a
+ * class. See docs/261018-location-work-and-class-catalogue.md and
+ * docs/261023-console-sidebar.md.
  */
 export default async function VehicleClassesPage() {
   await requireAdmin("coverage.view");
-  const manages = (await getPermissions()).includes("coverage.manage");
+  const permissions = await getPermissions();
+  const manages = permissions.includes("coverage.manage");
 
   return (
     <>
       <PageHeader
-        title="Vehicle classes"
-        description="The catalogue: what each class is, its picture, seats and luggage. Each location sells the classes it offers at its own rates and under its own rules."
+        title="Vehicles"
+        description="The class catalogue: what each class is, its picture, seats and luggage. Each location sells the classes it offers at its own rates and under its own rules."
         action={
           manages ? (
             <Button asChild>
@@ -54,6 +60,11 @@ export default async function VehicleClassesPage() {
             </Button>
           ) : null
         }
+      />
+      <SectionTabs
+        section={VEHICLES_SECTION}
+        current={VEHICLE_CLASSES_PATH}
+        permissions={permissions}
       />
 
       <Streamed

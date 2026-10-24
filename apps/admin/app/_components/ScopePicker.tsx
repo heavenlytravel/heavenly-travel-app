@@ -18,10 +18,10 @@ import {
 import {
   NEW_LOCATION_PATH,
   locationTabsMayOpen,
+  scopeOfPath,
   scopeSwitchHref,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
-import { useConsoleScope } from "./ConsoleScope";
 import { LocationMark } from "./LocationMark";
 import { LocationStateBadge } from "./StatusBadges";
 
@@ -31,7 +31,7 @@ import { LocationStateBadge } from "./StatusBadges";
  * locations, every location with its state, and Add location for
  * Marketing. Picking keeps the section on screen where the other scope
  * has it: from Langkawi's Rates to Penang's, from a location's Bookings to
- * the queue across locations. See docs/261022-console-scope.md.
+ * the queue across locations. See docs/261023-console-sidebar.md.
  */
 export function ScopePicker({
   locations,
@@ -41,7 +41,7 @@ export function ScopePicker({
   permissions: readonly Permission[];
 }) {
   const pathname = usePathname();
-  const scope = useConsoleScope();
+  const scope = scopeOfPath(pathname);
   const current =
     scope === "all"
       ? null

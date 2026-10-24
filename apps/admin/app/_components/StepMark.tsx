@@ -1,23 +1,26 @@
 import { cx } from "@repo/ui/cx";
 
 /**
- * Where one step of a location's setup stands, as a small circle: a tick
- * on green once it is done, its number on a ring until then. On the tabs
- * and in the checklist of a draft location.
+ * Where one step stands, as a small circle: a tick on green once it is
+ * done, its number on a ring until then, or the ring alone where the steps
+ * are not counted. On a draft location's checklist and the sidebar rows of
+ * its setup, and on the steps of a booking form.
  */
 export function StepMark({
   number,
   done,
   className,
 }: {
-  number: number;
+  /** None where the steps are not counted, as in the sidebar. */
+  number?: number;
   done: boolean;
   className?: string;
 }) {
+  const name = number === undefined ? "Setup step" : `Step ${number}`;
   return (
     <span
       role="img"
-      aria-label={done ? `Step ${number}, done` : `Step ${number}, to do`}
+      aria-label={done ? `${name}, done` : `${name}, to do`}
       className={cx(
         "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
         done

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { locationStateOf, type Permission } from "@repo/db";
+import type { Permission } from "@repo/db";
 import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import { NavigationProgress } from "@repo/ui/navigation-progress";
 import { SidebarTrigger } from "@repo/ui/sidebar";
@@ -13,37 +13,24 @@ import {
   locationSlugOf,
   locationTabHref,
   locationTabOf,
-  locationTabsFor,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
 import { BookingSearch } from "./BookingSearch";
-import { currentNav } from "./nav";
+import { sectionOnScreen } from "./nav";
 import { ScopePicker } from "./ScopePicker";
 
 /** The section on screen, for the trail after the picker: a location's tab, or a section of the console. */
-function sectionOf(
-  pathname: string,
-  locations: readonly SidebarLocation[],
-): { label: string; href: string } | null {
+function sectionOf(pathname: string): { label: string; href: string } | null {
   const slug = locationSlugOf(pathname);
   if (slug !== null) {
     const tab = locationTabOf(slug, pathname);
-    const location = locations.find((entry) => entry.slug === slug);
-    // The overview of a live location is its day, "Today".
-    const placed = location
-      ? locationTabsFor(locationStateOf(location.state)).find(
-          (entry) => entry.key === tab,
-        )
-      : undefined;
-    const label =
-      placed?.label ?? LOCATION_TABS.find((entry) => entry.key === tab)?.label;
+    const label = LOCATION_TABS.find((entry) => entry.key === tab)?.label;
     return label ? { label, href: locationTabHref(slug, tab) } : null;
   }
   if (pathname === NEW_LOCATION_PATH) {
     return { label: "Add location", href: NEW_LOCATION_PATH };
   }
-  const section = currentNav(pathname);
-  return section ? { label: section.label, href: section.href } : null;
+  return sectionOnScreen(pathname) ?? null;
 }
 
 /**
@@ -52,7 +39,7 @@ function sectionOf(
  * section on screen: "Langkawi / Rates", a link back to the section from
  * a record inside it. On the right the search for a booking, for an
  * admin who may open the bookings, and the signed-in admin's own menu.
- * See docs/261022-console-scope.md.
+ * See docs/261022-console-scope.md and docs/261023-console-sidebar.md.
  */
 export function ConsoleHeader({
   locations,
@@ -62,7 +49,7 @@ export function ConsoleHeader({
   permissions: readonly Permission[];
 }) {
   const pathname = usePathname();
-  const section = sectionOf(pathname, locations);
+  const section = sectionOf(pathname);
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur">

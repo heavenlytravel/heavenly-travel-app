@@ -2,6 +2,7 @@ import {
   LOCATION_STATE_LABELS,
   LOCATION_STATE_MOVE,
   hasBeenLive,
+  isSlugLocked,
   locationDeleteImpact,
   locationStateOf,
   stateMoveBlockers,
@@ -18,7 +19,9 @@ import {
   locationKey,
   locationOverview,
 } from "../../_lib/location-data";
+import { stateOptions } from "../../_lib/state-options";
 import { DeleteLocation } from "../DeleteLocation";
+import { LocationDetailsForm } from "../LocationDetailsForm";
 import { StateMove } from "../StateMove";
 
 /** What the state means for the public. */
@@ -34,14 +37,18 @@ function stateNote(state: LocationState, slug: string) {
 }
 
 /**
- * Route: /locations/[slug]/status. The last tab of the setup: where the
- * location stands with the public, and for SUPER the one move its state
- * allows, "Go live", "Pause" or "Resume", with what still stands in the
- * way of going live; then, for SUPER, its deletion. Every admin reads it.
+ * Route: /locations/[slug]/settings. The location's own settings, the
+ * first page of Settings in its sidebar, the history being the second.
+ * For Marketing its details, step 1 of the setup: the name, the slug and
+ * the states it lies in. For every admin where it stands with the public,
+ * with what still stands in the way of going live, and for SUPER the one
+ * move its state allows, "Go live", "Pause" or "Resume"; then, for SUPER,
+ * its deletion. Its saved addresses are with its pages. See
+ * docs/261023-console-sidebar.md.
  */
-export default async function LocationStatusPage({
+export default async function LocationSettingsPage({
   params,
-}: PageProps<"/locations/[slug]/status">) {
+}: PageProps<"/locations/[slug]/settings">) {
   await requireAdmin("locations.view");
   const { slug } = await params;
   const { id } = await locationKey(slug);
@@ -49,31 +56,44 @@ export default async function LocationStatusPage({
   return (
     <>
       <SectionHeader
-        title="Status"
-        description="Where the location stands with the public. A SUPER admin takes it live, pauses it and resumes it here."
+        title="General"
+        description="The location's details, where it stands with the public, and its deletion. Marketing sets the details; a SUPER admin takes it live, pauses it, resumes it and deletes it."
       />
       <div className="mt-6 grid gap-6">
-        <Streamed fallback={<CardSkeleton rows={3} />}>
-          {() => status({ id })}
+        <Streamed
+          fallback={
+            <>
+              <CardSkeleton rows={5} />
+              <CardSkeleton rows={3} />
+            </>
+          }
+        >
+          {() => settings({ id })}
         </Streamed>
       </div>
     </>
   );
 }
 
-async function status({ id }: { id: string }) {
+async function settings({ id }: { id: string }) {
   const asked = getPermissions();
-  const [location, overview, permissions, routesIn] = await Promise.all([
-    locationDetails(id),
-    locationOverview(id),
-    asked,
-    // What a delete takes from other locations, read for SUPER alone.
-    asked.then((held) =>
-      held.includes("locations.activate") ? routesIntoLocation(id) : [],
-    ),
-  ]);
-  const moves = permissions.includes("locations.activate");
+  const [location, overview, permissions, states, routesIn] = await Promise.all(
+    [
+      locationDetails(id),
+      locationOverview(id),
+      asked,
+      // The states to tick, read for Marketing alone.
+      asked.then((held) =>
+        held.includes("locations.manage") ? stateOptions() : null,
+      ),
+      // What a delete takes from other locations, read for SUPER alone.
+      asked.then((held) =>
+        held.includes("locations.activate") ? routesIntoLocation(id) : [],
+      ),
+    ],
+  );
   if (!location || !overview) notFound();
+  const moves = permissions.includes("locations.activate");
   const state = locationStateOf(location.state);
   const blockers = stateMoveBlockers(
     state,
@@ -84,6 +104,21 @@ async function status({ id }: { id: string }) {
 
   return (
     <>
+      {states ? (
+        <Card>
+          <CardTitle>Details</CardTitle>
+          <LocationDetailsForm
+            location={{
+              id: location.id,
+              name: location.name,
+              slug: location.slug,
+              stateCodes: location.states.map((entry) => entry.code).sort(),
+              slugLocked: isSlugLocked(location),
+            }}
+            states={states}
+          />
+        </Card>
+      ) : null}
       <Card>
         <CardTitle description={stateNote(state, location.slug)}>
           {LOCATION_STATE_LABELS[state]}

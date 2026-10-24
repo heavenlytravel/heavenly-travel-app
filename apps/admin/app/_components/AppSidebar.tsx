@@ -2,12 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarLabel,
   SidebarMenu,
@@ -15,15 +12,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@repo/ui/sidebar";
-import type { Permission } from "@repo/db";
 import type { MouseEvent, ReactNode } from "react";
-import {
-  ALL_LOCATIONS_NAV,
-  groupFor,
-  isCurrentNav,
-  navFor,
-  type NavGroup,
-} from "./nav";
+import { KEEPS_SHEET } from "./ConsoleMenu";
 
 /** A location as the picker lists it. */
 export type SidebarLocation = {
@@ -34,28 +24,26 @@ export type SidebarLocation = {
 };
 
 /**
- * The console's sidebar: the brand mark on top, then the sections of the
- * scope the picker in the header is on, then the sections of the console
- * as a whole. The scope's sections come from the layout's `@scope` slot:
- * a location's own, its day's work first and its setup folded under it,
- * or the views across every location. Collapsed it is a rail of icons
- * with the labels as tooltips; below `md` it opens as a sheet, which any
- * link in it closes, one to the page on screen or a part of it included.
- * See docs/261022-console-scope.md.
+ * The console's sidebar: the brand mark on top, then the menu of the
+ * scope the picker in the header is on, from the layout's `@scope` slot.
+ * On a location it holds that location alone; on All locations, the views
+ * across locations and the console's own screens. Collapsed it is a rail
+ * of icons with the labels as tooltips; below `md` it opens as a sheet,
+ * which a link in it closes, except a drill's row, which opens its menu in
+ * the sheet. See docs/261023-console-sidebar.md.
  */
 export function AppSidebar({
-  permissions,
   scope,
 }: {
-  permissions: readonly Permission[];
-  /** The scope's sections, from the `@scope` slot. */
+  /** The scope's menu, from the `@scope` slot. */
   scope: ReactNode;
 }) {
   const { setOpenMobile } = useSidebar();
-  // A link pressed anywhere in the sheet closes it; a submenu's chevron,
-  // a button, does not. On a wide screen there is no sheet to close.
+  // A link pressed anywhere in the sheet closes it; a drill's row and a
+  // button do not. On a wide screen there is no sheet to close.
   const closeOnLink = (event: MouseEvent<HTMLElement>) => {
-    if ((event.target as Element).closest("a")) setOpenMobile(false);
+    const link = (event.target as Element).closest("a");
+    if (link && !link.matches(KEEPS_SHEET)) setOpenMobile(false);
   };
 
   return (
@@ -91,48 +79,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent onClick={closeOnLink}>
-        {scope}
-        {navFor(permissions).map((group) => (
-          <NavGroupMenu key={group.label} group={group} />
-        ))}
-      </SidebarContent>
+      <SidebarContent onClick={closeOnLink}>{scope}</SidebarContent>
     </Sidebar>
   );
-}
-
-/** A group of sections under its heading, the one on screen marked. */
-function NavGroupMenu({ group }: { group: NavGroup }) {
-  const pathname = usePathname();
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-      <SidebarMenu>
-        {group.items.map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton
-              asChild
-              active={isCurrentNav(item, pathname)}
-              tooltip={item.label}
-            >
-              <Link href={item.href}>
-                <item.icon />
-                <SidebarLabel>{item.label}</SidebarLabel>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
-  );
-}
-
-/** The sidebar on All locations: the home and the views across locations the admin may open. */
-export function AllLocationsMenu({
-  permissions,
-}: {
-  permissions: readonly Permission[];
-}) {
-  const group = groupFor(ALL_LOCATIONS_NAV, permissions);
-  return group ? <NavGroupMenu group={group} /> : null;
 }

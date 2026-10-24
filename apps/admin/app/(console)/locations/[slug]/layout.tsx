@@ -11,12 +11,12 @@ import { LocationTabs } from "./LocationTabs";
  * Route: /locations/[slug] and its tabs. The header every tab shares: the
  * location's name. The location's sections are the sidebar's while the
  * picker in the console header is on it, with where each stands, its
- * state on the picker, and the move the state allows on the Status tab.
+ * state on the picker, and the move the state allows in its settings.
  * Preview is on the Pages tab and in each page's editor. On a phone,
  * where the sidebar is a sheet, a strip of the tabs under the header, in
  * the sidebar's order, keeps the sections in reach. Every admin may open
  * a location; each tab is its own route behind its own permission. See
- * docs/261022-console-scope.md,
+ * docs/261023-console-sidebar.md,
  * docs/261015-locations-as-operation-areas.md, "Setting a location up",
  * and docs/261018-location-work-and-class-catalogue.md.
  */

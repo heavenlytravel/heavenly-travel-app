@@ -1,6 +1,4 @@
 import {
-  SETUP_STEPS,
-  SETUP_STEP_LABELS,
   type ActivityEntityType,
   type BookingStatus,
   type LocationHistoryKind,
@@ -65,6 +63,9 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
 /** The page as the address names it: none for the first. */
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
+
+/** What Marketing sets on the customer site's home page: the top choices. */
+export const HOME_PAGE_PATH = "/home-page";
 
 export const MEDIA_PATH = "/media";
 
@@ -207,41 +208,36 @@ export function locationSlugOf(pathname: string): string | null {
   return slug === "" || slug === "new" ? null : decodeURIComponent(slug);
 }
 
-/** A tab of a location's page: the overview, one of the setup steps, the rates, the bookings, the vehicles, the drivers, the status or the history. */
+/** A tab of a location's page: the overview, the bookings, the vehicles, the drivers, the classes on sale, the coverage, the rates, the pages, the settings or the history. */
 export type LocationTab =
   | "overview"
-  | SetupStepKey
-  | "rates"
   | "bookings"
   | "vehicles"
   | "drivers"
-  | "status"
+  | "vehicle-classes"
+  | "coverage"
+  | "rates"
+  | "pages"
+  | "settings"
   | "history";
 
 export type LocationTabDef = {
   key: LocationTab;
   label: string;
   permission: Permission;
-  /** The setup step the tab is, when it is one. */
+  /** The setup step the tab holds, when it holds one: Settings holds the details. */
   step: SetupStepKey | null;
 };
 
-/** What opening each setup step's tab asks; changing the classes or the coverage asks `coverage.manage`. */
-const STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
-  details: "locations.manage",
-  "vehicle-classes": "coverage.view",
-  coverage: "coverage.view",
-  pages: "locations.manage",
-};
-
 /**
- * The tabs of a location's page, in order: the overview, then the four
- * setup steps in the order an admin walks them, with the rates right after
- * the coverage whose zones they price, then the bookings, the vehicles and
- * drivers based there, the status, and the history. Each is its own
- * route behind its own permission, as every console page is; the sidebar
- * lists the tabs the admin may open while the picker is on the location. See
- * docs/261015-locations-as-operation-areas.md, "Who may do what".
+ * The tabs of a location's page, in the sidebar's order: the day's work
+ * (the overview, the bookings, the vehicles and drivers based there), then
+ * what the location sells and where (the classes on sale, the zones, the
+ * rates between them), then its pages, its settings and its history. The
+ * settings are its details, its status and its deletion, on one page; the
+ * sidebar opens them and the history as one section. Each tab is its own
+ * route behind its own permission, as every console page is. See
+ * docs/261023-console-sidebar.md.
  */
 export const LOCATION_TABS: readonly LocationTabDef[] = [
   {
@@ -250,24 +246,6 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     permission: "locations.view",
     step: null,
   },
-  ...SETUP_STEPS.flatMap((step): LocationTabDef[] => [
-    {
-      key: step,
-      label: SETUP_STEP_LABELS[step],
-      permission: STEP_PERMISSIONS[step],
-      step,
-    },
-    ...(step === "coverage"
-      ? [
-          {
-            key: "rates" as const,
-            label: "Rates",
-            permission: "coverage.view" as const,
-            step: null,
-          },
-        ]
-      : []),
-  ]),
   {
     key: "bookings",
     label: "Bookings",
@@ -287,10 +265,34 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
     step: null,
   },
   {
-    key: "status",
-    label: "Status",
-    permission: "locations.view",
+    key: "vehicle-classes",
+    label: "Vehicle classes",
+    permission: "coverage.view",
+    step: "vehicle-classes",
+  },
+  {
+    key: "coverage",
+    label: "Coverage",
+    permission: "coverage.view",
+    step: "coverage",
+  },
+  {
+    key: "rates",
+    label: "Rates",
+    permission: "coverage.view",
     step: null,
+  },
+  {
+    key: "pages",
+    label: "Pages",
+    permission: "locations.manage",
+    step: "pages",
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    permission: "locations.view",
+    step: "details",
   },
   {
     key: "history",
@@ -301,89 +303,43 @@ export const LOCATION_TABS: readonly LocationTabDef[] = [
 ];
 
 /**
- * Where a tab sits among a location's sections in the sidebar: the day's
- * work, the setup done once and rarely touched, or the end, after both.
+ * What doing each setup step asks, for the checklist's way in: the details
+ * and the pages are Marketing's, the classes and the zones Operation's to
+ * change and Reservation's and Sales' to read. Settings opens for every
+ * admin, but only Marketing finds the details there.
  */
-export type LocationTabGroup = "work" | "setup" | "foot";
-
-/** A tab as a location in one state shows it: in its group, under the name it has there. */
-export type PlacedTab = LocationTabDef & { group: LocationTabGroup };
-
-/** The day's work in its order: the day, the queue, the vehicles and drivers Operation sends, the pages Marketing keeps. */
-const WORK_TABS: readonly LocationTab[] = [
-  "overview",
-  "bookings",
-  "vehicles",
-  "drivers",
-  "pages",
-];
+export const SETUP_STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
+  details: "locations.manage",
+  "vehicle-classes": "coverage.view",
+  coverage: "coverage.view",
+  pages: "locations.manage",
+};
 
 /**
- * The group of a tab in a location in this state; null for a tab it does
- * not show. A draft is all setup: its overview is the checklist, then the
- * steps and the rates, and it has no Bookings tab, since a draft takes no
- * bookings. Once live or paused, the day's work comes first and the setup
- * folds away under it; the pages, a setup step while a draft, are work
- * from then on, and so are the vehicles and drivers, entered while it is
- * set up. The status ends the setup, going live last; the history is at
- * the foot either way.
+ * The tabs of a location in this state, in the sidebar's order. A draft
+ * takes no bookings, so it has no Bookings tab; every other tab is the
+ * same in every state, so going live moves nothing. The sidebar, the strip
+ * of tabs on a phone and the header's trail all read this.
  */
-function groupOf(
-  tab: LocationTab,
+export function locationTabsFor(
   state: LocationState,
-): LocationTabGroup | null {
-  const draft = state === "draft";
-  switch (tab) {
-    case "history":
-      return "foot";
-    case "overview":
-      return "work";
-    case "bookings":
-      return draft ? null : "work";
-    case "pages":
-    case "vehicles":
-    case "drivers":
-      return draft ? "setup" : "work";
-    default:
-      return "setup";
-  }
-}
-
-/**
- * The tabs of a location in this state, in the sidebar's order: the work,
- * then the setup, then the end. The overview of a live or paused location
- * is its day, "Today". The sidebar, the strip of tabs on a phone and the
- * header's trail all read this. See docs/261018-location-work-and-class-catalogue.md.
- */
-export function locationTabsFor(state: LocationState): PlacedTab[] {
-  const placed = LOCATION_TABS.flatMap((tab): PlacedTab[] => {
-    const group = groupOf(tab.key, state);
-    if (!group) return [];
-    const label =
-      tab.key === "overview" && state !== "draft" ? "Today" : tab.label;
-    return [{ ...tab, label, group }];
-  });
-  const rank = (tab: PlacedTab) =>
-    tab.group === "work"
-      ? WORK_TABS.indexOf(tab.key)
-      : tab.group === "setup"
-        ? WORK_TABS.length
-        : WORK_TABS.length + 1;
-  // A stable sort, so the setup keeps the order the tabs are walked in.
-  return placed.sort((a, b) => rank(a) - rank(b));
+): readonly LocationTabDef[] {
+  return state === "draft"
+    ? LOCATION_TABS.filter((tab) => tab.key !== "bookings")
+    : LOCATION_TABS;
 }
 
 /** The tabs of a location in this state that an admin with these permissions may open, in order. */
 export function locationTabsMayOpen(
   state: LocationState,
   permissions: readonly Permission[],
-): PlacedTab[] {
+): LocationTabDef[] {
   return locationTabsFor(state).filter((tab) =>
     permissions.includes(tab.permission),
   );
 }
 
-/** The tab of a setup step. */
+/** The tab that holds a setup step: Settings holds the details. */
 export function setupStepTab(step: SetupStepKey): LocationTabDef {
   return LOCATION_TABS.find((tab) => tab.step === step)!;
 }
@@ -395,7 +351,7 @@ export function locationTabHref(slug: string, tab: LocationTab) {
     : `${locationHref(slug)}/${tab}`;
 }
 
-/** The tab a path under a location's page is on: the editor of a page is on Pages, a publish in the history on Overview. */
+/** The tab a path under a location's page is on: the editor of a page is on Pages, a publish on History. */
 export function locationTabOf(slug: string, pathname: string): LocationTab {
   const rest = pathname.slice(locationHref(slug).length);
   const segment = rest.split("/")[1];
@@ -406,16 +362,14 @@ export function locationTabOf(slug: string, pathname: string): LocationTab {
 /**
  * What the console works on, as the location picker in its header names
  * it and the sidebar lists it: one location, by its slug, or every
- * location at once. See docs/261022-console-scope.md.
+ * location at once. See docs/261023-console-sidebar.md.
  */
 export type ConsoleScope = { slug: string } | "all";
 
 /**
- * The sections across locations, each by the tab of a location it sums up.
- * Two lists must name the same ones: `ALL_LOCATIONS_NAV` in
- * `_components/nav.ts`, the sidebar's rows, and the folders of the
- * `(console)/@scope` slot, each of which draws All locations on its path.
- * A section left out of the slot keeps the menu of the scope before it.
+ * The sections across locations that sum up a tab of each location, so
+ * the picker keeps the section on screen: from Langkawi's Rates to the
+ * rates of every location, from a location's Pages to the home page.
  */
 const ACROSS_LOCATIONS: readonly { path: string; tab: LocationTab }[] = [
   { path: BOOKINGS_PATH, tab: "bookings" },
@@ -424,6 +378,7 @@ const ACROSS_LOCATIONS: readonly { path: string; tab: LocationTab }[] = [
   { path: VEHICLE_CLASSES_PATH, tab: "vehicle-classes" },
   { path: COVERAGE_PATH, tab: "coverage" },
   { path: RATES_PATH, tab: "rates" },
+  { path: HOME_PAGE_PATH, tab: "pages" },
 ];
 
 const acrossOf = (pathname: string) =>
@@ -432,34 +387,15 @@ const acrossOf = (pathname: string) =>
   );
 
 /**
- * The scope a path is in: the location it is inside, or every location on
- * the home and the sections across locations. Null on a page of the whole
- * console (the home page's choices, the media, the users, the admins, the
- * activity, adding a location), which keeps the scope last worked in.
+ * The scope a path is in: the location it is inside, or every location
+ * anywhere else. A location's sidebar lists that location alone; the
+ * screens of the console as a whole (the home page, the users, the
+ * admins, the activity, the media, adding a location) are listed on All
+ * locations, so opening one shows that sidebar.
  */
-export function scopeOfPath(pathname: string): ConsoleScope | null {
+export function scopeOfPath(pathname: string): ConsoleScope {
   const slug = locationSlugOf(pathname);
-  if (slug !== null) return { slug };
-  if (pathname === LOCATIONS_PATH || acrossOf(pathname)) return "all";
-  return null;
-}
-
-/** The cookie that remembers the scope last worked in, for a page of the whole console opened afresh. */
-export const SCOPE_COOKIE = "console_scope";
-
-/** How a location's key starts, apart from "all", which a slug may be too. */
-const LOCATION_KEY = "location:";
-
-/** A scope as its cookie holds it, and as a key to compare two by: "all", or "location:langkawi". */
-export function scopeKey(scope: ConsoleScope): string {
-  return scope === "all" ? "all" : `${LOCATION_KEY}${scope.slug}`;
-}
-
-/** The scope the cookie remembers; every location when there is none or it is not a key. */
-export function scopeOfKey(key: string | undefined): ConsoleScope {
-  return key?.startsWith(LOCATION_KEY) && key.length > LOCATION_KEY.length
-    ? { slug: key.slice(LOCATION_KEY.length) }
-    : "all";
+  return slug === null ? "all" : { slug };
 }
 
 /**
@@ -511,9 +447,6 @@ export const SAVED_ADDRESSES_ID = "saved-addresses";
 export function locationAddressesHref(slug: string) {
   return `${locationTabHref(slug, "pages")}#${SAVED_ADDRESSES_ID}`;
 }
-
-/** What Marketing sets on the customer site's home page: the top choices. */
-export const HOME_PAGE_PATH = "/home-page";
 
 /** The editor of one page of a location: its landing page or a product's. */
 export function locationPageHref(slug: string, page: LocationPageKey) {

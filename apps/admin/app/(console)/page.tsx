@@ -55,7 +55,7 @@ export default async function LocationsPage() {
   return (
     <>
       <PageHeader
-        title="Locations"
+        title="Overview"
         description={whoAmI(admin)}
         action={
           permissions.includes("locations.manage") ? (

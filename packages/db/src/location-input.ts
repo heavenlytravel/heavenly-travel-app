@@ -161,7 +161,7 @@ export function setupSteps(
         ? "No state yet"
         : andList(operation.stateNames),
       operation.stateNames.length === 0
-        ? ["Tick at least one state on the Details tab"]
+        ? ["Tick at least one state in the location's settings"]
         : [],
     ),
     step(

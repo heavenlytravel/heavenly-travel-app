@@ -17,6 +17,9 @@ export function Toaster() {
       position="bottom-right"
       duration={3500}
       gap={8}
+      // Above the dock a phone has at its foot, where there is one (styles.css).
+      offset={{ bottom: "var(--ui-dock-room, 24px)" }}
+      mobileOffset={{ bottom: "var(--ui-dock-room, 16px)" }}
       toastOptions={{
         classNames: {
           toast:

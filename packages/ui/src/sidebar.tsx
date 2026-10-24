@@ -14,17 +14,18 @@ import {
   type ReactNode,
 } from "react";
 import { cx } from "./cx.js";
-import { PanelLeftIcon, XIcon } from "./icons.js";
-import { Sheet } from "./sheet.js";
+import { haptic } from "./haptic.js";
+import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
+import { ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
 
 /**
  * An app sidebar that collapses to a rail of icons, after shadcn's sidebar:
  * a provider owns the open state, a keyboard shortcut (Ctrl or Cmd + B)
  * and a rail toggle it, the state survives reloads in a cookie, and below
- * `md` the same content opens in a sheet instead. Composed from small
- * pieces so each app decides what goes in the header, the groups and the
- * footer.
+ * `md` the same content opens in a panel over the page instead, from a bar
+ * that floats at the bottom of the screen. Composed from small
+ * pieces so each app decides what goes in the header and the groups.
  */
 
 const COOKIE_NAME = "sidebar_state";
@@ -107,18 +108,25 @@ export function SidebarProvider({
 
 /**
  * The sidebar itself. From `md` up it is a sticky column that is 16rem
- * wide open and 3rem collapsed; below that it is a sheet from the left,
- * always drawn open.
+ * wide open and 3rem collapsed. Below that it is a panel that fills the
+ * screen but for a narrow margin, always drawn open, with `dock`, the bar
+ * that opened it, floating over its foot where it was: its menu button is
+ * now the way to close it. The panel fades in and rises a little
+ * (`.ui-pop` in styles.css).
  */
 export function Sidebar({
   title,
+  dock,
   children,
 }: {
-  /** The sheet's accessible name: "Console menu". */
+  /** The panel's accessible name: "Console menu". */
   title: string;
+  /** The `SidebarDock` the page has, drawn again over the panel. */
+  dock?: ReactNode;
   children: ReactNode;
 }) {
   const { open, openMobile, setOpenMobile } = useSidebar();
+  const ref = useModal(openMobile);
 
   return (
     <>
@@ -135,30 +143,95 @@ export function Sidebar({
         <SidebarRail />
       </aside>
       {/* No display class on the dialog itself: closed, it must stay hidden. */}
-      <Sheet
-        open={openMobile}
-        onOpenChange={setOpenMobile}
-        side="left"
-        title={title}
-        className="ui:text-slate-900"
+      <dialog
+        ref={ref}
+        aria-label={title}
+        onClose={onModalClose(() => setOpenMobile(false))}
+        onClick={(event) => {
+          // The dialog itself, clear around the panel, is the margin over the page.
+          if (event.target === event.currentTarget) setOpenMobile(false);
+        }}
+        className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-slate-900 ui:backdrop:bg-ink/45"
       >
-        <div className="ui:flex ui:min-h-full ui:flex-col">
-          <div className="ui:flex ui:h-12 ui:shrink-0 ui:items-center ui:justify-end ui:px-2">
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={() => setOpenMobile(false)}
-              className="ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:hover:bg-slate-100 ui:hover:text-slate-900"
-            >
-              <XIcon />
-            </button>
-          </div>
-          <CollapsedContext.Provider value={false}>
-            {children}
-          </CollapsedContext.Provider>
+        <div className={cx("ui-pop-panel", PANEL)}>
+          {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
+          <ModalBody open={openMobile} className="ui:h-full ui:pt-2 ui:pb-20">
+            <CollapsedContext.Provider value={false}>
+              {children}
+            </CollapsedContext.Provider>
+          </ModalBody>
         </div>
-      </Sheet>
+        {dock}
+      </dialog>
     </>
+  );
+}
+
+/**
+ * The room a panel over the page takes on a phone: all of it but a narrow
+ * margin, so the page shows round it and a tap there closes it. The
+ * command palette takes the same room.
+ */
+const PANEL =
+  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)]";
+
+/**
+ * The bar that floats at the bottom of a phone's screen, over every page:
+ * what `children` hold (the search, say), then the button that opens the
+ * menu, which turns into the way to close it. Gone from `md` up, where the
+ * sidebar stands beside the page. Hand the same bar to `Sidebar` as its
+ * `dock`, so it shows over the menu's panel too, and to any other panel
+ * it opens. A page keeps room at its foot for it, and toasts rise above
+ * it (`--ui-dock-room`).
+ */
+export function SidebarDock({
+  onMenu,
+  children,
+}: {
+  /** The menu button is pressed: close what else the dock opened. */
+  onMenu?: () => void;
+  children?: ReactNode;
+}) {
+  const { openMobile, setOpenMobile } = useSidebar();
+  return (
+    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-300 ui:bg-white/95 ui:p-1 ui:shadow-[0_12px_32px_rgba(15,23,42,0.22),0_2px_6px_rgba(15,23,42,0.1)] ui:backdrop-blur ui:md:hidden">
+      {children}
+      {children ? (
+        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-slate-200" />
+      ) : null}
+      <SidebarDockButton
+        aria-label={openMobile ? "Close menu" : "Open menu"}
+        aria-expanded={openMobile}
+        onClick={() => {
+          onMenu?.();
+          setOpenMobile(!openMobile);
+        }}
+      >
+        {openMobile ? <XIcon /> : <MenuIcon />}
+      </SidebarDockButton>
+    </div>
+  );
+}
+
+/** A button in the dock: an icon, and a word beside it if it has one. A phone feels it pressed. */
+export function SidebarDockButton({
+  className,
+  onClick,
+  ...props
+}: ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        haptic();
+        onClick?.(event);
+      }}
+      className={cx(
+        "ui:inline-flex ui:h-9 ui:min-w-9 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-2.5 ui:text-sm ui:font-medium ui:text-slate-700 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-[18px]",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -180,7 +253,7 @@ function SidebarRail() {
   );
 }
 
-/** The button in the page header that opens or collapses the sidebar. */
+/** The button in the page header that opens or collapses the sidebar; on a phone the dock's does. */
 export function SidebarTrigger({
   className,
   ...props
@@ -224,16 +297,7 @@ export function SidebarHeader({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export function SidebarFooter({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cx("ui:flex ui:flex-col ui:gap-2 ui:p-2", className)}
-      {...props}
-    />
-  );
-}
-
-/** The scrolling middle, between header and footer. */
+/** The scrolling part under the header. */
 export function SidebarContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -290,6 +354,28 @@ export function SidebarMenu({ className, ...props }: ComponentProps<"ul">) {
 
 export function SidebarMenuItem({ className, ...props }: ComponentProps<"li">) {
   return <li className={cx("ui:relative", className)} {...props} />;
+}
+
+/**
+ * Rows that belong together, on a tint: on the rail, the pages of a
+ * section laid out as icons of their own. A row of a `SidebarMenu`
+ * holding its own list of `SidebarMenuItem`s, named by `label` for
+ * assistive technology.
+ */
+export function SidebarMenuCluster({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <li className="ui:-mx-0.5 ui:rounded-lg ui:bg-slate-50 ui:p-0.5 ui:ring-1 ui:ring-slate-200 ui:ring-inset">
+      <ul aria-label={label} className="ui:flex ui:flex-col ui:gap-0.5">
+        {children}
+      </ul>
+    </li>
+  );
 }
 
 const MENU_BUTTON =
@@ -361,88 +447,17 @@ export function SidebarMenuButton({
 }
 
 /**
- * A small button at the right end of a menu row, beside its link: the
- * toggle of the row's submenu, say. The row gives it room with `pr-8`.
- * Gone while collapsed, with the submenu.
+ * The text beside an icon. Collapsed it is hidden, so the row is a square,
+ * but still read out: it names the icon's link.
  */
-export function SidebarMenuAction({
-  className,
-  ...props
-}: ComponentProps<"button">) {
-  const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return (
-    <button
-      type="button"
-      className={cx(
-        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-200 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-/** The rows under a menu row, indented on a line; gone while collapsed. */
-export function SidebarMenuSub({ className, ...props }: ComponentProps<"ul">) {
-  const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return (
-    <ul
-      className={cx(
-        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-slate-200 ui:py-0.5 ui:pl-2.5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function SidebarMenuSubItem({
-  className,
-  ...props
-}: ComponentProps<"li">) {
-  return <li className={cx("ui:relative", className)} {...props} />;
-}
-
-/**
- * One row of a submenu: smaller than a menu row, its text first, a count
- * or a status at its end. `asChild` styles the child element (a `Link`).
- */
-export function SidebarMenuSubButton({
-  asChild = false,
-  active = false,
-  className,
-  children,
-  ...props
-}: ComponentProps<"button"> & { asChild?: boolean; active?: boolean }) {
-  const shared = {
-    className: cx(
-      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-slate-600 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
-      active && "ui:bg-accent ui:font-medium ui:text-accent-foreground",
-      className,
-    ),
-    "data-active": active || undefined,
-    "aria-current": active ? ("page" as const) : undefined,
-  };
-  if (asChild && isValidElement(children)) {
-    return cloneElement(
-      children as ReactElement<Record<string, unknown>>,
-      shared,
-    );
-  }
-  return (
-    <button type="button" {...shared} {...props}>
-      {children}
-    </button>
-  );
-}
-
-/** The text beside an icon; hidden while collapsed so the row is a square. */
 export function SidebarLabel({ className, ...props }: ComponentProps<"span">) {
   const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return <span className={cx("ui:truncate", className)} {...props} />;
+  return (
+    <span
+      className={cx(collapsed ? "ui:sr-only" : "ui:truncate", className)}
+      {...props}
+    />
+  );
 }
 
 export function SidebarSeparator({

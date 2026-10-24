@@ -105,7 +105,7 @@ export type FleetFilter = {
 };
 
 /** Where a vehicle matches a search: its plate, its brand or its model. */
-function vehicleSearchWhere(search: string): Prisma.VehicleWhereInput {
+export function vehicleSearchWhere(search: string): Prisma.VehicleWhereInput {
   const plate = plateTermOf(search);
   return {
     OR: [

@@ -206,7 +206,7 @@ describe("setupSteps", () => {
       key: "details",
       title: "Details",
       status: "No state yet",
-      todos: ["Tick at least one state on the Details tab"],
+      todos: ["Tick at least one state in the location's settings"],
       done: false,
     });
   });

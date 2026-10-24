@@ -31,7 +31,9 @@ import {
   TableSkeleton,
 } from "../../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
+import { MENU_ICONS } from "../../../_components/menu";
 import {
+  SETUP_STEP_PERMISSIONS,
   locationBookingsHref,
   locationDriversHref,
   locationTabHref,
@@ -40,7 +42,6 @@ import {
   setupStepTab,
   type LocationTab,
 } from "../../../_lib/routes";
-import { LOCATION_TAB_ICONS } from "../_components/TabIcon";
 import {
   locationDetails,
   locationKey,
@@ -65,14 +66,14 @@ const PAGE_DOTS: Record<PageStatus, string> = {
 /**
  * Route: /locations/[slug]. The Overview tab, for every team. A draft
  * location opens on its setup checklist: the four steps, where each
- * stands, and what to do next. A live or paused one opens on its day, the
- * tab named Today: its queue in numbers, today's pick-ups and the bookings
- * awaiting confirmation, for the teams that work the queue, and for
- * Operation the vehicles with a document due and the drivers with a licence
- * due. A team that does not, such as Marketing, sees the location's parts
- * at a glance instead, a line each and a way in, which the sidebar also
- * lists. See
- * docs/261018-location-work-and-class-catalogue.md.
+ * stands, and what to do next. A live or paused one opens on its day: its
+ * queue in numbers, today's pick-ups and the bookings awaiting
+ * confirmation, for the teams that work the queue, and for Operation the
+ * vehicles with a document due and the drivers with a licence due. A team
+ * that does not, such as Marketing, sees the location's parts at a glance
+ * instead, a line each and a way in, which the sidebar also lists. See
+ * docs/261018-location-work-and-class-catalogue.md and
+ * docs/261023-console-sidebar.md.
  */
 export default async function LocationOverviewPage({
   params,
@@ -138,10 +139,10 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   let top: ReactNode = null;
   if (draft) {
     const steps = setupSteps(location.pages, numbers);
-    const hrefOf = (step: SetupStep) => {
-      const tab = setupStepTab(step.key);
-      return may(tab.permission) ? locationTabHref(slug, tab.key) : null;
-    };
+    const hrefOf = (step: SetupStep) =>
+      may(SETUP_STEP_PERMISSIONS[step.key])
+        ? locationTabHref(slug, setupStepTab(step.key).key)
+        : null;
     top = (
       <SetupChecklist
         title={`Set up ${location.name}`}
@@ -167,7 +168,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   // Every pair of zones, and each zone with itself: its within-zone price.
   const pairs = (numbers.zones * (numbers.zones + 1)) / 2;
   const lines: Partial<Record<LocationTab, ReactNode>> = {
-    details: [
+    settings: [
       andList(numbers.stateNames) || "No state yet",
       location.topChoiceOrder === null
         ? null
@@ -242,7 +243,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
                   className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-4 transition-colors hover:bg-slate-50"
                 >
                   <span className="flex size-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                    {LOCATION_TAB_ICONS[tab.key]}
+                    <GlanceIcon tab={tab.key} />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-medium text-slate-900">
@@ -395,6 +396,12 @@ function DocumentsDueCard({
       </ul>
     </Card>
   );
+}
+
+/** A tab's icon on its line at a glance, the same as its row in the sidebar. */
+function GlanceIcon({ tab }: { tab: LocationTab }) {
+  const Icon = MENU_ICONS[tab];
+  return <Icon />;
 }
 
 function AllBookingsLink({ href }: { href: string }) {

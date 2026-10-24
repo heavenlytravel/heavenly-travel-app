@@ -251,3 +251,10 @@ export * from "./location-view";
 export * from "./location-search";
 export * from "./search";
 export * from "./cache-tags";
+export {
+  findVehicleMatches,
+  findDriverMatches,
+  findUserMatches,
+  findVehicleClassMatches,
+  findZoneMatches,
+} from "./console-search";

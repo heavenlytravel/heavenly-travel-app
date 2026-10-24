@@ -2,14 +2,14 @@ import Link from "next/link";
 import { setupProgress, type SetupStep } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardTitle } from "../../../_components/Card";
-import { StepMark } from "../_components/StepMark";
+import { StepMark } from "../../../_components/StepMark";
 
 /**
  * The steps that set a location up, each with where it stands, what is
  * left to do, and a link to its tab for an admin who may open it. The
  * first step not done is marked as the next one. The Overview tab of a
- * draft location; once live, the overview turns to the day's operation and
- * the steps fold away under Setup in the sidebar.
+ * draft location; once live, the overview turns to the day's operation.
+ * The sidebar marks the same steps on the rows that hold them.
  */
 export function SetupChecklist({
   title,
@@ -28,8 +28,8 @@ export function SetupChecklist({
       <CardTitle
         description={
           progress.next
-            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, listed in the sidebar; the location goes live on its Status tab once every step is done.`
-            : "Every step is done: the location goes live on its Status tab."
+            ? `${progress.done} of ${progress.total} steps done. Each step is a section of the location, marked in the sidebar; the location goes live from its Settings once every step is done.`
+            : "Every step is done: the location goes live from its Settings."
         }
       >
         {title}

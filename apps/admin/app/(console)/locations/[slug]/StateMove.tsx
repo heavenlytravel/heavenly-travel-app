@@ -38,7 +38,7 @@ function questionOf(from: LocationState, name: string): ConfirmRequest | null {
 
 /**
  * The one move a location can make from its state, as a button on the
- * location's Status tab: "Go live", "Pause" or "Resume". "Pause" takes the
+ * location's settings: "Go live", "Pause" or "Resume". "Pause" takes the
  * location off sale, so it stands out in amber, and it and "Go live" ask
  * first in an alert dialog. While its pages do not allow the move the
  * button is disabled.

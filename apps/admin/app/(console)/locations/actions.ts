@@ -98,7 +98,7 @@ export async function updateLocationAction(
   revalidateEverywhere(id);
   // A draft's new slug is its new address in the console too.
   if (parsed.value.slug !== textOf(formData.get("previousSlug"))) {
-    return { href: locationTabHref(parsed.value.slug, "details") };
+    return { href: locationTabHref(parsed.value.slug, "settings") };
   }
   return null;
 }

@@ -108,21 +108,21 @@ export function UsersIcon(props: IconProps) {
   );
 }
 
-export function PowerIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M12 2v10" />
-      <path d="M18.4 6.6a9 9 0 1 1-12.77.04" />
-    </Icon>
-  );
-}
-
 export function HistoryIcon(props: IconProps) {
   return (
     <Icon {...props}>
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
       <path d="M12 7v5l4 2" />
+    </Icon>
+  );
+}
+
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
     </Icon>
   );
 }
@@ -368,6 +368,16 @@ export function XIcon(props: IconProps) {
   );
 }
 
+export function MenuIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5h16" />
+      <path d="M4 12h16" />
+      <path d="M4 19h16" />
+    </Icon>
+  );
+}
+
 export function BusIcon(props: IconProps) {
   return (
     <Icon {...props}>
@@ -389,6 +399,19 @@ export function CarIcon(props: IconProps) {
       <circle cx="7" cy="17" r="2" />
       <path d="M9 17h6" />
       <circle cx="17" cy="17" r="2" />
+    </Icon>
+  );
+}
+
+export function CarFrontIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8" />
+      <path d="M7 14h.01" />
+      <path d="M17 14h.01" />
+      <rect width="18" height="8" x="3" y="10" rx="2" />
+      <path d="M5 18v2" />
+      <path d="M19 18v2" />
     </Icon>
   );
 }
@@ -475,6 +498,32 @@ export function InfoIcon(props: IconProps) {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 16v-4" />
       <path d="M12 8h.01" />
+    </Icon>
+  );
+}
+
+export function ActivityIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+    </Icon>
+  );
+}
+
+export function SlidersHorizontalIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" />
+    </Icon>
+  );
+}
+
+export function FilesIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 7h-3a2 2 0 0 1-2-2V2" />
+      <path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z" />
+      <path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8" />
     </Icon>
   );
 }

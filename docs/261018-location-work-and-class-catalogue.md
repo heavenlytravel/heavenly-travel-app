@@ -26,6 +26,11 @@ to do; it is what each class is, and it needs a picture.
 
 ### The panel by daily work and setup
 
+Revised on 2026-10-23: the groups and the fold below are replaced by
+`261023-console-sidebar.md`. A location's rows keep their places in every state; a draft
+marks its setup steps on the rows that hold them. The overview is Overview in every
+state, and Details and Status are one page under Settings, with the history.
+
 - A draft is all setup. Its overview stands alone on top, then the Setup group: how far
   it has come ("2 of 4 done"), a bar, what to do next, and the steps, numbered, with
   Rates among them unnumbered. A draft has no Bookings tab: it takes no bookings

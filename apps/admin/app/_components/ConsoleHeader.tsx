@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
-import { locationStateOf, type Permission } from "@repo/db";
+import type { Permission } from "@repo/db";
 import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import { NavigationProgress } from "@repo/ui/navigation-progress";
 import { SidebarTrigger } from "@repo/ui/sidebar";
@@ -13,46 +13,35 @@ import {
   locationSlugOf,
   locationTabHref,
   locationTabOf,
-  locationTabsFor,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
-import { BookingSearch } from "./BookingSearch";
-import { currentNav } from "./nav";
+import { SearchBox } from "./ConsoleSearch";
+import { sectionOnScreen } from "./nav";
 import { ScopePicker } from "./ScopePicker";
 
 /** The section on screen, for the trail after the picker: a location's tab, or a section of the console. */
-function sectionOf(
-  pathname: string,
-  locations: readonly SidebarLocation[],
-): { label: string; href: string } | null {
+function sectionOf(pathname: string): { label: string; href: string } | null {
   const slug = locationSlugOf(pathname);
   if (slug !== null) {
     const tab = locationTabOf(slug, pathname);
-    const location = locations.find((entry) => entry.slug === slug);
-    // The overview of a live location is its day, "Today".
-    const placed = location
-      ? locationTabsFor(locationStateOf(location.state)).find(
-          (entry) => entry.key === tab,
-        )
-      : undefined;
-    const label =
-      placed?.label ?? LOCATION_TABS.find((entry) => entry.key === tab)?.label;
+    const label = LOCATION_TABS.find((entry) => entry.key === tab)?.label;
     return label ? { label, href: locationTabHref(slug, tab) } : null;
   }
   if (pathname === NEW_LOCATION_PATH) {
     return { label: "Add location", href: NEW_LOCATION_PATH };
   }
-  const section = currentNav(pathname);
-  return section ? { label: section.label, href: section.href } : null;
+  return sectionOnScreen(pathname) ?? null;
 }
 
 /**
  * The bar above every console page. On the left the sidebar's toggle,
  * the location picker, which sets the scope the sidebar lists, and the
  * section on screen: "Langkawi / Rates", a link back to the section from
- * a record inside it. On the right the search for a booking, for an
- * admin who may open the bookings, and the signed-in admin's own menu.
- * See docs/261022-console-scope.md.
+ * a record inside it. On the right the search, which opens the command
+ * palette over every page and record the admin may open, and the
+ * signed-in admin's own menu. On a phone the toggle and the search are
+ * in the dock at the screen's foot instead.
+ * See docs/261022-console-scope.md and docs/261023-console-sidebar.md.
  */
 export function ConsoleHeader({
   locations,
@@ -62,7 +51,7 @@ export function ConsoleHeader({
   permissions: readonly Permission[];
 }) {
   const pathname = usePathname();
-  const section = sectionOf(pathname, locations);
+  const section = sectionOf(pathname);
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
@@ -70,8 +59,11 @@ export function ConsoleHeader({
         className="absolute inset-x-0 top-0"
         gradient={["var(--navy)", "var(--azure)"]}
       />
-      <SidebarTrigger className="-ml-1" />
-      <span aria-hidden="true" className="mx-1 h-4 w-px bg-slate-200" />
+      <SidebarTrigger className="-ml-1 max-md:hidden" />
+      <span
+        aria-hidden="true"
+        className="mx-1 h-4 w-px bg-slate-200 max-md:hidden"
+      />
       <ScopePicker locations={locations} permissions={permissions} />
       {section ? (
         <nav
@@ -99,7 +91,7 @@ export function ConsoleHeader({
         </nav>
       ) : null}
       <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 pl-2">
-        {permissions.includes("bookings.view") ? <BookingSearch /> : null}
+        <SearchBox />
         {/* The box holds the button's place while Clerk loads, so the bar does not shift. */}
         <span className="flex size-7 shrink-0 items-center justify-center">
           <UserButton appearance={clerkUserButton} />

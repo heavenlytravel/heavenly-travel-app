@@ -190,16 +190,13 @@ export function DetailSkeleton({
 }
 
 /**
- * The scope's sections in the sidebar while they load: a heading, then
- * rows of an icon and a name; collapsed to a rail, the icons alone.
+ * A location's menu in the sidebar while it loads: rows of an icon and a
+ * name; collapsed to a rail, the icons alone.
  */
 export function ScopeNavSkeleton() {
   return (
     <div className="grid gap-3 p-4">
-      <WhenExpanded>
-        <Bone className="h-3 w-24" />
-      </WhenExpanded>
-      {Array.from({ length: 6 }, (_, row) => (
+      {Array.from({ length: 7 }, (_, row) => (
         <div key={row} className="flex items-center gap-3">
           <Bone className="size-4 shrink-0 rounded" />
           <WhenExpanded>

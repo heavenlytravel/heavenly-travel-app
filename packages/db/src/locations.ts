@@ -930,7 +930,7 @@ export type LocationDeleted =
  * (`routesIntoLocation`), such as Kuala Lumpur's to Selangor's KLIA, once
  * the admin confirmed what that takes as it stands
  * (`locationDeleteImpact`, ./delete-impact): one that priced a route to it
- * since the Status tab was read is refused, to be read first. A top
+ * since the location's settings were read is refused, to be read first. A top
  * choice leaves the home page first, so the places after it close up.
  * What the location was is logged, in the other locations' history too,
  * and its earlier entries stay in the log under the name it had. The

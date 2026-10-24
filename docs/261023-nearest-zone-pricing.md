@@ -515,8 +515,9 @@ Where the build differs from the plan above, or settles what it left open:
 - **The live check lives in `@repo/places`**: `pnpm --filter @repo/places price:check`,
   beside `check-coverage`, because it needs Google's router and `@repo/db` does not
   depend on `@repo/places`. The named trips are `packages/db/data/price-check.json`,
-  read by `priceChecksAt` for Try a trip's examples. Rows whose fare depends on Google's
-  kilometres print without an expected fare until Ops confirms one.
+  read by `tryTripExamplesAt` for Try a trip's examples, but for the CEO demo's
+  made-up spots (Orange, Blue), marked `liveCheckOnly`. Rows whose fare depends on
+  Google's kilometres print without an expected fare until Ops confirms one.
 - **The cap on the extra** is `EXTRA_CAPPED` in `packages/db/src/zone-trip.ts`, off:
   the whole extra road, as agreed. Turning it on is that one line.
 - **The pure rule** is `zone-trip.ts` (geometry, nearest zone by road, the fare), and
@@ -533,6 +534,42 @@ Where the build differs from the plan above, or settles what it left open:
   still counts it, so the count is an upper bound.
 - **"Test an address"** on the console's home page still names only the zone a point
   falls in; a pickup outside every zone is placed by Try a trip, which routes.
+
+### Added on 2026-10-24
+
+Asked by the user after the first review on staging:
+
+- **A free extra road**, `Location.freeExtraKm`, default 0. Each end outside every zone
+  pays only for its road past it: with 3 km free, an address 5 km past the edge pays
+  2 km. Two ends outside each get their own free km. 0 keeps the rule as agreed with
+  the CEO. The furthest extra road stays the limit past which a trip is not priced.
+- **Whole km**: the extra road charged is rounded up to the next km, once, after the
+  free km and both ends are added (`chargedKmOf`). Airport to Orange is now the
+  Pantai Kok cell plus 1 km. The receipt keeps `freeKm` and `chargedKm`; receipts from
+  before keep their unrounded km.
+- **A weekend and holiday surcharge**, per location: the weekdays it applies on (the
+  location's own weekend: Kedah's is Friday and Saturday), a list of holiday dates (Ops
+  adds them; public holidays differ by state), and a percentage or a flat amount, by the
+  pickup's local date. It is added beside the odd-hours surcharge, each worked on the
+  price before either. It shows on the receipt as "Weekend" or "Public holiday". Off
+  until a location switches it on.
+- **One "Trip rules" card** on the Rates tab holds the extra road (free up to, served
+  up to, drawn as one bar), cross-location (a switch; "trips across locations" is now
+  "cross-location" everywhere), the odd-hours surcharge and the weekend and holiday
+  surcharge, each behind its switch, with one save. Each part that changed is logged as
+  its own entry, so the older entries still read.
+- **One "Add route" button**: with cross-location on, its dialog's "To" also lists
+  other locations' zones, by location. The separate "Add a route to another location"
+  button is gone, which changes the decision "routes out are added from their own
+  button".
+- **Try a trip opens in full screen**: the trip's settings along the top, the map on
+  the left, the price and the calculation on the right; stacked on a phone. The class
+  starts on Sedan and the day on tomorrow, any day can be picked, and an end may be as
+  far as 100 km past its zone: a try is not held to a booking's limits. What a customer
+  would meet instead (sent to WhatsApp, too far ahead, the class's booking rules) is
+  said over the price. Pointing at a road on the map says what it measures; picking a
+  line of the calculation lights its roads up. "Copy breakdown" copies the trip and
+  its receipt as text.
 
 ## Decisions
 

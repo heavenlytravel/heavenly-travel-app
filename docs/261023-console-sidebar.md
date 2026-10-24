@@ -58,7 +58,8 @@ sections open in its place, under a way back. This replaces "The sidebar" of
   ("1 of 4"). Its overview is still the checklist, with a way into each step.
 - The Setup group, its fold and the submenus go. What they held is on the pages: the
   booking statuses on the list, the due filter and Add on the vehicle and driver lists,
-  the zones on Coverage, the classes on Vehicle classes, and the four parts of the rates as
+  the zones on Coverage, the classes on Vehicle classes, and the four parts of the rates
+  (Rates and rules, Rate grid, Trip rules and Try a trip, since nearest-zone pricing) as
   jumps under the Rates tab's header.
 - Fleet, Pages and Settings are drills.
 
@@ -68,8 +69,9 @@ sections open in its place, under a way back. This replaces "The sidebar" of
   the menu, and its pages. While one of its pages is on screen the drill stays open. Back
   shows the menu with the page left as it is; the drill returns once another of its pages
   opens, or its row is pressed. Each page of a drill has its own icon, as each row has;
-  a location's pages keep their standing's dot beside it. On a phone the drill's row keeps the menu's panel open,
-  so its pages show there. Collapsed to a rail there is no drill: the rows' icons alone.
+  a location's pages keep their standing's dot beside it. On a phone the drill's row keeps
+  the menu's panel open, so its pages show there. Collapsed to a rail no drill opens; see
+  "On the rail" below.
 - A drill opens as its row is pressed, before its page has come. Its pages come in from
   the right out of a slight blur as the menu goes, and the menu comes back from the left
   (added 2026-10-25, after the way Vercel's dashboard moves between its menus).
@@ -82,6 +84,25 @@ sections open in its place, under a way back. This replaces "The sidebar" of
   change as the note.
 - All locations' Settings, for SUPER: Users, Admins, Activity, Media. The Settings screen
   of BL-42 (payment, policies, emails) joins it when it is built.
+
+### On the rail
+
+Decided on 2026-10-25, once a review found that the rail reached only a drill's first page:
+with the sidebar collapsed, nothing led to Drivers, Vehicle classes, Admins, Activity, Media
+or a location's History. Two ways were drawn and both liked; the first is built.
+
+- **Built: each page its own icon.** Collapsed to a rail, Fleet and Settings, in either
+  scope, lay their pages out as icons of their own, together on a tint, so each is one
+  click away, as every page was on the rail before the drills. The rail shows no Fleet or
+  Settings icon: each page's tooltip names it under the drill, as "Fleet / Vehicle
+  classes", with its line where it has one ("Fleet / Vehicles: 3 vehicles in service").
+  The icons are the drill's own, so the rail and the open drill show the same three. A
+  location's Pages stays one icon: its pages are its editors, all reached from All pages.
+- **Kept for later: a list beside the rail.** The rail stays one icon per section, and a
+  drill's icon opens its pages in a small list beside it, with their notes and dots as in
+  the drill: a shorter rail for two clicks. Worth taking up if the rail grows too long,
+  say once BL-42's settings join All locations' Settings. `@repo/ui`'s `Menu`, opened to
+  the right, would draw it.
 
 ### A location's settings
 
@@ -114,7 +135,8 @@ Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over 
   (localStorage, keyed by their Clerk id); nothing goes to the server, and a row kept is
   what it was when opened.
 - As they type it finds, in groups in this order: Pages (across locations and each
-  location's, "Rates · Langkawi"), Actions (New booking, Add vehicle, driver, class or
+  location's, "Rates · Langkawi", with a location's Trip rules and Try a trip by their own
+  names), Actions (New booking, Add vehicle, driver, class or
   location, and for each location Add zone and Put a class on sale), Locations, then
   Bookings, Vehicles, Drivers, Users, Vehicle classes and Zones. A group shows only when
   something in it matches, and only to an admin who may open it. "abd" can list a
@@ -187,6 +209,11 @@ foot of every page: Search, then the menu button.
   (`_lib/console-search.ts` for its answer) over `findBookingMatches` and the finders of
   `@repo/db`'s `console-search.ts`; `@repo/ui`'s `command-palette` (cmdk in a native
   `<dialog>`). The booking search, its route and `@repo/ui`'s `search-menu` go.
+- On the rail: a drill whose `spreadOnRail` is set (`MenuDrill`) is drawn by `RailPages` in
+  `ConsoleMenu`, on `@repo/ui`'s `SidebarMenuCluster`. A collapsed row's label stays for
+  screen readers (`SidebarLabel`), so an icon's link is named.
+- The Rates tab's parts are named once, `RATES_PART_LABELS` in `_lib/routes.ts`, for the
+  cards, their jumps and the search.
 - `@repo/ui`'s `Sheet` slides from its edge (`.ui-sheet` in its styles).
 - On a phone: `@repo/ui`'s `SidebarDock` (the floating bar, felt through `haptic`) and
   the sidebar's panel in place of its sheet (`.ui-pop`). `ConsoleSearch` sits round the

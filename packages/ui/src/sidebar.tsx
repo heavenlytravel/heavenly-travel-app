@@ -356,6 +356,28 @@ export function SidebarMenuItem({ className, ...props }: ComponentProps<"li">) {
   return <li className={cx("ui:relative", className)} {...props} />;
 }
 
+/**
+ * Rows that belong together, on a tint: on the rail, the pages of a
+ * section laid out as icons of their own. A row of a `SidebarMenu`
+ * holding its own list of `SidebarMenuItem`s, named by `label` for
+ * assistive technology.
+ */
+export function SidebarMenuCluster({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <li className="ui:-mx-0.5 ui:rounded-lg ui:bg-slate-50 ui:p-0.5 ui:ring-1 ui:ring-slate-200 ui:ring-inset">
+      <ul aria-label={label} className="ui:flex ui:flex-col ui:gap-0.5">
+        {children}
+      </ul>
+    </li>
+  );
+}
+
 const MENU_BUTTON =
   "ui:flex ui:w-full ui:items-center ui:gap-2 ui:overflow-hidden ui:rounded-md ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
 
@@ -424,11 +446,18 @@ export function SidebarMenuButton({
   );
 }
 
-/** The text beside an icon; hidden while collapsed so the row is a square. */
+/**
+ * The text beside an icon. Collapsed it is hidden, so the row is a square,
+ * but still read out: it names the icon's link.
+ */
 export function SidebarLabel({ className, ...props }: ComponentProps<"span">) {
   const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return <span className={cx("ui:truncate", className)} {...props} />;
+  return (
+    <span
+      className={cx(collapsed ? "ui:sr-only" : "ui:truncate", className)}
+      {...props}
+    />
+  );
 }
 
 export function SidebarSeparator({

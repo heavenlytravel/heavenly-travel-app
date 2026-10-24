@@ -1,23 +1,89 @@
 "use client";
 
-import type { LngLat, PriceCheck, PriceCheckEnd, ZoneShape } from "@repo/db";
+import {
+  formatMyr,
+  localDateTimeInputs,
+  type LngLat,
+  type PriceCheck,
+  type PriceCheckEnd,
+  type ZoneShape,
+} from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { TimeField } from "@repo/ui/date-field";
+import { DateField, TimeField } from "@repo/ui/date-field";
 import { inputClassName } from "@repo/ui/field";
+import {
+  ArrowLeftRightIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  MaximizeIcon,
+  XIcon,
+} from "@repo/ui/icons";
+import { Menu, MenuItem } from "@repo/ui/menu";
+import { ModalBody, onModalClose, useModal } from "@repo/ui/modal";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import { useId, useState, useTransition } from "react";
 import { FormError } from "../../../../../_components/FormError";
 import { tryTripAction, type TryEnd, type TryTripAnswer } from "./actions";
-import { allLayers, explainCalculation, explainSteps } from "./explain";
-import { TripMap, type TripPin } from "./TripMap";
+import {
+  allLayers,
+  breakdownText,
+  explainCalculation,
+  explainSteps,
+  type LayerKey,
+} from "./explain";
+import { MAP_COLORS, TripMap, type TripPin } from "./TripMap";
 
 /** What Google bills a route request past the free allowance, in US dollars. */
 const ROUTE_REQUEST_USD = 0.005;
 
-/** An end as the card holds it: the text in its field, and the place or the pin it stands for. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type ClassChoice = { id: string; name: string; slug: string };
+
+type TryTripProps = {
+  locationId: string;
+  locationName: string;
+  /** The browser key for Google's map; null when it is not set. */
+  mapKey: string | null;
+  zones: { id: string; name: string; shape: ZoneShape }[];
+  /** The classes on sale here: the ones a trip can be priced for. */
+  classes: ClassChoice[];
+  examples: PriceCheck[];
+};
+
+/**
+ * Try a trip on the Rates tab: a line on what it does and the button that
+ * opens it in full screen, where the controls, the map and the price sit
+ * together. Nothing is booked or saved.
+ */
+export function TryTrip(props: TryTripProps) {
+  const [open, setOpen] = useState(false);
+  if (props.classes.length === 0) {
+    return (
+      <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
+        Put a class on sale to try a trip in it.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 px-6 py-5">
+      <Button onClick={() => setOpen(true)}>
+        <MaximizeIcon />
+        Open Try a trip
+      </Button>
+      <p className="text-sm text-slate-600">
+        Opens in full screen: the map, the trip&apos;s settings and its price
+        worked out step by step, side by side.
+      </p>
+      <TryTripScreen {...props} open={open} onClose={() => setOpen(false)} />
+    </div>
+  );
+}
+
+/** An end as the workspace holds it: the text in its field, and the place or the pin it stands for. */
 type EndState = { text: string; end: TryEnd | null };
 
 const EMPTY: EndState = { text: "", end: null };
@@ -33,62 +99,94 @@ const endOfCheck = (end: PriceCheckEnd): EndState => ({
 const pinLabel = ([lng, lat]: LngLat) =>
   `Pin at ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
+/** The class a try starts in: the sedan, as most trips are, or the first on sale. */
+const firstClass = (classes: ClassChoice[]) =>
+  (
+    classes.find((c) => c.slug === "sedan") ??
+    classes.find((c) => /sedan/i.test(c.name)) ??
+    classes[0]
+  )?.id ?? "";
+
+/** The workspace as a full-screen modal, its state made afresh each time it opens. */
+function TryTripScreen({
+  open,
+  onClose,
+  locationName,
+  ...props
+}: TryTripProps & { open: boolean; onClose: () => void }) {
+  const ref = useModal(open);
+  return (
+    <dialog
+      ref={ref}
+      aria-label={`Try a trip in ${locationName}`}
+      onClose={onModalClose(onClose)}
+      className="m-0 size-full max-h-none max-w-none overflow-hidden bg-white p-0 text-inherit backdrop:bg-ink/45"
+    >
+      <ModalBody open={open} className="h-full">
+        {open ? (
+          <Workspace {...props} locationName={locationName} onClose={onClose} />
+        ) : null}
+      </ModalBody>
+    </dialog>
+  );
+}
+
 /**
- * Try a trip: a pickup and a drop-off, each a place from the search or a
- * pin on the map, a class and a pickup time, priced by the website's own
- * quote with the pickup kept to this location. The answer shows as the
- * calculation, set out line by line, or step by step, each step with the
- * call it made to Google, what came back and what was worked out, the map
- * redrawn for it. Every try makes real calls; their count and cost are
- * under the steps. The examples are the live check's named trips. Nothing
- * is booked or saved.
+ * Try a trip itself: a pickup and a drop-off, each a place from the
+ * search or a pin on the map, a class (the sedan first), a pickup day and
+ * time, priced by the website's own quote with the pickup kept to this
+ * location and none of a booking's limits: any day, and an end as far
+ * past its zone as any location may serve. What a customer would meet
+ * instead is said over the price. The answer shows as the calculation, a
+ * line each, picking one lighting up its roads on the map, or step by
+ * step, each step with the call it made to Google, what came back and
+ * what was worked out, the map redrawn for it. Pointing at a road on the
+ * map says what it measures. Every try makes real calls; their count and
+ * cost are under the steps. On a phone the parts stack and scroll.
  */
-export function TryTrip({
+function Workspace({
   locationId,
+  locationName,
   mapKey,
   zones,
   classes,
   examples,
-}: {
-  locationId: string;
-  /** The browser key for Google's map; null when it is not set. */
-  mapKey: string | null;
-  zones: { id: string; name: string; shape: ZoneShape }[];
-  /** The classes on sale here: the ones a trip can be priced for. */
-  classes: { id: string; name: string; slug: string }[];
-  examples: PriceCheck[];
+  onClose,
+}: Omit<TryTripProps, "classes"> & {
+  classes: ClassChoice[];
+  onClose: () => void;
 }) {
   const ids = useId();
   const [pickup, setPickup] = useState<EndState>(EMPTY);
   const [dropoff, setDropoff] = useState<EndState>(EMPTY);
-  const [classId, setClassId] = useState(classes[0]?.id ?? "");
+  const [classId, setClassId] = useState(() => firstClass(classes));
+  // Mounted in the browser only, on open: tomorrow is the browser's.
+  const [date, setDate] = useState(
+    () => localDateTimeInputs(new Date(Date.now() + DAY_MS)).date,
+  );
   const [time, setTime] = useState("10:00");
   /** Which end a click on the map places. */
   const [placing, setPlacing] = useState<"A" | "B">("A");
   const [answer, setAnswer] = useState<TryTripAnswer | null>(null);
   const [view, setView] = useState<"calculation" | "steps">("calculation");
   const [step, setStep] = useState(0);
+  /** The calculation line picked, whose roads the map lights up. */
+  const [picked, setPicked] = useState<number | null>(null);
+  const [pointed, setPointed] = useState<number | null>(null);
+  const [frame, setFrame] = useState(0);
+  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  if (classes.length === 0) {
-    return (
-      <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
-        Put a class on sale to try a trip in it.
-      </p>
-    );
-  }
+  const current = { pickup, dropoff, classId, date, time };
+  type Current = typeof current;
 
-  function run(next: {
-    pickup: EndState;
-    dropoff: EndState;
-    classId: string;
-    time: string;
-  }) {
+  function run(next: Current) {
     if (!next.pickup.end || !next.dropoff.end || !next.classId) return;
     const input = {
       pickup: next.pickup.end,
       dropoff: next.dropoff.end,
       vehicleClassId: next.classId,
+      date: next.date,
       time: next.time,
     };
     startTransition(async () => {
@@ -97,15 +195,18 @@ export function TryTrip({
         "ok" in answered ? answered : { ok: false, error: answered.error },
       );
       setStep(0);
+      setPicked(null);
+      setCopied(false);
+      setFrame((n) => n + 1);
     });
   }
 
-  const current = { pickup, dropoff, classId, time };
-  function change(patch: Partial<typeof current>) {
+  function change(patch: Partial<Current>) {
     const next = { ...current, ...patch };
     if (patch.pickup) setPickup(patch.pickup);
     if (patch.dropoff) setDropoff(patch.dropoff);
     if (patch.classId !== undefined) setClassId(patch.classId);
+    if (patch.date !== undefined) setDate(patch.date);
     if (patch.time !== undefined) setTime(patch.time);
     run(next);
   }
@@ -135,11 +236,15 @@ export function TryTrip({
   const answered = answer?.ok ? answer : null;
   const steps = answered ? explainSteps(answered) : [];
   const shownStep = steps[Math.min(step, steps.length - 1)];
+  const lines = answered ? explainCalculation(answered) : [];
   const layers = answered
     ? view === "steps" && shownStep
       ? shownStep.layers
       : allLayers(answered)
     : [];
+  const lit = pointed ?? picked;
+  const focus: LayerKey[] =
+    view === "calculation" && lit !== null ? (lines[lit]?.focus ?? []) : [];
   const pinAt = (state: EndState, fromAnswer: LngLat | undefined) =>
     state.end && "lat" in state.end
       ? ([state.end.lng, state.end.lat] as LngLat)
@@ -149,235 +254,451 @@ export function TryTrip({
     { letter: "B" as const, at: pinAt(dropoff, answered?.dropoff.at) },
   ].flatMap((p) => (p.at ? [{ letter: p.letter, at: p.at }] : []));
   const calls = answered?.trace.calls ?? 0;
+  const className = classes.find((c) => c.id === classId)?.name ?? "";
+
+  async function copy() {
+    if (!answered) return;
+    try {
+      await navigator.clipboard.writeText(breakdownText(answered, className));
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  const endField = (
+    letter: "A" | "B",
+    label: string,
+    state: EndState,
+    set: (end: EndState) => void,
+    clear: (text: string) => void,
+  ) => (
+    <div className="grid min-w-0 flex-1 basis-56 gap-1">
+      <label
+        htmlFor={`${ids}-${letter}`}
+        className="text-xs font-medium text-slate-600"
+      >
+        {label} ({letter})
+      </label>
+      <PlaceInput
+        id={`${ids}-${letter}`}
+        value={state.text}
+        placeId={
+          state.end && "placeId" in state.end ? state.end.placeId : undefined
+        }
+        placeholder="A place, or a click on the map"
+        className={inputClassName}
+        onChange={(text, placeId) =>
+          placeId ? set({ text, end: { placeId, label: text } }) : clear(text)
+        }
+      />
+    </div>
+  );
 
   return (
-    <div className="grid gap-5 border-t border-slate-200 px-6 py-5">
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_12rem_9rem]">
-        {(
-          [
-            [
-              "A",
-              "Pick-up",
-              pickup,
-              (end: EndState) => change({ pickup: end }),
-            ],
-            [
-              "B",
-              "Drop-off",
-              dropoff,
-              (end: EndState) => change({ dropoff: end }),
-            ],
-          ] as const
-        ).map(([letter, label, state, set]) => (
-          <div key={letter} className="grid gap-1.5">
-            <label
-              htmlFor={`${ids}-${letter}`}
-              className="text-sm font-medium text-slate-800"
-            >
-              {label} ({letter})
-            </label>
-            <PlaceInput
-              id={`${ids}-${letter}`}
-              value={state.text}
-              placeId={
-                state.end && "placeId" in state.end
-                  ? state.end.placeId
-                  : undefined
-              }
-              placeholder="A place, or a click on the map"
-              className={inputClassName}
-              onChange={(text, placeId) =>
-                placeId
-                  ? set({ text, end: { placeId, label: text } })
-                  : letter === "A"
-                    ? setPickup({ text, end: null })
-                    : setDropoff({ text, end: null })
-              }
+    <div className="flex h-full flex-col max-lg:overflow-y-auto">
+      <header className="grid gap-3 border-b border-slate-200 px-4 py-3 lg:px-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">
+              Try a trip in {locationName}
+            </h2>
+            <p className="text-sm text-slate-600">
+              Priced as a customer would be, without a booking&apos;s limits.
+              Nothing is booked or saved.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close Try a trip"
+            onClick={onClose}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-slate-900"
+          >
+            <XIcon />
+          </button>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          {endField(
+            "A",
+            "Pick-up",
+            pickup,
+            (end) => change({ pickup: end }),
+            (text) => setPickup({ text, end: null }),
+          )}
+          <Button
+            variant="secondary"
+            className="px-0 w-10"
+            aria-label="Swap the pick-up and the drop-off"
+            title="Swap A and B"
+            disabled={!pickup.end && !dropoff.end}
+            onClick={() => change({ pickup: dropoff, dropoff: pickup })}
+          >
+            <ArrowLeftRightIcon />
+          </Button>
+          {endField(
+            "B",
+            "Drop-off",
+            dropoff,
+            (end) => change({ dropoff: end }),
+            (text) => setDropoff({ text, end: null }),
+          )}
+          <div className="grid w-44 gap-1">
+            <span className="text-xs font-medium text-slate-600">Class</span>
+            <Select
+              aria-label="Class"
+              value={classId}
+              onValueChange={(next) => change({ classId: next })}
+              options={classes.map((c) => ({ value: c.id, label: c.name }))}
             />
           </div>
-        ))}
-        <div className="grid gap-1.5">
-          <span className="text-sm font-medium text-slate-800">Class</span>
-          <Select
-            aria-label="Class"
-            value={classId}
-            onValueChange={(next) => change({ classId: next })}
-            options={classes.map((c) => ({ value: c.id, label: c.name }))}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <span className="text-sm font-medium text-slate-800">
-            Pickup time
-          </span>
-          <TimeField
-            aria-label="Pickup time"
-            value={time}
-            onChange={(next) => change({ time: next })}
-          />
-        </div>
-      </div>
-
-      {examples.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-slate-500">Examples:</span>
-          {examples.map((check) => (
-            <Button
-              key={check.name}
-              variant="secondary"
-              size="sm"
-              disabled={pending}
-              onClick={() => example(check)}
-              title={check.note}
+          <div className="grid w-48 gap-1">
+            <span className="text-xs font-medium text-slate-600">
+              Pickup day
+            </span>
+            <DateField
+              aria-label="Pickup day"
+              value={date}
+              onChange={(next) => change({ date: next })}
+            />
+          </div>
+          <div className="grid w-36 gap-1">
+            <span className="text-xs font-medium text-slate-600">
+              Pickup time
+            </span>
+            <TimeField
+              aria-label="Pickup time"
+              value={time}
+              onChange={(next) => change({ time: next })}
+            />
+          </div>
+          {examples.length > 0 ? (
+            <Menu
+              label="Examples"
+              align="end"
+              trigger={
+                <Button variant="secondary" disabled={pending}>
+                  Examples
+                  <ChevronDownIcon />
+                </Button>
+              }
             >
-              {check.name}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-
-      {mapKey ? (
-        <div className="grid gap-2">
-          <div
-            role="radiogroup"
-            aria-label="A click on the map places"
-            className="flex flex-wrap items-center gap-2 text-sm text-slate-600"
-          >
-            A click on the map places the
-            {(["A", "B"] as const).map((letter) => (
-              <button
-                key={letter}
-                type="button"
-                role="radio"
-                aria-checked={placing === letter}
-                onClick={() => setPlacing(letter)}
-                className={cx(
-                  "rounded-md border px-2.5 py-1 font-medium",
-                  placing === letter
-                    ? "border-brand bg-brand-tint text-slate-900"
-                    : "border-slate-200 hover:bg-slate-50",
-                )}
-              >
-                {letter === "A" ? "pick-up (A)" : "drop-off (B)"}
-              </button>
-            ))}
-            <span>; drag a pin to move it.</span>
-          </div>
-          <TripMap
-            mapKey={mapKey}
-            zones={zones}
-            pins={pins}
-            layers={layers}
-            onPlace={(at) => pin(placing, at)}
-            onMove={pin}
-          />
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-            <span>Dark: the trip, from the zone edges</span>
-            <span>Orange dashes: the extra road</span>
-            <span>Green dots: the grid trip</span>
-            <span>Purple: an entry spot</span>
-            <span>Grey: a route as Google drew it</span>
-          </p>
-        </div>
-      ) : (
-        <p className="text-sm text-slate-600">
-          The map needs the browser key, NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY.
-          The places and the examples still work.
-        </p>
-      )}
-
-      {pending ? (
-        <p aria-live="polite" className="text-sm text-slate-500">
-          Working out the price…
-        </p>
-      ) : answer && !answer.ok ? (
-        <FormError error={answer.error} />
-      ) : answered ? (
-        <div className="grid gap-4">
-          <div role="tablist" className="flex gap-2">
-            {(
-              [
-                ["calculation", "The calculation"],
-                ["steps", "Step by step"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={view === key}
-                onClick={() => setView(key)}
-                className={cx(
-                  "rounded-md px-3 py-1.5 text-sm font-medium",
-                  view === key
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {view === "calculation" ? (
-            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[8rem_1fr]">
-              {explainCalculation(answered).map((line, index) => (
-                <div key={index} className="contents">
-                  <dt className="text-slate-500">{line.label}</dt>
-                  <dd className="text-slate-900">{line.detail}</dd>
-                </div>
+              {examples.map((check) => (
+                <MenuItem key={check.name} onSelect={() => example(check)}>
+                  <span className="grid">
+                    <span>{check.name}</span>
+                    {check.note ? (
+                      <span className="text-xs text-slate-500">
+                        {check.note}
+                      </span>
+                    ) : null}
+                  </span>
+                </MenuItem>
               ))}
-            </dl>
-          ) : shownStep ? (
-            <div className="grid gap-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={step === 0}
-                  onClick={() => setStep(step - 1)}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={step >= steps.length - 1}
-                  onClick={() => setStep(step + 1)}
-                >
-                  Next
-                </Button>
-                <span className="text-sm text-slate-500 tabular-nums">
-                  Step {Math.min(step, steps.length - 1) + 1} of {steps.length}:{" "}
-                  {shownStep.title}
-                </span>
-              </div>
-              <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
-                <dt className="text-slate-500">We asked Google</dt>
-                <dd className="text-slate-900">
-                  {shownStep.asked ?? "No call"}
-                </dd>
-                {shownStep.answered ? (
-                  <>
-                    <dt className="text-slate-500">Google answered</dt>
-                    <dd className="text-slate-900">{shownStep.answered}</dd>
-                  </>
-                ) : null}
-                <dt className="text-slate-500">We worked out</dt>
-                <dd className="text-slate-900">{shownStep.workedOut}</dd>
-              </dl>
-            </div>
+            </Menu>
           ) : null}
-          <p className="text-xs text-slate-500 tabular-nums">
-            Calls made by this try: {calls}, about US$
-            {(calls * ROUTE_REQUEST_USD).toFixed(3)} past Google&apos;s free
-            allowance. A route asked again within ten minutes is answered from
-            memory and not billed.
-          </p>
         </div>
+      </header>
+
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_28rem]">
+        <div className="relative p-3 max-lg:h-[60dvh] max-lg:shrink-0">
+          {mapKey ? (
+            <>
+              <TripMap
+                mapKey={mapKey}
+                zones={zones}
+                pins={pins}
+                layers={layers}
+                focus={focus}
+                frame={frame}
+                className="size-full"
+                onPlace={(at) => pin(placing, at)}
+                onMove={pin}
+              />
+              <div
+                role="radiogroup"
+                aria-label="A click on the map places"
+                className="absolute top-5 left-5 z-10 flex items-center gap-1 rounded-md bg-white p-1 text-sm shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]"
+              >
+                <span className="px-1.5 text-slate-500">A click places</span>
+                {(["A", "B"] as const).map((letter) => (
+                  <button
+                    key={letter}
+                    type="button"
+                    role="radio"
+                    aria-checked={placing === letter}
+                    onClick={() => setPlacing(letter)}
+                    className={cx(
+                      "rounded px-2 py-1 font-medium",
+                      placing === letter
+                        ? "bg-brand text-white"
+                        : "text-slate-700 hover:bg-slate-100",
+                    )}
+                  >
+                    {letter === "A" ? "Pick-up A" : "Drop-off B"}
+                  </button>
+                ))}
+              </div>
+              <Legend />
+            </>
+          ) : (
+            <p className="p-3 text-sm text-slate-600">
+              The map needs the browser key,
+              NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY. The places and the examples
+              still work.
+            </p>
+          )}
+        </div>
+
+        <aside
+          aria-live="polite"
+          className="grid content-start gap-4 border-slate-200 p-4 lg:overflow-y-auto lg:border-l lg:p-5"
+        >
+          {pending ? (
+            <p className="text-sm text-slate-500">Working out the price…</p>
+          ) : answer && !answer.ok ? (
+            <FormError error={answer.error} />
+          ) : answered ? (
+            <>
+              <Fare answer={answered} className={className} />
+              {answered.customer.length > 0 ? (
+                <ul className="grid gap-1 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  {answered.customer.map((note) => (
+                    <li key={note}>{note}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="flex items-center justify-between gap-2">
+                <div role="tablist" className="flex gap-1">
+                  {(
+                    [
+                      ["calculation", "The calculation"],
+                      ["steps", "Step by step"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={view === key}
+                      onClick={() => setView(key)}
+                      className={cx(
+                        "rounded-md px-3 py-1.5 text-sm font-medium",
+                        view === key
+                          ? "bg-slate-900 text-white"
+                          : "text-slate-600 hover:bg-slate-100",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" onClick={copy}>
+                  <CopyIcon />
+                  {copied ? "Copied" : "Copy breakdown"}
+                </Button>
+              </div>
+              {view === "calculation" ? (
+                <ol className="grid gap-1">
+                  {lines.map((line, index) => {
+                    const canLight = (line.focus?.length ?? 0) > 0;
+                    const body = (
+                      <>
+                        <span className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                          {line.label}
+                        </span>
+                        <span
+                          className={cx(
+                            "text-slate-900",
+                            line.total
+                              ? "text-lg font-semibold tabular-nums"
+                              : "text-sm",
+                          )}
+                        >
+                          {line.detail}
+                        </span>
+                      </>
+                    );
+                    return (
+                      <li key={index}>
+                        {canLight ? (
+                          <button
+                            type="button"
+                            aria-pressed={picked === index}
+                            onClick={() =>
+                              setPicked(picked === index ? null : index)
+                            }
+                            onMouseEnter={() => setPointed(index)}
+                            onMouseLeave={() => setPointed(null)}
+                            onFocus={() => setPointed(index)}
+                            onBlur={() => setPointed(null)}
+                            className={cx(
+                              "grid w-full gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors",
+                              lit === index
+                                ? "bg-brand-tint ring-1 ring-brand"
+                                : "hover:bg-slate-50",
+                            )}
+                          >
+                            {body}
+                          </button>
+                        ) : (
+                          <div className="grid gap-0.5 px-2.5 py-2">{body}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : shownStep ? (
+                <div className="grid gap-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={step === 0}
+                      onClick={() => setStep(step - 1)}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={step >= steps.length - 1}
+                      onClick={() => setStep(step + 1)}
+                    >
+                      Next
+                    </Button>
+                    <span className="text-sm text-slate-500 tabular-nums">
+                      {Math.min(step, steps.length - 1) + 1} of {steps.length}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {shownStep.title}
+                  </h3>
+                  <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[8rem_1fr]">
+                    <dt className="text-slate-500">We asked Google</dt>
+                    <dd className="text-slate-900">
+                      {shownStep.asked ?? "No call"}
+                    </dd>
+                    {shownStep.answered ? (
+                      <>
+                        <dt className="text-slate-500">Google answered</dt>
+                        <dd className="text-slate-900">{shownStep.answered}</dd>
+                      </>
+                    ) : null}
+                    <dt className="text-slate-500">We worked out</dt>
+                    <dd className="text-slate-900">{shownStep.workedOut}</dd>
+                  </dl>
+                </div>
+              ) : null}
+              <p className="text-xs text-slate-500 tabular-nums">
+                {view === "calculation"
+                  ? "Pick a line to light up its roads on the map; point at a road for its distance. "
+                  : null}
+                Calls made by this try: {calls}, about US$
+                {(calls * ROUTE_REQUEST_USD).toFixed(3)} past Google&apos;s free
+                allowance. A route asked again within ten minutes is answered
+                from memory and not billed.
+              </p>
+            </>
+          ) : (
+            <div className="grid gap-2 text-sm text-slate-600">
+              <p className="font-medium text-slate-900">
+                Pick a pick-up and a drop-off.
+              </p>
+              <p>
+                Search for a place, click the map (A first, then B), or open an
+                example. The price is worked out again on every change.
+              </p>
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/** The fare at the top of the results: the total, the class and the cell, or why there is none. */
+function Fare({
+  answer,
+  className,
+}: {
+  answer: Extract<TryTripAnswer, { ok: true }>;
+  className: string;
+}) {
+  const quote = answer.quote;
+  const price = quote?.price;
+  return (
+    <div className="grid gap-1 rounded-lg border border-slate-200 p-4">
+      <span className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+        {className}
+        {quote ? ` · ${quote.location}` : ""}
+      </span>
+      {answer.refused ? (
+        <>
+          <span className="text-lg font-semibold text-slate-900">
+            Not priced
+          </span>
+          <span className="text-sm text-slate-600">
+            {answer.refused.message}
+            {answer.refused.reason ? ` Why: ${answer.refused.reason}.` : ""}
+          </span>
+        </>
+      ) : price ? (
+        <>
+          <span className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">
+            {formatMyr(price.totalSen)}
+          </span>
+          <dl className="mt-1 grid gap-0.5 text-sm">
+            {quote.rows.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-3">
+                <dt className="text-slate-600">{label}</dt>
+                <dd className="text-slate-900 tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
       ) : (
-        <p className="text-sm text-slate-500">
-          Pick a pickup and a drop-off, or an example, to price a trip.
-        </p>
+        <>
+          <span className="text-lg font-semibold text-slate-900">
+            Not on the grid
+          </span>
+          <span className="text-sm text-slate-600">
+            {quote
+              ? `${quote.pickup.zone === quote.dropoff.zone ? `Within ${quote.pickup.zone}` : `${quote.pickup.zone} to ${quote.dropoff.zone}`} has no price for this class yet.`
+              : "No price."}
+          </span>
+        </>
       )}
     </div>
+  );
+}
+
+/** What the map's colours mean, in a corner over it. */
+function Legend() {
+  const items: [string, string, string][] = [
+    ["Trip, from the zone edges", MAP_COLORS.trip, "solid"],
+    ["Extra road", MAP_COLORS.extra, "dashed"],
+    ["Grid trip", MAP_COLORS.grid, "dotted"],
+    ["Entry spot", MAP_COLORS.entry, "dot"],
+    ["Route as Google drew it", MAP_COLORS.route, "solid"],
+  ];
+  return (
+    <ul className="absolute bottom-8 left-5 z-10 grid gap-1 rounded-md bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] max-sm:hidden">
+      {items.map(([label, color, kind]) => (
+        <li key={label} className="flex items-center gap-2">
+          {kind === "dot" ? (
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+          ) : (
+            <span
+              className="w-5 border-t-[3px]"
+              style={{ borderColor: color, borderTopStyle: kind as "solid" }}
+            />
+          )}
+          {label}
+        </li>
+      ))}
+    </ul>
   );
 }

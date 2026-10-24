@@ -3,14 +3,15 @@
 "use client";
 
 import type { LngLat, ZoneShape } from "@repo/db";
-import { useEffect, useRef } from "react";
+import { cx } from "@repo/ui/cx";
+import { useEffect, useRef, useState } from "react";
 import {
   MAP_FAILURES,
   boundsOf,
   pathsOf,
   useGoogleMap,
 } from "../../coverage/zones/map-shapes";
-import type { MapLayer } from "./explain";
+import type { LayerKey, MapLayer } from "./explain";
 
 /** A pin of the trip: where it is, and its letter on the map. */
 export type TripPin = { at: LngLat; letter: "A" | "B" };
@@ -18,7 +19,7 @@ export type TripPin = { at: LngLat; letter: "A" | "B" };
 const toLatLng = ([lng, lat]: LngLat) => ({ lat, lng });
 
 /** The pricing's colours, as the demo drew them: dark trip, orange extra road, green grid trip, purple entry spots. */
-const COLORS = {
+export const MAP_COLORS = {
   trip: "#0f172a",
   extra: "#ea580c",
   grid: "#16a34a",
@@ -30,18 +31,30 @@ const COLORS = {
   zone: "#2563eb",
 } as const;
 
-/** A line in a style: solid, or drawn as repeated dashes or dots. */
-function lineOptions(style: Extract<MapLayer, { kind: "line" }>["style"]) {
-  const color = COLORS[style];
+/** A line in a style: solid, or drawn as repeated dashes or dots; bolder when lit, fainter when another is. */
+function lineOptions(
+  style: Extract<MapLayer, { kind: "line" }>["style"],
+  emphasis: "lit" | "dim" | "plain",
+) {
+  const color = MAP_COLORS[style];
+  const grow = emphasis === "lit" ? 1.6 : 1;
+  const opacity = emphasis === "dim" ? 0.25 : 1;
   const repeat = (
     path: string | google.maps.SymbolPath,
     scale: number,
     gap: string,
   ) => ({
     strokeOpacity: 0,
+    // An invisible stroke wide enough to point at.
+    strokeWeight: 12,
     icons: [
       {
-        icon: { path, strokeOpacity: 1, strokeColor: color, scale },
+        icon: {
+          path,
+          strokeOpacity: opacity,
+          strokeColor: color,
+          scale: scale * grow,
+        },
         offset: "0",
         repeat: gap,
       },
@@ -49,9 +62,17 @@ function lineOptions(style: Extract<MapLayer, { kind: "line" }>["style"]) {
   });
   switch (style) {
     case "trip":
-      return { strokeColor: color, strokeWeight: 5, strokeOpacity: 0.9 };
+      return {
+        strokeColor: color,
+        strokeWeight: 5 * grow,
+        strokeOpacity: 0.9 * opacity,
+      };
     case "route":
-      return { strokeColor: color, strokeWeight: 4, strokeOpacity: 0.6 };
+      return {
+        strokeColor: color,
+        strokeWeight: 4,
+        strokeOpacity: 0.6 * opacity,
+      };
     case "extra":
       return repeat("M 0,-1 0,1", 3, "14px");
     case "grid":
@@ -61,17 +82,26 @@ function lineOptions(style: Extract<MapLayer, { kind: "line" }>["style"]) {
   }
 }
 
+/** What the pointer is on: its words and where, in the map's own pixels. */
+type Hover = { label: string; x: number; y: number };
+
 /**
- * Try a trip's map: the location's zones, filled and named on hover, the
- * two pins, and the layers of the view shown. A click drops the pin being
- * placed; a pin dragged and let go moves. The price is worked out again
- * on the drop, not while a pin moves, since each try makes real calls.
+ * Try a trip's map: the location's zones, named on hover, the two pins,
+ * and the layers of the view shown. Pointing at a line or a dot says what
+ * it measures; the layers of `focus` are drawn bolder and the rest
+ * fainter. A click drops the pin being placed, on a line too; a pin
+ * dragged and let go moves. The price is worked out again on the drop,
+ * not while a pin moves, since each try makes real calls. A new `frame`
+ * fits the view to the pins and the layers. `className` sizes the map.
  */
 export function TripMap({
   mapKey,
   zones,
   pins,
   layers,
+  focus,
+  frame,
+  className,
   onPlace,
   onMove,
 }: {
@@ -79,6 +109,10 @@ export function TripMap({
   zones: { id: string; name: string; shape: ZoneShape }[];
   pins: TripPin[];
   layers: MapLayer[];
+  focus: readonly LayerKey[];
+  /** Changed to fit the view to what is drawn: once per answer. */
+  frame: number;
+  className?: string;
   /** A click on the map, where it was. */
   onPlace: (at: LngLat) => void;
   /** A pin dragged and let go, where it now is. */
@@ -89,6 +123,20 @@ export function TripMap({
   useEffect(() => {
     callbacks.current = { onPlace, onMove };
   }, [onPlace, onMove]);
+  const [hover, setHover] = useState<Hover | null>(null);
+
+  // The pointer's place over the map, from the event Google passes on.
+  const hoverAt = (label: string, event: google.maps.MapMouseEvent) => {
+    const dom = event.domEvent;
+    const box = host.current?.getBoundingClientRect();
+    if (!box || !dom || !("clientX" in dom)) return;
+    setHover({ label, x: dom.clientX - box.left, y: dom.clientY - box.top });
+  };
+  const place = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      callbacks.current.onPlace([event.latLng.lng(), event.latLng.lat()]);
+    }
+  };
 
   // The zones, once the map is there, framed on them; a click places a pin.
   useEffect(() => {
@@ -96,34 +144,28 @@ export function TripMap({
     const drawn = zones.map((zone) => {
       const polygon = new library.Polygon({
         paths: pathsOf(zone.shape),
-        strokeColor: COLORS.zone,
+        strokeColor: MAP_COLORS.zone,
         strokeWeight: 1.5,
-        fillColor: COLORS.zone,
+        fillColor: MAP_COLORS.zone,
         fillOpacity: 0.12,
         map,
       });
-      polygon.addListener("click", (event: google.maps.PolyMouseEvent) => {
-        if (event.latLng) {
-          callbacks.current.onPlace([event.latLng.lng(), event.latLng.lat()]);
-        }
-      });
+      polygon.addListener("click", place);
+      polygon.addListener("mousemove", (event: google.maps.MapMouseEvent) =>
+        hoverAt(zone.name, event),
+      );
+      polygon.addListener("mouseout", () => setHover(null));
       return polygon;
     });
-    const listener = map.addListener(
-      "click",
-      (event: google.maps.MapMouseEvent) => {
-        if (event.latLng) {
-          callbacks.current.onPlace([event.latLng.lng(), event.latLng.lat()]);
-        }
-      },
-    );
+    const listener = map.addListener("click", place);
     const bounds = boundsOf(zones.map((zone) => zone.shape));
     if (!bounds.isEmpty()) map.fitBounds(bounds, 24);
     return () => {
       for (const polygon of drawn) polygon.setMap(null);
       listener.remove();
     };
-    // The zones are the page's; a change reloads the page.
+    // The zones are the page's; a change reloads the page. The handlers
+    // read the latest callbacks through their ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, library]);
 
@@ -134,6 +176,7 @@ export function TripMap({
       const marker = new google.maps.Marker({
         position: toLatLng(pin.at),
         label: { text: pin.letter, color: "white", fontWeight: "600" },
+        title: pin.letter === "A" ? "Pick-up (A)" : "Drop-off (B)",
         draggable: true,
         map,
         zIndex: 10,
@@ -153,47 +196,92 @@ export function TripMap({
     };
   }, [map, pins]);
 
-  // The view's lines and dots.
+  // The view's lines and dots, each saying what it is on hover.
   useEffect(() => {
     if (!map || !library) return;
-    const shapes: { setMap: (map: null) => void }[] = layers.map((layer) =>
-      layer.kind === "line"
-        ? new library.Polyline({
-            path: layer.path.map(toLatLng),
-            ...lineOptions(layer.style),
-            clickable: false,
-            map,
-            zIndex: layer.style === "route" ? 2 : 4,
-          })
-        : new library.Circle({
-            center: toLatLng(layer.at),
-            radius: 60,
-            strokeColor: COLORS[layer.style],
-            strokeWeight: 2,
-            fillColor: COLORS[layer.style],
-            fillOpacity: layer.style === "target" ? 0.2 : 0.9,
-            clickable: false,
-            map,
-            zIndex: 6,
-          }),
-    );
+    const emphasis = (layer: MapLayer) =>
+      focus.length === 0
+        ? "plain"
+        : layer.key && focus.includes(layer.key)
+          ? "lit"
+          : "dim";
+    const shapes = layers.map((layer) => {
+      const shape =
+        layer.kind === "line"
+          ? new library.Polyline({
+              path: layer.path.map(toLatLng),
+              ...lineOptions(layer.style, emphasis(layer)),
+              clickable: Boolean(layer.label),
+              map,
+              zIndex:
+                layer.style === "route" ? 2 : emphasis(layer) === "lit" ? 5 : 4,
+            })
+          : new library.Circle({
+              center: toLatLng(layer.at),
+              radius: emphasis(layer) === "lit" ? 110 : 60,
+              strokeColor: MAP_COLORS[layer.style],
+              strokeWeight: 2,
+              fillColor: MAP_COLORS[layer.style],
+              fillOpacity:
+                (layer.style === "target" ? 0.2 : 0.9) *
+                (emphasis(layer) === "dim" ? 0.3 : 1),
+              clickable: Boolean(layer.label),
+              map,
+              zIndex: 6,
+            });
+      if (layer.label) {
+        const label = layer.label;
+        shape.addListener("click", place);
+        shape.addListener("mousemove", (event: google.maps.MapMouseEvent) =>
+          hoverAt(label, event),
+        );
+        shape.addListener("mouseout", () => setHover(null));
+      }
+      return shape;
+    });
     return () => {
       for (const shape of shapes) shape.setMap(null);
+      setHover(null);
     };
-  }, [map, library, layers]);
+    // See the zones' effect: the handlers read the latest callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, library, layers, focus]);
+
+  // A new answer: the view fitted to the pins and what is drawn.
+  useEffect(() => {
+    if (!map || frame === 0) return;
+    const bounds = new google.maps.LatLngBounds();
+    for (const pin of pins) bounds.extend(toLatLng(pin.at));
+    for (const layer of layers) {
+      if (layer.kind === "dot") bounds.extend(toLatLng(layer.at));
+      else for (const point of layer.path) bounds.extend(toLatLng(point));
+    }
+    if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
+    // Only a new frame moves the view; a pin dragged does not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, frame]);
 
   return (
-    <div className="grid gap-2">
-      <div className="relative isolate">
+    <div className={cx("relative isolate", className)}>
+      <div
+        ref={host}
+        role="application"
+        aria-label="Map of the zones and the trip"
+        className="size-full rounded-md border border-slate-200 bg-slate-100"
+      />
+      {hover ? (
         <div
-          ref={host}
-          role="application"
-          aria-label="Map of the zones and the trip"
-          className="h-[28rem] w-full rounded-md border border-slate-200 bg-slate-100"
-        />
-      </div>
+          role="status"
+          className="pointer-events-none absolute z-20 w-max max-w-72 -translate-x-1/2 -translate-y-full rounded-md bg-ink px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg"
+          style={{ left: hover.x, top: hover.y - 12 }}
+        >
+          {hover.label}
+        </div>
+      ) : null}
       {failed ? (
-        <p className="text-sm text-red-700">{MAP_FAILURES[failed]}</p>
+        <p className="absolute inset-x-3 top-3 rounded-md bg-white p-3 text-sm text-red-700 shadow">
+          {MAP_FAILURES[failed]}
+        </p>
       ) : null}
     </div>
   );

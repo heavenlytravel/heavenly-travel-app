@@ -3,7 +3,7 @@
 import {
   emptyTrace,
   isTripCategory,
-  localDateTimeInputs,
+  isWithinHorizon,
   pickupInstant,
   pinPlace,
   priceRows,
@@ -27,7 +27,9 @@ export type TryTripInput = {
   pickup: TryEnd;
   dropoff: TryEnd;
   vehicleClassId: string;
-  /** The pickup time, "23:30", for the odd-hours surcharge; the day is tomorrow. */
+  /** The pickup's day, "2026-10-25", for the weekend and holiday surcharge. */
+  date: string;
+  /** The pickup time, "23:30", for the odd-hours surcharge. */
   time: string;
 };
 
@@ -42,8 +44,16 @@ export type TryTripAnswer =
       trace: TripTrace;
       /** Why it cannot be priced, for the customer and in Ops' words; null when it was. */
       refused: { message: string; reason: string | null } | null;
+      /**
+       * What a customer asking the same would meet that Try a trip let
+       * through: a pickup too far ahead, an end past the furthest extra
+       * road, the class's own booking rules. Empty when nothing.
+       */
+      customer: string[];
       quote: {
         location: string;
+        /** The location's extra road settings: its own, though the try was not held to them. */
+        reach: { freeExtraKm: number; maxExtraKm: number };
         pickup: QuotedEnd;
         dropoff: QuotedEnd;
         zoneTrip: ZoneTripMeasure | null;
@@ -51,12 +61,10 @@ export type TryTripAnswer =
         price: TripPriceBreakdown | null;
         /** The receipt's rows, as the website and the console show them. */
         rows: [string, string][];
-        /** Why the class cannot take the trip as asked, as the options page says it. */
-        unavailable: string | null;
       } | null;
     };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const END_NAMES = { pickup: "pickup", dropoff: "drop-off" } as const;
 
 function isEnd(value: unknown): value is TryEnd {
   if (typeof value !== "object" || value === null) return false;
@@ -76,11 +84,13 @@ const placeOf = async (end: TryEnd) =>
 
 /**
  * Prices a trip on the location's Rates tab with the website's own
- * `quoteTrip`, the pickup's location pinned to the tab's, and answers the
- * price and the quote's trace. Nothing is booked or stored; the routes are
- * real Google calls, counted in the trace. For anyone who can see the tab
- * (`coverage.view`). Arguments are checked for their type here: an action
- * is reachable by direct POST.
+ * `quoteTrip`, the pickup's location pinned to the tab's and its limits
+ * lifted (any day, any extra road a location may set), and answers the
+ * price, the quote's trace and what a customer would have met instead.
+ * Nothing is booked or stored; the routes are real Google calls, counted
+ * in the trace. For anyone who can see the tab (`coverage.view`).
+ * Arguments are checked for their type here: an action is reachable by
+ * direct POST.
  */
 export async function tryTripAction(
   locationId: unknown,
@@ -95,13 +105,15 @@ export async function tryTripAction(
     !isEnd(given.pickup) ||
     !isEnd(given.dropoff) ||
     typeof given.vehicleClassId !== "string" ||
+    typeof given.date !== "string" ||
     typeof given.time !== "string"
   ) {
     return { ok: false, error: "Pick the pickup, the drop-off and a class." };
   }
-  const tomorrow = localDateTimeInputs(new Date(Date.now() + DAY_MS)).date;
-  const startsAt = pickupInstant(tomorrow, given.time);
-  if (!startsAt) return { ok: false, error: "Enter the pickup time." };
+  const startsAt = pickupInstant(given.date, given.time);
+  if (!startsAt) {
+    return { ok: false, error: "Pick the pickup's day and time." };
+  }
 
   const [pickup, dropoff, offerings] = await Promise.all([
     placeOf(given.pickup),
@@ -127,7 +139,7 @@ export async function tryTripAction(
     category,
     { mode: "oneway", pickup, dropoff, startsAt, hours: null },
     tripRouting,
-    { locationId, trace },
+    { locationId, trace, unlimited: true },
   );
   const ends = {
     pickup: { label: pickup.label, at: [pickup.lng, pickup.lat] as LngLat },
@@ -136,6 +148,9 @@ export async function tryTripAction(
       at: [dropoff.lng, dropoff.lat] as LngLat,
     },
   };
+  const customer = isWithinHorizon(startsAt)
+    ? []
+    : ["A customer cannot book that far ahead."];
   if (!quoted.ok) {
     return {
       ok: true,
@@ -145,28 +160,43 @@ export async function tryTripAction(
         message: quoted.error.message,
         reason: quoted.error.reason ?? null,
       },
+      customer,
       quote: null,
     };
   }
   const { quote } = quoted;
+  const { maxExtraKm, freeExtraKm } = quote.location;
+  for (const end of ["pickup", "dropoff"] as const) {
+    const nearest = quote[end]?.nearest;
+    if (nearest && nearest.extraKm > maxExtraKm) {
+      customer.push(
+        `A customer would be sent to WhatsApp: the ${END_NAMES[end]} is ${nearest.extraKm.toFixed(1)} km past ${quote[end]!.zone}'s edge, over the ${maxExtraKm} km ${quote.location.name} serves.`,
+      );
+    }
+  }
   const chosen = quote.classes.find(
     (c) => c.vehicleClass.id === given.vehicleClassId,
   );
+  const unavailable = chosen
+    ? unavailableReason(chosen.availability)
+    : `${offering.vehicleClass.name} is not on sale here.`;
+  if (unavailable && chosen?.price) {
+    customer.push(`A customer could not book it: ${unavailable}`);
+  }
   return {
     ok: true,
     ...ends,
     trace,
     refused: null,
+    customer,
     quote: {
       location: quote.location.name,
+      reach: { freeExtraKm, maxExtraKm },
       pickup: quote.pickup,
       dropoff: quote.dropoff!,
       zoneTrip: quote.zoneTrip,
       price: chosen?.price ?? null,
       rows: chosen?.price ? priceRows(chosen.price) : [],
-      unavailable: chosen
-        ? unavailableReason(chosen.availability)
-        : `${offering.vehicleClass.name} is not on sale here.`,
     },
   };
 }

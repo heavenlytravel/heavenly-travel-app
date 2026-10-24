@@ -1,9 +1,11 @@
 import {
   EXTRA_CAPPED,
+  WEEKEND_REASON_LABELS,
   chargedKmOf,
   extraKmOf,
   formatMyr,
   lineBetweenKm,
+  payableExtraKmOf,
   type LngLat,
   type TraceStep,
   type TracedRoute,
@@ -14,18 +16,25 @@ import type { TryTripAnswer } from "./actions";
 /**
  * What Try a trip says and draws, from the quote's answer and its trace:
  * the calculation in lines, the steps one by one, and the map's layers
- * for each. Pure, so the card only renders. See
+ * for each, every line and dot with what it measures for the map's hover.
+ * A calculation line names the layers it is about, so picking it lights
+ * them up. Pure, so the workspace only renders. See
  * docs/261023-nearest-zone-pricing.md, "Try a trip, on the Rates tab".
  */
 
-/** What the map draws: a line in one of the pricing's styles, or a dot. */
-export type MapLayer =
+/** What a layer stands for, so a calculation line can light it up. */
+export type LayerKey =
+  "trip" | "grid" | "extra-pickup" | "extra-dropoff" | "route";
+
+/** What the map draws: a line in one of the pricing's styles, or a dot, and what a hover says of it. */
+export type MapLayer = { key?: LayerKey; label?: string } & (
   | {
       kind: "line";
       path: LngLat[];
       style: "trip" | "grid" | "extra" | "route" | "straight";
     }
-  | { kind: "dot"; at: LngLat; style: "entry" | "edge" | "target" };
+  | { kind: "dot"; at: LngLat; style: "entry" | "edge" | "target" }
+);
 
 /** One step of the quote as the step view shows it. */
 export type ExplainedStep = {
@@ -40,6 +49,7 @@ export type ExplainedStep = {
 type Answered = Extract<TryTripAnswer, { ok: true }>;
 
 const km = (value: number) => `${value.toFixed(2)} km`;
+const wholeKm = (value: number) => `${value} km`;
 const END_NAMES: Record<TripEnd, string> = {
   pickup: "the pickup",
   dropoff: "the drop-off",
@@ -51,35 +61,91 @@ const asRoad = (route: TracedRoute) => ({
 });
 
 /** The measured part of a traced route, and the full line under it. */
-function routeLayers(route: TracedRoute, style: "trip" | "grid"): MapLayer[] {
+function routeLayers(
+  route: TracedRoute,
+  style: "trip" | "grid",
+  label: string,
+): MapLayer[] {
   const road = asRoad(route);
   const part = lineBetweenKm(road, route.fromKm, route.toKm);
   return [
-    { kind: "line", path: route.line, style: "route" },
-    ...(part.length > 1 ? [{ kind: "line" as const, path: part, style }] : []),
+    {
+      kind: "line",
+      path: route.line,
+      style: "route",
+      key: "route",
+      label: `Route as Google drew it: ${km(route.distanceKm)}`,
+    },
+    ...(part.length > 1
+      ? [{ kind: "line" as const, path: part, style, key: style, label }]
+      : []),
     ...(style === "grid" && part.length > 0
       ? [
-          { kind: "dot" as const, at: part[0]!, style: "edge" as const },
-          { kind: "dot" as const, at: part.at(-1)!, style: "edge" as const },
+          {
+            kind: "dot" as const,
+            at: part[0]!,
+            style: "edge" as const,
+            key: "grid" as const,
+            label: "Where the grid trip is measured from",
+          },
+          {
+            kind: "dot" as const,
+            at: part.at(-1)!,
+            style: "edge" as const,
+            key: "grid" as const,
+            label: "Where the grid trip is measured to",
+          },
         ]
       : []),
   ];
 }
 
+/** What a hover on an end's extra road says: its km, the free km and what is paid for. */
+function extraLabel(
+  answer: Answered,
+  end: TripEnd,
+  zone: string,
+  extra: number,
+) {
+  const free = answer.quote?.reach.freeExtraKm ?? 0;
+  const paid = Math.max(0, extra - free);
+  const freePart = free > 0 ? `, the first ${wholeKm(free)} free` : "";
+  return `Extra road, ${END_NAMES[end]} to ${zone}'s edge: ${km(extra)}${freePart}; ${km(paid)} counts toward the charge`;
+}
+
 /** The road from an address to its zone's edge, dashed, from a route to the zone. */
-function extraLayers(step: Extract<TraceStep, { kind: "route-to-zone" }>) {
+function extraLayers(
+  answer: Answered,
+  step: Extract<TraceStep, { kind: "route-to-zone" }>,
+) {
   const layers: MapLayer[] = [];
+  const key = step.end === "pickup" ? "extra-pickup" : "extra-dropoff";
   if (step.line && step.distanceKm !== null && step.extraKm !== null) {
     const road = { distanceKm: step.distanceKm, line: step.line };
     layers.push({
       kind: "line",
       path: lineBetweenKm(road, 0, step.extraKm),
       style: "extra",
+      key,
+      label: extraLabel(answer, step.end, step.zone, step.extraKm),
     });
   }
-  if (step.entry) layers.push({ kind: "dot", at: step.entry, style: "entry" });
+  if (step.entry) {
+    layers.push({
+      kind: "dot",
+      at: step.entry,
+      style: "entry",
+      key,
+      label: `Entry spot: where ${END_NAMES[step.end]}'s road meets ${step.zone}`,
+    });
+  }
   return layers;
 }
+
+const tripLabel = (route: TracedRoute) =>
+  `Trip: ${km(route.km)}, from the zone edges or an address outside every zone`;
+const gridLabel = (route: TracedRoute) =>
+  `Grid trip: ${km(route.km)}, between the two zones' edges or entry spots`;
 
 /** Every step, in order, with what was asked, answered and worked out, and what the map draws. */
 export function explainSteps(answer: Answered): ExplainedStep[] {
@@ -114,11 +180,12 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
             kind: "line",
             path: [step.at, zone.closest],
             style: "straight",
+            label: `${zone.name}: ${km(zone.straightKm)} in a straight line`,
           })),
         });
         break;
       case "route-to-zone": {
-        const layers = extraLayers(step);
+        const layers = extraLayers(answer, step);
         steps.push({
           title: `Route to ${step.zone}`,
           asked: `${END_NAMES[step.end]} to a point inside ${step.zone}, with its line`,
@@ -136,10 +203,16 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
                     kind: "line" as const,
                     path: step.line,
                     style: "route" as const,
+                    label: `Route to inside ${step.zone}: ${km(step.distanceKm ?? 0)}`,
                   },
                 ]
               : []),
-            { kind: "dot", at: step.target, style: "target" },
+            {
+              kind: "dot",
+              at: step.target,
+              style: "target",
+              label: `The point inside ${step.zone} the route was asked to`,
+            },
             ...layers,
           ],
         });
@@ -150,13 +223,15 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
         break;
       }
       case "nearest": {
-        const layers =
+        const layers: MapLayer[] =
           step.cached && step.entry
             ? [
                 {
-                  kind: "dot" as const,
+                  kind: "dot",
                   at: step.entry,
-                  style: "entry" as const,
+                  style: "entry",
+                  key: step.end === "pickup" ? "extra-pickup" : "extra-dropoff",
+                  label: `Entry spot of ${step.zone}, from the cache`,
                 },
               ]
             : (winners.get(step.end)?.layers ?? []);
@@ -184,7 +259,9 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
             : "No road joins the two pins.",
           layers: [
             ...kept,
-            ...(step.route ? routeLayers(step.route, "trip") : []),
+            ...(step.route
+              ? routeLayers(step.route, "trip", tripLabel(step.route))
+              : []),
           ],
         });
         break;
@@ -201,7 +278,9 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
             : "No road joins the two stand-ins.",
           layers: [
             ...kept,
-            ...(step.route ? routeLayers(step.route, "grid") : []),
+            ...(step.route
+              ? routeLayers(step.route, "grid", gridLabel(step.route))
+              : []),
           ],
         });
         break;
@@ -222,18 +301,27 @@ export function allLayers(answer: Answered): MapLayer[] {
   const layers: MapLayer[] = [];
   for (const step of answer.trace.steps) {
     if (step.kind === "trip" && step.route) {
-      layers.push(...routeLayers(step.route, "trip"));
+      layers.push(...routeLayers(step.route, "trip", tripLabel(step.route)));
     } else if (step.kind === "grid-trip" && step.route) {
-      layers.push(...routeLayers(step.route, "grid"));
+      layers.push(...routeLayers(step.route, "grid", gridLabel(step.route)));
     } else if (step.kind === "nearest" && step.entry) {
-      layers.push({ kind: "dot", at: step.entry, style: "entry" });
       const road = answer.trace.steps.find(
         (s): s is Extract<TraceStep, { kind: "route-to-zone" }> =>
           s.kind === "route-to-zone" &&
           s.end === step.end &&
           s.zone === step.zone,
       );
-      if (road) layers.push(...extraLayers(road));
+      if (road) {
+        layers.push(...extraLayers(answer, road));
+      } else {
+        layers.push({
+          kind: "dot",
+          at: step.entry,
+          style: "entry",
+          key: step.end === "pickup" ? "extra-pickup" : "extra-dropoff",
+          label: `Entry spot of ${step.zone}, from the cache`,
+        });
+      }
     }
   }
   return layers;
@@ -245,12 +333,55 @@ function priceLine(answer: Answered) {
     return `${answer.refused.message}${answer.refused.reason ? ` (${answer.refused.reason})` : ""}`;
   }
   const quote = answer.quote;
-  if (!quote?.price) return quote?.unavailable ?? "Not priced.";
+  if (!quote?.price) return "Not on the grid for this class.";
   return quote.rows.map(([label, value]) => `${label} ${value}`).join("; ");
 }
 
-/** One line of the calculation, and its value when it has one. */
-export type CalcLine = { label: string; detail: string };
+/** One line of the calculation, its value when it has one, and the map's layers it is about. */
+export type CalcLine = {
+  label: string;
+  detail: string;
+  /** What a pick of the line lights up on the map. */
+  focus?: LayerKey[];
+  /** The fare: shown larger. */
+  total?: boolean;
+};
+
+/**
+ * The extra road worked through: each end's road past its zone's edge,
+ * less the free km, added, rounded up to the whole km, at the rate. The
+ * same sums `chargedKmOf` does, set out.
+ */
+function extraRoadDetail(answer: Answered): string {
+  const quote = answer.quote!;
+  const trip = quote.zoneTrip!;
+  const free = quote.reach.freeExtraKm;
+  const charged = chargedKmOf(trip, free);
+  if (charged === 0) {
+    return trip.tripKm > trip.gridTripKm
+      ? `Every end outside a zone is within the ${wholeKm(free)} free: nothing is added.`
+      : `The trip, ${km(trip.tripKm)}, is not longer than the grid trip, ${km(trip.gridTripKm)}: nothing is added.`;
+  }
+  const parts = (["pickup", "dropoff"] as const).flatMap((end) => {
+    const e = trip[end];
+    if (!e.nearest) return [];
+    const less = free > 0 ? ` − ${wholeKm(free)} free` : "";
+    return [`${END_NAMES[end].replace("the ", "")} ${km(e.extraKm)}${less}`];
+  });
+  const payable = payableExtraKmOf(trip, free);
+  const extra = extraKmOf(trip);
+  const added = trip.tripKm - trip.gridTripKm;
+  const capped =
+    EXTRA_CAPPED && added < extra
+      ? `; capped: the trip adds ${km(added)} over the grid trip`
+      : "";
+  const perKm = quote.price?.zoneTrip?.perKmSen;
+  const rate = perKm === undefined ? "the rate per extra km" : formatMyr(perKm);
+  const amount = quote.price?.zoneTrip
+    ? ` = ${formatMyr(quote.price.zoneTrip.extraSen)}`
+    : "";
+  return `${parts.join(" + ")} = ${km(payable)}${capped}, rounded up to ${wholeKm(charged)} × ${rate}${amount}`;
+}
 
 /** The calculation, as the pricing demo set it out: each end's zone, the base price, the distances, what is added, the fare. */
 export function explainCalculation(answer: Answered): CalcLine[] {
@@ -289,10 +420,12 @@ export function explainCalculation(answer: Answered): CalcLine[] {
   lines.push({
     label: "Pickup",
     detail: endLine("pickup", answer.pickup.label),
+    focus: ["extra-pickup"],
   });
   lines.push({
     label: "Drop-off",
     detail: endLine("dropoff", answer.dropoff.label),
+    focus: ["extra-dropoff"],
   });
   if (answer.refused) {
     lines.push({
@@ -323,31 +456,51 @@ export function explainCalculation(answer: Answered): CalcLine[] {
     lines.push({
       label: "Grid trip",
       detail: `${km(trip.gridTripKm)}, from ${trip.pickup.nearest ? "the pickup's entry spot" : `${trip.pickup.zone}'s edge`} to ${trip.dropoff.nearest ? "the drop-off's entry spot" : `${trip.dropoff.zone}'s edge`}`,
+      focus: ["grid"],
     });
     lines.push({
       label: "Trip",
       detail: `${km(trip.tripKm)}, from ${trip.pickup.nearest ? answer.pickup.label : `${trip.pickup.zone}'s edge`} to ${trip.dropoff.nearest ? answer.dropoff.label : `${trip.dropoff.zone}'s edge`}`,
+      focus: ["trip"],
     });
-    const charged = chargedKmOf(trip);
-    const extra = extraKmOf(trip);
-    const added = trip.tripKm - trip.gridTripKm;
-    const perKm = quote.price?.zoneTrip?.perKmSen;
     lines.push({
       label: "Extra road",
-      detail:
-        charged === 0
-          ? `The trip is not longer than the grid trip: nothing is added.`
-          : `${km(charged)} × ${perKm === undefined ? "the rate per extra km" : formatMyr(perKm)} = ${formatMyr(quote.price?.zoneTrip?.extraSen ?? 0)}${EXTRA_CAPPED && charged < extra ? `; capped: the trip adds ${km(added)} over the grid trip, less than the ${km(extra)} extra road` : ""}`,
+      detail: extraRoadDetail(answer),
+      focus: ["extra-pickup", "extra-dropoff"],
     });
   }
-  if (quote.price) {
-    for (const [label, value] of quote.rows) {
-      lines.push({ label: "Receipt", detail: `${label}: ${value}` });
-    }
-    lines.push({ label: "Fare", detail: formatMyr(quote.price.totalSen) });
+  const price = quote.price;
+  if (price?.surcharge) {
+    lines.push({
+      label: "Odd hours",
+      detail: `${price.surcharge.percent !== null ? `+${price.surcharge.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.surcharge.amountSen)}`,
+    });
   }
-  if (quote.unavailable) {
-    lines.push({ label: "Note", detail: quote.unavailable });
+  if (price?.weekend) {
+    lines.push({
+      label: WEEKEND_REASON_LABELS[price.weekend.reason],
+      detail: `${price.weekend.percent !== null ? `+${price.weekend.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.weekend.amountSen)}`,
+    });
+  }
+  if (price) {
+    lines.push({
+      label: "Fare",
+      detail: formatMyr(price.totalSen),
+      total: true,
+    });
   }
   return lines;
+}
+
+/** The answer as text to paste in a chat: the trip, the receipt and the fare. */
+export function breakdownText(answer: Answered, className: string): string {
+  const head = `${answer.pickup.label} to ${answer.dropoff.label}, ${className}`;
+  if (answer.refused) return `${head}\n${answer.refused.message}`;
+  const quote = answer.quote;
+  if (!quote?.price) return `${head}\nNot on the grid for this class.`;
+  return [
+    head,
+    ...quote.rows.map(([label, value]) => `${label}: ${value}`),
+    `Total: ${formatMyr(quote.price.totalSen)}`,
+  ].join("\n");
 }

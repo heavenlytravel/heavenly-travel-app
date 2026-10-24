@@ -4,13 +4,15 @@ import { DropdownMenu as Primitive } from "radix-ui";
 import type { ComponentProps, ReactNode } from "react";
 import { cx } from "./cx.js";
 import { CheckIcon } from "./icons.js";
+import { usePortalContainer } from "./portal-container.js";
 
 /**
  * A menu opened from a button, after shadcn's dropdown menu (Radix
  * underneath): a list of moves or links, walked with the arrows, chosen
  * with Enter, closed with Escape or a click outside. The trigger is the
  * caller's own button; each item is a `MenuItem`, a `Link` inside it with
- * `asChild`.
+ * `asChild`. In a dialog or full screen it opens in that layer, as a
+ * select's list does.
  */
 export function Menu({
   trigger,
@@ -28,10 +30,13 @@ export function Menu({
   className?: string;
   children: ReactNode;
 }) {
+  const { ref, container } = usePortalContainer();
   return (
     <Primitive.Root>
-      <Primitive.Trigger asChild>{trigger}</Primitive.Trigger>
-      <Primitive.Portal>
+      <Primitive.Trigger ref={ref} asChild>
+        {trigger}
+      </Primitive.Trigger>
+      <Primitive.Portal container={container}>
         <Primitive.Content
           aria-label={label}
           align={align}

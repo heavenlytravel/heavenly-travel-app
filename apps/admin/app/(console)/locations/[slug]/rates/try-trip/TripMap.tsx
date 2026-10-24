@@ -88,9 +88,9 @@ type Hover = { label: string; x: number; y: number };
 /**
  * Try a trip's map: the location's zones, named on hover, the two pins,
  * and the layers of the view shown. Pointing at a line or a dot says what
- * it measures; the layers of `focus` are drawn bolder and the rest
- * fainter. A click drops the pin being placed, on a line too; a pin
- * dragged and let go moves. The price is worked out again on the drop,
+ * it measures, as a tap on one does on a phone; the layers of `focus`
+ * are drawn bolder and the rest fainter. A click drops the pin being
+ * placed, on a line too, but for a tap; a pin dragged and let go moves. The price is worked out again on the drop,
  * not while a pin moves, since each try makes real calls. A new `frame`
  * fits the view to the pins and the layers. `className` sizes the map.
  */
@@ -118,7 +118,9 @@ export function TripMap({
   /** A pin dragged and let go, where it now is. */
   onMove: (letter: TripPin["letter"], at: LngLat) => void;
 }) {
-  const { host, map, library, failed } = useGoogleMap(mapKey, []);
+  const { host, map, library, failed } = useGoogleMap(mapKey, [], {
+    ownFullScreen: true,
+  });
   const callbacks = useRef({ onPlace, onMove });
   useEffect(() => {
     callbacks.current = { onPlace, onMove };
@@ -132,7 +134,11 @@ export function TripMap({
     if (!box || !dom || !("clientX" in dom)) return;
     setHover({ label, x: dom.clientX - box.left, y: dom.clientY - box.top });
   };
+  // A screen without a pointer has no hover: a tap on a road says what it
+  // measures instead, and a tap anywhere else places the pin.
+  const tapReads = () => window.matchMedia("(hover: none)").matches;
   const place = (event: google.maps.MapMouseEvent) => {
+    setHover(null);
     if (event.latLng) {
       callbacks.current.onPlace([event.latLng.lng(), event.latLng.lat()]);
     }
@@ -231,7 +237,9 @@ export function TripMap({
             });
       if (layer.label) {
         const label = layer.label;
-        shape.addListener("click", place);
+        shape.addListener("click", (event: google.maps.MapMouseEvent) =>
+          tapReads() ? hoverAt(label, event) : place(event),
+        );
         shape.addListener("mousemove", (event: google.maps.MapMouseEvent) =>
           hoverAt(label, event),
         );

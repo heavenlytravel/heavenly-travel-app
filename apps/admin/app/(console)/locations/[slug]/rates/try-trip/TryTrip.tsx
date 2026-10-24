@@ -13,19 +13,16 @@ import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { DateField, TimeField } from "@repo/ui/date-field";
 import { inputClassName } from "@repo/ui/field";
-import {
-  ArrowLeftRightIcon,
-  ChevronDownIcon,
-  CopyIcon,
-  MaximizeIcon,
-  XIcon,
-} from "@repo/ui/icons";
+import { ArrowLeftRightIcon, ChevronDownIcon, CopyIcon } from "@repo/ui/icons";
 import { Menu, MenuItem } from "@repo/ui/menu";
-import { ModalBody, onModalClose, useModal } from "@repo/ui/modal";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { FormError } from "../../../../../_components/FormError";
+import {
+  FullScreenButton,
+  useFullScreen,
+} from "../../coverage/zones/full-screen";
 import { tryTripAction, type TryEnd, type TryTripAnswer } from "./actions";
 import {
   allLayers,
@@ -55,12 +52,11 @@ type TryTripProps = {
 };
 
 /**
- * Try a trip on the Rates tab: a line on what it does and the button that
- * opens it in full screen, where the controls, the map and the price sit
- * together. Nothing is booked or saved.
+ * Try a trip on the Rates tab: the controls on top, the map on the left
+ * and the price on the right, which the button over the map puts in full
+ * screen together. Nothing is booked or saved.
  */
 export function TryTrip(props: TryTripProps) {
-  const [open, setOpen] = useState(false);
   if (props.classes.length === 0) {
     return (
       <p className="border-t border-slate-200 px-6 py-5 text-sm text-slate-600">
@@ -68,19 +64,7 @@ export function TryTrip(props: TryTripProps) {
       </p>
     );
   }
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 px-6 py-5">
-      <Button onClick={() => setOpen(true)}>
-        <MaximizeIcon />
-        Open Try a trip
-      </Button>
-      <p className="text-sm text-slate-600">
-        Opens in full screen: the map, the trip&apos;s settings and its price
-        worked out step by step, side by side.
-      </p>
-      <TryTripScreen {...props} open={open} onClose={() => setOpen(false)} />
-    </div>
-  );
+  return <Workspace {...props} />;
 }
 
 /** An end as the workspace holds it: the text in its field, and the place or the pin it stands for. */
@@ -107,30 +91,6 @@ const firstClass = (classes: ClassChoice[]) =>
     classes[0]
   )?.id ?? "";
 
-/** The workspace as a full-screen modal, its state made afresh each time it opens. */
-function TryTripScreen({
-  open,
-  onClose,
-  locationName,
-  ...props
-}: TryTripProps & { open: boolean; onClose: () => void }) {
-  const ref = useModal(open);
-  return (
-    <dialog
-      ref={ref}
-      aria-label={`Try a trip in ${locationName}`}
-      onClose={onModalClose(onClose)}
-      className="m-0 size-full max-h-none max-w-none overflow-hidden bg-white p-0 text-inherit backdrop:bg-ink/45"
-    >
-      <ModalBody open={open} className="h-full">
-        {open ? (
-          <Workspace {...props} locationName={locationName} onClose={onClose} />
-        ) : null}
-      </ModalBody>
-    </dialog>
-  );
-}
-
 /**
  * Try a trip itself: a pickup and a drop-off, each a place from the
  * search or a pin on the map, a class (the sedan first), a pickup day and
@@ -142,7 +102,9 @@ function TryTripScreen({
  * step, each step with the call it made to Google, what came back and
  * what was worked out, the map redrawn for it. Pointing at a road on the
  * map says what it measures. Every try makes real calls; their count and
- * cost are under the steps. On a phone the parts stack and scroll.
+ * cost are under the steps. Below a wide screen the parts stack: the
+ * controls, the map, then the price, and picking a line brings the map
+ * back into view.
  */
 function Workspace({
   locationId,
@@ -151,16 +113,14 @@ function Workspace({
   zones,
   classes,
   examples,
-  onClose,
-}: Omit<TryTripProps, "classes"> & {
-  classes: ClassChoice[];
-  onClose: () => void;
-}) {
+}: TryTripProps) {
   const ids = useId();
+  const { ref: screen, full, toggle } = useFullScreen<HTMLDivElement>();
+  const mapBox = useRef<HTMLDivElement>(null);
   const [pickup, setPickup] = useState<EndState>(EMPTY);
   const [dropoff, setDropoff] = useState<EndState>(EMPTY);
   const [classId, setClassId] = useState(() => firstClass(classes));
-  // Mounted in the browser only, on open: tomorrow is the browser's.
+  // Tomorrow in Malaysia's time, the same on the server and in the browser.
   const [date, setDate] = useState(
     () => localDateTimeInputs(new Date(Date.now() + DAY_MS)).date,
   );
@@ -256,6 +216,15 @@ function Workspace({
   const calls = answered?.trace.calls ?? 0;
   const className = classes.find((c) => c.id === classId)?.name ?? "";
 
+  /** A calculation line picked or put back; stacked, the map comes back into view to show it. */
+  function pick(index: number) {
+    const next = picked === index ? null : index;
+    setPicked(next);
+    if (next !== null && window.matchMedia("(max-width: 1023px)").matches) {
+      mapBox.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   async function copy() {
     if (!answered) return;
     try {
@@ -296,147 +265,168 @@ function Workspace({
   );
 
   return (
-    <div className="flex h-full flex-col max-lg:overflow-y-auto">
-      <header className="grid gap-3 border-b border-slate-200 px-4 py-3 lg:px-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold tracking-tight text-slate-900">
-              Try a trip in {locationName}
-            </h2>
-            <p className="text-sm text-slate-600">
-              Priced as a customer would be, without a booking&apos;s limits.
-              Nothing is booked or saved.
-            </p>
-          </div>
-          <button
-            type="button"
-            aria-label="Close Try a trip"
-            onClick={onClose}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-slate-900"
-          >
-            <XIcon />
-          </button>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          {endField(
-            "A",
-            "Pick-up",
-            pickup,
-            (end) => change({ pickup: end }),
-            (text) => setPickup({ text, end: null }),
-          )}
-          <Button
-            variant="secondary"
-            className="px-0 w-10"
-            aria-label="Swap the pick-up and the drop-off"
-            title="Swap A and B"
-            disabled={!pickup.end && !dropoff.end}
-            onClick={() => change({ pickup: dropoff, dropoff: pickup })}
-          >
-            <ArrowLeftRightIcon />
-          </Button>
-          {endField(
-            "B",
-            "Drop-off",
-            dropoff,
-            (end) => change({ dropoff: end }),
-            (text) => setDropoff({ text, end: null }),
-          )}
-          <div className="grid w-44 gap-1">
-            <span className="text-xs font-medium text-slate-600">Class</span>
-            <Select
-              aria-label="Class"
-              value={classId}
-              onValueChange={(next) => change({ classId: next })}
-              options={classes.map((c) => ({ value: c.id, label: c.name }))}
-            />
-          </div>
-          <div className="grid w-48 gap-1">
-            <span className="text-xs font-medium text-slate-600">
-              Pickup day
-            </span>
-            <DateField
-              aria-label="Pickup day"
-              value={date}
-              onChange={(next) => change({ date: next })}
-            />
-          </div>
-          <div className="grid w-36 gap-1">
-            <span className="text-xs font-medium text-slate-600">
-              Pickup time
-            </span>
-            <TimeField
-              aria-label="Pickup time"
-              value={time}
-              onChange={(next) => change({ time: next })}
-            />
-          </div>
-          {examples.length > 0 ? (
-            <Menu
-              label="Examples"
-              align="end"
-              trigger={
-                <Button variant="secondary" disabled={pending}>
-                  Examples
-                  <ChevronDownIcon />
-                </Button>
-              }
+    <div
+      ref={screen}
+      className={cx(
+        "border-t border-slate-200 bg-white",
+        full && "flex h-full flex-col overflow-y-auto lg:overflow-hidden",
+      )}
+    >
+      <div className="grid gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
+        {full ? (
+          <h2 className="text-base font-semibold tracking-tight text-slate-900">
+            Try a trip in {locationName}
+          </h2>
+        ) : null}
+        {/* The two ends, then the class, the day and the time, which move
+            under the ends as a group when a row cannot hold them all. */}
+        <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+          {/* On a phone, A over B with the swap beside both. */}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 gap-y-3 sm:flex sm:min-w-0 sm:flex-[1_1_32rem] sm:gap-3">
+            {endField(
+              "A",
+              "Pick-up",
+              pickup,
+              (end) => change({ pickup: end }),
+              (text) => setPickup({ text, end: null }),
+            )}
+            <Button
+              variant="secondary"
+              className="w-10 px-0 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
+              aria-label="Swap the pick-up and the drop-off"
+              title="Swap A and B"
+              disabled={!pickup.end && !dropoff.end}
+              onClick={() => change({ pickup: dropoff, dropoff: pickup })}
             >
-              {examples.map((check) => (
-                <MenuItem key={check.name} onSelect={() => example(check)}>
-                  <span className="grid">
-                    <span>{check.name}</span>
-                    {check.note ? (
-                      <span className="text-xs text-slate-500">
-                        {check.note}
+              <ArrowLeftRightIcon />
+            </Button>
+            {endField(
+              "B",
+              "Drop-off",
+              dropoff,
+              (end) => change({ dropoff: end }),
+              (text) => setDropoff({ text, end: null }),
+            )}
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-3 sm:flex sm:flex-wrap sm:items-end">
+            <div className="col-span-2 grid gap-1 sm:w-44">
+              <span className="text-xs font-medium text-slate-600">Class</span>
+              <Select
+                aria-label="Class"
+                value={classId}
+                onValueChange={(next) => change({ classId: next })}
+                options={classes.map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+            <div className="grid min-w-0 gap-1 sm:w-48">
+              <span className="text-xs font-medium text-slate-600">
+                Pickup day
+              </span>
+              <DateField
+                aria-label="Pickup day"
+                value={date}
+                onChange={(next) => change({ date: next })}
+              />
+            </div>
+            <div className="grid min-w-0 gap-1 sm:w-36">
+              <span className="text-xs font-medium text-slate-600">
+                Pickup time
+              </span>
+              <TimeField
+                aria-label="Pickup time"
+                value={time}
+                onChange={(next) => change({ time: next })}
+              />
+            </div>
+            {examples.length > 0 ? (
+              <div className="col-span-2 grid sm:block">
+                <Menu
+                  label="Examples"
+                  align="end"
+                  trigger={
+                    <Button
+                      variant="secondary"
+                      className="max-sm:w-full"
+                      disabled={pending}
+                    >
+                      Examples
+                      <ChevronDownIcon />
+                    </Button>
+                  }
+                >
+                  {examples.map((check) => (
+                    <MenuItem key={check.name} onSelect={() => example(check)}>
+                      <span className="grid">
+                        <span>{check.name}</span>
+                        {check.note ? (
+                          <span className="text-xs text-slate-500">
+                            {check.note}
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
-                </MenuItem>
-              ))}
-            </Menu>
-          ) : null}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </header>
+      </div>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_28rem]">
-        <div className="relative p-3 max-lg:h-[60dvh] max-lg:shrink-0">
+      <div
+        className={cx(
+          "grid lg:grid-cols-[minmax(0,1fr)_26rem]",
+          full ? "lg:min-h-0 lg:flex-1" : "lg:h-[42rem]",
+        )}
+      >
+        <div className="relative flex flex-col gap-2 p-3 lg:min-h-0">
           {mapKey ? (
             <>
-              <TripMap
-                mapKey={mapKey}
-                zones={zones}
-                pins={pins}
-                layers={layers}
-                focus={focus}
-                frame={frame}
-                className="size-full"
-                onPlace={(at) => pin(placing, at)}
-                onMove={pin}
-              />
               <div
-                role="radiogroup"
-                aria-label="A click on the map places"
-                className="absolute top-5 left-5 z-10 flex items-center gap-1 rounded-md bg-white p-1 text-sm shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]"
+                ref={mapBox}
+                className={cx(
+                  "relative shrink-0 lg:h-auto lg:min-h-0 lg:flex-1",
+                  full ? "h-[70dvh]" : "h-[50dvh] min-h-72",
+                )}
               >
-                <span className="px-1.5 text-slate-500">A click places</span>
-                {(["A", "B"] as const).map((letter) => (
-                  <button
-                    key={letter}
-                    type="button"
-                    role="radio"
-                    aria-checked={placing === letter}
-                    onClick={() => setPlacing(letter)}
-                    className={cx(
-                      "rounded px-2 py-1 font-medium",
-                      placing === letter
-                        ? "bg-brand text-white"
-                        : "text-slate-700 hover:bg-slate-100",
-                    )}
-                  >
-                    {letter === "A" ? "Pick-up A" : "Drop-off B"}
-                  </button>
-                ))}
+                <TripMap
+                  mapKey={mapKey}
+                  zones={zones}
+                  pins={pins}
+                  layers={layers}
+                  focus={focus}
+                  frame={frame}
+                  className="size-full"
+                  onPlace={(at) => pin(placing, at)}
+                  onMove={pin}
+                />
+                <div
+                  role="radiogroup"
+                  aria-label="A click on the map places"
+                  className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 rounded-md bg-white p-1 text-sm shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]"
+                >
+                  <span className="px-1.5 text-slate-500 max-sm:sr-only">
+                    A click places
+                  </span>
+                  {(["A", "B"] as const).map((letter) => (
+                    <button
+                      key={letter}
+                      type="button"
+                      role="radio"
+                      aria-checked={placing === letter}
+                      onClick={() => setPlacing(letter)}
+                      className={cx(
+                        "rounded px-2 py-1 font-medium",
+                        placing === letter
+                          ? "bg-brand text-white"
+                          : "text-slate-700 hover:bg-slate-100",
+                      )}
+                    >
+                      {letter === "A" ? "Pick-up A" : "Drop-off B"}
+                    </button>
+                  ))}
+                </div>
+                <FullScreenButton full={full} onToggle={toggle} />
               </div>
               <Legend />
             </>
@@ -451,7 +441,7 @@ function Workspace({
 
         <aside
           aria-live="polite"
-          className="grid content-start gap-4 border-slate-200 p-4 lg:overflow-y-auto lg:border-l lg:p-5"
+          className="grid content-start gap-4 border-slate-200 p-4 max-lg:border-t sm:px-6 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:p-5"
         >
           {pending ? (
             <p className="text-sm text-slate-500">Working out the price…</p>
@@ -471,8 +461,8 @@ function Workspace({
                 <div role="tablist" className="flex gap-1">
                   {(
                     [
-                      ["calculation", "The calculation"],
-                      ["steps", "Step by step"],
+                      ["calculation", "Calculation"],
+                      ["steps", "Steps"],
                     ] as const
                   ).map(([key, label]) => (
                     <button
@@ -482,7 +472,7 @@ function Workspace({
                       aria-selected={view === key}
                       onClick={() => setView(key)}
                       className={cx(
-                        "rounded-md px-3 py-1.5 text-sm font-medium",
+                        "rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap",
                         view === key
                           ? "bg-slate-900 text-white"
                           : "text-slate-600 hover:bg-slate-100",
@@ -524,9 +514,7 @@ function Workspace({
                           <button
                             type="button"
                             aria-pressed={picked === index}
-                            onClick={() =>
-                              setPicked(picked === index ? null : index)
-                            }
+                            onClick={() => pick(index)}
                             onMouseEnter={() => setPointed(index)}
                             onMouseLeave={() => setPointed(null)}
                             onFocus={() => setPointed(index)}
@@ -591,7 +579,7 @@ function Workspace({
               ) : null}
               <p className="text-xs text-slate-500 tabular-nums">
                 {view === "calculation"
-                  ? "Pick a line to light up its roads on the map; point at a road for its distance. "
+                  ? "Pick a line to light up its roads on the map; point at a road, or tap it on a phone, for its distance. "
                   : null}
                 Calls made by this try: {calls}, about US$
                 {(calls * ROUTE_REQUEST_USD).toFixed(3)} past Google&apos;s free
@@ -651,7 +639,9 @@ function Fare({
             {quote.rows.map(([label, value]) => (
               <div key={label} className="flex justify-between gap-3">
                 <dt className="text-slate-600">{label}</dt>
-                <dd className="text-slate-900 tabular-nums">{value}</dd>
+                <dd className="whitespace-nowrap text-slate-900 tabular-nums">
+                  {value}
+                </dd>
               </div>
             ))}
           </dl>
@@ -672,7 +662,7 @@ function Fare({
   );
 }
 
-/** What the map's colours mean, in a corner over it. */
+/** What the map's colours mean: in a corner over it, under it on a phone. */
 function Legend() {
   const items: [string, string, string][] = [
     ["Trip, from the zone edges", MAP_COLORS.trip, "solid"],
@@ -682,7 +672,7 @@ function Legend() {
     ["Route as Google drew it", MAP_COLORS.route, "solid"],
   ];
   return (
-    <ul className="absolute bottom-8 left-5 z-10 grid gap-1 rounded-md bg-white/95 px-3 py-2 text-xs text-slate-700 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] max-sm:hidden">
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-slate-700 sm:absolute sm:bottom-8 sm:left-5 sm:z-10 sm:grid sm:gap-1 sm:rounded-md sm:bg-white/95 sm:px-3 sm:py-2 sm:shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]">
       {items.map(([label, color, kind]) => (
         <li key={label} className="flex items-center gap-2">
           {kind === "dot" ? (

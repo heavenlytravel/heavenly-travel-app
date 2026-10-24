@@ -25,8 +25,7 @@ import { Tooltip } from "./tooltip.js";
  * and a rail toggle it, the state survives reloads in a cookie, and below
  * `md` the same content opens in a panel over the page instead, from a bar
  * that floats at the bottom of the screen. Composed from small
- * pieces so each app decides what goes in the header, the groups and the
- * footer.
+ * pieces so each app decides what goes in the header and the groups.
  */
 
 const COOKIE_NAME = "sidebar_state";
@@ -298,16 +297,7 @@ export function SidebarHeader({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export function SidebarFooter({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cx("ui:flex ui:flex-col ui:gap-2 ui:p-2", className)}
-      {...props}
-    />
-  );
-}
-
-/** The scrolling middle, between header and footer. */
+/** The scrolling part under the header. */
 export function SidebarContent({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
@@ -431,84 +421,6 @@ export function SidebarMenuButton({
     </Tooltip>
   ) : (
     row
-  );
-}
-
-/**
- * A small button at the right end of a menu row, beside its link: the
- * toggle of the row's submenu, say. The row gives it room with `pr-8`.
- * Gone while collapsed, with the submenu.
- */
-export function SidebarMenuAction({
-  className,
-  ...props
-}: ComponentProps<"button">) {
-  const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return (
-    <button
-      type="button"
-      className={cx(
-        "ui:absolute ui:top-1/2 ui:right-1.5 ui:flex ui:size-6 ui:-translate-y-1/2 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-200 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-4 ui:[&>svg]:shrink-0",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-/** The rows under a menu row, indented on a line; gone while collapsed. */
-export function SidebarMenuSub({ className, ...props }: ComponentProps<"ul">) {
-  const collapsed = useSidebarCollapsed();
-  if (collapsed) return null;
-  return (
-    <ul
-      className={cx(
-        "ui:mx-4 ui:mt-0.5 ui:mb-1 ui:flex ui:min-w-0 ui:flex-col ui:gap-0.5 ui:border-l ui:border-slate-200 ui:py-0.5 ui:pl-2.5",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-export function SidebarMenuSubItem({
-  className,
-  ...props
-}: ComponentProps<"li">) {
-  return <li className={cx("ui:relative", className)} {...props} />;
-}
-
-/**
- * One row of a submenu: smaller than a menu row, its text first, a count
- * or a status at its end. `asChild` styles the child element (a `Link`).
- */
-export function SidebarMenuSubButton({
-  asChild = false,
-  active = false,
-  className,
-  children,
-  ...props
-}: ComponentProps<"button"> & { asChild?: boolean; active?: boolean }) {
-  const shared = {
-    className: cx(
-      "ui:flex ui:h-7 ui:w-full ui:min-w-0 ui:items-center ui:gap-2 ui:rounded-md ui:px-2 ui:text-left ui:text-sm ui:text-slate-600 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
-      active && "ui:bg-accent ui:font-medium ui:text-accent-foreground",
-      className,
-    ),
-    "data-active": active || undefined,
-    "aria-current": active ? ("page" as const) : undefined,
-  };
-  if (asChild && isValidElement(children)) {
-    return cloneElement(
-      children as ReactElement<Record<string, unknown>>,
-      shared,
-    );
-  }
-  return (
-    <button type="button" {...shared} {...props}>
-      {children}
-    </button>
   );
 }
 

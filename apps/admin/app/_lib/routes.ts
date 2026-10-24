@@ -318,8 +318,9 @@ export const SETUP_STEP_PERMISSIONS: Record<SetupStepKey, Permission> = {
 /**
  * The tabs of a location in this state, in the sidebar's order. A draft
  * takes no bookings, so it has no Bookings tab; every other tab is the
- * same in every state, so going live moves nothing. The sidebar, the strip
- * of tabs on a phone and the header's trail all read this.
+ * same in every state, so going live moves nothing. The sidebar, the
+ * picker, the overview and the search read it, through
+ * `locationTabsMayOpen`.
  */
 export function locationTabsFor(
   state: LocationState,

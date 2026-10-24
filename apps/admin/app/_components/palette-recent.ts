@@ -43,6 +43,19 @@ function read(key: string | null): string | null {
 
 const isText = (value: unknown) => typeof value === "string";
 
+/**
+ * A path of the console's own: never off the site, whatever storage holds.
+ * Starting with "/" is not enough, since "//host" and "/\host" lead off it.
+ */
+function isOwnPath(value: string) {
+  try {
+    const { origin } = window.location;
+    return value.startsWith("/") && new URL(value, origin).origin === origin;
+  } catch {
+    return false;
+  }
+}
+
 /** A kept row read back, or none if it is not one: storage can hold anything. */
 function entryOf(value: unknown): RecentEntry | null {
   if (typeof value !== "object" || value === null) return null;
@@ -50,7 +63,7 @@ function entryOf(value: unknown): RecentEntry | null {
   const location = entry.location as Record<string, unknown> | undefined;
   const valid =
     isText(entry.href) &&
-    (entry.href as string).startsWith("/") &&
+    isOwnPath(entry.href as string) &&
     isText(entry.title) &&
     (entry.meta === undefined || isText(entry.meta)) &&
     (entry.icon === undefined ||

@@ -47,8 +47,8 @@ booking search, for an admin with `bookings.view`, and the signed-in admin's own
 ### The sidebar
 
 Revised on 2026-10-23: replaced by `261023-console-sidebar.md`. A location's sidebar holds
-that location alone, in parts with no headings, with no Setup fold and no submenus; Pages
-and Settings open in the sidebar's place. Marketing and Access move into All locations, as
+that location alone, in parts named by their work (Selling, Manage), with no Setup fold
+and no submenus; Pages and Settings open in the sidebar's place. Marketing and Access move into All locations, as
 Home page and a Settings drill. Every page off a location is All locations, and the
 `console_scope` cookie and the six `@scope` folders across locations go. What follows is
 the sidebar as it was.

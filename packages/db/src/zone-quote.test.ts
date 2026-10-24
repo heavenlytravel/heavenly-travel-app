@@ -6,17 +6,13 @@ import { routeRateOf } from "./zone-match";
 import {
   emptyTrace,
   placeTrip,
+  type NearestAnswer,
   type NearestCache,
   type QuoteLocation,
   type QuoteZone,
   type TripRouting,
 } from "./zone-quote";
-import {
-  kmBetween,
-  roundKm,
-  type NearestZone,
-  type RoutePoint,
-} from "./zone-trip";
+import { kmBetween, roundKm, type RoutePoint } from "./zone-trip";
 
 /**
  * The plan's Langkawi examples rebuilt on the equator with square zones,
@@ -142,7 +138,7 @@ function fakeRouting(nearest?: NearestCache): TripRouting & { asked: number } {
 }
 
 function memory(): NearestCache {
-  const kept = new Map<string, NearestZone | null>();
+  const kept = new Map<string, NearestAnswer>();
   return {
     get: (key) => kept.get(key),
     set: (key, value) => kept.set(key, value),
@@ -373,5 +369,56 @@ describe("the trace", () => {
     const nearest = trace.steps.find((step) => step.kind === "nearest");
     assert.equal(nearest?.kind === "nearest" && nearest.cached, true);
     near(again.measure!.dropoff.extraKm, roundKm(0.05 * DEG));
+  });
+
+  it("refuses a trip when the router cannot answer, and keeps nothing it half answered", async () => {
+    const cache = memory();
+    const down: TripRouting = {
+      nearest: cache,
+      route: () => Promise.reject(new Error("timeout")),
+    };
+    const failed = await placeTrip(
+      [langkawi()],
+      { pickup: at(0.05, 0.05), dropoff: orange },
+      down,
+    );
+    assert.ok(!failed.ok);
+    assert.equal(failed.error.code, "distance-unavailable");
+    const trace = emptyTrace();
+    const again = await placeTrip(
+      [langkawi()],
+      { pickup: at(0.05, 0.05), dropoff: orange },
+      fakeRouting(cache),
+      { trace },
+    );
+    assert.ok(again.ok);
+    const nearest = trace.steps.find((step) => step.kind === "nearest");
+    assert.equal(nearest?.kind === "nearest" && nearest.cached, false);
+  });
+
+  it("gives a refusal from the cache with its first reason", async () => {
+    const cache = memory();
+    // Every road climbs 0.2° north first, so orange is too far by road.
+    const detour: TripRouting = {
+      nearest: cache,
+      route: async (from, to) => {
+        const line: LngLat[] = [
+          [from.lng, from.lat],
+          [from.lng, from.lat + 0.2],
+          [to.lng, to.lat],
+        ];
+        return {
+          distanceKm:
+            kmBetween(line[0]!, line[1]!) + kmBetween(line[1]!, line[2]!),
+          line,
+        };
+      },
+    };
+    const trip = { pickup: at(0.05, 0.05), dropoff: orange };
+    const first = await placeTrip([langkawi()], trip, detour);
+    const again = await placeTrip([langkawi()], trip, detour);
+    assert.ok(!first.ok && !again.ok);
+    assert.match(first.error.reason, /beyond the furthest extra road/);
+    assert.equal(again.error.reason, first.error.reason);
   });
 });

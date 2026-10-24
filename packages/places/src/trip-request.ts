@@ -1,6 +1,6 @@
 import {
   pickupInstant,
-  type NearestZone,
+  type NearestAnswer,
   type TripRouting,
   type TripSearch,
 } from "@repo/db";
@@ -37,7 +37,7 @@ const DAY = 24 * 60 * 60 * 1000;
 export function routingOf(provider: PlacesProvider): TripRouting {
   return {
     route: (from, to) => provider.route(from, to),
-    nearest: ttlStore<NearestZone | null>({ ttlMs: DAY, max: 5_000 }),
+    nearest: ttlStore<NearestAnswer>({ ttlMs: DAY, max: 5_000 }),
   };
 }
 

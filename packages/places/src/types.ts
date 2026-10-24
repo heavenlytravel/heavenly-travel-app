@@ -55,8 +55,9 @@ export type PlacesProvider = {
   resolvePlace(placeId: string, options?: SearchOptions): Promise<Place | null>;
   /**
    * The road between two points, its length and its line, avoiding
-   * ferries; null when no road joins them or the router cannot answer.
-   * A point with a place id is routed from the place.
+   * ferries; null when no road joins them. Unlike the other methods it
+   * rejects when the router cannot answer, so a quote never takes an
+   * outage for no road. A point with a place id is routed from the place.
    */
   route(from: RoutePoint, to: RoutePoint): Promise<RoadRoute | null>;
 };

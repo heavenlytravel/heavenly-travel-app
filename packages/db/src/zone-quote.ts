@@ -1,8 +1,13 @@
 import { nearestPointOnShape, type LngLat } from "./geo";
-import type { OddHours, WeekendSurcharge } from "./rates-input";
+import {
+  reachableZones,
+  type OddHours,
+  type WeekendSurcharge,
+} from "./rates-input";
 import { polygonsOf, zoneAt, type RateCellLike } from "./zone-match";
 import {
   nearestZoneByRoad,
+  pointKey,
   roundKm,
   trimmedKm,
   zoneCandidates,
@@ -50,10 +55,13 @@ export type QuoteLocation = {
   weekend: WeekendSurcharge | null;
 };
 
+/** An address's nearest zone by road, or none and why. */
+export type NearestAnswer = { nearest: NearestZone | null; reason: string };
+
 /** Nearest-zone answers kept between quotes: an address's zone by road changes only when a zone does. */
 export type NearestCache = {
-  get(key: string): NearestZone | null | undefined;
-  set(key: string, value: NearestZone | null): void;
+  get(key: string): NearestAnswer | undefined;
+  set(key: string, value: NearestAnswer): void;
 };
 
 /** How a quote reaches roads: the router, and the cache of nearest zones when the app keeps one. */
@@ -146,12 +154,16 @@ const lngLat = (point: { lat: number; lng: number }): LngLat => [
   point.lat,
 ];
 
-/** The router, counting each route it is asked for into the trace. */
+/** A router that could not answer, told apart from the quote's own errors. */
+class RouterFailed extends Error {}
+
+/** The router, its failures marked and each route counted into the trace. */
 function counted(route: TripRouter, trace: TripTrace | undefined): TripRouter {
-  if (!trace) return route;
   return (from, to) => {
-    trace.calls += 1;
-    return route(from, to);
+    if (trace) trace.calls += 1;
+    return route(from, to).catch((error: unknown) => {
+      throw new RouterFailed("the router did not answer", { cause: error });
+    });
   };
 }
 
@@ -169,11 +181,14 @@ function ownZoneAt(
   return { location, zone };
 }
 
-/** A short key for the zones asked about, which changes whenever one of them does. */
+/** A short key for the zones asked about, which changes whenever one of them or its limit does. */
 function zonesKey(candidates: readonly ZoneCandidate[], maxExtraKm: number) {
   let hash = 2166136261;
   const text = `${maxExtraKm}|${candidates
-    .map(({ zone }) => `${zone.id}@${(zone as QuoteZone).version}`)
+    .map(
+      ({ zone, maxExtraKm: limit }) =>
+        `${zone.id}@${(zone as QuoteZone).version}<${limit}`,
+    )
     .join(",")}`;
   for (let i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i);
@@ -181,9 +196,6 @@ function zonesKey(candidates: readonly ZoneCandidate[], maxExtraKm: number) {
   }
   return (hash >>> 0).toString(36);
 }
-
-const pointKey = (point: RoutePoint) =>
-  point.placeId || `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`;
 
 /** Why no zone was found for an end, in Ops' words. */
 function noZoneReason(
@@ -213,7 +225,7 @@ async function nearestFor(
   routing: TripRouting,
   route: TripRouter,
   trace: TripTrace | undefined,
-): Promise<{ nearest: NearestZone | null; reason: string }> {
+): Promise<NearestAnswer> {
   const at = lngLat(address);
   trace?.steps.push({
     kind: "candidates",
@@ -234,16 +246,13 @@ async function nearestFor(
     trace?.steps.push({
       kind: "nearest",
       end,
-      zone: kept ? name(kept.zoneId) : null,
-      extraKm: kept?.extraKm ?? null,
-      entry: kept?.entry ?? null,
+      zone: kept.nearest ? name(kept.nearest.zoneId) : null,
+      extraKm: kept.nearest?.extraKm ?? null,
+      entry: kept.nearest?.entry ?? null,
       cached: true,
       beaten: [],
     });
-    return {
-      nearest: kept,
-      reason: kept ? "" : noZoneReason(candidates, [], maxExtraKm),
-    };
+    return kept;
   }
   const tried: { zone: string; extraKm: number | null }[] = [];
   const nearest = await nearestZoneByRoad(
@@ -274,11 +283,12 @@ async function nearestFor(
     cached: false,
     beaten: tried.filter((t) => t.zone !== winner),
   });
-  routing.nearest?.set(key, nearest);
-  return {
+  const answer = {
     nearest,
     reason: nearest ? "" : noZoneReason(candidates, tried, maxExtraKm),
   };
+  routing.nearest?.set(key, answer);
+  return answer;
 }
 
 const traced = (
@@ -292,16 +302,41 @@ const traced = (
   km: roundKm(part.km),
 });
 
+type PlaceOptions = { pinned?: QuoteLocation | null; trace?: TripTrace };
+
 /**
  * Both ends of a trip placed, and the trip measured when an end is
  * outside every zone, or why it cannot be priced. `pinned` keeps the
- * pickup to one location, as Try a trip does on a location's tab.
+ * pickup to one location, as Try a trip does on a location's tab. A
+ * router that cannot answer refuses the trip, and nothing it half
+ * answered is kept.
  */
 export async function placeTrip(
   locations: readonly QuoteLocation[],
   trip: { pickup: RoutePoint; dropoff: RoutePoint | null },
   routing: TripRouting,
-  { pinned, trace }: { pinned?: QuoteLocation | null; trace?: TripTrace } = {},
+  options: PlaceOptions = {},
+): Promise<TripPlacing> {
+  try {
+    return await placeBoth(locations, trip, routing, options);
+  } catch (error) {
+    if (!(error instanceof RouterFailed)) throw error;
+    return {
+      ok: false,
+      error: {
+        code: "distance-unavailable",
+        message: NO_ROUTE,
+        reason: error.message,
+      },
+    };
+  }
+}
+
+async function placeBoth(
+  locations: readonly QuoteLocation[],
+  trip: { pickup: RoutePoint; dropoff: RoutePoint | null },
+  routing: TripRouting,
+  { pinned, trace }: PlaceOptions,
 ): Promise<TripPlacing> {
   const route = counted(routing.route, trace);
   const fail = (
@@ -370,9 +405,11 @@ export async function placeTrip(
   }
 
   // The drop-off: in a zone the location prices to, or its nearest by road.
-  const reach = location.crossLocation
-    ? [...location.zones, ...location.zonesOut]
-    : location.zones;
+  const reach = reachableZones(
+    location.crossLocation,
+    location.zones,
+    location.zonesOut,
+  );
   const dropoffIn = zoneAt(reach, dropoffAt);
   let dropoff: PlacedEnd;
   if (dropoffIn) {

@@ -22,7 +22,15 @@ export type RoadRoute = { distanceKm: number; line: LngLat[] };
 /** Where a route starts or ends: a point, and the place there when there is one; "" for none. */
 export type RoutePoint = { lat: number; lng: number; placeId?: string };
 
-/** The road between two points, or null when no road joins them. */
+/** A point's key in a cache: its place, otherwise its coordinates. */
+export const pointKey = (point: RoutePoint) =>
+  point.placeId || `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`;
+
+/**
+ * The road between two points, or null when no road joins them. It
+ * rejects when the router cannot answer, so a failure is never taken for
+ * no road.
+ */
 export type TripRouter = (
   from: RoutePoint,
   to: RoutePoint,

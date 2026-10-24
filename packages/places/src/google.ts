@@ -1,4 +1,4 @@
-import type { RoutePoint } from "@repo/db";
+import { pointKey, type RoutePoint } from "@repo/db";
 import { memoize } from "./cache";
 import { parsePlace, parseRoute, parseSuggestions } from "./google-parse";
 import type { Bounds, PlacesProvider } from "./types";
@@ -51,9 +51,6 @@ const waypointOf = (point: RoutePoint) =>
           latLng: { latitude: point.lat, longitude: point.lng },
         },
       };
-
-const pointKey = (point: RoutePoint) =>
-  point.placeId || `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`;
 
 /** Logged, never thrown: a Google failure degrades the page, not crashes it. */
 async function attempt<T>(what: string, run: () => Promise<T>, fallback: T) {
@@ -169,6 +166,10 @@ export function googleProvider(key: string): PlacesProvider {
         () => details(placeId, options?.sessionToken),
         null,
       ),
-    route: (from, to) => attempt("route", () => route(from, to), null),
+    route: (from, to) =>
+      route(from, to).catch((error: unknown) => {
+        console.error("[places] route failed", error);
+        throw error;
+      }),
   };
 }

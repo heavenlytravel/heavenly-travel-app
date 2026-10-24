@@ -19,8 +19,14 @@ function pick(): PlacesProvider {
   if (key) return googleProvider(key);
   if (process.env.NODE_ENV === "production") {
     console.warn(
-      "[places] GOOGLE_MAPS_SERVER_KEY is not set; one-way trips are priced on straight lines",
+      "[places] GOOGLE_MAPS_SERVER_KEY is not set; one-way trips cannot be priced",
     );
+    // Straight lines are for development only: they would underprice a trip.
+    return {
+      ...nullProvider,
+      route: () =>
+        Promise.reject(new Error("GOOGLE_MAPS_SERVER_KEY is not set")),
+    };
   }
   return nullProvider;
 }

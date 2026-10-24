@@ -111,14 +111,24 @@ export async function listQuoteLocations(
     ),
   ];
   // A route out may end at a zone of a location the public does not see.
+  // It is named with its location, as the rate grid shows it, so a trip
+  // to another location's Airport never reads as within this one's.
   const missing = outIds.filter((id) => !own.has(id));
   const far = new Map(
     [
-      ...locations.flatMap((l) => l.zones),
+      ...locations.flatMap((l) =>
+        l.zones.map((zone) => ({ ...zone, location: { name: l.name } })),
+      ),
       ...(missing.length > 0
-        ? await db.zone.findMany({ where: { id: { in: missing } } })
+        ? await db.zone.findMany({
+            where: { id: { in: missing } },
+            include: { location: { select: { name: true } } },
+          })
         : []),
-    ].map((zone) => [zone.id, zone]),
+    ].map((zone) => [
+      zone.id,
+      { ...zone, name: `${zone.name} · ${zone.location.name}` },
+    ]),
   );
   const zonesOf = (zones: readonly Zone[]) =>
     zones.flatMap((zone) => quoteZoneOf(zone) ?? []);

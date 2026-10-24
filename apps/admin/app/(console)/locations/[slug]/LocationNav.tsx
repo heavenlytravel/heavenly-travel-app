@@ -21,7 +21,7 @@ import type {
   MenuMark,
   MenuRow,
 } from "../../../_components/menu";
-import { allLocationsMenu } from "../../../_components/nav";
+import { MENU_PART_LABELS, allLocationsMenu } from "../../../_components/nav";
 import { getPermissions } from "../../../_lib/access";
 import {
   locationAddressesHref,
@@ -59,6 +59,51 @@ function fleetLine(
 const countOf = (value: number, tone: "brand" | "amber") =>
   value > 0 ? { value, tone } : undefined;
 
+/** The tabs Fleet holds, in its drill's order: a vehicle is of a model of a class. */
+const FLEET_TABS: readonly LocationTab[] = [
+  "vehicles",
+  "drivers",
+  "vehicle-classes",
+];
+
+/**
+ * The Fleet row over the rows of its tabs the admin may open, each a page
+ * of its drill with its own count or setup mark. The row sums the
+ * documents due and carries the classes' setup mark; its line is theirs
+ * together. One tab alone is its own row, none is no row.
+ */
+function fleetRow(rows: readonly MenuRow[]): MenuRow[] {
+  const [first] = rows;
+  if (!first) return [];
+  if (rows.length === 1) return [first];
+  const due = rows.reduce((sum, row) => sum + (row.count?.value ?? 0), 0);
+  return [
+    {
+      key: "fleet",
+      label: "Fleet",
+      href: first.href,
+      icon: "fleet",
+      detail: rows
+        .map((row) => row.detail)
+        .filter(Boolean)
+        .join("; "),
+      count: countOf(due, "amber"),
+      mark: rows.find((row) => row.mark)?.mark,
+      drill: {
+        label: "Fleet",
+        entries: rows.map((row) => ({
+          key: row.key,
+          label: row.label,
+          href: row.href,
+          icon: row.icon,
+          count: row.count,
+          mark: row.mark,
+        })),
+      },
+    },
+  ];
+}
+
 /**
  * The sidebar's menu while the picker is on a location, read for the
  * `@scope` slot. A slug no location has (an address from before the slugs,
@@ -84,13 +129,15 @@ export async function LocationScopeNav({ slug }: { slug: string }) {
 /**
  * A location's menu: that location alone, its rows in the same places in
  * every state, each with its icon and, where something waits on it, a
- * count. The day's work first (the overview, the bookings awaiting
- * confirmation, the vehicles with a document due, the drivers with a
- * licence due), then what the location sells and where (its classes on
- * sale, its zones, its rates), then its pages and its settings, each a
- * drill whose pages take the menu's place: the location's pages one by one
- * with their standing and its saved addresses; its details, status and
- * deletion, and its history. Last, its public page once it is public. A
+ * count. The overview has the location's mark for its icon, as the picker
+ * has, so the menu says whose it is. The day's work first (the overview,
+ * the bookings awaiting confirmation, and Fleet, a drill: the vehicles
+ * with a document due, the drivers with a licence due, the classes on
+ * sale), then, under Selling, its zones and its rates, then, under Manage,
+ * its pages and its settings, each a drill whose pages take the menu's
+ * place: the location's pages one by one with their standing and its
+ * saved addresses; its details, status and deletion, and its history.
+ * Last, its public page once it is public. A
  * draft takes no bookings, so it has no Bookings row; the rows of its
  * setup steps carry a mark, ticked once done, and its overview, the
  * checklist, how far it has come. Each row shows only for an admin who may
@@ -139,6 +186,7 @@ function locationMenu({
       case "overview":
         return {
           ...row,
+          location: { name: location.name, state: location.state },
           exact: true,
           note: draft ? `${progress.done} of ${progress.total}` : undefined,
         };
@@ -157,11 +205,17 @@ function locationMenu({
           drill: {
             label: tab.label,
             entries: [
-              { key: "all", label: "All pages", href: row.href },
-              ...overview.pages.map((page) => ({
+              {
+                key: "all",
+                label: "All pages",
+                href: row.href,
+                icon: "pages",
+              },
+              ...overview.pages.map((page): MenuEntry => ({
                 key: page.page,
                 label: LOCATION_PAGE_LABELS[page.page],
                 href: locationPageHref(slug, page.page),
+                icon: "page",
                 dot: PAGE_DOTS[page.status],
                 note: PAGE_STATUS_LABELS[page.status],
               })),
@@ -169,6 +223,7 @@ function locationMenu({
                 key: "addresses",
                 label: "Saved addresses",
                 href: locationAddressesHref(slug),
+                icon: "addresses",
                 note: String(location.addresses.length),
               },
             ],
@@ -184,12 +239,14 @@ function locationMenu({
                 key: "general",
                 label: "General",
                 href: row.href,
+                icon: "general",
                 note: LOCATION_STATE_LABELS[state],
               },
               {
                 key: "history",
                 label: "History",
                 href: locationTabHref(slug, "history"),
+                icon: "history",
                 note: overview.changedAt
                   ? formatLocalDate(overview.changedAt)
                   : undefined,
@@ -206,6 +263,7 @@ function locationMenu({
   // The history is the second page of Settings, not a row of its own.
   const rowsOf = (keys: readonly LocationTab[]) =>
     tabs.filter((tab) => keys.includes(tab.key)).map(rowOf);
+  const fleet = fleetRow(rowsOf(FLEET_TABS));
   const publicPage: MenuRow[] = isPublicState(state)
     ? [
         {
@@ -221,10 +279,16 @@ function locationMenu({
   return {
     label: location.name,
     parts: [
-      rowsOf(["overview", "bookings", "vehicles", "drivers"]),
-      rowsOf(["vehicle-classes", "coverage", "rates"]),
-      [...rowsOf(["pages", "settings"]), ...publicPage],
-    ].filter((rows) => rows.length > 0),
+      { rows: [...rowsOf(["overview", "bookings"]), ...fleet] },
+      {
+        label: MENU_PART_LABELS.selling,
+        rows: rowsOf(["coverage", "rates"]),
+      },
+      {
+        label: MENU_PART_LABELS.manage,
+        rows: [...rowsOf(["pages", "settings"]), ...publicPage],
+      },
+    ].filter((part) => part.rows.length > 0),
     foot: isPublicState(state)
       ? undefined
       : "Not public yet. Staff read the pages through Preview.",

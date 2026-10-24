@@ -7,6 +7,7 @@ import { cx } from "@repo/ui/cx";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import {
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarLabel,
   SidebarMenu,
   SidebarMenuButton,
@@ -19,8 +20,11 @@ import {
   entryOnScreen,
   rowOnScreen,
   type Menu,
+  type MenuCount,
+  type MenuMark,
   type MenuRow,
 } from "./menu";
+import { LocationMark } from "./LocationMark";
 import { StepMark } from "./StepMark";
 
 /** A link in the sidebar that keeps the sheet open on a phone: a drill's row, which opens its menu there. */
@@ -38,7 +42,8 @@ const COUNT_TONES = {
 } as const;
 
 /**
- * A scope's menu in the sidebar: its parts a line apart, each row a
+ * A scope's menu in the sidebar: its parts under their names (a line
+ * apart on the rail, where names do not fit), each row a
  * section with its icon and, where something waits on it, a count. The
  * row of the section on screen is marked. A row with a chevron is a
  * drill: while one of its pages is on screen, its pages take the menu's
@@ -88,12 +93,15 @@ export function ConsoleMenu({ menu }: { menu: Menu }) {
 
   return (
     <nav ref={nav} aria-label={menu.label}>
-      {menu.parts.map((rows, index) => (
-        <Fragment key={rows[0]?.key ?? index}>
-          {index > 0 ? <SidebarSeparator /> : null}
+      {menu.parts.map((part, index) => (
+        <Fragment key={part.rows[0]?.key ?? index}>
+          {index > 0 && collapsed ? <SidebarSeparator /> : null}
           <SidebarGroup>
+            {part.label ? (
+              <SidebarGroupLabel>{part.label}</SidebarGroupLabel>
+            ) : null}
             <SidebarMenu>
-              {rows.map((row) => (
+              {part.rows.map((row) => (
                 <Row
                   key={row.key}
                   row={row}
@@ -130,7 +138,11 @@ function Row({
   const Icon = MENU_ICONS[row.icon];
   const content = (
     <>
-      <Icon />
+      {row.location ? (
+        <LocationMark name={row.location.name} state={row.location.state} />
+      ) : (
+        <Icon />
+      )}
       <SidebarLabel className="min-w-0 flex-1">{row.label}</SidebarLabel>
       {collapsed ? null : <RowEnd row={row} />}
     </>
@@ -181,24 +193,34 @@ function RowEnd({ row }: { row: MenuRow }) {
       ) : null}
       {row.count ? (
         <>
-          <span
-            aria-hidden="true"
-            className={cx(
-              "shrink-0 rounded-full px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums",
-              COUNT_TONES[row.count.tone],
-            )}
-          >
-            {row.count.value}
-          </span>
+          <Count count={row.count} />
           {row.detail ? <span className="sr-only">, {row.detail}</span> : null}
         </>
       ) : null}
-      {row.mark ? (
-        <StepMark done={row.mark === "done"} className="size-4" />
-      ) : null}
+      <Mark mark={row.mark} />
       {row.drill ? <ChevronRightIcon className="text-slate-400" /> : null}
     </>
   );
+}
+
+/** What waits on a row, in a pill at its end. */
+function Count({ count }: { count: MenuCount }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "shrink-0 rounded-full px-1.5 text-[11px] leading-[18px] font-semibold tabular-nums",
+        COUNT_TONES[count.tone],
+      )}
+    >
+      {count.value}
+    </span>
+  );
+}
+
+/** A setup step's mark at a row's end, ticked once done. */
+function Mark({ mark }: { mark: MenuMark | undefined }) {
+  return mark ? <StepMark done={mark === "done"} className="size-4" /> : null;
 }
 
 /** A drill's pages in the sidebar's place: its name over them, with the way back to the menu. */
@@ -244,29 +266,37 @@ function DrillMenu({
           </span>
         </div>
         <SidebarMenu className="mt-2">
-          {drill.entries.map((entry) => (
-            <SidebarMenuItem key={entry.key}>
-              <SidebarMenuButton asChild active={entry === on}>
-                <Link href={entry.href}>
-                  {entry.dot ? (
-                    <span
-                      aria-hidden="true"
-                      className={cx(
-                        "size-1.5 shrink-0 rounded-full",
-                        DOTS[entry.dot],
-                      )}
-                    />
-                  ) : null}
-                  <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-                  {entry.note ? (
-                    <span className="max-w-[50%] shrink-0 truncate text-xs text-slate-500 tabular-nums">
-                      {entry.note}
+          {drill.entries.map((entry) => {
+            const Icon = MENU_ICONS[entry.icon];
+            return (
+              <SidebarMenuItem key={entry.key}>
+                <SidebarMenuButton asChild active={entry === on}>
+                  <Link href={entry.href}>
+                    <Icon />
+                    {entry.dot ? (
+                      <span
+                        aria-hidden="true"
+                        className={cx(
+                          "size-1.5 shrink-0 rounded-full",
+                          DOTS[entry.dot],
+                        )}
+                      />
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">
+                      {entry.label}
                     </span>
-                  ) : null}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+                    {entry.note ? (
+                      <span className="max-w-[50%] shrink-0 truncate text-xs text-slate-500 tabular-nums">
+                        {entry.note}
+                      </span>
+                    ) : null}
+                    {entry.count ? <Count count={entry.count} /> : null}
+                    <Mark mark={entry.mark} />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroup>
     </nav>

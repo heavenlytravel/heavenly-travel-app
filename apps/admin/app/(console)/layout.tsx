@@ -33,7 +33,11 @@ export default async function ConsoleLayout({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <ConsoleSearch locations={locations} permissions={permissions}>
-        <AppSidebar scope={scope} />
+        <AppSidebar
+          scope={scope}
+          locations={locations}
+          permissions={permissions}
+        />
         <SidebarInset>
           <ConsoleHeader locations={locations} permissions={permissions} />
           <PageColumn>{children}</PageColumn>

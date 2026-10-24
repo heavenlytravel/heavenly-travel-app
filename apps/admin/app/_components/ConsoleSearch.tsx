@@ -6,9 +6,9 @@ import {
   CommandPaletteTrigger,
   type CommandPaletteGroup,
 } from "@repo/ui/command-palette";
-import { CirclePlusIcon, SearchIcon } from "@repo/ui/icons";
-import { SidebarDockButton, useSidebar } from "@repo/ui/sidebar";
-import { usePathname, useRouter } from "next/navigation";
+import { CirclePlusIcon, SearchIcon, XIcon } from "@repo/ui/icons";
+import { SidebarDock, SidebarDockButton, useSidebar } from "@repo/ui/sidebar";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useContext,
@@ -24,7 +24,7 @@ import {
   type SearchHit,
   type SearchResponse,
 } from "../_lib/console-search";
-import { SEARCH_PARAM, SEARCH_PATH, scopeOfPath } from "../_lib/routes";
+import { SEARCH_PARAM, SEARCH_PATH } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
 import { LocationMark } from "./LocationMark";
 import { MENU_ICONS, type MenuIcon } from "./menu";
@@ -33,6 +33,7 @@ import {
   paletteIndex,
   type PaletteEntry,
 } from "./palette-index";
+import { useRecent, type RecentEntry } from "./palette-recent";
 import { BookingStatusBadge } from "./StatusBadges";
 
 /** How long the typing rests before the records are asked for. */
@@ -61,26 +62,44 @@ type Answer = {
   failed: boolean;
 };
 
-/** Opens the palette, for a button that does: the header's box, the dock's search. */
-const OpenSearchContext = createContext<(() => void) | null>(null);
+/** The palette's state, for a button that opens it or closes it: the header's box, the dock's search. */
+const SearchContext = createContext<{
+  open: boolean;
+  setOpen: (open: boolean) => void;
+} | null>(null);
 
-function useOpenSearch() {
-  const open = useContext(OpenSearchContext);
-  if (!open) throw new Error("A search button needs ConsoleSearch round it.");
-  return open;
+function useSearch() {
+  const search = useContext(SearchContext);
+  if (!search) throw new Error("A search button needs ConsoleSearch round it.");
+  return search;
 }
+
+/** What is kept of a row as it is opened: all but the words it is found by. */
+function keptOf({
+  href,
+  title,
+  meta,
+  icon,
+  location,
+}: PaletteEntry): RecentEntry {
+  return { href, title, meta, icon, location };
+}
+
+/** A group of rows the palette finds in the browser. */
+type EntryGroup = { key: string; heading: string; entries: RecentEntry[] };
 
 /**
  * The console's search: the command palette, which the box in the header
- * (`SearchBox`) and the search in a phone's dock (`DockSearch`) open, as
+ * (`SearchBox`) and the search in a phone's dock (`ConsoleDock`) open, as
  * Ctrl or Cmd + K does from anywhere. Round the console, so each of them
- * reaches it. Before anything is typed it lists
- * the pages of the scope on screen and what the admin may add. As they
- * type it finds, in groups, the pages (across locations and each
- * location's), the actions, the locations, and, asked of the server, the
- * bookings, vehicles, drivers, users, classes and zones that match, every
- * location whatever the picker is on. Only what the admin may open is
- * offered. Enter or a click opens it. See docs/261023-console-sidebar.md.
+ * reaches it. Before anything is typed it lists the last rows opened from
+ * it (`useRecent`) and what the admin may add; the pages are the
+ * sidebar's. As they type it finds, in groups, the pages (across
+ * locations and each location's), the actions, the locations, and, asked
+ * of the server, the bookings, vehicles, drivers, users, classes and
+ * zones that match, every location whatever the picker is on. Only what
+ * the admin may open is offered. Enter or a click opens it. See
+ * docs/261023-console-sidebar.md.
  */
 export function ConsoleSearch({
   locations,
@@ -92,17 +111,16 @@ export function ConsoleSearch({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const { recent, remember } = useRecent();
+  const [open, setOpenState] = useState(false);
   const [text, setText] = useState("");
   const [answer, setAnswer] = useState<Answer | null>(null);
   const term = searchTermOf(text);
   const recordTerm = term && term.length >= MIN_RECORD_SEARCH ? term : null;
 
   const index = useMemo(
-    () =>
-      paletteIndex({ permissions, locations, scope: scopeOfPath(pathname) }),
-    [permissions, locations, pathname],
+    () => paletteIndex({ permissions, locations }),
+    [permissions, locations],
   );
 
   useEffect(() => {
@@ -141,34 +159,61 @@ export function ConsoleSearch({
     [recordTerm, answer],
   );
 
-  const groups = useMemo((): CommandPaletteGroup[] => {
-    const local = term
+  // The rows, and each row's entry by its page, kept as it is opened.
+  const { groups, entries } = useMemo(() => {
+    const actions = (list: readonly PaletteEntry[]): RecentEntry[] =>
+      list.map((entry) => ({ ...keptOf(entry), action: true }));
+    const plain = (list: readonly PaletteEntry[]): RecentEntry[] =>
+      list.map(keptOf);
+    const local: EntryGroup[] = term
       ? [
           {
             key: "pages",
             heading: "Pages",
-            entries: entriesMatching(index.pages, term).slice(0, PAGES_SHOWN),
+            entries: plain(entriesMatching(index.pages, term)).slice(
+              0,
+              PAGES_SHOWN,
+            ),
           },
           {
             key: "actions",
             heading: "Actions",
-            entries: entriesMatching(index.actions, term),
+            entries: actions(entriesMatching(index.actions, term)),
           },
           {
             key: "locations",
             heading: "Locations",
-            entries: entriesMatching(index.locations, term),
+            entries: plain(entriesMatching(index.locations, term)),
           },
         ]
       : [
-          { key: "pages", heading: "Pages", entries: index.pagesHere },
+          { key: "recent", heading: "Recent", entries: recent },
           {
             key: "actions",
             heading: "Actions",
-            entries: index.actions.filter((entry) => !entry.meta),
+            entries: actions(index.actions.filter((entry) => !entry.meta)),
           },
         ];
-    return [
+    const found = records.map((group) => ({
+      kind: group.kind,
+      hits: group.hits.map((hit) => ({
+        hit,
+        entry: {
+          href: hit.href,
+          title: hit.title,
+          meta: hit.meta,
+          icon: KIND_ICONS[group.kind],
+        } satisfies RecentEntry,
+      })),
+    }));
+    const entries = new Map<string, RecentEntry>();
+    for (const group of local) {
+      for (const entry of group.entries) entries.set(entry.href, entry);
+    }
+    for (const group of found) {
+      for (const { entry } of group.hits) entries.set(entry.href, entry);
+    }
+    const groups: CommandPaletteGroup[] = [
       ...local
         .filter((group) => group.entries.length > 0)
         .map((group) => ({
@@ -177,22 +222,21 @@ export function ConsoleSearch({
           items: group.entries.map((entry) => ({
             key: `${group.key}:${entry.href}`,
             value: entry.href,
-            content: (
-              <EntryRow entry={entry} action={group.key === "actions"} />
-            ),
+            content: <EntryRow entry={entry} />,
           })),
         })),
-      ...records.map((group) => ({
+      ...found.map((group) => ({
         key: group.kind,
         heading: RECORD_KIND_LABELS[group.kind],
-        items: group.hits.map((hit) => ({
+        items: group.hits.map(({ hit, entry }) => ({
           key: `${group.kind}:${hit.href}`,
           value: hit.href,
-          content: <HitRow hit={hit} icon={KIND_ICONS[group.kind]} />,
+          content: <HitRow hit={hit} icon={entry.icon} />,
         })),
       })),
     ];
-  }, [term, index, records]);
+    return { groups, entries };
+  }, [term, index, records, recent]);
 
   const status =
     !term || groups.length > 0 || pending
@@ -201,71 +245,80 @@ export function ConsoleSearch({
         ? "The search failed. Try again."
         : `No results for “${term}”.`;
 
-  const openSearch = useCallback(() => setOpen(true), []);
-
-  const close = (next: boolean) => {
-    setOpen(next);
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next);
     // Closed, it starts afresh: no text, and no records of the last search.
     if (!next) {
       setText("");
       setAnswer(null);
     }
-  };
+  }, []);
+  const search = useMemo(() => ({ open, setOpen }), [open, setOpen]);
 
   return (
-    <OpenSearchContext.Provider value={openSearch}>
+    <SearchContext.Provider value={search}>
       {children}
       <CommandPalette
         label="Search the console"
         placeholder="Search pages, bookings, plates, people…"
         open={open}
-        onOpenChange={close}
+        onOpenChange={setOpen}
         value={text}
         onValueChange={setText}
         groups={groups}
         pending={pending}
         status={status}
         onChoose={(href) => {
-          close(false);
+          const entry = entries.get(href);
+          if (entry) remember(entry);
+          setOpen(false);
           router.push(href);
         }}
+        dock={<ConsoleDock />}
       />
-    </OpenSearchContext.Provider>
+    </SearchContext.Provider>
   );
 }
 
 /** The box in the header that opens the search, from `md` up; a phone has the dock's. */
 export function SearchBox() {
-  const openSearch = useOpenSearch();
+  const { setOpen } = useSearch();
   return (
     <CommandPaletteTrigger
       label="Search"
-      onOpen={openSearch}
+      onOpen={() => setOpen(true)}
       className="max-w-xs max-md:hidden"
     />
   );
 }
 
-/** The search in a phone's dock. Pressed over the menu, the menu makes way for it. */
-export function DockSearch() {
-  const openSearch = useOpenSearch();
+/**
+ * The bar at a phone's foot: the search, then the menu. Each turns into
+ * the way to close what it opened, and opening one closes the other. Drawn
+ * on the page, and again over the menu's panel and the palette.
+ */
+export function ConsoleDock() {
+  const { open, setOpen } = useSearch();
   const { setOpenMobile } = useSidebar();
   return (
-    <SidebarDockButton
-      onClick={() => {
-        setOpenMobile(false);
-        openSearch();
-      }}
-    >
-      <SearchIcon />
-      Search
-    </SidebarDockButton>
+    <SidebarDock onMenu={() => setOpen(false)}>
+      <SidebarDockButton
+        aria-expanded={open}
+        onClick={() => {
+          if (!open) setOpenMobile(false);
+          setOpen(!open);
+        }}
+      >
+        {open ? <XIcon /> : <SearchIcon />}
+        {open ? "Close" : "Search"}
+      </SidebarDockButton>
+    </SidebarDock>
   );
 }
 
 /** A page, an action or a location: its icon or mark, its name, and where it is. */
-function EntryRow({ entry, action }: { entry: PaletteEntry; action: boolean }) {
-  const Icon = action
+function EntryRow({ entry }: { entry: RecentEntry }) {
+  const Icon = entry.action
     ? CirclePlusIcon
     : entry.icon
       ? MENU_ICONS[entry.icon]

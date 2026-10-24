@@ -14,7 +14,6 @@ import {
   newLocationOfferingHref,
   newLocationZoneHref,
   newVehicleHref,
-  type ConsoleScope,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
 import type { MenuIcon } from "./menu";
@@ -44,8 +43,6 @@ export type PaletteEntry = {
 export type PaletteIndex = {
   /** Every page, across locations then each location's. */
   pages: PaletteEntry[];
-  /** The pages of the scope on screen, listed before anything is typed. */
-  pagesHere: PaletteEntry[];
   actions: PaletteEntry[];
   locations: PaletteEntry[];
 };
@@ -70,11 +67,9 @@ const PAGE_WORDS: Partial<Record<MenuIcon, string>> = {
 export function paletteIndex({
   permissions,
   locations,
-  scope,
 }: {
   permissions: readonly Permission[];
   locations: readonly SidebarLocation[];
-  scope: ConsoleScope;
 }): PaletteIndex {
   const may = (permission: Permission) => permissions.includes(permission);
 
@@ -99,10 +94,6 @@ export function paletteIndex({
         words: PAGE_WORDS[tab.key],
       }),
     );
-  const here =
-    scope === "all"
-      ? undefined
-      : locations.find((location) => location.slug === scope.slug);
 
   const actions: PaletteEntry[] = [
     ...(may("bookings.create")
@@ -144,7 +135,6 @@ export function paletteIndex({
 
   return {
     pages: [...across, ...locations.flatMap(tabsOf)],
-    pagesHere: here ? tabsOf(here) : across,
     actions,
     locations: locations.map((location) => ({
       href: locationHref(location.slug),

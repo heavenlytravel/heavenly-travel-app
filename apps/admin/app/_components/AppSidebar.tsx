@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
-  SidebarDock,
   SidebarHeader,
   SidebarLabel,
   SidebarMenu,
@@ -15,7 +14,9 @@ import {
 } from "@repo/ui/sidebar";
 import type { MouseEvent, ReactNode } from "react";
 import { KEEPS_PANEL } from "./ConsoleMenu";
-import { DockSearch } from "./ConsoleSearch";
+import type { Permission } from "@repo/db";
+import { ConsoleDock } from "./ConsoleSearch";
+import { ScopePicker } from "./ScopePicker";
 
 /** A location as the picker lists it. */
 export type SidebarLocation = {
@@ -31,16 +32,22 @@ export type SidebarLocation = {
  * On a location it holds that location alone; on All locations, the views
  * across locations and the console's own screens. Collapsed it is a rail
  * of icons with the labels as tooltips. Below `md` it is a panel over the
- * page, with no brand mark, opened from the dock floating at the screen's
- * foot, which holds the search too. A link in the panel closes it, except
- * a drill's row, which opens its menu there. See
+ * page, opened from the dock floating at the screen's foot, which holds
+ * the search too. In place of the brand mark it has the location picker,
+ * so the admin sees which location the menu is of, and can change it
+ * there: the panel stays, with the other location's menu. A link in the
+ * menu closes it, except a drill's row, which opens its menu there. See
  * docs/261023-console-sidebar.md.
  */
 export function AppSidebar({
   scope,
+  locations,
+  permissions,
 }: {
   /** The scope's menu, from the `@scope` slot. */
   scope: ReactNode;
+  locations: readonly SidebarLocation[];
+  permissions: readonly Permission[];
 }) {
   const { setOpenMobile } = useSidebar();
   // A link pressed anywhere in the panel closes it; a drill's row and a
@@ -50,15 +57,16 @@ export function AppSidebar({
     if (link && !link.matches(KEEPS_PANEL)) setOpenMobile(false);
   };
 
-  const dock = (
-    <SidebarDock>
-      <DockSearch />
-    </SidebarDock>
-  );
-
   return (
     <>
-      <Sidebar title="Console menu" dock={dock}>
+      <Sidebar title="Console menu" dock={<ConsoleDock />}>
+        <SidebarHeader className="md:hidden">
+          <ScopePicker
+            locations={locations}
+            permissions={permissions}
+            className="w-full"
+          />
+        </SidebarHeader>
         <SidebarHeader onClick={closeOnLink} className="max-md:hidden">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -92,7 +100,7 @@ export function AppSidebar({
 
         <SidebarContent onClick={closeOnLink}>{scope}</SidebarContent>
       </Sidebar>
-      {dock}
+      <ConsoleDock />
     </>
   );
 }

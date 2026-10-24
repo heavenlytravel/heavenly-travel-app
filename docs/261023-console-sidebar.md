@@ -107,8 +107,12 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 Added on 2026-10-25, after shadcn's command menu, with no AI: the box in the top bar, or
 Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over the page.
 
-- Before anything is typed it lists the pages of the scope on screen and what the admin
-  may add.
+- Before anything is typed it lists Recent, the last five rows the admin opened from it,
+  newest first, then what they may add across locations. The pages are the sidebar's, so
+  they are not listed again (changed on 2026-10-25 from the pages of the scope on screen,
+  which made too long a list). Recent is kept in the browser for each admin
+  (localStorage, keyed by their Clerk id); nothing goes to the server, and a row kept is
+  what it was when opened.
 - As they type it finds, in groups in this order: Pages (across locations and each
   location's, "Rates · Langkawi"), Actions (New booking, Add vehicle, driver, class or
   location, and for each location Add zone and Put a class on sale), Locations, then
@@ -124,6 +128,11 @@ Ctrl + K (⌘ K on a Mac, as the box says on each device), opens a palette over 
   under the rows; a quick one shows neither, so nothing flickers. Enter opens the row
   marked, the first unless the arrows moved it. The box takes the keys as the palette
   opens, and an Esc at its end says how to close it.
+- Not searched: Activity, a log rather than records to open, and Media, whose file names
+  nobody searches by. Admins are found among Users.
+- Cost: plain `contains` queries on our own database, a handful per pause in the typing,
+  each capped; no outside service. Trigram indexes (`pg_trgm`) are the remedy if one
+  grows slow.
 
 ### On a phone
 
@@ -131,17 +140,17 @@ Added on 2026-10-25, after Vercel's dashboard on a phone. The top bar keeps the 
 the admin's own menu; the sidebar's toggle and the search move to a bar floating at the
 foot of every page: Search, then the menu button.
 
-- The menu opens as a panel over the page, all of it but a narrow margin, with no brand
-  mark. The bar stays over its foot, its menu button now an X to close it; Search there
-  closes the menu and opens the palette. A tap in the margin closes it too.
-- The palette takes the same room as the menu, with an X in place of the Esc.
+- The menu opens as a panel over the page, all of it but a narrow margin. In place of the
+  brand mark it has the location picker, so the admin sees which location the menu is
+  of; picking another keeps the panel open on that location's menu.
+- The palette takes the same room as the menu.
+- The bar stays over both. The button of what is open turns into an X to close it (the
+  menu's, or Search's as Close), and the other button opens its own in its place. A tap
+  in the margin closes either.
+- A press on the bar is felt as a light tap: the Vibration API on Android, a hidden
+  switch turned on an iPhone (iOS 18), nothing elsewhere.
 - Both fade in and rise a little. Pages keep room at their foot for the bar, and toasts
   stand above it.
-- Not searched: Activity, a log rather than records to open, and Media, whose file names
-  nobody searches by. Admins are found among Users.
-- Cost: plain `contains` queries on our own database, a handful per pause in the typing,
-  each capped; no outside service. Trigram indexes (`pg_trgm`) are the remedy if one
-  grows slow.
 
 ### Still open
 
@@ -177,10 +186,12 @@ foot of every page: Search, then the menu button.
   `@repo/db`'s `console-search.ts`; `@repo/ui`'s `command-palette` (cmdk in a native
   `<dialog>`). The booking search, its route and `@repo/ui`'s `search-menu` go.
 - `@repo/ui`'s `Sheet` slides from its edge (`.ui-sheet` in its styles).
-- On a phone: `@repo/ui`'s `SidebarDock` (the floating bar) and the sidebar's panel in
-  place of its sheet (`.ui-pop`); the palette's `ConsoleSearch` sits round the
-  console so the header's `SearchBox` and the dock's `DockSearch` both open it. A
-  drill's way in is `.ui-swap-in`. `@repo/ui` gains `MenuIcon`.
+- On a phone: `@repo/ui`'s `SidebarDock` (the floating bar, felt through `haptic`) and
+  the sidebar's panel in place of its sheet (`.ui-pop`). `ConsoleSearch` sits round the
+  console so the header's `SearchBox` and `ConsoleDock` both reach the palette; Recent
+  is `_components/palette-recent.ts`. `@repo/ui`'s `Menu` opens in the dialog it is in,
+  so the picker works in the panel. A drill's way in is `.ui-swap-in`. `@repo/ui` gains
+  `MenuIcon`.
 - `@repo/ui` gains `SettingsIcon`, `CarFrontIcon` (Fleet), `ActivityIcon`,
   `SlidersHorizontalIcon` (General) and `FilesIcon` (All pages).
 

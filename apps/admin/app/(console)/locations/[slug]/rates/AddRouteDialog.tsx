@@ -31,12 +31,12 @@ export type NewRoute = {
  * for each class on sale, a row each in a table grouped by category,
  * its cells drawn as the grid's, an empty one hatched. Only the zones with a pair
  * still free are offered, and only the free partners of the zone picked
- * first, so a route cannot be added twice or the other way round. Given
- * no `elsewhere`, "To" offers this location's zones, the one picked first
- * among them as "Within this zone": the zone's within-zone price. Given
- * other locations' zones, it is "Add a route to another location", and
- * "To" offers only those, by location: the route ends at that zone itself,
- * which stays its location's, and prices trips from here to it. At least
+ * first, so a route cannot be added twice or the other way round. "To"
+ * offers this location's zones, the one picked first among them as
+ * "Within this zone": the zone's within-zone price. Given other
+ * locations' zones, while cross-location is on, "To" offers those too,
+ * grouped by location: such a route ends at that zone itself, which stays
+ * its location's, and prices trips from here to it only. At least
  * one price is needed, since a route with none is no row on the grid.
  * `onAdd` saves the route; its error, if any, stays in the dialog.
  */
@@ -52,7 +52,7 @@ export function AddRouteDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   zones: readonly Zone[];
-  /** Other locations' zones a route out may end at; none for a route between this location's zones. */
+  /** Other locations' zones a route out may end at; none while cross-location is off. */
   elsewhere: readonly ZoneElsewhere[];
   classes: readonly ClassColumn[];
   /** The pairs on the grid already, by `pairKey`. */
@@ -60,15 +60,14 @@ export function AddRouteDialog({
   /** Saves the route; answers an error to show, or null once saved. */
   onAdd: (route: NewRoute) => Promise<string | null>;
 }) {
-  const out = elsewhere.length > 0;
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={out ? "Add a route to another location" : "Add a route"}
+      title="Add a route"
       description={
-        out
-          ? "Pick a zone here and another location's zone, then price the route for the classes it serves. It prices trips from here to that zone only."
+        elsewhere.length > 0
+          ? "Pick the two zones, the same one for a trip within it, then price the route for the classes it serves. A route here costs the same both ways; one to another location's zone prices trips from here to it only."
           : "Pick the two zones, the same one for a trip within it, then price the route for the classes it serves. A route costs the same both ways."
       }
       width="md"
@@ -101,7 +100,7 @@ function RouteForm({
   onAdd: (route: NewRoute) => Promise<string | null>;
   onCancel: () => void;
 }) {
-  const ends = elsewhere.length > 0 ? elsewhere : zones;
+  const ends = [...zones, ...elsewhere];
   const partnersOf = (id: string): Zone[] =>
     ends.filter((zone) => !paired.has(pairKey(id, zone.id)));
   const [from, setFrom] = useState(
@@ -185,11 +184,14 @@ function RouteForm({
             value={toId}
             onValueChange={setTo}
             options={
-              out
-                ? [...byLocation].map(([location, list]) => ({
-                    label: `In ${location}`,
-                    options: list.map(option),
-                  }))
+              elsewhere.length > 0
+                ? [
+                    { label: "This location", options: zones.map(option) },
+                    ...[...byLocation].map(([location, list]) => ({
+                      label: `In ${location}`,
+                      options: list.map(option),
+                    })),
+                  ]
                 : zones.map(option)
             }
           />

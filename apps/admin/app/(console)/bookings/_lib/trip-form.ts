@@ -73,6 +73,8 @@ export type TripQuoteView =
       extraKm: number | null;
       /** The odd-hours surcharge that applies, "+20%" or "+RM 30.00"; null for none. */
       surcharge: string | null;
+      /** The weekend and holiday surcharge that applies, "weekend +20%"; null for none. */
+      weekend: string | null;
       classes: ClassQuoteView[];
     }
   | { ok: false; error: string };
@@ -214,19 +216,20 @@ export function tripInput(trip: TripValues): Record<string, string> {
   return input;
 }
 
-/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · extra road 0.78 km · 55.2 km by road · odd hours +50%" */
+/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · extra road 1 km · 55.2 km by road · odd hours +50% · weekend +20%" */
 export function quoteSummary(quote: PricedTrip) {
   const parts = [`${quote.location} rates`];
   if (quote.district) parts.push(quote.district);
   if (quote.route) parts.push(`grid ${quote.route}`);
   if (quote.extraKm !== null) {
-    parts.push(`extra road ${quote.extraKm.toFixed(2)} km`);
+    parts.push(`extra road ${quote.extraKm} km`);
   }
   if (quote.distanceKm !== null) {
     parts.push(`${quote.distanceKm.toFixed(1)} km by road`);
   }
   if (quote.hours !== null) parts.push(`${quote.hours} hours`);
   if (quote.surcharge !== null) parts.push(`odd hours ${quote.surcharge}`);
+  if (quote.weekend !== null) parts.push(quote.weekend);
   return parts.join(" · ");
 }
 

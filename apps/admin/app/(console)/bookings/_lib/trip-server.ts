@@ -6,6 +6,7 @@ import {
   parseTripOptions,
   parseTripSearch,
   PRICE_OVERRIDE_FIELDS,
+  WEEKEND_REASON_LABELS,
   chargedKmOf,
   surchargeLabel,
   textOf,
@@ -37,6 +38,9 @@ export async function quoteTripView(
 
   const { request } = trip;
   const { quote } = quoted;
+  const extraKmCharged = quote.zoneTrip
+    ? chargedKmOf(quote.zoneTrip, quote.location.freeExtraKm)
+    : 0;
   return {
     ok: true,
     category,
@@ -54,11 +58,11 @@ export async function quoteTripView(
         ? `Within ${quote.pickup.zone}`
         : `${quote.pickup.zone} to ${quote.dropoff.zone}`
       : null,
-    extraKm:
-      quote.zoneTrip && chargedKmOf(quote.zoneTrip) > 0
-        ? chargedKmOf(quote.zoneTrip)
-        : null,
+    extraKm: extraKmCharged || null,
     surcharge: quote.surcharge ? surchargeLabel(quote.surcharge) : null,
+    weekend: quote.weekend
+      ? `${WEEKEND_REASON_LABELS[quote.weekend.reason].toLowerCase()} ${surchargeLabel(quote.weekend.charge)}`
+      : null,
     classes: quote.classes.map((c) => ({
       id: c.vehicleClass.id,
       name: c.vehicleClass.name,

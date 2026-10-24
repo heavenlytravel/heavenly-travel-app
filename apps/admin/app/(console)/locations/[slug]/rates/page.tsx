@@ -1,15 +1,12 @@
 import Link from "next/link";
 import {
-  CROSS_LOCATION_LABELS,
   TRIP_CATEGORY_LABELS,
   isTripCategory,
   isZoneShape,
-  oddHoursLabel,
-  oddHoursOf,
-  priceChecksAt,
+  tryTripExamplesAt,
+  tripRulesOf,
 } from "@repo/db";
 import { listZoneRates, listZones, listZonesElsewhere } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
@@ -28,10 +25,9 @@ import {
   locationZoneNames,
 } from "../../_lib/location-data";
 import { ClassRates } from "./ClassRates";
-import { OddHoursForm } from "./OddHoursForm";
 import { RateGrid } from "./RateGrid";
-import { TripReachForm } from "./TripReachForm";
-import { crossLocationNote } from "./trip-reach-note";
+import { TripRulesForm } from "./TripRulesForm";
+import { TripRulesList } from "./TripRulesList";
 import { TryTrip } from "./try-trip/TryTrip";
 
 /**
@@ -39,8 +35,8 @@ import { TryTrip } from "./try-trip/TryTrip";
  * the location charges, in one column. The classes it sells at their
  * rates and under their rules, each opening its editor; the rate grid
  * between its zones, one row per route and one column per class on sale;
- * both run to their cards' edges. Under them, where the location's trips
- * may go, then the odd-hours surcharge, then Try a trip, which prices a
+ * both run to their cards' edges. Under them, the trip rules (the extra
+ * road, cross-location and the two surcharges), then Try a trip, which prices a
  * trip as a customer would be charged and shows how. The zones themselves
  * are drawn on the Coverage tab, the classes put on sale on the Vehicle
  * classes tab. Operation changes them (`coverage.manage`); Reservation
@@ -102,11 +98,7 @@ async function rates({
   const onSale = offerings.filter(
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
-  const window = oddHoursOf(location);
-  const reach = {
-    maxExtraKm: location.maxExtraKm,
-    crossLocation: location.crossLocation,
-  };
+  const rules = tripRulesOf(location);
   const classes = onSale.map((offering) => ({
     id: offering.vehicleClassId,
     name: offering.vehicleClass.name,
@@ -185,56 +177,22 @@ async function rates({
         />
       </Card>
 
-      <Card id={RATES_PARTS.reach}>
+      <Card id={RATES_PARTS.rules}>
         <CardTitle
-          description={`Where a one-way trip from a pickup in ${location.name} may go. Hourly hire has no drop-off and is not affected.`}
+          description={`How far past a zone ${location.name} serves an address, and what is added to a trip's price.`}
         >
-          Where trips go
+          Trip rules
         </CardTitle>
         {manages ? (
-          <TripReachForm
+          <TripRulesForm
             locationId={id}
             locationName={location.name}
-            reach={reach}
+            reach={rules.reach}
+            oddHours={rules.oddHours}
+            weekend={rules.weekend}
           />
         ) : (
-          <dl className="grid gap-2 text-sm sm:grid-cols-[12rem_1fr]">
-            <dt className="text-slate-500">Furthest extra road</dt>
-            <dd className="font-medium text-slate-900">
-              {reach.maxExtraKm} km
-            </dd>
-            <dt className="text-slate-500">Trips across locations</dt>
-            <dd>
-              <span className="font-medium text-slate-900">
-                {CROSS_LOCATION_LABELS[reach.crossLocation ? "on" : "off"]}.
-              </span>{" "}
-              <span className="text-slate-600">
-                {crossLocationNote(reach.crossLocation, location.name)}
-              </span>
-            </dd>
-          </dl>
-        )}
-      </Card>
-
-      <Card id={RATES_PARTS.oddHours}>
-        <CardTitle description="Added to every trip whose pickup time is in the window, on its price from the grid or by the hour.">
-          <span className="inline-flex items-center gap-2">
-            Odd-hours surcharge
-            {window ? (
-              <Badge tone="amber">{oddHoursLabel(window)}</Badge>
-            ) : (
-              <Badge>Off</Badge>
-            )}
-          </span>
-        </CardTitle>
-        {manages ? (
-          <OddHoursForm locationId={id} window={window} />
-        ) : (
-          <p className="text-sm text-slate-600">
-            {window
-              ? `Trips that start from ${oddHoursLabel(window)}.`
-              : "No surcharge: a trip costs the same at any hour."}
-          </p>
+          <TripRulesList rules={rules} locationName={location.name} />
         )}
       </Card>
 
@@ -247,6 +205,7 @@ async function rates({
         </CardTitle>
         <TryTrip
           locationId={id}
+          locationName={location.name}
           mapKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY || null}
           zones={shapes.flatMap((zone) =>
             isZoneShape(zone.shape)
@@ -258,7 +217,7 @@ async function rates({
             name: offering.vehicleClass.name,
             slug: offering.vehicleClass.slug,
           }))}
-          examples={priceChecksAt(slug)}
+          examples={tryTripExamplesAt(slug)}
         />
       </Card>
     </>

@@ -1,11 +1,5 @@
 import Link from "next/link";
-import {
-  CROSS_LOCATION_LABELS,
-  TRIP_CATEGORY_LABELS,
-  isTripCategory,
-  oddHoursLabel,
-  oddHoursOf,
-} from "@repo/db";
+import { TRIP_CATEGORY_LABELS, isTripCategory, tripRulesOf } from "@repo/db";
 import {
   listPriceLists,
   listZonesElsewhere,
@@ -26,15 +20,15 @@ import {
   ratesHref,
 } from "../../_lib/routes";
 import { ClassRates } from "../locations/[slug]/rates/ClassRates";
-import { crossLocationNote } from "../locations/[slug]/rates/trip-reach-note";
 import { RateGrid } from "../locations/[slug]/rates/RateGrid";
+import { TripRulesList } from "../locations/[slug]/rates/TripRulesList";
 import { locationNames } from "../../_lib/location-names";
 
 /**
  * Route: /rates?location=…. What every location charges, or one
  * location, narrowed by the filter: each location's classes at their
- * rates and under their rules, the prices on its rate grid, where its
- * trips may go and the odd-hours surcharge. Read here, changed
+ * rates and under their rules, the prices on its rate grid and its trip
+ * rules. Read here, changed
  * inside the location, on its Rates tab, which each section links to. Behind `coverage.view`, as those tabs are. See
  * docs/261018-location-work-and-class-catalogue.md.
  */
@@ -97,7 +91,7 @@ async function priceLists({ locationId }: { locationId: string | undefined }) {
   );
 }
 
-/** One location's price list: its classes, its grid, then its two rules in a line each. */
+/** One location's price list: its classes, its grid, then its trip rules. */
 function LocationRates({
   list,
   elsewhere,
@@ -112,7 +106,6 @@ function LocationRates({
   const onSale = list.offerings.filter(
     (offering) => offering.isActive && offering.vehicleClass.isActive,
   );
-  const window = oddHoursOf(list);
   const editLink = (href: string) =>
     manages ? (
       <Link
@@ -179,27 +172,12 @@ function LocationRates({
         />
       </Card>
 
-      <dl className="grid gap-2 text-sm sm:grid-cols-[8rem_1fr]">
-        <dt className="text-slate-500">Where trips go</dt>
-        <dd>
-          <span className="font-medium text-slate-900">
-            Up to {list.maxExtraKm} km past a zone;{" "}
-            {CROSS_LOCATION_LABELS[
-              list.crossLocation ? "on" : "off"
-            ].toLowerCase()}
-            .
-          </span>{" "}
-          <span className="text-slate-600">
-            {crossLocationNote(list.crossLocation, list.name)}
-          </span>
-        </dd>
-        <dt className="text-slate-500">Odd hours</dt>
-        <dd className="text-slate-600">
-          {window
-            ? `Trips that start from ${oddHoursLabel(window)}.`
-            : "No surcharge."}
-        </dd>
-      </dl>
+      <Card>
+        <CardTitle action={editLink(locationRatesPartHref(list.slug, "rules"))}>
+          Trip rules
+        </CardTitle>
+        <TripRulesList rules={tripRulesOf(list)} locationName={list.name} />
+      </Card>
     </section>
   );
 }

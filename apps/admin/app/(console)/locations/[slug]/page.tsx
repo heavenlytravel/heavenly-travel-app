@@ -4,11 +4,10 @@ import {
   LOCATION_PAGE_LABELS,
   andList,
   locationStateOf,
-  oddHoursLabel,
-  oddHoursOf,
   plural,
   setupSteps,
-  tripReachLabel,
+  tripRulesLabel,
+  tripRulesOf,
   type BookingStatus,
   type PageStatus,
   type Permission,
@@ -167,7 +166,6 @@ async function overview({ id, slug }: { id: string; slug: string }) {
   const off = offerings.length - onSale.length;
   // Every pair of zones, and each zone with itself: its within-zone price.
   const pairs = (numbers.zones * (numbers.zones + 1)) / 2;
-  const surcharge = oddHoursOf(location);
   const lines: Partial<Record<LocationTab, ReactNode>> = {
     details: [
       andList(numbers.stateNames) || "No state yet",
@@ -189,10 +187,7 @@ async function overview({ id, slug }: { id: string; slug: string }) {
       pairs === 0
         ? "Needs a zone"
         : `${numbers.routesPriced} of ${plural(pairs, "route")} priced`,
-      `trips ${tripReachLabel(location).toLowerCase()}`,
-      surcharge
-        ? `odd hours ${oddHoursLabel(surcharge)}`
-        : "no odd-hours surcharge",
+      `rules: ${tripRulesLabel(tripRulesOf(location)).toLowerCase()}`,
     ].join(" · "),
     pages: (
       <span className="flex flex-wrap gap-x-3 gap-y-0.5">

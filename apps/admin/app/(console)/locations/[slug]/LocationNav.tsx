@@ -7,12 +7,11 @@ import {
   formatLocalDate,
   isPublicState,
   locationStateOf,
-  oddHoursLabel,
-  oddHoursOf,
   plural,
   setupProgress,
   setupSteps,
-  tripReachLabel,
+  tripRulesLabel,
+  tripRulesOf,
   type LocationState,
   type PageStatus,
   type Permission,
@@ -216,7 +215,6 @@ export function LocationNav({
       ? today
       : `${today}, ${overview.awaitingDriver} awaiting a driver`;
   };
-  const surcharge = oddHoursOf(location);
   // Adding a class or a zone is Operation's; the teams that read see the tab.
   const adds = may("coverage.manage");
   const itemsOf = (tab: LocationTab): LocationNavItem[] => {
@@ -276,16 +274,10 @@ export function LocationNav({
             note: plural(overview.routesPriced, "route"),
           },
           {
-            key: "reach",
-            label: "Where trips go",
-            href: locationRatesPartHref(slug, "reach"),
-            note: tripReachLabel(location),
-          },
-          {
-            key: "odd-hours",
-            label: "Odd hours",
-            href: locationRatesPartHref(slug, "oddHours"),
-            note: surcharge ? oddHoursLabel(surcharge) : "Off",
+            key: "rules",
+            label: "Trip rules",
+            href: locationRatesPartHref(slug, "rules"),
+            note: tripRulesLabel(tripRulesOf(location)),
           },
           {
             key: "try",

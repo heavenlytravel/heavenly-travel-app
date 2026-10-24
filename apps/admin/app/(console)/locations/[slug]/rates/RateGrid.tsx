@@ -180,9 +180,9 @@ function SortHeading({
  * paired with itself is its within-zone price, "Within Kuah Town", first
  * in that zone's rows. A route out of the location ends at another
  * location's zone, named with its location and marked one way (→), since
- * a trip back starts there and is priced there; "Add a route to another
- * location" offers those zones while trips across locations are on, and
- * while they are off such a route is kept, marked not sold. An empty cell
+ * a trip back starts there and is priced there; "Add route" offers those
+ * zones too, by location, while cross-location is on, and while it is off
+ * such a route is kept, marked not sold. An empty cell
  * is a class not offered on the route.
  *
  * A route's zones are two columns, From and To, their names cut short and
@@ -215,7 +215,7 @@ export function RateGrid({
   elsewhere: ZoneElsewhere[];
   classes: ClassColumn[];
   cells: Cell[];
-  /** Whether trips across locations are on: the routes out are sold, and more may be added. */
+  /** Whether cross-location is on: the routes out are sold, and more may be added. */
   crossLocation: boolean;
   /** For the teams that read the rates: the prices as text, nothing to change. */
   readOnly?: boolean;
@@ -223,8 +223,8 @@ export function RateGrid({
   const [saved, setSaved] = useState<Saved>(() => savedOf(cells, zones));
   const [routes, setRoutes] = useState<Route[]>(saved.routes);
   const [values, setValues] = useState(() => valuesOf(saved));
-  /** The dialog open: a route between this location's zones, or one out to another location's. */
-  const [adding, setAdding] = useState<"own" | "out" | null>(null);
+  /** Whether "Add route" is open. */
+  const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [sort, setSort] = useState<Sort>(null);
   /** The zone whose routes alone are shown, or "" for every route. */
@@ -379,7 +379,7 @@ export function RateGrid({
 
   // The pairs not on the grid yet, for "Add route": between this
   // location's zones, each with itself, and out to other locations' while
-  // trips across locations are on.
+  // cross-location is on.
   const paired = new Set(
     routes.map((route) => pairKey(route.fromZoneId, route.toZoneId)),
   );
@@ -560,7 +560,7 @@ export function RateGrid({
         ]),
       ),
     }));
-    setAdding(null);
+    setAdding(false);
     const [a, b] = endsOf(route);
     setNotice(null);
     toast.success(
@@ -740,7 +740,7 @@ export function RateGrid({
   } else if (notice) status = notice;
   else status = { tone: "idle", text: "No unsaved changes." };
 
-  const canAdd = freePairs > 0;
+  const canAdd = freePairs + freeOut > 0;
   const ticks = tickedShown.length;
 
   return (
@@ -752,30 +752,12 @@ export function RateGrid({
             <Button
               variant="secondary"
               disabled={pending || !canAdd}
-              onClick={() => setAdding("own")}
+              onClick={() => setAdding(true)}
             >
               <PlusIcon />
               Add route
             </Button>
           </Tooltip>
-          {crossLocation && elsewhere.length > 0 ? (
-            <Tooltip
-              content={
-                freeOut > 0
-                  ? null
-                  : "Every zone here has a route to every other location's zone."
-              }
-            >
-              <Button
-                variant="secondary"
-                disabled={pending || freeOut === 0}
-                onClick={() => setAdding("out")}
-              >
-                <PlusIcon />
-                Add a route to another location
-              </Button>
-            </Tooltip>
-          ) : null}
           <Tooltip content={ticks === 0 ? "Tick the routes to delete." : null}>
             <Button
               variant="secondary"
@@ -1163,12 +1145,10 @@ export function RateGrid({
         <>
           {leaveDialog}
           <AddRouteDialog
-            open={adding !== null}
-            onOpenChange={(open) => {
-              if (!open) setAdding(null);
-            }}
+            open={adding}
+            onOpenChange={setAdding}
             zones={zones}
-            elsewhere={adding === "out" ? elsewhere : []}
+            elsewhere={crossLocation ? elsewhere : []}
             classes={classes}
             paired={paired}
             onAdd={addRoute}

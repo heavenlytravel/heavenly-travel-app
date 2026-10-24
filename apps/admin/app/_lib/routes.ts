@@ -492,12 +492,11 @@ export function scopeSwitchHref(
     : locationHref(to.slug);
 }
 
-/** The ids of the Rates tab's four cards, and the link that lands on each. */
+/** The ids of the Rates tab's cards, and the link that lands on each. */
 export const RATES_PARTS = {
   classes: "class-rates",
   grid: "rate-grid",
-  reach: "trip-reach",
-  oddHours: "odd-hours",
+  rules: "trip-rules",
   tryTrip: "try-a-trip",
 } as const;
 export function locationRatesPartHref(

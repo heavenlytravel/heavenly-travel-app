@@ -11,6 +11,7 @@ import {
   SidebarLabel,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuCluster,
   SidebarMenuItem,
   SidebarSeparator,
   useSidebarCollapsed,
@@ -18,6 +19,7 @@ import {
 import {
   MENU_ICONS,
   entryOnScreen,
+  pagesOf,
   rowOnScreen,
   type Menu,
   type MenuCount,
@@ -53,7 +55,9 @@ const COUNT_TONES = {
  * Back shows the menu again with the page left as it is; the drill
  * returns with the next page of it opened, or its row pressed. Collapsed
  * to a rail, the menu is its rows' icons alone, with each row's line as
- * its tooltip, and no drill. See docs/261023-console-sidebar.md.
+ * its tooltip, and no drill opens: a drill's pages stand there as icons of
+ * their own instead (`RailPages`), unless they are records, as a
+ * location's Pages are. See docs/261023-console-sidebar.md.
  */
 export function ConsoleMenu({ menu }: { menu: Menu }) {
   const pathname = usePathname();
@@ -141,18 +145,22 @@ export function ConsoleMenu({ menu }: { menu: Menu }) {
               <SidebarGroupLabel>{part.label}</SidebarGroupLabel>
             ) : null}
             <SidebarMenu>
-              {part.rows.map((row) => (
-                <Row
-                  key={row.key}
-                  row={row}
-                  current={row === current}
-                  onOpen={() => {
-                    focusBackRef.current = !collapsed;
-                    setBackAt(null);
-                    setPressed({ key: row.key, at: pathname });
-                  }}
-                />
-              ))}
+              {part.rows.map((row) =>
+                collapsed && row.drill?.spreadOnRail ? (
+                  <RailPages key={row.key} row={row} pathname={pathname} />
+                ) : (
+                  <Row
+                    key={row.key}
+                    row={row}
+                    current={row === current}
+                    onOpen={() => {
+                      focusBackRef.current = !collapsed;
+                      setBackAt(null);
+                      setPressed({ key: row.key, at: pathname });
+                    }}
+                  />
+                ),
+              )}
             </SidebarMenu>
           </SidebarGroup>
         </Fragment>
@@ -220,6 +228,40 @@ function Row({
         )}
       </SidebarMenuButton>
     </SidebarMenuItem>
+  );
+}
+
+/**
+ * A drill's pages on the rail, where no drill opens: an icon each, together
+ * on a tint, the page on screen marked. The rail shows no icon of the
+ * drill's own; each page's tooltip names it under the drill, with its line
+ * where it has one: "Fleet / Vehicles: 3 vehicles in service".
+ */
+function RailPages({ row, pathname }: { row: MenuRow; pathname: string }) {
+  const drill = row.drill!;
+  const pages = pagesOf(drill.entries);
+  const on = entryOnScreen(pages, pathname);
+  return (
+    <SidebarMenuCluster label={drill.label}>
+      {pages.map((entry) => {
+        const Icon = MENU_ICONS[entry.icon];
+        const name = `${drill.label} / ${entry.label}`;
+        return (
+          <SidebarMenuItem key={entry.key}>
+            <SidebarMenuButton
+              asChild
+              active={entry === on}
+              tooltip={entry.detail ? `${name}: ${entry.detail}` : name}
+            >
+              <Link href={entry.href} data-row={entry.key}>
+                <Icon />
+                <SidebarLabel>{entry.label}</SidebarLabel>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenuCluster>
   );
 }
 

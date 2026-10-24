@@ -68,9 +68,10 @@ const FLEET_TABS: readonly LocationTab[] = [
 
 /**
  * The Fleet row over the rows of its tabs the admin may open, each a page
- * of its drill with its own count or setup mark. The row sums the
- * documents due and carries the classes' setup mark; its line is theirs
- * together. One tab alone is its own row, none is no row.
+ * of its drill with its own count, setup mark and line, and its own icon
+ * on the rail. The row sums the documents due and carries the classes'
+ * setup mark; its line is theirs together. One tab alone is its own row,
+ * none is no row.
  */
 function fleetRow(rows: readonly MenuRow[]): MenuRow[] {
   const [first] = rows;
@@ -98,7 +99,9 @@ function fleetRow(rows: readonly MenuRow[]): MenuRow[] {
           icon: row.icon,
           count: row.count,
           mark: row.mark,
+          detail: row.detail,
         })),
+        spreadOnRail: true,
       },
     },
   ];
@@ -241,6 +244,7 @@ function locationMenu({
                 href: row.href,
                 icon: "general",
                 note: LOCATION_STATE_LABELS[state],
+                detail: row.detail,
               },
               {
                 key: "history",
@@ -252,6 +256,7 @@ function locationMenu({
                   : undefined,
               },
             ],
+            spreadOnRail: true,
           },
         };
       default:

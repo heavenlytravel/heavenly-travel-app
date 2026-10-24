@@ -243,6 +243,8 @@ function rowOf(
               href: view.href,
               icon: view.icon,
             })),
+            // Each a screen of its own, so each its own icon on the rail.
+            spreadOnRail: true,
           },
         }
       : { paths: section.views.map((view) => view.href) }),

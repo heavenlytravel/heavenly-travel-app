@@ -25,7 +25,8 @@ import {
  * The sidebar's menus as data: the rows of the scope the picker is on, in
  * named parts, each row with its count or its setup mark, and the rows
  * that open a menu of their own in the sidebar's place, under a way back
- * (a drill: Fleet, a location's Pages, Settings).
+ * (a drill: Fleet, a location's Pages, Settings), or, collapsed to a rail,
+ * lay their pages out as icons of their own.
  * Built on the server, where the counts are read, and drawn in the browser
  * by `ConsoleMenu`; an icon travels by its name, so nothing made on the
  * server reaches a row. See docs/261023-console-sidebar.md.
@@ -83,6 +84,21 @@ export type MenuEntry = {
   mark?: MenuMark;
   /** A disc before the label: a page's standing. */
   dot?: "green" | "amber" | "grey";
+  /** Where the page stands, in a line: its tooltip on the rail. */
+  detail?: string;
+};
+
+/** A section's pages, listed in place of the menu while one of them is on screen. */
+export type MenuDrill = {
+  label: string;
+  entries: readonly MenuEntry[];
+  /**
+   * Collapsed to a rail, where no drill opens, each page is an icon of its
+   * own, together on a tint and named under the drill: Fleet's lists,
+   * Settings' pages. Without it the rail has the row's icon alone: a
+   * location's Pages, whose pages are its editors under one icon.
+   */
+  spreadOnRail?: boolean;
 };
 
 /** One row of a menu: a section. */
@@ -109,7 +125,7 @@ export type MenuRow = {
   /** Opens in a new tab: the public page. */
   external?: boolean;
   /** The section's pages, listed in place of the menu while one of them is on screen. */
-  drill?: { label: string; entries: readonly MenuEntry[] };
+  drill?: MenuDrill;
 };
 
 /** A part of a menu: its rows under its name. The first part, the day's work, has none. */
@@ -135,7 +151,7 @@ function within(pathname: string, path: string) {
 }
 
 /** A drill's pages, without the jumps to a part of one: a jump is never the page on screen. */
-const pagesOf = (entries: readonly MenuEntry[]) =>
+export const pagesOf = (entries: readonly MenuEntry[]) =>
   entries.filter((entry) => !entry.href.includes("#"));
 
 /** The path is in the row's section: its own address, its other paths, or a page of its drill. */

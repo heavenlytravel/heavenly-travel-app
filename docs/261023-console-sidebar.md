@@ -151,6 +151,8 @@ foot of every page: Search, then the menu button.
   switch turned on an iPhone (iOS 18), nothing elsewhere.
 - Both fade in and rise a little. Pages keep room at their foot for the bar, and toasts
   stand above it.
+- A location's page has no strip of its tabs under its name any more: the menu holds
+  them, a tap away on the bar.
 
 ### Still open
 
@@ -166,7 +168,7 @@ foot of every page: Search, then the menu button.
 - `_components/ConsoleMenu.tsx`: draws a menu, its drills and the way back, in the browser.
 - `_components/nav.ts`: All locations (`ALL_LOCATIONS_NAV`, `allLocationsMenu`) and the
   section for the header's trail (`sectionOnScreen`). The phone's strip of a location's
-  tabs uses `LinkTabs`.
+  tabs under its header goes, with `LinkTabs`, on 2026-10-25: the dock's menu holds them.
 - `locations/[slug]/LocationNav.tsx`: a location's menu from its details and its numbers.
   It no longer reads the location's zones and classes, which only the submenus needed.
   `fleetRow` gathers Vehicles, Drivers and Vehicle classes into Fleet.

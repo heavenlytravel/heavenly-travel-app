@@ -7,6 +7,7 @@ import {
   locationStateOf,
   type Permission,
 } from "@repo/db";
+import { cx } from "@repo/ui/cx";
 import { ChevronDownIcon, CirclePlusIcon, MapIcon } from "@repo/ui/icons";
 import {
   Menu,
@@ -18,10 +19,10 @@ import {
 import {
   NEW_LOCATION_PATH,
   locationTabsMayOpen,
+  scopeOfPath,
   scopeSwitchHref,
 } from "../_lib/routes";
 import type { SidebarLocation } from "./AppSidebar";
-import { useConsoleScope } from "./ConsoleScope";
 import { LocationMark } from "./LocationMark";
 import { LocationStateBadge } from "./StatusBadges";
 
@@ -31,17 +32,20 @@ import { LocationStateBadge } from "./StatusBadges";
  * locations, every location with its state, and Add location for
  * Marketing. Picking keeps the section on screen where the other scope
  * has it: from Langkawi's Rates to Penang's, from a location's Bookings to
- * the queue across locations. See docs/261022-console-scope.md.
+ * the queue across locations. See docs/261023-console-sidebar.md.
  */
 export function ScopePicker({
   locations,
   permissions,
+  className,
 }: {
   locations: readonly SidebarLocation[];
   permissions: readonly Permission[];
+  /** On its button: `w-full` atop the menu's panel on a phone. */
+  className?: string;
 }) {
   const pathname = usePathname();
-  const scope = useConsoleScope();
+  const scope = scopeOfPath(pathname);
   const current =
     scope === "all"
       ? null
@@ -63,20 +67,25 @@ export function ScopePicker({
         <button
           type="button"
           aria-label={`Location: ${current?.name ?? "All locations"}`}
-          className="flex h-9 min-w-0 shrink items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-900 outline-hidden transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:border-slate-300 data-[state=open]:bg-slate-50"
+          className={cx(
+            "flex h-9 min-w-0 shrink items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-900 outline-hidden transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:border-slate-300 data-[state=open]:bg-slate-50",
+            className,
+          )}
         >
           {current ? (
             <LocationMark name={current.name} state={current.state} size="md" />
           ) : (
             <MapIcon className="text-slate-500" />
           )}
-          <span className="truncate">{current?.name ?? "All locations"}</span>
+          <span className="truncate text-left">
+            {current?.name ?? "All locations"}
+          </span>
           {current ? (
             <span className="hidden sm:inline-flex">
               <LocationStateBadge state={current.state} />
             </span>
           ) : null}
-          <ChevronDownIcon className="text-slate-500" />
+          <ChevronDownIcon className="ml-auto text-slate-500" />
         </button>
       }
     >

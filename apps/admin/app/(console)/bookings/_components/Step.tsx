@@ -3,7 +3,7 @@
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { useEffect, useRef, type ReactNode } from "react";
-import { StepMark } from "../../locations/_components/StepMark";
+import { StepMark } from "../../../_components/StepMark";
 
 /**
  * One step of a booking form, on the page with the others: open, it is a

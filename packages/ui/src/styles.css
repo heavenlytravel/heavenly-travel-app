@@ -76,3 +76,153 @@ html:has(dialog:modal) {
   overflow: hidden;
   scrollbar-gutter: stable;
 }
+
+/*
+ * A sheet slides in from its edge and the page dims under it, in the time
+ * the sidebar takes to fold on a wide screen; closing runs it backwards.
+ * The native <dialog> leaves the page as it closes, so `display` and
+ * `overlay` wait for the slide (`allow-discrete`). Firefox has no
+ * `overlay` yet: there a sheet closes at once. None with reduced motion.
+ */
+.ui-sheet,
+.ui-sheet::backdrop {
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.ui-sheet {
+  transition-property: translate, display, overlay;
+}
+
+.ui-sheet::backdrop {
+  transition-property: opacity, display, overlay;
+  opacity: 0;
+}
+
+.ui-sheet[open]::backdrop {
+  opacity: 1;
+}
+
+.ui-sheet[data-side="left"]:not([open]) {
+  translate: -100% 0;
+}
+
+.ui-sheet[data-side="right"]:not([open]) {
+  translate: 100% 0;
+}
+
+.ui-sheet[data-side="bottom"]:not([open]) {
+  translate: 0 100%;
+}
+
+@starting-style {
+  .ui-sheet[open][data-side="left"] {
+    translate: -100% 0;
+  }
+
+  .ui-sheet[open][data-side="right"] {
+    translate: 100% 0;
+  }
+
+  .ui-sheet[open][data-side="bottom"] {
+    translate: 0 100%;
+  }
+
+  .ui-sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/*
+ * A panel over a dimmed page on a phone, the sidebar's or the command
+ * palette's, fades in and rises a little as it opens; closing runs it
+ * backwards. The dialog (`.ui-pop`) fades, with anything that floats in
+ * it, the dock; the panel inside it (`.ui-pop-panel`) rises. As for the
+ * sheet, `display` and `overlay` wait for it, and Firefox closes at once.
+ */
+.ui-pop,
+.ui-pop::backdrop,
+.ui-pop-panel {
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.ui-pop,
+.ui-pop::backdrop {
+  transition-property: opacity, display, overlay;
+}
+
+.ui-pop-panel {
+  transition-property: translate, scale;
+}
+
+.ui-pop:not([open]),
+.ui-pop:not([open])::backdrop {
+  opacity: 0;
+}
+
+.ui-pop:not([open]) .ui-pop-panel {
+  translate: 0 0.5rem;
+  scale: 0.98;
+}
+
+@starting-style {
+  .ui-pop[open],
+  .ui-pop[open]::backdrop {
+    opacity: 0;
+  }
+
+  .ui-pop[open] .ui-pop-panel {
+    translate: 0 0.5rem;
+    scale: 0.98;
+  }
+}
+
+/*
+ * One menu taking another's place in the same spot, a drill's pages for
+ * the sidebar's menu: it comes in from the side it lies on, out of a
+ * blur, as the other goes. `data-from="end"` going in, `"start"` coming
+ * back out.
+ */
+.ui-swap-in[data-from] {
+  animation: ui-swap-in 180ms ease-out;
+}
+
+.ui-swap-in[data-from="start"] {
+  --ui-swap-from: -0.75rem;
+}
+
+@keyframes ui-swap-in {
+  from {
+    opacity: 0;
+    translate: var(--ui-swap-from, 0.75rem) 0;
+    filter: blur(2px);
+  }
+}
+
+/*
+ * The room the dock at the foot of a phone's screen takes, which a toast
+ * stands above. Nothing where there is no dock.
+ */
+@media (width < 48rem) {
+  :root:has(.ui-dock) {
+    --ui-dock-room: 4.5rem;
+  }
+}
+
+/* None of it with reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-sheet,
+  .ui-sheet::backdrop,
+  .ui-pop,
+  .ui-pop::backdrop,
+  .ui-pop-panel {
+    transition: none;
+  }
+
+  .ui-swap-in[data-from] {
+    animation: none;
+  }
+}

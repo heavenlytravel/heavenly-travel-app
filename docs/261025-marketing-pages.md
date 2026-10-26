@@ -326,6 +326,9 @@ sections.
 
 ### The footer and the closing call
 
+Superseded on 2026-10-26 by `261026-site-footer.md`: the closing call is gone, the footer
+is written in the console, and `COMPANY` is its default content.
+
 - The footer gets the company's details from the WordPress footer, laid out anew: the logo
   and a line about the company; the live locations; the company pages that are published;
   the address, phone, email and WhatsApp; the social links; then the legal name and SSM

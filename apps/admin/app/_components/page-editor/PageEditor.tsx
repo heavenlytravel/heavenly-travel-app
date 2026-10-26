@@ -28,20 +28,12 @@ import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
-import {
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { errorOf } from "../../_lib/action-state";
 import { useLeaveGuard } from "../../_lib/use-leave-guard";
 import { Card, CardTitle } from "../Card";
 import { MarkdownField } from "../MarkdownField";
-import { PageStatusBadge } from "../StatusBadges";
 import { UploadsContext, useUploadCount } from "../use-image-upload";
-import { PreviewLink } from "../../(console)/locations/_components/PreviewLink";
 import {
   RowControls,
   movedRow,
@@ -63,7 +55,9 @@ import {
   HistoryDialog,
   type PagePublishEntry,
 } from "./PageHistory";
+import { BarLink, PublishBar } from "./PublishBar";
 import { PublishDialog } from "./PublishDialog";
+import { useSaveShortcut } from "./use-save-shortcut";
 import { SearchResultPreview, SharedLinkPreview } from "./SearchPreviews";
 import type { PageTarget } from "./target";
 
@@ -106,33 +100,6 @@ const partId = (key: PageCheck["key"]) => `page-${key}`;
 
 /** Where a part lands when "Go to it" scrolls to it: clear of the console header and the publish bar. */
 const PART_SCROLL = "scroll-mt-44";
-
-/** A quiet button in the publish bar's second line. */
-function BarLink({
-  onClick,
-  danger = false,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cx(
-        "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline disabled:opacity-50",
-        danger ? "text-red-700" : "text-slate-900",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 /** How the tagline is asked for, on the kinds that have one. */
 const TAGLINE_FIELD: Partial<
@@ -403,23 +370,9 @@ export function PageEditor({
     });
   }
 
-  // Ctrl+S or Cmd+S saves the draft, as an editor would.
-  const saveRef = useRef<() => void>(() => {});
-  useEffect(() => {
-    saveRef.current = () => {
-      if (dirty && limits.ok && !busy) write(false);
-    };
+  useSaveShortcut(() => {
+    if (dirty && limits.ok && !busy) write(false);
   });
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        saveRef.current();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const message = uploads.uploading ? (
     <span className="text-slate-500">Uploading the image…</span>
@@ -472,64 +425,27 @@ export function PageEditor({
   return (
     <UploadsContext value={uploads.track}>
       <div className="grid gap-6">
-        {/* Runs to the column's edges, so the form scrolls out of sight under it. */}
-        <div className="sticky top-14 z-[5] -mx-5 border-b border-slate-200 bg-slate-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-              <PageStatusBadge status={status} />
-              {dirty ? (
-                <span className="text-xs font-medium text-amber-700">
-                  Unsaved edits
-                </span>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <PreviewLink
-                size="sm"
-                href={previewUrl}
-                hint={
-                  dirty
-                    ? "Shows the saved draft: save first to see your latest edits."
-                    : undefined
-                }
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy || !dirty || !limits.ok}
-                onClick={() => write(false)}
-              >
-                Save draft
-              </Button>
-              <Tooltip
-                content={
-                  publishBlocked ??
-                  (status === "published"
-                    ? "The public sees this draft already."
-                    : null)
-                }
-              >
-                <Button
-                  size="sm"
-                  disabled={
-                    busy || status === "published" || publishBlocked !== null
-                  }
-                  onClick={() => setPublishing(true)}
-                >
-                  Publish
-                </Button>
-              </Tooltip>
-            </div>
-          </div>
-          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-            <span className="text-slate-500">{path}</span>
-            <span aria-live="polite">{message}</span>
-            {moves.length > 0 ? (
-              <span className="flex flex-wrap gap-x-3">{moves}</span>
-            ) : null}
-          </p>
-        </div>
+        <PublishBar
+          title={title}
+          status={status}
+          dirty={dirty}
+          previewUrl={previewUrl}
+          canSave={!busy && dirty && limits.ok}
+          onSave={() => write(false)}
+          canPublish={
+            !busy && status !== "published" && publishBlocked === null
+          }
+          publishHint={
+            publishBlocked ??
+            (status === "published"
+              ? "The public sees this draft already."
+              : null)
+          }
+          onPublish={() => setPublishing(true)}
+          path={path}
+          message={message}
+          moves={moves}
+        />
 
         {notice}
 

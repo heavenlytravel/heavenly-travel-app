@@ -5,6 +5,7 @@ import {
   copyrightOf,
   footerLinkHref,
   isExternalFooterLink,
+  isUploadUrl,
   phoneHrefOf,
   whatsappHrefOf,
   SOCIAL_NETWORK_LABELS,
@@ -149,11 +150,12 @@ export function SiteFooter({ content }: { content: FooterContent }) {
               {content.badges.length > 0 && (
                 <section aria-labelledby="footer-badges">
                   <Heading id="footer-badges">{content.badgesHeading}</Heading>
-                  <ul className="flex flex-wrap gap-x-7 gap-y-4">
+                  {/* A row of marks, each over its name, as the WordPress site had them. */}
+                  <ul className="grid grid-cols-3 gap-x-4 gap-y-6">
                     {content.badges.map((badge, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-3 text-[0.875rem] text-white/90"
+                        className="flex flex-col items-center gap-2.5 text-center text-[0.875rem] text-white/90"
                       >
                         {badge.image && (
                           <Image
@@ -162,11 +164,12 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                             height={badge.image.height}
                             alt=""
                             sizes="120px"
-                            className="h-14 w-auto max-w-[120px] rounded-lg bg-white object-contain p-1"
+                            unoptimized={!isUploadUrl(badge.image.url)}
+                            className="h-20 w-auto max-w-full rounded-xl bg-white object-contain p-1.5"
                           />
                         )}
                         <span>
-                          <strong className="block text-[0.95rem] text-white">
+                          <strong className="block text-[0.9rem] leading-snug text-white">
                             {badge.name}
                           </strong>
                           {badge.detail}
@@ -185,7 +188,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   <Heading id="footer-payment">
                     {content.paymentHeading}
                   </Heading>
-                  <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  <ul className="grid grid-cols-4 gap-2">
                     {content.paymentLogos.map((logo, i) => (
                       <li
                         key={i}
@@ -197,7 +200,9 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                           height={logo.height}
                           alt={logo.alt}
                           sizes="96px"
-                          className="max-h-9 w-auto max-w-full object-contain"
+                          // A mark the site ships is served as it is.
+                          unoptimized={!isUploadUrl(logo.url)}
+                          className="h-12 w-auto max-w-full object-contain"
                         />
                       </li>
                     ))}

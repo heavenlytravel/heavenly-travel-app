@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HOME_PAGE, SITE_PAGE_LABELS, isPagePublished } from "@repo/db";
 import {
+  SITE_URL,
   getFooter,
   listFooterPublishes,
   listLocationNames,
@@ -100,6 +101,7 @@ async function editorDetails() {
         previewUrl={sitePagePreviewUrl(HOME_PAGE)}
         publishes={publishes}
         historyHref={activityHref("site-page")}
+        siteUrl={SITE_URL}
       />
     </>
   );

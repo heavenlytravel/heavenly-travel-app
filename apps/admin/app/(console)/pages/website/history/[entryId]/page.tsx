@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FOOTER_KEY, describeActivity, formatLocalDateTime } from "@repo/db";
 import {
+  SITE_URL,
   getFooterPublish,
   getSitePagePublish,
   type ActivityEntry,
@@ -72,6 +73,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
             <FooterContentView
               content={footer.before}
               comparedTo={footer.after}
+              siteUrl={SITE_URL}
             />
           ) : (
             <p className="text-sm text-slate-500">
@@ -84,6 +86,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
           <FooterContentView
             content={footer.after}
             comparedTo={footer.before ?? undefined}
+            siteUrl={SITE_URL}
           />
         </Card>
       </PublishHeader>

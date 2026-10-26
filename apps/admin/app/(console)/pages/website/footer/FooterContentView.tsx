@@ -3,6 +3,7 @@ import {
   SOCIAL_NETWORK_LABELS,
   addressLinesOf,
   changedFooterParts,
+  isUploadUrl,
   type FooterContent,
   type FooterLink,
   type PageImage,
@@ -10,6 +11,7 @@ import {
 import { Badge } from "@repo/ui/badge";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { logoSrc } from "./logo-src";
 
 function Part({
   label,
@@ -59,10 +61,11 @@ function Links({ links }: { links: readonly FooterLink[] }) {
   );
 }
 
-function Logo({ image }: { image: PageImage }) {
+function Logo({ image, siteUrl }: { image: PageImage; siteUrl: string }) {
   return (
     <Image
-      src={image.url}
+      src={logoSrc(siteUrl, image.url)}
+      unoptimized={!isUploadUrl(image.url)}
       width={image.width}
       height={image.height}
       alt={image.alt}
@@ -91,9 +94,12 @@ function Heading({ text }: { text: string }) {
 export function FooterContentView({
   content,
   comparedTo,
+  siteUrl,
 }: {
   content: FooterContent;
   comparedTo?: FooterContent;
+  /** The customer site, where the logos it ships are. */
+  siteUrl: string;
 }) {
   const changed = new Set(
     comparedTo ? changedFooterParts(content, comparedTo) : [],
@@ -152,7 +158,9 @@ export function FooterContentView({
           ? NONE
           : content.badges.map((badge, i) => (
               <div key={i} className="flex items-center gap-3">
-                {badge.image ? <Logo image={badge.image} /> : null}
+                {badge.image ? (
+                  <Logo image={badge.image} siteUrl={siteUrl} />
+                ) : null}
                 <span>
                   <span className="block font-medium">
                     {badge.name || "No name"}
@@ -170,7 +178,7 @@ export function FooterContentView({
           <ul className="flex flex-wrap gap-2">
             {content.paymentLogos.map((logo, i) => (
               <li key={i} title={logo.alt}>
-                <Logo image={logo} />
+                <Logo image={logo} siteUrl={siteUrl} />
               </li>
             ))}
           </ul>

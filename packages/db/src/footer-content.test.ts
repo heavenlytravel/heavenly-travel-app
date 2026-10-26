@@ -96,6 +96,32 @@ describe("footerContentOf", () => {
   });
 });
 
+describe("shipped logos", () => {
+  it("are read from /brand alone", () => {
+    const shipped = (url: string) => ({ url, width: 38, height: 24, alt: "A" });
+    const content = footerContentOf({
+      paymentLogos: [
+        shipped("/brand/payments/visa.svg"),
+        shipped("/brand/../secret.svg"),
+        shipped("/uploads/visa.svg"),
+        shipped("https://evil.example/brand/visa.svg"),
+      ],
+    });
+    assert.deepEqual(
+      content.paymentLogos.map((logo) => logo.url),
+      ["/brand/payments/visa.svg"],
+    );
+    assert.equal(content.paymentLogos[0]?.key, "");
+  });
+
+  it("start the default footer, and are no file of Media's", () => {
+    const content = defaultFooterContent(DESTINATIONS);
+    assert.equal(content.paymentLogos.length, 8);
+    assert.equal(content.badges.length, 3);
+    assert.deepEqual(footerImageKeys(content), []);
+  });
+});
+
 describe("visibleFooterOf", () => {
   it("leaves out links the public cannot open, then empty columns", () => {
     const content = defaultFooterContent(DESTINATIONS);

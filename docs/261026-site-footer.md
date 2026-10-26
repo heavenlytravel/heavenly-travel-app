@@ -44,7 +44,14 @@ footer at all.
   published once it is.
 - **Before the first publish** the site shows `defaultFooterContent`. It holds today's
   company details (what `COMPANY` held, which is deleted) and the home page's top choices
-  as the destinations. The editor opens on the same default.
+  as the destinations. The editor opens on the same default. Asked for on 2026-10-26 so
+  nothing has to be uploaded first, the default also holds:
+  - **Registered with**, as the WordPress site lists them: the Ministry of Finance Malaysia,
+    the Ministry of Tourism, Arts & Culture Malaysia (both with the national crest,
+    `mof.jpg`) and MATTA (`matta.jpg`), in a row, each mark over its name;
+  - **Payment partners**: the ways HitPay takes payment in Malaysia, Visa, Mastercard,
+    FPX, DuitNow QR, Touch 'n Go eWallet, GrabPay, ShopeePay and Boost, four to a row,
+    with "Payments are processed securely by HitPay." under them.
 - **A link** opens a site page, a location's main page or any address (a web address, a
   path on the site, an email or a phone link). A link to a site page that is not
   published, or to a location the public does not see, is left out of the footer until
@@ -53,10 +60,17 @@ footer at all.
   WhatsApp from the footer, public or draft, so the two never disagree.
 - **The booking emails and the ops WhatsApp link** in the booking form and on a paused
   location keep `CONTACT` in code: they are the ops line, not the footer's text.
-- **Images** are uploaded in the editor, like a page's. The registrations take one logo
-  each; the payment logos are chosen several at once, each with its name as alt text.
-  Media counts them as used by "Site · Footer", and a footer publish's old logos as past
-  versions, so "delete unused" never takes one the footer shows.
+- **Images** are uploaded in the editor, like a page's, or ship with the customer site
+  under `/brand`. The registrations take one logo each; the payment logos are uploaded
+  several at once, each with its name as alt text, and "Put back a HitPay logo" adds back
+  a shipped one that was removed. Media counts the uploaded ones as used by "Site ·
+  Footer", and a footer publish's old logos as past versions, so "delete unused" never
+  takes one the footer shows. A shipped one is no file of Media's.
+- **The payment marks** are HitPay's own set for merchants, from the assets of its
+  WooCommerce plugin (`hit-pay/woocommerce`, `assets/images`), with the card frame each
+  is drawn in taken off so it sits on the footer's white tile. They are in
+  `apps/web/public/brand/payments`. ShopeePay's is a small picture inside the file, so
+  it shows softer than the others; upload a sharper one to replace it.
 
 ## How it is built
 

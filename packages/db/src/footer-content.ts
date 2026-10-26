@@ -81,9 +81,63 @@ export const SOCIAL_NETWORK_LABELS: Record<SocialNetwork, string> = {
 
 export type FooterSocial = { network: SocialNetwork; url: string };
 
+/**
+ * A logo of the footer: one uploaded in the console, or one that ships
+ * with the customer site under /brand, such as the payment marks the
+ * default holds. A shipped one has no upload key, and Media never lists it.
+ */
+export type FooterImage = PageImage;
+
+/** Where the customer site keeps the logos it ships: /brand/payments/visa.svg. */
+const BUNDLED_IMAGE =
+  /^\/brand\/[a-z0-9-]+(\/[a-z0-9-]+)*\.(svg|png|jpe?g|webp)$/;
+
+/** Whether the address is a logo the customer site ships, under /brand. */
+export function isBundledImageUrl(url: unknown): url is string {
+  return typeof url === "string" && BUNDLED_IMAGE.test(url);
+}
+
+const isSize = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
+/** The logo, uploaded or shipped, or null for anything else. */
+function footerImageOf(value: unknown): FooterImage | null {
+  const uploaded = pageImageOf(value);
+  if (uploaded) return uploaded;
+  const { url, width, height, alt } = recordOf(value);
+  if (!isBundledImageUrl(url) || !isSize(width) || !isSize(height)) {
+    return null;
+  }
+  return { url, key: "", width, height, alt: lineOf(alt) };
+}
+
+/** A logo the customer site ships, by its file, size and name. */
+const bundled = (
+  url: string,
+  alt: string,
+  width = 38,
+  height = 24,
+): FooterImage => ({ url, key: "", width, height, alt });
+
+/**
+ * The payment marks the customer site ships, from HitPay's own set for
+ * merchants, of the ways HitPay takes payment in Malaysia: the default
+ * footer's, and those the editor offers to add back.
+ */
+export const BUNDLED_PAYMENT_LOGOS: readonly FooterImage[] = [
+  bundled("/brand/payments/visa.svg", "Visa"),
+  bundled("/brand/payments/mastercard.svg", "Mastercard"),
+  bundled("/brand/payments/fpx.svg", "FPX online banking"),
+  bundled("/brand/payments/duitnow.svg", "DuitNow QR"),
+  bundled("/brand/payments/touch-n-go.svg", "Touch 'n Go eWallet"),
+  bundled("/brand/payments/grabpay.svg", "GrabPay"),
+  bundled("/brand/payments/shopeepay.svg", "ShopeePay"),
+  bundled("/brand/payments/boost.svg", "Boost"),
+];
+
 /** A body the company is registered with: its mark, its name, and a line such as the member number. */
 export type FooterBadge = {
-  image: PageImage | null;
+  image: FooterImage | null;
   name: string;
   detail: string;
 };
@@ -111,7 +165,7 @@ export type FooterContent = {
   /** "Payment partners". */
   paymentHeading: string;
   /** The logos of the ways to pay, each named in its alt text. */
-  paymentLogos: PageImage[];
+  paymentLogos: FooterImage[];
   /** The line under the logos: "Payments are processed securely by HitPay." Optional. */
   paymentNote: string;
   /** The copyright line's company: "Heavenly Travel Sdn Bhd". */
@@ -218,14 +272,14 @@ export function footerContentOf(value: unknown): FooterContent {
     badges: listOf(raw.badges).map((row) => {
       const { image, name, detail } = recordOf(row);
       return {
-        image: pageImageOf(image),
+        image: footerImageOf(image),
         name: lineOf(name),
         detail: lineOf(detail),
       };
     }),
     paymentHeading: lineOf(raw.paymentHeading),
     paymentLogos: listOf(raw.paymentLogos).flatMap((row) => {
-      const image = pageImageOf(row);
+      const image = footerImageOf(row);
       return image ? [image] : [];
     }),
     paymentNote: lineOf(raw.paymentNote),
@@ -250,8 +304,9 @@ const pageLink = (page: SitePageKey, label: string): FooterLink => ({
  * The footer the site shows until one is published, and the draft its
  * editor opens with: today's company details and links, taken from the
  * WordPress site's footer on 2026-10-25 (to be confirmed, OP0-16), with the
- * home page's top choices as the destinations. Nothing in the badges or
- * the payment logos: those are uploaded.
+ * home page's top choices as the destinations, the bodies the WordPress
+ * site says the company is registered with, and the ways to pay through
+ * HitPay, their marks shipped with the site.
  */
 export function defaultFooterContent(
   destinations: readonly { slug: string; name: string }[],
@@ -297,10 +352,26 @@ export function defaultFooterContent(
       "07000 Langkawi, Kedah",
     ].join("\n"),
     badgesHeading: "Registered with",
-    badges: [],
+    badges: [
+      {
+        image: bundled("/brand/mof.jpg", "", 280, 230),
+        name: "Ministry of Finance Malaysia",
+        detail: "",
+      },
+      {
+        image: bundled("/brand/mof.jpg", "", 280, 230),
+        name: "Ministry of Tourism, Arts & Culture Malaysia",
+        detail: "",
+      },
+      {
+        image: bundled("/brand/matta.jpg", "", 280, 230),
+        name: "Malaysian Association of Tour and Travel Agents",
+        detail: "",
+      },
+    ],
     paymentHeading: "Payment partners",
-    paymentLogos: [],
-    paymentNote: "",
+    paymentLogos: [...BUNDLED_PAYMENT_LOGOS],
+    paymentNote: "Payments are processed securely by HitPay.",
     legalName: "Heavenly Travel Sdn Bhd",
     registration: "202301000086 (1494005-W)",
     since: 2024,

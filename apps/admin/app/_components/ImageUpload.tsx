@@ -1,6 +1,11 @@
 "use client";
 
-import { IMAGE_MAX_MB, IMAGE_TYPES, type UploadedImage } from "@repo/db";
+import {
+  IMAGE_MAX_MB,
+  IMAGE_TYPES,
+  isUploadUrl,
+  type UploadedImage,
+} from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import Image from "next/image";
@@ -51,6 +56,8 @@ export function ImageUpload({
           height={360}
           alt={alt}
           sizes="320px"
+          // One the customer site ships is shown from there, as it is.
+          unoptimized={!isUploadUrl(src)}
           onLoad={(event) => {
             const { naturalWidth, naturalHeight } = event.currentTarget;
             setSize(`${naturalWidth} × ${naturalHeight}`);

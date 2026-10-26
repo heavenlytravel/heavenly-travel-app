@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BUNDLED_PAYMENT_LOGOS,
   FOOTER_LIMITS,
   FOOTER_LINK_KINDS,
   FOOTER_LINK_KIND_LABELS,
@@ -59,6 +60,7 @@ import {
 } from "../../../locations/_components/RowControls";
 import { publishFooterAction, saveFooterDraftAction } from "./actions";
 import { FooterContentView } from "./FooterContentView";
+import { logoSrc } from "./logo-src";
 
 /** A row of a list in the form, with an id that stays while the form is open. A logo has its own `key`, UploadThing's. */
 type Rowed<T> = T & { rowId: string };
@@ -135,6 +137,7 @@ export function FooterEditor({
   previewUrl,
   publishes,
   historyHref,
+  siteUrl,
 }: {
   draft: FooterContent;
   /** The copy the public is shown; null until the first publish. */
@@ -149,6 +152,8 @@ export function FooterEditor({
   publishes: PagePublishEntry[];
   /** Where every change to the site's pages is listed. */
   historyHref: string;
+  /** The customer site, where the logos it ships are. */
+  siteUrl: string;
 }) {
   const [content, setContent] = useState<FormContent>(() => ({
     ...draft,
@@ -593,7 +598,9 @@ export function FooterEditor({
                       <ImageUpload
                         label={`Logo of ${name}`}
                         uploadPath={LOCATION_IMAGE_UPLOAD_PATH}
-                        src={badge.image?.url ?? null}
+                        src={
+                          badge.image ? logoSrc(siteUrl, badge.image.url) : null
+                        }
                         alt=""
                         look="logo"
                         onChange={(image) =>
@@ -670,15 +677,13 @@ export function FooterEditor({
         <PaymentCard
           content={content}
           max={L.paymentLogos}
+          siteUrl={siteUrl}
           onEdit={edit}
-          onUploaded={(image) =>
-            // Logos land one by one: each joins the list as it is then.
+          onAdd={(image) =>
+            // Uploads land one by one: each joins the list as it is then.
             setContent((current) => ({
               ...current,
-              paymentLogos: [
-                ...current.paymentLogos,
-                rowed({ ...image, alt: "" }),
-              ],
+              paymentLogos: [...current.paymentLogos, rowed(image)],
             }))
           }
         />
@@ -811,13 +816,21 @@ export function FooterEditor({
                 <h3 className="mb-3 text-sm font-semibold text-slate-800">
                   Published
                 </h3>
-                <FooterContentView content={published} comparedTo={normal} />
+                <FooterContentView
+                  content={published}
+                  comparedTo={normal}
+                  siteUrl={siteUrl}
+                />
               </section>
               <section className="min-w-0 md:border-l md:border-slate-200 md:pl-6">
                 <h3 className="mb-3 text-sm font-semibold text-slate-800">
                   This draft
                 </h3>
-                <FooterContentView content={normal} comparedTo={published} />
+                <FooterContentView
+                  content={normal}
+                  comparedTo={published}
+                  siteUrl={siteUrl}
+                />
               </section>
             </div>
           </Dialog>
@@ -1057,20 +1070,23 @@ function LinkRows({
 }
 
 /**
- * The ways to pay: their logos, chosen several at once and each named, in
- * their order, and the line under them.
+ * The ways to pay: their logos, uploaded several at once or one of the
+ * HitPay marks the site ships put back, each named, in their order, and
+ * the line under them.
  */
 function PaymentCard({
   content,
   max,
+  siteUrl,
   onEdit,
-  onUploaded,
+  onAdd,
 }: {
   content: FormContent;
   max: number;
+  siteUrl: string;
   onEdit: (patch: Partial<FormContent>) => void;
-  /** A logo stored: it joins the end of the list. */
-  onUploaded: (image: UploadedImage) => void;
+  /** A logo stored or chosen: it joins the end of the list. */
+  onAdd: (image: PageImage) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, error } = useImageUpload(
@@ -1079,13 +1095,34 @@ function PaymentCard({
   );
   const logos = content.paymentLogos;
   const room = max - logos.length;
+  // The shipped marks not in the list, to put back.
+  const missing = BUNDLED_PAYMENT_LOGOS.filter(
+    (mark) => !logos.some((logo) => logo.url === mark.url),
+  );
 
   return (
     <Card>
       <CardTitle
         description={`The logos of the ways to pay, up to ${max}, each named for those who cannot see it. Upload them as PNG or WebP on a plain background.`}
         action={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
+            {missing.length > 0 ? (
+              <Select
+                aria-label="Put back a HitPay logo"
+                className="w-52"
+                value=""
+                placeholder="Put back a HitPay logo"
+                disabled={room <= 0}
+                options={missing.map((mark) => ({
+                  value: mark.url,
+                  label: mark.alt,
+                }))}
+                onValueChange={(url) => {
+                  const mark = missing.find((m) => m.url === url);
+                  if (mark) onAdd(mark);
+                }}
+              />
+            ) : null}
             <input
               ref={input}
               type="file"
@@ -1097,7 +1134,9 @@ function PaymentCard({
               onChange={(event) => {
                 const files = [...(event.target.files ?? [])].slice(0, room);
                 event.target.value = "";
-                void upload(files, onUploaded);
+                void upload(files, (image: UploadedImage) =>
+                  onAdd({ ...image, alt: "" }),
+                );
               }}
             />
             <Button
@@ -1106,9 +1145,9 @@ function PaymentCard({
               disabled={uploading || room <= 0}
               onClick={() => input.current?.click()}
             >
-              {uploading ? "Uploading…" : "Add logos"}
+              {uploading ? "Uploading…" : "Upload logos"}
             </Button>
-          </>
+          </div>
         }
       >
         Payment partners
@@ -1129,7 +1168,7 @@ function PaymentCard({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- a small logo, shown at its own size */}
                 <img
-                  src={logo.url}
+                  src={logoSrc(siteUrl, logo.url)}
                   alt=""
                   className="h-10 w-20 rounded border border-slate-200 bg-white object-contain p-1"
                 />

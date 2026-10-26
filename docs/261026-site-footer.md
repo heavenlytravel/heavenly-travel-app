@@ -32,6 +32,8 @@ footer at all.
   - the copyright line, with the registration and links such as the terms.
 
   A part with nothing in it is left out, and the dark strip under the old footer is gone.
+  The footer sits on the site's pale blue, `mist`, the tint of a preview's placeholders
+  (asked for on 2026-10-26).
 
 - **SUPER writes all of it** in the console at `/pages/website/footer`, listed under Pages
   as the website's last row (`website.manage`). Only the logo stays in code. The footer

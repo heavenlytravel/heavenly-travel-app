@@ -38,7 +38,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   const hasLower = content.badges.length > 0 || content.paymentLogos.length > 0;
 
   return (
-    <footer className="border-t border-slate-200 bg-white text-[0.95rem] text-slate-700">
+    <footer className="border-t border-slate-200 bg-mist text-[0.95rem] text-slate-700">
       <div className="px-5 py-12 sm:px-[clamp(20px,5vw,78px)] sm:pt-16 sm:pb-12">
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">

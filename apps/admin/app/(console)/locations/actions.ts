@@ -2,23 +2,24 @@
 
 import {
   createLocation,
+  createLocationEntry,
   deleteConfirmationOf,
   deleteLocation,
+  deleteLocationEntry,
   isLocationPageKey,
   isLocationState,
+  isPlaceSection,
+  moveLocationEntry,
   moveLocationState,
-  pageContentOf,
   parseAddressEntries,
   parseLocationFields,
-  publishLocationPage,
-  saveLocationPageDraft,
+  renameLocationEntry,
   savedAddressRefusal,
+  addLocationAddress,
   setLocationAddresses,
   textOf,
-  unpublishLocationPage,
   updateLocation,
   type AddressWrite,
-  type PageSaved,
 } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { revalidatePath } from "next/cache";
@@ -27,14 +28,16 @@ import {
   type ActionState,
   FORBIDDEN,
   FORBIDDEN_MESSAGE,
+  STALE_MESSAGE,
   refusalOf,
   STALE,
   stateOf,
 } from "../../_lib/action-state";
 import {
-  HOME_PAGE_PATH,
   LOCATIONS_PATH,
+  PAGES_PATH,
   locationHref,
+  locationPageHref,
   locationTabHref,
 } from "../../_lib/routes";
 import {
@@ -49,8 +52,9 @@ import { revalidateLocation, revalidateLocations } from "./_lib/revalidate";
  * as the actor and lets the writer in @repo/db check the rest. Arguments
  * passed directly, not through a form, are checked for their type here: an
  * action is reachable by direct POST. A change the public can see also
- * refreshes the customer site. The top choices are the Home page screen's,
- * in ../home-page/actions.
+ * refreshes the customer site. A page's own writes are the page editor's,
+ * in _components/page-editor/actions; the top choices are the home page
+ * editor's, in ../pages/website/actions.
  */
 
 /** After a change the public can see: this console's screens and the customer site's pages. */
@@ -148,6 +152,51 @@ export async function setLocationAddressesAction(
   return stateOf(result);
 }
 
+/** A saved address added at once: its id, or why not and the field it is about. */
+export type AddressAdded = { id: string } | { error: string; field?: string };
+
+/**
+ * Adds one saved address at once, from the Saved addresses list, a page's
+ * editor or its Add dialog, and answers its id so a page can point at it.
+ * From the list, `page` makes it a popular place, an attraction or a hotel
+ * with a draft page of its own. The lists show it after the refresh.
+ */
+export async function addLocationAddressAction(
+  locationId: string,
+  placeId: string,
+  name: string,
+  page: { page: string; slug: string } | null = null,
+): Promise<AddressAdded> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return { error: FORBIDDEN_MESSAGE };
+  if (
+    typeof locationId !== "string" ||
+    typeof placeId !== "string" ||
+    typeof name !== "string" ||
+    (page !== null &&
+      (typeof page !== "object" ||
+        !isPlaceSection(page.page) ||
+        typeof page.slug !== "string"))
+  ) {
+    return { error: STALE_MESSAGE };
+  }
+  const trimmed = name.replace(/\s+/g, " ").trim();
+  const place = await resolvePlace(placeId);
+  if (!place)
+    return { error: `Google did not return the place of ${trimmed}.` };
+  const result = await addLocationAddress(
+    actorOf(admin),
+    locationId,
+    { place, name: trimmed },
+    page && isPlaceSection(page.page)
+      ? { page: page.page, slug: page.slug }
+      : undefined,
+  );
+  if (!result.ok) return { error: result.error, field: result.field };
+  revalidateEverywhere(locationId);
+  return { id: result.id };
+}
+
 /** What the saved address dialog hears of a picked place. */
 export type AddressPlaceCheck =
   { ok: true; detail: string } | { ok: false; error: string };
@@ -183,83 +232,6 @@ export async function checkAddressPlaceAction(
 }
 
 /**
- * The page editor's two writes. `version` names the content the editor was
- * opened with, so a page someone else changed meanwhile is not overwritten;
- * the answer carries the new one. The content arrives as the editor holds it
- * and is read into its one shape here.
- */
-async function writePage(
-  locationId: string,
-  page: string,
-  version: string | null,
-  content: unknown,
-  publish: boolean,
-): Promise<PageSaved> {
-  const admin = await getAdmin("locations.manage");
-  if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
-  if (
-    typeof locationId !== "string" ||
-    !isLocationPageKey(page) ||
-    (version !== null && typeof version !== "string")
-  ) {
-    return { ok: false, error: "Missing page." };
-  }
-  const draft = pageContentOf(page, content);
-
-  const result = publish
-    ? await publishLocationPage(
-        actorOf(admin),
-        locationId,
-        page,
-        version,
-        draft,
-      )
-    : await saveLocationPageDraft(locationId, page, version, draft);
-  if (result.ok) {
-    revalidateLocation();
-    // A draft changes nothing in public.
-    if (publish) refreshLocationAfter(locationId);
-  }
-  return result;
-}
-
-/** Overwrites the page's draft. Nothing changes in public. */
-export async function savePageDraftAction(
-  locationId: string,
-  page: string,
-  version: string | null,
-  content: unknown,
-): Promise<PageSaved> {
-  return writePage(locationId, page, version, content, false);
-}
-
-/** Saves the content and makes it the page's public copy, when it is complete. */
-export async function publishPageAction(
-  locationId: string,
-  page: string,
-  version: string | null,
-  content: unknown,
-): Promise<PageSaved> {
-  return writePage(locationId, page, version, content, true);
-}
-
-/** Takes the page from the public and keeps its text. */
-export async function unpublishPageAction(
-  locationId: string,
-  page: string,
-): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
-  if (!admin) return FORBIDDEN;
-  if (typeof locationId !== "string" || !isLocationPageKey(page)) return STALE;
-
-  const result = await unpublishLocationPage(actorOf(admin), locationId, page);
-  if (result.ok) {
-    revalidateEverywhere(locationId);
-  }
-  return stateOf(result);
-}
-
-/**
  * Deletes a location and opens the list. `seen` and `typed` are what the
  * dialog showed and what the admin typed: the slug, for a location that
  * has been live or that other locations price routes to (@repo/db's
@@ -279,7 +251,8 @@ export async function deleteLocationAction(
   const result = await deleteLocation(actorOf(admin), locationId, confirmation);
   if (!result.ok) return stateOf(result);
   revalidateLocations();
-  revalidatePath(HOME_PAGE_PATH);
+  // A deleted location leaves the home page's top choices and the list of pages.
+  revalidatePath(PAGES_PATH, "layout");
   refreshDeletedLocationAfter(result.slug, ...result.alsoChanged);
   return { href: LOCATIONS_PATH };
 }
@@ -294,6 +267,124 @@ export async function moveLocationStateAction(
   if (!isLocationState(to)) return STALE;
 
   const result = await moveLocationState(actorOf(admin), locationId, to);
+  if (result.ok) revalidateEverywhere(locationId);
+  return stateOf(result);
+}
+
+/**
+ * Adds a page to a section that takes pages on demand, from the Pages
+ * tab's Add dialog, and opens its editor. The slug is the one the dialog
+ * filled from the name, as Marketing left it.
+ */
+export async function createLocationEntryAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return FORBIDDEN;
+  const locationId = textOf(formData.get("locationId"));
+  const page = formData.get("page");
+  const slug = textOf(formData.get("locationSlug"));
+  if (!locationId || !slug || !isLocationPageKey(page)) return STALE;
+  const entry = textOf(formData.get("slug"));
+
+  const result = await createLocationEntry(actorOf(admin), locationId, page, {
+    title: textOf(formData.get("title")),
+    slug: entry,
+    addressId: textOf(formData.get("addressId")) || null,
+  });
+  if (!result.ok) return stateOf(result);
+  revalidateLocation();
+  return { href: locationPageHref(slug, { page, slug: entry }) };
+}
+
+/**
+ * Gives a page added on demand a new slug, and a place a new type, before
+ * its first publish; the editor moves to its new address.
+ */
+export async function renameLocationEntryAction(
+  locationId: string,
+  locationSlug: string,
+  page: string,
+  from: string,
+  toPage: string,
+  to: string,
+): Promise<ActionState> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return FORBIDDEN;
+  if (
+    typeof locationId !== "string" ||
+    typeof locationSlug !== "string" ||
+    !isLocationPageKey(page) ||
+    typeof from !== "string" ||
+    !isLocationPageKey(toPage) ||
+    typeof to !== "string"
+  ) {
+    return STALE;
+  }
+  const result = await renameLocationEntry(
+    actorOf(admin),
+    locationId,
+    { page, slug: from },
+    { page: toPage, slug: to },
+  );
+  if (!result.ok) return stateOf(result);
+  revalidateLocation();
+  return { href: locationPageHref(locationSlug, { page: toPage, slug: to }) };
+}
+
+/** Deletes a page added on demand and opens the Pages tab. A public one leaves the customer site too. */
+export async function deleteLocationEntryAction(
+  locationId: string,
+  locationSlug: string,
+  page: string,
+  slug: string,
+): Promise<ActionState> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return FORBIDDEN;
+  if (
+    typeof locationId !== "string" ||
+    typeof locationSlug !== "string" ||
+    !isLocationPageKey(page) ||
+    typeof slug !== "string"
+  ) {
+    return STALE;
+  }
+  const result = await deleteLocationEntry(
+    actorOf(admin),
+    locationId,
+    page,
+    slug,
+  );
+  if (!result.ok) return stateOf(result);
+  revalidateEverywhere(locationId);
+  return { href: locationTabHref(locationSlug, "pages") };
+}
+
+/** Moves a page added on demand one place up or down in its section, which the customer site shows at once. */
+export async function moveLocationEntryAction(
+  locationId: string,
+  page: string,
+  slug: string,
+  by: number,
+): Promise<ActionState> {
+  const admin = await getAdmin("locations.manage");
+  if (!admin) return FORBIDDEN;
+  if (
+    typeof locationId !== "string" ||
+    !isLocationPageKey(page) ||
+    typeof slug !== "string" ||
+    (by !== -1 && by !== 1)
+  ) {
+    return STALE;
+  }
+  const result = await moveLocationEntry(
+    actorOf(admin),
+    locationId,
+    page,
+    slug,
+    by,
+  );
   if (result.ok) revalidateEverywhere(locationId);
   return stateOf(result);
 }

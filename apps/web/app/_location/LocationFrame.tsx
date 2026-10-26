@@ -1,25 +1,37 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import {
-  LOCATION_PAGE_LABELS,
+  ADMIN_URL,
+  LANDING_REF,
   LOCATION_STATE_LABELS,
-  PAGE_STATUS_LABELS,
+  LOCATION_SECTIONS,
+  childrenInView,
+  classOfPage,
   locationPreviewPath,
+  pageEditorPath,
+  pageNameInView,
+  pageOfView,
   type LocationView,
   type LocationViewPage,
 } from "@repo/db/server";
+import { Footer } from "../_components/Footer";
+import { MarketingHeader } from "../_components/MarketingHeader";
+import {
+  PreviewBar,
+  type PreviewPage,
+  type PreviewStanding,
+} from "../_components/PreviewBar";
 import { locationSearchPreview, publicLocationSearch } from "../_lib/locations";
-import { Closing, SiteFooter } from "../_home/Sections";
 import { fontVars } from "../_home/fonts";
-import { LocationHeader, LocationSearch } from "./LocationSearch";
+import { LocationSearch } from "./LocationSearch";
 
 /**
  * What every page of a location shares: the home page's type and palette,
- * the site header, the search card's state, the closing call and the
- * footer. The public pages get it from their layout, so the search card
- * keeps what was typed from page to page; the card keeps to the location's
- * zones and where its trips may go. `previewOf` is the page a staff preview is
- * showing, and puts the preview bar on top.
+ * the site header, the search card's state and the footer; each page ends
+ * with its own closing call, which knows where its search card is. The
+ * public pages get it from their layout, so the search card keeps what was
+ * typed from page to page; the card searches all of Malaysia, the
+ * location's area first. `previewOf` is the page a staff preview is
+ * showing, and floats the preview bar over it.
  */
 export async function LocationFrame({
   location,
@@ -37,57 +49,67 @@ export async function LocationFrame({
     <div
       className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
-      {previewOf && <PreviewBar location={location} page={previewOf} />}
-      <LocationHeader />
+      <MarketingHeader />
       <LocationSearch
         slug={location.slug}
         name={location.name}
         addresses={location.addresses}
         search={search}
-        preview={previewOf !== undefined}
       >
-        <main className="pb-[60px] sm:pb-[88px]">{children}</main>
-        <Closing />
+        <main>{children}</main>
       </LocationSearch>
-      <SiteFooter />
+      <Footer />
+      {previewOf && <LocationPreviewBar location={location} page={previewOf} />}
     </div>
   );
 }
 
 /**
- * The bar on top of a staff preview: that this is a preview, the
- * location's state, where the page shown stands against its published
- * copy, and the way to the location's other pages, published or not.
+ * The preview bar of a location's page: where the page shown stands
+ * against its published copy, its editor, and the pages of the location,
+ * published or not: the main page, then each section's own page with the
+ * pages under it, under the location's state. A class's page is paused
+ * while its class is off sale there, or no longer offered.
  */
-function PreviewBar({
+function LocationPreviewBar({
   location,
   page: shown,
 }: {
   location: LocationView;
   page: LocationViewPage;
 }) {
+  const standingOf = (entry: LocationViewPage): PreviewStanding =>
+    entry.kind === "class" && !classOfPage(location, entry)?.onSale
+      ? "paused"
+      : entry.status;
+  const linkOf = (entry: LocationViewPage): PreviewPage => ({
+    href: locationPreviewPath(location.slug, entry),
+    name:
+      entry.page === LANDING_REF.page
+        ? "Main page"
+        : pageNameInView(location, entry),
+    standing: standingOf(entry),
+    current: entry.page === shown.page && entry.slug === shown.slug,
+  });
+  const groups = [
+    LANDING_REF,
+    ...LOCATION_SECTIONS.map((page) => ({ page, slug: "" })),
+  ]
+    .map((ref) => pageOfView(location, ref))
+    .filter((entry) => entry !== undefined)
+    .map((entry) => ({
+      ...linkOf(entry),
+      children: childrenInView(location, entry.page).map(linkOf),
+    }));
   return (
-    <aside
-      aria-label="Preview"
-      className="sticky top-0 z-30 flex flex-wrap items-center gap-x-6 gap-y-1.5 border-b-[3px] border-azure bg-ink px-5 py-2.5 text-[0.85rem] text-white sm:px-[clamp(20px,5vw,76px)]"
-    >
-      <p>
-        <strong className="mr-2.5 tracking-[0.16em] uppercase">Preview</strong>
-        {location.name} · {LOCATION_STATE_LABELS[location.state]} · This page:{" "}
-        {PAGE_STATUS_LABELS[shown.status]}
-      </p>
-      <nav aria-label="Pages of this location" className="flex gap-x-5">
-        {location.pages.map(({ page }) => (
-          <Link
-            key={page}
-            href={locationPreviewPath(location.slug, page)}
-            aria-current={page === shown.page ? "page" : undefined}
-            className="font-semibold underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure aria-[current]:underline"
-          >
-            {LOCATION_PAGE_LABELS[page]}
-          </Link>
-        ))}
-      </nav>
-    </aside>
+    <PreviewBar
+      name={pageNameInView(location, shown)}
+      standing={standingOf(shown)}
+      editHref={`${ADMIN_URL}${pageEditorPath(location.slug, shown)}`}
+      title={`Pages of ${location.name}`}
+      note={LOCATION_STATE_LABELS[location.state]}
+      searchLabel={`Find a page of ${location.name}`}
+      groups={groups}
+    />
   );
 }

@@ -1,8 +1,12 @@
 import {
+  SITE_PAGES_PATH,
+  pageEditorPath,
+  pageSegmentOf,
   type ActivityEntityType,
   type BookingStatus,
   type LocationHistoryKind,
   type LocationPageKey,
+  type LocationPageRef,
   type LocationState,
   type MediaFilter,
   type Permission,
@@ -64,8 +68,7 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
 
-/** What Marketing sets on the customer site's home page: the top choices. */
-export const HOME_PAGE_PATH = "/home-page";
+export { SITE_PAGES_PATH };
 
 export const MEDIA_PATH = "/media";
 
@@ -129,6 +132,32 @@ export function coverageHref(locationId?: string) {
 export const RATES_PATH = "/rates";
 export function ratesHref(locationId?: string) {
   return withLocation(RATES_PATH, locationId);
+}
+
+/** What narrows a list of pages: a status, a section, a search, and across locations a location or the website. */
+export type PagesFilter = {
+  status?: string;
+  /** In the address as `pageSegmentOf` names it: `main` for the main page. */
+  section?: LocationPageKey;
+  q?: string;
+  location?: string;
+};
+
+/** The location filter's value on Pages for the customer site's own pages, SUPER's alone. */
+export const WEBSITE_FILTER = "website";
+
+/**
+ * Every location's pages in one list, and for SUPER the site's own,
+ * narrowed by location (or the website), section, status and a search.
+ */
+export const PAGES_PATH = "/pages";
+export function pagesHref(filter: PagesFilter = {}) {
+  return listHref(PAGES_PATH, {
+    location: filter.location,
+    section: filter.section && pageSegmentOf(filter.section),
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
 }
 
 /** The catalogue of vehicle classes. */
@@ -379,7 +408,7 @@ const ACROSS_LOCATIONS: readonly { path: string; tab: LocationTab }[] = [
   { path: VEHICLE_CLASSES_PATH, tab: "vehicle-classes" },
   { path: COVERAGE_PATH, tab: "coverage" },
   { path: RATES_PATH, tab: "rates" },
-  { path: HOME_PAGE_PATH, tab: "pages" },
+  { path: PAGES_PATH, tab: "pages" },
 ];
 
 const acrossOf = (pathname: string) =>
@@ -390,7 +419,7 @@ const acrossOf = (pathname: string) =>
 /**
  * The scope a path is in: the location it is inside, or every location
  * anywhere else. A location's sidebar lists that location alone; the
- * screens of the console as a whole (the home page, the users, the
+ * screens of the console as a whole (the site pages, the users, the
  * admins, the activity, the media, adding a location) are listed on All
  * locations, so opening one shows that sidebar.
  */
@@ -456,9 +485,35 @@ export function locationAddressesHref(slug: string) {
   return `${locationTabHref(slug, "pages")}#${SAVED_ADDRESSES_ID}`;
 }
 
-/** The editor of one page of a location: its landing page or a product's. */
-export function locationPageHref(slug: string, page: LocationPageKey) {
-  return `${locationTabHref(slug, "pages")}/${page}`;
+/**
+ * A location's Pages tab, every page of it, narrowed by section, status
+ * and a search. Narrowed to a section, it is that section's list: its own
+ * page and every page under it, where a section's row leads.
+ */
+export function locationPagesHref(
+  slug: string,
+  filter: Pick<PagesFilter, "section" | "status" | "q"> = {},
+) {
+  return listHref(locationTabHref(slug, "pages"), {
+    section: filter.section && pageSegmentOf(filter.section),
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/** The editor of one of the site's own pages. */
+export function sitePageHref(page: string) {
+  return `${SITE_PAGES_PATH}/${page}`;
+}
+
+/** What one publish of a site page put on it, by the log entry's id. */
+export function sitePagePublishHref(entryId: string) {
+  return `${SITE_PAGES_PATH}/history/${entryId}`;
+}
+
+/** The editor of one page of a location: its main page, a section's, or one under a section. */
+export function locationPageHref(slug: string, ref: LocationPageRef) {
+  return pageEditorPath(slug, ref);
 }
 
 /** A location's history, optionally narrowed to one part of it. */

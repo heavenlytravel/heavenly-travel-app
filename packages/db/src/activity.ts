@@ -10,7 +10,13 @@ import {
 } from "./activity-actions";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
+import type { LocationPageRef } from "./location-page-input";
 import { fullName } from "./names";
+import {
+  SITE_PAGES,
+  SITE_PAGE_LABELS,
+  type SitePageKey,
+} from "./site-page-input";
 
 /**
  * The activity log: one row per change, written by the transaction that
@@ -229,6 +235,9 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     admin: emails,
     setting: new Map(),
     media: new Map(),
+    "site-page": new Map(
+      SITE_PAGES.map((page) => [page, SITE_PAGE_LABELS[page]] as const),
+    ),
     location: withDeleted(
       locations.map((l) => [l.id, l.name] as const),
       deleted,
@@ -303,6 +312,8 @@ function entityLabelOf(
       return "The wall";
     case "media":
       return "Media";
+    case "site-page":
+      return labels[entityType].get(row.entityId) ?? row.entityId;
     case "booking":
     case "state":
     case "district":
@@ -398,15 +409,38 @@ export async function listLocationHistory({
  */
 export async function listPagePublishes(
   locationId: string,
-  page: string,
+  ref: LocationPageRef,
+): Promise<ActivityEntry[]> {
+  // An entry from before sections names no slug: it is a section's own page.
+  const ids = await db.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "ActivityLog"
+    WHERE "entityType" = 'location' AND "entityId" = ${locationId}
+      AND action = 'location.page.published'
+      AND after->>'page' = ${ref.page}
+      AND COALESCE(after->>'slug', '') = ${ref.slug}`;
+  return publishesById(ids.map((row) => row.id));
+}
+
+/** The publishes of a site page, newest first, without their contents. */
+export async function listSitePagePublishes(
+  page: SitePageKey,
 ): Promise<ActivityEntry[]> {
   const rows = await db.activityLog.findMany({
     where: {
-      entityType: "location",
-      entityId: locationId,
-      action: "location.page.published",
-      after: { path: ["page"], equals: page },
+      entityType: "site-page",
+      entityId: page,
+      action: "site.page.published",
     },
+    select: { id: true },
+  });
+  return publishesById(rows.map((row) => row.id));
+}
+
+/** The entries by id, newest first, their contents left out: a list needs only who and when. */
+async function publishesById(ids: readonly string[]): Promise<ActivityEntry[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.activityLog.findMany({
+    where: { id: { in: [...ids] } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     omit: { before: true, after: true },
   });

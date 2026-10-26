@@ -62,6 +62,14 @@ async function attempt<T>(what: string, run: () => Promise<T>, fallback: T) {
   }
 }
 
+/** A box as the Places API takes it, to keep the suggestions inside or to put its places first. */
+const rectangleOf = ([west, south, east, north]: Bounds) => ({
+  rectangle: {
+    low: { latitude: south, longitude: west },
+    high: { latitude: north, longitude: east },
+  },
+});
+
 export function googleProvider(key: string): PlacesProvider {
   // The session token is not part of any cache key: a cached answer costs
   // nothing, and the token only matters on the calls that reach Google.
@@ -71,6 +79,7 @@ export function googleProvider(key: string): PlacesProvider {
       sessionToken?: string,
       includeAreas?: boolean,
       within?: Bounds,
+      near?: Bounds,
     ) =>
       call(key, `${PLACES}/places:autocomplete`, {
         method: "POST",
@@ -82,19 +91,15 @@ export function googleProvider(key: string): PlacesProvider {
           languageCode: LANGUAGE,
           regionCode: REGION,
           sessionToken,
-          locationRestriction: within
-            ? {
-                rectangle: {
-                  low: { latitude: within[1], longitude: within[0] },
-                  high: { latitude: within[3], longitude: within[2] },
-                },
-              }
-            : undefined,
+          // Google takes a restriction or a bias, not both; `within` keeps
+          // to its box already.
+          locationRestriction: within ? rectangleOf(within) : undefined,
+          locationBias: near && !within ? rectangleOf(near) : undefined,
         },
       }).then((body) => parseSuggestions(body, includeAreas)),
     {
-      key: ([query, , includeAreas, within]) =>
-        `${includeAreas ? "areas:" : ""}${within ? `${within.join(",")}:` : ""}${query}`,
+      key: ([query, , includeAreas, within, near]) =>
+        `${includeAreas ? "areas:" : ""}${within ? `in:${within.join(",")}:` : near ? `near:${near.join(",")}:` : ""}${query}`,
       ttlMs: MINUTE,
       max: 1_000,
     },
@@ -157,6 +162,7 @@ export function googleProvider(key: string): PlacesProvider {
             options?.sessionToken,
             options?.includeAreas,
             options?.within,
+            options?.near,
           ),
         [],
       ),

@@ -28,8 +28,10 @@ const RULES = {
   "fleet.manage": ["OPERATION"],
   /** Open a location and read its overview. Every team works inside one. */
   "locations.view": "any",
-  /** Add a location, its details, saved addresses and pages; the home page's top choices. */
+  /** Add a location, its details, saved addresses and pages. */
   "locations.manage": ["MARKETING"],
+  /** The customer site's own pages (the home page, about us, the legal pages) and the home page's top choices. */
+  "website.manage": "super",
   /** Take a location live, pause it, resume it, delete it. */
   "locations.activate": "super",
   "admins.manage": "super",

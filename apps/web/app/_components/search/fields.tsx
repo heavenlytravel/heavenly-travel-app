@@ -2,6 +2,15 @@
 
 import { BOOKING_RULES, type BBox } from "@repo/db";
 import { DateField, DateTimeField } from "@repo/ui/date-field";
+import {
+  ArrowLeftRightIcon,
+  BedIcon,
+  CalendarIcon,
+  ClockIcon,
+  FlagIcon,
+  MapPinIcon,
+  UsersIcon,
+} from "@repo/ui/icons";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput, type PlacePresets } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
@@ -21,17 +30,18 @@ const { timeZone } = BOOKING_RULES;
  * from @repo/ui without a box of their own, so `className` draws it. A
  * day and a time are one field that sets two values, so `onChange` names
  * the value it sets. A place field is an autocomplete: `onChange` gets the
- * place id and the autocomplete session when a suggestion is picked, and
- * nothing when the text was typed. `presets` are the places a place field
- * offers before anything is typed, `within` the box it suggests places in.
- * Days and times are read in Malaysia, where the trip happens.
+ * place id when a suggestion is picked, and none when the text was typed.
+ * `presets` are the places a place field offers before anything is
+ * typed, `near` the box whose places it suggests first. Days and times
+ * are read in Malaysia, where the trip happens. A day has no icon in its
+ * box: the label carries the field's icon (`FieldIcon`).
  */
 export function FieldInput({
   def,
   id,
   values,
   presets,
-  within,
+  near,
   onChange,
   onFocus,
   className,
@@ -40,13 +50,8 @@ export function FieldInput({
   id: string;
   values: SearchValues;
   presets?: PlacePresets;
-  within?: BBox;
-  onChange: (
-    key: FieldKey,
-    value: string,
-    placeId?: string,
-    sessionToken?: string,
-  ) => void;
+  near?: BBox;
+  onChange: (key: FieldKey, value: string, placeId?: string) => void;
   onFocus?: () => void;
   className?: string;
 }) {
@@ -58,10 +63,8 @@ export function FieldInput({
         placeId={values.placeIds[def.key]}
         placeholder={def.placeholder}
         presets={presets}
-        within={within}
-        onChange={(value, placeId, sessionToken) =>
-          onChange(def.key, value, placeId, sessionToken)
-        }
+        near={near}
+        onChange={(value, placeId) => onChange(def.key, value, placeId)}
         onFocus={onFocus}
         className={className}
       />
@@ -138,4 +141,32 @@ export function FieldInput({
       className={className}
     />
   );
+}
+
+/** The icon each field's label leads with: what the field asks, at a glance. */
+const FIELD_ICONS: Record<FieldKey, typeof MapPinIcon> = {
+  mode: ArrowLeftRightIcon,
+  from: MapPinIcon,
+  to: FlagIcon,
+  place: MapPinIcon,
+  date: CalendarIcon,
+  endDate: CalendarIcon,
+  time: ClockIcon,
+  endTime: ClockIcon,
+  days: CalendarIcon,
+  hours: ClockIcon,
+  people: UsersIcon,
+  children: UsersIcon,
+  rooms: BedIcon,
+};
+
+export function FieldIcon({
+  def,
+  className,
+}: {
+  def: FieldDef;
+  className?: string;
+}) {
+  const Icon = FIELD_ICONS[def.key];
+  return <Icon className={className} />;
 }

@@ -1,17 +1,11 @@
-import {
-  changedFields,
-  getActivityEntry,
-  logActivity,
-  type ActivityEntry,
-} from "./activity";
-import type { ActivityEntityType, Actor } from "./activity-actions";
+import { changedFields, logActivity } from "./activity";
+import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import type {
   Location,
   LocationAddress,
-  LocationPage,
   Prisma,
   State,
 } from "./generated/prisma/client";
@@ -20,8 +14,6 @@ import {
   TOP_CHOICE_CAP,
   checkAddressNames,
   checkLocationFields,
-  checkLocationSlug,
-  checkPageUnpublish,
   locationStateOf,
   isSlugLocked,
   locationDeleteImpact,
@@ -29,39 +21,35 @@ import {
   type LocationFields,
   type LocationState,
   type OperationStanding,
-  type PageStanding,
   type TopChoiceChange,
 } from "./location-input";
 import {
   LANDING_PAGE,
-  LOCATION_PAGES,
-  PAGE_LOCALE,
-  checkPageComplete,
-  checkPageLimits,
-  isLocationPageKey,
-  pageContentOf,
-  pageStatusOf,
-  publicCopyOf,
-  samePageContent,
-  type LocationPageKey,
-  type PageContent,
-  type PageImage,
+  isLocationPageRef,
+  pageKindOf,
+  type PlaceSection,
 } from "./location-page-input";
+import {
+  checkNewEntry,
+  createLocationEntry,
+  pagesForStandings,
+  standingsOf,
+  type PageSummary,
+} from "./location-pages";
 import {
   isInStates,
   strayAddresses,
   strayAddressesPhrase,
 } from "./location-places";
-import {
-  previewLocationViewOf,
-  publicLocationViewOf,
-  topChoiceCardOf,
-  type LocationView,
-  type TopChoiceCard,
-} from "./location-view";
 import { andList, plural } from "./names";
+import {
+  PAGE_LOCALE,
+  pageContentOf,
+  publicCopyOf,
+  type PageContent,
+  type PageImage,
+} from "./page-content";
 import { isPlace, type Place } from "./place";
-import { deletedMediaRefusal } from "./media";
 import { routesIntoLocation } from "./zones";
 
 export type { Location, LocationAddress };
@@ -83,8 +71,6 @@ export type { Location, LocationAddress };
  * docs/261001-locations-and-pages.md, docs/261003-location-flow.md and
  * docs/261015-locations-as-operation-areas.md.
  */
-
-const LOCATION: ActivityEntityType = "location";
 
 const NOT_FOUND = refuse(
   "This location was deleted meanwhile. Go back to Locations.",
@@ -114,11 +100,6 @@ const ADDRESSES_CHANGED: Refusal = {
 const ADDRESS_RULE =
   "A saved address has to be in one of the location's states.";
 
-const PAGE_CHANGED: Refusal = {
-  ok: false,
-  error: "This page was changed by someone else. Reload to see it.",
-};
-
 /** The states a location lies in, by name. */
 type WithStates = { states: State[] };
 
@@ -133,7 +114,7 @@ export function listLocationNames(): Promise<LocationName[]> {
   });
 }
 
-/** A saved address with the names of the landing page's highlights that point at it. */
+/** A saved address with the names of the pages whose "Take me here" goes to it. */
 export type LocationAddressWithUses = LocationAddress & {
   usedBy: string[];
   /** It lies outside the location's states: saved before the rule, or before the states changed. */
@@ -141,61 +122,14 @@ export type LocationAddressWithUses = LocationAddress & {
 };
 
 /**
- * A location with its states, its saved addresses in order and its
- * pages, one per key of `LOCATION_PAGES` whether or not it has been written.
+ * A location with its states, its saved addresses in order and its pages,
+ * written or not, in their order (`standingsOf`).
  */
 export type LocationWithDetails = Location &
   WithStates & {
     addresses: LocationAddressWithUses[];
     pages: PageSummary[];
   };
-
-/** A page as the screens list it: where it stands, and the picture it leads with. */
-export type PageSummary = PageStanding & {
-  /** The draft's hero image, else that of the copy last published; null when neither has one. */
-  heroImage: PageImage | null;
-};
-
-/** The copy last published, kept when the page is unpublished; null before the first publish. */
-function publishedOf(page: LocationPageKey, row: LocationPage) {
-  return row.published === null ? null : pageContentOf(page, row.published);
-}
-
-/** The columns of a page's row that its standing is read from. */
-export type PageRow = Pick<
-  LocationPage,
-  "page" | "isOn" | "draft" | "published"
->;
-
-/** What the rules and the screens read of a page's row; a page never saved has none. */
-function standingOf(
-  page: LocationPageKey,
-  row: PageRow | undefined,
-): PageSummary {
-  if (!row) return { page, status: "unpublished", heroImage: null };
-  const draft = pageContentOf(page, row.draft);
-  return {
-    page,
-    status: pageStatusOf(draft, publicCopyOf(page, row)),
-    heroImage:
-      draft.heroImage ??
-      (row.published === null
-        ? null
-        : pageContentOf(page, row.published).heroImage),
-  };
-}
-
-/** Every page of a location, written or not, in the order of `LOCATION_PAGES`. */
-export function standingsOf(rows: readonly PageRow[]): PageSummary[] {
-  return LOCATION_PAGES.map((page) =>
-    standingOf(
-      page,
-      rows.find((row) => row.page === page),
-    ),
-  );
-}
-
-const pagesInLocale = { where: { locale: PAGE_LOCALE } };
 
 export async function getLocation(
   id: string,
@@ -204,37 +138,39 @@ export async function getLocation(
     where: { id },
     include: {
       addresses: { orderBy: { position: "asc" } },
-      pages: pagesInLocale,
+      ...pagesForStandings,
       ...withStates,
     },
   });
   if (!found) return null;
-  const { pages, addresses, ...location } = found;
+  const { pages, offerings, addresses, ...location } = found;
   const stateCodes = codesOf(location.states);
 
-  // A highlight of the landing page points at an address, in the draft, the
-  // public copy or both.
-  const landing = pages.find((row) => row.page === LANDING_PAGE);
-  const highlights = landing
-    ? [
-        ...pageContentOf(LANDING_PAGE, landing.draft).highlights,
-        ...(publicCopyOf(LANDING_PAGE, landing)?.highlights ?? []),
-      ]
-    : [];
+  // A place, an attraction or a hotel points at an address, in its draft,
+  // its public copy or both.
+  const pointers = pages.flatMap((row) => {
+    const ref = { page: row.page, slug: row.slug };
+    if (!isLocationPageRef(ref) || pageKindOf(ref) !== "place") return [];
+    const draft = pageContentOf("place", row.draft);
+    const name = draft.heroHeadline || row.slug;
+    return [draft, publicCopyOf("place", row)]
+      .filter((content): content is PageContent => content !== null)
+      .map((content) => ({ addressId: content.addressId, name }));
+  });
   return {
     ...location,
     addresses: addresses.map((address) => ({
       ...address,
       usedBy: [
         ...new Set(
-          highlights
-            .filter((highlight) => highlight.addressId === address.id)
-            .map((highlight) => highlight.name || "an unnamed highlight"),
+          pointers
+            .filter((pointer) => pointer.addressId === address.id)
+            .map((pointer) => pointer.name),
         ),
       ],
       isStray: isPlace(address.place) && !isInStates(address.place, stateCodes),
     })),
-    pages: standingsOf(pages),
+    pages: standingsOf(pages, offerings),
   };
 }
 
@@ -262,15 +198,14 @@ export async function listTopChoices(): Promise<TopChoice[]> {
       slug: true,
       state: true,
       pages: {
-        where: { locale: PAGE_LOCALE, page: LANDING_PAGE },
-        select: { page: true, isOn: true, draft: true, published: true },
+        where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" },
       },
     },
   });
   return locations.map(({ pages, ...location }) => ({
     ...location,
     heroImage:
-      standingsOf(pages).find((page) => page.page === LANDING_PAGE)
+      standingsOf(pages, []).find((page) => page.page === LANDING_PAGE)
         ?.heroImage ?? null,
   }));
 }
@@ -284,59 +219,6 @@ export function listTopChoiceCandidates(): Promise<TopChoiceCandidate[]> {
     where: { state: "live" satisfies LocationState, topChoiceOrder: null },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
-  });
-}
-
-const forSite = {
-  include: {
-    addresses: { orderBy: { position: "asc" } },
-    pages: pagesInLocale,
-  },
-} satisfies Prisma.LocationDefaultArgs;
-
-/**
- * The location at the slug as the public sees it: null for a slug no
- * location has, and for a location that is not public. A slug no location
- * could have is refused without asking the database, since this reads
- * whatever follows the customer site's first slash.
- */
-export async function getPublicLocation(
-  slug: string,
-): Promise<LocationView | null> {
-  if (!checkLocationSlug(slug).ok) return null;
-  const location = await db.location.findUnique({
-    where: { slug },
-    ...forSite,
-  });
-  return location ? publicLocationViewOf(location) : null;
-}
-
-/** The location at the slug as staff preview it: the drafts, in any state. */
-export async function getLocationPreview(
-  slug: string,
-): Promise<LocationView | null> {
-  if (!checkLocationSlug(slug).ok) return null;
-  const location = await db.location.findUnique({
-    where: { slug },
-    ...forSite,
-  });
-  return location ? previewLocationViewOf(location) : null;
-}
-
-/**
- * The home page's cards, in their order: the top choices that are live. A
- * paused one is left off and keeps its place.
- */
-export async function listTopChoiceCards(): Promise<TopChoiceCard[]> {
-  const locations = await db.location.findMany({
-    ...topChoices,
-    ...forSite,
-    where: { ...topChoices.where, state: "live" satisfies LocationState },
-    take: TOP_CHOICE_CAP,
-  });
-  return locations.flatMap((location) => {
-    const view = publicLocationViewOf(location);
-    return view ? [topChoiceCardOf(view)] : [];
   });
 }
 
@@ -358,88 +240,6 @@ export async function getLocationSlug(id: string): Promise<string | null> {
     select: { slug: true },
   });
   return location?.slug ?? null;
-}
-
-/** One page of a location, as its editor opens it. */
-export type LocationPageDetails = {
-  location: Location & { addresses: LocationAddress[] };
-  page: LocationPageKey;
-  draft: PageContent;
-  /** The copy the public is shown; null while the page is not published. */
-  published: PageContent | null;
-  /** When that copy was published; null while the page is not published. */
-  publishedAt: Date | null;
-  /**
-   * Names the stored content. A save hands it back, and is refused when the
-   * content has changed since. Null until the page is first saved.
-   */
-  version: string | null;
-};
-
-/** The content's version: when it last changed. Unpublishing does not move it. */
-function versionOf(row: LocationPage | null) {
-  return row ? row.updatedAt.toISOString() : null;
-}
-
-const pageKey = (locationId: string, page: LocationPageKey) => ({
-  locationId_page_locale: { locationId, page, locale: PAGE_LOCALE },
-});
-
-export async function getLocationPage(
-  locationId: string,
-  page: LocationPageKey,
-): Promise<LocationPageDetails | null> {
-  const [location, row] = await Promise.all([
-    db.location.findUnique({
-      where: { id: locationId },
-      include: { addresses: { orderBy: { position: "asc" } } },
-    }),
-    db.locationPage.findUnique({ where: pageKey(locationId, page) }),
-  ]);
-  if (!location) return null;
-  return {
-    location,
-    page,
-    draft: pageContentOf(page, row?.draft),
-    published: row ? publicCopyOf(page, row) : null,
-    publishedAt: row?.isOn ? row.publishedAt : null,
-    version: versionOf(row),
-  };
-}
-
-/** One publish from the location's history: the page and its content before and after. */
-export type PagePublish = {
-  entry: ActivityEntry;
-  page: LocationPageKey;
-  /** Null on the page's first publish. */
-  before: PageContent | null;
-  after: PageContent;
-};
-
-/** The publish a history entry of the location records, or null when the entry is not one. */
-export async function getPagePublish(
-  locationId: string,
-  entryId: string,
-): Promise<PagePublish | null> {
-  const entry = await getActivityEntry(entryId);
-  if (
-    !entry ||
-    entry.entityType !== LOCATION ||
-    entry.entityId !== locationId ||
-    entry.action !== "location.page.published"
-  ) {
-    return null;
-  }
-  const after = entry.after as { page?: unknown; content?: unknown } | null;
-  const before = entry.before as { content?: unknown } | null;
-  const page = after?.page;
-  if (!isLocationPageKey(page)) return null;
-  return {
-    entry,
-    page,
-    before: before?.content ? pageContentOf(page, before.content) : null,
-    after: pageContentOf(page, after?.content),
-  };
 }
 
 /** The stored place's label, as the log names a place. */
@@ -623,8 +423,8 @@ export async function savedAddressRefusal(
 
 /**
  * Replaces the location's saved addresses with the list, in its order. A
- * kept address keeps its id, which a highlight may point at; one left out is
- * removed, and a highlight pointing at it then reads as having no address.
+ * kept address keeps its id, which a place's page may point at; one left out
+ * is removed, and a page pointing at it then reads as having no address.
  * `expected` is the ids the form was opened with, in order: when the stored
  * list is no longer that, someone else changed it and the save is refused.
  * A new address has to lie in one of the location's states, placed by
@@ -719,201 +519,64 @@ export async function setLocationAddresses(
   });
 }
 
-/** A page write's answer: the content's new version, or why not. */
-export type PageSaved = { ok: true; version: string } | Refusal;
-
 /**
- * Writes the page's content inside the caller's transaction, when the
- * stored content is still the version the form was opened with. A highlight
- * pointing at an address the location does not hold loses the pointer.
- * `publish` also makes the content the page's public copy. Answers the
- * content as written and the row as it was, for the caller's log.
+ * Adds one saved address at the end of the location's list, saved at once:
+ * from the Saved addresses list, and from a page's editor or its Add
+ * dialog when the address a place needs is not saved yet. It is
+ * `setLocationAddresses` over the list as it is plus the new one, so the
+ * same checks apply: a name unique in the list, within the limit, and a
+ * place in one of the location's states. With `page`, the address is a
+ * popular place, an attraction or a hotel: a draft page of that type is
+ * added too, named as the address and pointing at it, its slug checked
+ * before anything is written. Answers the new address's id.
  */
-async function writePageContent(
-  tx: Prisma.TransactionClient,
+export async function addLocationAddress(
+  actor: Actor,
   locationId: string,
-  page: LocationPageKey,
-  version: string | null,
-  content: PageContent,
-  publish: boolean,
-): Promise<
-  | Refusal
-  | {
-      ok: true;
-      version: string;
-      content: PageContent;
-      was: LocationPage | null;
-    }
-> {
-  const location = await tx.location.findUnique({
-    where: { id: locationId },
-    include: { addresses: { select: { id: true } } },
+  address: { place: Place; name: string },
+  page?: { page: PlaceSection; slug: string },
+): Promise<Created> {
+  if (page) {
+    const refused = await checkNewEntry(locationId, page.page, {
+      title: address.name,
+      slug: page.slug,
+    });
+    if (refused) return refused;
+  }
+  const current = await db.locationAddress.findMany({
+    where: { locationId },
+    orderBy: { position: "asc" },
+    select: { id: true, name: true, place: true },
   });
-  if (!location) return NOT_FOUND;
-  const was = await tx.locationPage.findUnique({
-    where: pageKey(locationId, page),
-  });
-  if (versionOf(was) !== version) return PAGE_CHANGED;
-  // An image uploaded in this form and deleted on Media before it saved.
-  const gone = await deletedMediaRefusal(
-    tx,
-    [
-      content.shareImage,
-      content.heroImage,
-      ...content.highlights.map((highlight) => highlight.image),
-    ].map((image) => image?.url ?? null),
-    "An image",
+  if (
+    current.some(
+      (saved) =>
+        isPlace(saved.place) && saved.place.placeId === address.place.placeId,
+    )
+  ) {
+    return refuse(`${address.name} is saved already.`, "place");
+  }
+  const result = await setLocationAddresses(
+    actor,
+    locationId,
+    current.map((saved) => saved.id),
+    [...current.map(({ id, name }) => ({ id, name })), address],
   );
-  if (gone) return gone;
-
-  const addressIds = new Set(location.addresses.map((address) => address.id));
-  const clean: PageContent = {
-    ...content,
-    highlights: content.highlights.map((highlight) => ({
-      ...highlight,
-      addressId:
-        highlight.addressId !== null && addressIds.has(highlight.addressId)
-          ? highlight.addressId
-          : null,
-    })),
-  };
-
-  const now = new Date();
-  const data = {
-    draft: clean,
-    updatedAt: now,
-    ...(publish ? { published: clean, publishedAt: now, isOn: true } : {}),
-  };
-  // Conditional on the version read above, so two saves at once cannot both land.
-  const { count } = was
-    ? await tx.locationPage.updateMany({
-        where: { id: was.id, updatedAt: was.updatedAt },
-        data,
-      })
-    : await tx.locationPage.createMany({
-        data: [{ locationId, page, locale: PAGE_LOCALE, ...data }],
-        skipDuplicates: true,
-      });
-  if (count !== 1) return PAGE_CHANGED;
-  return { ok: true, version: now.toISOString(), content: clean, was };
-}
-
-/**
- * Overwrites the page's working draft. Nothing changes in public, and
- * nothing is logged. Only the length limits are checked: a draft may be
- * incomplete.
- */
-export async function saveLocationPageDraft(
-  locationId: string,
-  page: LocationPageKey,
-  version: string | null,
-  draft: PageContent,
-): Promise<PageSaved> {
-  const content = pageContentOf(page, draft);
-  const check = checkPageLimits(content);
-  if (!check.ok) return check;
-
-  return db.$transaction(async (tx) => {
-    const written = await writePageContent(
-      tx,
-      locationId,
-      page,
-      version,
-      content,
-      false,
-    );
-    return written.ok ? { ok: true, version: written.version } : written;
+  if (!result.ok) return result;
+  const added = await db.locationAddress.findFirst({
+    where: { locationId, name: address.name },
+    select: { id: true },
   });
-}
-
-/**
- * Saves the content as the page's draft and makes it the page's public
- * copy, when it is complete. A published page is one the public can see,
- * once the location is live: there is no switch beside it. It works in any
- * location state. Publishing what is already public logs nothing.
- */
-export async function publishLocationPage(
-  actor: Actor,
-  locationId: string,
-  page: LocationPageKey,
-  version: string | null,
-  draft: PageContent,
-): Promise<PageSaved> {
-  const content = pageContentOf(page, draft);
-  const check = checkPageComplete(page, content);
-  if (!check.ok) return check;
-
-  return db.$transaction(async (tx) => {
-    const written = await writePageContent(
-      tx,
-      locationId,
-      page,
-      version,
-      content,
-      true,
-    );
-    if (!written.ok) return written;
-
-    // The copy last published, which the diff in the history reads; a page
-    // that was unpublished since is published again, and that is logged too.
-    const before = written.was ? publishedOf(page, written.was) : null;
-    if (
-      !written.was?.isOn ||
-      !before ||
-      !samePageContent(before, written.content)
-    ) {
-      await logActivity(tx, actor, {
-        action: "location.page.published",
-        entityId: locationId,
-        before: { page, content: before },
-        after: { page, content: written.content },
-      });
-    }
-    return { ok: true, version: written.version };
-  });
-}
-
-/**
- * Unpublishes a page: the public no longer sees it, and its draft and the
- * copy last published are kept. Unpublishing a page that is not published
- * logs nothing. The content's version is left as it is, so a form open on
- * the page still saves.
- */
-export async function unpublishLocationPage(
-  actor: Actor,
-  locationId: string,
-  page: LocationPageKey,
-): Promise<Change> {
-  return db.$transaction(async (tx) => {
-    const location = await tx.location.findUnique({
-      where: { id: locationId },
+  if (!added) return NOT_FOUND;
+  if (page) {
+    const created = await createLocationEntry(actor, locationId, page.page, {
+      title: address.name,
+      slug: page.slug,
+      addressId: added.id,
     });
-    if (!location) return NOT_FOUND;
-    const row = await tx.locationPage.findUnique({
-      where: pageKey(locationId, page),
-    });
-    if (!row?.isOn) return { ok: true };
-
-    const check = checkPageUnpublish(locationStateOf(location.state), page);
-    if (!check.ok) return check;
-
-    // Only while the content is the one read above: writing its version
-    // back over a save that landed meanwhile would hide that save.
-    const { count } = await tx.locationPage.updateMany({
-      where: { id: row.id, updatedAt: row.updatedAt },
-      data: { isOn: false, updatedAt: row.updatedAt },
-    });
-    if (count !== 1) {
-      return { ok: false, error: "The page was just saved. Try again." };
-    }
-    await logActivity(tx, actor, {
-      action: "location.page.updated",
-      entityId: locationId,
-      before: { page, isOn: true },
-      after: { page, isOn: false },
-    });
-    return { ok: true };
-  });
+    if (!created.ok) return created;
+  }
+  return { ok: true, id: added.id };
 }
 
 /**
@@ -1050,7 +713,7 @@ export async function moveLocationState(
   return db.$transaction(async (tx) => {
     const location = await tx.location.findUnique({
       where: { id },
-      include: { pages: pagesInLocale },
+      include: pagesForStandings,
     });
     if (!location) return NOT_FOUND;
     const from = locationStateOf(location.state);
@@ -1059,7 +722,7 @@ export async function moveLocationState(
     const blockers = stateMoveBlockers(
       from,
       to,
-      standingsOf(location.pages),
+      standingsOf(location.pages, location.offerings),
       await operationStandingOf(tx, id),
     );
     if (blockers.length > 0) {

@@ -11,6 +11,9 @@ export const TOP_CHOICES_TAG = "top-choices";
 /** The active vehicle classes a product page lists. */
 export const VEHICLE_CLASSES_TAG = "vehicle-classes";
 
+/** The site's own pages: the home page's content, the documents, the footer's links. */
+export const SITE_PAGES_TAG = "site-pages";
+
 /** One location's pages, by the slug they are read at. */
 export function locationTag(slug: string) {
   return `location:${slug}`;

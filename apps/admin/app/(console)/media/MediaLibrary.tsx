@@ -6,7 +6,7 @@ import {
   formatLocalDate,
   isOnPage,
   mediaDeleteImpact,
-  pageTitleOf,
+  mediaPageName,
   plural,
   type MediaStatus,
   type MediaUse,
@@ -23,6 +23,8 @@ import { DeleteButton } from "../../_components/DeleteButton";
 import {
   locationPageHref,
   locationPublishHref,
+  sitePageHref,
+  sitePagePublishHref,
   locationVehicleHref,
   vehicleClassHref,
 } from "../../_lib/routes";
@@ -235,20 +237,28 @@ function UseLink({ use }: { use: MediaUse }) {
             : "draft";
       return (
         <Link
-          href={locationPageHref(use.location.slug, use.page)}
+          href={
+            use.on.site
+              ? sitePageHref(use.on.page)
+              : locationPageHref(use.on.location.slug, use.on.ref)
+          }
           className={LINK}
         >
-          {use.location.name} · {pageTitleOf(use.page)}, {copies}
+          {mediaPageName(use.on)}, {copies}
         </Link>
       );
     }
     case "earlier":
       return (
         <Link
-          href={locationPublishHref(use.location.slug, use.entryId)}
+          href={
+            use.on.site
+              ? sitePagePublishHref(use.entryId)
+              : locationPublishHref(use.on.location.slug, use.entryId)
+          }
           className={LINK}
         >
-          {use.location.name} · {pageTitleOf(use.page)}, a past version
+          {mediaPageName(use.on)}, a past version
         </Link>
       );
     case "class":

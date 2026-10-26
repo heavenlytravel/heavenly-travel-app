@@ -6,79 +6,108 @@ import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import type { Prisma } from "./generated/prisma/client";
 import { uploadKeyOf } from "./images";
 import {
-  isLocationPageKey,
-  pageContentOf,
-  type LocationPageKey,
-  type PageContent,
+  loggedPageRef,
+  pageKindOf,
+  pageTitleOf,
+  type LocationPageRef,
 } from "./location-page-input";
+import { pageContentOf, pageImageKeys, type PageKind } from "./page-content";
+import {
+  SITE_PAGE_LABELS,
+  isSitePageKey,
+  sitePageKindOf,
+} from "./site-page-input";
 import {
   mediaDeleteImpact,
   mediaDeleteRefusal,
+  mediaPageKey,
   mediaStatusOf,
+  type MediaPage,
   type MediaUse,
 } from "./media-status";
 
 /**
  * Where the console's uploaded files are used, for the Media screen: the
- * locations' pages, working and published, the vehicle classes' pictures,
- * the vehicles' photos, and the past versions a location's History
- * shows; the delete that takes files off them; and the check that keeps a
+ * locations' pages and the site's, working and published, the vehicle
+ * classes' pictures, the vehicles' photos, and the past versions a page's
+ * History shows; the delete that takes files off them; and the check that keeps a
  * form opened before the delete from putting a deleted file back. The
  * rules are in ./media-status. See docs/261001-locations-and-pages.md,
  * "Images".
  */
 
-/** The keys of the images on a page: its share image, its hero and its highlights'. */
-function pageImageKeys(content: PageContent): string[] {
-  return [
-    content.shareImage,
-    content.heroImage,
-    ...content.highlights.map((highlight) => highlight.image),
-  ].flatMap((image) => (image ? [image.key] : []));
-}
-
 /** The keys of the images a published page showed, from a log entry's `{ page, content }`. */
-function snapshotKeys(page: LocationPageKey, snapshot: unknown): string[] {
+function snapshotKeys(kind: PageKind, snapshot: unknown): string[] {
   const content =
     snapshot !== null && typeof snapshot === "object" && "content" in snapshot
       ? snapshot.content
       : null;
-  return content ? pageImageKeys(pageContentOf(page, content)) : [];
+  return content ? pageImageKeys(pageContentOf(kind, content)) : [];
+}
+
+/** A location's page as a use names it: "Popular places page", "Eagle Square". */
+function locationPageOf(
+  location: { id: string; name: string; slug: string },
+  ref: LocationPageRef,
+  content: unknown,
+): MediaPage {
+  const name = pageContentOf(pageKindOf(ref), content).heroHeadline;
+  return { site: false, location, ref, title: pageTitleOf(ref, name) };
 }
 
 /** The rows the uses are read from, in one read. */
 async function readSources(client: Prisma.TransactionClient) {
-  const [locations, pages, publishes, classes, photos] = await Promise.all([
-    client.location.findMany({ select: { id: true, name: true, slug: true } }),
-    client.locationPage.findMany({
-      select: { locationId: true, page: true, draft: true, published: true },
-    }),
-    client.activityLog.findMany({
-      where: { entityType: "location", action: "location.page.published" },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: { id: true, entityId: true, before: true, after: true },
-    }),
-    client.vehicleClass.findMany({
-      where: { imageUrl: { not: null } },
-      select: { id: true, name: true, imageUrl: true },
-    }),
-    client.vehiclePhoto.findMany({
-      select: {
-        id: true,
-        url: true,
-        vehicle: {
-          select: {
-            id: true,
-            plate: true,
-            locationId: true,
-            location: { select: { slug: true } },
-            _count: { select: { photos: true } },
+  const [locations, pages, sitePages, publishes, classes, photos] =
+    await Promise.all([
+      client.location.findMany({
+        select: { id: true, name: true, slug: true },
+      }),
+      client.locationPage.findMany({
+        select: {
+          locationId: true,
+          page: true,
+          slug: true,
+          draft: true,
+          published: true,
+        },
+      }),
+      client.sitePage.findMany({
+        select: { page: true, draft: true, published: true },
+      }),
+      client.activityLog.findMany({
+        where: {
+          action: { in: ["location.page.published", "site.page.published"] },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          action: true,
+          entityId: true,
+          before: true,
+          after: true,
+        },
+      }),
+      client.vehicleClass.findMany({
+        where: { imageUrl: { not: null } },
+        select: { id: true, name: true, imageUrl: true },
+      }),
+      client.vehiclePhoto.findMany({
+        select: {
+          id: true,
+          url: true,
+          vehicle: {
+            select: {
+              id: true,
+              plate: true,
+              locationId: true,
+              location: { select: { slug: true } },
+              _count: { select: { photos: true } },
+            },
           },
         },
-      },
-    }),
-  ]);
-  return { locations, pages, publishes, classes, photos };
+      }),
+    ]);
+  return { locations, pages, sitePages, publishes, classes, photos };
 }
 
 type Sources = Awaited<ReturnType<typeof readSources>>;
@@ -90,48 +119,77 @@ type Sources = Awaited<ReturnType<typeof readSources>>;
  * a deleted location's history has no page.
  */
 function usesOf(sources: Sources): Map<string, MediaUse[]> {
-  const { locations, pages, publishes, classes, photos } = sources;
+  const { locations, pages, sitePages, publishes, classes, photos } = sources;
   const locationById = new Map(locations.map((l) => [l.id, l]));
   const uses = new Map<string, MediaUse[]>();
   const add = (key: string | null, use: MediaUse) => {
     if (key) uses.set(key, [...(uses.get(key) ?? []), use]);
   };
-
-  for (const row of pages) {
-    const location = locationById.get(row.locationId);
-    if (!location || !isLocationPageKey(row.page)) continue;
-    const draft = new Set(pageImageKeys(pageContentOf(row.page, row.draft)));
+  // A page's working and published copies are one use of each file on either.
+  const addPage = (
+    on: MediaPage,
+    kind: PageKind,
+    row: { draft: unknown; published: unknown },
+  ) => {
+    const draft = new Set(pageImageKeys(pageContentOf(kind, row.draft)));
     const published = new Set(
-      row.published
-        ? pageImageKeys(pageContentOf(row.page, row.published))
-        : [],
+      row.published ? pageImageKeys(pageContentOf(kind, row.published)) : [],
     );
     for (const key of new Set([...draft, ...published])) {
       add(key, {
         kind: "page",
-        location,
-        page: row.page,
+        on,
         draft: draft.has(key),
         published: published.has(key),
       });
     }
+  };
+
+  for (const row of pages) {
+    const location = locationById.get(row.locationId);
+    const ref = loggedPageRef(row);
+    if (!location || !ref) continue;
+    addPage(locationPageOf(location, ref, row.draft), pageKindOf(ref), row);
+  }
+  for (const row of sitePages) {
+    if (!isSitePageKey(row.page)) continue;
+    addPage(
+      { site: true, page: row.page, title: SITE_PAGE_LABELS[row.page] },
+      sitePageKindOf(row.page),
+      row,
+    );
   }
 
   // Newest first, so the first entry seen for a file on a page names it.
   const seen = new Set<string>();
   for (const entry of publishes) {
-    const location = locationById.get(entry.entityId);
-    const page = (entry.after as { page?: unknown } | null)?.page;
-    if (!location || !isLocationPageKey(page)) continue;
+    let on: MediaPage;
+    let kind: PageKind;
+    if (entry.action === "site.page.published") {
+      if (!isSitePageKey(entry.entityId)) continue;
+      on = {
+        site: true,
+        page: entry.entityId,
+        title: SITE_PAGE_LABELS[entry.entityId],
+      };
+      kind = sitePageKindOf(entry.entityId);
+    } else {
+      const location = locationById.get(entry.entityId);
+      const ref = loggedPageRef(entry.after);
+      if (!location || !ref) continue;
+      const content = (entry.after as { content?: unknown } | null)?.content;
+      on = locationPageOf(location, ref, content);
+      kind = pageKindOf(ref);
+    }
     const keys = new Set([
-      ...snapshotKeys(page, entry.before),
-      ...snapshotKeys(page, entry.after),
+      ...snapshotKeys(kind, entry.before),
+      ...snapshotKeys(kind, entry.after),
     ]);
     for (const key of keys) {
-      const where = `${key}|${location.id}|${page}`;
+      const where = `${key}|${mediaPageKey(on)}`;
       if (seen.has(where)) continue;
       seen.add(where);
-      add(key, { kind: "earlier", location, page, entryId: entry.id });
+      add(key, { kind: "earlier", on, entryId: entry.id });
     }
   }
 

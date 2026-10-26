@@ -6,7 +6,7 @@ import { Field, Input } from "@repo/ui/field";
 import { useState } from "react";
 import { FormError } from "../../../_components/FormError";
 import { useActionForm } from "../../../_lib/use-action-form";
-import { SlugField } from "../_components/SlugField";
+import { LocationSlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { updateLocationAction } from "../actions";
 
@@ -49,7 +49,7 @@ export function LocationDetailsForm({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        <SlugField
+        <LocationSlugField
           value={slug}
           onChange={setSlug}
           locked={location.slugLocked}

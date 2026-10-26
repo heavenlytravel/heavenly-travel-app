@@ -1,17 +1,20 @@
 "use client";
 
+import { XIcon } from "@repo/ui/icons";
 import {
   fieldKeys,
   PRODUCTS,
   visibleFields,
+  type FieldDef,
   type Product,
+  type SearchValues,
 } from "../../_lib/search";
 import { bookableCategory } from "../../_lib/transportation-booking";
 import { useTripSubmit } from "../../_lib/useSearch";
 import { Pending } from "../../(site)/_components/Page";
 import { ProductIcon } from "../Brand";
 import { useSearchCard } from "./SearchProvider";
-import { FieldInput } from "./fields";
+import { FieldIcon, FieldInput } from "./fields";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
@@ -35,19 +38,26 @@ const TABS: Product[] = [
  * above it, which is how a card elsewhere on the page fills a place in.
  * The button says so while the options page prices the trip, which is
  * the longest wait on the site. On a location's pages the place fields
- * keep to the location, and a place it cannot take is said at its field
- * when the customer asks for prices.
+ * suggest the location's area first, and any trip is sent as from the
+ * home page: the options page says which location prices it, or why none
+ * can. Each label leads with its field's
+ * icon, and a filled place or day has an × at its end that empties it.
  */
 export function ServiceTabsSearch() {
-  const { product, setProduct, values, set, dropoffs, withinOf, checkPlaces } =
-    useSearchCard();
+  const { product, setProduct, values, set, presetsOf, near } = useSearchCard();
   const { issues, pending, submit: sendTrip } = useTripSubmit();
   const fields = visibleFields(product, values);
+
+  /** Empties the field, a day and its time together, and puts the cursor back in it. */
+  function clear(def: FieldDef, id: string) {
+    for (const key of fieldKeys(def)) set(key, "");
+    document.getElementById(id)?.focus();
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const category = bookableCategory(product.key);
-    if (category) sendTrip(category, values, undefined, checkPlaces);
+    if (category) sendTrip(category, values);
   }
 
   return (
@@ -112,7 +122,10 @@ export function ServiceTabsSearch() {
           {fields.map((f, i) => {
             const id = `svc-${f.key}`;
             const keys = fieldKeys(f);
-            const issue = issues.find((x) => keys.includes(x.field));
+            const issue = issues.find((x) =>
+              keys.some((key) => key === x.field),
+            );
+            const clearable = isClearable(f, values);
             // The field fills its box, its label laid over the top of it:
             // a click anywhere in the box reaches the field, and its list
             // or calendar opens under the box, lined up with its edges.
@@ -131,19 +144,32 @@ export function ServiceTabsSearch() {
               >
                 <label
                   htmlFor={id}
-                  className="pointer-events-none absolute top-2.5 left-[18px] text-[0.82rem]/5 font-semibold text-slate-800"
+                  className="pointer-events-none absolute top-2.5 left-[18px] flex items-center gap-1.5 text-[0.82rem]/5 font-semibold text-slate-800"
                 >
+                  <FieldIcon def={f} className="size-[15px] text-slate-500" />
                   {f.label}
                 </label>
                 <FieldInput
                   def={f}
                   id={id}
                   values={values}
-                  presets={f.key === "to" ? dropoffs : undefined}
-                  within={withinOf(f.key)}
+                  presets={presetsOf(f.key)}
+                  near={near}
                   onChange={set}
-                  className="h-full min-h-[70px] w-full border-0 bg-transparent px-[18px] pt-[34px] pb-2.5 text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80"
+                  className={`h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80 ${
+                    clearable ? "pr-11" : "pr-[18px]"
+                  }`}
                 />
+                {clearable && (
+                  <button
+                    type="button"
+                    aria-label={`Clear ${f.label}`}
+                    onClick={() => clear(f, id)}
+                    className={`absolute right-2.5 bottom-[11px] flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-ink ${focus}`}
+                  >
+                    <XIcon className="size-4" />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -168,4 +194,12 @@ export function ServiceTabsSearch() {
       </form>
     </div>
   );
+}
+
+/** Whether a field shows its ×: a place or a day with something in it. */
+function isClearable(def: FieldDef, values: SearchValues) {
+  if (def.kind !== "place" && def.kind !== "when" && def.kind !== "date") {
+    return false;
+  }
+  return fieldKeys(def).some((key) => values[key] !== "");
 }

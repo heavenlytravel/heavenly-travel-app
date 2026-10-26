@@ -6,7 +6,7 @@ import {
   type PlacesProvider,
 } from "./types";
 
-/** `within=west,south,east,north`, four numbers in range; null for anything else. */
+/** A box as the query carries it, `west,south,east,north`: four numbers in range; null for anything else. */
 export function parseBounds(value: string | null): Bounds | null {
   const parts = value?.split(",").map(Number);
   if (parts?.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
@@ -28,7 +28,8 @@ export function parseBounds(value: string | null): Bounds | null {
  * `GET /api/places/search?q=...&session=...`. The Google key stays on the
  * server; the provider caches per query. `session` is Google's autocomplete
  * session token, minted by the field per selection. `within`, a box, keeps
- * the suggestions inside it. Signed in or not.
+ * the suggestions inside it; `near`, one, puts the places inside it first.
+ * Signed in or not.
  */
 export function placeSearchHandler(provider: PlacesProvider) {
   return async function GET(request: Request): Promise<Response> {
@@ -38,11 +39,12 @@ export function placeSearchHandler(provider: PlacesProvider) {
       .slice(0, PLACE_QUERY_MAX_LENGTH);
     const sessionToken = params.get("session")?.slice(0, 64) || undefined;
     const within = parseBounds(params.get("within")) ?? undefined;
+    const near = parseBounds(params.get("near")) ?? undefined;
 
     const suggestions =
       query.length < PLACE_QUERY_MIN_LENGTH
         ? []
-        : await provider.searchPlaces(query, { sessionToken, within });
+        : await provider.searchPlaces(query, { sessionToken, within, near });
 
     const body: PlaceSearchResponse = { suggestions };
     return Response.json(body, {

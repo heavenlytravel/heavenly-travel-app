@@ -1,6 +1,7 @@
 import type { DeleteImpact } from "./delete-impact";
 import { formatBytes } from "./images";
-import { pageTitleOf, type LocationPageKey } from "./location-page-input";
+import type { LocationPageRef } from "./location-page-input";
+import type { SitePageKey } from "./site-page-input";
 import { andList, compareNames, plural } from "./names";
 
 /**
@@ -14,21 +15,40 @@ import { andList, compareNames, plural } from "./names";
 /** A location's name and slug, as a use names it. */
 type LocationRef = { id: string; name: string; slug: string };
 
+/**
+ * A page a file is on: a location's, by its section and slug, or one of the
+ * site's own; with the title the screens give it, "Eagle Square",
+ * "Coach charter page", "About us".
+ */
+export type MediaPage =
+  | { site: false; location: LocationRef; ref: LocationPageRef; title: string }
+  | { site: true; page: SitePageKey; title: string };
+
+/** One key per page, to see a page once. */
+export function mediaPageKey(on: MediaPage) {
+  return on.site
+    ? `site|${on.page}`
+    : `${on.location.id}|${on.ref.page}|${on.ref.slug}`;
+}
+
+/** Where a page is, as the Media screen names it: "Langkawi · Eagle Square", "Site · About us". */
+export function mediaPageName(on: MediaPage) {
+  return `${on.site ? "Site" : on.location.name} · ${on.title}`;
+}
+
 /** One place a file is used, by its UploadThing key. */
 export type MediaUse =
-  /** On a location's page: its working copy, its published copy, or both. */
+  /** On a page: its working copy, its published copy, or both. */
   | {
       kind: "page";
-      location: LocationRef;
-      page: LocationPageKey;
+      on: MediaPage;
       draft: boolean;
       published: boolean;
     }
   /** On a page only as a past version showed it: the newest such publish, by its log entry. */
   | {
       kind: "earlier";
-      location: LocationRef;
-      page: LocationPageKey;
+      on: MediaPage;
       entryId: string;
     }
   /** A vehicle class's picture. */
@@ -45,7 +65,7 @@ export const MEDIA_GRACE_HOURS = 24;
 
 /**
  * Where a file stands: used by a page, a class or a vehicle; shown only by
- * a page's past version, which a location's History shows as it was
+ * a page's past version, which the page's History shows as it was
  * published; used by nothing; or used by nothing but just uploaded
  * (`MEDIA_GRACE_HOURS`).
  */
@@ -98,7 +118,7 @@ export function isMediaFilter(value: unknown): value is MediaFilter {
   return typeof value === "string" && Object.hasOwn(MEDIA_FILTERS, value);
 }
 
-/** Whether the Media screen may delete a file: not one on a location's page, which is replaced there first. */
+/** Whether the Media screen may delete a file: not one on a page, which is replaced there first. */
 export function isOnPage(uses: readonly MediaUse[]) {
   return uses.some((use) => use.kind === "page");
 }
@@ -113,7 +133,7 @@ export type MediaToDelete = {
 
 /**
  * Why the files cannot be deleted from Media, or null when they can: one
- * is on a location's page, where Marketing replaces it and publishes,
+ * is on a page, where Marketing replaces it and publishes,
  * so a public page never changes without a publish.
  */
 export function mediaDeleteRefusal(
@@ -122,7 +142,7 @@ export function mediaDeleteRefusal(
   const onPage = files.filter((file) => isOnPage(file.uses));
   if (onPage.length === 0) return null;
   const names = onPage.map((file) => file.name);
-  return `${andList(names)} ${names.length === 1 ? "is" : "are"} on a location's page. Replace ${names.length === 1 ? "it" : "them"} there first.`;
+  return `${andList(names)} ${names.length === 1 ? "is" : "are"} on a page. Replace ${names.length === 1 ? "it" : "them"} there first.`;
 }
 
 /**
@@ -170,7 +190,7 @@ export function mediaDeleteImpact(
   const pages = new Map<string, number>();
   for (const use of uses) {
     if (use.kind === "earlier") {
-      const where = `${use.location.name} · ${pageTitleOf(use.page)}`;
+      const where = mediaPageName(use.on);
       pages.set(where, (pages.get(where) ?? 0) + 1);
     }
   }

@@ -22,11 +22,8 @@
 // Running it again changes nothing.
 import { db } from "../src/client";
 import { DISTRICT_DATA, districtShape } from "../src/district-index";
-import {
-  LANDING_PAGE,
-  PAGE_LOCALE,
-  pageContentOf,
-} from "../src/location-page-input";
+import { LANDING_PAGE } from "../src/location-page-input";
+import { PAGE_LOCALE, pageContentOf } from "../src/page-content";
 import { isPlace } from "../src/place";
 import { zoneAt } from "../src/zone-match";
 
@@ -40,7 +37,7 @@ const locations = await db.location.findMany({
     states: { select: { code: true } },
     zones: { select: { id: true, name: true, shape: true } },
     offerings: { select: { vehicleClassId: true } },
-    pages: { where: { page: LANDING_PAGE, locale: PAGE_LOCALE } },
+    pages: { where: { page: LANDING_PAGE, slug: "", locale: PAGE_LOCALE } },
   },
 });
 
@@ -94,21 +91,25 @@ let taglinesMoved = 0;
 for (const location of locations) {
   if (!location.tagline) continue;
   const row = location.pages[0];
-  const draft = pageContentOf(LANDING_PAGE, row?.draft);
+  const draft = pageContentOf("landing", row?.draft);
   const published =
     row && row.published !== null
-      ? pageContentOf(LANDING_PAGE, row.published)
+      ? pageContentOf("landing", row.published)
       : null;
   if (draft.tagline !== "" || (published && published.tagline !== "")) {
     continue;
   }
+  // The stored JSON is spread, not the content read from it, so a field the
+  // content no longer reads stays as it is.
+  const raw = (value: unknown) =>
+    typeof value === "object" && value !== null ? value : {};
   if (row) {
     await db.locationPage.update({
       where: { id: row.id },
       data: {
-        draft: { ...draft, tagline: location.tagline },
-        ...(published
-          ? { published: { ...published, tagline: location.tagline } }
+        draft: { ...raw(row.draft), tagline: location.tagline },
+        ...(row.published !== null
+          ? { published: { ...raw(row.published), tagline: location.tagline } }
           : {}),
       },
     });

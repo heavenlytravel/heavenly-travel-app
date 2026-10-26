@@ -5,11 +5,9 @@ import {
   CalendarCheckIcon,
   CarFrontIcon,
   CarIcon,
-  ExternalLinkIcon,
   FilesIcon,
   FileTextIcon,
   HistoryIcon,
-  HouseIcon,
   IdCardIcon,
   ImageIcon,
   LayoutDashboardIcon,
@@ -51,7 +49,6 @@ export const MENU_ICONS = {
   pages: FilesIcon,
   page: FileTextIcon,
   addresses: MapPinIcon,
-  "home-page": HouseIcon,
   settings: SettingsIcon,
   general: SlidersHorizontalIcon,
   history: HistoryIcon,
@@ -59,7 +56,6 @@ export const MENU_ICONS = {
   admins: ShieldCheckIcon,
   activity: ActivityIcon,
   media: ImageIcon,
-  "public-page": ExternalLinkIcon,
 };
 
 export type MenuIcon = keyof typeof MENU_ICONS;
@@ -88,6 +84,8 @@ export type MenuEntry = {
   mark?: MenuMark;
   /** A disc before the label: a page's standing. */
   dot?: "green" | "amber" | "grey";
+  /** Other paths that are the page too, each with the paths under it: a section's editors are its list's. */
+  paths?: readonly string[];
 };
 
 /** A section's pages, listed in place of the menu while one of them is on screen. */
@@ -123,8 +121,6 @@ export type MenuRow = {
   note?: string;
   /** The setup step the row holds, while the location is a draft. */
   mark?: MenuMark;
-  /** Opens in a new tab: the public page. */
-  external?: boolean;
   /** The section's pages, listed in place of the menu while one of them is on screen. */
   drill?: MenuDrill;
 };
@@ -161,7 +157,10 @@ export function rowHolds(row: MenuRow, pathname: string): boolean {
   if (row.exact ? pathname === own : within(pathname, own)) return true;
   return [
     ...(row.paths ?? []),
-    ...pagesOf(row.drill?.entries ?? []).map((entry) => pathOf(entry.href)),
+    ...pagesOf(row.drill?.entries ?? []).flatMap((entry) => [
+      pathOf(entry.href),
+      ...(entry.paths ?? []),
+    ]),
   ].some((path) => within(pathname, path));
 }
 
@@ -172,16 +171,46 @@ export function rowOnScreen(menu: Menu, pathname: string): MenuRow | undefined {
     .find((row) => rowHolds(row, pathname));
 }
 
-/** The page of a drill on screen: the one with the longest address that the path is, or is under. */
+/**
+ * How near the address on screen is to a drill's page: the length of the
+ * longest of its paths that the path on screen is, or is under; -1 when
+ * none. A page whose link narrows a list, a section's list of pages, is on
+ * screen at that list with the same values alone, nearer than the list.
+ */
+function nearness(
+  entry: MenuEntry,
+  pathname: string,
+  search: URLSearchParams | null,
+): number {
+  const path = pathOf(entry.href);
+  const query = new URLSearchParams(entry.href.split(/[?#]/)[1] ?? "");
+  const paths = (entry.paths ?? []).filter((other) => within(pathname, other));
+  const own =
+    query.size === 0
+      ? within(pathname, path)
+        ? path.length
+        : -1
+      : pathname === path &&
+          [...query].every(([key, value]) => search?.get(key) === value)
+        ? path.length + 1
+        : -1;
+  return Math.max(own, ...paths.map((other) => other.length));
+}
+
+/** The page of a drill on screen: the nearest to the address (`nearness`), its query read off `search`. */
 export function entryOnScreen(
   entries: readonly MenuEntry[],
   pathname: string,
+  search: URLSearchParams | null = null,
 ): MenuEntry | undefined {
   let found: MenuEntry | undefined;
+  let best = -1;
   for (const entry of pagesOf(entries)) {
-    const path = pathOf(entry.href);
-    if (!within(pathname, path)) continue;
-    if (!found || path.length > pathOf(found.href).length) found = entry;
+    const near = nearness(entry, pathname, search);
+    if (near > best) {
+      found = entry;
+      best = near;
+    }
   }
   return found;
 }

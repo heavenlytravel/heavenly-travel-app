@@ -4,8 +4,11 @@ import { db } from "./client";
 import { driversDueWhere } from "./drivers";
 import type { Location } from "./generated/prisma/client";
 import type { OperationStanding } from "./location-input";
-import { PAGE_LOCALE } from "./location-page-input";
-import { standingsOf, type PageSummary } from "./locations";
+import {
+  pagesForStandings,
+  standingsOf,
+  type PageSummary,
+} from "./location-pages";
 import { vehiclesDueWhere } from "./vehicles";
 
 /**
@@ -34,7 +37,7 @@ export type LocationOverview = Pick<
     vehiclesDue: number;
     /** Active drivers here with a licence due within the warning, or expired. */
     driversDue: number;
-    /** Where each page stands and its hero image, in the order of `LOCATION_PAGES`. */
+    /** Where each page stands and its hero image, in their order (`standingsOf`). */
     pages: PageSummary[];
     /** The newest logged change to the location; null when none is logged. */
     changedAt: Date | null;
@@ -102,10 +105,7 @@ async function overviewsOf(
           },
         },
         states: { select: { name: true }, orderBy: { name: "asc" } },
-        pages: {
-          where: { locale: PAGE_LOCALE },
-          select: { page: true, isOn: true, draft: true, published: true },
-        },
+        ...pagesForStandings,
       },
     }),
     db.locationVehicleClass.groupBy({
@@ -189,7 +189,7 @@ async function overviewsOf(
     changes.map((row) => [row.entityId, row._max.createdAt]),
   );
 
-  return locations.map(({ _count, states, pages, ...location }) => ({
+  return locations.map(({ _count, states, pages, offerings, ...location }) => ({
     ...location,
     stateNames: states.map((state) => state.name),
     classesOnSale: classesOnSale.get(location.id) ?? 0,
@@ -202,7 +202,7 @@ async function overviewsOf(
     drivers: _count.drivers,
     vehiclesDue: vehiclesDueAt.get(location.id) ?? 0,
     driversDue: driversDueAt.get(location.id) ?? 0,
-    pages: standingsOf(pages),
+    pages: standingsOf(pages, offerings),
     changedAt: changedAt.get(location.id) ?? null,
   }));
 }

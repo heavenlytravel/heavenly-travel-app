@@ -531,6 +531,11 @@ One-off copies, run once per database after `db:push`, as
 
 ### The search card
 
+Changed on 2026-10-25: the card no longer keeps to the location. It searches all of
+Malaysia with the location's area first, and "Get my price" goes to the options page as the
+home card does; see `261025-marketing-pages.md`, "The search card". What follows is the
+card as it was.
+
 Added 2026-10-21. On a location's pages the search card keeps to the location
 (`location-search.ts` for the card, `search-areas.ts` on the server):
 

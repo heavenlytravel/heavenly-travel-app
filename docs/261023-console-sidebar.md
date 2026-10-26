@@ -44,8 +44,8 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 
 ### A location
 
-- Overview, Bookings, Fleet; Selling: Coverage, Rates; Manage: Pages, Settings, and the
-  public page once it is public. The same rows in the same places in every state,
+- Overview, Bookings, Fleet; Selling: Coverage, Rates; Manage: Pages, Settings. (The
+  public page's row went on 2026-10-25, `261025-marketing-pages.md`.) The same rows in the same places in every state,
   so going live moves nothing; a draft has no Bookings row, since it takes no bookings.
 - The first row is Overview in every state and scope; a live location's overview is still
   its day.
@@ -78,8 +78,10 @@ sections open in its place, under a way back. This replaces "The sidebar" of
 - Fleet, decided by the CEO on 2026-10-25: Vehicles, Drivers, Vehicle classes, in either
   scope. An admin who may open one of them alone (Reservation and Sales read the classes,
   not the vehicles) sees that page's row in Fleet's place, with no drill.
-- A location's Pages: All pages (the tiles and the saved addresses), each page with its
-  standing, and Saved addresses, a jump to their card.
+- A location's Pages: All pages (every page in one list, then the saved addresses), the
+  main page and each section with its own page's standing (a section with pages under it
+  opens its list, All pages narrowed to it, and stays lit on their editors and its own,
+  `261025-marketing-pages.md`), and Saved addresses, a jump to their card.
 - A location's Settings: General, its state as the note, and History, the date of the last
   change as the note.
 - All locations' Settings, for SUPER: Users, Admins, Activity, Media. The Settings screen
@@ -123,13 +125,15 @@ and the third declined.
 
 ### All locations
 
-- Overview, Bookings, Fleet; Selling: Coverage, Rates; Manage: Home page, Settings.
+- Overview, Bookings, Fleet; Selling: Coverage, Rates; Manage: Pages, Settings (Pages
+  across locations, which holds the website's own pages too and replaces Home page, since
+  `261025-marketing-pages.md`).
 - Fleet holds the class catalogue beside the vehicles and drivers, at `/vehicle-classes`,
   as staff asked: a vehicle is of a model of a class. It replaces the Classes tab Vehicles
   had in the first cut of this change.
 - The home's title is Overview, as its row.
 - The picker keeps the section across the two scopes as before, and a location's Pages
-  and the home page are now one section in it.
+  and Pages across locations are now one section in it.
 
 ### Search
 
@@ -194,7 +198,9 @@ foot of every page: Search, then the menu button.
 ## How it is built
 
 - `_components/menu.ts`: the menus as data (`Menu`, `MenuRow`, `MenuEntry`), each icon by
-  its name (`MENU_ICONS`), and which row and which page of a drill are on screen.
+  its name (`MENU_ICONS`), and which row and which page of a drill are on screen: the
+  page whose address, or one of its `paths`, is nearest the one on screen; a page whose
+  link narrows a list by its query is on screen only at that list with the same values.
 - `_components/ConsoleMenu.tsx`: draws a menu, its drills and the way back, in the browser.
 - `_components/nav.ts`: All locations (`ALL_LOCATIONS_NAV`, `allLocationsMenu`) and the
   section for the header's trail (`sectionOnScreen`). The phone's strip of a location's

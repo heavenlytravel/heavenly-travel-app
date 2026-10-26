@@ -53,13 +53,26 @@ The running apps read their own `.env.local`, so nothing here affects a dev serv
 
 ```sh
 pnpm db:push         # development branch
-pnpm db:push:prod    # production branch, asks you to type "production" first
+pnpm db:push:prod    # rehearses on a copy of production, then asks you to type "production"
 pnpm db:studio       # browse development data
 ```
 
 Every `*:prod` script in `packages/db` goes through `scripts/with-production-db.ts`,
 which swaps in the production URL for that one command after the typed confirmation.
 Push to development first, test, then push to production before merging the PR.
+
+The scripts that write (all but `db:studio:prod`) pass `--rehearse`. The command
+first runs against a throwaway Neon branch named `rehearsal-<time>`, copied from
+production that second through the Neon API (`NEON_API_KEY` and `NEON_PROJECT_ID`
+in `packages/db/.env`). Prisma's data-loss warnings and any script error show up
+there first. Production is offered only when the rehearsal exits cleanly, and the
+branch is deleted at the end either way, Ctrl+C included. If the deletion fails,
+the script names the branch to delete in the Neon console.
+
+A rehearsal is not a backup. If production is damaged anyway, Neon's instant
+restore rewinds the `production` branch to a moment within its history window
+(Settings in the Neon console). That also rewinds every write since, bookings
+included, so for a partial loss restore into a new branch and copy the rows back.
 
 `prisma generate` runs on install and on build.
 

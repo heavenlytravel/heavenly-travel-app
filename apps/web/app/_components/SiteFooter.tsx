@@ -12,7 +12,6 @@ import {
   type FooterLink,
   type SocialNetwork,
 } from "@repo/db";
-import { focus } from "../(site)/_components/Page";
 import { Photo } from "./Brand";
 
 /**
@@ -21,7 +20,8 @@ import { Photo } from "./Brand";
  * "Get in touch"; the bodies the company is registered with and the ways
  * to pay; then the copyright line with its links. A part with nothing in
  * it is left out and the others close up. `content` is the footer as it is
- * shown, its links to pages the public cannot open already left out.
+ * shown, its links to pages the public cannot open already left out. It
+ * sits on the site's navy, its words in white, its headings light blue.
  */
 export function SiteFooter({ content }: { content: FooterContent }) {
   const year = new Date().getFullYear();
@@ -38,7 +38,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   const hasLower = content.badges.length > 0 || content.paymentLogos.length > 0;
 
   return (
-    <footer className="border-t border-slate-200 bg-mist text-[0.95rem] text-slate-700">
+    <footer className="bg-navy text-[0.95rem] text-white">
       <div className="px-5 py-12 sm:px-[clamp(20px,5vw,78px)] sm:pt-16 sm:pb-12">
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
@@ -48,14 +48,15 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                 aria-label="Heavenly Travel home"
                 className={`inline-block ${focus}`}
               >
+                {/* The blue logo, drawn white on the blue. */}
                 <Photo
                   src="/brand/logo-blue.svg"
                   alt="Heavenly, your travel engineer"
-                  className="h-10 w-auto"
+                  className="h-10 w-auto brightness-0 invert"
                 />
               </Link>
               {content.tagline && (
-                <p className="mt-4 leading-relaxed text-slate-500">
+                <p className="mt-4 leading-relaxed text-white/90">
                   {content.tagline}
                 </p>
               )}
@@ -87,7 +88,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`inline-flex items-center gap-2.5 ${linkClass} [&:hover>svg]:text-brand`}
+                          className={`inline-flex items-center gap-2.5 ${linkClass}`}
                         >
                           <SocialGlyph network={network} />
                           {SOCIAL_NETWORK_LABELS[network]}
@@ -129,7 +130,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                       </a>
                     )}
                     {address.length > 0 && (
-                      <span className="leading-relaxed text-slate-500">
+                      <span className="leading-relaxed text-white/90">
                         {address.map((line, i) => (
                           <span key={i} className="block lg:whitespace-nowrap">
                             {line}
@@ -144,7 +145,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
           </div>
 
           {hasLower && (
-            <div className="mt-11 grid gap-9 border-t border-slate-200 pt-8 lg:grid-cols-[1fr_1.5fr] lg:items-start lg:gap-16">
+            <div className="mt-11 grid gap-9 border-t border-white/25 pt-8 lg:grid-cols-[1fr_1.5fr] lg:items-start lg:gap-16">
               {content.badges.length > 0 && (
                 <section aria-labelledby="footer-badges">
                   <Heading id="footer-badges">{content.badgesHeading}</Heading>
@@ -152,7 +153,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {content.badges.map((badge, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-3 text-[0.875rem] text-slate-600"
+                        className="flex items-center gap-3 text-[0.875rem] text-white/90"
                       >
                         {badge.image && (
                           <Image
@@ -161,11 +162,11 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                             height={badge.image.height}
                             alt=""
                             sizes="120px"
-                            className="h-12 w-auto max-w-[120px] object-contain"
+                            className="h-14 w-auto max-w-[120px] rounded-lg bg-white object-contain p-1"
                           />
                         )}
                         <span>
-                          <strong className="block text-[0.95rem] text-ink">
+                          <strong className="block text-[0.95rem] text-white">
                             {badge.name}
                           </strong>
                           {badge.detail}
@@ -188,7 +189,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {content.paymentLogos.map((logo, i) => (
                       <li
                         key={i}
-                        className="grid h-14 place-items-center rounded-[10px] border border-slate-200 bg-white px-2"
+                        className="grid h-14 place-items-center rounded-[10px] bg-white px-2"
                       >
                         <Image
                           src={logo.url}
@@ -202,7 +203,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     ))}
                   </ul>
                   {content.paymentNote && (
-                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-slate-500">
+                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-white/90">
                       <LockGlyph />
                       {content.paymentNote}
                     </p>
@@ -214,7 +215,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
         </div>
       </div>
 
-      <div className="border-t border-slate-200 px-5 py-[18px] text-[0.875rem] text-slate-500 sm:px-[clamp(20px,5vw,78px)]">
+      <div className="border-t border-white/25 px-5 py-[18px] text-[0.875rem] text-white/90 sm:px-[clamp(20px,5vw,78px)]">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <p>
             {copyrightOf(content, year)}
@@ -235,14 +236,18 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   );
 }
 
-const linkClass = `underline-offset-4 hover:text-brand hover:underline ${focus}`;
+/** The focus ring, white: it shows on the navy as the site's blue ring would not. */
+const focus =
+  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white";
+
+const linkClass = `text-white underline-offset-4 hover:underline ${focus}`;
 
 /** A heading over a part of the footer; `id` names the part for a screen reader. */
 function Heading({ id, children }: { id?: string; children: string }) {
   return (
     <h2
       id={id}
-      className="mb-4 text-[0.8rem] font-bold tracking-[0.18em] text-slate-500 uppercase lg:whitespace-nowrap"
+      className="mb-4 text-[0.8rem] font-bold tracking-[0.18em] text-azure-light uppercase lg:whitespace-nowrap"
     >
       {children}
     </h2>
@@ -284,7 +289,7 @@ const glyph = {
   width: 18,
   height: 18,
   "aria-hidden": true,
-  className: "shrink-0 text-navy",
+  className: "shrink-0",
 } as const;
 
 /** The mark of a social network, in the link's colour. */

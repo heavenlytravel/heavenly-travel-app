@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { AuthShell } from "@repo/ui/auth-shell";
 import { redirect } from "next/navigation";
 import { Photo } from "../_components/Brand";
+import { Footer } from "../_components/Footer";
 import { fontVars } from "../_home/fonts";
 
 const focus =
@@ -11,8 +12,9 @@ const focus =
 
 /**
  * The customer site's sign-in and sign-up pages: the home page fonts, the
- * logo above the form, the Langkawi hero on the left from `lg` up. Someone
- * already signed in is sent on from the server, so the form never flashes.
+ * logo above the form, the Langkawi hero on the left from `lg` up, and the
+ * site's footer under them. Someone already signed in is sent on from the
+ * server, so the form never flashes.
  */
 export default async function AuthLayout({
   children,
@@ -53,6 +55,7 @@ export default async function AuthLayout({
       >
         {children}
       </AuthShell>
+      <Footer />
     </div>
   );
 }

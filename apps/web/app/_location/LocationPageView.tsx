@@ -49,21 +49,15 @@ import {
 } from "../_components/page-parts";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
-import {
-  HOME_SEARCH_CARD,
-  SEARCH_CARD_ID,
-  type ProductKey,
-} from "../_lib/search";
+import { SEARCH_CARD_ID, type ProductKey } from "../_lib/search";
 import { vehicleClassCards, type VehicleClassCard } from "../_lib/locations";
-import { Closing } from "../_home/Sections";
 import { TakeMeHere } from "./LocationSearch";
 import { crumbsOf, structuredDataOf, type Crumb } from "./seo";
 
 /**
- * One page of a location, laid out by its kind, then the closing call.
- * Every page but the blog's opens with the hero and the search card on its
- * floor; the blog reads as a blog, its pages opening with their title and
- * cover and no card, and its closing call goes to the main page's card.
+ * One page of a location, laid out by its kind. Every page but the blog's
+ * opens with the hero and the search card on its floor; the blog reads as
+ * a blog, its pages opening with their title and cover and no card.
  * Then by kind: the main page offers the services, the intro, the popular
  * places, the newest posts and the FAQs; a service's page its classes or
  * its places, the intro and the FAQs; a page that lists others, its cards;
@@ -134,16 +128,6 @@ export async function LocationPageView({
           />
         </>
       )}
-      <div className="pt-[60px] sm:pt-[88px]">
-        {/* Paused, the card is a notice: the price is asked on the home page. */}
-        <Closing
-          priceHref={
-            location.state === "paused"
-              ? HOME_SEARCH_CARD
-              : `${isBlog ? pathOf() : ""}#${SEARCH_CARD_ID}`
-          }
-        />
-      </div>
     </>
   );
 }

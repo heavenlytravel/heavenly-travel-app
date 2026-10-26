@@ -168,6 +168,8 @@ const ACTIONS = {
   "site.page.published": { entityType: "site-page", customerVisible: false },
   /** A site page's key and whether it is published. */
   "site.page.updated": { entityType: "site-page", customerVisible: false },
+  /** The footer's whole content, before and after. Logged against `FOOTER_KEY`. */
+  "site.footer.published": { entityType: "site-page", customerVisible: false },
   /**
    * The name, the slug, the state codes and the state it had, in
    * `before`: the row is gone, and its other entries are named from this one.
@@ -845,6 +847,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Published ${sitePageName(entry.after)}`;
     case "site.page.updated":
       return `Unpublished ${sitePageName(entry.after)}`;
+    case "site.footer.published":
+      return "Published the footer";
     case "location.offering.created":
       return `Started selling ${className(entry.after)}`;
     case "location.offering.updated":

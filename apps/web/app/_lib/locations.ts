@@ -9,6 +9,7 @@ import {
   getPublicLocation,
   listActiveOfferingsAt,
   cheapestCellsAt,
+  listPublicLocationSlugs,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
@@ -110,6 +111,17 @@ export const locationSearchPreview = cache(getLocationSearch);
 export const topChoiceCards = unstable_cache(
   listTopChoiceCards,
   ["top-choice-cards"],
+  { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
+);
+
+/**
+ * The slugs of the locations the public sees, for the footer's links. A
+ * location going live, paused or deleted refreshes the top choices' tag,
+ * so the list is kept under it.
+ */
+export const publicLocationSlugs = unstable_cache(
+  listPublicLocationSlugs,
+  ["public-location-slugs"],
   { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
 );
 

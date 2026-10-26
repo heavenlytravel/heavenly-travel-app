@@ -1,23 +1,31 @@
 import "server-only";
 import {
-  FOOTER_SITE_PAGES,
   SITE_PAGES_TAG,
-  SITE_PAGE_LABELS,
+  defaultFooterContent,
+  getFooter,
+  getPublishedFooter,
   getSitePage,
+  isSitePageKey,
   listPublishedSitePages,
-  sitePagePath,
+  visibleFooterOf,
+  type FooterContent,
   type PublishedSitePage,
   type SitePageKey,
 } from "@repo/db/server";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { REFRESH_SECONDS } from "./locations";
+import {
+  REFRESH_SECONDS,
+  publicLocationSlugs,
+  topChoiceCards,
+} from "./locations";
 
 /**
  * What the customer site reads of the site's own pages, cached under one
- * tag: the home page's content, the documents and the footer's links. The
- * admin names the tag after a publish or an unpublish. The preview reads
- * the drafts directly. See docs/261025-marketing-pages.md, "Site pages".
+ * tag: the home page's content, the documents and the footer. The admin
+ * names the tag after a publish or an unpublish. The preview reads the
+ * drafts directly. See docs/261025-marketing-pages.md, "Site pages", and
+ * docs/261026-site-footer.md.
  */
 
 /** The version of what the cache holds; a change to its shape bumps it. */
@@ -40,11 +48,36 @@ export async function publishedSitePage(
 /** A site page's draft, for the staff preview, read fresh. Once per request. */
 export const sitePageDraft = cache(getSitePage);
 
-/** The company's pages the footer links: those published, in its order. */
-export async function footerLinks() {
-  const pages = await publishedSitePages();
-  return FOOTER_SITE_PAGES.filter((page) => pages[page]).map((page) => ({
-    href: sitePagePath(page),
-    label: SITE_PAGE_LABELS[page],
-  }));
+/** The footer as published; null until its first publish. */
+const publishedFooter = unstable_cache(
+  getPublishedFooter,
+  ["published-footer", String(SITE_PAGES_VERSION)],
+  { tags: [SITE_PAGES_TAG], revalidate: REFRESH_SECONDS },
+);
+
+/** The footer the public is shown: the published one, else the default with the home page's top choices. */
+export async function publicFooter(): Promise<FooterContent> {
+  return (
+    (await publishedFooter()) ?? defaultFooterContent(await topChoiceCards())
+  );
+}
+
+/** The footer's draft, for the staff preview, read fresh. Once per request. */
+export const footerDraft = cache(async () => (await getFooter()).draft);
+
+/**
+ * The footer as a page shows it, public or a staff preview's draft: each
+ * link to a site page that is not published or a location that is not
+ * public left out, so none leads to a 404.
+ */
+export async function shownFooter(preview: boolean): Promise<FooterContent> {
+  const [content, pages, locations] = await Promise.all([
+    preview ? footerDraft() : publicFooter(),
+    publishedSitePages(),
+    publicLocationSlugs(),
+  ]);
+  return visibleFooterOf(content, {
+    pages: new Set(Object.keys(pages).filter(isSitePageKey)),
+    locations: new Set(locations),
+  });
 }

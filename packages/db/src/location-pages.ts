@@ -9,9 +9,11 @@ import type {
   Prisma,
 } from "./generated/prisma/client";
 import {
+  LOCATION_STATES,
   TOP_CHOICE_CAP,
   checkLocationSlug,
   checkPageUnpublish,
+  isPublicState,
   locationStateOf,
   type PageStanding,
 } from "./location-input";
@@ -295,6 +297,28 @@ export async function listTopChoiceCards(): Promise<TopChoiceCard[]> {
     const view = publicLocationViewOf({ ...location, offerings: [] });
     return view ? [topChoiceCardOf(view)] : [];
   });
+}
+
+/**
+ * The locations the public sees, by slug: live or paused, with their main
+ * page published. The footer leaves out a link to any other.
+ */
+export async function listPublicLocationSlugs(): Promise<string[]> {
+  const locations = await db.location.findMany({
+    where: { state: { in: LOCATION_STATES.filter(isPublicState) } },
+    select: {
+      slug: true,
+      pages: {
+        where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" },
+        select: { isOn: true, published: true },
+      },
+    },
+  });
+  return locations
+    .filter(({ pages }) =>
+      pages.some((page) => publicCopyOf("landing", page) !== null),
+    )
+    .map((location) => location.slug);
 }
 
 /** One page of a location, as its editor opens it. */

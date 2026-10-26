@@ -1,6 +1,5 @@
 import type { SitePageKey } from "@repo/db/server";
-import { Closing } from "../_home/Sections";
-import { HOME_SEARCH_CARD } from "../_lib/search";
+import { publicFooter } from "../_lib/site-pages";
 import { SiteDocumentView } from "./SiteDocumentView";
 import { SiteFrame } from "./SiteFrame";
 import { publishedDocumentAt } from "./routes";
@@ -19,8 +18,8 @@ export async function SiteDocumentPage({ page }: { page: SitePageKey }) {
         page={page}
         content={shown.content}
         publishedAt={shown.publishedAt}
+        footer={await publicFooter()}
       />
-      <Closing priceHref={HOME_SEARCH_CARD} />
     </SiteFrame>
   );
 }

@@ -17,10 +17,11 @@ type SitePageStanding = { page: SitePageKey; status: PageStatus };
 
 /**
  * What the site's own pages share: the home page's type and palette, the
- * header, and the footer. `overlay` floats the header over the home page's
- * hero. `preview` is the page a staff preview shows, and floats the
- * preview bar over it: where the page stands, its editor, and the way to
- * every site page, `pages`, each with where it stands.
+ * header, and the footer, its draft on a staff preview. `overlay` floats
+ * the header over the home page's hero. `preview` is the page a staff
+ * preview shows, and floats the preview bar over it: where the page
+ * stands, its editor, and the way to every site page, `pages`, each with
+ * where it stands.
  */
 export function SiteFrame({
   overlay = false,
@@ -37,7 +38,7 @@ export function SiteFrame({
     >
       <MarketingHeader overlay={overlay} />
       {children}
-      <Footer />
+      <Footer preview={preview !== undefined} />
       {preview && (
         <PreviewBar
           name={SITE_PAGE_LABELS[preview.page]}

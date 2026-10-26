@@ -17,6 +17,7 @@ export {
   listLocationHistory,
   listPagePublishes,
   listSitePagePublishes,
+  listFooterPublishes,
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
@@ -161,6 +162,7 @@ export {
   getLocationPreview,
   getLocationPageBody,
   listTopChoiceCards,
+  listPublicLocationSlugs,
   listLocationPages,
   saveLocationPageDraft,
   publishLocationPage,
@@ -193,6 +195,20 @@ export type {
   SitePagePublish,
   PublishedSitePage,
 } from "./site-pages";
+export {
+  getDefaultFooter,
+  getFooter,
+  getFooterPublish,
+  getFooterSummary,
+  getPublishedFooter,
+  saveFooterDraft,
+  publishFooter,
+} from "./site-footer";
+export type {
+  FooterDetails,
+  FooterPublish,
+  FooterSummary,
+} from "./site-footer";
 export { quoteTrip, prepareTripItem } from "./transportation";
 export { listQuoteLocations } from "./coverage";
 export type {
@@ -278,6 +294,7 @@ export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";
+export * from "./footer-content";
 export * from "./location-view";
 export * from "./location-search";
 export * from "./search";

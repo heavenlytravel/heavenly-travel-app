@@ -106,14 +106,11 @@ const TRIP_FIELDS: FieldDef[] = [
 
 /**
  * The id of the element that holds the search card; filling a field from
- * elsewhere on the page scrolls to it, and "Get my price" links to it. Kept
- * out of the card's client module: a server component importing a value
- * from there gets a client reference, not the string.
+ * elsewhere on the page scrolls to it. Kept out of the card's client
+ * module: a server component importing a value from there gets a client
+ * reference, not the string.
  */
 export const SEARCH_CARD_ID = "booking";
-
-/** Where the home page's search card is, for a page without one. */
-export const HOME_SEARCH_CARD = `/#${SEARCH_CARD_ID}`;
 
 export const PRODUCTS: Record<ProductKey, Product> = {
   "car-with-driver": {

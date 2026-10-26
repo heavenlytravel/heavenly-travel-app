@@ -88,15 +88,6 @@ export function sitePagePreviewPath(page: SitePageKey) {
   return page === HOME_PAGE ? "/preview" : `/preview${sitePagePath(page)}`;
 }
 
-/** The site pages the footer links, in its order, when they are published. */
-export const FOOTER_SITE_PAGES: readonly SitePageKey[] = [
-  "about-us",
-  "contact-us",
-  "terms",
-  "privacy-policy",
-  "refund-policy",
-];
-
 /**
  * Whether a site page can be unpublished. The home page stays published
  * once it is: unpublished, it would fall back to the text it had before

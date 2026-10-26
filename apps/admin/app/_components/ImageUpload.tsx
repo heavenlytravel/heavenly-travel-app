@@ -2,6 +2,7 @@
 
 import { IMAGE_MAX_MB, IMAGE_TYPES, type UploadedImage } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { cx } from "@repo/ui/cx";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useImageUpload } from "./use-image-upload";
@@ -20,6 +21,7 @@ export function ImageUpload({
   src,
   alt,
   onChange,
+  look = "picture",
 }: {
   /** What the image is, as a screen reader hears the controls: "Hero image". */
   label: string;
@@ -29,6 +31,8 @@ export function ImageUpload({
   src: string | null;
   alt: string;
   onChange: (image: UploadedImage | null) => void;
+  /** How the image shows: a picture, or a small logo on white. */
+  look?: "picture" | "logo";
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, error } = useImageUpload(
@@ -51,7 +55,10 @@ export function ImageUpload({
             const { naturalWidth, naturalHeight } = event.currentTarget;
             setSize(`${naturalWidth} × ${naturalHeight}`);
           }}
-          className="h-40 w-auto max-w-full rounded-md border border-slate-200 object-contain"
+          className={cx(
+            "w-auto max-w-full rounded-md border border-slate-200 object-contain",
+            look === "logo" ? "h-16 bg-white p-1" : "h-40",
+          )}
         />
       ) : null}
 

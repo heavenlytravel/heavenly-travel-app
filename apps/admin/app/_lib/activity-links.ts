@@ -117,9 +117,10 @@ export function activityEntryHref(
     case "media":
       return may("media.manage") ? MEDIA_PATH : null;
     case "site-page":
-      // A publish opens the page before and after; any other entry, its editor.
+      // A publish opens the page or the footer before and after; any other entry, its editor.
       if (!may("website.manage")) return null;
-      return entry.action === "site.page.published"
+      return entry.action === "site.page.published" ||
+        entry.action === "site.footer.published"
         ? sitePagePublishHref(entry.id)
         : sitePageHref(entry.entityId);
     default:

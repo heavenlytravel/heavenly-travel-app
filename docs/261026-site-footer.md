@@ -68,9 +68,10 @@ footer at all.
   takes one the footer shows. A shipped one is no file of Media's.
 - **The payment marks** are HitPay's own set for merchants, from the assets of its
   WooCommerce plugin (`hit-pay/woocommerce`, `assets/images`), with the card frame each
-  is drawn in taken off so it sits on the footer's white tile. They are in
-  `apps/web/public/brand/payments`. ShopeePay's is a small picture inside the file, so
-  it shows softer than the others; upload a sharper one to replace it.
+  is drawn in taken off and its blank margin trimmed, so it fills the footer's white
+  square. They are in `apps/web/public/brand/payments`. ShopeePay's is a small picture
+  inside the file, so it shows softer than the others; upload a sharper one to replace
+  it.
 
 ## How it is built
 

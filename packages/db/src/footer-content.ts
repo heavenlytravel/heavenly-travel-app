@@ -111,7 +111,7 @@ function footerImageOf(value: unknown): FooterImage | null {
   return { url, key: "", width, height, alt: lineOf(alt) };
 }
 
-/** A logo the customer site ships, by its file, size and name. */
+/** A logo the customer site ships, by its file, name and size; a payment mark's is ten times its SVG's. */
 const bundled = (
   url: string,
   alt: string,
@@ -125,14 +125,14 @@ const bundled = (
  * footer's, and those the editor offers to add back.
  */
 export const BUNDLED_PAYMENT_LOGOS: readonly FooterImage[] = [
-  bundled("/brand/payments/visa.svg", "Visa"),
-  bundled("/brand/payments/mastercard.svg", "Mastercard"),
-  bundled("/brand/payments/fpx.svg", "FPX online banking"),
-  bundled("/brand/payments/duitnow.svg", "DuitNow QR"),
-  bundled("/brand/payments/touch-n-go.svg", "Touch 'n Go eWallet"),
-  bundled("/brand/payments/grabpay.svg", "GrabPay"),
-  bundled("/brand/payments/shopeepay.svg", "ShopeePay"),
-  bundled("/brand/payments/boost.svg", "Boost"),
+  bundled("/brand/payments/visa.svg", "Visa", 274, 92),
+  bundled("/brand/payments/mastercard.svg", "Mastercard", 232, 152),
+  bundled("/brand/payments/fpx.svg", "FPX online banking", 306, 110),
+  bundled("/brand/payments/duitnow.svg", "DuitNow QR", 199, 182),
+  bundled("/brand/payments/touch-n-go.svg", "Touch 'n Go eWallet", 184, 184),
+  bundled("/brand/payments/grabpay.svg", "GrabPay", 320, 94),
+  bundled("/brand/payments/shopeepay.svg", "ShopeePay", 392, 252),
+  bundled("/brand/payments/boost.svg", "Boost", 312, 113),
 ];
 
 /** A body the company is registered with: its mark, its name, and a line such as the member number. */

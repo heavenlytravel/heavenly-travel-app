@@ -152,11 +152,12 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   <Heading id="footer-payment">
                     {content.paymentHeading}
                   </Heading>
-                  <ul className="grid grid-cols-4 gap-2">
+                  {/* Fixed squares, four to a row at most, as the registrations' marks keep their size. */}
+                  <ul className="grid w-fit grid-cols-4 gap-2">
                     {content.paymentLogos.map((logo, i) => (
                       <li
                         key={i}
-                        className="grid h-12 place-items-center rounded-[10px] bg-white px-1.5"
+                        className="grid size-14 place-items-center rounded-lg bg-white p-1.5"
                       >
                         <Image
                           src={logo.url}
@@ -166,7 +167,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                           sizes="96px"
                           // A mark the site ships is served as it is.
                           unoptimized={!isUploadUrl(logo.url)}
-                          className="h-10 w-auto max-w-full object-contain"
+                          className="size-full object-contain"
                         />
                       </li>
                     ))}

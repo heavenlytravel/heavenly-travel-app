@@ -99,6 +99,22 @@ git checkout main && git branch -D review/a-and-b
 
 ### 5. Merge
 
+If the PR changes `packages/db/prisma/schema.prisma` or needs a one-off data script,
+production goes first. New code that reads a column production does not have yet breaks
+every page that reads it. The developer runs, from the PR branch, before the merge:
+
+1. `pnpm db:push` and any data script against development, then tests on staging.
+2. `pnpm db:push:prod`. It rehearses the push on a throwaway copy of production first. Read
+   Prisma's output there: a data-loss warning means stop and rethink the change. Type
+   `production` only when the rehearsal shows what you expect. The script then backs up
+   production to a Neon branch named after the PR, and pushes.
+3. Any data script with its `:prod` script, such as
+   `pnpm --filter @repo/db db:migrate-locations:prod`. It rehearses and backs up the same way.
+4. Then merge, so Vercel deploys code that matches the database.
+
+The rehearsal, the backups and how to restore from one are in
+`docs/260918-auth-and-database.md`.
+
 Use **Squash and merge**. The squash commit message should read like a changelog line,
 e.g. `feat(web): add landing page search bar`. GitHub deletes the remote branch on merge.
 

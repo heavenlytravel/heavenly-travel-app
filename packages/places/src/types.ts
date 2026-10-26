@@ -37,6 +37,12 @@ export type SearchOptions = {
    * search the box around its states.
    */
   within?: Bounds;
+  /**
+   * Suggest the places inside this box first, and the rest of Malaysia
+   * after them: the search card on a location's pages puts the location's
+   * area first. Ignored with `within`, which keeps to its box already.
+   */
+  near?: Bounds;
 };
 
 /**

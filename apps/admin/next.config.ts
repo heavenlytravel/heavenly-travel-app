@@ -17,12 +17,21 @@ const nextConfig: NextConfig = {
   },
   // A location's Details and Status tabs are one page since its Settings
   // (docs/261023-console-sidebar.md); a bookmark of either still opens it.
+  // So does one of its main page's editor, at "landing" until it was "main"
+  // (docs/261025-marketing-pages.md).
   async redirects() {
-    return ["details", "status"].map((tab) => ({
-      source: `/locations/:slug/${tab}`,
-      destination: "/locations/:slug/settings",
-      permanent: false,
-    }));
+    return [
+      ...["details", "status"].map((tab) => ({
+        source: `/locations/:slug/${tab}`,
+        destination: "/locations/:slug/settings",
+        permanent: false,
+      })),
+      {
+        source: "/locations/:slug/pages/landing",
+        destination: "/locations/:slug/pages/main",
+        permanent: false,
+      },
+    ];
   },
   // The admin never belongs in search engines, on any host. Unlike the
   // customer site's header, this one stays after the move to

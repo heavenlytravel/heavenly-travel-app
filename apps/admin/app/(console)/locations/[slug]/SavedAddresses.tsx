@@ -1,21 +1,24 @@
 "use client";
 
-import { LOCATION_LIMITS, checkAddressNames } from "@repo/db";
-import type { Bounds } from "@repo/places";
+import { LOCATION_LIMITS } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
-import { Tooltip } from "@repo/ui/tooltip";
-import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { PencilIcon, PlusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
 import { toast } from "@repo/ui/toast";
+import { Tooltip } from "@repo/ui/tooltip";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Card, CardTitle } from "../../../_components/Card";
-import { RowControls, movedRow } from "../_components/RowControls";
-import { setLocationAddressesAction } from "../actions";
-import { AddressDialog, type AddressDialogMode } from "./AddressDialog";
 import { errorOf } from "../../../_lib/action-state";
+import { RowControls, movedRow } from "../_components/RowControls";
+import type { AddressArea } from "../_components/SavedAddressPicker";
+import {
+  addLocationAddressAction,
+  setLocationAddressesAction,
+} from "../actions";
+import { AddressDialog, type AddressDialogMode } from "./AddressDialog";
 
 /** A saved address as the page hands it over. */
 export type SavedAddress = {
@@ -25,146 +28,112 @@ export type SavedAddress = {
   placeId: string;
   placeLabel: string;
   placeAddress: string;
-  /** The landing page's highlights whose "Take me here" goes to it, by name. */
+  /** The pages whose "Take me here" goes to it, by name: popular places, attractions, hotels. */
   usedBy: string[];
   /** It lies outside the location's states, where no new address may. */
   isStray: boolean;
 };
 
-/** A row of the list: a saved address, or one added and not saved yet. */
-type Row = {
-  /** Stable while the list is open: the address id, or the new place's id. */
-  key: string;
-  id?: string;
-  placeId: string;
-  name: string;
-  /** What sits under the name: the place's address, or its label when new. */
-  detail: string;
-};
+/** What sits under an address's name: the place's address, or its label where they match. */
+const detailOf = (address: SavedAddress) =>
+  address.placeAddress && address.placeAddress !== address.name
+    ? address.placeAddress
+    : address.placeLabel;
 
-const rowOf = (address: SavedAddress): Row => ({
-  key: address.id,
-  id: address.id,
-  placeId: address.placeId,
-  name: address.name,
-  detail:
-    address.placeAddress && address.placeAddress !== address.name
-      ? address.placeAddress
-      : address.placeLabel,
-});
-
-/** "Eagle Square and Night market": the highlights as the question names them. */
-function namesOf(highlights: string[]) {
-  return highlights.length <= 1
-    ? highlights.join("")
-    : `${highlights.slice(0, -1).join(", ")} and ${highlights.at(-1)}`;
+/** "Eagle Square and Night market": the pages as the question names them. */
+function namesOf(pages: string[]) {
+  return pages.length <= 1
+    ? pages.join("")
+    : `${pages.slice(0, -1).join(", ")} and ${pages.at(-1)}`;
 }
 
 /**
  * The location's saved addresses, in their card: the places most
- * customers go to there, in the order the drop-off offers them. "Add
- * address" opens a dialog that searches an exact spot and names it; each
- * row is renamed in the same dialog, moved up or down, or removed. The
- * list is saved at once with "Save addresses", which shows with "Discard"
- * once something changed; nothing reaches customers before. An address
- * has to be in one of the location's states: Save refuses a new one that
- * is not and says where it is, and a stored one left outside is marked.
- * Removing an address a highlight uses asks first.
+ * customers go to there, in the order the drop-off offers them. The plus
+ * opens the dialog a place's page adds one with, which searches an exact
+ * spot around the location and names it, and may give it a page as a
+ * popular place, an attraction or a hotel. Each row is renamed in the same
+ * dialog, moved up or down, or removed. Every change is saved at once and
+ * reaches customers then, as the dialog's add does from a page. An address
+ * has to be in one of the location's states; a stored one left outside is
+ * marked. Removing an address a page uses asks first.
  */
 export function SavedAddresses({
   id,
   locationId,
-  stateNames,
-  within,
+  locationSlug,
+  area,
   addresses,
 }: {
   /** The card's id, which links to the list land on. */
   id: string;
   locationId: string;
-  /** The location's states, by name. */
-  stateNames: readonly string[];
-  /** The box around the states, which the address search keeps to. */
-  within: Bounds | null;
+  locationSlug: string;
+  /** Where a new address is searched. */
+  area: AddressArea;
   addresses: SavedAddress[];
 }) {
-  const [rows, setRows] = useState(() => addresses.map(rowOf));
-  // A save answers with the stored list, new ids included: start again from it.
-  const stored = addresses.map((a) => `${a.id}:${a.name}`).join("|");
-  const [shown, setShown] = useState(stored);
-  if (shown !== stored) {
-    setShown(stored);
-    setRows(addresses.map(rowOf));
-  }
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   const [dialog, confirm] = useConfirm();
   const [editing, setEditing] = useState<{
     mode: AddressDialogMode;
-    rowKey: string | null;
+    address: SavedAddress | null;
   } | null>(null);
+  const full = addresses.length >= LOCATION_LIMITS.addresses;
 
-  const changed =
-    rows.length !== addresses.length ||
-    rows.some(
-      (row, i) =>
-        row.id !== addresses[i]?.id || row.name !== addresses[i]?.name,
+  /**
+   * Saves the list as `next` makes it, over the list as it was read: a
+   * rename, a move or a removal. Answers why not, if not.
+   */
+  async function save(
+    next: { id: string; name: string }[],
+    done: string,
+  ): Promise<string | null> {
+    const refused = errorOf(
+      await answerOf(
+        setLocationAddressesAction(
+          locationId,
+          addresses.map((address) => address.id),
+          next,
+        ),
+      ),
     );
-  const full = rows.length >= LOCATION_LIMITS.addresses;
-
-  function edit(next: Row[]) {
-    setRows(next);
-    setError(null);
+    if (refused) return refused;
+    toast.success(done);
+    router.refresh();
+    return null;
   }
 
-  /** The stored address a row stands for; none for a new one. */
-  const storedOf = (row: Row) =>
-    addresses.find((address) => address.id === row.id);
+  /** A move or a removal, its refusal shown under the list. */
+  function change(next: { id: string; name: string }[], done: string) {
+    setError(null);
+    startSave(async () => setError(await save(next, done)));
+  }
 
-  /** The highlights that point at a row's address; none for a new one. */
-  const usedBy = (row: Row) => storedOf(row)?.usedBy ?? [];
+  const listed = addresses.map(({ id, name }) => ({ id, name }));
 
-  async function remove(row: Row) {
-    const highlights = usedBy(row);
+  async function remove(address: SavedAddress) {
+    const pages = address.usedBy;
     if (
-      highlights.length > 0 &&
       !(await confirm({
-        title: `Remove ${row.name}?`,
-        description: `“Take me here” on ${namesOf(highlights)} goes to it. Once the list is saved, ${
-          highlights.length > 1
-            ? "those highlights show"
-            : "that highlight shows"
-        } no button.`,
+        title: `Remove ${address.name}?`,
+        description:
+          pages.length > 0
+            ? `“Take me here” on ${namesOf(pages)} goes to it. ${
+                pages.length > 1 ? "Those pages show" : "That page shows"
+              } no button once it is removed.`
+            : "Customers no longer see it in the drop-off's list.",
         action: "Remove",
       }))
     ) {
       return;
     }
-    edit(rows.filter((other) => other.key !== row.key));
-  }
-
-  function save() {
-    const check = checkAddressNames(rows.map((row) => row.name.trim()));
-    if (!check.ok) {
-      setError(check.error);
-      return;
-    }
-    startSave(async () => {
-      const refused = errorOf(
-        await answerOf(
-          setLocationAddressesAction(
-            locationId,
-            addresses.map((address) => address.id),
-            rows.map((row) =>
-              row.id
-                ? { id: row.id, name: row.name }
-                : { placeId: row.placeId, name: row.name },
-            ),
-          ),
-        ),
-      );
-      setError(refused);
-      if (!refused) toast.success("Saved addresses saved.");
-    });
+    change(
+      listed.filter((other) => other.id !== address.id),
+      `${address.name} removed.`,
+    );
   }
 
   return (
@@ -176,25 +145,26 @@ export function SavedAddresses({
             content={
               full
                 ? `The list is full at ${LOCATION_LIMITS.addresses} addresses. Remove one to add another.`
-                : null
+                : "Add an address"
             }
           >
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
-              disabled={full}
+              className="w-8 px-0"
+              aria-label="Add an address"
+              disabled={full || saving}
               onClick={() =>
                 setEditing({
                   mode: {
                     kind: "add",
-                    takenPlaceIds: rows.map((row) => row.placeId),
+                    takenPlaceIds: addresses.map((address) => address.placeId),
                   },
-                  rowKey: null,
+                  address: null,
                 })
               }
             >
               <PlusIcon />
-              Add address
             </Button>
           </Tooltip>
         }
@@ -205,34 +175,33 @@ export function SavedAddresses({
         </span>
       </CardTitle>
 
-      {rows.length === 0 ? (
+      {addresses.length === 0 ? (
         <p className="border-t border-slate-200 px-6 py-8 text-center text-sm text-slate-500">
           None yet. The drop-off then shows the normal search.
         </p>
       ) : (
         <ol className="divide-y divide-slate-100 border-t border-slate-200">
-          {rows.map((row, index) => (
+          {addresses.map((address, index) => (
             <li
-              key={row.key}
+              key={address.id}
               className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3.5"
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 tabular-nums">
                 {index + 1}
               </span>
               <div className="min-w-48 flex-1">
-                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-900">
-                  {row.name}
-                  {row.id ? null : <Badge tone="blue">New</Badge>}
+                <span className="block text-sm font-medium text-slate-900">
+                  {address.name}
                 </span>
                 <span className="block text-xs text-slate-500">
-                  {row.detail}
+                  {detailOf(address)}
                 </span>
-                {usedBy(row).length > 0 ? (
+                {address.usedBy.length > 0 ? (
                   <span className="block text-xs text-slate-500">
-                    “Take me here” on {namesOf(usedBy(row))}
+                    “Take me here” on {namesOf(address.usedBy)}
                   </span>
                 ) : null}
-                {storedOf(row)?.isStray ? (
+                {address.isStray ? (
                   <span className="block text-xs text-amber-800">
                     Outside this location’s states. Remove it, or tick its
                     state.
@@ -244,16 +213,17 @@ export function SavedAddresses({
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={`Rename ${row.name}`}
+                    aria-label={`Rename ${address.name}`}
                     className="w-8 px-0"
+                    disabled={saving}
                     onClick={() =>
                       setEditing({
                         mode: {
                           kind: "rename",
-                          name: row.name,
-                          detail: row.detail,
+                          name: address.name,
+                          detail: detailOf(address),
                         },
-                        rowKey: row.key,
+                        address,
                       })
                     }
                   >
@@ -261,11 +231,17 @@ export function SavedAddresses({
                   </Button>
                 </Tooltip>
                 <RowControls
-                  name={row.name}
+                  name={address.name}
                   isFirst={index === 0}
-                  isLast={index === rows.length - 1}
-                  onMove={(by) => edit(movedRow(rows, index, by))}
-                  onRemove={() => remove(row)}
+                  isLast={index === addresses.length - 1}
+                  disabled={saving}
+                  onMove={(by) =>
+                    change(
+                      movedRow(listed, index, by),
+                      `${address.name} moved.`,
+                    )
+                  }
+                  onRemove={() => remove(address)}
                 />
               </div>
             </li>
@@ -273,59 +249,51 @@ export function SavedAddresses({
         </ol>
       )}
 
-      {changed || error ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 bg-slate-50/70 px-6 py-3">
-          {error ? (
-            <p aria-live="polite" className="text-sm text-red-700">
-              {error}
-            </p>
-          ) : (
-            <p className="text-sm text-slate-600">
-              Unsaved changes. Customers see the list once it is saved.
-            </p>
-          )}
-          {changed ? (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                disabled={saving}
-                onClick={() => edit(addresses.map(rowOf))}
-              >
-                Discard
-              </Button>
-              <Button disabled={saving} onClick={save}>
-                {saving ? "Saving…" : "Save addresses"}
-              </Button>
-            </div>
-          ) : null}
-        </div>
+      {error ? (
+        <p
+          aria-live="polite"
+          className="rounded-b-xl border-t border-slate-200 bg-slate-50/70 px-6 py-3 text-sm text-red-700"
+        >
+          {error}
+        </p>
       ) : null}
 
       <AddressDialog
         locationId={locationId}
-        stateNames={stateNames}
-        within={within}
+        stateNames={area.stateNames}
+        within={area.within}
         mode={editing?.mode ?? null}
+        pagesUnder={`/${locationSlug}`}
         onClose={() => setEditing(null)}
-        onAdd={(place, name) => {
-          edit([
-            ...rows,
-            {
-              key: place.placeId,
-              placeId: place.placeId,
-              name,
-              detail: place.detail,
-            },
-          ]);
-          setEditing(null);
-        }}
-        onRename={(name) => {
-          edit(
-            rows.map((row) =>
-              row.key === editing?.rowKey ? { ...row, name } : row,
-            ),
+        onAdd={async (place, name, page) => {
+          const answer = await addLocationAddressAction(
+            locationId,
+            place.placeId,
+            name,
+            page,
           );
+          if ("error" in answer) return answer;
           setEditing(null);
+          toast.success(
+            page
+              ? `${name} saved, with its page as a draft.`
+              : `${name} saved.`,
+          );
+          router.refresh();
+          return null;
+        }}
+        onRename={async (name) => {
+          const renamed = editing?.address;
+          if (!renamed) return null;
+          const refused = await save(
+            listed.map((address) =>
+              address.id === renamed.id ? { ...address, name } : address,
+            ),
+            `Renamed to ${name}.`,
+          );
+          if (refused) return { error: refused };
+          setEditing(null);
+          return null;
         }}
       />
       {dialog}

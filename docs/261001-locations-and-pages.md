@@ -6,7 +6,10 @@ Google place, and the Coverage screen does not list locations. All four PRs are 
 what PR 3 and PR 4 settled while they were built is marked "PR 3" and "PR 4" below. A
 fifth PR then made the flow simpler, as decided in `261003-location-flow.md`: three
 states, pages that are published or not with no switch, and a Home page screen. What it
-changed is marked "PR 5". A sixth added Delete for a location, marked "PR 6". The PRs are listed under "Build order". The
+changed is marked "PR 5". A sixth added Delete for a location, marked "PR 6". Since
+`261025-marketing-pages.md` a location's pages are sections, highlights are popular
+places with pages of their own, and the Home page screen is the Site pages screen; that
+document wins where the two differ. The PRs are listed under "Build order". The
 design this narrows is `architecture/04-location-and-seo-architecture.md` and
 `architecture/05b-public-site.md` in the `heavenly-travel-docs` repository. Where this
 document differs from those two, this one wins for the app; the differences are listed
@@ -169,7 +172,7 @@ draft differs from the published copy (the two side by side, the parts that diff
 marked), "History" once the page has been published (its publishes, each opening the
 page before and after), "Preview" of the saved draft, "Save draft" (also Ctrl+S) and
 "Publish". Under it two tabs: **Page content** (hero, intro, FAQs, highlights) and
-**Search and sharing** (meta title and description with a search-result sketch, the share
+**SEO** (meta title and description with a search-result sketch, the share
 image with a shared-link sketch, and what is set automatically), each with a count of
 what is still missing. "Publish" opens a dialog of the checks the page must pass (the
 `pageChecks` of `location-page-input.ts`), each with "Go to it", what the publish

@@ -3,6 +3,7 @@ import {
   TOP_CHOICES_TAG,
   VEHICLE_CLASSES_TAG,
   checkLocationSlug,
+  getLocationPageBody,
   getLocationPreview,
   getLocationSearch,
   getPublicLocation,
@@ -11,6 +12,7 @@ import {
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
+  type LocationPageRef,
   type LocationSearch,
   type LocationView,
   type TripCategory,
@@ -26,7 +28,7 @@ import { cache } from "react";
  * docs/261001-locations-and-pages.md, "Keeping the pages fresh".
  */
 
-const REFRESH_SECONDS = 3600;
+export const REFRESH_SECONDS = 3600;
 
 /**
  * Whether the text could be a location's slug. Whatever follows the site's
@@ -37,13 +39,20 @@ export function isLocationSlug(slug: string) {
   return checkLocationSlug(slug).ok;
 }
 
+/**
+ * The version of `LocationView` the cache holds. A cached answer outlives a
+ * deploy, so a change to its shape bumps this, or the pages read the old
+ * shape until it expires.
+ */
+const LOCATION_VIEW_VERSION = 2;
+
 /** The location at the slug as the public sees it, or null. Once per request. */
 export const publicLocation = cache(
   async (slug: string): Promise<LocationView | null> => {
     if (!isLocationSlug(slug)) return null;
     return unstable_cache(
       () => getPublicLocation(slug),
-      ["public-location", slug],
+      ["public-location", String(LOCATION_VIEW_VERSION), slug],
       { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
     )();
   },
@@ -53,14 +62,33 @@ export const publicLocation = cache(
 export const locationPreview = cache(getLocationPreview);
 
 /**
+ * The text of a public post at the location, which its view leaves out:
+ * only the post's own page reads it. Tagged with the location, as the view.
+ */
+export const publicPageBody = cache(
+  (slug: string, page: LocationPageRef["page"], entry: string) =>
+    unstable_cache(
+      () => getLocationPageBody(slug, { page, slug: entry }, false),
+      ["public-page-body", slug, page, entry],
+      { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
+    )(),
+);
+
+/** The same for the staff preview: the draft's text, read fresh. */
+export const previewPageBody = cache(
+  (slug: string, page: LocationPageRef["page"], entry: string) =>
+    getLocationPageBody(slug, { page, slug: entry }, true),
+);
+
+/**
  * The version of `LocationSearch` the cache holds. A cached answer outlives
  * a deploy, so a change to its shape bumps this, or the pages read the old
  * shape until it expires.
  */
-const LOCATION_SEARCH_VERSION = 3;
+const LOCATION_SEARCH_VERSION = 5;
 
 /**
- * What the search card on the location's pages keeps to, read off its
+ * Where the search card on the location's pages starts, read off its
  * zones and where its trips may go. Tagged with the location, which the admin
  * refreshes after a change to either. Once per request.
  */
@@ -88,6 +116,8 @@ export const topChoiceCards = unstable_cache(
 /** A class a location sells, as its product page lists it. */
 export type VehicleClassCard = {
   id: string;
+  /** The class's slug, which its page under the product is at. */
+  slug: string;
   name: string;
   description: string;
   minPassengers: number;
@@ -121,6 +151,7 @@ export const vehicleClassCards = cache(
         ]);
         return offerings.map(({ vehicleClass, ...offering }) => ({
           id: vehicleClass.id,
+          slug: vehicleClass.slug,
           name: vehicleClass.name,
           description: vehicleClass.description,
           minPassengers: vehicleClass.minPassengers,
@@ -134,7 +165,7 @@ export const vehicleClassCards = cache(
           ),
         }));
       },
-      ["vehicle-class-cards", slug, category],
+      ["vehicle-class-cards", "2", slug, category],
       {
         tags: [locationTag(slug), VEHICLE_CLASSES_TAG],
         revalidate: REFRESH_SECONDS,

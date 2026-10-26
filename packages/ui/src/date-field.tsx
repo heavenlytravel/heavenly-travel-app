@@ -55,7 +55,10 @@ type Common = {
   id?: string;
   disabled?: boolean;
   required?: boolean;
-  /** No box of its own: the caller's `className` draws the trigger. */
+  /**
+   * No box and no icon of its own: the caller's `className` draws the
+   * trigger, and the caller its decoration.
+   */
   bare?: boolean;
   className?: string;
   /** Where "now" and "today" are read: Malaysia for a pick-up. */
@@ -63,7 +66,7 @@ type Common = {
   "aria-label"?: string;
 };
 
-/** The field's button: its value, or the placeholder, and an icon. */
+/** The field's button: its value, or the placeholder, and an icon unless bare. */
 function trigger({
   id,
   ref,
@@ -96,7 +99,7 @@ function trigger({
       className={cx(bare ? BARE : BOX, className)}
     >
       <span className="ui:min-w-0 ui:truncate">{text ?? placeholder}</span>
-      <span className="ui:shrink-0 ui:opacity-60">{icon}</span>
+      {bare ? null : <span className="ui:shrink-0 ui:opacity-60">{icon}</span>}
     </button>
   );
 }

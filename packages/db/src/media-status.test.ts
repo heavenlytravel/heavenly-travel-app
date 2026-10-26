@@ -6,22 +6,27 @@ import {
   mediaDeleteImpact,
   mediaDeleteRefusal,
   mediaStatusOf,
+  type MediaPage,
   type MediaToDelete,
   type MediaUse,
 } from "./media-status";
 
 const langkawi = { id: "l1", name: "Langkawi", slug: "langkawi" };
+const mainPage: MediaPage = {
+  site: false,
+  location: langkawi,
+  ref: { page: "landing", slug: "" },
+  title: "Main page",
+};
 const onPage: MediaUse = {
   kind: "page",
-  location: langkawi,
-  page: "landing",
+  on: mainPage,
   draft: true,
   published: false,
 };
 const earlier: MediaUse = {
   kind: "earlier",
-  location: langkawi,
-  page: "landing",
+  on: mainPage,
   entryId: "e1",
 };
 const now = new Date("2026-10-22T12:00:00Z");
@@ -117,7 +122,7 @@ describe("mediaDeleteRefusal", () => {
     assert.equal(mediaDeleteRefusal([file("a.jpg", [earlier])]), null);
     assert.equal(
       mediaDeleteRefusal([file("a.jpg", [onPage]), file("b.jpg")]),
-      "a.jpg is on a location's page. Replace it there first.",
+      "a.jpg is on a page. Replace it there first.",
     );
   });
 });

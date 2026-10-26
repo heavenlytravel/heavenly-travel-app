@@ -4,8 +4,9 @@ import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
 
 /**
  * The buttons of one row of a list Marketing orders by hand: up and down
- * as arrows, and remove in red, all quiet so a long list does not fill up
- * with boxes. `name` is what a screen reader hears the row called.
+ * as arrows, and remove in red where a row can be removed here, all quiet
+ * so a long list does not fill up with boxes. `name` is what a screen
+ * reader hears the row called. `disabled` holds them while a move is saved.
  */
 export function RowControls({
   name,
@@ -13,12 +14,14 @@ export function RowControls({
   isLast,
   onMove,
   onRemove,
+  disabled = false,
 }: {
   name: string;
   isFirst: boolean;
   isLast: boolean;
   onMove: (by: -1 | 1) => void;
-  onRemove: () => void;
+  onRemove?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -26,7 +29,7 @@ export function RowControls({
         <Button
           variant="ghost"
           size="sm"
-          disabled={isFirst}
+          disabled={disabled || isFirst}
           aria-label={`Move ${name} up`}
           className="w-8 px-0"
           onClick={() => onMove(-1)}
@@ -38,7 +41,7 @@ export function RowControls({
         <Button
           variant="ghost"
           size="sm"
-          disabled={isLast}
+          disabled={disabled || isLast}
           aria-label={`Move ${name} down`}
           className="w-8 px-0"
           onClick={() => onMove(1)}
@@ -46,15 +49,17 @@ export function RowControls({
           <ArrowDownIcon />
         </Button>
       </Tooltip>
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label={`Remove ${name}`}
-        className="text-red-700 hover:bg-red-50 hover:text-red-800"
-        onClick={onRemove}
-      >
-        Remove
-      </Button>
+      {onRemove ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Remove ${name}`}
+          className="text-red-700 hover:bg-red-50 hover:text-red-800"
+          onClick={onRemove}
+        >
+          Remove
+        </Button>
+      ) : null}
     </div>
   );
 }

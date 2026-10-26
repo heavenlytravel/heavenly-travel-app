@@ -192,15 +192,17 @@ async function overview({ id, slug }: { id: string; slug: string }) {
     ].join(" · "),
     pages: (
       <span className="flex flex-wrap gap-x-3 gap-y-0.5">
-        {numbers.pages.map((page) => (
-          <span key={page.page} className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className={cx("size-2 rounded-full", PAGE_DOTS[page.status])}
-            />
-            {LOCATION_PAGE_LABELS[page.page]}
-          </span>
-        ))}
+        {numbers.pages
+          .filter((page) => page.slug === "")
+          .map((page) => (
+            <span key={page.page} className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className={cx("size-2 rounded-full", PAGE_DOTS[page.status])}
+              />
+              {LOCATION_PAGE_LABELS[page.page]}
+            </span>
+          ))}
         <span>
           {plural(
             location.addresses.length,

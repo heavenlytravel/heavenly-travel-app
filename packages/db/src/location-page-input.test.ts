@@ -1,443 +1,212 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { TRIP_CATEGORIES } from "./booking-status";
 import {
+  LANDING_PAGE,
+  LANDING_REF,
   LOCATION_PAGES,
-  PAGE_LIMITS,
-  changedPageParts,
-  checkPageComplete,
-  checkPageLimits,
+  LOCATION_SECTIONS,
+  PLACE_SECTIONS,
+  SECTIONS,
+  SERVICE_SECTIONS,
+  checkEntrySlug,
+  isEntrySlugLocked,
   isLocationPageKey,
-  isPagePublished,
-  missingFields,
-  pageContentOf,
-  pageChecks,
+  isLocationPageRef,
+  locationPageFallbackTitle,
+  locationPagePath,
+  locationPreviewPath,
+  loggedPageRef,
+  pageKindOf,
+  pageEditorPath,
+  pageKeyOfSegment,
   pageNameOf,
-  pageStatusOf,
-  paragraphsOf,
-  publicCopyOf,
-  samePageContent,
-  wordCount,
-  type PageContent,
-  type PageImage,
+  pageSegmentOf,
+  pageTitleOf,
 } from "./location-page-input";
 
-const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
-  result.ok ? "" : result.error;
-
-const image = (alt = "A beach at sunset"): PageImage => ({
-  url: "https://abc123.ufs.sh/f/key-1",
-  key: "key-1",
-  width: 1600,
-  height: 900,
-  alt,
-});
-
-const words = (count: number) =>
-  Array.from({ length: count }, () => "word").join(" ");
-
-/** A page with every field filled and every minimum met. */
-function complete(page: "landing" | "car-with-driver"): PageContent {
-  return pageContentOf(page, {
-    metaTitle: "Langkawi by car with driver",
-    metaDescription: "Private transfers around Langkawi with a driver.",
-    heroHeadline: "Langkawi, door to door",
-    heroSubheadline: "A driver who knows the island.",
-    heroImage: image(),
-    intro: words(PAGE_LIMITS.introWords),
-    faqs: [1, 2, 3].map((n) => ({ question: `Q${n}?`, answer: `A${n}.` })),
-    highlights: [1, 2, 3].map((n) => ({
-      name: `Spot ${n}`,
-      text: `About spot ${n}.`,
-      image: image(`Spot ${n}`),
-      addressId: null,
-    })),
-  });
-}
-
 describe("the pages of a location", () => {
-  it("are the landing page and one per product", () => {
-    assert.deepEqual(LOCATION_PAGES, ["landing", ...TRIP_CATEGORIES]);
-    assert.equal(isLocationPageKey("landing"), true);
+  it("are the main page and one per section", () => {
+    assert.deepEqual(LOCATION_PAGES, [
+      "landing",
+      "car-with-driver",
+      "coach-charter",
+      "car-rental",
+      "attractions",
+      "hotels",
+      "popular-places",
+      "blog",
+    ]);
     assert.equal(isLocationPageKey("coach-charter"), true);
     assert.equal(isLocationPageKey("hotel"), false);
-  });
-
-  it("are named as a sentence names them", () => {
-    assert.equal(pageNameOf("landing"), "the main page");
-    assert.equal(pageNameOf("coach-charter"), "the Coach charter page");
-  });
-});
-
-describe("paragraphsOf and wordCount", () => {
-  it("reads each line as a paragraph and drops the empty ones", () => {
-    assert.deepEqual(paragraphsOf(" One  two.\r\n\r\n\nThree.\n  \nFour. "), [
-      "One two.",
-      "Three.",
-      "Four.",
-    ]);
-    assert.deepEqual(paragraphsOf("  \n "), []);
-  });
-
-  it("counts words across paragraphs", () => {
-    assert.equal(wordCount("One two.\n\nThree."), 3);
-    assert.equal(wordCount("  "), 0);
-  });
-});
-
-describe("pageContentOf", () => {
-  it("reads anything that is not content as an empty page", () => {
-    const empty = {
-      metaTitle: "",
-      metaDescription: "",
-      shareImage: null,
-      tagline: "",
-      heroHeadline: "",
-      heroSubheadline: "",
-      heroImage: null,
-      intro: "",
-      faqs: [],
-      highlights: [],
-    };
-    for (const value of [undefined, null, "text", 7, [], {}]) {
-      assert.deepEqual(pageContentOf("landing", value), empty);
-    }
-  });
-
-  it("trims the text and keeps paragraphs a blank line apart", () => {
-    const content = pageContentOf("landing", {
-      metaTitle: "  Langkawi \n transfers ",
-      intro: "First.\nSecond.\n\n\nThird.",
-      faqs: [{ question: " How far? ", answer: "Near.\nVery near." }, "junk"],
-    });
-    assert.equal(content.metaTitle, "Langkawi transfers");
-    assert.equal(content.intro, "First.\n\nSecond.\n\nThird.");
-    assert.deepEqual(content.faqs, [
-      { question: "How far?", answer: "Near.\n\nVery near." },
-      { question: "", answer: "" },
-    ]);
-  });
-
-  it("keeps an image only when it is an uploaded one with a size", () => {
-    const read = (heroImage: unknown) =>
-      pageContentOf("landing", { heroImage }).heroImage;
-    assert.deepEqual(
-      read({ ...image(), alt: "  A beach  " }),
-      image("A beach"),
-    );
-    assert.deepEqual(read({ ...image(), alt: undefined }), image(""));
-    assert.equal(read({ ...image(), url: "https://example.com/a.jpg" }), null);
-    assert.equal(read({ ...image(), key: "" }), null);
-    assert.equal(read({ ...image(), width: 0 }), null);
-    assert.equal(read({ ...image(), height: 1.5 }), null);
-    assert.equal(read("https://abc123.ufs.sh/f/key-1"), null);
-  });
-
-  it("keeps highlights on the landing page only", () => {
-    const raw = {
-      highlights: [
-        { name: " Eagle Square ", text: "A landmark.", addressId: "a1" },
-        { name: "Local food", addressId: "" },
-      ],
-    };
-    assert.deepEqual(pageContentOf("landing", raw).highlights, [
-      {
-        name: "Eagle Square",
-        text: "A landmark.",
-        image: null,
-        addressId: "a1",
-      },
-      { name: "Local food", text: "", image: null, addressId: null },
-    ]);
-    assert.deepEqual(pageContentOf("coach-charter", raw).highlights, []);
-  });
-
-  it("reads its own output back unchanged", () => {
-    const content = complete("landing");
-    assert.deepEqual(pageContentOf("landing", content), content);
-    assert.equal(
-      samePageContent(
-        content,
-        pageContentOf("landing", JSON.parse(JSON.stringify(content))),
-      ),
-      true,
-    );
-  });
-});
-
-describe("checkPageLimits", () => {
-  it("accepts an empty draft and a complete page", () => {
-    assert.equal(checkPageLimits(pageContentOf("landing", {})).ok, true);
-    assert.equal(checkPageLimits(complete("landing")).ok, true);
-  });
-
-  it("holds every text to its length", () => {
-    const base = complete("landing");
-    const cases: [Partial<PageContent>, RegExp][] = [
-      [{ metaTitle: "a".repeat(61) }, /meta title is at most 60/],
-      [{ metaDescription: "a".repeat(161) }, /meta description is at most 160/],
-      [{ heroHeadline: "a".repeat(81) }, /hero headline is at most 80/],
-      [{ heroSubheadline: "a".repeat(161) }, /hero subheadline is at most 160/],
-      [{ intro: "a".repeat(5001) }, /intro is at most 5000/],
-      [{ heroImage: image("a".repeat(161)) }, /alt text is at most 160/],
-      [
-        { faqs: [{ question: "a".repeat(161), answer: "A." }] },
-        /question of FAQ 1 is at most 160/,
-      ],
-      [
-        { faqs: [{ question: "Q?", answer: "a".repeat(1001) }] },
-        /answer of FAQ 1 is at most 1000/,
-      ],
-      [
-        {
-          highlights: [
-            { name: "a".repeat(61), text: "", image: null, addressId: null },
-          ],
-        },
-        /name of highlight 1 is at most 60/,
-      ],
-      [
-        {
-          highlights: [
-            { name: "", text: "a".repeat(301), image: null, addressId: null },
-          ],
-        },
-        /text of highlight 1 is at most 300/,
-      ],
-      [
-        {
-          highlights: [
-            {
-              name: "",
-              text: "",
-              image: image("a".repeat(161)),
-              addressId: null,
-            },
-          ],
-        },
-        /alt text is at most 160/,
-      ],
-    ];
-    for (const [patch, error] of cases) {
-      assert.match(errorOf(checkPageLimits({ ...base, ...patch })), error);
-    }
-    assert.equal(
-      checkPageLimits({ ...base, metaTitle: "a".repeat(60) }).ok,
-      true,
-    );
-  });
-
-  it("caps the FAQs and the highlights", () => {
-    const base = complete("landing");
-    const faq = { question: "Q?", answer: "A." };
-    const highlight = base.highlights[0]!;
-    assert.match(
-      errorOf(
-        checkPageLimits({
-          ...base,
-          faqs: Array.from({ length: 13 }, () => faq),
-        }),
-      ),
-      /at most 12 FAQs/,
-    );
-    assert.match(
-      errorOf(
-        checkPageLimits({
-          ...base,
-          highlights: Array.from({ length: 9 }, () => highlight),
-        }),
-      ),
-      /at most 8 highlights/,
-    );
-  });
-});
-
-describe("missingFields", () => {
-  it("finds nothing missing on a complete page", () => {
-    assert.deepEqual(missingFields("landing", complete("landing")), []);
-    assert.deepEqual(
-      missingFields("car-with-driver", complete("car-with-driver")),
-      [],
-    );
-  });
-
-  it("lists everything an empty page needs, in the order of the form", () => {
-    assert.deepEqual(missingFields("landing", pageContentOf("landing", {})), [
-      "Meta title",
-      "Meta description",
-      "Hero headline",
-      "Hero subheadline",
-      "Hero image",
-      "Intro: at least 100 words (0 so far)",
-      "FAQs: at least 3 (0 so far)",
-      "Highlights: at least 3 (0 so far)",
-    ]);
-  });
-
-  it("asks a product page for no highlights", () => {
-    const missing = missingFields(
+    assert.deepEqual(SERVICE_SECTIONS, [
+      "car-with-driver",
       "coach-charter",
-      pageContentOf("coach-charter", {}),
-    );
-    assert.equal(
-      missing.some((field) => field.startsWith("Highlight")),
-      false,
-    );
-  });
-
-  it("names what a row still needs", () => {
-    const base = complete("landing");
-    const content: PageContent = {
-      ...base,
-      heroImage: image(""),
-      intro: words(62),
-      faqs: [base.faqs[0]!, { question: "Q?", answer: "" }],
-      highlights: [
-        base.highlights[0]!,
-        { name: "", text: "", image: null, addressId: null },
-        { ...base.highlights[2]!, image: image("") },
-      ],
-    };
-    assert.deepEqual(missingFields("landing", content), [
-      "Hero image: the alt text",
-      "Intro: at least 100 words (62 so far)",
-      "FAQs: at least 3 (2 so far)",
-      "FAQ 2: the answer",
-      "Highlight 2: the name",
-      "Highlight 2: the text",
-      "Highlight 2: the image",
-      "Highlight 3: the alt text of the image",
+      "car-rental",
+      "attractions",
+      "hotels",
     ]);
   });
 
-  it("does not ask a highlight for a saved address", () => {
-    const content = complete("landing");
+  it("have pages under a section only where the section takes them", () => {
+    assert.equal(isLocationPageRef(LANDING_REF), true);
+    assert.equal(isLocationPageRef({ page: "blog", slug: "" }), true);
+    assert.equal(isLocationPageRef({ page: "blog", slug: "a-day" }), true);
     assert.equal(
-      content.highlights.every((highlight) => highlight.addressId === null),
+      isLocationPageRef({ page: "car-with-driver", slug: "sedan" }),
       true,
     );
-    assert.deepEqual(missingFields("landing", content), []);
+    assert.equal(isLocationPageRef({ page: "landing", slug: "x" }), false);
+    assert.equal(isLocationPageRef({ page: "car-rental", slug: "x" }), false);
+    assert.equal(isLocationPageRef({ page: "blog", slug: "A Day" }), false);
+    assert.equal(isLocationPageRef({ page: "hotel", slug: "" }), false);
+    assert.equal(isLocationPageRef({ page: "blog", slug: 3 }), false);
+  });
+
+  it("have the kind their place makes them", () => {
+    assert.equal(pageKindOf(LANDING_REF), "landing");
+    assert.equal(pageKindOf({ page: "coach-charter", slug: "" }), "service");
+    assert.equal(pageKindOf({ page: "attractions", slug: "" }), "service");
+    assert.equal(pageKindOf({ page: "popular-places", slug: "" }), "listing");
+    assert.equal(pageKindOf({ page: "coach-charter", slug: "coach" }), "class");
+    assert.equal(pageKindOf({ page: "hotels", slug: "the-datai" }), "place");
+    assert.equal(pageKindOf({ page: "blog", slug: "a-day" }), "article");
+  });
+
+  it("are named as a heading and a sentence name them", () => {
+    const place = { page: "popular-places", slug: "eagle-square" } as const;
+    const sedan = { page: "car-with-driver", slug: "sedan" } as const;
+    assert.equal(pageTitleOf(LANDING_REF), "Main page");
+    assert.equal(
+      pageTitleOf({ page: "coach-charter", slug: "" }),
+      "Coach charter page",
+    );
+    assert.equal(pageTitleOf(place, "Eagle Square"), "Eagle Square");
+    assert.equal(pageTitleOf(place), "eagle-square");
+    assert.equal(pageNameOf(LANDING_REF), "the main page");
+    assert.equal(
+      pageNameOf({ page: "coach-charter", slug: "" }),
+      "the Coach charter page",
+    );
+    assert.equal(
+      pageNameOf(place, "Eagle Square"),
+      "the popular place “Eagle Square”",
+    );
+    assert.equal(pageNameOf(sedan, "Sedan"), "the Sedan page");
+  });
+
+  it("are at their addresses, and previewed under /preview", () => {
+    assert.equal(locationPagePath("langkawi"), "/langkawi");
+    assert.equal(
+      locationPagePath("langkawi", { page: "blog", slug: "" }),
+      "/langkawi/blog",
+    );
+    assert.equal(
+      locationPagePath("langkawi", { page: "blog", slug: "a-day" }),
+      "/langkawi/blog/a-day",
+    );
+    assert.equal(
+      locationPreviewPath("langkawi", { page: "car-with-driver", slug: "" }),
+      "/preview/langkawi/car-with-driver",
+    );
   });
 });
 
-describe("pageChecks", () => {
-  it("groups what is missing by the part of the page, with its tab", () => {
-    const checks = pageChecks("landing", pageContentOf("landing", {}));
-    assert.deepEqual(
-      checks.map((check) => [check.key, check.tab, check.missing.length]),
-      [
-        ["search", "search", 2],
-        ["hero", "content", 3],
-        ["intro", "content", 1],
-        ["faqs", "content", 1],
-        ["highlights", "content", 1],
-      ],
-    );
-    assert.equal(
-      pageChecks("coach-charter", complete("car-with-driver")).length,
-      4,
-    );
+describe("loggedPageRef", () => {
+  it("reads the page an entry names, with no slug for one from before sections", () => {
+    assert.deepEqual(loggedPageRef({ page: "coach-charter" }), {
+      page: "coach-charter",
+      slug: "",
+    });
+    assert.deepEqual(loggedPageRef({ page: "blog", slug: "a-day", x: 1 }), {
+      page: "blog",
+      slug: "a-day",
+    });
+    assert.equal(loggedPageRef({ page: "landing", slug: "x" }), null);
+    assert.equal(loggedPageRef(null), null);
+    assert.equal(loggedPageRef("landing"), null);
   });
+});
 
-  it("asks a share image, which is optional, for its alt text", () => {
-    const base = complete("landing");
-    assert.deepEqual(missingFields("landing", base), []);
+describe("the sections of places", () => {
+  it("are those whose pages under them are places", () => {
     assert.deepEqual(
-      missingFields("landing", { ...base, shareImage: image("") }),
-      ["Share image: the alt text"],
+      [...PLACE_SECTIONS].sort(),
+      LOCATION_SECTIONS.filter((section) => {
+        const children = SECTIONS[section].children;
+        return children?.type === "entries" && children.kind === "place";
+      }).sort(),
     );
   });
 });
 
-describe("changedPageParts", () => {
-  it("names the parts two contents differ in, in the order of the editor", () => {
-    const base = complete("landing");
-    assert.deepEqual(changedPageParts(base, base), []);
-    assert.deepEqual(
-      changedPageParts(base, {
-        ...base,
-        intro: "Changed.",
-        metaTitle: "Another title",
-        shareImage: image("Share"),
-      }),
-      ["Meta title", "Share image", "Intro"],
+describe("where a page is edited in the console", () => {
+  it("is the page's address on the site under the location's Pages, the main page at main", () => {
+    assert.equal(
+      pageEditorPath("langkawi", LANDING_REF),
+      "/locations/langkawi/pages/main",
+    );
+    assert.equal(
+      pageEditorPath("langkawi", { page: "car-rental", slug: "" }),
+      "/locations/langkawi/pages/car-rental",
+    );
+    assert.equal(
+      pageEditorPath("langkawi", { page: "popular-places", slug: "" }),
+      "/locations/langkawi/pages/popular-places",
+    );
+    assert.equal(
+      pageEditorPath("langkawi", { page: "car-with-driver", slug: "sedan" }),
+      "/locations/langkawi/pages/car-with-driver/sedan",
     );
   });
 });
 
-describe("checkPageComplete", () => {
-  it("passes a complete page", () => {
-    assert.equal(checkPageComplete("landing", complete("landing")).ok, true);
-  });
-
-  it("names the first thing missing and counts the rest", () => {
-    const base = complete("landing");
+describe("a location page's title without a meta title", () => {
+  it("names the location, and a section or the page under it", () => {
     assert.equal(
-      errorOf(checkPageComplete("landing", { ...base, metaTitle: "" })),
-      "The page is not complete. Still missing: Meta title.",
+      locationPageFallbackTitle("Langkawi", LANDING_REF, "Langkawi"),
+      "Langkawi | Heavenly Travel",
     );
     assert.equal(
-      errorOf(
-        checkPageComplete("landing", {
-          ...base,
-          metaTitle: "",
-          heroImage: null,
-          faqs: [],
-        }),
+      locationPageFallbackTitle(
+        "Langkawi",
+        { page: "car-with-driver", slug: "" },
+        "ignored",
       ),
-      "The page is not complete. Still missing: Meta title, and 2 more.",
+      "Car with driver in Langkawi | Heavenly Travel",
     );
-  });
-
-  it("applies the limits first", () => {
-    assert.match(
-      errorOf(
-        checkPageComplete("landing", {
-          ...complete("landing"),
-          metaTitle: "a".repeat(61),
-        }),
+    assert.equal(
+      locationPageFallbackTitle(
+        "Langkawi",
+        { page: "popular-places", slug: "eagle-square" },
+        "Eagle Square",
       ),
-      /at most 60/,
+      "Eagle Square in Langkawi | Heavenly Travel",
     );
   });
 });
 
-describe("pageStatusOf", () => {
-  it("tells a page never published from one with newer changes", () => {
-    const published = complete("landing");
-    assert.equal(pageStatusOf(published, null), "unpublished");
-    assert.equal(pageStatusOf(published, published), "published");
-    assert.equal(
-      pageStatusOf({ ...published, heroHeadline: "New" }, published),
-      "changed",
-    );
+describe("a page as the console's addresses name it", () => {
+  it("is its key, the main page main", () => {
+    assert.equal(pageSegmentOf(LANDING_PAGE), "main");
+    assert.equal(pageSegmentOf("popular-places"), "popular-places");
+    assert.equal(pageKeyOfSegment("main"), LANDING_PAGE);
+    assert.equal(pageKeyOfSegment("popular-places"), "popular-places");
+    assert.equal(pageKeyOfSegment("landing"), null);
+    assert.equal(pageKeyOfSegment(undefined), null);
   });
 });
 
-describe("publicCopyOf", () => {
-  it("is the copy last published while the page is published, and nothing once it is unpublished", () => {
-    const published = complete("car-with-driver");
-    assert.deepEqual(
-      publicCopyOf("car-with-driver", { isOn: true, published }),
-      published,
-    );
-    assert.equal(
-      publicCopyOf("car-with-driver", { isOn: false, published }),
-      null,
-    );
-    assert.equal(
-      publicCopyOf("car-with-driver", { isOn: false, published: null }),
-      null,
-    );
+describe("the slug of a page added on demand", () => {
+  it("is what slugify makes, within the limit", () => {
+    assert.equal(checkEntrySlug("eagle-square").ok, true);
+    assert.equal(checkEntrySlug("").ok, false);
+    assert.equal(checkEntrySlug("Eagle Square").ok, false);
+    assert.equal(checkEntrySlug("a".repeat(81)).ok, false);
+    assert.equal(checkEntrySlug("a".repeat(80)).ok, true);
   });
 
-  it("makes an unpublished page read as not published, whatever it once showed", () => {
-    const published = complete("landing");
-    const row = { isOn: false, published };
-    const status = pageStatusOf(published, publicCopyOf("landing", row));
-    assert.equal(status, "unpublished");
-    assert.equal(isPagePublished(status), false);
-    assert.equal(isPagePublished("published"), true);
-    assert.equal(isPagePublished("changed"), true);
+  it("is locked once the page has been published", () => {
+    assert.equal(isEntrySlugLocked({ firstPublishedAt: null }), false);
+    assert.equal(isEntrySlugLocked({ firstPublishedAt: new Date() }), true);
   });
 });

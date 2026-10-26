@@ -5,9 +5,9 @@ import {
   BOOKINGS_PATH,
   COVERAGE_PATH,
   DRIVERS_PATH,
-  HOME_PAGE_PATH,
   LOCATIONS_PATH,
   MEDIA_PATH,
+  PAGES_PATH,
   RATES_PATH,
   USERS_PATH,
   VEHICLE_CLASSES_PATH,
@@ -55,8 +55,9 @@ export const MENU_PART_LABELS = { selling: "Selling", manage: "Manage" };
  * locations (the home with every location's numbers, the queue, the
  * fleet: our vehicles, our drivers and the class catalogue, a vehicle
  * being of a model of a class), then what every location serves and
- * charges, then the customer site's home page and the console's own
- * settings: its users, its admins, its activity and its images. Each view
+ * charges, then the pages (every location's, and for SUPER the customer
+ * site's own) and the console's own settings: its users, its admins, its
+ * activity and its images. Each view
  * across locations sums up the same tab of every location, where it is
  * changed. A location picked, its own sidebar stands here instead. See
  * docs/261023-console-sidebar.md.
@@ -154,14 +155,14 @@ export const ALL_LOCATIONS_NAV: readonly NavPart[] = [
     label: MENU_PART_LABELS.manage,
     sections: [
       {
-        key: "home-page",
-        label: "Home page",
-        icon: "home-page",
+        key: "pages",
+        label: "Pages",
+        icon: "pages",
         views: [
           {
-            href: HOME_PAGE_PATH,
-            label: "Home page",
-            icon: "home-page",
+            href: PAGES_PATH,
+            label: "Pages",
+            icon: "pages",
             permission: "locations.manage",
           },
         ],

@@ -2,6 +2,7 @@ import {
   LOCATION_PAGE_LABELS,
   LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
+  childrenOf,
   formatLocalDate,
   isPublicState,
   locationStateOf,
@@ -25,12 +26,12 @@ import { getPermissions } from "../../../_lib/access";
 import {
   locationAddressesHref,
   locationPageHref,
+  locationPagesHref,
   locationTabHref,
   locationTabsMayOpen,
   type LocationTab,
   type LocationTabDef,
 } from "../../../_lib/routes";
-import { locationPublicUrl } from "../../../_lib/site";
 import {
   locationDetails,
   locationIdOf,
@@ -130,8 +131,7 @@ export async function LocationScopeNav({ slug }: { slug: string }) {
  * sale), then, under Selling, its zones and its rates, then, under Manage,
  * its pages and its settings, each a drill whose pages take the menu's
  * place: the location's pages one by one with their standing and its
- * saved addresses; its details, status and deletion, and its history.
- * Last, its public page once it is public. A
+ * saved addresses; its details, status and deletion, and its history. A
  * draft takes no bookings, so it has no Bookings row; the rows of its
  * setup steps carry a mark, ticked once done, and its overview, the
  * checklist, how far it has come. Each row shows only for an admin who may
@@ -214,14 +214,25 @@ function locationMenu({
                 href: row.href,
                 icon: "pages",
               },
-              ...overview.pages.map((page): MenuEntry => ({
-                key: page.page,
-                label: LOCATION_PAGE_LABELS[page.page],
-                href: locationPageHref(slug, page.page),
-                icon: "page",
-                dot: PAGE_DOTS[page.status],
-                note: PAGE_STATUS_LABELS[page.status],
-              })),
+              // The main page, then each section: its list where it has
+              // pages under it, lit on their editors and its own too, else
+              // its own page's editor; each with the standing of its own
+              // page.
+              ...overview.pages
+                .filter((page) => page.slug === "")
+                .map((page): MenuEntry => ({
+                  key: page.page,
+                  label: LOCATION_PAGE_LABELS[page.page],
+                  ...(childrenOf(page.page)
+                    ? {
+                        href: locationPagesHref(slug, { section: page.page }),
+                        paths: [locationPageHref(slug, page)],
+                      }
+                    : { href: locationPageHref(slug, page) }),
+                  icon: "page",
+                  dot: PAGE_DOTS[page.status],
+                  note: PAGE_STATUS_LABELS[page.status],
+                })),
               {
                 key: "addresses",
                 label: "Saved addresses",
@@ -268,18 +279,6 @@ function locationMenu({
   const rowsOf = (keys: readonly LocationTab[]) =>
     tabs.filter((tab) => keys.includes(tab.key)).map(rowOf);
   const fleet = fleetRow(rowsOf(FLEET_TABS));
-  const publicPage: MenuRow[] = isPublicState(state)
-    ? [
-        {
-          key: "public-page",
-          label: "Open the public page",
-          href: locationPublicUrl(slug),
-          icon: "public-page",
-          external: true,
-        },
-      ]
-    : [];
-
   return {
     label: location.name,
     parts: [
@@ -290,7 +289,7 @@ function locationMenu({
       },
       {
         label: MENU_PART_LABELS.manage,
-        rows: [...rowsOf(["pages", "settings"]), ...publicPage],
+        rows: rowsOf(["pages", "settings"]),
       },
     ].filter((part) => part.rows.length > 0),
     foot: isPublicState(state)

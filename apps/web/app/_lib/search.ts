@@ -104,6 +104,17 @@ const TRIP_FIELDS: FieldDef[] = [
   { key: "date", timeKey: "time", kind: "when", label: "When" },
 ];
 
+/**
+ * The id of the element that holds the search card; filling a field from
+ * elsewhere on the page scrolls to it, and "Get my price" links to it. Kept
+ * out of the card's client module: a server component importing a value
+ * from there gets a client reference, not the string.
+ */
+export const SEARCH_CARD_ID = "booking";
+
+/** Where the home page's search card is, for a page without one. */
+export const HOME_SEARCH_CARD = `/#${SEARCH_CARD_ID}`;
+
 export const PRODUCTS: Record<ProductKey, Product> = {
   "car-with-driver": {
     key: "car-with-driver",
@@ -201,7 +212,7 @@ export function visibleFields(product: Product, values: SearchValues) {
 }
 
 /** The values a field holds: one, or a day and a time. */
-export function fieldKeys(def: FieldDef): (keyof SearchValues)[] {
+export function fieldKeys(def: FieldDef): FieldKey[] {
   return def.timeKey ? [def.key, def.timeKey] : [def.key];
 }
 

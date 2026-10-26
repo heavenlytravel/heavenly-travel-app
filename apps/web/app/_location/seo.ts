@@ -1,29 +1,33 @@
 import "server-only";
 import {
   LANDING_PAGE,
-  LOCATION_PAGE_LABELS,
+  SITE_NAME,
+  locationPageFallbackTitle,
+  SECTIONS,
   SITE_URL,
   locationPagePath,
   locationPreviewPath,
-  paragraphsOf,
+  pageNameInView,
   type LocationView,
   type LocationViewPage,
 } from "@repo/db/server";
 import type { Metadata } from "next";
+import { faqDataOf, pageMetadata } from "../_lib/seo";
 
 /**
  * What a location page tells search engines and link previews: its
- * metadata, with the canonical address on `SITE_URL` so it follows the host
- * at cutover, and its structured data. See
- * docs/261001-locations-and-pages.md, "Search engines".
+ * metadata (../_lib/seo) and its structured data, with the breadcrumb
+ * through its section. See docs/261001-locations-and-pages.md, "Search
+ * engines".
  */
-
-const SITE_NAME = "Heavenly Travel";
 
 /** The page's steps from the home page, as its breadcrumb shows them. */
 export type Crumb = { name: string; path: string };
 
-/** Home, the location, then the product on a product page. `preview` keeps the links in the preview. */
+/**
+ * Home, the location, then the section on a section's page, then the page
+ * itself under a section. `preview` keeps the links in the preview.
+ */
 export function crumbsOf(
   location: LocationView,
   page: LocationViewPage,
@@ -34,58 +38,45 @@ export function crumbsOf(
     { name: "Home", path: "/" },
     { name: location.name, path: pathOf(location.slug) },
   ];
-  if (page.page !== LANDING_PAGE) {
+  if (page.page === LANDING_PAGE) return crumbs;
+  crumbs.push({
+    name: SECTIONS[page.page].label,
+    path: pathOf(location.slug, { page: page.page, slug: "" }),
+  });
+  if (page.slug !== "") {
     crumbs.push({
-      name: LOCATION_PAGE_LABELS[page.page],
-      path: pathOf(location.slug, page.page),
+      name: pageNameInView(location, page),
+      path: pathOf(location.slug, page),
     });
   }
   return crumbs;
 }
 
-/**
- * The page's title, description, canonical address and share image: the
- * one Marketing set for shared links, else the hero image, shown as a large
- * card. The preview has no canonical address and is never listed.
- */
+/** A location page's metadata, as `pageMetadata` makes it. */
 export function locationMetadata(
   location: LocationView,
   page: LocationViewPage,
   preview = false,
 ): Metadata {
-  const { metaTitle, metaDescription, shareImage, heroImage } = page.content;
-  const shared = shareImage ?? heroImage;
-  const title = metaTitle || `${location.name} | ${SITE_NAME}`;
-  if (preview) {
-    return { title: `Preview: ${title}`, robots: { index: false } };
-  }
-  const url = SITE_URL + locationPagePath(location.slug, page.page);
-  return {
-    title,
-    description: metaDescription,
-    alternates: { canonical: url },
-    openGraph: {
-      type: "website",
-      siteName: SITE_NAME,
-      title,
-      description: metaDescription,
-      url,
-      images: shared
-        ? [
-            {
-              url: shared.url,
-              width: shared.width,
-              height: shared.height,
-              alt: shared.alt,
-            },
-          ]
+  const name = pageNameInView(location, page);
+  return pageMetadata(page.content, {
+    path: locationPagePath(location.slug, page),
+    fallbackTitle: locationPageFallbackTitle(location.name, page, name),
+    preview,
+    article:
+      page.kind === "article"
+        ? {
+            publishedTime: page.firstPublishedAt,
+            modifiedTime: page.publishedAt,
+          }
         : undefined,
-    },
-    twitter: { card: shared ? "summary_large_image" : "summary" },
-  };
+  });
 }
 
-/** The page's `BreadcrumbList`, and its `FAQPage` when it has FAQs. Addresses are public ones. */
+/**
+ * The page's `BreadcrumbList`, its `FAQPage` when it has FAQs, and on a post
+ * its `Article`. Addresses are public ones.
+ */
 export function structuredDataOf(
   location: LocationView,
   page: LocationViewPage,
@@ -102,19 +93,20 @@ export function structuredDataOf(
       })),
     },
   ];
-  const faqs = page.content.faqs.filter((faq) => faq.question && faq.answer);
-  if (faqs.length > 0) {
+  const faqs = faqDataOf(page.content);
+  if (faqs) data.push(faqs);
+  if (page.kind === "article") {
+    const { heroHeadline, heroSubheadline, heroImage } = page.content;
     data.push({
       "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: faqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: paragraphsOf(faq.answer).join("\n"),
-        },
-      })),
+      "@type": "Article",
+      headline: heroHeadline,
+      description: heroSubheadline,
+      image: heroImage ? [heroImage.url] : undefined,
+      datePublished: page.firstPublishedAt ?? undefined,
+      dateModified: page.publishedAt ?? undefined,
+      mainEntityOfPage: SITE_URL + locationPagePath(location.slug, page),
+      publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
     });
   }
   return data;

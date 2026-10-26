@@ -2,7 +2,8 @@ import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { LOCATION_FIELD_LABELS } from "./location-input";
 import { andList } from "./names";
-import { isLocationPageKey, pageNameOf } from "./location-page-input";
+import { loggedPageRef, pageNameOf } from "./location-page-input";
+import { SITE_PAGE_LABELS, isSitePageKey } from "./site-page-input";
 import { formatMyr } from "./money";
 import { OFFERING_FIELD_LABELS } from "./offering-input";
 import {
@@ -59,6 +60,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "vehicle",
   "driver",
   "media",
+  "site-page",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -137,16 +139,35 @@ const ACTIONS = {
   },
   "location.state.changed": { entityType: "location", customerVisible: false },
   /**
-   * The page's key and its whole content, before and after, so a publish
-   * can be read back and rolled back by hand. The content before is null on
-   * the first publish.
+   * The page's key, its slug ("" or none for the main page and a section's
+   * own), its name in `after`, and its whole content, before and after, so
+   * a publish can be read back and rolled back by hand. The content before
+   * is null on the first publish.
    */
   "location.page.published": {
     entityType: "location",
     customerVisible: false,
   },
-  /** The page's key and whether it is published. */
+  /** The page's key and slug, and whether it is published. */
   "location.page.updated": { entityType: "location", customerVisible: false },
+  /** A page Marketing added to a section: its key, slug and name, in `after`. */
+  "location.page.created": { entityType: "location", customerVisible: false },
+  /** A page added on demand given another slug, before its first publish. */
+  "location.page.renamed": { entityType: "location", customerVisible: false },
+  /** A page added on demand, deleted: its key, slug, name and whether it was on, in `before`. */
+  "location.page.deleted": { entityType: "location", customerVisible: false },
+  /** A section's pages added on demand, by slug in their order, before and after; `moved` the one moved. */
+  "location.pages.ordered": {
+    entityType: "location",
+    customerVisible: false,
+  },
+  /**
+   * A site page's key and its whole content, before and after, as a
+   * location's page logs it. Logged against the page's key.
+   */
+  "site.page.published": { entityType: "site-page", customerVisible: false },
+  /** A site page's key and whether it is published. */
+  "site.page.updated": { entityType: "site-page", customerVisible: false },
   /**
    * The name, the slug, the state codes and the state it had, in
    * `before`: the row is gone, and its other entries are named from this one.
@@ -264,6 +285,10 @@ export function locationHistoryKindOf(
       return "fleet";
     case "location.page.published":
     case "location.page.updated":
+    case "location.page.created":
+    case "location.page.renamed":
+    case "location.page.deleted":
+    case "location.pages.ordered":
     case "location.addresses.updated":
       return "pages";
     case "location.created":
@@ -644,10 +669,31 @@ function stateMove(before: unknown, after: unknown) {
   }
 }
 
-/** "the landing page", or "a page" when the entry names none we know. */
+/**
+ * "the main page", "the popular place “Eagle Square”", or "a page" when
+ * the entry names none we know. An entry from before sections names no
+ * slug; one from before names were logged reads its name off the content.
+ */
 function pageName(json: unknown) {
+  const ref = loggedPageRef(json);
+  if (!ref) return "a page";
+  const name = field(json, "name");
+  const content = field(json, "content");
+  const headline = field(content, "heroHeadline");
+  return pageNameOf(
+    ref,
+    typeof name === "string" && name !== ""
+      ? name
+      : typeof headline === "string"
+        ? headline
+        : undefined,
+  );
+}
+
+/** "About us", or "a site page" when the entry names none we know. */
+function sitePageName(json: unknown) {
   const page = field(json, "page");
-  return isLocationPageKey(page) ? pageNameOf(page) : "a page";
+  return isSitePageKey(page) ? SITE_PAGE_LABELS[page] : "a site page";
 }
 
 /**
@@ -779,6 +825,26 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "isOn") === true
         ? `Turned ${pageName(entry.after)} on`
         : `Unpublished ${pageName(entry.after)}`;
+    case "location.page.created":
+      return `Added ${pageName(entry.after)}`;
+    case "location.page.renamed": {
+      const page = field(entry.after, "page");
+      const slug = field(entry.after, "slug");
+      return `Changed the address of ${pageName(entry.after)} to /${typeof page === "string" ? `${page}/` : ""}${typeof slug === "string" ? slug : ""}`;
+    }
+    case "location.page.deleted":
+      return `Deleted ${pageName(entry.before)}`;
+    case "location.pages.ordered": {
+      const moved = field(entry.after, "moved");
+      const page = field(entry.after, "page");
+      return typeof moved === "string"
+        ? `Moved ${pageName({ page, slug: moved })} in the order`
+        : "Changed the order of the pages";
+    }
+    case "site.page.published":
+      return `Published ${sitePageName(entry.after)}`;
+    case "site.page.updated":
+      return `Unpublished ${sitePageName(entry.after)}`;
     case "location.offering.created":
       return `Started selling ${className(entry.after)}`;
     case "location.offering.updated":

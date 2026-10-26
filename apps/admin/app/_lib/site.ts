@@ -1,6 +1,7 @@
 import "server-only";
 import {
   REVALIDATE_PATH,
+  SITE_PAGES_TAG,
   SITE_URL,
   TOP_CHOICES_TAG,
   VEHICLE_CLASSES_TAG,
@@ -8,25 +9,39 @@ import {
   locationPagePath,
   locationPreviewPath,
   locationTag,
-  type LocationPageKey,
+  sitePagePath,
+  sitePagePreviewPath,
+  type LocationPageRef,
+  type SitePageKey,
 } from "@repo/db/server";
 import { after } from "next/server";
 
 /**
  * The console's dealings with the customer site, a separate deployment at
- * `SITE_URL`: the address of a location's staff preview there, and the call
- * that refreshes its cached pages after a change here. See
+ * `SITE_URL`: the addresses of a page's staff preview there and of its
+ * public copy, and the call that refreshes its cached pages after a change
+ * here. See
  * docs/261001-locations-and-pages.md, "Keeping the pages fresh".
  */
 
 /** Where staff preview a page of a location on the customer site. */
-export function locationPreviewUrl(slug: string, page?: LocationPageKey) {
-  return SITE_URL + locationPreviewPath(slug, page);
+export function locationPreviewUrl(slug: string, ref?: LocationPageRef) {
+  return SITE_URL + locationPreviewPath(slug, ref);
 }
 
 /** Where the public reads a location's page, its main page when left out, once it is live. */
-export function locationPublicUrl(slug: string, page?: LocationPageKey) {
-  return SITE_URL + locationPagePath(slug, page);
+export function locationPublicUrl(slug: string, ref?: LocationPageRef) {
+  return SITE_URL + locationPagePath(slug, ref);
+}
+
+/** Where staff preview a site page's draft. */
+export function sitePagePreviewUrl(page: SitePageKey) {
+  return SITE_URL + sitePagePreviewPath(page);
+}
+
+/** Where the public reads a site page, once it is published. */
+export function sitePagePublicUrl(page: SitePageKey) {
+  return SITE_URL + sitePagePath(page);
 }
 
 /** How long the refresh may take before it is given up. */
@@ -111,6 +126,11 @@ async function locationTagsOf(ids: readonly string[]) {
 /** Refreshes the home page's cards alone: their order changed. */
 export function refreshTopChoicesAfter() {
   after(() => refreshSite([TOP_CHOICES_TAG]));
+}
+
+/** Refreshes the site's own pages: the home page, the documents and the footer's links. */
+export function refreshSitePagesAfter() {
+  after(() => refreshSite([SITE_PAGES_TAG]));
 }
 
 /** Refreshes the vehicle classes the product pages list. */

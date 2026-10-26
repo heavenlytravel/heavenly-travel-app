@@ -9,7 +9,7 @@ import { Card } from "../../../_components/Card";
 import { FormError } from "../../../_components/FormError";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
-import { SlugField } from "../_components/SlugField";
+import { LocationSlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { createLocationAction } from "../actions";
 import { FORM_WIDTH } from "../../../_components/PageColumn";
@@ -52,7 +52,7 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
               }}
             />
           </Field>
-          <SlugField
+          <LocationSlugField
             value={slug}
             onChange={(next) => {
               setSlugTyped(true);

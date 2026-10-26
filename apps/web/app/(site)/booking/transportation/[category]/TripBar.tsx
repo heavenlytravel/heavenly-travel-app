@@ -7,7 +7,7 @@ import {
   type TripSearch,
   type TripView,
 } from "@repo/db";
-import { FieldInput } from "../../../../_components/search/fields";
+import { FieldIcon, FieldInput } from "../../../../_components/search/fields";
 import {
   fieldKeys,
   PRODUCTS,
@@ -162,13 +162,14 @@ function TripEditor({
         {fields.map((f) => {
           const id = `trip-${f.key}`;
           const keys = fieldKeys(f);
-          const issue = issues.some((x) => keys.includes(x.field));
+          const issue = issues.some((x) => keys.some((key) => key === x.field));
           return (
             <div key={f.key} className="min-w-0">
               <label
                 htmlFor={id}
-                className="mb-1.5 block text-[0.9rem] font-semibold text-slate-800"
+                className="mb-1.5 flex items-center gap-1.5 text-[0.9rem] font-semibold text-slate-800"
               >
+                <FieldIcon def={f} className="size-[15px] text-slate-500" />
                 {f.label}
               </label>
               <FieldInput

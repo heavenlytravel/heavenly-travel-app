@@ -19,6 +19,7 @@ const SUPER_ONLY: Permission[] = [
   "activity.view",
   "locations.activate",
   "media.manage",
+  "website.manage",
 ];
 /** What every admin holds, team or not: the home and the locations' overviews. */
 const ANYONE: Permission[] = ["dashboard.view", "locations.view"];

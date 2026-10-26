@@ -12,16 +12,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Route: /preview/langkawi. A location's landing page as drafted, for staff
+ * Route: /preview/langkawi. A location's main page as drafted, for staff
  * who hold `locations.manage`: the public page's components over the working
  * draft, in any state. The access check is `previewPageAt`'s. There is no
  * layout here, so the check runs in the page.
  */
 export default async function LocationLandingPreview({ params }: Props) {
-  const { location, page } = await previewPageAt((await params).location);
+  const route = await previewPageAt((await params).location);
   return (
-    <LocationFrame location={location} previewOf={page}>
-      <LocationPageView location={location} page={page} preview />
+    <LocationFrame location={route.location} previewOf={route.page}>
+      <LocationPageView {...route} preview />
     </LocationFrame>
   );
 }

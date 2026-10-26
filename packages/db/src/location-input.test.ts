@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { TRIP_CATEGORIES } from "./booking-status";
 import {
   LOCATION_LIMITS,
   LOCATION_MOVE_LABELS,
@@ -23,6 +22,7 @@ import {
   type OperationStanding,
   type PageStanding,
 } from "./location-input";
+import { LANDING_REF, LOCATION_SECTIONS } from "./location-page-input";
 
 const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
   result.ok ? "" : result.error;
@@ -54,12 +54,17 @@ const bare: OperationStanding = {
   routesPriced: 0,
 };
 
-/** The three pages, each published as drafted unless the patch says otherwise. */
+/** Three pages, each published as drafted unless the patch says otherwise. */
 function pages(
   patch: Partial<Record<PageStanding["page"], PageStanding["status"]>> = {},
 ): PageStanding[] {
   return (["landing", "car-with-driver", "coach-charter"] as const).map(
-    (page) => ({ page, status: patch[page] ?? "published" }),
+    (page) => ({
+      page,
+      slug: "",
+      name: "",
+      status: patch[page] ?? "published",
+    }),
   );
 }
 
@@ -166,7 +171,7 @@ describe("setupSteps", () => {
         ["details", "Kedah", true],
         ["vehicle-classes", "3 classes on sale", true],
         ["coverage", "2 zones", true],
-        ["pages", "Main page published, 2 product pages published", true],
+        ["pages", "Main page published, 2 section pages published", true],
       ],
     );
     assert.deepEqual(setupProgress(steps), {
@@ -189,7 +194,7 @@ describe("setupSteps", () => {
         ["coverage", "No zones yet", false],
         [
           "pages",
-          "Main page published, 1 product page published, edits waiting",
+          "Main page published, 1 section page published, edits waiting",
           false,
         ],
       ],
@@ -214,24 +219,44 @@ describe("setupSteps", () => {
 
 describe("checkPageUnpublish", () => {
   it("keeps the main page published once the location has left draft", () => {
-    assert.equal(checkPageUnpublish("draft", "landing").ok, true);
+    assert.equal(checkPageUnpublish("draft", LANDING_REF).ok, true);
     for (const state of ["live", "paused"] as const) {
       assert.match(
-        errorOf(checkPageUnpublish(state, "landing")),
+        errorOf(checkPageUnpublish(state, LANDING_REF)),
         /stays published/,
         state,
       );
     }
   });
 
-  it("lets a product page be unpublished in any state", () => {
+  it("lets any other page be unpublished in any state", () => {
     for (const state of LOCATION_STATES) {
-      assert.equal(
-        checkPageUnpublish(state, "car-with-driver").ok,
-        true,
-        state,
-      );
+      for (const ref of [
+        { page: "car-with-driver", slug: "" },
+        { page: "car-with-driver", slug: "sedan" },
+        { page: "blog", slug: "a-day" },
+      ] as const) {
+        assert.equal(checkPageUnpublish(state, ref).ok, true, state);
+      }
     }
+  });
+
+  it("names a page under a section by its name in a step's to-do", () => {
+    const steps = setupSteps(
+      [
+        ...pages(),
+        {
+          page: "popular-places",
+          slug: "eagle-square",
+          name: "Eagle Square",
+          status: "changed",
+        },
+      ],
+      ready,
+    );
+    assert.deepEqual(steps[3]?.todos, [
+      "Publish the changes on the popular place “Eagle Square”",
+    ]);
   });
 });
 
@@ -255,10 +280,12 @@ describe("checkLocationSlug", () => {
     assert.equal(checkLocationSlug("a".repeat(LOCATION_LIMITS.slug)).ok, true);
   });
 
-  it("refuses the site's own paths, the products, the locales, the set-aside names and the console's", () => {
+  it("refuses the site's own paths, the sections, the locales, the set-aside names and the console's", () => {
     const reserved = [
       ...["account", "booking", "preview", "sign-in", "sign-up", "api"],
-      ...TRIP_CATEGORIES,
+      ...["about-us", "contact-us", "terms", "privacy-policy"],
+      ...["refund-policy"],
+      ...LOCATION_SECTIONS,
       ...["en", "ms", "zh"],
       ...["admin", "search", "manage", "quote", "packages"],
       ...["vehicles", "transfer", "driver", "sitemap", "robots"],

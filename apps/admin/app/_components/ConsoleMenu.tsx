@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { cx } from "@repo/ui/cx";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
@@ -199,16 +199,7 @@ function Row({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild active={current} tooltip={row.label}>
-        {row.external ? (
-          <a
-            href={row.href}
-            target="_blank"
-            rel="noreferrer"
-            data-row={row.key}
-          >
-            {content}
-          </a>
-        ) : row.drill ? (
+        {row.drill ? (
           <Link
             href={row.href}
             data-row={row.key}
@@ -236,7 +227,7 @@ function Row({
 function RailPages({ row, pathname }: { row: MenuRow; pathname: string }) {
   const drill = row.drill!;
   const pages = pagesOf(drill.entries);
-  const on = entryOnScreen(pages, pathname);
+  const on = entryOnScreen(pages, pathname, useSearchParams());
   return (
     <SidebarMenuCluster label={drill.label}>
       {pages.map((entry) => {
@@ -322,9 +313,10 @@ function DrillMenu({
 }) {
   const back = useRef<HTMLButtonElement>(null);
   const drill = row.drill!;
+  const search = useSearchParams();
   // Pressed, before its page has come, the page the row opens is marked.
   const on =
-    entryOnScreen(drill.entries, pathname) ??
+    entryOnScreen(drill.entries, pathname, search) ??
     drill.entries.find((entry) => entry.href === row.href);
 
   useEffect(() => {

@@ -19,18 +19,22 @@ export function isSearchableQuery(query: string) {
   return query.trim().length >= PLACE_QUERY_MIN_LENGTH;
 }
 
-/** The suggestions for a query; inside `within` only, when given. */
+/**
+ * The suggestions for a query: inside `within` only, or the places in
+ * `near` first, when given.
+ */
 export async function fetchPlaceSuggestions(
   query: string,
   sessionToken: string,
   signal?: AbortSignal,
-  within?: Bounds,
+  { within, near }: { within?: Bounds; near?: Bounds } = {},
 ): Promise<PlaceSuggestion[]> {
   const params = new URLSearchParams({
     q: query.trim().slice(0, PLACE_QUERY_MAX_LENGTH),
     session: sessionToken,
   });
   if (within) params.set("within", within.join(","));
+  if (near) params.set("near", near.join(","));
   const res = await fetch(`${PLACE_SEARCH_PATH}?${params}`, { signal });
   if (!res.ok) return [];
   const body = (await res.json()) as PlaceSearchResponse;

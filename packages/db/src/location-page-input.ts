@@ -1,15 +1,19 @@
-import { TRIP_CATEGORIES, TRIP_CATEGORY_LABELS } from "./booking-status";
-import type { Change } from "./change";
+import { TRIP_CATEGORY_LABELS, type TripCategory } from "./booking-status";
+import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
-import { isUploadUrl, type UploadedImage } from "./images";
+import type { PageKind } from "./page-content";
+import { plural } from "./names";
+import { SITE_NAME } from "./site-page-input";
+import { slugify } from "./slug";
 
 /**
- * The content of a location's pages and the rules it is checked against,
- * pure and browser-safe: the editor shows the limits and what is still
- * missing as it is typed, the writers in ./location-pages apply the same
- * checks before they write. Every page has the same fields in the same
- * order; only the main page has highlights. See
- * docs/261001-locations-and-pages.md, "The content of a page".
+ * A location's pages, pure and browser-safe: its main page, then its
+ * sections, each with a page of its own and, for most, pages under it.
+ * Car with driver and coach charter have one page per vehicle class the
+ * location offers; popular places, attractions, hotels and the blog have
+ * pages Marketing adds on demand. What a page holds is its kind's
+ * (./page-content). See docs/261025-marketing-pages.md, "A location's site
+ * is sections".
  */
 
 /**
@@ -19,465 +23,346 @@ import { isUploadUrl, type UploadedImage } from "./images";
  */
 export const LANDING_PAGE = "landing";
 
-/** The pages of a location: its main page, then one per product. */
-export const LOCATION_PAGES = [LANDING_PAGE, ...TRIP_CATEGORIES] as const;
+/** The sections of every location, in the order its pages and the console list them. */
+export const LOCATION_SECTIONS = [
+  "car-with-driver",
+  "coach-charter",
+  "car-rental",
+  "attractions",
+  "hotels",
+  "popular-places",
+  "blog",
+] as const;
+export type LocationSection = (typeof LOCATION_SECTIONS)[number];
+export const isLocationSection = guardFor(LOCATION_SECTIONS);
+
+/** The pages a location's row can be: its main page, or a section's. A page under a section shares its section's key, with a slug. */
+export const LOCATION_PAGES = [LANDING_PAGE, ...LOCATION_SECTIONS] as const;
 export type LocationPageKey = (typeof LOCATION_PAGES)[number];
 export const isLocationPageKey = guardFor(LOCATION_PAGES);
+
+/** What a section's pages under it are. */
+export type SectionChildren =
+  /** One per vehicle class the location offers in the product, keyed by the class's slug. */
+  | { type: "classes"; category: TripCategory }
+  /** Added by Marketing, each with a slug of its own. */
+  | {
+      type: "entries";
+      kind: Extract<PageKind, "place" | "article">;
+      /** What one is called: "popular place". */
+      one: string;
+      /** And several: "popular places". */
+      many: string;
+      /** Shown in Marketing's order; else newest first, by their first publish. */
+      ordered: boolean;
+    };
+
+export type SectionDef = {
+  label: string;
+  /** The kind of the section's own page. */
+  kind: Extract<PageKind, "service" | "listing">;
+  /** The pages under it; null for none yet. */
+  children: SectionChildren | null;
+  /**
+   * A service that cannot be booked online yet: its pages are written and
+   * published, and say that online booking is coming.
+   */
+  comingSoon: boolean;
+  /** One line about it, on the card that opens its page. */
+  note: string;
+};
+
+export const SECTIONS: Record<LocationSection, SectionDef> = {
+  "car-with-driver": {
+    label: TRIP_CATEGORY_LABELS["car-with-driver"],
+    kind: "service",
+    children: { type: "classes", category: "car-with-driver" },
+    comingSoon: false,
+    note: "Sedan, MPV or van, with a driver",
+  },
+  "coach-charter": {
+    label: TRIP_CATEGORY_LABELS["coach-charter"],
+    kind: "service",
+    children: { type: "classes", category: "coach-charter" },
+    comingSoon: false,
+    note: "Minibus or coach for groups",
+  },
+  "car-rental": {
+    label: "Car rental",
+    kind: "service",
+    // One page per class, as car with driver, once car rental is a
+    // category with classes of its own.
+    children: null,
+    comingSoon: true,
+    note: "Drive yourself, by the day or the week",
+  },
+  attractions: {
+    label: "Attractions",
+    kind: "service",
+    children: {
+      type: "entries",
+      kind: "place",
+      one: "attraction",
+      many: "attractions",
+      ordered: true,
+    },
+    comingSoon: true,
+    note: "Tickets and tours, skip the queue",
+  },
+  hotels: {
+    label: "Hotels",
+    kind: "service",
+    children: {
+      type: "entries",
+      kind: "place",
+      one: "hotel",
+      many: "hotels",
+      ordered: true,
+    },
+    comingSoon: true,
+    note: "Stays picked by people who live here",
+  },
+  "popular-places": {
+    label: "Popular places",
+    kind: "listing",
+    children: {
+      type: "entries",
+      kind: "place",
+      one: "popular place",
+      many: "popular places",
+      ordered: true,
+    },
+    comingSoon: false,
+    note: "Where most visitors go",
+  },
+  blog: {
+    label: "Blog",
+    kind: "listing",
+    children: {
+      type: "entries",
+      kind: "article",
+      one: "post",
+      many: "posts",
+      ordered: false,
+    },
+    comingSoon: false,
+    note: "Guides and stories",
+  },
+};
+
+/** The sections that are services, whose pages the main page offers as cards. */
+export const SERVICE_SECTIONS = LOCATION_SECTIONS.filter(
+  (section) => SECTIONS[section].kind === "service",
+);
+
 export const LOCATION_PAGE_LABELS: Record<LocationPageKey, string> = {
   landing: "Main page",
-  ...TRIP_CATEGORY_LABELS,
+  ...(Object.fromEntries(
+    LOCATION_SECTIONS.map((section) => [section, SECTIONS[section].label]),
+  ) as Record<LocationSection, string>),
 };
 
-/** How a heading names a page: "Main page", "Coach charter page". */
-export function pageTitleOf(page: LocationPageKey) {
-  return page === LANDING_PAGE
-    ? LOCATION_PAGE_LABELS[page]
-    : `${LOCATION_PAGE_LABELS[page]} page`;
+/**
+ * One page of a location: its main page or a section's own, with an empty
+ * slug, or a page under a section, by its slug: `{ page: "car-with-driver",
+ * slug: "sedan" }`.
+ */
+export type LocationPageRef = { page: LocationPageKey; slug: string };
+
+/** The main page. */
+export const LANDING_REF: LocationPageRef = { page: LANDING_PAGE, slug: "" };
+
+/** Whether the page is under a section, not the main page or a section's own. */
+export function isChildPage(ref: LocationPageRef) {
+  return ref.slug !== "";
 }
 
-/** How a sentence names a page: "the main page", "the Coach charter page". */
-export function pageNameOf(page: LocationPageKey) {
-  return page === LANDING_PAGE
-    ? "the main page"
-    : `the ${LOCATION_PAGE_LABELS[page]} page`;
+/** What the section's pages under it are; null for the main page, or a section with none. */
+export function childrenOf(page: LocationPageKey): SectionChildren | null {
+  return page === LANDING_PAGE ? null : SECTIONS[page].children;
 }
 
-/** The locale every page row is written in. Malay pages are future work. */
-export const PAGE_LOCALE = "en";
+/** How many pages a section has under it, as a list says it: "3 classes", "4 popular places", "1 post". */
+export function childrenCount(children: SectionChildren, n: number) {
+  return children.type === "classes"
+    ? plural(n, "class", "classes")
+    : plural(n, children.one, children.many);
+}
 
-/** An uploaded image as the content keeps it, with the alt text Marketing writes. */
-export type PageImage = UploadedImage & { alt: string };
+/** The kind of a page, which decides what it holds. */
+export function pageKindOf(ref: LocationPageRef): PageKind {
+  if (ref.page === LANDING_PAGE) return "landing";
+  const section = SECTIONS[ref.page];
+  if (!isChildPage(ref)) return section.kind;
+  if (section.children?.type === "entries") return section.children.kind;
+  return "class";
+}
 
-export type PageFaq = { question: string; answer: string };
+/** Whether a page can exist: its main page and each section's own, or one under a section that has pages under it. */
+export function isLocationPageRef(ref: {
+  page: unknown;
+  slug: unknown;
+}): ref is LocationPageRef {
+  if (!isLocationPageKey(ref.page) || typeof ref.slug !== "string") {
+    return false;
+  }
+  if (ref.slug === "") return true;
+  return childrenOf(ref.page) !== null && ref.slug === slugify(ref.slug);
+}
 
-export type PageHighlight = {
-  name: string;
-  text: string;
-  image: PageImage | null;
-  /** The saved address "Take me here" fills in; null for none. */
-  addressId: string | null;
+/** The page a log entry's `{ page, slug }` names; one from before sections has no slug. */
+export function loggedPageRef(json: unknown): LocationPageRef | null {
+  if (typeof json !== "object" || json === null) return null;
+  const { page, slug } = json as { page?: unknown; slug?: unknown };
+  const ref = { page, slug: slug ?? "" };
+  return isLocationPageRef(ref) ? ref : null;
+}
+
+/**
+ * How a heading names a page: "Main page", "Coach charter page", and a page
+ * under a section by its name, "Sedan", "Eagle Square". `name` is the
+ * page's name where it has one: its class's, or its headline.
+ */
+export function pageTitleOf(ref: LocationPageRef, name?: string) {
+  if (ref.page === LANDING_PAGE) return LOCATION_PAGE_LABELS.landing;
+  if (!isChildPage(ref)) return `${LOCATION_PAGE_LABELS[ref.page]} page`;
+  return name || ref.slug;
+}
+
+/**
+ * A location page's title while its meta title is empty, on the site and
+ * in the editor's search preview alike: "Langkawi | Heavenly Travel",
+ * "Car with driver in Langkawi | …", "Eagle Square in Langkawi | …".
+ * `name` names a page under a section: its class's, or its headline.
+ */
+export function locationPageFallbackTitle(
+  locationName: string,
+  ref: LocationPageRef,
+  name: string,
+): string {
+  if (ref.page === LANDING_PAGE) return `${locationName} | ${SITE_NAME}`;
+  const shown = isChildPage(ref) ? name : SECTIONS[ref.page].label;
+  return `${shown} in ${locationName} | ${SITE_NAME}`;
+}
+
+/**
+ * How a sentence names a page: "the main page", "the Coach charter page",
+ * "the Sedan page", "the popular place “Eagle Square”".
+ */
+export function pageNameOf(ref: LocationPageRef, name?: string) {
+  if (ref.page === LANDING_PAGE) return "the main page";
+  if (!isChildPage(ref)) return `the ${LOCATION_PAGE_LABELS[ref.page]} page`;
+  const children = childrenOf(ref.page);
+  if (children?.type === "entries") {
+    return `the ${children.one} “${name || ref.slug}”`;
+  }
+  return `the ${name || ref.slug} page`;
+}
+
+/**
+ * Where a page of a location is on the customer site: /langkawi,
+ * /langkawi/coach-charter, /langkawi/popular-places/eagle-square.
+ */
+export function locationPagePath(
+  locationSlug: string,
+  ref: LocationPageRef = LANDING_REF,
+) {
+  if (ref.page === LANDING_PAGE) return `/${locationSlug}`;
+  return isChildPage(ref)
+    ? `/${locationSlug}/${ref.page}/${ref.slug}`
+    : `/${locationSlug}/${ref.page}`;
+}
+
+/**
+ * The main page as the console's addresses name it, where a section is
+ * named by its key: its editor at /locations/langkawi/pages/main, the
+ * Pages list narrowed to it at ?section=main. No section is keyed so.
+ */
+export const MAIN_PAGE_SEGMENT = "main";
+
+/** A page's key as the console's addresses name it: `main` for the main page. */
+export function pageSegmentOf(page: LocationPageKey): string {
+  return page === LANDING_PAGE ? MAIN_PAGE_SEGMENT : page;
+}
+
+/** The page a console address names by `pageSegmentOf`; null for none, the stored key "landing" too. */
+export function pageKeyOfSegment(segment: unknown): LocationPageKey | null {
+  if (segment === MAIN_PAGE_SEGMENT) return LANDING_PAGE;
+  return isLocationSection(segment) ? segment : null;
+}
+
+/**
+ * The sections whose pages are places, each place a page under one of
+ * them: its type, which decides its address and the list its card is in.
+ * A place in two lists is two pages, each with its own name and text,
+ * which may point at the same saved address. One catalogue of places, in
+ * three lists. See docs/261025-marketing-pages.md, "Places".
+ */
+export const PLACE_SECTIONS = [
+  "popular-places",
+  "attractions",
+  "hotels",
+] as const;
+export type PlaceSection = (typeof PLACE_SECTIONS)[number];
+export const isPlaceSection = guardFor(PLACE_SECTIONS);
+
+/** What a place of each section is, as its type: "Attraction". */
+export const PLACE_TYPE_LABELS: Record<PlaceSection, string> = {
+  "popular-places": "Popular place",
+  attractions: "Attraction",
+  hotels: "Hotel",
 };
 
-/** What Marketing writes on one page. The working draft and the published copy both hold one. */
-export type PageContent = {
-  metaTitle: string;
-  metaDescription: string;
-  /**
-   * The picture a shared link shows; null to show the hero image. Optional:
-   * for a hero that crops badly on a 1200 by 630 card.
-   */
-  shareImage: PageImage | null;
-  /**
-   * The main page's only; empty on a product page. The short line over
-   * the headline and under the name on a home page card: "Island escape".
-   * Optional.
-   */
-  tagline: string;
-  heroHeadline: string;
-  heroSubheadline: string;
-  heroImage: PageImage | null;
-  /** Plain paragraphs, a blank line between them. */
-  intro: string;
-  faqs: PageFaq[];
-  /** The main page's only; empty on a product page. */
-  highlights: PageHighlight[];
-};
+/**
+ * Where a page is edited in the console: under the location's Pages, at
+ * its address on the site without the location's, the main page at
+ * `MAIN_PAGE_SEGMENT`. /locations/langkawi/pages/main,
+ * /locations/langkawi/pages/car-with-driver,
+ * /locations/langkawi/pages/car-with-driver/sedan. A section's list of its
+ * pages is the Pages list narrowed to it. Shared by the console's links
+ * and the customer site's preview, whose Edit opens it.
+ */
+export function pageEditorPath(locationSlug: string, ref: LocationPageRef) {
+  const own = `/locations/${locationSlug}/pages/${pageSegmentOf(ref.page)}`;
+  return isChildPage(ref) ? `${own}/${ref.slug}` : own;
+}
 
-export const PAGE_LIMITS = {
-  /** Characters. */
-  metaTitle: 60,
-  metaDescription: 160,
-  tagline: 80,
-  heroHeadline: 80,
-  heroSubheadline: 160,
-  imageAlt: 160,
-  intro: 5000,
-  faqQuestion: 160,
-  faqAnswer: 1000,
-  highlightName: 60,
-  highlightText: 300,
-  /** Words the intro needs to be complete. */
-  introWords: 100,
-  /** How many a complete page needs, and how many it can hold. */
-  minFaqs: 3,
-  maxFaqs: 12,
-  minHighlights: 3,
-  maxHighlights: 8,
+/** Where staff preview the same page: /preview/langkawi. */
+export function locationPreviewPath(
+  locationSlug: string,
+  ref?: LocationPageRef,
+) {
+  return `/preview${locationPagePath(locationSlug, ref)}`;
+}
+
+export const ENTRY_LIMITS = {
+  /** Characters of a slug. */
+  slug: 80,
 } as const;
 
-const fail = (error: string): Change => ({ ok: false, error });
-
-export function wordCount(text: string) {
-  return text.split(/\s+/).filter(Boolean).length;
-}
-
-/** The paragraphs of a plain text, as the page renders them. */
-export function paragraphsOf(text: string): string[] {
-  return text
-    .split(/\n+/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
-}
-
-/** One line: runs of white space become one space. */
-function lineOf(value: unknown) {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
-}
-
-/** Plain paragraphs with one blank line between them. */
-function paragraphTextOf(value: unknown) {
-  return typeof value === "string" ? paragraphsOf(value).join("\n\n") : "";
-}
-
-function record(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-const isSize = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
-
-/** The image, or null for anything that is not an uploaded one. */
-function imageOf(value: unknown): PageImage | null {
-  const { url, key, width, height, alt } = record(value);
-  if (!isUploadUrl(url) || typeof key !== "string" || key === "") return null;
-  if (!isSize(width) || !isSize(height)) return null;
-  return { url, key, width, height, alt: lineOf(alt) };
-}
-
-/**
- * The content a stored or submitted value holds, in its one shape: text
- * trimmed, paragraphs normalised, anything unreadable left empty. It never
- * fails, so an empty or damaged draft reads as an empty page; the limits and
- * what is missing are separate checks.
- */
-export function pageContentOf(
-  page: LocationPageKey,
-  value: unknown,
-): PageContent {
-  const raw = record(value);
-  const list = (rows: unknown) =>
-    Array.isArray(rows) ? (rows as unknown[]) : [];
-  return {
-    metaTitle: lineOf(raw.metaTitle),
-    metaDescription: lineOf(raw.metaDescription),
-    shareImage: imageOf(raw.shareImage),
-    tagline: page === LANDING_PAGE ? lineOf(raw.tagline) : "",
-    heroHeadline: lineOf(raw.heroHeadline),
-    heroSubheadline: lineOf(raw.heroSubheadline),
-    heroImage: imageOf(raw.heroImage),
-    intro: paragraphTextOf(raw.intro),
-    faqs: list(raw.faqs).map((row) => {
-      const { question, answer } = record(row);
-      return { question: lineOf(question), answer: paragraphTextOf(answer) };
-    }),
-    highlights:
-      page === LANDING_PAGE
-        ? list(raw.highlights).map((row) => {
-            const { name, text, image, addressId } = record(row);
-            return {
-              name: lineOf(name),
-              text: lineOf(text),
-              image: imageOf(image),
-              addressId:
-                typeof addressId === "string" && addressId !== ""
-                  ? addressId
-                  : null,
-            };
-          })
-        : [],
-  };
-}
-
-/** Whether two contents are the same, field for field. Both are `pageContentOf` values. */
-export function samePageContent(a: PageContent, b: PageContent) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-/**
- * The length limits, which a draft is checked against every time it is
- * saved. What a page still needs to be complete is `missingFields`.
- */
-export function checkPageLimits(content: PageContent): Change {
-  const over = (text: string, limit: number) => text.length > limit;
-  const L = PAGE_LIMITS;
-  if (over(content.metaTitle, L.metaTitle)) {
-    return fail(`The meta title is at most ${L.metaTitle} characters.`);
-  }
-  if (over(content.metaDescription, L.metaDescription)) {
-    return fail(
-      `The meta description is at most ${L.metaDescription} characters.`,
+/** A page added on demand is titled and given a slug: the slug is what `slugify` makes, within the limit. */
+export function checkEntrySlug(slug: string): Change {
+  if (slug === "") return refuse("Enter the slug.", "slug");
+  if (slug !== slugify(slug)) {
+    return refuse(
+      "A slug is lower-case letters, digits and dashes, such as eagle-square.",
+      "slug",
     );
   }
-  if (over(content.tagline, L.tagline)) {
-    return fail(`The tagline is at most ${L.tagline} characters.`);
-  }
-  if (over(content.heroHeadline, L.heroHeadline)) {
-    return fail(`The hero headline is at most ${L.heroHeadline} characters.`);
-  }
-  if (over(content.heroSubheadline, L.heroSubheadline)) {
-    return fail(
-      `The hero subheadline is at most ${L.heroSubheadline} characters.`,
+  if (slug.length > ENTRY_LIMITS.slug) {
+    return refuse(
+      `The slug is at most ${ENTRY_LIMITS.slug} characters.`,
+      "slug",
     );
-  }
-  if (over(content.intro, L.intro)) {
-    return fail(`The intro is at most ${L.intro} characters.`);
-  }
-  const images = [
-    content.shareImage,
-    content.heroImage,
-    ...content.highlights.map((highlight) => highlight.image),
-  ];
-  if (images.some((image) => image && over(image.alt, L.imageAlt))) {
-    return fail(`An alt text is at most ${L.imageAlt} characters.`);
-  }
-  if (content.faqs.length > L.maxFaqs) {
-    return fail(`A page holds at most ${L.maxFaqs} FAQs.`);
-  }
-  for (const [i, faq] of content.faqs.entries()) {
-    if (over(faq.question, L.faqQuestion)) {
-      return fail(
-        `The question of FAQ ${i + 1} is at most ${L.faqQuestion} characters.`,
-      );
-    }
-    if (over(faq.answer, L.faqAnswer)) {
-      return fail(
-        `The answer of FAQ ${i + 1} is at most ${L.faqAnswer} characters.`,
-      );
-    }
-  }
-  if (content.highlights.length > L.maxHighlights) {
-    return fail(`A page holds at most ${L.maxHighlights} highlights.`);
-  }
-  for (const [i, highlight] of content.highlights.entries()) {
-    if (over(highlight.name, L.highlightName)) {
-      return fail(
-        `The name of highlight ${i + 1} is at most ${L.highlightName} characters.`,
-      );
-    }
-    if (over(highlight.text, L.highlightText)) {
-      return fail(
-        `The text of highlight ${i + 1} is at most ${L.highlightText} characters.`,
-      );
-    }
   }
   return { ok: true };
 }
 
-/** What an image still needs: the image itself, or its alt text. */
-function missingOfImage(
-  image: PageImage | null,
-  theImage: string,
-  itsAltText: string,
-) {
-  if (!image) return [theImage];
-  return image.alt === "" ? [itsAltText] : [];
-}
-
-/** The two tabs of the page editor: what the page shows, and what search engines and shared links show. */
-export type PageEditorTab = "content" | "search";
-
 /**
- * One thing a page needs before it is published, as the publish dialog
- * lists them: what a complete page has there, the tab it is edited on, and
- * what is still missing, empty once it is done.
+ * Whether a page added on demand may still change its slug: until it is
+ * first published. A new address after that needs a redirect from the old
+ * one, which waits for the redirect table at cutover.
  */
-export type PageCheck = {
-  key: "search" | "hero" | "intro" | "faqs" | "highlights";
-  label: string;
-  tab: PageEditorTab;
-  missing: string[];
-};
-
-/**
- * Everything a page needs before it can be published, in the order of the
- * editor: the meta title and description, the hero, the intro, the FAQs
- * and, on the main page, the highlights. A share image is optional, but
- * one that is set needs its alt text.
- */
-export function pageChecks(
-  page: LocationPageKey,
-  content: PageContent,
-): PageCheck[] {
-  const L = PAGE_LIMITS;
-  const search: string[] = [];
-  if (content.metaTitle === "") search.push("Meta title");
-  if (content.metaDescription === "") search.push("Meta description");
-  if (content.shareImage && content.shareImage.alt === "") {
-    search.push("Share image: the alt text");
-  }
-
-  const hero: string[] = [];
-  if (content.heroHeadline === "") hero.push("Hero headline");
-  if (content.heroSubheadline === "") hero.push("Hero subheadline");
-  hero.push(
-    ...missingOfImage(
-      content.heroImage,
-      "Hero image",
-      "Hero image: the alt text",
-    ),
-  );
-
-  const words = wordCount(content.intro);
-  const intro =
-    words < L.introWords
-      ? [`Intro: at least ${L.introWords} words (${words} so far)`]
-      : [];
-
-  const faqs: string[] = [];
-  if (content.faqs.length < L.minFaqs) {
-    faqs.push(`FAQs: at least ${L.minFaqs} (${content.faqs.length} so far)`);
-  }
-  for (const [i, faq] of content.faqs.entries()) {
-    if (faq.question === "") faqs.push(`FAQ ${i + 1}: the question`);
-    if (faq.answer === "") faqs.push(`FAQ ${i + 1}: the answer`);
-  }
-
-  const checks: PageCheck[] = [
-    {
-      key: "search",
-      label: "A meta title and description for search results",
-      tab: "search",
-      missing: search,
-    },
-    {
-      key: "hero",
-      label: "A hero: headline, subheadline and an image with its alt text",
-      tab: "content",
-      missing: hero,
-    },
-    {
-      key: "intro",
-      label: `An intro of at least ${L.introWords} words`,
-      tab: "content",
-      missing: intro,
-    },
-    {
-      key: "faqs",
-      label: `At least ${L.minFaqs} FAQs, each with its answer`,
-      tab: "content",
-      missing: faqs,
-    },
-  ];
-  if (page !== LANDING_PAGE) return checks;
-
-  const highlights: string[] = [];
-  if (content.highlights.length < L.minHighlights) {
-    highlights.push(
-      `Highlights: at least ${L.minHighlights} (${content.highlights.length} so far)`,
-    );
-  }
-  for (const [i, highlight] of content.highlights.entries()) {
-    const what = `Highlight ${i + 1}`;
-    if (highlight.name === "") highlights.push(`${what}: the name`);
-    if (highlight.text === "") highlights.push(`${what}: the text`);
-    highlights.push(
-      ...missingOfImage(
-        highlight.image,
-        `${what}: the image`,
-        `${what}: the alt text of the image`,
-      ),
-    );
-  }
-  checks.push({
-    key: "highlights",
-    label: `At least ${L.minHighlights} highlights, each with a name, a text and an image`,
-    tab: "content",
-    missing: highlights,
-  });
-  return checks;
-}
-
-/**
- * What the page still needs before it can be published, in the order of the
- * editor: "Meta title", "Intro: at least 100 words (62 so far)", "FAQ 2:
- * the answer". Empty when the page is complete.
- */
-export function missingFields(
-  page: LocationPageKey,
-  content: PageContent,
-): string[] {
-  return pageChecks(page, content).flatMap((check) => check.missing);
-}
-
-/** The parts of a page as a person names them, in the order of the editor. */
-const PAGE_PARTS: readonly (readonly [keyof PageContent, string])[] = [
-  ["metaTitle", "Meta title"],
-  ["metaDescription", "Meta description"],
-  ["shareImage", "Share image"],
-  ["tagline", "Tagline"],
-  ["heroHeadline", "Hero headline"],
-  ["heroSubheadline", "Hero subheadline"],
-  ["heroImage", "Hero image"],
-  ["intro", "Intro"],
-  ["faqs", "FAQs"],
-  ["highlights", "Highlights"],
-];
-
-/** The parts in which two contents differ, by name: what a publish would change. */
-export function changedPageParts(a: PageContent, b: PageContent): string[] {
-  return PAGE_PARTS.filter(
-    ([key]) => JSON.stringify(a[key]) !== JSON.stringify(b[key]),
-  ).map(([, label]) => label);
-}
-
-/** Whether the page can be published: within the limits with nothing missing. */
-export function checkPageComplete(
-  page: LocationPageKey,
-  content: PageContent,
-): Change {
-  const limits = checkPageLimits(content);
-  if (!limits.ok) return limits;
-  const missing = missingFields(page, content);
-  if (missing.length === 0) return { ok: true };
-  const more = missing.length - 1;
-  return fail(
-    `The page is not complete. Still missing: ${missing[0]}${
-      more > 0 ? `, and ${more} more` : ""
-    }.`,
-  );
-}
-
-/**
- * Where a page stands between its draft and its public copy: not published,
- * published as it is drafted, or published with newer edits waiting in the
- * draft. Published means the public can see the page, once its location is
- * live: there is no switch beside it. A page that was unpublished reads as
- * not published, whatever it once showed.
- */
-export const PAGE_STATUSES = ["unpublished", "published", "changed"] as const;
-export type PageStatus = (typeof PAGE_STATUSES)[number];
-export const PAGE_STATUS_LABELS: Record<PageStatus, string> = {
-  unpublished: "Not published",
-  published: "Published",
-  changed: "Published, edits waiting",
-};
-
-/**
- * The copy the public is shown of a page, from its stored row: null while
- * the page is not published. `isOn` is true from a publish until the page
- * is unpublished; `published` keeps the copy last published either way.
- */
-export function publicCopyOf(
-  page: LocationPageKey,
-  row: { isOn: boolean; published: unknown },
-): PageContent | null {
-  return row.isOn && row.published != null
-    ? pageContentOf(page, row.published)
-    : null;
-}
-
-/** `publicCopy` is what the public is shown: null while the page is not published. */
-export function pageStatusOf(
-  draft: PageContent,
-  publicCopy: PageContent | null,
-): PageStatus {
-  if (!publicCopy) return "unpublished";
-  return samePageContent(draft, publicCopy) ? "published" : "changed";
-}
-
-/** Whether the page has a public copy: it is published, with or without edits waiting. */
-export function isPagePublished(status: PageStatus) {
-  return status !== "unpublished";
+export function isEntrySlugLocked(page: { firstPublishedAt: unknown }) {
+  return page.firstPublishedAt != null;
 }

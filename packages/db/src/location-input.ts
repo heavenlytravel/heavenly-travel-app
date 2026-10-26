@@ -1,14 +1,15 @@
-import { TRIP_CATEGORIES } from "./booking-status";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
 import {
   LANDING_PAGE,
-  isPagePublished,
+  LOCATION_SECTIONS,
+  isChildPage,
   pageNameOf,
-  type LocationPageKey,
-  type PageStatus,
+  type LocationPageRef,
 } from "./location-page-input";
+import { SITE_PAGE_PATHS } from "./site-page-input";
+import { isPagePublished, type PageStatus } from "./page-content";
 import type { DeleteImpact } from "./delete-impact";
 import { andList, plural } from "./names";
 import { routesLostLine } from "./zone-routes";
@@ -61,9 +62,9 @@ export const LOCATION_MOVE_LABELS: Record<LocationState, string> = {
   paused: "Resume",
 };
 
-/** What the rules on a location's state read of one of its pages. */
-export type PageStanding = {
-  page: LocationPageKey;
+/** What the rules on a location's state read of one of its pages, with the name a sentence calls it by. */
+export type PageStanding = LocationPageRef & {
+  name: string;
   status: PageStatus;
 };
 
@@ -122,7 +123,7 @@ export type SetupStep = {
  * card has something to sell; and a zone, since the zones are the
  * coverage and a location with none serves no pickup. A route on the grid
  * is not required: hourly hire needs none, and a one-way trip with no cell
- * is sent to WhatsApp. No product page is needed: a landing page with none
+ * is sent to WhatsApp. No section page is needed: a landing page with none
  * published shows no product links and still carries the search card.
  */
 export function setupSteps(
@@ -143,14 +144,17 @@ export function setupSteps(
 
   const landing = pages.find((page) => page.page === LANDING_PAGE);
   const landingOn = landing !== undefined && isPagePublished(landing.status);
-  const productsOn = pages.filter(
-    (page) => page.page !== LANDING_PAGE && isPagePublished(page.status),
+  const sectionsOn = pages.filter(
+    (page) =>
+      page.page !== LANDING_PAGE &&
+      !isChildPage(page) &&
+      isPagePublished(page.status),
   ).length;
   const pageTodos: string[] = [];
   if (!landingOn) pageTodos.push("Publish the main page");
   for (const page of pages) {
     if (page.status === "changed") {
-      pageTodos.push(`Publish the changes on ${pageNameOf(page.page)}`);
+      pageTodos.push(`Publish the changes on ${pageNameOf(page, page.name)}`);
     }
   }
 
@@ -188,8 +192,8 @@ export function setupSteps(
       "pages",
       [
         landingOn ? "Main page published" : "Main page not published",
-        productsOn > 0
-          ? `${plural(productsOn, "product page")} published`
+        sectionsOn > 0
+          ? `${plural(sectionsOn, "section page")} published`
           : null,
         pageTodos.some((todo) => todo.startsWith("Publish the changes"))
           ? "edits waiting"
@@ -235,14 +239,14 @@ export function stateMoveBlockers(
 /**
  * Whether a page can be unpublished: taken from the public, its text kept.
  * The landing page stays published once the location has left `draft`,
- * since the location's address must not become a 404; the product pages can
+ * since the location's address must not become a 404; every other page can
  * be unpublished at any time.
  */
 export function checkPageUnpublish(
   state: LocationState,
-  page: LocationPageKey,
+  ref: LocationPageRef,
 ): Change {
-  if (page === LANDING_PAGE && state !== "draft") {
+  if (ref.page === LANDING_PAGE && state !== "draft") {
     return refuse(
       "The main page stays published once the location has left draft. Pause the location instead.",
     );
@@ -270,7 +274,8 @@ export const LOCATION_LIMITS = {
 /**
  * Slugs a location cannot take, because the address is or will be something
  * else. A new top-level route on the customer site is added to `SITE_PATHS`
- * in the same PR.
+ * in the same PR; a site page's address joins by `SITE_PAGE_PATHS`, and the
+ * sections' keys are kept for site-wide hubs to come (/blog, /attractions).
  */
 const SITE_PATHS = [
   "account",
@@ -279,6 +284,7 @@ const SITE_PATHS = [
   "sign-in",
   "sign-up",
   "api",
+  ...SITE_PAGE_PATHS,
 ];
 const LOCALE_CODES = ["en", "ms", "zh"];
 /** Set aside by `04-location-and-seo-architecture.md` for routes still to come. */
@@ -298,7 +304,7 @@ const SET_ASIDE = [
 const CONSOLE_PATHS = ["new"];
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   ...SITE_PATHS,
-  ...TRIP_CATEGORIES,
+  ...LOCATION_SECTIONS,
   ...LOCALE_CODES,
   ...SET_ASIDE,
   ...CONSOLE_PATHS,

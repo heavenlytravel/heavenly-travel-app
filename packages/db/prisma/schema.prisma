@@ -326,31 +326,62 @@ model ZoneRate {
   @@index([toZoneId])
 }
 
-/// One page of a location in one locale: the landing page or a product's.
-/// Marketing edits `draft`; the public reads `published`.
+/// One page of a location in one locale: its main page, a section's own
+/// page, or a page under a section, by its slug. Marketing edits `draft`;
+/// the public reads `published`. See docs/261025-marketing-pages.md.
 model LocationPage {
-  id          String    @id @default(cuid())
-  locationId  String
-  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  /// "landing" | "car-with-driver" | "coach-charter"
-  page        String
-  locale      String    @default("en")
+  id               String    @id @default(cuid())
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// "landing" or a section's key: "car-with-driver", "popular-places", ...
+  /// See LOCATION_PAGES in src/location-page-input.ts.
+  page             String
+  /// "" for the main page and a section's own page; else the page's slug
+  /// under its section: a vehicle class's ("sedan"), or one Marketing gave
+  /// a page it added ("eagle-square").
+  slug             String    @default("")
+  locale           String    @default("en")
+  /// Its place among the pages Marketing added to its section, from 0.
+  position         Int       @default(0)
   /// Whether the page is published: true from a publish until it is
   /// unpublished. Not whether the product can be booked there: that is the
   /// district's switch.
-  isOn        Boolean   @default(false)
+  isOn             Boolean   @default(false)
   /// The working copy.
-  draft       Json
+  draft            Json
   /// What the public sees; kept through an unpublish, null until the first
   /// publish.
-  published   Json?
-  publishedAt DateTime?
+  published        Json?
+  publishedAt      DateTime?
+  /// Set once, at the first publish: the date a post shows, and from then
+  /// its slug is locked.
+  firstPublishedAt DateTime?
   /// When the draft or the published copy last changed. An unpublish leaves
   /// it, so it names the content a form was opened with: a save over
   /// someone else's change is refused by it.
-  updatedAt   DateTime  @updatedAt
+  updatedAt        DateTime  @updatedAt
 
-  @@unique([locationId, page, locale])
+  @@unique([locationId, page, slug, locale])
+}
+
+/// A page of the whole site in one locale: the home page's content, about
+/// us, contact us and the legal pages. As a location's page: Marketing
+/// edits `draft`, the public reads `published` while `isOn`. `page` is
+/// one of SITE_PAGES in src/site-page-input.ts. See
+/// docs/261025-marketing-pages.md, "Site pages".
+model SitePage {
+  id               String    @id @default(cuid())
+  page             String
+  locale           String    @default("en")
+  isOn             Boolean   @default(false)
+  draft            Json
+  published        Json?
+  publishedAt      DateTime?
+  firstPublishedAt DateTime?
+  /// As LocationPage.updatedAt: names the content a form was opened with.
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([page, locale])
 }
 
 /// A place most customers go to in a location: "Kuah Jetty". The drop-off

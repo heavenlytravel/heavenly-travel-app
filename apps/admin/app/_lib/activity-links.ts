@@ -12,6 +12,8 @@ import {
   locationPublishHref,
   locationVehicleHref,
   MEDIA_PATH,
+  sitePageHref,
+  sitePagePublishHref,
   vehicleClassHref,
 } from "./routes";
 
@@ -33,6 +35,7 @@ export const ACTIVITY_RECORD_NAMES: Record<
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
   user: { one: "User", many: "Users" },
   admin: { one: "Admin", many: "Admins" },
+  "site-page": { one: "Site page", many: "Site pages" },
   media: { one: "Media", many: "Media" },
   setting: { one: "Setting", many: "Settings" },
   state: { one: "State", many: "States" },
@@ -66,9 +69,10 @@ export function activityEntryTag(
 /**
  * The page an entry opens, for an admin with `permissions`; null when the
  * record has none, is gone, or is not theirs to open. A publish opens the
- * page as it was before and after, for Marketing; any other entry the
- * record itself: a booking, a location, a class, a vehicle or a driver
- * inside the location it is based at now. `slugs` are the locations' by
+ * page as it was before and after, for Marketing, and a site page's other
+ * entries its editor; any other entry the record itself: a booking, a
+ * location, a class, a vehicle or a driver inside the location it is based
+ * at now. `slugs` are the locations' by
  * id. On a location's own history (`here`, its id) its entries open
  * nothing more, but a publish.
  */
@@ -112,6 +116,12 @@ export function activityEntryHref(
       return may("coverage.view") ? vehicleClassHref(entry.entityId) : null;
     case "media":
       return may("media.manage") ? MEDIA_PATH : null;
+    case "site-page":
+      // A publish opens the page before and after; any other entry, its editor.
+      if (!may("website.manage")) return null;
+      return entry.action === "site.page.published"
+        ? sitePagePublishHref(entry.id)
+        : sitePageHref(entry.entityId);
     default:
       // A user, an admin, the wall, a state or a district has no page of its own.
       return null;

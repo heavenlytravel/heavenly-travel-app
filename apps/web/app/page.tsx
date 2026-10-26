@@ -1,115 +1,47 @@
 /**
  * Heavenly Travel — home page
  * Route: /
- * One page: a full-screen pale photo hero with the booking card for all six
- * services resting on its floor, why to book with us, the locations we cover
- * and a closing call. The location cards are Marketing's top choices and open
- * their pages. Its pieces live in ./_home.
+ * The home page's content is Marketing's, from the published home page;
+ * until that is first published it shows what it was designed with. The
+ * location cards are Marketing's top choices and open their pages. Its
+ * pieces live in ./_site and ./_home. Static: it reads the cached site
+ * pages and top choices, and nothing of the request.
  */
 
 import type { Metadata } from "next";
-import styles from "./_home/home.module.css";
-import { Photo } from "./_components/Brand";
-import { SearchProvider } from "./_components/search/SearchProvider";
-import { DestinationCards } from "./_home/DestinationCards";
-import { Booking, Closing, SiteFooter, Trust, eyebrow } from "./_home/Sections";
-import { SiteHeader } from "./_home/SiteHeader";
-import { fontVars } from "./_home/fonts";
+import {
+  HOME_PAGE,
+  sitePageFallbackTitle,
+  sitePagePath,
+} from "@repo/db/server";
 import { topChoiceCards } from "./_lib/locations";
+import { pageMetadata } from "./_lib/seo";
+import { publishedSitePage } from "./_lib/site-pages";
+import { HOME_DEFAULTS, HomeView } from "./_site/HomeView";
+import { SiteFrame } from "./_site/SiteFrame";
 
-export const metadata: Metadata = {
-  title: "Heavenly Travel — Travel made simple",
-  description:
-    "Book car rental, chauffeured rides, coach rental, attractions, hotels and custom travel packages across Malaysia with Heavenly Travel.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const home = await publishedSitePage(HOME_PAGE);
+  if (!home) {
+    return {
+      title: sitePageFallbackTitle(HOME_PAGE),
+      description: HOME_DEFAULTS.description,
+    };
+  }
+  return pageMetadata(home.content, {
+    path: sitePagePath(HOME_PAGE),
+    fallbackTitle: sitePageFallbackTitle(HOME_PAGE),
+  });
+}
 
 export default async function Page() {
-  const choices = await topChoiceCards();
+  const [home, choices] = await Promise.all([
+    publishedSitePage(HOME_PAGE),
+    topChoiceCards(),
+  ]);
   return (
-    <div
-      id="top"
-      className={`${fontVars} relative min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
-    >
-      <SiteHeader />
-
-      <SearchProvider>
-        <main>
-          <section
-            aria-labelledby="hero-title"
-            className="relative flex min-h-svh flex-col"
-          >
-            {/* From lg up the photo is fixed to the viewport, so it fills the
-                window the same at any zoom. The clip keeps it inside the hero
-                without clipping the booking card's menus. Below lg the stacked
-                card outgrows the screen, so the photo stops at the first one. */}
-            <div className="absolute inset-x-0 top-0 h-svh bg-mist [clip-path:inset(0)] lg:h-full">
-              <Photo
-                src="/brand/hero-langkawi.jpg"
-                alt="Eagle Square in Langkawi from the air"
-                className="absolute inset-0 h-full w-full object-cover object-center lg:fixed"
-                loading="eager"
-              />
-              <div className={`${styles.heroWash} absolute inset-0`} />
-            </div>
-            {/* The words sit in the middle of the room between the header and
-                the booking card. From sm up one type size follows the window's
-                height as well as its width, so the headline and the whole card
-                fit on one screen down to about 600px tall; the script word is
-                sized from it, so the pair keeps its proportions. */}
-            <div className="relative z-[1] flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
-              <div className="text-[3.75rem] sm:text-[clamp(3.75rem,min(9vw,12svh),6.5rem)]">
-                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
-                  Travel
-                </p>
-                <h1
-                  id="hero-title"
-                  className="mt-[0.1em] mb-[0.25em] font-(family-name:--font-display) text-[1em] leading-[0.9] text-ink sm:whitespace-nowrap"
-                >
-                  made simple.
-                </h1>
-              </div>
-              <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-[1.18rem]">
-                Cars, drivers, coaches, stays and experiences—thoughtfully
-                brought together for your journey.
-              </p>
-            </div>
-            <p
-              aria-hidden
-              className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-(family-name:--font-script) text-[2rem] leading-[0.85] text-white lg:block"
-            >
-              More
-              <br />
-              than a trip
-            </p>
-
-            <Booking />
-          </section>
-
-          <Trust />
-
-          <section
-            id="destinations"
-            aria-labelledby="destinations-title"
-            className="scroll-mt-8 px-3 pt-[75px] pb-[55px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px] sm:pb-[90px]"
-          >
-            <p className={`${eyebrow} mb-2`}>Locations we cover</p>
-            <h2
-              id="destinations-title"
-              className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
-            >
-              Choose your destination
-            </h2>
-            <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
-              Start with where you are going.
-            </p>
-            <DestinationCards choices={choices} />
-          </section>
-
-          <Closing />
-        </main>
-      </SearchProvider>
-
-      <SiteFooter />
-    </div>
+    <SiteFrame overlay>
+      <HomeView content={home?.content ?? null} choices={choices} />
+    </SiteFrame>
   );
 }

@@ -61,9 +61,9 @@ const DISTRICT_SHARE = 0.05;
 
 /**
  * The box around a zone and the districts it lies in, for the search card
- * on the location's pages: a circle at Langkawi's airport searches the
- * whole of Langkawi, and no further. Without the margin, which the card
- * adds once over all the zones.
+ * on the location's pages: a circle at Langkawi's airport puts the whole
+ * of Langkawi first, and no more. Without the margin, which the card adds
+ * once over all the zones.
  */
 export function zoneSearchBox(shape: ZoneShape): BBox {
   const polygons = polygonsOf(shape);

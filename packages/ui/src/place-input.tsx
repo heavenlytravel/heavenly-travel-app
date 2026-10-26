@@ -20,11 +20,15 @@ export type PlacePresets = {
  * so the caller knows whether the place is resolved. One Google
  * autocomplete session token lives from the first keystroke to a pick,
  * then a new one is minted, which is how Google bills a session as one
- * request; the pick reports the token, for the details call that ends the
- * session. The input is unstyled: the caller passes the classes its form
+ * request. The input is unstyled: the caller passes the classes its form
  * uses. With `presets`, the field offers those places when it is opened
  * empty; typing brings the search. With `within`, a box, it suggests
- * places inside it only.
+ * places inside it only; with `near`, one, it suggests the places inside
+ * it first and the rest of Malaysia after them. `keep` leaves out the
+ * suggestions it refuses, those that name another state for the saved
+ * addresses' search. `inline` puts the list
+ * in the flow under the field, for a dialog, which grows to hold it,
+ * where a list floating over it would scroll within it.
  */
 export function PlaceInput({
   id,
@@ -35,6 +39,9 @@ export function PlaceInput({
   onChange,
   onFocus,
   within,
+  near,
+  keep,
+  inline = false,
   className,
 }: {
   id: string;
@@ -42,9 +49,12 @@ export function PlaceInput({
   placeId?: string;
   placeholder?: string;
   presets?: PlacePresets;
-  onChange: (value: string, placeId?: string, sessionToken?: string) => void;
+  onChange: (value: string, placeId?: string) => void;
   onFocus?: () => void;
   within?: Bounds;
+  near?: Bounds;
+  keep?: (suggestion: PlaceSuggestion) => boolean;
+  inline?: boolean;
   className?: string;
 }) {
   const listId = useId();
@@ -59,18 +69,17 @@ export function PlaceInput({
   // A resolved value (one with a place id) is what was just picked, and a
   // short one is not worth asking about: neither fetches nor shows a list.
   const searchable = !placeId && isSearchableQuery(value);
-  // The box as text, so a new array with the same corners is the same box.
+  // The boxes as text, so a new array with the same corners is the same box.
   const withinKey = within?.join(",");
+  const nearKey = near?.join(",");
 
   // Fetch while typing, debounced and cancellable.
   useEffect(() => {
     if (!searchable) return;
-    const box = withinKey
-      ? (withinKey.split(",").map(Number) as Bounds)
-      : undefined;
+    const area = { within: boxOf(withinKey), near: boxOf(nearKey) };
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      fetchPlaceSuggestions(value, sessionToken(), controller.signal, box)
+      fetchPlaceSuggestions(value, sessionToken(), controller.signal, area)
         .then((rows) => {
           setSuggestions(rows);
           setActive(-1);
@@ -83,10 +92,10 @@ export function PlaceInput({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value, searchable, withinKey]);
+  }, [value, searchable, withinKey, nearKey]);
 
   function pick(s: PlaceSuggestion) {
-    onChange(s.label, s.placeId, session.current);
+    onChange(s.label, s.placeId);
     setSuggestions([]);
     setOpen(false);
     session.current = undefined;
@@ -94,7 +103,13 @@ export function PlaceInput({
 
   // The presets stand in for the search while the field is empty.
   const offered = value === "" && presets?.options.length ? presets : null;
-  const rows = offered ? offered.options : searchable ? suggestions : [];
+  const rows = offered
+    ? offered.options
+    : searchable
+      ? keep
+        ? suggestions.filter(keep)
+        : suggestions
+      : [];
   const showing = open && rows.length > 0;
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -153,7 +168,12 @@ export function PlaceInput({
           id={listId}
           role="listbox"
           aria-label={offered?.heading}
-          className="ui:absolute ui:top-full ui:left-0 ui:z-20 ui:mt-1 ui:max-h-72 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-popover-line ui:bg-white ui:py-1.5 ui:text-left ui:text-slate-900 ui:shadow-[0_18px_40px_rgba(0,38,75,0.18)]"
+          className={cx(
+            "ui:mt-1 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-popover-line ui:bg-white ui:py-1.5 ui:text-left ui:text-slate-900",
+            inline
+              ? "ui:max-h-80"
+              : "ui:absolute ui:top-full ui:left-0 ui:z-20 ui:max-h-72 ui:shadow-[0_18px_40px_rgba(0,38,75,0.18)]",
+          )}
         >
           {offered && (
             <li
@@ -192,4 +212,9 @@ export function PlaceInput({
       )}
     </div>
   );
+}
+
+/** A box back from its text; none for none. */
+function boxOf(key: string | undefined): Bounds | undefined {
+  return key ? (key.split(",").map(Number) as Bounds) : undefined;
 }

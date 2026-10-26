@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { TripCategory } from "@repo/db";
 import {
   tripBookingHref,
@@ -61,54 +61,24 @@ export function useSearch(
 
 /**
  * Sends a trip to the options page of its category, or keeps the reasons it
- * cannot be sent. The home card and the trip editor both send through here.
+ * cannot be sent. The search card, on the home page and on a location's
+ * pages alike, and the trip editor all send through here.
  */
 export function useTripSubmit() {
   const [issues, setIssues] = useState<TripSearchIssue[]>([]);
-  const [checking, setChecking] = useState(false);
-  // Pending while the places are checked, then until the options page has
-  // priced the trip and is on screen.
+  // Pending until the options page has priced the trip and is on screen.
   const { pending, go } = useNavigate();
-  // A check that answers once the customer has left the page, by a link or
-  // Back, sends nothing: the card that asked is gone.
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  /**
-   * True when the trip was sent. `passengers` is carried over, if given.
-   * With `check`, a trip the card can send is checked first, and sent
-   * once the check finds nothing; this answers false then, and the
-   * reasons it finds are kept like the card's own. A check that fails to
-   * answer sends the trip: the options page checks it again.
-   */
+  /** True when the trip was sent. `passengers` is carried over, if given. */
   function submit(
     category: TripCategory,
     values: SearchValues,
     passengers?: number,
-    check?: (values: SearchValues) => Promise<TripSearchIssue[]>,
   ) {
     const result = tripSearchFromCard(values);
     setIssues(result.ok ? [] : result.issues);
     if (!result.ok) return false;
-    const href = tripBookingHref(category, result.params, passengers);
-    if (!check) {
-      go(href);
-      return true;
-    }
-    setChecking(true);
-    check(values)
-      .catch((): TripSearchIssue[] => [])
-      .then((found) => {
-        if (!mounted.current) return;
-        setChecking(false);
-        if (found.length > 0) setIssues(found);
-        else go(href);
-      });
-    return false;
+    go(tripBookingHref(category, result.params, passengers));
+    return true;
   }
-  return { issues, pending: pending || checking, submit };
+  return { issues, pending, submit };
 }

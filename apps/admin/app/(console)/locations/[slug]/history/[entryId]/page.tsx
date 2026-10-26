@@ -13,7 +13,7 @@ import {
 } from "../../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationPageHref, locationTabHref } from "../../../../../_lib/routes";
-import { PageContentView } from "../../../_components/PageContentView";
+import { PageContentView } from "../../../../../_components/page-editor/PageContentView";
 import { locationKey } from "../../../_lib/location-data";
 
 /**
@@ -61,7 +61,7 @@ async function publishDetails({
   ]);
   if (!location || !publish) notFound();
 
-  const { entry, page, before, after } = publish;
+  const { entry, ref, kind, before, after } = publish;
   const addressNames = new Map(
     location.addresses.map((address) => [address.id, address.name]),
   );
@@ -81,7 +81,7 @@ async function publishDetails({
         description={`${entry.actorName}, ${formatLocalDateTime(entry.createdAt)}. To roll back, copy the old text into the editor and publish again.`}
         action={
           <Button asChild variant="secondary">
-            <Link href={locationPageHref(location.slug, page)}>
+            <Link href={locationPageHref(location.slug, ref)}>
               Edit this page
             </Link>
           </Button>
@@ -93,7 +93,7 @@ async function publishDetails({
           <CardTitle>Before</CardTitle>
           {before ? (
             <PageContentView
-              page={page}
+              kind={kind}
               content={before}
               comparedTo={after}
               addressNames={addressNames}
@@ -107,7 +107,7 @@ async function publishDetails({
         <Card>
           <CardTitle>Published</CardTitle>
           <PageContentView
-            page={page}
+            kind={kind}
             content={after}
             comparedTo={before ?? undefined}
             addressNames={addressNames}

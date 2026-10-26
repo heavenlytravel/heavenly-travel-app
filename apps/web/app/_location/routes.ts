@@ -2,6 +2,7 @@ import "server-only";
 import {
   LANDING_REF,
   PAGE_KIND_RULES,
+  childrenOf,
   getAdminAccess,
   isLocationPageRef,
   isLocationSection,
@@ -73,7 +74,15 @@ export async function publicPageAt(
   const page = pageOfView(location, ref);
   if (!page) {
     if (ref.slug === "") redirect(locationPagePath(slug));
-    if (location.classes.some((entry) => entry.slug === ref.slug)) {
+    // A class of the section's own product, not one of another's.
+    const children = childrenOf(ref.page);
+    if (
+      children?.type === "classes" &&
+      location.classes.some(
+        (entry) =>
+          entry.slug === ref.slug && entry.category === children.category,
+      )
+    ) {
       const own = { page: ref.page, slug: "" };
       redirect(
         locationPagePath(slug, pageOfView(location, own) ? own : LANDING_REF),

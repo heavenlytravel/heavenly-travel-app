@@ -8,21 +8,23 @@ import {
   type SitePageKey,
 } from "@repo/db/server";
 import { Footer } from "../_components/Footer";
-import { MarketingHeader } from "../_components/MarketingHeader";
+import { SiteHeader } from "../_components/SiteHeader";
 import { PreviewBar } from "../_components/PreviewBar";
 import { fontVars } from "../_home/fonts";
+import { headerDestinations } from "../_lib/locations";
 
 /** Where a site page stands. */
 type SitePageStanding = { page: SitePageKey; status: PageStatus };
 
 /**
  * What the site's own pages share: the home page's type and palette, the
- * header, and the footer. `overlay` floats the header over the home page's
- * hero. `preview` is the page a staff preview shows, and floats the
- * preview bar over it: where the page stands, its editor, and the way to
- * every site page, `pages`, each with where it stands.
+ * header, and the footer, its draft on a staff preview. `overlay` floats
+ * the header over the home page's hero. `preview` is the page a staff
+ * preview shows, and floats the preview bar over it: where the page
+ * stands, its editor, and the way to every site page, `pages`, each with
+ * where it stands.
  */
-export function SiteFrame({
+export async function SiteFrame({
   overlay = false,
   preview,
   children,
@@ -35,9 +37,9 @@ export function SiteFrame({
     <div
       className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
-      <MarketingHeader overlay={overlay} />
+      <SiteHeader overlay={overlay} destinations={await headerDestinations()} />
       {children}
-      <Footer />
+      <Footer preview={preview !== undefined} />
       {preview && (
         <PreviewBar
           name={SITE_PAGE_LABELS[preview.page]}

@@ -3,6 +3,7 @@ import {
   HOME_PAGE,
   SITE_PAGE_LABELS,
   checkSitePageUnpublish,
+  hasBuiltInCopy,
   isSitePageKey,
   sitePageFallbackTitle,
   sitePageKindOf,
@@ -118,6 +119,11 @@ async function editorDetails({ page }: { page: SitePageKey }) {
         publishes={publishes}
         historyHref={activityHref("site-page")}
         historyLabel="All changes to the site's pages"
+        unpublishedNote={
+          hasBuiltInCopy(page)
+            ? "The public sees the page in the words it was built with until you publish."
+            : undefined
+        }
       />
       {page === HOME_PAGE ? (
         <div className="mt-10">

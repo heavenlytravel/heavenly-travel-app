@@ -1,12 +1,12 @@
 import type { Refusal } from "./change";
-import { samePageContent, type PageContent } from "./page-content";
+import { samePageContent } from "./page-content";
 
 /**
- * What a write on a location's page (./location-pages) and on a site page
- * (./site-pages) share: the version a form holds, the refusal when someone
- * else saved meanwhile, the columns a save and a publish set, and whether a
- * publish is worth an entry in the log. Server side, no database access of
- * its own.
+ * What a write on a location's page (./location-pages), on a site page
+ * (./site-pages) and on the footer (./site-footer) share: the version a
+ * form holds, the refusal when someone else saved meanwhile, the columns a
+ * save and a publish set, and whether a publish is worth an entry in the
+ * log. Server side, no database access of its own.
  */
 
 /** A page write's answer: the content's new version, or why not. */
@@ -38,8 +38,8 @@ export function versionOf(row: { updatedAt: Date } | null) {
  * its date, the page turned on, and the date of the first publish, set
  * once.
  */
-export function pageWriteData(
-  content: PageContent,
+export function pageWriteData<T>(
+  content: T,
   publish: boolean,
   was: StoredPage | null,
   now: Date,
@@ -64,10 +64,10 @@ export function pageWriteData(
  * is the copy last published, kept through an unpublish; null before the
  * first.
  */
-export function publishChanges(
+export function publishChanges<T>(
   was: StoredPage | null,
-  before: PageContent | null,
-  after: PageContent,
+  before: T | null,
+  after: T,
 ) {
   return !was?.isOn || !before || !samePageContent(before, after);
 }

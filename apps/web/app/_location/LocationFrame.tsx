@@ -14,24 +14,27 @@ import {
   type LocationViewPage,
 } from "@repo/db/server";
 import { Footer } from "../_components/Footer";
-import { MarketingHeader } from "../_components/MarketingHeader";
+import { SiteHeader } from "../_components/SiteHeader";
 import {
   PreviewBar,
   type PreviewPage,
   type PreviewStanding,
 } from "../_components/PreviewBar";
-import { locationSearchPreview, publicLocationSearch } from "../_lib/locations";
+import {
+  headerDestinations,
+  locationSearchPreview,
+  publicLocationSearch,
+} from "../_lib/locations";
 import { fontVars } from "../_home/fonts";
 import { LocationSearch } from "./LocationSearch";
 
 /**
  * What every page of a location shares: the home page's type and palette,
- * the site header, the search card's state and the footer; each page ends
- * with its own closing call, which knows where its search card is. The
- * public pages get it from their layout, so the search card keeps what was
- * typed from page to page; the card searches all of Malaysia, the
- * location's area first. `previewOf` is the page a staff preview is
- * showing, and floats the preview bar over it.
+ * the site header, the search card's state and the footer as published.
+ * The public pages get it from their layout, so the search card keeps
+ * what was typed from page to page; the card searches all of Malaysia,
+ * the location's area first. `previewOf` is the page a staff
+ * preview is showing, and floats the preview bar over it.
  */
 export async function LocationFrame({
   location,
@@ -42,22 +45,27 @@ export async function LocationFrame({
   previewOf?: LocationViewPage;
   children: ReactNode;
 }) {
-  const search = previewOf
-    ? await locationSearchPreview(location.slug)
-    : await publicLocationSearch(location.slug);
+  const [search, destinations] = await Promise.all([
+    previewOf
+      ? locationSearchPreview(location.slug)
+      : publicLocationSearch(location.slug),
+    headerDestinations(),
+  ]);
   return (
     <div
       className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
-      <MarketingHeader />
+      <SiteHeader destinations={destinations} />
       <LocationSearch
         slug={location.slug}
         name={location.name}
         addresses={location.addresses}
         search={search}
       >
-        <main>{children}</main>
+        {/* Room between the page and the footer. */}
+        <main className="pb-[60px] sm:pb-[88px]">{children}</main>
       </LocationSearch>
+      {/* The public footer: its draft is SUPER's to preview, on a site page. */}
       <Footer />
       {previewOf && <LocationPreviewBar location={location} page={previewOf} />}
     </div>

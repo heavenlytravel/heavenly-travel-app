@@ -4,8 +4,8 @@ import { locationPagePath, type TopChoiceCard } from "@repo/db";
 import styles from "./home.module.css";
 
 /**
- * The home page's cards: Marketing's top choices, each opening the
- * location's page.
+ * The home page's photo cards: the services, each opening its hub, and
+ * Marketing's top choices, each opening the location's page.
  */
 
 const focus =
@@ -15,6 +15,17 @@ const focus =
 const cell = "w-full sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]";
 
 const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-[17px] bg-navy p-[25px] text-left text-white sm:h-[330px] ${focus}`;
+
+/** One photo card: where it opens, its picture, and its words. */
+export type PhotoCard = {
+  key: string;
+  href: string;
+  image: { url: string; alt: string } | null;
+  /** The small line over the name; null for none. */
+  tag: string | null;
+  name: string;
+  line: string;
+};
 
 function CardText({
   tag,
@@ -45,17 +56,18 @@ function CardText({
   );
 }
 
-export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
+/** A centred row of photo cards. */
+export function PhotoCards({ cards }: { cards: readonly PhotoCard[] }) {
   return (
     <ul className="mx-auto flex max-w-[1450px] flex-wrap justify-center gap-3 sm:gap-4">
-      {choices.map((choice) => (
-        <li key={choice.slug} className={cell}>
-          <Link href={locationPagePath(choice.slug)} className={card}>
-            {choice.image && (
+      {cards.map((entry) => (
+        <li key={entry.key} className={cell}>
+          <Link href={entry.href} className={card}>
+            {entry.image && (
               <>
                 <Image
-                  src={choice.image.url}
-                  alt={choice.image.alt}
+                  src={entry.image.url}
+                  alt={entry.image.alt}
                   fill
                   sizes="(min-width: 64rem) 25vw, (min-width: 40rem) 50vw, 100vw"
                   className="object-cover"
@@ -63,14 +75,26 @@ export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
                 <span className={`${styles.cardShade} absolute inset-0`} />
               </>
             )}
-            <CardText
-              tag={choice.tagline}
-              name={choice.name}
-              line="Explore this location"
-            />
+            <CardText tag={entry.tag} name={entry.name} line={entry.line} />
           </Link>
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Marketing's top choices as photo cards, each opening the location's page. */
+export function DestinationCards({ choices }: { choices: TopChoiceCard[] }) {
+  return (
+    <PhotoCards
+      cards={choices.map((choice) => ({
+        key: choice.slug,
+        href: locationPagePath(choice.slug),
+        image: choice.image,
+        tag: choice.tagline,
+        name: choice.name,
+        line: "Explore this location",
+      }))}
+    />
   );
 }

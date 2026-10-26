@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  FOOTER_KEY,
+  FOOTER_LABEL,
+  HOME_PAGE,
   LANDING_PAGE,
   LOCATION_PAGE_LABELS,
   PAGE_FILTERS,
@@ -16,7 +19,11 @@ import {
   type PageImage,
   type PageStatus,
 } from "@repo/db";
-import type { PageSummary, SitePageSummary } from "@repo/db/server";
+import type {
+  FooterSummary,
+  PageSummary,
+  SitePageSummary,
+} from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
@@ -66,7 +73,8 @@ export type PageRow = {
   status: PageStatus;
   /** A class's page whose class is off sale here: its public copy waits. */
   paused: boolean;
-  indexable: boolean;
+  /** Whether search engines may list it; null for the footer, which is no page of its own. */
+  indexable: boolean | null;
   editHref: string;
   previewHref: string;
 };
@@ -102,6 +110,21 @@ export function sitePageRow(page: SitePageSummary): PageRow {
     indexable: page.indexable,
     editHref: sitePageHref(page.page),
     previewHref: sitePagePreviewUrl(page.page),
+  };
+}
+
+/** The footer as a row among the website's pages; its preview is the home page's. */
+export function footerRow(footer: FooterSummary): PageRow {
+  return {
+    key: `website/${FOOTER_KEY}`,
+    label: FOOTER_LABEL,
+    path: "On every page",
+    image: null,
+    status: footer.status,
+    paused: false,
+    indexable: null,
+    editHref: sitePageHref(FOOTER_KEY),
+    previewHref: sitePagePreviewUrl(HOME_PAGE),
   };
 }
 
@@ -232,6 +255,9 @@ function PageStatusCell({ row }: { row: PageRow }) {
 
 /** Whether search engines may list the page, its switch on the SEO tab. */
 function SeoCell({ row }: { row: PageRow }) {
+  if (row.indexable === null) {
+    return <span className="text-slate-400">None</span>;
+  }
   return (
     <span
       className={cx(

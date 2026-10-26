@@ -212,8 +212,8 @@ export function paragraphsOf(text: string): string[] {
     .filter(Boolean);
 }
 
-/** One line: runs of white space become one space. */
-function lineOf(value: unknown) {
+/** One line: runs of white space become one space; "" for anything that is not text. */
+export function lineOf(value: unknown) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
 }
 
@@ -229,7 +229,8 @@ function markdownOf(value: unknown) {
     : "";
 }
 
-function record(value: unknown): Record<string, unknown> {
+/** The fields of a stored or submitted object; none for anything else. */
+export function recordOf(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : {};
@@ -238,9 +239,9 @@ function record(value: unknown): Record<string, unknown> {
 const isSize = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value > 0;
 
-/** The image, or null for anything that is not an uploaded one. */
-function imageOf(value: unknown): PageImage | null {
-  const { url, key, width, height, alt } = record(value);
+/** The image, with its alt text as one line, or null for anything that is not an uploaded one. */
+export function pageImageOf(value: unknown): PageImage | null {
+  const { url, key, width, height, alt } = recordOf(value);
   if (!isUploadUrl(url) || typeof key !== "string" || key === "") return null;
   if (!isSize(width) || !isSize(height)) return null;
   return { url, key, width, height, alt: lineOf(alt) };
@@ -256,20 +257,20 @@ function imageOf(value: unknown): PageImage | null {
  */
 export function pageContentOf(kind: PageKind, value: unknown): PageContent {
   const rule = PAGE_KIND_RULES[kind];
-  const raw = record(value);
+  const raw = recordOf(value);
   const faqs = Array.isArray(raw.faqs) ? (raw.faqs as unknown[]) : [];
   return {
     metaTitle: lineOf(raw.metaTitle),
     metaDescription: lineOf(raw.metaDescription),
-    shareImage: imageOf(raw.shareImage),
+    shareImage: pageImageOf(raw.shareImage),
     tagline: rule.tagline ? lineOf(raw.tagline) : "",
     heroHeadline: lineOf(raw.heroHeadline),
     heroSubheadline: lineOf(raw.heroSubheadline),
-    heroImage: imageOf(raw.heroImage),
+    heroImage: pageImageOf(raw.heroImage),
     intro: rule.intro === "none" ? "" : paragraphTextOf(raw.intro),
     body: rule.body ? markdownOf(raw.body) : "",
     faqs: faqs.map((row) => {
-      const { question, answer } = record(row);
+      const { question, answer } = recordOf(row);
       return { question: lineOf(question), answer: paragraphTextOf(answer) };
     }),
     addressId:
@@ -286,8 +287,12 @@ export function emptyPageContent(kind: PageKind): PageContent {
   return pageContentOf(kind, null);
 }
 
-/** Whether two contents are the same, field for field. Both are `pageContentOf` values. */
-export function samePageContent(a: PageContent, b: PageContent) {
+/**
+ * Whether two contents are the same, field for field. Both are read by
+ * their kind's reader, `pageContentOf` or the footer's, so their keys
+ * come in one order.
+ */
+export function samePageContent<T>(a: T, b: T) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
@@ -614,11 +619,8 @@ export function publicCopyOf(
     : null;
 }
 
-/** `publicCopy` is what the public is shown: null while the page is not published. */
-export function pageStatusOf(
-  draft: PageContent,
-  publicCopy: PageContent | null,
-): PageStatus {
+/** `publicCopy` is what the public is shown: null while the page is not published. A page's content or the footer's. */
+export function pageStatusOf<T>(draft: T, publicCopy: T | null): PageStatus {
   if (!publicCopy) return "unpublished";
   return samePageContent(draft, publicCopy) ? "published" : "changed";
 }

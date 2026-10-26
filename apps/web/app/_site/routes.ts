@@ -5,6 +5,7 @@ import {
   sitePageFallbackTitle,
   sitePagePath,
   sitePagePreviewPath,
+  type HubPage,
   type PageStatus,
   type SitePageDetails,
   type SitePageKey,
@@ -14,6 +15,7 @@ import { notFound, redirect } from "next/navigation";
 import { signInHref } from "../_lib/routes";
 import { pageMetadata } from "../_lib/seo";
 import { publishedSitePage, sitePageDraft } from "../_lib/site-pages";
+import { HUB_DEFAULTS } from "./HubView";
 
 /**
  * What a site page's route shows: the published document, or for staff the
@@ -62,5 +64,23 @@ export async function previewMetadata(page: SitePageKey): Promise<Metadata> {
     path: sitePagePath(page),
     fallbackTitle: sitePageFallbackTitle(page),
     preview: true,
+  });
+}
+
+/**
+ * A hub's metadata: its published copy's, else what it was built with, as
+ * the home page's is.
+ */
+export async function hubMetadata(page: HubPage): Promise<Metadata> {
+  const shown = await publishedSitePage(page);
+  if (!shown) {
+    return {
+      title: sitePageFallbackTitle(page),
+      description: HUB_DEFAULTS[page].description,
+    };
+  }
+  return pageMetadata(shown.content, {
+    path: sitePagePath(page),
+    fallbackTitle: sitePageFallbackTitle(page),
   });
 }

@@ -9,14 +9,17 @@ import type {
   Prisma,
 } from "./generated/prisma/client";
 import {
+  LOCATION_STATES,
   TOP_CHOICE_CAP,
   checkLocationSlug,
   checkPageUnpublish,
+  isPublicState,
   locationStateOf,
   type PageStanding,
 } from "./location-input";
 import {
   LANDING_PAGE,
+  LANDING_REF,
   childrenOf,
   checkEntrySlug,
   isChildPage,
@@ -27,9 +30,11 @@ import {
   pageKindOf,
   type LocationPageKey,
   type LocationPageRef,
+  type LocationSection,
 } from "./location-page-input";
 import {
   offeredClassesOf,
+  pageOfView,
   pageSlotsOf,
   previewLocationViewOf,
   publicLocationViewOf,
@@ -295,6 +300,79 @@ export async function listTopChoiceCards(): Promise<TopChoiceCard[]> {
     const view = publicLocationViewOf({ ...location, offerings: [] });
     return view ? [topChoiceCardOf(view)] : [];
   });
+}
+
+/** A location on a service's hub: its card, opening its own page of the service. */
+export type ServiceLocationCard = {
+  slug: string;
+  name: string;
+  /** The service page's subheadline, else the location's tagline; "" for neither. */
+  text: string;
+  /** The service page's hero image, else the main page's. */
+  image: PageImage | null;
+};
+
+/**
+ * The locations that serve a service, for its hub: those the public sees
+ * whose own page of the service is published, the top choices first in
+ * their order, then the others by name.
+ */
+export async function listServiceLocationCards(
+  section: LocationSection,
+): Promise<ServiceLocationCard[]> {
+  const locations = await db.location.findMany({
+    where: { state: { in: LOCATION_STATES.filter(isPublicState) } },
+    orderBy: [
+      { topChoiceOrder: { sort: "asc", nulls: "last" } },
+      { name: "asc" },
+    ],
+    include: {
+      addresses: { orderBy: { position: "asc" } },
+      // The main page and the service's own: a card shows their words and image.
+      pages: {
+        where: {
+          locale: PAGE_LOCALE,
+          page: { in: [LANDING_PAGE, section] },
+          slug: "",
+        },
+      },
+    },
+  });
+  return locations.flatMap((location) => {
+    const view = publicLocationViewOf({ ...location, offerings: [] });
+    const page = view && pageOfView(view, { page: section, slug: "" });
+    if (!view || !page) return [];
+    return [
+      {
+        slug: view.slug,
+        name: view.name,
+        text: page.content.heroSubheadline || view.tagline || "",
+        image:
+          page.content.heroImage ??
+          pageOfView(view, LANDING_REF)?.content.heroImage ??
+          null,
+      },
+    ];
+  });
+}
+
+/**
+ * The locations the public sees, by slug: live or paused, with their main
+ * page published. The footer leaves out a link to any other.
+ */
+export async function listPublicLocationSlugs(): Promise<string[]> {
+  const locations = await db.location.findMany({
+    where: { state: { in: LOCATION_STATES.filter(isPublicState) } },
+    include: {
+      addresses: { orderBy: { position: "asc" } },
+      // The main page alone decides whether the public sees a location.
+      pages: { where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" } },
+    },
+  });
+  // The public view's own rule, so the footer links what the routes serve.
+  return locations.flatMap((location) =>
+    publicLocationViewOf({ ...location, offerings: [] }) ? [location.slug] : [],
+  );
 }
 
 /** One page of a location, as its editor opens it. */

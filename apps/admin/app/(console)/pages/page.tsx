@@ -11,7 +11,11 @@ import {
   type LocationPageKey,
   type PageFilter,
 } from "@repo/db";
-import { listLocationPages, listSitePageSummaries } from "@repo/db/server";
+import {
+  getFooterSummary,
+  listLocationPages,
+  listSitePageSummaries,
+} from "@repo/db/server";
 import { HouseIcon } from "@repo/ui/icons";
 import { Card, CardTitle } from "../../_components/Card";
 import { FilterLinks } from "../../_components/FilterLinks";
@@ -28,6 +32,7 @@ import {
   PageFilterLinks,
   PageTree,
   locationPageGroups,
+  footerRow,
   sitePageRow,
   type PageGroup,
 } from "../locations/_components/PageList";
@@ -84,7 +89,7 @@ export default async function PagesPage({ searchParams }: PageProps<"/pages">) {
         title="Pages"
         description={
           website
-            ? "Every location's pages, and the website's own: the home page, about us, contact us and the legal pages. A location's pages are written and published inside it."
+            ? "Every location's pages, and the website's own: the home page, the services' hubs, about us, contact us, the legal pages and the footer. A location's pages are written and published inside it."
             : "Every location's pages. Each is written and published inside its location."
         }
         action={
@@ -119,12 +124,15 @@ export default async function PagesPage({ searchParams }: PageProps<"/pages">) {
 
 async function pagesList(filter: Filter, website: boolean) {
   const onlyWebsite = filter.location === WEBSITE_FILTER;
-  const [lists, sitePages] = await Promise.all([
+  // The site's pages and the footer belong to no section.
+  const withWebsite =
+    website &&
+    (filter.location === undefined || onlyWebsite) &&
+    !filter.section;
+  const [lists, sitePages, footer] = await Promise.all([
     onlyWebsite ? [] : listLocationPages(filter.location),
-    // The site's pages belong to no section.
-    website && (filter.location === undefined || onlyWebsite) && !filter.section
-      ? listSitePageSummaries()
-      : [],
+    withWebsite ? listSitePageSummaries() : [],
+    withWebsite ? getFooterSummary() : null,
   ]);
   const narrowed = filter.status !== undefined || filter.q !== undefined;
   const changedCell = (at: Date | null) => (
@@ -156,8 +164,14 @@ async function pagesList(filter: Filter, website: boolean) {
       },
     );
   });
-  for (const page of sitePages) {
-    const row = sitePageRow(page);
+  const websiteRows = [
+    ...sitePages.map((page) => ({
+      row: sitePageRow(page),
+      at: page.updatedAt,
+    })),
+    ...(footer ? [{ row: footerRow(footer), at: footer.updatedAt }] : []),
+  ];
+  for (const { row, at } of websiteRows) {
     const inList = isPageInList(
       { name: row.label, status: row.status, paused: false },
       row.path,
@@ -177,7 +191,7 @@ async function pagesList(filter: Filter, website: boolean) {
             Website
           </span>,
         ],
-        trail: [changedCell(page.updatedAt)],
+        trail: [changedCell(at)],
       },
       under: [],
       folds: false,

@@ -9,11 +9,14 @@ import {
   getPublicLocation,
   listActiveOfferingsAt,
   cheapestCellsAt,
+  listPublicLocationSlugs,
+  listServiceLocationCards,
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
   type LocationPageRef,
   type LocationSearch,
+  type LocationSection,
   type LocationView,
   type TripCategory,
 } from "@repo/db/server";
@@ -112,6 +115,35 @@ export const topChoiceCards = unstable_cache(
   ["top-choice-cards"],
   { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
 );
+
+/**
+ * The slugs of the locations the public sees, for the footer's links. A
+ * location going live, paused or deleted refreshes the top choices' tag,
+ * so the list is kept under it.
+ */
+export const publicLocationSlugs = unstable_cache(
+  listPublicLocationSlugs,
+  ["public-location-slugs"],
+  { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
+);
+
+/**
+ * The locations that serve a service, for its hub. A page of a location
+ * published or unpublished refreshes the top choices' tag, so they are
+ * kept under it. Once per request.
+ */
+export const serviceLocationCards = cache((section: LocationSection) =>
+  unstable_cache(
+    () => listServiceLocationCards(section),
+    ["service-location-cards", section],
+    { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
+  )(),
+);
+
+/** The Destinations menu of the header: the top choices, by slug and name. */
+export async function headerDestinations() {
+  return (await topChoiceCards()).map(({ slug, name }) => ({ slug, name }));
+}
 
 /** A class a location sells, as its product page lists it. */
 export type VehicleClassCard = {

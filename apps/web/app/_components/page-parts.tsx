@@ -403,6 +403,30 @@ export function PageCards({
   );
 }
 
+/** The breadcrumb of a page of the site's own, one step under the home page: "Home / About us". */
+export function HomeCrumbs({ current }: { current: string }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-slate-700">
+        <li className="flex items-center gap-x-2">
+          <Link
+            href="/"
+            className={`underline-offset-4 hover:underline ${focus}`}
+          >
+            Home
+          </Link>
+          <span aria-hidden>/</span>
+        </li>
+        <li>
+          <span aria-current="page" className="font-semibold">
+            {current}
+          </span>
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
 /** A link at the foot of a page or beside a heading, with its arrow. */
 export function MoreLink({
   href,

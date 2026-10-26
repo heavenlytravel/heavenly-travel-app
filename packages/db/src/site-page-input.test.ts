@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { RESERVED_SLUGS } from "./location-input";
+import { isLocationSection } from "./location-page-input";
 import {
+  HUB_PAGES,
   SITE_PAGES,
+  checkSitePageUnpublish,
+  hasBuiltInCopy,
+  isSitePagePublic,
+  sitePageKindOf,
   sitePageFallbackTitle,
   sitePagePath,
   sitePagePreviewPath,
@@ -40,5 +47,33 @@ describe("a site page's title without a meta title", () => {
       sitePageFallbackTitle("about-us"),
       "About us | Heavenly Travel",
     );
+  });
+});
+
+describe("the services' hubs", () => {
+  it("are service pages at the sections' names", () => {
+    for (const page of HUB_PAGES) {
+      assert.equal(sitePageKindOf(page), "service");
+      assert.equal(sitePagePath(page), `/${page}`);
+      assert.ok(isLocationSection(page));
+    }
+  });
+
+  it("show their built-in copy before a publish, and stay published", () => {
+    assert.ok(hasBuiltInCopy("car-with-driver"));
+    assert.ok(!hasBuiltInCopy("about-us"));
+    assert.equal(checkSitePageUnpublish("coach-charter").ok, false);
+    assert.equal(checkSitePageUnpublish("terms").ok, true);
+  });
+
+  it("are open to the public before a publish, as the home page is", () => {
+    assert.ok(isSitePagePublic("car-with-driver", false));
+    assert.ok(isSitePagePublic("home", false));
+    assert.ok(!isSitePagePublic("about-us", false));
+    assert.ok(isSitePagePublic("about-us", true));
+  });
+
+  it("take addresses no location may", () => {
+    for (const page of HUB_PAGES) assert.ok(RESERVED_SLUGS.has(page));
   });
 });

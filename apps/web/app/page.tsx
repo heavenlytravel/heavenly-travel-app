@@ -5,7 +5,8 @@
  * until that is first published it shows what it was designed with. The
  * location cards are Marketing's top choices and open their pages. Its
  * pieces live in ./_site and ./_home. Static: it reads the cached site
- * pages and top choices, and nothing of the request.
+ * pages and top choices, and nothing of the request. Above the
+ * destinations, the services each open their hub.
  */
 
 import type { Metadata } from "next";
@@ -16,12 +17,13 @@ import {
 } from "@repo/db/server";
 import { topChoiceCards } from "./_lib/locations";
 import { pageMetadata } from "./_lib/seo";
-import { publishedSitePage } from "./_lib/site-pages";
+import { publishedSitePages } from "./_lib/site-pages";
 import { HOME_DEFAULTS, HomeView } from "./_site/HomeView";
+import { hubCards } from "./_site/HubView";
 import { SiteFrame } from "./_site/SiteFrame";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const home = await publishedSitePage(HOME_PAGE);
+  const home = (await publishedSitePages())[HOME_PAGE];
   if (!home) {
     return {
       title: sitePageFallbackTitle(HOME_PAGE),
@@ -35,13 +37,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Page() {
-  const [home, choices] = await Promise.all([
-    publishedSitePage(HOME_PAGE),
+  const [pages, choices] = await Promise.all([
+    publishedSitePages(),
     topChoiceCards(),
   ]);
   return (
     <SiteFrame overlay>
-      <HomeView content={home?.content ?? null} choices={choices} />
+      <HomeView
+        content={pages[HOME_PAGE]?.content ?? null}
+        services={hubCards(pages)}
+        choices={choices}
+      />
     </SiteFrame>
   );
 }

@@ -1,16 +1,11 @@
-import { SiteFooter } from "../_home/Sections";
-import { topChoiceCards } from "../_lib/locations";
-import { footerLinks } from "../_lib/site-pages";
+import { shownFooter } from "../_lib/site-pages";
+import { SiteFooter } from "./SiteFooter";
 
 /**
- * The footer with what it lists read for it, cached: the home page's top
- * choices and the company's pages that are published. Every marketing page
- * ends with it.
+ * The footer with what it shows read for it: the published footer, cached,
+ * or on a staff preview its draft. Every page of the customer site ends
+ * with it.
  */
-export async function Footer() {
-  const [destinations, links] = await Promise.all([
-    topChoiceCards(),
-    footerLinks(),
-  ]);
-  return <SiteFooter destinations={destinations} links={links} />;
+export async function Footer({ preview = false }: { preview?: boolean }) {
+  return <SiteFooter content={await shownFooter(preview)} />;
 }

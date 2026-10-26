@@ -11,6 +11,12 @@ import {
   pageTitleOf,
   type LocationPageRef,
 } from "./location-page-input";
+import {
+  FOOTER_KEY,
+  FOOTER_LABEL,
+  footerContentOf,
+  footerImageKeys,
+} from "./footer-content";
 import { pageContentOf, pageImageKeys, type PageKind } from "./page-content";
 import {
   SITE_PAGE_LABELS,
@@ -28,7 +34,7 @@ import {
 
 /**
  * Where the console's uploaded files are used, for the Media screen: the
- * locations' pages and the site's, working and published, the vehicle
+ * locations' pages, the site's and its footer, working and published, the vehicle
  * classes' pictures, the vehicles' photos, and the past versions a page's
  * History shows; the delete that takes files off them; and the check that keeps a
  * form opened before the delete from putting a deleted file back. The
@@ -36,14 +42,33 @@ import {
  * "Images".
  */
 
+/** What a published page or footer showed, from a log entry's `{ content }`; null for none. */
+function snapshotContent(snapshot: unknown): unknown {
+  return snapshot !== null &&
+    typeof snapshot === "object" &&
+    "content" in snapshot
+    ? snapshot.content
+    : null;
+}
+
 /** The keys of the images a published page showed, from a log entry's `{ page, content }`. */
 function snapshotKeys(kind: PageKind, snapshot: unknown): string[] {
-  const content =
-    snapshot !== null && typeof snapshot === "object" && "content" in snapshot
-      ? snapshot.content
-      : null;
+  const content = snapshotContent(snapshot);
   return content ? pageImageKeys(pageContentOf(kind, content)) : [];
 }
+
+/** The same for a publish of the footer. */
+function footerSnapshotKeys(snapshot: unknown): string[] {
+  const content = snapshotContent(snapshot);
+  return content ? footerImageKeys(footerContentOf(content)) : [];
+}
+
+/** The footer, as a use names it. */
+const FOOTER_PAGE: MediaPage = {
+  site: true,
+  page: FOOTER_KEY,
+  title: FOOTER_LABEL,
+};
 
 /** A location's page as a use names it: "Popular places page", "Eagle Square". */
 function locationPageOf(
@@ -76,7 +101,13 @@ async function readSources(client: Prisma.TransactionClient) {
       }),
       client.activityLog.findMany({
         where: {
-          action: { in: ["location.page.published", "site.page.published"] },
+          action: {
+            in: [
+              "location.page.published",
+              "site.page.published",
+              "site.footer.published",
+            ],
+          },
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: {
@@ -128,13 +159,11 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
   // A page's working and published copies are one use of each file on either.
   const addPage = (
     on: MediaPage,
-    kind: PageKind,
+    keysOf: (content: unknown) => string[],
     row: { draft: unknown; published: unknown },
   ) => {
-    const draft = new Set(pageImageKeys(pageContentOf(kind, row.draft)));
-    const published = new Set(
-      row.published ? pageImageKeys(pageContentOf(kind, row.published)) : [],
-    );
+    const draft = new Set(keysOf(row.draft));
+    const published = new Set(row.published ? keysOf(row.published) : []);
     for (const key of new Set([...draft, ...published])) {
       add(key, {
         kind: "page",
@@ -144,18 +173,30 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
       });
     }
   };
+  const pageKeysOf = (kind: PageKind) => (content: unknown) =>
+    pageImageKeys(pageContentOf(kind, content));
+  const footerKeysOf = (content: unknown) =>
+    footerImageKeys(footerContentOf(content));
 
   for (const row of pages) {
     const location = locationById.get(row.locationId);
     const ref = loggedPageRef(row);
     if (!location || !ref) continue;
-    addPage(locationPageOf(location, ref, row.draft), pageKindOf(ref), row);
+    addPage(
+      locationPageOf(location, ref, row.draft),
+      pageKeysOf(pageKindOf(ref)),
+      row,
+    );
   }
   for (const row of sitePages) {
+    if (row.page === FOOTER_KEY) {
+      addPage(FOOTER_PAGE, footerKeysOf, row);
+      continue;
+    }
     if (!isSitePageKey(row.page)) continue;
     addPage(
       { site: true, page: row.page, title: SITE_PAGE_LABELS[row.page] },
-      sitePageKindOf(row.page),
+      pageKeysOf(sitePageKindOf(row.page)),
       row,
     );
   }
@@ -164,27 +205,36 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
   const seen = new Set<string>();
   for (const entry of publishes) {
     let on: MediaPage;
-    let kind: PageKind;
-    if (entry.action === "site.page.published") {
-      if (!isSitePageKey(entry.entityId)) continue;
-      on = {
-        site: true,
-        page: entry.entityId,
-        title: SITE_PAGE_LABELS[entry.entityId],
-      };
-      kind = sitePageKindOf(entry.entityId);
+    let keys: Set<string>;
+    if (entry.action === "site.footer.published") {
+      on = FOOTER_PAGE;
+      keys = new Set([
+        ...footerSnapshotKeys(entry.before),
+        ...footerSnapshotKeys(entry.after),
+      ]);
     } else {
-      const location = locationById.get(entry.entityId);
-      const ref = loggedPageRef(entry.after);
-      if (!location || !ref) continue;
-      const content = (entry.after as { content?: unknown } | null)?.content;
-      on = locationPageOf(location, ref, content);
-      kind = pageKindOf(ref);
+      let kind: PageKind;
+      if (entry.action === "site.page.published") {
+        if (!isSitePageKey(entry.entityId)) continue;
+        on = {
+          site: true,
+          page: entry.entityId,
+          title: SITE_PAGE_LABELS[entry.entityId],
+        };
+        kind = sitePageKindOf(entry.entityId);
+      } else {
+        const location = locationById.get(entry.entityId);
+        const ref = loggedPageRef(entry.after);
+        if (!location || !ref) continue;
+        const content = (entry.after as { content?: unknown } | null)?.content;
+        on = locationPageOf(location, ref, content);
+        kind = pageKindOf(ref);
+      }
+      keys = new Set([
+        ...snapshotKeys(kind, entry.before),
+        ...snapshotKeys(kind, entry.after),
+      ]);
     }
-    const keys = new Set([
-      ...snapshotKeys(kind, entry.before),
-      ...snapshotKeys(kind, entry.after),
-    ]);
     for (const key of keys) {
       const where = `${key}|${mediaPageKey(on)}`;
       if (seen.has(where)) continue;

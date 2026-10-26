@@ -14,13 +14,17 @@ import {
   type LocationViewPage,
 } from "@repo/db/server";
 import { Footer } from "../_components/Footer";
-import { MarketingHeader } from "../_components/MarketingHeader";
+import { SiteHeader } from "../_components/SiteHeader";
 import {
   PreviewBar,
   type PreviewPage,
   type PreviewStanding,
 } from "../_components/PreviewBar";
-import { locationSearchPreview, publicLocationSearch } from "../_lib/locations";
+import {
+  headerDestinations,
+  locationSearchPreview,
+  publicLocationSearch,
+} from "../_lib/locations";
 import { fontVars } from "../_home/fonts";
 import { LocationSearch } from "./LocationSearch";
 
@@ -41,14 +45,17 @@ export async function LocationFrame({
   previewOf?: LocationViewPage;
   children: ReactNode;
 }) {
-  const search = previewOf
-    ? await locationSearchPreview(location.slug)
-    : await publicLocationSearch(location.slug);
+  const [search, destinations] = await Promise.all([
+    previewOf
+      ? locationSearchPreview(location.slug)
+      : publicLocationSearch(location.slug),
+    headerDestinations(),
+  ]);
   return (
     <div
       className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
-      <MarketingHeader />
+      <SiteHeader destinations={destinations} />
       <LocationSearch
         slug={location.slug}
         name={location.name}

@@ -58,7 +58,7 @@ export function Booking() {
       id={SEARCH_CARD_ID}
       role="search"
       aria-label="Travel booking search"
-      className="relative z-[3] mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1240px] scroll-mt-24 sm:mb-14 sm:w-[88%]"
+      className="relative z-[3] mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1240px] sm:mb-14 sm:w-[88%]"
     >
       <ServiceTabsSearch />
     </div>

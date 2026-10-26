@@ -140,6 +140,11 @@ export const serviceLocationCards = cache((section: LocationSection) =>
   )(),
 );
 
+/** The Destinations menu of the header: the top choices, by slug and name. */
+export async function headerDestinations() {
+  return (await topChoiceCards()).map(({ slug, name }) => ({ slug, name }));
+}
+
 /** A class a location sells, as its product page lists it. */
 export type VehicleClassCard = {
   id: string;

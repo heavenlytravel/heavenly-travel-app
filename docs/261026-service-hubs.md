@@ -32,6 +32,22 @@ to "Choose your destination".
   image or its built-in photo, and the section's one-line note.
 - The hubs' addresses join the reserved slugs, so no location can take them.
 
+## The header
+
+Asked for on 2026-10-26 with the hubs: one header for every page of the customer site,
+in place of the two there were (the marketing pages' and the booking and account
+pages'). Sign-in and sign-up keep their own frame.
+
+- From `lg` up: the logo, then Car with driver and Coach charter (the hubs) and
+  Destinations, a menu of the home page's top choices and "All destinations", which goes
+  to "Choose your destination" on the home page. On the right, signed out, "Sign in" and
+  "Sign up"; signed in, "My bookings" and the account's menu.
+- Below `lg`, a menu button opens a panel with the same links. On a phone only the
+  filled button stays in the bar.
+- It stays at the top as the page scrolls, white with a hairline and a soft shadow. On
+  the home page it is clear over the hero until the page scrolls. A jump to a part of a
+  page lands clear of it (`scroll-padding-top`).
+
 ## How it is built
 
 - `site-page-input.ts`: `HUB_PAGES`, their labels, `sitePageKindOf` (`service`),

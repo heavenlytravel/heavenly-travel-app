@@ -448,7 +448,7 @@ function Hero({
         id={SEARCH_CARD_ID}
         role="search"
         aria-label="Travel booking search"
-        className="relative z-[3] mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] scroll-mt-24 sm:w-[88%] lg:mb-12"
+        className="relative z-[3] mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
       >
         {paused ? <PausedNotice name={location.name} /> : <ServiceTabsSearch />}
       </div>

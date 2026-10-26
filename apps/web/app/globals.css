@@ -15,6 +15,11 @@
   }
 }
 
+/* A jump to a part of a page lands clear of the header held at the top. */
+html {
+  scroll-padding-top: 84px;
+}
+
 /* The menus of the form controls from @repo/ui, rounder on the site. */
 :root {
   --ui-popover-radius: 16px;

@@ -8,9 +8,10 @@ import {
   type SitePageKey,
 } from "@repo/db/server";
 import { Footer } from "../_components/Footer";
-import { MarketingHeader } from "../_components/MarketingHeader";
+import { SiteHeader } from "../_components/SiteHeader";
 import { PreviewBar } from "../_components/PreviewBar";
 import { fontVars } from "../_home/fonts";
+import { headerDestinations } from "../_lib/locations";
 
 /** Where a site page stands. */
 type SitePageStanding = { page: SitePageKey; status: PageStatus };
@@ -23,7 +24,7 @@ type SitePageStanding = { page: SitePageKey; status: PageStatus };
  * stands, its editor, and the way to every site page, `pages`, each with
  * where it stands.
  */
-export function SiteFrame({
+export async function SiteFrame({
   overlay = false,
   preview,
   children,
@@ -36,7 +37,7 @@ export function SiteFrame({
     <div
       className={`${fontVars} min-h-screen bg-slate-50 text-slate-900 font-(family-name:--font-body) leading-normal antialiased`}
     >
-      <MarketingHeader overlay={overlay} />
+      <SiteHeader overlay={overlay} destinations={await headerDestinations()} />
       {children}
       <Footer preview={preview !== undefined} />
       {preview && (

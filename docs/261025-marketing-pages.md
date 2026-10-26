@@ -109,9 +109,12 @@ Popular places, attractions, hotels and blog posts:
 - `db:migrate-popular-places` turns each location's highlights into popular place drafts:
   the name as the headline and slug, the first 160 characters of the text as the short
   description and the whole text as the start of the intro, the image as the hero, the
-  saved address kept. They are drafts, not published **(assumed)**: none has the SEO fields
-  or the intro a page needs. Until Marketing publishes them and the Popular places page, a
-  main page shows no popular places.
+  saved address kept. They are drafts, not published: none has the SEO fields or the intro
+  a page needs. Until Marketing publishes them and the Popular places page, a main page
+  shows no popular places; the live main pages lose their highlights at the deploy, a gap
+  accepted in the fourth review (261026) while Marketing completes them. Run on
+  production on 2026-10-26, after the schema push and before the deploy, so the live
+  console never counted the highlights' photos as unused.
 - Saved addresses stay on the location. A popular place, an attraction or a hotel may point
   at one; removing an address that a page uses asks first and names the page.
 
@@ -489,7 +492,18 @@ Added in the fifth round, to re-decide:
 ## Future work, on record
 
 - Read a location's page summaries with JSON operators once a location has many posts: the
-  view reads every page's content to build its cards today.
+  view reads every page's content to build its cards today, and Pages across locations
+  (`listLocationPages`) every page's draft and public copy, a post's whole text with them,
+  to list names and statuses. Found in the PR review (261026).
+- A saved address added with its page writes the address, then the page, apart: a slug
+  another admin takes in that same moment leaves the address saved without its page while
+  the dialog says it failed, and a retry is refused as saved already. One transaction for
+  both (`setLocationAddresses` taking a transaction client) closes it. Found in the PR
+  review (261026).
+- After a save or a publish, the editor takes what it sent as stored, though the writer
+  drops a saved address removed meanwhile (`writePageContent`): the editor shows the old
+  address as saved until a reload. The action answering with the stored content fixes it.
+  Found in the PR review (261026).
 - A site-wide `/blog`, `/attractions` and the product hubs.
 - Redirects for a renamed slug, at cutover.
 - Malay pages, as `261001` records.

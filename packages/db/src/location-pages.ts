@@ -40,6 +40,7 @@ import {
   type TopChoiceCard,
 } from "./location-view";
 import { deletedMediaRefusal } from "./media";
+import { isUniqueViolation } from "./prisma-errors";
 import {
   PAGE_KIND_RULES,
   PAGE_LIMITS,
@@ -704,6 +705,23 @@ function entriesRefusal(page: LocationPageKey): Refusal | null {
     : refuse("Pages cannot be added there.");
 }
 
+/**
+ * Why the page is not one added on demand, which alone is renamed, moved
+ * or deleted as one: its section takes none, or it is the section's own
+ * page, which no slug names. Null when it is.
+ */
+function addedPageRefusal(ref: LocationPageRef): Refusal | null {
+  return (
+    entriesRefusal(ref.page) ??
+    (isChildPage(ref) ? null : refuse("That is the section's own page."))
+  );
+}
+
+const SLUG_TAKEN = refuse(
+  "Another page here already has this slug. Choose another.",
+  "slug",
+);
+
 /** Why another page of the section cannot take the slug; null when none has it. */
 async function entrySlugTaken(
   tx: Prisma.TransactionClient,
@@ -715,9 +733,22 @@ async function entrySlugTaken(
     where: pageKey(locationId, { page, slug }),
     select: { id: true },
   });
-  return taken
-    ? refuse("Another page here already has this slug. Choose another.", "slug")
-    : null;
+  return taken ? SLUG_TAKEN : null;
+}
+
+/**
+ * A write that gives a page under a section its slug, refused as taken
+ * when another admin gave the same one at the same moment: the check
+ * before the write cannot see a write not yet committed, the unique index
+ * can.
+ */
+async function claimingSlug(write: () => Promise<Change>): Promise<Change> {
+  try {
+    return await write();
+  } catch (error) {
+    if (isUniqueViolation(error, "slug")) return SLUG_TAKEN;
+    throw error;
+  }
 }
 
 /**
@@ -795,53 +826,54 @@ export async function createLocationEntry(
   if (refused) return refused;
   const name = entryTitleOf(fields.title);
 
-  return db.$transaction(async (tx) => {
-    const location = await tx.location.findUnique({
-      where: { id: locationId },
-      select: { id: true, addresses: { select: { id: true } } },
-    });
-    if (!location) return NOT_FOUND;
-    const kind = pageKindOf({ page, slug: fields.slug });
-    const addressId = PAGE_KIND_RULES[kind].address
-      ? (fields.addressId ?? null)
-      : null;
-    if (
-      addressId !== null &&
-      !location.addresses.some((address) => address.id === addressId)
-    ) {
-      return refuse(
-        "That saved address was removed meanwhile. Choose another.",
-        "addressId",
-      );
-    }
-    const current = await entriesOf(tx, locationId, page);
-    const taken = await entrySlugTaken(tx, locationId, page, fields.slug);
-    if (taken) return taken;
+  return claimingSlug(() =>
+    db.$transaction(async (tx) => {
+      const location = await tx.location.findUnique({
+        where: { id: locationId },
+        select: { id: true, addresses: { select: { id: true } } },
+      });
+      if (!location) return NOT_FOUND;
+      const kind = pageKindOf({ page, slug: fields.slug });
+      const addressId = PAGE_KIND_RULES[kind].address
+        ? (fields.addressId ?? null)
+        : null;
+      if (
+        addressId !== null &&
+        !location.addresses.some((address) => address.id === addressId)
+      ) {
+        return refuse(
+          "That saved address was removed meanwhile. Choose another.",
+          "addressId",
+        );
+      }
+      const current = await entriesOf(tx, locationId, page);
+      const taken = await entrySlugTaken(tx, locationId, page, fields.slug);
+      if (taken) return taken;
 
-    await tx.locationPage.create({
-      data: {
-        locationId,
-        page,
-        slug: fields.slug,
-        locale: PAGE_LOCALE,
-        position: (current.at(-1)?.position ?? -1) + 1,
-        draft: { heroHeadline: name, addressId },
-      },
-    });
-    await logActivity(tx, actor, {
-      action: "location.page.created",
-      entityId: locationId,
-      after: { page, slug: fields.slug, name },
-    });
-    return { ok: true };
-  });
+      await tx.locationPage.create({
+        data: {
+          locationId,
+          page,
+          slug: fields.slug,
+          locale: PAGE_LOCALE,
+          position: (current.at(-1)?.position ?? -1) + 1,
+          draft: { heroHeadline: name, addressId },
+        },
+      });
+      await logActivity(tx, actor, {
+        action: "location.page.created",
+        entityId: locationId,
+        after: { page, slug: fields.slug, name },
+      });
+      return { ok: true };
+    }),
+  );
 }
 
 /**
  * Gives a page added on demand a new slug, and a place a new type (another
  * section of places), until it is first published: both are its address.
- * Its content and its version stay, so its editor saves on; a place is no
- * longer listed again under its new section.
+ * Its content and its version stay, so its editor saves on.
  */
 export async function renameLocationEntry(
   actor: Actor,
@@ -849,7 +881,7 @@ export async function renameLocationEntry(
   from: LocationPageRef,
   to: LocationPageRef,
 ): Promise<Change> {
-  const refused = entriesRefusal(from.page);
+  const refused = addedPageRefusal(from);
   if (refused) return refused;
   if (
     to.page !== from.page &&
@@ -861,46 +893,48 @@ export async function renameLocationEntry(
   if (!slugCheck.ok) return slugCheck;
   if (from.page === to.page && from.slug === to.slug) return { ok: true };
 
-  return db.$transaction(async (tx) => {
-    const row = await tx.locationPage.findUnique({
-      where: pageKey(locationId, from),
-    });
-    if (!row) return PAGE_GONE;
-    if (isEntrySlugLocked(row)) {
-      return refuse(
-        "The address is locked: the page has been published. A new one needs a redirect from the old, which comes with the move to heavenlytravel.my.",
-        "slug",
-      );
-    }
-    const taken = await entrySlugTaken(tx, locationId, to.page, to.slug);
-    if (taken) return taken;
-    const kind = pageKindOf(to);
-    const draft = pageContentOf(kind, row.draft);
-    const moved = to.page !== from.page;
-    await tx.locationPage.update({
-      where: { id: row.id },
-      data: {
-        page: to.page,
-        slug: to.slug,
-        ...(moved
-          ? {
-              // Last in its new section's order.
-              position:
-                ((await entriesOf(tx, locationId, to.page)).at(-1)?.position ??
-                  -1) + 1,
-            }
-          : {}),
-        updatedAt: row.updatedAt,
-      },
-    });
-    await logActivity(tx, actor, {
-      action: "location.page.renamed",
-      entityId: locationId,
-      before: { page: from.page, slug: from.slug },
-      after: { page: to.page, slug: to.slug, name: draft.heroHeadline },
-    });
-    return { ok: true };
-  });
+  return claimingSlug(() =>
+    db.$transaction(async (tx) => {
+      const row = await tx.locationPage.findUnique({
+        where: pageKey(locationId, from),
+      });
+      if (!row) return PAGE_GONE;
+      if (isEntrySlugLocked(row)) {
+        return refuse(
+          "The address is locked: the page has been published. A new one needs a redirect from the old, which comes with the move to heavenlytravel.my.",
+          "slug",
+        );
+      }
+      const taken = await entrySlugTaken(tx, locationId, to.page, to.slug);
+      if (taken) return taken;
+      const kind = pageKindOf(to);
+      const draft = pageContentOf(kind, row.draft);
+      const moved = to.page !== from.page;
+      await tx.locationPage.update({
+        where: { id: row.id },
+        data: {
+          page: to.page,
+          slug: to.slug,
+          ...(moved
+            ? {
+                // Last in its new section's order.
+                position:
+                  ((await entriesOf(tx, locationId, to.page)).at(-1)
+                    ?.position ?? -1) + 1,
+              }
+            : {}),
+          updatedAt: row.updatedAt,
+        },
+      });
+      await logActivity(tx, actor, {
+        action: "location.page.renamed",
+        entityId: locationId,
+        before: { page: from.page, slug: from.slug },
+        after: { page: to.page, slug: to.slug, name: draft.heroHeadline },
+      });
+      return { ok: true };
+    }),
+  );
 }
 
 /**
@@ -913,7 +947,7 @@ export async function deleteLocationEntry(
   page: LocationPageKey,
   slug: string,
 ): Promise<Change> {
-  const refused = entriesRefusal(page);
+  const refused = addedPageRefusal({ page, slug });
   if (refused) return refused;
   return db.$transaction(async (tx) => {
     const row = await tx.locationPage.findUnique({
@@ -936,7 +970,8 @@ export async function deleteLocationEntry(
 }
 
 /**
- * Moves a page added on demand one place up or down in its section. The
+ * Moves a page added on demand one place up or down in its section, one
+ * shown in Marketing's order: the blog's posts are shown newest first. The
  * places are written again as 0, 1, 2 with no gaps, and the order logged.
  */
 export async function moveLocationEntry(
@@ -946,8 +981,14 @@ export async function moveLocationEntry(
   slug: string,
   by: -1 | 1,
 ): Promise<Change> {
-  const refused = entriesRefusal(page);
+  const refused = addedPageRefusal({ page, slug });
   if (refused) return refused;
+  const children = childrenOf(page);
+  if (children?.type === "entries" && !children.ordered) {
+    return refuse(
+      `The ${children.many} here are shown newest first, not in an order.`,
+    );
+  }
   return db.$transaction(async (tx) => {
     const rows = await entriesOf(tx, locationId, page);
     const before = rows.map((row) => row.slug);

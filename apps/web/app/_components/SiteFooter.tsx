@@ -146,13 +146,13 @@ export function SiteFooter({ content }: { content: FooterContent }) {
           </div>
 
           {hasLower && (
-            <div className="mt-8 grid gap-8 border-t border-white/25 pt-7 lg:grid-cols-[1.5fr_1fr] lg:items-start lg:gap-16">
+            <div className="mt-8 grid gap-8 border-t border-white/25 pt-7 lg:grid-cols-2 lg:items-start lg:gap-16">
               {content.paymentLogos.length > 0 && (
                 <section aria-labelledby="footer-payment">
                   <Heading id="footer-payment">
                     {content.paymentHeading}
                   </Heading>
-                  <ul className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+                  <ul className="grid grid-cols-4 gap-2">
                     {content.paymentLogos.map((logo, i) => (
                       <li
                         key={i}

@@ -26,7 +26,7 @@ Package manager is pnpm (Node >= 24).
 - `pnpm build`: production build
 - `pnpm format`: Prettier
 - `pnpm db:push`: push the Prisma schema to the development database (no migrations)
-- `pnpm db:push:prod`: same against production: rehearses on a throwaway copy of production, then asks for a typed confirmation. Only the developer runs this
+- `pnpm db:push:prod`: same against production: rehearses on a throwaway copy of production, asks for a typed confirmation, then backs production up to a Neon branch before the push. Only the developer runs this
 
 ## Priorities
 

@@ -2,23 +2,34 @@
 // packages/db/.env, after an explicit confirmation. Used by the *:prod scripts
 // so the development URL never has to be edited by hand for a release.
 //
-// With --rehearse, the command first runs against a throwaway Neon branch
-// copied from production this second. Production is offered only when that
-// run succeeds, and the branch is deleted at the end either way.
+// With --protect, every script that writes:
+// 1. runs the command first against a throwaway Neon branch copied from
+//    production this second, and stops there if it fails;
+// 2. after the confirmation, copies production into a backup branch right
+//    before the real run, and keeps only the newest backups;
+// 3. deletes the throwaway branch at the end either way.
+// Both branch names carry the PR of the current git branch, or its name.
 import "dotenv/config";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
-import { createBranchFrom, deleteBranch, type Branch } from "./neon-branch";
+import {
+  createBackupBranch,
+  createConnectedBranch,
+  deleteBranch,
+  type Branch,
+} from "./neon-branch";
 
 const CONFIRM_WORD = "production";
-const REHEARSE_FLAG = "--rehearse";
+const PROTECT_FLAG = "--protect";
+const BACKUP_PREFIX = "backup-";
+const BACKUPS_KEPT = 3;
 
 const args = process.argv.slice(2);
-const rehearse = args[0] === REHEARSE_FLAG;
-const command = rehearse ? args.slice(1) : args;
+const protect = args[0] === PROTECT_FLAG;
+const command = protect ? args.slice(1) : args;
 if (command.length === 0) {
   console.error(
-    `Usage: with-production-db [${REHEARSE_FLAG}] <command> [...args]`,
+    `Usage: with-production-db [${PROTECT_FLAG}] <command> [...args]`,
   );
   process.exit(1);
 }
@@ -40,7 +51,7 @@ let rehearsal: Branch | undefined;
 let commandRunning = false;
 
 // Ctrl+C during the command stops the command, and this script then cleans
-// up. Ctrl+C anywhere else stops this script, after deleting the branch.
+// up. Ctrl+C anywhere else stops this script, after deleting the rehearsal.
 process.on("SIGINT", () => {
   if (commandRunning) return;
   void (rehearsal ? deleteBranch(rehearsal) : Promise.resolve()).finally(() =>
@@ -83,10 +94,28 @@ async function confirmProduction(question: string) {
   }
 }
 
+/** `pr55` for the current git branch's PR, else the branch's name. */
+function changeLabel() {
+  const output = (line: string) =>
+    spawnSync(line, {
+      shell: true,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 15_000,
+    }).stdout?.trim() ?? "";
+  const pr = output("gh pr view --json number -q .number");
+  if (/^\d+$/.test(pr)) return `pr${pr}`;
+  const branch = output("git branch --show-current")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return branch || "local";
+}
+
 async function main(): Promise<number> {
   const described = `"${command.join(" ")}"`;
 
-  if (!rehearse) {
+  if (!protect) {
     const confirmed = await confirmProduction(
       `\nAbout to run ${described} against PRODUCTION (${productionHost}).`,
     );
@@ -97,14 +126,17 @@ async function main(): Promise<number> {
     return run(productionUrl);
   }
 
-  const name = `rehearsal-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}`;
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+  const suffix = `${changeLabel()}-${stamp}`;
+  const name = `rehearsal-${suffix}`;
   console.log(
     `\nCopying production (${productionHost}) into the Neon branch "${name}"...`,
   );
-  rehearsal = await createBranchFrom(productionUrl, name);
+  const connected = await createConnectedBranch(productionUrl, name);
+  rehearsal = connected;
   try {
     console.log(`Rehearsing ${described} on "${name}".\n`);
-    const rehearsed = await run(rehearsal.url);
+    const rehearsed = await run(connected.url);
     if (rehearsed !== 0) {
       console.error(
         `\nThe rehearsal failed (exit code ${rehearsed}). Production was not touched.`,
@@ -119,9 +151,16 @@ async function main(): Promise<number> {
       console.error("Aborted. Production was not touched.");
       return 1;
     }
+    const backup = await createBackupBranch(
+      productionUrl,
+      `${BACKUP_PREFIX}${suffix}`,
+      BACKUP_PREFIX,
+      BACKUPS_KEPT,
+    );
+    console.log(`Backed up production to the Neon branch "${backup.name}".\n`);
     return await run(productionUrl);
   } finally {
-    await deleteBranch(rehearsal);
+    await deleteBranch(connected);
     rehearsal = undefined;
   }
 }

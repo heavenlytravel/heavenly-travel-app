@@ -1,14 +1,15 @@
-// Throwaway Neon branches for with-production-db's rehearsals, over the Neon
-// API (https://api-docs.neon.tech/reference). Reads NEON_API_KEY and
+// Neon branches for with-production-db's rehearsals and backups, over the
+// Neon API (https://api-docs.neon.tech/reference). Reads NEON_API_KEY and
 // NEON_PROJECT_ID from packages/db/.env.
 
 const API = "https://console.neon.tech/api/v2";
 const OPERATION_TIMEOUT_MS = 120_000;
 const POOLER_SUFFIX = "-pooler";
 
-export type Branch = {
-  id: string;
-  name: string;
+export type Branch = { id: string; name: string };
+
+/** A branch with its own compute, and a connection string to it. */
+export type ConnectedBranch = Branch & {
   /** The source URL with this branch's host and its role's password. */
   url: string;
 };
@@ -18,7 +19,7 @@ async function neon<T>(path: string, init?: RequestInit): Promise<T> {
   const project = process.env.NEON_PROJECT_ID;
   if (!key || !project) {
     throw new Error(
-      "NEON_API_KEY and NEON_PROJECT_ID must be set in packages/db/.env to rehearse.",
+      "NEON_API_KEY and NEON_PROJECT_ID must be set in packages/db/.env.",
     );
   }
   const response = await fetch(`${API}/projects/${project}${path}`, {
@@ -59,22 +60,18 @@ async function settle(operations: { id: string }[]) {
   }
 }
 
-/**
- * Copies the branch behind the connection string into a new branch with its
- * own compute, and returns a connection string to it that keeps the same
- * role, database, pooling and parameters.
- */
-export async function createBranchFrom(
-  sourceUrl: string,
-  name: string,
-): Promise<Branch> {
-  const url = new URL(sourceUrl);
+/** The connection string's host, split into its endpoint and the rest. */
+function hostOf(url: URL) {
   const [label = "", ...domain] = url.hostname.split(".");
   const pooled = label.endsWith(POOLER_SUFFIX);
-  const sourceEndpoint = pooled ? label.slice(0, -POOLER_SUFFIX.length) : label;
+  const endpoint = pooled ? label.slice(0, -POOLER_SUFFIX.length) : label;
+  return { endpoint, pooled, domain };
+}
 
+/** Copies the branch behind the connection string, as of now, into a new branch. */
+async function createBranch(sourceUrl: URL, name: string, compute: boolean) {
   const { endpoint } = await neon<{ endpoint: { branch_id: string } }>(
-    `/endpoints/${sourceEndpoint}`,
+    `/endpoints/${hostOf(sourceUrl).endpoint}`,
   );
   const created = await neon<{
     branch: { id: string };
@@ -84,23 +81,42 @@ export async function createBranchFrom(
     method: "POST",
     body: JSON.stringify({
       branch: { parent_id: endpoint.branch_id, name },
-      endpoints: [{ type: "read_write" }],
+      endpoints: compute ? [{ type: "read_write" }] : [],
     }),
   });
-  const branch = { id: created.branch.id, name, url: "" };
-
+  const branch: Branch = { id: created.branch.id, name };
   try {
     await settle(created.operations);
-    const newEndpoint = created.endpoints[0];
-    if (!newEndpoint)
+  } catch (error) {
+    await deleteBranch(branch);
+    throw error;
+  }
+  return { branch, endpoints: created.endpoints };
+}
+
+/**
+ * Copies the branch behind the connection string into a new branch with its
+ * own compute, and returns a connection string to it that keeps the same
+ * role, database, pooling and parameters.
+ */
+export async function createConnectedBranch(
+  sourceUrl: string,
+  name: string,
+): Promise<ConnectedBranch> {
+  const url = new URL(sourceUrl);
+  const { branch, endpoints } = await createBranch(url, name, true);
+  try {
+    const endpoint = endpoints[0];
+    if (!endpoint)
       throw new Error("Neon created the branch without a compute.");
     // A branch of a protected branch gets new passwords, so ask for the role's.
     const role = decodeURIComponent(url.username);
     const { password } = await neon<{ password: string }>(
       `/branches/${branch.id}/roles/${encodeURIComponent(role)}/reveal_password`,
     );
+    const { pooled, domain } = hostOf(url);
     url.hostname = [
-      newEndpoint.id + (pooled ? POOLER_SUFFIX : ""),
+      endpoint.id + (pooled ? POOLER_SUFFIX : ""),
       ...domain,
     ].join(".");
     url.password = encodeURIComponent(password);
@@ -111,8 +127,39 @@ export async function createBranchFrom(
   }
 }
 
+/**
+ * Copies the branch behind the connection string into a new branch with no
+ * compute, a backup that costs only what changes after it. Then deletes the
+ * oldest branches whose names start with the prefix, beyond the newest `keep`.
+ */
+export async function createBackupBranch(
+  sourceUrl: string,
+  name: string,
+  prefix: string,
+  keep: number,
+): Promise<Branch> {
+  const { branch } = await createBranch(new URL(sourceUrl), name, false);
+  try {
+    const { branches } = await neon<{
+      branches: { id: string; name: string; created_at: string }[];
+    }>("/branches");
+    const older = branches
+      .filter((b) => b.name.startsWith(prefix))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(keep);
+    for (const old of older) await deleteBranch(old);
+  } catch (error) {
+    // The new backup exists, so a failed clean-up must not stop the run.
+    console.error(
+      `Could not delete the older "${prefix}*" branches. Delete them in the Neon console.\n` +
+        (error instanceof Error ? error.message : String(error)),
+    );
+  }
+  return branch;
+}
+
 /** Deletes the branch and its compute. Reports a failure rather than throwing. */
-export async function deleteBranch(branch: Pick<Branch, "id" | "name">) {
+export async function deleteBranch(branch: Branch) {
   try {
     await neon(`/branches/${branch.id}`, { method: "DELETE" });
     console.log(`Deleted the Neon branch "${branch.name}".`);

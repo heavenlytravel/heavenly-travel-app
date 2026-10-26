@@ -106,12 +106,13 @@ every page that reads it. The developer runs, from the PR branch, before the mer
 1. `pnpm db:push` and any data script against development, then tests on staging.
 2. `pnpm db:push:prod`. It rehearses the push on a throwaway copy of production first. Read
    Prisma's output there: a data-loss warning means stop and rethink the change. Type
-   `production` only when the rehearsal shows what you expect.
-3. Any data script with its `:prod` script, such as `pnpm --filter @repo/db db:migrate-locations:prod`. It
-   rehearses the same way.
+   `production` only when the rehearsal shows what you expect. The script then backs up
+   production to a Neon branch named after the PR, and pushes.
+3. Any data script with its `:prod` script, such as
+   `pnpm --filter @repo/db db:migrate-locations:prod`. It rehearses and backs up the same way.
 4. Then merge, so Vercel deploys code that matches the database.
 
-The rehearsal and how to recover a damaged production database are in
+The rehearsal, the backups and how to restore from one are in
 `docs/260918-auth-and-database.md`.
 
 Use **Squash and merge**. The squash commit message should read like a changelog line,

@@ -53,7 +53,7 @@ The running apps read their own `.env.local`, so nothing here affects a dev serv
 
 ```sh
 pnpm db:push         # development branch
-pnpm db:push:prod    # rehearses on a copy of production, then asks you to type "production"
+pnpm db:push:prod    # rehearses on a copy, asks you to type "production", backs up, then pushes
 pnpm db:studio       # browse development data
 ```
 
@@ -61,18 +61,30 @@ Every `*:prod` script in `packages/db` goes through `scripts/with-production-db.
 which swaps in the production URL for that one command after the typed confirmation.
 Push to development first, test, then push to production before merging the PR.
 
-The scripts that write (all but `db:studio:prod`) pass `--rehearse`. The command
-first runs against a throwaway Neon branch named `rehearsal-<time>`, copied from
-production that second through the Neon API (`NEON_API_KEY` and `NEON_PROJECT_ID`
-in `packages/db/.env`). Prisma's data-loss warnings and any script error show up
-there first. Production is offered only when the rehearsal exits cleanly, and the
-branch is deleted at the end either way, Ctrl+C included. If the deletion fails,
-the script names the branch to delete in the Neon console.
+The scripts that write (all but `db:studio:prod`) pass `--protect`. It uses the
+Neon API (`NEON_API_KEY` and `NEON_PROJECT_ID` in `packages/db/.env`) to:
 
-A rehearsal is not a backup. If production is damaged anyway, Neon's instant
-restore rewinds the `production` branch to a moment within its history window
-(Settings in the Neon console). That also rewinds every write since, bookings
-included, so for a partial loss restore into a new branch and copy the rows back.
+1. Copy production into a throwaway branch, `rehearsal-pr<n>-<time>`, and run the
+   command there first. Prisma's data-loss warnings and any script error show up on
+   the copy. If the command fails, the script stops and production is not touched.
+2. After you type "production", copy production into `backup-pr<n>-<time>` right
+   before the real run. A backup has no compute and costs only what changes after
+   it. The 3 newest `backup-*` branches are kept, older ones are deleted.
+3. Delete the rehearsal branch at the end either way, Ctrl+C included. If a deletion
+   fails, the script names the branch to delete in the Neon console.
+
+`<n>` is the PR of the current git branch, found with `gh`. Without `gh` or a PR,
+the branch name stands in.
+
+To undo a bad run, use the newest backup:
+
+- **Some rows lost or wrong:** connect to the backup (add a compute to it in the Neon
+  console) and copy those rows back into production.
+- **Everything wrong:** restore `production` from the backup branch in the Neon
+  console. This also undoes every write made since the backup, bookings included.
+
+Neon's own instant restore is the fallback: it rewinds `production` to any moment
+within the project's history window (Settings in the Neon console).
 
 `prisma generate` runs on install and on build.
 

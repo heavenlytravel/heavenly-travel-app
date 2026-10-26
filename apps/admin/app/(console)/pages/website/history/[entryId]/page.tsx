@@ -57,10 +57,9 @@ export default async function SitePagePublishPage({
 
 /** The publish under its sentence: the page or the footer before and after. */
 async function publishDetails({ entryId }: { entryId: string }) {
-  const [publish, footer] = await Promise.all([
-    getSitePagePublish(entryId),
-    getFooterPublish(entryId),
-  ]);
+  // Most entries are a site page's; the footer's is read only when it is not.
+  const publish = await getSitePagePublish(entryId);
+  const footer = publish ? null : await getFooterPublish(entryId);
   if (footer) {
     return (
       <PublishHeader

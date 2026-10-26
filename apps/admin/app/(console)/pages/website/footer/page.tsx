@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { HOME_PAGE, SITE_PAGE_LABELS, isPagePublished } from "@repo/db";
+import {
+  HOME_PAGE,
+  SITE_PAGE_LABELS,
+  isPagePublished,
+  isSitePagePublic,
+} from "@repo/db";
 import {
   SITE_URL,
   getFooter,
@@ -91,7 +96,10 @@ async function editorDetails() {
         pages={summaries.map((summary) => ({
           page: summary.page,
           label: SITE_PAGE_LABELS[summary.page],
-          published: isPagePublished(summary.status),
+          published: isSitePagePublic(
+            summary.page,
+            isPagePublished(summary.status),
+          ),
         }))}
         locations={locations.map((location) => ({
           slug: location.slug,

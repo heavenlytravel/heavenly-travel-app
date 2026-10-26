@@ -363,19 +363,16 @@ export async function listServiceLocationCards(
 export async function listPublicLocationSlugs(): Promise<string[]> {
   const locations = await db.location.findMany({
     where: { state: { in: LOCATION_STATES.filter(isPublicState) } },
-    select: {
-      slug: true,
-      pages: {
-        where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" },
-        select: { isOn: true, published: true },
-      },
+    include: {
+      addresses: { orderBy: { position: "asc" } },
+      // The main page alone decides whether the public sees a location.
+      pages: { where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" } },
     },
   });
-  return locations
-    .filter(({ pages }) =>
-      pages.some((page) => publicCopyOf("landing", page) !== null),
-    )
-    .map((location) => location.slug);
+  // The public view's own rule, so the footer links what the routes serve.
+  return locations.flatMap((location) =>
+    publicLocationViewOf({ ...location, offerings: [] }) ? [location.slug] : [],
+  );
 }
 
 /** One page of a location, as its editor opens it. */

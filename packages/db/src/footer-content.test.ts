@@ -233,6 +233,8 @@ describe("links and numbers", () => {
     assert.ok(isFooterUrl("/booking"));
     assert.ok(isFooterUrl("mailto:sales@heavenlytravel.my"));
     assert.ok(!isFooterUrl("//evil.example"));
+    assert.ok(!isFooterUrl(String.raw`/\evil.example`));
+    assert.ok(!isFooterUrl("/booking now"));
     assert.ok(!isFooterUrl("javascript:alert(1)"));
     assert.ok(!isFooterUrl("hitpayapp.com"));
   });

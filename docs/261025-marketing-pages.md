@@ -333,7 +333,8 @@ is written in the console, and `COMPANY` is its default content.
   and a line about the company; the live locations; the company pages that are published;
   the address, phone, email and WhatsApp; the social links; then the legal name and SSM
   number on the bottom line, centred. The columns close up to the right whichever are
-  shown. The details live in `COMPANY` in `contact.ts`, beside `CONTACT`.
+  shown. The details lived in `COMPANY` in `contact.ts`, beside `CONTACT`, until
+  261026, when they moved into the editable footer.
 - The closing call keeps its line, "Tell us where you want to go.", with two answers:
   "Get my price", which brings the search card into view (or opens the page that has one:
   the location's main page from its blog, the home page from a site page or a paused

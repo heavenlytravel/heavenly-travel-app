@@ -5,7 +5,8 @@ import {
   getFooter,
   getPublishedFooter,
   getSitePage,
-  isSitePageKey,
+  SITE_PAGES,
+  isSitePagePublic,
   listPublishedSitePages,
   visibleFooterOf,
   type FooterContent,
@@ -67,8 +68,8 @@ export const footerDraft = cache(async () => (await getFooter()).draft);
 
 /**
  * The footer as a page shows it, public or a staff preview's draft: each
- * link to a site page that is not published or a location that is not
- * public left out, so none leads to a 404.
+ * link to a site page or a location the public cannot open left out, so
+ * none leads to a 404.
  */
 export async function shownFooter(preview: boolean): Promise<FooterContent> {
   const [content, pages, locations] = await Promise.all([
@@ -77,7 +78,9 @@ export async function shownFooter(preview: boolean): Promise<FooterContent> {
     publicLocationSlugs(),
   ]);
   return visibleFooterOf(content, {
-    pages: new Set(Object.keys(pages).filter(isSitePageKey)),
+    pages: new Set(
+      SITE_PAGES.filter((page) => isSitePagePublic(page, page in pages)),
+    ),
     locations: new Set(locations),
   });
 }

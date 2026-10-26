@@ -427,7 +427,8 @@ function isWebUrl(text: string) {
  * path on the site ("/booking"), or an email or phone link.
  */
 export function isFooterUrl(text: string) {
-  if (/^\/(?!\/)/.test(text)) return true;
+  // A path on the site; never "//host" or "/\host", which browsers open as another site.
+  if (/^\/(?![/\\])[^\s\\]*$/.test(text)) return true;
   if (/^(mailto|tel):\S+$/.test(text)) return true;
   return isWebUrl(text);
 }

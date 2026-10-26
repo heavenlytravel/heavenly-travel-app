@@ -30,10 +30,10 @@ import { LocationSearch } from "./LocationSearch";
 
 /**
  * What every page of a location shares: the home page's type and palette,
- * the site header, the search card's state and the footer, its draft on a
- * staff preview. The public pages get it from their layout, so the search
- * card keeps what was typed from page to page; the card searches all of
- * Malaysia, the location's area first. `previewOf` is the page a staff
+ * the site header, the search card's state and the footer as published.
+ * The public pages get it from their layout, so the search card keeps
+ * what was typed from page to page; the card searches all of Malaysia,
+ * the location's area first. `previewOf` is the page a staff
  * preview is showing, and floats the preview bar over it.
  */
 export async function LocationFrame({
@@ -65,7 +65,8 @@ export async function LocationFrame({
         {/* Room between the page and the footer. */}
         <main className="pb-[60px] sm:pb-[88px]">{children}</main>
       </LocationSearch>
-      <Footer preview={previewOf !== undefined} />
+      {/* The public footer: its draft is SUPER's to preview, on a site page. */}
+      <Footer />
       {previewOf && <LocationPreviewBar location={location} page={previewOf} />}
     </div>
   );

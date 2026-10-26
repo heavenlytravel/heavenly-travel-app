@@ -188,7 +188,16 @@ export function FooterEditor({
     since: /^\d{4}$/.test(year) ? Number(year) : null,
   });
   const limits = checkFooterLimits(normal);
-  const problems = footerProblems(normal);
+  // A first year typed that is no year is refused here, not dropped on save.
+  const sinceProblem =
+    year !== "" && normal.since === null
+      ? "The copyright line's first year is not a year, such as 2024."
+      : null;
+  const problems = [
+    ...(sinceProblem ? [sinceProblem] : []),
+    ...footerProblems(normal),
+  ];
+  const canWrite = limits.ok && sinceProblem === null;
   const dirty = !sameFooterContent(normal, saved);
   const status = pageStatusOf(normal, published);
   const publishedOn = publishedAt ? formatLocalDateTime(publishedAt) : "";
@@ -234,7 +243,7 @@ export function FooterEditor({
   }
 
   useSaveShortcut(() => {
-    if (dirty && limits.ok && !busy) write(false);
+    if (dirty && canWrite && !busy) write(false);
   });
 
   const message = uploads.uploading ? (
@@ -245,6 +254,8 @@ export function FooterEditor({
     <span className="text-red-700">{error}</span>
   ) : !limits.ok ? (
     <span className="text-red-700">{limits.error}</span>
+  ) : sinceProblem ? (
+    <span className="text-red-700">{sinceProblem}</span>
   ) : (
     <span className="text-slate-600">{standingNote}</span>
   );
@@ -275,7 +286,7 @@ export function FooterEditor({
           status={status}
           dirty={dirty}
           previewUrl={previewUrl}
-          canSave={!busy && dirty && limits.ok}
+          canSave={!busy && dirty && canWrite}
           onSave={() => write(false)}
           canPublish={!busy && status !== "published"}
           publishHint={
@@ -902,6 +913,20 @@ function firstLink(pages: readonly LinkablePage[]): FooterLink {
   };
 }
 
+/**
+ * Why a link to a location is left out, or null when it shows: the
+ * location is not public, or no location has the address any more, its
+ * slug changed or it was deleted.
+ */
+function locationNote(locations: readonly LinkableLocation[], slug: string) {
+  if (slug === "") return null;
+  const location = locations.find((l) => l.slug === slug);
+  if (!location) {
+    return `No location is at /${slug} any more, so this link is left out. Choose its location again.`;
+  }
+  return location.public ? null : "Left out until the location is public.";
+}
+
 /** The first network not in the list yet, for a new row. */
 function unusedNetwork(rows: readonly FooterSocial[]) {
   return (
@@ -976,10 +1001,7 @@ function LinkRows({
                   ? "Left out until the page is published."
                   : null
                 : target.kind === "location"
-                  ? locations.find((l) => l.slug === target.slug)?.public ===
-                    false
-                    ? "Left out until the location is public."
-                    : null
+                  ? locationNote(locations, target.slug)
                   : null;
             return (
               <li

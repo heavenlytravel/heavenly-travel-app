@@ -7,6 +7,7 @@ import {
   SITE_PAGES,
   checkSitePageUnpublish,
   hasBuiltInCopy,
+  isSitePagePublic,
   sitePageKindOf,
   sitePageFallbackTitle,
   sitePagePath,
@@ -63,6 +64,13 @@ describe("the services' hubs", () => {
     assert.ok(!hasBuiltInCopy("about-us"));
     assert.equal(checkSitePageUnpublish("coach-charter").ok, false);
     assert.equal(checkSitePageUnpublish("terms").ok, true);
+  });
+
+  it("are open to the public before a publish, as the home page is", () => {
+    assert.ok(isSitePagePublic("car-with-driver", false));
+    assert.ok(isSitePagePublic("home", false));
+    assert.ok(!isSitePagePublic("about-us", false));
+    assert.ok(isSitePagePublic("about-us", true));
   });
 
   it("take addresses no location may", () => {

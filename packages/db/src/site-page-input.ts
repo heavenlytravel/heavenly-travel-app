@@ -84,6 +84,15 @@ export function hasBuiltInCopy(page: SitePageKey) {
   return page === HOME_PAGE || isHubPage(page);
 }
 
+/**
+ * Whether the public can open a site page: one published, or one with
+ * built-in copy, which is public from the start. A footer link to any
+ * other is left out.
+ */
+export function isSitePagePublic(page: SitePageKey, published: boolean) {
+  return published || hasBuiltInCopy(page);
+}
+
 /** Where a site page is on the customer site: /, /about-us. */
 export function sitePagePath(page: SitePageKey) {
   return page === HOME_PAGE ? "/" : `/${page}`;

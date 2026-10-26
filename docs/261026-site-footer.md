@@ -39,9 +39,12 @@ footer at all.
 
 - **SUPER writes all of it** in the console at `/pages/website/footer`, listed under Pages
   as the website's last row (`website.manage`). Only the logo stays in code. The footer
-  works as a site page does: a draft, Preview (the home page's preview shows the saved
-  draft), Publish, Compare and History. It goes live on every page at once and stays
-  published once it is.
+  works as a site page does: a draft, Preview (the site pages' previews, which need
+  `website.manage` as the footer does, show the saved draft; a location's preview shows the
+  published footer), Publish, Compare and History. It goes live on every page at once and
+  stays published once it is. A link to a site page counts as open when the page is
+  published, or is the home page or a hub, which are public from the start
+  (`isSitePagePublic`).
 - **Before the first publish** the site shows `defaultFooterContent`. It holds today's
   company details (what `COMPANY` held, which is deleted) and the home page's top choices
   as the destinations. The editor opens on the same default. Asked for on 2026-10-26 so

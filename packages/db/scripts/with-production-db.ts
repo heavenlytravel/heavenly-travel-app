@@ -126,7 +126,10 @@ async function main(): Promise<number> {
     return run(productionUrl);
   }
 
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
+  // Local time, as the docs write dates.
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  const stamp = local.toISOString().slice(0, 19).replace(/[T:]/g, "-");
   const suffix = `${changeLabel()}-${stamp}`;
   const name = `rehearsal-${suffix}`;
   console.log(

@@ -18,8 +18,8 @@ import { Photo } from "./Brand";
 /**
  * The foot of every page of the customer site, as SUPER writes it in the
  * console: the logo and the tagline; the link columns, "Follow us on" and
- * "Get in touch"; the bodies the company is registered with and the ways
- * to pay; then the copyright line with its links. A part with nothing in
+ * "Get in touch"; the ways to pay and the bodies the company is
+ * registered with; then the copyright line with its links. A part with nothing in
  * it is left out and the others close up. `content` is the footer as it is
  * shown, its links to pages the public cannot open already left out. It
  * sits on the site's navy, its words in white, its headings light blue.
@@ -40,7 +40,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
 
   return (
     <footer className="bg-navy text-[0.95rem] text-white">
-      <div className="px-5 py-12 sm:px-[clamp(20px,5vw,78px)] sm:pt-16 sm:pb-12">
+      <div className="px-5 py-10 sm:px-[clamp(20px,5vw,78px)] sm:pt-12 sm:pb-10">
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
             <div className="max-w-[340px]">
@@ -63,13 +63,13 @@ export function SiteFooter({ content }: { content: FooterContent }) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-9 lg:flex lg:justify-between lg:gap-x-10">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:flex lg:justify-between lg:gap-x-10">
               {content.columns.map((column, index) => (
                 <nav key={index} aria-labelledby={`footer-column-${index}`}>
                   <Heading id={`footer-column-${index}`}>
                     {column.heading}
                   </Heading>
-                  <ul className="grid gap-2.5">
+                  <ul className="grid gap-2">
                     {column.links.map((link, i) => (
                       <li key={i}>
                         <FooterAnchor link={link} />
@@ -82,7 +82,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
               {content.social.length > 0 && (
                 <nav aria-labelledby="footer-social">
                   <Heading id="footer-social">{content.socialHeading}</Heading>
-                  <ul className="grid gap-2.5">
+                  <ul className="grid gap-2">
                     {content.social.map(({ network, url }, i) => (
                       <li key={i}>
                         <a
@@ -103,7 +103,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
               {hasContact && (
                 <div className="col-span-2 sm:col-span-1">
                   <Heading>{content.contactHeading}</Heading>
-                  <address className="grid justify-items-start gap-2.5 not-italic">
+                  <address className="grid justify-items-start gap-2 not-italic">
                     {content.whatsapp &&
                       (whatsappHref ? (
                         <a
@@ -146,16 +146,48 @@ export function SiteFooter({ content }: { content: FooterContent }) {
           </div>
 
           {hasLower && (
-            <div className="mt-11 grid gap-9 border-t border-white/25 pt-8 lg:grid-cols-[1fr_1.5fr] lg:items-start lg:gap-16">
+            <div className="mt-8 grid gap-8 border-t border-white/25 pt-7 lg:grid-cols-[1.5fr_1fr] lg:items-start lg:gap-16">
+              {content.paymentLogos.length > 0 && (
+                <section aria-labelledby="footer-payment">
+                  <Heading id="footer-payment">
+                    {content.paymentHeading}
+                  </Heading>
+                  <ul className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+                    {content.paymentLogos.map((logo, i) => (
+                      <li
+                        key={i}
+                        className="grid h-12 place-items-center rounded-[10px] bg-white px-1.5"
+                      >
+                        <Image
+                          src={logo.url}
+                          width={logo.width}
+                          height={logo.height}
+                          alt={logo.alt}
+                          sizes="96px"
+                          // A mark the site ships is served as it is.
+                          unoptimized={!isUploadUrl(logo.url)}
+                          className="h-10 w-auto max-w-full object-contain"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  {content.paymentNote && (
+                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-white/90">
+                      <LockGlyph />
+                      {content.paymentNote}
+                    </p>
+                  )}
+                </section>
+              )}
               {content.badges.length > 0 && (
                 <section aria-labelledby="footer-badges">
                   <Heading id="footer-badges">{content.badgesHeading}</Heading>
                   {/* A row of marks, each over its name, as the WordPress site had them. */}
-                  <ul className="grid grid-cols-3 gap-x-4 gap-y-6">
+                  <ul className="grid grid-cols-3 gap-x-4 gap-y-5">
                     {content.badges.map((badge, i) => (
                       <li
                         key={i}
-                        className="flex flex-col items-center gap-2.5 text-center text-[0.875rem] text-white/90"
+                        className="flex flex-col items-center gap-2 text-center text-[0.875rem] text-white/90"
                       >
                         {badge.image && (
                           <Image
@@ -165,7 +197,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                             alt=""
                             sizes="120px"
                             unoptimized={!isUploadUrl(badge.image.url)}
-                            className="h-20 w-auto max-w-full rounded-xl bg-white object-contain p-1.5"
+                            className="h-14 w-auto max-w-full rounded-lg bg-white object-contain p-1"
                           />
                         )}
                         <span>
@@ -177,42 +209,6 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                       </li>
                     ))}
                   </ul>
-                </section>
-              )}
-
-              {content.paymentLogos.length > 0 && (
-                <section
-                  aria-labelledby="footer-payment"
-                  className="lg:col-start-2"
-                >
-                  <Heading id="footer-payment">
-                    {content.paymentHeading}
-                  </Heading>
-                  <ul className="grid grid-cols-4 gap-2">
-                    {content.paymentLogos.map((logo, i) => (
-                      <li
-                        key={i}
-                        className="grid h-14 place-items-center rounded-[10px] bg-white px-2"
-                      >
-                        <Image
-                          src={logo.url}
-                          width={logo.width}
-                          height={logo.height}
-                          alt={logo.alt}
-                          sizes="96px"
-                          // A mark the site ships is served as it is.
-                          unoptimized={!isUploadUrl(logo.url)}
-                          className="h-12 w-auto max-w-full object-contain"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                  {content.paymentNote && (
-                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-white/90">
-                      <LockGlyph />
-                      {content.paymentNote}
-                    </p>
-                  )}
                 </section>
               )}
             </div>

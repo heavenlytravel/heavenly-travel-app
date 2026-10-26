@@ -30,7 +30,6 @@ import { faqDataOf } from "../_lib/seo";
 
 /** What the home page shows before Marketing publishes its own. */
 export const HOME_DEFAULTS = {
-  title: "Heavenly Travel — Travel made simple",
   description:
     "Book car rental, chauffeured rides, coach rental, attractions, hotels and custom travel packages across Malaysia with Heavenly Travel.",
   tagline: "Travel",

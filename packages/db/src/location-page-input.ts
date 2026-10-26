@@ -3,6 +3,7 @@ import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import type { PageKind } from "./page-content";
 import { plural } from "./names";
+import { SITE_NAME } from "./site-page-input";
 import { slugify } from "./slug";
 
 /**
@@ -226,6 +227,22 @@ export function pageTitleOf(ref: LocationPageRef, name?: string) {
   if (ref.page === LANDING_PAGE) return LOCATION_PAGE_LABELS.landing;
   if (!isChildPage(ref)) return `${LOCATION_PAGE_LABELS[ref.page]} page`;
   return name || ref.slug;
+}
+
+/**
+ * A location page's title while its meta title is empty, on the site and
+ * in the editor's search preview alike: "Langkawi | Heavenly Travel",
+ * "Car with driver in Langkawi | …", "Eagle Square in Langkawi | …".
+ * `name` names a page under a section: its class's, or its headline.
+ */
+export function locationPageFallbackTitle(
+  locationName: string,
+  ref: LocationPageRef,
+  name: string,
+): string {
+  if (ref.page === LANDING_PAGE) return `${locationName} | ${SITE_NAME}`;
+  const shown = isChildPage(ref) ? name : SECTIONS[ref.page].label;
+  return `${shown} in ${locationName} | ${SITE_NAME}`;
 }
 
 /**

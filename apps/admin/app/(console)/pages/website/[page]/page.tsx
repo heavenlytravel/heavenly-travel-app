@@ -4,6 +4,7 @@ import {
   SITE_PAGE_LABELS,
   checkSitePageUnpublish,
   isSitePageKey,
+  sitePageFallbackTitle,
   sitePageKindOf,
   sitePagePath,
   type SitePageKey,
@@ -113,11 +114,7 @@ async function editorDetails({ page }: { page: SitePageKey }) {
         places={null}
         previewUrl={sitePagePreviewUrl(page)}
         publicUrl={sitePagePublicUrl(page)}
-        fallbackTitle={
-          page === HOME_PAGE
-            ? "Heavenly Travel — Travel made simple"
-            : `${label} | Heavenly Travel`
-        }
+        fallbackTitle={sitePageFallbackTitle(page)}
         publishes={publishes}
         historyHref={activityHref("site-page")}
         historyLabel="All changes to the site's pages"

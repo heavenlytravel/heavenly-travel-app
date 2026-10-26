@@ -1,5 +1,10 @@
 import "server-only";
-import { SITE_URL, paragraphsOf, type PageContent } from "@repo/db/server";
+import {
+  SITE_NAME,
+  SITE_URL,
+  paragraphsOf,
+  type PageContent,
+} from "@repo/db/server";
 import type { Metadata } from "next";
 
 /**
@@ -8,8 +13,6 @@ import type { Metadata } from "next";
  * `SITE_URL` so it follows the host at cutover, and the structured data of
  * its FAQs. See docs/261001-locations-and-pages.md, "Search engines".
  */
-
-export const SITE_NAME = "Heavenly Travel";
 
 /**
  * A page's title, description, canonical address and share image: the

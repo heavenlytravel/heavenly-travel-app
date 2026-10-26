@@ -1,8 +1,8 @@
 import "server-only";
 import {
-  SITE_PAGE_LABELS,
   getAdminAccess,
   pageStatusOf,
+  sitePageFallbackTitle,
   sitePagePath,
   sitePagePreviewPath,
   type PageStatus,
@@ -12,7 +12,7 @@ import {
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { signInHref } from "../_lib/routes";
-import { SITE_NAME, pageMetadata } from "../_lib/seo";
+import { pageMetadata } from "../_lib/seo";
 import { publishedSitePage, sitePageDraft } from "../_lib/site-pages";
 
 /**
@@ -34,7 +34,7 @@ export async function documentMetadata(page: SitePageKey): Promise<Metadata> {
   if (!shown) return {};
   return pageMetadata(shown.content, {
     path: sitePagePath(page),
-    fallbackTitle: `${SITE_PAGE_LABELS[page]} | ${SITE_NAME}`,
+    fallbackTitle: sitePageFallbackTitle(page),
   });
 }
 
@@ -60,7 +60,7 @@ export async function previewMetadata(page: SitePageKey): Promise<Metadata> {
   const shown = await previewSitePageAt(page);
   return pageMetadata(shown.draft, {
     path: sitePagePath(page),
-    fallbackTitle: `${SITE_PAGE_LABELS[page]} | ${SITE_NAME}`,
+    fallbackTitle: sitePageFallbackTitle(page),
     preview: true,
   });
 }

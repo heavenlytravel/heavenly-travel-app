@@ -7,6 +7,7 @@ import {
   isChildPage,
   isEntrySlugLocked,
   isPublicState,
+  locationPageFallbackTitle,
   locationPagePath,
   locationStateOf,
   pageNameOf,
@@ -136,11 +137,7 @@ async function editorDetails(id: string, ref: LocationPageRef) {
         }}
         previewUrl={locationPreviewUrl(location.slug, ref)}
         publicUrl={locationPublicUrl(location.slug, ref)}
-        fallbackTitle={
-          ref.page === LANDING_PAGE
-            ? `${location.name} | Heavenly Travel`
-            : `${isChildPage(ref) ? name : sectionLabel} in ${location.name} | Heavenly Travel`
-        }
+        fallbackTitle={locationPageFallbackTitle(location.name, ref, name)}
         publishes={publishes}
         historyHref={locationHistoryHref(location.slug, "pages")}
         historyLabel="All changes to this location's pages"

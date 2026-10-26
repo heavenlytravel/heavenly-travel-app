@@ -12,6 +12,7 @@ import {
   isEntrySlugLocked,
   isLocationPageKey,
   isLocationPageRef,
+  locationPageFallbackTitle,
   locationPagePath,
   locationPreviewPath,
   loggedPageRef,
@@ -155,6 +156,31 @@ describe("where a page is edited in the console", () => {
     assert.equal(
       pageEditorPath("langkawi", { page: "car-with-driver", slug: "sedan" }),
       "/locations/langkawi/pages/car-with-driver/sedan",
+    );
+  });
+});
+
+describe("a location page's title without a meta title", () => {
+  it("names the location, and a section or the page under it", () => {
+    assert.equal(
+      locationPageFallbackTitle("Langkawi", LANDING_REF, "Langkawi"),
+      "Langkawi | Heavenly Travel",
+    );
+    assert.equal(
+      locationPageFallbackTitle(
+        "Langkawi",
+        { page: "car-with-driver", slug: "" },
+        "ignored",
+      ),
+      "Car with driver in Langkawi | Heavenly Travel",
+    );
+    assert.equal(
+      locationPageFallbackTitle(
+        "Langkawi",
+        { page: "popular-places", slug: "eagle-square" },
+        "Eagle Square",
+      ),
+      "Eagle Square in Langkawi | Heavenly Travel",
     );
   });
 });

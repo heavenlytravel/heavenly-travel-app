@@ -1,6 +1,8 @@
 import "server-only";
 import {
   LANDING_PAGE,
+  SITE_NAME,
+  locationPageFallbackTitle,
   SECTIONS,
   SITE_URL,
   locationPagePath,
@@ -10,7 +12,7 @@ import {
   type LocationViewPage,
 } from "@repo/db/server";
 import type { Metadata } from "next";
-import { SITE_NAME, faqDataOf, pageMetadata } from "../_lib/seo";
+import { faqDataOf, pageMetadata } from "../_lib/seo";
 
 /**
  * What a location page tells search engines and link previews: its
@@ -59,10 +61,7 @@ export function locationMetadata(
   const name = pageNameInView(location, page);
   return pageMetadata(page.content, {
     path: locationPagePath(location.slug, page),
-    fallbackTitle:
-      page.page === LANDING_PAGE
-        ? `${location.name} | ${SITE_NAME}`
-        : `${name} in ${location.name} | ${SITE_NAME}`,
+    fallbackTitle: locationPageFallbackTitle(location.name, page, name),
     preview,
     article:
       page.kind === "article"

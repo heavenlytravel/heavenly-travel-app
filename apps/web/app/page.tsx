@@ -9,9 +9,13 @@
  */
 
 import type { Metadata } from "next";
-import { HOME_PAGE, sitePagePath } from "@repo/db/server";
+import {
+  HOME_PAGE,
+  sitePageFallbackTitle,
+  sitePagePath,
+} from "@repo/db/server";
 import { topChoiceCards } from "./_lib/locations";
-import { SITE_NAME, pageMetadata } from "./_lib/seo";
+import { pageMetadata } from "./_lib/seo";
 import { publishedSitePage } from "./_lib/site-pages";
 import { HOME_DEFAULTS, HomeView } from "./_site/HomeView";
 import { SiteFrame } from "./_site/SiteFrame";
@@ -20,13 +24,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const home = await publishedSitePage(HOME_PAGE);
   if (!home) {
     return {
-      title: HOME_DEFAULTS.title,
+      title: sitePageFallbackTitle(HOME_PAGE),
       description: HOME_DEFAULTS.description,
     };
   }
   return pageMetadata(home.content, {
     path: sitePagePath(HOME_PAGE),
-    fallbackTitle: SITE_NAME,
+    fallbackTitle: sitePageFallbackTitle(HOME_PAGE),
   });
 }
 

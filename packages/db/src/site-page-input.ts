@@ -34,6 +34,21 @@ export const SITE_PAGE_LABELS: Record<SitePageKey, string> = {
   "refund-policy": "Cancellation and refunds",
 };
 
+/** The site's name, after a page's own title in a browser tab and a search result. */
+export const SITE_NAME = "Heavenly Travel";
+
+/**
+ * A site page's title while its meta title is empty, on the site and in
+ * the editor's search preview alike: the home page's as the site has long
+ * had it, a document's its name before the site's, "About us | Heavenly
+ * Travel".
+ */
+export function sitePageFallbackTitle(page: SitePageKey): string {
+  return page === HOME_PAGE
+    ? `${SITE_NAME} — Travel made simple`
+    : `${SITE_PAGE_LABELS[page]} | ${SITE_NAME}`;
+}
+
 /** The home page holds its own sections; every other site page is a document. */
 export function sitePageKindOf(page: SitePageKey): PageKind {
   return page === HOME_PAGE ? "home" : "document";

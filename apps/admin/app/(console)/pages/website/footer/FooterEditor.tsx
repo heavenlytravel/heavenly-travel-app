@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BUNDLED_BADGES,
   BUNDLED_PAYMENT_LOGOS,
   FOOTER_LIMITS,
   FOOTER_LINK_KINDS,
@@ -580,7 +581,22 @@ export function FooterEditor({
               placeholder="Registered with"
               onChange={(badgesHeading) => edit({ badgesHeading })}
             />
-            {content.badges.length > 0 ? (
+            {content.badges.length === 0 ? (
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                None yet. The footer leaves this part out until there is one.
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    edit({
+                      badges: BUNDLED_BADGES.map((badge) => rowed(badge)),
+                    })
+                  }
+                >
+                  Add the old site&apos;s three
+                </Button>
+              </div>
+            ) : (
               <ul className={ROWS}>
                 {content.badges.map((badge, index) => {
                   const update = (patch: Partial<FooterBadge>) =>
@@ -670,7 +686,7 @@ export function FooterEditor({
                   );
                 })}
               </ul>
-            ) : null}
+            )}
           </div>
         </Card>
 
@@ -1069,6 +1085,9 @@ function LinkRows({
   );
 }
 
+/** The choice that puts back every shipped mark not in the list. */
+const ALL_MARKS = "all";
+
 /**
  * The ways to pay: their logos, uploaded several at once or one of the
  * HitPay marks the site ships put back, each named, in their order, and
@@ -1113,13 +1132,21 @@ function PaymentCard({
                 value=""
                 placeholder="Put back a HitPay logo"
                 disabled={room <= 0}
-                options={missing.map((mark) => ({
-                  value: mark.url,
-                  label: mark.alt,
-                }))}
+                options={[
+                  ...(missing.length > 1
+                    ? [{ value: ALL_MARKS, label: "All of them" }]
+                    : []),
+                  ...missing.map((mark) => ({
+                    value: mark.url,
+                    label: mark.alt,
+                  })),
+                ]}
                 onValueChange={(url) => {
-                  const mark = missing.find((m) => m.url === url);
-                  if (mark) onAdd(mark);
+                  const marks =
+                    url === ALL_MARKS
+                      ? missing.slice(0, room)
+                      : missing.filter((m) => m.url === url);
+                  for (const mark of marks) onAdd(mark);
                 }}
               />
             ) : null}

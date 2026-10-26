@@ -142,6 +142,27 @@ export type FooterBadge = {
   detail: string;
 };
 
+const crest = () => bundled("/brand/mof.jpg", "", 280, 230);
+
+/**
+ * The bodies the WordPress site says the company is registered with, their
+ * marks shipped with the site: the default footer's, and those the editor
+ * offers to fill in.
+ */
+export const BUNDLED_BADGES: readonly FooterBadge[] = [
+  { image: crest(), name: "Ministry of Finance Malaysia", detail: "" },
+  {
+    image: crest(),
+    name: "Ministry of Tourism, Arts & Culture Malaysia",
+    detail: "",
+  },
+  {
+    image: bundled("/brand/matta.jpg", "", 280, 230),
+    name: "Malaysian Association of Tour and Travel Agents",
+    detail: "",
+  },
+];
+
 /** What the footer holds. The draft and the published copy both hold one. */
 export type FooterContent = {
   /** The line under the logo. */
@@ -352,23 +373,7 @@ export function defaultFooterContent(
       "07000 Langkawi, Kedah",
     ].join("\n"),
     badgesHeading: "Registered with",
-    badges: [
-      {
-        image: bundled("/brand/mof.jpg", "", 280, 230),
-        name: "Ministry of Finance Malaysia",
-        detail: "",
-      },
-      {
-        image: bundled("/brand/mof.jpg", "", 280, 230),
-        name: "Ministry of Tourism, Arts & Culture Malaysia",
-        detail: "",
-      },
-      {
-        image: bundled("/brand/matta.jpg", "", 280, 230),
-        name: "Malaysian Association of Tour and Travel Agents",
-        detail: "",
-      },
-    ],
+    badges: [...BUNDLED_BADGES],
     paymentHeading: "Payment partners",
     paymentLogos: [...BUNDLED_PAYMENT_LOGOS],
     paymentNote: "Payments are processed securely by HitPay.",

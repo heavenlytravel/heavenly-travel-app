@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   SITE_PAGE_LABELS,
   addressLinesOf,
@@ -12,6 +11,7 @@ import { eyebrow, focus } from "../(site)/_components/Page";
 import {
   Cover,
   Faqs,
+  HomeCrumbs,
   JsonLd,
   MissingMark,
   MissingPart,
@@ -54,24 +54,7 @@ export function SiteDocumentView({
       <article>
         <header className={`pt-7 ${gutter}`}>
           <div className="mx-auto w-full max-w-[900px]">
-            <nav aria-label="Breadcrumb">
-              <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-slate-700">
-                <li className="flex items-center gap-x-2">
-                  <Link
-                    href="/"
-                    className={`underline-offset-4 hover:underline ${focus}`}
-                  >
-                    Home
-                  </Link>
-                  <span aria-hidden>/</span>
-                </li>
-                <li>
-                  <span aria-current="page" className="font-semibold">
-                    {label}
-                  </span>
-                </li>
-              </ol>
-            </nav>
+            <HomeCrumbs current={label} />
             <p className={`${eyebrow} mt-8 mb-3`}>Heavenly Travel</p>
             <h1 className="font-(family-name:--font-display) text-[clamp(2.3rem,5.4vw,4rem)] leading-[1.02] text-ink">
               {content.heroHeadline || label}

@@ -163,6 +163,7 @@ export {
   getLocationPageBody,
   listTopChoiceCards,
   listPublicLocationSlugs,
+  listServiceLocationCards,
   listLocationPages,
   saveLocationPageDraft,
   publishLocationPage,
@@ -175,6 +176,7 @@ export {
 export type {
   LocationPageDetails,
   LocationPageList,
+  ServiceLocationCard,
   PageSummary,
   PagePublish,
   EntryFields,

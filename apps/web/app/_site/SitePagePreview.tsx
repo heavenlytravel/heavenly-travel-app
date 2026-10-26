@@ -1,11 +1,13 @@
 import {
   HOME_PAGE,
+  isHubPage,
   listSitePageSummaries,
   type SitePageKey,
 } from "@repo/db/server";
-import { topChoiceCards } from "../_lib/locations";
-import { footerDraft } from "../_lib/site-pages";
+import { serviceLocationCards, topChoiceCards } from "../_lib/locations";
+import { footerDraft, publishedSitePages } from "../_lib/site-pages";
 import { HomeView } from "./HomeView";
+import { HubView, hubCards } from "./HubView";
 import { SiteDocumentView } from "./SiteDocumentView";
 import { SiteFrame } from "./SiteFrame";
 import { previewSitePageAt } from "./routes";
@@ -31,7 +33,20 @@ export async function SitePagePreview({ page }: { page: SitePageKey }) {
       <SiteFrame overlay preview={preview}>
         <HomeView
           content={shown.draft}
+          services={hubCards(await publishedSitePages())}
           choices={await topChoiceCards()}
+          preview
+        />
+      </SiteFrame>
+    );
+  }
+  if (isHubPage(page)) {
+    return (
+      <SiteFrame preview={preview}>
+        <HubView
+          page={page}
+          content={shown.draft}
+          locations={await serviceLocationCards(page)}
           preview
         />
       </SiteFrame>

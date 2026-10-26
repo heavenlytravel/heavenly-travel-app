@@ -89,7 +89,7 @@ export default async function PagesPage({ searchParams }: PageProps<"/pages">) {
         title="Pages"
         description={
           website
-            ? "Every location's pages, and the website's own: the home page, about us, contact us, the legal pages and the footer. A location's pages are written and published inside it."
+            ? "Every location's pages, and the website's own: the home page, the services' hubs, about us, contact us, the legal pages and the footer. A location's pages are written and published inside it."
             : "Every location's pages. Each is written and published inside its location."
         }
         action={

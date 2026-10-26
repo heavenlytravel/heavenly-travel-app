@@ -10,15 +10,19 @@ import {
   emptyPartsOf,
 } from "../_components/page-parts";
 import { SearchProvider } from "../_components/search/SearchProvider";
-import { DestinationCards } from "../_home/DestinationCards";
+import {
+  DestinationCards,
+  PhotoCards,
+  type PhotoCard,
+} from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
 import { Booking, Trust, eyebrow } from "../_home/Sections";
 import { faqDataOf } from "../_lib/seo";
 
 /**
  * The home page: a full-screen pale photo hero with the booking card for
- * all six services resting on its floor, why to book with us, the locations
- * we cover, then the intro and the FAQs when Marketing wrote them. The
+ * all six services resting on its floor, why to book with us, the services
+ * we offer, each opening its hub, the locations we cover, then the intro and the FAQs when Marketing wrote them. The
  * hero's words and photo are the published home page's (`content`); until
  * the home page is first published it shows the words and photo it was
  * designed with. The public page and the staff preview render this. The preview marks each empty part: a dashed placeholder
@@ -38,11 +42,14 @@ export const HOME_DEFAULTS = {
 
 export function HomeView({
   content,
+  services,
   choices,
   preview = false,
 }: {
   /** The home page's content; null before its first publish. */
   content: PageContent | null;
+  /** The services, each opening its hub. */
+  services: readonly PhotoCard[];
   choices: TopChoiceCard[];
   preview?: boolean;
 }) {
@@ -139,6 +146,24 @@ export function HomeView({
         </section>
 
         <Trust />
+
+        <section
+          id="services"
+          aria-labelledby="services-title"
+          className="scroll-mt-8 px-3 pt-[75px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px]"
+        >
+          <p className={`${eyebrow} mb-2`}>What we offer</p>
+          <h2
+            id="services-title"
+            className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
+          >
+            Our services
+          </h2>
+          <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
+            See where each one runs.
+          </p>
+          <PhotoCards cards={services} />
+        </section>
 
         <section
           id="destinations"

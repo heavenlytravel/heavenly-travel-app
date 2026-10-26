@@ -173,6 +173,7 @@ export function PageEditor({
   historyLabel,
   entry,
   notice,
+  unpublishedNote = "The public does not see this page.",
 }: {
   target: PageTarget;
   kind: PageKind;
@@ -220,6 +221,8 @@ export function PageEditor({
   entry?: EntryControls;
   /** A line over the form about what the page is not yet: a class off sale. */
   notice?: ReactNode;
+  /** What the public sees while the page is not published. */
+  unpublishedNote?: string;
 }) {
   const rule = PAGE_KIND_RULES[kind];
   const labels = heroLabelsOf(kind);
@@ -256,7 +259,7 @@ export function PageEditor({
   // What the status means for the public, under the badge.
   const standingNote =
     status === "unpublished"
-      ? "The public does not see this page."
+      ? unpublishedNote
       : status === "published"
         ? `Published ${publishedOn}.${hiddenBecause ? ` ${hiddenBecause}` : ""}`
         : `The public ${hiddenBecause ? "will see" : "sees"} the copy published ${publishedOn} until you publish again.`;

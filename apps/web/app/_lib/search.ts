@@ -75,15 +75,15 @@ const dropOff: FieldDef = {
 };
 
 /**
- * What a trip with a driver asks, on the home card and in the trip editor of
- * the options page alike. Passengers is asked on the options page, where the
- * vehicle classes are known.
+ * What a trip asks, on the search card and in the vehicle page's trip
+ * planner alike: its kind first, as two radios. The group's size is asked
+ * once for all the trips, beside the card's button and on the vehicle page.
  */
 const TRIP_FIELDS: FieldDef[] = [
   {
     key: "mode",
     kind: "choice",
-    label: "Trip",
+    label: "Type of trip",
     options: TRIP_MODES.map((mode) => ({
       value: mode,
       label: TRIP_MODE_LABELS[mode],

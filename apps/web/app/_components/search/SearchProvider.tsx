@@ -9,33 +9,43 @@ import {
 } from "@repo/db";
 import type { PlacePresets } from "@repo/ui/place-input";
 import {
+  PRODUCTS,
   SEARCH_CARD_ID,
   type FieldKey,
+  type Product,
   type ProductKey,
 } from "../../_lib/search";
-import { useSearch } from "../../_lib/useSearch";
+import type { PlannedTrip } from "../../_lib/trip-plan";
+import { usePlanner, type Planner } from "../trips/usePlanner";
 
 /**
  * Holds the search card's state above the card, so something else on the
  * page can fill a place into it: a place's "Take me here" fills the
- * drop-off. Filling brings
- * the card into view. On a location's pages the provider sits in the
- * layout, so what was typed stays while the customer moves between them,
- * and with `location` the card starts at the location: the place fields
- * search all of Malaysia with the location's area first, and each empty
- * field offers the saved addresses its end of a trip from there may be
- * at. Whatever the trip, "Get my price" sends it to the options page as
- * the home page's card does, and that page prices it at the location
- * that picks up there, or says why none can. See @repo/db's
- * location-search.
+ * drop-off of the trip being typed. Filling brings the card into view.
+ * The card's trips, the one being typed and the group's size live here:
+ * on a location's pages the provider sits in the layout, so what was
+ * typed stays while the customer moves between them. With `location` the
+ * card starts at the location: the place fields search all of Malaysia
+ * with the location's area first, and each empty field offers the saved
+ * addresses its end of a trip from there may be at. "Get prices" sends
+ * the trips to the vehicle page as the home page's card does, and that
+ * page prices each at the location that picks up there, or says why none
+ * can. See @repo/db's location-search and docs/261027-multi-trip-booking.md.
  */
 
-type SearchCard = ReturnType<typeof useSearch> & {
+type SearchCard = {
+  product: Product;
+  setProduct: (key: ProductKey) => void;
+  /** The trips typed so far and the form for the next. */
+  planner: Planner;
+  /** The most travelling on any trip. */
+  passengers: number;
+  setPassengers: (passengers: number) => void;
   /** What a place field offers when it is opened empty; none to offer nothing. */
   presetsOf: (key: FieldKey) => PlacePresets | undefined;
   /** The box whose places the place fields suggest first; none to suggest all of Malaysia alike. */
   near?: BBox;
-  /** Fills the drop-off with an exact place, ready to send, on a one-way trip. */
+  /** Fills the drop-off of the trip being typed with an exact place, as a one-way trip. */
   fillDropoff: (place: { label: string; placeId: string }) => void;
   /** Whether a trip may end at a saved address: on a location's pages, by its rule. */
   offersDropoff: (placeId: string) => boolean;
@@ -67,8 +77,10 @@ export function SearchProvider({
   location?: LocationSearch;
   children: ReactNode;
 }) {
-  const search = useSearch(product);
-  const { set, setProduct } = search;
+  const [key, setProduct] = useState<ProductKey>(product ?? "car-with-driver");
+  const [trips, setTrips] = useState<PlannedTrip[]>([]);
+  const [passengers, setPassengers] = useState(1);
+  const planner = usePlanner({ trips, onTrips: setTrips, keepOpen: true });
   // A product page opens the card on its tab. A page with no product of its
   // own leaves the tab where the customer put it.
   const [opened, setOpened] = useState(product);
@@ -83,9 +95,9 @@ export function SearchProvider({
     !location || offersPickupAddress(location, placeId);
 
   /** The saved addresses the field offers: those its end of a trip may be at. */
-  function presetsOf(key: FieldKey): PlacePresets | undefined {
+  function presetsOf(field: FieldKey): PlacePresets | undefined {
     const offers =
-      key === "from" ? offersPickup : key === "to" ? offersDropoff : null;
+      field === "from" ? offersPickup : field === "to" ? offersDropoff : null;
     if (!saved || !offers) return undefined;
     return {
       ...saved,
@@ -95,15 +107,22 @@ export function SearchProvider({
 
   function fillDropoff(place: { label: string; placeId: string }) {
     // An hourly trip has no drop-off.
-    set("mode", "oneway");
-    set("to", place.label, place.placeId);
+    planner.fill({
+      mode: "oneway",
+      to: place.label,
+      placeIds: { to: place.placeId },
+    });
     bringIntoView();
   }
 
   return (
     <SearchCardContext
       value={{
-        ...search,
+        product: PRODUCTS[key],
+        setProduct,
+        planner,
+        passengers,
+        setPassengers,
         presetsOf,
         near: location?.near ?? undefined,
         fillDropoff,

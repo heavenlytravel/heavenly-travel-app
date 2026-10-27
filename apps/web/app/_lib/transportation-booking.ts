@@ -1,6 +1,5 @@
 import {
   checkHours,
-  isHeadCount,
   isTripCategory,
   isTripMode,
   TRIP_PARAM,
@@ -9,15 +8,12 @@ import {
 import { PRODUCTS, type SearchValues } from "./search";
 
 /**
- * The transportation booking flow keeps the whole trip in the URL: the
- * search card links to the options page with the search, the options page
- * links to the confirm page with the search plus the choices, and the confirm
- * page carries the same query through the sign-in redirect. Nothing is lost
- * on the way and every step can be shared or reopened. The category is a
- * path segment, the trip is the query. The query's names and parsers are
- * `trip-input.ts` in `@repo/db`, shared with the console's manual booking;
- * this module is the website's part: its paths, which categories it sells
- * and how the search card's values become the query. Browser-safe.
+ * The transportation booking flow's paths, which categories the website
+ * sells, and how the search card's values become a trip's search. The
+ * trips themselves travel in the browser's storage (./trip-plan-store),
+ * each as the search parameters of `trip-input.ts` in `@repo/db`, which
+ * the console's manual booking shares; the category is the path segment.
+ * Browser-safe.
  */
 
 export const TRIP_BOOKING_ROOT = "/booking/transportation";
@@ -94,20 +90,4 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
   if (mode === "oneway") params.set(TRIP_PARAM.dropoff, values.placeIds.to!);
   else params.set(TRIP_PARAM.hours, String(hours));
   return { ok: true, params };
-}
-
-/**
- * The options page for a search. `passengers` carries a count already typed
- * there over a changed trip; it is a starting value, not part of the search.
- */
-export function tripBookingHref(
-  category: TripCategory,
-  search: URLSearchParams,
-  passengers?: number,
-) {
-  const params = new URLSearchParams(search);
-  if (passengers !== undefined && isHeadCount(passengers)) {
-    params.set(TRIP_PARAM.passengers, String(passengers));
-  }
-  return `${tripBookingPath(category)}?${params}`;
 }

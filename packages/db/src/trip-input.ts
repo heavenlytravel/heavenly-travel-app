@@ -79,9 +79,6 @@ export const TRIP_OPTION_FIELDS = {
   notes: TRIP_PARAM.notes,
 } as const;
 
-export const isHeadCount = (n: number) =>
-  Number.isInteger(n) && n >= 1 && n <= MAX_HEAD_COUNT;
-
 /** A query string, Next's `searchParams`, or a posted form, as one shape. */
 export type QueryInput =
   | URLSearchParams

@@ -2,8 +2,7 @@
 
 import type { ReactNode } from "react";
 import {
-  TRIP_MODE_LABELS,
-  TRIP_MODES,
+  isTripMode,
   type BBox,
   type TripCategory,
   type TripMode,
@@ -79,9 +78,9 @@ export function TripForm({
     planner;
   if (!form) return null;
   const { values } = form;
-  const fields = visibleFields(PRODUCTS[category], values).filter(
-    (f) => f.key !== "mode",
-  );
+  const all = visibleFields(PRODUCTS[category], values);
+  const kind = all.find((f) => f.key === "mode");
+  const fields = all.filter((f) => f !== kind);
   const id = (key: string) => `${scope}-${key}`;
   const messages = [
     ...new Set([...issues.map((x) => x.message), ...clashNotes]),
@@ -114,27 +113,29 @@ export function TripForm({
         key={form.key}
         className="grid gap-2.5 @lg:grid-cols-2 @3xl:flex @3xl:gap-0"
       >
-        <fieldset className="flex min-h-[70px] min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 @3xl:w-[150px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-[14px]">
-          <legend className="sr-only">Type of trip</legend>
-          {TRIP_MODES.map((mode) => {
-            const Icon = MODE_ICONS[mode];
-            return (
-              <label
-                key={mode}
-                className="flex cursor-pointer items-center gap-2 text-[0.9rem]/5 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
-              >
-                <Radio
-                  name={id("mode")}
-                  value={mode}
-                  checked={values.mode === mode}
-                  onChange={() => planner.set("mode", mode)}
-                />
-                <Icon className="size-4 shrink-0" />
-                {TRIP_MODE_LABELS[mode]}
-              </label>
-            );
-          })}
-        </fieldset>
+        {kind ? (
+          <fieldset className="flex min-h-[70px] min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 @3xl:w-[150px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-[14px]">
+            <legend className="sr-only">{kind.label}</legend>
+            {kind.options?.map(({ value, label }) => {
+              const Icon = isTripMode(value) ? MODE_ICONS[value] : ClockIcon;
+              return (
+                <label
+                  key={value}
+                  className="flex cursor-pointer items-center gap-2 text-[0.9rem]/5 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
+                >
+                  <Radio
+                    name={id(kind.key)}
+                    value={value}
+                    checked={values.mode === value}
+                    onChange={() => planner.set(kind.key, value)}
+                  />
+                  <Icon className="size-4 shrink-0" />
+                  {label}
+                </label>
+              );
+            })}
+          </fieldset>
+        ) : null}
         {fields.map((f, i) => {
           const keys = fieldKeys(f);
           const invalid =

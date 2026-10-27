@@ -45,15 +45,27 @@ together, one vehicle chosen once, confirmed once.
 
 ### The search card (home page and location pages)
 
-- **The trip type is two radios with icons in the row's first box**, where the live card
-  has its "Trip" list: One-way and Hourly.
-- **"Add trip"** puts the trip in "Your trips" and empties the form for the next.
-- **"Your trips" appears once a trip is added,** so one trip looks like today's card.
-  The list runs by date, numbered as the trips are booked and priced.
+- **The trip type is a box like the others,** "Trip" over the top, its icon the arrow or,
+  for Hourly, the clock, and the two radios side by side, where the live card has its
+  "Trip" list.
+- **With no trips yet the form is the card,** so one trip looks like today's card. "Add
+  another trip" under it keeps the trip in "Your trips" and opens "Trip 2".
+- **"Your trips" stays open** once a trip is in, the list by date, numbered as the trips
+  are booked and priced, with "Add another trip" under it. The open form is "Trip 2",
+  with "Save trip" and "Cancel".
 - **Choosing a trip opens it in the form** ("Change trip 2"): Save changes, Cancel,
   Remove trip. A new trip half typed waits until the change is done.
-- **Passengers** is a stepper beside the button. Today the live code asks it on the
-  options page (`_lib/search.ts`); it moves to the card.
+- **One row under the trip:** "Add another trip", or the form's buttons, on the left;
+  passengers and "Get prices" on the right. On a phone they stack, a line between the
+  trip and the booking.
+- **Passengers** is one line the height of the buttons, the label on the left and a minus
+  and a plus either side of the number. Today the live code asks it on the options page
+  (`_lib/search.ts`); it moves to the card.
+- **Once the card scrolls away the vehicle page's bar follows the page** under the
+  header, before a trip is in too ("Plan a trip · Where and when"). From `lg` its sheet
+  holds the form too; on a phone it holds the list, passengers and "Get prices", and
+  choosing a trip or "Add another trip", or the bar itself before there is a trip, goes
+  back up to the card.
 - **"Get prices"** sends the list with the form's trip when one is typed: "Get my price",
   or "Get prices · 4 trips".
 - **Errors stay at the field:** what is missing, and a trip that starts during another,
@@ -64,11 +76,18 @@ together, one vehicle chosen once, confirmed once.
 - **"Your trips" at the top,** the same list and form as the card, each trip with its
   price in the vehicle chosen before, if any. A trip changed or added here is priced in
   place, with a toast; removing one offers Undo. No "Change trips" back to the home page.
-- **A sticky trips bar.** Once the list scrolls away, a thin bar slides in under the site
-  header: "4 trips · 3 Nov to 6 Nov · MPV · RM 950 · Show". Choosing it opens the list in
-  a sheet below it with a short animation. A trip is changed or added right there in the
-  sheet, without scrolling back up. Only the list scrolls inside the sheet, and the form's
-  place suggestions hang below it. This page alone has the bar.
+- **On a phone the trips are folded into one line** ("4 trips · 3 Nov to 6 Nov · Show",
+  the group, the vehicle and the total under it), so the vehicles come first. It sits
+  under the title and pins under the header as the page scrolls. Choosing it opens the
+  trips in a sheet hung from the line, over the page, wherever the line is: the page
+  does not move, the sheet scrolls on its own when long, and it folds again once the
+  page scrolls, unless the customer is typing. It opens by itself when a trip turns red.
+- **A sticky trips bar from `lg`.** Once the list scrolls away, a thin bar slides in
+  under the site header: "4 trips · 3 Nov to 6 Nov · 5 passengers · MPV · RM 950 · Show".
+  Choosing it opens the list in a sheet below it with a short animation. A trip is
+  changed or added right there in the sheet, without scrolling back up. Only the list
+  scrolls inside the sheet, and the form's place suggestions hang below it. The search
+  card has the same bar, on a phone too.
 - **Vehicle cards like the location page's class cards,** three across: photo, name,
   blurb, models, seats and bags, and the late-night line.
 - **Each card has its own button, "Continue · RM 950",** with the total for all the
@@ -76,27 +95,36 @@ together, one vehicle chosen once, confirmed once.
   selecting first. The vehicle chosen before is marked "Your choice".
 - **A class too small for the group is not shown.** A line says which ("Not shown:
   Sedan, for fewer than 5"). No stock is kept, so a class is never "none free" on a day.
-- **Passengers** is a stepper beside the heading; a group larger than any car gets the
-  coach charter link.
+- **Passengers** is the search card's, right of "Add another trip" at the foot of "Your
+  trips"; a group larger than any car gets the coach charter link.
 - **Gone from the page:** the side "Your details" card, child seats, radios, and the list
   of trip prices inside each card (the list above shows them).
 
 ### The confirm page
 
 - **Laid out as B:** the trips and the vehicle on the left, "Your details" on the right.
-  The details stay in view while the left side scrolls, and scroll on their own when
-  taller than the screen.
+  The left side stays in view while the details scroll with the page, unless it is the
+  taller side; nothing scrolls on its own.
+- **On a phone the trips and the vehicle fold into one line** ("2 trips · 3 Nov to 6 Nov",
+  the vehicle and the group under it) above the details, so the form comes first. It
+  pins under the header as the page scrolls and opens as a sheet over the page, as on
+  the vehicle page, and opens by itself when a trip turns red. Open, it shows what is
+  booked with one "Edit trips or vehicle" button.
 - **The trips are shown, not changed.** The same list, priced, with no editing and no
-  "Add a trip". One "Edit trips" link goes back to the vehicle page, where trips are
-  changed or added, and the vehicle chosen again. No sticky bar on this page.
+  "Add a trip". "Edit trips" (or the phone's one button) goes back to the vehicle page,
+  where trips are changed or added, and the vehicle chosen again.
 - **A trip that cannot be booked says so under it in the list:** it is too soon to book
   online, or it is at the same time as another trip or during a hire. So do a trip we
   quote by email, a driver's night away, and a price changed since the trip was added.
-- **"Your vehicle":** the class, passengers, "Change" (to the vehicle page), the total,
-  trips quoted by email, free cancellation per trip, pay nothing now, and the products
-  coming later (hotel, tickets, a pasted itinerary) marked Soon.
+- **"Your vehicle":** the class pictured at the vehicle cards' size, its blurb,
+  its models as on the vehicle cards ("Honda City, Nissan Almeera or Toyota Vios, or
+  similar", with their photos), passengers and "Change" (to the vehicle page). No model
+  is chosen: any of them is sent, whichever is free on the day (see Future work).
 - **"Your details":** name, phone, email, the flights when they apply, the note for the
-  driver, and "Confirm booking · RM 950". It names the trips to fix when any is red.
+  driver, then the page's one button, "Confirm booking · RM 950", with free cancellation
+  per trip and pay nothing now under it, on a phone too. It waits while a trip is red,
+  naming the trips to fix, and while the name, phone or email is empty, saying which to
+  fill in.
 
 ### Tried and dropped (2026-10-27)
 
@@ -110,6 +138,24 @@ So nobody brings them back without a new reason:
 - **"Add the way back"** after a one-way trip.
 - **Radios to select a vehicle before Continue,** and disabled cards for classes too
   small.
+- **The total, the terms and the products coming later in "Your vehicle"** (review,
+  2026-10-27). The total is on the button, the terms under it; hotel, tickets and a
+  pasted itinerary marked Soon added nothing to the booking.
+- **A second button on a phone** in a bar at the foot that only scrolled to the details,
+  while the button under the form booked. Only one of them showed what was missing.
+- **The one button in a bar at the foot of a phone's screen,** with the total (review,
+  2026-10-27). It covered the form's last fields; the button sits under the details as
+  on a wide screen.
+- **The search card's trips folded into a line, and a trips bar on the confirm page**
+  (review, 2026-10-27). The card keeps its list open; the confirm page's left side stays
+  in view itself, and the details no longer scroll inside their own box.
+- **The form always open with an "Add trip" button, and passengers as a tall box or a
+  chip at the top of the card** (options A and B of the review's mock-up, 2026-10-27).
+  The card is short once a trip is in, with "Add another trip", and passengers sits
+  beside "Get prices".
+- **The phone's fold opening in the page,** scrolling back up to where the line sits
+  (review, 2026-10-27). Choosing a pinned line threw the customer back up the page, and
+  the open trips stayed open while they scrolled on.
 - **A one-way trip lasting an hour in the overlap rule.** It refused a trip at 11:00 after
   one at 10:30. Without a real drive time, only the same start time counts.
 - **Editing and adding trips on the confirm page,** and two layouts for it (A: trips
@@ -225,7 +271,8 @@ PR brings main the real flow and this plan, never the example.
 
 1. **Choosing a model:** on the confirm page, once for the booking, under "Your
    vehicle". Offered when every trip's location lets the customer choose and has that
-   model; each trip is charged its own location's fee on its own fare.
+   model; each trip is charged its own location's fee on its own fare. Built, then
+   hidden in the review of 2026-10-27 to keep the page simple: see Future work.
 2. **Cancelling one trip:** yes. Each trip cancels on its own until its own cutoff;
    "Cancel booking" keeps today's rule (the earliest live trip's deadline).
 3. **A class that fails one trip on its own rules:** hidden, like a class too small,
@@ -257,6 +304,13 @@ PR brings main the real flow and this plan, never the example.
   - **To decide:** whether this is worth it over pricing the whole list each time, how
     long a quote stays good, and whether route lookups should be cached by place pair
     across customers.
+- **Choosing a model** (hidden on 2026-10-27, user's call). The website books any model
+  of the class, whichever is free on the day, and shows the models as "or similar".
+  Everything under it stays: the schema, the model charge in pricing, `itemN.model` in
+  the booking action and the console's choice. To bring it back, restore from git what
+  the hiding removed: `ModelChoice.tsx` (the confirm page's panel), `PhotoCarousel.tsx`,
+  `bookingModelChoices` in `packages/db/src/trip-plan.ts` with its tests, the plan's
+  `modelId`, and the quote's `modelChoiceSen`, `modelChoicePercent` and `modelIds`.
 - **A trip we quote by email.** Book the priced trips and send an unpriced one to the
   team to quote. Needs an item without a price (`BookingItem.priceTotalSen` is
   required today) and console work to price it later.
@@ -273,15 +327,14 @@ above.
 
 - **Rules** (`packages/db/src/trip-plan.ts`, tested): `tripClashes` (same start, or
   starting during an hourly hire), `classFit` and `classFitNote` (one class for every
-  trip), `bookingModelChoices` (a model chosen once for all trips), `isAirportPlace`
-  and `flightOfTrip` (which flight goes on which trip, by the place's name or
+  trip), `isAirportPlace` and `flightOfTrip` (which flight goes on which trip, by the place's name or
   address). `BOOKING_RULES.maxTripsPerBooking` is 20. "By the hour" is "Hourly".
 - **Quotes:** `quoteTrips` and `prepareTripItems` read the locations once and each
   location's offerings once for a list; `quoteTrip` and `prepareTripItem` go through
   them, so the console prices exactly as before.
 - **The plan in the browser:** `apps/web/app/_lib/trip-plan.ts` (pure) and
   `trip-plan-store.ts` (local storage, versioned): the trips by start, passengers, the
-  class and model, the flights and note, and the last pricing keyed by each trip's
+  class, the flights and note, and the last pricing keyed by each trip's
   search, so a changed trip has no quote.
 - **Pricing:** `quoteTripsAction` prices the whole list in one request. The vehicle
   and confirm pages ask it when a trip has no quote or the quotes are older than 15
@@ -294,10 +347,16 @@ above.
   copies the note onto every trip, and stops with "now RM X, up from RM Y" when a
   price changed. The page then prices the trips again. On success the plan empties.
 - **Pages:** the search card is the planner (`app/_components/trips/`); the vehicle
-  page has the trips panel with its sticky bar and sheet and the class cards
-  (`app/_components/ClassCard.tsx`, shared with the location pages); the confirm page
-  is layout B with a phone dock. Today's one-trip links still open the vehicle and
-  confirm pages as a list of one; the address is cleaned with the browser's history,
+  page has the trips panel and the class cards (`app/_components/ClassCard.tsx`,
+  shared with the location pages); the confirm page is layout B, its one button under
+  the details. `TripsPanel` (the list, the form, passengers and
+  the send button) serves the search card and the vehicle page. `TripsBar.tsx` holds the
+  folded line (`TripsBar`), the phone's fold that pins under the header and opens a
+  sheet over the page (`TripsFold`, on the vehicle and confirm pages), the bar under the
+  header once the trips scroll away (`UnderHeader`, the search card, before a trip too,
+  and from `lg` the vehicle page), and `useFoldOnScroll`, which folds an open sheet once
+  the page scrolls unless the customer is typing. Today's one-trip links still open the vehicle and confirm pages as a
+  list of one; the address is cleaned with the browser's history,
   because a server action in flight drops a router navigation.
 - **After booking:** `cancelTripAsCustomer` and the "customer-cancelled-trip" event and
   email; trips numbered with their status on the booking pages; each trip with its

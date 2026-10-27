@@ -1,11 +1,11 @@
 # Multi-trip booking: one booking, many trips, one vehicle
 
-Status: designed with the user from 2026-10-25 to 2026-10-27 in the clickable example at
+Status: designed with the user from 2026-10-25 to 2026-10-27 in a clickable example at
 `/booking-example`, on branch `feat/multi-item-booking`. Simplified on 2026-10-27: no
 Return, no Days, no link lines; one Continue per vehicle; the confirm page only shows the
-trips; trips clash only at the same time or during a hire. Not built yet. The build
-starts in its own thread from this plan, on the same branch, and ends by deleting the
-example: it is a reference for the build, never part of the site.
+trips; trips clash only at the same time or during a hire. Built on 2026-10-27 on the
+same branch, with the open questions answered (see "As built"); the example was deleted
+before the merge and was never part of the site.
 
 This supersedes one line of docs/260930-admin-teams-and-access.md, Step 11: "The website
 keeps one item per booking." The website now books any number of trips in one booking.
@@ -221,18 +221,21 @@ PR brings main the real flow and this plan, never the example.
 6. **Docs:** mark Step 11 of docs/260930-admin-teams-and-access.md as superseded, and
    add "As built" here, saying the example was removed.
 
-## Open questions
+## Answered questions (2026-10-27)
 
-1. **Choosing a model.** The live options page lets a customer pick a model of the class
-   for a fee (`ModelChoice`). With Continue on each card, where does that choice go, and
-   is it once for the booking?
-2. **Cancelling one trip.** Today a customer cancels the whole booking. Should each trip
-   cancel on its own, until its own cutoff, as the example's page says?
-3. **A class that fails one trip on its own rules:** too little notice for that class,
-   fewer hours than its minimum, or no price for that route on the grid. It cannot take
-   the booking. Hide it like a class too small, with the line saying why ("Not shown:
-   Premium MPV, which needs 24 hours notice for Tue 3 Nov"), or show it with the reason
-   and its button disabled? The example has no such rules, so it shows neither.
+1. **Choosing a model:** on the confirm page, once for the booking, under "Your
+   vehicle". Offered when every trip's location lets the customer choose and has that
+   model; each trip is charged its own location's fee on its own fare.
+2. **Cancelling one trip:** yes. Each trip cancels on its own until its own cutoff;
+   "Cancel booking" keeps today's rule (the earliest live trip's deadline).
+3. **A class that fails one trip on its own rules:** hidden, like a class too small,
+   with the line saying why ("Not shown: Premium MPV, which needs 24 hours notice for
+   trip 1 (Tue, 3 Nov)").
+4. **A trip that cannot be priced** (outside our areas, no grid price, too far): it says
+   why under it in the list, and the vehicles and the booking wait until it is changed
+   or removed. "A trip we quote by email" and "a driver's night away" from the example
+   need concepts the system does not have (an item without a price, an overnight
+   charge), so they moved to Future work.
 
 ## Future work
 
@@ -254,26 +257,54 @@ PR brings main the real flow and this plan, never the example.
   - **To decide:** whether this is worth it over pricing the whole list each time, how
     long a quote stays good, and whether route lookups should be cached by place pair
     across customers.
+- **A trip we quote by email.** Book the priced trips and send an unpriced one to the
+  team to quote. Needs an item without a price (`BookingItem.priceTotalSen` is
+  required today) and console work to price it later.
+- **A driver's night away.** A trip far from the driver's base adds the driver's
+  room and meals. Needs an overnight charge on the rates and on the receipt.
 - **Several products in one order:** a coach day inside a car booking, tickets, a hotel.
   One order holding several bookings, one per vehicle, paid together; overlaps checked per
   vehicle. It changes the one-vehicle rule, so it is its own step after this.
 
-## The example
+## As built (2026-10-27)
 
-`/booking-example` (not linked from the site, nothing saved) walks every step with sample
-classes and prices. It is the reference for the build and is deleted by its step 5. Files
-under `apps/web/app/(site)/booking-example/`:
+One PR from `feat/multi-item-booking`, a commit or more per step, in the build order
+above.
 
-- **`_example/situations.ts`:** every situation it opens on, listed at `/booking-example`.
-  - One trip, there and back, a stay with hires between, the same hire every day, a
-    different trip each day, across the country.
-  - Too soon to book, a trip we quote, a price changed.
-  - A visitor's booking, a booking halfway through.
-  - What is not allowed: a different vehicle on some trips, two vehicles for one group,
-    two trips at the same time.
-- **`_example/SearchStep.tsx`, `search/SearchCard.tsx`, `search/Planner.tsx`,
-  `search/parts.tsx`, `search/rules.ts`:** the card and the planner.
-- **`_example/VehicleStep.tsx`, `_example/ConfirmStep.tsx`:** steps 2 and 3.
-- **`_example/ReceivedStep.tsx`, `_example/BookingStep.tsx`:** after booking, each trip
-  one item.
-- **`_example/store.ts`:** the state in session storage, the trips and `clashOf`.
+- **Rules** (`packages/db/src/trip-plan.ts`, tested): `tripClashes` (same start, or
+  starting during an hourly hire), `classFit` and `classFitNote` (one class for every
+  trip), `bookingModelChoices` (a model chosen once for all trips), `isAirportPlace`
+  and `flightOfTrip` (which flight goes on which trip, by the place's name or
+  address). `BOOKING_RULES.maxTripsPerBooking` is 20. "By the hour" is "Hourly".
+- **Quotes:** `quoteTrips` and `prepareTripItems` read the locations once and each
+  location's offerings once for a list; `quoteTrip` and `prepareTripItem` go through
+  them, so the console prices exactly as before.
+- **The plan in the browser:** `apps/web/app/_lib/trip-plan.ts` (pure) and
+  `trip-plan-store.ts` (local storage, versioned): the trips by start, passengers, the
+  class and model, the flights and note, and the last pricing keyed by each trip's
+  search, so a changed trip has no quote.
+- **Pricing:** `quoteTripsAction` prices the whole list in one request. The vehicle
+  and confirm pages ask it when a trip has no quote or the quotes are older than 15
+  minutes (`QUOTE_TTL_MS`); removing a trip sends nothing. A trip priced again keeps
+  each class's old price where it changed, and the confirm page says "Now RM X, up
+  from RM Y when you added it". "Pricing a growing list" below stays to decide.
+- **Booking:** `createTripsBookingAction` reads the trips as `itemN.*` fields with the
+  price each showed, prices every trip again, refuses a clash, puts the arriving
+  flight on each pick-up at an airport and the departing one on each drop-off at one,
+  copies the note onto every trip, and stops with "now RM X, up from RM Y" when a
+  price changed. The page then prices the trips again. On success the plan empties.
+- **Pages:** the search card is the planner (`app/_components/trips/`); the vehicle
+  page has the trips panel with its sticky bar and sheet and the class cards
+  (`app/_components/ClassCard.tsx`, shared with the location pages); the confirm page
+  is layout B with a phone dock. Today's one-trip links still open the vehicle and
+  confirm pages as a list of one; the address is cleaned with the browser's history,
+  because a server action in flight drops a router navigation.
+- **After booking:** `cancelTripAsCustomer` and the "customer-cancelled-trip" event and
+  email; trips numbered with their status on the booking pages; each trip with its
+  pick-up time under My bookings; the received page and emails worded for several.
+- **Also:** the site pages got the toaster, and every customer save ends with a toast.
+- **The example** at `/booking-example` was deleted in the branch's last code commit.
+
+Not checked in the browser, because they write to the development database: making
+a booking, and cancelling one trip of it. Both are typechecked, and the rules under
+them are unit-tested.

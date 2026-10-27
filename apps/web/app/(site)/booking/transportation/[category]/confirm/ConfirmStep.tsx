@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  bookingModelChoices,
-  choosableModel,
   formatMyr,
+  modelsLine,
   isAirportPlace,
   TRIP_CATEGORY_LABELS,
   tripItemField,
@@ -14,14 +13,10 @@ import {
   type TripOptions,
   type TripSearch,
 } from "@repo/db";
-import { BedIcon, FileTextIcon } from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
 import { ClassPicture } from "../../../../../_components/ClassPicture";
-import { ProductIcon } from "../../../../../_components/Brand";
-import {
-  ModelGallery,
-  type GalleryModel,
-} from "../../../../../_components/ModelGallery";
+import { ModelPhotosButton } from "../../../../../_components/ModelGallery";
+import { TripsFold } from "../../../../../_components/trips/TripsBar";
 import {
   TripTimeline,
   type TripNote,
@@ -51,12 +46,13 @@ import {
 import {
   PageTitle,
   panel,
+  panelFromLarge,
   Pending,
-  primaryButton,
+  secondaryButton,
   Stop,
+  surface,
   textLink,
 } from "../../../../_components/Page";
-import { ModelChoice } from "../ModelChoice";
 import { usePlanPricing } from "../usePlanPricing";
 import { ConfirmForm } from "./ConfirmForm";
 import { CONFIRM_FIELDS } from "./fields";
@@ -74,19 +70,24 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
 
 /**
  * The confirm step, laid out as B: the trips and the vehicle on the left,
- * "Your details" on the right, which stay in view while the left side
- * scrolls. The trips are shown, priced with today's rates, not changed:
- * "Edit trips" goes back to the vehicle page, where they are changed or
- * added and the vehicle chosen again. A trip that cannot be booked as it
- * is says so under it: it starts with another or during a hire, the
- * vehicle needs more notice or hours for it, or it cannot be priced; so
- * does a price changed since the trip was added. "Your vehicle" has the
- * class for all the trips, the group, the model chosen once for them all
- * where every trip's location lets the customer choose, the total, and
- * the products coming later. The details ask the contact, the flights for
- * the trips at an airport, and one note for the drivers; the button says
- * which trip to fix while any is red. A link with today's one-trip
- * confirm address still opens it, as a plan of one. See
+ * which stay in view while "Your details" on the right scroll with the
+ * page. On a phone the trips and the vehicle fold into one line above the
+ * details, which come first; it pins under the header as the page
+ * scrolls, and unfolds by itself when a trip turns red. The trips are
+ * shown, priced with today's rates, not changed: "Edit trips", or on a
+ * phone the fold's one "Edit trips or vehicle", goes back to the vehicle
+ * page, where they are changed or added and the vehicle chosen again. A
+ * trip that cannot be booked as it is says so under it: it starts with
+ * another or during a hire, the vehicle needs more notice or hours for
+ * it, or it cannot be priced; so does a price changed since the trip was
+ * added. "Your vehicle" has the class for all the trips, pictured and
+ * with its models as on the vehicle page (any of them is sent, whichever
+ * is free on the day: choosing a model is not offered for now), and the
+ * group. The details ask the contact, the flights for the trips at an
+ * airport, and one note for the drivers, and end in the one button, with
+ * the total and the cancellation terms; it says which trip to fix while
+ * any is red. A link with today's one-trip confirm address still opens
+ * it, as a plan of one. See
  * docs/261027-multi-trip-booking.md, "The confirm page".
  */
 export function ConfirmStep({
@@ -124,7 +125,6 @@ export function ConfirmStep({
       updatePlan((now) => ({
         ...now,
         classId: options.vehicleClassId,
-        modelId: options.vehicleModelId,
         forDriver: {
           // The flight goes on the trip it is for once its places are known.
           arrivingFlight: options.flightNumber ?? "",
@@ -140,7 +140,6 @@ export function ConfirmStep({
   );
   // The booking is made: the page waits for the next while the plan empties.
   const [booked, setBooked] = useState(false);
-  const [gallery, setGallery] = useState<GalleryModel | null>(null);
 
   if (booked) {
     return (
@@ -194,29 +193,13 @@ export function ConfirmStep({
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
-  const models = card
-    ? bookingModelChoices(
-        card.models,
-        onTrip.map((here) => ({
-          modelChoiceSen: here?.modelChoiceSen ?? null,
-          modelIds: here?.modelIds ?? [],
-        })),
-      )
-    : [];
-  const model = choosableModel(
-    models.map((m) => m.model),
-    models.length > 0,
-    plan.modelId,
-  );
-  const percents = new Set(onTrip.map((here) => here?.modelChoicePercent));
-  const chargePercent = percents.size === 1 ? ([...percents][0] ?? null) : null;
-  /** A trip's price in the chosen vehicle, with the model's charge on it. */
+  /** A trip's price in the chosen vehicle, any of its models. */
   const priceOn = (index: number) => {
     const here = onTrip[index];
     if (!here || here.totalSen === null || !here.availability.ok) {
       return null;
     }
-    return here.totalSen + (model ? (here.modelChoiceSen ?? 0) : 0);
+    return here.totalSen;
   };
   const totalSen = trips.reduce(
     (sum, _, index) => sum + (priceOn(index) ?? 0),
@@ -224,7 +207,11 @@ export function ConfirmStep({
   );
   const cutoffs = new Set(onTrip.map((p) => p?.cancellationCutoffHours));
   const cutoff = cutoffs.size === 1 ? [...cutoffs][0] : undefined;
-
+  const cancellation = !card
+    ? null
+    : cutoff !== undefined
+      ? `Free cancellation until ${cutoff} hours before ${several ? "each trip, each on its own" : "the trip"}.`
+      : "Free cancellation until each trip's own cutoff, each on its own.";
   /** What a trip says for itself in the list; the list says a clash itself. */
   function noteOf(trip: PlannedTrip): TripNote | null {
     const index = trips.findIndex((t) => t.id === trip.id);
@@ -297,32 +284,36 @@ export function ConfirmStep({
     ...(card
       ? [[CONFIRM_FIELDS.vehicleClass, card.id] as [string, string]]
       : []),
-    ...(model
-      ? [[CONFIRM_FIELDS.vehicleModel, model.id] as [string, string]]
-      : []),
     [CONFIRM_FIELDS.passengers, String(passengers)],
   ];
 
-  const tripsPanel = (
-    <section className={panel}>
-      <TripTimeline
-        trips={trips}
-        className=""
-        action={
-          <Link href={vehiclePage} className={`text-[0.92rem] ${textLink}`}>
-            Edit trips
-          </Link>
+  const timeline = (
+    <TripTimeline
+      trips={trips}
+      className=""
+      action={
+        <Link
+          href={vehiclePage}
+          className={`hidden text-[0.92rem] lg:inline ${textLink}`}
+        >
+          Edit trips
+        </Link>
+      }
+      priceOf={(trip) => {
+        const index = trips.findIndex((t) => t.id === trip.id);
+        if (!quotes[index]) {
+          return <span className="text-slate-400">…</span>;
         }
-        priceOf={(trip) => {
-          const index = trips.findIndex((t) => t.id === trip.id);
-          if (!quotes[index]) {
-            return <span className="text-slate-400">…</span>;
-          }
-          const price = priceOn(index);
-          return price === null ? null : formatMyr(price);
-        }}
-        noteOf={noteOf}
-      />
+        const price = priceOn(index);
+        return price === null ? null : formatMyr(price);
+      }}
+      noteOf={noteOf}
+    />
+  );
+
+  const tripsPanel = (
+    <section aria-label="Your trips" className={panelFromLarge}>
+      {timeline}
       {error ? (
         <p role="alert" className="mx-1 mt-3 text-[0.92rem] text-[#b3261e]">
           {error}{" "}
@@ -339,79 +330,47 @@ export function ConfirmStep({
   );
 
   const vehiclePanel = card ? (
-    <section className={`${panel} grid gap-5`}>
-      <h2 className="font-(family-name:--font-display) text-[1.5rem] leading-tight">
-        Your vehicle
-      </h2>
-      <div className="flex items-center gap-4">
-        <ClassPicture
-          src={card.imageUrl}
-          sizes="96px"
-          className="w-[72px] shrink-0 sm:w-24"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-bold text-ink">
-            {card.name}{" "}
-            <span className="font-semibold text-slate-500">
-              for{" "}
-              {trips.length === 2
-                ? "both trips"
-                : several
-                  ? `all ${trips.length} trips`
-                  : "the trip"}
-            </span>
-          </p>
-          <p className="text-[0.9rem] text-slate-600">
-            {model ? model.name : "Any model"} · {passengers}{" "}
-            {passengers === 1 ? "passenger" : "passengers"}
-          </p>
-        </div>
-        <Link href={vehiclePage} className={`text-[0.92rem] ${textLink}`}>
+    <section className={`${panelFromLarge} grid gap-5`}>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="font-(family-name:--font-display) text-[1.5rem] leading-tight">
+          Your vehicle
+        </h2>
+        <Link
+          href={vehiclePage}
+          className={`hidden text-[0.92rem] lg:inline ${textLink}`}
+        >
           Change
         </Link>
       </div>
-      {models.length > 0 ? (
-        <div className="-mx-5 -mb-1 sm:-mx-6">
-          <ModelChoice
-            vehicleClassName={card.name}
-            models={models.map((m) => m.model)}
-            chargeSen={models[0]!.chargeSen}
-            chargePercent={several ? null : chargePercent}
-            modelId={model?.id ?? null}
-            onChoose={(modelId) => updatePlan((now) => ({ ...now, modelId }))}
-            onPhotos={setGallery}
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,300px)_minmax(0,1fr)] sm:items-center sm:gap-6">
+        {card.imageUrl ? (
+          <ClassPicture
+            src={card.imageUrl}
+            sizes="(min-width: 40rem) 300px, 100vw"
           />
+        ) : null}
+        <div className="min-w-0">
+          <p className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
+            {card.name}
+          </p>
+          <p className="mt-1.5 text-slate-700">{card.description}</p>
+          {card.models.length > 0 ? (
+            // A div, not a p: the gallery's dialog is not phrasing content.
+            <div className="mt-2 text-[0.95rem] text-slate-700">
+              {modelsLine(card.models.map((m) => m.name))}, or similar.{" "}
+              <ModelPhotosButton title={card.name} models={card.models} />
+            </div>
+          ) : null}
+          <p className="mt-3 text-[0.9rem] text-slate-500">
+            For{" "}
+            {trips.length === 2
+              ? "both trips"
+              : several
+                ? `all ${trips.length} trips`
+                : "the trip"}{" "}
+            · {passengers} {passengers === 1 ? "passenger" : "passengers"}
+          </p>
         </div>
-      ) : null}
-      <div className="border-t border-slate-200 pt-4">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="font-semibold text-slate-700">
-            {several ? `${trips.length} trips` : "1 trip"} in the {card.name}
-          </span>
-          <span className="text-[1.7rem] font-bold text-brand">
-            {formatMyr(totalSen)}
-          </span>
-        </div>
-        <p className="mt-2 text-[0.88rem] text-emerald-800">
-          {cutoff !== undefined
-            ? `Free cancellation until ${cutoff} hours before ${several ? "each trip, each on its own" : "the trip"}.`
-            : "Free cancellation until each trip's own cutoff, each on its own."}
-        </p>
-        <p className="mt-1 text-[0.85rem] text-slate-500">
-          Pay nothing now. We confirm your booking by email.
-        </p>
-      </div>
-      <div className="grid gap-2 border-t border-slate-200 pt-4">
-        <p className="text-[0.85rem] font-semibold text-slate-500">
-          Coming soon to your booking
-        </p>
-        <Soon icon={<BedIcon className="size-5" />}>A hotel for your stay</Soon>
-        <Soon icon={<ProductIcon service="attraction" className="size-5" />}>
-          Attraction tickets, on the days you are there
-        </Soon>
-        <Soon icon={<FileTextIcon className="size-5" />}>
-          Paste your itinerary, and we find the trips in it
-        </Soon>
       </div>
     </section>
   ) : null;
@@ -427,21 +386,46 @@ export function ConfirmStep({
         nothing now.
       </PageTitle>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-7 pb-24 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:pb-0">
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-7">
-          {tripsPanel}
-          {vehiclePanel}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        {/* In view while the details scroll, unless it is the taller side.
+            On a phone its parts are the page's own, so the fold pins all the way down. */}
+        <div className="contents lg:sticky lg:top-24 lg:block">
+          <TripsFold
+            trips={trips}
+            summary={
+              card
+                ? `${card.name} · ${passengers} ${passengers === 1 ? "passenger" : "passengers"}`
+                : null
+            }
+            attention={red.length > 0 || error !== null}
+            label="Your trips and vehicle"
+            className={`${surface} lg:rounded-none lg:bg-transparent lg:shadow-none`}
+          >
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:gap-7">
+              {tripsPanel}
+              {vehiclePanel}
+              <Link
+                href={vehiclePage}
+                className={`${secondaryButton} w-full lg:hidden`}
+              >
+                Edit trips or vehicle
+              </Link>
+            </div>
+          </TripsFold>
         </div>
-        {/* In view while the left side scrolls; scrolls itself when taller than the screen. */}
-        <div className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:rounded-[18px]">
-          <section id="details" className={`${panel} scroll-mt-28`}>
-            <h2 className="mb-4 font-(family-name:--font-display) text-[1.5rem]">
+        <div>
+          <section aria-labelledby="details" className={panel}>
+            <h2
+              id="details"
+              className="mb-4 font-(family-name:--font-display) text-[1.5rem]"
+            >
               Your details
             </h2>
             <ConfirmForm
               category={category}
               entries={entries}
               totalSen={totalSen}
+              cancellation={cancellation}
               blocked={blocked}
               forDriver={forDriver}
               arriving={
@@ -476,48 +460,7 @@ export function ConfirmStep({
         </div>
       </div>
 
-      {/* A phone keeps the total and the way to the details at its foot. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-slate-200 bg-white px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,38,75,0.12)] lg:hidden">
-        <span className="min-w-0 flex-1">
-          <b className="block text-[1.2rem] leading-tight text-brand">
-            {formatMyr(totalSen)}
-          </b>
-          <span className="text-[0.8rem] text-slate-500">
-            {card ? `${card.name} · ` : ""}
-            {several ? `${trips.length} trips` : "1 trip"}
-          </span>
-        </span>
-        <a href="#details" className={`${primaryButton} min-h-[48px] px-4`}>
-          Continue
-        </a>
-      </div>
-      {gallery ? (
-        <ModelGallery
-          title={gallery.name}
-          description={`One of the ${card?.name ?? ""} models.`}
-          models={[gallery]}
-          open
-          onOpenChange={(open) => {
-            if (!open) setGallery(null);
-          }}
-        />
-      ) : null}
       {newBooking.dialog}
     </>
-  );
-}
-
-/** Something the booking will hold later, where it will sit. */
-function Soon({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border-[1.5px] border-dashed border-[#c5d3e2] px-3 py-2.5 text-[0.9rem] text-slate-500">
-      <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-slate-100 text-slate-400">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">{children}</span>
-      <span className="text-[0.6rem] font-bold tracking-[0.12em] text-azure uppercase">
-        Soon
-      </span>
-    </div>
   );
 }

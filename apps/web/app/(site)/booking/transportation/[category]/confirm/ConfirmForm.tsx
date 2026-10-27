@@ -21,9 +21,12 @@ import {
 import { createTripsBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
+const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
 const label = "mb-1.5 block text-[0.9rem] font-semibold text-slate-800";
 const hint = "mt-1.5 block text-[0.85rem] text-slate-500";
 const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
+/** A field given the focus comes into view clear of the site header and the pinned trips. */
+const inView = "scroll-mt-28 scroll-mb-8";
 
 /**
  * "Your details": name, phone and email, the flights when a trip picks up
@@ -37,13 +40,16 @@ const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
  * controlled: React resets a form once its action returns, and an answer
  * that is an error must not wipe what the customer typed. A field refused,
  * by the browser on submit or by the server, says why under itself; any
- * other refusal shows above the button. While a trip is marked in red,
- * `blocked` says which to fix and the button waits.
+ * other refusal shows above the button. It is the page's one button,
+ * under the details with the total on it. It waits while a trip is marked
+ * in red, `blocked` saying which to fix, and while the name, the phone or
+ * the email is empty, a line saying which to fill in.
  */
 export function ConfirmForm({
   category,
   entries,
   totalSen,
+  cancellation,
   blocked,
   forDriver,
   arriving,
@@ -60,6 +66,8 @@ export function ConfirmForm({
   /** The trips, the vehicle and the prices shown, as hidden fields. */
   entries: [name: string, value: string][];
   totalSen: number;
+  /** The cancellation terms under the button; null while no vehicle is chosen. */
+  cancellation: string | null;
   /** What to fix before booking; null when nothing stops it. */
   blocked: string | null;
   forDriver: ForDriver;
@@ -114,6 +122,12 @@ export function ConfirmForm({
       <span className={hint}>{text}</span>
     ) : null;
   const error = state && "error" in state ? state.error : null;
+  const missing = [
+    name.trim() === "" ? "name" : null,
+    phone.trim() === "" ? "phone number" : null,
+    email.trim() === "" ? "email" : null,
+  ].filter((field) => field !== null);
+  const alert = blocked ?? error;
 
   return (
     <form ref={form} action={action} {...formProps} className="grid gap-4">
@@ -137,7 +151,7 @@ export function ConfirmForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="name"
-          className={control}
+          className={`${control} ${inView}`}
         />
         {note(CONFIRM_FIELDS.name)}
       </Field>
@@ -150,7 +164,7 @@ export function ConfirmForm({
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+60 12 345 6789"
           autoComplete="tel"
-          className={control}
+          className={`${control} ${inView}`}
         />
         {note(
           CONFIRM_FIELDS.phone,
@@ -166,7 +180,7 @@ export function ConfirmForm({
           onChange={(e) => setEmail(e.target.value)}
           readOnly={locked}
           autoComplete="email"
-          className={`${control} ${locked ? "bg-mist text-slate-700" : ""}`}
+          className={`${control} ${inView} ${locked ? "bg-mist text-slate-700" : ""}`}
         />
         {note(
           CONFIRM_FIELDS.email,
@@ -186,7 +200,7 @@ export function ConfirmForm({
             }
             placeholder="MH 1234"
             autoComplete="off"
-            className={`${control} uppercase`}
+            className={`${control} ${inView} uppercase`}
           />
           <span className={hint}>
             For the pick-up at {arriving}. Your driver follows it, and waits if
@@ -205,7 +219,7 @@ export function ConfirmForm({
             }
             placeholder="AK 6305"
             autoComplete="off"
-            className={`${control} uppercase`}
+            className={`${control} ${inView} uppercase`}
           />
           <span className={hint}>
             For the drop-off at {departing}, so your driver leaves time for
@@ -240,29 +254,36 @@ export function ConfirmForm({
           />
         </label>
       </div>
-      {blocked ? (
-        <p role="alert" className="text-[0.95rem] text-[#b3261e]">
-          {blocked}
+      <div className="grid gap-3">
+        {alert ? (
+          <p role="alert" className="text-[0.95rem] text-[#b3261e]">
+            {alert}
+          </p>
+        ) : missing.length > 0 ? (
+          <p className="text-[0.95rem] text-slate-600">
+            Fill in your {listFormat.format(missing)} to confirm.
+          </p>
+        ) : null}
+        <button
+          type="submit"
+          disabled={pending || blocked !== null || missing.length > 0}
+          className={`${primaryButton} w-full`}
+        >
+          {pending ? (
+            <Pending>Booking…</Pending>
+          ) : (
+            <>Confirm booking&nbsp;· {formatMyr(totalSen)}</>
+          )}
+        </button>
+      </div>
+      <div className="grid gap-1 text-[0.85rem]">
+        {cancellation ? (
+          <p className="text-emerald-800">{cancellation}</p>
+        ) : null}
+        <p className="text-slate-500">
+          No payment now. We will confirm your booking by email.
         </p>
-      ) : error ? (
-        <p role="alert" className="text-[0.95rem] text-[#b3261e]">
-          {error}
-        </p>
-      ) : null}
-      <button
-        type="submit"
-        disabled={pending || blocked !== null}
-        className={primaryButton}
-      >
-        {pending ? (
-          <Pending>Booking…</Pending>
-        ) : (
-          `Confirm booking · ${formatMyr(totalSen)}`
-        )}
-      </button>
-      <p className="text-[0.85rem] text-slate-500">
-        No payment now. We will confirm your booking by email.
-      </p>
+      </div>
     </form>
   );
 }

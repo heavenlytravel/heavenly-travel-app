@@ -1,20 +1,17 @@
 "use client";
 
-import { XIcon } from "@repo/ui/icons";
+import { PRODUCTS, type Product } from "../../_lib/search";
 import {
-  fieldKeys,
-  PRODUCTS,
-  visibleFields,
-  type FieldDef,
-  type Product,
-  type SearchValues,
-} from "../../_lib/search";
-import { bookableCategory } from "../../_lib/transportation-booking";
-import { useTripSubmit } from "../../_lib/useSearch";
+  bookableCategory,
+  tripBookingPath,
+} from "../../_lib/transportation-booking";
+import { useNavigate } from "../../_lib/useNavigate";
 import { Pending } from "../../(site)/_components/Page";
 import { ProductIcon } from "../Brand";
+import { PassengersStepper } from "../trips/PassengersStepper";
+import { TripsPanel } from "../trips/TripsPanel";
+import { useNewBooking } from "../trips/useNewBooking";
 import { useSearchCard } from "./SearchProvider";
-import { FieldIcon, FieldInput } from "./fields";
 
 const focus =
   "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
@@ -30,34 +27,46 @@ const TABS: Product[] = [
 ];
 
 /**
- * Six services as a row of icon tabs, then one joined row of fields that
- * changes with the service, and a blue button of fixed width at the end.
- * Car with driver and coach charter can be sent: each goes to the options
- * page of its category with the search in the URL. The other tabs are
- * disabled until their flows exist. Its state is the `SearchProvider`'s
- * above it, which is how a card elsewhere on the page fills a place in.
- * The button says so while the options page prices the trip, which is
- * the longest wait on the site. On a location's pages the place fields
+ * Six services as a row of icon tabs, then the trip planner, as on the
+ * vehicle page: the kind of trip as two radios, the places, the hours of
+ * a hire and when, in one joined row. Car with driver and coach charter
+ * can be sent; the other tabs are disabled until their flows exist. One
+ * trip is typed and priced as before; "Add another trip" puts it in
+ * "Your trips", by date, which stays open, and opens the next; choosing a
+ * trip of the list opens it in the row to change. Once the card scrolls
+ * away the trips follow the page in a bar under the header. The group's
+ * size is asked once, beside the send button, for the one vehicle that
+ * does every trip. "Get prices" sends the list with the trip in the row,
+ * when one is typed, to the vehicle page of the category, asking first
+ * when it would replace trips the customer already has; the button says
+ * so while that page opens. Its state is the `SearchProvider`'s above it, which is how a card elsewhere
+ * on the page fills a place in. On a location's pages the place fields
  * suggest the location's area first, and any trip is sent as from the
- * home page: the options page says which location prices it, or why none
- * can. Each label leads with its field's
- * icon, and a filled place or day has an × at its end that empties it.
+ * home page: the vehicle page says which location prices it, or why none
+ * can. See docs/261027-multi-trip-booking.md, "The search card".
  */
 export function ServiceTabsSearch() {
-  const { product, setProduct, values, set, presetsOf, near } = useSearchCard();
-  const { issues, pending, submit: sendTrip } = useTripSubmit();
-  const fields = visibleFields(product, values);
+  const {
+    product,
+    setProduct,
+    planner,
+    passengers,
+    setPassengers,
+    presetsOf,
+    near,
+  } = useSearchCard();
+  const category = bookableCategory(product.key);
+  const newBooking = useNewBooking();
+  const { pending, go } = useNavigate();
 
-  /** Empties the field, a day and its time together, and puts the cursor back in it. */
-  function clear(def: FieldDef, id: string) {
-    for (const key of fieldKeys(def)) set(key, "");
-    document.getElementById(id)?.focus();
-  }
-
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const category = bookableCategory(product.key);
-    if (category) sendTrip(category, values);
+    if (!category) return;
+    const trips = planner.collect();
+    if (!trips) return;
+    if (await newBooking.start(category, trips, passengers)) {
+      go(tripBookingPath(category));
+    }
   }
 
   return (
@@ -118,88 +127,45 @@ export function ServiceTabsSearch() {
         noValidate
         className="px-3.5 py-[18px] sm:p-6"
       >
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:flex lg:gap-0">
-          {fields.map((f, i) => {
-            const id = `svc-${f.key}`;
-            const keys = fieldKeys(f);
-            const issue = issues.find((x) =>
-              keys.some((key) => key === x.field),
-            );
-            const clearable = isClearable(f, values);
-            // The field fills its box, its label laid over the top of it:
-            // a click anywhere in the box reaches the field, and its list
-            // or calendar opens under the box, lined up with its edges.
-            return (
-              <div
-                key={f.key}
-                className={`relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand lg:rounded-none ${
-                  issue ? "border-[#b3261e]" : "border-slate-200"
-                } ${i === 0 ? "lg:rounded-l-[14px]" : "lg:-ml-px"} ${
-                  f.kind === "place"
-                    ? "lg:flex-[2]"
-                    : f.kind === "when"
-                      ? "lg:flex-[1.5]"
-                      : "lg:flex-1"
-                }`}
+        {category ? (
+          <TripsPanel
+            planner={planner}
+            category={category}
+            presetsOf={presetsOf}
+            near={near}
+            summary={
+              passengers === 1 ? "1 passenger" : `${passengers} passengers`
+            }
+            passengers={
+              <PassengersStepper
+                value={passengers}
+                onChange={setPassengers}
+                className="w-full @3xl:w-[250px]"
+              />
+            }
+            action={
+              <button
+                type="submit"
+                disabled={pending}
+                className={`flex min-h-[56px] w-full items-center justify-center rounded-[14px] bg-brand px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70 @3xl:w-auto @3xl:min-w-[230px] ${focus}`}
               >
-                <label
-                  htmlFor={id}
-                  className="pointer-events-none absolute top-2.5 left-[18px] flex items-center gap-1.5 text-[0.82rem]/5 font-semibold text-slate-800"
-                >
-                  <FieldIcon def={f} className="size-[15px] text-slate-500" />
-                  {f.label}
-                </label>
-                <FieldInput
-                  def={f}
-                  id={id}
-                  values={values}
-                  presets={presetsOf(f.key)}
-                  near={near}
-                  onChange={set}
-                  className={`h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80 ${
-                    clearable ? "pr-11" : "pr-[18px]"
-                  }`}
-                />
-                {clearable && (
-                  <button
-                    type="button"
-                    aria-label={`Clear ${f.label}`}
-                    onClick={() => clear(f, id)}
-                    className={`absolute right-2.5 bottom-[11px] flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-ink ${focus}`}
-                  >
-                    <XIcon className="size-4" />
-                  </button>
+                {pending ? (
+                  <Pending>Finding prices…</Pending>
+                ) : (
+                  <>
+                    {planner.count > 1
+                      ? `Get prices · ${planner.count} trips`
+                      : product.cta}{" "}
+                    &nbsp;→
+                  </>
                 )}
-              </div>
-            );
-          })}
-          <button
-            type="submit"
-            disabled={pending}
-            className={`flex min-h-[65px] items-center justify-center rounded-[14px] bg-brand px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70 lg:ml-3.5 lg:min-h-0 lg:w-[190px] lg:shrink-0 ${focus}`}
-          >
-            {pending ? (
-              <Pending>Finding prices…</Pending>
-            ) : (
-              <>{product.cta} &nbsp;→</>
-            )}
-          </button>
-        </div>
-
-        {issues.length > 0 && (
-          <p role="alert" className="mx-1 mt-3 text-[0.92rem] text-[#b3261e]">
-            {issues.map((x) => x.message).join(" ")}
-          </p>
-        )}
+              </button>
+            }
+            className="scroll-mt-28"
+          />
+        ) : null}
       </form>
+      {newBooking.dialog}
     </div>
   );
-}
-
-/** Whether a field shows its ×: a place or a day with something in it. */
-function isClearable(def: FieldDef, values: SearchValues) {
-  if (def.kind !== "place" && def.kind !== "when" && def.kind !== "date") {
-    return false;
-  }
-  return fieldKeys(def).some((key) => values[key] !== "");
 }

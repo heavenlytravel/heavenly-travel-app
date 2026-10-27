@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  hiddenSearchFields,
   isTripId,
   tripItemField,
   tripItemIndexes,
@@ -72,7 +71,7 @@ describe("parseTripSearch", () => {
     const search = parseTripSearch(hourly)!;
     assert.deepEqual(parseTripSearch(tripSearchParams(search)), search);
     assert.deepEqual(
-      hiddenSearchFields(search).map(([name]) => name),
+      [...tripSearchParams(search).keys()],
       ["mode", "pickup", "date", "time", "hours"],
     );
   });

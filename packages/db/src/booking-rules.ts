@@ -19,6 +19,8 @@ export const BOOKING_RULES = {
   hourlyFloorHours: 3,
   /** Longest hourly hire in one item; anything longer is a multi-day request. */
   maxHourlyHours: 12,
+  /** The most trips one booking takes on the website: a long stay, not a fleet. */
+  maxTripsPerBooking: 20,
   /** All customer-facing dates and times. Malaysia has no daylight saving. */
   timeZone: "Asia/Kuala_Lumpur",
   utcOffset: "+08:00",

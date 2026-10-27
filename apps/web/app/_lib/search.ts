@@ -75,9 +75,10 @@ const dropOff: FieldDef = {
 };
 
 /**
- * What a trip with a driver asks, on the home card and in the trip editor of
- * the options page alike. Passengers is asked on the options page, where the
- * vehicle classes are known.
+ * What a trip asks, on the search card and in the vehicle page's trip
+ * planner alike: its kind first, as two radios. The group's size is asked
+ * once for all the trips, beside the send button and with the vehicle
+ * page's trips.
  */
 const TRIP_FIELDS: FieldDef[] = [
   {
@@ -227,6 +228,23 @@ export const isPlaceKey = (key: FieldKey): key is PlaceFieldKey =>
 export type SearchValues = Record<FieldKey, string> & {
   placeIds: Partial<Record<PlaceFieldKey, string>>;
 };
+
+/**
+ * The values with one field changed. A place picked from the autocomplete
+ * list comes with its id; typing into the field afterwards drops the id
+ * again. An end date never comes before the start date.
+ */
+export function withValue(
+  values: SearchValues,
+  key: FieldKey,
+  value: string,
+  placeId?: string,
+): SearchValues {
+  const next = { ...values, [key]: value };
+  if (isPlaceKey(key)) next.placeIds = { ...values.placeIds, [key]: placeId };
+  if (next.date && next.endDate && next.endDate < next.date) next.endDate = "";
+  return next;
+}
 
 export const EMPTY_SEARCH: SearchValues = {
   from: "",

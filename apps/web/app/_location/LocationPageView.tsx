@@ -11,11 +11,9 @@ import {
   linkedChildrenOf,
   locationPagePath,
   locationPreviewPath,
-  modelsLine,
   pageNameInView,
   paragraphsOf,
   pageOfView,
-  seatsLabel,
   servicePagesOf,
   type LocationPageRef,
   type LocationSection,
@@ -23,10 +21,9 @@ import {
   type LocationViewPage,
   type TripCategory,
 } from "@repo/db/server";
-import { eyebrow, focus, panel } from "../(site)/_components/Page";
+import { eyebrow, focus } from "../(site)/_components/Page";
 import { ProductIcon } from "../_components/Brand";
-import { ClassPicture } from "../_components/ClassPicture";
-import { ModelPhotosButton } from "../_components/ModelGallery";
+import { ClassCard } from "../_components/ClassCard";
 import {
   Cover,
   Faqs,
@@ -740,7 +737,7 @@ async function VehicleClasses({
             className={`grid gap-4 ${only ? "max-w-[560px]" : "sm:grid-cols-2 lg:grid-cols-3"}`}
           >
             {classes.map((vehicleClass) => (
-              <ClassCard
+              <LocationClassCard
                 key={vehicleClass.id}
                 vehicleClass={vehicleClass}
                 pictured={pictured}
@@ -764,7 +761,7 @@ async function VehicleClasses({
   );
 }
 
-function ClassCard({
+function LocationClassCard({
   vehicleClass,
   pictured,
   href,
@@ -775,31 +772,7 @@ function ClassCard({
   href?: string;
 }) {
   return (
-    <li className={`${panel} flex flex-col`}>
-      {pictured ? (
-        <ClassPicture
-          src={vehicleClass.imageUrl}
-          sizes="(min-width: 64rem) 400px, (min-width: 40rem) 50vw, 100vw"
-          className="mb-4"
-        />
-      ) : null}
-      <h3 className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
-        {vehicleClass.name}
-      </h3>
-      <p className="mt-1.5 text-slate-700">{vehicleClass.description}</p>
-      {vehicleClass.models.length > 0 ? (
-        // A div, not a p: the gallery's dialog is not phrasing content.
-        <div className="mt-2 text-[0.95rem] text-slate-700">
-          {modelsLine(vehicleClass.models.map((m) => m.name))}, or similar.{" "}
-          <ModelPhotosButton
-            title={vehicleClass.name}
-            models={vehicleClass.models}
-          />
-        </div>
-      ) : null}
-      <p className="mt-3 text-[0.9rem] text-slate-500">
-        {seatsLabel(vehicleClass)} · {vehicleClass.luggage}
-      </p>
+    <ClassCard vehicleClass={vehicleClass} pictured={pictured}>
       <p className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 pt-5 text-slate-500">
         <span>
           From{" "}
@@ -809,7 +782,7 @@ function ClassCard({
         </span>
         {href && <MoreLink href={href}>About the {vehicleClass.name}</MoreLink>}
       </p>
-    </li>
+    </ClassCard>
   );
 }
 

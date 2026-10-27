@@ -211,7 +211,12 @@ export type {
   FooterPublish,
   FooterSummary,
 } from "./site-footer";
-export { quoteTrip, prepareTripItem } from "./transportation";
+export {
+  quoteTrip,
+  quoteTrips,
+  prepareTripItem,
+  prepareTripItems,
+} from "./transportation";
 export { listQuoteLocations } from "./coverage";
 export type {
   TripRequest,
@@ -242,6 +247,7 @@ export {
   amendItem,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
+  cancelTripAsCustomer,
 } from "./bookings";
 export type {
   BookingFilter,

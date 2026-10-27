@@ -11,6 +11,7 @@ import { localDayRange } from "./booking-rules";
 import {
   bookingStatusOf,
   checkCustomerCancel,
+  checkCustomerTripCancel,
   isLive,
   nextItemStatusOf,
   type BookingStatus,
@@ -370,7 +371,12 @@ export function getBooking(id: string): Promise<BookingWithItems | null> {
  * An amend is one too: the customer is told in writing what the trip now
  * is, whatever the status.
  */
-export type BookingEvent = "confirmed" | "cancelled" | "amended";
+export type BookingEvent =
+  | "confirmed"
+  | "cancelled"
+  | "amended"
+  /** The customer cancelled a trip of a booking that lives on. */
+  | "customer-cancelled-trip";
 
 export type BookingChange =
   | { ok: true; booking: BookingWithItems; event: BookingEvent | null }
@@ -429,10 +435,13 @@ async function refreshBooking(
   let event: BookingEvent | null = null;
   if (status === "cancelled" && booking.status !== "cancelled") {
     event = "cancelled";
-  } else if (cancelledBy !== null) {
+  } else if (cancelledBy === "admin") {
     // An admin cancelled one item of a booking that lives on: the customer
     // still hears about it.
     event = "cancelled";
+  } else if (cancelledBy === "customer") {
+    // The customer cancelled a trip and kept the rest: both sides hear.
+    event = "customer-cancelled-trip";
   } else if (status === "confirmed" && booking.status === "received") {
     event = "confirmed";
   }
@@ -818,6 +827,46 @@ export function cancelBookingAsCustomer(
     return {
       ok: true,
       ...(await cancelAllItems(tx, customer, booking, "customer", now)),
+    };
+  });
+}
+
+/**
+ * The customer cancels one trip of their own booking, keeping the rest:
+ * only while the trip is not yet done or cancelled, and only before its
+ * own deadline. The last live trip cancelled cancels the booking. See
+ * docs/261027-multi-trip-booking.md.
+ */
+export function cancelTripAsCustomer(
+  customer: CustomerActor,
+  reference: string,
+  itemId: string,
+  now: Date = new Date(),
+): Promise<BookingChange> {
+  return db.$transaction(async (tx) => {
+    const item = await tx.bookingItem.findFirst({
+      where: { id: itemId, booking: { reference, userId: customer.userId } },
+    });
+    if (!item)
+      return {
+        ok: false,
+        error: "This trip is no longer on the booking. Reload the booking.",
+      };
+    const allowed = checkCustomerTripCancel(item, now);
+    if (!allowed.ok) return { ok: false, error: allowed.message };
+    await tx.bookingItem.update({
+      where: { id: item.id },
+      data: { status: "cancelled", cancelledAt: now },
+    });
+    await logActivity(tx, customer, {
+      action: ITEM_ACTIONS.cancelled,
+      entityId: item.bookingId,
+      before: { position: item.position, status: item.status },
+      after: { position: item.position, status: "cancelled" },
+    });
+    return {
+      ok: true,
+      ...(await refreshBooking(tx, item.bookingId, "customer", now)),
     };
   });
 }

@@ -39,7 +39,7 @@ export default async function ReceivedPage({
   return (
     <>
       <PageTitle eyebrow="Booking" title="Request received.">
-        We will check the trip and confirm it by email shortly.
+        We will check your booking and confirm it by email shortly.
       </PageTitle>
       <Panel className="max-w-[560px]">
         <p className={eyebrow}>Your reference</p>
@@ -51,10 +51,10 @@ export default async function ReceivedPage({
             <>
               We have emailed the details to{" "}
               <strong className="font-semibold">{sentTo}</strong>. Keep this
-              reference and quote it when you contact us about the trip.
+              reference and quote it when you contact us about your booking.
             </>
           ) : (
-            "We have emailed you the details. Keep this reference and quote it when you contact us about the trip."
+            "We have emailed you the details. Keep this reference and quote it when you contact us about your booking."
           )}
         </p>
         <p className="mt-4 text-[0.9rem] text-slate-500">

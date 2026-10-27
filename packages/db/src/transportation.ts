@@ -37,7 +37,12 @@ import {
 } from "./rates-input";
 import type { VehicleClass } from "./vehicle-classes";
 import { routeRateOf } from "./zone-match";
-import { placeTrip, type TripRouting, type TripTrace } from "./zone-quote";
+import {
+  placeTrip,
+  type QuoteLocation,
+  type TripRouting,
+  type TripTrace,
+} from "./zone-quote";
 import type { NearestZone, ZoneTripMeasure } from "./zone-trip";
 import {
   choosableModel,
@@ -189,7 +194,104 @@ export async function quoteTrip(
   category: TripCategory,
   request: TripRequest,
   routing: TripRouting,
-  { now = new Date(), locationId, trace, unlimited = false }: QuoteOptions = {},
+  options: QuoteOptions = {},
+): Promise<TripQuoteResult> {
+  const [result] = await quoteAll(category, [request], routing, options);
+  return result!;
+}
+
+/**
+ * `quoteTrip` for every trip of a booking at once, in the same order. The
+ * locations are read once and each location's offerings once, however
+ * many trips there are; each trip is placed and priced as `quoteTrip`
+ * prices it alone. Try a trip's trace is for one trip, so it is not
+ * offered here. See docs/261027-multi-trip-booking.md.
+ */
+export function quoteTrips(
+  category: TripCategory,
+  requests: readonly TripRequest[],
+  routing: TripRouting,
+  options: Omit<QuoteOptions, "trace"> = {},
+): Promise<TripQuoteResult[]> {
+  return quoteAll(category, requests, routing, options);
+}
+
+/** What quoting reads from the database once, however many trips it prices. */
+type QuoteReads = {
+  /** As stored, for a quote to say its location's own furthest extra road. */
+  loaded: QuoteLocation[];
+  /** The ones the trips are placed among: as stored, or with every limit lifted. */
+  locations: QuoteLocation[];
+  /** Try a trip's location; null when none is pinned, or the pinned one was deleted. */
+  pinned: QuoteLocation | null;
+  /** A location's offerings of the category, read once per location. */
+  offeringsAt: (locationId: string) => Promise<OfferingOnSale[]>;
+};
+
+async function readForQuotes(
+  category: TripCategory,
+  locationId: string | undefined,
+  unlimited: boolean,
+): Promise<QuoteReads> {
+  const loaded = await listQuoteLocations(locationId);
+  const locations = unlimited
+    ? loaded.map((location) => ({
+        ...location,
+        maxExtraKm: TRIP_REACH_LIMITS.maxExtraKm.max,
+      }))
+    : loaded;
+  const offerings = new Map<string, Promise<OfferingOnSale[]>>();
+  return {
+    loaded,
+    locations,
+    pinned: locationId
+      ? (locations.find((location) => location.id === locationId) ?? null)
+      : null,
+    offeringsAt(id) {
+      let read = offerings.get(id);
+      if (!read) {
+        read = listActiveOfferings(id, category);
+        offerings.set(id, read);
+      }
+      return read;
+    },
+  };
+}
+
+/** The trips priced in parallel on one set of reads, taken only when a trip gets past its own checks. */
+async function quoteAll(
+  category: TripCategory,
+  requests: readonly TripRequest[],
+  routing: TripRouting,
+  { now = new Date(), locationId, trace, unlimited = false }: QuoteOptions,
+): Promise<TripQuoteResult[]> {
+  let reads: Promise<QuoteReads> | null = null;
+  const readOnce = () =>
+    (reads ??= readForQuotes(category, locationId, unlimited));
+  return Promise.all(
+    requests.map((request) =>
+      quoteOne(category, request, routing, readOnce, {
+        now,
+        locationId,
+        trace,
+        unlimited,
+      }),
+    ),
+  );
+}
+
+async function quoteOne(
+  category: TripCategory,
+  request: TripRequest,
+  routing: TripRouting,
+  readOnce: () => Promise<QuoteReads>,
+  {
+    now,
+    locationId,
+    trace,
+    unlimited,
+  }: Required<Pick<QuoteOptions, "now" | "unlimited">> &
+    Pick<QuoteOptions, "locationId" | "trace">,
 ): Promise<TripQuoteResult> {
   if (!unlimited && !isWithinHorizon(request.startsAt, now)) {
     return fail(
@@ -211,19 +313,11 @@ export async function quoteTrip(
   }
 
   // The district is the record's: read alongside the locations.
-  const [loaded, district] = await Promise.all([
-    listQuoteLocations(locationId),
+  const [reads, district] = await Promise.all([
+    readOnce(),
     resolveDistrict(request.pickup),
   ]);
-  const locations = unlimited
-    ? loaded.map((location) => ({
-        ...location,
-        maxExtraKm: TRIP_REACH_LIMITS.maxExtraKm.max,
-      }))
-    : loaded;
-  const pinned = locationId
-    ? (locations.find((location) => location.id === locationId) ?? null)
-    : null;
+  const { loaded, locations, pinned } = reads;
   if (locationId && !pinned) {
     return fail("not-served", "That location was deleted meanwhile.");
   }
@@ -245,7 +339,7 @@ export async function quoteTrip(
       ? { mode: "oneway", distanceKm: placed.distanceKm ?? 0 }
       : { mode: "hourly", hours };
 
-  const offerings = await listActiveOfferings(location.id, category);
+  const offerings = await reads.offeringsAt(location.id);
   const cellOf = (vehicleClassId: string) =>
     dropoff
       ? routeRateOf(
@@ -396,9 +490,34 @@ export async function prepareTripItem(
   routing: TripRouting,
   now: Date = new Date(),
 ): Promise<PrepareTripItemResult> {
-  const quoted = await quoteTrip(category, request, routing, { now });
-  if (!quoted.ok) return quoted;
-  const { district, location, basis, classes } = quoted.quote;
+  const [prepared] = await prepareTripItems(category, [request], routing, now);
+  return prepared!;
+}
+
+/**
+ * `prepareTripItem` for every trip of a booking, in the same order, on the
+ * reads of one `quoteTrips`. Each trip is checked on its own: whether the
+ * trips may share a vehicle is the caller's to check (./trip-plan).
+ */
+export async function prepareTripItems(
+  category: TripCategory,
+  requests: readonly TripItemRequest[],
+  routing: TripRouting,
+  now: Date = new Date(),
+): Promise<PrepareTripItemResult[]> {
+  const quoted = await quoteTrips(category, requests, routing, { now });
+  return quoted.map((result, index) =>
+    result.ok ? itemOf(category, result.quote, requests[index]!) : result,
+  );
+}
+
+/** The chosen class and model of a quoted trip, checked, as the item to store. */
+function itemOf(
+  category: TripCategory,
+  quote: TripQuote,
+  request: TripItemRequest,
+): PrepareTripItemResult {
+  const { district, location, basis, classes } = quote;
 
   const chosen = classes.find(
     (c) => c.vehicleClass.id === request.vehicleClassId,

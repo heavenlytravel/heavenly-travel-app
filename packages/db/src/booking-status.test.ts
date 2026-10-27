@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   bookingStatusOf,
   checkCustomerCancel,
+  checkCustomerTripCancel,
   isBookingStatus,
   isItemStatus,
   NEXT_ITEM_STATUS,
@@ -122,6 +123,44 @@ describe("checkCustomerCancel", () => {
     for (const status of ["completed", "cancelled"]) {
       const check = checkCustomerCancel(booking(status, item(100, 24)), now);
       assert.equal(check.ok, false);
+      assert.equal(!check.ok && check.reason, "status");
+    }
+  });
+});
+
+describe("checkCustomerTripCancel", () => {
+  const now = new Date("2026-10-01T00:00:00Z");
+  const hours = (n: number) => new Date(now.getTime() + n * 60 * 60 * 1000);
+  const trip = (startsIn: number, cutoff: number, status = "confirmed") => ({
+    status,
+    startsAt: hours(startsIn),
+    cancellationCutoffHours: cutoff,
+  });
+
+  it("allows a trip before its own deadline, whatever the other trips", () => {
+    assert.deepEqual(checkCustomerTripCancel(trip(25, 24), now), {
+      ok: true,
+      deadline: hours(1),
+      message: "Free cancellation until Thu, 1 Oct 2026, 9:00 AM.",
+    });
+    assert.equal(
+      checkCustomerTripCancel(trip(25, 24, "assigned"), now).ok,
+      true,
+    );
+  });
+
+  it("refuses from its deadline on and names it as a date", () => {
+    const check = checkCustomerTripCancel(trip(24, 24), now);
+    assert.equal(!check.ok && check.reason, "cutoff");
+    assert.equal(
+      !check.ok && check.message,
+      "Free cancellation ended on Thu, 1 Oct 2026, 8:00 AM.",
+    );
+  });
+
+  it("refuses a trip already done or cancelled", () => {
+    for (const status of ["completed", "cancelled"]) {
+      const check = checkCustomerTripCancel(trip(100, 24, status), now);
       assert.equal(!check.ok && check.reason, "status");
     }
   });

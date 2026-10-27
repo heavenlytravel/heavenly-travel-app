@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   formatLocalDateTime,
   formatMyr,
+  isLive,
   itemSummary,
   tripHeadline,
   tripViewOfItem,
@@ -33,7 +34,7 @@ export default async function BookingsPage() {
   return (
     <>
       <PageTitle eyebrow="Account" title="My bookings.">
-        Every trip you have booked with us, newest first.
+        Every booking you have made with us, newest first.
       </PageTitle>
       {bookings.length === 0 ? (
         <Stop
@@ -62,15 +63,25 @@ export default async function BookingsPage() {
                   </div>
                   <div className="mt-3 grid gap-1 text-[0.95rem] sm:grid-cols-[1fr_auto] sm:items-end">
                     <div>
-                      {trips.map(({ item, trip }) => (
-                        <div key={item.id}>
-                          <p className="font-medium">{tripHeadline(trip)}</p>
-                          <p className="text-slate-500">{itemSummary(item)}</p>
-                        </div>
-                      ))}
-                      <p className="text-slate-500">
-                        Pick-up {formatLocalDateTime(booking.startsAt)}
-                      </p>
+                      {trips.map(({ item, trip }) => {
+                        // A trip cancelled from a booking that lives on.
+                        const dropped =
+                          !isLive(item) && booking.status !== "cancelled";
+                        return (
+                          <div key={item.id} className="[&+&]:mt-2">
+                            <p
+                              className={`font-medium ${dropped ? "text-slate-400 line-through" : ""}`}
+                            >
+                              {tripHeadline(trip)}
+                            </p>
+                            <p className="text-slate-500">
+                              {itemSummary(item)} · Pick-up{" "}
+                              {formatLocalDateTime(item.startsAt)}
+                              {dropped ? " · Cancelled" : ""}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                     <p className="font-bold text-brand">
                       {formatMyr(booking.priceTotalSen)}

@@ -130,7 +130,7 @@ describe("bookingEmails", () => {
         subjectPrefix: "[Development] ",
       }).map((e) => e.message.subject),
     );
-    assert.equal(subjects.length, 12);
+    assert.equal(subjects.length, 14);
     for (const subject of subjects) assert.match(subject, /^\[Development\] /);
   });
 
@@ -225,6 +225,70 @@ describe("bookingEmails", () => {
     );
   });
 
+  it("names the first trip and how many more for a booking of several", () => {
+    const emails = bookingEmails(
+      "received",
+      sampleBooking({
+        items: [
+          sampleItem(),
+          sampleItem({ id: "item2", position: 2 }),
+          sampleItem({ id: "item3", position: 3 }),
+        ],
+      }),
+      settings,
+    );
+    const ops = emails.find((e) => e.message.to === settings.opsTo)!;
+    assert.match(
+      ops.message.text,
+      /New booking: KLIA Terminal 1 to Kuala Lumpur, and 2 more trips/,
+    );
+    assert.match(emails[0]!.message.text, /We will check the trips/);
+  });
+
+  it("confirms several trips by the first pick-up and points to each time", () => {
+    const emails = bookingEmails(
+      "confirmed",
+      sampleBooking({
+        status: "confirmed",
+        items: [
+          sampleItem({ status: "confirmed" }),
+          sampleItem({ id: "item2", position: 2, status: "confirmed" }),
+        ],
+      }),
+      settings,
+    );
+    assert.match(
+      emails[0]!.message.text,
+      /Your first pick-up is on Sat, 3 Oct 2026, 9:30 AM, and each trip's time is below/,
+    );
+  });
+
+  it("a customer's trip cancel tells the customer and ops, the rest standing", () => {
+    const emails = bookingEmails(
+      "customer-cancelled-trip",
+      sampleBooking({
+        status: "confirmed",
+        items: [
+          sampleItem({ status: "confirmed" }),
+          sampleItem({ id: "item2", position: 2, status: "cancelled" }),
+        ],
+      }),
+      settings,
+    );
+    assert.deepEqual(
+      emails.map((e) => e.message.subject),
+      [
+        "Booking HT-7K3QZM updated",
+        "Booking HT-7K3QZM: a trip cancelled by the customer",
+      ],
+    );
+    assert.match(emails[0]!.message.text, /you cancelled a trip/);
+    assert.match(
+      emails[0]!.message.text,
+      /ITEM 2: CAR WITH DRIVER \(CANCELLED\)/,
+    );
+  });
+
   it("an amend tells the customer what the trip now is, with the total", () => {
     const emails = bookingEmails(
       "amended",
@@ -264,7 +328,7 @@ describe("bookingEmails", () => {
       assert.match(message.html, />Car with driver</);
     }
     for (const { message } of coach) {
-      assert.match(message.text, /COACH CHARTER\nTrip: By the hour/);
+      assert.match(message.text, /COACH CHARTER\nTrip: Hourly/);
       assert.match(message.html, />Coach charter</);
       assert.match(message.text, /Vehicle: Coach VIP/);
       assert.match(message.text, /Duration: 8 hours/);

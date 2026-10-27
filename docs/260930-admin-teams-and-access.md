@@ -357,8 +357,10 @@ differ.
   class and details, priced on its own; the customer, the contact and the agreed
   price per item stay as they are. `createBooking` already takes several items and
   the emails, the lists and the history already show them.
-- The website keeps one item per booking. A customer who needs two vehicles books
-  twice or calls, as today.
+- ~~The website keeps one item per booking.~~ Superseded on 2026-10-27 by
+  docs/261027-multi-trip-booking.md: the website books any number of trips in one
+  booking, one item per trip, all done by one vehicle. A customer who needs two
+  vehicles still books twice or calls.
 
 ### Data model for PR E
 

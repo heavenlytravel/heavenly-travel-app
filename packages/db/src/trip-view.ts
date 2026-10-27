@@ -89,6 +89,19 @@ export function tripHeadline(trip: TripView) {
     : `${trip.pickup.label}, ${trip.hours} hours`;
 }
 
+/**
+ * Several trips in one line, for a heading: the first trip's, and how many
+ * more: "KLIA to Kuala Lumpur, and 2 more trips"; null for none.
+ */
+export function tripsHeadline(trips: readonly TripView[]) {
+  const [first] = trips;
+  if (!first) return null;
+  const more = trips.length - 1;
+  return more === 0
+    ? tripHeadline(first)
+    : `${tripHeadline(first)}, and ${more} more ${more === 1 ? "trip" : "trips"}`;
+}
+
 /** A label and its value; a place value lets the app show the address too. */
 export type DetailRow = [label: string, value: string | Place];
 

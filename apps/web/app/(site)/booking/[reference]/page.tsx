@@ -40,7 +40,8 @@ export default async function BookingPage({
         aside={
           <>
             <p className="mt-4 text-[0.85rem] text-slate-500">
-              Keep this reference. Quote it when you contact us about the trip.
+              Keep this reference. Quote it when you contact us about your
+              booking.
             </p>
             <Link href="/" className={`${primaryButton} mt-6 w-full`}>
               Back to Heavenly Travel

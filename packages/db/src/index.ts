@@ -44,6 +44,7 @@ export * from "./location-view";
 export * from "./location-search";
 export * from "./cache-tags";
 export * from "./trip-input";
+export * from "./trip-plan";
 export * from "./booking-input";
 export * from "./booking-contact";
 export * from "./booking-limits";

@@ -3,7 +3,7 @@
 import { BOOKING_RULES, type BBox } from "@repo/db";
 import { DateField, DateTimeField } from "@repo/ui/date-field";
 import {
-  ArrowLeftRightIcon,
+  ArrowRightIcon,
   BedIcon,
   CalendarIcon,
   ClockIcon,
@@ -145,7 +145,7 @@ export function FieldInput({
 
 /** The icon each field's label leads with: what the field asks, at a glance. */
 const FIELD_ICONS: Record<FieldKey, typeof MapPinIcon> = {
-  mode: ArrowLeftRightIcon,
+  mode: ArrowRightIcon,
   from: MapPinIcon,
   to: FlagIcon,
   place: MapPinIcon,
@@ -160,13 +160,33 @@ const FIELD_ICONS: Record<FieldKey, typeof MapPinIcon> = {
   rooms: BedIcon,
 };
 
+/** A field's icon; the kind of trip's follows the choice, the clock for a hire. */
 export function FieldIcon({
   def,
+  values,
   className,
 }: {
   def: FieldDef;
+  values?: SearchValues;
   className?: string;
 }) {
-  const Icon = FIELD_ICONS[def.key];
+  const Icon =
+    def.key === "mode" && values?.mode === "hourly"
+      ? ClockIcon
+      : FIELD_ICONS[def.key];
   return <Icon className={className} />;
 }
+
+/** A field's box on the search card: the field fills it, its label laid over its top. */
+export const fieldBox =
+  "relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand";
+
+/** The label laid over the top of a `fieldBox`, its icon leading. */
+export const fieldLabel =
+  "pointer-events-none absolute top-2.5 left-[18px] z-[1] flex items-center gap-1.5 text-[0.82rem]/5 font-semibold text-slate-800";
+
+/** A field filling its `fieldBox`, under the label; `clearable` leaves room for the × at its end. */
+export const fieldControl = (clearable: boolean) =>
+  `h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80 ${
+    clearable ? "pr-11" : "pr-[18px]"
+  }`;

@@ -7,9 +7,10 @@ import {
   ITEM_STATUS_LABELS,
   itemHeading,
   signUpPath,
+  isLive,
   tripDetailRows,
-  tripHeadline,
   tripRows,
+  tripsHeadline,
   tripViewOfItem,
   type Canceller,
   type DetailRow,
@@ -152,11 +153,21 @@ function consoleButton(
   };
 }
 
-/** "KLIA Terminal 1 to Kuala Lumpur", or the reference when no trip can be read. */
+/**
+ * "KLIA Terminal 1 to Kuala Lumpur", and how many more trips the booking
+ * holds; the reference when no trip can be read.
+ */
 function headline(booking: BookingWithItems) {
-  const trip = booking.items.map(tripViewOfItem).find((t) => t !== null);
-  return trip ? tripHeadline(trip) : booking.reference;
+  const trips = booking.items.flatMap((item) => {
+    const trip = tripViewOfItem(item);
+    return trip ? [trip] : [];
+  });
+  return tripsHeadline(trips) ?? booking.reference;
 }
+
+/** Whether the booking still holds more than one trip to do. */
+const severalLive = (booking: BookingWithItems) =>
+  booking.items.filter(isLive).length > 1;
 
 function email(
   to: string,
@@ -206,7 +217,7 @@ function received(
       blocks: [
         {
           type: "paragraph",
-          text: `Hi ${booking.contactName}, thanks for booking with Heavenly Travel. Your reference is ${ref}. We will check the trip and confirm it by email shortly.`,
+          text: `Hi ${booking.contactName}, thanks for booking with Heavenly Travel. Your reference is ${ref}. We will check ${severalLive(booking) ? "the trips" : "the trip"} and confirm by email shortly.`,
         },
         ...itemBlocks(booking),
         totalBlock(booking),
@@ -244,7 +255,9 @@ function confirmed(
     blocks: [
       {
         type: "paragraph",
-        text: `Hi ${booking.contactName}, booking ${ref} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
+        text: severalLive(booking)
+          ? `Hi ${booking.contactName}, booking ${ref} is confirmed. Your first pick-up is on ${formatLocalDateTime(booking.startsAt)}, and each trip's time is below. Please be reachable on ${booking.contactPhone} around those times.`
+          : `Hi ${booking.contactName}, booking ${ref} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
       },
       ...itemBlocks(booking),
       totalBlock(booking),
@@ -261,7 +274,8 @@ function cancelled(
 ): BookingEmail[] {
   const ref = booking.reference;
   // The booking records who cancelled it only once it is fully cancelled.
-  // A partial cancel leaves it live, and only admins can do that.
+  // A partial cancel leaves it live; the customer's has its own event
+  // (`customerCancelledTrip`), so a live one here is an admin's.
   const by: Canceller =
     booking.cancelledBy === "customer" ? "customer" : "admin";
   const whole = booking.status === "cancelled";
@@ -344,6 +358,48 @@ function updated(
   });
 }
 
+/**
+ * The customer cancelled a trip and kept the rest: they get every trip
+ * with its status and the new total, and ops hears which booking changed.
+ */
+function customerCancelledTrip(
+  booking: BookingWithItems,
+  settings: EmailSettings,
+  key: string,
+): BookingEmail[] {
+  const ref = booking.reference;
+  return [
+    ...toCustomer(booking, key, settings, {
+      subject: `Booking ${ref} updated`,
+      heading: "Your trip is cancelled",
+      blocks: [
+        {
+          type: "paragraph",
+          text: `Hi ${booking.contactName}, you cancelled a trip of booking ${ref}. The rest goes ahead as planned; each trip and its status is below.`,
+        },
+        ...itemBlocks(booking),
+        totalBlock(booking),
+        ...bookingButton(booking, settings),
+        { type: "contact" },
+      ],
+    }),
+    toOps(key, settings, {
+      subject: `Booking ${ref}: a trip cancelled by the customer`,
+      heading: `Trip cancelled by the customer: ${headline(booking)}`,
+      blocks: [
+        {
+          type: "paragraph",
+          text: `${booking.contactName} cancelled a trip of ${ref}. The rest of the booking stands; no driver is needed for the cancelled trip.`,
+        },
+        customerBlock(booking),
+        ...itemBlocks(booking),
+        totalBlock(booking),
+        consoleButton(booking, settings),
+      ],
+    }),
+  ];
+}
+
 function amended(
   booking: BookingWithItems,
   settings: EmailSettings,
@@ -378,5 +434,7 @@ export function bookingEmails(
       return cancelled(booking, settings, key);
     case "amended":
       return amended(booking, settings, key);
+    case "customer-cancelled-trip":
+      return customerCancelledTrip(booking, settings, key);
   }
 }

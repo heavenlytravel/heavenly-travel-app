@@ -220,6 +220,17 @@ export const sampleCases: {
     }),
   },
   {
+    name: "trip-cancelled-by-customer",
+    event: "customer-cancelled-trip",
+    booking: sampleBooking({
+      status: "confirmed",
+      items: [
+        sampleItem({ status: "confirmed" }),
+        sampleItem({ id: "item2", position: 2, status: "cancelled" }),
+      ],
+    }),
+  },
+  {
     name: "amended",
     event: "amended",
     booking: sampleBooking({

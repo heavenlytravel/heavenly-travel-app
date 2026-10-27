@@ -247,6 +247,7 @@ export {
   amendItem,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
+  cancelTripAsCustomer,
 } from "./bookings";
 export type {
   BookingFilter,

@@ -6,9 +6,9 @@ import {
   tripDetailRows,
   tripViewOfItem,
 } from "@repo/db";
-import type { BookingWithItems } from "@repo/db/server";
+import type { BookingItemWithDetails, BookingWithItems } from "@repo/db/server";
 import { Panel, Rows } from "../../_components/Page";
-import { StatusBadge } from "./StatusBadge";
+import { ItemStatusBadge, StatusBadge } from "./StatusBadge";
 import { TripSummary } from "./TripSummary";
 
 /** One line under the title, per booking status, as the customer reads it. */
@@ -23,19 +23,24 @@ export const BOOKING_STATUS_LINES: Record<string, string> = {
  * A booking as the customer sees it, on the success page and under My
  * bookings: each item's trip on the left, the reference, contact, status
  * and total on the right, followed by whatever the page wants to offer
- * (a way home, a cancel button).
+ * (a way home, a cancel button). A booking of several trips numbers them
+ * as they were booked, each with its own status, and `tripAside` adds to
+ * each, such as its own cancel button.
  */
 export function BookingDetail({
   booking,
   aside,
+  tripAside,
 }: {
   booking: BookingWithItems;
   aside?: ReactNode;
+  tripAside?: (item: BookingItemWithDetails) => ReactNode;
 }) {
   const trips = booking.items.flatMap((item) => {
     const trip = tripViewOfItem(item);
     return trip ? [{ item, trip }] : [];
   });
+  const several = trips.length > 1;
 
   const rows: [string, ReactNode][] = [
     ["Reference", <strong key="ref">{booking.reference}</strong>],
@@ -58,13 +63,19 @@ export function BookingDetail({
       <div className="grid gap-6">
         {trips.map(({ item, trip }) => (
           <Panel key={item.id}>
-            <h2 className="mb-3 font-(family-name:--font-display) text-[1.5rem]">
-              {itemHeading(item)}
-            </h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <h2 className="font-(family-name:--font-display) text-[1.5rem]">
+                {several
+                  ? `Trip ${item.position} · ${itemHeading(item)}`
+                  : itemHeading(item)}
+              </h2>
+              {several ? <ItemStatusBadge status={item.status} /> : null}
+            </div>
             <TripSummary
               trip={trip}
               extra={item.tripDetails ? tripDetailRows(item.tripDetails) : []}
             />
+            {tripAside?.(item)}
           </Panel>
         ))}
       </div>

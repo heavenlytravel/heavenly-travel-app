@@ -182,3 +182,47 @@ export function checkCustomerCancel(
     message: `Free cancellation until ${formatLocalDateTime(deadline)}.`,
   };
 }
+
+/** Item statuses a customer may still cancel one trip from; the cutoff is checked separately. */
+export const CUSTOMER_CANCELLABLE_ITEMS: readonly ItemStatus[] = [
+  "received",
+  "confirmed",
+  "assigned",
+];
+
+/**
+ * Whether the customer may cancel one trip of a booking right now: while
+ * it is not yet done or cancelled, and before its own deadline, its start
+ * less its own cutoff. Each trip of a booking cancels on its own; the
+ * whole booking still follows `checkCustomerCancel`. See
+ * docs/261027-multi-trip-booking.md.
+ */
+export function checkCustomerTripCancel(
+  item: CancellableItem,
+  now: Date = new Date(),
+): CustomerCancelCheck {
+  if (!CUSTOMER_CANCELLABLE_ITEMS.includes(item.status as ItemStatus)) {
+    return {
+      ok: false,
+      reason: "status",
+      message: `This trip is already ${item.status}.`,
+    };
+  }
+  const deadline = cancellationDeadline(
+    item.startsAt,
+    item.cancellationCutoffHours,
+  );
+  if (now.getTime() >= deadline.getTime()) {
+    return {
+      ok: false,
+      reason: "cutoff",
+      deadline,
+      message: `Free cancellation ended on ${formatLocalDateTime(deadline)}.`,
+    };
+  }
+  return {
+    ok: true,
+    deadline,
+    message: `Free cancellation until ${formatLocalDateTime(deadline)}.`,
+  };
+}

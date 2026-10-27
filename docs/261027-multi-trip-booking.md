@@ -1,10 +1,11 @@
 # Multi-trip booking: one booking, many trips, one vehicle
 
 Status: designed with the user from 2026-10-25 to 2026-10-27 in the clickable example at
-`/booking-example` (branch `feat/multi-item-booking`, not committed). Simplified on
-2026-10-27: no Return, no Days, no link lines; one Continue per vehicle; the confirm page
-only shows the trips; trips clash only at the same time or during a hire. Not built yet.
-The build starts in its own thread from this plan.
+`/booking-example`, on branch `feat/multi-item-booking`. Simplified on 2026-10-27: no
+Return, no Days, no link lines; one Continue per vehicle; the confirm page only shows the
+trips; trips clash only at the same time or during a hire. Not built yet. The build
+starts in its own thread from this plan, on the same branch, and ends by deleting the
+example: it is a reference for the build, never part of the site.
 
 This supersedes one line of docs/260930-admin-teams-and-access.md, Step 11: "The website
 keeps one item per booking." The website now books any number of trips in one booking.
@@ -189,9 +190,16 @@ the form (`TripForm`), and the vehicle page's panel with its sticky bar and shee
 `_example/store.ts`) move into `packages/db` as pure functions with tests, next to
 `booking-rules.ts`, so the booking action checks the same rules the screen does.
 
+Build these in the real codebase, beside the live search card and booking pages, on
+real prices and the real trip parameters. Take what helps from the example's code, but
+nothing imports from it: it runs on sample classes and prices and on session storage, and
+it is deleted at the end.
+
 ### Build order
 
-Each step keeps the site working.
+One PR from `feat/multi-item-booking`, a commit or more per step, each step keeping the
+site working. The example is added and deleted inside the branch, so the squash-merged
+PR brings main the real flow and this plan, never the example.
 
 1. **Rules and quotes** (`packages/db`): the overlap rule, "one class for all the trips"
    (offered at every location, meets its rules on every trip, seats the group), and a
@@ -208,8 +216,10 @@ Each step keeps the site working.
    - The received page and the account list for several trips.
    - The email headline and copy.
    - Per-trip cancellation by the customer, if chosen (see the open questions).
-5. **Docs:** mark Step 11 of docs/260930-admin-teams-and-access.md as superseded, and
-   add "As built" here.
+5. **Remove the example:** delete `apps/web/app/(site)/booking-example` entirely, once
+   the real flow does everything it shows. Check nothing else refers to it.
+6. **Docs:** mark Step 11 of docs/260930-admin-teams-and-access.md as superseded, and
+   add "As built" here, saying the example was removed.
 
 ## Open questions
 
@@ -251,7 +261,8 @@ Each step keeps the site working.
 ## The example
 
 `/booking-example` (not linked from the site, nothing saved) walks every step with sample
-classes and prices. Files under `apps/web/app/(site)/booking-example/`:
+classes and prices. It is the reference for the build and is deleted by its step 5. Files
+under `apps/web/app/(site)/booking-example/`:
 
 - **`_example/situations.ts`:** every situation it opens on, listed at `/booking-example`.
   - One trip, there and back, a stay with hires between, the same hire every day, a

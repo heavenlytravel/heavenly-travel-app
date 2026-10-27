@@ -32,7 +32,7 @@ export type TripMode = (typeof TRIP_MODES)[number];
 export const isTripMode = guardFor(TRIP_MODES);
 export const TRIP_MODE_LABELS: Record<TripMode, string> = {
   oneway: "One-way",
-  hourly: "By the hour",
+  hourly: "Hourly",
 };
 
 /** received -> confirmed -> assigned -> completed, or cancelled from any of them. */

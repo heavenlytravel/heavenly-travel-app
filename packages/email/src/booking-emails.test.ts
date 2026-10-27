@@ -264,7 +264,7 @@ describe("bookingEmails", () => {
       assert.match(message.html, />Car with driver</);
     }
     for (const { message } of coach) {
-      assert.match(message.text, /COACH CHARTER\nTrip: By the hour/);
+      assert.match(message.text, /COACH CHARTER\nTrip: Hourly/);
       assert.match(message.html, />Coach charter</);
       assert.match(message.text, /Vehicle: Coach VIP/);
       assert.match(message.text, /Duration: 8 hours/);

@@ -228,6 +228,23 @@ export type SearchValues = Record<FieldKey, string> & {
   placeIds: Partial<Record<PlaceFieldKey, string>>;
 };
 
+/**
+ * The values with one field changed. A place picked from the autocomplete
+ * list comes with its id; typing into the field afterwards drops the id
+ * again. An end date never comes before the start date.
+ */
+export function withValue(
+  values: SearchValues,
+  key: FieldKey,
+  value: string,
+  placeId?: string,
+): SearchValues {
+  const next = { ...values, [key]: value };
+  if (isPlaceKey(key)) next.placeIds = { ...values.placeIds, [key]: placeId };
+  if (next.date && next.endDate && next.endDate < next.date) next.endDate = "";
+  return next;
+}
+
 export const EMPTY_SEARCH: SearchValues = {
   from: "",
   to: "",

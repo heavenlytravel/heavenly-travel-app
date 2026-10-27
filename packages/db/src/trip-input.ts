@@ -167,6 +167,11 @@ const text = (raw: string | null, max: number) => {
   return value === "" ? null : value;
 };
 
+/** A flight number as typed, in capitals; null for none. */
+export function parseFlightNumber(raw: string | null): string | null {
+  return text(raw, TRIP_MAX_FLIGHT_NUMBER_LENGTH)?.toUpperCase() ?? null;
+}
+
 /**
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
@@ -192,11 +197,7 @@ export function parseTripOptions(
     vehicleModelId,
     passengers,
     childSeats: childSeats ?? 0,
-    flightNumber:
-      text(
-        params.get(TRIP_PARAM.flightNumber),
-        TRIP_MAX_FLIGHT_NUMBER_LENGTH,
-      )?.toUpperCase() ?? null,
+    flightNumber: parseFlightNumber(params.get(TRIP_PARAM.flightNumber)),
     notes: text(params.get(TRIP_PARAM.notes), TRIP_MAX_NOTES_LENGTH),
   };
 }
@@ -214,11 +215,6 @@ export function tripSearchParams(search: TripSearch) {
   return params;
 }
 
-/** The search as name and value pairs, for the hidden inputs of a form. */
-export function hiddenSearchFields(search: TripSearch) {
-  return Array.from(tripSearchParams(search).entries());
-}
-
 /** The search a stored trip was made from, for a form that amends it. */
 export function tripSearchOf(trip: TripView): TripSearch {
   const { date, time } = localDateTimeInputs(trip.startsAt);
@@ -233,9 +229,10 @@ export function tripSearchOf(trip: TripView): TripSearch {
 }
 
 /**
- * A form that carries several trips, one per vehicle, names each one's
- * inputs "item2.mode", "item2.pickup", so one parser reads every item.
- * See "Step 11: Several vehicles in one booking" in the plan.
+ * A form that carries several items names each one's inputs "item2.mode",
+ * "item2.pickup", so one parser reads every item: the console's manual
+ * booking, one item per vehicle, and the website's confirm page, one per
+ * trip. See docs/261027-multi-trip-booking.md.
  */
 const ITEM_FIELD_RE = /^item(\d+)\.(.+)$/;
 

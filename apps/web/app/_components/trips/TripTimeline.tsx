@@ -1,0 +1,143 @@
+import type { ReactNode } from "react";
+import { PencilIcon } from "@repo/ui/icons";
+import { focus } from "../../(site)/_components/Page";
+import {
+  byStart,
+  clashesOf,
+  clashLabel,
+  routeOf,
+  whenOf,
+  type PlannedTrip,
+} from "../../_lib/trip-plan";
+
+/** A line under a trip in the list: why it cannot be booked, or what to know about it. */
+export type TripNote = { tone: "red" | "blue"; text: ReactNode };
+
+const NOTE_TONES: Record<TripNote["tone"], string> = {
+  red: "text-[#b3261e]",
+  blue: "text-navy",
+};
+
+export function TripNumber({
+  value,
+  small = false,
+}: {
+  value: number;
+  small?: boolean;
+}) {
+  return (
+    <span
+      className={`grid shrink-0 place-items-center rounded-full bg-brand font-bold text-white ${
+        small ? "size-[22px] text-[0.72rem]" : "size-6 text-[0.78rem]"
+      }`}
+    >
+      {value}
+    </span>
+  );
+}
+
+/**
+ * "Your trips": the trips by start, numbered as they are booked and
+ * priced, each with its price and what the page needs to say about it. A
+ * trip that starts with another or during a hire says so in place of its
+ * route. With `onPick` a trip opens in the form; without, the list only
+ * shows them, as on the confirm page.
+ */
+export function TripTimeline({
+  trips,
+  open = null,
+  onPick,
+  priceOf,
+  noteOf,
+  action,
+  className = "mb-5",
+}: {
+  trips: readonly PlannedTrip[];
+  /** The trip open in the form. */
+  open?: string | null;
+  onPick?: (id: string) => void;
+  priceOf?: (trip: PlannedTrip) => ReactNode;
+  noteOf?: (trip: PlannedTrip) => TripNote | null;
+  /** Beside the list's title, such as a link to change the trips. */
+  action?: ReactNode;
+  className?: string;
+}) {
+  const sorted = byStart(trips);
+  const clashes = clashesOf(sorted);
+
+  return (
+    <div
+      className={`@container rounded-2xl bg-mist p-2.5 sm:p-3.5 ${className}`}
+    >
+      <div className="mx-1 mb-2 flex flex-wrap items-baseline gap-x-2.5 text-[0.92rem]">
+        <b className="text-ink">Your trips</b>
+        {onPick ? (
+          <span className="text-slate-500">Choose one to change it</span>
+        ) : null}
+        {action ? <span className="ml-auto">{action}</span> : null}
+      </div>
+      <ol className="grid gap-1.5">
+        {sorted.map((trip, index) => {
+          const isOpen = trip.id === open;
+          const clash = clashes.get(trip.id);
+          const problem = !isOpen && clash ? clashLabel(clash.kind) : null;
+          const note = isOpen ? null : (noteOf?.(trip) ?? null);
+          const red = problem !== null || note?.tone === "red";
+          const look = `flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-[0.88rem] leading-snug ${
+            isOpen
+              ? "border-brand bg-brand-tint"
+              : red
+                ? "border-[#b3261e] bg-white"
+                : "border-slate-200 bg-white"
+          }`;
+          const body = (
+            <>
+              <TripNumber value={index + 1} small />
+              <span className="grid min-w-0 flex-1 gap-x-4 @xl:grid-cols-[170px_minmax(0,1fr)] @xl:items-center">
+                <b className="text-ink">{whenOf(trip)}</b>
+                <span
+                  className={`min-w-0 @xl:truncate ${
+                    problem ? "text-[#b3261e]" : "text-slate-600"
+                  }`}
+                >
+                  {problem ?? routeOf(trip)}
+                </span>
+                {note ? (
+                  <span
+                    className={`col-span-full mt-1 text-[0.85rem] ${NOTE_TONES[note.tone]}`}
+                  >
+                    {note.text}
+                  </span>
+                ) : null}
+              </span>
+              {priceOf ? (
+                <span className="shrink-0 font-semibold text-ink">
+                  {priceOf(trip)}
+                </span>
+              ) : null}
+            </>
+          );
+          return (
+            <li key={trip.id}>
+              {onPick ? (
+                <button
+                  type="button"
+                  onClick={() => onPick(trip.id)}
+                  aria-current={isOpen ? "true" : undefined}
+                  className={`${look} ${isOpen || red ? "" : "hover:border-brand/50"} ${focus}`}
+                >
+                  {body}
+                  {isOpen ? null : (
+                    <PencilIcon className="size-3.5 shrink-0 text-slate-400" />
+                  )}
+                </button>
+              ) : (
+                <div className={look}>{body}</div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}

@@ -10,7 +10,7 @@ import {
 import {
   EMPTY_SEARCH,
   PRODUCTS,
-  isPlaceKey,
+  withValue,
   type FieldKey,
   type ProductKey,
   type SearchValues,
@@ -36,16 +36,7 @@ function useSearchValues(preset: Partial<SearchValues> = {}) {
    * its id; typing into the field afterwards drops the id again.
    */
   const set = (key: FieldKey, value: string, placeId?: string) =>
-    setValues((v) => {
-      const next = { ...v, [key]: value };
-      if (isPlaceKey(key)) {
-        next.placeIds = { ...v.placeIds, [key]: placeId };
-      }
-      // An end date can never come before the start date.
-      if (next.date && next.endDate && next.endDate < next.date)
-        next.endDate = "";
-      return next;
-    });
+    setValues((v) => withValue(v, key, value, placeId));
   return { values, set };
 }
 

@@ -1,20 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  isTripMode,
-  type BBox,
-  type TripCategory,
-  type TripMode,
-} from "@repo/db";
+import type { BBox, TripCategory } from "@repo/db";
 import { Radio } from "@repo/ui/field";
-import {
-  ArrowRightIcon,
-  ClockIcon,
-  PlusIcon,
-  TrashIcon,
-  XIcon,
-} from "@repo/ui/icons";
+import { PlusIcon, TrashIcon, XIcon } from "@repo/ui/icons";
 import type { PlacePresets } from "@repo/ui/place-input";
 import { focus, secondaryButton } from "../../(site)/_components/Page";
 import {
@@ -25,21 +14,21 @@ import {
   type FieldKey,
   type SearchValues,
 } from "../../_lib/search";
-import { FieldIcon, FieldInput } from "../search/fields";
+import {
+  fieldBox,
+  fieldControl,
+  FieldIcon,
+  FieldInput,
+  fieldLabel,
+} from "../search/fields";
 import { TripNumber } from "./TripTimeline";
 import type { Planner } from "./usePlanner";
 
-const MODE_ICONS: Record<TripMode, typeof ClockIcon> = {
-  oneway: ArrowRightIcon,
-  hourly: ClockIcon,
-};
+/** Save: the full width of a narrow form, beside Cancel in a wide one. */
+const saveButton = `${secondaryButton} w-full @3xl:w-auto`;
 
-const input = (clearable: boolean) =>
-  `h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80 ${
-    clearable ? "pr-11" : "pr-[18px]"
-  }`;
-
-const textButton = `inline-flex min-h-[48px] items-center gap-1.5 px-1 text-[0.95rem] font-semibold hover:underline ${focus}`;
+/** Cancel and Remove: side by side under Save in a narrow form, after it in a wide one. */
+const textButton = `inline-flex min-h-[48px] flex-1 items-center justify-center gap-1.5 px-1 text-[0.95rem] font-semibold hover:underline @3xl:flex-none ${focus}`;
 
 /** Whether a field shows its ×: a place or a day with something in it. */
 function isClearable(def: FieldDef, values: SearchValues) {
@@ -47,17 +36,33 @@ function isClearable(def: FieldDef, values: SearchValues) {
   return fieldKeys(def).some((key) => values[key] !== "");
 }
 
+/** "Add another trip": opens a new trip in the form. */
+export function AddAnotherTrip({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`mx-1 inline-flex min-h-[44px] items-center gap-1.5 text-[0.95rem] font-semibold text-brand hover:underline ${focus}`}
+    >
+      <PlusIcon className="size-4" />
+      Add another trip
+    </button>
+  );
+}
+
 /**
- * The trip form: the kind of trip as two radios in the row's first box,
- * then the places, the hours of a hire and when, in one row of boxes
- * joined up when there is room, as the home page card asks a trip. A new
- * trip is added to the list with "Add trip", and the form empties for the
- * next; a trip of the list is saved, or removed. What is wrong shows at
- * the field and under the row: a field to fill, or a trip that starts
- * during another, naming it and what to do. `children` follow the form's
- * own buttons, such as the search card's passengers and send button.
- * Each label leads with its field's icon, and a filled place or day has
- * an × at its end that empties it.
+ * The trip form: "Trip 2" over it once there are trips, then the kind of
+ * trip as two radios side by side, the places, the hours of a hire and
+ * when, each in a box with its label over the top, joined up in one row
+ * when there is room, as the home page card asks a trip. A new trip is
+ * kept with "Save trip", a trip of the list saved or removed; with no
+ * trips yet the form is the first trip, and "Add another trip" keeps it
+ * and opens the next. What is wrong shows at the field and under the
+ * row: a field to fill, or a trip that starts during another, naming it
+ * and what to do. `children` follow the form's buttons, such as the
+ * group's size and the send button. The kind of trip's label leads with
+ * the arrow or, for a hire, the clock; each other label with its field's
+ * icon, and a filled place or day has an × at its end that empties it.
  */
 export function TripForm({
   planner,
@@ -72,10 +77,10 @@ export function TripForm({
   presetsOf?: (key: FieldKey) => PlacePresets | undefined;
   /** The box whose places the place fields suggest first. */
   near?: BBox;
+  /** After the form's buttons, such as the group's size and the send button. */
   children?: ReactNode;
 }) {
-  const { scope, form, editing, issues, clashNotes, keepOpen, numberOf } =
-    planner;
+  const { scope, form, editing, issues, clashNotes, numberOf } = planner;
   if (!form) return null;
   const { values } = form;
   const all = visibleFields(PRODUCTS[category], values);
@@ -96,15 +101,13 @@ export function TripForm({
     <div className="@container">
       {planner.trips.length > 0 ? (
         <div className="mx-1 mb-3 flex items-center gap-2.5">
-          {editing ? (
-            <TripNumber value={numberOf(editing)} />
-          ) : (
-            <span className="grid size-6 place-items-center rounded-full bg-brand-tint text-brand">
-              <PlusIcon className="size-4" />
-            </span>
-          )}
+          <TripNumber
+            value={editing ? numberOf(editing) : planner.trips.length + 1}
+          />
           <p className="font-bold text-ink">
-            {editing ? `Change trip ${numberOf(editing)}` : "Add a trip"}
+            {editing
+              ? `Change trip ${numberOf(editing)}`
+              : `Trip ${planner.trips.length + 1}`}
           </p>
         </div>
       ) : null}
@@ -114,14 +117,24 @@ export function TripForm({
         className="grid gap-2.5 @lg:grid-cols-2 @3xl:flex @3xl:gap-0"
       >
         {kind ? (
-          <fieldset className="flex min-h-[70px] min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 @3xl:w-[150px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-[14px]">
-            <legend className="sr-only">{kind.label}</legend>
-            {kind.options?.map(({ value, label }) => {
-              const Icon = isTripMode(value) ? MODE_ICONS[value] : ClockIcon;
-              return (
+          <div
+            role="radiogroup"
+            aria-labelledby={id(kind.key)}
+            className={`${fieldBox} border-slate-200 @3xl:w-[240px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-[14px]`}
+          >
+            <span id={id(kind.key)} className={fieldLabel}>
+              <FieldIcon
+                def={kind}
+                values={values}
+                className="size-[15px] text-slate-500"
+              />
+              {kind.label}
+            </span>
+            <div className="flex min-h-[70px] items-end gap-x-6 px-[18px] pt-[34px] pb-2.5">
+              {kind.options?.map(({ value, label }) => (
                 <label
                   key={value}
-                  className="flex cursor-pointer items-center gap-2 text-[0.9rem]/5 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
+                  className="flex cursor-pointer items-center gap-2 text-[1rem]/6 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
                 >
                   <Radio
                     name={id(kind.key)}
@@ -129,12 +142,11 @@ export function TripForm({
                     checked={values.mode === value}
                     onChange={() => planner.set(kind.key, value)}
                   />
-                  <Icon className="size-4 shrink-0" />
                   {label}
                 </label>
-              );
-            })}
-          </fieldset>
+              ))}
+            </div>
+          </div>
         ) : null}
         {fields.map((f, i) => {
           const keys = fieldKeys(f);
@@ -149,7 +161,7 @@ export function TripForm({
           return (
             <div
               key={f.key}
-              className={`relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand @3xl:-ml-px @3xl:rounded-none ${
+              className={`${fieldBox} @3xl:-ml-px @3xl:rounded-none ${
                 invalid ? "z-[1] border-[#b3261e]" : "border-slate-200"
               } ${last ? "@3xl:rounded-r-[14px]" : ""} ${
                 f.kind === "place"
@@ -159,10 +171,7 @@ export function TripForm({
                     : "@3xl:flex-1"
               }`}
             >
-              <label
-                htmlFor={id(f.key)}
-                className="pointer-events-none absolute top-2.5 left-[18px] z-[1] flex items-center gap-1.5 text-[0.82rem]/5 font-semibold text-slate-800"
-              >
+              <label htmlFor={id(f.key)} className={fieldLabel}>
                 <FieldIcon def={f} className="size-[15px] text-slate-500" />
                 {f.label}
               </label>
@@ -173,7 +182,7 @@ export function TripForm({
                 presets={presetsOf?.(f.key)}
                 near={near}
                 onChange={planner.set}
-                className={input(clearable)}
+                className={fieldControl(clearable)}
               />
               {clearable && (
                 <button
@@ -195,13 +204,13 @@ export function TripForm({
         </p>
       ) : null}
 
-      <div className="mx-1 mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         {editing ? (
           <>
             <button
               type="button"
               onClick={planner.commit}
-              className={secondaryButton}
+              className={saveButton}
             >
               Save changes
             </button>
@@ -221,26 +230,30 @@ export function TripForm({
               Remove trip
             </button>
           </>
-        ) : (
+        ) : planner.trips.length > 0 ? (
           <>
             <button
               type="button"
               onClick={planner.commit}
-              className={`${secondaryButton} gap-2`}
+              className={saveButton}
             >
-              <PlusIcon className="size-4" />
-              Add trip
+              Save trip
             </button>
-            {keepOpen ? null : (
-              <button
-                type="button"
-                onClick={planner.close}
-                className={`${textButton} text-slate-600`}
-              >
-                Cancel
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={planner.close}
+              className={`${textButton} text-slate-600`}
+            >
+              Cancel
+            </button>
           </>
+        ) : (
+          // The first trip: kept, and the next opened.
+          <AddAnotherTrip
+            onClick={() => {
+              if (planner.commit()) planner.openNew();
+            }}
+          />
         )}
         {children}
       </div>

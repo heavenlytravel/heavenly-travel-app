@@ -22,6 +22,7 @@ import {
   type PlannerChange,
 } from "../../../../_components/trips/usePlanner";
 import {
+  clashesOf,
   classOnTrip,
   planPrices,
   quoteOf,
@@ -39,6 +40,7 @@ import {
   tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
 import {
+  surface,
   PageTitle,
   panel,
   Pending,
@@ -59,10 +61,12 @@ export type VehicleSeed = { search: TripSearch; passengers: number | null };
 
 /**
  * The vehicle step: every class of the category priced for all the trips
- * at once. "Your trips" sits at the top, each trip priced in the vehicle
- * chosen before, if any, and changed or added in place as on the search
- * card, priced again with a toast; removing one offers Undo. A thin bar
- * keeps the trips in view once the list scrolls away. One vehicle does
+ * at once. "Your trips" sits at the top with the group's size, each trip
+ * priced in the vehicle chosen before, if any, and changed or added in
+ * place as on the search card, priced again with a toast; removing one
+ * offers Undo. On a phone they are folded into one line, so the vehicles
+ * come first, which pins under the header as the page scrolls; on a
+ * large screen a thin bar keeps them in view once the list scrolls away. One vehicle does
  * every trip, so it is chosen once, from cards like a location's class
  * cards, each with its own Continue and the total for all the trips; it
  * goes straight to the confirm page. A class too small for the group, or
@@ -104,7 +108,7 @@ export function VehicleStep({
   );
   const planner = usePlanner({
     trips: plan?.trips ?? [],
-    keepOpen: false,
+    openWhenEmpty: false,
     onTrips: (next: PlannedTrip[], change: PlannerChange) => {
       const before = currentPlan().trips;
       updatePlan((now) => ({ ...now, trips: next }));
@@ -170,11 +174,7 @@ export function VehicleStep({
   const pictured = shown.some((c) => c.card.imageUrl !== null);
 
   function choose(id: string) {
-    updatePlan((now) => ({
-      ...now,
-      classId: id,
-      modelId: now.classId === id ? now.modelId : null,
-    }));
+    updatePlan((now) => ({ ...now, classId: id }));
     router.push(tripConfirmPath(category));
   }
 
@@ -203,10 +203,23 @@ export function VehicleStep({
       <TripsPanel
         planner={planner}
         category={category}
-        summary={
-          chosen?.fit.ok
-            ? `${chosen.card.name} · ${formatMyr(chosen.fit.totalSen)}`
-            : null
+        foldOnSmall
+        attention={failed.length > 0 || clashesOf(trips).size > 0}
+        className={`${surface} mb-8 scroll-mt-28 lg:p-7`}
+        summary={[
+          passengers === 1 ? "1 passenger" : `${passengers} passengers`,
+          ...(chosen?.fit.ok
+            ? [`${chosen.card.name} · ${formatMyr(chosen.fit.totalSen)}`]
+            : []),
+        ].join(" · ")}
+        passengers={
+          <PassengersStepper
+            value={passengers}
+            onChange={(next) =>
+              updatePlan((now) => ({ ...now, passengers: next }))
+            }
+            className="w-full @3xl:w-[250px]"
+          />
         }
         priceOf={(trip) => {
           const quote = quoteOf(priced, trip);
@@ -224,22 +237,14 @@ export function VehicleStep({
       />
 
       <section aria-labelledby="vehicles">
-        <div className="mx-1 mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <h2
-            id="vehicles"
-            className="font-(family-name:--font-display) text-[1.7rem] leading-tight text-ink"
-          >
-            {several
-              ? "Choose one vehicle for every trip"
-              : "Choose your vehicle"}
-          </h2>
-          <PassengersStepper
-            value={passengers}
-            onChange={(next) =>
-              updatePlan((now) => ({ ...now, passengers: next }))
-            }
-          />
-        </div>
+        <h2
+          id="vehicles"
+          className="mx-1 mb-4 font-(family-name:--font-display) text-[1.7rem] leading-tight text-ink"
+        >
+          {several
+            ? "Choose one vehicle for every trip"
+            : "Choose your vehicle"}
+        </h2>
 
         {error ? (
           <div role="alert" className={alertBox}>
@@ -373,7 +378,6 @@ function switchCategory(category: TripCategory) {
     ...now,
     category,
     classId: null,
-    modelId: null,
     priced: null,
   }));
 }

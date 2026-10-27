@@ -9,21 +9,25 @@ const MAX_PASSENGERS = 99;
 
 /**
  * The group's size, asked once for the booking: the one vehicle must seat
- * them all, so it is the most travelling on any trip. A minus and a plus
- * beside the number; an emptied field counts as one.
+ * them all, so it is the most travelling on any trip. One line the height
+ * of the buttons beside it, the label on the left and a minus and a plus
+ * either side of the number on the right; an emptied field counts as one.
  */
 export function PassengersStepper({
   value,
   onChange,
+  className = "",
 }: {
   value: number;
   onChange: (passengers: number) => void;
+  /** The box's width where it sits. */
+  className?: string;
 }) {
   const id = useId();
   return (
     <label
       htmlFor={id}
-      className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white py-1.5 pr-1.5 pl-4 text-[0.92rem] font-semibold text-slate-800"
+      className={`flex min-h-[56px] items-center gap-3 rounded-[14px] border border-slate-200 bg-white py-1.5 pr-2.5 pl-4 text-[0.95rem] font-semibold text-slate-800 focus-within:border-brand ${className}`}
     >
       <UsersIcon className="size-[18px] shrink-0 text-slate-500" />
       Passengers
@@ -38,7 +42,7 @@ export function PassengersStepper({
             Math.min(MAX_PASSENGERS, Math.max(1, Number(e.target.value) || 1)),
           )
         }
-        className="w-[120px] text-[1rem] text-ink"
+        className="ml-auto w-[120px] text-[1rem] text-ink"
       />
     </label>
   );

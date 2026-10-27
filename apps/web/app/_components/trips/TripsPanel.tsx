@@ -1,26 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { TripCategory } from "@repo/db";
-import { ChevronDownIcon, MapIcon, PlusIcon } from "@repo/ui/icons";
-import { focus, panel } from "../../(site)/_components/Page";
-import { spanOf, type PlannedTrip } from "../../_lib/trip-plan";
-import { TripForm } from "./TripForm";
+import type { ReactNode } from "react";
+import type { BBox, TripCategory } from "@repo/db";
+import type { PlacePresets } from "@repo/ui/place-input";
+import type { FieldKey } from "../../_lib/search";
+import type { PlannedTrip } from "../../_lib/trip-plan";
+import { AddAnotherTrip, TripForm } from "./TripForm";
+import {
+  scrollBehavior,
+  TripsBar,
+  TripsFold,
+  UnderHeader,
+  underHeaderFrame,
+  useLarge,
+  useTripsSheet,
+} from "./TripsBar";
 import { TripTimeline, type TripNote } from "./TripTimeline";
 import type { Planner } from "./usePlanner";
 
-/** The site header's height, which the bar slides in under: 68px, 76px from `sm`, plus its border. */
-const HEADER = "top-[69px] sm:top-[77px]";
-const HEADER_PX = 77;
-
 /**
- * The booking's trips at the top of the vehicle page: the list, and the
- * form when a trip is open or "Add a trip" to open one. Once the list
+ * The booking's trips, on the search card and at the top of the vehicle
+ * page: the list, then the form while a trip is open, then one row with
+ * the form's buttons, or "Add another trip" while it is closed, on the
+ * left, and `passengers` and `action` (the search card's send button) on
+ * the right; on a phone they stack, a line between the trip and the
+ * booking. With no trips yet, as on a fresh search card, it is the form
+ * alone. `foldOnSmall` folds it into one line on a phone, as on the
+ * vehicle page, which pins under the site header as the page scrolls;
+ * `attention` unfolds it when a trip turns red. Otherwise, once the list
  * scrolls away, a thin bar slides in under the site header with the trips
- * in a few words and `summary`; choosing it opens the list in a sheet
- * below it, with a short animation, where a trip is changed or added
- * without scrolling back up. Only the list scrolls inside the sheet, and
- * the form's place suggestions hang below it.
+ * in a few words and `summary`, or "Plan a trip" before there is one;
+ * choosing it opens them in a sheet below it, which folds again once the
+ * page scrolls. From `lg` the sheet holds the form too, so a trip is
+ * changed or added without scrolling back up, only the list scrolling
+ * inside it and the place suggestions hanging below; on a phone it holds
+ * the list and the foot, and choosing a trip or "Add another trip", or
+ * the bar itself before there is a trip, goes back up to the form in the
+ * page. `className` draws the frame.
  */
 export function TripsPanel({
   planner,
@@ -28,148 +44,150 @@ export function TripsPanel({
   priceOf,
   noteOf,
   summary,
+  passengers,
+  action,
+  foldOnSmall = false,
+  attention = false,
+  presetsOf,
+  near,
+  className,
 }: {
   planner: Planner;
   category: TripCategory;
   priceOf?: (trip: PlannedTrip) => ReactNode;
   noteOf?: (trip: PlannedTrip) => TripNote | null;
-  /** The bar's last words, such as the vehicle and the total. */
+  /** The bar's last words, such as the group, the vehicle and the total. */
   summary?: ReactNode;
+  /** The group's size, at the foot. */
+  passengers: ReactNode;
+  /** After it, such as the search card's send button. */
+  action?: ReactNode;
+  foldOnSmall?: boolean;
+  /** A trip is marked in red: unfold. */
+  attention?: boolean;
+  /** What a place field offers when it is opened empty. */
+  presetsOf?: (key: FieldKey) => PlacePresets | undefined;
+  /** The box whose places the place fields suggest first. */
+  near?: BBox;
+  className: string;
 }) {
-  const ref = useRef<HTMLElement>(null);
-  const [away, setAway] = useState(false);
-  const [sheet, setSheet] = useState(false);
-  // Clipped while it opens and closes; free once open, so a place's
-  // suggestions can hang below it.
-  const [settled, setSettled] = useState(false);
+  const { watch, element, away, open, setOpen } = useTripsSheet();
+  const large = useLarge();
   const { trips } = planner;
+  const any = trips.length > 0;
+  // The form is in one place at a time: from lg, the sheet while it is open.
+  const formInSheet = open && large;
 
-  function showSheet(open: boolean) {
-    setSheet(open);
-    setSettled(
-      open && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
+  /** On a phone: back up to the trips in the page, and `then` there. */
+  function backToPage(then: () => void) {
+    setOpen(false);
+    then();
+    element?.scrollIntoView({ block: "start", behavior: scrollBehavior() });
   }
 
-  useEffect(() => {
-    const section = ref.current;
-    if (!section) return;
-    // Away once its foot has gone under the site header.
-    const watch = new IntersectionObserver(
-      ([entry]) => {
-        const gone =
-          !entry!.isIntersecting && entry!.boundingClientRect.top < 0;
-        setAway(gone);
-        if (!gone) {
-          setSheet(false);
-          setSettled(false);
-        }
-      },
-      { rootMargin: `-${HEADER_PX}px 0px 0px 0px` },
-    );
-    watch.observe(section);
-    return () => watch.disconnect();
-  }, []);
-
-  const list = (
-    <TripTimeline
-      trips={trips}
-      open={planner.editing}
-      onPick={planner.open}
-      priceOf={priceOf}
-      noteOf={noteOf}
-      className={planner.form ? "mb-5" : "mb-3"}
-    />
+  const list = (onPick: (id: string) => void) =>
+    any ? (
+      <TripTimeline
+        trips={trips}
+        open={planner.editing}
+        onPick={onPick}
+        priceOf={priceOf}
+        noteOf={noteOf}
+        className={planner.form ? "mb-5" : "mb-3"}
+      />
+    ) : null;
+  // Right of the trip's buttons in one row; on a phone, under a line.
+  const foot = (
+    <>
+      <span className="hidden flex-1 @3xl:block" />
+      <span
+        aria-hidden
+        className="my-1 w-full border-t border-slate-100 @3xl:hidden"
+      />
+      {passengers}
+      {action}
+    </>
   );
-  // The form is in one place at a time: the sheet while it is open.
-  const form = planner.form ? (
-    <TripForm planner={planner} category={category} />
-  ) : (
-    <button
-      type="button"
-      onClick={() => planner.openNew()}
-      className={`mx-1 inline-flex items-center gap-1.5 text-[0.95rem] font-semibold text-brand hover:underline ${focus}`}
+  const closed = (onAdd: () => void) => (
+    <div className="flex flex-wrap items-center gap-3">
+      <AddAnotherTrip onClick={onAdd} />
+      {foot}
+    </div>
+  );
+  const rest = planner.form ? (
+    <TripForm
+      planner={planner}
+      category={category}
+      presetsOf={presetsOf}
+      near={near}
     >
-      <PlusIcon className="size-4" />
-      Add a trip
-    </button>
+      {foot}
+    </TripForm>
+  ) : (
+    closed(() => planner.openNew())
+  );
+  const body = (
+    <div className="@container">
+      {list(planner.open)}
+      {formInSheet ? null : rest}
+    </div>
   );
 
   return (
     <>
-      <section
-        ref={ref}
-        aria-label="Your trips"
-        className={`${panel} mb-8 scroll-mt-28`}
-      >
-        {list}
-        {sheet ? null : form}
-      </section>
+      {foldOnSmall && any ? (
+        <TripsFold
+          trips={trips}
+          summary={summary}
+          attention={attention}
+          watch={watch}
+          className={className}
+        >
+          {body}
+        </TripsFold>
+      ) : (
+        <section
+          ref={watch}
+          aria-label={any ? "Your trips" : undefined}
+          className={className}
+        >
+          {body}
+        </section>
+      )}
 
-      <div
-        inert={!away}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") showSheet(false);
-        }}
-        className={`fixed inset-x-0 ${HEADER} z-20 transition duration-300 ease-out motion-reduce:transition-none ${
-          away
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-3 opacity-0"
-        }`}
+      <UnderHeader
+        shown={away}
+        className={foldOnSmall ? "hidden lg:block" : ""}
       >
-        <div className="mx-auto w-full max-w-[1100px] px-5 sm:px-8">
-          <div className="rounded-b-[18px] border border-t-0 border-slate-200 bg-white shadow-[0_18px_40px_rgba(0,38,75,0.14)]">
-            <button
-              type="button"
-              onClick={() => showSheet(!sheet)}
-              aria-expanded={sheet}
-              className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-[0.92rem] sm:px-5 ${focus}`}
-            >
-              <MapIcon className="size-[18px] shrink-0 text-brand" />
-              <b className="shrink-0 text-ink">
-                {trips.length === 1 ? "1 trip" : `${trips.length} trips`}
-              </b>
-              <span className="min-w-0 truncate text-slate-600">
-                {spanOf(trips)}
-              </span>
-              <span className="ml-auto flex shrink-0 items-center gap-3">
-                {summary ? (
-                  <span className="hidden font-semibold text-ink sm:inline">
-                    {summary}
-                  </span>
-                ) : null}
-                <span className="flex items-center gap-1 font-semibold text-brand">
-                  {sheet ? "Hide" : "Show"}
-                  <ChevronDownIcon
-                    className={`size-4 transition-transform duration-300 ${
-                      sheet ? "rotate-180" : ""
-                    }`}
-                  />
-                </span>
-              </span>
-            </button>
-            <div
-              onTransitionEnd={(e) => {
-                if (e.target === e.currentTarget && sheet) setSettled(true);
-              }}
-              className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
-                sheet ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              <div
-                inert={!sheet}
-                className={`min-h-0 ${settled ? "overflow-visible" : "overflow-hidden"}`}
-              >
-                <div className="border-t border-slate-100 px-3 pt-3 pb-4 sm:px-4">
-                  {/* Only the list scrolls, so the form below it stays in view. */}
-                  <div className="max-h-[40dvh] overflow-y-auto">{list}</div>
-                  {sheet ? form : null}
-                </div>
+        <TripsBar
+          trips={trips}
+          summary={summary}
+          open={open}
+          onOpenChange={(next) => {
+            // No trip yet on a phone: the form is up in the page.
+            if (next && !any && !large) backToPage(() => {});
+            else setOpen(next);
+          }}
+          className={underHeaderFrame}
+        >
+          {large ? (
+            <>
+              {/* Only the list scrolls, so the form below it stays in view. */}
+              <div className="max-h-[40dvh] overflow-y-auto">
+                {list(planner.open)}
               </div>
+              {formInSheet ? <div className="@container">{rest}</div> : null}
+            </>
+          ) : (
+            <div className="@container">
+              <div className="max-h-[40dvh] overflow-y-auto">
+                {list((id) => backToPage(() => planner.open(id)))}
+              </div>
+              {closed(() => backToPage(() => planner.openNew()))}
             </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </TripsBar>
+      </UnderHeader>
     </>
   );
 }

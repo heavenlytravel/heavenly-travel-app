@@ -77,13 +77,14 @@ const dropOff: FieldDef = {
 /**
  * What a trip asks, on the search card and in the vehicle page's trip
  * planner alike: its kind first, as two radios. The group's size is asked
- * once for all the trips, beside the card's button and on the vehicle page.
+ * once for all the trips, beside the send button and with the vehicle
+ * page's trips.
  */
 const TRIP_FIELDS: FieldDef[] = [
   {
     key: "mode",
     kind: "choice",
-    label: "Type of trip",
+    label: "Trip",
     options: TRIP_MODES.map((mode) => ({
       value: mode,
       label: TRIP_MODE_LABELS[mode],

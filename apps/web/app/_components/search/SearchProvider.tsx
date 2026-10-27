@@ -80,7 +80,11 @@ export function SearchProvider({
   const [key, setProduct] = useState<ProductKey>(product ?? "car-with-driver");
   const [trips, setTrips] = useState<PlannedTrip[]>([]);
   const [passengers, setPassengers] = useState(1);
-  const planner = usePlanner({ trips, onTrips: setTrips, keepOpen: true });
+  const planner = usePlanner({
+    trips,
+    onTrips: setTrips,
+    openWhenEmpty: true,
+  });
   // A product page opens the card on its tab. A page with no product of its
   // own leaves the tab where the customer put it.
   const [opened, setOpened] = useState(product);

@@ -9,8 +9,7 @@ import { useNavigate } from "../../_lib/useNavigate";
 import { Pending } from "../../(site)/_components/Page";
 import { ProductIcon } from "../Brand";
 import { PassengersStepper } from "../trips/PassengersStepper";
-import { TripForm } from "../trips/TripForm";
-import { TripTimeline } from "../trips/TripTimeline";
+import { TripsPanel } from "../trips/TripsPanel";
 import { useNewBooking } from "../trips/useNewBooking";
 import { useSearchCard } from "./SearchProvider";
 
@@ -28,18 +27,19 @@ const TABS: Product[] = [
 ];
 
 /**
- * Six services as a row of icon tabs, then the trip planner: the kind of
- * trip as two radios, the places, the hours of a hire and when, in one
- * joined row. Car with driver and coach charter can be sent; the other
- * tabs are disabled until their flows exist. One trip is typed and priced
- * as before; "Add trip" puts it in "Your trips" above, by date, and
- * empties the row for the next, and choosing a trip of the list opens it
- * in the row to change. The group's size is asked once, beside the
- * button, for the one vehicle that does every trip. "Get prices" sends
- * the list with the trip in the row, when one is typed, to the vehicle
- * page of the category, asking first when it would replace trips the
- * customer already has; the button says so while that page opens. Its
- * state is the `SearchProvider`'s above it, which is how a card elsewhere
+ * Six services as a row of icon tabs, then the trip planner, as on the
+ * vehicle page: the kind of trip as two radios, the places, the hours of
+ * a hire and when, in one joined row. Car with driver and coach charter
+ * can be sent; the other tabs are disabled until their flows exist. One
+ * trip is typed and priced as before; "Add another trip" puts it in
+ * "Your trips", by date, which stays open, and opens the next; choosing a
+ * trip of the list opens it in the row to change. Once the card scrolls
+ * away the trips follow the page in a bar under the header. The group's
+ * size is asked once, beside the send button, for the one vehicle that
+ * does every trip. "Get prices" sends the list with the trip in the row,
+ * when one is typed, to the vehicle page of the category, asking first
+ * when it would replace trips the customer already has; the button says
+ * so while that page opens. Its state is the `SearchProvider`'s above it, which is how a card elsewhere
  * on the page fills a place in. On a location's pages the place fields
  * suggest the location's area first, and any trip is sent as from the
  * home page: the vehicle page says which location prices it, or why none
@@ -128,26 +128,26 @@ export function ServiceTabsSearch() {
         className="px-3.5 py-[18px] sm:p-6"
       >
         {category ? (
-          <>
-            {planner.trips.length > 0 ? (
-              <TripTimeline
-                trips={planner.trips}
-                open={planner.editing}
-                onPick={planner.open}
+          <TripsPanel
+            planner={planner}
+            category={category}
+            presetsOf={presetsOf}
+            near={near}
+            summary={
+              passengers === 1 ? "1 passenger" : `${passengers} passengers`
+            }
+            passengers={
+              <PassengersStepper
+                value={passengers}
+                onChange={setPassengers}
+                className="w-full @3xl:w-[250px]"
               />
-            ) : null}
-            <TripForm
-              planner={planner}
-              category={category}
-              presetsOf={presetsOf}
-              near={near}
-            >
-              <span className="hidden flex-1 lg:block" />
-              <PassengersStepper value={passengers} onChange={setPassengers} />
+            }
+            action={
               <button
                 type="submit"
                 disabled={pending}
-                className={`flex min-h-[56px] w-full items-center justify-center rounded-[14px] bg-brand px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:min-w-[230px] ${focus}`}
+                className={`flex min-h-[56px] w-full items-center justify-center rounded-[14px] bg-brand px-5 text-[1.02rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70 @3xl:w-auto @3xl:min-w-[230px] ${focus}`}
               >
                 {pending ? (
                   <Pending>Finding prices…</Pending>
@@ -160,8 +160,9 @@ export function ServiceTabsSearch() {
                   </>
                 )}
               </button>
-            </TripForm>
-          </>
+            }
+            className="scroll-mt-28"
+          />
         ) : null}
       </form>
       {newBooking.dialog}

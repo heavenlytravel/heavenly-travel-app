@@ -32,9 +32,16 @@ export const textLink = `font-semibold text-brand underline-offset-4 hover:under
 
 export const control = `w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-ink outline-none placeholder:text-slate-500/80 focus:border-brand aria-invalid:border-[#b3261e] data-placeholder:text-slate-500/80 ${focus}`;
 
+/** The white card with the home page's shadow, its padding left to the caller. */
+export const surface =
+  "rounded-[18px] bg-white shadow-[0_12px_35px_rgba(0,38,75,0.08)]";
+
 /** The white card with the home page's shadow, as a class for links and lists. */
-export const panel =
-  "rounded-[18px] bg-white p-5 shadow-[0_12px_35px_rgba(0,38,75,0.08)] sm:p-7";
+export const panel = `${surface} p-5 sm:p-7`;
+
+/** A `panel` from `lg` only: below it the content sits bare, in a card of the caller's. */
+export const panelFromLarge =
+  "lg:rounded-[18px] lg:bg-white lg:p-7 lg:shadow-[0_12px_35px_rgba(0,38,75,0.08)]";
 
 export function PageTitle({
   eyebrow: above,

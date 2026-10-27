@@ -50,22 +50,24 @@ const tooMany: TripSearchIssue = {
  * share it, so a trip is typed and changed the same way in both. "Add trip"
  * puts the form's trip in the list when it is complete and starts on time;
  * choosing a trip of the list opens it in the form, and a new trip half
- * typed waits until the change is done. `keepOpen` keeps the form open for
- * the next trip, as on the search card; the vehicle page closes it. The
- * list itself is the caller's, changed through `onTrips`.
+ * typed waits until the change is done. Once a trip is added or saved the
+ * form closes and "Add a trip" opens it again; `openWhenEmpty` keeps a
+ * blank form open while the list is empty, as on the search card, where
+ * the first trip is typed straight away. The list itself is the caller's,
+ * changed through `onTrips`.
  */
 export function usePlanner({
   trips,
   onTrips,
-  keepOpen,
+  openWhenEmpty,
 }: {
   trips: readonly PlannedTrip[];
   onTrips: (next: PlannedTrip[], change: PlannerChange) => void;
-  keepOpen: boolean;
+  openWhenEmpty: boolean;
 }) {
   const scope = useId();
   const [form, setForm] = useState<Form | null>(() =>
-    keepOpen ? blankForm() : null,
+    openWhenEmpty && trips.length === 0 ? blankForm() : null,
   );
   // A new trip being typed waits here while a trip of the list is changed.
   const [aside, setAside] = useState<SearchValues | null>(null);
@@ -138,16 +140,21 @@ export function usePlanner({
     setForm({ values: draftOf(trip), editing: id, key: newTripId() });
   }
 
-  function close() {
+  /** Closes the form, back to a new trip half typed if one waits, or a blank one when `remaining` trips are none. */
+  function settle(remaining: number) {
     setIssues([]);
     setForm(
       aside
         ? { values: aside, editing: null, key: newTripId() }
-        : keepOpen
+        : openWhenEmpty && remaining === 0
           ? blankForm()
           : null,
     );
     setAside(null);
+  }
+
+  function close() {
+    settle(sorted.length);
   }
 
   /** Adds the new trip, or saves the changed one, when it is complete: the list with it, or null. */
@@ -165,14 +172,14 @@ export function usePlanner({
     if (clashNotes.length > 0) return null;
     const next = byStart([...others, result.trip]);
     onTrips(next, form.editing ? "changed" : "added");
-    close();
+    settle(next.length);
     return next;
   }
 
   function remove() {
     if (!editing) return;
     onTrips(others, "removed");
-    close();
+    settle(others.length);
   }
 
   /**
@@ -231,7 +238,6 @@ export function usePlanner({
     editing,
     issues,
     clashNotes,
-    keepOpen,
     count,
     set,
     fill,

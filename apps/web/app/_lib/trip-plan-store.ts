@@ -28,8 +28,6 @@ export type TripPlan = {
   passengers: number;
   /** The one vehicle class for every trip; null until chosen. */
   classId: string | null;
-  /** The model chosen of it, at the class's charge; null when any will do. */
-  modelId: string | null;
   forDriver: ForDriver;
   priced: PricedTrips | null;
 };
@@ -39,7 +37,6 @@ export const EMPTY_PLAN: TripPlan = {
   trips: [],
   passengers: 1,
   classId: null,
-  modelId: null,
   forDriver: NO_FLIGHTS,
   priced: null,
 };

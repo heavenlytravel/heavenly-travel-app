@@ -1,5 +1,4 @@
 import type { ClassAvailability } from "./booking-rules";
-import { choosableModel } from "./model-choice";
 
 /**
  * Several trips in one booking, done by one vehicle: the rules a list of
@@ -141,40 +140,6 @@ export function classFitNote(
     case "not-on-route":
       return `which is not offered for ${trip}`;
   }
-}
-
-/** What one trip's quote says about choosing a model of a class there. */
-export type TripModelChoice = {
-  /** What choosing a model adds to this trip; null when the customer cannot choose here. */
-  modelChoiceSen: number | null;
-  /** The models of the class at this trip's location. */
-  modelIds: readonly string[];
-};
-
-/**
- * The models of a class the customer may choose once for a whole booking,
- * each with what the choice adds over all the trips: those every trip's
- * location lets them choose and has. None when any trip cannot. Each
- * trip's charge is its own location's, from its own fare.
- */
-export function bookingModelChoices<Model extends { id: string }>(
-  models: readonly Model[],
-  trips: readonly TripModelChoice[],
-): { model: Model; chargeSen: number }[] {
-  if (trips.length === 0) return [];
-  return models.flatMap((model) => {
-    let chargeSen = 0;
-    for (const trip of trips) {
-      const found = choosableModel(
-        trip.modelIds.map((id) => ({ id })),
-        trip.modelChoiceSen !== null,
-        model.id,
-      );
-      if (!found || trip.modelChoiceSen === null) return [];
-      chargeSen += trip.modelChoiceSen;
-    }
-    return [{ model, chargeSen }];
-  });
 }
 
 const AIRPORT_RE = /\b(airport|klia2?|lapangan terbang)\b/i;

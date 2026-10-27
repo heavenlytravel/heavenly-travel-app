@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { pickupInstant } from "./booking-rules";
 import {
-  bookingModelChoices,
   classFit,
   classFitNote,
   flightOfTrip,
@@ -170,37 +169,6 @@ describe("classFitNote", () => {
       classFitNote({ ok: false, reason: "not-offered", trip: 2 }, name),
       "which is not offered for trip 3",
     );
-  });
-});
-
-describe("bookingModelChoices", () => {
-  const models = [
-    { id: "alphard", name: "Alphard" },
-    { id: "vellfire", name: "Vellfire" },
-  ];
-
-  it("offers the models every trip can choose, with the charges added up", () => {
-    assert.deepEqual(
-      bookingModelChoices(models, [
-        { modelChoiceSen: 2000, modelIds: ["alphard", "vellfire"] },
-        { modelChoiceSen: 5000, modelIds: ["alphard"] },
-      ]),
-      [{ model: models[0], chargeSen: 7000 }],
-    );
-  });
-
-  it("offers none when one trip's location does not let the customer choose", () => {
-    assert.deepEqual(
-      bookingModelChoices(models, [
-        { modelChoiceSen: 2000, modelIds: ["alphard", "vellfire"] },
-        { modelChoiceSen: null, modelIds: ["alphard", "vellfire"] },
-      ]),
-      [],
-    );
-  });
-
-  it("offers none without trips", () => {
-    assert.deepEqual(bookingModelChoices(models, []), []);
   });
 });
 

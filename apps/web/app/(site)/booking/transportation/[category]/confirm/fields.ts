@@ -12,7 +12,6 @@ import { TRIP_PARAM } from "@repo/db";
 export const CONFIRM_FIELDS = {
   category: "category",
   vehicleClass: TRIP_PARAM.vehicleClass,
-  vehicleModel: TRIP_PARAM.vehicleModel,
   passengers: TRIP_PARAM.passengers,
   /** One per trip: "item2.shownSen". */
   shownSen: "shownSen",

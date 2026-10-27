@@ -64,12 +64,6 @@ export const NO_FLIGHTS: ForDriver = {
 
 /** One class as a trip's quote prices it, with what the pages say about it. */
 export type TripClassQuote = TripClassPrice & {
-  /** What choosing a model adds to this trip; null when the customer cannot choose here. */
-  modelChoiceSen: number | null;
-  /** The share of the fare that is, 10 for 10%; null for an amount of its own. */
-  modelChoicePercent: number | null;
-  /** The models of the class at this trip's location. */
-  modelIds: string[];
   /** What the odd-hours surcharge adds to this trip; 0 when none. */
   oddHoursSen: number;
   /** The customer may cancel this trip free until this long before it starts. */

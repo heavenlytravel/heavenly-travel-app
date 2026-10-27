@@ -26,7 +26,7 @@ export function useNewBooking() {
         title: "Start a new booking?",
         description: `This search takes the place of the ${
           one ? "trip" : `${plan.trips.length} trips`
-        } you have, with their flight numbers and notes for the driver. You cannot undo this.`,
+        } you have, with the flight numbers and notes for the driver. You cannot undo this.`,
         action: "Start a new booking",
         cancel: one ? "Keep my trip" : "Keep my trips",
         danger: true,

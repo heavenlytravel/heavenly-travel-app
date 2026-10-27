@@ -249,19 +249,10 @@ export function VehicleStep({
             </button>
           </div>
         ) : failed.length > 0 ? (
-          <div role="alert" className={alertBox}>
-            {failed.map(({ index, error: why }) => (
-              <p key={index}>
-                {several ? `Trip ${index + 1}: ` : ""}
-                {why}
-              </p>
-            ))}
-            <p className="mt-1.5">
-              Change or remove{" "}
-              {failed.length === 1 ? "that trip" : "those trips"} above to
-              choose your vehicle.
-            </p>
-          </div>
+          <p role="alert" className={alertBox}>
+            Change or remove the {failed.length === 1 ? "trip" : "trips"} marked
+            in red above to choose your vehicle.
+          </p>
         ) : !complete || (pricing && choices.length === 0) ? (
           <p className={`${panel} flex items-center text-slate-600`}>
             <Pending>

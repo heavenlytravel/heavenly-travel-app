@@ -183,8 +183,9 @@ export function PageThumb({
 
 /**
  * A page's picture, its name linking where its row leads, and its address
- * on the customer site under it. Both wrap where the table is narrow, so
- * the list fits its card instead of scrolling sideways.
+ * on the customer site under it. Both wrap where the table is narrow, but
+ * keep a width of their own: wrapping anywhere would let the table squeeze
+ * the column to a letter a line, so on a phone the table scrolls instead.
  */
 function PageName({
   row,
@@ -198,7 +199,7 @@ function PageName({
   return (
     <span className="flex max-w-[28rem] min-w-0 items-center gap-3">
       <PageThumb image={row.image} size={small ? "sm" : "md"} />
-      <span className="min-w-0">
+      <span className="min-w-40">
         <Link
           href={href}
           className="block font-medium [overflow-wrap:anywhere] text-slate-900 underline-offset-4 hover:underline"

@@ -15,14 +15,12 @@ import {
 /** What the toast says once each step is taken. */
 const ADVANCED: Record<NextItemStatus, string> = {
   confirmed: "Item confirmed. The customer is told.",
-  assigned: "Driver assigned.",
   completed: "Item completed.",
 };
 
 /** What the forward button says for each step it would take. */
 const ADVANCE_LABELS: Record<NextItemStatus, string> = {
   confirmed: "Confirm",
-  assigned: "Mark driver assigned",
   completed: "Mark completed",
 };
 

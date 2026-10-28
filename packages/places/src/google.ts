@@ -124,14 +124,17 @@ export function googleProvider(key: string): PlacesProvider {
   );
 
   // The line prices a trip from the zone edges
-  // (docs/261023-nearest-zone-pricing.md). Asking for it and avoiding
+  // (docs/261023-nearest-zone-pricing.md); the duration ends a one-way trip
+  // for fulfilment (docs/261028-fulfilment-vendors-and-connect.md). Asking
+  // for them and avoiding
   // ferries keep a request in the cheapest tier, Compute Routes Essentials:
   // no traffic, no waypoints, no tolls.
   const route = memoize(
     (from: RoutePoint, to: RoutePoint) =>
       call(key, ROUTES, {
         method: "POST",
-        fieldMask: "routes.distanceMeters,routes.polyline.encodedPolyline",
+        fieldMask:
+          "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
         body: {
           origin: waypointOf(from),
           destination: waypointOf(to),

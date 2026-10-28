@@ -18,6 +18,7 @@ import type { FleetFilter } from "./vehicles";
 import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
 import { checkVendorServes } from "./vendors";
+import { releaseHeldWork } from "./fulfilment";
 
 /**
  * Every vendor's drivers, ours and others', each based at one location
@@ -284,6 +285,17 @@ function updateDriverIn(
           : {}),
       },
     });
+    // Inactive, they leave the bookings they were accepted for, which the
+    // form listed before the save.
+    if (changed?.after.isActive === false) {
+      await releaseHeldWork(
+        tx,
+        actor,
+        { driverId: id },
+        "out-of-service",
+        new Date(),
+      );
+    }
     await logActivity(tx, actor, {
       action: "driver.updated",
       entityId: id,
@@ -326,6 +338,11 @@ export function deleteDriver(
       include: { location: { select: { name: true } } },
     });
     if (!driver) return NOT_FOUND;
+    if (await tx.tripPart.count({ where: { driverId: id } })) {
+      return refuse(
+        "This driver has been on jobs. Make them inactive instead, so their history stays.",
+      );
+    }
     await tx.driver.delete({ where: { id } });
     await logActivity(tx, actor, {
       action: "driver.deleted",

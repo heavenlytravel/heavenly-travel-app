@@ -72,9 +72,8 @@ export function permissionsOf(
   return PERMISSIONS.filter((p) => may(admin, p, wallActive));
 }
 
-/** Confirming is Reservation and Sales work; assigning and completing is Operation's. */
+/** Confirming is Reservation and Sales work; completing is Operation's, as assigning is. */
 export const ADVANCE_PERMISSIONS: Record<NextItemStatus, Permission> = {
   confirmed: "bookings.manage",
-  assigned: "bookings.fulfil",
   completed: "bookings.fulfil",
 };

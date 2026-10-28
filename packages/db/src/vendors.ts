@@ -3,6 +3,7 @@ import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { releaseHeldWork } from "./fulfilment";
 import { phoneDigitsOf } from "./search";
 import {
   checkReviewNote,
@@ -348,16 +349,16 @@ export type VendorMove = keyof typeof STATUS_MOVES;
 /**
  * SUPER's review of a vendor: approve or refuse one that signed up,
  * suspend an active one or reinstate it. Refusing and suspending need a
- * reason, kept for staff. `release` runs inside the transaction before a
- * suspension, to take the vendor off the work it accepted. Ours is never
- * suspended: switch it off first.
+ * reason, kept for staff. A suspension first takes the vendor off the
+ * work it accepted, which the dialog listed (`heldBookingsOf`), and
+ * those trips go back to To assign. Ours is never suspended: switch it
+ * off first.
  */
 export async function moveVendor(
   actor: { kind: "admin"; userId: string },
   id: string,
   move: VendorMove,
   note: string,
-  release?: (tx: Prisma.TransactionClient) => Promise<Prisma.InputJsonObject>,
 ): Promise<Change & { vendor?: { name: string; contactEmail: string } }> {
   const rule = STATUS_MOVES[move];
   if (move === "refuse" || move === "suspend") {
@@ -373,7 +374,18 @@ export async function moveVendor(
         `${vendor.name} is ours. Switch "Ours" off before suspending it.`,
       );
     }
-    const released = release ? await release(tx) : undefined;
+    const released =
+      move === "suspend"
+        ? {
+            released: await releaseHeldWork(
+              tx,
+              actor,
+              { vendorId: id },
+              "suspended",
+              new Date(),
+            ),
+          }
+        : undefined;
     const reviewNote =
       move === "refuse" || move === "suspend" ? note : vendor.reviewNote;
     await tx.vendor.update({

@@ -178,10 +178,11 @@ export function parseDriverFields(
 }
 
 /**
- * What deleting a driver takes (./delete-impact): nothing beyond them
- * while jobs are not assigned to drivers, so a plain yes confirms it.
+ * What deleting a driver takes (./delete-impact): nothing beyond them,
+ * since one who has been on a job cannot be deleted, so a plain yes
+ * confirms it.
  */
 export const DRIVER_DELETE_IMPACT: DeleteImpact = {
-  lines: ["Nothing else changes: no job is assigned to a driver yet."],
+  lines: ["Nothing else changes: they have not been on a job."],
   confirmWith: null,
 };

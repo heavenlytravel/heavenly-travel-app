@@ -82,6 +82,7 @@ export function sampleItem(
       itemId: "item1",
       vehicleClassId: "vc1",
       vehicleClassName: "Sedan VIP",
+      driveMinutes: 55,
       vehicleModelId: "vm1",
       vehicleModelName: "Toyota Camry",
       vehicleClassCategory: "car-with-driver",

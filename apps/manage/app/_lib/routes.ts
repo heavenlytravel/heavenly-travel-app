@@ -109,6 +109,15 @@ export function bookingHref(id: string, slug?: string) {
     : `${BOOKINGS_PATH}/${id}`;
 }
 
+/**
+ * Operation's board: a day's trips in their columns, at one location
+ * (its id) or every one. No day is today in Malaysia.
+ */
+export const BOARD_PATH = "/board";
+export function boardHref(filter: { day?: string; location?: string } = {}) {
+  return listHref(BOARD_PATH, { day: filter.day, location: filter.location });
+}
+
 /** Where the console's search asks for the records that match: bookings, vehicles, drivers, users, classes and zones. */
 export const SEARCH_PATH = "/api/search";
 

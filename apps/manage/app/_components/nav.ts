@@ -2,6 +2,7 @@ import type { Permission } from "@repo/db";
 import {
   ACTIVITY_PATH,
   ADMINS_PATH,
+  BOARD_PATH,
   BOOKINGS_PATH,
   COVERAGE_PATH,
   DRIVERS_PATH,
@@ -90,6 +91,19 @@ export const ALL_LOCATIONS_NAV: readonly NavPart[] = [
             label: "Bookings",
             icon: "bookings",
             permission: "bookings.view",
+          },
+        ],
+      },
+      {
+        key: "board",
+        label: "Board",
+        icon: "board",
+        views: [
+          {
+            href: BOARD_PATH,
+            label: "Board",
+            icon: "board",
+            permission: "bookings.fulfil",
           },
         ],
       },

@@ -30,6 +30,7 @@ export * from "./photos-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
 export * from "./vendor-input";
+export * from "./fulfilment-rules";
 export * from "./user-input";
 export * from "./expiry";
 export * from "./location-input";

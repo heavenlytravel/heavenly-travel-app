@@ -16,8 +16,15 @@ import {
  * docs/261023-nearest-zone-pricing.md.
  */
 
-/** A road as the router answers it: its length in km, and its line on the map. */
-export type RoadRoute = { distanceKm: number; line: LngLat[] };
+/**
+ * A road as the router answers it: its length in km, its line on the map,
+ * and the drive in whole minutes without traffic, when the router knows it.
+ */
+export type RoadRoute = {
+  distanceKm: number;
+  line: LngLat[];
+  durationMinutes?: number;
+};
 
 /** Where a route starts or ends: a point, and the place there when there is one; "" for none. */
 export type RoutePoint = { lat: number; lng: number; placeId?: string };

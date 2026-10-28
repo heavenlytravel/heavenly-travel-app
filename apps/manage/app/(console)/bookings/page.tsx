@@ -41,7 +41,7 @@ export default async function BookingsPage({
     <>
       <PageHeader
         title="Bookings"
-        description="Every booking, made on the site or entered here. Open one to confirm it, mark it assigned or completed, or cancel it."
+        description="Every booking, made on the site or entered here. Open one to confirm it, assign it, mark it completed, or cancel it."
         action={
           permissions.includes("bookings.create") ? (
             <Button asChild>

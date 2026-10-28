@@ -7,6 +7,7 @@ import {
 } from "@repo/db";
 import {
   getVendor,
+  heldBookingsOf,
   listActivityFor,
   listDrivers,
   listVehicles,
@@ -27,6 +28,7 @@ import {
   newVendorVehicleHref,
   VENDORS_PATH,
 } from "../../../_lib/routes";
+import { heldBookingsSentence } from "../../../_lib/held-bookings";
 import { VendorForm } from "../_components/VendorForm";
 import { VendorReview } from "../_components/VendorReview";
 import { VendorStatusBadge } from "../_components/VendorStatusBadge";
@@ -92,6 +94,11 @@ async function vendorScreen(id: string) {
   ]);
   const status = isVendorStatus(vendor.status) ? vendor.status : "pending";
   const reviews = permissions.includes("vendors.review");
+  // What suspending takes it off, read for SUPER while it can be suspended.
+  const held =
+    reviews && status === "active"
+      ? await heldBookingsOf({ vendorId: id })
+      : [];
 
   return (
     <>
@@ -166,6 +173,17 @@ async function vendorScreen(id: string) {
                   name={vendor.name}
                   status={status}
                   isOurs={vendor.isOurs}
+                  suspendNote={
+                    held.length > 0 ? (
+                      <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        {heldBookingsSentence(
+                          vendor.name,
+                          held,
+                          "Suspending takes its vehicles and drivers off them.",
+                        )}
+                      </p>
+                    ) : null
+                  }
                 />
               </Card>
             ) : null}

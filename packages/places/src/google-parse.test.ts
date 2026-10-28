@@ -137,12 +137,14 @@ describe("parseRoute", () => {
         routes: [
           {
             distanceMeters: 56789,
+            duration: "2701s",
             polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC" },
           },
         ],
       }),
       {
         distanceKm: 56.789,
+        durationMinutes: 46,
         line: [
           [-120.2, 38.5],
           [-120.95, 40.7],

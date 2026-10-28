@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { bookingEmails } from "./booking-emails";
+import { bookingEmails, driverEmails } from "./booking-emails";
 import {
   sampleBooking,
   sampleCases,
@@ -350,5 +350,42 @@ describe("bookingEmails", () => {
     for (const { message } of any) {
       assert.doesNotMatch(message.text, /Model:/);
     }
+  });
+});
+
+describe("driverEmails", () => {
+  const crew = {
+    position: 1,
+    startsAt: new Date("2026-11-03T01:00:00Z"),
+    driverName: "Ali bin Abu",
+    driverPhone: "+60123456789",
+    plate: "VLE1234",
+    model: "Toyota Alphard",
+    colour: "Black",
+  };
+
+  it("tells the customer the driver, the phone, the vehicle and the plate", () => {
+    const [customer, ...rest] = driverEmails(sampleBooking(), [crew], settings);
+    assert.equal(rest.length, 0);
+    assert.equal(customer!.message.subject, "Your driver for HT-7K3QZM");
+    assert.match(customer!.message.text, /Driver: Ali bin Abu/);
+    assert.match(customer!.message.text, /Plate: VLE1234/);
+    assert.match(customer!.message.text, /Toyota Alphard, Black/);
+  });
+
+  it("keys on the crews, so a changed driver sends again and the same one does not", () => {
+    const [first] = driverEmails(sampleBooking(), [crew], settings);
+    const [same] = driverEmails(sampleBooking(), [crew], settings);
+    const [changed] = driverEmails(
+      sampleBooking(),
+      [{ ...crew, plate: "WXY88" }],
+      settings,
+    );
+    assert.equal(first!.key, same!.key);
+    assert.notEqual(first!.key, changed!.key);
+  });
+
+  it("sends nothing with no crew", () => {
+    assert.deepEqual(driverEmails(sampleBooking(), [], settings), []);
   });
 });

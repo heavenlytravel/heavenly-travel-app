@@ -55,7 +55,7 @@ async function finish(result: BookingChange): Promise<ActionState> {
   return null;
 }
 
-/** Confirm, assign or complete one item: one step forward, named explicitly. */
+/** Confirm or complete one item: one step forward, named explicitly. Assigning is ./fulfil-actions. */
 export async function advanceItemAction(
   _previous: ActionState,
   formData: FormData,

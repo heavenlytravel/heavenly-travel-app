@@ -155,8 +155,71 @@ model Vendor {
   members   VendorMember[]
   vehicles  Vehicle[]
   drivers   Driver[]
+  offers    VendorOffer[]
 
   @@index([status])
+}
+
+/// What one vendor is asked for one booking: a vehicle, a driver or both,
+/// for each of its trips, at an amount per trip and part (`TripPart`).
+/// Ours gets one too, at no cost, accepted for by Operation. A part
+/// declined, unanswered or backed out of is deleted and its trip reopened;
+/// the offer keeps its status and the activity log the history. See
+/// docs/261028-fulfilment-vendors-and-connect.md, "Acceptance".
+model VendorOffer {
+  id            String    @id @default(cuid())
+  bookingId     String
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendorId      String
+  vendor        Vendor    @relation(fields: [vendorId], references: [id])
+  /// "offered" | "accepted" | "declined" | "expired" | "withdrawn" | "released"
+  status        String
+  /// Unanswered by then, its parts are reopened.
+  respondBy     DateTime
+  /// "not-available" | "too-far" | "other", with `declineNote` for other.
+  declineReason String?
+  declineNote   String?
+  /// No relations, so the record outlives the accounts.
+  sentById      String?
+  sentAt        DateTime  @default(now())
+  answeredById  String?
+  answeredAt    DateTime?
+  /// Who accepted saw the timing warnings then, as they read.
+  warningsSeen  String[]  @default([])
+
+  parts TripPart[]
+
+  @@index([bookingId])
+  @@index([vendorId, status])
+}
+
+/// The vehicle or the driver of one trip, from one vendor's offer, with
+/// what we owe that vendor for it. Accepted once its vendor has, and, for
+/// a driver, once the driver has too.
+model TripPart {
+  id               String      @id @default(cuid())
+  itemId           String
+  item             BookingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  offerId          String
+  offer            VendorOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  /// "vehicle" | "driver"
+  role             String
+  /// Named by Operation, or by the vendor when asked for one; null until then.
+  vehicleId        String?
+  vehicle          Vehicle?    @relation(fields: [vehicleId], references: [id])
+  driverId         String?
+  driver           Driver?     @relation(fields: [driverId], references: [id])
+  /// What we owe the vendor for this part of this trip; 0 for ours.
+  costSen          Int         @default(0)
+  vendorAcceptedAt DateTime?
+  /// The driver's own acceptance; for a vehicle, unused.
+  driverAcceptedAt DateTime?
+  createdAt        DateTime    @default(now())
+
+  @@unique([itemId, role])
+  @@index([offerId])
+  @@index([vehicleId])
+  @@index([driverId])
 }
 
 /// An account that works for a vendor in Connect, its owner or its staff.
@@ -236,55 +299,58 @@ model District {
 /// state, not a district's switch, decides what the public sees; the
 /// district's switch decides whether a pickup there is served.
 model Location {
-  id                 String    @id @default(cuid())
+  id                  String    @id @default(cuid())
   /// The address of its pages: /langkawi. Locked the first time it goes live.
-  slug               String    @unique
-  name               String
+  slug                String    @unique
+  name                String
   /// No longer read: the tagline is on the landing page's content since
   /// docs/261015-locations-as-operation-areas.md. Kept until the copy
   /// script has run on every database; dropped in a follow-up.
-  tagline            String?
+  tagline             String?
   /// No longer read: coverage is the location's zones. Kept until the copy
   /// script has run on every database; dropped in a follow-up.
-  districtCodes      String[]  @default([])
+  districtCodes       String[]  @default([])
   /// "draft" | "live" | "paused"
-  state              String
+  state               String
   /// Set once, the first time the location goes live.
-  wentLiveAt         DateTime?
+  wentLiveAt          DateTime?
   /// Its place among the home page's top choices; null when it is not one.
-  topChoiceOrder     Int?
+  topChoiceOrder      Int?
   /// No longer read: nearest-zone pricing replaced the drop-off rule with
   /// maxExtraKm and crossLocation (docs/261023-nearest-zone-pricing.md).
   /// Dropped in a follow-up once the change runs on every database.
-  dropoffRule        String    @default("anywhere")
+  dropoffRule         String    @default("anywhere")
   /// The furthest extra road, in whole km: an end of a trip outside every
   /// zone further than this by road from its nearest zone is not priced.
-  maxExtraKm         Int       @default(15)
+  maxExtraKm          Int       @default(15)
   /// The free extra road, in whole km: each end outside every zone pays
   /// only for its road past this. 0 charges all of it.
-  freeExtraKm        Int       @default(0)
+  freeExtraKm         Int       @default(0)
   /// Whether trips may end in another location's zone, on the routes out
   /// this location prices to it. Off keeps every trip to its own zones.
-  crossLocation      Boolean   @default(false)
+  crossLocation       Boolean   @default(false)
   /// The odd-hours surcharge: a window as minutes of the local day (23:00
   /// is 1380, 07:00 is 420), and what it adds, a percentage of the price or
   /// a flat amount in sen, exactly one of the two. All null when there is
   /// none. See OddHours in src/rates-input.ts.
-  oddHoursFromMinute Int?
-  oddHoursToMinute   Int?
-  oddHoursPercent    Int?
-  oddHoursFlatSen    Int?
+  oddHoursFromMinute  Int?
+  oddHoursToMinute    Int?
+  oddHoursPercent     Int?
+  oddHoursFlatSen     Int?
   /// The weekend and holiday surcharge: the days of the week it applies
   /// on (0 is Sunday, 6 Saturday), the dates it also applies on
   /// ("2026-12-25"), and what it adds, a percentage or a flat amount in
   /// sen, exactly one of the two. The amounts null when there is none.
   /// See WeekendSurcharge in src/rates-input.ts.
-  weekendDays        Int[]     @default([])
-  holidayDates       String[]  @default([])
-  weekendPercent     Int?
-  weekendFlatSen     Int?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  weekendDays         Int[]     @default([])
+  holidayDates        String[]  @default([])
+  weekendPercent      Int?
+  weekendFlatSen      Int?
+  /// Minutes a vehicle or driver is kept free after a job, on top of the
+  /// drive to the next: roads differ by place. 0 turns it off.
+  safetyBufferMinutes Int       @default(15)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   pages     LocationPage[]
   addresses LocationAddress[]
@@ -578,6 +644,7 @@ model Vehicle {
   updatedAt           DateTime     @updatedAt
 
   photos VehiclePhoto[]
+  parts  TripPart[]
 
   @@index([locationId, isActive])
   @@index([vehicleModelId])
@@ -628,6 +695,9 @@ model Driver {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
+  /// The trips they were named for.
+  parts TripPart[]
+
   @@index([locationId, isActive])
   @@index([vendorId])
 }
@@ -668,8 +738,9 @@ model Booking {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  items BookingItem[]
-  notes BookingNote[]
+  items  BookingItem[]
+  notes  BookingNote[]
+  offers VendorOffer[]
 
   @@index([userId, createdAt])
   @@index([status, startsAt])
@@ -736,6 +807,8 @@ model BookingItem {
   updatedAt               DateTime  @updatedAt
 
   tripDetails TripItemDetails?
+  /// Who does it: the vehicle and the driver, each from a vendor's offer.
+  parts       TripPart[]
 
   @@unique([bookingId, position])
   @@index([status, startsAt])
@@ -754,6 +827,11 @@ model TripItemDetails {
   /// Snapshots, so a renamed, moved or retired class never changes an old
   /// booking.
   vehicleClassName     String
+  /// One-way: Google's drive, pin to pin, in whole minutes without
+  /// traffic, from the route pricing asked for; the trip ends at its pickup
+  /// plus this. Null for hourly, and on trips booked before it was kept,
+  /// whose end is estimated from their distance.
+  driveMinutes         Int?
   /// The model the customer chose, which the receipt charges for, and its
   /// name as a snapshot: "Toyota Alphard". Both null when any model of the
   /// class will do.

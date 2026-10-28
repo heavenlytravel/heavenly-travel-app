@@ -17,6 +17,7 @@ import type {
   LocationName,
   ModelSuggestion,
   VehicleWithModel,
+  HeldBooking,
   VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
@@ -34,6 +35,7 @@ import { VendorField } from "../../../_components/VendorField";
 import { classGroups } from "../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
+import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
 import { createVehicleAction, updateVehicleAction } from "../actions";
 import { PhotoList } from "./PhotoList";
 import {
@@ -121,6 +123,7 @@ export function VehicleForm({
   vendors,
   backHref,
   backToList = false,
+  held = [],
 }: {
   /** Absent on the "new" page. */
   vehicle?: VehicleWithModel;
@@ -140,11 +143,20 @@ export function VehicleForm({
   backHref: string;
   /** Opened from the list across locations, which a saved vehicle goes back to. */
   backToList?: boolean;
+  /** The accepted bookings still to come it is on, which taking it out of service takes it off. */
+  held?: HeldBooking[];
 }) {
   const isNew = !vehicle;
+  const outOfService = useOutOfServiceAsk({
+    name: vehicle?.plate ?? "",
+    wasActive: vehicle?.isActive ?? false,
+    held,
+    action: "Take out of service",
+  });
   const { pending, error, formProps, markDirty, leaveDialog } = useActionForm(
     isNew ? createVehicleAction : updateVehicleAction,
     {
+      ask: outOfService.ask,
       done: isNew ? "Vehicle added." : "Vehicle saved.",
       leave: isNew
         ? "The vehicle is not added."
@@ -281,6 +293,9 @@ export function VehicleForm({
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
+              onChange={(event) =>
+                outOfService.onActiveChange(event.currentTarget.checked)
+              }
               name="isActive"
               defaultChecked={fields?.isActive ?? true}
             />
@@ -364,6 +379,7 @@ export function VehicleForm({
           <FormError error={error} />
         </div>
         {leaveDialog}
+        {outOfService.dialog}
       </form>
     </UploadsContext>
   );

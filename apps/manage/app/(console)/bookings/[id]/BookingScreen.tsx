@@ -17,6 +17,7 @@ import {
 } from "@repo/db";
 import {
   getBooking,
+  getBookingFulfilment,
   listBookingNotes,
   type BookingItemWithDetails,
 } from "@repo/db/server";
@@ -47,6 +48,7 @@ import {
 import { CancelBookingControl, ItemControls } from "./BookingControls";
 import { Notes } from "./Notes";
 import { PriceOverrideControl } from "./PriceOverride";
+import { WhoDoesIt } from "./WhoDoesIt";
 
 function statusLabel(status: string) {
   return isBookingStatus(status) ? BOOKING_STATUS_LABELS[status] : status;
@@ -78,8 +80,8 @@ export function BookingSkeleton() {
 }
 
 /**
- * One booking for ops, under its reference: each item with its trip,
- * price and controls on the left; the customer, the totals, the
+ * One booking for ops, under its reference: who does its trips, then
+ * each item with its trip, price and controls on the left; the customer, the totals, the
  * booking-level cancel and the internal notes on the right; the way to its
  * history in its header.
  * Every team opens it; the controls follow what the admin may do. From
@@ -95,10 +97,11 @@ export async function bookingScreen({
   id: string;
   place: BookingPlace;
 }) {
-  const [booking, permissions, notes] = await Promise.all([
+  const [booking, permissions, notes, fulfilment] = await Promise.all([
     getBooking(id),
     getPermissions(),
     listBookingNotes(id),
+    getBookingFulfilment(id),
   ]);
   if (!booking) notFound();
   if (place && !booking.items.some((item) => item.locationId === place.id)) {
@@ -183,16 +186,25 @@ export async function bookingScreen({
       />
 
       <DetailColumns
-        main={booking.items.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            label={`${booking.reference} item ${item.position}`}
-            showPosition={booking.items.length > 1}
-            permissions={permissions}
-            slug={place?.slug}
-          />
-        ))}
+        main={
+          <>
+            <WhoDoesIt
+              bookingId={booking.id}
+              trips={fulfilment}
+              canFulfil={permissions.includes("bookings.fulfil")}
+            />
+            {booking.items.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                label={`${booking.reference} item ${item.position}`}
+                showPosition={booking.items.length > 1}
+                permissions={permissions}
+                slug={place?.slug}
+              />
+            ))}
+          </>
+        }
         side={
           <>
             <Card>
@@ -299,7 +311,8 @@ function ItemCard({
     permissions.includes("bookings.create") &&
     item.status !== "cancelled" &&
     item.status !== "completed";
-  // A trip can be amended until a driver is assigned to it.
+  // A trip can be amended until it is assigned; amending a trip with a
+  // vehicle or driver asked for lets them go, to ask again.
   const canAmend =
     permissions.includes("bookings.manage") &&
     trip !== null &&

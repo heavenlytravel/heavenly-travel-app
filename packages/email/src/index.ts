@@ -2,20 +2,24 @@ import "server-only";
 import { CONTACT } from "@repo/db";
 import {
   ADMIN_URL,
+  getBooking,
   SITE_URL,
+  tripCrewsOf,
   type BookingChange,
   type BookingWithItems,
 } from "@repo/db/server";
 import {
   bookingEmails,
+  driverEmails,
   type BookingEmailEvent,
   type EmailSettings,
+  type TripCrew,
 } from "./booking-emails";
 import { logSender } from "./log-sender";
 import { resendSender } from "./resend";
 import type { EmailSender } from "./types";
 
-export type { BookingEmailEvent } from "./booking-emails";
+export type { BookingEmailEvent, TripCrew } from "./booking-emails";
 
 /**
  * Booking emails as the apps send them. The sender is chosen once per
@@ -77,6 +81,38 @@ export async function sendBookingEmail(
       );
     }
   }
+}
+
+/**
+ * Tells the customer who picks them up, once trips are assigned or their
+ * driver or vehicle changes. After the write has committed; never throws.
+ */
+export async function sendDriverEmail(
+  booking: BookingWithItems,
+  crews: readonly TripCrew[],
+): Promise<void> {
+  const results = await Promise.allSettled(
+    driverEmails(booking, crews, settings).map(({ key, message }) =>
+      sender.send(message, key),
+    ),
+  );
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error(
+        `[email] driver email for ${booking.reference} failed via ${sender.name}:`,
+        result.reason,
+      );
+    }
+  }
+}
+
+/** The driver email for a booking whose trips were just assigned, read fresh. */
+export async function sendDriverEmailFor(bookingId: string): Promise<void> {
+  const [booking, crews] = await Promise.all([
+    getBooking(bookingId),
+    tripCrewsOf(bookingId),
+  ]);
+  if (booking) await sendDriverEmail(booking, crews);
 }
 
 /**

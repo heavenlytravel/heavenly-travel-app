@@ -436,6 +436,17 @@ export function IdCardIcon(props: IconProps) {
   );
 }
 
+/** Lucide's "kanban": the board. */
+export function KanbanIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M6 5v11" />
+      <path d="M12 5v6" />
+      <path d="M18 5v14" />
+    </Icon>
+  );
+}
+
 /** Lucide's "building-2": a vendor. */
 export function BuildingIcon(props: IconProps) {
   return (

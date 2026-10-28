@@ -2,6 +2,7 @@ import Link from "next/link";
 import { modelName } from "@repo/db";
 import {
   getVehicle,
+  heldBookingsOf,
   listModelSuggestions,
   listVendorOptions,
   listClassOptions,
@@ -77,10 +78,11 @@ async function vehicleScreen({
   startClassId: string | undefined;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, impact, classes, suggestions, locations, vendors] =
+  const [vehicle, impact, held, classes, suggestions, locations, vendors] =
     await Promise.all([
       isNew ? null : getVehicle(vehicleId),
       isNew ? null : vehicleDeleteImpactOf(vehicleId),
+      isNew ? [] : heldBookingsOf({ vehicleId }),
       listClassOptions(),
       listModelSuggestions(),
       locationNames(),
@@ -136,6 +138,7 @@ async function vehicleScreen({
             classes={classes}
             suggestions={suggestions}
             vendors={vendors}
+            held={held}
             locations={locations}
             backHref={locationTabHref(slug, "vehicles")}
           />

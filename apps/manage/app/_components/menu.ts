@@ -10,6 +10,7 @@ import {
   FileTextIcon,
   HistoryIcon,
   IdCardIcon,
+  KanbanIcon,
   ImageIcon,
   LayoutDashboardIcon,
   MapIcon,
@@ -41,6 +42,7 @@ import {
 export const MENU_ICONS = {
   overview: LayoutDashboardIcon,
   bookings: CalendarCheckIcon,
+  board: KanbanIcon,
   fleet: CarFrontIcon,
   vehicles: CarIcon,
   drivers: IdCardIcon,

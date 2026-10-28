@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DRIVER_DELETE_IMPACT } from "@repo/db";
 import {
   getDriver,
+  heldBookingsOf,
   listClassOptions,
   listVendorOptions,
 } from "@repo/db/server";
@@ -67,8 +68,9 @@ async function driverScreen({
   driverId: string;
 }) {
   const isNew = driverId === "new";
-  const [driver, classes, locations, vendors] = await Promise.all([
+  const [driver, held, classes, locations, vendors] = await Promise.all([
     isNew ? null : getDriver(driverId),
+    isNew ? [] : heldBookingsOf({ driverId }),
     listClassOptions(),
     locationNames(),
     listVendorOptions(),
@@ -117,6 +119,7 @@ async function driverScreen({
             classes={classes}
             locations={locations}
             vendors={vendors}
+            held={held}
             backHref={locationTabHref(slug, "drivers")}
           />
         }

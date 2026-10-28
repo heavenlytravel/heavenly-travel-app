@@ -115,7 +115,6 @@ describe("may, in both states", () => {
 describe("ADVANCE_PERMISSIONS", () => {
   it("splits confirming from assigning and completing", () => {
     assert.equal(ADVANCE_PERMISSIONS.confirmed, "bookings.manage");
-    assert.equal(ADVANCE_PERMISSIONS.assigned, "bookings.fulfil");
     assert.equal(ADVANCE_PERMISSIONS.completed, "bookings.fulfil");
   });
 });

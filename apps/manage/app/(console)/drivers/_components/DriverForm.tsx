@@ -14,6 +14,7 @@ import type {
   ClassOption,
   DriverWithClasses,
   LocationName,
+  HeldBooking,
   VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
@@ -27,6 +28,7 @@ import { FormError } from "../../../_components/FormError";
 import { VendorField } from "../../../_components/VendorField";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
+import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
 import { createDriverAction, updateDriverAction } from "../actions";
 import { FORM_WIDTH } from "../../../_components/PageColumn";
 
@@ -47,6 +49,7 @@ export function DriverForm({
   vendors,
   backHref,
   backToList = false,
+  held = [],
 }: {
   /** Where a new driver is based to start with; absent on the list across locations. */
   locationId?: string;
@@ -62,11 +65,20 @@ export function DriverForm({
   backHref: string;
   /** Opened from the list across locations, which a saved driver goes back to. */
   backToList?: boolean;
+  /** The accepted bookings still to come they are on, which making them inactive takes them off. */
+  held?: HeldBooking[];
 }) {
   const isNew = !driver;
+  const outOfService = useOutOfServiceAsk({
+    name: driver?.name ?? "",
+    wasActive: driver?.isActive ?? false,
+    held,
+    action: "Make inactive",
+  });
   const { pending, error, formProps, leaveDialog } = useActionForm(
     isNew ? createDriverAction : updateDriverAction,
     {
+      ask: outOfService.ask,
       done: isNew ? "Driver added." : "Driver saved.",
       leave: isNew
         ? "The driver is not added."
@@ -145,7 +157,13 @@ export function DriverForm({
           </Field>
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <Checkbox name="isActive" defaultChecked={fields?.isActive ?? true} />
+          <Checkbox
+            onChange={(event) =>
+              outOfService.onActiveChange(event.currentTarget.checked)
+            }
+            name="isActive"
+            defaultChecked={fields?.isActive ?? true}
+          />
           <span className="inline-flex items-center gap-1.5">
             {DRIVER_FIELD_LABELS.isActive}
             <InfoTip text="Inactive, the driver keeps their history and their licences are not checked." />
@@ -234,6 +252,7 @@ export function DriverForm({
         <FormError error={error} />
       </div>
       {leaveDialog}
+      {outOfService.dialog}
     </form>
   );
 }

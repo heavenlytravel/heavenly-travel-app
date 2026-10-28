@@ -83,6 +83,27 @@ const ACTIONS = {
   "booking.cancelled": { entityType: "booking", customerVisible: true },
   /** The `AMENDED_FIELDS` that changed; the driver notes and the reason are not in it. */
   "booking.item.amended": { entityType: "booking", customerVisible: true },
+  /** An assigned trip that lost its vehicle or driver, back to confirmed. */
+  "booking.item.reopened": { entityType: "booking", customerVisible: false },
+  /**
+   * A vendor asked for a role of the booking's trips: the role, the
+   * vendor's name, the vehicle's plate or the driver's name when named,
+   * the trips' positions, the total cost, and when it is answered by.
+   */
+  "booking.offer.sent": { entityType: "booking", customerVisible: false },
+  /** As the offer's: role, vendor, named, positions; who answered (`by`), whether Operation recorded it, the warnings seen. */
+  "booking.part.accepted": { entityType: "booking", customerVisible: false },
+  /** As accepted, with the reason and a note. */
+  "booking.part.declined": { entityType: "booking", customerVisible: false },
+  /** The vendor named the vehicle or the driver it was asked for. */
+  "booking.part.named": { entityType: "booking", customerVisible: false },
+  /** A part let go, and why (`cause`): released, backed out, unanswered, vendor suspended, out of service. */
+  "booking.part.released": { entityType: "booking", customerVisible: false },
+  /** What we owe a vendor for a part, before and after, with the reason. */
+  "booking.part.cost.changed": {
+    entityType: "booking",
+    customerVisible: false,
+  },
   /** The reason is in `after`, so a customer never sees the entry. */
   "booking.item.priced": { entityType: "booking", customerVisible: false },
   /** The note's id only; the text stays in `BookingNote`. */
@@ -217,6 +238,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /** `safetyBufferMinutes`, before and after: the time kept free after a job. */
+  "location.buffer.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /** The weekend and holiday surcharge, before and after; empty for none. */
   "location.weekend.updated": {
     entityType: "location",
@@ -301,6 +327,7 @@ export function locationHistoryKindOf(
     case "driver.created":
     case "driver.updated":
     case "driver.deleted":
+    case "location.buffer.updated":
       return "fleet";
     case "location.page.published":
     case "location.page.updated":
@@ -555,6 +582,61 @@ function vendorChanges(after: unknown) {
     : "Changed the vendor";
 }
 
+const RELEASE_CAUSES: Record<string, string> = {
+  released: "Released",
+  "backed-out": "Backed out of",
+  expired: "No answer in time for",
+  suspended: "Vendor suspended: released",
+  "out-of-service": "Out of service: released",
+};
+
+/** "the vehicle of trips 1 and 2 (VLE1234, Pulau Coach)". */
+function partsOf(json: unknown) {
+  const role = field(json, "role") === "driver" ? "driver" : "vehicle";
+  const positions = field(json, "positions");
+  const trips = Array.isArray(positions)
+    ? positions.length === 1
+      ? `trip ${String(positions[0])}`
+      : `trips ${andList(positions.map(String))}`
+    : "the trips";
+  const named = field(json, "named");
+  const vendor = field(json, "vendorName");
+  const who = [named, vendor].filter((x): x is string => typeof x === "string");
+  return `the ${role} of ${trips}${who.length > 0 ? ` (${who.join(", ")})` : ""}`;
+}
+
+/** One sentence for an offer or a part's entry. */
+function partSentence(action: string, after: unknown) {
+  const what = partsOf(after);
+  const recorded =
+    field(after, "recorded") === true ? ", recorded by staff" : "";
+  const by = field(after, "by") === "driver" ? "the driver" : "the vendor";
+  switch (action) {
+    case "booking.offer.sent":
+      return field(after, "acceptedNow") === true
+        ? `Assigned ${what} and accepted it`
+        : `Asked for ${what}`;
+    case "booking.part.accepted":
+      return `Accepted ${what} for ${by}${recorded}`;
+    case "booking.part.declined": {
+      const reason = field(after, "reason");
+      return `Declined ${what} for ${by}${recorded}${typeof reason === "string" ? `: ${reason}` : ""}`;
+    }
+    case "booking.part.named":
+      return `Named ${what}`;
+    case "booking.part.released": {
+      const cause = field(after, "cause");
+      return `${RELEASE_CAUSES[typeof cause === "string" ? cause : "released"] ?? "Released"} ${what}`;
+    }
+    default: {
+      const cost = field(after, "costSen");
+      return typeof cost === "number"
+        ? `Set the cost of ${what} to ${formatMyr(cost)}`
+        : `Changed the cost of ${what}`;
+    }
+  }
+}
+
 /** "Refused the vendor: no SSM certificate", or the sentence alone when the entry keeps no reason. */
 function withReason(sentence: string, json: unknown) {
   const reason = field(json, "reason");
@@ -785,6 +867,15 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.item.cancelled":
       return `Cancelled ${itemName(entry.after)}`;
+    case "booking.item.reopened":
+      return `Reopened ${itemName(entry.after)}: it lost its vehicle or driver`;
+    case "booking.offer.sent":
+    case "booking.part.accepted":
+    case "booking.part.declined":
+    case "booking.part.named":
+    case "booking.part.released":
+    case "booking.part.cost.changed":
+      return partSentence(entry.action, entry.after);
     case "booking.item.amended": {
       // In the vocabulary's order, not the stored one: jsonb reorders keys.
       const present = new Set(keysOf(entry.after));
@@ -951,6 +1042,14 @@ export function describeActivity(entry: DescribableActivity): string {
           : []),
       ];
       return `Set ${andList(parts)}`;
+    }
+    case "location.buffer.updated": {
+      const minutes = field(entry.after, "safetyBufferMinutes");
+      return minutes === 0
+        ? "Turned the safety buffer off"
+        : typeof minutes === "number"
+          ? `Set the safety buffer to ${minutes} min`
+          : "Changed the safety buffer";
     }
     case "location.weekend.updated": {
       const weekend = weekendIn(entry.after);

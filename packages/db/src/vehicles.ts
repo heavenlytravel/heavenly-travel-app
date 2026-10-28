@@ -32,6 +32,7 @@ import { modelName } from "./vehicle-model-input";
 import { dropModelIfUnused, modelFor } from "./vehicle-models";
 import { plateTermOf } from "./search";
 import { checkVendorServes } from "./vendors";
+import { releaseHeldWork } from "./fulfilment";
 
 /**
  * Every vendor's vehicles, ours and others', each of one model and based
@@ -357,6 +358,17 @@ export async function updateVehicle(
         });
       }
       if (model) await dropModelIfUnused(tx, actor, vehicle.vehicleModelId);
+      // Out of service, it leaves the bookings it was accepted for, which
+      // the form listed before the save.
+      if (after.isActive === false) {
+        await releaseHeldWork(
+          tx,
+          actor,
+          { vehicleId: id },
+          "out-of-service",
+          new Date(),
+        );
+      }
       await logActivity(tx, actor, {
         action: "vehicle.updated",
         entityId: id,
@@ -514,6 +526,11 @@ export function deleteVehicle(
       },
     });
     if (!vehicle) return NOT_FOUND;
+    if (await tx.tripPart.count({ where: { vehicleId: id } })) {
+      return refuse(
+        "This vehicle has been on jobs. Take it out of service instead, so its history stays.",
+      );
+    }
     const impact = await vehicleDeleteImpactOf(id, tx);
     if (!impact) return NOT_FOUND;
     const confirmed = checkDeleteConfirmed(impact, confirmation);

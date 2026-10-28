@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { listClassOptions, listVendorOptions } from "@repo/db/server";
-import { DetailColumns } from "../../../_components/PageColumn";
-import { PageHeader } from "../../../_components/PageHeader";
-import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
+import { DetailColumns } from "@repo/console/PageColumn";
+import { PageHeader } from "@repo/console/PageHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { DRIVERS_PATH, driversHref } from "../../../_lib/routes";
 import { DriverForm } from "../_components/DriverForm";

@@ -26,6 +26,8 @@ const VARIANTS = {
 const SIZES = {
   sm: "ui:h-8 ui:px-3 ui:text-xs",
   md: "ui:h-10 ui:px-4 ui:text-sm",
+  /** A thumb's target on a phone: Connect's answers and trip reports. */
+  lg: "ui:h-14 ui:px-5 ui:text-base",
 } as const;
 
 export type ButtonProps = ComponentProps<"button"> & {

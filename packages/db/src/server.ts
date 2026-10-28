@@ -1,7 +1,19 @@
 export { db } from "./client";
-export { getSession, getAccess, getAdminAccess } from "./session";
-export type { SessionUser, Access, AdminUser, AdminAccess } from "./session";
-export { SITE_URL, ADMIN_URL } from "./origins";
+export {
+  getSession,
+  getAccess,
+  getAdminAccess,
+  getConnectAccess,
+} from "./session";
+export type {
+  SessionUser,
+  Access,
+  AdminUser,
+  AdminAccess,
+  ConnectAccess,
+  ConnectVendor,
+} from "./session";
+export { SITE_URL, ADMIN_URL, CONNECT_URL } from "./origins";
 export {
   snapshotFromWebhook,
   snapshotFromBackendUser,
@@ -103,6 +115,21 @@ export type {
 } from "./fulfilment";
 export { listBoard, listOursToAccept, boardDayRange } from "./board";
 export type { BoardCard, BoardPart, OursToAccept } from "./board";
+export {
+  listDriverJobs,
+  getDriverJob,
+  answerAsDriver,
+  reportTripEvent,
+  listTripEvents,
+} from "./driver-jobs";
+export type {
+  DriverJobs,
+  DriverJob,
+  DriverTrip,
+  DriverOffer,
+  TripEventView,
+  Reporter,
+} from "./driver-jobs";
 export {
   listVendors,
   countPendingVendors,
@@ -335,6 +362,7 @@ export * from "./vehicle-input";
 export * from "./driver-input";
 export * from "./vendor-input";
 export * from "./fulfilment-rules";
+export * from "./trip-events-input";
 export * from "./user-input";
 export * from "./expiry";
 export * from "./location-input";

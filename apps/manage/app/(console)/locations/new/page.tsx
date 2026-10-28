@@ -1,5 +1,5 @@
-import { PageHeader } from "../../../_components/PageHeader";
-import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { stateOptions } from "../_lib/state-options";
 import { NewLocationForm } from "./NewLocationForm";

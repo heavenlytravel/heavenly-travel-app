@@ -2,7 +2,7 @@ import Link from "next/link";
 import { isBookingStatus, searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { FilterSelect } from "../../_components/FilterSelect";
-import { PageHeader } from "../../_components/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { pageOf } from "../../_components/Pager";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/filter-options";

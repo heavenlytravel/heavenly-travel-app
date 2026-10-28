@@ -29,9 +29,9 @@ import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { errorOf } from "../../_lib/action-state";
-import { useLeaveGuard } from "../../_lib/use-leave-guard";
-import { Card, CardTitle } from "../Card";
+import { errorOf } from "@repo/console/action-state";
+import { useLeaveGuard } from "@repo/console/use-leave-guard";
+import { Card, CardTitle } from "@repo/console/Card";
 import { MarkdownField } from "../MarkdownField";
 import { UploadsContext, useUploadCount } from "../use-image-upload";
 import {

@@ -8,15 +8,11 @@ import {
 } from "@repo/db";
 import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
-import { PageHeader } from "../../_components/PageHeader";
-import { Card, CardTitle } from "../../_components/Card";
-import {
-  CardSkeleton,
-  Streamed,
-  TableSkeleton,
-} from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { Card, CardTitle } from "@repo/console/Card";
+import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { SearchBox } from "../../_components/SearchBox";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { requireAdmin } from "../../_lib/access";
 import { ADMINS_PATH, SEARCH_PARAM } from "../../_lib/routes";
 import { AdminRowControls } from "./AdminRowControls";

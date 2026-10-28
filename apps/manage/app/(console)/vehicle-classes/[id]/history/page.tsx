@@ -4,7 +4,7 @@ import {
   RecordHistory,
   RecordHistorySkeleton,
 } from "../../../../_components/RecordHistory";
-import { Streamed } from "../../../../_components/Skeleton";
+import { Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
 import { vehicleClassHref } from "../../../../_lib/routes";
 

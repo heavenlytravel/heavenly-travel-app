@@ -6,17 +6,17 @@ import {
   type ListedVehicle,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { DetailColumns } from "../../../_components/PageColumn";
-import { PageHeader } from "../../../_components/PageHeader";
+import { DetailColumns } from "@repo/console/PageColumn";
+import { PageHeader } from "@repo/console/PageHeader";
 import { HistoryLink } from "../../../_components/RecordHistory";
-import { Card, CardTitle } from "../../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import {
   CardSkeleton,
   DetailSkeleton,
   FormSkeleton,
   HeaderSkeleton,
   Streamed,
-} from "../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
   recordHistoryHref,

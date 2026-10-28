@@ -2,16 +2,16 @@
 
 ## Environments
 
-| Environment | web                               | manage                                   | Git branch          | Vercel environment         |
-| ----------- | --------------------------------- | ---------------------------------------- | ------------------- | -------------------------- |
-| Production  | https://new.heavenlytravel.my     | https://manage.heavenlytravel.my         | `main`              | Production                 |
-| Staging     | https://staging.heavenlytravel.my | https://staging-manage.heavenlytravel.my | `staging` (pointer) | Preview (branch `staging`) |
-| PR previews | Vercel preview URL per PR         | Vercel preview URL per PR                | `feat/*`, `fix/*`   | Preview                    |
-| Local       | http://localhost:3000             | http://localhost:3001                    | any                 | —                          |
+| Environment | web                               | manage                                   | connect                                   | Git branch          | Vercel environment         |
+| ----------- | --------------------------------- | ---------------------------------------- | ----------------------------------------- | ------------------- | -------------------------- |
+| Production  | https://new.heavenlytravel.my     | https://manage.heavenlytravel.my         | https://connect.heavenlytravel.my         | `main`              | Production                 |
+| Staging     | https://staging.heavenlytravel.my | https://staging-manage.heavenlytravel.my | https://staging-connect.heavenlytravel.my | `staging` (pointer) | Preview (branch `staging`) |
+| PR previews | Vercel preview URL per PR         | Vercel preview URL per PR                | Vercel preview URL per PR                 | `feat/*`, `fix/*`   | Preview                    |
+| Local       | http://localhost:3000             | http://localhost:3001                    | http://localhost:3002                     | any                 | —                          |
 
-Two Vercel projects on the same repository, `ht-web` and `ht-manage` (named `ht-admin`
-until 2026-10-28), deploy the two apps. Deploys are automatic. Vercel builds every push
-in both projects; pushes to `main` go to production, pushes to `staging` go to the
+Three Vercel projects on the same repository, `ht-web`, `ht-manage` (named `ht-admin`
+until 2026-10-28) and `ht-connect`, deploy the three apps. Deploys are automatic. Vercel
+builds every push in every project; pushes to `main` go to production, pushes to `staging` go to the
 staging domains, and every other branch gets a preview URL per project posted on its PR.
 
 ### Opening a dev server from another machine
@@ -22,25 +22,25 @@ browser but the server never sees it, and the page flickers between `/` and `/si
 Use the Tailscale HTTPS addresses instead. Each one uses its app's own port number, and
 `pnpm dev` starts each app on its port:
 
-| App    | Port | Open                                        |
-| ------ | ---- | ------------------------------------------- |
-| web    | 3000 | https://akieez-h510m.tail4436c5.ts.net:3000 |
-| manage | 3001 | https://akieez-h510m.tail4436c5.ts.net:3001 |
+| App     | Port | Open                                        |
+| ------- | ---- | ------------------------------------------- |
+| web     | 3000 | https://akieez-h510m.tail4436c5.ts.net:3000 |
+| manage  | 3001 | https://akieez-h510m.tail4436c5.ts.net:3001 |
+| connect | 3002 | https://akieez-h510m.tail4436c5.ts.net:3002 |
 
 The ports are pinned in each app's `dev` script, so an address never shows the other app.
 A port already taken stops `pnpm dev` with `EADDRINUSE` instead of moving the app: free
-the port, or run the other apps alone with `pnpm --filter <app> dev`. Port 3002 is
-kept for Connect, the app for drivers and vendors still to come, and 3200 for
-BoothKita, which often runs on the same machine. Each address is set up once on the
+the port, or run the other apps alone with `pnpm --filter <app> dev`. Port 3200 is
+BoothKita's, which often runs on the same machine. Each address is set up once on the
 machine with `tailscale serve --bg --https=<port> <port>`. The older addresses still work:
 the one without a port for web, and `:8443` for manage.
 
 ## Branch model
 
 ```
-feat/xyz ──PR, squash──▶ main ──▶ new.heavenlytravel.my + manage.heavenlytravel.my
+feat/xyz ──PR, squash──▶ main ──▶ new. + manage. + connect.heavenlytravel.my
    │
-   └──force push──▶ staging ──▶ staging.heavenlytravel.my + staging-manage.heavenlytravel.my
+   └──force push──▶ staging ──▶ staging. + staging-manage. + staging-connect.heavenlytravel.my
 ```
 
 - `main`: what is live. Only changes through squash-merged PRs. Protected by a ruleset.
@@ -91,9 +91,10 @@ pnpm staging
 ```
 
 This pushes the current branch to its own remote ref and then force-pushes it onto
-`staging`. Both Vercel projects rebuild, and a minute later the branch is live on
-https://staging.heavenlytravel.my (web) and https://staging-manage.heavenlytravel.my
-(manage). One push covers both apps; there is no separate command for it. Run it again
+`staging`. All three Vercel projects rebuild, and a minute later the branch is live on
+https://staging.heavenlytravel.my (web), https://staging-manage.heavenlytravel.my
+(manage) and https://staging-connect.heavenlytravel.my (connect). One push covers the
+three apps; there is no separate command for it. Run it again
 after every review fix. Pushing a different branch replaces what is there.
 
 The domains show one branch at a time. To review two features together, build a throwaway
@@ -162,8 +163,8 @@ No approvals are required, so a solo developer can merge their own PRs. Raise
 
 ## Vercel configuration
 
-Both Vercel projects (`ht-web` with root directory `apps/web`, `ht-manage` with root directory
-`apps/manage`) need:
+The three Vercel projects (`ht-web` with root directory `apps/web`, `ht-manage` with root
+directory `apps/manage`, `ht-connect` with root directory `apps/connect`) need:
 
 1. **Settings → Git → Production Branch**: `main`.
 2. **Settings → Domains**:
@@ -171,8 +172,10 @@ Both Vercel projects (`ht-web` with root directory `apps/web`, `ht-manage` with 
      `staging.heavenlytravel.my` → Preview, Git branch `staging`.
    - `ht-manage`: `manage.heavenlytravel.my` → Production (no Git branch);
      `staging-manage.heavenlytravel.my` → Preview, Git branch `staging`.
+   - `ht-connect`: `connect.heavenlytravel.my` → Production (no Git branch);
+     `staging-connect.heavenlytravel.my` → Preview, Git branch `staging`.
 3. **DNS** (at the `heavenlytravel.my` DNS provider): `CNAME` records for `new`,
-   `staging`, `manage` and `staging-manage` pointing at the value Vercel shows (usually
+   `staging`, `manage`, `staging-manage`, `connect` and `staging-connect` pointing at the value Vercel shows (usually
    `cname.vercel-dns.com`).
 4. **Settings → Deployment Protection**: Vercel Authentication **Disabled**, so reviewers
    do not need a Vercel account to open the staging domain. Access control for staging
@@ -188,7 +191,8 @@ Which Clerk instance and Neon branch each scope uses is in `docs/260918-auth-and
 ## Gating the staging site
 
 Because Vercel Authentication is off, the web staging domain is public until the app gates
-it. The manage app already gates itself: every page requires an admin session.
+it. The manage app already gates itself: every page requires an admin session, and so
+does Connect: every page asks for a vendor's member or a driver.
 The plan is a Clerk sign-in in `apps/web/proxy.ts`, enabled only when a staging-scoped
 environment variable is set, with Clerk sign-ups restricted to internal accounts.
 Production never has that variable, so the gate never appears on the live site.

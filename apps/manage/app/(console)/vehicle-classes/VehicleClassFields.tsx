@@ -14,7 +14,7 @@ import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
-import { Card } from "../../_components/Card";
+import { Card } from "@repo/console/Card";
 import { ImageUpload } from "../../_components/ImageUpload";
 import { VEHICLE_CLASS_IMAGE_UPLOAD_PATH } from "../../_lib/routes";
 

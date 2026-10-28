@@ -18,7 +18,7 @@ import { Menu, MenuItem } from "@repo/ui/menu";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import { useId, useRef, useState, useTransition } from "react";
-import { FormError } from "../../../../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import {
   FullScreenButton,
   useFullScreen,

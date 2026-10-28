@@ -7,10 +7,7 @@ import {
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../../../_lib/access";
-import {
-  FORBIDDEN_MESSAGE,
-  STALE_MESSAGE,
-} from "../../../../_lib/action-state";
+import { FORBIDDEN_MESSAGE, STALE_MESSAGE } from "@repo/console/action-state";
 import { SITE_PAGES_PATH } from "../../../../_lib/routes";
 import { refreshSitePagesAfter } from "../../../../_lib/site";
 

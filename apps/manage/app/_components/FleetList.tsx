@@ -4,7 +4,7 @@ import type { FleetListFilter } from "../_lib/routes";
 import { DriversTable } from "./DriversTable";
 import { DueFilter } from "./DueFilter";
 import { SearchBox } from "./SearchBox";
-import { Streamed, TableSkeleton } from "./Skeleton";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { VehiclesTable } from "./VehiclesTable";
 
 /** What a fleet list narrows to, beside the location: the documents due, a search. */

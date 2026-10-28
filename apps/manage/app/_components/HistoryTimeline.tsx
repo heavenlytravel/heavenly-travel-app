@@ -6,7 +6,7 @@ import {
   formatLocalTime,
 } from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
-import { Frame } from "./Card";
+import { Frame } from "@repo/console/Card";
 
 /** The entries by the Malaysian day they were made, the days and the entries newest first. */
 function byDay(entries: readonly ActivityEntry[]) {

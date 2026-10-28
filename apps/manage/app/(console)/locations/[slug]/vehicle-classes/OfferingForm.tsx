@@ -25,15 +25,15 @@ import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import Link from "next/link";
 import { useState } from "react";
-import { Card } from "../../../../_components/Card";
+import { Card } from "@repo/console/Card";
 import { ChargeInput } from "../../../../_components/ChargeInput";
-import { FormError } from "../../../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import {
   OFFERING_FROM_PARAM,
   offeringBackHref,
   type OfferingFrom,
 } from "../../../../_lib/routes";
-import { useActionForm } from "../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import {
   DEFAULT_CATEGORY,
   VehicleClassFieldset,
@@ -44,7 +44,7 @@ import {
   UploadsContext,
   useUploadCount,
 } from "../../../../_components/use-image-upload";
-import { FORM_WIDTH } from "../../../../_components/PageColumn";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {
   perKmSen:

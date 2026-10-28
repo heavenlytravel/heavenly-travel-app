@@ -8,7 +8,9 @@
 
 - `apps/web`: Customer-facing site (landing page and customer app).
 - `apps/manage`: Internal admin side for running the app, at `manage.heavenlytravel.my`.
-- `packages/ui` (`@repo/ui`): Shared React component library used by both apps.
+- `apps/connect`: Heavenly Travel Connect, the app vendors and drivers use, at `connect.heavenlytravel.my`. See `docs/261028-fulfilment-vendors-and-connect.md`.
+- `packages/ui` (`@repo/ui`): Shared React component library used by every app.
+- `packages/console` (`@repo/console`): The screens' parts `manage` and `connect` share (cards, headers, tables, skeletons, the action-form hook, the fleet form fields). Source only, transpiled by each app; not in `@repo/ui` because it reads `@repo/db`.
 - `packages/db` (`@repo/db`): Prisma schema, Neon client, the `getAccess` session/role helper and the booking domain. See `docs/260918-auth-and-database.md` and `docs/260923-car-with-driver.md`.
 - `packages/places` (`@repo/places`): Google Places and Routes behind one interface, with a keyless provider for local development.
 - `packages/email` (`@repo/email`): Booking emails over Resend, logged to the console when no key is set.
@@ -42,7 +44,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 - Format: `<type>(<scope>): <subject>`
 - Types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
-- Scopes: `web` | `manage` | `ui` | `config` | `deps` (omit for repo-wide changes)
+- Scopes: `web` | `manage` | `connect` | `ui` | `config` | `deps` (omit for repo-wide changes)
 - Subject: <= 50 chars, imperative mood, no period
 - Small changes: one-line commit
 - Complex changes: add body (wrap at 72 chars) explaining what/why; reference issues
@@ -52,8 +54,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 Full details in `docs/260916-development-workflow.md`.
 
-- Dev ports are pinned in each app's `dev` script: web 3000, manage 3001, and Connect 3002
-  once built. Port 3200 is BoothKita's, often running on the same machine. A taken port
+- Dev ports are pinned in each app's `dev` script: web 3000, manage 3001 and connect 3002. Port 3200 is BoothKita's, often running on the same machine. A taken port
   stops `pnpm dev` with `EADDRINUSE` instead of moving the app; pass `--port` to run one
   app elsewhere (e.g. `pnpm --filter manage dev --port 3005`).
 - `main` is production. It is protected: never commit or push to it directly.

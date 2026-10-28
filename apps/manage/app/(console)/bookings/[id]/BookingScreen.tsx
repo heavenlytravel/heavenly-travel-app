@@ -18,23 +18,25 @@ import {
 import {
   getBooking,
   getBookingFulfilment,
+  listTripEvents,
   listBookingNotes,
   type BookingItemWithDetails,
 } from "@repo/db/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { DetailColumns } from "../../../_components/PageColumn";
-import { PageHeader } from "../../../_components/PageHeader";
-import { SectionHeader } from "../../../_components/SectionHeader";
+import { DetailColumns } from "@repo/console/PageColumn";
+import { TripReports } from "./TripReports";
+import { PageHeader } from "@repo/console/PageHeader";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import { HistoryLink } from "../../../_components/RecordHistory";
 import { PlaceValue, Rows } from "../../../_components/Rows";
-import { Card, CardTitle } from "../../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import {
   DetailSkeleton,
   HeaderSkeleton,
   CardSkeleton,
-} from "../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import {
   BookingStatusBadge,
   ItemStatusBadge,
@@ -103,6 +105,7 @@ export async function bookingScreen({
     listBookingNotes(id),
     getBookingFulfilment(id),
   ]);
+  const events = await listTripEvents(fulfilment.map((trip) => trip.id));
   if (!booking) notFound();
   if (place && !booking.items.some((item) => item.locationId === place.id)) {
     redirect(bookingHref(booking.id));
@@ -191,6 +194,12 @@ export async function bookingScreen({
             <WhoDoesIt
               bookingId={booking.id}
               trips={fulfilment}
+              canFulfil={permissions.includes("bookings.fulfil")}
+            />
+            <TripReports
+              bookingId={booking.id}
+              trips={fulfilment}
+              events={events}
               canFulfil={permissions.includes("bookings.fulfil")}
             />
             {booking.items.map((item) => (

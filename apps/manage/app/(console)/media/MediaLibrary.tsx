@@ -17,7 +17,7 @@ import { cx } from "@repo/ui/cx";
 import { ImageIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
-import { Frame, Tile, TileGrid } from "../../_components/Card";
+import { Frame, Tile, TileGrid } from "@repo/console/Card";
 import { CardImage } from "../../_components/CardImage";
 import { DeleteButton } from "../../_components/DeleteButton";
 import {

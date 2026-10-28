@@ -8,8 +8,8 @@ import { cx } from "@repo/ui/cx";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { errorOf, type ActionState } from "../_lib/action-state";
-import { FormError } from "./FormError";
+import { errorOf, type ActionState } from "@repo/console/action-state";
+import { FormError } from "@repo/console/FormError";
 
 /**
  * What a delete takes, a line each, as the server worked it out

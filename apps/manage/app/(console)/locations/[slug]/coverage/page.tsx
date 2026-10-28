@@ -14,9 +14,9 @@ import {
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
-import { Card, CardTitle } from "../../../../_components/Card";
-import { SectionHeader } from "../../../../_components/SectionHeader";
-import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
+import { Card, CardTitle } from "@repo/console/Card";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   locationTabHref,

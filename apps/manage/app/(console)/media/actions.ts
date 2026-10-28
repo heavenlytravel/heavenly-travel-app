@@ -11,7 +11,7 @@ import {
   STALE,
   refusalOf,
   type ActionState,
-} from "../../_lib/action-state";
+} from "@repo/console/action-state";
 import { revalidateFleet } from "../../_lib/fleet-actions";
 import { deleteStoredFiles, listStoredFiles } from "../../_lib/uploads";
 

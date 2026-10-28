@@ -8,7 +8,7 @@ import {
 import { imageSize } from "image-size";
 import { UTApi } from "uploadthing/server";
 import { getAdmin } from "./access";
-import { FORBIDDEN_MESSAGE } from "./action-state";
+import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 
 /**
  * Image uploads to UploadThing, for the location pages, the vehicle

@@ -7,7 +7,7 @@ import {
 import { BookingsTable } from "../../../_components/BookingsTable";
 import { Pager } from "../../../_components/Pager";
 import { SearchBox } from "../../../_components/SearchBox";
-import { Streamed, TableSkeleton } from "../../../_components/Skeleton";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import type { BookingsListFilter } from "../../../_lib/routes";
 
 /** How many bookings a page of a list holds. */

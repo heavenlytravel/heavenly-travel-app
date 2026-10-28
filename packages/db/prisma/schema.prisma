@@ -702,6 +702,31 @@ model Driver {
   @@index([vendorId])
 }
 
+/// One tap of a trip's driver on the day, or Operation's on their
+/// behalf: on the way, arrived, passenger on board, dropped off, no-show,
+/// a problem. Never edited or deleted. Dropped off and no-show complete the
+/// trip. Made with an id from the phone, so a tap sent again never counts
+/// twice. See docs/261028-fulfilment-vendors-and-connect.md, "On the day".
+model TripEvent {
+  id        String      @id @default(cuid())
+  itemId    String
+  item      BookingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// The driver it is about; no relation, so it outlives the driver's row.
+  driverId  String?
+  /// The account that tapped: the driver's, or the admin's for them.
+  actorId   String?
+  /// TRIP_EVENT_KINDS
+  kind      String
+  /// When it happened, by the phone's clock.
+  at        DateTime
+  note      String?
+  /// Made on the phone; a retry never counts twice.
+  clientId  String      @unique
+  createdAt DateTime    @default(now())
+
+  @@index([itemId, at])
+}
+
 /// An order: one or more items, each one product on one day. `status` is
 /// derived from the items by `bookingStatusOf` and stored for filtering.
 /// The contact fields are copies, so a later profile change never rewrites
@@ -809,6 +834,8 @@ model BookingItem {
   tripDetails TripItemDetails?
   /// Who does it: the vehicle and the driver, each from a vendor's offer.
   parts       TripPart[]
+  /// What its driver reported on the day, in order.
+  events      TripEvent[]
 
   @@unique([bookingId, position])
   @@index([status, startsAt])

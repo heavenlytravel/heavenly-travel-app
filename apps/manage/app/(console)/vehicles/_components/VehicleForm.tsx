@@ -28,13 +28,13 @@ import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
 import { useState } from "react";
-import { Card } from "../../../_components/Card";
-import { ExpiryDateField } from "../../../_components/ExpiryDateField";
-import { FormError } from "../../../_components/FormError";
-import { VendorField } from "../../../_components/VendorField";
+import { Card } from "@repo/console/Card";
+import { ExpiryDateField } from "@repo/console/ExpiryDateField";
+import { FormError } from "@repo/console/FormError";
+import { VendorField } from "@repo/console/VendorField";
 import { classGroups } from "../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
 import { createVehicleAction, updateVehicleAction } from "../actions";
 import { PhotoList } from "./PhotoList";
@@ -42,7 +42,7 @@ import {
   UploadsContext,
   useUploadCount,
 } from "../../../_components/use-image-upload";
-import { FORM_WIDTH } from "../../../_components/PageColumn";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {

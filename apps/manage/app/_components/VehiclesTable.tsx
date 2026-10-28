@@ -3,8 +3,8 @@ import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import type { ListedVehicle } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { locationVehicleHref } from "../_lib/routes";
-import { DocumentsDue } from "./DocumentsDue";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
+import { DocumentsDue } from "@repo/console/DocumentsDue";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 
 /**
  * Our vehicles as a table, for a location's Vehicles tab, the list across

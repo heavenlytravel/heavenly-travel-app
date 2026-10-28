@@ -3,8 +3,8 @@ import { listActivity } from "@repo/db/server";
 import { FilterLinks } from "../../_components/FilterLinks";
 import { HistoryPager } from "../../_components/HistoryPager";
 import { HistoryTimeline } from "../../_components/HistoryTimeline";
-import { PageHeader } from "../../_components/PageHeader";
-import { CardSkeleton, Streamed } from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import {
   ACTIVITY_RECORD_NAMES,

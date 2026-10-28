@@ -3,9 +3,9 @@
 import { USER_LIMITS } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { Card } from "../../_components/Card";
-import { FormError } from "../../_components/FormError";
-import { useActionForm } from "../../_lib/use-action-form";
+import { Card } from "@repo/console/Card";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createUserAction } from "./actions";
 
 /** Creates an account on someone's behalf: a customer, or staff to promote next. */

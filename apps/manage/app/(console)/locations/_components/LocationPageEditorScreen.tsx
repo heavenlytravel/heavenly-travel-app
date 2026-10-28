@@ -21,7 +21,7 @@ import {
   CardSkeleton,
   HeaderSkeleton,
   Streamed,
-} from "../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import type { PagePublishEntry } from "../../../_components/page-editor/PageHistory";
 import {
   locationHistoryHref,

@@ -7,8 +7,10 @@ import {
   formatLocalDate,
   formatLocalTime,
   isDay,
+  isTripEventKind,
   PART_ROLE_LABELS,
   todayInMalaysia,
+  TRIP_EVENT_LABELS,
   type PartRole,
 } from "@repo/db";
 import {
@@ -19,10 +21,10 @@ import {
 } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
-import { Card, CardTitle } from "../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import { FilterSelect } from "../../_components/FilterSelect";
-import { PageHeader } from "../../_components/PageHeader";
-import { CardSkeleton, Streamed } from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/filter-options";
 import { locationNames } from "../../_lib/location-names";
@@ -240,6 +242,16 @@ function BoardCardView({ card }: { card: BoardCard }) {
           </span>
         );
       })}
+      {card.lastEvent ? (
+        <span className="text-xs text-slate-600">
+          <span className="font-medium">
+            {isTripEventKind(card.lastEvent.kind)
+              ? TRIP_EVENT_LABELS[card.lastEvent.kind]
+              : card.lastEvent.kind}
+          </span>{" "}
+          at {formatLocalTime(card.lastEvent.at)}
+        </span>
+      ) : null}
       {card.overdue ? (
         <Badge tone="amber">Past its estimated end, no Dropped off yet</Badge>
       ) : null}

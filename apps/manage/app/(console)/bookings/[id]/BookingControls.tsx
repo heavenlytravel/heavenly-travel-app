@@ -4,8 +4,8 @@ import { nextItemStatusOf, type NextItemStatus } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
-import { FormError } from "../../../_components/FormError";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import {
   advanceItemAction,
   cancelBookingAction,

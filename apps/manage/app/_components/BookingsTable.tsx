@@ -12,7 +12,7 @@ import type { BookingWithItems } from "@repo/db/server";
 import { bookingLocations } from "../_lib/booking-locations";
 import { bookingHref } from "../_lib/routes";
 import { BookingStatusBadge } from "./StatusBadges";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 
 /** "Langkawi", or "Langkawi, Penang" for a booking whose items pick up in two. */
 function locationsOf(booking: BookingWithItems) {

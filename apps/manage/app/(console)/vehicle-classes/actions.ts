@@ -14,7 +14,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../_lib/action-state";
+} from "@repo/console/action-state";
 import { VEHICLE_CLASSES_PATH } from "../../_lib/routes";
 import { refreshVehicleClassesAfter } from "../../_lib/site";
 

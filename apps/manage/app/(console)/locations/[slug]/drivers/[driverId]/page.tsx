@@ -8,10 +8,10 @@ import {
 } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import { DeleteButton } from "../../../../../_components/DeleteButton";
-import { DetailColumns } from "../../../../../_components/PageColumn";
+import { DetailColumns } from "@repo/console/PageColumn";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
-import { SectionHeader } from "../../../../../_components/SectionHeader";
-import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import {
   locationDriverHref,

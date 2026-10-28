@@ -27,7 +27,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { locationTabHref } from "../../../../_lib/routes";
-import { useLeaveGuard } from "../../../../_lib/use-leave-guard";
+import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { setZoneRatesAction } from "./actions";
 import {
   AddRouteDialog,
@@ -35,7 +35,7 @@ import {
   type NewRoute,
   type ZoneElsewhere,
 } from "./AddRouteDialog";
-import { errorOf } from "../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 import { CELL_INPUT, CellKey, EMPTY_CELL, EMPTY_CELL_MEANING } from "./cells";
 
 type Zone = { id: string; name: string };

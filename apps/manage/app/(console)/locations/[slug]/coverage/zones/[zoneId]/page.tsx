@@ -15,8 +15,8 @@ import {
 } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { notFound } from "next/navigation";
-import { SectionHeader } from "../../../../../../_components/SectionHeader";
-import { FormSkeleton, Streamed } from "../../../../../../_components/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../../_lib/access";
 import { locationTabHref } from "../../../../../../_lib/routes";
 import { locationDetails, locationKey } from "../../../../_lib/location-data";

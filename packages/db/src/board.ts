@@ -52,6 +52,11 @@ const boardInclude = {
       driver: { select: { name: true } },
     },
   },
+  events: {
+    orderBy: { at: "desc" },
+    take: 1,
+    select: { kind: true, at: true },
+  },
 } satisfies Prisma.BookingItemInclude;
 
 /** One part of a card: who, from whom, and what it waits for. */
@@ -77,8 +82,10 @@ export type BoardCard = {
   passengers: number;
   locationName: string | null;
   parts: BoardPart[];
-  /** Assigned, and past its estimated end with no Dropped off yet. */
+  /** Assigned or on the road, and past its estimated end with no Dropped off yet. */
   overdue: boolean;
+  /** The driver's last tap, and when; null before the first. */
+  lastEvent: { kind: string; at: Date } | null;
 };
 
 /** The instants a day in Malaysia runs between: "2026-11-03". Null for a day that is not one. */
@@ -90,8 +97,8 @@ export function boardDayRange(day: string) {
 /**
  * The cards of a day's trips, at one location or every one, by pickup:
  * the confirmed ones to assign or waiting, the assigned ones, and those
- * done that day. Offers past their time are expired first. Until drivers
- * report from Connect, no trip is on the road.
+ * done that day. Offers past their time are expired first. A trip whose
+ * driver has tapped in Connect is on the road.
  */
 export async function listBoard(
   day: string,
@@ -112,9 +119,8 @@ export async function listBoard(
   });
   return items.map((item) => {
     const job = jobOf(item);
-    // Driver reports arrive with Connect (step 4); until then none is on
-    // the road.
-    const reported = false;
+    const lastEvent = item.events[0] ?? null;
+    const reported = lastEvent !== null;
     const column = boardColumnOf({
       status: item.status,
       parts: item.parts,
@@ -145,7 +151,9 @@ export async function listBoard(
               : null,
       })),
       overdue:
-        column === "assigned" && tripWindow(job).end.getTime() < now.getTime(),
+        (column === "assigned" || column === "on-the-road") &&
+        tripWindow(job).end.getTime() < now.getTime(),
+      lastEvent,
     };
   });
 }

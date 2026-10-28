@@ -3,16 +3,16 @@
 import type { VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import Link from "next/link";
-import { FormError } from "../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import { VEHICLE_CLASSES_PATH } from "../../_lib/routes";
-import { useActionForm } from "../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createVehicleClassAction, updateVehicleClassAction } from "./actions";
 import { VehicleClassFieldset } from "./VehicleClassFields";
 import {
   UploadsContext,
   useUploadCount,
 } from "../../_components/use-image-upload";
-import { FORM_WIDTH } from "../../_components/PageColumn";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /**
  * The form for one catalogue class, new or existing: its fields, then

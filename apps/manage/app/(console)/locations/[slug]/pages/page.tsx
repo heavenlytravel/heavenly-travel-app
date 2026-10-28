@@ -16,14 +16,10 @@ import {
 } from "@repo/db";
 import type { PageSummary } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { Card, CardTitle } from "../../../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import { FilterSelect } from "../../../../_components/FilterSelect";
-import { SectionHeader } from "../../../../_components/SectionHeader";
-import {
-  CardSkeleton,
-  Streamed,
-  TableSkeleton,
-} from "../../../../_components/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
 import { filterOptions } from "../../../../_lib/filter-options";
 import {

@@ -2,8 +2,8 @@
 
 import { answerOf } from "@repo/ui/action-answer";
 import { useState, useTransition } from "react";
-import { FormError } from "../../../_components/FormError";
-import { errorOf } from "../../../_lib/action-state";
+import { FormError } from "@repo/console/FormError";
+import { errorOf } from "@repo/console/action-state";
 import { moveLocationEntryAction } from "../actions";
 import { RowControls } from "./RowControls";
 

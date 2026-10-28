@@ -11,8 +11,8 @@ import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { moveLocationStateAction } from "../actions";
-import { FormError } from "../../../_components/FormError";
-import { errorOf } from "../../../_lib/action-state";
+import { FormError } from "@repo/console/FormError";
+import { errorOf } from "@repo/console/action-state";
 
 /** What the admin is asked before a move the public notices; null for the rest. */
 function questionOf(from: LocationState, name: string): ConfirmRequest | null {

@@ -17,11 +17,11 @@ import {
   listSitePageSummaries,
 } from "@repo/db/server";
 import { HouseIcon } from "@repo/ui/icons";
-import { Card, CardTitle } from "../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import { FilterSelect } from "../../_components/FilterSelect";
 import { LocationMark } from "../../_components/LocationMark";
-import { PageHeader } from "../../_components/PageHeader";
-import { Streamed, TableSkeleton } from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import {
   filterOptions,

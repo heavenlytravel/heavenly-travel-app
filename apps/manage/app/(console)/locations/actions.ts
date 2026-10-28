@@ -34,7 +34,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../_lib/action-state";
+} from "@repo/console/action-state";
 import {
   LOCATIONS_PATH,
   PAGES_PATH,

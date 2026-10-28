@@ -3,12 +3,12 @@ import { formatLocalDate, fullName, searchTermOf } from "@repo/db";
 import { listUsers } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
-import { Card, CardTitle } from "../../_components/Card";
-import { PageHeader } from "../../_components/PageHeader";
+import { Card, CardTitle } from "@repo/console/Card";
+import { PageHeader } from "@repo/console/PageHeader";
 import { Pager, pageOf } from "../../_components/Pager";
 import { SearchBox } from "../../_components/SearchBox";
-import { Streamed, TableSkeleton } from "../../_components/Skeleton";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { requireAdmin } from "../../_lib/access";
 import {
   adminHref,

@@ -2,8 +2,12 @@ import Link from "next/link";
 import type { ActivityEntry } from "@repo/db/server";
 import { HistoryIcon } from "@repo/ui/icons";
 import { HistoryTimeline } from "./HistoryTimeline";
-import { Header } from "./PageHeader";
-import { BackLinkSkeleton, CardSkeleton, HeaderSkeleton } from "./Skeleton";
+import { Header } from "@repo/console/PageHeader";
+import {
+  BackLinkSkeleton,
+  CardSkeleton,
+  HeaderSkeleton,
+} from "@repo/console/Skeleton";
 
 /** "History" in a record's header: the way to the record's history page. */
 export function HistoryLink({ href }: { href: string }) {

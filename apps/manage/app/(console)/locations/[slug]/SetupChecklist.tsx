@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { setupProgress, type SetupStep } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
-import { Card, CardTitle } from "../../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import { StepMark } from "../../../_components/StepMark";
 
 /**

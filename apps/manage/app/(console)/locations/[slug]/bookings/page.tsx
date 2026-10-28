@@ -1,5 +1,5 @@
 import { isBookingStatus, searchTermOf } from "@repo/db";
-import { SectionHeader } from "../../../../_components/SectionHeader";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import { pageOf } from "../../../../_components/Pager";
 import { requireAdmin } from "../../../../_lib/access";
 import {

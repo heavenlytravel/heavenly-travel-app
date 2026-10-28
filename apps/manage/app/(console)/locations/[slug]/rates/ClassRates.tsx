@@ -18,7 +18,7 @@ import {
   Th,
   ThGroup,
   THeadRows,
-} from "../../../../_components/Table";
+} from "@repo/console/Table";
 
 const hours = (n: number) => `${n} h`;
 

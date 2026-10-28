@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { useState } from "react";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { BookingSummary } from "../_components/BookingSummary";
 import { ItemHiddenFields } from "../_components/ItemHiddenFields";
 import {

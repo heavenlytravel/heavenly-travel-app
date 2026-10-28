@@ -11,7 +11,7 @@ import { cx } from "@repo/ui/cx";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useImageUpload } from "./use-image-upload";
-import { FormError } from "./FormError";
+import { FormError } from "@repo/console/FormError";
 
 /**
  * One image of a form: what is there now, and the buttons that upload,

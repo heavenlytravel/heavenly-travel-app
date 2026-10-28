@@ -1,4 +1,4 @@
-import { Streamed } from "../../../../../_components/Skeleton";
+import { Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { AmendItemSkeleton, amendItemScreen } from "./AmendItemScreen";
 

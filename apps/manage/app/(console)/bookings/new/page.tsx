@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { hasGooglePlaces } from "@repo/places/server";
-import { PageHeader } from "../../../_components/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { requireAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { NewBookingForm } from "./NewBookingForm";

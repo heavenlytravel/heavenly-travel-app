@@ -15,15 +15,9 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { AddressTester } from "../_components/AddressTester";
-import { PageHeader } from "../_components/PageHeader";
-import {
-  Card,
-  CardTitle,
-  TILE_LINK,
-  Tile,
-  TileGrid,
-} from "../_components/Card";
-import { Streamed, TileGridSkeleton } from "../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { Card, CardTitle, TILE_LINK, Tile, TileGrid } from "@repo/console/Card";
+import { Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../_lib/access";
 import {

@@ -7,8 +7,8 @@ import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { useState } from "react";
-import { FormError } from "../../../_components/FormError";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createLocationEntryAction } from "../actions";
 import {
   SavedAddressPicker,

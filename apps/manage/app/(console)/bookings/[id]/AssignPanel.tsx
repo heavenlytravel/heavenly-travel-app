@@ -14,8 +14,8 @@ import { Dialog } from "@repo/ui/dialog";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState, useTransition } from "react";
-import { FormError } from "../../../_components/FormError";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import {
   assignAction,
   loadAssignChoices,

@@ -26,7 +26,7 @@ import { Tooltip } from "@repo/ui/tooltip";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Card } from "../../../../../_components/Card";
+import { Card } from "@repo/console/Card";
 import { locationTabHref } from "../../../../../_lib/routes";
 import {
   checkOverlapsAction,
@@ -45,7 +45,7 @@ import {
 } from "./ZoneMap";
 import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
-import { FormError } from "../../../../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import { pricedFromSentence } from "../zone-lines";
 
 /** What the check after a change found in the way of a shape, with the shape it was asked for. */

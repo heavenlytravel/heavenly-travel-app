@@ -3,8 +3,8 @@ import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
 import type { DriverWithClasses } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { locationDriverHref } from "../_lib/routes";
-import { DocumentsDue } from "./DocumentsDue";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
+import { DocumentsDue } from "@repo/console/DocumentsDue";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 
 /**
  * Our drivers as a table, for a location's Drivers tab and the list across

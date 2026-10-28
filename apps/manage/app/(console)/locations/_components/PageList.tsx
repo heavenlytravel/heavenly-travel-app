@@ -32,14 +32,7 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { FilterSelect } from "../../../_components/FilterSelect";
 import { SearchBox } from "../../../_components/SearchBox";
 import { PageStatusBadge } from "../../../_components/StatusBadges";
-import {
-  EmptyRow,
-  TBody,
-  Td,
-  Th,
-  THead,
-  Table,
-} from "../../../_components/Table";
+import { EmptyRow, TBody, Td, Th, THead, Table } from "@repo/console/Table";
 import {
   locationPageHref,
   locationPagesHref,

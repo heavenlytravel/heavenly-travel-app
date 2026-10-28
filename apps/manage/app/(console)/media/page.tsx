@@ -11,10 +11,10 @@ import {
 import { listMediaUses } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import Link from "next/link";
-import { Frame } from "../../_components/Card";
-import { PageHeader } from "../../_components/PageHeader";
+import { Frame } from "@repo/console/Card";
+import { PageHeader } from "@repo/console/PageHeader";
 import { Pager, pageOf } from "../../_components/Pager";
-import { Bone, Streamed, TileGridSkeleton } from "../../_components/Skeleton";
+import { Bone, Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../_lib/access";
 import { PAGE_PARAM, mediaHref } from "../../_lib/routes";
 import { listStoredFiles, type StoredFile } from "../../_lib/uploads";

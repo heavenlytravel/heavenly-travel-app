@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "@repo/tailwind-config";
+/* The shared console parts live outside this app. */
+@source "../../../packages/console/src";
+
+body {
+  background: var(--color-slate-50);
+  color: var(--color-slate-900);
+}

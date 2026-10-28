@@ -24,7 +24,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
-import { FormError } from "./FormError";
+import { FormError } from "@repo/console/FormError";
 import { useImageUpload } from "./use-image-upload";
 
 /**

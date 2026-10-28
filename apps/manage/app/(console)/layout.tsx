@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { AppSidebar } from "../_components/AppSidebar";
 import { ConsoleHeader } from "../_components/ConsoleHeader";
 import { ConsoleSearch } from "../_components/ConsoleSearch";
-import { PageColumn } from "../_components/PageColumn";
+import { PageColumn } from "@repo/console/PageColumn";
 import { getPermissions } from "../_lib/access";
 import { locationNames } from "../_lib/location-names";
 

@@ -6,9 +6,9 @@ import {
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
-import { Card, CardTitle } from "../../../../../_components/Card";
-import { SectionHeader } from "../../../../../_components/SectionHeader";
-import { FormSkeleton, Streamed } from "../../../../../_components/Skeleton";
+import { Card, CardTitle } from "@repo/console/Card";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { VehiclesTable } from "../../../../../_components/VehiclesTable";
 import { getPermissions, requireAdmin } from "../../../../../_lib/access";
 import {

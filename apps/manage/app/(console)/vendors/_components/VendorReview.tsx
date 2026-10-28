@@ -8,9 +8,9 @@ import { Field, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { useState, useTransition, type ReactNode } from "react";
-import { FormError } from "../../../_components/FormError";
-import { errorOf } from "../../../_lib/action-state";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { errorOf } from "@repo/console/action-state";
+import { useActionForm } from "@repo/console/use-action-form";
 import { moveVendorAction, setVendorOursAction } from "../actions";
 
 /** The move a button makes from a status, and what it says once done. */

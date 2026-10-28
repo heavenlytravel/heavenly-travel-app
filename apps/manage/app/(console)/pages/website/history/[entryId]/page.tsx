@@ -9,14 +9,14 @@ import {
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Card, CardTitle } from "../../../../../_components/Card";
-import { SectionHeader } from "../../../../../_components/SectionHeader";
+import { Card, CardTitle } from "@repo/console/Card";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import {
   BackLinkSkeleton,
   CardSkeleton,
   HeaderSkeleton,
   Streamed,
-} from "../../../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import { PageContentView } from "../../../../../_components/page-editor/PageContentView";
 import { requireAdmin } from "../../../../../_lib/access";
 import { activityHref, sitePageHref } from "../../../../../_lib/routes";

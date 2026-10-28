@@ -3,8 +3,8 @@
 import type { AdminTeam } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Sheet } from "@repo/ui/sheet";
-import { FormError } from "../../_components/FormError";
-import { useActionForm } from "../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
 

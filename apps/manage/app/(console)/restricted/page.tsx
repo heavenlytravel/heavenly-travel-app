@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PageHeader } from "../../_components/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { requireAdmin } from "../../_lib/access";
 
 /**

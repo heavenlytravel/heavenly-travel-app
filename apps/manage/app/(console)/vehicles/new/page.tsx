@@ -4,9 +4,9 @@ import {
   listModelSuggestions,
   listVendorOptions,
 } from "@repo/db/server";
-import { DetailColumns } from "../../../_components/PageColumn";
-import { PageHeader } from "../../../_components/PageHeader";
-import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
+import { DetailColumns } from "@repo/console/PageColumn";
+import { PageHeader } from "@repo/console/PageHeader";
+import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { VEHICLES_PATH, vehiclesHref } from "../../../_lib/routes";
 import { VehicleForm } from "../_components/VehicleForm";

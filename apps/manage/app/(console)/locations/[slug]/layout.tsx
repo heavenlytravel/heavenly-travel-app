@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { PageHeader } from "../../../_components/PageHeader";
-import { HeaderSkeleton, Streamed } from "../../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { locationDetails, locationKey } from "../_lib/location-data";
 

@@ -22,10 +22,10 @@ import {
   Textarea,
 } from "@repo/ui/field";
 import Link from "next/link";
-import { Card } from "../../../_components/Card";
-import { FormError } from "../../../_components/FormError";
-import { FORM_WIDTH } from "../../../_components/PageColumn";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { Card } from "@repo/console/Card";
+import { FormError } from "@repo/console/FormError";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createVendorAction, updateVendorAction } from "../actions";
 
 /**

@@ -4,8 +4,8 @@ import { SAFETY_BUFFER_FIELD, SAFETY_BUFFER_MAX_MINUTES } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
-import { FormError } from "../../../_components/FormError";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { setSafetyBufferAction } from "../actions";
 
 /**

@@ -9,8 +9,8 @@ import { listLocationHistory } from "@repo/db/server";
 import { FilterLinks } from "../../../../_components/FilterLinks";
 import { HistoryPager } from "../../../../_components/HistoryPager";
 import { HistoryTimeline } from "../../../../_components/HistoryTimeline";
-import { SectionHeader } from "../../../../_components/SectionHeader";
-import { CardSkeleton, Streamed } from "../../../../_components/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   activityEntryHref,

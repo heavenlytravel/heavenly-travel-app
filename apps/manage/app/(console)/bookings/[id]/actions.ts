@@ -29,7 +29,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../../_lib/action-state";
+} from "@repo/console/action-state";
 import {
   BOOKINGS_PATH,
   LOCATION_ROUTE,

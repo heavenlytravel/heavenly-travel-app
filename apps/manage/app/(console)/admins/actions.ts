@@ -9,7 +9,7 @@ import {
 } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
-import { type ActionState, STALE, stateOf } from "../../_lib/action-state";
+import { type ActionState, STALE, stateOf } from "@repo/console/action-state";
 import { ADMINS_PATH } from "../../_lib/routes";
 
 const FORBIDDEN: ActionState = {

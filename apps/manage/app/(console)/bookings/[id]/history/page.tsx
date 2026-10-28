@@ -1,5 +1,5 @@
 import { RecordHistorySkeleton } from "../../../../_components/RecordHistory";
-import { Streamed } from "../../../../_components/Skeleton";
+import { Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
 import { bookingHistory } from "../BookingHistory";
 

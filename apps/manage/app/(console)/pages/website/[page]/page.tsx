@@ -23,8 +23,8 @@ import {
   HeaderSkeleton,
   Streamed,
   TileGridSkeleton,
-} from "../../../../_components/Skeleton";
-import { SectionHeader } from "../../../../_components/SectionHeader";
+} from "@repo/console/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import { PageEditor } from "../../../../_components/page-editor/PageEditor";
 import type { PagePublishEntry } from "../../../../_components/page-editor/PageHistory";
 import { requireAdmin } from "../../../../_lib/access";

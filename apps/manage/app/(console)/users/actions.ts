@@ -3,7 +3,11 @@
 import { createUser, parseNewUser } from "@repo/db/server";
 import { revalidatePath } from "next/cache";
 import { actorOf, getAdmin } from "../../_lib/access";
-import { type ActionState, refusalOf, stateOf } from "../../_lib/action-state";
+import {
+  type ActionState,
+  refusalOf,
+  stateOf,
+} from "@repo/console/action-state";
 import { USERS_PATH } from "../../_lib/routes";
 
 /**

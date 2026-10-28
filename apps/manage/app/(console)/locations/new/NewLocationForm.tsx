@@ -5,14 +5,14 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useState } from "react";
-import { Card } from "../../../_components/Card";
-import { FormError } from "../../../_components/FormError";
+import { Card } from "@repo/console/Card";
+import { FormError } from "@repo/console/FormError";
 import { LOCATIONS_PATH } from "../../../_lib/routes";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { LocationSlugField } from "../_components/SlugField";
 import { StatePicker, type StateOption } from "../_components/StatePicker";
 import { createLocationAction } from "../actions";
-import { FORM_WIDTH } from "../../../_components/PageColumn";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /**
  * The form for a new location: the three things only a person can say. The

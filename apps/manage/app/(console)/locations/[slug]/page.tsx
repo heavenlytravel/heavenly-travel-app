@@ -23,13 +23,13 @@ import { ChevronRightIcon } from "@repo/ui/icons";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { BookingsTable } from "../../../_components/BookingsTable";
-import { Card, CardTitle, Frame } from "../../../_components/Card";
+import { Card, CardTitle, Frame } from "@repo/console/Card";
 import {
   Bone,
   CardSkeleton,
   Streamed,
   TableSkeleton,
-} from "../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { MENU_ICONS } from "../../../_components/menu";
 import {

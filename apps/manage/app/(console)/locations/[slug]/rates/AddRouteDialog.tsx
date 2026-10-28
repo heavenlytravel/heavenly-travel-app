@@ -7,7 +7,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Field } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { Fragment, useState, useTransition, type FormEvent } from "react";
-import { FormError } from "../../../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import { CELL_INPUT, CellKey, EMPTY_CELL, EMPTY_CELL_MEANING } from "./cells";
 
 type Zone = { id: string; name: string };

@@ -1,6 +1,6 @@
 import { ConsoleMenu } from "../../../_components/ConsoleMenu";
 import { allLocationsMenu } from "../../../_components/nav";
-import { ScopeNavSkeleton, Streamed } from "../../../_components/Skeleton";
+import { ScopeNavSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions } from "../../../_lib/access";
 import { LocationScopeNav } from "../../locations/[slug]/LocationNav";
 

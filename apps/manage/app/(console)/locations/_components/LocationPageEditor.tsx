@@ -8,9 +8,9 @@ import { Dialog } from "@repo/ui/dialog";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ComponentProps } from "react";
-import { FormError } from "../../../_components/FormError";
+import { FormError } from "@repo/console/FormError";
 import { PageEditor } from "../../../_components/page-editor/PageEditor";
-import { errorOf } from "../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 import {
   deleteLocationEntryAction,
   renameLocationEntryAction,

@@ -2,6 +2,7 @@
 
 import {
   isDeclineReason,
+  isTripEventKind,
   parseRinggit,
   pickupInstant,
   textOf,
@@ -14,6 +15,7 @@ import {
   listVendorOptions,
   nameParts,
   releaseAction,
+  reportTripEvent,
   setPartCost,
   type Candidate,
   type PartAsk,
@@ -29,7 +31,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../../_lib/action-state";
+} from "@repo/console/action-state";
 import {
   BOOKINGS_PATH,
   LOCATION_ROUTE,
@@ -264,4 +266,35 @@ export async function setPartCostAction(
   );
   if (result.ok) revalidatePath(bookingHref(bookingId));
   return stateOf(result);
+}
+
+/**
+ * Operation taps for a driver who cannot: the same kinds as Connect's,
+ * at the time it is entered. Dropped off and no-show complete the trip.
+ */
+export async function reportForDriverAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.fulfil");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  const itemId = textOf(formData.get("itemId"));
+  const kind = textOf(formData.get("kind"));
+  if (!bookingId || !itemId || !isTripEventKind(kind)) return STALE;
+  const note = textOf(formData.get("note"));
+  return finish(
+    bookingId,
+    await reportTripEvent(
+      actorOf(admin),
+      { admin: true },
+      {
+        itemId,
+        kind,
+        at: new Date(),
+        note: note || null,
+        clientId: crypto.randomUUID(),
+      },
+    ),
+  );
 }

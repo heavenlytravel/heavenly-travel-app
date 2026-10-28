@@ -22,15 +22,15 @@ import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { Card } from "../../../_components/Card";
-import { ExpiryDateField } from "../../../_components/ExpiryDateField";
-import { FormError } from "../../../_components/FormError";
-import { VendorField } from "../../../_components/VendorField";
+import { Card } from "@repo/console/Card";
+import { ExpiryDateField } from "@repo/console/ExpiryDateField";
+import { FormError } from "@repo/console/FormError";
+import { VendorField } from "@repo/console/VendorField";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
 import { createDriverAction, updateDriverAction } from "../actions";
-import { FORM_WIDTH } from "../../../_components/PageColumn";
+import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /**
  * The form for a vendor's driver, new or existing: whose driver they are,

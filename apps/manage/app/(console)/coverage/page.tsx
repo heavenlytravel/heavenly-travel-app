@@ -1,9 +1,9 @@
 import { isZoneShape, plural, pricedRoutesByZone } from "@repo/db";
 import { listCoverage } from "@repo/db/server";
 import { FilterSelect } from "../../_components/FilterSelect";
-import { Card, CardTitle } from "../../_components/Card";
-import { PageHeader } from "../../_components/PageHeader";
-import { CardSkeleton, Streamed } from "../../_components/Skeleton";
+import { Card, CardTitle } from "@repo/console/Card";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/filter-options";
 import {

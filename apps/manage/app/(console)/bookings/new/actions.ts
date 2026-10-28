@@ -14,7 +14,7 @@ import {
   type ActionState,
   FORBIDDEN,
   refusalOf,
-} from "../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 import { CONTACT_FIELDS } from "../_lib/trip-form";
 import { prepareFormItem } from "../_lib/trip-server";

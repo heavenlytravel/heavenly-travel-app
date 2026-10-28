@@ -12,13 +12,13 @@ import {
 import { getBooking } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { notFound, redirect } from "next/navigation";
-import { PageHeader } from "../../../../../_components/PageHeader";
-import { SectionHeader } from "../../../../../_components/SectionHeader";
+import { PageHeader } from "@repo/console/PageHeader";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import {
   BackLinkSkeleton,
   FormSkeleton,
   HeaderSkeleton,
-} from "../../../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import { getPermissions } from "../../../../../_lib/access";
 import { amendItemHref, bookingHref } from "../../../../../_lib/routes";
 import type { BookingPlace } from "../../BookingScreen";

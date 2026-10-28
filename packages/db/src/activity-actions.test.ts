@@ -352,6 +352,8 @@ describe("activityActionMeta", () => {
     "booking.part.named",
     "booking.part.released",
     "booking.part.cost.changed",
+    "booking.trip.reported",
+    "booking.contact.viewed",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

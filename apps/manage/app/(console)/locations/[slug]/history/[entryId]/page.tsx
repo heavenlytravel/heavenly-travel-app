@@ -3,14 +3,14 @@ import { describeActivity, formatLocalDateTime } from "@repo/db";
 import { getLocation, getPagePublish } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
-import { Card, CardTitle } from "../../../../../_components/Card";
-import { SectionHeader } from "../../../../../_components/SectionHeader";
+import { Card, CardTitle } from "@repo/console/Card";
+import { SectionHeader } from "@repo/console/SectionHeader";
 import {
   BackLinkSkeleton,
   CardSkeleton,
   HeaderSkeleton,
   Streamed,
-} from "../../../../../_components/Skeleton";
+} from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationPageHref, locationTabHref } from "../../../../../_lib/routes";
 import { PageContentView } from "../../../../../_components/page-editor/PageContentView";

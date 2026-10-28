@@ -41,6 +41,6 @@ export function needsTeam(admin: { level: string; teams: readonly string[] }) {
   );
 }
 
-/** Areas of the product a signed-in user may enter. See `getAccess`. */
-export const AREAS = ["user", "driver", "partner", "admin"] as const;
+/** Areas of the product a signed-in user may enter. See `getAccess`, and `getConnectAccess` for Connect. */
+export const AREAS = ["user", "admin"] as const;
 export type Area = (typeof AREAS)[number];

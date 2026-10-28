@@ -36,7 +36,7 @@ import { modelName } from "./vehicle-model-input";
  */
 
 /** A live trip with what fulfilment reads of it. */
-const tripInclude = {
+export const tripInclude = {
   booking: { select: { id: true, reference: true } },
   tripDetails: {
     select: {
@@ -76,7 +76,7 @@ export function jobOf(trip: TripRow): Job {
 }
 
 /** The trips a vehicle or a driver holds besides `exceptBookingId`'s: live, not done. */
-async function heldJobs(
+export async function heldJobs(
   client: Prisma.TransactionClient,
   where: { vehicleId: string } | { driverId: string },
   exceptBookingId: string,

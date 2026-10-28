@@ -2,9 +2,9 @@
 
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { Card } from "../../_components/Card";
-import { FormError } from "../../_components/FormError";
-import { useActionForm } from "../../_lib/use-action-form";
+import { Card } from "@repo/console/Card";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
 

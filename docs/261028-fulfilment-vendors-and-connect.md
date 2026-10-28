@@ -455,8 +455,9 @@ side, three servers instead of two. Its port is 3002, pinned like web's and mana
 `https://akieez-h510m.tail4436c5.ts.net:3002` serves it on the tailnet.
 
 **It looks like `manage.`:** the same sidebar, header, page headers, tables and cards.
-The parts both apps need move from `apps/manage/app/_components` into `@repo/ui`, so
-there is one copy, not two. Within that frame, the drivers' pages are built for a phone
+The parts both apps need move from `apps/manage/app/_components` into one shared copy, not
+two. Built in `packages/console` (`@repo/console`), not `@repo/ui` as first written: they
+read `@repo/db`, and `@repo/ui` is built on its own with no dependency on it. Within that frame, the drivers' pages are built for a phone
 first, with large buttons for the reports.
 
 ### In the repo (the PR does these)

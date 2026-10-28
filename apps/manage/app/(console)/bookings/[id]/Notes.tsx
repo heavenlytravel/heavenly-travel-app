@@ -4,8 +4,8 @@ import { BOOKING_NOTE_MAX_LENGTH, formatLocalDateTime } from "@repo/db";
 import type { BookingNoteEntry } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { FieldGroup, Textarea } from "@repo/ui/field";
-import { FormError } from "../../../_components/FormError";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { FormError } from "@repo/console/FormError";
+import { useActionForm } from "@repo/console/use-action-form";
 import { addNoteAction } from "./actions";
 
 /**

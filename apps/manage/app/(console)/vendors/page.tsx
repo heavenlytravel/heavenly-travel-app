@@ -11,9 +11,9 @@ import { listVendors } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { FilterLinks } from "../../_components/FilterLinks";
-import { PageHeader } from "../../_components/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { SearchBox } from "../../_components/SearchBox";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "../../_components/Table";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { requireAdmin } from "../../_lib/access";
 import {
   NEW_VENDOR_PATH,

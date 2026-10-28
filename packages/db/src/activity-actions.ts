@@ -20,6 +20,7 @@ import {
 } from "./vehicle-class-input";
 import { VEHICLE_FIELD_LABELS } from "./vehicle-input";
 import { VENDOR_FIELD_LABELS } from "./vendor-input";
+import { isTripEventKind, TRIP_EVENT_LABELS } from "./trip-events-input";
 
 /**
  * The activity log's vocabulary, browser-safe: who can act, what an entry
@@ -27,7 +28,13 @@ import { VENDOR_FIELD_LABELS } from "./vendor-input";
  * ./activity. See docs/260930-admin-teams-and-access.md, "The activity log".
  */
 
-export const ACTOR_KINDS = ["admin", "customer", "guest", "system"] as const;
+export const ACTOR_KINDS = [
+  "admin",
+  "customer",
+  "guest",
+  "system",
+  "connect",
+] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
 export const isActorKind = guardFor(ACTOR_KINDS);
 
@@ -36,8 +43,11 @@ export type CustomerActor = { kind: "customer"; userId: string };
 /** A signed-out visitor booking on the website. See docs/261008-guest-booking.md. */
 export type GuestActor = { kind: "guest" };
 export type SystemActor = { kind: "system" };
+/** A vendor's member or a driver, acting in Connect. See docs/261028-fulfilment-vendors-and-connect.md. */
+export type ConnectActor = { kind: "connect"; userId: string };
 /** Who is doing the change. Every mutation takes one and logs it. */
-export type Actor = AdminActor | CustomerActor | GuestActor | SystemActor;
+export type Actor =
+  AdminActor | CustomerActor | GuestActor | SystemActor | ConnectActor;
 export const GUEST_ACTOR: GuestActor = { kind: "guest" };
 export const SYSTEM_ACTOR: SystemActor = { kind: "system" };
 
@@ -47,6 +57,7 @@ export const ANONYMOUS_ACTOR_NAMES: Record<ActorKind, string> = {
   customer: "Former customer",
   guest: "Guest",
   system: "System",
+  connect: "Former Connect user",
 };
 
 export const ACTIVITY_ENTITY_TYPES = [
@@ -99,6 +110,13 @@ const ACTIONS = {
   "booking.part.named": { entityType: "booking", customerVisible: false },
   /** A part let go, and why (`cause`): released, backed out, unanswered, vendor suspended, out of service. */
   "booking.part.released": { entityType: "booking", customerVisible: false },
+  /**
+   * A driver's tap, or Operation's for them: the trip's position, the
+   * kind, when it happened by the phone, the note, the driver's name.
+   */
+  "booking.trip.reported": { entityType: "booking", customerVisible: false },
+  /** A driver opened a job showing the customer's details: the trip's position and the driver's name. PDPA. */
+  "booking.contact.viewed": { entityType: "booking", customerVisible: false },
   /** What we owe a vendor for a part, before and after, with the reason. */
   "booking.part.cost.changed": {
     entityType: "booking",
@@ -869,6 +887,18 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Cancelled ${itemName(entry.after)}`;
     case "booking.item.reopened":
       return `Reopened ${itemName(entry.after)}: it lost its vehicle or driver`;
+    case "booking.trip.reported": {
+      const kind = field(entry.after, "kind");
+      const label = isTripEventKind(kind)
+        ? TRIP_EVENT_LABELS[kind]
+        : "A report";
+      const note = field(entry.after, "note");
+      return `${label}, ${itemName(entry.after)}${typeof note === "string" && note ? `: ${note}` : ""}`;
+    }
+    case "booking.contact.viewed": {
+      const driver = field(entry.after, "driverName");
+      return `${typeof driver === "string" ? driver : "The driver"} saw the customer's details of ${itemName(entry.after)}`;
+    }
     case "booking.offer.sent":
     case "booking.part.accepted":
     case "booking.part.declined":

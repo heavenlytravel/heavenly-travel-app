@@ -6,11 +6,11 @@ import {
   type LocationPriceList,
   type ZoneElsewhere,
 } from "@repo/db/server";
-import { Card, CardTitle } from "../../_components/Card";
+import { Card, CardTitle } from "@repo/console/Card";
 import { FilterSelect } from "../../_components/FilterSelect";
 import { LocationMark } from "../../_components/LocationMark";
-import { PageHeader } from "../../_components/PageHeader";
-import { CardSkeleton, Streamed } from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "../../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import { locationFilterOptions } from "../../_lib/filter-options";

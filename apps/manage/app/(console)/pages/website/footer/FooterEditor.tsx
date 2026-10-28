@@ -35,8 +35,8 @@ import { Field, Input, Textarea } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { Card, CardTitle } from "../../../../_components/Card";
-import { FormError } from "../../../../_components/FormError";
+import { Card, CardTitle } from "@repo/console/Card";
+import { FormError } from "@repo/console/FormError";
 import { ImageUpload } from "../../../../_components/ImageUpload";
 import { Count } from "../../../../_components/page-editor/Count";
 import {
@@ -54,7 +54,7 @@ import {
   useUploadCount,
 } from "../../../../_components/use-image-upload";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../../../../_lib/routes";
-import { useLeaveGuard } from "../../../../_lib/use-leave-guard";
+import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import {
   RowControls,
   movedRow,

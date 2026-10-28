@@ -9,19 +9,10 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { BusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
-import {
-  TILE_LINK,
-  Tile,
-  TileFoot,
-  TileGrid,
-} from "../../../../_components/Card";
+import { TILE_LINK, Tile, TileFoot, TileGrid } from "@repo/console/Card";
 import { CardImage } from "../../../../_components/CardImage";
-import { SectionHeader } from "../../../../_components/SectionHeader";
-import {
-  Bone,
-  Streamed,
-  TileGridSkeleton,
-} from "../../../../_components/Skeleton";
+import { SectionHeader } from "@repo/console/SectionHeader";
+import { Bone, Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   VEHICLE_CLASSES_PATH,

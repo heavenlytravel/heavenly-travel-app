@@ -12,11 +12,11 @@ import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { BusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
-import { TILE_LINK, Tile, TileFoot, TileGrid } from "../../_components/Card";
+import { TILE_LINK, Tile, TileFoot, TileGrid } from "@repo/console/Card";
 import { CardImage } from "../../_components/CardImage";
 import { LocationMark } from "../../_components/LocationMark";
-import { PageHeader } from "../../_components/PageHeader";
-import { Bone, Streamed, TileGridSkeleton } from "../../_components/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { Bone, Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
 import {
   NEW_VEHICLE_CLASS_PATH,

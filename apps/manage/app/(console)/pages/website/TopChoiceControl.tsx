@@ -11,13 +11,13 @@ import { Select } from "@repo/ui/select";
 import { ArrowLeftIcon, ArrowRightIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { TILE_LINK, Tile, TileFoot, TileGrid } from "../../../_components/Card";
+import { TILE_LINK, Tile, TileFoot, TileGrid } from "@repo/console/Card";
 import { LocationStateBadge } from "../../../_components/StatusBadges";
 import { locationHref } from "../../../_lib/routes";
 import { CardImage } from "../../../_components/CardImage";
 import { changeTopChoiceAction } from "./actions";
-import { FormError } from "../../../_components/FormError";
-import { errorOf } from "../../../_lib/action-state";
+import { FormError } from "@repo/console/FormError";
+import { errorOf } from "@repo/console/action-state";
 
 /**
  * The home page's top choices as the cards they become there, in their

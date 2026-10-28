@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Streamed } from "../../../_components/Skeleton";
+import { Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { BOOKINGS_PATH } from "../../../_lib/routes";
 import { BookingSkeleton, bookingScreen } from "./BookingScreen";

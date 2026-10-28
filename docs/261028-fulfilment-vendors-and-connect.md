@@ -1,9 +1,10 @@
 # Fulfilment: vendors, assignment and Connect
 
-Status: designed with the user on 2026-10-27 and 2026-10-28, in conversation. Not built.
-It is built in steps, one pull request each, in another thread (see "Build order"). The data
-model below is a proposal: each step confirms its part of it before building, and the user
-runs `db:push`.
+Status: designed with the user on 2026-10-27 and 2026-10-28, in conversation, and settled
+in review on 2026-10-28. Not built. A small pull request goes first: it pins the dev ports
+and renames `apps/admin` to `apps/manage`. Then this plan is built in one pull request,
+in five steps, one commit or more each (see "Build order"). The data model below is a
+proposal: each step confirms its part of it before building, and the user runs `db:push`.
 
 Today a booking is received, confirmed, "assigned" and completed, but "assigned" is a
 label only: nothing records which vehicle and which driver did the trip. Operation assigns
@@ -25,8 +26,11 @@ See "What this changes elsewhere".
   "Ali", an independent driver, with or without a car of his own, and so is a coach
   company.
 - **Connect:** the app vendors and drivers use, at `connect.heavenlytravel.my`
-  (`staging-connect.heavenlytravel.my` on staging). A third app beside `web` and `admin`.
-- **`manage.`:** the admin app, as today.
+  (`staging-connect.heavenlytravel.my` on staging). A third app beside `web` and `manage`,
+  in `apps/connect`. Its screens say "Heavenly Travel Connect"; a phone's home screen,
+  "HT Connect". "Vendor" stays the name of the thing in the data and on its screens.
+- **`manage.`:** the admin app, in `apps/manage` (`apps/admin` until the first pull
+  request).
 - **Trip:** one booking item. A booking holds one or more trips on one vehicle class
   (docs/261027-multi-trip-booking.md).
 
@@ -50,20 +54,32 @@ received ──► confirmed ──► assigned ──► completed
 - **Completed** comes from the driver's "Dropped off", or from Operation on their behalf.
 - **The board's columns are worked out, not stored:** To assign, Waiting to accept,
   Assigned, On the road, Done. The item status stays one of today's five.
+- **The board is for watching; cards are not dragged.** A card moves when someone acts:
+  a vendor or driver accepts, a driver taps. Clicking a card opens it, and a card in To
+  assign opens the assign panel with the picker. Dragging trips onto a driver's day is
+  in "Later".
 
 ### Vendors
 
 - **Every vehicle and every driver belongs to one vendor.**
-- **Heavenly Travel is the one vendor marked as ours.** What differs for it:
+- **A vendor is ours when `SUPER` switches it on,** on the vendor's page in `manage.`. No
+  one else can. Heavenly Travel is ours from the start, set by the script that makes it,
+  and a company Heavenly owns later can be switched on too. The code finds ours by the
+  switch, never by the name, so a renamed vendor stays ours. What differs for ours:
 
-|                                   | Heavenly (ours) | Other vendors                         |
-| --------------------------------- | --------------- | ------------------------------------- |
-| Order in the picker               | First           | After ours                            |
-| Cost to us                        | None            | Per trip, agreed in the offer         |
-| Sign-up and approval              | None            | Signs up in Connect, `SUPER` approves |
-| Its vehicles and drivers are kept | In `manage.`    | In Connect, and in `manage.` by staff |
-| Accepts for the vendor            | Operation       | The vendor's owner or staff           |
-| Its drivers accept their own jobs | Yes             | Yes                                   |
+|                                   | Ours                      | Other vendors                         |
+| --------------------------------- | ------------------------- | ------------------------------------- |
+| Order in the picker               | First                     | After ours                            |
+| Cost to us                        | None                      | Per trip, agreed in the offer         |
+| Sign-up and approval              | None                      | Signs up in Connect, `SUPER` approves |
+| Its vehicles and drivers are kept | In `manage.`              | In Connect, and in `manage.` by staff |
+| Accepts for the vendor            | Operation and `SUPER`     | The vendor's owner or staff           |
+| Its drivers accept their own jobs | Yes                       | Yes                                   |
+| Its vehicles reach the website    | Class pictures and models | Never                                 |
+
+- **Ours has no members.** Accepting for ours is the `bookings.fulfil` permission in
+  `manage.`: the Operation team, and `SUPER`, who holds every permission. One list, the
+  Admins page, says who may.
 
 - **A vendor is a company or an individual.** An individual with a car is a vendor like
   any company. Without a car, they are a vendor whose only driver is themself.
@@ -74,20 +90,37 @@ received ──► confirmed ──► assigned ──► completed
   works in Connect for now; the rest is a supplier list for Reservation until we sell it.
 - **Vendors' vehicles never reach the website.** We sell our classes; vendors add
   capacity behind them. The class pictures and the models shown "or similar" read only
-  Heavenly's vehicles (`modelsShownAt` in `packages/db/src/vehicle-models.ts`).
+  our vendors' vehicles (`modelsShownAt` in `packages/db/src/vehicle-models.ts`).
+- **Suspending a vendor first shows its accepted bookings still to come** in a dialog:
+  "Vendor A has 2 accepted bookings: HT-… Fri 8:00, HT-… Sat 9:00. Suspending takes its
+  vehicle and driver off them." Confirming suspends it and puts those bookings back in
+  To assign. Its owner, staff and drivers then see a suspended screen in Connect. **The
+  same dialog** comes before a vehicle or driver is taken out of service.
 
 ### Signing up
 
-1. **`connect.heavenlytravel.my/sign-up`** asks for the business details: company or
-   individual, name, SSM number (IC for an individual), contact person, phone, email,
-   address, the locations served and what they offer. No account is made.
-2. **It waits as Pending** until a `SUPER` reviews it in `manage.`.
-3. **Approved:** the vendor is active, and the applicant's email gets owner access. If no
-   account has that email yet, one is made, as the Users page makes one today. An email
-   says they can sign in.
-4. **Refused:** with a reason, staff only. No access.
-5. **Only then can they sign in.** An account with no access to Connect sees a no-access
-   page, as `manage.` does.
+Clerk first, then our form (decided 2026-10-28):
+
+1. **`connect.heavenlytravel.my/sign-up` is Clerk's sign-up,** with an email code.
+   Someone who already has an account, a customer's for one, signs in instead. Clerk's
+   bot protection keeps spam out, and the code proves the email is theirs.
+2. **Then the registration form,** at `/register`: company or individual, name, SSM
+   number (IC for an individual), contact person, phone, address, the locations served
+   and what they offer. The email is the account's. The applicant is the vendor's owner.
+3. **It waits as Pending** until a `SUPER` reviews it in `manage.`.
+4. **Approved:** the vendor is active, and an email says Connect is open.
+5. **Refused:** with a reason, staff only.
+
+Connect checks who is signed in on each page and shows one screen per case, as
+`manage.` shows "No admin access":
+
+| Signed in as                                        | Sees                           |
+| --------------------------------------------------- | ------------------------------ |
+| Neither a vendor's member nor a driver              | The registration form          |
+| A member of a pending vendor                        | "Waiting for approval"         |
+| A member of a refused vendor                        | "Not approved", with a contact |
+| A member, or a driver, of a suspended vendor        | "Suspended", with a contact    |
+| A member of an active vendor, or one of its drivers | Connect                        |
 
 Documents and scans (SSM certificate, permits, licences) are later. Until then a vendor's
 vehicles and drivers carry the expiry dates ours do.
@@ -104,10 +137,12 @@ by email (see "Accounts").
   - **Location:** only the locations the vendor serves.
   - **Class:** only the classes on sale at that location. A driver's "may drive" classes
     are limited the same way.
-  - **Model:** picked from the class's models. A model typed new waits for `SUPER` with
-    the vehicle, so a typo never enters the shared catalogue.
+  - **Model:** picked from the class's models, or typed new, which adds it to the
+    catalogue at once. If typed models pile up with typos, a fixed list comes later
+    (see "Later").
   - **Photos:** optional. They never reach the website.
-- **Each new vehicle or driver from Connect waits for `SUPER`** before it can be assigned.
+- **No approval for each vehicle or driver.** The vendor's approval covers them: one
+  saved in Connect can be assigned at once, as one staff add in `manage.`.
 - **In `manage.`, Operation keeps every vendor's fleet:** to assign, to watch documents
   expire, and to enter a fleet for a vendor not yet on Connect, or one that never signs
   in.
@@ -132,19 +167,23 @@ Assigning is Operation's work (`bookings.fulfil`).
 
 - **The picker** lists vehicles and drivers, ours first. One that cannot be used is shown
   greyed with the reason: not allowed on this class, a licence, PSV, road tax,
-  insurance, inspection or permit expired on the trip's date, out of service, waiting
-  for approval, or another job at that time. It shows each driver's day ("Ali: 8:00
+  insurance, inspection or permit expired on the trip's date, out of service, its vendor
+  suspended, or another job at that time. It shows each driver's day ("Ali: 8:00
   Airport → Datai, ends about 8:45").
 - **Named or open.** Operation names a vendor's own vehicle or driver, and the vendor
   confirms; or asks a vendor for a vehicle, a driver or both, and the vendor chooses.
-- **The offer** to a vendor holds the booking's trips, what is asked, the amount for each
-  trip (with "same for every trip"), and a time to answer by.
+- **The offer** to a vendor holds the booking's trips, what is asked, the amounts for each
+  trip, one for the vehicle and one for the driver (with "same for every trip"), and a
+  time to answer by. A vendor asked for both may quote less for the pair: that is two
+  lower amounts.
 
 ### Acceptance
 
-- **Every vendor accepts its offer.** For Heavenly that is Operation. The person assigning
-  can accept our vehicle in the same step when they have already checked it; otherwise
-  it waits in Operation's list like any other acceptance.
+- **Every vendor accepts its offer.** For ours that is Operation or `SUPER`, in
+  `manage.`. The person assigning can accept our vehicle in the same step when they have
+  already checked it; otherwise it waits in Operation's list like any other acceptance.
+- **Acceptance is kept for each part,** the vehicle and the driver, so a back-out reopens
+  that part alone, even when one vendor supplies both.
 - **Every driver accepts their own job, ours included.** It replaces the "acknowledge"
   step of `05e`. A vendor's owner names the driver, then that driver accepts. For a
   one-person vendor such as Ali, one tap covers both.
@@ -225,8 +264,9 @@ and **Report a problem**.
 
 ### Money owed to vendors
 
-- **A cost per trip for each outside vendor on it,** agreed in the offer (OP-Q4: per job).
-  Heavenly's is 0. Our drivers' own pay is still open (B-O2).
+- **A cost per trip for the vehicle and for the driver,** owed to the vendor of each and
+  agreed in the offer (OP-Q4: per job). Ours is 0. Our drivers' own pay is still open
+  (B-O2).
 - **Due once every trip of the booking is completed or late-cancelled.** For a 3-day
   booking, after day 3. Paying it out is Finance's work, later (OP6-03).
 - **A cancelled trip:**
@@ -247,9 +287,9 @@ and **Report a problem**.
   relying on it. People sign in with their own email.
 - **Access comes from rows, never a role column,** as today:
   - An admin profile opens `manage.`.
-  - Being a vendor's owner or staff, or a driver whose row has the account, opens
-    Connect.
-  - One person can have both. Our Operation admins are staff of the Heavenly vendor.
+  - Being an owner or staff of an active vendor, or a driver of one whose row has the
+    account, opens Connect. The other cases see a screen saying why (see "Signing up").
+  - One person can have both: one of our admins who also drives, say.
 - **A driver's account is linked by email.** A driver gets an email field; when an account
   with that email exists or is made, it is linked, as guest bookings are claimed in
   `packages/db/src/sync.ts`.
@@ -259,12 +299,12 @@ and **Report a problem**.
 
 ### Who does what in `manage.`
 
-| Who                | What                                                                                                                        |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `SUPER`            | Approve or refuse sign-ups; approve vendors' new vehicles, drivers and models; suspend a vendor                             |
-| Operation          | Vendors and their fleets; assign; accept for Heavenly; record acceptances and reports for others; set costs; mark completed |
-| Reservation, Sales | Confirm, as today                                                                                                           |
-| Finance            | See the costs; pay them out later                                                                                           |
+| Who                | What                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `SUPER`            | Approve or refuse sign-ups; switch a vendor to ours; suspend a vendor; anything Operation does                          |
+| Operation          | Vendors and their fleets; assign; accept for ours; record acceptances and reports for others; set costs; mark completed |
+| Reservation, Sales | Confirm, as today                                                                                                       |
+| Finance            | See the costs; pay them out later                                                                                       |
 
 ## Data model (proposal)
 
@@ -275,7 +315,8 @@ Vendor                                    new
   id
   name                "Heavenly Travel", "Ali bin Abu", "Pulau Coach Sdn Bhd"
   kind                "company" | "individual"
-  isOurs              Boolean, true on Heavenly's row only
+  isOurs              Boolean @default(false); SUPER switches it; true on
+                      Heavenly's row from the script that makes it
   status              "pending" | "active" | "refused" | "suspended"
   registrationNo      SSM number, or IC for an individual
   contactName, contactPhone, contactEmail, address
@@ -286,17 +327,14 @@ Vendor                                    new
   reviewedAt, reviewedById
   createdAt, updatedAt
 
-VendorMember                              new, replaces PartnerProfile
+VendorMember                              new, replaces PartnerProfile; none for ours
   id, vendorId, userId
   role                "owner" | "staff"
   @@unique([vendorId, userId])
 
 Vehicle             + vendorId  -> Vendor
-                    + approvedAt  DateTime?   null while it waits for SUPER
 Driver              + vendorId  -> Vendor
                     + email       String?     links their account
-                    + approvedAt  DateTime?
-VehicleModel        + approvedAt  DateTime?   a model a vendor typed waits with its vehicle
 Location            + safetyBufferMinutes Int @default(15)
 TripItemDetails     + driveMinutes Int?       Google's drive time, one-way trips
 
@@ -315,7 +353,8 @@ TripPart                                  new: the vehicle or the driver of one 
   role                "vehicle" | "driver"
   vehicleId?          named vehicle; null until the vendor names it
   driverId?           named driver
-  costSen             Int, 0 for ours
+  costSen             Int, 0 for ours: this part's amount for this trip
+  vendorAcceptedAt    DateTime?           its vendor's acceptance, for this part
   driverAcceptedAt    DateTime?           the driver's own acceptance
   @@unique([itemId, role])
 
@@ -340,95 +379,115 @@ TripEvent                                 new, never edited or deleted
 
 ## Build order
 
-One pull request per step. Production is live, so each step that changes the schema
-pushes it, and runs its data script, before the merge. A script that writes to production
-is rehearsed on a Neon copy first and backed up to a branch (PR #55).
+Two pull requests (decided 2026-10-28).
 
-**Before step 1, in a small PR of its own: pin the dev ports.** Web and admin each take
-the first free port from 3000 today, so they swap between runs, and the Tailscale address
-of one shows the other. The fix:
+**First, a small one: the dev ports and the `manage` folder.** No schema, no Connect.
 
-- `apps/web/package.json`: `"dev": "next dev --port 3000"`.
-- `apps/admin/package.json`: `"dev": "next dev --port 3001"`.
-- `CLAUDE.md`, "Development Workflow": replace "Dev ports are not pinned..." with the fixed
-  ports, web 3000 and admin 3001, Connect 3002 once built, and BoothKita's 3200 left
-  free on the same machine.
-- `docs/260916-development-workflow.md`: the environments table's Local row, and the
-  Tailscale table with the addresses on the same numbers (`:3000`, `:3001`). The old
-  `:443` and `:8443` addresses still work.
+- **Pin the dev ports.** Web and admin each took the first free port from 3000, so they
+  swapped between runs, and the Tailscale address of one showed the other. Each app's
+  `dev` script now names its port: web 3000, manage 3001, and Connect 3002 once built.
+  BoothKita keeps 3200. A taken port stops `pnpm dev` with `EADDRINUSE` instead of moving
+  the app. Tailscale serves `:3000`, `:3001` and `:3002` since 2026-10-28; the old `:443`
+  and `:8443` still work.
+- **Rename `apps/admin` to `apps/manage`,** the package `admin` to `manage`, so the folder
+  matches its address, as `apps/connect` will. The paths in `CLAUDE.md`, the READMEs, the
+  docs, `.gitignore` (the two lines that keep the coverage pages tracked) and the
+  lockfile follow. `ADMIN_URL`, `AdminProfile` and "admin" for staff stay: they name
+  people, not the app. The Vercel project `ht-admin` becomes `ht-manage`, and its Root
+  Directory changes.
+- **The READMEs** replace the starter text they still had.
+- Its steps outside the code are under "Outside the code", "The first pull request".
 
-Done when `pnpm dev` always puts web on 3000 and admin on 3001. Tailscale already serves
-`:3000`, `:3001` and `:3002`, set up on 2026-10-28.
+Done when `pnpm dev` puts web on 3000 and manage on 3001, and `manage.` deploys from
+`apps/manage`.
+
+**Then one pull request for this plan,** built in the five steps below, each in its own
+commits, on the branch `feat/fulfilment-vendors-connect`, rebased on `main` once the first
+is merged.
+
+**It pushes the schema twice,** because it removes things as well as adding them. The
+code live on `main` reads every column it knows, so a column or table removed before the
+merge breaks it, and so does a column made required. Each push goes through
+`pnpm db:push:prod`: a rehearsal on a Neon copy, the typed confirmation, a backup branch,
+then production (PR #55).
+
+1. **Before the merge, push the additions:** the new tables and columns, `vendorId`
+   still optional. Then run the vendor script's `:prod`: Heavenly as a vendor, with
+   every vehicle and driver under it. Prisma warns of no data loss here; a warning means
+   stop.
+2. **Merge.** Vercel deploys code that no longer reads what goes, and always sets a
+   vehicle's or driver's vendor.
+3. **After the deploy, push the removals:** run the vendor script's `:prod` again, for
+   anything added in between, then `pnpm db:push:prod` from `main`. It drops the columns
+   of step 1, `PartnerProfile` and `DriverProfile`, and makes `vendorId` required.
+   Prisma's data-loss warning is expected here and lists exactly those; anything else in
+   it means stop. Nothing breaks while this waits, so it need not be the same hour.
+
+The first push needs the schema without the removals. The pull request keeps them in its
+last commit, and its body gives the commands for both pushes.
 
 1. **Clean-up (BL-58, BL-69).** The columns, the table and the scripts the locations and
    fleet work left behind, including the base and minimum fare PR #51 stopped using.
-   Tech Lead, 2026-10-22: they go with this work.
-2. **Vendors in `manage.`.** The vendor tables. Heavenly as the first vendor, with every
-   vehicle and driver moved under it: push `vendorId` as optional, run the script, then
-   push it as required. Vendor screens for staff. The website reads only Heavenly's
+   Tech Lead, 2026-10-22: they go with this work. Their removal is the second push.
+2. **Vendors in `manage.`.** The vendor tables. Heavenly as the first vendor, ours, with
+   every vehicle and driver moved under it by a script. Vendor screens for staff: the
+   ours switch, suspending with its dialog. The website reads only our vendors'
    vehicles. Done when every vehicle and driver has a vendor, and Operation can enter an
    outside vendor's fleet.
 3. **Assigning in `manage.`.** The drive time on new trips, the safety buffer, the picker
-   with its reasons and warnings, offers with costs per trip, acceptances recorded by
-   Operation, reopening a part, the board, the cancel rules for vendor costs, the
-   customer's driver email, and "Mark assigned" gone. Done when every booking Operation
-   assigns names who does each trip, and a clash is refused.
+   with its reasons and warnings, offers with a vehicle and a driver amount per trip,
+   acceptances recorded by Operation, reopening a part, the board, the cancel rules for
+   vendor costs, the customer's driver email, and "Mark assigned" gone. Done when every
+   booking Operation assigns names who does each trip, and a clash is refused.
 4. **Connect for drivers.** `apps/connect`, set up as in "Setting up Connect" below.
    Drivers sign in, see their jobs, accept or decline, and report the trip. Done when a
    driver completes a trip in Connect and Operation sees it without a call.
-5. **Connect for vendors.** Sign-up and `SUPER`'s review, the vendor's owner access, its
-   own vehicles and drivers on the shared forms with approval, and its offers. Done when
-   a new vendor signs up, is approved, adds a car, and accepts a job.
+5. **Connect for vendors.** Clerk's sign-up, the registration form and `SUPER`'s review,
+   the screens for each case, the vendor's owner access, its own vehicles and drivers on
+   the shared forms, and its offers. Done when a new vendor signs up, is approved, adds a
+   car, and accepts a job.
 
 ## Setting up Connect (step 4)
 
-Connect is a third Next.js app in the monorepo, `apps/connect`, built like `apps/admin`.
+Connect is a third Next.js app in the monorepo, `apps/connect`, built like `apps/manage`.
 `pnpm dev` stays one command in one terminal: Turbo runs every app's `dev` task side by
-side, three servers instead of two.
+side, three servers instead of two. Its port is 3002, pinned like web's and manage's, and
+`https://akieez-h510m.tail4436c5.ts.net:3002` serves it on the tailnet.
 
-**Ports are pinned, and each Tailscale address uses the app's own port number.** Today
-each app takes the first free port from 3000, so web and admin swap 3000 and 3001 between
-runs, and a third app would land on 3002, which no Tailscale address serves. Web and admin
-are pinned before step 1 (see "Build order"); Connect starts pinned. Each app's
-`dev` script gets its own port:
-
-| App     | Port | Tailscale address (testing from another machine) |
-| ------- | ---- | ------------------------------------------------ |
-| web     | 3000 | `https://akieez-h510m.tail4436c5.ts.net:3000`    |
-| admin   | 3001 | `https://akieez-h510m.tail4436c5.ts.net:3001`    |
-| connect | 3002 | `https://akieez-h510m.tail4436c5.ts.net:3002`    |
-
-Port 3200 stays BoothKita's, so both projects can run at once. A pinned port that is
-already taken stops that app with an error instead of moving it to another port. This
-replaces "Dev ports are not pinned" in `CLAUDE.md`.
+**It looks like `manage.`:** the same sidebar, header, page headers, tables and cards.
+The parts both apps need move from `apps/manage/app/_components` into `@repo/ui`, so
+there is one copy, not two. Within that frame, the drivers' pages are built for a phone
+first, with large buttons for the reports.
 
 ### In the repo (the PR does these)
 
-1. `apps/connect` from `apps/admin`'s shape: `package.json` (name `connect`, the same
+1. `apps/connect` from `apps/manage`'s shape: `package.json` (name `connect`, the same
    `dev`, `build`, `lint` and `check-types` scripts), `next.config.ts` (with the tailnet
-   host in `allowedDevOrigins`, as admin's), `tsconfig.json`,
+   host in `allowedDevOrigins`, as manage's), `tsconfig.json`,
    `eslint.config.js` (`next-js`), `postcss.config.js`, `proxy.ts` (session only, access
    checked per page), and `vercel.json` with `regions: ["sin1"]`.
-2. Its own `/sign-in`, and `/sign-up` as the vendor application form, not Clerk's sign-up.
+2. Its own `/sign-in`; `/sign-up`, Clerk's, which leads to the registration form at
+   `/register` (see "Signing up").
 3. `CONNECT_URL` in `packages/db/src/origins.ts`, with `https://connect.heavenlytravel.my`
    as the default, for links in emails and between the apps. Add it to `globalEnv` in
    `turbo.json`.
-4. A manifest and icons, so a driver can add Connect to their phone's home screen.
-5. `CLAUDE.md`: add `apps/connect` to "Package Roles", and its port, 3002, beside web's
-   and admin's.
-6. Connect's `dev` script: `next dev --port 3002`. Web and admin are pinned by then.
+4. A manifest and icons, so a driver can add Connect to their phone's home screen: the
+   name "Heavenly Travel Connect", the short name "HT Connect".
+5. `CLAUDE.md`: add `apps/connect` to "Package Roles", `connect` to the commit scopes,
+   and its port, 3002, beside web's and manage's.
+6. Connect's `dev` script: `next dev --port 3002`.
 7. `docs/260916-development-workflow.md`: the environments table, the branch model, "Show
    it on staging" (one push now deploys three apps), the Vercel configuration, and the
-   Tailscale table with the three pinned ports.
+   Tailscale table with the three ports.
 
 ### Vercel (the developer does these)
 
-1. New project `connect` on the same GitHub repository, root directory `apps/connect`,
+1. New project `ht-connect` on the same GitHub repository, root directory `apps/connect`,
    production branch `main`.
 2. Domains: `connect.heavenlytravel.my` → Production; `staging-connect.heavenlytravel.my`
    → Preview, Git branch `staging`.
-3. Deployment Protection: Vercel Authentication off, as for `web` and `admin`.
-4. Environment variables, the same split as `admin`:
+3. Deployment Protection: Vercel Authentication off, as for `ht-web` and `ht-manage`.
+4. Environment variables, the same split as `ht-manage`:
    - **Production:** the production `DATABASE_URL`, the Production Clerk keys and its
      `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, the production `UPLOADTHING_TOKEN`,
      `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`, `ADMIN_URL` and `CONNECT_URL`.
@@ -447,7 +506,8 @@ replaces "Dev ports are not pinned" in `CLAUDE.md`.
 
 1. **Clerk:** no new instance. Development serves local and staging, and Production serves
    production, for all three apps. On staging and then production, check that one sign-in
-   carries from `manage.` to `connect.`. The `user.*` webhook stays on the web app.
+   carries from `manage.` to `connect.`. The `user.*` webhook stays on the web app. Bot
+   sign-up protection on in both instances, since Connect's sign-up is open to anyone.
 2. **UploadThing:** no new app. Connect uses the same app as the database it reads
    (production, or `heavenly-travel-app-dev`), so Media's "delete unused" stays safe.
 3. **Resend:** no change. The sending domain is already verified.
@@ -468,14 +528,73 @@ Each has a proposal; the step it belongs to settles it.
 1. **The safety buffer** per location, 15 minutes to start (step 3).
 2. **The default time to answer an offer:** 2 hours, never later than an hour before
    pickup; Operation can change it on each offer (step 3).
-3. **A vehicle or driver staff add for an outside vendor in `manage.`:** active at once,
-   since staff checked it, or waiting for `SUPER` like Connect's (step 2).
-4. **No-show:** ends the trip as completed, the event saying no-show, and the vendor is
+3. **No-show:** ends the trip as completed, the event saying no-show, and the vendor is
    paid. What the customer pays is B-O4 (step 4).
-5. **How long contact details stay visible after a trip:** 3 days (step 4).
-6. **Trips already marked Assigned on production,** with no vehicle or driver: count them
-   before step 3, then leave them marked "assigned before vendors" or ask Operation to
-   fill them in.
+4. **How long contact details stay visible after a trip:** 3 days (step 4).
+
+Settled on 2026-10-28: a vehicle or driver is usable once saved, in either app, with no
+approval of its own. Production has no real bookings yet, so no trip marked Assigned needs
+a vehicle or driver filled in; its real data is the operational kind (locations, zones,
+rates, routes, classes, the fleet, the pages).
+
+## Outside the code
+
+What the developer and the team do, in the order it is needed. The pull requests do
+everything else.
+
+### The first pull request (ports and `apps/manage`)
+
+- [ ] Any time: rename the Vercel project `ht-admin` to `ht-manage` (Settings → General →
+      Project Name). Nothing in the code reads the name or Vercel's OpenID Connect token,
+      so its warning does not apply. What follows the name: the preview addresses become
+      `ht-manage-…vercel.app`, and the PR check reads "Vercel – ht-manage". If Google's
+      browser key lists `ht-admin-…` preview addresses, add the new ones; if a GitHub
+      ruleset requires the Vercel check, select the new name.
+- [ ] Before the merge, in `ht-manage`: Settings → Build and Deployment → Root Directory
+      `apps/manage`. Then redeploy the pull request's preview and check it
+      builds. Until the merge, `main` would not build there, and nothing deploys it.
+- [ ] Merge. Check https://manage.heavenlytravel.my and https://new.heavenlytravel.my.
+- [ ] In each checkout of the repository: stop `pnpm dev`, pull or switch, then move
+      `apps/admin/.env.local` to `apps/manage/.env.local`. Git does not move ignored
+      files. Delete what is left of `apps/admin` (`node_modules`, `.next`), run
+      `pnpm install`, start `pnpm dev`.
+- [ ] Rebase any open branch on `main`. One still on `apps/admin` fails its `ht-manage`
+      preview on Vercel until it is.
+- [ ] Docs repo: the `apps/admin` paths become `apps/manage`.
+
+### Before building this plan
+
+- [ ] Collect an email for each of our drivers: Connect links their account by it.
+- [ ] List the outside vendors: those staff enter in `manage.`, and those to invite to
+      sign up.
+- [ ] Settle the four items of "To confirm while building", and chase B-O2 (our drivers'
+      pay) and B-O4 (what a late cancellation or a no-show costs the customer).
+
+### Connect's services (before this plan's merge)
+
+- [ ] Vercel: the `ht-connect` project, its domains, its environment variables and a
+      redeploy, as in "Setting up Connect".
+- [ ] Vercel: `CONNECT_URL` with the staging address in the Preview environment of `ht-web`
+      and `ht-manage` too, so their links reach staging's Connect. Production needs none:
+      the default is the production address.
+- [ ] DNS: the `connect` and `staging-connect` records, until Vercel shows them valid.
+- [ ] Clerk: bot sign-up protection on, in Development and Production.
+- [ ] Google: only if Connect shows a map, its two domains on the browser key.
+
+### The merge of this plan
+
+- [ ] On development: `pnpm db:push`, the scripts, then test on staging.
+- [ ] Before the merge: the first push and the vendor script, as in "Build order".
+- [ ] Merge, then check `manage.`, `new.` and `connect.`.
+- [ ] After the deploy: the vendor script again, then the second push.
+- [ ] Clerk: one sign-in carries from `manage.` to `connect.`, on staging and production.
+
+### After
+
+- [ ] Set each location's safety buffer if 15 minutes is wrong for it.
+- [ ] Brief Operation on the board and the picker, and drivers on Connect: accept, then
+      On the way, Arrived, On board, Dropped off.
+- [ ] Docs repo sync, as in "What this changes elsewhere".
 
 ## What this changes elsewhere
 
@@ -510,3 +629,9 @@ For the docs repo's sync:
   attractions.
 - **A portal for B2B customers.** Keep `business.` free for it.
 - **Web push** to Connect on a phone.
+- **A dispatch timeline, a big build:** one row per driver or vehicle, the hours across,
+  the trips to assign in a tray, and a trip dragged onto a row opens the assign panel.
+  It shows each day's gaps and clashes at a glance. On a computer only, since dragging
+  on a phone is poor; every drag also needs a click. After Operation has used the
+  board.
+- **A fixed list of models,** if the models vendors type pile up with typos.

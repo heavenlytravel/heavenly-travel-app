@@ -15,6 +15,7 @@ import {
   sitePageHref,
   sitePagePublishHref,
   vehicleClassHref,
+  vendorHref,
 } from "./routes";
 
 /**
@@ -32,6 +33,7 @@ export const ACTIVITY_RECORD_NAMES: Record<
   location: { one: "Location", many: "Locations" },
   vehicle: { one: "Vehicle", many: "Vehicles" },
   driver: { one: "Driver", many: "Drivers" },
+  vendor: { one: "Vendor", many: "Vendors" },
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
   user: { one: "User", many: "Users" },
   admin: { one: "Admin", many: "Admins" },
@@ -112,6 +114,8 @@ export function activityEntryHref(
       return based && may("fleet.manage")
         ? locationDriverHref(based, entry.entityId)
         : null;
+    case "vendor":
+      return may("fleet.manage") ? vendorHref(entry.entityId) : null;
     case "vehicle-class":
       return may("coverage.view") ? vehicleClassHref(entry.entityId) : null;
     case "media":

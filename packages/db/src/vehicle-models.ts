@@ -29,14 +29,20 @@ const photosInOrder = {
 } satisfies Prisma.Vehicle$photosArgs;
 
 /**
- * A class's models as one location's customers see them: those with a
- * vehicle in service based there, by name, each with those vehicles, the
+ * A class's models as one location's customers see them: those with one
+ * of our vehicles in service based there, by name, each with those vehicles, the
  * first entered first, with when each was entered and its photos. The
  * offerings read it, then `shownModel` names each and `classCoverOf`
  * finds the class's picture (./models-shown).
  */
 export function modelsShownAt(location: Prisma.LocationWhereInput) {
-  const there = { isActive: true, location } satisfies Prisma.VehicleWhereInput;
+  // Other vendors' vehicles add capacity behind our classes; only ours
+  // reach the website.
+  const there = {
+    isActive: true,
+    location,
+    vendor: { isOurs: true },
+  } satisfies Prisma.VehicleWhereInput;
   return {
     where: { vehicles: { some: there } },
     orderBy: byName,

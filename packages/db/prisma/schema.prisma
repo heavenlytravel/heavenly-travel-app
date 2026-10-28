@@ -25,6 +25,8 @@ model User {
   adminProfile   AdminProfile?
   driver         Driver?
   partnerProfile PartnerProfile?
+  /// The vendors they own or work for, in Connect.
+  vendorMembers  VendorMember[]
   bookings       Booking[]
   bookingNotes   BookingNote[]
   /// No longer read: see DriverProfile.
@@ -109,6 +111,68 @@ model PartnerProfile {
   activeAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Vendors. See docs/261028-fulfilment-vendors-and-connect.md. Every vehicle
+// and driver belongs to one, Heavenly Travel included. Kinds, statuses,
+// services and roles are strings checked against the const arrays in
+// src/vendor-input.ts.
+// ---------------------------------------------------------------------------
+
+/// Whoever supplies a vehicle, a driver or both: a company, or an individual
+/// whose only driver may be themself. Ours when SUPER switches `isOurs` on;
+/// the code finds ours by it, never by the name.
+model Vendor {
+  id             String    @id @default(cuid())
+  name           String
+  /// "company" | "individual"
+  kind           String
+  /// Ours: no cost, no members, accepted for by Operation, and its vehicles
+  /// reach the website. Only SUPER switches it.
+  isOurs         Boolean   @default(false)
+  /// "pending" | "active" | "refused" | "suspended"
+  status         String
+  /// The SSM number, or an individual's IC; empty when not given.
+  registrationNo String    @default("")
+  contactName    String
+  /// As src/phone.ts keeps it.
+  contactPhone   String
+  contactEmail   String
+  address        String    @default("")
+  /// What it supplies, VENDOR_SERVICES: asked of every kind at sign-up.
+  services       String[]  @default([])
+  /// Why it was refused or suspended. Staff only.
+  reviewNote     String?
+  reviewedAt     DateTime?
+  /// No relation, so the record outlives the reviewer.
+  reviewedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  /// The locations it serves; each of its vehicles and drivers is based at one.
+  locations Location[]
+  members   VendorMember[]
+  vehicles  Vehicle[]
+  drivers   Driver[]
+
+  @@index([status])
+}
+
+/// An account that works for a vendor in Connect, its owner or its staff.
+/// Ours has none: accepting for ours is `bookings.fulfil` in the admin.
+model VendorMember {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "owner" | "staff"
+  role      String
+  createdAt DateTime @default(now())
+
+  @@unique([vendorId, userId])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +297,8 @@ model Location {
   items     BookingItem[]
   vehicles  Vehicle[]
   drivers   Driver[]
+  /// The vendors that serve it.
+  vendors   Vendor[]
 
   @@index([state])
 }
@@ -487,6 +553,10 @@ model VehicleModel {
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())
+  /// Whose it is. Optional only until db:migrate-vendors has run on every
+  /// database; required in the follow-up push.
+  vendorId            String?
+  vendor              Vendor?      @relation(fields: [vendorId], references: [id])
   /// In capitals without spaces: "VLE1234".
   plate               String       @unique
   vehicleModelId      String
@@ -511,6 +581,7 @@ model Vehicle {
 
   @@index([locationId, isActive])
   @@index([vehicleModelId])
+  @@index([vendorId])
 }
 
 /// One photo of a vehicle, in its order; the first is the vehicle's cover.
@@ -527,14 +598,21 @@ model VehiclePhoto {
   @@index([vehicleId, sortOrder])
 }
 
-/// One of our drivers, based at a location. A driver exists before they
-/// have an account; the account is linked when the driver portal opens, and
-/// `getAccess("driver")` reads this row, active or pending. See
-/// docs/261019-vehicles-and-drivers.md.
+/// A vendor's driver, ours or another's, based at a location. A driver
+/// exists before they have an account; it is linked by `email` when an
+/// account with it exists or is made (src/sync.ts), and opens Connect. See
+/// docs/261019-vehicles-and-drivers.md and
+/// docs/261028-fulfilment-vendors-and-connect.md.
 model Driver {
   id               String         @id @default(cuid())
+  /// Whose driver they are. Optional only until db:migrate-vendors has run
+  /// on every database; required in the follow-up push.
+  vendorId         String?
+  vendor           Vendor?        @relation(fields: [vendorId], references: [id])
   userId           String?        @unique
   user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Lowercase; what links their account. Null until known.
+  email            String?        @unique
   locationId       String
   location         Location       @relation(fields: [locationId], references: [id])
   name             String
@@ -551,6 +629,7 @@ model Driver {
   updatedAt        DateTime       @updatedAt
 
   @@index([locationId, isActive])
+  @@index([vendorId])
 }
 
 /// An order: one or more items, each one product on one day. `status` is

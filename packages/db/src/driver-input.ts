@@ -2,6 +2,7 @@ import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
+import { isValidEmail, normalizeEmail } from "./booking-contact";
 import { isValidPhone, normalizePhone } from "./phone";
 
 /**
@@ -28,9 +29,13 @@ export const DRIVER_CLASSES_FIELD = "vehicleClassIds";
 
 /** Every editable field of a driver. */
 export type DriverFields = {
+  /** Whose driver they are. */
+  vendorId: string;
   name: string;
   /** As ./phone keeps it. */
   phone: string;
+  /** Lowercase: what links their account to open Connect; null until known. */
+  email: string | null;
   locationId: string;
   /** The classes they may drive, each once, sorted. */
   vehicleClassIds: string[];
@@ -42,8 +47,10 @@ export type DriverField = keyof DriverFields;
 
 /** How the screen and the activity log name each field. */
 export const DRIVER_FIELD_LABELS: Record<DriverField, string> = {
+  vendorId: "Vendor",
   name: "Name",
   phone: "Phone",
+  email: "Email",
   locationId: "Based at",
   vehicleClassIds: "May drive",
   isActive: "Active",
@@ -54,8 +61,10 @@ export const DRIVER_FIELD_LABELS: Record<DriverField, string> = {
 /** A stored driver's fields as the form and the log read them: its dates as days, its classes by id. */
 export function driverFieldsOf(
   driver: {
+    vendorId: string | null;
     name: string;
     phone: string;
+    email: string | null;
     locationId: string;
     vehicleClasses: readonly { id: string }[];
     isActive: boolean;
@@ -63,8 +72,10 @@ export function driverFieldsOf(
   } & Record<DriverDocument, Date | null>,
 ): DriverFields {
   return {
+    vendorId: driver.vendorId ?? "",
     name: driver.name,
     phone: driver.phone,
+    email: driver.email,
     locationId: driver.locationId,
     vehicleClassIds: driver.vehicleClasses.map((c) => c.id).sort(),
     isActive: driver.isActive,
@@ -87,6 +98,9 @@ export function driverDocumentsDue(
 
 /** The rules on a driver's fields; a field left out is not checked. */
 export function checkDriverFields(fields: Partial<DriverFields>): Change {
+  if (fields.vendorId !== undefined && !fields.vendorId) {
+    return refuse("Choose whose driver they are.", "vendorId");
+  }
   if (fields.name !== undefined) {
     if (fields.name === "") return refuse("Enter the driver's name.", "name");
     if (fields.name.length > DRIVER_LIMITS.name) {
@@ -98,6 +112,16 @@ export function checkDriverFields(fields: Partial<DriverFields>): Change {
   }
   if (fields.phone !== undefined && !isValidPhone(fields.phone)) {
     return refuse("Enter a phone number the team can call.", "phone");
+  }
+  if (
+    fields.email !== undefined &&
+    fields.email !== null &&
+    !isValidEmail(fields.email)
+  ) {
+    return refuse(
+      "Enter the email they sign in with, such as ali@example.com, or leave it empty.",
+      "email",
+    );
   }
   if (fields.locationId !== undefined && !fields.locationId) {
     return refuse("Choose where they are based.", "locationId");
@@ -135,9 +159,12 @@ export function parseDriverFields(
     if (!day.ok) return day;
     documents[key] = day.value;
   }
+  const email = normalizeEmail(textOf(values.email));
   const fields: DriverFields = {
+    vendorId: textOf(values.vendorId),
     name: textOf(values.name),
     phone: normalizePhone(textOf(values.phone)),
+    email: email === "" ? null : email,
     locationId: textOf(values.locationId),
     vehicleClassIds: [
       ...new Set(vehicleClassIds.map(textOf).filter(Boolean)),

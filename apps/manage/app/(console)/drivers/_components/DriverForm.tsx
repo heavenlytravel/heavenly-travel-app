@@ -14,6 +14,7 @@ import type {
   ClassOption,
   DriverWithClasses,
   LocationName,
+  VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
@@ -23,30 +24,37 @@ import Link from "next/link";
 import { Card } from "../../../_components/Card";
 import { ExpiryDateField } from "../../../_components/ExpiryDateField";
 import { FormError } from "../../../_components/FormError";
+import { VendorField } from "../../../_components/VendorField";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
 import { createDriverAction, updateDriverAction } from "../actions";
 import { FORM_WIDTH } from "../../../_components/PageColumn";
 
 /**
- * The form for one of our drivers, new or existing: who they are and how
- * to reach them, where they are based, the classes they may drive, the
+ * The form for a vendor's driver, new or existing: whose driver they are,
+ * who they are and how to reach them, the email they sign in to Connect
+ * with, where they are based, the classes they may drive, the
  * expiry dates of their licences, and notes. A saved driver opens the
  * Drivers tab of the location they are based at, or the list across
  * locations they were added from.
  */
 export function DriverForm({
   locationId,
+  vendorId,
   driver,
   classes,
   locations,
+  vendors,
   backHref,
   backToList = false,
 }: {
   /** Where a new driver is based to start with; absent on the list across locations. */
   locationId?: string;
+  /** Whose a new driver is to start with; ours when absent. */
+  vendorId?: string;
   /** Absent on the "new" page. */
   driver?: DriverWithClasses;
+  vendors: VendorOption[];
   /** Every class in the catalogue, in its order. */
   classes: ClassOption[];
   locations: LocationName[];
@@ -77,6 +85,11 @@ export function DriverForm({
 
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
+          <VendorField
+            vendors={vendors}
+            defaultValue={fields?.vendorId || vendorId || ""}
+            what="driver"
+          />
           <Field label={DRIVER_FIELD_LABELS.name}>
             <Input
               name="name"
@@ -97,6 +110,18 @@ export function DriverForm({
               autoComplete="off"
               placeholder="+60 12-345 6789"
               defaultValue={fields?.phone}
+            />
+          </Field>
+          <Field
+            label={DRIVER_FIELD_LABELS.email}
+            hint="The email they sign in to Connect with, to see and report their jobs."
+          >
+            <Input
+              name="email"
+              type="email"
+              autoComplete="off"
+              placeholder="ali@example.com"
+              defaultValue={fields?.email ?? ""}
             />
           </Field>
           <Field

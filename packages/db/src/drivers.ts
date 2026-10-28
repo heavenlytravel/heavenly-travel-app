@@ -15,12 +15,15 @@ import {
 import { dateOfDay, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
 import type { FleetFilter } from "./vehicles";
+import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
+import { checkVendorServes } from "./vendors";
 
 /**
- * Our drivers, each based at one location, with the classes they may drive
- * and the expiry dates of their licences. A driver needs no account; the
- * driver portal links one later. The readers serve a location's Drivers
+ * Every vendor's drivers, ours and others', each based at one location
+ * their vendor serves, with the classes they may drive and the expiry
+ * dates of their licences. A driver needs no account: their email links
+ * one when it exists or is made (./sync), and it opens Connect. The readers serve a location's Drivers
  * tab and the list across locations; the writers take the actor and log
  * against the driver inside their transaction. See
  * docs/261019-vehicles-and-drivers.md.
@@ -33,10 +36,11 @@ const withClasses = {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     },
     location: { select: { id: true, name: true, slug: true, state: true } },
+    vendor: { select: { id: true, name: true, isOurs: true, status: true } },
   },
 } satisfies Prisma.DriverDefaultArgs;
 
-/** A driver with the classes they may drive and their location. */
+/** A driver with the classes they may drive, their location and their vendor. */
 export type DriverWithClasses = Prisma.DriverGetPayload<typeof withClasses>;
 
 const NOT_FOUND: Change = refuse(
@@ -60,6 +64,7 @@ export function listDrivers(
 ): Promise<DriverWithClasses[]> {
   const where: Prisma.DriverWhereInput[] = [];
   if (filter.locationId) where.push({ locationId: filter.locationId });
+  if (filter.vendorId) where.push({ vendorId: filter.vendorId });
   if (filter.due) where.push(driversDueWhere());
   if (filter.search) where.push(driverSearchWhere(filter.search));
   return db.driver.findMany({
@@ -137,35 +142,65 @@ async function namesOf(
   };
 }
 
+/** The account an email links a driver to: the user with it, or none. */
+async function accountOf(tx: Prisma.TransactionClient, email: string | null) {
+  if (!email) return null;
+  const user = await tx.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true, driver: { select: { id: true } } },
+  });
+  return user ? { id: user.id, driverId: user.driver?.id ?? null } : null;
+}
+
+const EMAIL_TAKEN = refuse(
+  "Another driver has this email. Each driver signs in with their own.",
+  "email",
+);
+
 export async function createDriver(
   actor: Actor,
   fields: DriverFields,
 ): Promise<Created> {
   const check = checkDriverFields(fields);
   if (!check.ok) return check;
-  return db.$transaction(async (tx) => {
-    const names = await namesOf(tx, fields);
-    if (!names.ok) return names;
-    const { vehicleClassIds, ...rest } = fields;
-    const driver = await tx.driver.create({
-      data: {
-        ...rest,
-        ...documentDates(fields),
-        vehicleClasses: { connect: vehicleClassIds.map((id) => ({ id })) },
-      },
+  try {
+    return await db.$transaction(async (tx) => {
+      const names = await namesOf(tx, fields);
+      if (!names.ok) return names;
+      const vendor = await checkVendorServes(
+        tx,
+        fields.vendorId,
+        fields.locationId,
+      );
+      if (!vendor.ok) return vendor;
+      const account = await accountOf(tx, fields.email);
+      if (account?.driverId) return EMAIL_TAKEN;
+      const { vehicleClassIds, ...rest } = fields;
+      const driver = await tx.driver.create({
+        data: {
+          ...rest,
+          ...documentDates(fields),
+          userId: account?.id ?? null,
+          vehicleClasses: { connect: vehicleClassIds.map((id) => ({ id })) },
+        },
+      });
+      await logActivity(tx, actor, {
+        action: "driver.created",
+        entityId: driver.id,
+        after: {
+          ...rest,
+          classes: names.classNames ?? [],
+          locationName: names.locationName ?? null,
+          vendorName: vendor.name,
+        },
+        locationIds: [fields.locationId],
+      });
+      return { ok: true, id: driver.id };
     });
-    await logActivity(tx, actor, {
-      action: "driver.created",
-      entityId: driver.id,
-      after: {
-        ...rest,
-        classes: names.classNames ?? [],
-        locationName: names.locationName ?? null,
-      },
-      locationIds: [fields.locationId],
-    });
-    return { ok: true, id: driver.id };
-  });
+  } catch (error) {
+    if (isUniqueViolation(error, "email")) return EMAIL_TAKEN;
+    throw error;
+  }
 }
 
 /**
@@ -179,6 +214,19 @@ export async function updateDriver(
 ): Promise<Change> {
   const check = checkDriverFields(patch);
   if (!check.ok) return check;
+  try {
+    return await updateDriverIn(actor, id, patch);
+  } catch (error) {
+    if (isUniqueViolation(error, "email")) return EMAIL_TAKEN;
+    throw error;
+  }
+}
+
+function updateDriverIn(
+  actor: Actor,
+  id: string,
+  patch: Partial<DriverFields>,
+): Promise<Change> {
   return db.$transaction(async (tx) => {
     const driver = await tx.driver.findUnique({
       where: { id },
@@ -203,9 +251,28 @@ export async function updateDriver(
       vehicleClassIds: classesChanged ? vehicleClassIds : undefined,
     });
     if (!names.ok) return names;
+    const after = changed?.after ?? {};
+    let vendorName: string | null = null;
+    if (after.vendorId !== undefined || after.locationId !== undefined) {
+      const vendor = await checkVendorServes(
+        tx,
+        after.vendorId ?? current.vendorId,
+        after.locationId ?? current.locationId,
+      );
+      if (!vendor.ok) return vendor;
+      if (after.vendorId !== undefined) vendorName = vendor.name;
+    }
+    // The account follows the email: the one with the new email, or none.
+    let userId: string | null | undefined;
+    if (after.email !== undefined) {
+      const account = await accountOf(tx, after.email);
+      if (account?.driverId && account.driverId !== id) return EMAIL_TAKEN;
+      userId = account?.id ?? null;
+    }
     await tx.driver.update({
       where: { id },
       data: {
+        ...(userId !== undefined ? { userId } : {}),
         ...changed?.after,
         ...(changed ? documentDates(changed.after) : {}),
         ...(classesChanged
@@ -230,6 +297,7 @@ export async function updateDriver(
         ...changed?.after,
         ...(classesChanged ? { classes: names.classNames ?? [] } : {}),
         ...(names.locationName ? { locationName: names.locationName } : {}),
+        ...(vendorName ? { vendorName } : {}),
       },
       locationIds: [
         driver.locationId,

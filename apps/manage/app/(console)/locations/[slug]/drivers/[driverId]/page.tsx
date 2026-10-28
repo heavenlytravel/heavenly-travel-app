@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { DRIVER_DELETE_IMPACT } from "@repo/db";
-import { getDriver, listClassOptions } from "@repo/db/server";
+import {
+  getDriver,
+  listClassOptions,
+  listVendorOptions,
+} from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DetailColumns } from "../../../../../_components/PageColumn";
@@ -63,10 +67,11 @@ async function driverScreen({
   driverId: string;
 }) {
   const isNew = driverId === "new";
-  const [driver, classes, locations] = await Promise.all([
+  const [driver, classes, locations, vendors] = await Promise.all([
     isNew ? null : getDriver(driverId),
     listClassOptions(),
     locationNames(),
+    listVendorOptions(),
   ]);
   if (!isNew && !driver) notFound();
   // Based at another location now: its page is there.
@@ -81,7 +86,7 @@ async function driverScreen({
         description={
           driver
             ? driver.vehicleClasses.map((c) => c.name).join(", ")
-            : "One of our drivers, based here, with the classes they may drive."
+            : "A driver of ours or of another vendor, based here, with the classes they may drive."
         }
         action={
           driver ? (
@@ -111,6 +116,7 @@ async function driverScreen({
             driver={driver ?? undefined}
             classes={classes}
             locations={locations}
+            vendors={vendors}
             backHref={locationTabHref(slug, "drivers")}
           />
         }

@@ -194,6 +194,26 @@ export function newVehicleHref(location?: string) {
   return fleetListHref(`${VEHICLES_PATH}/new`, { location });
 }
 
+/** Every vendor, ours first, narrowed to a status or a search; one vendor's page; a new one. */
+export const VENDORS_PATH = "/vendors";
+export function vendorsHref(filter: { status?: string; q?: string } = {}) {
+  return listHref(VENDORS_PATH, {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+export function vendorHref(id: string) {
+  return `${VENDORS_PATH}/${id}`;
+}
+export const NEW_VENDOR_PATH = vendorHref("new");
+/** A new vehicle or driver of a vendor, from its page. */
+export function newVendorVehicleHref(vendorId: string) {
+  return `${VEHICLES_PATH}/new?vendor=${encodeURIComponent(vendorId)}`;
+}
+export function newVendorDriverHref(vendorId: string) {
+  return `${DRIVERS_PATH}/new?vendor=${encodeURIComponent(vendorId)}`;
+}
+
 /** Our drivers across locations, narrowed by the filter; a new one, based where their form says. */
 export const DRIVERS_PATH = "/drivers";
 export function driversHref(filter: FleetListFilter = {}) {

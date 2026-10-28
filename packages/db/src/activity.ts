@@ -128,6 +128,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     location: idsOf(rows, "location"),
     vehicle: idsOf(rows, "vehicle"),
     driver: idsOf(rows, "driver"),
+    vendor: idsOf(rows, "vendor"),
   };
 
   const [
@@ -139,6 +140,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     locations,
     vehicles,
     drivers,
+    vendors,
   ] = await Promise.all([
     read([...userIds], () =>
       db.user.findMany({
@@ -186,6 +188,12 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       db.driver.findMany({
         where: { id: { in: ids.driver } },
         select: { id: true, name: true, locationId: true },
+      }),
+    ),
+    read(ids.vendor, () =>
+      db.vendor.findMany({
+        where: { id: { in: ids.vendor } },
+        select: { id: true, name: true },
       }),
     ),
   ]);
@@ -252,6 +260,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       drivers.map((d) => [d.id, d.name] as const),
       deletedDrivers,
     ),
+    vendor: new Map(vendors.map((v) => [v.id, v.name] as const)),
   };
 
   return rows.map((row) => {
@@ -323,6 +332,7 @@ function entityLabelOf(
     case "location":
     case "vehicle":
     case "driver":
+    case "vendor":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:
       return row.entityId;

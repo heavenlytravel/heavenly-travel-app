@@ -38,7 +38,7 @@ export default async function DriversPage({
     <>
       <PageHeader
         title="Drivers"
-        description="Our drivers at every location, with the licences due within 30 days or expired."
+        description="Every vendor's drivers, ours first, at every location, with the licences due within 30 days or expired."
         action={
           <Button asChild>
             <Link href={newDriverHref(location)}>Add driver</Link>

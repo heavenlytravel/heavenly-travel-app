@@ -12,6 +12,7 @@ const NOW = new Date("2026-10-19T04:00:00Z");
 const PHOTO = "https://abc123.ufs.sh/f/key-1";
 
 const FORM: Record<string, string> = {
+  vendorId: "ven1",
   plate: "vle 1234",
   vehicleClassId: "vc1",
   brand: " Toyota ",
@@ -46,6 +47,7 @@ describe("parseVehicleFields", () => {
     assert.deepEqual(result, {
       ok: true,
       value: {
+        vendorId: "ven1",
         plate: "VLE1234",
         vehicleClassId: "vc1",
         brand: "Toyota",
@@ -104,6 +106,7 @@ describe("parseVehicleFields", () => {
 
 describe("a stored vehicle", () => {
   const stored = {
+    vendorId: "ven1",
     plate: "VLE1234",
     vehicleModel: { vehicleClassId: "vc1", brand: "Toyota", name: "Alphard" },
     locationId: "loc1",

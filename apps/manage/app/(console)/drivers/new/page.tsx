@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listClassOptions } from "@repo/db/server";
+import { listClassOptions, listVendorOptions } from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
@@ -18,7 +18,7 @@ export default async function NewDriverPage({
   searchParams,
 }: PageProps<"/drivers/new">) {
   await requireAdmin("fleet.manage");
-  const { location } = await searchParams;
+  const { location, vendor } = await searchParams;
 
   return (
     <>
@@ -32,7 +32,7 @@ export default async function NewDriverPage({
       </p>
       <PageHeader
         title="Add driver"
-        description="One of our drivers, based at the location you choose, with the classes they may drive."
+        description="A driver of ours or of another vendor, based at the location you choose, with the classes they may drive."
       />
       <Streamed
         fallback={
@@ -40,17 +40,24 @@ export default async function NewDriverPage({
         }
       >
         {() =>
-          newDriverForm(typeof location === "string" ? location : undefined)
+          newDriverForm(
+            typeof location === "string" ? location : undefined,
+            typeof vendor === "string" ? vendor : undefined,
+          )
         }
       </Streamed>
     </>
   );
 }
 
-async function newDriverForm(location: string | undefined) {
-  const [classes, locations] = await Promise.all([
+async function newDriverForm(
+  location: string | undefined,
+  vendor: string | undefined,
+) {
+  const [classes, locations, vendors] = await Promise.all([
     listClassOptions(),
     locationNames(),
+    listVendorOptions(),
   ]);
   const locationId = locations.find((l) => l.id === location)?.id;
   return (
@@ -60,6 +67,8 @@ async function newDriverForm(location: string | undefined) {
           locationId={locationId}
           classes={classes}
           locations={locations}
+          vendors={vendors}
+          vendorId={vendors.find((v) => v.id === vendor)?.id}
           backHref={driversHref({ location: locationId })}
           backToList
         />

@@ -17,6 +17,7 @@ import type {
   LocationName,
   ModelSuggestion,
   VehicleWithModel,
+  VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Combobox } from "@repo/ui/combobox";
@@ -29,6 +30,7 @@ import { useState } from "react";
 import { Card } from "../../../_components/Card";
 import { ExpiryDateField } from "../../../_components/ExpiryDateField";
 import { FormError } from "../../../_components/FormError";
+import { VendorField } from "../../../_components/VendorField";
 import { classGroups } from "../../../_lib/fleet-form";
 import { FLEET_BACK_FIELD } from "../../../_lib/routes";
 import { useActionForm } from "../../../_lib/use-action-form";
@@ -101,7 +103,7 @@ function ModelNote({
 }
 
 /**
- * The form for one of our vehicles, new or existing: its plate, its class,
+ * The form for a vendor's vehicle, new or existing: whose it is, its plate, its class,
  * its brand and model, chosen from the ones entered before or added new,
  * where it is based and whether it is in service, its photos, the expiry
  * dates of its documents, and notes. A model the class does not have yet
@@ -111,10 +113,12 @@ function ModelNote({
 export function VehicleForm({
   vehicle,
   locationId,
+  vendorId,
   vehicleClassId,
   classes,
   suggestions,
   locations,
+  vendors,
   backHref,
   backToList = false,
 }: {
@@ -122,6 +126,9 @@ export function VehicleForm({
   vehicle?: VehicleWithModel;
   /** Where a new vehicle is based to start with; absent on the list across locations. */
   locationId?: string;
+  /** Whose a new vehicle is to start with; ours when absent. */
+  vendorId?: string;
+  vendors: VendorOption[];
   /** The class a new vehicle starts in, when it is added from the class's page. */
   vehicleClassId?: string;
   /** Every class in the catalogue, in its order. */
@@ -170,6 +177,11 @@ export function VehicleForm({
 
         <Card className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
+            <VendorField
+              vendors={vendors}
+              defaultValue={fields?.vendorId || vendorId || ""}
+              what="vehicle"
+            />
             <Field label={VEHICLE_FIELD_LABELS.plate}>
               <Input
                 name="plate"

@@ -80,6 +80,22 @@ export {
 } from "./drivers";
 export type { DriverWithClasses } from "./drivers";
 export {
+  listVendors,
+  countPendingVendors,
+  getVendor,
+  listVendorOptions,
+  createVendor,
+  updateVendor,
+  moveVendor,
+  setVendorOurs,
+} from "./vendors";
+export type {
+  VendorWithLocations,
+  VendorFilter,
+  VendorOption,
+  VendorMove,
+} from "./vendors";
+export {
   listOfferings,
   listPicturedOfferings,
   listActiveOfferings,
@@ -292,6 +308,7 @@ export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./vendor-input";
 export * from "./user-input";
 export * from "./expiry";
 export * from "./location-input";

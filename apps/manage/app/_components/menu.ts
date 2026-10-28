@@ -1,6 +1,7 @@
 import {
   ActivityIcon,
   BanknoteIcon,
+  BuildingIcon,
   BusIcon,
   CalendarCheckIcon,
   CarFrontIcon,
@@ -43,6 +44,7 @@ export const MENU_ICONS = {
   fleet: CarFrontIcon,
   vehicles: CarIcon,
   drivers: IdCardIcon,
+  vendors: BuildingIcon,
   "vehicle-classes": BusIcon,
   coverage: MapIcon,
   rates: BanknoteIcon,

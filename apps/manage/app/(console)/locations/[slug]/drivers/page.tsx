@@ -34,7 +34,7 @@ export default async function LocationDriversPage({
     <>
       <SectionHeader
         title="Drivers"
-        description="Our drivers based here, the classes each may drive, and the expiry dates of their licences."
+        description="The drivers based here, ours and other vendors', the classes each may drive, and the expiry dates of their licences."
         action={
           <Button asChild>
             <Link href={newLocationDriverHref(slug)}>Add driver</Link>

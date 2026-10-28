@@ -3,6 +3,7 @@ import { modelName } from "@repo/db";
 import {
   getVehicle,
   listModelSuggestions,
+  listVendorOptions,
   listClassOptions,
   vehicleDeleteImpactOf,
 } from "@repo/db/server";
@@ -76,13 +77,15 @@ async function vehicleScreen({
   startClassId: string | undefined;
 }) {
   const isNew = vehicleId === "new";
-  const [vehicle, impact, classes, suggestions, locations] = await Promise.all([
-    isNew ? null : getVehicle(vehicleId),
-    isNew ? null : vehicleDeleteImpactOf(vehicleId),
-    listClassOptions(),
-    listModelSuggestions(),
-    locationNames(),
-  ]);
+  const [vehicle, impact, classes, suggestions, locations, vendors] =
+    await Promise.all([
+      isNew ? null : getVehicle(vehicleId),
+      isNew ? null : vehicleDeleteImpactOf(vehicleId),
+      listClassOptions(),
+      listModelSuggestions(),
+      locationNames(),
+      listVendorOptions(),
+    ]);
   if (!isNew && !vehicle) notFound();
   // Based at another location now: its page is there.
   if (vehicle && vehicle.locationId !== id) {
@@ -97,7 +100,7 @@ async function vehicleScreen({
         description={
           model
             ? `${modelName(model)}, ${model.vehicleClass.name}.`
-            : "One of our vehicles, based here. Its class is what customers book, and its model what they may choose."
+            : "A vehicle of ours or of another vendor, based here. Its class is what customers book."
         }
         action={
           vehicle && impact ? (
@@ -132,6 +135,7 @@ async function vehicleScreen({
             vehicle={vehicle ?? undefined}
             classes={classes}
             suggestions={suggestions}
+            vendors={vendors}
             locations={locations}
             backHref={locationTabHref(slug, "vehicles")}
           />

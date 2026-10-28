@@ -44,6 +44,8 @@ export const VEHICLE_DOCUMENT_LABELS: Record<VehicleDocument, string> = {
 
 /** Every editable field of a vehicle but its photos: what a change is compared by. */
 export type VehicleFields = {
+  /** Whose it is. */
+  vendorId: string;
   /** In capitals without spaces: "VLE1234". */
   plate: string;
   vehicleClassId: string;
@@ -65,6 +67,7 @@ export type VehicleInput = VehicleFields & { photos: Photo[] };
 
 /** How the screen and the activity log name each field. */
 export const VEHICLE_FIELD_LABELS: Record<VehicleField | "photos", string> = {
+  vendorId: "Vendor",
   plate: "Plate",
   vehicleClassId: "Class",
   brand: "Brand",
@@ -88,6 +91,7 @@ const PLATE_RE = /^[A-Z0-9]{2,12}$/;
 /** A stored vehicle's fields as the form and the log read them: its model by class, brand and name, its dates as days. */
 export function vehicleFieldsOf(
   vehicle: {
+    vendorId: string | null;
     plate: string;
     vehicleModel: { vehicleClassId: string; brand: string; name: string };
     locationId: string;
@@ -98,6 +102,7 @@ export function vehicleFieldsOf(
   } & Record<VehicleDocument, Date | null>,
 ): VehicleFields {
   return {
+    vendorId: vehicle.vendorId ?? "",
     plate: vehicle.plate,
     vehicleClassId: vehicle.vehicleModel.vehicleClassId,
     brand: vehicle.vehicleModel.brand,
@@ -130,6 +135,9 @@ export function checkVehicleFields(
   fields: Partial<VehicleFields>,
   now: Date = new Date(),
 ): Change {
+  if (fields.vendorId !== undefined && !fields.vendorId) {
+    return refuse("Choose whose vehicle it is.", "vendorId");
+  }
   if (fields.plate !== undefined && !PLATE_RE.test(fields.plate)) {
     return refuse(
       "Enter the plate: letters and digits, such as VLE 1234.",
@@ -201,6 +209,7 @@ export function parseVehicleFields(
     documents[key] = day.value;
   }
   const fields: VehicleFields = {
+    vendorId: textOf(values.vendorId),
     plate: normalizePlate(textOf(values.plate)),
     vehicleClassId: textOf(values.vehicleClassId),
     brand: squashName(textOf(values.brand)),

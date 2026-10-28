@@ -60,8 +60,23 @@ function claimGuestBookings(tx: Prisma.TransactionClient, user: User) {
 }
 
 /**
+ * Links the new account to the driver row staff gave its email, so the
+ * driver opens Connect at their first sign-in. A driver whose email was
+ * entered after the account existed is linked by the driver's save
+ * instead (./drivers). See docs/261028-fulfilment-vendors-and-connect.md,
+ * "Accounts and access".
+ */
+function linkDriver(tx: Prisma.TransactionClient, user: User) {
+  return tx.driver.updateMany({
+    where: { userId: null, email: user.email.toLowerCase() },
+    data: { userId: user.id },
+  });
+}
+
+/**
  * Mirrors a Clerk user into the `User` table: the row is updated when it
- * exists and created, with its guest bookings claimed, when it does not.
+ * exists and created, with its guest bookings claimed and its driver row
+ * linked, when it does not.
  * Idempotent, so the webhook and the first signed-in request may both call
  * it: when they race, the loser's insert fails on the unique Clerk id and
  * it updates the row the winner made, whose claim already ran.
@@ -78,6 +93,7 @@ export async function upsertUserFromClerk(
     return await db.$transaction(async (tx) => {
       const user = await tx.user.create({ data: { clerkId, ...fields } });
       await claimGuestBookings(tx, user);
+      await linkDriver(tx, user);
       return user;
     });
   } catch (error) {

@@ -10,6 +10,7 @@ import {
   PAGES_PATH,
   RATES_PATH,
   USERS_PATH,
+  VENDORS_PATH,
   VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,
 } from "../_lib/routes";
@@ -108,6 +109,12 @@ export const ALL_LOCATIONS_NAV: readonly NavPart[] = [
             href: DRIVERS_PATH,
             label: "Drivers",
             icon: "drivers",
+            permission: "fleet.manage",
+          },
+          {
+            href: VENDORS_PATH,
+            label: "Vendors",
+            icon: "vendors",
             permission: "fleet.manage",
           },
           {

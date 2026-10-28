@@ -38,7 +38,7 @@ export default async function VehiclesPage({
     <>
       <PageHeader
         title="Vehicles"
-        description="Our vehicles at every location, with the documents due within 30 days or expired."
+        description="Every vendor's vehicles at every location, with the documents due within 30 days or expired."
         action={
           <Button asChild>
             <Link href={newVehicleHref(location)}>Add vehicle</Link>

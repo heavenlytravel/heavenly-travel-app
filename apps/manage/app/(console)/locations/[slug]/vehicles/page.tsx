@@ -34,7 +34,7 @@ export default async function LocationVehiclesPage({
     <>
       <SectionHeader
         title="Vehicles"
-        description="Our vehicles based here, each of one model, with the expiry dates of its documents."
+        description="The vehicles based here, ours and other vendors', each of one model, with the expiry dates of its documents."
         action={
           <Button asChild>
             <Link href={newLocationVehicleHref(slug)}>Add vehicle</Link>

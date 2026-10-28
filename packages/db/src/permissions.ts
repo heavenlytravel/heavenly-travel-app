@@ -24,8 +24,10 @@ const RULES = {
   "coverage.manage": ["OPERATION"],
   /** Read them: the same tabs and the catalogue, without a way to change them. */
   "coverage.view": ["OPERATION", "RESERVATION", "SALES"],
-  /** Our vehicles and drivers: read, add and change them. Operation assigns them. */
+  /** Vendors, ours included, and their vehicles and drivers: read, add and change them. Operation assigns them. */
   "fleet.manage": ["OPERATION"],
+  /** Approve or refuse a vendor that signed up, suspend or reinstate one, and switch one to ours. */
+  "vendors.review": "super",
   /** Open a location and read its overview. Every team works inside one. */
   "locations.view": "any",
   /** Add a location, its details, saved addresses and pages. */

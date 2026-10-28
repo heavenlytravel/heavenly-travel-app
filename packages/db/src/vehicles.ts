@@ -31,9 +31,11 @@ import {
 import { modelName } from "./vehicle-model-input";
 import { dropModelIfUnused, modelFor } from "./vehicle-models";
 import { plateTermOf } from "./search";
+import { checkVendorServes } from "./vendors";
 
 /**
- * Our vehicles, each of one model and based at one location, with the
+ * Every vendor's vehicles, ours and others', each of one model and based
+ * at one location its vendor serves, with the
  * expiry dates of its documents. The readers serve a location's Vehicles
  * tab and the list across locations; the writers take the actor and log
  * against the vehicle inside their transaction. A vehicle's model is
@@ -63,10 +65,11 @@ const listed = {
       },
     },
     location: { select: { id: true, name: true, slug: true, state: true } },
+    vendor: { select: { id: true, name: true, isOurs: true, status: true } },
   },
 } satisfies Prisma.VehicleDefaultArgs;
 
-/** A vehicle as the lists show it: with its model, its class and its location. */
+/** A vehicle as the lists show it: with its model, its class, its location and its vendor. */
 export type ListedVehicle = Prisma.VehicleGetPayload<typeof listed>;
 
 const withPhotos = {
@@ -99,6 +102,7 @@ function byClassAndPlate(a: ListedVehicle, b: ListedVehicle) {
 /** What the vehicle and driver lists narrow to: one location, the ones with a document due, a search, or any of them together. */
 export type FleetFilter = {
   locationId?: string;
+  vendorId?: string;
   due?: boolean;
   /** As `searchTermOf` reads it: part of a vehicle's plate or model, or of a driver's name or phone. */
   search?: string;
@@ -122,6 +126,7 @@ export async function listVehicles(
 ): Promise<ListedVehicle[]> {
   const where: Prisma.VehicleWhereInput[] = [];
   if (filter.locationId) where.push({ locationId: filter.locationId });
+  if (filter.vendorId) where.push({ vendorId: filter.vendorId });
   if (filter.vehicleClassId) {
     where.push({ vehicleModel: { vehicleClassId: filter.vehicleClassId } });
   }
@@ -215,6 +220,12 @@ export async function createVehicle(
     return await db.$transaction(async (tx) => {
       const locationName = await locationNameOf(tx, fields.locationId);
       if (!locationName) return NO_LOCATION;
+      const vendor = await checkVendorServes(
+        tx,
+        fields.vendorId,
+        fields.locationId,
+      );
+      if (!vendor.ok) return vendor;
       const gone = await deletedMediaRefusal(
         tx,
         photos.map((photo) => photo.url),
@@ -243,6 +254,7 @@ export async function createVehicle(
           photos: photos.length,
           modelName: model.name,
           locationName,
+          vendorName: vendor.name,
         },
         locationIds: [fields.locationId],
       });
@@ -321,6 +333,16 @@ export async function updateVehicle(
         ? await locationNameOf(tx, after.locationId)
         : null;
       if (after.locationId && !locationName) return NO_LOCATION;
+      let vendorName: string | null = null;
+      if (after.vendorId !== undefined || after.locationId !== undefined) {
+        const vendor = await checkVendorServes(
+          tx,
+          after.vendorId ?? current.vendorId,
+          after.locationId ?? current.locationId,
+        );
+        if (!vendor.ok) return vendor;
+        if (after.vendorId !== undefined) vendorName = vendor.name;
+      }
       await tx.vehicle.update({
         where: { id },
         data: {
@@ -347,6 +369,7 @@ export async function updateVehicle(
           ...(photos && photosChanged ? { photos: photos.length } : {}),
           ...(model ? { modelName: model.name } : {}),
           ...(locationName ? { locationName } : {}),
+          ...(vendorName ? { vendorName } : {}),
         },
         locationIds: [
           vehicle.locationId,
@@ -382,6 +405,7 @@ export async function vehicleDeleteImpactOf(
       isActive: true,
       locationId: true,
       vehicleModelId: true,
+      vendor: { select: { isOurs: true } },
       _count: { select: { photos: true } },
       location: { select: { name: true } },
       vehicleModel: {
@@ -423,6 +447,7 @@ export async function vehicleDeleteImpactOf(
         isActive: true,
         locationId: vehicle.locationId,
         vehicleModel: { vehicleClassId: vehicleModel.vehicleClassId },
+        vendor: { isOurs: true },
       },
       orderBy: { createdAt: "asc" },
       select: {
@@ -432,8 +457,10 @@ export async function vehicleDeleteImpactOf(
       },
     }),
   ]);
-  // What the vehicle shows customers: in service, of a class on sale there.
+  // What the vehicle shows customers: ours, in service, of a class on sale
+  // there. Other vendors' vehicles never reach the website.
   const shows =
+    vehicle.vendor?.isOurs === true &&
     vehicle.isActive &&
     vehicleModel.vehicleClass.isActive &&
     offering?.isActive === true;

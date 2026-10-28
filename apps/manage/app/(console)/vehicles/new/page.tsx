@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { listClassOptions, listModelSuggestions } from "@repo/db/server";
+import {
+  listClassOptions,
+  listModelSuggestions,
+  listVendorOptions,
+} from "@repo/db/server";
 import { DetailColumns } from "../../../_components/PageColumn";
 import { PageHeader } from "../../../_components/PageHeader";
 import { FormSkeleton, Streamed } from "../../../_components/Skeleton";
@@ -18,7 +22,7 @@ export default async function NewVehiclePage({
   searchParams,
 }: PageProps<"/vehicles/new">) {
   await requireAdmin("fleet.manage");
-  const { location } = await searchParams;
+  const { location, vendor } = await searchParams;
 
   return (
     <>
@@ -32,7 +36,7 @@ export default async function NewVehiclePage({
       </p>
       <PageHeader
         title="Add vehicle"
-        description="One of our vehicles, based at the location you choose. Its class is what customers book, and its model what they may choose."
+        description="A vehicle of ours or of another vendor, based at the location you choose. Its class is what customers book."
       />
       <Streamed
         fallback={
@@ -40,18 +44,25 @@ export default async function NewVehiclePage({
         }
       >
         {() =>
-          newVehicleForm(typeof location === "string" ? location : undefined)
+          newVehicleForm(
+            typeof location === "string" ? location : undefined,
+            typeof vendor === "string" ? vendor : undefined,
+          )
         }
       </Streamed>
     </>
   );
 }
 
-async function newVehicleForm(location: string | undefined) {
-  const [classes, suggestions, locations] = await Promise.all([
+async function newVehicleForm(
+  location: string | undefined,
+  vendor: string | undefined,
+) {
+  const [classes, suggestions, locations, vendors] = await Promise.all([
     listClassOptions(),
     listModelSuggestions(),
     locationNames(),
+    listVendorOptions(),
   ]);
   const locationId = locations.find((l) => l.id === location)?.id;
   return (
@@ -62,6 +73,8 @@ async function newVehicleForm(location: string | undefined) {
           classes={classes}
           suggestions={suggestions}
           locations={locations}
+          vendors={vendors}
+          vendorId={vendors.find((v) => v.id === vendor)?.id}
           backHref={vehiclesHref({ location: locationId })}
           backToList
         />

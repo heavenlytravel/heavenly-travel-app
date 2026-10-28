@@ -19,6 +19,7 @@ import {
   type VehicleClassField,
 } from "./vehicle-class-input";
 import { VEHICLE_FIELD_LABELS } from "./vehicle-input";
+import { VENDOR_FIELD_LABELS } from "./vendor-input";
 
 /**
  * The activity log's vocabulary, browser-safe: who can act, what an entry
@@ -61,6 +62,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "driver",
   "media",
   "site-page",
+  "vendor",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -220,6 +222,21 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /**
+   * Its fields, its locations by name in `locations`, and its status:
+   * "active" when staff entered it, "pending" when it signed up in Connect.
+   */
+  "vendor.created": { entityType: "vendor", customerVisible: false },
+  /** The changed fields; changed locations by name in `locations`. */
+  "vendor.updated": { entityType: "vendor", customerVisible: false },
+  "vendor.approved": { entityType: "vendor", customerVisible: false },
+  /** The reason in `after`. */
+  "vendor.refused": { entityType: "vendor", customerVisible: false },
+  /** The reason, and the bookings it was taken off by reference in `released`. */
+  "vendor.suspended": { entityType: "vendor", customerVisible: false },
+  "vendor.reinstated": { entityType: "vendor", customerVisible: false },
+  /** `isOurs`, before and after. */
+  "vendor.ours.switched": { entityType: "vendor", customerVisible: false },
   /**
    * The files the Media screen deleted, each with its key, name and size,
    * in `before`. Logged against `MEDIA_RECORD_ID`.
@@ -487,6 +504,10 @@ function recordChanges(
   if (typeof locationName === "string") {
     phrases.push(`Moved to ${locationName}`);
   }
+  const vendorName = field(after, "vendorName");
+  if (typeof vendorName === "string") {
+    phrases.push(`Moved to the vendor ${vendorName}`);
+  }
   const model = field(after, "modelName");
   if (typeof model === "string") phrases.push(`Changed the model to ${model}`);
   const classes = field(after, "classes");
@@ -502,6 +523,7 @@ function recordChanges(
         ![
           "isActive",
           "locationId",
+          "vendorId",
           "vehicleClassId",
           "brand",
           "model",
@@ -512,6 +534,33 @@ function recordChanges(
     .map((key) => `the ${labels[key]!.toLowerCase()}`);
   if (others.length > 0) phrases.push(`Changed ${andList(others)}`);
   return sentence(phrases, fallback);
+}
+
+/** "Changed the contact phone and the locations served": a vendor's changes, named by their labels. */
+function vendorChanges(after: unknown) {
+  const labels: Record<string, string> = {
+    ...VENDOR_FIELD_LABELS,
+    services: "What it offers",
+    locations: "Locations served",
+  };
+  const changed = keysOf(after)
+    .filter((key) => key in labels && key !== "locationIds")
+    .map((key) =>
+      key === "services"
+        ? "what it offers"
+        : `the ${labels[key]!.toLowerCase()}`,
+    );
+  return changed.length > 0
+    ? `Changed ${andList(changed)}`
+    : "Changed the vendor";
+}
+
+/** "Refused the vendor: no SSM certificate", or the sentence alone when the entry keeps no reason. */
+function withReason(sentence: string, json: unknown) {
+  const reason = field(json, "reason");
+  return typeof reason === "string" && reason !== ""
+    ? `${sentence}: ${reason}`
+    : sentence;
 }
 
 /** "Executive sedan", or "the class" when the entry names none. */
@@ -909,6 +958,31 @@ export function describeActivity(entry: DescribableActivity): string {
         ? `Set the weekend and holiday surcharge to ${weekendLabel(weekend)}`
         : "Removed the weekend and holiday surcharge";
     }
+    case "vendor.created":
+      return field(entry.after, "status") === "pending"
+        ? "Signed up in Connect"
+        : "Added the vendor";
+    case "vendor.updated":
+      return vendorChanges(entry.after);
+    case "vendor.approved":
+      return "Approved the vendor";
+    case "vendor.refused":
+      return withReason("Refused the vendor", entry.after);
+    case "vendor.suspended": {
+      const released = field(entry.after, "released");
+      const count = Array.isArray(released) ? released.length : 0;
+      const taken =
+        count > 0
+          ? `, and took it off ${count === 1 ? "1 booking" : `${count} bookings`}`
+          : "";
+      return withReason(`Suspended the vendor${taken}`, entry.after);
+    }
+    case "vendor.reinstated":
+      return "Reinstated the vendor";
+    case "vendor.ours.switched":
+      return field(entry.after, "isOurs") === true
+        ? "Made the vendor ours"
+        : "Made the vendor not ours";
     case "media.deleted": {
       const files = field(entry.before, "files");
       const count = Array.isArray(files) ? files.length : 0;

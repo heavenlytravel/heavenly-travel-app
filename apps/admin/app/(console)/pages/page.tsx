@@ -208,9 +208,11 @@ async function pagesList(
                         {
                           value: WEBSITE_FILTER,
                           label: "Website",
+                          // The website's pages belong to no section.
                           href: pagesHref({
                             ...filter,
                             location: WEBSITE_FILTER,
+                            section: undefined,
                           }),
                         },
                       ]

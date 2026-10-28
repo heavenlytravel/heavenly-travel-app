@@ -35,7 +35,8 @@ const FoldsContext = createContext<{
 
 /**
  * Which of a list's sections are folded, for its rows and the chevron in
- * its heading that folds or opens them all. `ids` are the keys of the sections that fold.
+ * its heading that folds or opens them all. `ids` are the keys of the
+ * sections that fold.
  */
 export function PageTreeFolds({
   ids,
@@ -48,17 +49,11 @@ export function PageTreeFolds({
     () => new Set(ids.filter((id) => folded.has(id))),
   );
   function fold(which: readonly string[], shut: boolean) {
-    const next = new Set(closed);
     for (const id of which) {
-      if (shut) {
-        folded.add(id);
-        next.add(id);
-      } else {
-        folded.delete(id);
-        next.delete(id);
-      }
+      if (shut) folded.add(id);
+      else folded.delete(id);
     }
-    setClosed(next);
+    setClosed(new Set(ids.filter((id) => folded.has(id))));
   }
   return (
     <FoldsContext.Provider value={{ ids, closed, fold }}>

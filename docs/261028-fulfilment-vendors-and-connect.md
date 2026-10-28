@@ -590,6 +590,12 @@ everything else.
 - [ ] Merge, then check `manage.`, `new.` and `connect.`.
 - [ ] After the deploy: the vendor script again, then the second push.
 - [ ] Clerk: one sign-in carries from `manage.` to `connect.`, on staging and production.
+- [ ] In each checkout of the repository: stop `pnpm dev`, pull or switch, then add
+      `apps/connect/.env.local` (the keys of `apps/connect/.env.example`: Clerk, the
+      database, UploadThing, Resend and the email lines, `SITE_URL`, `ADMIN_URL`, and
+      `CONNECT_URL=http://localhost:3002`; no Google keys), and `CONNECT_URL` in
+      `apps/manage/.env.local`. Git does not carry ignored files. Run `pnpm install`,
+      start `pnpm dev`: three apps, on 3000, 3001 and 3002.
 
 ### After
 

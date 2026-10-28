@@ -100,7 +100,7 @@ false. The full log reads "Aki added Seri Kembangan to Klang Valley" through
 `describeActivity`.
 
 The autocomplete needs Google in the admin app: `GOOGLE_MAPS_SERVER_KEY` is added to
-`apps/admin` locally and on Vercel, the search route handler is added to the admin app,
+`apps/manage` locally and on Vercel, the search route handler is added to the admin app,
 and `PlaceInput` with its fetch helper move from `apps/web/app/_components/search` to
 `packages/ui` so both apps share one field. Without the key the null provider offers the
 seeded names, and the test tool says so.
@@ -162,17 +162,17 @@ after, `entityType: "vehicle-class"`, `customerVisible` false.
 
 ## Module changes for PR D
 
-| Module                                        | Change                                                                                                                                                                                                             |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `booking-rules.ts`                            | Gains `CATEGORY_RULE_DEFAULTS`; `seed.ts` reads it.                                                                                                                                                                |
-| `zones.ts`                                    | `listZones` (all, with district counts), `getZone`, `createZone`, `updateZone`, `addZoneDistrict`, `removeZoneDistrict`, each taking the actor and logging. `resolveZone` also returns the district it matched on. |
-| `vehicle-classes.ts`                          | `listVehicleClasses` (all), `getVehicleClass`, `createVehicleClass`, `updateVehicleClass`, with the actor and the log. The validation, pure and tested.                                                            |
-| `activity-actions.ts`                         | The six actions above and their sentences in `describeActivity`.                                                                                                                                                   |
-| `packages/ui`                                 | `PlaceInput` and its fetch helper, from `apps/web`.                                                                                                                                                                |
-| `apps/admin/app/api/places/search`            | The search route handler, as the web app's.                                                                                                                                                                        |
-| `apps/admin/.../zones`, `.../vehicle-classes` | The screens. `.../locations` and `sample-locations.ts` are removed.                                                                                                                                                |
-| `apps/admin/app/_components/nav.ts`           | "Zones" and "Vehicle classes" replace "Locations".                                                                                                                                                                 |
-| `apps/admin/app/_lib/routes.ts`               | `ZONES_PATH`, `zoneHref(id)`, `VEHICLE_CLASSES_PATH`.                                                                                                                                                              |
+| Module                                         | Change                                                                                                                                                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `booking-rules.ts`                             | Gains `CATEGORY_RULE_DEFAULTS`; `seed.ts` reads it.                                                                                                                                                                |
+| `zones.ts`                                     | `listZones` (all, with district counts), `getZone`, `createZone`, `updateZone`, `addZoneDistrict`, `removeZoneDistrict`, each taking the actor and logging. `resolveZone` also returns the district it matched on. |
+| `vehicle-classes.ts`                           | `listVehicleClasses` (all), `getVehicleClass`, `createVehicleClass`, `updateVehicleClass`, with the actor and the log. The validation, pure and tested.                                                            |
+| `activity-actions.ts`                          | The six actions above and their sentences in `describeActivity`.                                                                                                                                                   |
+| `packages/ui`                                  | `PlaceInput` and its fetch helper, from `apps/web`.                                                                                                                                                                |
+| `apps/manage/app/api/places/search`            | The search route handler, as the web app's.                                                                                                                                                                        |
+| `apps/manage/.../zones`, `.../vehicle-classes` | The screens. `.../locations` and `sample-locations.ts` are removed.                                                                                                                                                |
+| `apps/manage/app/_components/nav.ts`           | "Zones" and "Vehicle classes" replace "Locations".                                                                                                                                                                 |
+| `apps/manage/app/_lib/routes.ts`               | `ZONES_PATH`, `zoneHref(id)`, `VEHICLE_CLASSES_PATH`.                                                                                                                                                              |
 
 No schema change.
 

@@ -19,7 +19,7 @@ On staging, signed in, three runs a page (2026-10-02 and again 2026-10-05):
 
 ### 1. Functions run in Singapore
 
-`apps/web/vercel.json` and `apps/admin/vercel.json` set `"regions": ["sin1"]`, beside
+`apps/web/vercel.json` and `apps/manage/vercel.json` set `"regions": ["sin1"]`, beside
 the database. The same is set in both Vercel projects' settings; the files keep it
 reviewed and stop the two from drifting. The Hobby plan allows one region, and it may be
 any region.

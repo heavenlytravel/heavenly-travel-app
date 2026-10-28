@@ -1,55 +1,31 @@
-# Turborepo Tailwind CSS starter
+# Heavenly Travel
 
-This Turborepo starter is maintained by the Turborepo core team.
+An online travel booking platform in Malaysia for booking cars with driver and coach
+charter. A pnpm and Turborepo monorepo.
 
-## Using this example
+| App      | What it is                             | Production                       | Local                 |
+| -------- | -------------------------------------- | -------------------------------- | --------------------- |
+| `web`    | The customer site and the booking flow | https://new.heavenlytravel.my    | http://localhost:3000 |
+| `manage` | The console staff run the business in  | https://manage.heavenlytravel.my | http://localhost:3001 |
 
-Run the following command:
+The shared packages are listed in `CLAUDE.md`, "Package Roles".
+
+## Start
+
+Node 24 or later, and pnpm.
 
 ```sh
-npx create-turbo@latest -e with-tailwind
+pnpm install
+pnpm dev
 ```
 
-## What's inside?
+`pnpm dev` starts every app on its own port. Each app reads its settings from
+`.env.local`: copy its `.env.example` and fill it in. The Prisma commands and the
+production scripts read `packages/db/.env` (see `packages/db/.env.example`).
 
-This Turborepo includes the following packages/apps:
+## Docs
 
-### Apps and Packages
-
-- `web`: main landing page and customer app, a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `admin`: admin app, a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `admin` applications
-- `@repo/tailwind-config`: shared Tailwind CSS theme and PostCSS configuration
-- `@repo/eslint-config`: `eslint` flat configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Building packages/ui
-
-This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.ts`. This was chosen for several reasons:
-
-- Make sharing one theme from `packages/tailwind-config/shared-styles.css` to apps and packages as easy as possible.
-- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
-- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for its classes via `@import "tailwindcss" prefix(ui);` in [packages/ui/src/styles.css](packages/ui/src/styles.css).
-- Maintain clear package export boundaries.
-
-Another option is to consume `packages/ui` directly from source without building. Tailwind CSS v4 automatically detects class names in your source files, but it does not scan other packages in `node_modules`. If you use this option, add [`@source` directives](https://tailwindcss.com/docs/functions-and-directives#source-directive) to the CSS entry point in your apps so Tailwind can find the class names used in the `ui` package:
-
-```css
-@import "tailwindcss";
-@import "@repo/tailwind-config";
-
-@source "../../../packages/ui/src";
-```
-
-If you choose this strategy, you can remove the `tailwindcss` dependency and the `build:styles` script from the `ui` package.
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- `CLAUDE.md`: the commands and the rules for working here.
+- `docs/260916-development-workflow.md`: branches, staging, merging and Vercel.
+- `docs/260918-auth-and-database.md`: sign-in, the database and schema pushes.
+- `docs/`: one file per piece of work, named by its date.

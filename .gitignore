@@ -10,8 +10,8 @@ coverage
 # A location's Coverage tab and the Coverage screen across locations are
 # routes, not test output. The brackets are escaped: unescaped, [slug]
 # would match one letter.
-!apps/admin/app/(console)/locations/\[slug\]/coverage/
-!apps/admin/app/(console)/coverage/
+!apps/manage/app/(console)/locations/\[slug\]/coverage/
+!apps/manage/app/(console)/coverage/
 
 # next.js
 .next/

@@ -21,7 +21,7 @@ importers:
         specifier: 2.10.12
         version: 2.10.12
 
-  apps/admin:
+  apps/manage:
     dependencies:
       '@clerk/nextjs':
         specifier: 7.9.4

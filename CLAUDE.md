@@ -7,7 +7,7 @@
 ### Package Roles
 
 - `apps/web`: Customer-facing site (landing page and customer app).
-- `apps/admin`: Internal admin side for running the app.
+- `apps/manage`: Internal admin side for running the app, at `manage.heavenlytravel.my`.
 - `packages/ui` (`@repo/ui`): Shared React component library used by both apps.
 - `packages/db` (`@repo/db`): Prisma schema, Neon client, the `getAccess` session/role helper and the booking domain. See `docs/260918-auth-and-database.md` and `docs/260923-car-with-driver.md`.
 - `packages/places` (`@repo/places`): Google Places and Routes behind one interface, with a keyless provider for local development.
@@ -42,7 +42,7 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 - Format: `<type>(<scope>): <subject>`
 - Types: `feat` | `fix` | `docs` | `style` | `refactor` | `test` | `chore` | `perf`
-- Scopes: `web` | `admin` | `ui` | `config` | `deps` (omit for repo-wide changes)
+- Scopes: `web` | `manage` | `ui` | `config` | `deps` (omit for repo-wide changes)
 - Subject: <= 50 chars, imperative mood, no period
 - Small changes: one-line commit
 - Complex changes: add body (wrap at 72 chars) explaining what/why; reference issues
@@ -52,8 +52,10 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 Full details in `docs/260916-development-workflow.md`.
 
-- Dev ports are not pinned. Each app takes the first free port from 3000 and prints it;
-  pass `--port` (e.g. `pnpm --filter admin dev --port 3001`) when a fixed port matters.
+- Dev ports are pinned in each app's `dev` script: web 3000, manage 3001, and Connect 3002
+  once built. Port 3200 is BoothKita's, often running on the same machine. A taken port
+  stops `pnpm dev` with `EADDRINUSE` instead of moving the app; pass `--port` to run one
+  app elsewhere (e.g. `pnpm --filter manage dev --port 3005`).
 - `main` is production. It is protected: never commit or push to it directly.
 - Start work by branching from `main`: `feat/*`, `fix/*` or `chore/*`.
 - Run `pnpm lint` and `pnpm check-types` before pushing.
@@ -61,6 +63,6 @@ Full details in `docs/260916-development-workflow.md`.
 - `staging` is a review pointer, not a branch to work on. `pnpm staging` force-pushes the
   current branch onto it so the team can review both apps at
   https://staging.heavenlytravel.my (web) and https://staging-manage.heavenlytravel.my
-  (admin). One push deploys both.
+  (manage). One push deploys both.
   Never merge into or from `staging`, never open a PR from it, and ignore how far it
   is ahead of or behind `main`.

@@ -170,7 +170,7 @@ schema (`pnpm db:push`).
   as the initial email.
 - `_lib/routes.ts`: `receivedHref`, `signUpHref(email, returnTo)`.
 
-`apps/admin`
+`apps/manage`
 
 - `bookings/new`: email required; the form says so. No other change.
 

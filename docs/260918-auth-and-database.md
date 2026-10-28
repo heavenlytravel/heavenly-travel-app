@@ -36,11 +36,11 @@
 
 ## Environments
 
-| Environment       | Clerk instance | Neon branch   | Where the values live                          |
-| ----------------- | -------------- | ------------- | ---------------------------------------------- |
-| Local             | Development    | `development` | `apps/web/.env.local`, `apps/admin/.env.local` |
-| Preview / staging | Development    | `development` | Vercel env vars, **Preview** scope             |
-| Production        | Production     | `production`  | Vercel env vars, **Production** scope          |
+| Environment       | Clerk instance | Neon branch   | Where the values live                           |
+| ----------------- | -------------- | ------------- | ----------------------------------------------- |
+| Local             | Development    | `development` | `apps/web/.env.local`, `apps/manage/.env.local` |
+| Preview / staging | Development    | `development` | Vercel env vars, **Preview** scope              |
+| Production        | Production     | `production`  | Vercel env vars, **Production** scope           |
 
 Both apps need the same variable names; see each app's `.env.example`. Never put
 `pk_live`/`sk_live` keys or the production database URL in a local file or Preview scope.
@@ -147,7 +147,7 @@ also sets levels and teams, revokes access and holds the wall switch. The page a
 `packages/db/src/admins.ts`, which always keep at least one `SUPER` admin.
 
 Every admin page starts with `requireAdmin(permission)`
-(`apps/admin/app/_lib/access.ts`), naming the screen it guards: signed-out visitors go
+(`apps/manage/app/_lib/access.ts`), naming the screen it guards: signed-out visitors go
 to `/sign-in`, signed-in users without an admin profile go to `/no-access`, and an
 admin whose teams do not reach the screen goes to `/restricted`. Server actions check
 again with `getAdmin(permission)`, because they can be called by direct POST. Both ask
@@ -166,7 +166,7 @@ logged does not happen. Rows are never edited or deleted.
 
 - Every mutation in `packages/db` takes the actor first: `{ kind: "admin", userId }`,
   `{ kind: "customer", userId }` or `SYSTEM_ACTOR` for a script. Server actions build
-  it with `actorOf(admin)` from `apps/admin/app/_lib/access.ts`.
+  it with `actorOf(admin)` from `apps/manage/app/_lib/access.ts`.
 - The vocabulary (actor kinds, actions, record types, `customerVisible`) is in
   `packages/db/src/activity-actions.ts`, browser-safe. `logActivity` and the readers
   are in `packages/db/src/activity.ts`. An item action logs against its booking.

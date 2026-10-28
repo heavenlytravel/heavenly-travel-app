@@ -8,8 +8,13 @@ import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
-import { VEHICLES_PATH, vehiclesHref } from "../../../_lib/routes";
-import { VehicleForm } from "../_components/VehicleForm";
+import {
+  VEHICLE_IMAGE_UPLOAD_PATH,
+  VEHICLES_PATH,
+  vehiclesHref,
+} from "../../../_lib/routes";
+import { createVehicleAction } from "../actions";
+import { VehicleForm } from "@repo/console/VehicleForm";
 import { locationNames } from "../../../_lib/location-names";
 
 /**
@@ -74,6 +79,8 @@ async function newVehicleForm(
           suggestions={suggestions}
           locations={locations}
           vendors={vendors}
+          action={createVehicleAction}
+          uploadPath={VEHICLE_IMAGE_UPLOAD_PATH}
           vendorId={vendors.find((v) => v.id === vendor)?.id}
           backHref={vehiclesHref({ location: locationId })}
           backToList

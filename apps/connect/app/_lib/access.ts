@@ -35,3 +35,54 @@ export async function getDriverAccess() {
 export function actorOf(user: { id: string }): ConnectActor {
   return { kind: "connect", userId: user.id };
 }
+
+/** An active vendor's member, as Connect's vendor screens and actions read them. */
+export type MemberAccess = {
+  user: LetIn["user"];
+  vendor: LetIn["memberships"][number]["vendor"];
+  role: string;
+  /** Their own driver row, when they drive for it too: a one-person vendor. */
+  driver: LetIn["driver"];
+};
+
+/** The vendor a let-in visitor works for, or null when they only drive. Connect shows one vendor's screens. */
+export function memberOf(access: LetIn): MemberAccess | null {
+  const membership = access.memberships[0];
+  return membership
+    ? {
+        user: access.user,
+        vendor: membership.vendor,
+        role: membership.role,
+        driver: access.driver,
+      }
+    : null;
+}
+
+/** The member let in, or null: for server actions, which must not redirect. */
+export async function getMemberAccess(): Promise<MemberAccess | null> {
+  const access = await getConnectAccess();
+  return access.status === "ok" ? memberOf(access) : null;
+}
+
+/** What an action answers a visitor who is not an active vendor's member. */
+export const NOT_A_MEMBER = {
+  error: "You are not signed in for an active vendor. Reload the page.",
+};
+
+/** What the shell shows a member: their vendor's pages, the staff page for its owner. */
+export function shellMember(member: MemberAccess | null) {
+  return member
+    ? { vendorName: member.vendor.name, owner: member.role === "owner" }
+    : undefined;
+}
+
+/**
+ * First line of a vendor's own pages: the member let in. Anyone else goes
+ * home, where their screen says where they stand.
+ */
+export async function requireMember(): Promise<MemberAccess> {
+  const access = await requireSignedIn();
+  const member = access.status === "ok" ? memberOf(access) : null;
+  if (!member) redirect("/");
+  return member;
+}

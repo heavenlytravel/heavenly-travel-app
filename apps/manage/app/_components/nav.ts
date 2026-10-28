@@ -15,7 +15,7 @@ import {
   VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,
 } from "../_lib/routes";
-import type { Menu, MenuIcon, MenuRow } from "./menu";
+import type { Menu, MenuCount, MenuIcon, MenuRow } from "./menu";
 
 /** A page of a section, and what its `requireAdmin` asks; one the admin may not open is not offered. */
 export type NavView = {
@@ -236,6 +236,7 @@ export function viewsFor(
 function rowOf(
   section: NavSection,
   permissions: readonly Permission[],
+  counts: NavCounts,
 ): MenuRow | null {
   const views = viewsFor(section, permissions);
   const [first] = views;
@@ -247,14 +248,29 @@ function rowOf(
       label: first.label,
       href: first.href,
       icon: first.icon,
+      count: counts[first.href],
     };
   }
+  // The row sums what waits on its pages.
+  const waiting = views.flatMap((view) => {
+    const count = counts[view.href];
+    return count ? [count] : [];
+  });
   return {
     key: section.key,
     label: section.label,
     href: first.href,
     icon: section.icon,
     exact: section.exact,
+    ...(waiting.length > 0
+      ? {
+          count: {
+            value: waiting.reduce((sum, c) => sum + c.value, 0),
+            tone: waiting[0]!.tone,
+            label: waiting.map((c) => c.label).join(", "),
+          },
+        }
+      : {}),
     ...(section.drill
       ? {
           drill: {
@@ -264,6 +280,7 @@ function rowOf(
               label: view.label,
               href: view.href,
               icon: view.icon,
+              count: counts[view.href],
             })),
             // Each a screen of its own, so each its own icon on the rail.
             spreadOnRail: true,
@@ -278,13 +295,19 @@ function rowOf(
  * leading to the first of its pages they may open. A section with none
  * goes, and so does a part left empty.
  */
-export function allLocationsMenu(permissions: readonly Permission[]): Menu {
+/** What waits on a page across locations, by its address: the vendors to review. */
+export type NavCounts = Partial<Record<string, MenuCount>>;
+
+export function allLocationsMenu(
+  permissions: readonly Permission[],
+  counts: NavCounts = {},
+): Menu {
   return {
     label: "All locations",
     parts: ALL_LOCATIONS_NAV.map((part) => ({
       label: part.label,
       rows: part.sections.flatMap((section) => {
-        const row = rowOf(section, permissions);
+        const row = rowOf(section, permissions, counts);
         return row ? [row] : [];
       }),
     })).filter((part) => part.rows.length > 0),

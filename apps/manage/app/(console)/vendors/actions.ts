@@ -11,7 +11,9 @@ import {
   VENDOR_SERVICES_FIELD,
   type VendorMove,
 } from "@repo/db/server";
+import { sendVendorEmail } from "@repo/email";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { actorOf, getAdmin } from "../../_lib/access";
 import {
   type ActionState,
@@ -104,8 +106,14 @@ export async function moveVendorAction(
     move,
     textOf(formData.get("reviewNote")),
   );
-  if (result.ok) revalidateVendors();
-  return stateOf(result);
+  if (!result.ok) return stateOf(result);
+  revalidateVendors();
+  // Approved, the vendor hears that Connect is open; a refusal is staff only.
+  const vendor = result.vendor;
+  if (move === "approve" && vendor) {
+    after(() => sendVendorEmail("approved", { ...vendor, at: new Date() }));
+  }
+  return null;
 }
 
 export async function setVendorOursAction(

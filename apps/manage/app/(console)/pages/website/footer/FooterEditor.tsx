@@ -52,7 +52,7 @@ import {
   UploadsContext,
   useImageUpload,
   useUploadCount,
-} from "../../../../_components/use-image-upload";
+} from "@repo/console/use-image-upload";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../../../../_lib/routes";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import {

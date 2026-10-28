@@ -28,7 +28,7 @@ import {
   newVendorVehicleHref,
   VENDORS_PATH,
 } from "../../../_lib/routes";
-import { heldBookingsSentence } from "../../../_lib/held-bookings";
+import { heldBookingsSentence } from "@repo/console/held-bookings";
 import { VendorForm } from "../_components/VendorForm";
 import { VendorReview } from "../_components/VendorReview";
 import { VendorStatusBadge } from "../_components/VendorStatusBadge";

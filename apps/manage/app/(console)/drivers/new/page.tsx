@@ -5,7 +5,8 @@ import { PageHeader } from "@repo/console/PageHeader";
 import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../_lib/access";
 import { DRIVERS_PATH, driversHref } from "../../../_lib/routes";
-import { DriverForm } from "../_components/DriverForm";
+import { createDriverAction } from "../actions";
+import { DriverForm } from "@repo/console/DriverForm";
 import { locationNames } from "../../../_lib/location-names";
 
 /**
@@ -68,6 +69,7 @@ async function newDriverForm(
           classes={classes}
           locations={locations}
           vendors={vendors}
+          action={createDriverAction}
           vendorId={vendors.find((v) => v.id === vendor)?.id}
           backHref={driversHref({ location: locationId })}
           backToList

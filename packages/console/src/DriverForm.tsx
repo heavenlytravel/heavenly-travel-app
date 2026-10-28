@@ -22,15 +22,15 @@ import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { Card } from "@repo/console/Card";
-import { ExpiryDateField } from "@repo/console/ExpiryDateField";
-import { FormError } from "@repo/console/FormError";
-import { VendorField } from "@repo/console/VendorField";
-import { FLEET_BACK_FIELD } from "../../../_lib/routes";
-import { useActionForm } from "@repo/console/use-action-form";
-import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
-import { createDriverAction, updateDriverAction } from "../actions";
-import { FORM_WIDTH } from "@repo/console/PageColumn";
+import type { ActionState } from "./action-state";
+import { Card } from "./Card";
+import { ExpiryDateField } from "./ExpiryDateField";
+import { FLEET_BACK_FIELD } from "./fleet-form";
+import { FormError } from "./FormError";
+import { FORM_WIDTH } from "./PageColumn";
+import { useActionForm } from "./use-action-form";
+import { useOutOfServiceAsk } from "./use-out-of-service-ask";
+import { VendorField } from "./VendorField";
 
 /**
  * The form for a vendor's driver, new or existing: whose driver they are,
@@ -38,7 +38,10 @@ import { FORM_WIDTH } from "@repo/console/PageColumn";
  * with, where they are based, the classes they may drive, the
  * expiry dates of their licences, and notes. A saved driver opens the
  * Drivers tab of the location they are based at, or the list across
- * locations they were added from.
+ * locations they were added from. One copy for both apps: the admin
+ * chooses the vendor from every one, and Connect fixes it to the
+ * member's vendor, with only the locations it serves and the classes on
+ * sale at them.
  */
 export function DriverForm({
   locationId,
@@ -47,6 +50,7 @@ export function DriverForm({
   classes,
   locations,
   vendors,
+  action,
   backHref,
   backToList = false,
   held = [],
@@ -57,8 +61,11 @@ export function DriverForm({
   vendorId?: string;
   /** Absent on the "new" page. */
   driver?: DriverWithClasses;
-  vendors: VendorOption[];
-  /** Every class in the catalogue, in its order. */
+  /** The vendors to choose from, in the admin; absent in Connect, where it is the member's. */
+  vendors?: VendorOption[];
+  /** The save, new or existing, as the app checks it. */
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /** Every class it may be allowed on, in the catalogue's order. */
   classes: ClassOption[];
   locations: LocationName[];
   /** Where "Cancel" goes; with `backToList`, where a saved driver goes too. */
@@ -75,16 +82,13 @@ export function DriverForm({
     held,
     action: "Make inactive",
   });
-  const { pending, error, formProps, leaveDialog } = useActionForm(
-    isNew ? createDriverAction : updateDriverAction,
-    {
-      ask: outOfService.ask,
-      done: isNew ? "Driver added." : "Driver saved.",
-      leave: isNew
-        ? "The driver is not added."
-        : "The changes to this driver are lost.",
-    },
-  );
+  const { pending, error, formProps, leaveDialog } = useActionForm(action, {
+    ask: outOfService.ask,
+    done: isNew ? "Driver added." : "Driver saved.",
+    leave: isNew
+      ? "The driver is not added."
+      : "The changes to this driver are lost.",
+  });
   const fields = driver ? driverFieldsOf(driver) : null;
   const ticked = new Set(fields?.vehicleClassIds ?? []);
 
@@ -97,11 +101,19 @@ export function DriverForm({
 
       <Card className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <VendorField
-            vendors={vendors}
-            defaultValue={fields?.vendorId || vendorId || ""}
-            what="driver"
-          />
+          {vendors ? (
+            <VendorField
+              vendors={vendors}
+              defaultValue={fields?.vendorId || vendorId || ""}
+              what="driver"
+            />
+          ) : (
+            <input
+              type="hidden"
+              name="vendorId"
+              value={fields?.vendorId || vendorId || ""}
+            />
+          )}
           <Field label={DRIVER_FIELD_LABELS.name}>
             <Input
               name="name"

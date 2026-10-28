@@ -645,6 +645,12 @@ export type PartAnswer = {
   recorded: boolean;
   /** The warnings the one accepting saw, kept on the offer. */
   warningsSeen?: string[];
+  /**
+   * The vendor's member accepting is also the driver named, as a
+   * one-person vendor is: their yes for the vendor is their own too. Only
+   * for driver parts naming the actor's own account.
+   */
+  driverToo?: boolean;
 };
 
 /** Parts as an answer reads them. */
@@ -654,7 +660,7 @@ const answerInclude = {
     select: { id: true, vendor: { select: { name: true, isOurs: true } } },
   },
   vehicle: { select: { plate: true } },
-  driver: { select: { name: true } },
+  driver: { select: { name: true, userId: true } },
 } satisfies Prisma.TripPartInclude;
 
 /**
@@ -706,12 +712,24 @@ export async function answerParts(
           return refuse("The vendor has not accepted this job yet.");
         }
       }
+      const userId = "userId" in actor ? actor.userId : null;
       for (const part of parts) {
+        // A one-person vendor's yes covers their own driving too.
+        const ownDriving =
+          answer.driverToo === true &&
+          part.role === "driver" &&
+          userId !== null &&
+          part.driver?.userId === userId;
         await tx.tripPart.update({
           where: { id: part.id },
           data:
             answer.as === "vendor"
-              ? { vendorAcceptedAt: part.vendorAcceptedAt ?? now }
+              ? {
+                  vendorAcceptedAt: part.vendorAcceptedAt ?? now,
+                  ...(ownDriving
+                    ? { driverAcceptedAt: part.driverAcceptedAt ?? now }
+                    : {}),
+                }
               : { driverAcceptedAt: part.driverAcceptedAt ?? now },
         });
       }

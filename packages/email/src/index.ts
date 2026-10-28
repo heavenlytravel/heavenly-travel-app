@@ -2,6 +2,7 @@ import "server-only";
 import { CONTACT } from "@repo/db";
 import {
   ADMIN_URL,
+  CONNECT_URL,
   getBooking,
   SITE_URL,
   tripCrewsOf,
@@ -11,15 +12,22 @@ import {
 import {
   bookingEmails,
   driverEmails,
+  type BookingEmail,
   type BookingEmailEvent,
   type EmailSettings,
   type TripCrew,
 } from "./booking-emails";
 import { logSender } from "./log-sender";
+import {
+  vendorApprovedEmails,
+  vendorRegisteredEmails,
+  type VendorEmailFacts,
+} from "./vendor-emails";
 import { resendSender } from "./resend";
 import type { EmailSender } from "./types";
 
 export type { BookingEmailEvent, TripCrew } from "./booking-emails";
+export type { VendorEmailFacts } from "./vendor-emails";
 
 /**
  * Booking emails as the apps send them. The sender is chosen once per
@@ -55,28 +63,23 @@ const sender = pick();
 const settings: EmailSettings = {
   siteUrl: SITE_URL,
   adminUrl: ADMIN_URL,
+  connectUrl: CONNECT_URL,
   opsTo: process.env.EMAIL_OPS_TO || CONTACT.bookingEmail,
   subjectPrefix: isProduction ? "" : "[Development] ",
 };
 
 /**
- * Sends the emails for a booking event. Call it after the database write
- * has committed, never inside the transaction. It never throws: a failed
- * send is logged and the booking stands.
+ * Sends emails, each with its idempotency key. It never throws: a failed
+ * send is logged under `what` and the write that caused it stands.
  */
-export async function sendBookingEmail(
-  event: BookingEmailEvent,
-  booking: BookingWithItems,
-): Promise<void> {
+async function sendAll(emails: readonly BookingEmail[], what: string) {
   const results = await Promise.allSettled(
-    bookingEmails(event, booking, settings).map(({ key, message }) =>
-      sender.send(message, key),
-    ),
+    emails.map(({ key, message }) => sender.send(message, key)),
   );
   for (const result of results) {
     if (result.status === "rejected") {
       console.error(
-        `[email] ${event} email for ${booking.reference} failed via ${sender.name}:`,
+        `[email] ${what} failed via ${sender.name}:`,
         result.reason,
       );
     }
@@ -84,26 +87,47 @@ export async function sendBookingEmail(
 }
 
 /**
+ * Sends the emails for a booking event. Call it after the database write
+ * has committed, never inside the transaction. It never throws.
+ */
+export function sendBookingEmail(
+  event: BookingEmailEvent,
+  booking: BookingWithItems,
+): Promise<void> {
+  return sendAll(
+    bookingEmails(event, booking, settings),
+    `${event} email for ${booking.reference}`,
+  );
+}
+
+/**
  * Tells the customer who picks them up, once trips are assigned or their
  * driver or vehicle changes. After the write has committed; never throws.
  */
-export async function sendDriverEmail(
+export function sendDriverEmail(
   booking: BookingWithItems,
   crews: readonly TripCrew[],
 ): Promise<void> {
-  const results = await Promise.allSettled(
-    driverEmails(booking, crews, settings).map(({ key, message }) =>
-      sender.send(message, key),
-    ),
+  return sendAll(
+    driverEmails(booking, crews, settings),
+    `driver email for ${booking.reference}`,
   );
-  for (const result of results) {
-    if (result.status === "rejected") {
-      console.error(
-        `[email] driver email for ${booking.reference} failed via ${sender.name}:`,
-        result.reason,
-      );
-    }
-  }
+}
+
+/**
+ * A vendor's sign-up emails: the team hears of a registration, the vendor
+ * of its approval. After the write has committed; never throws.
+ */
+export function sendVendorEmail(
+  event: "registered" | "approved",
+  vendor: VendorEmailFacts,
+): Promise<void> {
+  return sendAll(
+    event === "registered"
+      ? vendorRegisteredEmails(vendor, settings)
+      : vendorApprovedEmails(vendor, settings),
+    `vendor ${event} email for ${vendor.name}`,
+  );
 }
 
 /** The driver email for a booking whose trips were just assigned, read fresh. */

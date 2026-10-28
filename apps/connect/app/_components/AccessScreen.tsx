@@ -1,5 +1,7 @@
 import { CONTACT } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { Card } from "@repo/console/Card";
+import Link from "next/link";
 import type { SignedIn } from "../_lib/access";
 
 type Shut = Exclude<SignedIn, { status: "ok" }>;
@@ -7,7 +9,7 @@ type Shut = Exclude<SignedIn, { status: "ok" }>;
 /**
  * What a signed-in visitor Connect does not let in sees, one screen per
  * case, as the admin shows "No admin access": not a driver or a vendor
- * yet, a vendor waiting for approval, one not approved, or one suspended.
+ * yet, with the way to register a vendor, a vendor waiting for approval, one not approved, or one suspended.
  * Each says how to reach the team.
  */
 export function AccessScreen({ access }: { access: Shut }) {
@@ -16,6 +18,13 @@ export function AccessScreen({ access }: { access: Shut }) {
     <Card className="grid gap-3">
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       <p className="text-slate-600">{text}</p>
+      {access.status === "register" ? (
+        <div>
+          <Button asChild size="lg">
+            <Link href="/register">Register as a vendor</Link>
+          </Button>
+        </div>
+      ) : null}
       <p className="text-sm text-slate-600">
         WhatsApp{" "}
         <a
@@ -42,7 +51,7 @@ function screenOf(access: Shut): { title: string; text: string } {
     case "register":
       return {
         title: "Not on Connect yet",
-        text: `${access.user.email} is not a driver or a vendor on Heavenly Travel yet. A driver signs in with the email Operation has for them; ask the team to add it.`,
+        text: `${access.user.email} is not a driver or a vendor on Heavenly Travel yet. A company or a person who supplies vehicles or drives registers as a vendor. A driver for a vendor already with us signs in with the email their vendor has for them; ask them to add it.`,
       };
     case "pending":
       return {

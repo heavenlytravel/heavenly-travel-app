@@ -28,21 +28,17 @@ import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
 import { useState } from "react";
-import { Card } from "@repo/console/Card";
-import { ExpiryDateField } from "@repo/console/ExpiryDateField";
-import { FormError } from "@repo/console/FormError";
-import { VendorField } from "@repo/console/VendorField";
-import { classGroups } from "../../../_lib/fleet-form";
-import { FLEET_BACK_FIELD } from "../../../_lib/routes";
-import { useActionForm } from "@repo/console/use-action-form";
-import { useOutOfServiceAsk } from "../../../_lib/use-out-of-service-ask";
-import { createVehicleAction, updateVehicleAction } from "../actions";
+import type { ActionState } from "./action-state";
+import { Card } from "./Card";
+import { ExpiryDateField } from "./ExpiryDateField";
+import { classGroups, FLEET_BACK_FIELD } from "./fleet-form";
+import { FormError } from "./FormError";
+import { FORM_WIDTH } from "./PageColumn";
 import { PhotoList } from "./PhotoList";
-import {
-  UploadsContext,
-  useUploadCount,
-} from "../../../_components/use-image-upload";
-import { FORM_WIDTH } from "@repo/console/PageColumn";
+import { useActionForm } from "./use-action-form";
+import { UploadsContext, useUploadCount } from "./use-image-upload";
+import { useOutOfServiceAsk } from "./use-out-of-service-ask";
+import { VendorField } from "./VendorField";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {
@@ -109,8 +105,11 @@ function ModelNote({
  * its brand and model, chosen from the ones entered before or added new,
  * where it is based and whether it is in service, its photos, the expiry
  * dates of its documents, and notes. A model the class does not have yet
- * is added to it on save. A saved vehicle opens the Vehicles tab of the location it is
- * based at, or the list across locations it was added from.
+ * is added to it on save. One copy for both apps: the admin chooses the
+ * vendor from every one, and Connect fixes it to the member's vendor and
+ * offers only the locations it serves and the classes on sale at each.
+ * Each app passes its own action and its upload route. Where a saved
+ * vehicle opens is the action's answer.
  */
 export function VehicleForm({
   vehicle,
@@ -121,17 +120,30 @@ export function VehicleForm({
   suggestions,
   locations,
   vendors,
+  classesAt,
+  action,
+  uploadPath,
+  photosNote,
   backHref,
   backToList = false,
   held = [],
 }: {
+  /** The save, new or existing, as the app checks it. */
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /** The app's upload route for a vehicle's photo. */
+  uploadPath: string;
+  /** What the photos are for, under their title; the admin's says what customers see. */
+  photosNote?: string;
+  /** The classes on sale at each location, by its id: Connect narrows the class to them. */
+  classesAt?: Record<string, readonly string[]>;
   /** Absent on the "new" page. */
   vehicle?: VehicleWithModel;
   /** Where a new vehicle is based to start with; absent on the list across locations. */
   locationId?: string;
-  /** Whose a new vehicle is to start with; ours when absent. */
+  /** Whose a new vehicle is to start with, ours when absent; with no `vendors`, fixed. */
   vendorId?: string;
-  vendors: VendorOption[];
+  /** The vendors to choose from, in the admin; absent in Connect, where it is the member's. */
+  vendors?: VendorOption[];
   /** The class a new vehicle starts in, when it is added from the class's page. */
   vehicleClassId?: string;
   /** Every class in the catalogue, in its order. */
@@ -154,7 +166,7 @@ export function VehicleForm({
     action: "Take out of service",
   });
   const { pending, error, formProps, markDirty, leaveDialog } = useActionForm(
-    isNew ? createVehicleAction : updateVehicleAction,
+    action,
     {
       ask: outOfService.ask,
       done: isNew ? "Vehicle added." : "Vehicle saved.",
@@ -168,6 +180,13 @@ export function VehicleForm({
   const [classId, setClassId] = useState(
     fields?.vehicleClassId ?? vehicleClassId ?? "",
   );
+  const [basedAt, setBasedAt] = useState(
+    fields?.locationId ?? locationId ?? "",
+  );
+  const onSale = classesAt ? new Set(classesAt[basedAt] ?? []) : null;
+  const classChoices = onSale
+    ? classes.filter((c) => onSale.has(c.id) || c.id === classId)
+    : classes;
   const [brand, setBrand] = useState(fields?.brand ?? "");
   const [model, setModel] = useState(fields?.model ?? "");
   const [photos, setPhotos] = useState<Photo[]>(
@@ -189,11 +208,19 @@ export function VehicleForm({
 
         <Card className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <VendorField
-              vendors={vendors}
-              defaultValue={fields?.vendorId || vendorId || ""}
-              what="vehicle"
-            />
+            {vendors ? (
+              <VendorField
+                vendors={vendors}
+                defaultValue={fields?.vendorId || vendorId || ""}
+                what="vehicle"
+              />
+            ) : (
+              <input
+                type="hidden"
+                name="vendorId"
+                value={fields?.vendorId || vendorId || ""}
+              />
+            )}
             <Field label={VEHICLE_FIELD_LABELS.plate}>
               <Input
                 name="plate"
@@ -219,7 +246,7 @@ export function VehicleForm({
                 placeholder="Choose the class"
                 value={classId}
                 onValueChange={setClassId}
-                options={classGroups(classes)}
+                options={classGroups(classChoices)}
               />
             </Field>
             <Field label={VEHICLE_FIELD_LABELS.brand}>
@@ -283,7 +310,8 @@ export function VehicleForm({
                 name="locationId"
                 required
                 placeholder="Choose the location"
-                defaultValue={fields?.locationId ?? locationId ?? ""}
+                value={basedAt}
+                onValueChange={setBasedAt}
                 options={locations.map((location) => ({
                   value: location.id,
                   label: location.name,
@@ -312,13 +340,12 @@ export function VehicleForm({
               {VEHICLE_FIELD_LABELS.photos}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              What the customers of the location it is based at see of its
-              model, plate and all, and swipe through when they choose one. The
-              first is its cover; the first cover of the class there is the
-              class&apos;s picture at the location.
+              {photosNote ??
+                "What the customers of the location it is based at see of its model, plate and all, and swipe through when they choose one. The first is its cover; the first cover of the class there is the class's picture at the location."}
             </p>
           </div>
           <PhotoList
+            uploadPath={uploadPath}
             name={modelName({ brand: brand.trim(), name: model.trim() })}
             photos={photos}
             setPhotos={(next) => {

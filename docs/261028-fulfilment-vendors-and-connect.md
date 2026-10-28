@@ -1,7 +1,8 @@
 # Fulfilment: vendors, assignment and Connect
 
 Status: designed with the user on 2026-10-27 and 2026-10-28, in conversation, and settled
-in review on 2026-10-28. Not built. A small pull request goes first: it pins the dev ports
+in review on 2026-10-28. Built on the branch `feat/fulfilment-vendors-connect`, not yet
+merged. A small pull request went first (#58): it pins the dev ports
 and renames `apps/admin` to `apps/manage`. Then this plan is built in one pull request,
 in five steps, one commit or more each (see "Build order"). The data model below is a
 proposal: each step confirms its part of it before building, and the user runs `db:push`.

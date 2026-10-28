@@ -33,7 +33,7 @@ import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
 import { MarkdownField } from "../MarkdownField";
-import { UploadsContext, useUploadCount } from "../use-image-upload";
+import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import {
   RowControls,
   movedRow,

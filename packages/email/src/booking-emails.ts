@@ -44,6 +44,8 @@ export type EmailSettings = {
   siteUrl: string;
   /** The admin console, for "Open in console". */
   adminUrl: string;
+  /** Connect, for vendors and drivers. */
+  connectUrl: string;
   /** Where the ops copies go. */
   opsTo: string;
   /** "[Development] " outside production, so the environment is obvious. */
@@ -169,7 +171,7 @@ function headline(booking: BookingWithItems) {
 const severalLive = (booking: BookingWithItems) =>
   booking.items.filter(isLive).length > 1;
 
-function email(
+export function email(
   to: string,
   key: string,
   content: EmailContent,
@@ -200,7 +202,11 @@ function toCustomer(
   return to ? [email(to, `${key}:customer`, content, settings)] : [];
 }
 
-function toOps(key: string, settings: EmailSettings, content: EmailContent) {
+export function toOps(
+  key: string,
+  settings: EmailSettings,
+  content: EmailContent,
+) {
   return email(settings.opsTo, `${key}:ops`, content, settings);
 }
 

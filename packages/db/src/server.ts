@@ -139,12 +139,34 @@ export {
   updateVendor,
   moveVendor,
   setVendorOurs,
+  listVendorMembers,
+  addVendorStaff,
+  removeVendorStaff,
+  listRegistrationLocations,
+  vendorFleetChoices,
+  mayRegisterVendor,
 } from "./vendors";
+export {
+  listVendorOffers,
+  nameForVendor,
+  answerAsVendor,
+  listVendorJobs,
+  getVendorJob,
+} from "./vendor-work";
+export type {
+  OfferRole,
+  VendorOfferView,
+  VendorTrip,
+  VendorJobs,
+  VendorJob,
+} from "./vendor-work";
 export type {
   VendorWithLocations,
   VendorFilter,
   VendorOption,
   VendorMove,
+  VendorMemberView,
+  VendorContact,
 } from "./vendors";
 export {
   listOfferings,

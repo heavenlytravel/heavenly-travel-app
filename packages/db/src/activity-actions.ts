@@ -281,6 +281,10 @@ const ACTIONS = {
   "vendor.reinstated": { entityType: "vendor", customerVisible: false },
   /** `isOurs`, before and after. */
   "vendor.ours.switched": { entityType: "vendor", customerVisible: false },
+  /** A Connect account the owner added as staff: its email and role, in `after`. */
+  "vendor.member.added": { entityType: "vendor", customerVisible: false },
+  /** A staff account the owner removed: its email and role, in `before`. */
+  "vendor.member.removed": { entityType: "vendor", customerVisible: false },
   /**
    * The files the Media screen deleted, each with its key, name and size,
    * in `before`. Logged against `MEDIA_RECORD_ID`.
@@ -897,7 +901,14 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.contact.viewed": {
       const driver = field(entry.after, "driverName");
-      return `${typeof driver === "string" ? driver : "The driver"} saw the customer's details of ${itemName(entry.after)}`;
+      const vendor = field(entry.after, "vendorName");
+      const who =
+        typeof driver === "string"
+          ? driver
+          : typeof vendor === "string"
+            ? `${vendor}'s staff`
+            : "The driver";
+      return `${who} saw the customer's details of ${itemName(entry.after)}`;
     }
     case "booking.offer.sent":
     case "booking.part.accepted":
@@ -1108,6 +1119,18 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "vendor.reinstated":
       return "Reinstated the vendor";
+    case "vendor.member.added": {
+      const email = field(entry.after, "email");
+      return typeof email === "string"
+        ? `Added ${email} as staff`
+        : "Added a staff account";
+    }
+    case "vendor.member.removed": {
+      const email = field(entry.before, "email");
+      return typeof email === "string"
+        ? `Removed ${email} from the staff`
+        : "Removed a staff account";
+    }
     case "vendor.ours.switched":
       return field(entry.after, "isOurs") === true
         ? "Made the vendor ours"

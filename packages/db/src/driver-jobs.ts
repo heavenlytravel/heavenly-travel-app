@@ -34,10 +34,10 @@ import {
  */
 
 /** How long done jobs stay on a driver's list. */
-const DONE_DAYS = 3;
+export const DONE_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const jobInclude = {
+export const jobInclude = {
   item: {
     include: {
       ...tripInclude,
@@ -46,7 +46,7 @@ const jobInclude = {
   },
 } satisfies Prisma.TripPartInclude;
 
-type JobPart = Prisma.TripPartGetPayload<{ include: typeof jobInclude }>;
+export type JobPart = Prisma.TripPartGetPayload<{ include: typeof jobInclude }>;
 
 /** A tap as the job shows it. */
 export type TripEventView = {
@@ -92,11 +92,11 @@ export type DriverJobs = {
   done: DriverTrip[];
 };
 
-function placeOf(value: unknown): Place | null {
+export function placeOf(value: unknown): Place | null {
   return isPlace(value) ? value : null;
 }
 
-function tripOf(part: JobPart): DriverTrip {
+export function tripOf(part: JobPart): DriverTrip {
   const details = part.item.tripDetails;
   const pickup = placeOf(details?.pickupPlace);
   const dropoff = placeOf(details?.dropoffPlace);

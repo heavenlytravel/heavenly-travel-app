@@ -346,6 +346,15 @@ const MOVE_ACTIONS = {
 
 export type VendorMove = keyof typeof STATUS_MOVES;
 
+/** Who an email about a vendor goes to, and what it names. */
+export type VendorContact = {
+  id: string;
+  name: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+};
+
 /**
  * SUPER's review of a vendor: approve or refuse one that signed up,
  * suspend an active one or reinstate it. Refusing and suspending need a
@@ -359,7 +368,7 @@ export async function moveVendor(
   id: string,
   move: VendorMove,
   note: string,
-): Promise<Change & { vendor?: { name: string; contactEmail: string } }> {
+): Promise<Change & { vendor?: VendorContact }> {
   const rule = STATUS_MOVES[move];
   if (move === "refuse" || move === "suspend") {
     const noteCheck = checkReviewNote(note);
@@ -409,7 +418,13 @@ export async function moveVendor(
     });
     return {
       ok: true,
-      vendor: { name: vendor.name, contactEmail: vendor.contactEmail },
+      vendor: {
+        id: vendor.id,
+        name: vendor.name,
+        contactName: vendor.contactName,
+        contactEmail: vendor.contactEmail,
+        contactPhone: vendor.contactPhone,
+      },
     };
   });
 }
@@ -448,4 +463,206 @@ export function setVendorOurs(
     });
     return { ok: true };
   });
+}
+
+/** A vendor's member as its staff screen lists them. */
+export type VendorMemberView = {
+  id: string;
+  userId: string;
+  role: string;
+  email: string;
+  name: string;
+};
+
+/** The accounts that work for a vendor: the owner first, then staff by email. */
+export async function listVendorMembers(
+  vendorId: string,
+): Promise<VendorMemberView[]> {
+  const rows = await db.vendorMember.findMany({
+    where: { vendorId },
+    include: {
+      user: { select: { email: true, firstName: true, lastName: true } },
+    },
+  });
+  return rows
+    .map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      role: row.role,
+      email: row.user.email,
+      name: [row.user.firstName, row.user.lastName].filter(Boolean).join(" "),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.role === "owner") - Number(a.role === "owner") ||
+        a.email.localeCompare(b.email),
+    );
+}
+
+/**
+ * The owner adds an account as staff, by its email. The account must
+ * exist: one that has never signed in is asked to sign up first. An
+ * account that already works for a vendor, or drives for one, is refused:
+ * Connect shows one vendor's screens.
+ */
+export async function addVendorStaff(
+  actor: Actor,
+  vendorId: string,
+  email: string,
+): Promise<Change> {
+  const wanted = email.trim().toLowerCase();
+  if (!wanted) return refuse("Enter their email.", "email");
+  return db.$transaction(async (tx) => {
+    const vendor = await tx.vendor.findUnique({
+      where: { id: vendorId },
+      select: { name: true, isOurs: true },
+    });
+    if (!vendor) return NOT_FOUND;
+    if (vendor.isOurs) {
+      return refuse("Ours has no Connect accounts: Operation accepts for it.");
+    }
+    const user = await tx.user.findFirst({
+      where: { email: { equals: wanted, mode: "insensitive" } },
+      select: {
+        id: true,
+        email: true,
+        vendorMembers: { select: { vendorId: true } },
+      },
+    });
+    if (!user) {
+      return refuse(
+        `No account has ${wanted} yet. Ask them to sign up on Connect first, then add them.`,
+        "email",
+      );
+    }
+    if (user.vendorMembers.some((m) => m.vendorId === vendorId)) {
+      return refuse(`${user.email} works for ${vendor.name} already.`, "email");
+    }
+    if (user.vendorMembers.length > 0) {
+      return refuse(
+        `${user.email} works for another vendor. An account works for one.`,
+        "email",
+      );
+    }
+    await tx.vendorMember.create({
+      data: { vendorId, userId: user.id, role: "staff" },
+    });
+    await logActivity(tx, actor, {
+      action: "vendor.member.added",
+      entityId: vendorId,
+      after: { email: user.email, role: "staff" },
+    });
+    return { ok: true };
+  });
+}
+
+/** The owner removes a staff member. The owner stays: a vendor always has one. */
+export async function removeVendorStaff(
+  actor: Actor,
+  vendorId: string,
+  memberId: string,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const member = await tx.vendorMember.findUnique({
+      where: { id: memberId },
+      include: { user: { select: { email: true } } },
+    });
+    if (!member || member.vendorId !== vendorId) {
+      return refuse("This account was removed meanwhile. Reload the page.");
+    }
+    if (member.role === "owner") {
+      return refuse("The owner stays. Ask the team to change the owner.");
+    }
+    await tx.vendorMember.delete({ where: { id: memberId } });
+    await logActivity(tx, actor, {
+      action: "vendor.member.removed",
+      entityId: vendorId,
+      before: { email: member.user.email, role: member.role },
+    });
+    return { ok: true };
+  });
+}
+
+/** The locations a vendor may sign up to serve: those live on the website, by name. */
+export function listRegistrationLocations(): Promise<
+  { id: string; name: string; slug: string; state: string }[]
+> {
+  return db.location.findMany({
+    where: { state: "live" },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true, state: true },
+  });
+}
+
+/**
+ * What a vendor's own vehicle and driver forms offer in Connect: the
+ * locations it serves, and at each the classes on sale there (an offering
+ * on, of a class on), so a vendor adds capacity behind what we sell.
+ */
+export async function vendorFleetChoices(vendorId: string): Promise<{
+  locations: { id: string; name: string; slug: string; state: string }[];
+  /** The classes on sale at each location, by the location's id. */
+  classesAt: Record<string, string[]>;
+  /** Every class on sale at one of them, in the catalogue's order. */
+  classes: { id: string; name: string; category: string; isActive: boolean }[];
+}> {
+  const locations = await db.location.findMany({
+    where: { vendors: { some: { id: vendorId } } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true, state: true },
+  });
+  const offerings = await db.locationVehicleClass.findMany({
+    where: {
+      locationId: { in: locations.map((l) => l.id) },
+      isActive: true,
+      vehicleClass: { isActive: true },
+    },
+    select: {
+      locationId: true,
+      vehicleClass: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          isActive: true,
+          sortOrder: true,
+        },
+      },
+    },
+  });
+  const classesAt: Record<string, string[]> = {};
+  const classes = new Map<string, (typeof offerings)[number]["vehicleClass"]>();
+  for (const { locationId, vehicleClass } of offerings) {
+    (classesAt[locationId] ??= []).push(vehicleClass.id);
+    classes.set(vehicleClass.id, vehicleClass);
+  }
+  return {
+    locations,
+    classesAt,
+    classes: [...classes.values()]
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        category: c.category,
+        isActive: c.isActive,
+      })),
+  };
+}
+
+/**
+ * Whether a signed-in account may register a vendor: not a member of one
+ * already, nor a driver. Connect's registration asks before it creates.
+ */
+export async function mayRegisterVendor(userId: string): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      driver: { select: { id: true } },
+      _count: { select: { vendorMembers: true } },
+    },
+  });
+  return (
+    user !== null && user.driver === null && user._count.vendorMembers === 0
+  );
 }

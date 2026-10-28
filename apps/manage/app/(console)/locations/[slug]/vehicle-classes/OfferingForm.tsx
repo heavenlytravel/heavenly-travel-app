@@ -40,10 +40,7 @@ import {
 } from "../../../vehicle-classes/VehicleClassFields";
 import { createOfferingAction, updateOfferingAction } from "./actions";
 import { SOURCES, SOURCE_FIELD } from "./offering-form";
-import {
-  UploadsContext,
-  useUploadCount,
-} from "../../../../_components/use-image-upload";
+import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {

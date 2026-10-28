@@ -25,7 +25,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
 import { FormError } from "@repo/console/FormError";
-import { useImageUpload } from "./use-image-upload";
+import { useImageUpload } from "@repo/console/use-image-upload";
 
 /**
  * How the console's preview shows a body: the elements styled from the

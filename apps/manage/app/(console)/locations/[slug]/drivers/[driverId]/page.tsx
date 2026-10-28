@@ -18,9 +18,13 @@ import {
   locationTabHref,
   recordHistoryHref,
 } from "../../../../../_lib/routes";
+import {
+  createDriverAction,
+  updateDriverAction,
+} from "../../../../drivers/actions";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteDriverAction } from "../../../../drivers/actions";
-import { DriverForm } from "../../../../drivers/_components/DriverForm";
+import { DriverForm } from "@repo/console/DriverForm";
 import { locationNames } from "../../../../../_lib/location-names";
 
 /**
@@ -119,6 +123,7 @@ async function driverScreen({
             classes={classes}
             locations={locations}
             vendors={vendors}
+            action={driver ? updateDriverAction : createDriverAction}
             held={held}
             backHref={locationTabHref(slug, "drivers")}
           />

@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
     "akieez-h510m.tail4436c5.ts.net",
   ],
   transpilePackages: ["@repo/console", "@repo/db", "@repo/email"],
+  images: {
+    // A vendor's vehicle photos are on UploadThing, as the admin's are:
+    // https://<app id>.ufs.sh/f/<key>, the host `isUploadUrl` in @repo/db checks.
+    remotePatterns: [
+      { protocol: "https", hostname: "*.ufs.sh", pathname: "/f/**" },
+    ],
+  },
   // Connect is for vendors and drivers, never for search engines. A
   // header, not robots.txt, so a crawler that fetches a page sees it.
   async headers() {

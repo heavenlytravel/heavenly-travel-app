@@ -6,7 +6,11 @@
   "exports": {
     "./*": "./src/*.tsx",
     "./action-state": "./src/action-state.ts",
+    "./fleet-form": "./src/fleet-form.ts",
+    "./held-bookings": "./src/held-bookings.ts",
+    "./image-upload": "./src/image-upload.ts",
     "./use-action-form": "./src/use-action-form.ts",
+    "./use-image-upload": "./src/use-image-upload.ts",
     "./use-leave-guard": "./src/use-leave-guard.ts"
   },
   "scripts": {
@@ -15,7 +19,10 @@
   },
   "dependencies": {
     "@repo/db": "workspace:*",
-    "@repo/ui": "workspace:*"
+    "@repo/ui": "workspace:*",
+    "image-size": "2.0.4",
+    "server-only": "0.0.1",
+    "uploadthing": "7.7.4"
   },
   "peerDependencies": {
     "next": "16.3.1",

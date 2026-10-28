@@ -12,6 +12,7 @@ import type { BookingEmailEvent, EmailSettings } from "./booking-emails";
 export const sampleSettings: EmailSettings = {
   siteUrl: "https://site.test",
   adminUrl: "https://admin.test",
+  connectUrl: "https://connect.test",
   opsTo: "ops@site.test",
   subjectPrefix: "",
 };

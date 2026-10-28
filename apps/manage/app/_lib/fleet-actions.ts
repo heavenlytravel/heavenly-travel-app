@@ -1,10 +1,10 @@
 import "server-only";
 import { getLocationSlug, textOf } from "@repo/db/server";
+import { FLEET_BACK_FIELD } from "@repo/console/fleet-form";
 import { revalidatePath } from "next/cache";
 import { revalidateLocation } from "../(console)/locations/_lib/revalidate";
 import {
   DRIVERS_PATH,
-  FLEET_BACK_FIELD,
   LOCATIONS_PATH,
   VEHICLE_CLASSES_PATH,
   VEHICLES_PATH,

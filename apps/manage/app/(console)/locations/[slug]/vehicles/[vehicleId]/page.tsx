@@ -20,10 +20,15 @@ import {
   locationVehicleHref,
   recordHistoryHref,
   VEHICLE_CLASS_PARAM,
+  VEHICLE_IMAGE_UPLOAD_PATH,
 } from "../../../../../_lib/routes";
+import {
+  createVehicleAction,
+  updateVehicleAction,
+} from "../../../../vehicles/actions";
 import { locationKey } from "../../../_lib/location-data";
 import { deleteVehicleAction } from "../../../../vehicles/actions";
-import { VehicleForm } from "../../../../vehicles/_components/VehicleForm";
+import { VehicleForm } from "@repo/console/VehicleForm";
 import { locationNames } from "../../../../../_lib/location-names";
 
 /**
@@ -138,6 +143,8 @@ async function vehicleScreen({
             classes={classes}
             suggestions={suggestions}
             vendors={vendors}
+            action={vehicle ? updateVehicleAction : createVehicleAction}
+            uploadPath={VEHICLE_IMAGE_UPLOAD_PATH}
             held={held}
             locations={locations}
             backHref={locationTabHref(slug, "vehicles")}

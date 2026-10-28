@@ -6,18 +6,26 @@ import {
   CONTACT_VISIBLE_DAYS,
   formatLocalDate,
   formatLocalTime,
+  isTripEventKind,
+  TRIP_EVENT_LABELS,
   waitingMinutes,
 } from "@repo/db";
-import { getDriverJob } from "@repo/db/server";
+import { getDriverJob, getVendorJob } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardTitle } from "@repo/console/Card";
 import { AccessScreen } from "../../_components/AccessScreen";
 import { ConnectShell } from "../../_components/ConnectShell";
-import { actorOf, requireSignedIn } from "../../_lib/access";
+import {
+  actorOf,
+  memberOf,
+  requireSignedIn,
+  shellMember,
+} from "../../_lib/access";
 import { TripTaps } from "./TripTaps";
 
 /**
- * Route: /jobs/[itemId]. One of the driver's jobs: the trip, what the
+ * Route: /jobs/[itemId]. One of the driver's jobs, or of their vendor's
+ * for its owner and staff, who see its taps but do not make them: the trip, what the
  * customer needs from them once they accepted it, until a few days after
  * it, and the buttons to report the trip on the day. Opening the
  * customer's details is logged. See
@@ -32,16 +40,27 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
       </ConnectShell>
     );
   }
-  if (!access.driver) notFound();
   const { itemId } = await params;
-  const job = await getDriverJob(actorOf(access.user), access.driver, itemId);
+  const member = memberOf(access);
+  // Their own driving first; else their vendor's job, without the taps.
+  const driverJob = access.driver
+    ? await getDriverJob(actorOf(access.user), access.driver, itemId)
+    : null;
+  const vendorJob =
+    !driverJob && member
+      ? await getVendorJob(actorOf(access.user), member.vendor, itemId)
+      : null;
+  const job = driverJob ?? vendorJob;
   if (!job) notFound();
   const waited = waitingMinutes(job.events);
   const open =
-    job.accepted && job.status !== "cancelled" && job.status !== "completed";
+    driverJob !== null &&
+    job.accepted &&
+    job.status !== "cancelled" &&
+    job.status !== "completed";
 
   return (
-    <ConnectShell>
+    <ConnectShell member={shellMember(member)}>
       <p className="text-sm">
         <Link
           href="/"
@@ -69,6 +88,16 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
           </span>
         ) : null}
       </div>
+
+      {vendorJob ? (
+        <Card className="grid gap-3">
+          <CardTitle>Who does it</CardTitle>
+          <dl className="grid gap-2 text-sm">
+            <Row label="Vehicle">{vendorJob.vehicle ?? "Not yours"}</Row>
+            <Row label="Driver">{vendorJob.driver ?? "Not yours"}</Row>
+          </dl>
+        </Card>
+      ) : null}
 
       <Card className="grid gap-3">
         <CardTitle>The customer</CardTitle>
@@ -110,15 +139,48 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
       {job.accepted ? (
         <Card className="grid gap-4">
           <CardTitle>On the day</CardTitle>
-          <TripTaps itemId={job.itemId} events={job.events} open={open} />
+          {driverJob ? (
+            <TripTaps itemId={job.itemId} events={job.events} open={open} />
+          ) : (
+            <TapList events={job.events} />
+          )}
           {waited !== null ? (
             <p className="text-sm text-slate-600">
-              You waited {waited} min for the passenger.
+              {driverJob ? "You" : "The driver"} waited {waited} min for the
+              passenger.
             </p>
           ) : null}
         </Card>
       ) : null}
     </ConnectShell>
+  );
+}
+
+/** The driver's taps so far, for the vendor watching. */
+function TapList({
+  events,
+}: {
+  events: { id: string; kind: string; at: Date; note: string | null }[];
+}) {
+  if (events.length === 0) {
+    return (
+      <p className="text-sm text-slate-600">No report from the driver yet.</p>
+    );
+  }
+  return (
+    <ul className="grid gap-1 text-sm">
+      {events.map((event) => (
+        <li key={event.id}>
+          <span className="font-medium tabular-nums">
+            {formatLocalTime(event.at)}
+          </span>{" "}
+          {isTripEventKind(event.kind)
+            ? TRIP_EVENT_LABELS[event.kind]
+            : event.kind}
+          {event.note ? `: ${event.note}` : ""}
+        </li>
+      ))}
+    </ul>
   );
 }
 

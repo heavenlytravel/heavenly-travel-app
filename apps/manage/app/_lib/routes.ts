@@ -233,13 +233,6 @@ export function newDriverHref(location?: string) {
   return fleetListHref(`${DRIVERS_PATH}/new`, { location });
 }
 
-/**
- * The field a vehicle or driver form posts when it was opened from the
- * list across locations: the list's address, as it was filtered. Once
- * saved, the form goes back to it rather than to a location's tab.
- */
-export const FLEET_BACK_FIELD = "back";
-
 /** The console's home: every location with its numbers. */
 export const LOCATIONS_PATH = "/";
 

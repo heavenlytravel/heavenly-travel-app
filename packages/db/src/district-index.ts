@@ -13,8 +13,8 @@ import {
  * Malaysia's states and districts with their boundaries, from
  * data/malaysia-districts.json (built by scripts/build-districts.ts from
  * geoBoundaries.org). Loaded once per process; half a megabyte, so it stays
- * on the server. The database holds the switch and the multiplier per row;
- * this holds the shapes. See docs/260930-coverage.md.
+ * on the server. The database holds the rows by code; this holds the
+ * shapes. See docs/260930-coverage.md.
  */
 
 export type StateShape = { code: string; name: string };

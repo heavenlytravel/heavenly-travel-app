@@ -49,9 +49,7 @@ export function DriversTable({
                 </Link>
                 <span className="block text-xs text-slate-500 tabular-nums">
                   {driver.phone}
-                  {driver.vendor && !driver.vendor.isOurs
-                    ? ` · ${driver.vendor.name}`
-                    : null}
+                  {!driver.vendor.isOurs ? ` · ${driver.vendor.name}` : null}
                 </span>
               </Td>
               <Td className="min-w-40 text-slate-600">

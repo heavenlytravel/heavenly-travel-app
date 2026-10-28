@@ -55,9 +55,7 @@ export function VehiclesTable({
                 </Link>
                 <span className="block text-xs text-slate-500">
                   {modelName(vehicle.vehicleModel)}
-                  {vehicle.vendor && !vehicle.vendor.isOurs
-                    ? ` · ${vehicle.vendor.name}`
-                    : null}
+                  {!vehicle.vendor.isOurs ? ` · ${vehicle.vendor.name}` : null}
                 </span>
               </Td>
               {showClass ? (

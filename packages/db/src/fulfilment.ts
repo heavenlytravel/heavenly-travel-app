@@ -328,8 +328,7 @@ export async function listCandidates(
   const candidates = await Promise.all(
     rows.map(async (row): Promise<Candidate & { rank: number }> => {
       const reasons = [...row.reasons];
-      if (!row.vendor) reasons.push("No vendor");
-      else if (row.vendor.status !== "active") {
+      if (row.vendor.status !== "active") {
         reasons.push("Its vendor is suspended");
       }
       const held = await heldJobs(db, row.held, bookingId);
@@ -344,13 +343,11 @@ export async function listCandidates(
       return {
         id: row.id,
         name: row.name,
-        vendor: row.vendor
-          ? {
-              id: row.vendor.id,
-              name: row.vendor.name,
-              isOurs: row.vendor.isOurs,
-            }
-          : { id: "", name: "No vendor", isOurs: false },
+        vendor: {
+          id: row.vendor.id,
+          name: row.vendor.name,
+          isOurs: row.vendor.isOurs,
+        },
         locationName: row.location.name,
         reasons,
         warnings,
@@ -360,7 +357,7 @@ export async function listCandidates(
           .map(dayLine),
         rank:
           (reasons.length > 0 ? 4 : 0) +
-          (row.vendor?.isOurs ? 0 : 2) +
+          (row.vendor.isOurs ? 0 : 2) +
           (row.location.id === here ? 0 : 1),
       };
     }),
@@ -375,8 +372,8 @@ export async function listCandidates(
 }
 
 /** Whether a vehicle's or a driver's vendor is active and serves for us. */
-function usableVendor(vendor: { status: string } | null) {
-  return vendor?.status === "active";
+function usableVendor(vendor: { status: string }) {
+  return vendor.status === "active";
 }
 
 // ---------------------------------------------------------------------------

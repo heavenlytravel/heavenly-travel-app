@@ -44,35 +44,29 @@ const summary = await db.$transaction(async (tx) => {
     });
   }
 
-  const where = { vendorId: null };
-  const [vehicleLocations, driverLocations] = await Promise.all([
-    tx.vehicle.findMany({ where, select: { locationId: true } }),
-    tx.driver.findMany({ where, select: { locationId: true } }),
-  ]);
-  const locationIds = [
-    ...new Set(
-      [...vehicleLocations, ...driverLocations].map((r) => r.locationId),
-    ),
-  ];
+  // In SQL, so the script runs the same on the schema that makes the
+  // vendor required, from main after the deploy, where the client cannot
+  // ask for a null vendor.
+  const unowned = await tx.$queryRaw<{ locationId: string }[]>`
+    SELECT "locationId" FROM "Vehicle" WHERE "vendorId" IS NULL
+    UNION
+    SELECT "locationId" FROM "Driver" WHERE "vendorId" IS NULL`;
+  const locationIds = unowned.map((r) => r.locationId);
   if (locationIds.length > 0) {
     await tx.vendor.update({
       where: { id: ours.id },
       data: { locations: { connect: locationIds.map((id) => ({ id })) } },
     });
   }
-  const vehicles = await tx.vehicle.updateMany({
-    where,
-    data: { vendorId: ours.id },
-  });
-  const drivers = await tx.driver.updateMany({
-    where,
-    data: { vendorId: ours.id },
-  });
+  const vehicles = await tx.$executeRaw`
+    UPDATE "Vehicle" SET "vendorId" = ${ours.id} WHERE "vendorId" IS NULL`;
+  const drivers = await tx.$executeRaw`
+    UPDATE "Driver" SET "vendorId" = ${ours.id} WHERE "vendorId" IS NULL`;
   return {
     ours,
     made,
-    vehicles: vehicles.count,
-    drivers: drivers.count,
+    vehicles,
+    drivers,
     locations: locationIds.length,
   };
 });

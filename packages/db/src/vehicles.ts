@@ -472,7 +472,7 @@ export async function vehicleDeleteImpactOf(
   // What the vehicle shows customers: ours, in service, of a class on sale
   // there. Other vendors' vehicles never reach the website.
   const shows =
-    vehicle.vendor?.isOurs === true &&
+    vehicle.vendor.isOurs &&
     vehicle.isActive &&
     vehicleModel.vehicleClass.isActive &&
     offering?.isActive === true;

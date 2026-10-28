@@ -61,7 +61,7 @@ export const DRIVER_FIELD_LABELS: Record<DriverField, string> = {
 /** A stored driver's fields as the form and the log read them: its dates as days, its classes by id. */
 export function driverFieldsOf(
   driver: {
-    vendorId: string | null;
+    vendorId: string;
     name: string;
     phone: string;
     email: string | null;
@@ -72,7 +72,7 @@ export function driverFieldsOf(
   } & Record<DriverDocument, Date | null>,
 ): DriverFields {
   return {
-    vendorId: driver.vendorId ?? "",
+    vendorId: driver.vendorId,
     name: driver.name,
     phone: driver.phone,
     email: driver.email,

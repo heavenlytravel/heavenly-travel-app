@@ -22,15 +22,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  adminProfile   AdminProfile?
-  driver         Driver?
-  partnerProfile PartnerProfile?
+  adminProfile  AdminProfile?
+  driver        Driver?
   /// The vendors they own or work for, in Connect.
-  vendorMembers  VendorMember[]
-  bookings       Booking[]
-  bookingNotes   BookingNote[]
-  /// No longer read: see DriverProfile.
-  driverProfile  DriverProfile?
+  vendorMembers VendorMember[]
+  bookings      Booking[]
+  bookingNotes  BookingNote[]
 }
 
 /// Staff access. `level` is one of the AdminLevel values and `teams` holds
@@ -86,31 +83,6 @@ model ActivityLog {
   @@index([actorId, createdAt])
   @@index([createdAt])
   @@index([locationIds], type: Gin)
-}
-
-/// No longer read: a driver is a `Driver` since
-/// docs/261019-vehicles-and-drivers.md, and nothing wrote to this. Kept so
-/// the schema push before the deploy leaves the running code, which reads
-/// it at sign-in, working; dropped in a follow-up.
-model DriverProfile {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isActive  Boolean   @default(false)
-  activeAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-/// Stub. Real partner fields (company details) arrive with that feature.
-model PartnerProfile {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isActive  Boolean   @default(false)
-  activeAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
 }
 
 // ---------------------------------------------------------------------------
@@ -242,21 +214,16 @@ model VendorMember {
 // Coverage. See docs/260930-coverage.md and
 // docs/261015-locations-as-operation-areas.md. The rows are Malaysia's fixed
 // states and districts, seeded from data/malaysia-districts.json and keyed
-// by its codes; the boundaries stay in that file. A district belongs to at
-// most one location, and Operation flips its switch on the location's
-// Coverage tab.
+// by its codes; the boundaries stay in that file. Coverage is each
+// location's zones.
 // ---------------------------------------------------------------------------
 
 /// One of the 13 states and 3 federal territories. `code` is ISO 3166-2,
 /// "MY-10" for Selangor.
 model State {
-  code       String   @id
-  name       String
-  /// No longer read: rates are set per location since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  multiplier Float    @default(1)
-  updatedAt  DateTime @updatedAt
+  code      String   @id
+  name      String
+  updatedAt DateTime @updatedAt
 
   districts District[]
   /// The locations that lie in it: a location ticks its states, and its
@@ -265,9 +232,7 @@ model State {
 }
 
 /// One administrative district. `code` is the slug of its name, the key in
-/// data/malaysia-districts.json. Off means pickups there are told the area
-/// is not served yet. A district with no location is off: a pickup is
-/// priced by its location.
+/// data/malaysia-districts.json.
 /// Malaysia's districts, for placing an address: a booking records the
 /// district its pickup fell in, and the zone maker draws the district
 /// outlines under the zones. Coverage is the zones', not the districts'.
@@ -276,9 +241,6 @@ model District {
   name      String
   stateCode String
   state     State    @relation(fields: [stateCode], references: [code])
-  /// No longer read: coverage is the location's zones since
-  /// docs/261015-locations-as-operation-areas.md. Dropped in a follow-up.
-  isActive  Boolean  @default(false)
   updatedAt DateTime @updatedAt
 
   items BookingItem[]
@@ -295,31 +257,19 @@ model District {
 // validated against the const arrays in src/location-input.ts.
 // ---------------------------------------------------------------------------
 
-/// A town, an island, a city or a state, with the districts it owns. Its
-/// state, not a district's switch, decides what the public sees; the
-/// district's switch decides whether a pickup there is served.
+/// A town, an island, a city or a state. Its state decides what the public
+/// sees; its zones decide whether a pickup there is served.
 model Location {
   id                  String    @id @default(cuid())
   /// The address of its pages: /langkawi. Locked the first time it goes live.
   slug                String    @unique
   name                String
-  /// No longer read: the tagline is on the landing page's content since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  tagline             String?
-  /// No longer read: coverage is the location's zones. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  districtCodes       String[]  @default([])
   /// "draft" | "live" | "paused"
   state               String
   /// Set once, the first time the location goes live.
   wentLiveAt          DateTime?
   /// Its place among the home page's top choices; null when it is not one.
   topChoiceOrder      Int?
-  /// No longer read: nearest-zone pricing replaced the drop-off rule with
-  /// maxExtraKm and crossLocation (docs/261023-nearest-zone-pricing.md).
-  /// Dropped in a follow-up once the change runs on every database.
-  dropoffRule         String    @default("anywhere")
   /// The furthest extra road, in whole km: an end of a trip outside every
   /// zone further than this by road from its nearest zone is not priced.
   maxExtraKm          Int       @default(15)
@@ -383,11 +333,6 @@ model LocationVehicleClass {
   vehicleClassId          String
   vehicleClass            VehicleClass @relation(fields: [vehicleClassId], references: [id])
   isActive                Boolean      @default(true)
-  /// No longer read: only the metered price used them, and nearest-zone
-  /// pricing has none (docs/261023-nearest-zone-pricing.md). Dropped in a
-  /// follow-up once the change runs on every database.
-  baseFareSen             Int          @default(0)
-  minimumFareSen          Int          @default(0)
   /// The rate per extra km: the road past a zone's edge.
   perKmSen                Int
   hourlyRateSen           Int
@@ -477,7 +422,7 @@ model LocationPage {
   position         Int       @default(0)
   /// Whether the page is published: true from a publish until it is
   /// unpublished. Not whether the product can be booked there: that is the
-  /// district's switch.
+  /// location's zones.
   isOn             Boolean   @default(false)
   /// The working copy.
   draft            Json
@@ -546,38 +491,24 @@ model LocationAddress {
 /// deleted, only deactivated. A booking snapshots what it shows, so
 /// editing or retiring a class never changes one.
 model VehicleClass {
-  id                      String   @id @default(cuid())
-  slug                    String   @unique
+  id            String   @id @default(cuid())
+  slug          String   @unique
   /// "car-with-driver" | "coach-charter"
-  category                String
-  name                    String
-  description             String
-  isActive                Boolean  @default(true)
-  sortOrder               Int      @default(0)
+  category      String
+  name          String
+  description   String
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
   /// Information only ("from 15 seats"): fit is by maxPassengers alone.
-  minPassengers           Int
-  maxPassengers           Int
-  luggage                 String
+  minPassengers Int
+  maxPassengers Int
+  luggage       String
   /// Its neutral picture, a file on UploadThing (src/images.ts); null for
   /// none. A location shows the first photo of its vehicles of the class in
   /// its place, once one has a photo.
-  imageUrl                String?
-  /// No longer read: rates are on the location's offering since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  baseFareSen             Int      @default(0)
-  perKmSen                Int      @default(0)
-  hourlyRateSen           Int      @default(0)
-  minimumFareSen          Int      @default(0)
-  /// No longer read: the rules are on the location's offering since
-  /// docs/261018-location-work-and-class-catalogue.md. Kept until
-  /// db:migrate-offering-rules has run on every database; dropped in a
-  /// follow-up.
-  minLeadHours            Int      @default(0)
-  cancellationCutoffHours Int      @default(0)
-  minHourlyHours          Int      @default(0)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   tripItems TripItemDetails[]
   offerings LocationVehicleClass[]
@@ -619,10 +550,9 @@ model VehicleModel {
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())
-  /// Whose it is. Optional only until db:migrate-vendors has run on every
-  /// database; required in the follow-up push.
-  vendorId            String?
-  vendor              Vendor?      @relation(fields: [vendorId], references: [id])
+  /// Whose it is.
+  vendorId            String
+  vendor              Vendor       @relation(fields: [vendorId], references: [id])
   /// In capitals without spaces: "VLE1234".
   plate               String       @unique
   vehicleModelId      String
@@ -672,10 +602,9 @@ model VehiclePhoto {
 /// docs/261028-fulfilment-vendors-and-connect.md.
 model Driver {
   id               String         @id @default(cuid())
-  /// Whose driver they are. Optional only until db:migrate-vendors has run
-  /// on every database; required in the follow-up push.
-  vendorId         String?
-  vendor           Vendor?        @relation(fields: [vendorId], references: [id])
+  /// Whose driver they are.
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id])
   userId           String?        @unique
   user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Lowercase; what links their account. Null until known.

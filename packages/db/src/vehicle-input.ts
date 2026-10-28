@@ -91,7 +91,7 @@ const PLATE_RE = /^[A-Z0-9]{2,12}$/;
 /** A stored vehicle's fields as the form and the log read them: its model by class, brand and name, its dates as days. */
 export function vehicleFieldsOf(
   vehicle: {
-    vendorId: string | null;
+    vendorId: string;
     plate: string;
     vehicleModel: { vehicleClassId: string; brand: string; name: string };
     locationId: string;
@@ -102,7 +102,7 @@ export function vehicleFieldsOf(
   } & Record<VehicleDocument, Date | null>,
 ): VehicleFields {
   return {
-    vendorId: vehicle.vendorId ?? "",
+    vendorId: vehicle.vendorId,
     plate: vehicle.plate,
     vehicleClassId: vehicle.vehicleModel.vehicleClassId,
     brand: vehicle.vehicleModel.brand,

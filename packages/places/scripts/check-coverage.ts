@@ -429,7 +429,7 @@ for (const group of groups) {
       ? `${place.lat.toFixed(4)}, ${place.lng.toFixed(4)} | ${place.locality ?? "-"}`
       : "(Google found nothing)";
     console.log(
-      `${ok ? "ok  " : "MISS"}  ${pad(query, 34)} ${pad(got ?? "-", 24)} ${district ? (district.isActive ? "on " : "off") : "   "} ${where}`,
+      `${ok ? "ok  " : "MISS"}  ${pad(query, 34)} ${pad(got ?? "-", 24)} ${where}`,
     );
   }
 }

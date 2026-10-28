@@ -160,26 +160,26 @@ unknown level as `REGULAR`, so nobody is locked out between the push and the scr
 
 ## Module changes
 
-| Module                                  | Change                                                                                                                                                            |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `roles.ts`                              | `ADMIN_LEVELS` is `SUPER`, `REGULAR`. Gains `ADMIN_TEAMS`, its guard and its labels.                                                                              |
-| `admins.ts`                             | `setAdminLevel` becomes `setAdmin(email, level, teams)`. Refuses a `REGULAR` admin with no team. The last `SUPER` rule stays.                                     |
-| `scripts/promote-admin.ts`              | Takes the teams after the level. New `scripts/migrate-admin-levels.ts`.                                                                                           |
-| `permissions.ts`, new (step 2)          | The map above as data, and one pure function that answers "may this admin do this, with the wall on or off". Unit-tested.                                         |
-| `settings.ts`, new (step 2)             | Reads and writes the one `AppSetting` row. Read once per request.                                                                                                 |
-| `activity-actions.ts`, new (step 3)     | Browser-safe: the actor kinds, the actions with their record type and `customerVisible`, and `describeActivity`, the sentence an entry reads as.                  |
-| `activity.ts`, new (step 3)             | `logActivity(tx, actor, entry)` and the readers for one record and for the full log, with actors and records named.                                               |
-| `bookings.ts` (step 3)                  | `advanceItem`, `cancelItem`, `cancelBookingAsAdmin`, `createBooking` and `cancelBookingAsCustomer` take the actor and log inside their transaction.               |
-| `admins.ts`, `settings.ts` (step 3)     | `setAdmin`, `revokeAdmin` and `setWallActive` take the actor and log inside their transaction. A change to the same values logs nothing.                          |
-| `dashboard.ts`, new (step 4)            | `dashboardCounts()`: the Dashboard's numbers, one count each.                                                                                                     |
-| `apps/admin/app/_lib/access.ts`         | `requireAdmin` and `getAdmin` take the screen or action they guard. `requireAdmin` sends a blocked admin to `/restricted`.                                        |
-| `apps/admin/app/_components/nav.ts`     | Each item names the permission it needs. The sidebar and header show only what the admin may open.                                                                |
-| `apps/admin/.../admins`                 | Teams shown and set per admin. The wall switch. Admins with no team flagged.                                                                                      |
-| `apps/admin/.../bookings/[id]`          | Buttons shown by permission. The history section.                                                                                                                 |
-| `apps/admin/.../activity`, new (step 3) | The full log, `SUPER` only.                                                                                                                                       |
-| `apps/admin/.../locations`              | Removed in step 6. `zones` and `vehicle-classes` take its place.                                                                                                  |
-| `prisma/seed.ts` (step 5)               | Stops replacing the districts and rates of a record that already exists. Reports how an existing zone's districts differ; `--replace-districts` applies the list. |
-| `packages/places/scripts` (step 5)      | `check-coverage`: geocodes real places in and around every zone and reports the zone each resolves to.                                                            |
+| Module                                   | Change                                                                                                                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `roles.ts`                               | `ADMIN_LEVELS` is `SUPER`, `REGULAR`. Gains `ADMIN_TEAMS`, its guard and its labels.                                                                              |
+| `admins.ts`                              | `setAdminLevel` becomes `setAdmin(email, level, teams)`. Refuses a `REGULAR` admin with no team. The last `SUPER` rule stays.                                     |
+| `scripts/promote-admin.ts`               | Takes the teams after the level. New `scripts/migrate-admin-levels.ts`.                                                                                           |
+| `permissions.ts`, new (step 2)           | The map above as data, and one pure function that answers "may this admin do this, with the wall on or off". Unit-tested.                                         |
+| `settings.ts`, new (step 2)              | Reads and writes the one `AppSetting` row. Read once per request.                                                                                                 |
+| `activity-actions.ts`, new (step 3)      | Browser-safe: the actor kinds, the actions with their record type and `customerVisible`, and `describeActivity`, the sentence an entry reads as.                  |
+| `activity.ts`, new (step 3)              | `logActivity(tx, actor, entry)` and the readers for one record and for the full log, with actors and records named.                                               |
+| `bookings.ts` (step 3)                   | `advanceItem`, `cancelItem`, `cancelBookingAsAdmin`, `createBooking` and `cancelBookingAsCustomer` take the actor and log inside their transaction.               |
+| `admins.ts`, `settings.ts` (step 3)      | `setAdmin`, `revokeAdmin` and `setWallActive` take the actor and log inside their transaction. A change to the same values logs nothing.                          |
+| `dashboard.ts`, new (step 4)             | `dashboardCounts()`: the Dashboard's numbers, one count each.                                                                                                     |
+| `apps/manage/app/_lib/access.ts`         | `requireAdmin` and `getAdmin` take the screen or action they guard. `requireAdmin` sends a blocked admin to `/restricted`.                                        |
+| `apps/manage/app/_components/nav.ts`     | Each item names the permission it needs. The sidebar and header show only what the admin may open.                                                                |
+| `apps/manage/.../admins`                 | Teams shown and set per admin. The wall switch. Admins with no team flagged.                                                                                      |
+| `apps/manage/.../bookings/[id]`          | Buttons shown by permission. The history section.                                                                                                                 |
+| `apps/manage/.../activity`, new (step 3) | The full log, `SUPER` only.                                                                                                                                       |
+| `apps/manage/.../locations`              | Removed in step 6. `zones` and `vehicle-classes` take its place.                                                                                                  |
+| `prisma/seed.ts` (step 5)                | Stops replacing the districts and rates of a record that already exists. Reports how an existing zone's districts differ; `--replace-districts` applies the list. |
+| `packages/places/scripts` (step 5)       | `check-coverage`: geocodes real places in and around every zone and reports the zone each resolves to.                                                            |
 
 ## Build order
 
@@ -384,20 +384,20 @@ schema" says.
 
 ### Module changes for PR E
 
-| Module                         | Change                                                                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `trip-input.ts`, new           | The trip query vocabulary and its parsers, from the web app. Unit-tested.                                                                               |
-| `booking-input.ts`, new        | `parseNoteBody`, `parsePriceOverride` and their limits. Unit-tested.                                                                                    |
-| `booking-contact.ts`, new      | `customerEmailOf(booking)`.                                                                                                                             |
-| `users.ts`, new                | `findUserByEmail`, for linking a manual booking to an account.                                                                                          |
-| `booking-notes.ts`, new        | `listBookingNotes` and `addBookingNote`, logged.                                                                                                        |
-| `bookings.ts`                  | `createBooking` takes a nullable user, the contact email and items with an optional override; `overrideItemPrice`. The `user` on a booking is nullable. |
-| `activity-actions.ts`          | `booking.note.added`, `booking.item.priced`; "Entered the booking" for a booking made by staff.                                                         |
-| `@repo/places/server`          | `resolveTrip`, from the web app.                                                                                                                        |
-| `@repo/email`                  | Reads `customerEmailOf`; a booking with no email gets no customer copy.                                                                                 |
-| `apps/web`                     | `transportation-booking.ts` keeps the website's part; the confirm action copies the account's email onto the booking.                                   |
-| `apps/admin/.../bookings/new`  | The manual booking page, its quote and create actions.                                                                                                  |
-| `apps/admin/.../bookings/[id]` | The Notes card, the price override control, the customer card for a guest.                                                                              |
+| Module                          | Change                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `trip-input.ts`, new            | The trip query vocabulary and its parsers, from the web app. Unit-tested.                                                                               |
+| `booking-input.ts`, new         | `parseNoteBody`, `parsePriceOverride` and their limits. Unit-tested.                                                                                    |
+| `booking-contact.ts`, new       | `customerEmailOf(booking)`.                                                                                                                             |
+| `users.ts`, new                 | `findUserByEmail`, for linking a manual booking to an account.                                                                                          |
+| `booking-notes.ts`, new         | `listBookingNotes` and `addBookingNote`, logged.                                                                                                        |
+| `bookings.ts`                   | `createBooking` takes a nullable user, the contact email and items with an optional override; `overrideItemPrice`. The `user` on a booking is nullable. |
+| `activity-actions.ts`           | `booking.note.added`, `booking.item.priced`; "Entered the booking" for a booking made by staff.                                                         |
+| `@repo/places/server`           | `resolveTrip`, from the web app.                                                                                                                        |
+| `@repo/email`                   | Reads `customerEmailOf`; a booking with no email gets no customer copy.                                                                                 |
+| `apps/web`                      | `transportation-booking.ts` keeps the website's part; the confirm action copies the account's email onto the booking.                                   |
+| `apps/manage/.../bookings/new`  | The manual booking page, its quote and create actions.                                                                                                  |
+| `apps/manage/.../bookings/[id]` | The Notes card, the price override control, the customer card for a guest.                                                                              |
 
 ### As built in PR E
 
@@ -419,17 +419,17 @@ schema" says.
 
 ### Module changes for PR F
 
-| Module                                | Change                                                                                                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `booking-rules.ts`                    | `localDateTimeInputs`, the inverse of `pickupInstant`, for a form that starts from a stored trip. Unit-tested.                                                           |
-| `trip-input.ts`                       | `tripSearchOf(trip)`, a stored trip back as its search; `tripItemField`, `tripItemIndexes` and `tripItemParams`, one form carrying several trips. Unit-tested.           |
-| `activity-actions.ts`                 | `booking.item.amended`, `customerVisible`; `AmendedFields` and their labels; the sentence "Changed the pick-up and the vehicle of item 2". Unit-tested.                  |
-| `bookings.ts`                         | `amendItem(actor, itemId, { item, override })`; `BookingEvent` gains `amended`.                                                                                          |
-| `@repo/email`                         | The `amended` event: "Booking updated" to the customer, sharing its shape with the partial cancel.                                                                       |
-| `apps/admin/.../bookings/_lib`        | `trip-form.ts`: the field names, the quote view and `ItemDraft`, browser-safe. `trip-server.ts`: `quoteTripView` and `prepareFormItem`. `quote-action.ts`: "Get prices". |
-| `apps/admin/.../bookings/_components` | `ItemEditor`: one vehicle's trip, priced list, details and agreed price, the part both forms share.                                                                      |
-| `apps/admin/.../bookings/new`         | One `ItemEditor` per vehicle and "Add another vehicle"; the create action prepares every item.                                                                           |
-| `apps/admin/.../bookings/[id]`        | "Amend" on an item card; `amendItemAction`; the amend page under `amend/[itemId]`.                                                                                       |
+| Module                                 | Change                                                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `booking-rules.ts`                     | `localDateTimeInputs`, the inverse of `pickupInstant`, for a form that starts from a stored trip. Unit-tested.                                                           |
+| `trip-input.ts`                        | `tripSearchOf(trip)`, a stored trip back as its search; `tripItemField`, `tripItemIndexes` and `tripItemParams`, one form carrying several trips. Unit-tested.           |
+| `activity-actions.ts`                  | `booking.item.amended`, `customerVisible`; `AmendedFields` and their labels; the sentence "Changed the pick-up and the vehicle of item 2". Unit-tested.                  |
+| `bookings.ts`                          | `amendItem(actor, itemId, { item, override })`; `BookingEvent` gains `amended`.                                                                                          |
+| `@repo/email`                          | The `amended` event: "Booking updated" to the customer, sharing its shape with the partial cancel.                                                                       |
+| `apps/manage/.../bookings/_lib`        | `trip-form.ts`: the field names, the quote view and `ItemDraft`, browser-safe. `trip-server.ts`: `quoteTripView` and `prepareFormItem`. `quote-action.ts`: "Get prices". |
+| `apps/manage/.../bookings/_components` | `ItemEditor`: one vehicle's trip, priced list, details and agreed price, the part both forms share.                                                                      |
+| `apps/manage/.../bookings/new`         | One `ItemEditor` per vehicle and "Add another vehicle"; the create action prepares every item.                                                                           |
+| `apps/manage/.../bookings/[id]`        | "Amend" on an item card; `amendItemAction`; the amend page under `amend/[itemId]`.                                                                                       |
 
 ### As built in PR F
 

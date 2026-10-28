@@ -54,7 +54,7 @@ state, and Details and Status are one page under Settings, with the history.
   drop-off rule on Rates judges a trip by zones, and a price for a particular place is
   a route on the rate grid.
 - The strip of tabs on narrow screens follows the same order and names, from
-  `locationTabsFor(state)` in `apps/admin/app/_lib/routes.ts`, which the panel reads
+  `locationTabsFor(state)` in `apps/manage/app/_lib/routes.ts`, which the panel reads
   too.
 
 ### The overview

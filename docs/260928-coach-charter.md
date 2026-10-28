@@ -259,7 +259,7 @@ category or changing its rules is a row, not code.
 | `apps/web/app/_lib/search.ts`                 | Tab keys renamed to the categories. Coach tab bookable with the car tab's fields, Return removed. Passengers removed from both tabs. Tab notes reworded without numbers.                                                                                  |
 | `apps/web/app/_lib/transportation-booking.ts` | Category-aware URL helper. Passengers is no longer part of the search, only of the options. The card, options page, confirm page and action still never trust each other.                                                                                 |
 | `apps/web/.../booking/transportation/`        | `[category]` route segment with the options, confirm and action. `loadTrip` is category-aware. The trip summary bar and its editor. The options form greys out classes by fit and by availability state, caps passengers and shows the larger group line. |
-| `apps/admin`, `packages/email`                | Read `tripDetails` and the new row helpers. Item headings from the shared function. A coach sample in the email fixtures and previews. No new screens.                                                                                                    |
+| `apps/manage`, `packages/email`               | Read `tripDetails` and the new row helpers. Item headings from the shared function. A coach sample in the email fixtures and previews. No new screens.                                                                                                    |
 
 ## Build order
 

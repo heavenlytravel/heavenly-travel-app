@@ -36,7 +36,7 @@ resend, errors and the return URL. What changes is everything around and inside 
 - **Web** (`apps/web/app/(auth)/layout.tsx`): the home page fonts, the logo centred
   above the form and linking home, the Langkawi hero photo with the "Travel made
   simple." headline on the left from `lg` up, and a "Back to Heavenly Travel" link.
-- **Admin** (`apps/admin/app/(auth)/layout.tsx`): the dark tone, the logo drawn white
+- **Admin** (`apps/manage/app/(auth)/layout.tsx`): the dark tone, the logo drawn white
   above the "Admin portal" eyebrow, no sign-up link and no footer. The `/no-access`
   page uses the same shell so a signed-in customer who is not staff sees the same page
   family, not an error page.

@@ -5,7 +5,7 @@ import { guardFor } from "./const-enum";
  * Uploaded images, pure and browser-safe: the files the console takes and
  * the one host it stores them on. A location's pages keep theirs in their
  * content (./location-page-input); a vehicle class keeps the address of
- * its picture. The upload itself is the admin's, in apps/admin's
+ * its picture. The upload itself is the admin's, in apps/manage's
  * `_lib/uploads.ts`. See docs/261001-locations-and-pages.md, "Images".
  */
 

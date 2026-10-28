@@ -246,6 +246,13 @@ Decided in review (261025), after mock-ups of two layouts:
   published, edits waiting, paused) and its SEO switch (on or off); Edit and Preview are
   icons. It filters by section and status and searches names and addresses, all kept in
   the address. A section's plus adds a page to it. The saved addresses follow.
+- The filters are one bar over the table (decided 261028, after the chips wrapped to
+  several lines and the location sat in the page's heading): the search, then a dropdown
+  each for the location (on `/pages`), the section and the status, one choice each, a
+  choice other than "All …" tinted. On a phone the search takes a line and the dropdowns
+  go two to a row. A chevron beside the Page heading, over the rows' own, folds every
+  section while any is open and opens them all once all are folded, as a box that ticks
+  every row.
 - A row opens its page wherever it is pressed, as its name does: a section's row its
   list, any other row its editor. The pencil always opens the editor.
 - A section's list is the tab narrowed to it, `/locations/langkawi/pages?section=car-with-driver`,

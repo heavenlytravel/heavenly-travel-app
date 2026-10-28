@@ -2,6 +2,7 @@
 
 import { cx } from "@repo/ui/cx";
 import { ChevronRightIcon } from "@repo/ui/icons";
+import { Tooltip } from "@repo/ui/tooltip";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -25,6 +26,66 @@ import {
  */
 const folded = new Set<string>();
 
+const FoldsContext = createContext<{
+  /** The list's sections that fold, by key. */
+  ids: readonly string[];
+  closed: ReadonlySet<string>;
+  fold: (ids: readonly string[], shut: boolean) => void;
+} | null>(null);
+
+/**
+ * Which of a list's sections are folded, for its rows and the chevron in
+ * its heading that folds or opens them all. `ids` are the keys of the
+ * sections that fold.
+ */
+export function PageTreeFolds({
+  ids,
+  children,
+}: {
+  ids: readonly string[];
+  children: ReactNode;
+}) {
+  const [closed, setClosed] = useState<ReadonlySet<string>>(
+    () => new Set(ids.filter((id) => folded.has(id))),
+  );
+  function fold(which: readonly string[], shut: boolean) {
+    for (const id of which) {
+      if (shut) folded.add(id);
+      else folded.delete(id);
+    }
+    setClosed(new Set(ids.filter((id) => folded.has(id))));
+  }
+  return (
+    <FoldsContext.Provider value={{ ids, closed, fold }}>
+      {children}
+    </FoldsContext.Provider>
+  );
+}
+
+/**
+ * The chevron in the Page heading, over the rows' own, as a box that ticks
+ * them all: turned down while any section is open, it folds every one;
+ * once all are folded, it opens them again. A list with no section that
+ * folds keeps its place empty.
+ */
+export function FoldAllToggle() {
+  const folds = useContext(FoldsContext);
+  if (!folds || folds.ids.length === 0) {
+    return <span aria-hidden="true" className="size-6 shrink-0" />;
+  }
+  const anyOpen = folds.ids.some((id) => !folds.closed.has(id));
+  const label = anyOpen ? "Collapse all" : "Expand all";
+  return (
+    <Tooltip content={label}>
+      <FoldChevron
+        open={anyOpen}
+        label={label}
+        onClick={() => folds.fold(folds.ids, anyOpen)}
+      />
+    </Tooltip>
+  );
+}
+
 const GroupContext = createContext<{
   open: boolean;
   toggle: () => void;
@@ -39,11 +100,10 @@ export function PageGroupRows({
   id: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(() => !folded.has(id));
+  const folds = useContext(FoldsContext);
+  const open = !folds?.closed.has(id);
   function toggle() {
-    if (open) folded.add(id);
-    else folded.delete(id);
-    setOpen(!open);
+    folds?.fold([id], open);
   }
   return (
     <GroupContext.Provider value={{ open, toggle }}>
@@ -57,17 +117,36 @@ export function PageGroupToggle({ label }: { label: string }) {
   const group = useContext(GroupContext);
   if (!group) return null;
   return (
+    <FoldChevron
+      open={group.open}
+      label={`${group.open ? "Hide" : "Show"} the pages under ${label}`}
+      onClick={group.toggle}
+    />
+  );
+}
+
+/** A fold's button: a chevron pointing right, turned down while open. */
+function FoldChevron({
+  open,
+  label,
+  onClick,
+}: {
+  open: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
     <button
       type="button"
-      aria-expanded={group.open}
-      aria-label={`${group.open ? "Hide" : "Show"} the pages under ${label}`}
-      onClick={group.toggle}
+      aria-expanded={open}
+      aria-label={label}
+      onClick={onClick}
       className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
     >
       <ChevronRightIcon
         className={cx(
           "size-4 transition-transform motion-reduce:transition-none",
-          group.open && "rotate-90",
+          open && "rotate-90",
         )}
       />
     </button>

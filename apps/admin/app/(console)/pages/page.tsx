@@ -18,18 +18,18 @@ import {
 } from "@repo/db/server";
 import { HouseIcon } from "@repo/ui/icons";
 import { Card, CardTitle } from "../../_components/Card";
-import { FilterLinks } from "../../_components/FilterLinks";
-import { LocationFilter } from "../../_components/LocationFilter";
+import { FilterSelect } from "../../_components/FilterSelect";
 import { LocationMark } from "../../_components/LocationMark";
 import { PageHeader } from "../../_components/PageHeader";
-import { SearchBox } from "../../_components/SearchBox";
 import { Streamed, TableSkeleton } from "../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/location-filter";
+import {
+  filterOptions,
+  locationFilterOptions,
+} from "../../_lib/filter-options";
 import { locationNames } from "../../_lib/location-names";
 import { SEARCH_PARAM, WEBSITE_FILTER, pagesHref } from "../../_lib/routes";
 import {
-  PageFilterLinks,
   PageTree,
   locationPageGroups,
   footerRow,
@@ -80,8 +80,6 @@ export default async function PagesPage({ searchParams }: PageProps<"/pages">) {
     status: isPageFilter(params.status) ? params.status : undefined,
     q: searchTermOf(params[SEARCH_PARAM]) ?? undefined,
   };
-  const hrefOf = (next: string | undefined) =>
-    pagesHref({ ...filter, location: next });
 
   return (
     <>
@@ -92,37 +90,24 @@ export default async function PagesPage({ searchParams }: PageProps<"/pages">) {
             ? "Every location's pages, and the website's own: the home page, the services' hubs, about us, contact us, the legal pages and the footer. A location's pages are written and published inside it."
             : "Every location's pages. Each is written and published inside its location."
         }
-        action={
-          <LocationFilter
-            value={filter.location ?? ""}
-            options={[
-              ...locationFilterOptions(locations, hrefOf),
-              ...(website
-                ? [
-                    {
-                      value: WEBSITE_FILTER,
-                      label: "Website",
-                      href: hrefOf(WEBSITE_FILTER),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        }
       />
       <div className="mt-6">
         <Streamed
           key={JSON.stringify(filter)}
           fallback={<TableSkeleton columns={6} rows={10} />}
         >
-          {() => pagesList(filter, website)}
+          {() => pagesList(filter, website, locations)}
         </Streamed>
       </div>
     </>
   );
 }
 
-async function pagesList(filter: Filter, website: boolean) {
+async function pagesList(
+  filter: Filter,
+  website: boolean,
+  locations: readonly { id: string; name: string }[],
+) {
   const onlyWebsite = filter.location === WEBSITE_FILTER;
   // The site's pages and the footer belong to no section.
   const withWebsite =
@@ -201,39 +186,53 @@ async function pagesList(filter: Filter, website: boolean) {
 
   return (
     <Card flush>
-      <CardTitle
-        inset
-        action={
-          <SearchBox
-            href={pagesHref({ ...filter, q: undefined })}
-            value={filter.q ?? ""}
-            label="Search pages"
-            placeholder="Name or address"
-          />
-        }
-      >
-        {plural(count, "page")}
-      </CardTitle>
-      <div className="grid grid-cols-[3.5rem_1fr] items-center gap-x-3 gap-y-2 px-6 pb-4">
-        {onlyWebsite ? null : (
-          <>
-            <span className="text-xs text-slate-500">Section</span>
-            <FilterLinks
-              label="Filter by section"
-              options={SECTION_OPTIONS}
-              active={filter.section}
-              hrefOf={(section) => pagesHref({ ...filter, section })}
-            />
-          </>
-        )}
-        <span className="text-xs text-slate-500">Status</span>
-        <PageFilterLinks
-          active={filter.status}
-          hrefOf={(status) => pagesHref({ ...filter, status })}
-        />
-      </div>
+      <CardTitle inset>{plural(count, "page")}</CardTitle>
       <PageTree
         groups={groups}
+        filters={{
+          searchHref: pagesHref({ ...filter, q: undefined }),
+          q: filter.q,
+          status: filter.status,
+          statusHref: (status) => pagesHref({ ...filter, status }),
+          selects: (
+            <>
+              <FilterSelect
+                label="Location"
+                value={filter.location ?? ""}
+                options={[
+                  ...locationFilterOptions(locations, (location) =>
+                    pagesHref({ ...filter, location }),
+                  ),
+                  ...(website
+                    ? [
+                        {
+                          value: WEBSITE_FILTER,
+                          label: "Website",
+                          // The website's pages belong to no section.
+                          href: pagesHref({
+                            ...filter,
+                            location: WEBSITE_FILTER,
+                            section: undefined,
+                          }),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+              {onlyWebsite ? null : (
+                <FilterSelect
+                  label="Section"
+                  value={filter.section ?? ""}
+                  options={filterOptions(
+                    "All sections",
+                    SECTION_OPTIONS,
+                    (section) => pagesHref({ ...filter, section }),
+                  )}
+                />
+              )}
+            </>
+          ),
+        }}
         lead={["Location"]}
         trail={["Changed"]}
         empty={

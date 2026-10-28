@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { isBookingStatus, searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { LocationFilter } from "../../_components/LocationFilter";
+import { FilterSelect } from "../../_components/FilterSelect";
 import { PageHeader } from "../../_components/PageHeader";
 import { pageOf } from "../../_components/Pager";
 import { getPermissions, requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/location-filter";
+import { locationFilterOptions } from "../../_lib/filter-options";
 import {
   bookingsHref,
   NEW_BOOKING_PATH,
@@ -56,7 +56,8 @@ export default async function BookingsPage({
           hrefOf={(filter) => bookingsHref({ ...filter, location })}
           locationId={location}
           locationFilter={
-            <LocationFilter
+            <FilterSelect
+              label="Location"
               value={location ?? ""}
               options={locationFilterOptions(locations, (next) =>
                 bookingsHref({ status, q, location: next }),

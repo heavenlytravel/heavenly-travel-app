@@ -7,13 +7,13 @@ import {
   type ZoneElsewhere,
 } from "@repo/db/server";
 import { Card, CardTitle } from "../../_components/Card";
-import { LocationFilter } from "../../_components/LocationFilter";
+import { FilterSelect } from "../../_components/FilterSelect";
 import { LocationMark } from "../../_components/LocationMark";
 import { PageHeader } from "../../_components/PageHeader";
 import { CardSkeleton, Streamed } from "../../_components/Skeleton";
 import { LocationStateBadge } from "../../_components/StatusBadges";
 import { getPermissions, requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/location-filter";
+import { locationFilterOptions } from "../../_lib/filter-options";
 import {
   RATES_PART_LABELS,
   locationRatesPartHref,
@@ -46,7 +46,8 @@ export default async function RatesPage({ searchParams }: PageProps<"/rates">) {
         title="Rates"
         description="What each location charges. Every one-way trip is a cell of its grid, plus the road past a zone's edge for an address outside every zone. Each is changed inside its location."
         action={
-          <LocationFilter
+          <FilterSelect
+            label="Location"
             value={locationId ?? ""}
             options={locationFilterOptions(locations, ratesHref)}
           />

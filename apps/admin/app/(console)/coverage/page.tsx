@@ -1,11 +1,11 @@
 import { isZoneShape, plural, pricedRoutesByZone } from "@repo/db";
 import { listCoverage } from "@repo/db/server";
-import { LocationFilter } from "../../_components/LocationFilter";
+import { FilterSelect } from "../../_components/FilterSelect";
 import { Card, CardTitle } from "../../_components/Card";
 import { PageHeader } from "../../_components/PageHeader";
 import { CardSkeleton, Streamed } from "../../_components/Skeleton";
 import { getPermissions, requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/location-filter";
+import { locationFilterOptions } from "../../_lib/filter-options";
 import {
   coverageHref,
   locationTabHref,
@@ -41,7 +41,8 @@ export default async function CoveragePage({
         title="Coverage"
         description="Where each location serves pickups: a pickup is served when it falls in one of its zones. Zones are drawn on each location's Coverage tab."
         action={
-          <LocationFilter
+          <FilterSelect
+            label="Location"
             value={locationId ?? ""}
             options={locationFilterOptions(locations, coverageHref)}
           />

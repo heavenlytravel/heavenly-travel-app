@@ -17,8 +17,7 @@ import {
 import type { PageSummary } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "../../../../_components/Card";
-import { FilterLinks } from "../../../../_components/FilterLinks";
-import { SearchBox } from "../../../../_components/SearchBox";
+import { FilterSelect } from "../../../../_components/FilterSelect";
 import { SectionHeader } from "../../../../_components/SectionHeader";
 import {
   CardSkeleton,
@@ -26,6 +25,7 @@ import {
   TableSkeleton,
 } from "../../../../_components/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
+import { filterOptions } from "../../../../_lib/filter-options";
 import {
   SAVED_ADDRESSES_ID,
   SEARCH_PARAM,
@@ -35,7 +35,6 @@ import {
 import { AddEntryDialog } from "../../_components/EntryDialogs";
 import { EntryOrder } from "../../_components/EntryOrder";
 import {
-  PageFilterLinks,
   PageTree,
   locationPageGroups,
   type PageGroup,
@@ -232,42 +231,35 @@ async function pages(id: string, filter: Filter) {
                   ? `${childrenCount(children, under)}, shown on the site in this order.`
                   : `${childrenCount(children, under)}, shown on the site newest first, by their first publish.`
           }
-          action={
-            <SearchBox
-              href={locationPagesHref(slug, { section, status })}
-              value={q ?? ""}
-              label="Search pages"
-              placeholder="Name or address"
-            />
-          }
         >
           {section ? LOCATION_PAGE_LABELS[section] : "Every page"}
         </CardTitle>
-        <div className="grid grid-cols-[3.5rem_1fr] items-center gap-x-3 gap-y-2 px-6 pb-4">
-          <span className="text-xs text-slate-500">Section</span>
-          <FilterLinks
-            label="Filter by section"
-            options={location.pages
-              .filter((page) => page.slug === "")
-              .map((page) => ({
-                value: page.page,
-                label: LOCATION_PAGE_LABELS[page.page],
-              }))}
-            active={section}
-            hrefOf={(next) =>
-              locationPagesHref(slug, { ...filter, section: next })
-            }
-          />
-          <span className="text-xs text-slate-500">Status</span>
-          <PageFilterLinks
-            active={status}
-            hrefOf={(next) =>
-              locationPagesHref(slug, { ...filter, status: next })
-            }
-          />
-        </div>
         <PageTree
           groups={groups}
+          filters={{
+            searchHref: locationPagesHref(slug, { section, status }),
+            q,
+            status,
+            statusHref: (next) =>
+              locationPagesHref(slug, { ...filter, status: next }),
+            selects: (
+              <FilterSelect
+                label="Section"
+                value={section ?? ""}
+                options={filterOptions(
+                  "All sections",
+                  location.pages
+                    .filter((page) => page.slug === "")
+                    .map((page) => ({
+                      value: page.page,
+                      label: LOCATION_PAGE_LABELS[page.page],
+                    })),
+                  (next) =>
+                    locationPagesHref(slug, { ...filter, section: next }),
+                )}
+              />
+            ),
+          }}
           lead={
             isPlaces ? ["Saved address"] : isPosts ? ["First published"] : []
           }

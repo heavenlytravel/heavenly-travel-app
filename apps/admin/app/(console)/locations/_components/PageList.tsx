@@ -29,7 +29,8 @@ import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { ExternalLinkIcon, PencilIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
-import { FilterLinks } from "../../../_components/FilterLinks";
+import { FilterSelect } from "../../../_components/FilterSelect";
+import { SearchBox } from "../../../_components/SearchBox";
 import { PageStatusBadge } from "../../../_components/StatusBadges";
 import {
   EmptyRow,
@@ -44,12 +45,15 @@ import {
   locationPagesHref,
   sitePageHref,
 } from "../../../_lib/routes";
+import { filterOptions } from "../../../_lib/filter-options";
 import { locationPreviewUrl, sitePagePreviewUrl } from "../../../_lib/site";
 import {
+  FoldAllButton,
   PageGroupChildren,
   PageGroupRows,
   PageGroupToggle,
   PageRowLink,
+  PageTreeFolds,
 } from "./PageTreeRows";
 
 /**
@@ -128,26 +132,52 @@ export function footerRow(footer: FooterSummary): PageRow {
   };
 }
 
-const FILTER_OPTIONS = PAGE_FILTERS.map((value) => ({
+const STATUS_OPTIONS = PAGE_FILTERS.map((value) => ({
   value,
   label: PAGE_FILTER_LABELS[value],
 }));
 
-/** The statuses a list of pages narrows to, "All" first, kept in its address. */
-export function PageFilterLinks({
-  active,
-  hrefOf,
-}: {
-  active: PageFilter | undefined;
-  hrefOf: (status: PageFilter | undefined) => string;
-}) {
+/** What narrows a list of pages, all kept in its address. */
+export type PageTreeFilters = {
+  /** The list's address as filtered, without the search. */
+  searchHref: string;
+  q: string | undefined;
+  status: PageFilter | undefined;
+  statusHref: (status: PageFilter | undefined) => string;
+  /** The dropdowns ahead of Status: the location, the section. */
+  selects?: ReactNode;
+};
+
+/**
+ * The bar over a list of pages: the search, the list's dropdowns and
+ * Status, then the button that folds every section. One line where there
+ * is room, the search giving way first; on a phone the search takes a line
+ * and the rest two to a row.
+ */
+function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
   return (
-    <FilterLinks
-      label="Filter by status"
-      options={FILTER_OPTIONS}
-      active={active}
-      hrefOf={hrefOf}
-    />
+    <div className="grid grid-cols-2 items-center gap-2 px-6 pb-4 sm:flex sm:flex-wrap">
+      <div className="col-span-2 sm:max-w-72 sm:min-w-48 sm:flex-1">
+        <SearchBox
+          href={filters.searchHref}
+          value={filters.q ?? ""}
+          label="Search pages"
+          placeholder="Name or address"
+          fill
+        />
+      </div>
+      {filters.selects}
+      <FilterSelect
+        label="Status"
+        value={filters.status ?? ""}
+        options={filterOptions(
+          "All statuses",
+          STATUS_OPTIONS,
+          filters.statusHref,
+        )}
+      />
+      <FoldAllButton />
+    </div>
   );
 }
 
@@ -452,65 +482,72 @@ function TreeRowView({
 }
 
 /**
- * The tree of pages in a table: Page, the list's `lead` columns, Status,
- * SEO, its `trail` columns, and the icons. `empty` is what it says with
- * no group to show.
+ * The tree of pages in a table, under the bar of its `filters`: Page, the
+ * list's `lead` columns, Status, SEO, its `trail` columns, and the icons.
+ * `empty` is what it says with no group to show.
  */
 export function PageTree({
   groups,
+  filters,
   lead = [],
   trail = [],
   empty,
 }: {
   groups: readonly PageGroup[];
+  filters: PageTreeFilters;
   lead?: readonly string[];
   trail?: readonly string[];
   empty: ReactNode;
 }) {
   const columns = 4 + lead.length + trail.length;
   return (
-    <Table bare>
-      <THead>
-        <Th>Page</Th>
-        {lead.map((label) => (
-          <Th key={label}>{label}</Th>
-        ))}
-        <Th>Status</Th>
-        <Th>SEO</Th>
-        {trail.map((label) => (
-          <Th key={label}>{label}</Th>
-        ))}
-        <Th />
-      </THead>
-      <TBody>
-        {groups.length === 0 ? (
-          <EmptyRow colSpan={columns}>{empty}</EmptyRow>
-        ) : null}
-        {groups.map((group) => (
-          <PageGroupRows key={group.key} id={group.key}>
-            <TreeRowView item={group.own} folds={group.folds} />
-            <PageGroupChildren>
-              {group.under.map((item, index) => (
-                <TreeRowView
-                  key={item.row.key}
-                  item={item}
-                  under={{ last: index === group.under.length - 1 }}
-                />
-              ))}
-              {group.empty && group.under.length === 0 ? (
-                <tr className="bg-slate-50/40">
-                  <td
-                    colSpan={columns}
-                    className="px-4 py-3 text-sm text-slate-500"
-                  >
-                    <UnderSection last>{group.empty}</UnderSection>
-                  </td>
-                </tr>
-              ) : null}
-            </PageGroupChildren>
-          </PageGroupRows>
-        ))}
-      </TBody>
-    </Table>
+    <PageTreeFolds
+      ids={groups.filter((group) => group.folds).map((group) => group.key)}
+    >
+      <PageTreeBar filters={filters} />
+      <Table bare>
+        <THead>
+          <Th>Page</Th>
+          {lead.map((label) => (
+            <Th key={label}>{label}</Th>
+          ))}
+          <Th>Status</Th>
+          <Th>SEO</Th>
+          {trail.map((label) => (
+            <Th key={label}>{label}</Th>
+          ))}
+          <Th />
+        </THead>
+        <TBody>
+          {groups.length === 0 ? (
+            <EmptyRow colSpan={columns}>{empty}</EmptyRow>
+          ) : null}
+          {groups.map((group) => (
+            <PageGroupRows key={group.key} id={group.key}>
+              <TreeRowView item={group.own} folds={group.folds} />
+              <PageGroupChildren>
+                {group.under.map((item, index) => (
+                  <TreeRowView
+                    key={item.row.key}
+                    item={item}
+                    under={{ last: index === group.under.length - 1 }}
+                  />
+                ))}
+                {group.empty && group.under.length === 0 ? (
+                  <tr className="bg-slate-50/40">
+                    <td
+                      colSpan={columns}
+                      className="px-4 py-3 text-sm text-slate-500"
+                    >
+                      <UnderSection last>{group.empty}</UnderSection>
+                    </td>
+                  </tr>
+                ) : null}
+              </PageGroupChildren>
+            </PageGroupRows>
+          ))}
+        </TBody>
+      </Table>
+    </PageTreeFolds>
   );
 }

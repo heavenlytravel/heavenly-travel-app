@@ -2,10 +2,10 @@ import Link from "next/link";
 import { searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { FleetList } from "../../_components/FleetList";
-import { LocationFilter } from "../../_components/LocationFilter";
+import { FilterSelect } from "../../_components/FilterSelect";
 import { PageHeader } from "../../_components/PageHeader";
 import { requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/location-filter";
+import { locationFilterOptions } from "../../_lib/filter-options";
 import {
   DUE_PARAM,
   newVehicleHref,
@@ -53,7 +53,8 @@ export default async function VehiclesPage({
           hrefOf={(filter) => vehiclesHref({ ...filter, location })}
           locationId={location}
           locationFilter={
-            <LocationFilter
+            <FilterSelect
+              label="Location"
               value={location ?? ""}
               options={locationFilterOptions(locations, (next) =>
                 vehiclesHref({ location: next, due, q }),

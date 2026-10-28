@@ -1,7 +1,12 @@
 "use client";
 
+import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { ChevronRightIcon } from "@repo/ui/icons";
+import {
+  ChevronRightIcon,
+  ChevronsDownUpIcon,
+  ChevronsUpDownIcon,
+} from "@repo/ui/icons";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -25,6 +30,66 @@ import {
  */
 const folded = new Set<string>();
 
+const FoldsContext = createContext<{
+  /** The list's sections that fold, by key. */
+  ids: readonly string[];
+  closed: ReadonlySet<string>;
+  fold: (ids: readonly string[], shut: boolean) => void;
+} | null>(null);
+
+/**
+ * Which of a list's sections are folded, for its rows and the button that
+ * folds or opens them all. `ids` are the keys of the sections that fold.
+ */
+export function PageTreeFolds({
+  ids,
+  children,
+}: {
+  ids: readonly string[];
+  children: ReactNode;
+}) {
+  const [closed, setClosed] = useState<ReadonlySet<string>>(
+    () => new Set(ids.filter((id) => folded.has(id))),
+  );
+  function fold(which: readonly string[], shut: boolean) {
+    const next = new Set(closed);
+    for (const id of which) {
+      if (shut) {
+        folded.add(id);
+        next.add(id);
+      } else {
+        folded.delete(id);
+        next.delete(id);
+      }
+    }
+    setClosed(next);
+  }
+  return (
+    <FoldsContext.Provider value={{ ids, closed, fold }}>
+      {children}
+    </FoldsContext.Provider>
+  );
+}
+
+/** Folds every section of the list, or opens them all while every one is folded. */
+export function FoldAllButton() {
+  const folds = useContext(FoldsContext);
+  if (!folds || folds.ids.length === 0) return null;
+  const anyOpen = folds.ids.some((id) => !folds.closed.has(id));
+  const Icon = anyOpen ? ChevronsDownUpIcon : ChevronsUpDownIcon;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={() => folds.fold(folds.ids, anyOpen)}
+      className="col-start-2 justify-self-end sm:ml-auto"
+    >
+      <Icon />
+      {anyOpen ? "Collapse all" : "Expand all"}
+    </Button>
+  );
+}
+
 const GroupContext = createContext<{
   open: boolean;
   toggle: () => void;
@@ -39,11 +104,10 @@ export function PageGroupRows({
   id: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(() => !folded.has(id));
+  const folds = useContext(FoldsContext);
+  const open = !folds?.closed.has(id);
   function toggle() {
-    if (open) folded.add(id);
-    else folded.delete(id);
-    setOpen(!open);
+    folds?.fold([id], open);
   }
   return (
     <GroupContext.Provider value={{ open, toggle }}>

@@ -48,7 +48,7 @@ import {
 import { filterOptions } from "../../../_lib/filter-options";
 import { locationPreviewUrl, sitePagePreviewUrl } from "../../../_lib/site";
 import {
-  FoldAllButton,
+  FoldAllToggle,
   PageGroupChildren,
   PageGroupRows,
   PageGroupToggle,
@@ -150,20 +150,18 @@ export type PageTreeFilters = {
 
 /**
  * The bar over a list of pages: the search, the list's dropdowns and
- * Status, then the button that folds every section. One line where there
- * is room, the search giving way first; on a phone the search takes a line
- * and the rest two to a row.
+ * Status. One line where there is room; on a phone the search takes a
+ * line and the dropdowns two to a row.
  */
 function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
   return (
     <div className="grid grid-cols-2 items-center gap-2 px-6 pb-4 sm:flex sm:flex-wrap">
-      <div className="col-span-2 sm:max-w-72 sm:min-w-48 sm:flex-1">
+      <div className="col-span-2">
         <SearchBox
           href={filters.searchHref}
           value={filters.q ?? ""}
           label="Search pages"
           placeholder="Name or address"
-          fill
         />
       </div>
       {filters.selects}
@@ -176,7 +174,6 @@ function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
           filters.statusHref,
         )}
       />
-      <FoldAllButton />
     </div>
   );
 }
@@ -507,7 +504,12 @@ export function PageTree({
       <PageTreeBar filters={filters} />
       <Table bare>
         <THead>
-          <Th>Page</Th>
+          <Th>
+            <span className="flex items-center gap-2">
+              <FoldAllToggle />
+              Page
+            </span>
+          </Th>
           {lead.map((label) => (
             <Th key={label}>{label}</Th>
           ))}

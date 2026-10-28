@@ -167,24 +167,6 @@ export function ChevronUpIcon(props: IconProps) {
   );
 }
 
-export function ChevronsDownUpIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="m7 20 5-5 5 5" />
-      <path d="m7 4 5 5 5-5" />
-    </Icon>
-  );
-}
-
-export function ChevronsUpDownIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="m7 15 5 5 5-5" />
-      <path d="m7 9 5-5 5 5" />
-    </Icon>
-  );
-}
-
 export function CheckIcon(props: IconProps) {
   return (
     <Icon {...props}>

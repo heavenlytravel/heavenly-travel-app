@@ -22,7 +22,6 @@ export function SearchBox({
   value,
   label,
   placeholder,
-  fill = false,
 }: {
   href: string;
   /** The search in force; "" for none. */
@@ -31,8 +30,6 @@ export function SearchBox({
   label: string;
   /** What it finds, while empty: "Reference, name, phone or email". */
   placeholder: string;
-  /** Fills its parent at every width, for a bar that sizes it; otherwise 18rem from `sm`. */
-  fill?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -64,10 +61,7 @@ export function SearchBox({
   }
 
   return (
-    <div
-      role="search"
-      className={fill ? "relative w-full" : "relative w-full sm:w-72"}
-    >
+    <div role="search" className="relative w-full sm:w-72">
       <SearchIcon
         className={`pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 ${
           pending ? "animate-pulse text-slate-700" : "text-slate-400"

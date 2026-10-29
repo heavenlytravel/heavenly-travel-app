@@ -45,8 +45,10 @@ export function AuthShell({
         </aside>
       ) : null}
 
-      <div className="ui:flex ui:min-h-svh ui:min-w-0 ui:flex-col ui:px-6 ui:py-7 ui:sm:px-10">
-        <main className="ui:flex ui:flex-1 ui:flex-col ui:items-center ui:justify-center ui:py-10">
+      {/* The small print under the card is part of the page's main
+          content: it is not a second page footer beside the site's own. */}
+      <main className="ui:flex ui:min-h-svh ui:min-w-0 ui:flex-col ui:px-6 ui:py-7 ui:sm:px-10">
+        <div className="ui:flex ui:flex-1 ui:flex-col ui:items-center ui:justify-center ui:py-10">
           {brand ? (
             <div className="ui:mb-8 ui:flex ui:justify-center">{brand}</div>
           ) : null}
@@ -61,7 +63,7 @@ export function AuthShell({
             </p>
           ) : null}
           {children}
-        </main>
+        </div>
 
         {footer ? (
           <div
@@ -73,7 +75,7 @@ export function AuthShell({
             {footer}
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

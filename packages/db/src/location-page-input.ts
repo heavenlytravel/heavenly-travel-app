@@ -275,7 +275,7 @@ export function locationPagePath(
 
 /**
  * The main page as the console's addresses name it, where a section is
- * named by its key: its editor at /locations/langkawi/pages/main, the
+ * named by its key: its editor at /langkawi/pages/main, the
  * Pages list narrowed to it at ?section=main. No section is keyed so.
  */
 export const MAIN_PAGE_SEGMENT = "main";

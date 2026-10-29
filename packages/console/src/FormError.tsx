@@ -21,7 +21,7 @@ export function FormError({
       role="alert"
       className={cx(
         size === "xs" ? "text-xs" : "text-sm",
-        "font-medium text-red-700",
+        "font-medium text-danger",
         className,
       )}
     >

@@ -58,16 +58,16 @@ export function FigureTiles({
 function FigureTile({ figure }: { figure: Figure }) {
   const body = (
     <>
-      <span className="flex items-center gap-2 text-[13px] font-medium text-muted">
+      <span className="flex items-center gap-2 text-caption font-medium text-muted">
         {figure.tone ? <Dot tone={figure.tone} /> : null}
         <span className="truncate">{figure.label}</span>
         {figure.current ? (
-          <span className="ml-auto text-[10.5px] font-bold tracking-[0.06em] text-brand uppercase max-sm:hidden">
+          <span className="ml-auto text-caps font-bold text-brand max-sm:hidden">
             Showing
           </span>
         ) : null}
       </span>
-      <span className="mt-2 block font-serif text-[1.75rem] leading-none text-ink tabular-nums">
+      <span className="mt-2 block font-serif text-figure leading-none text-ink tabular-nums">
         {figure.value}
       </span>
     </>
@@ -83,7 +83,7 @@ function FigureTile({ figure }: { figure: Figure }) {
       aria-current={figure.current ? "page" : undefined}
       className={cx(
         classes,
-        "transition-shadow outline-none hover:border-edge focus-visible:ring-2 focus-visible:ring-brand",
+        "transition-shadow hover:border-edge focus-ring",
         figure.current && "hover:border-brand",
       )}
     >
@@ -113,10 +113,10 @@ export function FigureStrip({
         {figures.map((figure) => {
           const body = (
             <>
-              <span className="block font-serif text-[1.75rem] leading-none text-ink tabular-nums">
+              <span className="block font-serif text-figure leading-none text-ink tabular-nums">
                 {figure.value}
               </span>
-              <span className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-muted">
+              <span className="mt-1.5 flex items-center gap-1.5 text-caption text-muted">
                 {figure.tone ? <Dot tone={figure.tone} /> : null}
                 {figure.label}
               </span>
@@ -134,7 +134,7 @@ export function FigureStrip({
                   aria-current={figure.current ? "page" : undefined}
                   className={cx(
                     classes,
-                    "transition-colors outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
+                    "transition-colors hover:bg-hover focus-ring-inset",
                   )}
                 >
                   {body}

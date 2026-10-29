@@ -2,7 +2,6 @@ import { cx } from "@repo/ui/cx";
 import { Suspense, type ComponentProps, type ReactNode } from "react";
 import { Card, Frame, TileGrid } from "./Card";
 import { DetailColumns } from "./PageColumn";
-import { WhenExpanded } from "./SidebarVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
 /**
@@ -176,7 +175,7 @@ export function TileGridSkeleton({
         <li key={tile}>
           <Frame className="overflow-hidden">
             {image ? (
-              <Bone className="aspect-[16/9] w-full rounded-none" />
+              <Bone className="aspect-video w-full rounded-none" />
             ) : null}
             <div className="grid gap-2.5 p-4">
               <Bone className="h-5 w-28" />
@@ -199,30 +198,6 @@ export function DetailSkeleton({
   side: ReactNode;
 }) {
   return <DetailColumns main={main} side={side} />;
-}
-
-/**
- * The menu in the navy sidebar while its counts load: rows of an icon and
- * a name; collapsed to a rail, the icons alone.
- */
-export function MenuSkeleton() {
-  return (
-    <div className="grid gap-5 px-5 py-4">
-      {Array.from({ length: 9 }, (_, row) => (
-        <div key={row} className="flex items-center gap-3">
-          <span className="block size-4 shrink-0 rounded bg-white/15" />
-          <WhenExpanded>
-            <span
-              className={cx(
-                "block h-3.5 rounded bg-white/15",
-                row % 2 ? "w-20" : "w-28",
-              )}
-            />
-          </WhenExpanded>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 /** A form: cards of labelled fields, then its button. */

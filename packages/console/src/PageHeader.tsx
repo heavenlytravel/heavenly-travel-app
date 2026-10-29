@@ -34,14 +34,14 @@ export function PageHeader({
   return (
     <header className="mb-6">
       {section ? (
-        <p className="mb-1.5 text-[13px] font-semibold tracking-[0.08em] text-brand uppercase">
+        <p className="mb-1.5 text-caption font-semibold tracking-kicker text-brand uppercase">
           {section}
         </p>
       ) : null}
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-1.5">
-            <h1 className="font-serif text-[1.875rem] leading-[1.1] text-ink md:text-[2.125rem]">
+            <h1 className="font-serif text-3xl leading-display text-ink md:text-title">
               {title}
             </h1>
             {badge}
@@ -69,7 +69,7 @@ export function BackLink({
   return (
     <Link
       href={href}
-      className="mb-3.5 inline-flex items-center gap-1.5 text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
+      className="mb-3.5 inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-ring"
     >
       <ArrowLeftIcon className="size-4" />
       {children}

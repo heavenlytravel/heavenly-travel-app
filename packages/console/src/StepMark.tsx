@@ -22,10 +22,8 @@ export function StepMark({
       role="img"
       aria-label={done ? `${name}, done` : `${name}, to do`}
       className={cx(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
-        done
-          ? "bg-brand text-white"
-          : "border-2 border-slate-300 text-slate-500",
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-2xs font-semibold tabular-nums",
+        done ? "bg-brand text-white" : "border-2 border-edge text-muted",
         className,
       )}
     >

@@ -2,18 +2,18 @@ import { locationStateOf, type LocationState } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 
 const MARK_TONES: Record<LocationState, string> = {
-  draft: "bg-slate-200 text-slate-700",
+  draft: "bg-hairline text-body",
   live: "bg-brand text-white",
-  paused: "bg-amber-100 text-amber-800",
+  paused: "bg-warning-soft text-warning",
 };
 
 const MARK_SIZES = {
   /** Beside a row's label, in a list. */
-  sm: "size-[18px] rounded-[5px] text-[10px]",
+  sm: "size-4.5 rounded text-2xs",
   /** Beside a name in the location picker's menu. */
-  md: "size-5 rounded-[5px] text-[11px]",
+  md: "size-5 rounded text-2xs",
   /** On the picker's button. */
-  picker: "size-[26px] rounded-[7px] text-xs",
+  picker: "size-6.5 rounded-md text-xs",
   /** Beside a heading, a row of the dashboard. */
   lg: "size-8 rounded-lg text-sm",
 } as const;

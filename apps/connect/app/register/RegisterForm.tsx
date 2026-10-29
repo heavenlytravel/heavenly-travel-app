@@ -1,9 +1,11 @@
 "use client";
 
-import { Button } from "@repo/ui/button";
 import { FormError } from "@repo/console/FormError";
 import { useActionForm } from "@repo/console/use-action-form";
 import { VendorFieldsSection } from "@repo/console/VendorFieldsSection";
+import { Send } from "lucide-react";
+import { buttonClass } from "../_ui/button";
+import { FormFrame } from "../_ui/FormFrame";
 import { registerVendorAction } from "./actions";
 
 /**
@@ -28,11 +30,18 @@ export function RegisterForm({
   );
   return (
     <form {...formProps} className="grid gap-6">
-      <VendorFieldsSection locations={locations} emailFixed={email} />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="lg" disabled={pending}>
+      <FormFrame>
+        <VendorFieldsSection locations={locations} emailFixed={email} />
+      </FormFrame>
+      <div className="grid gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className={buttonClass({ size: "lg", className: "w-full" })}
+        >
+          <Send aria-hidden className="size-5" />
           {pending ? "Sending…" : "Send for approval"}
-        </Button>
+        </button>
         <FormError error={error} />
       </div>
       {leaveDialog}

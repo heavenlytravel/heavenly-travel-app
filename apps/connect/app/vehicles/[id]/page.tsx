@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getVehicle,
@@ -6,9 +5,9 @@ import {
   listModelSuggestions,
   vendorFleetChoices,
 } from "@repo/db/server";
-import { PageHeader } from "@repo/console/PageHeader";
 import { VehicleForm } from "@repo/console/VehicleForm";
-import { ConnectShell } from "../../_components/ConnectShell";
+import { FormFrame } from "../../_ui/FormFrame";
+import { BandHeading, Screen } from "../../_ui/Screen";
 import { requireMember, shellMember } from "../../_lib/access";
 import { saveVehicleAction } from "../../fleet-actions";
 
@@ -37,34 +36,37 @@ export default async function VehiclePage({
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (
-    <ConnectShell member={shellMember(member)}>
-      <p className="text-sm">
-        <Link
-          href="/vehicles"
-          className="text-slate-600 underline-offset-4 hover:underline"
+    <Screen
+      member={shellMember(member)}
+      width="narrow"
+      back={{ href: "/vehicles", label: "Vehicles" }}
+      band={
+        <BandHeading
+          eyebrow={member.vendor.name}
+          title={vehicle ? vehicle.plate : "Add vehicle"}
         >
-          All vehicles
-        </Link>
-      </p>
-      <PageHeader
-        title={vehicle ? vehicle.plate : "Add vehicle"}
-        description="Its class is what we sell: we offer you jobs of that class where it is based."
-      />
-      <VehicleForm
-        key={vehicle?.id ?? "new"}
-        vehicle={vehicle ?? undefined}
-        vendorId={member.vendor.id}
-        locationId={only?.id}
-        classes={choices.classes}
-        classesAt={choices.classesAt}
-        suggestions={suggestions}
-        locations={choices.locations}
-        action={saveVehicleAction}
-        uploadPath={UPLOAD_PATH}
-        photosNote="Optional, for our team: they never show on the website. The first is its cover."
-        backHref="/vehicles"
-        held={held}
-      />
-    </ConnectShell>
+          Its class is what we sell: we offer you jobs of that class where it is
+          based.
+        </BandHeading>
+      }
+    >
+      <FormFrame>
+        <VehicleForm
+          key={vehicle?.id ?? "new"}
+          vehicle={vehicle ?? undefined}
+          vendorId={member.vendor.id}
+          locationId={only?.id}
+          classes={choices.classes}
+          classesAt={choices.classesAt}
+          suggestions={suggestions}
+          locations={choices.locations}
+          action={saveVehicleAction}
+          uploadPath={UPLOAD_PATH}
+          photosNote="Optional, for our team: they never show on the website. The first is its cover."
+          backHref="/vehicles"
+          held={held}
+        />
+      </FormFrame>
+    </Screen>
   );
 }

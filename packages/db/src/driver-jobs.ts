@@ -196,14 +196,30 @@ function offerWarnings(
   return timingWarnings(asked, held, { bufferMinutes, who: firstName(name) });
 }
 
+/** An exact place of a job, once accepted: what it is called, where, and its point to navigate to. */
+export type JobStop = Pick<Place, "label" | "address" | "lat" | "lng">;
+
+/** A booked place as the job shows it, or null when none was kept. */
+export function stopOf(value: unknown): JobStop | null {
+  const place = placeOf(value);
+  return place
+    ? {
+        label: place.label,
+        address: place.address,
+        lat: place.lat,
+        lng: place.lng,
+      }
+    : null;
+}
+
 /** One job as the driver opens it: the trip, its taps, and the customer's details while they may see them. */
 export type DriverJob = DriverTrip & {
   /** Null before the driver accepted, and from a few days after the trip. */
   customer: {
     name: string;
     phone: string;
-    pickup: string;
-    dropoff: string | null;
+    pickup: JobStop | null;
+    dropoff: JobStop | null;
     flightNumber: string | null;
     notes: string | null;
   } | null;
@@ -253,8 +269,6 @@ export async function getDriverJob(
     contactVisible(job, now);
   if (!shows) return { ...trip, customer: null };
   const details = part.item.tripDetails;
-  const pickup = placeOf(details?.pickupPlace);
-  const dropoff = placeOf(details?.dropoffPlace);
   await db.$transaction((tx) =>
     logActivity(tx, actor, {
       action: "booking.contact.viewed",
@@ -267,8 +281,8 @@ export async function getDriverJob(
     customer: {
       name: part.item.booking.contactName,
       phone: part.item.booking.contactPhone,
-      pickup: pickup ? `${pickup.label}, ${pickup.address}` : "",
-      dropoff: dropoff ? `${dropoff.label}, ${dropoff.address}` : null,
+      pickup: stopOf(details?.pickupPlace),
+      dropoff: stopOf(details?.dropoffPlace),
       flightNumber: details?.flightNumber ?? null,
       notes: details?.notes ?? null,
     },

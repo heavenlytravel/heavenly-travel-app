@@ -2,21 +2,23 @@
 
 import {
   formatLocalTime,
-  isTripEventKind,
   nextTripStep,
   TRIP_EVENT_LABELS,
   TRIP_EVENT_NOTE_MAX_LENGTH,
-  TRIP_STEPS,
   type TripEventKind,
 } from "@repo/db";
 import type { TripEventView } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
-import { Field, Input } from "@repo/ui/field";
+import { useConfirm } from "@repo/ui/alert-dialog";
+import { Input, Textarea } from "@repo/ui/field";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FormError } from "@repo/console/FormError";
+import { CloudOff, PenLine, TriangleAlert, UserX } from "lucide-react";
 import { reportTapAction, type TapPayload } from "../../actions";
+import { buttonClass } from "../../_ui/button";
+import { SlideToConfirm } from "../../_ui/SlideToConfirm";
+import { TripTimeline, type TimelineEvent } from "../../_ui/TripTimeline";
 
 /** Where the phone keeps the taps not sent yet, across reloads and lost signal. */
 const QUEUE_KEY = "connect.pending-taps";
@@ -34,12 +36,36 @@ function writeQueue(queue: readonly TapPayload[]) {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
+/** What each step's slider says, and the line under it. */
+const STEP_PROMPTS: Partial<
+  Record<TripEventKind, { label: string; hint: string }>
+> = {
+  "on-the-way": {
+    label: "I'm on my way",
+    hint: "Slide when you leave for the pick-up.",
+  },
+  arrived: {
+    label: "I've arrived",
+    hint: "Slide when you are at the pick-up. Waiting time counts from here.",
+  },
+  "on-board": {
+    label: "Passenger on board",
+    hint: "Slide once everyone is in.",
+  },
+  "dropped-off": {
+    label: "Dropped off",
+    hint: "Slide at the drop-off. This ends the trip.",
+  },
+};
+
 /**
- * The driver's report buttons, large for a thumb: the next step stands
- * out, the others stay at hand, and No-show and a problem below. A tap is
- * kept on the phone first, with an id made here, then sent; without
- * signal it waits and is sent again on the next load or when the phone is
- * back online. The server keeps a tap once, however often it is sent.
+ * The driver's trip on the day: the steps so far, then one slider for the
+ * next, so a pocket or a brushing thumb sends nothing. A note goes with
+ * the next report; No-show (after a yes) and a problem (with what it is)
+ * stand apart below. A tap is kept on the phone first, with an id made
+ * here, then sent; without signal it waits and is sent again on the next
+ * load or when the phone is back online. The server keeps a tap once,
+ * however often it is sent.
  */
 export function TripTaps({
   itemId,
@@ -52,10 +78,12 @@ export function TripTaps({
   open: boolean;
 }) {
   const router = useRouter();
+  const [dialog, confirm] = useConfirm();
   const [waiting, setWaiting] = useState<TapPayload[]>([]);
   const [note, setNote] = useState("");
+  const [noting, setNoting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [problem, setProblem] = useState(false);
 
   /** Sends every tap waiting on the phone, oldest first; keeps those that do not arrive. */
   const flush = useCallback(async () => {
@@ -87,31 +115,46 @@ export function TripTaps({
     };
   }, [flush]);
 
-  function tap(kind: TripEventKind) {
-    if (kind === "problem" && !note.trim()) {
-      setProblem(true);
-      setError("Say what the problem is, then tap again.");
-      return;
-    }
+  function tap(kind: TripEventKind, text: string) {
     setError(null);
     const payload: TapPayload = {
       itemId,
       kind,
       at: new Date().toISOString(),
-      note: note.trim() || null,
+      note: text.trim() || null,
       clientId: crypto.randomUUID(),
     };
     writeQueue([...readQueue(), payload]);
     setWaiting((current) => [...current, payload]);
     setNote("");
-    setProblem(false);
+    setNoting(false);
+    setProblem(null);
     toast.success(
       `${TRIP_EVENT_LABELS[kind]}, ${formatLocalTime(new Date(payload.at))}.`,
     );
     void flush();
   }
 
-  const shown = [
+  async function noShow() {
+    const yes = await confirm({
+      title: "Report a no-show?",
+      description:
+        "This ends the trip. Call or WhatsApp the passenger first, and wait as Operation asks.",
+      action: "Report no-show",
+      danger: true,
+    });
+    if (yes) tap("no-show", note);
+  }
+
+  function sendProblem() {
+    if (!problem?.trim()) {
+      setError("Say what the problem is, then send it.");
+      return;
+    }
+    tap("problem", problem);
+  }
+
+  const shown: TimelineEvent[] = [
     ...events.map((e) => ({
       key: e.id,
       kind: e.kind,
@@ -128,76 +171,116 @@ export function TripTaps({
     })),
   ];
   const next = nextTripStep(shown);
+  const prompt = next ? STEP_PROMPTS[next] : undefined;
 
   return (
-    <div className="grid gap-4">
-      {shown.length > 0 ? (
-        <ol className="grid gap-1 text-sm">
-          {shown.map((event) => (
-            <li key={event.key} className="flex flex-wrap gap-x-2">
-              <span className="text-slate-500 tabular-nums">
-                {formatLocalTime(event.at)}
+    <div className="grid gap-6">
+      <TripTimeline events={shown} next={open ? next : null} />
+      {waiting.length > 0 ? (
+        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 ring-1 ring-amber-200">
+          <CloudOff aria-hidden className="size-4 shrink-0" />
+          {waiting.length === 1
+            ? "1 report is waiting for signal."
+            : `${waiting.length} reports are waiting for signal.`}{" "}
+          They send by themselves.
+        </p>
+      ) : null}
+      {open && next && prompt ? (
+        <div className="grid gap-3">
+          <SlideToConfirm
+            key={next}
+            label={prompt.label}
+            hint={prompt.hint}
+            onConfirm={() => tap(next, note)}
+          />
+          {noting ? (
+            <label className="grid gap-1.5">
+              <span className="text-sm font-semibold text-slate-700">
+                Note, sent with your next report
               </span>
-              <span className="font-medium">
-                {isTripEventKind(event.kind)
-                  ? TRIP_EVENT_LABELS[event.kind]
-                  : event.kind}
-              </span>
-              {event.note ? (
-                <span className="text-slate-600">{event.note}</span>
-              ) : null}
-              {event.sent ? null : (
-                <span className="text-amber-700">waiting for signal</span>
-              )}
-            </li>
-          ))}
-        </ol>
+              <Input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
+                autoComplete="off"
+                autoFocus
+                placeholder="The customer came at 8:15"
+              />
+            </label>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNoting(true)}
+              className="mx-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-tint"
+            >
+              <PenLine aria-hidden className="size-4" />
+              Add a note
+            </button>
+          )}
+        </div>
       ) : null}
       {open ? (
-        <>
-          <div className="grid gap-2">
-            {TRIP_STEPS.map((step) => (
-              <Button
-                key={step}
-                size="lg"
-                variant={step === next ? "primary" : "secondary"}
-                onClick={() => tap(step)}
-              >
-                {TRIP_EVENT_LABELS[step]}
-              </Button>
-            ))}
-          </div>
-          <Field
-            label="Note"
-            hint={
-              problem
-                ? "Say what the problem is."
-                : "Optional, sent with your next tap."
-            }
-          >
-            <Input
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
-              autoComplete="off"
-              placeholder="The customer came at 8:15"
-            />
-          </Field>
+        problem === null ? (
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => tap("no-show")}
+            <button
+              type="button"
+              onClick={() => void noShow()}
+              className={buttonClass({ variant: "outline", size: "lg" })}
             >
-              {TRIP_EVENT_LABELS["no-show"]}
-            </Button>
-            <Button size="lg" variant="caution" onClick={() => tap("problem")}>
-              {TRIP_EVENT_LABELS.problem}
-            </Button>
+              <UserX aria-hidden className="size-5" />
+              No-show
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setProblem("");
+              }}
+              className={buttonClass({ variant: "danger", size: "lg" })}
+            >
+              <TriangleAlert aria-hidden className="size-5" />
+              Problem
+            </button>
           </div>
-        </>
+        ) : (
+          <div className="grid gap-3 rounded-2xl bg-red-50 p-4 ring-1 ring-red-100">
+            <label className="grid gap-1.5">
+              <span className="text-sm font-bold text-red-900">
+                What is the problem?
+              </span>
+              <Textarea
+                value={problem}
+                onChange={(event) => setProblem(event.target.value)}
+                maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
+                rows={3}
+                autoFocus
+                placeholder="Flat tyre on the way, about 30 minutes late"
+              />
+            </label>
+            <div className="grid grid-cols-[1fr_1.4fr] gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setProblem(null);
+                }}
+                className={buttonClass({ variant: "outline", size: "lg" })}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={sendProblem}
+                className={buttonClass({ variant: "alarm", size: "lg" })}
+              >
+                Send to Operation
+              </button>
+            </div>
+          </div>
+        )
       ) : null}
       <FormError error={error} />
+      {dialog}
     </div>
   );
 }

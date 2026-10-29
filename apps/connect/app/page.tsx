@@ -1,22 +1,15 @@
-import Link from "next/link";
-import {
-  formatLocalDate,
-  formatLocalTime,
-  isTripEventKind,
-  TRIP_EVENT_LABELS,
-} from "@repo/db";
 import {
   listDriverJobs,
+  listDrivers,
+  listVehicles,
   listVendorJobs,
   listVendorOffers,
+  type DriverJobs,
   type DriverTrip,
-  type VendorTrip,
 } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
-import { Card, CardTitle } from "@repo/console/Card";
-import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
+import { CalendarCheck, Inbox } from "lucide-react";
 import { AccessScreen } from "./_components/AccessScreen";
-import { ConnectShell } from "./_components/ConnectShell";
+import { GettingStarted } from "./_components/GettingStarted";
 import { OfferCard } from "./_components/OfferCard";
 import { VendorOfferCard } from "./_components/VendorOfferCard";
 import {
@@ -26,186 +19,209 @@ import {
   type LetIn,
   type MemberAccess,
 } from "./_lib/access";
+import { tripStateOf } from "./_lib/trip-state";
+import { greetingAt, longDayLabel } from "./_lib/when";
+import { EmptyState, SectionTitle } from "./_ui/parts";
+import { BandHeading, Screen } from "./_ui/Screen";
+import { BandStats } from "./_ui/BandStats";
+import { DoneTrips, NextJobCard, TripDays } from "./_ui/Trips";
+import { WeekAhead } from "./_ui/WeekAhead";
 
 /**
  * Route: /. Who is signed in decides the screen: why Connect is shut to
  * them; a vendor's work for its owner and staff, the offers waiting for
- * its yes and the jobs it accepted; and a driver's own, the offers
- * waiting for their yes, today's jobs, those coming up and those done
- * lately. A one-person vendor sees both. See
- * docs/261028-fulfilment-vendors-and-connect.md, "What people see in
- * Connect".
+ * its yes and the jobs it accepted; and a driver's own, the job that
+ * matters now first, the offers waiting for their yes, today's jobs,
+ * those coming up and those done lately. A one-person vendor sees both,
+ * its own driving once. See docs/261028-fulfilment-vendors-and-connect.md,
+ * "What people see in Connect".
  */
 export default async function HomePage() {
   const access = await requireSignedIn();
-  if (access.status !== "ok") {
-    return (
-      <ConnectShell>
-        <AccessScreen access={access} />
-      </ConnectShell>
-    );
-  }
+  if (access.status !== "ok") return <AccessScreen access={access} />;
   const member = memberOf(access);
-  return (
-    <ConnectShell member={shellMember(member)}>
-      {member ? (
-        <Streamed fallback={<CardSkeleton rows={3} />}>
-          {() => vendorScreen(member)}
-        </Streamed>
-      ) : null}
-      {access.driver ? (
-        <Streamed fallback={<CardSkeleton rows={3} />}>
-          {() => driverScreen(access.driver!, member !== null)}
-        </Streamed>
-      ) : null}
-    </ConnectShell>
+  const now = new Date();
+  const firstName =
+    access.user.firstName ?? access.driver?.name.split(" ")[0] ?? null;
+  const greeting = `${greetingAt(now)}${firstName ? `, ${firstName}` : ""}`;
+  return member ? (
+    <MemberHome member={member} greeting={greeting} now={now} />
+  ) : (
+    <DriverHome driver={access.driver!} greeting={greeting} now={now} />
   );
 }
 
-async function vendorScreen(member: MemberAccess) {
-  const [offers, jobs] = await Promise.all([
-    listVendorOffers(member.vendor.id, member.user.id),
-    listVendorJobs(member.vendor.id),
-  ]);
-  const empty = offers.length + jobs.coming.length + jobs.done.length === 0;
-  return (
-    <>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {member.vendor.name}
-        </h1>
-        <p className="text-slate-600">
-          The jobs we offer you, and those you accepted.
-        </p>
-      </div>
-      {empty ? (
-        <Card>
-          <p className="text-slate-600">
-            No job yet. Add your vehicles and drivers, and the jobs we offer you
-            show here to accept.
-          </p>
-        </Card>
-      ) : null}
-      {offers.length > 0 ? (
-        <section className="grid gap-3">
-          <h2 className="text-lg font-semibold">Offers</h2>
-          {offers.map((offer) => (
-            <VendorOfferCard key={offer.offerId} offer={offer} />
-          ))}
-        </section>
-      ) : null}
-      <JobList title="Accepted" trips={jobs.coming} />
-      <JobList title="Done" trips={jobs.done} />
-    </>
-  );
+/** The band of a home: the greeting, and the counts beside it on a large screen. */
+const BAND_GRID =
+  "grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:items-end lg:gap-10";
+
+/** The job that matters now: one under way, else today's next, else the next one. */
+function heroOf(jobs: DriverJobs): DriverTrip | null {
+  const open = [...jobs.today, ...jobs.coming];
+  return open.find((t) => tripStateOf(t).live) ?? open[0] ?? null;
 }
 
-async function driverScreen(
-  driver: NonNullable<LetIn["driver"]>,
-  alsoMember: boolean,
-) {
+async function DriverHome({
+  driver,
+  greeting,
+  now,
+}: {
+  driver: NonNullable<LetIn["driver"]>;
+  greeting: string;
+  now: Date;
+}) {
   const jobs = await listDriverJobs(driver);
-  const empty =
-    jobs.offers.length +
-      jobs.today.length +
-      jobs.coming.length +
-      jobs.done.length ===
-    0;
+  const hero = heroOf(jobs);
+  const others = (trips: DriverTrip[]) =>
+    trips.filter((t) => t.itemId !== hero?.itemId);
+  const empty = hero === null && jobs.offers.length + jobs.done.length === 0;
   return (
-    <>
-      <div>
-        {alsoMember ? (
-          <h2 className="text-xl font-semibold tracking-tight">
-            Your own driving
-          </h2>
-        ) : (
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Hi {driver.name.split(" ")[0]}
-          </h1>
-        )}
-        <p className="text-slate-600">
-          {driver.vendor.isOurs ? "Heavenly Travel" : driver.vendor.name}
-        </p>
-      </div>
-      {empty ? (
-        <Card>
-          <p className="text-slate-600">
-            No job yet. A job Operation gives you shows here to accept.
-          </p>
-        </Card>
-      ) : null}
+    <Screen
+      aside={
+        <>
+          {hero ? <NextJobCard trip={hero} now={now} /> : null}
+          <WeekAhead trips={[...jobs.today, ...jobs.coming]} now={now} />
+        </>
+      }
+      asideFirst={hero !== null}
+      band={
+        <div className={BAND_GRID}>
+          <BandHeading eyebrow={longDayLabel(now)} title={greeting}>
+            {driver.vendor.isOurs ? "Heavenly Travel" : driver.vendor.name} ·
+            Driver
+          </BandHeading>
+          <BandStats
+            items={[
+              { label: "Offers", value: jobs.offers.length, alert: true },
+              { label: "Today", value: jobs.today.length },
+              { label: "Coming up", value: jobs.coming.length },
+            ]}
+          />
+        </div>
+      }
+    >
       {jobs.offers.length > 0 ? (
         <section className="grid gap-3">
-          <h2 className="text-lg font-semibold">Offers</h2>
+          <SectionTitle count={jobs.offers.length}>
+            Waiting for your answer
+          </SectionTitle>
           {jobs.offers.map((offer) => (
-            <OfferCard key={offer.offerId} offer={offer} />
+            <OfferCard key={offer.offerId} offer={offer} now={now} />
           ))}
         </section>
       ) : null}
-      <JobList title="Today" trips={jobs.today} />
-      <JobList title="Coming up" trips={jobs.coming} />
-      <JobList title="Done" trips={jobs.done} />
-    </>
+      {empty ? (
+        <EmptyState icon={CalendarCheck} title="No jobs yet">
+          A job Operation gives you shows here to accept. We tell you when one
+          comes.
+        </EmptyState>
+      ) : null}
+      <TripDays title="Today" trips={others(jobs.today)} now={now} />
+      <TripDays title="Coming up" trips={others(jobs.coming)} now={now} />
+      <DoneTrips trips={jobs.done} now={now} />
+    </Screen>
   );
 }
 
-function JobList({
-  title,
-  trips,
+async function MemberHome({
+  member,
+  greeting,
+  now,
 }: {
-  title: string;
-  trips: (DriverTrip | VendorTrip)[];
+  member: MemberAccess;
+  greeting: string;
+  now: Date;
 }) {
-  if (trips.length === 0) return null;
+  const driver = member.driver;
+  const [offers, jobs, vehicles, drivers, ownJobs] = await Promise.all([
+    listVendorOffers(member.vendor.id, member.user.id),
+    listVendorJobs(member.vendor.id),
+    listVehicles({ vendorId: member.vendor.id }),
+    listDrivers({ vendorId: member.vendor.id }),
+    driver ? listDriverJobs(driver) : null,
+  ]);
+  // Their own driving for this vendor is among its jobs already.
+  const drivesHere = driver?.vendor.id === member.vendor.id;
+  const hero = ownJobs ? heroOf(ownJobs) : null;
+  const toFix = jobs.coming.filter(
+    (t) => t.driver === null || !t.driverAccepted,
+  ).length;
+  const offerCount = offers.length + (ownJobs?.offers.length ?? 0);
+  const ready =
+    vehicles.some((v) => v.isActive) && drivers.some((d) => d.isActive);
+  const quiet = offerCount + jobs.coming.length === 0;
+  const nothing = quiet && jobs.done.length === 0;
+  const setup = !ready || nothing;
   return (
-    <Card className="grid gap-1" flush>
-      <CardTitle inset>{title}</CardTitle>
-      <ul className="divide-y divide-slate-100">
-        {trips.map((trip) => {
-          const last = trip.events.at(-1);
-          return (
-            <li key={trip.itemId}>
-              <Link
-                href={`/jobs/${trip.itemId}`}
-                className="grid gap-0.5 px-6 py-3 hover:bg-slate-50"
-              >
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold tabular-nums">
-                    {formatLocalDate(trip.startsAt)},{" "}
-                    {formatLocalTime(trip.startsAt)}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {trip.reference}
-                  </span>
-                </span>
-                <span className="text-slate-700">
-                  {trip.dropoffArea
-                    ? `${trip.pickupArea} → ${trip.dropoffArea}`
-                    : `${trip.pickupArea}, by the hour`}
-                </span>
-                <span className="text-sm text-slate-500">
-                  {trip.className} · {trip.passengers} passengers
-                  {"vehicle" in trip
-                    ? ` · ${trip.vehicle ?? "No vehicle"}, ${trip.driver ?? "no driver"}${trip.driver && !trip.driverAccepted ? " (to accept)" : ""}`
-                    : ""}
-                </span>
-                {last ? (
-                  <span>
-                    <Badge
-                      tone={trip.status === "completed" ? "green" : "blue"}
-                    >
-                      {isTripEventKind(last.kind)
-                        ? TRIP_EVENT_LABELS[last.kind]
-                        : last.kind}{" "}
-                      {formatLocalTime(last.at)}
-                    </Badge>
-                  </span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
+    <Screen
+      member={shellMember(member)}
+      aside={
+        <>
+          {hero ? <NextJobCard trip={hero} now={now} /> : null}
+          {setup ? (
+            <GettingStarted
+              vehicles={vehicles.filter((v) => v.isActive).length}
+              drivers={drivers.filter((d) => d.isActive).length}
+              driversSignedIn={drivers.filter((d) => d.userId).length}
+              jobs={jobs.coming.length + jobs.done.length}
+              owner={member.role === "owner"}
+            />
+          ) : null}
+          <WeekAhead
+            trips={[
+              ...jobs.coming,
+              ...(ownJobs && !drivesHere
+                ? [...ownJobs.today, ...ownJobs.coming]
+                : []),
+            ]}
+            now={now}
+          />
+        </>
+      }
+      asideFirst={hero !== null || setup}
+      band={
+        <div className={BAND_GRID}>
+          <BandHeading eyebrow={greeting} title={member.vendor.name}>
+            {longDayLabel(now)}
+          </BandHeading>
+          <BandStats
+            items={[
+              { label: "Offers", value: offerCount, alert: true },
+              { label: "Coming up", value: jobs.coming.length },
+              { label: "Need a driver", value: toFix, alert: true },
+            ]}
+          />
+        </div>
+      }
+    >
+      {offerCount > 0 ? (
+        <section className="grid gap-3">
+          <SectionTitle count={offerCount}>
+            Waiting for your answer
+          </SectionTitle>
+          {offers.map((offer) => (
+            <VendorOfferCard key={offer.offerId} offer={offer} now={now} />
+          ))}
+          {ownJobs?.offers.map((offer) => (
+            <OfferCard key={offer.offerId} offer={offer} now={now} />
+          ))}
+        </section>
+      ) : null}
+      {ready && quiet ? (
+        <EmptyState icon={Inbox} title="No offers right now">
+          The jobs we offer you show here, with what we pay. Keep your vehicles
+          and drivers in service to be offered more.
+        </EmptyState>
+      ) : null}
+      <TripDays title="Coming up" trips={jobs.coming} now={now} />
+      {ownJobs && !drivesHere ? (
+        <TripDays
+          title="Your own driving"
+          trips={[...ownJobs.today, ...ownJobs.coming]}
+          now={now}
+        />
+      ) : null}
+      <DoneTrips trips={jobs.done} now={now} />
+    </Screen>
   );
 }

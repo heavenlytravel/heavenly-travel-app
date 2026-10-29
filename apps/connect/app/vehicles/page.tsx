@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
-import { listVehicles } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
-import { PageHeader } from "@repo/console/PageHeader";
-import { ConnectShell } from "../_components/ConnectShell";
-import { FleetRows } from "../_components/FleetRows";
+import { listDrivers, listVehicles } from "@repo/db/server";
+import { CarFront, Plus } from "lucide-react";
+import { FleetList } from "../_components/FleetList";
+import { FleetTabs } from "../_components/FleetTabs";
 import { requireMember, shellMember } from "../_lib/access";
+import { buttonClass } from "../_ui/button";
+import { Plate } from "../_ui/parts";
+import { BandHeading, Screen } from "../_ui/Screen";
 
 /**
  * Route: /vehicles. A vendor's own vehicles, for its owner and staff, each
@@ -16,30 +18,58 @@ import { requireMember, shellMember } from "../_lib/access";
  */
 export default async function VehiclesPage() {
   const member = await requireMember();
-  const vehicles = await listVehicles({ vendorId: member.vendor.id });
+  const [vehicles, drivers] = await Promise.all([
+    listVehicles({ vendorId: member.vendor.id }),
+    listDrivers({ vendorId: member.vendor.id }),
+  ]);
+  const add = (
+    <Link
+      href="/vehicles/new"
+      className={buttonClass({ variant: "glass", size: "sm" })}
+    >
+      <Plus aria-hidden className="size-4" />
+      Add
+    </Link>
+  );
   return (
-    <ConnectShell member={shellMember(member)}>
-      <PageHeader
-        title="Vehicles"
-        description="Your vehicles, where each is based and its documents due."
-        action={
-          <Button asChild>
-            <Link href="/vehicles/new">Add vehicle</Link>
-          </Button>
-        }
-      />
-      <FleetRows
-        rows={vehicles.map((v) => ({
+    <Screen
+      member={shellMember(member)}
+      band={
+        <div className="grid gap-5">
+          <BandHeading eyebrow={member.vendor.name} title="Fleet" action={add}>
+            We offer you jobs for each vehicle&apos;s class, where it is based.
+          </BandHeading>
+          <FleetTabs
+            current="vehicles"
+            vehicles={vehicles.length}
+            drivers={drivers.length}
+          />
+        </div>
+      }
+    >
+      <FleetList
+        items={vehicles.map((v) => ({
           id: v.id,
-          title: v.plate,
-          detail: `${modelName(v.vehicleModel)} · ${v.vehicleModel.vehicleClass.name} · ${v.location.name}`,
+          lead: <Plate>{v.plate}</Plate>,
+          title: modelName(v.vehicleModel),
+          detail: `${v.vehicleModel.vehicleClass.name} · ${v.location.name}`,
           isActive: v.isActive,
           due: vehicleDocumentsDue(v),
           anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
         }))}
         hrefOf={(id) => `/vehicles/${id}`}
-        emptyMessage="No vehicle yet. Add one to be offered jobs for it."
+        empty={{
+          icon: CarFront,
+          title: "No vehicle yet",
+          text: "Add one to be offered jobs for it. It can take jobs as soon as it is saved.",
+          action: (
+            <Link href="/vehicles/new" className={buttonClass()}>
+              <Plus aria-hidden className="size-4" />
+              Add a vehicle
+            </Link>
+          ),
+        }}
       />
-    </ConnectShell>
+    </Screen>
   );
 }

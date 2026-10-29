@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from "@repo/ui/button";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/console/FormError";
 import { useActionForm } from "@repo/console/use-action-form";
+import { UserPlus } from "lucide-react";
+import { buttonClass } from "../_ui/button";
 import { addStaffAction, removeStaffAction } from "./actions";
 
 /** The owner adds a staff account by the email it signs in with. */
@@ -21,12 +22,15 @@ export function AddStaffForm() {
       >
         <Input name="email" type="email" required autoComplete="off" />
       </Field>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Adding…" : "Add staff"}
-        </Button>
-        <FormError error={error} />
-      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className={buttonClass({ size: "lg", className: "w-full" })}
+      >
+        <UserPlus aria-hidden className="size-5" />
+        {pending ? "Adding…" : "Add to the team"}
+      </button>
+      <FormError error={error} />
     </form>
   );
 }
@@ -53,9 +57,13 @@ export function RemoveStaffButton({
   return (
     <form {...formProps} className="grid justify-items-end gap-1">
       <input type="hidden" name="memberId" value={memberId} />
-      <Button type="submit" variant="ghost" size="sm" disabled={pending}>
+      <button
+        type="submit"
+        disabled={pending}
+        className={buttonClass({ variant: "danger", size: "sm" })}
+      >
         Remove
-      </Button>
+      </button>
       <FormError error={error} size="xs" />
       {dialog}
     </form>

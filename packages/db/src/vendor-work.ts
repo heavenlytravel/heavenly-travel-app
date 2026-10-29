@@ -5,7 +5,7 @@ import { db } from "./client";
 import {
   DONE_DAYS,
   jobInclude,
-  placeOf,
+  stopOf,
   tripOf,
   type DriverJob,
   type DriverTrip,
@@ -368,8 +368,6 @@ export async function getVendorJob(
   const base = { ...trip, vehicle: vehicle ?? null, driver: driver ?? null };
   if (!shows) return { ...base, customer: null };
   const details = first.item.tripDetails;
-  const pickup = placeOf(details?.pickupPlace);
-  const dropoff = placeOf(details?.dropoffPlace);
   await db.$transaction((tx) =>
     logActivity(tx, actor, {
       action: "booking.contact.viewed",
@@ -382,8 +380,8 @@ export async function getVendorJob(
     customer: {
       name: first.item.booking.contactName,
       phone: first.item.booking.contactPhone,
-      pickup: pickup ? `${pickup.label}, ${pickup.address}` : "",
-      dropoff: dropoff ? `${dropoff.label}, ${dropoff.address}` : null,
+      pickup: stopOf(details?.pickupPlace),
+      dropoff: stopOf(details?.dropoffPlace),
       flightNumber: details?.flightNumber ?? null,
       notes: details?.notes ?? null,
     },

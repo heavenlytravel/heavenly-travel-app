@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDriver, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { DriverForm } from "@repo/console/DriverForm";
-import { PageHeader } from "@repo/console/PageHeader";
-import { ConnectShell } from "../../_components/ConnectShell";
+import { FormFrame } from "../../_ui/FormFrame";
+import { BandHeading, Screen } from "../../_ui/Screen";
 import { requireMember, shellMember } from "../../_lib/access";
 import { saveDriverAction } from "../../fleet-actions";
 
@@ -27,30 +26,33 @@ export default async function DriverPage({
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (
-    <ConnectShell member={shellMember(member)}>
-      <p className="text-sm">
-        <Link
-          href="/drivers"
-          className="text-slate-600 underline-offset-4 hover:underline"
+    <Screen
+      member={shellMember(member)}
+      width="narrow"
+      back={{ href: "/drivers", label: "Drivers" }}
+      band={
+        <BandHeading
+          eyebrow={member.vendor.name}
+          title={driver ? driver.name : "Add driver"}
         >
-          All drivers
-        </Link>
-      </p>
-      <PageHeader
-        title={driver ? driver.name : "Add driver"}
-        description="We offer you jobs for them on the classes they may drive, where they are based."
-      />
-      <DriverForm
-        key={driver?.id ?? "new"}
-        driver={driver ?? undefined}
-        vendorId={member.vendor.id}
-        locationId={only?.id}
-        classes={choices.classes}
-        locations={choices.locations}
-        action={saveDriverAction}
-        backHref="/drivers"
-        held={held}
-      />
-    </ConnectShell>
+          We offer you jobs for them on the classes they may drive, where they
+          are based.
+        </BandHeading>
+      }
+    >
+      <FormFrame>
+        <DriverForm
+          key={driver?.id ?? "new"}
+          driver={driver ?? undefined}
+          vendorId={member.vendor.id}
+          locationId={only?.id}
+          classes={choices.classes}
+          locations={choices.locations}
+          action={saveDriverAction}
+          backHref="/drivers"
+          held={held}
+        />
+      </FormFrame>
+    </Screen>
   );
 }

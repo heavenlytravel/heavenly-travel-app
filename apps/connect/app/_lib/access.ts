@@ -69,11 +69,9 @@ export const NOT_A_MEMBER = {
   error: "You are not signed in for an active vendor. Reload the page.",
 };
 
-/** What the shell shows a member: their vendor's pages, the staff page for its owner. */
+/** What the screen shows a member: their vendor's tabs, Team for its owner. */
 export function shellMember(member: MemberAccess | null) {
-  return member
-    ? { vendorName: member.vendor.name, owner: member.role === "owner" }
-    : undefined;
+  return member ? { owner: member.role === "owner" } : undefined;
 }
 
 /**

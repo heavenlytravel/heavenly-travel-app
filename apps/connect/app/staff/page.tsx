@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { VENDOR_ROLE_LABELS, isVendorRole } from "@repo/db";
 import { listVendorMembers } from "@repo/db/server";
-import { Card, CardTitle } from "@repo/console/Card";
-import { PageHeader } from "@repo/console/PageHeader";
-import { ConnectShell } from "../_components/ConnectShell";
+import { Crown } from "lucide-react";
 import { requireMember, shellMember } from "../_lib/access";
+import { Avatar, Panel } from "../_ui/parts";
+import { BandHeading, Screen } from "../_ui/Screen";
 import { AddStaffForm, RemoveStaffButton } from "./StaffControls";
 
 /**
@@ -18,23 +18,39 @@ export default async function StaffPage() {
   if (member.role !== "owner") redirect("/");
   const members = await listVendorMembers(member.vendor.id);
   return (
-    <ConnectShell member={shellMember(member)}>
-      <PageHeader
-        title="Staff"
-        description="Who answers your offers and keeps your vehicles and drivers in Connect. Drivers do not need to be staff: they see their own jobs."
-      />
-      <Card className="grid gap-1" flush>
+    <Screen
+      member={shellMember(member)}
+      aside={
+        <Panel className="grid gap-4 p-5">
+          <h2 className="text-lg font-bold text-ink">Add someone</h2>
+          <AddStaffForm />
+        </Panel>
+      }
+      band={
+        <BandHeading eyebrow={member.vendor.name} title="Team">
+          Who answers your offers and keeps your fleet. Drivers need not be
+          here: they see their own jobs.
+        </BandHeading>
+      }
+    >
+      <Panel className="connect-rise overflow-hidden">
         <ul className="divide-y divide-slate-100">
           {members.map((m) => (
             <li
               key={m.id}
-              className="flex items-center justify-between gap-3 px-6 py-3"
+              className="flex items-center gap-3 px-4 py-4 sm:px-5"
             >
-              <span className="grid">
-                <span className="font-medium">{m.name || m.email}</span>
-                <span className="text-sm text-slate-500">
-                  {m.name ? `${m.email} · ` : ""}
+              <Avatar name={m.name || m.email} />
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="truncate font-semibold text-slate-900">
+                  {m.name || m.email}
+                </span>
+                <span className="flex items-center gap-1.5 truncate text-sm text-slate-500">
+                  {m.role === "owner" ? (
+                    <Crown aria-hidden className="size-3.5 text-amber-500" />
+                  ) : null}
                   {isVendorRole(m.role) ? VENDOR_ROLE_LABELS[m.role] : m.role}
+                  {m.name ? ` · ${m.email}` : ""}
                 </span>
               </span>
               {m.role === "owner" ? null : (
@@ -43,11 +59,7 @@ export default async function StaffPage() {
             </li>
           ))}
         </ul>
-      </Card>
-      <Card className="grid gap-3">
-        <CardTitle>Add staff</CardTitle>
-        <AddStaffForm />
-      </Card>
-    </ConnectShell>
+      </Panel>
+    </Screen>
   );
 }

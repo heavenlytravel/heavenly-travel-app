@@ -127,6 +127,7 @@ export type {
   DriverJob,
   DriverTrip,
   DriverOffer,
+  JobStop,
   TripEventView,
   Reporter,
 } from "./driver-jobs";

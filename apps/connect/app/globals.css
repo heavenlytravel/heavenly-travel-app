@@ -3,7 +3,75 @@
 /* The shared console parts live outside this app. */
 @source "../../../packages/console/src";
 
+@theme inline {
+  --font-sans: var(--font-connect), ui-sans-serif, system-ui, sans-serif;
+}
+
 body {
-  background: var(--color-slate-50);
+  background: var(--mist);
   color: var(--color-slate-900);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * The ink band every screen opens on: the logo's light blue rising from
+ * its top right corner, and a faint route line drawn across it.
+ */
+.connect-band {
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(
+      90% 70% at 100% 0%,
+      color-mix(in oklab, var(--azure) 45%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      70% 60% at 0% 100%,
+      color-mix(in oklab, var(--navy) 90%, transparent),
+      transparent 70%
+    );
+}
+
+/*
+ * A screen's first panel rises over the band's edge; anything else
+ * first (a section's label) starts below it. On a phone that is the
+ * column shown first; on a large screen, the top of each column.
+ */
+.connect-lead > :first-child:not(.connect-panel) {
+  margin-top: 3.25rem;
+}
+@media (width >= 64rem) {
+  .connect-col > :first-child:not(.connect-panel) {
+    margin-top: 4.25rem;
+  }
+}
+
+/* The live dot of a trip under way. */
+@keyframes connect-ping {
+  75%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.connect-ping {
+  animation: connect-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* A card rising into place as a screen opens. */
+@keyframes connect-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.connect-rise {
+  animation: connect-rise 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connect-ping,
+  .connect-rise {
+    animation: none;
+  }
 }

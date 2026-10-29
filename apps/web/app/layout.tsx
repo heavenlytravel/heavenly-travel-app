@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en">
+      <html lang="en" data-app="site">
         {/* The site's fonts on the body too, for what opens over the page. */}
         <body className={`${fontVars} font-(family-name:--font-body)`}>
           {/* The line along the top while a link opens the next page. */}

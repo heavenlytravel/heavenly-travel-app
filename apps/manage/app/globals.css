@@ -4,42 +4,10 @@
 @source "../../../packages/console/src";
 
 /*
- * The console's own look, "Signature" (docs/261029-manage-signature-overhaul.md):
- * a mist canvas, white cards with 14px corners and a soft navy shadow, DM
- * Serif Display for titles and figures and DM Sans for the rest. The brand
- * blues are @repo/tailwind-config's, shared with the customer site; what
- * is here is the console's alone. Inline, so the fonts read the variables
- * `next/font` sets on <html>.
+ * The console's look, "Signature" (docs/261029-manage-signature-overhaul.md),
+ * is set by the tokens in @repo/tailwind-config under `data-app="console"`
+ * (docs/261029-design-tokens.md). What is here is the console's alone.
  */
-@theme inline {
-  --font-serif: var(--font-display), Georgia, serif;
-  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-
-  /* The page behind the cards. */
-  --color-canvas: var(--mist);
-  /* A control's edge: a field, a button, the picker. */
-  --color-edge: #d9e3ee;
-  /* A card's edge, a shade lighter. */
-  --color-card-edge: #e3eaf2;
-  /* The hairline between a card's rows and under its title. */
-  --color-hairline: #eef2f7;
-  /* A table's heading row and a grouping row. */
-  --color-shade: #f7f9fc;
-  /* A row under the pointer. */
-  --color-hover: #f6f9fd;
-  /* Words that step back: a card's meta, a column's name. 5:1 on white, 4.6:1 on mist. */
-  --color-muted: #5b6b80;
-  /* The text of the page. */
-  --color-body: #1e293b;
-  /* The dashed edge of an empty slot: add a photo, add another trip. */
-  --color-slot: #b8cde3;
-
-  --radius-card: 14px;
-  --shadow-card:
-    0 1px 2px rgb(0 38 75 / 0.04), 0 6px 18px -8px rgb(0 38 75 / 0.12);
-  --shadow-band: 0 18px 40px -22px rgb(0 38 75 / 0.6);
-  --shadow-control: 0 1px 3px rgb(0 38 75 / 0.08);
-}
 
 /* The dashboard's band: navy to ink, lit from its top right by the logo's blue. */
 @utility bg-band {
@@ -52,20 +20,9 @@
     linear-gradient(135deg, var(--navy) 0%, var(--ink) 100%);
 }
 
-/*
- * The console's shape for @repo/ui's controls, through the hooks they
- * leave for it; the customer site keeps the defaults.
- */
-:root {
-  --ui-button-radius: 9px;
-  --ui-button-weight: 600;
-  --ui-field-radius: 10px;
-  --ui-popover-radius: 12px;
-}
-
 body {
-  background: var(--color-canvas);
-  color: var(--color-body);
-  font-family: var(--font-sans);
+  background: var(--canvas);
+  color: var(--body);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

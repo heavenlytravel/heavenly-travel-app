@@ -22,7 +22,7 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cx(
         "ui:relative ui:inline-flex ui:h-6 ui:w-11 ui:shrink-0 ui:items-center ui:rounded-full ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:opacity-50",
-        checked ? "ui:bg-emerald-600" : "ui:bg-slate-300",
+        checked ? "ui:bg-brand" : "ui:bg-slate-300",
       )}
     >
       <span

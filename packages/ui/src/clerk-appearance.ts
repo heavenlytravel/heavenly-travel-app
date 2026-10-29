@@ -7,8 +7,8 @@
  * same rules would squeeze. The colours are
  * the brand's custom properties from @repo/tailwind-config, which Clerk reads
  * where it draws (`docs/260923-home-design.md`). The font is inherited from the
- * page, so the card takes the home page fonts on the customer site and Geist
- * on the admin console. The logo is drawn by `AuthShell`, not by Clerk.
+ * page, so the card takes the home page fonts in both apps, the title in
+ * `--font-display`. The logo is drawn by `AuthShell`, not by Clerk.
  * `@repo/ui` does not depend on Clerk, so this is a plain object; the apps
  * type-check it when they pass it to the provider.
  */

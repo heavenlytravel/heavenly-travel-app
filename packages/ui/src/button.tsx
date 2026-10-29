@@ -6,6 +6,11 @@ import {
 } from "react";
 import { cx } from "./cx.js";
 
+/**
+ * The button's corners and weight are hooks, `--ui-button-radius` and
+ * `--ui-button-weight`, which the console sets for its own look; the
+ * customer site keeps the defaults.
+ */
 const VARIANTS = {
   primary:
     "ui:bg-primary ui:text-primary-foreground ui:hover:bg-brand-strong ui:border-transparent",
@@ -45,7 +50,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const classes = cx(
-    "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-md ui:border ui:font-medium ui:whitespace-nowrap ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-50",
+    "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-[var(--ui-button-radius,0.375rem)] ui:border ui:[font-weight:var(--ui-button-weight,500)] ui:whitespace-nowrap ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-50",
     VARIANTS[variant],
     SIZES[size],
     className,

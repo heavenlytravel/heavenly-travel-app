@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 /**
  * The picture on top of a card: a location's or a page's hero image,
  * cropped to fill, or a vehicle class's picture, the whole vehicle in view;
- * a quiet grey tile holding `fallback` while there is none. `children`
+ * a quiet mist tile holding `fallback` while there is none. `children`
  * stand over the picture's corner: a badge.
  */
 export function CardImage({
@@ -25,7 +25,7 @@ export function CardImage({
   children?: ReactNode;
 }) {
   return (
-    <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
+    <div className="relative aspect-[16/9] overflow-hidden bg-canvas">
       {src ? (
         <Image
           src={src}

@@ -22,16 +22,16 @@ export function Pager({
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   const link =
-    "rounded-md px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100";
+    "inline-flex h-8 items-center rounded-lg border border-edge bg-white px-3 font-semibold text-body transition-colors hover:border-slate-300 hover:text-ink";
   return (
     <nav
       aria-label="Pages"
-      className="mt-3 flex items-center justify-between gap-3 text-sm"
+      className="flex items-center justify-between gap-3 border-t border-hairline px-5 py-3 text-[13px]"
     >
-      <p className="text-slate-600 tabular-nums">
+      <p className="text-muted tabular-nums">
         {first}–{last} of {total}
       </p>
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         {page > 1 ? (
           <Link href={hrefOf(page - 1)} className={link}>
             Previous

@@ -24,7 +24,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
-import { FormError } from "./FormError";
+import { FormError } from "@repo/console/FormError";
 import { useImageUpload } from "./use-image-upload";
 
 /**
@@ -280,7 +280,7 @@ export function MarkdownField({
           {tool("Subheading", "H3", (text, span) =>
             prefixLines(text, span, () => "### "),
           )}
-          <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+          <span aria-hidden className="mx-1 h-5 w-px bg-edge" />
           {tool(
             "Bold",
             <span className="font-bold">B</span>,
@@ -294,7 +294,7 @@ export function MarkdownField({
             "Ctrl+I",
           )}
           {tool("Link", "Link", link)}
-          <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+          <span aria-hidden className="mx-1 h-5 w-px bg-edge" />
           {tool("Bulleted list", "• List", (text, span) =>
             prefixLines(text, span, () => "- "),
           )}
@@ -336,26 +336,26 @@ export function MarkdownField({
       </div>
       <FormError error={importError} size="xs" />
 
+      {/* Where the two do not fit side by side: one at a time, a switch of two. */}
       <div
-        role="tablist"
+        role="group"
         aria-label="Write or preview"
-        className="flex gap-1 border-b border-slate-200 lg:hidden"
+        className="inline-flex w-fit rounded-lg border border-edge bg-shade p-0.5 lg:hidden"
       >
-        {(["write", "preview"] as const).map((tab) => (
+        {(["write", "preview"] as const).map((mode) => (
           <button
-            key={tab}
+            key={mode}
             type="button"
-            role="tab"
-            aria-selected={view === tab}
-            onClick={() => setView(tab)}
+            aria-pressed={view === mode}
+            onClick={() => setView(mode)}
             className={cx(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
-              view === tab
-                ? "border-brand text-brand"
-                : "border-transparent text-slate-500 hover:text-slate-900",
+              "rounded-md px-3 py-1 text-[13px] font-semibold transition-colors",
+              view === mode
+                ? "bg-white text-ink shadow-control"
+                : "text-muted hover:text-ink",
             )}
           >
-            {tab === "write" ? "Write" : "Preview"}
+            {mode === "write" ? "Write" : "Preview"}
           </button>
         ))}
       </div>
@@ -373,19 +373,19 @@ export function MarkdownField({
             "Write here. Start a line with ## for a heading.\nLeave a blank line between paragraphs."
           }
           className={cx(
-            "block min-h-80 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
+            "block min-h-80 w-full resize-y rounded-[var(--ui-field-radius,0.375rem)] border border-slate-300 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
             view === "preview" && "hidden lg:block",
           )}
         />
         <div
           aria-label="Preview"
           className={cx(
-            "min-h-80 overflow-auto rounded-md border border-slate-200 bg-white px-4 py-3",
+            "min-h-80 overflow-auto rounded-[var(--ui-field-radius,0.375rem)] border border-card-edge bg-white px-4 py-3",
             view === "write" && "hidden lg:block",
           )}
         >
           {value.trim() === "" ? (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted">
               The text shows here as the page will read it.
             </p>
           ) : (
@@ -477,7 +477,7 @@ function ToolButton({
       // Keeps the text area's selection: the press must not take the focus.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-medium text-slate-700 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-semibold text-body hover:border-edge hover:bg-shade hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
     >
       {children}
     </button>
@@ -519,7 +519,7 @@ function AddImageDialog({
         <div>
           <label
             htmlFor={altId}
-            className="mb-1.5 block text-sm font-medium text-slate-800"
+            className="mb-1.5 block text-sm font-medium text-body"
           >
             Alt text
           </label>
@@ -531,7 +531,7 @@ function AddImageDialog({
             value={alt}
             onChange={(event) => setAlt(event.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted">
             A page publishes only once every image has one. You can write it
             later under “Images in the text”.
           </p>
@@ -557,7 +557,7 @@ function AddImageDialog({
           <Button disabled={uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Choose image"}
           </Button>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
           </span>
         </div>
@@ -583,7 +583,7 @@ function TextImages({
   const away = images.filter((image) => !isUploadUrl(image.url)).length;
   return (
     <section aria-label="Images in the text" className="grid gap-2">
-      <h3 className="text-sm font-medium text-slate-800">
+      <h3 className="text-sm font-semibold text-ink">
         Images in the text
         {away > 0 ? (
           <span className="ml-2 text-xs font-normal text-amber-800">
@@ -593,7 +593,7 @@ function TextImages({
           </span>
         ) : null}
       </h3>
-      <ol className="divide-y divide-slate-100 rounded-md border border-slate-200 bg-white">
+      <ol className="divide-y divide-hairline rounded-card border border-card-edge bg-white">
         {images.map((image) => (
           // The address and the place together: the same file may be in twice.
           <li key={`${image.index}-${image.url}`}>
@@ -635,7 +635,7 @@ function TextImage({
           width={96}
           height={64}
           sizes="96px"
-          className="h-16 w-24 shrink-0 rounded border border-slate-200 object-cover"
+          className="h-16 w-24 shrink-0 rounded border border-card-edge object-cover"
         />
       ) : (
         <span className="grid h-16 w-24 shrink-0 place-items-center rounded border border-dashed border-amber-300 bg-amber-50 px-1 text-center text-[11px] leading-tight text-amber-800">
@@ -655,7 +655,7 @@ function TextImage({
           className="h-8"
         />
         {here ? null : (
-          <p className="truncate text-xs text-slate-500" title={image.url}>
+          <p className="truncate text-xs text-muted" title={image.url}>
             Links to {image.url}
           </p>
         )}

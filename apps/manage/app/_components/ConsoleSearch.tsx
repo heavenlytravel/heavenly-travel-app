@@ -25,8 +25,8 @@ import {
   type SearchResponse,
 } from "../_lib/console-search";
 import { SEARCH_PARAM, SEARCH_PATH } from "../_lib/routes";
-import type { SidebarLocation } from "./AppSidebar";
-import { LocationMark } from "./LocationMark";
+import type { PickerLocation } from "./ScopePicker";
+import { LocationMark } from "@repo/console/LocationMark";
 import { MENU_ICONS, type MenuIcon } from "./menu";
 import {
   entriesMatching,
@@ -34,7 +34,7 @@ import {
   type PaletteEntry,
 } from "./palette-index";
 import { useRecent, type RecentEntry } from "./palette-recent";
-import { BookingStatusBadge } from "./StatusBadges";
+import { BookingStatusBadge } from "@repo/console/StatusBadges";
 
 /** How long the typing rests before the records are asked for. */
 const PAUSE_MS = 200;
@@ -50,8 +50,8 @@ const KIND_ICONS: Record<RecordKind, MenuIcon> = {
   bookings: "bookings",
   vehicles: "vehicles",
   drivers: "drivers",
-  users: "users",
-  "vehicle-classes": "vehicle-classes",
+  users: "customers",
+  "vehicle-classes": "classes",
   zones: "coverage",
 };
 
@@ -99,14 +99,14 @@ type EntryGroup = { key: string; heading: string; entries: RecentEntry[] };
  * of the server, the bookings, vehicles, drivers, users, classes and
  * zones that match, every location whatever the picker is on. Only what
  * the admin may open is offered. Enter or a click opens it. See
- * docs/261023-console-sidebar.md.
+ * docs/261029-manage-signature-overhaul.md.
  */
 export function ConsoleSearch({
   locations,
   permissions,
   children,
 }: {
-  locations: readonly SidebarLocation[];
+  locations: readonly PickerLocation[];
   permissions: readonly Permission[];
   children: ReactNode;
 }) {

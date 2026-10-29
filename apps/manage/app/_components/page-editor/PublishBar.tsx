@@ -5,8 +5,9 @@ import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Tooltip } from "@repo/ui/tooltip";
 import type { ReactNode } from "react";
-import { PreviewLink } from "../../(console)/locations/_components/PreviewLink";
-import { PageStatusBadge } from "../StatusBadges";
+import { SURFACE } from "@repo/console/Card";
+import { PageStatusBadge } from "@repo/console/StatusBadges";
+import { PreviewLink } from "../../(console)/[location]/pages/_components/PreviewLink";
 
 /** A quiet button in the publish bar's second line. */
 export function BarLink({
@@ -26,8 +27,8 @@ export function BarLink({
       disabled={disabled}
       onClick={onClick}
       className={cx(
-        "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline disabled:opacity-50",
-        danger ? "text-red-700" : "text-slate-900",
+        "inline-flex items-center gap-1 font-semibold underline-offset-4 hover:underline disabled:opacity-50",
+        danger ? "text-red-700" : "text-brand",
       )}
     >
       {children}
@@ -36,15 +37,15 @@ export function BarLink({
 }
 
 /**
- * The bar over an editor of what the customer site shows, a page or the
- * footer, held in view while the form scrolls. Its first line is the
- * name and where it stands, level with "Preview" of the saved draft,
- * "Save draft" and "Publish". Its second line is where it shows on the
- * site, `message` (what its standing means, or what went wrong), then
- * the quiet `moves`, each a `BarLink`.
+ * The bar under an editor's title, of a page or the footer the customer
+ * site shows, held in view while the form scrolls: where it stands, "Unsaved
+ * edits" while the form holds some, and `message` (what its standing means,
+ * or what went wrong), level with "Preview" of the saved draft, "Save
+ * draft" and "Publish". Its second line is where it shows on the site,
+ * then the quiet `moves`, each a `BarLink`. On a phone the buttons follow
+ * the words.
  */
 export function PublishBar({
-  title,
   status,
   dirty,
   previewUrl,
@@ -57,7 +58,6 @@ export function PublishBar({
   message,
   moves,
 }: {
-  title: string;
   status: PageStatus;
   /** Whether the form holds edits not saved yet. */
   dirty: boolean;
@@ -69,56 +69,65 @@ export function PublishBar({
   /** The tooltip on "Publish": why it is off; null for none. */
   publishHint: string | null;
   onPublish: () => void;
-  /** Where it shows on the customer site: "/langkawi", "Every page". */
+  /** Where it shows on the customer site: "/langkawi", "On every page". */
   path: string;
   message: ReactNode;
   moves: readonly ReactNode[];
 }) {
   return (
-    // Runs to the column's edges, so the form scrolls out of sight under it.
-    <div className="sticky top-14 z-[5] -mx-5 border-b border-slate-200 bg-slate-50/95 px-5 pt-2 pb-4 backdrop-blur-sm md:-mx-10 md:px-10">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          <PageStatusBadge status={status} />
-          {dirty ? (
-            <span className="text-xs font-medium text-amber-700">
-              Unsaved edits
-            </span>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <PreviewLink
-            size="sm"
-            href={previewUrl}
-            hint={
-              dirty
-                ? "Shows the saved draft: save first to see your latest edits."
-                : undefined
-            }
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!canSave}
-            onClick={onSave}
+    // On the canvas from the column's edges, so the form scrolls out of
+    // sight under it rather than showing round the card.
+    <div className="sticky top-16 z-[5] -mx-4 -mt-3 bg-canvas/95 px-4 pt-2 pb-3 backdrop-blur-sm md:top-[72px] md:-mx-7 md:px-7">
+      <div className={cx("px-4 py-3 md:px-5", SURFACE)}>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
+          <p
+            aria-live="polite"
+            className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[13px]"
           >
-            Save draft
-          </Button>
-          <Tooltip content={publishHint}>
-            <Button size="sm" disabled={!canPublish} onClick={onPublish}>
-              Publish
+            <PageStatusBadge status={status} />
+            {dirty ? (
+              <span className="inline-flex items-center gap-1.5 font-semibold text-amber-800">
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 rounded-full bg-amber-500"
+                />
+                Unsaved edits
+              </span>
+            ) : null}
+            <span className="min-w-0">{message}</span>
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <PreviewLink
+              size="sm"
+              href={previewUrl}
+              hint={
+                dirty
+                  ? "Shows the saved draft: save first to see your latest edits."
+                  : undefined
+              }
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!canSave}
+              onClick={onSave}
+            >
+              Save draft
             </Button>
-          </Tooltip>
+            <Tooltip content={publishHint}>
+              <Button size="sm" disabled={!canPublish} onClick={onPublish}>
+                Publish
+              </Button>
+            </Tooltip>
+          </div>
         </div>
+        <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-hairline pt-2 text-[13px]">
+          <span className="[overflow-wrap:anywhere] text-muted">{path}</span>
+          {moves.length > 0 ? (
+            <span className="flex flex-wrap gap-x-3">{moves}</span>
+          ) : null}
+        </p>
       </div>
-      <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-        <span className="text-slate-500">{path}</span>
-        <span aria-live="polite">{message}</span>
-        {moves.length > 0 ? (
-          <span className="flex flex-wrap gap-x-3">{moves}</span>
-        ) : null}
-      </p>
     </div>
   );
 }

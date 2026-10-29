@@ -1,56 +1,161 @@
-import { listDrivers, listVehicles } from "@repo/db/server";
-import type { ReactNode } from "react";
-import type { FleetListFilter } from "../_lib/routes";
+import { driverDocumentsDue, plural, vehicleDocumentsDue } from "@repo/db";
+import {
+  listDrivers,
+  listVehicles,
+  type DriverWithClasses,
+  type FleetFilter,
+  type ListedVehicle,
+} from "@repo/db/server";
+import { Card } from "@repo/console/Card";
+import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
+import { Bone, Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import {
+  driversHref,
+  vehiclesHref,
+  type FleetListFilter,
+} from "../_lib/routes";
+import type { ConsoleScope } from "../_lib/scope";
 import { DriversTable } from "./DriversTable";
 import { DueFilter } from "./DueFilter";
 import { SearchBox } from "./SearchBox";
-import { Streamed, TableSkeleton } from "./Skeleton";
 import { VehiclesTable } from "./VehiclesTable";
 
-/** What a fleet list narrows to, beside the location: the documents due, a search. */
-type Filter = Omit<FleetListFilter, "location">;
-
-/** How each list names its records and the documents it watches. */
+/**
+ * How each list names its records, their standing and the documents it
+ * watches, how many columns its table has under a location (`~` adds the
+ * location's), and its address.
+ */
 const KINDS = {
   vehicles: {
     one: "vehicle",
+    active: "In service",
+    inactive: "Out of service",
     due: "Documents due",
+    expired: "Document expired",
     dueEmpty: "has a document due",
     search: "Plate, brand or model",
+    columns: 5,
+    href: vehiclesHref,
   },
   drivers: {
     one: "driver",
+    active: "Active",
+    inactive: "Inactive",
     due: "Licences due",
+    expired: "Licence expired",
     dueEmpty: "has a licence due",
     search: "Name or phone",
+    columns: 4,
+    href: driversHref,
   },
 } as const;
 
+type FleetKind = keyof typeof KINDS;
+
+/** The rows of one list, by its kind. */
+type Listed =
+  | { kind: "vehicles"; rows: ListedVehicle[] }
+  | { kind: "drivers"; rows: DriverWithClasses[] };
+
+async function read(kind: FleetKind, filter: FleetFilter): Promise<Listed> {
+  return kind === "vehicles"
+    ? { kind, rows: await listVehicles(filter) }
+    : { kind, rows: await listDrivers(filter) };
+}
+
 /**
- * A list of our vehicles or our drivers, across locations or a
- * location's tab: the filter to those with a document due, the search,
- * and the table. `hrefOf` names the list with filters in its address;
- * `locationFilter` is the list across locations' choice of location.
+ * How many of a list are in service and out, and of those in service how
+ * many have a document due and how many one expired, each counted once,
+ * by its worst.
+ */
+type Counts = {
+  active: number;
+  inactive: number;
+  due: number;
+  expired: number;
+};
+
+function countsOf(listed: Listed): Counts {
+  const rows =
+    listed.kind === "vehicles"
+      ? listed.rows.map((v) => ({
+          isActive: v.isActive,
+          due: vehicleDocumentsDue(v),
+        }))
+      : listed.rows.map((d) => ({
+          isActive: d.isActive,
+          due: driverDocumentsDue(d),
+        }));
+  const active = rows.filter((row) => row.isActive);
+  const expired = active.filter((row) =>
+    row.due.some((document) => document.state === "expired"),
+  ).length;
+  return {
+    active: active.length,
+    inactive: rows.length - active.length,
+    due: active.filter((row) => row.due.length > 0).length - expired,
+    expired,
+  };
+}
+
+/** The counts as the strip shows them, amber and red only when there are some; bones while they load. */
+function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
+  const names = KINDS[kind];
+  const value = (n: number | undefined) => n ?? <Bone className="h-7 w-8" />;
+  return [
+    {
+      key: "active",
+      label: names.active,
+      value: value(counts?.active),
+      tone: "green",
+    },
+    {
+      key: "inactive",
+      label: names.inactive,
+      value: value(counts?.inactive),
+      tone: "neutral",
+    },
+    {
+      key: "due",
+      label: names.due,
+      value: value(counts?.due),
+      tone: counts?.due ? "amber" : "neutral",
+    },
+    {
+      key: "expired",
+      label: names.expired,
+      value: value(counts?.expired),
+      tone: counts?.expired ? "red" : "neutral",
+    },
+  ];
+}
+
+/**
+ * Our vehicles or our drivers in the scope: every location's under `~`,
+ * with a column of locations, or those based at one location. A strip of
+ * figures sums up the scope; under it, in one card, the search, the
+ * filter to those with a document due, and the table, with how many it
+ * shows at its foot. The figures count the whole scope, whatever the
+ * filters.
  */
 export function FleetList({
   kind,
+  scope,
   filter,
-  hrefOf,
-  locationId,
-  across = false,
-  locationFilter,
 }: {
-  kind: keyof typeof KINDS;
-  filter: Filter;
-  hrefOf: (filter: Filter) => string;
-  /** The location the list is narrowed to, by its tab or by the filter. */
-  locationId?: string;
-  /** Across locations: the column of locations, and messages for every location. */
-  across?: boolean;
-  locationFilter?: ReactNode;
+  kind: FleetKind;
+  scope: ConsoleScope;
+  filter: FleetListFilter;
 }) {
   const names = KINDS[kind];
   const { due = false, q } = filter;
+  const across = scope.slug === null;
+  const locationId = scope.location?.id;
+  const hrefOf = (next: FleetListFilter) => names.href(scope.slug, next);
+  // One read serves the figures and, unfiltered, the table.
+  const everyOne = read(kind, { locationId });
+  const shown =
+    due || q ? read(kind, { locationId, due, search: q }) : everyOne;
   const empty = q
     ? `No ${names.one} matches “${q}”.`
     : due
@@ -58,52 +163,78 @@ export function FleetList({
       : across
         ? `No ${names.one} yet.`
         : `No ${names.one} based here yet.`;
-  const where = { locationId, due, search: q };
+  const where = scope.location ? ` at ${scope.location.name}` : "";
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <DueFilter
-          label={names.due}
-          due={due}
-          hrefOf={(next) => hrefOf({ due: next, q })}
-        />
-        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+      <Streamed
+        fallback={
+          <FigureStrip
+            label={`Our ${kind}${where}`}
+            figures={figuresOf(kind, null)}
+          />
+        }
+      >
+        {async () => (
+          <FigureStrip
+            label={`Our ${kind}${where}`}
+            figures={figuresOf(kind, countsOf(await everyOne))}
+          />
+        )}
+      </Streamed>
+      <Card flush>
+        <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-5 py-4">
           <SearchBox
             href={hrefOf({ due })}
             value={q ?? ""}
             label={`Search ${kind}`}
             placeholder={names.search}
           />
-          {locationFilter}
+          <DueFilter
+            label={names.due}
+            due={due}
+            href={hrefOf({ due: !due, q })}
+          />
         </div>
-      </div>
-      <div className="mt-4">
         <Streamed
-          key={`${locationId ?? "all"}:${due}:${q ?? ""}`}
+          key={`${due}:${q ?? ""}`}
           fallback={
-            <TableSkeleton
-              columns={(kind === "vehicles" ? 5 : 4) + Number(across)}
-            />
+            <TableSkeleton bare columns={names.columns + Number(across)} />
           }
         >
-          {async () =>
-            kind === "vehicles" ? (
-              <VehiclesTable
-                showLocation={across}
-                vehicles={await listVehicles(where)}
-                emptyMessage={empty}
-              />
-            ) : (
-              <DriversTable
-                showLocation={across}
-                drivers={await listDrivers(where)}
-                emptyMessage={empty}
-              />
-            )
-          }
+          {async () => {
+            const [listed, total] = await Promise.all([shown, everyOne]);
+            const count = listed.rows.length;
+            return (
+              <>
+                {listed.kind === "vehicles" ? (
+                  <VehiclesTable
+                    vehicles={listed.rows}
+                    scope={scope.slug}
+                    bare
+                    emptyMessage={empty}
+                  />
+                ) : (
+                  <DriversTable
+                    drivers={listed.rows}
+                    scope={scope.slug}
+                    bare
+                    emptyMessage={empty}
+                  />
+                )}
+                {count > 0 ? (
+                  <p className="border-t border-hairline px-5 py-3 text-[13px] text-muted tabular-nums">
+                    {count === total.rows.length
+                      ? plural(count, names.one)
+                      : `${count} of ${plural(total.rows.length, names.one)}`}
+                    {where}
+                  </p>
+                ) : null}
+              </>
+            );
+          }}
         </Streamed>
-      </div>
+      </Card>
     </>
   );
 }

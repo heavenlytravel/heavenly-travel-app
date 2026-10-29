@@ -316,14 +316,13 @@ export const PLACE_TYPE_LABELS: Record<PlaceSection, string> = {
 /**
  * Where a page is edited in the console: under the location's Pages, at
  * its address on the site without the location's, the main page at
- * `MAIN_PAGE_SEGMENT`. /locations/langkawi/pages/main,
- * /locations/langkawi/pages/car-with-driver,
- * /locations/langkawi/pages/car-with-driver/sedan. A section's list of its
+ * `MAIN_PAGE_SEGMENT`. /langkawi/pages/main, /langkawi/pages/car-with-driver,
+ * /langkawi/pages/car-with-driver/sedan. A section's list of its
  * pages is the Pages list narrowed to it. Shared by the console's links
  * and the customer site's preview, whose Edit opens it.
  */
 export function pageEditorPath(locationSlug: string, ref: LocationPageRef) {
-  const own = `/locations/${locationSlug}/pages/${pageSegmentOf(ref.page)}`;
+  const own = `/${locationSlug}/pages/${pageSegmentOf(ref.page)}`;
   return isChildPage(ref) ? `${own}/${ref.slug}` : own;
 }
 

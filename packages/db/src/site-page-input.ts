@@ -1,4 +1,5 @@
 import { refuse, type Change } from "./change";
+import { ALL_LOCATIONS_SEGMENT } from "./console-paths";
 import { guardFor } from "./const-enum";
 import type { LocationSection } from "./location-page-input";
 import type { PageKind } from "./page-content";
@@ -108,10 +109,10 @@ export const SITE_PAGE_PATHS: readonly string[] = SITE_PAGES.filter(
 
 /**
  * Where the console keeps the site pages, under its Pages: their editors
- * at /pages/website/about-us, the home page's with its top choices. Staff
+ * at /~/pages/website/about-us, the home page's with its top choices. Staff
  * alone see these addresses.
  */
-export const SITE_PAGES_PATH = "/pages/website";
+export const SITE_PAGES_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/website`;
 
 /** Where a site page is edited in the console; the customer site's preview links it as Edit. */
 export function sitePageEditorPath(page: SitePageKey) {

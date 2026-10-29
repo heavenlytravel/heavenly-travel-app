@@ -44,6 +44,8 @@ export function Select({
   bare,
   className,
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: {
   id?: string;
   name?: string;
@@ -57,8 +59,11 @@ export function Select({
   bare?: boolean;
   className?: string;
   "aria-label"?: string;
+  /** Refused by the form: marked, and tied to the line that says why. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
-  const field = useFieldControl({ id });
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
   const [own, setOwn] = useState(defaultValue);
   const current = value ?? own;
   const { ref, container, trigger } = usePortalContainer();
@@ -94,6 +99,7 @@ export function Select({
           ref={ref}
           {...field}
           aria-label={ariaLabel}
+          aria-invalid={invalid || undefined}
           className={cx(
             bare
               ? "ui:flex ui:w-full ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:outline-none"

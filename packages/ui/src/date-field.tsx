@@ -65,6 +65,9 @@ type Common = {
   /** Where "now" and "today" are read: Malaysia for a pick-up. */
   timeZone?: string;
   "aria-label"?: string;
+  /** Refused by the form: marked, and tied to the line that says why. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 };
 
 /** The field's button: its value, or the placeholder, and an icon unless bare. */
@@ -76,6 +79,7 @@ function trigger({
   bare,
   className,
   ariaLabel,
+  invalid,
   text,
   placeholder,
   icon,
@@ -87,6 +91,7 @@ function trigger({
   bare?: boolean;
   className?: string;
   ariaLabel?: string;
+  invalid?: boolean;
   text: string | null;
   placeholder: string;
   icon: ReactNode;
@@ -99,6 +104,7 @@ function trigger({
       disabled={disabled}
       aria-label={ariaLabel}
       aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
       data-placeholder={text ? undefined : ""}
       className={cx(bare ? BARE : BOX, className)}
     >
@@ -128,6 +134,8 @@ export function DateField({
   className,
   placeholder = "Pick a day",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   name?: string;
   value?: string;
@@ -142,7 +150,7 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
-  const field = useFieldControl({ id });
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   return (
     <>
@@ -158,6 +166,7 @@ export function DateField({
           bare,
           className,
           ariaLabel,
+          invalid,
           text: dayLabel(current),
           placeholder,
           icon: <CalendarIcon />,
@@ -206,6 +215,8 @@ export function TimeField({
   timeZone,
   placeholder = "Pick a time",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   name?: string;
   value?: string;
@@ -217,7 +228,7 @@ export function TimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
-  const field = useFieldControl({ id });
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   return (
     <>
@@ -233,6 +244,7 @@ export function TimeField({
           bare,
           className,
           ariaLabel,
+          invalid,
           text: timeLabel(current),
           placeholder,
           icon: <ClockIcon />,
@@ -290,6 +302,8 @@ export function DateTimeField({
   placeholder = "Pick a date and time",
   title = "Date and time",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   dateName?: string;
   timeName?: string;
@@ -306,7 +320,7 @@ export function DateTimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
-  const field = useFieldControl({ id });
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   const day = dayLabel(current.date, true);
   const time = timeLabel(current.time);
@@ -332,6 +346,7 @@ export function DateTimeField({
           bare,
           className,
           ariaLabel,
+          invalid,
           text,
           placeholder,
           icon: <CalendarIcon />,

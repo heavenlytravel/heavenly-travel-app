@@ -43,6 +43,8 @@ export function PlaceInput({
   keep,
   inline = false,
   className,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: {
   id: string;
   value: string;
@@ -56,6 +58,9 @@ export function PlaceInput({
   keep?: (suggestion: PlaceSuggestion) => boolean;
   inline?: boolean;
   className?: string;
+  /** Refused by the form: marked, and tied to the line that says why. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
   const listId = useId();
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
@@ -168,6 +173,8 @@ export function PlaceInput({
         aria-expanded={showing}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         aria-activedescendant={
           showing && active >= 0 ? `${listId}-${active}` : undefined
         }

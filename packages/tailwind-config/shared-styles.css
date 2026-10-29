@@ -179,6 +179,8 @@
   /* Type: DM Serif Display for titles and figures, DM Sans for the rest (next/font sets both). */
   --font-serif: var(--font-display), Georgia, serif;
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  /* The site's handwriting: "Travel", "More than a trip". */
+  --font-hand: var(--font-script), cursive;
 
   /*
    * Sizes between Tailwind's steps, the ones both apps had typed by hand.

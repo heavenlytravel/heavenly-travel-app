@@ -66,7 +66,7 @@ the line, instead of a reload.
 
 ## Not done
 
-- No streaming or skeletons on the site. Each page is one query after the session check;
-  the line covers it.
-- The place input shows nothing while suggestions are fetched. Add a "Searching…" row
-  only if it is noticed on a slow connection.
+- No streaming on the site. Each page is one query after the session check;
+  the line covers it. The two booking steps that read the trip plan in the browser
+  (vehicle, confirm) show their heading and a skeleton until it is read (2026-10-30).
+  The place input says when it is searching, finds nothing or fails.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { describeActivity, formatLocalDate, formatLocalTime } from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { HistoryIcon } from "@repo/ui/icons";
 import {
   Card,
@@ -20,13 +21,12 @@ import { HistoryTimeline } from "./HistoryTimeline";
 /** "History" in a record's header: the way to the record's history page, as a quiet button. */
 export function HistoryLink({ href }: { href: string }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-edge bg-white px-3 text-sm font-semibold text-body shadow-control transition-colors hover:border-slate-300 hover:text-ink"
-    >
-      <HistoryIcon className="size-4 text-muted" />
-      History
-    </Link>
+    <Button asChild variant="secondary">
+      <Link href={href}>
+        <HistoryIcon className="size-4 text-muted" />
+        History
+      </Link>
+    </Button>
   );
 }
 

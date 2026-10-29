@@ -5,6 +5,7 @@
 import type { ZoneShape } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { useEffect, useRef, useState } from "react";
+import { FormError } from "@repo/console/FormError";
 import {
   MAP_FAILURES,
   boundsOf,
@@ -149,7 +150,7 @@ export function CoverageMap({
         {label && labelled ? (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 w-max max-w-64 rounded-md bg-ink px-2.5 py-1.5 text-xs text-white shadow-lg"
+            className="pointer-events-none absolute z-(--layer-raised) w-max max-w-64 rounded-md bg-ink px-2.5 py-1.5 text-xs text-white shadow-lg"
             style={{
               top: label.y + 14,
               ...(label.flip
@@ -158,15 +159,15 @@ export function CoverageMap({
             }}
           >
             <span className="block font-medium">{labelled.name}</span>
-            <span className="block text-slate-300">{labelled.note}</span>
+            <span className="block text-white/75">{labelled.note}</span>
           </div>
         ) : null}
       </div>
-      {failed ? (
-        <p className="border-t border-hairline px-5 py-3 text-xs text-red-700">
-          {MAP_FAILURES[failed]}
-        </p>
-      ) : null}
+      <FormError
+        error={failed ? MAP_FAILURES[failed] : null}
+        size="xs"
+        className="border-t border-hairline px-5 py-3"
+      />
     </div>
   );
 }

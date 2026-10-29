@@ -117,9 +117,7 @@ function ClassCard({
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.05em] text-muted uppercase">
-            Sold in
-          </p>
+          <p className="text-caps font-semibold text-muted">Sold in</p>
           {offerings.length === 0 ? (
             <p className="mt-1 text-sm text-muted">No location yet</p>
           ) : (

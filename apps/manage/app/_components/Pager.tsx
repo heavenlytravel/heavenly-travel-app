@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@repo/ui/button";
 
 /**
  * Where a long list is: "51–100 of 340", with the pages before and after
@@ -21,26 +22,24 @@ export function Pager({
   if (pages <= 1) return null;
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
-  const link =
-    "inline-flex h-8 items-center rounded-lg border border-edge bg-white px-3 font-semibold text-body transition-colors hover:border-slate-300 hover:text-ink";
   return (
     <nav
       aria-label="Pages"
-      className="flex items-center justify-between gap-3 border-t border-hairline px-5 py-3 text-[13px]"
+      className="flex items-center justify-between gap-3 border-t border-hairline px-5 py-3 text-caption"
     >
       <p className="text-muted tabular-nums">
         {first}–{last} of {total}
       </p>
       <div className="flex gap-1.5">
         {page > 1 ? (
-          <Link href={hrefOf(page - 1)} className={link}>
-            Previous
-          </Link>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={hrefOf(page - 1)}>Previous</Link>
+          </Button>
         ) : null}
         {page < pages ? (
-          <Link href={hrefOf(page + 1)} className={link}>
-            Next
-          </Link>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={hrefOf(page + 1)}>Next</Link>
+          </Button>
         ) : null}
       </div>
     </nav>

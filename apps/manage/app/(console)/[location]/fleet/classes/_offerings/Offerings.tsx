@@ -162,7 +162,7 @@ function OfferingCard({
           </div>
         </div>
         {!vehicleClass.isActive ? (
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-warning">
             Off in the catalogue, so sold nowhere.
           </p>
         ) : null}

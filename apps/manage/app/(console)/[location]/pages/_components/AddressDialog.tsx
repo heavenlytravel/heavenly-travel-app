@@ -19,6 +19,7 @@ import { Field, Input, inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import { useId, useState, useTransition, type FormEvent } from "react";
+import { FormError } from "@repo/console/FormError";
 import { EntrySlugField } from "../../settings/SlugField";
 import { checkAddressPlaceAction } from "../../../../_lib/location-actions";
 
@@ -223,9 +224,7 @@ function AddressForm({
               Checking where it is…
             </p>
           ) : formError ? (
-            <p aria-live="polite" className="text-xs text-red-700">
-              {formError}
-            </p>
+            <FormError error={formError} size="xs" />
           ) : place ? (
             <p className="text-xs text-muted">{place.detail}</p>
           ) : null}
@@ -233,11 +232,7 @@ function AddressForm({
       ) : (
         <>
           <p className="text-sm text-muted">{mode.detail}</p>
-          {formError ? (
-            <p aria-live="polite" className="text-xs text-red-700">
-              {formError}
-            </p>
-          ) : null}
+          <FormError error={formError} size="xs" />
         </>
       )}
 
@@ -289,11 +284,7 @@ function AddressForm({
                 }}
                 under={`${pagesUnder}/${section}`}
               />
-              {slugError ? (
-                <p aria-live="polite" className="text-xs text-red-700">
-                  {slugError}
-                </p>
-              ) : null}
+              <FormError error={slugError} size="xs" />
             </div>
           ) : null}
         </>
@@ -308,10 +299,10 @@ function AddressForm({
           disabled={
             !trimmed ||
             checking ||
-            saving ||
             (mode.kind === "add" && !place) ||
             (section !== null && !checkEntrySlug(slug).ok)
           }
+          pending={saving}
         >
           {mode.kind === "rename"
             ? saving

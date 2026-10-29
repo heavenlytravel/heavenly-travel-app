@@ -33,7 +33,7 @@ export function ActionRow({
         >
           {title}
         </Link>
-        <span className="block truncate text-[12.5px] text-muted">{line}</span>
+        <span className="block truncate text-caption text-muted">{line}</span>
       </span>
       {end}
     </CardRow>
@@ -41,8 +41,9 @@ export function ActionRow({
 }
 
 const MARK_TONES = {
-  red: "border-red-200 bg-red-50 text-red-600",
-  amber: "border-amber-200 bg-amber-50 text-amber-700",
+  red: "border-danger-edge bg-danger-tint text-danger",
+  amber: "border-warning-edge bg-warning-tint text-warning",
+  green: "border-success/20 bg-success-tint text-success",
   neutral: "border-hairline bg-shade text-navy",
 } as const;
 

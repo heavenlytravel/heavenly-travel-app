@@ -62,9 +62,11 @@ export function ImageUpload({
             const { naturalWidth, naturalHeight } = event.currentTarget;
             setSize(`${naturalWidth} × ${naturalHeight}`);
           }}
+          // A box of its own size, whatever the image's shape, so nothing
+          // moves as it loads: the image fits inside it.
           className={cx(
-            "w-auto max-w-full rounded-md border border-slate-200 object-contain",
-            look === "logo" ? "h-16 bg-white p-1" : "h-40",
+            "max-w-full rounded-md border border-card-edge object-contain",
+            look === "logo" ? "h-16 w-56 bg-white p-1" : "aspect-video h-40",
           )}
         />
       ) : null}
@@ -87,7 +89,7 @@ export function ImageUpload({
         <Button
           variant="secondary"
           size="sm"
-          disabled={uploading}
+          pending={uploading}
           onClick={() => input.current?.click()}
         >
           {uploading ? "Uploading…" : src ? "Replace" : "Upload image"}
@@ -103,12 +105,12 @@ export function ImageUpload({
             Remove
           </Button>
         ) : (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
           </span>
         )}
         {src && size ? (
-          <span className="text-xs text-slate-500 tabular-nums">{size}</span>
+          <span className="text-xs text-muted tabular-nums">{size}</span>
         ) : null}
       </div>
       <FormError error={error} size="xs" />

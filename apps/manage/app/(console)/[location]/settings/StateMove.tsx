@@ -85,7 +85,8 @@ export function StateMove({
     <div className="flex flex-col items-start gap-1.5">
       <Button
         variant={state === "live" ? "caution" : "primary"}
-        disabled={pending || blocked}
+        disabled={blocked}
+        pending={pending}
         onClick={move}
       >
         {LOCATION_MOVE_LABELS[state]}

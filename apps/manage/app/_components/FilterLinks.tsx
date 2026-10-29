@@ -50,10 +50,11 @@ function FilterLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex h-8 items-center rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${
+      // A chip is 32px tall; on a touch screen its hit area reaches 44px round it.
+      className={`inline-flex h-8 touch-target items-center rounded-full border px-3.5 text-caption font-semibold transition-colors focus-ring ${
         active
           ? "border-ink bg-ink text-white"
-          : "border-edge bg-white text-body hover:border-slate-300 hover:text-ink"
+          : "border-edge bg-white text-body hover:text-ink"
       }`}
     >
       {children}

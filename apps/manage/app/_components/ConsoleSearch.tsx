@@ -332,7 +332,7 @@ function EntryRow({ entry }: { entry: RecentEntry }) {
       ) : null}
       <span className="min-w-0 flex-1 truncate">{entry.title}</span>
       {entry.meta ? (
-        <span className="shrink-0 text-xs text-slate-500">{entry.meta}</span>
+        <span className="shrink-0 text-xs text-muted">{entry.meta}</span>
       ) : null}
     </>
   );
@@ -346,17 +346,17 @@ function HitRow({ hit, icon }: { hit: SearchHit; icon: MenuIcon }) {
       <Icon />
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-medium text-slate-900 tabular-nums">
+          <span className="truncate font-medium text-body tabular-nums">
             {hit.title}
           </span>
           {hit.status ? <BookingStatusBadge status={hit.status} /> : null}
         </span>
         {hit.detail ? (
-          <span className="truncate text-xs text-slate-500">{hit.detail}</span>
+          <span className="truncate text-xs text-muted">{hit.detail}</span>
         ) : null}
       </span>
       {hit.meta ? (
-        <span className="shrink-0 text-xs text-slate-500">{hit.meta}</span>
+        <span className="shrink-0 text-xs text-muted">{hit.meta}</span>
       ) : null}
     </>
   );

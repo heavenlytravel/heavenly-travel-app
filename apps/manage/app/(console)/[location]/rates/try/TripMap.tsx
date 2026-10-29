@@ -5,6 +5,7 @@
 import type { LngLat, ZoneShape } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { useEffect, useRef, useState } from "react";
+import { FormError } from "@repo/console/FormError";
 import {
   MAP_FAILURES,
   boundsOf,
@@ -280,17 +281,16 @@ export function TripMap({
       {hover ? (
         <div
           role="status"
-          className="pointer-events-none absolute z-20 w-max max-w-72 -translate-x-1/2 -translate-y-full rounded-md bg-ink px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg"
+          className="pointer-events-none absolute z-(--layer-raised) w-max max-w-72 -translate-x-1/2 -translate-y-full rounded-md bg-ink px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg"
           style={{ left: hover.x, top: hover.y - 12 }}
         >
           {hover.label}
         </div>
       ) : null}
-      {failed ? (
-        <p className="absolute inset-x-3 top-3 rounded-md bg-white p-3 text-sm text-red-700 shadow">
-          {MAP_FAILURES[failed]}
-        </p>
-      ) : null}
+      <FormError
+        error={failed ? MAP_FAILURES[failed] : null}
+        className="absolute inset-x-3 top-3 rounded-md bg-white p-3 shadow-map"
+      />
     </div>
   );
 }

@@ -22,14 +22,14 @@ export const CELL_CHANGED =
   "border-brand bg-brand-tint font-semibold text-brand";
 
 /** A cell whose text is not a price. */
-export const CELL_BAD = "border-red-300 bg-red-50 text-red-700";
+export const CELL_BAD = "border-danger-edge bg-danger-tint text-danger";
 
 /** A cell of a route marked for deletion: no box, its price struck through. */
 export const CELL_DOOMED =
   "border-transparent bg-transparent text-muted line-through";
 
 export const EMPTY_CELL =
-  "bg-[image:repeating-linear-gradient(-45deg,var(--color-slate-200)_0_1px,transparent_1px_6px)]";
+  "bg-[image:repeating-linear-gradient(-45deg,var(--card-edge)_0_1px,transparent_1px_6px)]";
 
 /** What an empty cell means, as the legend says it: every trip is priced from the grid. */
 export const EMPTY_CELL_MEANING =
@@ -47,7 +47,7 @@ export function CellKey({
     <span className="inline-flex items-center gap-1.5">
       <span
         aria-hidden="true"
-        className={cx("size-3 shrink-0 rounded-[4px] border", swatch)}
+        className={cx("size-3 shrink-0 rounded-sm border", swatch)}
       />
       {children}
     </span>

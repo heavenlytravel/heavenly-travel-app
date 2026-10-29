@@ -22,7 +22,7 @@ export function SetupBar({
       aria-valuemax={total}
       aria-valuenow={done}
       className={cx(
-        "h-1.5 overflow-hidden rounded-full bg-slate-200",
+        "h-1.5 overflow-hidden rounded-full bg-card-edge",
         className,
       )}
     >

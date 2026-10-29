@@ -20,7 +20,7 @@ export function ConsoleTopBar({
   permissions: readonly Permission[];
 }) {
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b border-edge bg-white px-4 md:h-[72px] md:bg-canvas/90 md:px-7 md:backdrop-blur">
+    <header className="sticky top-0 z-(--layer-sticky) flex h-(--header-height) shrink-0 items-center gap-3 border-b border-edge bg-white px-4 md:bg-canvas/90 md:px-7 md:backdrop-blur">
       <NavigationProgress
         className="absolute inset-x-0 top-0"
         gradient={["var(--navy)", "var(--azure)"]}

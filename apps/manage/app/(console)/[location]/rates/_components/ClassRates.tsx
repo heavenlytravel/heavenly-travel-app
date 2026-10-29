@@ -102,7 +102,7 @@ export function ClassRates({
                     {vehicleClass.name}
                     {selling ? null : <Badge>Off sale</Badge>}
                   </span>
-                  <span className="block text-[12.5px] text-muted">
+                  <span className="block text-caption text-muted">
                     {isTripCategory(vehicleClass.category)
                       ? TRIP_CATEGORY_LABELS[vehicleClass.category]
                       : vehicleClass.category}

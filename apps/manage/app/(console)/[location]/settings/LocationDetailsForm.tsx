@@ -62,7 +62,11 @@ export function LocationDetailsForm({
       />
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending || stateCodes.length === 0}>
+        <Button
+          type="submit"
+          disabled={stateCodes.length === 0}
+          pending={pending}
+        >
           {pending ? "Saving…" : "Save"}
         </Button>
         {error ? (

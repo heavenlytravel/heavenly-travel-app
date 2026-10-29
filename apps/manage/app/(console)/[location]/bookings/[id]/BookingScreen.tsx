@@ -31,6 +31,7 @@ import { CheckIcon, MessageCircleIcon, PhoneIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
+import { Notice } from "@repo/console/Notice";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import {
@@ -239,7 +240,10 @@ function CustomerCard({ booking }: { booking: BookingWithItems }) {
     [
       "Account",
       booking.user ? (
-        fullName(booking.user) || booking.user.email
+        // A long email breaks where it must, not past the card.
+        <span key="a" className="[overflow-wrap:anywhere]">
+          {fullName(booking.user) || booking.user.email}
+        </span>
       ) : (
         <span key="a" className="font-normal text-muted">
           None, booked as a guest
@@ -307,7 +311,7 @@ function TripCard({
         <Link
           key="l"
           href={bookingHref(item.location.slug, item.bookingId)}
-          className="underline decoration-slate-300 underline-offset-4 hover:decoration-ink"
+          className="rounded-sm underline decoration-edge underline-offset-4 hover:decoration-ink focus-ring"
         >
           {item.location.name}
         </Link>
@@ -367,10 +371,10 @@ function TripCard({
         {/* The customer paid for this model: kept by people until assignment checks it. */}
         {details?.vehicleModelName &&
         (item.status === "received" || item.status === "confirmed") ? (
-          <p className="rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+          <Notice>
             The customer paid to choose the {details.vehicleModelName}. Send
             one. If none is free, call them before sending another vehicle.
-          </p>
+          </Notice>
         ) : null}
         {trip ? (
           <ol className="grid gap-4">
@@ -452,7 +456,7 @@ function Stop({
       <span className="min-w-0">
         <span className="block font-semibold text-ink">{place.label}</span>
         {facts ? (
-          <span className="block text-[13px] text-muted">{facts}</span>
+          <span className="block text-caption text-muted">{facts}</span>
         ) : null}
       </span>
     </li>
@@ -490,9 +494,12 @@ function TripSteps({ item }: { item: BookingItemWithDetails }) {
         ? item.confirmedAt
         : null;
   return (
+    // From `sm`, one row of four that always fits the card: the first three
+    // share the room, each with its line on to the next, and the last takes
+    // its own width. A time wraps under its step rather than widen it.
     <ol
       aria-label="Steps"
-      className="grid grid-cols-2 gap-3 border-b border-hairline px-5 py-3 sm:flex sm:gap-x-2 sm:overflow-x-auto"
+      className="grid grid-cols-2 gap-3 border-b border-hairline px-5 py-3 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:gap-x-2"
     >
       {TRIP_STEPS.map((step, index) => {
         const done = index <= reached;
@@ -502,7 +509,7 @@ function TripSteps({ item }: { item: BookingItemWithDetails }) {
           <li
             key={step}
             aria-current={index === reached ? "step" : undefined}
-            className="flex items-start gap-2 sm:min-w-max sm:flex-1 sm:last:flex-none"
+            className="flex min-w-0 items-start gap-2"
           >
             <span
               aria-hidden="true"
@@ -511,23 +518,23 @@ function TripSteps({ item }: { item: BookingItemWithDetails }) {
                 done
                   ? "bg-brand text-white"
                   : nextUp
-                    ? "border-2 border-amber-500"
-                    : "border-2 border-slate-300",
+                    ? "border-2 border-warning"
+                    : "border-2 border-edge",
               )}
             >
               {done ? <CheckIcon className="size-2.5" /> : null}
             </span>
-            <span className="grid">
+            <span className="grid min-w-0">
               <span
                 className={cx(
-                  "text-[13px] whitespace-nowrap",
+                  "text-caption whitespace-nowrap",
                   done ? "font-semibold text-ink" : "text-muted",
                 )}
               >
                 {ITEM_STATUS_LABELS[step]}
               </span>
               {at ? (
-                <span className="text-[11.5px] text-muted sm:whitespace-nowrap">
+                <span className="text-2xs text-muted">
                   {formatLocalDateTime(at)}
                 </span>
               ) : null}

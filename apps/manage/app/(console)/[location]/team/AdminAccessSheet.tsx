@@ -47,7 +47,7 @@ export function AdminAccessSheet({
     >
       <form {...formProps} className="grid gap-5 p-6 text-left">
         <div>
-          <h2 className="text-lg font-bold tracking-[-0.01em] text-ink">
+          <h2 className="text-lg font-bold tracking-title text-ink">
             {email ? "Level and teams" : "Promote to staff"}
           </h2>
           <p className="mt-1 text-sm break-all text-muted">
@@ -74,7 +74,7 @@ export function AdminAccessSheet({
           and needs none.
         </p>
         <div className="flex items-center gap-2">
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" pending={pending}>
             {pending ? "Saving…" : submit}
           </Button>
           <Button

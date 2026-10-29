@@ -55,7 +55,7 @@ export function PriceOverrideControl({
               type="submit"
               variant="ghost"
               size="sm"
-              disabled={remove.pending}
+              pending={remove.pending}
             >
               {remove.pending ? "Removing…" : "Remove override"}
             </Button>
@@ -69,7 +69,7 @@ export function PriceOverrideControl({
   return (
     <form
       {...save.formProps}
-      className="order-last grid basis-full gap-3 rounded-[10px] border border-dashed border-slot p-3"
+      className="order-last grid basis-full gap-3 rounded-control border border-dashed border-slot p-3"
     >
       <input type="hidden" name="itemId" value={itemId} />
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
@@ -94,7 +94,7 @@ export function PriceOverrideControl({
         </Field>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="sm" disabled={save.pending}>
+        <Button type="submit" size="sm" pending={save.pending}>
           {save.pending ? "Saving…" : "Save price"}
         </Button>
         <Button

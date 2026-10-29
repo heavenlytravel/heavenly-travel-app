@@ -239,11 +239,11 @@ export function FooterEditor({
   ) : pending ? (
     <span className="text-muted">Saving…</span>
   ) : error ? (
-    <span className="font-medium text-red-700">{error}</span>
+    <span className="font-medium text-danger">{error}</span>
   ) : !limits.ok ? (
-    <span className="font-medium text-red-700">{limits.error}</span>
+    <span className="font-medium text-danger">{limits.error}</span>
   ) : sinceProblem ? (
-    <span className="font-medium text-red-700">{sinceProblem}</span>
+    <span className="font-medium text-danger">{sinceProblem}</span>
   ) : (
     <span className="text-muted">{standingNote}</span>
   );
@@ -802,7 +802,10 @@ export function FooterEditor({
                 Cancel
               </Button>
               <Button
-                disabled={busy || problems.length > 0 || !limits.ok}
+                disabled={
+                  uploads.uploading || problems.length > 0 || !limits.ok
+                }
+                pending={pending}
                 onClick={() => write(true)}
               >
                 {pending ? "Publishing…" : "Publish now"}
@@ -1053,7 +1056,7 @@ function LinkRows({
                   />
                 </div>
                 {hidden ? (
-                  <p className="text-xs text-amber-700">{hidden}</p>
+                  <p className="text-xs text-warning">{hidden}</p>
                 ) : null}
               </li>
             );
@@ -1158,7 +1161,8 @@ function PaymentCard({
             <Button
               variant="secondary"
               size="sm"
-              disabled={uploading || room <= 0}
+              disabled={room <= 0}
+              pending={uploading}
               onClick={() => input.current?.click()}
             >
               {uploading ? "Uploading…" : "Upload logos"}

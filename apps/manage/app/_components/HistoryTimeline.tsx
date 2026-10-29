@@ -8,6 +8,7 @@ import type { ActivityEntry } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { Card } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { Bone } from "@repo/console/Skeleton";
 import { dayHeadingOf, localDayOf } from "../_lib/local-days";
 
@@ -71,18 +72,16 @@ export function HistoryTimeline({
         <div className="border-b border-hairline px-5 py-4">{head}</div>
       ) : null}
       {entries.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-muted">
-          {emptyMessage}
-        </p>
+        <EmptyState>{emptyMessage}</EmptyState>
       ) : (
         byDay(entries).map((dayEntries, index) => (
           <section
             key={dayEntries[0]!.id}
             className={cx(index > 0 && "border-t border-hairline")}
           >
-            <h3 className="border-b border-hairline bg-shade px-5 py-2 text-[11px] font-bold tracking-[0.08em] text-brand uppercase">
+            <h2 className="border-b border-hairline bg-shade px-5 py-2 text-2xs font-bold tracking-kicker text-brand uppercase">
               {dayHeadingOf(dayEntries[0]!.createdAt, now)}
-            </h3>
+            </h2>
             <ol className="divide-y divide-hairline text-sm">
               {dayEntries.map((entry) => (
                 <HistoryLine
@@ -115,16 +114,16 @@ function HistoryLine({
   const actor = actorOf(entry);
   return (
     <li className="grid grid-cols-[3.75rem_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 px-5 py-3 sm:grid-cols-[4.5rem_auto_minmax(0,1fr)_auto]">
-      <span className="text-[13px] text-muted tabular-nums">
+      <span className="text-caption text-muted tabular-nums">
         {formatLocalTime(entry.createdAt)}
       </span>
       <span
         aria-hidden="true"
         className={cx(
-          "flex size-8 items-center justify-center rounded-full text-[11px] font-bold",
+          "flex size-8 items-center justify-center rounded-full text-2xs font-bold",
           entry.actorKind === "admin"
             ? "bg-brand-tint text-brand-strong"
-            : "bg-slate-100 text-slate-600",
+            : "bg-hairline text-muted",
         )}
       >
         {initialsOf(actor)}
@@ -134,7 +133,7 @@ function HistoryLine({
           {href ? (
             <Link
               href={href}
-              className="underline decoration-slate-300 underline-offset-4 transition-colors hover:text-brand hover:decoration-brand"
+              className="rounded-sm underline decoration-edge underline-offset-4 transition-colors hover:text-brand hover:decoration-brand focus-ring"
             >
               {sentence}
             </Link>
@@ -142,7 +141,7 @@ function HistoryLine({
             sentence
           )}
         </span>
-        <span className="block truncate text-[12.5px] text-muted">{actor}</span>
+        <span className="block truncate text-caption text-muted">{actor}</span>
       </span>
       {tag ? (
         <span className="col-start-3 justify-self-start rounded-md border border-hairline bg-shade px-2 py-0.5 text-xs text-muted sm:col-start-auto sm:justify-self-end">

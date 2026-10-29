@@ -11,6 +11,7 @@ import {
   CardRows,
   CardTitle,
 } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { LocationMark } from "@repo/console/LocationMark";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
@@ -92,9 +93,7 @@ async function chooseLocation() {
     <Card flush>
       <CardTitle inset>Pick a location</CardTitle>
       {locations.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted">
-          No location yet.
-        </p>
+        <EmptyState>No location yet.</EmptyState>
       ) : (
         <CardRows>
           {locations.map((location) => (

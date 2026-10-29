@@ -204,12 +204,8 @@ export function VehicleForm({
                       />
                     </Field>
                     <Field
-                      label={
-                        <span className="inline-flex items-center gap-1.5">
-                          {VEHICLE_FIELD_LABELS.vehicleClassId}
-                          <InfoTip text="The class the customer books it as. Its models are the brands and models of the vehicles entered in it." />
-                        </span>
-                      }
+                      label={VEHICLE_FIELD_LABELS.vehicleClassId}
+                      tip="The class the customer books it as. Its models are the brands and models of the vehicles entered in it."
                     >
                       <Select
                         name="vehicleClassId"
@@ -270,12 +266,8 @@ export function VehicleForm({
                       />
                     </Field>
                     <Field
-                      label={
-                        <span className="inline-flex items-center gap-1.5">
-                          {VEHICLE_FIELD_LABELS.locationId}
-                          <InfoTip text="To move a vehicle to another location, change where it is based." />
-                        </span>
-                      }
+                      label={VEHICLE_FIELD_LABELS.locationId}
+                      tip="To move a vehicle to another location, change where it is based."
                     >
                       <Select
                         name="locationId"
@@ -298,16 +290,17 @@ export function VehicleForm({
                       defaultValue={fields?.notes}
                     />
                   </Field>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      name="isActive"
-                      defaultChecked={fields?.isActive ?? true}
-                    />
-                    <span className="inline-flex items-center gap-1.5">
+                  {/* The tip beside the label, not in it: its button would join the box's name. */}
+                  <span className="flex items-center gap-1.5 text-sm">
+                    <label className="flex items-center gap-2">
+                      <Checkbox
+                        name="isActive"
+                        defaultChecked={fields?.isActive ?? true}
+                      />
                       {VEHICLE_FIELD_LABELS.isActive}
-                      <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
-                    </span>
-                  </label>
+                    </label>
+                    <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
+                  </span>
                 </div>
               </Card>
             </>
@@ -335,7 +328,7 @@ export function VehicleForm({
         />
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={pending || uploads.uploading}>
+          <Button type="submit" pending={pending || uploads.uploading}>
             {uploads.uploading
               ? "Uploading photos…"
               : pending

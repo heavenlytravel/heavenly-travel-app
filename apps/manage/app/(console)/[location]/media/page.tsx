@@ -12,6 +12,7 @@ import { listMediaUses } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, Frame } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import {
   FigureTiles,
   type Figure,
@@ -93,7 +94,7 @@ function filesValue(files: readonly StoredFile[]) {
   return (
     <>
       {files.length}
-      <span className="ml-2 font-sans text-[13px] text-muted">
+      <span className="ml-2 font-sans text-caption text-muted">
         {formatBytes(files.reduce((sum, file) => sum + file.size, 0))}
       </span>
     </>
@@ -115,9 +116,7 @@ async function mediaList({
   if (!stored.ok) {
     return (
       <Frame>
-        <p className="px-6 py-10 text-center text-sm text-muted">
-          {stored.error}
-        </p>
+        <EmptyState>{stored.error}</EmptyState>
       </Frame>
     );
   }

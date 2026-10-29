@@ -87,13 +87,13 @@ function Brand({
       className={
         collapsed
           ? "items-center gap-2 border-b border-white/10 py-3 max-md:hidden"
-          : "h-[72px] flex-row items-center gap-2.5 border-b border-white/10 px-5 max-md:hidden"
+          : "h-(--header-height) flex-row items-center gap-2.5 border-b border-white/10 px-5 max-md:hidden"
       }
     >
       <Link
         href="/"
         aria-label="Heavenly Travel Manage, the dashboard"
-        className="flex min-w-0 items-center gap-2.5 rounded-md outline-hidden focus-visible:ring-2 focus-visible:ring-azure-light"
+        className="flex min-w-0 items-center gap-2.5 rounded-md focus-ring focus-ring-dark"
       >
         {collapsed ? (
           <Image
@@ -109,12 +109,14 @@ function Brand({
             <Image
               src="/brand/logo-blue.svg"
               alt=""
-              width={112}
-              height={26}
+              // The file's own size; CSS sets the height and the width
+              // follows, so Next sees both changed.
+              width={120}
+              height={28}
               priority
-              className="h-[26px] w-auto brightness-0 invert"
+              className="h-6.5 w-auto brightness-0 invert"
             />
-            <span className="rounded-[5px] bg-white/12 px-1.5 py-0.5 text-[10.5px] font-semibold tracking-[0.06em] text-white uppercase">
+            <span className="rounded-sm bg-white/12 px-1.5 py-0.5 text-caps font-semibold text-white">
               Manage
             </span>
           </>
@@ -153,7 +155,7 @@ function PersonRow({ person }: { person: Person }) {
       </span>
       {collapsed ? null : (
         <span className="grid min-w-0 leading-tight">
-          <span className="truncate text-[13px] font-semibold text-white">
+          <span className="truncate text-caption font-semibold text-white">
             {person.name}
           </span>
           <span className="truncate text-xs text-azure-light">

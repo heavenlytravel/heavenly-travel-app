@@ -72,13 +72,13 @@ export function ScopePicker({
           type="button"
           aria-label={`Location: ${current?.name ?? "All locations"}`}
           className={cx(
-            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-[10px] border border-edge bg-white pr-3 pl-2 text-left shadow-control outline-hidden transition-colors hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:border-slate-300 md:min-w-56",
+            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border border-edge bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring md:min-w-56",
             className,
           )}
         >
           <ScopeMark location={current} />
           <span className="grid min-w-0 leading-tight">
-            <span className="text-[11px] font-medium text-muted">Location</span>
+            <span className="text-2xs font-medium text-muted">Location</span>
             <span className="truncate text-sm font-semibold text-ink">
               {current?.name ?? "All locations"}
             </span>
@@ -152,9 +152,7 @@ function ScopeMark({
       aria-hidden="true"
       className={cx(
         "grid shrink-0 place-items-center bg-brand font-bold text-white",
-        small
-          ? "size-5 rounded-[5px] text-[9px]"
-          : "size-[26px] rounded-[7px] text-[11px]",
+        small ? "size-5 rounded-sm text-[9px]" : "size-6.5 rounded-md text-2xs",
       )}
     >
       All

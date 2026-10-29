@@ -32,6 +32,7 @@ import { useRef, useState, useTransition, type ReactNode } from "react";
 import { errorOf } from "../../_lib/action-state";
 import { useLeaveGuard } from "../../_lib/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
+import { Notice } from "@repo/console/Notice";
 import { MarkdownField } from "../MarkdownField";
 import { UploadsContext, useUploadCount } from "../use-image-upload";
 import {
@@ -111,10 +112,6 @@ const TAGLINE_FIELD: Partial<
 /** The rows of a list in a card, the FAQs: hairlines between them, no frames. */
 const ROWS = "divide-y divide-hairline";
 
-/** A sentence that warns of what a change will do: amber, in its own box. */
-const WARNING =
-  "rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900";
-
 /**
  * One part of a card of the editor, under its name and a line of help,
  * split from the one before by a hairline. "Go to it" lands on it by its
@@ -140,7 +137,7 @@ function Part({
       )}
     >
       <h3 className="text-sm font-bold text-ink">{title}</h3>
-      {hint ? <p className="mt-0.5 text-[13px] text-muted">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-caption text-muted">{hint}</p> : null}
       <div className="mt-3.5">{children}</div>
     </section>
   );
@@ -269,7 +266,7 @@ export function PageEditor({
       .filter((check) => check.tab === card)
       .reduce((sum, check) => sum + check.missing.length, 0);
     return missing > 0 ? (
-      <span className="font-semibold text-amber-800">
+      <span className="font-semibold text-warning">
         {missing} to do before publishing
       </span>
     ) : undefined;
@@ -402,9 +399,9 @@ export function PageEditor({
   ) : pending ? (
     <span className="text-muted">Saving…</span>
   ) : error ? (
-    <span className="font-medium text-red-700">{error}</span>
+    <span className="font-medium text-danger">{error}</span>
   ) : !limits.ok ? (
-    <span className="font-medium text-red-700">{limits.error}</span>
+    <span className="font-medium text-danger">{limits.error}</span>
   ) : (
     <span className="text-muted">{standingNote}</span>
   );
@@ -826,7 +823,7 @@ export function PageEditor({
                 </div>
               </div>
               {indexingChange ? (
-                <p className={cx("mt-3", WARNING)}>{indexingChange}</p>
+                <Notice className="mt-3">{indexingChange}</Notice>
               ) : null}
             </Part>
 
@@ -863,11 +860,11 @@ export function PageEditor({
             ) : null}
 
             <Part title="Set for you">
-              <p className={cx("mb-3", WARNING)}>
+              <Notice className="mb-3">
                 Until the site moves to heavenlytravel.my, search engines are
                 asked not to list any of its pages. These fields count from
                 then; shared links use them already.
-              </p>
+              </Notice>
               <ul className="grid list-disc gap-1.5 pl-5 text-sm text-muted">
                 <li>
                   The page&apos;s address and its canonical link, so search

@@ -185,7 +185,8 @@ function RenameDialog({
           </Button>
           <Button
             type="submit"
-            disabled={pending || (slug === entry.slug && page === entry.page)}
+            disabled={slug === entry.slug && page === entry.page}
+            pending={pending}
           >
             {pending ? "Changing…" : type ? "Change" : "Change slug"}
           </Button>

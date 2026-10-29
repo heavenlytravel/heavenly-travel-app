@@ -7,7 +7,7 @@ import {
 } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { Field, Input } from "@repo/ui/field";
-import { InfoTip } from "@repo/ui/info-tip";
+import { useId } from "react";
 
 /**
  * A slug, with where its page will be, or what is wrong with it, said
@@ -38,16 +38,10 @@ function SlugField({
 }) {
   const result = check(value);
   const wrong = locked === null && value !== "" && !result.ok;
+  const noteId = useId();
 
   return (
-    <Field
-      label={
-        <span className="inline-flex items-center gap-1.5">
-          Slug
-          <InfoTip text={info} />
-        </span>
-      }
-    >
+    <Field label="Slug" tip={info}>
       <Input
         name="slug"
         required
@@ -56,14 +50,16 @@ function SlugField({
         maxLength={maxLength}
         readOnly={locked !== null}
         aria-invalid={wrong}
+        aria-describedby={noteId}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
       <span
+        id={noteId}
         aria-live="polite"
         className={cx(
           "mt-1.5 block text-xs",
-          wrong ? "text-red-700" : "text-muted",
+          wrong ? "text-danger" : "text-muted",
         )}
       >
         {locked !== null

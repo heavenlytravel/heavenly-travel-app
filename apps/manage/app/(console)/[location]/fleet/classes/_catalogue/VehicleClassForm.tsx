@@ -45,7 +45,7 @@ export function VehicleClassForm({
         ) : null}
         <VehicleClassFieldset vehicleClass={vehicleClass} />
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={pending || uploads.uploading}>
+          <Button type="submit" pending={pending || uploads.uploading}>
             {uploads.uploading
               ? "Uploading the picture…"
               : pending

@@ -8,7 +8,10 @@ export function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
       {rows.map(([label, value]) => (
         <div key={label} className="flex justify-between gap-6 py-2.5">
           <dt className="shrink-0 text-muted">{label}</dt>
-          <dd className="text-right font-medium text-body">{value}</dd>
+          {/* A long value without spaces, an email or a reference, breaks rather than run past the card. */}
+          <dd className="min-w-0 text-right font-medium text-body [overflow-wrap:anywhere]">
+            {value}
+          </dd>
         </div>
       ))}
     </dl>

@@ -222,7 +222,7 @@ function Count({ count, current }: { count: MenuCount; current: boolean }) {
       <span
         aria-hidden="true"
         className={cx(
-          "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[11.5px] font-semibold tabular-nums",
+          "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-2xs font-semibold tabular-nums",
           current ? "bg-brand text-white" : "bg-amber-400 text-ink",
         )}
       >

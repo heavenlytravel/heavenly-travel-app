@@ -47,7 +47,7 @@ export function AdminRowControls({
             type="submit"
             variant="danger"
             size="sm"
-            disabled={revoke.pending}
+            pending={revoke.pending}
           >
             Revoke
           </Button>

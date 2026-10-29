@@ -136,12 +136,13 @@ export function DeleteButton({
             : "secondary"
       }
       size={look === "header" ? undefined : "sm"}
-      disabled={disabled || pending}
+      disabled={disabled}
+      pending={pending}
       aria-label={ariaLabel}
       className={
         look === "card" || look === "bar"
           ? undefined
-          : "text-red-700 hover:bg-red-50 hover:text-red-800"
+          : "text-danger hover:bg-danger-tint hover:text-danger-strong"
       }
       onClick={remove}
     >

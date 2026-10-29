@@ -12,6 +12,7 @@ import { hasGooglePlaces } from "@repo/places/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card } from "@repo/console/Card";
+import { Notice } from "@repo/console/Notice";
 import { BackLink, PageHeader } from "@repo/console/PageHeader";
 import {
   BackLinkSkeleton,
@@ -121,12 +122,9 @@ export async function amendItemScreen({
         }
       />
       {droppedModel ? (
-        <p
-          role="note"
-          className="mb-5 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-        >
-          {droppedModel}
-        </p>
+        <div role="note" className="mb-5">
+          <Notice>{droppedModel}</Notice>
+        </div>
       ) : null}
       <AmendItemForm
         itemId={item.id}

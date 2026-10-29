@@ -12,7 +12,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/field";
 import Link from "next/link";
 import { Fragment, useId, useState, type ReactNode } from "react";
-import { Choices } from "./Choices";
+import { Choices } from "../../../../_components/Choices";
 
 /** The reasons staff give most, one tap each; anything else is typed. */
 const REASONS = ["Agreed on the phone", "Goodwill", "Repeat customer"] as const;
@@ -201,13 +201,13 @@ function AgreedPrice({
             ? `Agree a different price for ${name.toLowerCase()}`
             : "Agree a different price"}
         </button>
-        {note ? <p className="text-xs text-amber-800">{note}</p> : null}
+        {note ? <p className="text-xs text-warning">{note}</p> : null}
       </div>
     );
   }
 
   return (
-    <div className="mt-1 mb-1 grid gap-3 rounded-[10px] border border-dashed border-slot p-3">
+    <div className="mt-1 mb-1 grid gap-3 rounded-control border border-dashed border-slot p-3">
       <label htmlFor={`${ids}-amount`} className="grid gap-1.5">
         <span className="text-xs font-semibold text-body">
           {name ? `${name}, agreed price (RM)` : "Agreed price (RM)"}
@@ -253,7 +253,7 @@ function AgreedPrice({
         ) : null}
       </div>
       <p className="text-xs text-muted">The quote stays on the receipt.</p>
-      {note ? <p className="text-xs text-amber-800">{note}</p> : null}
+      {note ? <p className="text-xs text-warning">{note}</p> : null}
       <Button
         variant="ghost"
         size="sm"

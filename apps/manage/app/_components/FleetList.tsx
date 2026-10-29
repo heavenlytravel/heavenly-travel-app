@@ -223,7 +223,7 @@ export function FleetList({
                   />
                 )}
                 {count > 0 ? (
-                  <p className="border-t border-hairline px-5 py-3 text-[13px] text-muted tabular-nums">
+                  <p className="border-t border-hairline px-5 py-3 text-caption text-muted tabular-nums">
                     {count === total.rows.length
                       ? plural(count, names.one)
                       : `${count} of ${plural(total.rows.length, names.one)}`}

@@ -215,7 +215,7 @@ function RouteForm({
       <div className="grid gap-2">
         <div className="overflow-hidden rounded-lg border border-card-edge">
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-shade text-[11px] tracking-[0.05em] text-muted uppercase">
+            <thead className="bg-shade text-caps text-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">
                   Class
@@ -298,7 +298,7 @@ function RouteForm({
         <Button variant="ghost" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || !toId}>
+        <Button type="submit" disabled={!toId} pending={pending}>
           {pending ? "Adding…" : "Add route"}
         </Button>
       </div>

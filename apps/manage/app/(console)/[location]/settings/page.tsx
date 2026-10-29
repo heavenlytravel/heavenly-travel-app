@@ -26,6 +26,8 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Card, CardTitle, TILE_LINK, Tile, TileGrid } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
+import { Notice } from "@repo/console/Notice";
 import { PageHeader } from "@repo/console/PageHeader";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import {
@@ -136,11 +138,7 @@ async function locationTiles({
   const locations = await scopeOverviews(scope);
 
   if (locations.length === 0) {
-    return (
-      <p className="rounded-card border border-dashed border-slot px-4 py-10 text-center text-sm text-muted">
-        No locations yet. Add the first one.
-      </p>
-    );
+    return <EmptyState slot>No locations yet. Add the first one.</EmptyState>;
   }
   return (
     <TileGrid>
@@ -180,7 +178,7 @@ function LocationTile({
         src={hero?.url ?? null}
         sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
         fallback={
-          <span className="font-serif text-5xl text-slate-300">
+          <span className="font-serif text-5xl text-slot">
             {location.name.charAt(0).toUpperCase()}
           </span>
         }
@@ -190,13 +188,13 @@ function LocationTile({
 
       <div className="grid gap-4 p-4">
         <div className="min-w-0">
-          <h3 className="truncate text-base font-bold tracking-[-0.01em] text-ink">
+          <h3 className="truncate text-base font-bold tracking-title text-ink">
             {/* The link's box covers the tile, so the whole tile opens the location's settings. */}
             <Link href={settingsHref(location.slug)} className={TILE_LINK}>
               {location.name}
             </Link>
           </h3>
-          <p className="truncate text-[12.5px] text-muted">
+          <p className="truncate text-caption text-muted">
             /{location.slug}
             {location.stateNames.length > 0
               ? ` · ${andList(location.stateNames)}`
@@ -216,11 +214,11 @@ function LocationTile({
                 <Tooltip content="Bookings awaiting confirmation">
                   <Link
                     href={bookingsHref(location.slug, { status: "received" })}
-                    className="relative z-1 inline-flex items-center gap-1.5 align-top text-amber-800 underline-offset-4 hover:underline"
+                    className="relative z-1 inline-flex items-center gap-1.5 rounded-sm align-top text-warning underline-offset-4 hover:underline focus-ring"
                   >
                     <span
                       aria-hidden="true"
-                      className="size-1.5 rounded-full bg-amber-500"
+                      className="size-1.5 rounded-full bg-current"
                     />
                     {location.awaitingConfirmation}
                   </Link>
@@ -278,7 +276,7 @@ function Figure({
       <dt className="truncate text-xs text-muted">{label}</dt>
       <dd
         className={cx(
-          "mt-1 font-serif text-[1.375rem] leading-none tabular-nums",
+          "mt-1 font-serif text-xl leading-none tabular-nums",
           none ? "text-muted" : "text-ink",
         )}
       >
@@ -352,14 +350,14 @@ async function locationSettings({
         </CardTitle>
         <p className="text-sm text-body">{stateNote(state, location.slug)}</p>
         {blockers.length > 0 ? (
-          <div className="mt-4 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Notice className="mt-4">
             <p className="font-semibold">Before it can go live:</p>
             <ul className="mt-1 list-disc pl-5">
               {blockers.map((blocker) => (
                 <li key={blocker}>{blocker}.</li>
               ))}
             </ul>
-          </div>
+          </Notice>
         ) : null}
         <div className="mt-4">
           {moves ? (

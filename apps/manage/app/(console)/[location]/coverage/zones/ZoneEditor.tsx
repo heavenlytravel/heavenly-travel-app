@@ -27,6 +27,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Card } from "@repo/console/Card";
+import { Notice } from "@repo/console/Notice";
 import { coverageHref } from "../../../../_lib/routes";
 import {
   checkOverlapsAction,
@@ -673,7 +674,7 @@ export function ZoneEditor({
                       : "border-edge",
                     unavailable
                       ? "cursor-not-allowed opacity-60"
-                      : !chosen && "cursor-pointer hover:border-slate-300",
+                      : !chosen && "cursor-pointer",
                   )}
                 >
                   <Radio
@@ -779,7 +780,7 @@ export function ZoneEditor({
                         <span className="min-w-0 flex-1 truncate text-ink">
                           {mukim.name}
                         </span>
-                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-px text-[11px] text-muted">
+                        <span className="shrink-0 rounded bg-hairline px-1.5 py-px text-2xs text-muted">
                           {mukim.kind}
                         </span>
                       </label>
@@ -821,7 +822,7 @@ export function ZoneEditor({
                 onChange={pickPlace}
               />
               {!hasGoogle ? (
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-warning">
                   Google is not set up on this server, so the list offers the
                   districts themselves instead of real places.
                 </p>
@@ -894,7 +895,7 @@ export function ZoneEditor({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={save} disabled={pending}>
+        <Button onClick={save} pending={pending}>
           {pending
             ? "Saving…"
             : trimming
@@ -956,61 +957,60 @@ function OverlapBar({
   onKeep: () => void;
 }) {
   return (
-    <div
-      role="status"
-      className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 shadow-md"
-    >
-      {trimming ? (
-        <>
-          <span>
-            {labels} {one ? "is" : "are"} trimmed when you save, as the map
-            shows, and {one ? "keeps its" : "keep their"} rates.
-          </span>
-          <button
-            type="button"
-            onClick={onKeep}
-            className="font-medium underline underline-offset-4"
-          >
-            Keep {labels} as {one ? "it is" : "they are"}
-          </button>
-        </>
-      ) : (
-        <>
-          <span>Overlaps {labels}.</span>
-          <span className="flex flex-wrap gap-2">
-            <Tooltip
-              content={
-                thisZoneWhy ??
-                `This zone gives up the ground it shares with ${labels}, which ${one ? "stays as it is" : "stay as they are"}. You check it on the map before you save.`
-              }
+    <div role="status">
+      <Notice className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 shadow-map">
+        {trimming ? (
+          <>
+            <span>
+              {labels} {one ? "is" : "are"} trimmed when you save, as the map
+              shows, and {one ? "keeps its" : "keep their"} rates.
+            </span>
+            <button
+              type="button"
+              onClick={onKeep}
+              className="rounded-sm font-medium underline underline-offset-4 focus-ring"
             >
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onTrimThisZone}
-                disabled={!ready || thisZoneWhy !== null}
+              Keep {labels} as {one ? "it is" : "they are"}
+            </button>
+          </>
+        ) : (
+          <>
+            <span>Overlaps {labels}.</span>
+            <span className="flex flex-wrap gap-2">
+              <Tooltip
+                content={
+                  thisZoneWhy ??
+                  `This zone gives up the ground it shares with ${labels}, which ${one ? "stays as it is" : "stay as they are"}. You check it on the map before you save.`
+                }
               >
-                Trim this zone
-              </Button>
-            </Tooltip>
-            <Tooltip
-              content={
-                othersWhy ??
-                `${labels} ${one ? "gives" : "give"} up the ground under this zone and ${one ? "keeps its" : "keep their"} rates. You check it on the map before you save.`
-              }
-            >
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onTrimTheOthers}
-                disabled={othersWhy !== null}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onTrimThisZone}
+                  disabled={!ready || thisZoneWhy !== null}
+                >
+                  Trim this zone
+                </Button>
+              </Tooltip>
+              <Tooltip
+                content={
+                  othersWhy ??
+                  `${labels} ${one ? "gives" : "give"} up the ground under this zone and ${one ? "keeps its" : "keep their"} rates. You check it on the map before you save.`
+                }
               >
-                Trim {labels}
-              </Button>
-            </Tooltip>
-          </span>
-        </>
-      )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onTrimTheOthers}
+                  disabled={othersWhy !== null}
+                >
+                  Trim {labels}
+                </Button>
+              </Tooltip>
+            </span>
+          </>
+        )}
+      </Notice>
     </div>
   );
 }

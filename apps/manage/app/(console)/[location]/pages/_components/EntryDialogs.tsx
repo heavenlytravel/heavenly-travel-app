@@ -126,7 +126,7 @@ export function AddEntryDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" pending={pending}>
               {pending ? "Adding…" : `Add ${one}`}
             </Button>
           </div>

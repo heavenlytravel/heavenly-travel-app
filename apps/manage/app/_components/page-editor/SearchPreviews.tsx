@@ -53,7 +53,7 @@ export function SearchResultPreview({
         <p className="mt-2 text-lg leading-snug text-blue-800">
           {cut(title || fallbackTitle, SHOWN.title)}
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+        <p className="mt-1 text-sm leading-relaxed text-muted">
           {description ? (
             cut(description, SHOWN.description)
           ) : (
@@ -105,7 +105,7 @@ export function SharedLinkPreview({
           </div>
         )}
         <div className="grid gap-0.5 border-t border-card-edge bg-shade px-3 py-2.5">
-          <span className="text-[11px] tracking-wide text-muted uppercase">
+          <span className="text-2xs tracking-wide text-muted uppercase">
             {new URL(url).host.replace(/^www\./, "")}
           </span>
           <span className="truncate text-sm font-semibold text-ink">

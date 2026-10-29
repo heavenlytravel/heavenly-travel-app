@@ -68,7 +68,11 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
       </Card>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending || stateCodes.length === 0}>
+        <Button
+          type="submit"
+          disabled={stateCodes.length === 0}
+          pending={pending}
+        >
           {pending ? "Adding…" : "Add location"}
         </Button>
         <Button asChild variant="ghost">

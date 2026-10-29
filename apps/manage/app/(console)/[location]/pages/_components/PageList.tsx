@@ -280,7 +280,7 @@ function SearchEnginesCell({ row }: { row: PageRow }) {
         aria-hidden="true"
         className={cx(
           "size-2 rounded-full",
-          row.indexable ? "bg-green-600" : "bg-slate-300",
+          row.indexable ? "bg-success" : "bg-edge",
         )}
       />
       {row.indexable ? "Shown" : "Hidden"}
@@ -527,7 +527,7 @@ function PartHeadingRow({
             <span className="font-semibold text-ink">{heading.label}</span>
           )}
           {heading.meta ? (
-            <span className="text-[13px] text-muted">{heading.meta}</span>
+            <span className="text-caption text-muted">{heading.meta}</span>
           ) : null}
         </span>
       </td>

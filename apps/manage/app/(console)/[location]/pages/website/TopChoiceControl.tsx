@@ -81,7 +81,7 @@ export function TopChoiceControl({
                 src={choice.heroImage?.url ?? null}
                 sizes="(min-width: 1024px) 18rem, (min-width: 640px) 50vw, 100vw"
                 fallback={
-                  <span className="text-5xl font-semibold text-slate-300">
+                  <span className="text-5xl font-semibold text-slot">
                     {choice.name.charAt(0).toUpperCase()}
                   </span>
                 }
@@ -106,7 +106,8 @@ export function TopChoiceControl({
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={pending || place === 0}
+                    disabled={place === 0}
+                    pending={pending}
                     aria-label={`Move ${choice.name} earlier`}
                     className="w-8 px-0"
                     onClick={() => change(choice.id, "up")}
@@ -118,7 +119,8 @@ export function TopChoiceControl({
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={pending || place === choices.length - 1}
+                    disabled={place === choices.length - 1}
+                    pending={pending}
                     aria-label={`Move ${choice.name} later`}
                     className="w-8 px-0"
                     onClick={() => change(choice.id, "down")}
@@ -129,9 +131,9 @@ export function TopChoiceControl({
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={pending}
+                  pending={pending}
                   aria-label={`Remove ${choice.name}`}
-                  className="ml-auto text-red-700 hover:bg-red-50 hover:text-red-800"
+                  className="ml-auto text-danger hover:bg-danger-tint hover:text-danger-strong"
                   onClick={() => change(choice.id, "remove")}
                 >
                   Remove
@@ -158,7 +160,8 @@ export function TopChoiceControl({
                     />
                     <Button
                       variant="secondary"
-                      disabled={pending || toAdd === ""}
+                      disabled={toAdd === ""}
+                      pending={pending}
                       onClick={() => change(toAdd, "add")}
                     >
                       Add to the home page

@@ -3,12 +3,12 @@
 import type { SurchargeKind } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { Input } from "@repo/ui/field";
-import { radioKeys } from "../_lib/radio-keys";
+import { Choices } from "./Choices";
 
 /** The two kinds of charge, as the switch beside the amount shows them. */
 const KINDS = [
-  ["percent", "%"],
-  ["flat", "RM"],
+  { value: "percent", label: "%", name: "A percentage" },
+  { value: "flat", label: "RM", name: "A flat amount" },
 ] as const;
 
 /**
@@ -42,11 +42,6 @@ export function ChargeInput({
     onKindChange(next);
     onAmountChange("");
   }
-  const keys = radioKeys({
-    count: KINDS.length,
-    chosen: KINDS.findIndex(([value]) => value === kind),
-    choose: (index) => choose(KINDS[index]![0]),
-  });
 
   return (
     <>
@@ -55,7 +50,7 @@ export function ChargeInput({
         {kind === "flat" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-500"
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted"
           >
             RM
           </span>
@@ -78,39 +73,18 @@ export function ChargeInput({
         {kind === "percent" ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500"
+            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted"
           >
             %
           </span>
         ) : null}
       </span>
-      <span
-        role="radiogroup"
-        aria-label={`The ${label.toLowerCase()} is`}
-        onKeyDown={keys.onKeyDown}
-        className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white"
-      >
-        {KINDS.map(([value, text], index) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={kind === value}
-            tabIndex={keys.tabIndexOf(index)}
-            aria-label={value === "percent" ? "A percentage" : "A flat amount"}
-            onClick={() => choose(value)}
-            className={cx(
-              "h-10 px-3 text-sm font-medium transition-colors focus-visible:relative focus-visible:outline-2 focus-visible:outline-brand",
-              value === "flat" && "border-l border-slate-300",
-              kind === value
-                ? "bg-brand text-white"
-                : "text-slate-600 hover:bg-slate-100",
-            )}
-          >
-            {text}
-          </button>
-        ))}
-      </span>
+      <Choices
+        label={`The ${label.toLowerCase()} is`}
+        value={kind}
+        options={KINDS}
+        onChange={choose}
+      />
     </>
   );
 }

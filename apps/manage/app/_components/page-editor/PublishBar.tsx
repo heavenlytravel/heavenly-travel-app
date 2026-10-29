@@ -27,8 +27,8 @@ export function BarLink({
       disabled={disabled}
       onClick={onClick}
       className={cx(
-        "inline-flex items-center gap-1 font-semibold underline-offset-4 hover:underline disabled:opacity-50",
-        danger ? "text-red-700" : "text-brand",
+        "inline-flex items-center gap-1 rounded-sm font-semibold underline-offset-4 hover:underline focus-ring disabled:opacity-50",
+        danger ? "text-danger" : "text-brand",
       )}
     >
       {children}
@@ -76,20 +76,21 @@ export function PublishBar({
 }) {
   return (
     // On the canvas from the column's edges, so the form scrolls out of
-    // sight under it rather than showing round the card.
-    <div className="sticky top-16 z-[5] -mx-4 -mt-3 bg-canvas/95 px-4 pt-2 pb-3 backdrop-blur-sm md:top-[72px] md:-mx-7 md:px-7">
+    // sight under it rather than showing round the card. Under the top bar,
+    // over the form.
+    <div className="sticky top-(--header-height) z-(--layer-raised) -mx-4 -mt-3 bg-canvas/95 px-4 pt-2 pb-3 backdrop-blur-sm md:-mx-7 md:px-7">
       <div className={cx("px-4 py-3 md:px-5", SURFACE)}>
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
           <p
             aria-live="polite"
-            className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[13px]"
+            className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-caption"
           >
             <PageStatusBadge status={status} />
             {dirty ? (
-              <span className="inline-flex items-center gap-1.5 font-semibold text-amber-800">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-warning">
                 <span
                   aria-hidden="true"
-                  className="size-1.5 rounded-full bg-amber-500"
+                  className="size-1.5 rounded-full bg-current"
                 />
                 Unsaved edits
               </span>
@@ -121,7 +122,7 @@ export function PublishBar({
             </Tooltip>
           </div>
         </div>
-        <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-hairline pt-2 text-[13px]">
+        <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-hairline pt-2 text-caption">
           <span className="[overflow-wrap:anywhere] text-muted">{path}</span>
           {moves.length > 0 ? (
             <span className="flex flex-wrap gap-x-3">{moves}</span>

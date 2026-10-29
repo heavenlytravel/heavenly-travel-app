@@ -6,6 +6,7 @@ import {
 import { InfoTip } from "@repo/ui/info-tip";
 import type { ReactNode } from "react";
 import { TileGrid } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import { Bone, TileGridSkeleton } from "@repo/console/Skeleton";
 
@@ -46,9 +47,7 @@ export function ClassCategory({
         />
       </div>
       {emptyMessage ? (
-        <p className="rounded-card border border-dashed border-slot px-4 py-8 text-center text-sm text-muted">
-          {emptyMessage}
-        </p>
+        <EmptyState slot>{emptyMessage}</EmptyState>
       ) : (
         <TileGrid>{children}</TileGrid>
       )}

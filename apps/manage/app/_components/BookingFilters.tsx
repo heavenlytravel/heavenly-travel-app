@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@repo/ui/button";
 import { DateField } from "@repo/ui/date-field";
 import { XIcon } from "@repo/ui/icons";
 import { useRouter } from "next/navigation";
@@ -42,14 +43,15 @@ export function PickupDateFilter({
         className={`w-full sm:w-56 ${pending ? "animate-pulse" : ""}`}
       />
       {value ? (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           aria-label="Any pick-up date"
           onClick={() => go("")}
-          className="grid size-9 shrink-0 place-items-center rounded-[9px] text-muted transition-colors hover:bg-hover hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+          className="size-9 shrink-0 px-0 text-muted hover:text-ink"
         >
           <XIcon className="size-4" />
-        </button>
+        </Button>
       ) : null}
     </div>
   );

@@ -92,13 +92,13 @@ export function Band({
   children: ReactNode;
 }) {
   return (
-    <section className="@container mb-6 rounded-[18px] bg-band p-5 text-white shadow-band md:p-7">
+    <section className="@container mb-6 rounded-2xl bg-band p-5 text-white shadow-band md:p-7">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold tracking-[0.1em] text-azure-light uppercase">
+          <p className="text-xs font-bold tracking-kicker text-azure-light uppercase">
             {date}
           </p>
-          <h1 className="mt-1.5 font-serif text-[1.75rem] leading-[1.1] md:text-[2.375rem]">
+          <h1 className="mt-1.5 font-serif text-figure leading-display md:text-4xl">
             {greeting}
           </h1>
         </div>
@@ -180,19 +180,19 @@ function BandFigureTile({ figure }: { figure: BandFigure }) {
   const lit = figure.waits && figure.value > 0;
   const body = (
     <>
-      <span className="flex items-center gap-2.5 text-[13px] font-medium text-white/85">
+      <span className="flex items-center gap-2.5 text-caption font-medium text-white/85">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-azure-light @max-3xl:hidden">
           {figure.icon}
         </span>
         <span className="truncate">{figure.label}</span>
       </span>
-      <span className="mt-2.5 block font-serif text-[2rem] leading-none tabular-nums @3xl:text-[2.5rem]">
+      <span className="mt-2.5 block font-serif text-3xl leading-none tabular-nums @3xl:text-4xl">
         {figure.value}
       </span>
       <span
         className={cx(
-          "mt-2 block h-5 truncate text-[13px] @max-3xl:hidden",
-          lit ? "text-amber-200" : "text-white/75",
+          "mt-2 block h-5 truncate text-caption @max-3xl:hidden",
+          lit ? "text-warning-edge" : "text-white/75",
         )}
       >
         {figure.line}
@@ -202,15 +202,15 @@ function BandFigureTile({ figure }: { figure: BandFigure }) {
   const classes = cx(
     "block h-full rounded-xl border px-4 py-3.5 @3xl:p-5",
     lit
-      ? "border-amber-300/60 bg-amber-300/[0.07]"
-      : "border-white/15 bg-white/[0.06]",
+      ? "border-warning-edge/60 bg-warning-edge/7"
+      : "border-white/15 bg-white/6",
   );
   return figure.href ? (
     <Link
       href={figure.href}
       className={cx(
         classes,
-        "transition-colors hover:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-light",
+        "transition-colors hover:bg-white/12 focus-ring focus-ring-dark",
       )}
     >
       {body}
@@ -227,7 +227,7 @@ export function BandFiguresSkeleton() {
       {Array.from({ length: 4 }, (_, tile) => (
         <div
           key={tile}
-          className="h-[5.5rem] rounded-xl border border-white/10 bg-white/[0.06] @3xl:h-[8.75rem]"
+          className="h-[5.5rem] rounded-xl border border-white/10 bg-white/6 @3xl:h-[8.75rem]"
         />
       ))}
     </div>

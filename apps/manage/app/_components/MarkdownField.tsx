@@ -17,11 +17,12 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Dialog } from "@repo/ui/dialog";
-import { Input } from "@repo/ui/field";
+import { Input, Textarea } from "@repo/ui/field";
 import { ImageIcon } from "@repo/ui/icons";
 import { Markdown } from "@repo/ui/markdown";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Choices } from "./Choices";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
 import { FormError } from "@repo/console/FormError";
@@ -29,10 +30,16 @@ import { useImageUpload } from "./use-image-upload";
 
 /**
  * How the console's preview shows a body: the elements styled from the
- * wrapper, in the console's slate tones. The customer site styles its own.
+ * wrapper, in the console's own tones. The customer site styles its own.
  */
 const PROSE =
-  "text-sm leading-relaxed text-slate-700 [&>:first-child]:mt-0 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-slate-900 [&_h3]:mt-5 [&_h3]:mb-1.5 [&_h3]:font-semibold [&_h3]:text-slate-900 [&_h4]:mt-4 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-slate-900 [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600 [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:my-4 [&_table]:w-full [&_table]:text-left [&_th]:border-b [&_th]:border-slate-300 [&_th]:py-1.5 [&_th]:pr-3 [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-1.5 [&_td]:pr-3 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:text-[0.85em] [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_hr]:my-6 [&_hr]:border-slate-200";
+  "text-sm leading-relaxed text-body [&>:first-child]:mt-0 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-5 [&_h3]:mb-1.5 [&_h3]:font-semibold [&_h3]:text-ink [&_h4]:mt-4 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-ink [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-edge [&_blockquote]:pl-4 [&_blockquote]:text-muted [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:my-4 [&_table]:w-full [&_table]:text-left [&_th]:border-b [&_th]:border-edge [&_th]:py-1.5 [&_th]:pr-3 [&_td]:border-b [&_td]:border-hairline [&_td]:py-1.5 [&_td]:pr-3 [&_code]:rounded [&_code]:bg-hairline [&_code]:px-1 [&_code]:text-[0.85em] [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-hairline [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_hr]:my-6 [&_hr]:border-card-edge";
+
+/** The switch between the text and its preview, where the two do not fit side by side. */
+const VIEWS = [
+  { value: "write", label: "Write" },
+  { value: "preview", label: "Preview" },
+] as const;
 
 /** The files "Import .md" takes, by their name. */
 const MARKDOWN_FILE = /\.(md|markdown|txt)$/i;
@@ -337,31 +344,18 @@ export function MarkdownField({
       <FormError error={importError} size="xs" />
 
       {/* Where the two do not fit side by side: one at a time, a switch of two. */}
-      <div
-        role="group"
-        aria-label="Write or preview"
-        className="inline-flex w-fit rounded-lg border border-edge bg-shade p-0.5 lg:hidden"
-      >
-        {(["write", "preview"] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            aria-pressed={view === mode}
-            onClick={() => setView(mode)}
-            className={cx(
-              "rounded-md px-3 py-1 text-[13px] font-semibold transition-colors",
-              view === mode
-                ? "bg-white text-ink shadow-control"
-                : "text-muted hover:text-ink",
-            )}
-          >
-            {mode === "write" ? "Write" : "Preview"}
-          </button>
-        ))}
+      <div className="lg:hidden">
+        <Choices
+          label="Write or preview"
+          size="sm"
+          value={view}
+          options={VIEWS}
+          onChange={setView}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <textarea
+        <Textarea
           ref={area}
           id={fieldId}
           value={value}
@@ -373,14 +367,14 @@ export function MarkdownField({
             "Write here. Start a line with ## for a heading.\nLeave a blank line between paragraphs."
           }
           className={cx(
-            "block min-h-80 w-full resize-y rounded-[var(--ui-field-radius,0.375rem)] border border-slate-300 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
+            "min-h-80 resize-y font-mono text-caption",
             view === "preview" && "hidden lg:block",
           )}
         />
         <div
           aria-label="Preview"
           className={cx(
-            "min-h-80 overflow-auto rounded-[var(--ui-field-radius,0.375rem)] border border-card-edge bg-white px-4 py-3",
+            "min-h-80 overflow-auto rounded-control border border-card-edge bg-white px-4 py-3",
             view === "write" && "hidden lg:block",
           )}
         >
@@ -477,7 +471,7 @@ function ToolButton({
       // Keeps the text area's selection: the press must not take the focus.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-semibold text-body hover:border-edge hover:bg-shade hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-semibold text-body hover:border-edge hover:bg-shade hover:text-ink focus-ring"
     >
       {children}
     </button>
@@ -554,7 +548,7 @@ function AddImageDialog({
               });
             }}
           />
-          <Button disabled={uploading} onClick={() => input.current?.click()}>
+          <Button pending={uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Choose image"}
           </Button>
           <span className="text-xs text-muted">
@@ -586,7 +580,7 @@ function TextImages({
       <h3 className="text-sm font-semibold text-ink">
         Images in the text
         {away > 0 ? (
-          <span className="ml-2 text-xs font-normal text-amber-800">
+          <span className="ml-2 text-xs font-normal text-warning">
             {away === 1
               ? "1 is not uploaded here"
               : `${away} are not uploaded here`}
@@ -638,7 +632,7 @@ function TextImage({
           className="h-16 w-24 shrink-0 rounded border border-card-edge object-cover"
         />
       ) : (
-        <span className="grid h-16 w-24 shrink-0 place-items-center rounded border border-dashed border-amber-300 bg-amber-50 px-1 text-center text-[11px] leading-tight text-amber-800">
+        <span className="grid h-16 w-24 shrink-0 place-items-center rounded border border-dashed border-warning-edge bg-warning-tint px-1 text-center text-2xs leading-tight text-warning">
           Not uploaded here
         </span>
       )}
@@ -679,7 +673,7 @@ function TextImage({
           <Button
             variant="secondary"
             size="sm"
-            disabled={uploading}
+            pending={uploading}
             onClick={() => input.current?.click()}
           >
             {uploading ? "Uploading…" : "Upload"}

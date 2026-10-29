@@ -59,14 +59,14 @@ function PagerCard({
       rel={after ? "next" : "prev"}
       className={cx(
         SURFACE,
-        "flex items-center gap-4 px-5 py-4 transition-colors outline-none hover:border-edge hover:bg-hover focus-visible:ring-2 focus-visible:ring-brand",
+        "flex items-center gap-4 px-5 py-4 transition-colors hover:border-edge hover:bg-hover focus-ring",
         after && "flex-row-reverse text-right sm:col-start-2",
       )}
     >
       <Arrow className="size-4 shrink-0 text-muted" />
       <span className="grid min-w-0">
-        <span className="text-[12.5px] text-muted">{way}</span>
-        <span className="truncate text-[15px] font-semibold text-ink">
+        <span className="text-caption text-muted">{way}</span>
+        <span className="truncate text-copy font-semibold text-ink">
           {children}
         </span>
       </span>

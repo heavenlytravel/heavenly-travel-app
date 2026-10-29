@@ -15,7 +15,7 @@ export function Count({
     <span
       className={cx(
         "text-xs font-normal tabular-nums",
-        value > limit ? "font-medium text-red-700" : "text-muted",
+        value > limit ? "font-medium text-danger" : "text-muted",
       )}
     >
       {value}/{limit}

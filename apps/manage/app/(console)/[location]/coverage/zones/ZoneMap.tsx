@@ -487,7 +487,7 @@ export function ZoneMap({
         {help && keys ? (
           <ZoneMapHelp keys={keys} onClose={() => setHelp(false)} />
         ) : null}
-        <div className="absolute bottom-6 left-1/2 z-10 flex w-max max-w-[calc(100%-1.25rem)] -translate-x-1/2 flex-col items-center gap-2">
+        <div className="absolute bottom-6 left-1/2 z-(--layer-raised) flex w-max max-w-[calc(100%-1.25rem)] -translate-x-1/2 flex-col items-center gap-2">
           {overlap}
           {keys && (canAdd || canUndo || canRedo) ? (
             <Toolbar help={help} onHelp={() => setHelp((open) => !open)}>
@@ -607,7 +607,8 @@ export function ZoneMap({
               aria-label="Edit the zone"
               style={{ left: menu.x, top: menu.y }}
               onContextMenu={(event) => event.preventDefault()}
-              className="absolute z-20 grid w-48 rounded-md border border-slate-200 bg-white p-1 text-sm shadow-lg"
+              onKeyDown={menuKeys}
+              className="absolute z-(--layer-popover) grid w-48 rounded-popover border border-card-edge bg-white p-1 text-sm shadow-lg"
             >
               {menu.items.map((item) => (
                 <button
@@ -619,10 +620,10 @@ export function ZoneMap({
                     item.run();
                   }}
                   className={cx(
-                    "rounded px-2.5 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand",
+                    "rounded-sm px-2.5 py-2 text-left focus-ring-inset",
                     item.danger
-                      ? "text-red-700 hover:bg-red-50"
-                      : "text-slate-800 hover:bg-slate-100",
+                      ? "text-danger hover:bg-danger-tint"
+                      : "text-body hover:bg-hairline",
                   )}
                 >
                   {item.label}
@@ -637,12 +638,12 @@ export function ZoneMap({
         className={cx(
           "min-h-4 text-xs",
           failed
-            ? "text-red-700"
+            ? "text-danger"
             : notice?.kind === "refused"
-              ? "text-amber-800"
+              ? "text-warning"
               : notice
-                ? "text-emerald-800"
-                : "text-slate-500",
+                ? "text-success"
+                : "text-muted",
         )}
       >
         {hint}
@@ -651,8 +652,41 @@ export function ZoneMap({
   );
 }
 
+/**
+ * The keys of the right-click menu, as a menu answers them: Up and Down
+ * move between its items, round the ends, Home and End to the first and
+ * the last. Kept from the map, which would pan on them. Escape closes it
+ * from the document.
+ */
+function menuKeys(event: React.KeyboardEvent<HTMLElement>) {
+  const items = [
+    ...event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+  ];
+  if (items.length === 0) return;
+  const at = items.indexOf(document.activeElement as HTMLElement);
+  const last = items.length - 1;
+  const next =
+    event.key === "ArrowDown"
+      ? at < 0 || at === last
+        ? 0
+        : at + 1
+      : event.key === "ArrowUp"
+        ? at <= 0
+          ? last
+          : at - 1
+        : event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? last
+            : null;
+  if (next === null) return;
+  event.preventDefault();
+  event.stopPropagation();
+  items[next]?.focus();
+}
+
 function Divider() {
-  return <span aria-hidden className="mx-0.5 h-5 w-px bg-slate-200" />;
+  return <span aria-hidden className="mx-0.5 h-5 w-px bg-card-edge" />;
 }
 
 /**
@@ -669,7 +703,7 @@ function Toolbar({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-slate-300 bg-white p-1 shadow-md">
+    <div className="flex items-center gap-0.5 rounded-sm bg-white p-1 shadow-map">
       {children}
       <Divider />
       <ToolButton label="How the map works" active={help} onClick={onHelp}>
@@ -724,10 +758,10 @@ function ToolButton({
         disabled={disabled}
         onClick={onClick}
         className={cx(
-          "grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-[18px]",
+          "grid size-9 place-items-center rounded-sm transition-colors focus-ring disabled:cursor-not-allowed disabled:opacity-35 [&_svg]:size-4.5",
           active
             ? "bg-brand text-white"
-            : "text-slate-700 enabled:hover:bg-slate-100",
+            : "text-body enabled:hover:bg-hairline",
         )}
       >
         {children}

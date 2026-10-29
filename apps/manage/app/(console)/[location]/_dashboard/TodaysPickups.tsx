@@ -164,7 +164,7 @@ function PickupsCard({
         </TBody>
       </Table>
       {total > pickups.length && pickups.length > 0 ? (
-        <p className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-[13px] text-muted">
+        <p className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-caption text-muted">
           {pickups.length} of {total} shown
           <Link href={todayHref} className={CARD_LINK}>
             All of today →

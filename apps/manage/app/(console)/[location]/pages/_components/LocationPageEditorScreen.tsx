@@ -15,6 +15,7 @@ import {
 } from "@repo/db";
 import { getLocationPage, listPagePublishes } from "@repo/db/server";
 import { notFound } from "next/navigation";
+import { Notice } from "@repo/console/Notice";
 import {
   BackLinkSkeleton,
   CardSkeleton,
@@ -160,10 +161,10 @@ async function editorDetails(id: string, ref: LocationPageRef) {
         }
         notice={
           publishBlocked ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+            <Notice>
               {publishBlocked} Its text is kept meanwhile
               {details.published ? ", and its public copy waits" : ""}.
-            </p>
+            </Notice>
           ) : undefined
         }
       />

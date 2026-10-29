@@ -8,6 +8,7 @@ import { inputClassName } from "@repo/ui/field";
 import { SearchIcon } from "@repo/ui/icons";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
+import { FormError } from "@repo/console/FormError";
 import { coverageHref } from "../../../_lib/routes";
 import { testAddressAction, type AddressTest } from "./tester-actions";
 
@@ -88,7 +89,7 @@ export function AddressTester({
           }}
         />
         {!hasGoogle ? (
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-warning">
             Google is not set up on this server, so the list offers the
             districts themselves instead of real places.
           </p>
@@ -98,9 +99,7 @@ export function AddressTester({
       {testing ? (
         <p className="text-sm text-muted">Checking…</p>
       ) : result === null ? null : !result.ok ? (
-        <p aria-live="polite" className="text-sm text-red-700">
-          {result.error}
-        </p>
+        <FormError error={result.error} />
       ) : (
         <div
           aria-live="polite"

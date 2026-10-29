@@ -57,13 +57,13 @@ export function FullScreenButton({
     <Tooltip
       content={label}
       side="left"
-      className="absolute top-2.5 right-2.5 z-10"
+      className="absolute top-2.5 right-2.5 z-(--layer-raised)"
     >
       <button
         type="button"
         aria-label={label}
         onClick={onToggle}
-        className="grid size-10 place-items-center rounded-sm bg-white text-slate-600 shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)] hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand [&_svg]:size-[18px]"
+        className="grid size-10 place-items-center rounded-sm bg-white text-muted shadow-map hover:text-ink focus-ring [&_svg]:size-4.5"
       >
         {full ? <MinimizeIcon /> : <MaximizeIcon />}
       </button>

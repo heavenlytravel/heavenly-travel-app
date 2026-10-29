@@ -1,5 +1,9 @@
 # The console's top bar and scope
 
+Superseded on 2026-10-29 by `docs/261029-manage-signature-overhaul.md`: the location
+is now the address's first segment (`~` for every location), and one route file serves
+a screen in every scope. Kept for the reasoning behind the picker.
+
 Decided on 2026-10-22, after the CEO's review of the location panel: one sidebar, no
 panel on the right, more use of the top bar. Three layouts were mocked up and compared
 (in the docs repo, `presentations/261022-admin-workspace-layout.html`); this is the

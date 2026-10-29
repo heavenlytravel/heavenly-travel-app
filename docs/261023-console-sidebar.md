@@ -1,5 +1,9 @@
 # The console's sidebar: one scope at a time, sections that open
 
+Superseded on 2026-10-29 by `docs/261029-manage-signature-overhaul.md`: one menu that
+never changes with the location, sections that open in place one at a time, no drills.
+Kept for the reasoning behind the sections and their order.
+
 Decided on 2026-10-23, after staff said the sidebar's grouping made the console hard to
 work in. Five reviews of every console screen (the fleet and the class catalogue, the
 bookings and the day's work, a location's setup and prices, the console's own screens with

@@ -1,9 +1,10 @@
 # Manage overhaul: the Signature look, one menu, one route per screen
 
 Status: designed with the user on 2026-10-29, from a review of the console and HTML
-mock-ups. Not built. The CEO chose the "Signature" look out of three. The mock-up is
-`docs/mockups/261029-manage-signature.html`: open it in a browser at full width. It is
-deleted in the last PR of this plan.
+mock-ups, and built the same day in one branch (`feat/manage-ui-opus-5-5-high`) rather
+than the nine PRs under "Build order". The CEO chose the "Signature" look out of
+three. The mock-up, `docs/mockups/261029-manage-signature.html`, was deleted with the
+build; it is in git history.
 
 This supersedes `docs/261022-console-scope.md` (the path picks the scope, global and
 location copies of a screen) and `docs/261023-console-sidebar.md` (two menus, drills).

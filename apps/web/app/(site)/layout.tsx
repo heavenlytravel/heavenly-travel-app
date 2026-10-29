@@ -22,7 +22,13 @@ export default async function SiteLayout({
       className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-slate-900 antialiased`}
     >
       <SiteHeader destinations={await headerDestinations()} />
-      <main className={pageColumn}>{children}</main>
+      {/* At least a screen tall, so the footer starts below the fold and
+          stays there while a step swaps its skeleton for a shorter answer. */}
+      <main
+        className={`${pageColumn} min-h-[calc(100svh-var(--header-height))]`}
+      >
+        {children}
+      </main>
       <Footer />
       <Toaster />
     </div>

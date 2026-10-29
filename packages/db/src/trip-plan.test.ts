@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { pickupInstant } from "./booking-rules";
 import {
+  byStart,
+  clashesOf,
   classFit,
   classFitNote,
   flightOfTrip,
+  hireEndOf,
   isAirportPlace,
   tripClashes,
   type TripClassPrice,
+  type TypedTrip,
 } from "./trip-plan";
 
 const at = (date: string, time: string) => pickupInstant(date, time)!;
@@ -202,5 +206,69 @@ describe("flights", () => {
       "AK 6305",
     );
     assert.equal(flightOfTrip({ pickup: hotel, dropoff: null }, flights), null);
+  });
+});
+
+const typed = (
+  id: string,
+  date: string,
+  time: string,
+  hours: number | null = null,
+): TypedTrip => ({
+  id,
+  mode: hours === null ? "oneway" : "hourly",
+  date,
+  time,
+  hours,
+});
+
+describe("byStart", () => {
+  it("orders trips by day, then by time", () => {
+    const trips = [
+      typed("c", "2026-11-04", "09:00"),
+      typed("a", "2026-11-03", "17:30"),
+      typed("b", "2026-11-04", "08:00"),
+    ];
+    assert.deepEqual(
+      byStart(trips).map((trip) => trip.id),
+      ["a", "b", "c"],
+    );
+  });
+});
+
+describe("clashesOf", () => {
+  it("names each clashing trip by its id, with the trip it clashes with", () => {
+    const hireDay = typed("hire", "2026-11-03", "09:00", 8);
+    const during = typed("during", "2026-11-03", "12:00");
+    const after = typed("after", "2026-11-03", "17:00");
+    const clashes = clashesOf([during, hireDay, after]);
+    assert.deepEqual([...clashes.keys()], ["during"]);
+    assert.equal(clashes.get("during")?.with, hireDay);
+    assert.equal(clashes.get("during")?.kind, "during-hire");
+  });
+
+  it("leaves out a trip whose day or time is not typed yet", () => {
+    assert.equal(
+      clashesOf([
+        typed("a", "2026-11-03", "09:00"),
+        typed("b", "2026-11-03", ""),
+      ]).size,
+      0,
+    );
+  });
+});
+
+describe("hireEndOf", () => {
+  it("says when a hire ends, and the next day past midnight", () => {
+    assert.equal(hireEndOf(typed("a", "2026-11-03", "09:00", 8)), "5:00 PM");
+    assert.equal(
+      hireEndOf(typed("b", "2026-11-03", "20:00", 6)),
+      "2:00 AM the next day",
+    );
+  });
+
+  it("has nothing for a one-way trip or one not timed yet", () => {
+    assert.equal(hireEndOf(typed("a", "2026-11-03", "09:00")), "");
+    assert.equal(hireEndOf(typed("b", "", "", 4)), "");
   });
 });

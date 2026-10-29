@@ -1,10 +1,17 @@
-import type { ClassAvailability } from "./booking-rules";
+import {
+  formatClock,
+  localDateTimeInputs,
+  localMinuteOfDay,
+  pickupInstant,
+  type ClassAvailability,
+} from "./booking-rules";
+import type { TripMode } from "./booking-status";
 
 /**
  * Several trips in one booking, done by one vehicle: the rules a list of
- * trips is checked by, on the website's planner as each trip is typed and
- * again by the booking action. Pure and browser-safe. See
- * docs/261027-multi-trip-booking.md, "The rules".
+ * trips is checked by, on the website's planner and the console's new
+ * booking as each trip is typed, and again by their booking actions. Pure
+ * and browser-safe. See docs/261027-multi-trip-booking.md, "The rules".
  */
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -54,6 +61,72 @@ export function tripClashes(
     }
   });
   return clashes;
+}
+
+/** A trip's day and time as a form holds them, in Malaysia: "2026-11-03" and "09:30". */
+export type TripDayTime = { date: string; time: string };
+
+/** A trip as a form holds it while it is typed: its kind, its day and time, and the hours of a hire. */
+export type TypedTrip = TripDayTime & {
+  id: string;
+  mode: TripMode;
+  /** Hourly only; null for one-way. */
+  hours: number | null;
+};
+
+/** The moment a trip starts, read in Malaysia; null while its day or time is missing or not a real one. */
+export function startOfTrip(trip: TripDayTime) {
+  return pickupInstant(trip.date, trip.time);
+}
+
+/** The trips by start, the order they are numbered, priced and booked in. */
+export function byStart<Trip extends TripDayTime>(
+  trips: readonly Trip[],
+): Trip[] {
+  return [...trips].sort((a, b) =>
+    `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`),
+  );
+}
+
+/**
+ * `tripClashes` for a list of trips as typed: for each trip that cannot
+ * share the vehicle, by its id, the trip it clashes with and why. A trip
+ * without a real day and time yet is left out.
+ */
+export function clashesOf<Trip extends TypedTrip>(
+  trips: readonly Trip[],
+): Map<string, { with: Trip; kind: TripClash["kind"] }> {
+  const timed = trips.flatMap((trip) => {
+    const startsAt = startOfTrip(trip);
+    return startsAt
+      ? [{ trip, startsAt, hours: trip.mode === "hourly" ? trip.hours : null }]
+      : [];
+  });
+  const found = new Map<string, { with: Trip; kind: TripClash["kind"] }>();
+  tripClashes(timed).forEach((clash, index) => {
+    if (clash) {
+      found.set(timed[index]!.trip.id, {
+        with: timed[clash.with]!.trip,
+        kind: clash.kind,
+      });
+    }
+  });
+  return found;
+}
+
+/**
+ * When an hourly hire ends: "5:00 PM", or "3:00 AM the next day" when it
+ * runs past midnight; "" for a trip that is not an hourly hire with a real
+ * day and time.
+ */
+export function hireEndOf(trip: TypedTrip) {
+  const start = startOfTrip(trip);
+  if (!start || trip.mode !== "hourly" || trip.hours === null) return "";
+  const end = new Date(start.getTime() + trip.hours * HOUR_MS);
+  const time = formatClock(localMinuteOfDay(end));
+  return localDateTimeInputs(end).date === trip.date
+    ? time
+    : `${time} the next day`;
 }
 
 /** A class as one trip's quote prices it, read the same way by the site and the booking action. */

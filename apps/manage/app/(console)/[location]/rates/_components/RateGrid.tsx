@@ -827,7 +827,7 @@ export function RateGrid({
       <div className="relative">
         <div
           ref={gridRef}
-          className="max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
+          className="relative max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead className="sticky top-0 z-2 bg-shade text-2xs text-muted">

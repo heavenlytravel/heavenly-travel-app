@@ -70,7 +70,7 @@ export function ScopePicker({
       trigger={
         <button
           type="button"
-          aria-label={`Location: ${current?.name ?? "All locations"}`}
+          // Named by its own words, "Location" and the one shown, as it reads.
           className={cx(
             "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border border-edge bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring md:min-w-56",
             className,

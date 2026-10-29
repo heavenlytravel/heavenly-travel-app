@@ -367,7 +367,7 @@ export function MarkdownField({
             "Write here. Start a line with ## for a heading.\nLeave a blank line between paragraphs."
           }
           className={cx(
-            "min-h-80 resize-y font-mono text-caption",
+            "min-h-80 resize-y font-mono text-caption pointer-coarse:text-base",
             view === "preview" && "hidden lg:block",
           )}
         />

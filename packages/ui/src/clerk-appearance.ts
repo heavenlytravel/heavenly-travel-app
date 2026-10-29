@@ -15,8 +15,16 @@
 
 const brand = "var(--brand)";
 const ink = "var(--ink)";
-const muted = "#45556c";
-const line = "#cad5e2";
+const muted = "var(--muted)";
+const line = "var(--edge)";
+
+/** The keyboard's ring of the app the card is in (docs/261029-design-tokens.md). */
+const focusRing = {
+  "&:focus-visible": {
+    outline: "var(--ring-width) solid var(--ring)",
+    outlineOffset: "var(--ring-offset)",
+  },
+};
 
 export const clerkAppearance = {
   options: { logoPlacement: "none" },
@@ -31,21 +39,29 @@ export const clerkAppearance = {
     colorBorder: line,
     colorRing: brand,
     colorNeutral: ink,
-    colorDanger: "#b42318",
-    colorSuccess: "#157a74",
+    colorDanger: "var(--danger)",
+    colorSuccess: "var(--success)",
     fontFamily: "inherit",
     borderRadius: "0.75rem",
   },
   elements: {
     headerSubtitle: { color: muted },
+    // No shadow at rest, and the app's ring for the keyboard: Clerk's own
+    // ring is a shadow too, so the shadow's removal took it with it.
     formButtonPrimary: {
       height: "2.75rem",
-      fontSize: "0.95rem",
+      fontSize: "0.9375rem",
       fontWeight: 600,
       boxShadow: "none",
+      ...focusRing,
     },
-    formFieldInput: { height: "2.75rem" },
-    otpCodeFieldInput: { height: "3rem" },
+    // 16px, so a phone does not zoom the page when a field takes the focus.
+    formFieldInput: {
+      height: "2.75rem",
+      minHeight: "2.75rem",
+      fontSize: "1rem",
+    },
+    otpCodeFieldInput: { height: "3rem", fontSize: "1rem" },
     footerActionLink: { color: brand, fontWeight: 600 },
   },
 } as const;
@@ -75,7 +91,7 @@ export const clerkAuthCard = {
 /** The user button in a header. */
 export const clerkUserButton = {
   elements: {
-    userButtonTrigger: { boxShadow: "none" },
+    userButtonTrigger: { boxShadow: "none", ...focusRing },
   },
 } as const;
 

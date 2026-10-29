@@ -9,11 +9,11 @@ import { cx } from "./cx.js";
  */
 const TONES = {
   neutral: "ui:bg-slate-100 ui:text-slate-600",
-  amber: "ui:bg-amber-100 ui:text-amber-800",
+  amber: "ui:bg-warning-soft ui:text-warning",
   brand: "ui:bg-brand-tint ui:text-brand-strong",
   navy: "ui:bg-navy/10 ui:text-navy",
-  green: "ui:bg-green-100 ui:text-green-800",
-  red: "ui:bg-red-100 ui:text-red-800",
+  green: "ui:bg-success-tint ui:text-success",
+  red: "ui:bg-danger-tint ui:text-danger",
 } as const;
 
 export type BadgeTone = keyof typeof TONES;

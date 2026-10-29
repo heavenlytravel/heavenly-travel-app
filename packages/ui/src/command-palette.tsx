@@ -10,7 +10,7 @@ import {
 } from "react";
 import { cx } from "./cx.js";
 import { SearchIcon, SpinnerIcon, XIcon } from "./icons.js";
-import { ModalBody, onModalClose, useModal } from "./modal.js";
+import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 
 /** One row of the palette: what it shows, and the value `onChoose` is handed. */
 export type CommandPaletteItem = {
@@ -55,14 +55,13 @@ export function CommandPaletteTrigger({
     <button
       type="button"
       onClick={onOpen}
-      aria-label={label}
       aria-keyshortcuts="Control+K Meta+K"
       className={cx(
-        "ui:inline-flex ui:h-10 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-[9px] ui:border ui:border-line ui:bg-white ui:px-3 ui:text-sm ui:text-slate-500 ui:shadow-[0_1px_3px_rgba(0,38,75,0.08)] ui:outline-hidden ui:transition-colors ui:hover:border-slate-400 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
+        "ui:inline-flex ui:h-10 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-control ui:border ui:border-edge ui:bg-white ui:px-3 ui:text-sm ui:text-muted ui:shadow-control ui:transition-colors ui:hover:border-edge-strong ui:focus-ring",
         className,
       )}
     >
-      <SearchIcon className="ui:text-slate-400" />
+      <SearchIcon className="ui:text-muted" />
       <span className="ui:flex-1 ui:text-left">{label}…</span>
       <Keys>{shortcut}</Keys>
     </button>
@@ -74,7 +73,7 @@ function Keys({ children }: { children: ReactNode }) {
   return (
     <kbd
       aria-hidden="true"
-      className="ui:rounded ui:border ui:border-slate-200 ui:bg-white ui:px-1.5 ui:font-sans ui:text-[11px] ui:text-slate-500"
+      className="ui:rounded ui:border ui:border-card-edge ui:bg-white ui:px-1.5 ui:font-sans ui:text-2xs ui:text-muted"
     >
       {children}
     </kbd>
@@ -174,10 +173,8 @@ export function CommandPalette({
       ref={ref}
       aria-label={label}
       onClose={onModalClose(() => onOpenChange(false))}
-      onClick={(event) => {
-        // The dialog itself, clear around the panel, is the page's dimmed margin.
-        if (event.target === event.currentTarget) onOpenChange(false);
-      }}
+      // The dialog itself, clear around the panel, is the page's dimmed margin.
+      {...backdropClose(() => onOpenChange(false))}
       className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-inherit ui:backdrop:bg-ink/45"
     >
       {open ? (
@@ -187,23 +184,18 @@ export function CommandPalette({
           loop
           value={current}
           onValueChange={setMarked}
-          className="ui-pop-panel ui:absolute ui:inset-2 ui:flex ui:flex-col ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:md:inset-x-0 ui:md:top-[12dvh] ui:md:bottom-auto ui:md:mx-auto ui:md:w-[38rem] ui:md:rounded-[14px]"
+          className="ui-pop-panel ui:absolute ui:inset-2 ui:flex ui:flex-col ui:overflow-hidden ui:rounded-2xl ui:border ui:border-card-edge ui:bg-white ui:shadow-overlay ui:md:inset-x-0 ui:md:top-[12dvh] ui:md:bottom-auto ui:md:mx-auto ui:md:w-[38rem] ui:md:rounded-card"
         >
-          <div className="ui:flex ui:shrink-0 ui:items-center ui:gap-2 ui:border-b ui:border-slate-200 ui:pr-2 ui:pl-3">
-            <SearchIcon className="ui:text-slate-400" />
+          <div className="ui:flex ui:shrink-0 ui:items-center ui:gap-2 ui:border-b ui:border-hairline ui:pr-2 ui:pl-3">
+            <SearchIcon className="ui:text-muted" />
             <Command.Input
               value={value}
               onValueChange={onValueChange}
               placeholder={placeholder}
               ref={input}
-              className="ui:h-12 ui:min-w-0 ui:flex-1 ui:bg-transparent ui:text-sm ui:outline-hidden ui:placeholder:text-slate-400"
+              className="ui:h-12 ui:min-w-0 ui:flex-1 ui:bg-transparent ui:text-sm ui:outline-hidden ui:placeholder:text-muted ui:pointer-coarse:text-base"
             />
-            {searching ? (
-              <SpinnerIcon
-                aria-label="Searching"
-                className="ui:text-slate-400"
-              />
-            ) : null}
+            {searching ? <SpinnerIcon className="ui:text-muted" /> : null}
             <button
               type="button"
               aria-label="Close"
@@ -211,7 +203,7 @@ export function CommandPalette({
               onClick={() => onOpenChange(false)}
               className={cx(
                 dock ? "ui:max-md:hidden" : null,
-                "ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:outline-hidden ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
+                "ui:touch-target ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring",
               )}
             >
               <span className="ui:max-md:hidden">
@@ -233,14 +225,14 @@ export function CommandPalette({
                 <Command.Group
                   key={group.key}
                   heading={group.heading}
-                  className="ui:[&_[cmdk-group-heading]]:px-2 ui:[&_[cmdk-group-heading]]:pt-2 ui:[&_[cmdk-group-heading]]:pb-1 ui:[&_[cmdk-group-heading]]:text-[11px] ui:[&_[cmdk-group-heading]]:font-semibold ui:[&_[cmdk-group-heading]]:tracking-[0.06em] ui:[&_[cmdk-group-heading]]:text-slate-500 ui:[&_[cmdk-group-heading]]:uppercase"
+                  className="ui:[&_[cmdk-group-heading]]:px-2 ui:[&_[cmdk-group-heading]]:pt-2 ui:[&_[cmdk-group-heading]]:pb-1 ui:[&_[cmdk-group-heading]]:text-caps ui:[&_[cmdk-group-heading]]:font-semibold ui:[&_[cmdk-group-heading]]:text-muted"
                 >
                   {group.items.map((item) => (
                     <Command.Item
                       key={item.key}
                       value={item.key}
                       onSelect={() => onChoose(item.value)}
-                      className="ui:flex ui:cursor-pointer ui:items-center ui:gap-2 ui:rounded-lg ui:px-2.5 ui:py-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-[selected=true]:bg-accent ui:data-[selected=true]:text-accent-foreground ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>svg]:text-slate-500"
+                      className="ui:flex ui:cursor-pointer ui:items-center ui:gap-2 ui:rounded-lg ui:px-2.5 ui:py-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-[selected=true]:bg-accent ui:data-[selected=true]:text-accent-foreground ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>svg]:text-muted"
                     >
                       {item.content}
                     </Command.Item>
@@ -248,11 +240,16 @@ export function CommandPalette({
                 </Command.Group>
               ))}
             </Command.List>
-            {searching || status ? (
-              <p className="ui:px-3 ui:py-3 ui:text-sm ui:text-slate-500">
-                {searching ? "Searching…" : status}
-              </p>
-            ) : null}
+            {/* Read out as it changes: "Searching…", then what was found. */}
+            <p
+              role="status"
+              className={cx(
+                "ui:px-3 ui:text-sm ui:text-muted",
+                searching || status ? "ui:py-3" : "ui:sr-only",
+              )}
+            >
+              {searching ? "Searching…" : status}
+            </p>
           </ModalBody>
         </Command>
       ) : null}

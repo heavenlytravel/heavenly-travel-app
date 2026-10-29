@@ -7,30 +7,31 @@ import {
 import { cx } from "./cx.js";
 
 /**
- * The button's corners and weight are hooks, `--ui-button-radius` and
- * `--ui-button-weight`, which the console sets for its own look; the
- * customer site keeps the defaults.
+ * The button's corners and weight come from the tokens (`rounded-control`,
+ * `--control-weight`), which each app sets for its own look.
  */
 const VARIANTS = {
   primary:
     "ui:bg-primary ui:text-primary-foreground ui:hover:bg-brand-strong ui:border-transparent",
   secondary:
-    "ui:bg-white ui:text-slate-900 ui:border-slate-300 ui:hover:bg-slate-100",
+    "ui:bg-white ui:text-slate-900 ui:border-edge ui:hover:bg-slate-100",
   /** A move that removes something, on a screen: quiet, in red. */
-  danger: "ui:bg-white ui:text-red-700 ui:border-red-200 ui:hover:bg-red-50",
+  danger:
+    "ui:bg-white ui:text-danger ui:border-danger-edge ui:hover:bg-danger-tint",
   /** A move that takes something from the public and can be undone, a pause: quiet, in amber. */
   caution:
-    "ui:bg-white ui:text-amber-800 ui:border-amber-300 ui:hover:bg-amber-50",
+    "ui:bg-white ui:text-warning ui:border-warning-edge ui:hover:bg-warning-tint",
   /** The yes of a question whose answer deletes or loses something for good. */
   destructive:
-    "ui:bg-red-600 ui:text-white ui:hover:bg-red-700 ui:border-transparent",
+    "ui:bg-danger ui:text-white ui:hover:bg-danger-strong ui:border-transparent",
   ghost:
     "ui:bg-transparent ui:text-slate-600 ui:border-transparent ui:hover:bg-slate-100 ui:hover:text-slate-900",
 } as const;
 
+/** On a touch screen a button is 44px tall, or reaches that far around it. */
 const SIZES = {
-  sm: "ui:h-8 ui:px-3 ui:text-xs",
-  md: "ui:h-10 ui:px-4 ui:text-sm",
+  sm: "ui:h-8 ui:px-3 ui:text-xs ui:touch-target",
+  md: "ui:h-10 ui:px-4 ui:text-sm ui:pointer-coarse:h-11",
 } as const;
 
 export type ButtonProps = ComponentProps<"button"> & {
@@ -38,6 +39,12 @@ export type ButtonProps = ComponentProps<"button"> & {
   size?: keyof typeof SIZES;
   /** Style the one child element (a `Link`) instead of rendering a button. */
   asChild?: boolean;
+  /**
+   * The work it started is under way: it looks disabled and ignores
+   * presses, but keeps the focus (a disabled button would drop it), and
+   * says so to screen readers (`aria-busy`).
+   */
+  pending?: boolean;
 };
 
 export function Button({
@@ -45,12 +52,14 @@ export function Button({
   size = "md",
   type = "button",
   asChild = false,
+  pending = false,
   className,
   children,
+  onClick,
   ...props
 }: ButtonProps) {
   const classes = cx(
-    "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-[var(--ui-button-radius,0.375rem)] ui:border ui:[font-weight:var(--ui-button-weight,500)] ui:whitespace-nowrap ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-50",
+    "ui:inline-flex ui:items-center ui:justify-center ui:gap-2 ui:rounded-control ui:border ui:[font-weight:var(--control-weight)] ui:whitespace-nowrap ui:transition-colors ui:focus-ring ui:disabled:cursor-not-allowed ui:disabled:opacity-50 ui:aria-busy:cursor-progress ui:aria-busy:opacity-50",
     VARIANTS[variant],
     SIZES[size],
     className,
@@ -62,7 +71,21 @@ export function Button({
     });
   }
   return (
-    <button type={type} className={classes} {...props}>
+    <button
+      type={type}
+      className={classes}
+      aria-busy={pending || undefined}
+      aria-disabled={pending || undefined}
+      onClick={(event) => {
+        // A press, or Enter in the form, while the work runs does nothing.
+        if (pending) {
+          event.preventDefault();
+          return;
+        }
+        onClick?.(event);
+      }}
+      {...props}
+    >
       {children}
     </button>
   );

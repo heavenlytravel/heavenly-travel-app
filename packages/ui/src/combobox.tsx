@@ -4,7 +4,7 @@ import { Command } from "cmdk";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 import { cx } from "./cx.js";
-import { inputClassName } from "./field.js";
+import { inputClassName, useFieldControl } from "./field.js";
 import { FormValue } from "./form-value.js";
 import { CheckIcon, ChevronDownIcon, PlusIcon } from "./icons.js";
 import { usePortalContainer } from "./portal-container.js";
@@ -54,6 +54,7 @@ export function Combobox({
   maxLength?: number;
   required?: boolean;
 }) {
+  const field = useFieldControl({});
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { ref, container, trigger } = usePortalContainer();
@@ -86,6 +87,7 @@ export function Combobox({
       >
         <Popover.Trigger
           ref={ref}
+          {...field}
           // A field holding a value picked from a list: read as one, with
           // whether it must be filled.
           role="combobox"
@@ -96,14 +98,11 @@ export function Combobox({
           )}
         >
           <span
-            className={cx(
-              "ui:min-w-0 ui:truncate",
-              !value && "ui:text-slate-400",
-            )}
+            className={cx("ui:min-w-0 ui:truncate", !value && "ui:text-muted")}
           >
             {value || placeholder}
           </span>
-          <ChevronDownIcon className="ui:shrink-0 ui:text-slate-500" />
+          <ChevronDownIcon className="ui:shrink-0 ui:text-muted" />
         </Popover.Trigger>
         <Popover.Portal container={container}>
           <Popover.Content
@@ -111,7 +110,7 @@ export function Combobox({
             sideOffset={4}
             collisionPadding={8}
             aria-label={placeholder}
-            className="ui:z-50 ui:w-[var(--radix-popover-trigger-width)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
+            className="ui:z-(--layer-popover) ui:w-[var(--radix-popover-trigger-width)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
           >
             {/* The list is narrowed here, so "Create" stays last. It opens
                 on the value there is. */}
@@ -129,10 +128,10 @@ export function Combobox({
                 onInput={(event) => event.stopPropagation()}
                 maxLength={maxLength}
                 placeholder={searchPlaceholder}
-                className="ui:h-10 ui:w-full ui:border-b ui:border-popover-line ui:bg-transparent ui:px-3 ui:text-sm ui:outline-none ui:placeholder:text-slate-400"
+                className="ui:h-10 ui:w-full ui:border-b ui:border-popover-line ui:bg-transparent ui:px-3 ui:text-sm ui:outline-none ui:placeholder:text-muted ui:pointer-coarse:text-base"
               />
               <Command.List className="ui:max-h-[min(18rem,calc(var(--radix-popover-content-available-height)_-_2.5rem))] ui:scroll-py-1 ui:overflow-y-auto ui:p-1">
-                <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-slate-500">
+                <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-muted">
                   None yet. Type one to add it.
                 </Command.Empty>
                 {shown.map((option) => (
@@ -156,7 +155,7 @@ export function Combobox({
                     onSelect={() => choose(typed)}
                     className={row}
                   >
-                    <PlusIcon className="ui:shrink-0 ui:text-slate-500" />
+                    <PlusIcon className="ui:shrink-0 ui:text-muted" />
                     <span className="ui:min-w-0 ui:truncate">
                       Create{" "}
                       <span className="ui:font-medium">

@@ -45,7 +45,7 @@ export function Picker({
             <div className="ui:px-4 ui:pt-2.5 ui:pb-5">
               <div
                 aria-hidden="true"
-                className="ui:mx-auto ui:mb-3 ui:h-1 ui:w-10 ui:rounded-full ui:bg-slate-300"
+                className="ui:mx-auto ui:mb-3 ui:h-1 ui:w-10 ui:rounded-full ui:bg-edge"
               />
               <p className="ui:mb-3 ui:text-base ui:font-semibold">{title}</p>
               {open ? children : null}
@@ -57,10 +57,11 @@ export function Picker({
           <Popover.Content
             // The picker focuses its own day or time, not the first button.
             onOpenAutoFocus={(event) => event.preventDefault()}
+            aria-label={title}
             align="start"
             sideOffset={4}
             collisionPadding={8}
-            className="ui:z-50 ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
+            className="ui:z-(--layer-popover) ui:overflow-hidden ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:text-popover-foreground ui:shadow-lg ui:outline-none"
           >
             {children}
           </Popover.Content>

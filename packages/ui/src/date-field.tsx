@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { Calendar, dayOf } from "./calendar.js";
 import { cx } from "./cx.js";
-import { inputClassName } from "./field.js";
+import { Button } from "./button.js";
+import { inputClassName, useFieldControl } from "./field.js";
 import { FormValue } from "./form-value.js";
 import { CalendarIcon, ClockIcon } from "./icons.js";
 import { Picker } from "./picker.js";
@@ -18,7 +19,7 @@ import {
 
 const BOX = cx(
   inputClassName,
-  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-slate-400",
+  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-muted",
 );
 /** A trigger with no box of its own, for a search card that draws the box. */
 const BARE =
@@ -69,6 +70,7 @@ type Common = {
 /** The field's button: its value, or the placeholder, and an icon unless bare. */
 function trigger({
   id,
+  "aria-describedby": describedBy,
   ref,
   disabled,
   bare,
@@ -79,6 +81,7 @@ function trigger({
   icon,
 }: {
   id?: string;
+  "aria-describedby"?: string;
   ref: (node: HTMLElement | null) => void;
   disabled?: boolean;
   bare?: boolean;
@@ -95,6 +98,7 @@ function trigger({
       id={id}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-describedby={describedBy}
       data-placeholder={text ? undefined : ""}
       className={cx(bare ? BARE : BOX, className)}
     >
@@ -138,6 +142,7 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id });
 
   return (
     <>
@@ -147,7 +152,7 @@ export function DateField({
         title={ariaLabel ?? "Date"}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
@@ -212,6 +217,7 @@ export function TimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id });
 
   return (
     <>
@@ -221,7 +227,7 @@ export function TimeField({
         title={ariaLabel ?? "Time"}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
@@ -300,6 +306,7 @@ export function DateTimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id });
 
   const day = dayLabel(current.date, true);
   const time = timeLabel(current.time);
@@ -319,7 +326,7 @@ export function DateTimeField({
         title={title}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
@@ -412,16 +419,12 @@ function MomentPanel({
         />
       </div>
       <div className="ui:mt-4 ui:flex ui:items-center ui:justify-between ui:gap-3 ui:text-sm ui:sm:mt-0 ui:sm:border-t ui:sm:border-popover-line ui:sm:px-3 ui:sm:py-2.5">
-        <span className="ui:min-w-0 ui:truncate ui:text-slate-600">
+        <span className="ui:min-w-0 ui:truncate ui:text-muted">
           {summary || "Pick a day and a time"}
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="ui:shrink-0 ui:rounded-md ui:bg-primary ui:px-3.5 ui:py-1.5 ui:text-sm ui:font-semibold ui:text-primary-foreground ui:hover:opacity-90 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring"
-        >
+        <Button size="sm" onClick={onClose} className="ui:shrink-0">
           Done
-        </button>
+        </Button>
       </div>
     </div>
   );

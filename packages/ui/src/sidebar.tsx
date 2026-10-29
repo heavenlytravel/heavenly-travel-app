@@ -16,7 +16,7 @@ import {
 import { cx } from "./cx.js";
 import { haptic } from "./haptic.js";
 import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
-import { ModalBody, onModalClose, useModal } from "./modal.js";
+import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
 
 /**
@@ -41,6 +41,17 @@ type SidebarContextValue = {
 };
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
+
+/** True where a keypress types: a field, a text area, editable text. */
+function isTyping(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement)
+  );
+}
 
 export function useSidebar() {
   const context = useContext(SidebarContext);
@@ -100,10 +111,12 @@ export function SidebarProvider({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "b") {
-        event.preventDefault();
-        toggleSidebar();
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (event.key.toLowerCase() !== "b") return;
+      // A field that took the keys (the page editor's bold) keeps them.
+      if (event.defaultPrevented || isTyping(event.target)) return;
+      event.preventDefault();
+      toggleSidebar();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -152,7 +165,7 @@ export function Sidebar({
       <aside
         data-state={open ? "expanded" : "collapsed"}
         className={cx(
-          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
+          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:motion-reduce:transition-none ui:md:flex",
           navy
             ? "ui:bg-linear-to-b ui:from-navy ui:to-ink ui:text-white/80"
             : "ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900",
@@ -169,10 +182,8 @@ export function Sidebar({
         ref={ref}
         aria-label={title}
         onClose={onModalClose(() => setOpenMobile(false))}
-        onClick={(event) => {
-          // The dialog itself, clear around the panel, is the margin over the page.
-          if (event.target === event.currentTarget) setOpenMobile(false);
-        }}
+        // The dialog itself, clear around the panel, is the margin over the page.
+        {...backdropClose(() => setOpenMobile(false))}
         className={cx(
           "ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:backdrop:bg-ink/45",
           navy ? "ui:text-white/80" : "ui:text-slate-900",
@@ -206,7 +217,7 @@ export function Sidebar({
  * command palette takes the same room.
  */
 const PANEL =
-  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)]";
+  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-card-edge ui:bg-white ui:shadow-overlay";
 
 /**
  * The bar that floats at the bottom of a phone's screen, over every page:
@@ -227,10 +238,10 @@ export function SidebarDock({
 }) {
   const { openMobile, setOpenMobile } = useSidebar();
   return (
-    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-300 ui:bg-white/95 ui:p-1 ui:shadow-[0_12px_32px_rgba(15,23,42,0.22),0_2px_6px_rgba(15,23,42,0.1)] ui:backdrop-blur ui:md:hidden">
+    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-(--layer-chrome) ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-edge ui:bg-white/95 ui:p-1 ui:shadow-overlay ui:backdrop-blur ui:md:hidden">
       {children}
       {children ? (
-        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-slate-200" />
+        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-hairline" />
       ) : null}
       <SidebarDockButton
         aria-label={openMobile ? "Close menu" : "Open menu"}
@@ -260,7 +271,7 @@ export function SidebarDockButton({
         onClick?.(event);
       }}
       className={cx(
-        "ui:inline-flex ui:h-9 ui:min-w-9 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-2.5 ui:text-sm ui:font-medium ui:text-slate-700 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-[18px]",
+        "ui:inline-flex ui:h-11 ui:min-w-11 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-3 ui:text-sm ui:font-medium ui:text-slate-700 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring-inset ui:[&>svg]:size-4.5",
         className,
       )}
       {...props}
@@ -300,7 +311,7 @@ export function SidebarTrigger({
       aria-label="Toggle sidebar"
       onClick={toggleSidebar}
       className={cx(
-        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900",
+        "ui:touch-target ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring",
         className,
       )}
       {...props}
@@ -370,8 +381,8 @@ export function SidebarGroupLabel({
       className={cx(
         "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2.5",
         navy
-          ? "ui:text-[11px] ui:font-semibold ui:tracking-[0.07em] ui:text-azure-light/80 ui:uppercase"
-          : "ui:text-xs ui:font-medium ui:text-slate-500",
+          ? "ui:text-caps ui:font-semibold ui:text-azure-light/80"
+          : "ui:text-xs ui:font-medium ui:text-muted",
         className,
       )}
       {...props}
@@ -443,7 +454,7 @@ export function SidebarMenuSub({
       <ul
         aria-label={label}
         className={cx(
-          "ui:mt-1 ui:mb-1.5 ui:ml-[1.125rem] ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
+          "ui:mt-1 ui:mb-1.5 ui:ml-4.5 ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
           navy ? "ui:border-white/15" : "ui:border-slate-200",
         )}
       >
@@ -454,7 +465,7 @@ export function SidebarMenuSub({
 }
 
 const MENU_BUTTON =
-  "ui:flex ui:w-full ui:items-center ui:gap-2.5 ui:overflow-hidden ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:focus-visible:ring-2 ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+  "ui:flex ui:w-full ui:items-center ui:gap-2.5 ui:overflow-hidden ui:p-2 ui:text-left ui:text-sm ui:transition-colors ui:focus-ring-inset ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
 
 /**
  * A row's look by the sidebar's tone: its shape, then its colours at
@@ -463,24 +474,25 @@ const MENU_BUTTON =
  */
 const MENU_TONES = {
   light: {
-    shape: "ui:rounded-md ui:focus-visible:ring-ring",
+    shape: "ui:rounded-md",
     rest: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
     active:
       "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:[&>svg]:text-brand",
     open: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
   },
   navy: {
-    shape: "ui:rounded-[10px] ui:font-medium ui:focus-visible:ring-azure-light",
+    shape: "ui:rounded-control ui:font-medium ui:focus-ring-dark",
     rest: "ui:text-white/80 ui:hover:bg-white/14 ui:hover:text-white ui:[&>svg]:text-azure-light",
     active: "ui:bg-white ui:font-semibold ui:text-ink ui:[&>svg]:text-brand",
     open: "ui:bg-white/10 ui:text-white ui:hover:bg-white/14 ui:[&>svg]:text-azure-light",
   },
 } as const;
 
+/** On a touch screen, in the phone's panel, a row is 44px tall. */
 const MENU_SIZES = {
-  default: "ui:h-9",
+  default: "ui:h-9 ui:pointer-coarse:h-11",
   /** A page under its section's row, opened in place. */
-  sm: "ui:h-8",
+  sm: "ui:h-8 ui:pointer-coarse:h-11",
   /** Room for two lines beside a square: a logo and a subtitle, a user and an email. */
   lg: "ui:h-12",
 } as const;
@@ -559,23 +571,6 @@ export function SidebarLabel({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       className={cx(collapsed ? "ui:sr-only" : "ui:truncate", className)}
-      {...props}
-    />
-  );
-}
-
-export function SidebarSeparator({
-  className,
-  ...props
-}: ComponentProps<"hr">) {
-  const navy = useSidebarTone() === "navy";
-  return (
-    <hr
-      className={cx(
-        "ui:mx-3 ui:border-0 ui:border-t",
-        navy ? "ui:border-white/10" : "ui:border-slate-200",
-        className,
-      )}
       {...props}
     />
   );

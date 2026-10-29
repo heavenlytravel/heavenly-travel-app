@@ -162,7 +162,7 @@ export function TimeList({
   }
 
   const toggle =
-    "ui:flex-1 ui:rounded-md ui:py-1.5 ui:text-sm ui:font-semibold ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-ring";
+    "ui:flex-1 ui:rounded-md ui:py-1.5 ui:text-sm ui:font-semibold ui:transition-colors ui:focus-ring";
 
   return (
     <div className={cx("ui:flex ui:min-h-0 ui:flex-col ui:gap-2", className)}>
@@ -181,7 +181,7 @@ export function TimeList({
               toggle,
               half === option
                 ? "ui:bg-popover ui:text-accent-foreground ui:shadow-sm"
-                : "ui:text-slate-500 ui:hover:text-accent-foreground",
+                : "ui:text-muted ui:hover:text-accent-foreground",
             )}
           >
             {option}

@@ -23,10 +23,10 @@ export function Toaster() {
       toastOptions={{
         classNames: {
           toast:
-            "ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:text-slate-900 ui:shadow-[0_10px_30px_rgba(15,23,42,0.12)]",
+            "ui:rounded-popover ui:border ui:border-card-edge ui:bg-white ui:text-slate-900 ui:shadow-lg",
           title: "ui:text-sm ui:font-medium",
-          description: "ui:text-sm ui:text-slate-600",
-          icon: "ui:text-emerald-600",
+          description: "ui:text-sm ui:text-muted",
+          icon: "ui:text-success",
         },
       }}
     />

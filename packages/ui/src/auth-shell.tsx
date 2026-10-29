@@ -53,7 +53,7 @@ export function AuthShell({
           {eyebrow ? (
             <p
               className={cx(
-                "ui:mb-6 ui:text-xs ui:font-semibold ui:tracking-[0.2em] ui:uppercase",
+                "ui:mb-6 ui:text-xs ui:font-semibold ui:tracking-eyebrow ui:uppercase",
                 tone === "dark" ? "ui:text-azure-light" : "ui:text-slate-600",
               )}
             >
@@ -64,14 +64,14 @@ export function AuthShell({
         </main>
 
         {footer ? (
-          <footer
+          <div
             className={cx(
               "ui:text-center ui:text-sm",
               tone === "dark" ? "ui:text-slate-300" : "ui:text-slate-600",
             )}
           >
             {footer}
-          </footer>
+          </div>
         ) : null}
       </div>
     </div>

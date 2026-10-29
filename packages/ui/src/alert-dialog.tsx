@@ -57,7 +57,7 @@ export function AlertDialog({
       onClose={onModalClose(() => {
         if (open) onAnswer(false);
       })}
-      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45"
+      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-card-edge ui:bg-white ui:p-0 ui:text-inherit ui:shadow-overlay ui:backdrop:bg-ink/45"
     >
       <ModalBody open={open} className="ui:max-h-[90dvh]">
         {request ? (
@@ -70,10 +70,7 @@ export function AlertDialog({
                 {request.title}
               </h2>
               {request.description ? (
-                <div
-                  id={descriptionId}
-                  className="ui:text-sm ui:text-slate-600"
-                >
+                <div id={descriptionId} className="ui:text-sm ui:text-muted">
                   {request.description}
                 </div>
               ) : null}

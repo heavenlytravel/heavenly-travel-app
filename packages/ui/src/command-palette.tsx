@@ -58,7 +58,7 @@ export function CommandPaletteTrigger({
       aria-label={label}
       aria-keyshortcuts="Control+K Meta+K"
       className={cx(
-        "ui:inline-flex ui:h-9 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-md ui:border ui:border-line ui:bg-white ui:px-3 ui:text-sm ui:text-slate-500 ui:outline-hidden ui:transition-colors ui:hover:border-slate-400 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
+        "ui:inline-flex ui:h-10 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-[9px] ui:border ui:border-line ui:bg-white ui:px-3 ui:text-sm ui:text-slate-500 ui:shadow-[0_1px_3px_rgba(0,38,75,0.08)] ui:outline-hidden ui:transition-colors ui:hover:border-slate-400 ui:focus-visible:ring-2 ui:focus-visible:ring-ring",
         className,
       )}
     >
@@ -187,7 +187,7 @@ export function CommandPalette({
           loop
           value={current}
           onValueChange={setMarked}
-          className="ui-pop-panel ui:absolute ui:inset-2 ui:flex ui:flex-col ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:md:inset-x-0 ui:md:top-[12dvh] ui:md:bottom-auto ui:md:mx-auto ui:md:w-[36rem] ui:md:rounded-xl"
+          className="ui-pop-panel ui:absolute ui:inset-2 ui:flex ui:flex-col ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:md:inset-x-0 ui:md:top-[12dvh] ui:md:bottom-auto ui:md:mx-auto ui:md:w-[38rem] ui:md:rounded-[14px]"
         >
           <div className="ui:flex ui:shrink-0 ui:items-center ui:gap-2 ui:border-b ui:border-slate-200 ui:pr-2 ui:pl-3">
             <SearchIcon className="ui:text-slate-400" />
@@ -233,14 +233,14 @@ export function CommandPalette({
                 <Command.Group
                   key={group.key}
                   heading={group.heading}
-                  className="ui:[&_[cmdk-group-heading]]:px-2 ui:[&_[cmdk-group-heading]]:pt-2 ui:[&_[cmdk-group-heading]]:pb-1 ui:[&_[cmdk-group-heading]]:text-xs ui:[&_[cmdk-group-heading]]:font-medium ui:[&_[cmdk-group-heading]]:text-slate-500"
+                  className="ui:[&_[cmdk-group-heading]]:px-2 ui:[&_[cmdk-group-heading]]:pt-2 ui:[&_[cmdk-group-heading]]:pb-1 ui:[&_[cmdk-group-heading]]:text-[11px] ui:[&_[cmdk-group-heading]]:font-semibold ui:[&_[cmdk-group-heading]]:tracking-[0.06em] ui:[&_[cmdk-group-heading]]:text-slate-500 ui:[&_[cmdk-group-heading]]:uppercase"
                 >
                   {group.items.map((item) => (
                     <Command.Item
                       key={item.key}
                       value={item.key}
                       onSelect={() => onChoose(item.value)}
-                      className="ui:flex ui:cursor-pointer ui:items-center ui:gap-2 ui:rounded-sm ui:px-2 ui:py-1.5 ui:text-sm ui:outline-hidden ui:select-none ui:data-[selected=true]:bg-accent ui:data-[selected=true]:text-accent-foreground ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>svg]:text-slate-500"
+                      className="ui:flex ui:cursor-pointer ui:items-center ui:gap-2 ui:rounded-lg ui:px-2.5 ui:py-2 ui:text-sm ui:outline-hidden ui:select-none ui:data-[selected=true]:bg-accent ui:data-[selected=true]:text-accent-foreground ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>svg]:text-slate-500"
                     >
                       {item.content}
                     </Command.Item>

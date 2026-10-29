@@ -2,105 +2,165 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
+import type { Permission } from "@repo/db";
+import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
+  useSidebarCollapsed,
 } from "@repo/ui/sidebar";
 import type { MouseEvent, ReactNode } from "react";
-import { KEEPS_PANEL } from "./ConsoleMenu";
-import type { Permission } from "@repo/db";
 import { ConsoleDock } from "./ConsoleSearch";
-import { ScopePicker } from "./ScopePicker";
+import { ScopePicker, type PickerLocation } from "./ScopePicker";
 
-/** A location as the picker lists it. */
-export type SidebarLocation = {
-  id: string;
-  name: string;
-  slug: string;
-  state: string;
-};
+/** The signed-in admin, at the sidebar's foot. */
+export type Person = { name: string; role: string };
 
 /**
- * The console's sidebar: the brand mark on top, then the menu of the
- * scope the picker in the header is on, from the layout's `@scope` slot.
- * On a location it holds that location alone; on All locations, the views
- * across locations and the console's own screens. Collapsed it is a rail
- * of icons with the labels as tooltips. Below `md` it is a panel over the
- * page, opened from the dock floating at the screen's foot, which holds
- * the search too. In place of the brand mark it has the location picker,
- * so the admin sees which location the menu is of, and can change it
- * there: the panel stays, with the other location's menu. A link in the
- * menu closes it, except a drill's row, which opens its menu there. See
- * docs/261023-console-sidebar.md.
+ * The console's sidebar, navy to ink: the brand on top, then the one
+ * menu, then the signed-in admin at its foot with their own menu (the
+ * account, signing out). Collapsed it is a rail of icons with the names as
+ * tooltips. Below `md` it is a panel over the page, opened from the dock
+ * floating at the screen's foot, which holds the search too, with the
+ * location picker on top in the brand's place. A link in the panel closes
+ * it; opening a section does not. See
+ * docs/261029-manage-signature-overhaul.md, "The menu".
  */
 export function AppSidebar({
-  scope,
+  menu,
   locations,
   permissions,
+  person,
 }: {
-  /** The scope's menu, from the `@scope` slot. */
-  scope: ReactNode;
-  locations: readonly SidebarLocation[];
+  /** The menu, drawn on the server with its counts streaming in. */
+  menu: ReactNode;
+  locations: readonly PickerLocation[];
   permissions: readonly Permission[];
+  person: Person;
 }) {
   const { setOpenMobile } = useSidebar();
-  // A link pressed anywhere in the panel closes it; a drill's row and a
-  // button do not. On a wide screen there is no panel to close.
+  // A link pressed anywhere in the panel closes it; a button does not. On a
+  // wide screen there is no panel to close.
   const closeOnLink = (event: MouseEvent<HTMLElement>) => {
-    const link = (event.target as Element).closest("a");
-    if (link && !link.matches(KEEPS_PANEL)) setOpenMobile(false);
+    if ((event.target as Element).closest("a")) setOpenMobile(false);
   };
 
   return (
     <>
-      <Sidebar title="Console menu" dock={<ConsoleDock />}>
-        <SidebarHeader className="md:hidden">
+      <Sidebar title="Console menu" tone="navy" dock={<ConsoleDock />}>
+        <SidebarHeader className="border-b border-white/10 p-3 md:hidden">
           <ScopePicker
             locations={locations}
             permissions={permissions}
             className="w-full"
           />
         </SidebarHeader>
-        <SidebarHeader onClick={closeOnLink} className="max-md:hidden">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                size="lg"
-                tooltip="Heavenly Travel Admin"
-              >
-                <Link href="/">
-                  <Image
-                    src="/brand/favicon.png"
-                    alt=""
-                    width={32}
-                    height={32}
-                    priority
-                    className="size-8 shrink-0 rounded-lg"
-                  />
-                  <span className="grid flex-1 leading-tight">
-                    <SidebarLabel className="text-sm font-semibold">
-                      Heavenly Travel
-                    </SidebarLabel>
-                    <SidebarLabel className="text-xs text-slate-500">
-                      Admin console
-                    </SidebarLabel>
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-
-        <SidebarContent onClick={closeOnLink}>{scope}</SidebarContent>
+        <Brand onLink={closeOnLink} />
+        <SidebarContent onClick={closeOnLink} className="py-3">
+          {menu}
+        </SidebarContent>
+        <PersonRow person={person} />
       </Sidebar>
       <ConsoleDock />
     </>
+  );
+}
+
+/**
+ * The brand at the sidebar's head, as high as the top bar beside it: the
+ * logo in white with "Manage", and the button that folds the sidebar to a
+ * rail. On the rail, the brand's mark alone, and the button under it.
+ */
+function Brand({
+  onLink,
+}: {
+  onLink: (event: MouseEvent<HTMLElement>) => void;
+}) {
+  const collapsed = useSidebarCollapsed();
+  return (
+    <SidebarHeader
+      onClick={onLink}
+      className={
+        collapsed
+          ? "items-center gap-2 border-b border-white/10 py-3 max-md:hidden"
+          : "h-[72px] flex-row items-center gap-2.5 border-b border-white/10 px-5 max-md:hidden"
+      }
+    >
+      <Link
+        href="/"
+        aria-label="Heavenly Travel Manage, the dashboard"
+        className="flex min-w-0 items-center gap-2.5 rounded-md outline-hidden focus-visible:ring-2 focus-visible:ring-azure-light"
+      >
+        {collapsed ? (
+          <Image
+            src="/brand/favicon.png"
+            alt=""
+            width={32}
+            height={32}
+            priority
+            className="size-8 rounded-lg"
+          />
+        ) : (
+          <>
+            <Image
+              src="/brand/logo-blue.svg"
+              alt=""
+              width={112}
+              height={26}
+              priority
+              className="h-[26px] w-auto brightness-0 invert"
+            />
+            <span className="rounded-[5px] bg-white/12 px-1.5 py-0.5 text-[10.5px] font-semibold tracking-[0.06em] text-white uppercase">
+              Manage
+            </span>
+          </>
+        )}
+      </Link>
+      <SidebarTrigger
+        aria-label={collapsed ? "Expand the menu" : "Fold the menu"}
+        className={
+          collapsed
+            ? "size-9 text-azure-light hover:bg-white/14 hover:text-white"
+            : "ml-auto text-azure-light hover:bg-white/14 hover:text-white"
+        }
+      />
+    </SidebarHeader>
+  );
+}
+
+/**
+ * The signed-in admin at the sidebar's foot: their picture, which opens
+ * their own menu, their name and their level. On the rail, the picture
+ * alone.
+ */
+function PersonRow({ person }: { person: Person }) {
+  const collapsed = useSidebarCollapsed();
+  return (
+    <div
+      className={
+        collapsed
+          ? "flex justify-center border-t border-white/10 py-3"
+          : "flex items-center gap-2.5 border-t border-white/10 px-4 py-3"
+      }
+    >
+      {/* The box holds the button's place while Clerk loads, so the row does not shift. */}
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-azure">
+        <UserButton appearance={clerkUserButton} />
+      </span>
+      {collapsed ? null : (
+        <span className="grid min-w-0 leading-tight">
+          <span className="truncate text-[13px] font-semibold text-white">
+            {person.name}
+          </span>
+          <span className="truncate text-xs text-azure-light">
+            {person.role}
+          </span>
+        </span>
+      )}
+    </div>
   );
 }

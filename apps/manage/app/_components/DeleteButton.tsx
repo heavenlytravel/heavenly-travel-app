@@ -9,7 +9,7 @@ import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { errorOf, type ActionState } from "../_lib/action-state";
-import { FormError } from "./FormError";
+import { FormError } from "@repo/console/FormError";
 
 /**
  * What a delete takes, a line each, as the server worked it out
@@ -39,8 +39,12 @@ export function ImpactList({
   );
 }
 
-/** Where the button stands: a record's header, a row of a list, a card or a bar. */
-type Look = "header" | "row" | "card";
+/**
+ * Where the button stands: a record's header, a row of a list, a card, or
+ * the dark bar of what is chosen (Media), where its refusal sits on white
+ * to be read.
+ */
+type Look = "header" | "row" | "card" | "bar";
 
 /**
  * The one way the console deletes. The button asks in an alert dialog
@@ -125,13 +129,17 @@ export function DeleteButton({
   const button = (
     <Button
       variant={
-        look === "card" ? "danger" : look === "row" ? "ghost" : "secondary"
+        look === "card" || look === "bar"
+          ? "danger"
+          : look === "row"
+            ? "ghost"
+            : "secondary"
       }
       size={look === "header" ? undefined : "sm"}
       disabled={disabled || pending}
       aria-label={ariaLabel}
       className={
-        look === "card"
+        look === "card" || look === "bar"
           ? undefined
           : "text-red-700 hover:bg-red-50 hover:text-red-800"
       }
@@ -154,11 +162,15 @@ export function DeleteButton({
     <div
       className={cx(
         "flex flex-col gap-1",
-        look === "row" ? "items-end" : "items-start",
+        look === "card" ? "items-start" : "items-end",
       )}
     >
       {button}
-      <FormError error={error} size="xs" />
+      <FormError
+        error={error}
+        size="xs"
+        className={look === "bar" ? "rounded-md bg-white px-2 py-1" : undefined}
+      />
       {dialog}
     </div>
   );

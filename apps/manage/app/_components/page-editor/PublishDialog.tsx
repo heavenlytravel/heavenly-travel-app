@@ -36,7 +36,7 @@ export function PublishDialog({
   changes: readonly string[] | null;
   pending: boolean;
   onPublish: () => void;
-  /** Shows the part of the page a check is about, in its tab. */
+  /** Shows the part of the page a check is about. */
   onGoTo: (check: PageCheck) => void;
 }) {
   const left = checks.filter((check) => check.missing.length > 0).length;
@@ -56,33 +56,31 @@ export function PublishDialog({
     >
       <div className="grid gap-5">
         {goesLive ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
             {goesLive}
           </p>
         ) : null}
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-slate-800">
-            Before publishing
-          </h3>
-          <ol className="divide-y divide-slate-100 rounded-md border border-slate-200">
+          <h3 className="text-sm font-semibold text-ink">Before publishing</h3>
+          <ol className="divide-y divide-hairline rounded-card border border-card-edge">
             {checks.map((check) => {
               const done = check.missing.length === 0;
               return (
-                <li key={check.key} className="flex gap-3 px-3 py-2.5">
+                <li key={check.key} className="flex gap-3 px-3.5 py-3">
                   <span
                     aria-hidden="true"
                     className={cx(
                       "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
                       done
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-green-600 text-white"
                         : "border border-amber-400 bg-amber-50 text-amber-700",
                     )}
                   >
                     {done ? "✓" : "!"}
                   </span>
                   <div className="min-w-0 flex-1 text-sm">
-                    <p className={done ? "text-slate-700" : "text-slate-900"}>
+                    <p className={done ? "text-muted" : "text-ink"}>
                       <span className="sr-only">
                         {done ? "Done: " : "Not done: "}
                       </span>
@@ -100,7 +98,7 @@ export function PublishDialog({
                     <button
                       type="button"
                       onClick={() => onGoTo(check)}
-                      className="shrink-0 self-start text-xs font-medium text-slate-900 underline-offset-4 hover:underline"
+                      className="shrink-0 self-start text-xs font-semibold text-brand underline-offset-4 hover:underline"
                     >
                       Go to it
                     </button>
@@ -115,13 +113,13 @@ export function PublishDialog({
         </section>
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-slate-800">What changes</h3>
+          <h3 className="text-sm font-semibold text-ink">What changes</h3>
           {changes === null ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               Nothing is published yet: this is the page&apos;s first publish.
             </p>
           ) : changes.length === 0 ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               Nothing: the draft is the published copy.
             </p>
           ) : (
@@ -129,7 +127,7 @@ export function PublishDialog({
               {changes.map((part) => (
                 <li
                   key={part}
-                  className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800"
+                  className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
                 >
                   {part}
                 </li>

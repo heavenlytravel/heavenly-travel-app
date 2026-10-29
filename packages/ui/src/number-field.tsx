@@ -55,7 +55,7 @@ export function NumberField({
       className={cx(
         bare
           ? "ui:flex ui:w-full ui:items-center ui:gap-2"
-          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-md ui:border ui:border-slate-300 ui:bg-white ui:has-[input:disabled]:bg-slate-100 ui:has-[input[aria-invalid=true]]:border-red-500",
+          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-[var(--ui-field-radius,0.375rem)] ui:border ui:border-slate-300 ui:bg-white ui:has-[input:disabled]:bg-slate-100 ui:has-[input[aria-invalid=true]]:border-red-500",
         className,
       )}
     >

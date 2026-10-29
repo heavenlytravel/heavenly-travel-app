@@ -1,12 +1,11 @@
 import Link from "next/link";
-
-const LINK = "font-medium text-slate-600 underline-offset-4 hover:underline";
+import { Button } from "@repo/ui/button";
 
 /**
- * The way between the pages of a history read newest first: back to the
- * newest once past the first page, and on to the older changes while
- * there are more. Nothing when the history fits one page. The Activity
- * screen and a location's History read it.
+ * The way between the pages of a history read newest first, across the
+ * foot of its card (`HistoryTimeline`'s `foot`): back to the newest once
+ * past the first page, and on to the older changes while there are more.
+ * Nothing when the history fits one page. The Activity screen reads it.
  */
 export function HistoryPager({
   newestHref,
@@ -21,19 +20,17 @@ export function HistoryPager({
   return (
     <nav
       aria-label="Pages"
-      className="mt-4 flex items-center justify-between text-sm"
+      className="flex items-center justify-end gap-1.5 border-t border-hairline px-5 py-3"
     >
       {newestHref ? (
-        <Link href={newestHref} className={LINK}>
-          Newest
-        </Link>
-      ) : (
-        <span />
-      )}
+        <Button asChild variant="secondary" size="sm">
+          <Link href={newestHref}>Newest</Link>
+        </Button>
+      ) : null}
       {olderHref ? (
-        <Link href={olderHref} className={LINK}>
-          Older changes
-        </Link>
+        <Button asChild variant="secondary" size="sm">
+          <Link href={olderHref}>Older changes</Link>
+        </Button>
       ) : null}
     </nav>
   );

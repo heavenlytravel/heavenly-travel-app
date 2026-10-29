@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
+  clashesOf,
   classFitNote,
   CONTACT,
   formatMyr,
@@ -22,7 +23,6 @@ import {
   type PlannerChange,
 } from "../../../../_components/trips/usePlanner";
 import {
-  clashesOf,
   classOnTrip,
   planPrices,
   quoteOf,

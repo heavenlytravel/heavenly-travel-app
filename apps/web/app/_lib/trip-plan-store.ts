@@ -1,9 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { isTripCategory, type TripCategory } from "@repo/db";
+import { byStart, isTripCategory, type TripCategory } from "@repo/db";
 import {
-  byStart,
   NO_FLIGHTS,
   type ForDriver,
   type PlannedTrip,

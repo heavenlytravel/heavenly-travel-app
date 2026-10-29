@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  clashesOf,
   formatMyr,
   modelsLine,
   isAirportPlace,
@@ -25,7 +26,6 @@ import { useLinkSeed } from "../../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../../_components/trips/useNewBooking";
 import {
   classOnTrip,
-  clashesOf,
   planPrices,
   quoteOf,
   shortDayOf,

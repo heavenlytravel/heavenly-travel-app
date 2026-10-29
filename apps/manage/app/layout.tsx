@@ -3,10 +3,10 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkAppearance } from "@repo/ui/clerk-appearance";
-import { GeistSans } from "geist/font/sans";
+import { fontVars } from "./fonts";
 
 export const metadata: Metadata = {
-  title: "Heavenly Travel Admin",
+  title: "Heavenly Travel Manage",
   description: "Internal operations for Heavenly Travel",
 };
 
@@ -17,8 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en">
-        <body className={GeistSans.className}>{children}</body>
+      <html lang="en" className={fontVars}>
+        <body>{children}</body>
       </html>
     </ClerkProvider>
   );

@@ -48,6 +48,21 @@ export function useSidebar() {
   return context;
 }
 
+/**
+ * The sidebar's colours: `light`, white with slate words, or `navy`, a
+ * navy-to-ink gradient with white words, azure-light icons and the page on
+ * screen as a bright white pill. Set on `Sidebar`, read by every piece
+ * inside it.
+ */
+export type SidebarTone = "light" | "navy";
+
+const ToneContext = createContext<SidebarTone>("light");
+
+/** The sidebar's colours, for a piece drawn inside it. */
+export function useSidebarTone() {
+  return useContext(ToneContext);
+}
+
 /** Whether the pieces inside are drawn as icons only. False inside the mobile sheet. */
 const CollapsedContext = createContext(false);
 
@@ -117,24 +132,31 @@ export function SidebarProvider({
 export function Sidebar({
   title,
   dock,
+  tone = "light",
   children,
 }: {
   /** The panel's accessible name: "Console menu". */
   title: string;
   /** The `SidebarDock` the page has, drawn again over the panel. */
   dock?: ReactNode;
+  /** Its colours, on a wide screen and in the panel alike. */
+  tone?: SidebarTone;
   children: ReactNode;
 }) {
   const { open, openMobile, setOpenMobile } = useSidebar();
   const ref = useModal(openMobile);
+  const navy = tone === "navy";
 
   return (
-    <>
+    <ToneContext.Provider value={tone}>
       <aside
         data-state={open ? "expanded" : "collapsed"}
         className={cx(
-          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
-          open ? "ui:w-64" : "ui:w-12",
+          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
+          navy
+            ? "ui:bg-linear-to-b ui:from-navy ui:to-ink ui:text-white/80"
+            : "ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900",
+          open ? "ui:w-64" : "ui:w-15",
         )}
       >
         <CollapsedContext.Provider value={!open}>
@@ -151,9 +173,20 @@ export function Sidebar({
           // The dialog itself, clear around the panel, is the margin over the page.
           if (event.target === event.currentTarget) setOpenMobile(false);
         }}
-        className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-slate-900 ui:backdrop:bg-ink/45"
+        className={cx(
+          "ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:backdrop:bg-ink/45",
+          navy ? "ui:text-white/80" : "ui:text-slate-900",
+        )}
       >
-        <div className={cx("ui-pop-panel", PANEL)}>
+        <div
+          className={cx(
+            "ui-pop-panel",
+            PANEL,
+            navy
+              ? "ui:border-white/10 ui:bg-linear-to-b ui:from-navy ui:to-ink"
+              : "ui:border-slate-200 ui:bg-white",
+          )}
+        >
           {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
           <ModalBody open={openMobile} className="ui:h-full ui:pt-2 ui:pb-20">
             <CollapsedContext.Provider value={false}>
@@ -163,7 +196,7 @@ export function Sidebar({
         </div>
         {dock}
       </dialog>
-    </>
+    </ToneContext.Provider>
   );
 }
 
@@ -238,6 +271,7 @@ export function SidebarDockButton({
 /** The thin strip on the sidebar's edge that toggles it. */
 function SidebarRail() {
   const { open, toggleSidebar } = useSidebar();
+  const navy = useSidebarTone() === "navy";
   return (
     <button
       type="button"
@@ -246,7 +280,8 @@ function SidebarRail() {
       tabIndex={-1}
       onClick={toggleSidebar}
       className={cx(
-        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-slate-200",
+        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5",
+        navy ? "ui:hover:after:bg-azure/60" : "ui:hover:after:bg-slate-200",
         open ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}
     />
@@ -314,7 +349,7 @@ export function SidebarGroup({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cx(
-        "ui:relative ui:flex ui:w-full ui:min-w-0 ui:flex-col ui:p-2",
+        "ui:relative ui:flex ui:w-full ui:min-w-0 ui:flex-col ui:px-3 ui:py-1",
         className,
       )}
       {...props}
@@ -328,11 +363,15 @@ export function SidebarGroupLabel({
   ...props
 }: ComponentProps<"div">) {
   const collapsed = useSidebarCollapsed();
+  const navy = useSidebarTone() === "navy";
   if (collapsed) return null;
   return (
     <div
       className={cx(
-        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2 ui:text-xs ui:font-medium ui:text-slate-500",
+        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2.5",
+        navy
+          ? "ui:text-[11px] ui:font-semibold ui:tracking-[0.07em] ui:text-azure-light/80 ui:uppercase"
+          : "ui:text-xs ui:font-medium ui:text-slate-500",
         className,
       )}
       {...props}
@@ -369,8 +408,16 @@ export function SidebarMenuCluster({
   label: string;
   children: ReactNode;
 }) {
+  const navy = useSidebarTone() === "navy";
   return (
-    <li className="ui:-mx-0.5 ui:rounded-lg ui:bg-slate-50 ui:p-0.5 ui:ring-1 ui:ring-slate-200 ui:ring-inset">
+    <li
+      className={cx(
+        "ui:-mx-0.5 ui:rounded-xl ui:p-0.5 ui:ring-1 ui:ring-inset",
+        navy
+          ? "ui:bg-white/10 ui:ring-white/10"
+          : "ui:bg-slate-50 ui:ring-slate-200",
+      )}
+    >
       <ul aria-label={label} className="ui:flex ui:flex-col ui:gap-0.5">
         {children}
       </ul>
@@ -378,11 +425,62 @@ export function SidebarMenuCluster({
   );
 }
 
+/**
+ * The pages of a section, open in place under its row: indented, on a
+ * line down their left. A row of a `SidebarMenu` holding its own list of
+ * `SidebarMenuItem`s, named by `label` for assistive technology.
+ */
+export function SidebarMenuSub({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  const navy = useSidebarTone() === "navy";
+  return (
+    <li>
+      <ul
+        aria-label={label}
+        className={cx(
+          "ui:mt-1 ui:mb-1.5 ui:ml-[1.125rem] ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
+          navy ? "ui:border-white/15" : "ui:border-slate-200",
+        )}
+      >
+        {children}
+      </ul>
+    </li>
+  );
+}
+
 const MENU_BUTTON =
-  "ui:flex ui:w-full ui:items-center ui:gap-2 ui:overflow-hidden ui:rounded-md ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+  "ui:flex ui:w-full ui:items-center ui:gap-2.5 ui:overflow-hidden ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:focus-visible:ring-2 ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+
+/**
+ * A row's look by the sidebar's tone: its shape, then its colours at
+ * rest, as the page on screen, or as the section open under it. A row has
+ * one set of colours at a time, so none overrides another.
+ */
+const MENU_TONES = {
+  light: {
+    shape: "ui:rounded-md ui:focus-visible:ring-ring",
+    rest: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
+    active:
+      "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:[&>svg]:text-brand",
+    open: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
+  },
+  navy: {
+    shape: "ui:rounded-[10px] ui:font-medium ui:focus-visible:ring-azure-light",
+    rest: "ui:text-white/80 ui:hover:bg-white/14 ui:hover:text-white ui:[&>svg]:text-azure-light",
+    active: "ui:bg-white ui:font-semibold ui:text-ink ui:[&>svg]:text-brand",
+    open: "ui:bg-white/10 ui:text-white ui:hover:bg-white/14 ui:[&>svg]:text-azure-light",
+  },
+} as const;
 
 const MENU_SIZES = {
-  default: "ui:h-8",
+  default: "ui:h-9",
+  /** A page under its section's row, opened in place. */
+  sm: "ui:h-8",
   /** Room for two lines beside a square: a logo and a subtitle, a user and an email. */
   lg: "ui:h-12",
 } as const;
@@ -399,6 +497,7 @@ const MENU_SIZES = {
 export function SidebarMenuButton({
   asChild = false,
   active = false,
+  open = false,
   size = "default",
   tooltip,
   className,
@@ -406,20 +505,25 @@ export function SidebarMenuButton({
   ...props
 }: ComponentProps<"button"> & {
   asChild?: boolean;
+  /** The page on screen. */
   active?: boolean;
+  /** A section's row whose pages are open under it: lit softly. */
+  open?: boolean;
   size?: keyof typeof MENU_SIZES;
   /** Shown on hover while collapsed; defaults to nothing. */
   tooltip?: string;
 }) {
   const collapsed = useSidebarCollapsed();
+  const tone = MENU_TONES[useSidebarTone()];
   const classes = cx(
     MENU_BUTTON,
     MENU_SIZES[size],
-    active &&
-      "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:hover:bg-accent ui:hover:text-accent-foreground ui:[&>svg]:text-brand",
+    tone.shape,
+    active ? tone.active : open ? tone.open : tone.rest,
     // Collapsed, every row is a square: padded around a 1rem icon, or edge
     // to edge around a 2rem mark.
-    collapsed && (size === "lg" ? "ui:size-8! ui:p-0!" : "ui:size-8! ui:p-2!"),
+    collapsed &&
+      (size === "lg" ? "ui:size-9! ui:p-0!" : "ui:size-9! ui:p-2.5!"),
     className,
   );
   const shared = {
@@ -464,10 +568,12 @@ export function SidebarSeparator({
   className,
   ...props
 }: ComponentProps<"hr">) {
+  const navy = useSidebarTone() === "navy";
   return (
     <hr
       className={cx(
-        "ui:mx-2 ui:border-0 ui:border-t ui:border-slate-200",
+        "ui:mx-3 ui:border-0 ui:border-t",
+        navy ? "ui:border-white/10" : "ui:border-slate-200",
         className,
       )}
       {...props}

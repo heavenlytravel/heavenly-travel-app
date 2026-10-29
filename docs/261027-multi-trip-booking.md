@@ -187,6 +187,9 @@ Mapped on 2026-10-27.
   - The console's manual booking action reads `itemN.*` fields through `tripItemField`,
     `tripItemIndexes` and `tripItemParams` in `trip-input.ts`. The website can use the
     same format.
+  - Since 2026-10-29 the console's New booking has the same trip list ("Add another
+    trip"), with the same rules from `packages/db/src/trip-plan.ts` and
+    `maxTripsPerBooking`: one vehicle for every trip, no two trips at once, at most 20.
 - **Still written for one trip:**
   - The received page says "the trip".
   - The account list shows one "Pick-up" time.

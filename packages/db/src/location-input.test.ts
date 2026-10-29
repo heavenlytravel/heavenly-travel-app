@@ -289,7 +289,7 @@ describe("checkLocationSlug", () => {
       ...["en", "ms", "zh"],
       ...["admin", "search", "manage", "quote", "packages"],
       ...["vehicles", "transfer", "driver", "sitemap", "robots"],
-      "new",
+      ...["no-access", "restricted"],
     ];
     for (const slug of reserved) {
       assert.match(errorOf(checkLocationSlug(slug)), /something else/, slug);

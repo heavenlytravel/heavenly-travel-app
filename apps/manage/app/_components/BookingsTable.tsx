@@ -10,9 +10,9 @@ import {
 } from "@repo/db";
 import type { BookingWithItems } from "@repo/db/server";
 import { bookingLocations } from "../_lib/booking-locations";
-import { bookingHref } from "../_lib/routes";
-import { BookingStatusBadge } from "./StatusBadges";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "./Table";
+import { bookingHref, type ScopeSlug } from "../_lib/routes";
+import { BookingStatusBadge } from "@repo/console/StatusBadges";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 
 /** "Langkawi", or "Langkawi, Penang" for a booking whose items pick up in two. */
 function locationsOf(booking: BookingWithItems) {
@@ -22,26 +22,22 @@ function locationsOf(booking: BookingWithItems) {
 }
 
 /**
- * The bookings table, shared by the queue across locations and a location's
- * own lists. `showLocation` adds the column the queue needs and a
- * location's list does not; a location's list gives its `locationSlug`,
- * so a booking opens inside the location. `bare` is for the table inside
- * a `flush` card.
+ * The bookings table, in the scope on screen: under `~` it has the
+ * column of locations, and a booking opens in the scope it was listed in.
+ * `bare` is for the table inside a `flush` card.
  */
 export function BookingsTable({
   bookings,
-  showLocation = false,
-  locationSlug,
+  scope,
   bare = false,
   emptyMessage,
 }: {
   bookings: BookingWithItems[];
-  showLocation?: boolean;
-  /** The location whose list this is; absent in the queue across locations. */
-  locationSlug?: string;
+  scope: ScopeSlug;
   bare?: boolean;
   emptyMessage: string;
 }) {
+  const showLocation = scope === null;
   const columns = showLocation ? 6 : 5;
   return (
     <Table bare={bare}>
@@ -66,7 +62,7 @@ export function BookingsTable({
               <tr key={booking.id}>
                 <Td className="font-medium whitespace-nowrap tabular-nums">
                   <Link
-                    href={bookingHref(booking.id, locationSlug)}
+                    href={bookingHref(scope, booking.id)}
                     className="underline-offset-4 hover:underline"
                   >
                     {booking.reference}
@@ -77,32 +73,32 @@ export function BookingsTable({
                 </Td>
                 <Td>
                   <span className="block">{booking.contactName}</span>
-                  <span className="block max-w-48 truncate text-xs text-slate-500">
+                  <span className="block max-w-48 truncate text-xs text-muted">
                     {customerEmailOf(booking) ?? booking.contactPhone}
                   </span>
                 </Td>
-                <Td className="min-w-48 text-slate-600">
+                <Td className="min-w-48 text-body">
                   {trips.map(({ item, trip }) => (
                     <span key={item.id} className="block">
                       {tripHeadline(trip)}
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-muted">
                         {itemSummary(item)}
                       </span>
                     </span>
                   ))}
                 </Td>
                 {showLocation ? (
-                  <Td className="whitespace-nowrap text-slate-600">
+                  <Td className="whitespace-nowrap text-body">
                     {locationsOf(booking) || (
-                      <span className="text-slate-500">—</span>
+                      <span className="text-muted">—</span>
                     )}
                   </Td>
                 ) : null}
-                <Td className="whitespace-nowrap text-slate-600 tabular-nums">
+                <Td className="whitespace-nowrap text-body tabular-nums">
                   <span className="block">
                     {formatLocalDate(booking.startsAt)}
                   </span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-xs text-muted">
                     {formatLocalTime(booking.startsAt)}
                   </span>
                 </Td>

@@ -11,7 +11,7 @@ import { useFieldError } from "./validation.js";
  * is changed.
  */
 export const inputClassName =
-  "ui:h-10 ui:w-full ui:rounded-md ui:border ui:border-slate-300 ui:bg-white ui:px-3 ui:text-sm ui:text-slate-900 ui:placeholder:text-slate-400 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-ring ui:disabled:bg-slate-100 ui:disabled:text-slate-500 ui:aria-invalid:border-red-500 ui:aria-invalid:focus-visible:outline-red-600";
+  "ui:h-10 ui:w-full ui:rounded-[var(--ui-field-radius,0.375rem)] ui:border ui:border-slate-300 ui:bg-white ui:px-3 ui:text-sm ui:text-slate-900 ui:placeholder:text-slate-400 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-ring ui:disabled:bg-slate-100 ui:disabled:text-slate-500 ui:aria-invalid:border-red-500 ui:aria-invalid:focus-visible:outline-red-600";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cx(inputClassName, className)} {...props} />;

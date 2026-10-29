@@ -21,10 +21,10 @@ export default function RootLayout({
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" data-app="site">
         {/* The site's fonts on the body too, for what opens over the page. */}
-        <body className={`${fontVars} font-(family-name:--font-body)`}>
+        <body className={`${fontVars} font-sans`}>
           {/* The line along the top while a link opens the next page. */}
           <NavigationProgress
-            className="fixed inset-x-0 top-0 z-50"
+            className="fixed inset-x-0 top-0 z-(--layer-popover)"
             gradient={["var(--brand)", "var(--azure)"]}
           />
           {children}

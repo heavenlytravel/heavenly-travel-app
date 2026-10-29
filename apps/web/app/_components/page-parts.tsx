@@ -12,7 +12,7 @@ import {
   type PageKind,
 } from "@repo/db";
 import { Markdown } from "@repo/ui/markdown";
-import { eyebrow, focus } from "../(site)/_components/Page";
+import { eyebrow } from "../(site)/_components/Page";
 
 /**
  * The parts the marketing pages are built of, a location's and the site's
@@ -28,8 +28,7 @@ import { eyebrow, focus } from "../(site)/_components/Page";
 
 export const gutter = "px-5 sm:px-[clamp(20px,5vw,78px)]";
 export const column = "mx-auto w-full max-w-[1240px]";
-export const heading =
-  "font-(family-name:--font-display) text-[clamp(2rem,3.6vw,3rem)] leading-[1.05] text-ink";
+export const heading = "font-serif text-display-sm leading-[1.05] text-ink";
 
 /** The room above a part of the page and at its sides, as every section has it. */
 const sectionBand = `pt-[60px] sm:pt-[88px] ${gutter}`;
@@ -103,7 +102,7 @@ const dashed = "border-dashed border-azure/40 bg-brand-tint/40";
 export const missingLook = `border-2 ${dashed}`;
 
 /** The shape of a placeholder where a block goes: paragraphs, questions, cards. */
-export const missingBlock = "min-h-[180px] rounded-[17px]";
+export const missingBlock = "min-h-[180px] rounded-card";
 
 /**
  * A placeholder: a dashed box where the part's content would go, with its
@@ -119,7 +118,7 @@ export function MissingPart({
 }) {
   return (
     <p
-      className={`flex items-center justify-center ${missingLook} px-5 py-2 text-center text-[0.95rem] font-semibold text-slate-600 ${className}`}
+      className={`flex items-center justify-center ${missingLook} px-5 py-2 text-center text-copy font-semibold text-slate-600 ${className}`}
     >
       {part}
     </p>
@@ -141,7 +140,7 @@ export function MissingMark({
 }) {
   return (
     <span
-      className={`${alone ? "" : "ml-3"} inline-block rounded-full border ${dashed} px-2.5 py-0.5 align-middle font-(family-name:--font-body) text-[0.75rem] leading-normal font-bold tracking-normal text-slate-600 normal-case`}
+      className={`${alone ? "" : "ml-3"} inline-block rounded-full border ${dashed} px-2.5 py-0.5 align-middle font-sans text-xs leading-normal font-bold tracking-normal text-slate-600 normal-case`}
     >
       {part}
     </span>
@@ -198,7 +197,7 @@ export function Intro({
           {title}
         </h2>
         {paragraphs.length > 0 ? (
-          <div className="grid max-w-[70ch] gap-4 text-[1.05rem] leading-relaxed text-slate-700">
+          <div className="grid max-w-[70ch] gap-4 text-lead leading-relaxed text-slate-700">
             {paragraphs.map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
@@ -218,17 +217,17 @@ export function Intro({
 
 /** How a text in Markdown reads on the site: the home page's type, a measure for reading. */
 const PROSE = [
-  "max-w-[70ch] text-[1.07rem] leading-relaxed text-slate-700",
-  "[&_h2]:mt-11 [&_h2]:mb-3 [&_h2]:font-(family-name:--font-display) [&_h2]:text-[clamp(1.6rem,2.6vw,2.15rem)] [&_h2]:leading-tight [&_h2]:text-ink",
-  "[&_h3]:mt-8 [&_h3]:mb-2 [&_h3]:text-[1.2rem] [&_h3]:font-bold [&_h3]:text-ink",
+  "max-w-[70ch] text-lead leading-relaxed text-slate-700",
+  "[&_h2]:mt-11 [&_h2]:mb-3 [&_h2]:font-serif [&_h2]:text-heading [&_h2]:leading-tight [&_h2]:text-ink",
+  "[&_h3]:mt-8 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-ink",
   "[&_h4]:mt-6 [&_h4]:mb-2 [&_h4]:font-bold [&_h4]:text-ink",
   "[&_p]:my-4 [&_strong]:text-ink",
   "[&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1.5 [&_li]:pl-1",
   "[&_a]:font-semibold [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-4",
-  "[&_blockquote]:my-7 [&_blockquote]:border-l-4 [&_blockquote]:border-azure [&_blockquote]:pl-5 [&_blockquote]:text-[1.15rem] [&_blockquote]:text-ink",
-  "[&_img]:my-8 [&_img]:h-auto [&_img]:w-full [&_img]:rounded-[17px] [&_img]:bg-mist",
+  "[&_blockquote]:my-7 [&_blockquote]:border-l-4 [&_blockquote]:border-azure [&_blockquote]:pl-5 [&_blockquote]:text-lg [&_blockquote]:text-ink",
+  "[&_img]:my-8 [&_img]:h-auto [&_img]:w-full [&_img]:rounded-card [&_img]:bg-mist",
   "[&_hr]:my-10 [&_hr]:border-slate-200",
-  "[&_table]:my-6 [&_table]:w-full [&_table]:text-[0.98rem] [&_th]:border-b [&_th]:border-slate-300 [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:text-ink [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-2 [&_td]:pr-4",
+  "[&_table]:my-6 [&_table]:w-full [&_table]:text-copy [&_th]:border-b [&_th]:border-slate-300 [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:text-ink [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-2 [&_td]:pr-4",
   "[&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:text-[0.92em] [&_pre]:my-5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-slate-100 [&_pre]:p-4",
   "[&>div>:first-child]:mt-0",
 ].join(" ");
@@ -252,7 +251,7 @@ export function Prose({
 
 /** The frame of the picture under a post's or a document's title. */
 const coverFrame =
-  "mx-auto mt-9 aspect-[16/9] w-full max-w-[1100px] rounded-[22px]";
+  "mx-auto mt-9 aspect-[16/9] w-full max-w-[1100px] rounded-panel";
 
 /**
  * The picture under a post's or a document's title. In a preview with
@@ -302,13 +301,11 @@ export function Faqs({
         <div className="max-w-[820px] border-t border-slate-200">
           {filled.map((faq, i) => (
             <details key={i} className="group border-b border-slate-200">
-              <summary
-                className={`flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-[1.08rem] font-semibold text-ink [&::-webkit-details-marker]:hidden ${focus}`}
-              >
+              <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-lead font-semibold text-ink focus-ring [&::-webkit-details-marker]:hidden">
                 {faq.question}
                 <span
                   aria-hidden
-                  className="mt-0.5 text-[1.3rem] leading-none text-brand transition-transform group-open:rotate-45 motion-reduce:transition-none"
+                  className="mt-0.5 text-xl leading-none text-brand transition-transform group-open:rotate-45 motion-reduce:transition-none"
                 >
                   +
                 </span>
@@ -366,7 +363,7 @@ export function PageCards({
     >
       {cards.map((card) => (
         <li key={card.key} className="group relative flex flex-col items-start">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[17px] bg-mist">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-mist">
             {card.image && (
               <Image
                 src={card.image.url}
@@ -377,23 +374,26 @@ export function PageCards({
               />
             )}
             {card.badge && (
-              <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-[0.7rem] font-bold tracking-[0.14em] text-azure uppercase">
+              <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-caps font-bold text-brand">
                 {card.badge}
               </span>
             )}
           </div>
-          <h3 className="mt-4 font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
+          <h3 className="mt-4 font-serif text-2xl leading-tight text-ink">
             <Link
               href={card.href}
-              className={`after:absolute after:inset-0 after:rounded-[17px] after:content-[''] hover:text-brand ${focus}`}
+              className="after:absolute after:inset-0 after:rounded-card after:content-[''] hover:text-brand focus-ring"
             >
               {card.title}
             </Link>
           </h3>
           {card.text && <p className="mt-1.5 text-slate-700">{card.text}</p>}
           {card.cta && (
-            <span className="mt-3 text-[0.92rem] font-bold text-brand underline-offset-4 group-hover:underline">
-              {card.cta} <span className="ml-1.5">→</span>
+            <span className="mt-3 text-copy font-bold text-brand underline-offset-4 group-hover:underline">
+              {card.cta}{" "}
+              <span aria-hidden className="ml-1.5">
+                →
+              </span>
             </span>
           )}
           {card.extra && <div className="relative z-[1]">{card.extra}</div>}
@@ -403,27 +403,51 @@ export function PageCards({
   );
 }
 
+/** A step of a page's breadcrumb from the home page: its name and where it opens. */
+export type Crumb = { name: string; path: string };
+
+/**
+ * A page's breadcrumb, "Home / Langkawi / Car with driver": each step a
+ * link but the last, the page itself. On a touch screen each link's hit
+ * area grows to a finger's, without moving the line.
+ */
+export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol className="flex flex-wrap items-center gap-x-2 text-caption text-slate-700">
+        {crumbs.map((crumb, i) => (
+          <li key={crumb.path} className="flex items-center gap-x-2">
+            {i === crumbs.length - 1 ? (
+              <span aria-current="page" className="font-semibold">
+                {crumb.name}
+              </span>
+            ) : (
+              <>
+                <Link
+                  href={crumb.path}
+                  className="touch-target underline-offset-4 hover:underline focus-ring"
+                >
+                  {crumb.name}
+                </Link>
+                <span aria-hidden>/</span>
+              </>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 /** The breadcrumb of a page of the site's own, one step under the home page: "Home / About us". */
 export function HomeCrumbs({ current }: { current: string }) {
   return (
-    <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-slate-700">
-        <li className="flex items-center gap-x-2">
-          <Link
-            href="/"
-            className={`underline-offset-4 hover:underline ${focus}`}
-          >
-            Home
-          </Link>
-          <span aria-hidden>/</span>
-        </li>
-        <li>
-          <span aria-current="page" className="font-semibold">
-            {current}
-          </span>
-        </li>
-      </ol>
-    </nav>
+    <Breadcrumbs
+      crumbs={[
+        { name: "Home", path: "/" },
+        { name: current, path: "" },
+      ]}
+    />
   );
 }
 
@@ -438,9 +462,12 @@ export function MoreLink({
   return (
     <Link
       href={href}
-      className={`font-bold text-brand underline-offset-4 hover:underline ${focus}`}
+      className="font-bold text-brand underline-offset-4 hover:underline focus-ring"
     >
-      {children} <span className="ml-1.5">→</span>
+      {children}{" "}
+      <span aria-hidden className="ml-1.5">
+        →
+      </span>
     </Link>
   );
 }

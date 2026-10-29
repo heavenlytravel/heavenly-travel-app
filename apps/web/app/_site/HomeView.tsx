@@ -16,7 +16,8 @@ import {
   type PhotoCard,
 } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
-import { Booking, Trust, eyebrow } from "../_home/Sections";
+import { Booking, Trust } from "../_home/Sections";
+import { eyebrow } from "../(site)/_components/Page";
 import { faqDataOf } from "../_lib/seo";
 
 /**
@@ -103,9 +104,9 @@ export function HomeView({
                 <MissingMark part={empty.heroImage} alone />
               </p>
             )}
-            <div className="text-[3.75rem] sm:text-[clamp(3.75rem,min(9vw,12svh),6.5rem)]">
+            <div className="text-6xl sm:text-hero">
               {tagline ? (
-                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
+                <p className="origin-left -rotate-3 font-hand text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
                   {tagline}
                 </p>
               ) : (
@@ -118,7 +119,7 @@ export function HomeView({
               )}
               <h1
                 id="hero-title"
-                className="mt-[0.1em] mb-[0.25em] max-w-[14ch] font-(family-name:--font-display) text-[1em] leading-[0.9] text-ink sm:max-w-none"
+                className="mt-[0.1em] mb-[0.25em] max-w-[14ch] font-serif text-[1em] leading-[0.9] text-ink sm:max-w-none"
               >
                 {headline}
                 {!content?.heroHeadline && empty.headline && (
@@ -126,7 +127,7 @@ export function HomeView({
                 )}
               </h1>
             </div>
-            <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-[1.18rem]">
+            <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-lg">
               {subheadline}
               {!content?.heroSubheadline && empty.subheadline && (
                 <MissingMark part={empty.subheadline} />
@@ -135,7 +136,7 @@ export function HomeView({
           </div>
           <p
             aria-hidden
-            className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-(family-name:--font-script) text-[2rem] leading-[0.85] text-white lg:block"
+            className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-hand text-3xl leading-[0.85] text-white lg:block"
           >
             More
             <br />
@@ -155,11 +156,11 @@ export function HomeView({
           <p className={`${eyebrow} mb-2`}>What we offer</p>
           <h2
             id="services-title"
-            className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
+            className="font-serif text-display leading-none"
           >
             Our services
           </h2>
-          <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
+          <p className="mt-[13px] mb-[34px] text-lead text-muted">
             See where each one runs.
           </p>
           <PhotoCards cards={services} />
@@ -173,11 +174,11 @@ export function HomeView({
           <p className={`${eyebrow} mb-2`}>Locations we cover</p>
           <h2
             id="destinations-title"
-            className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
+            className="font-serif text-display leading-none"
           >
             Choose your destination
           </h2>
-          <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
+          <p className="mt-[13px] mb-[34px] text-lead text-muted">
             Start with where you are going.
           </p>
           <DestinationCards choices={choices} />

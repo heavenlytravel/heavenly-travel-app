@@ -12,6 +12,7 @@ import {
   type LocationViewPage,
 } from "@repo/db/server";
 import type { Metadata } from "next";
+import type { Crumb } from "../_components/page-parts";
 import { faqDataOf, pageMetadata } from "../_lib/seo";
 
 /**
@@ -21,11 +22,9 @@ import { faqDataOf, pageMetadata } from "../_lib/seo";
  * engines".
  */
 
-/** The page's steps from the home page, as its breadcrumb shows them. */
-export type Crumb = { name: string; path: string };
-
 /**
- * Home, the location, then the section on a section's page, then the page
+ * The page's steps from the home page, as its breadcrumb shows them:
+ * home, the location, then the section on a section's page, then the page
  * itself under a section. `preview` keeps the links in the preview.
  */
 export function crumbsOf(

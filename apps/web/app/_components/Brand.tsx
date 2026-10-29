@@ -3,17 +3,23 @@
 /**
  * Plain <img> for the /brand photos. They are already sized for the web and
  * served from /public, so next/image adds nothing here; one suppression for
- * the lint rule instead of one per photo.
+ * the lint rule instead of one per photo. `width` and `height` are the
+ * picture's own, so the browser keeps its room before it loads; the class
+ * still sizes it.
  */
 export function Photo({
   src,
   alt,
+  width,
+  height,
   className,
   loading = "lazy",
   style,
 }: {
   src: string;
   alt: string;
+  width?: number;
+  height?: number;
   className?: string;
   loading?: "lazy" | "eager";
   style?: React.CSSProperties;
@@ -23,11 +29,36 @@ export function Photo({
     <img
       src={src}
       alt={alt}
+      width={width}
+      height={height}
       className={className}
       loading={loading}
       // The one eager photo on a page is its hero.
       fetchPriority={loading === "eager" ? "high" : undefined}
       style={style}
+    />
+  );
+}
+
+/**
+ * The blue logo, at its own size (120 by 28) so nothing beside it moves
+ * when it loads; `className` sets its height, its width follows.
+ */
+export function Logo({
+  className,
+  loading,
+}: {
+  className: string;
+  loading?: "lazy" | "eager";
+}) {
+  return (
+    <Photo
+      src="/brand/logo-blue.svg"
+      alt="Heavenly, your travel engineer"
+      width={120}
+      height={28}
+      className={className}
+      loading={loading}
     />
   );
 }

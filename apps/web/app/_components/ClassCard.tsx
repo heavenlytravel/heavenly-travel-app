@@ -44,7 +44,7 @@ export function ClassCard({
         />
       ) : null}
       <div className="flex items-start justify-between gap-3">
-        <h3 className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
+        <h3 className="font-serif text-2xl leading-tight text-ink">
           {vehicleClass.name}
         </h3>
         {badge}
@@ -52,7 +52,7 @@ export function ClassCard({
       <p className="mt-1.5 text-slate-700">{vehicleClass.description}</p>
       {vehicleClass.models.length > 0 ? (
         // A div, not a p: the gallery's dialog is not phrasing content.
-        <div className="mt-2 text-[0.95rem] text-slate-700">
+        <div className="mt-2 text-copy text-slate-700">
           {modelsLine(vehicleClass.models.map((m) => m.name))}, or similar.{" "}
           <ModelPhotosButton
             title={vehicleClass.name}
@@ -60,7 +60,7 @@ export function ClassCard({
           />
         </div>
       ) : null}
-      <p className="mt-3 text-[0.9rem] text-slate-500">
+      <p className="mt-3 text-copy text-muted">
         {seatsLabel(vehicleClass)} · {vehicleClass.luggage}
       </p>
       {children}

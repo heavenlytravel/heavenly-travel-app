@@ -19,7 +19,9 @@ import {
   type FormEvent,
 } from "react";
 import { flushSync } from "react-dom";
-import { focus } from "../(site)/_components/Page";
+
+/** The keyboard's ring on the bar's ink: the site's, in white. */
+const focus = "focus-ring focus-ring-dark";
 
 /** Where a page stands, as its dot shows it: its status, or paused, a class's page while the class is off sale there. */
 export type PreviewStanding = PageStatus | "paused";
@@ -44,7 +46,7 @@ const STANDINGS: Record<PreviewStanding, { label: string; dot: string }> = {
 };
 
 /** A button or link on the pill. */
-const pillButton = `inline-flex min-h-[36px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-semibold hover:bg-white/10 ${focus}`;
+const pillButton = `inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-semibold hover:bg-white/10 ${focus}`;
 
 function Dot({ standing }: { standing: PreviewStanding }) {
   return (
@@ -137,7 +139,7 @@ export function PreviewBar({
       <aside
         ref={root}
         aria-label="Preview"
-        className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex flex-col items-center gap-2 px-3 text-[0.85rem] text-white"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex flex-col items-center gap-2 px-3 text-caption text-white"
       >
         {open && (
           <PagePicker
@@ -155,7 +157,7 @@ export function PreviewBar({
             type="button"
             aria-label={`Show the preview bar: ${name}, ${label}`}
             onClick={() => fold(false)}
-            className={`pointer-events-auto relative flex size-11 cursor-pointer items-center justify-center rounded-full bg-ink shadow-lg ring-1 shadow-ink/30 ring-white/15 hover:bg-navy ${focus}`}
+            className={`pointer-events-auto relative flex size-11 cursor-pointer items-center justify-center rounded-full bg-ink shadow-overlay ring-1 ring-white/15 hover:bg-navy ${focus}`}
           >
             <ChevronUpIcon className="size-5" />
             <span className="absolute top-1.5 right-1.5 flex rounded-full ring-2 ring-ink">
@@ -163,9 +165,9 @@ export function PreviewBar({
             </span>
           </button>
         ) : (
-          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full bg-ink py-1 pr-1 pl-4 shadow-lg ring-1 shadow-ink/30 ring-white/15">
+          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full bg-ink py-1 pr-1 pl-4 shadow-overlay ring-1 ring-white/15">
             <p className="flex min-w-0 items-center gap-2.5 pr-1">
-              <strong className="shrink-0 text-[0.75rem] tracking-[0.16em] uppercase">
+              <strong className="shrink-0 text-xs tracking-eyebrow uppercase">
                 Preview
               </strong>
               <span className="max-w-[16rem] min-w-0 truncate font-semibold max-sm:sr-only">
@@ -212,7 +214,7 @@ export function PreviewBar({
 
 /** A page's row in the picker; its outline is drawn inside, as the list clips it. */
 const pickerRow =
-  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-azure-light aria-[current=page]:bg-brand aria-[current=page]:font-semibold";
+  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/10 focus-ring-inset focus-ring-dark aria-[current=page]:bg-brand aria-[current=page]:font-semibold";
 
 /**
  * The pages that can be previewed with the one shown, above the pill,
@@ -284,14 +286,14 @@ function PagePicker({
   return (
     <div
       id={id}
-      className="pointer-events-auto flex max-h-[min(34rem,calc(100dvh-6rem))] w-full max-w-[26rem] flex-col overflow-hidden rounded-2xl bg-ink shadow-2xl ring-1 shadow-ink/40 ring-white/15"
+      className="pointer-events-auto flex max-h-[min(34rem,calc(100dvh-6rem))] w-full max-w-[26rem] flex-col overflow-hidden rounded-2xl bg-ink shadow-overlay ring-1 ring-white/15"
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-        <h2 id={titleId} className="truncate text-[0.95rem] font-bold">
+        <h2 id={titleId} className="truncate text-copy font-bold">
           {title}
         </h2>
         {note && (
-          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-0.5 text-[0.75rem] font-semibold">
+          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold">
             {note}
           </span>
         )}
@@ -307,7 +309,7 @@ function PagePicker({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={searchLabel}
             autoComplete="off"
-            className="w-full rounded-xl bg-white/10 py-2 pr-3 pl-9 text-[0.9rem] text-white placeholder:text-white/55 focus-visible:outline-2 focus-visible:outline-azure-light"
+            className="w-full rounded-xl bg-white/10 py-2 pr-3 pl-9 text-copy text-white placeholder:text-white/55 focus-ring-inset focus-ring-dark"
           />
         </label>
       </form>

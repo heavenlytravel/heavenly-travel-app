@@ -7,7 +7,7 @@ import {
   type PageContent,
   type SitePageKey,
 } from "@repo/db/server";
-import { eyebrow, focus } from "../(site)/_components/Page";
+import { eyebrow, textLink } from "../(site)/_components/Page";
 import {
   Cover,
   Faqs,
@@ -56,14 +56,14 @@ export function SiteDocumentView({
           <div className="mx-auto w-full max-w-[900px]">
             <HomeCrumbs current={label} />
             <p className={`${eyebrow} mt-8 mb-3`}>Heavenly Travel</p>
-            <h1 className="font-(family-name:--font-display) text-[clamp(2.3rem,5.4vw,4rem)] leading-[1.02] text-ink">
+            <h1 className="font-serif text-display leading-[1.02] text-ink">
               {content.heroHeadline || label}
               {!content.heroHeadline && empty.headline && (
                 <MissingMark part={empty.headline} />
               )}
             </h1>
             {content.heroSubheadline ? (
-              <p className="mt-4 max-w-[640px] text-[1.12rem] text-slate-700">
+              <p className="mt-4 max-w-[640px] text-lg text-slate-700">
                 {content.heroSubheadline}
               </p>
             ) : (
@@ -75,7 +75,7 @@ export function SiteDocumentView({
               )
             )}
             {publishedAt && page !== "about-us" && page !== "contact-us" && (
-              <p className="mt-5 text-[0.9rem] text-slate-500">
+              <p className="mt-5 text-copy text-muted">
                 Last updated{" "}
                 <time dateTime={publishedAt}>
                   {formatPageDate(publishedAt)}
@@ -97,8 +97,6 @@ export function SiteDocumentView({
   );
 }
 
-const detailLink = `font-semibold text-brand underline-offset-4 hover:underline ${focus}`;
-
 /** The company's details, as the footer has them, laid out for contact us. Each one missing is left out. */
 function CompanyDetails({ footer }: { footer: FooterContent }) {
   const address = addressLinesOf(footer);
@@ -107,11 +105,11 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
   return (
     <section
       aria-labelledby="company-title"
-      className="grid gap-6 rounded-[20px] bg-white p-6 shadow-[0_12px_35px_rgba(0,38,75,0.08)] sm:grid-cols-2 sm:p-8"
+      className="grid gap-6 rounded-card bg-white p-6 shadow-card sm:grid-cols-2 sm:p-8"
     >
       <h2
         id="company-title"
-        className="font-(family-name:--font-display) text-[1.8rem] leading-tight text-ink sm:col-span-2"
+        className="font-serif text-figure leading-tight text-ink sm:col-span-2"
       >
         {footer.legalName || "Heavenly Travel"}
       </h2>
@@ -128,9 +126,7 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
             </address>
           )}
           {footer.registration && (
-            <p className="mt-2 text-[0.9rem] text-slate-500">
-              {footer.registration}
-            </p>
+            <p className="mt-2 text-copy text-muted">{footer.registration}</p>
           )}
         </div>
       )}
@@ -138,12 +134,12 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
         <div className="grid content-start gap-2">
           <p className={`${eyebrow} mb-0`}>Reach us</p>
           {phoneHref && (
-            <a href={phoneHref} className={detailLink}>
+            <a href={phoneHref} className={textLink}>
               {footer.phone}
             </a>
           )}
           {footer.email && (
-            <a href={`mailto:${footer.email}`} className={detailLink}>
+            <a href={`mailto:${footer.email}`} className={textLink}>
               {footer.email}
             </a>
           )}
@@ -152,7 +148,7 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className={detailLink}
+              className={textLink}
             >
               WhatsApp {footer.whatsapp}
             </a>

@@ -24,6 +24,7 @@ import {
   column,
   emptyPartsOf,
   gutter,
+  missingBlock,
 } from "../_components/page-parts";
 import type { PhotoCard } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
@@ -70,7 +71,6 @@ export function hubCards(
     href: sitePagePath(page),
     image: published[page]?.content.heroImage ?? {
       url: HUB_DEFAULTS[page].image,
-      alt: "",
     },
     tag: null,
     name: SITE_PAGE_LABELS[page],
@@ -127,14 +127,14 @@ export function HubView({
             <p className={`${eyebrow} mt-7 mb-3`}>Our services</p>
             <h1
               id="hero-title"
-              className="max-w-[18ch] font-(family-name:--font-display) text-[clamp(2.5rem,6vw,4.6rem)] leading-[0.98] text-ink"
+              className="max-w-[18ch] font-serif text-display-lg leading-[0.98] text-ink"
             >
               {headline}
               {content && !content.heroHeadline && empty.headline && (
                 <MissingMark part={empty.headline} />
               )}
             </h1>
-            <p className="mt-4 max-w-[540px] text-slate-700 sm:text-[1.14rem]">
+            <p className="mt-4 max-w-[540px] text-slate-700 sm:text-lg">
               {subheadline}
               {content && !content.heroSubheadline && empty.subheadline && (
                 <MissingMark part={empty.subheadline} />
@@ -163,10 +163,10 @@ export function HubView({
         ) : preview ? (
           <MissingPart
             part={`No location offers ${label.toLowerCase()} yet: publish a location's ${label} page`}
-            className="min-h-[180px] rounded-[17px]"
+            className={missingBlock}
           />
         ) : (
-          <p className="max-w-[60ch] text-[1.05rem] text-slate-700">
+          <p className="max-w-[60ch] text-lead text-slate-700">
             We are bringing {label.toLowerCase()} to more places soon.
           </p>
         )}

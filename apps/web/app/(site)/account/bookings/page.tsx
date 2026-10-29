@@ -9,14 +9,14 @@ import {
   tripViewOfItem,
 } from "@repo/db";
 import { getAccess, listBookingsForUser } from "@repo/db/server";
+import { BookingStatusBadge } from "@repo/console/StatusBadges";
 import { redirect } from "next/navigation";
-import { PageTitle, Stop, focus, panel } from "../../_components/Page";
+import { PageTitle, Stop, panel } from "../../_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
   signInHref,
 } from "../../../_lib/routes";
-import { StatusBadge } from "../../booking/_components/StatusBadge";
 
 export const metadata: Metadata = {
   title: "My bookings | Heavenly Travel",
@@ -53,15 +53,15 @@ export default async function BookingsPage() {
               <li key={booking.id}>
                 <Link
                   href={accountBookingHref(booking.reference)}
-                  className={`${panel} block transition-shadow hover:shadow-[0_16px_40px_rgba(0,38,75,0.14)] ${focus}`}
+                  className={`${panel} block transition-shadow hover:shadow-raised focus-ring`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="font-(family-name:--font-display) text-[1.35rem]">
+                    <span className="font-serif text-xl">
                       {booking.reference}
                     </span>
-                    <StatusBadge status={booking.status} />
+                    <BookingStatusBadge status={booking.status} />
                   </div>
-                  <div className="mt-3 grid gap-1 text-[0.95rem] sm:grid-cols-[1fr_auto] sm:items-end">
+                  <div className="mt-3 grid gap-1 text-copy sm:grid-cols-[1fr_auto] sm:items-end">
                     <div>
                       {trips.map(({ item, trip }) => {
                         // A trip cancelled from a booking that lives on.
@@ -70,11 +70,11 @@ export default async function BookingsPage() {
                         return (
                           <div key={item.id} className="[&+&]:mt-2">
                             <p
-                              className={`font-medium ${dropped ? "text-slate-400 line-through" : ""}`}
+                              className={`font-medium ${dropped ? "text-muted line-through" : ""}`}
                             >
                               {tripHeadline(trip)}
                             </p>
-                            <p className="text-slate-500">
+                            <p className="text-muted">
                               {itemSummary(item)} · Pick-up{" "}
                               {formatLocalDateTime(item.startsAt)}
                               {dropped ? " · Cancelled" : ""}

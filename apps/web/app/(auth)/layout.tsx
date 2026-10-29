@@ -3,12 +3,9 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { AuthShell } from "@repo/ui/auth-shell";
 import { redirect } from "next/navigation";
-import { Photo } from "../_components/Brand";
+import { Logo, Photo } from "../_components/Brand";
 import { Footer } from "../_components/Footer";
 import { fontVars } from "../_home/fonts";
-
-const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
 
 /**
  * The customer site's sign-in and sign-up pages: the home page fonts, the
@@ -29,25 +26,22 @@ export default async function AuthLayout({
   }
 
   return (
-    <div
-      className={`${fontVars} font-(family-name:--font-body) leading-normal antialiased`}
-    >
+    <div className={`${fontVars} font-sans leading-normal antialiased`}>
       <AuthShell
         brand={
-          <Link href="/" aria-label="Heavenly Travel home" className={focus}>
-            <Photo
-              src="/brand/logo-blue.svg"
-              alt="Heavenly, your travel engineer"
-              className="h-10 w-auto"
-              loading="eager"
-            />
+          <Link
+            href="/"
+            aria-label="Heavenly Travel home"
+            className="focus-ring"
+          >
+            <Logo className="h-10 w-auto" loading="eager" />
           </Link>
         }
         aside={<HeroPanel />}
         footer={
           <Link
             href="/"
-            className={`underline-offset-4 hover:underline ${focus}`}
+            className="underline-offset-4 hover:underline focus-ring"
           >
             Back to Heavenly Travel
           </Link>
@@ -70,15 +64,13 @@ function HeroPanel() {
         className="absolute inset-0 h-full w-full object-cover object-center"
         loading="eager"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,56,118,0.2)_0%,rgba(0,56,118,0.55)_55%,rgba(0,20,40,0.9)_100%)]" />
+      <div className="absolute inset-0 bg-linear-to-b/srgb from-navy/20 via-navy/55 via-55% to-ink/90" />
       <div className="absolute inset-x-0 bottom-0 p-[clamp(32px,5vw,72px)] text-white">
-        <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[3.4rem] leading-[0.75] text-azure-light">
+        <p className="origin-left -rotate-3 font-hand text-6xl leading-[0.75] text-azure-light">
           Travel
         </p>
-        <p className="mt-2 font-(family-name:--font-display) text-[3.6rem] leading-[0.9]">
-          made simple.
-        </p>
-        <p className="mt-5 max-w-[26rem] text-[1.08rem] text-white/85">
+        <p className="mt-2 font-serif text-6xl leading-[0.9]">made simple.</p>
+        <p className="mt-5 max-w-[26rem] text-lead text-white/85">
           Cars, drivers, coaches, stays and experiences across Malaysia, in one
           place.
         </p>

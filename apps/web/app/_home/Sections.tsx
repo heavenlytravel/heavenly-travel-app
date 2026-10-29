@@ -3,9 +3,6 @@ import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 
 /** Sections of the home page that need no state of their own. */
 
-export const eyebrow =
-  "text-[0.76rem] font-bold tracking-[0.25em] text-brand uppercase";
-
 const TRUST = [
   {
     icon: "✓",
@@ -34,12 +31,12 @@ export function Trust() {
             key={t.title}
             className="flex gap-[13px] border-b border-slate-200 px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
           >
-            <span aria-hidden className="text-[1.65rem] text-brand">
+            <span aria-hidden className="text-figure text-brand">
               {t.icon}
             </span>
             <p>
               <strong className="block">{t.title}</strong>
-              <small className="mt-0.5 block text-[0.83rem] text-slate-500">
+              <small className="mt-0.5 block text-caption text-muted">
                 {t.text}
               </small>
             </p>

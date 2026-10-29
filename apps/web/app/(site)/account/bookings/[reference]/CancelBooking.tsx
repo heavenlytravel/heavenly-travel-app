@@ -2,7 +2,7 @@
 
 import { answerOf } from "@repo/ui/action-answer";
 import { toast } from "@repo/ui/toast";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   dangerButton,
   Pending,
@@ -29,7 +29,9 @@ type Words = {
  * cancelled, or when that ended. Past the deadline it is `blocked` and the
  * button shows disabled, so the customer learns the rule instead of
  * wondering where the button went. A cancel that went through says so in
- * a toast; one refused says why under the buttons.
+ * a toast; one refused says why under the buttons. The focus follows the
+ * swap: opening puts it on the question, so it is read first and Enter
+ * pressed twice does not cancel; keeping puts it back on the button.
  */
 function CancelControl({
   fields,
@@ -53,19 +55,35 @@ function CancelControl({
     },
     null,
   );
+  const openButton = useRef<HTMLButtonElement>(null);
+  const question = useRef<HTMLParagraphElement>(null);
+  // Set by a press of either button, so the focus moves once the other
+  // part is drawn, and never on the page's first draw.
+  const swapped = useRef(false);
+  useEffect(() => {
+    if (!swapped.current) return;
+    swapped.current = false;
+    (armed ? question : openButton).current?.focus();
+  }, [armed]);
+
+  function arm(next: boolean) {
+    swapped.current = true;
+    setArmed(next);
+  }
 
   if (!armed || blocked) {
     return (
       <>
         <button
+          ref={openButton}
           type="button"
           disabled={blocked}
-          onClick={() => setArmed(true)}
+          onClick={() => arm(true)}
           className={`${secondaryButton} w-full`}
         >
           {words.open}
         </button>
-        <p className="mt-2 text-center text-[0.85rem] text-slate-500">{hint}</p>
+        <p className="mt-2 text-center text-caption text-muted">{hint}</p>
       </>
     );
   }
@@ -75,20 +93,27 @@ function CancelControl({
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <p className="text-[0.95rem] text-slate-700">{words.question}</p>
+      {/* Takes the focus as the form opens, a place to read from, not a control. */}
+      <p
+        ref={question}
+        tabIndex={-1}
+        className="text-copy text-slate-700 outline-none"
+      >
+        {words.question}
+      </p>
       <button type="submit" disabled={pending} className={dangerButton}>
         {pending ? <Pending>Cancelling…</Pending> : words.confirm}
       </button>
       <button
         type="button"
         disabled={pending}
-        onClick={() => setArmed(false)}
+        onClick={() => arm(false)}
         className={secondaryButton}
       >
         {words.keep}
       </button>
       {state?.error && (
-        <p role="alert" className="text-[0.95rem] text-[#b3261e]">
+        <p role="alert" className="text-copy text-danger">
           {state.error}
         </p>
       )}

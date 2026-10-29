@@ -13,7 +13,7 @@ import {
   type FooterLink,
   type SocialNetwork,
 } from "@repo/db";
-import { Photo } from "./Brand";
+import { Logo } from "./Brand";
 
 /**
  * The foot of every page of the customer site, as SUPER writes it in the
@@ -39,7 +39,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   const hasLower = content.badges.length > 0 || content.paymentLogos.length > 0;
 
   return (
-    <footer className="bg-navy text-[0.95rem] text-white">
+    <footer className="bg-navy text-copy text-white">
       <div className="px-5 py-10 sm:px-[clamp(20px,5vw,78px)] sm:pt-12 sm:pb-10">
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
@@ -50,11 +50,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                 className={`inline-block ${focus}`}
               >
                 {/* The blue logo, drawn white on the blue. */}
-                <Photo
-                  src="/brand/logo-blue.svg"
-                  alt="Heavenly, your travel engineer"
-                  className="h-10 w-auto brightness-0 invert"
-                />
+                <Logo className="h-10 w-auto brightness-0 invert" />
               </Link>
               {content.tagline && (
                 <p className="mt-4 leading-relaxed text-white/90">
@@ -133,7 +129,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {address.length > 0 && (
                       <span className="leading-relaxed text-white/90">
                         {address.map((line, i) => (
-                          <span key={i} className="block lg:whitespace-nowrap">
+                          <span key={i} className="block">
                             {line}
                           </span>
                         ))}
@@ -173,7 +169,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     ))}
                   </ul>
                   {content.paymentNote && (
-                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-white/90">
+                    <p className="mt-3 flex items-center gap-1.5 text-sm text-white/90">
                       <LockGlyph />
                       {content.paymentNote}
                     </p>
@@ -188,7 +184,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {content.badges.map((badge, i) => (
                       <li
                         key={i}
-                        className="flex flex-col items-center gap-2 text-center text-[0.875rem] text-white/90"
+                        className="flex flex-col items-center gap-2 text-center text-sm text-white/90"
                       >
                         {badge.image && (
                           <Image
@@ -202,7 +198,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                           />
                         )}
                         <span>
-                          <strong className="block text-[0.9rem] leading-snug text-white">
+                          <strong className="block text-copy leading-snug text-white">
                             {badge.name}
                           </strong>
                           {badge.detail}
@@ -217,7 +213,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
         </div>
       </div>
 
-      <div className="border-t border-white/25 px-5 py-[18px] text-[0.875rem] text-white/90 sm:px-[clamp(20px,5vw,78px)]">
+      <div className="border-t border-white/25 px-5 py-[18px] text-sm text-white/90 sm:px-[clamp(20px,5vw,78px)]">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <p>
             {copyrightOf(content, year)}
@@ -239,17 +235,17 @@ export function SiteFooter({ content }: { content: FooterContent }) {
 }
 
 /** The focus ring, white: it shows on the navy as the site's blue ring would not. */
-const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white";
+const focus = "focus-ring focus-ring-dark";
 
-const linkClass = `text-white underline-offset-4 hover:underline ${focus}`;
+/** A link of the footer; on a touch screen its hit area grows to a finger's, without moving the lines. */
+const linkClass = `touch-target text-white underline-offset-4 hover:underline ${focus}`;
 
 /** A heading over a part of the footer; `id` names the part for a screen reader. */
 function Heading({ id, children }: { id?: string; children: string }) {
   return (
     <h2
       id={id}
-      className="mb-4 text-[0.8rem] font-bold tracking-[0.18em] text-azure-light uppercase lg:whitespace-nowrap"
+      className="mb-4 text-caption font-bold tracking-eyebrow text-azure-light uppercase lg:whitespace-nowrap"
     >
       {children}
     </h2>

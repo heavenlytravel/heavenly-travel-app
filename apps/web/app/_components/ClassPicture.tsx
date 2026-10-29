@@ -19,7 +19,7 @@ export function ClassPicture({
 }) {
   return (
     <span
-      className={`relative block aspect-[3/2] overflow-hidden rounded-[12px] bg-mist ${className}`}
+      className={`relative block aspect-[3/2] overflow-hidden rounded-xl bg-mist ${className}`}
     >
       {src ? (
         <Image src={src} alt="" fill sizes={sizes} className="object-contain" />

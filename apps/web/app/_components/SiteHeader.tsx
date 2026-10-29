@@ -14,14 +14,14 @@ import { Menu, MenuItem, MenuSeparator } from "@repo/ui/menu";
 import { Sheet } from "@repo/ui/sheet";
 import { cx } from "@repo/ui/cx";
 import { AccountMenu } from "../(site)/_components/AccountMenu";
-import { focus } from "../(site)/_components/Page";
+import { eyebrow } from "../(site)/_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
   ACCOUNT_PATH,
   signInHref,
   signUpHref,
 } from "../_lib/routes";
-import { Photo } from "./Brand";
+import { Logo } from "./Brand";
 
 /** A location the Destinations menu offers: the home page's top choices. */
 export type HeaderDestination = { slug: string; name: string };
@@ -30,16 +30,23 @@ export type HeaderDestination = { slug: string; name: string };
 const ALL_DESTINATIONS = "/#destinations";
 
 /** A link of the bar: the services and Destinations. */
-const navLink = `inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-[0.95rem] font-semibold text-ink hover:text-brand aria-[current=page]:text-brand data-[state=open]:text-brand ${focus}`;
+const navLink =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-copy font-semibold text-ink hover:text-brand aria-[current=page]:text-brand data-[state=open]:text-brand focus-ring";
 
 /** A quiet text button beside the pill. */
-const quiet = `inline-flex min-h-[44px] items-center rounded-full px-3 whitespace-nowrap text-[0.92rem] font-semibold text-ink underline-offset-6 hover:underline ${focus}`;
+const quiet =
+  "inline-flex min-h-11 items-center rounded-full px-3 whitespace-nowrap text-copy font-semibold text-ink underline-offset-6 hover:underline focus-ring";
 
-/** The one filled button of the header. */
-const pill = `inline-flex min-h-[44px] items-center rounded-full bg-brand px-5 text-[0.92rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong ${focus}`;
+/** The one filled button of the header: the primary button's colours and glow, as a pill. */
+const pill =
+  "inline-flex min-h-11 items-center rounded-full bg-brand px-5 text-copy font-bold whitespace-nowrap text-white shadow-cta hover:bg-brand-strong focus-ring";
 
 /** A row of the phone menu. */
-const sheetLink = `flex min-h-[52px] items-center border-b border-slate-100 text-[1.05rem] font-semibold text-ink aria-[current=page]:text-brand ${focus}`;
+const sheetLink =
+  "flex min-h-13 items-center border-b border-hairline text-lead font-semibold text-ink aria-[current=page]:text-brand focus-ring";
+
+/** The bar's row: the header's height (`--header-height`) less its border. */
+const row = "h-[calc(var(--header-height)-1px)]";
 
 /** Whether the page has scrolled past the top, for the bar's solid look. */
 function useScrolled() {
@@ -89,26 +96,23 @@ export function SiteHeader({
   return (
     <header
       className={cx(
-        "inset-x-0 top-0 z-30 transition-[background-color,box-shadow,border-color] duration-200 motion-reduce:transition-none",
+        "inset-x-0 top-0 z-(--layer-chrome) transition-[background-color,box-shadow,border-color] duration-200 motion-reduce:transition-none",
         overlay ? "fixed" : "sticky",
         solid
-          ? "border-b border-slate-200/80 bg-white/90 shadow-[0_6px_24px_rgba(0,38,75,0.06)] backdrop-blur-md"
+          ? "border-b border-card-edge/80 bg-white/90 shadow-bar backdrop-blur-md"
           : "border-b border-transparent",
       )}
     >
-      <div className="flex h-[68px] items-center justify-between gap-4 px-5 sm:h-[76px] sm:px-[clamp(20px,5vw,76px)]">
+      <div
+        className={`flex ${row} items-center justify-between gap-4 px-5 sm:px-[clamp(20px,5vw,76px)]`}
+      >
         <div className="flex min-w-0 items-center gap-8">
           <Link
             href="/"
             aria-label="Heavenly Travel home"
-            className={`shrink-0 ${focus}`}
+            className="shrink-0 focus-ring"
           >
-            <Photo
-              src="/brand/logo-blue.svg"
-              alt="Heavenly, your travel engineer"
-              className="h-8 w-auto sm:h-10"
-              loading="eager"
-            />
+            <Logo className="h-8 w-auto sm:h-10" loading="eager" />
           </Link>
 
           <nav aria-label="Site" className="hidden items-center gap-1 lg:flex">
@@ -137,12 +141,12 @@ export function SiteHeader({
               }
             >
               {destinations.map(({ slug, name }) => (
-                <MenuItem key={slug} asChild className="py-2 text-[0.95rem]">
+                <MenuItem key={slug} asChild className="py-2 text-copy">
                   <Link href={locationPagePath(slug)}>{name}</Link>
                 </MenuItem>
               ))}
               {destinations.length > 0 && <MenuSeparator />}
-              <MenuItem asChild className="py-2 text-[0.95rem] font-semibold">
+              <MenuItem asChild className="py-2 text-copy font-semibold">
                 <Link href={ALL_DESTINATIONS}>All destinations</Link>
               </MenuItem>
             </Menu>
@@ -177,12 +181,13 @@ export function SiteHeader({
                 </Link>
               </>
             ))}
+          {/* A column, so its bars' margins add up: 44px tall, a finger's target. */}
           <button
             type="button"
             aria-label="Menu"
             aria-expanded={open}
             onClick={() => setOpen(true)}
-            className={`-mr-2 ml-1 p-2.5 text-ink lg:hidden ${focus}`}
+            className="-mr-2 ml-1 inline-flex min-h-11 flex-col justify-center p-2.5 text-ink focus-ring lg:hidden"
           >
             <span className="m-[5px] block h-0.5 w-[22px] bg-current" />
             <span className="m-[5px] block h-0.5 w-[22px] bg-current" />
@@ -191,15 +196,13 @@ export function SiteHeader({
       </div>
 
       <Sheet open={open} onOpenChange={setOpen} title="Site menu">
-        <div className="flex h-[68px] items-center justify-between px-5 sm:h-[76px]">
-          <span className="text-[0.76rem] font-bold tracking-[0.25em] text-brand uppercase">
-            Menu
-          </span>
+        <div className={`flex ${row} items-center justify-between px-5`}>
+          <span className={eyebrow}>Menu</span>
           <button
             type="button"
             aria-label="Close menu"
             onClick={close}
-            className={`-mr-2.5 p-2.5 text-[1.4rem] leading-none ${focus}`}
+            className="touch-target -mr-2.5 p-2.5 text-xl leading-none focus-ring"
           >
             ×
           </button>
@@ -216,7 +219,7 @@ export function SiteHeader({
               {SITE_PAGE_LABELS[page]}
             </Link>
           ))}
-          <p className="mt-6 mb-1 text-[0.76rem] font-bold tracking-[0.2em] text-slate-500 uppercase">
+          <p className="mt-6 mb-1 text-xs font-bold tracking-eyebrow text-muted uppercase">
             Destinations
           </p>
           {destinations.map(({ slug, name }) => (

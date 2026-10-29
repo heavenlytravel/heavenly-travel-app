@@ -2,21 +2,29 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { SpinnerIcon } from "@repo/ui/icons";
 
-/** Presentational pieces the booking pages share. */
+/**
+ * Presentational pieces the booking pages share, on the site's tokens
+ * (docs/261029-design-tokens.md). The keyboard's ring is `focus-ring`, the
+ * site's own: three pixels of azure, clear of the control.
+ */
 
-export const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
+/** The one centred column of a booking or account page, under the site header. */
+export const pageColumn =
+  "mx-auto w-full max-w-[1100px] px-5 pt-6 pb-24 sm:px-8 sm:pt-10";
 
 export const eyebrow =
-  "text-[0.76rem] font-bold tracking-[0.25em] text-brand uppercase";
+  "text-xs font-bold tracking-eyebrow text-brand uppercase";
 
-export const primaryButton = `inline-flex min-h-[52px] items-center justify-center rounded-[14px] bg-brand px-6 text-[1rem] font-bold whitespace-nowrap text-white shadow-[0_8px_20px_rgba(4,107,210,0.18)] hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50 ${focus}`;
+export const primaryButton =
+  "inline-flex min-h-13 items-center justify-center rounded-control bg-brand px-6 text-base font-bold whitespace-nowrap text-white shadow-cta hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50 focus-ring";
 
 /** The quiet counterpart to `primaryButton`: an outlined button on white. */
-export const secondaryButton = `inline-flex min-h-[48px] items-center justify-center rounded-[14px] border border-slate-200 bg-white px-5 text-[0.95rem] font-bold whitespace-nowrap text-brand hover:border-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-200 ${focus}`;
+export const secondaryButton =
+  "inline-flex min-h-12 items-center justify-center rounded-control border border-card-edge bg-white px-5 text-copy font-bold whitespace-nowrap text-brand hover:border-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-card-edge focus-ring";
 
 /** A destructive action: filled red, used only after the customer confirms. */
-export const dangerButton = `inline-flex min-h-[48px] items-center justify-center rounded-[14px] bg-[#b3261e] px-5 text-[0.95rem] font-bold whitespace-nowrap text-white hover:bg-[#961d16] disabled:cursor-not-allowed disabled:opacity-50 ${focus}`;
+export const dangerButton =
+  "inline-flex min-h-12 items-center justify-center rounded-control bg-danger px-5 text-copy font-bold whitespace-nowrap text-white hover:bg-danger-strong disabled:cursor-not-allowed disabled:opacity-50 focus-ring";
 
 /** What a button shows while it waits: a spinner and what it is doing. */
 export function Pending({ children }: { children: ReactNode }) {
@@ -28,20 +36,21 @@ export function Pending({ children }: { children: ReactNode }) {
   );
 }
 
-export const textLink = `font-semibold text-brand underline-offset-4 hover:underline ${focus}`;
+export const textLink =
+  "font-semibold text-brand underline-offset-4 hover:underline focus-ring";
 
-export const control = `w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-ink outline-none placeholder:text-slate-500/80 focus:border-brand aria-invalid:border-[#b3261e] data-placeholder:text-slate-500/80 ${focus}`;
+export const control =
+  "w-full rounded-xl border border-card-edge bg-white px-4 py-3 text-ink outline-none placeholder:text-muted focus:border-brand aria-invalid:border-danger data-placeholder:text-muted focus-ring";
 
 /** The white card with the home page's shadow, its padding left to the caller. */
-export const surface =
-  "rounded-[18px] bg-white shadow-[0_12px_35px_rgba(0,38,75,0.08)]";
+export const surface = "rounded-card bg-white shadow-card";
 
 /** The white card with the home page's shadow, as a class for links and lists. */
 export const panel = `${surface} p-5 sm:p-7`;
 
 /** A `panel` from `lg` only: below it the content sits bare, in a card of the caller's. */
 export const panelFromLarge =
-  "lg:rounded-[18px] lg:bg-white lg:p-7 lg:shadow-[0_12px_35px_rgba(0,38,75,0.08)]";
+  "lg:rounded-card lg:bg-white lg:p-7 lg:shadow-card";
 
 export function PageTitle({
   eyebrow: above,
@@ -55,13 +64,9 @@ export function PageTitle({
   return (
     <div className="mb-8">
       <p className={`${eyebrow} mb-2`}>{above}</p>
-      <h1 className="font-(family-name:--font-display) text-[clamp(2.2rem,4vw,3.2rem)] leading-none">
-        {title}
-      </h1>
+      <h1 className="font-serif text-display-sm leading-none">{title}</h1>
       {children && (
-        <p className="mt-3 max-w-[60ch] text-[1.02rem] text-slate-500">
-          {children}
-        </p>
+        <p className="mt-3 max-w-[60ch] text-base text-muted">{children}</p>
       )}
     </div>
   );
@@ -78,41 +83,85 @@ export function Panel({
   return <section className={`${panel} ${className}`}>{children}</section>;
 }
 
-/** Something stopped the flow: the reason and where to go instead. */
+/**
+ * Something stopped the flow: the reason and where to go instead, or
+ * `action` in place of the link, such as a button that tries again.
+ * `level` 1 when it is all the page shows, so its title is the page's.
+ */
 export function Stop({
   title,
   message,
   href = "/#booking",
   linkLabel = "Change the search",
+  action,
+  level = 2,
 }: {
   title: string;
   message: string;
   href?: string;
   linkLabel?: string;
+  action?: ReactNode;
+  level?: 1 | 2;
 }) {
+  const Heading = level === 1 ? "h1" : "h2";
   return (
     <Panel className="max-w-[560px]">
-      <h2 className="font-(family-name:--font-display) text-[1.7rem] leading-tight">
+      <Heading className="font-serif text-figure leading-tight">
         {title}
-      </h2>
+      </Heading>
       <p className="mt-2 text-slate-700">{message}</p>
-      <Link href={href} className={`${primaryButton} mt-6`}>
-        {linkLabel}
-      </Link>
+      {action ?? (
+        <Link href={href} className={`${primaryButton} mt-6`}>
+          {linkLabel}
+        </Link>
+      )}
     </Panel>
   );
 }
 
-/** Label and value pairs, one per line. */
+/**
+ * Label and value pairs, one per line. A long value, such as an email,
+ * breaks where it must instead of running out of a phone's screen.
+ */
 export function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
   return (
-    <dl className="divide-y divide-slate-100">
+    <dl className="divide-y divide-hairline">
       {rows.map(([label, value]) => (
         <div key={label} className="flex justify-between gap-6 py-2.5">
-          <dt className="shrink-0 text-slate-500">{label}</dt>
-          <dd className="text-right font-medium">{value}</dd>
+          <dt className="shrink-0 text-muted">{label}</dt>
+          <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+            {value}
+          </dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+/** One grey bar in place of what is loading; the class gives its size and room, not its corners. */
+export function Bone({ className }: { className: string }) {
+  return <span className={`block rounded-lg bg-slate-200/80 ${className}`} />;
+}
+
+/**
+ * The shape of a part that is not read yet, such as the trips the browser
+ * keeps: bones where its words go, at about its height, so nothing below
+ * moves when it comes. It pulses unless the customer asks for less motion.
+ */
+export function Loading({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      className={`motion-safe:animate-pulse ${className}`}
+    >
+      {children}
+    </div>
   );
 }

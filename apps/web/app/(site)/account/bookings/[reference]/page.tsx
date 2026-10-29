@@ -36,7 +36,7 @@ export default async function AccountBookingPage({
 
   return (
     <>
-      <p className="mb-6 text-[0.9rem]">
+      <p className="mb-6 text-copy">
         <Link href={ACCOUNT_BOOKINGS_PATH} className={textLink}>
           All bookings
         </Link>

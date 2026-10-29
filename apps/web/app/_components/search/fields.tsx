@@ -34,7 +34,10 @@ const { timeZone } = BOOKING_RULES;
  * `presets` are the places a place field offers before anything is
  * typed, `near` the box whose places it suggests first. Days and times
  * are read in Malaysia, where the trip happens. A day has no icon in its
- * box: the label carries the field's icon (`FieldIcon`).
+ * box: the label carries the field's icon (`FieldIcon`). `invalid` marks a
+ * field the form refused and `describedBy` ties it to the line that says
+ * why, on the controls that take them: a count and a text. The place
+ * field and the pickers of @repo/ui take neither yet.
  */
 export function FieldInput({
   def,
@@ -44,6 +47,8 @@ export function FieldInput({
   near,
   onChange,
   onFocus,
+  invalid = false,
+  describedBy,
   className,
 }: {
   def: FieldDef;
@@ -53,6 +58,10 @@ export function FieldInput({
   near?: BBox;
   onChange: (key: FieldKey, value: string, placeId?: string) => void;
   onFocus?: () => void;
+  /** The form refused the field. */
+  invalid?: boolean;
+  /** The id of the line that says why. */
+  describedBy?: string;
   className?: string;
 }) {
   if (def.kind === "place" && isPlaceKey(def.key)) {
@@ -66,6 +75,8 @@ export function FieldInput({
         near={near}
         onChange={(value, placeId) => onChange(def.key, value, placeId)}
         onFocus={onFocus}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className={className}
       />
     );
@@ -86,6 +97,8 @@ export function FieldInput({
         }}
         min={min}
         timeZone={timeZone}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className={className}
       />
     );
@@ -100,6 +113,8 @@ export function FieldInput({
         onChange={(value) => onChange(def.key, value)}
         min={min}
         timeZone={timeZone}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className={className}
       />
     );
@@ -112,6 +127,8 @@ export function FieldInput({
         value={values[def.key]}
         onValueChange={(value) => onChange(def.key, value)}
         options={def.options ?? []}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className={className}
       />
     );
@@ -126,6 +143,8 @@ export function FieldInput({
         value={values[def.key]}
         onChange={(e) => onChange(def.key, e.target.value)}
         onFocus={onFocus}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className={className}
       />
     );
@@ -138,6 +157,8 @@ export function FieldInput({
       onFocus={onFocus}
       placeholder={def.placeholder}
       autoComplete="off"
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
       className={className}
     />
   );
@@ -181,12 +202,23 @@ export function FieldIcon({
 export const fieldBox =
   "relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand";
 
+/**
+ * The keyboard's ring around a `fieldBox` whose field has the focus: the
+ * field draws none of its own (`fieldControl`), so the box shows it, in
+ * the site's ring, on its edge.
+ */
+export const fieldRing =
+  "has-[:focus-visible]:outline-(length:--ring-width) has-[:focus-visible]:outline-ring";
+
 /** The label laid over the top of a `fieldBox`, its icon leading. */
 export const fieldLabel =
-  "pointer-events-none absolute top-2.5 left-[18px] z-[1] flex items-center gap-1.5 text-[0.82rem]/5 font-semibold text-slate-800";
+  "pointer-events-none absolute top-2.5 left-[18px] z-[1] flex items-center gap-1.5 text-caption/5 font-semibold text-slate-800";
 
-/** A field filling its `fieldBox`, under the label; `clearable` leaves room for the × at its end. */
+/**
+ * A field filling its `fieldBox`, under the label: what is filled in ink,
+ * the placeholder in muted. `clearable` leaves room for the × at its end.
+ */
 export const fieldControl = (clearable: boolean) =>
-  `h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-slate-500 outline-none placeholder:text-slate-500/80 focus:text-ink data-placeholder:text-slate-500/80 ${
+  `h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-ink outline-none placeholder:text-muted data-placeholder:text-muted ${
     clearable ? "pr-11" : "pr-[18px]"
   }`;

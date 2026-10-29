@@ -8,12 +8,28 @@ import {
   type ReactNode,
 } from "react";
 import { ChevronDownIcon, MapIcon } from "@repo/ui/icons";
-import { focus } from "../../(site)/_components/Page";
 import { spanOf, type PlannedTrip } from "../../_lib/trip-plan";
 
-/** The site header's height, plus its border: 68px, 76px from `sm`. What pins under it sits at this top. */
-const UNDER_HEADER = "top-[69px] sm:top-[77px]";
+/** What pins under the site header sits at its height, its border included. */
+const UNDER_HEADER = "top-(--header-height)";
+
+/**
+ * The site header's height from `sm` in pixels, `--header-height` there. An
+ * observer's margin takes pixels only, so the number is typed here; on a
+ * phone, whose header is 8px shorter, the trips count as gone a touch early.
+ */
 const HEADER_PX = 77;
+
+/** Where a part brought into view lands: clear of the site header, with room above it. */
+export const clearOfHeader = "scroll-mt-[calc(var(--header-height)+2.25rem)]";
+
+/**
+ * Where a field brought into view lands on a page whose trips fold and pin
+ * under the header on a phone: clear of both there, and from `lg`, where
+ * the trips stay in place, of the header alone.
+ */
+export const clearOfFold =
+  "scroll-mt-[calc(var(--header-height)+5.5rem)] lg:scroll-mt-[calc(var(--header-height)+2.25rem)]";
 
 /** Where a page's trips stop folding on a phone: Tailwind's `lg`. */
 const LARGE = "(min-width: 64rem)";
@@ -23,7 +39,7 @@ const FOLD_AFTER_PX = 24;
 
 /** The frame of a bar held under the site header: its sides and foot drawn, its top the header's. */
 export const underHeaderFrame =
-  "rounded-b-[18px] border border-t-0 border-slate-200 bg-white shadow-[0_18px_40px_rgba(0,38,75,0.14)]";
+  "rounded-b-card border border-t-0 border-card-edge bg-white shadow-raised";
 
 /** A scroll the customer can follow, or a jump when they ask for less motion. */
 export function scrollBehavior(): ScrollBehavior {
@@ -73,19 +89,22 @@ export function useFoldOnScroll(open: boolean, fold: () => void) {
 /**
  * The booking's trips in one line: how many and the days they span, or
  * "Plan a trip" before there is one, then `summary` (on a line of its own
- * on a phone) and Show or Hide.
+ * on a phone) and Show or Hide. `alert` writes the count in red, for a
+ * trip marked in red while the line is folded.
  */
 function TripsLine({
   trips,
   summary,
   open,
   onToggle,
+  alert = false,
   className = "",
 }: {
   trips: readonly PlannedTrip[];
   summary?: ReactNode;
   open: boolean;
   onToggle: () => void;
+  alert?: boolean;
   className?: string;
 }) {
   return (
@@ -93,11 +112,11 @@ function TripsLine({
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className={`flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-left text-[0.92rem] sm:px-5 ${className} ${focus}`}
+      className={`flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-left text-copy focus-ring sm:px-5 ${className}`}
     >
       <MapIcon className="size-[18px] shrink-0 text-brand" />
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <b className="shrink-0 text-ink">
+        <b className={`shrink-0 ${alert ? "text-danger" : "text-ink"}`}>
           {trips.length === 0
             ? "Plan a trip"
             : trips.length === 1
@@ -183,7 +202,7 @@ export function TripsBar({
             open && settled ? "overflow-visible" : "overflow-hidden"
           } ${open ? "visible" : "invisible"}`}
         >
-          <div className="border-t border-slate-100 px-3 pt-3 pb-4 sm:px-4">
+          <div className="border-t border-hairline px-3 pt-3 pb-4 sm:px-4">
             {children}
           </div>
         </div>
@@ -198,9 +217,10 @@ export function TripsBar({
  * opens them in a sheet hung from the line, over the page, wherever the
  * line is; the sheet scrolls on its own when long, and folds again once
  * the page scrolls. It unfolds by itself when `attention` turns true, so
- * a trip marked in red is not left folded away. From `lg` it is no fold:
- * `children` as they are. `watch` is given its element, and `className`
- * draws its frame.
+ * a trip marked in red is not left folded away; while it is true the line
+ * is marked in red too, so "the trip marked in red" still shows red once
+ * the sheet folds again. From `lg` it is no fold: `children` as they are.
+ * `watch` is given its element, and `className` draws its frame.
  */
 export function TripsFold({
   trips,
@@ -235,20 +255,21 @@ export function TripsFold({
       onKeyDown={(e) => {
         if (e.key === "Escape" && open) setOpen(false);
       }}
-      className={`sticky ${UNDER_HEADER} z-20 lg:static ${
+      className={`sticky ${UNDER_HEADER} z-(--layer-float) lg:static ${
         open ? "max-lg:rounded-b-none" : ""
-      } ${className}`}
+      } ${attention ? "max-lg:ring-2 max-lg:ring-danger" : ""} ${className}`}
     >
       <TripsLine
         trips={trips}
         summary={summary}
         open={open}
         onToggle={() => setOpen(!open)}
+        alert={attention}
         className="lg:hidden"
       />
       {/* On a phone a sheet over the page, taking no room in it; from lg the trips in place. */}
       <div
-        className={`absolute inset-x-0 top-full max-h-[60dvh] overflow-y-auto rounded-b-[18px] border-t border-slate-100 bg-white px-3 pt-3 pb-4 shadow-[0_18px_40px_rgba(0,38,75,0.14)] transition-[opacity,translate,visibility] duration-200 ease-out motion-reduce:transition-none sm:px-4 ${
+        className={`absolute inset-x-0 top-full max-h-[60dvh] overflow-y-auto rounded-b-card border-t border-hairline bg-white px-3 pt-3 pb-4 shadow-raised transition-[opacity,translate,visibility] duration-200 ease-out motion-reduce:transition-none sm:px-4 ${
           open ? "visible opacity-100" : "invisible -translate-y-1 opacity-0"
         } lg:visible lg:static lg:max-h-none lg:translate-y-0 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:opacity-100 lg:shadow-none`}
       >
@@ -304,7 +325,7 @@ export function UnderHeader({
   return (
     <div
       inert={!shown}
-      className={`fixed inset-x-0 ${UNDER_HEADER} z-20 transition duration-300 ease-out motion-reduce:transition-none ${
+      className={`fixed inset-x-0 ${UNDER_HEADER} z-(--layer-float) transition duration-300 ease-out motion-reduce:transition-none ${
         shown
           ? "translate-y-0 opacity-100"
           : "pointer-events-none -translate-y-3 opacity-0"

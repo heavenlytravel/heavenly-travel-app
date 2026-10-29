@@ -6,7 +6,6 @@ import type {
   LocationViewAddress,
 } from "@repo/db";
 import { usePathname } from "next/navigation";
-import { focus } from "../(site)/_components/Page";
 import {
   SearchProvider,
   useSearchCard,
@@ -76,9 +75,12 @@ export function TakeMeHere({ address }: { address: LocationViewAddress }) {
       onClick={() =>
         fillDropoff({ label: address.name, placeId: address.placeId })
       }
-      className={`mt-4 inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-brand/35 px-[17px] text-[0.9rem] font-bold text-brand hover:border-brand hover:bg-brand-tint ${focus}`}
+      className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-brand/35 px-[17px] text-copy font-bold text-brand hover:border-brand hover:bg-brand-tint focus-ring"
     >
-      Take me here <span className="ml-2.5">→</span>
+      Take me here{" "}
+      <span aria-hidden className="ml-2.5">
+        →
+      </span>
     </button>
   );
 }

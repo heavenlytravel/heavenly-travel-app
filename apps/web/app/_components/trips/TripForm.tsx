@@ -5,7 +5,7 @@ import type { BBox, TripCategory } from "@repo/db";
 import { Radio } from "@repo/ui/field";
 import { PlusIcon, TrashIcon, XIcon } from "@repo/ui/icons";
 import type { PlacePresets } from "@repo/ui/place-input";
-import { focus, secondaryButton } from "../../(site)/_components/Page";
+import { secondaryButton } from "../../(site)/_components/Page";
 import {
   fieldKeys,
   PRODUCTS,
@@ -20,6 +20,7 @@ import {
   FieldIcon,
   FieldInput,
   fieldLabel,
+  fieldRing,
 } from "../search/fields";
 import { TripNumber } from "./TripTimeline";
 import type { Planner } from "./usePlanner";
@@ -28,7 +29,8 @@ import type { Planner } from "./usePlanner";
 const saveButton = `${secondaryButton} w-full @3xl:w-auto`;
 
 /** Cancel and Remove: side by side under Save in a narrow form, after it in a wide one. */
-const textButton = `inline-flex min-h-[48px] flex-1 items-center justify-center gap-1.5 px-1 text-[0.95rem] font-semibold hover:underline @3xl:flex-none ${focus}`;
+const textButton =
+  "inline-flex min-h-12 flex-1 items-center justify-center gap-1.5 px-1 text-copy font-semibold hover:underline focus-ring @3xl:flex-none";
 
 /** Whether a field shows its ×: a place or a day with something in it. */
 function isClearable(def: FieldDef, values: SearchValues) {
@@ -42,7 +44,7 @@ export function AddAnotherTrip({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className={`mx-1 inline-flex min-h-[44px] items-center gap-1.5 text-[0.95rem] font-semibold text-brand hover:underline ${focus}`}
+      className="mx-1 inline-flex min-h-11 items-center gap-1.5 text-copy font-semibold text-brand hover:underline focus-ring"
     >
       <PlusIcon className="size-4" />
       Add another trip
@@ -90,6 +92,8 @@ export function TripForm({
   const messages = [
     ...new Set([...issues.map((x) => x.message), ...clashNotes]),
   ];
+  /** The line under the row that says what is wrong, which a refused field points at. */
+  const messagesId = id("issues");
 
   /** Empties the field, a day and its time together, and puts the cursor back in it. */
   function clear(def: FieldDef) {
@@ -120,13 +124,13 @@ export function TripForm({
           <div
             role="radiogroup"
             aria-labelledby={id(kind.key)}
-            className={`${fieldBox} border-slate-200 @3xl:w-[240px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-[14px]`}
+            className={`${fieldBox} border-card-edge @3xl:w-[240px] @3xl:shrink-0 @3xl:rounded-none @3xl:rounded-l-control`}
           >
             <span id={id(kind.key)} className={fieldLabel}>
               <FieldIcon
                 def={kind}
                 values={values}
-                className="size-[15px] text-slate-500"
+                className="size-[15px] text-muted"
               />
               {kind.label}
             </span>
@@ -134,7 +138,7 @@ export function TripForm({
               {kind.options?.map(({ value, label }) => (
                 <label
                   key={value}
-                  className="flex cursor-pointer items-center gap-2 text-[1rem]/6 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
+                  className="flex cursor-pointer items-center gap-2 text-base/6 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
                 >
                   <Radio
                     name={id(kind.key)}
@@ -161,9 +165,9 @@ export function TripForm({
           return (
             <div
               key={f.key}
-              className={`${fieldBox} @3xl:-ml-px @3xl:rounded-none ${
-                invalid ? "z-[1] border-[#b3261e]" : "border-slate-200"
-              } ${last ? "@3xl:rounded-r-[14px]" : ""} ${
+              className={`${fieldBox} ${fieldRing} @3xl:-ml-px @3xl:rounded-none ${
+                invalid ? "z-[1] border-danger" : "border-card-edge"
+              } ${last ? "@3xl:rounded-r-control" : ""} ${
                 f.kind === "place"
                   ? "@3xl:flex-[2]"
                   : f.kind === "when"
@@ -172,7 +176,7 @@ export function TripForm({
               }`}
             >
               <label htmlFor={id(f.key)} className={fieldLabel}>
-                <FieldIcon def={f} className="size-[15px] text-slate-500" />
+                <FieldIcon def={f} className="size-[15px] text-muted" />
                 {f.label}
               </label>
               <FieldInput
@@ -182,6 +186,8 @@ export function TripForm({
                 presets={presetsOf?.(f.key)}
                 near={near}
                 onChange={planner.set}
+                invalid={invalid}
+                describedBy={invalid ? messagesId : undefined}
                 className={fieldControl(clearable)}
               />
               {clearable && (
@@ -189,7 +195,7 @@ export function TripForm({
                   type="button"
                   aria-label={`Clear ${f.label}`}
                   onClick={() => clear(f)}
-                  className={`absolute right-2.5 bottom-[11px] z-[1] flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-ink ${focus}`}
+                  className="absolute right-2.5 bottom-[11px] z-[1] flex size-7 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-slate-100 hover:text-ink focus-ring"
                 >
                   <XIcon className="size-4" />
                 </button>
@@ -199,7 +205,11 @@ export function TripForm({
         })}
       </div>
       {messages.length > 0 ? (
-        <p role="alert" className="mx-1 mt-3 text-[0.92rem] text-[#b3261e]">
+        <p
+          id={messagesId}
+          role="alert"
+          className="mx-1 mt-3 text-copy text-danger"
+        >
           {messages.join(" ")}
         </p>
       ) : null}
@@ -224,7 +234,7 @@ export function TripForm({
             <button
               type="button"
               onClick={planner.remove}
-              className={`${textButton} text-[#b3261e]`}
+              className={`${textButton} text-danger`}
             >
               <TrashIcon className="size-4" />
               Remove trip

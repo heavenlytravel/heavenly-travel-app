@@ -44,6 +44,8 @@ import {
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
 import {
+  Bone,
+  Loading,
   PageTitle,
   panel,
   panelFromLarge,
@@ -59,6 +61,13 @@ import { CONFIRM_FIELDS } from "./fields";
 
 /** What a link brought: today's one-trip confirm address, read as a plan of one. */
 export type ConfirmSeed = { search: TripSearch; options: TripOptions };
+
+/** The two sides from `lg`: the trips and the vehicle, then "Your details". */
+const columns =
+  "grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start";
+
+/** The trips' side held in view from `lg`, clear of the site header. */
+const pinnedSide = "lg:sticky lg:top-[calc(var(--header-height)+1.25rem)]";
 
 /** "Langkawi International Airport on Tue, 3 Nov", and how many more. */
 function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
@@ -142,16 +151,27 @@ export function ConfirmStep({
   const [booked, setBooked] = useState(false);
 
   if (booked) {
+    // The page's one heading while the next opens, in the line's own look.
     return (
-      <p className={`${panel} flex max-w-[560px] items-center text-slate-600`}>
-        <Pending>Booked. Opening your booking…</Pending>
-      </p>
+      <div className={`${panel} max-w-[560px]`}>
+        <h1 className="flex items-center text-slate-600">
+          <Pending>Booked. Opening your booking…</Pending>
+        </h1>
+      </div>
     );
   }
-  if (!plan || !seeded) return newBooking.dialog;
+  if (!plan || !seeded) {
+    return (
+      <>
+        <ConfirmStepSkeleton category={category} />
+        {newBooking.dialog}
+      </>
+    );
+  }
   if (plan.category !== category || plan.trips.length === 0) {
     return (
       <Stop
+        level={1}
         title="Nothing to confirm yet"
         message="Search for a trip. Add as many as your stay needs: one vehicle does them all, and you book them together."
         linkLabel="Search for a trip"
@@ -170,6 +190,7 @@ export function ConfirmStep({
   if (complete && failed.length === 0 && !chosen) {
     return (
       <Stop
+        level={1}
         title="Choose a vehicle first"
         message="One vehicle does every trip. Choose it, and your trips show here, priced."
         href={vehiclePage}
@@ -180,6 +201,7 @@ export function ConfirmStep({
   if (chosen && !chosen.fit.ok && chosen.fit.reason === "seats") {
     return (
       <Stop
+        level={1}
         title="Choose a larger vehicle"
         message={`The ${chosen.card.name} seats up to ${chosen.card.maxPassengers}, and your group is ${passengers}.`}
         href={vehiclePage}
@@ -290,11 +312,12 @@ export function ConfirmStep({
   const timeline = (
     <TripTimeline
       trips={trips}
+      fullRoutes
       className=""
       action={
         <Link
           href={vehiclePage}
-          className={`hidden text-[0.92rem] lg:inline ${textLink}`}
+          className={`hidden text-copy lg:inline ${textLink}`}
         >
           Edit trips
         </Link>
@@ -302,7 +325,7 @@ export function ConfirmStep({
       priceOf={(trip) => {
         const index = trips.findIndex((t) => t.id === trip.id);
         if (!quotes[index]) {
-          return <span className="text-slate-400">…</span>;
+          return <span className="text-muted">…</span>;
         }
         const price = priceOn(index);
         return price === null ? null : formatMyr(price);
@@ -315,14 +338,17 @@ export function ConfirmStep({
     <section aria-label="Your trips" className={panelFromLarge}>
       {timeline}
       {error ? (
-        <p role="alert" className="mx-1 mt-3 text-[0.92rem] text-[#b3261e]">
+        <p role="alert" className="mx-1 mt-3 text-copy text-danger">
           {error}{" "}
           <button type="button" onClick={retry} className={textLink}>
             Try again
           </button>
         </p>
       ) : pricing && complete ? (
-        <p className="mx-1 mt-3 flex items-center text-[0.9rem] text-slate-500">
+        <p
+          role="status"
+          className="mx-1 mt-3 flex items-center text-copy text-muted"
+        >
           <Pending>Checking today&apos;s prices…</Pending>
         </p>
       ) : null}
@@ -332,12 +358,10 @@ export function ConfirmStep({
   const vehiclePanel = card ? (
     <section className={`${panelFromLarge} grid gap-5`}>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-(family-name:--font-display) text-[1.5rem] leading-tight">
-          Your vehicle
-        </h2>
+        <h2 className="font-serif text-2xl leading-tight">Your vehicle</h2>
         <Link
           href={vehiclePage}
-          className={`hidden text-[0.92rem] lg:inline ${textLink}`}
+          className={`hidden text-copy lg:inline ${textLink}`}
         >
           Change
         </Link>
@@ -350,18 +374,18 @@ export function ConfirmStep({
           />
         ) : null}
         <div className="min-w-0">
-          <p className="font-(family-name:--font-display) text-[1.5rem] leading-tight text-ink">
+          <p className="font-serif text-2xl leading-tight text-ink">
             {card.name}
           </p>
           <p className="mt-1.5 text-slate-700">{card.description}</p>
           {card.models.length > 0 ? (
             // A div, not a p: the gallery's dialog is not phrasing content.
-            <div className="mt-2 text-[0.95rem] text-slate-700">
+            <div className="mt-2 text-copy text-slate-700">
               {modelsLine(card.models.map((m) => m.name))}, or similar.{" "}
               <ModelPhotosButton title={card.name} models={card.models} />
             </div>
           ) : null}
-          <p className="mt-3 text-[0.9rem] text-slate-500">
+          <p className="mt-3 text-copy text-muted">
             For{" "}
             {trips.length === 2
               ? "both trips"
@@ -377,19 +401,12 @@ export function ConfirmStep({
 
   return (
     <>
-      <PageTitle
-        eyebrow={`${TRIP_CATEGORY_LABELS[category]}${several ? ` · ${trips.length} trips` : ""}`}
-        title="Confirm your booking."
-      >
-        {several ? "Every trip is priced" : "Your trip is priced"} with
-        today&apos;s rates. Nothing is booked until you confirm, and you pay
-        nothing now.
-      </PageTitle>
+      <StepTitle category={category} count={trips.length} />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      <div className={columns}>
         {/* In view while the details scroll, unless it is the taller side.
             On a phone its parts are the page's own, so the fold pins all the way down. */}
-        <div className="contents lg:sticky lg:top-24 lg:block">
+        <div className={`contents lg:block ${pinnedSide}`}>
           <TripsFold
             trips={trips}
             summary={
@@ -415,10 +432,7 @@ export function ConfirmStep({
         </div>
         <div>
           <section aria-labelledby="details" className={panel}>
-            <h2
-              id="details"
-              className="mb-4 font-(family-name:--font-display) text-[1.5rem]"
-            >
+            <h2 id="details" className="mb-4 font-serif text-2xl">
               Your details
             </h2>
             <ConfirmForm
@@ -461,6 +475,77 @@ export function ConfirmStep({
       </div>
 
       {newBooking.dialog}
+    </>
+  );
+}
+
+/** The page's title: the category, how many trips when several, and that nothing is paid yet. */
+function StepTitle({
+  category,
+  count,
+}: {
+  category: TripCategory;
+  count: number;
+}) {
+  const several = count > 1;
+  return (
+    <PageTitle
+      eyebrow={`${TRIP_CATEGORY_LABELS[category]}${several ? ` · ${count} trips` : ""}`}
+      title="Confirm your booking."
+    >
+      {several ? "Every trip is priced" : "Your trip is priced"} with
+      today&apos;s rates. Nothing is booked until you confirm, and you pay
+      nothing now.
+    </PageTitle>
+  );
+}
+
+/**
+ * The page while the browser's trips are read: its title as it reads for
+ * one trip, then bones about the height of its two sides (on a phone the
+ * folded line, then the details), so the page and the footer do not jump
+ * when they come.
+ */
+function ConfirmStepSkeleton({ category }: { category: TripCategory }) {
+  return (
+    <>
+      <StepTitle category={category} count={1} />
+      <Loading className={columns}>
+        <div className="grid gap-6 lg:gap-7">
+          <div
+            className={`${surface} grid gap-1.5 px-4 py-2.5 sm:px-5 lg:hidden`}
+          >
+            <Bone className="h-5 w-40" />
+            <Bone className="h-5 w-56 max-w-full" />
+          </div>
+          <div className={`hidden lg:block ${panelFromLarge}`}>
+            <Bone className="h-24 w-full" />
+          </div>
+          <div className={`hidden lg:grid lg:gap-5 ${panelFromLarge}`}>
+            <Bone className="h-8 w-40" />
+            <div className="grid grid-cols-[minmax(0,300px)_minmax(0,1fr)] items-center gap-6">
+              <Bone className="aspect-[3/2] w-full" />
+              <div className="grid gap-2">
+                <Bone className="h-7 w-32" />
+                <Bone className="h-4 w-full" />
+                <Bone className="h-4 w-3/4" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={`${panel} grid gap-4`}>
+          <Bone className="mb-1 h-8 w-36" />
+          {[0, 1, 2, 3].map((field) => (
+            <div key={field}>
+              <Bone className="mb-1.5 h-5 w-32" />
+              <Bone className={field === 3 ? "h-24 w-full" : "h-12 w-full"} />
+              <Bone className="mt-1.5 h-4 w-3/4" />
+            </div>
+          ))}
+          <Bone className="mt-2 h-13 w-full" />
+          <Bone className="h-4 w-2/3" />
+        </div>
+      </Loading>
     </>
   );
 }

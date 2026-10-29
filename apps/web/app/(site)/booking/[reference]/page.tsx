@@ -39,14 +39,14 @@ export default async function BookingPage({
         booking={booking}
         aside={
           <>
-            <p className="mt-4 text-[0.85rem] text-slate-500">
+            <p className="mt-4 text-caption text-muted">
               Keep this reference. Quote it when you contact us about your
               booking.
             </p>
             <Link href="/" className={`${primaryButton} mt-6 w-full`}>
               Back to Heavenly Travel
             </Link>
-            <p className="mt-4 text-center text-[0.9rem]">
+            <p className="mt-4 text-center text-copy">
               <Link href={ACCOUNT_BOOKINGS_PATH} className={textLink}>
                 See all your bookings
               </Link>

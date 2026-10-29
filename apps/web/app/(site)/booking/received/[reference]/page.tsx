@@ -43,9 +43,7 @@ export default async function ReceivedPage({
       </PageTitle>
       <Panel className="max-w-[560px]">
         <p className={eyebrow}>Your reference</p>
-        <p className="mt-2 font-(family-name:--font-display) text-[clamp(2.4rem,6vw,3.6rem)] leading-none">
-          {reference}
-        </p>
+        <p className="mt-2 font-serif text-display leading-none">{reference}</p>
         <p className="mt-5 text-slate-700">
           {sentTo ? (
             <>
@@ -57,7 +55,7 @@ export default async function ReceivedPage({
             "We have emailed you the details. Keep this reference and quote it when you contact us about your booking."
           )}
         </p>
-        <p className="mt-4 text-[0.9rem] text-slate-500">
+        <p className="mt-4 text-copy text-muted">
           Verify your email once to see updates and cancel online.{" "}
           <Link
             href={signUpHref(null, accountBookingHref(reference))}

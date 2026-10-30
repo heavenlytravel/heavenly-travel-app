@@ -11,12 +11,15 @@ import { cx } from "@repo/ui/cx";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useImageUpload } from "@repo/console/use-image-upload";
+import { ViewImage } from "@repo/console/ViewImage";
 import { FormError } from "@repo/ui/form-error";
+import { MediaPicker } from "./MediaPicker";
 
 /**
- * One image of a form: what is there now, and the buttons that upload,
- * replace or take it away. The file is stored as soon as it is chosen, at
- * the upload route given; the form keeps it once it is saved. A page's
+ * One image of a form: what is there now, and the buttons that upload or
+ * replace it, choose one already stored from Media, view it full screen
+ * or take it away. The file is stored as soon as it is chosen, at the
+ * upload route given; the form keeps it once it is saved. A page's
  * image adds its alt text under it; a vehicle class's picture is the
  * class's name.
  */
@@ -94,16 +97,27 @@ export function ImageUpload({
         >
           {uploading ? "Uploading…" : src ? "Replace" : "Upload image"}
         </Button>
+        <MediaPicker
+          label={label}
+          most={1}
+          disabled={uploading}
+          onPick={([image]) => {
+            if (image) onChange(image);
+          }}
+        />
         {src ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={uploading}
-            aria-label={`Remove ${label.toLowerCase()}`}
-            onClick={() => onChange(null)}
-          >
-            Remove
-          </Button>
+          <>
+            <ViewImage src={src} alt={alt} label={label} />
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={uploading}
+              aria-label={`Remove ${label.toLowerCase()}`}
+              onClick={() => onChange(null)}
+            >
+              Remove
+            </Button>
+          </>
         ) : (
           <span className="text-xs text-muted">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.

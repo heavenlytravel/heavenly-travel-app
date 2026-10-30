@@ -6,6 +6,7 @@ import {
   PHOTO_LIMITS,
   photoAlt,
   type Photo,
+  type UploadedImage,
 } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -18,24 +19,49 @@ import {
   XIcon,
 } from "@repo/ui/icons";
 import Image from "next/image";
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useRef,
+  useState,
+  type ComponentType,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { useImageUpload } from "./use-image-upload";
+import { ViewImage } from "./ViewImage";
 import { FormError } from "@repo/ui/form-error";
 
 /**
+ * What an app's "Choose from Media" takes, beside an image field's upload:
+ * the admin's picker over the files already stored. Connect has none: a
+ * vendor never sees the staff's files.
+ */
+export type MediaPickerProps = {
+  /** What the images are for, as the picker names them: "Photos of Toyota Alphard". */
+  label: string;
+  /** How many may be picked at once: 1 for one image, the room a list has left. */
+  most: number;
+  disabled?: boolean;
+  /** The files picked, in the order picked, as an upload answers each. */
+  onPick: (images: UploadedImage[]) => void;
+};
+export type MediaPicker = ComponentType<MediaPickerProps>;
+
+/**
  * A vehicle's photos, in the order the customer swipes through them: each
- * with its caption, moved left or right, or taken out. The first is the
- * vehicle's cover. "Add photos", the dashed slot after the last, stores
- * each file as soon as it is chosen, several at once, each shown in its
- * place until it lands; files past the limit are left out, and the list
- * says so. The form keeps them once it is saved, and waits for the
- * uploads.
+ * with its caption, viewed full screen, moved left or right, or taken
+ * out. The first is the vehicle's cover. "Add photos", the dashed slot
+ * after the last, stores each file as soon as it is chosen, several at
+ * once, each shown in its place until it lands; files past the limit are
+ * left out, and the list says so. In the admin, "Choose from Media" adds
+ * files already stored. The form keeps them once it is saved, and waits
+ * for the uploads.
  */
 export function PhotoList({
   name,
   photos,
   setPhotos,
   uploadPath,
+  mediaPicker: Picker,
 }: {
   /** The app's upload route for a vehicle's photo. */
   uploadPath: string;
@@ -44,6 +70,8 @@ export function PhotoList({
   photos: Photo[];
   /** The form's state setter: an upload lands on the list as it is then, edits made meanwhile kept. */
   setPhotos: Dispatch<SetStateAction<Photo[]>>;
+  /** The admin's "Choose from Media"; absent in Connect. */
+  mediaPicker?: MediaPicker;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, pending, error } = useImageUpload(
@@ -66,6 +94,18 @@ export function PhotoList({
           : current,
       ),
     );
+  }
+
+  /** Files picked from Media go last, one already on the list once. */
+  function addPicked(images: UploadedImage[]) {
+    setLeftOut(null);
+    setPhotos((current) => {
+      const on = new Set(current.map((photo) => photo.url));
+      const added = images
+        .filter((image) => !on.has(image.url))
+        .map((image) => ({ url: image.url, caption: "" }));
+      return [...current, ...added].slice(0, PHOTO_LIMITS.photos);
+    });
   }
 
   function move(from: number, to: number) {
@@ -134,8 +174,14 @@ export function PhotoList({
               >
                 <ArrowRightIcon />
               </Button>
+              <ViewImage
+                look="icon"
+                src={photo.url}
+                alt={photoAlt(shown, photo)}
+                label={`Photo ${i + 1}`}
+              />
               <Button
-                variant="ghost"
+                variant="ghost-danger"
                 size="sm"
                 className="ml-auto"
                 aria-label={`Remove photo ${i + 1}`}
@@ -195,11 +241,21 @@ export function PhotoList({
           if (files.length > 0) add(files);
         }}
       />
-      <p className="text-xs text-muted">
-        {room > 0
-          ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
-          : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {Picker && room > 0 ? (
+          <Picker
+            label={`Photos of ${shown}`}
+            most={room}
+            disabled={uploading}
+            onPick={addPicked}
+          />
+        ) : null}
+        <p className="text-xs text-muted">
+          {room > 0
+            ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
+            : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
+        </p>
+      </div>
       <FormError error={error ?? leftOut} size="xs" />
     </div>
   );

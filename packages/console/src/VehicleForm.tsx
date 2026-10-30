@@ -33,7 +33,7 @@ import { ExpiryDateField } from "./ExpiryDateField";
 import { classGroups, DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
 import { FormFoot } from "./FormFoot";
 import { DetailColumns } from "./PageColumn";
-import { PhotoList } from "./PhotoList";
+import { PhotoList, type MediaPicker } from "./PhotoList";
 import { useActionForm } from "./use-action-form";
 import { UploadsContext, useUploadCount } from "./use-image-upload";
 import { useOutOfServiceAsk } from "./use-out-of-service-ask";
@@ -125,6 +125,7 @@ export function VehicleForm({
   action,
   cancelHref,
   uploadPath,
+  mediaPicker,
   photosNote = "What the customers of the location it is based at see of its model, plate and all, and swipe through when they choose one. The first cover of the class there is the class's picture at the location.",
   held = [],
 }: {
@@ -146,6 +147,8 @@ export function VehicleForm({
   cancelHref: string;
   /** The app's upload route for a vehicle's photo. */
   uploadPath: string;
+  /** The admin's "Choose from Media" for the photos; absent in Connect. */
+  mediaPicker?: MediaPicker;
   /** What the photos are for, in the tip beside their title. */
   photosNote?: string;
   /** The accepted bookings still to come it is on, which taking it out of service takes it off. */
@@ -219,6 +222,7 @@ export function VehicleForm({
                 </CardTitle>
                 <PhotoList
                   uploadPath={uploadPath}
+                  mediaPicker={mediaPicker}
                   name={modelName({ brand: brand.trim(), name: model.trim() })}
                   photos={photos}
                   setPhotos={(next) => {

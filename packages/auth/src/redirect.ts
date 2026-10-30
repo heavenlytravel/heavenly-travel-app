@@ -23,3 +23,16 @@ export function safeRedirect(
     return fallback;
   }
 }
+
+/**
+ * Leaves for `to` once a session has started (Clerk's `finalize`), by a
+ * whole page load: every server component reads the new session at once,
+ * and no client navigation ends in a server redirect, which React's
+ * timings in development throw on ("cannot have a negative time stamp").
+ */
+export function openSignedIn(
+  { decorateUrl }: { decorateUrl: (url: string) => string },
+  to: string,
+) {
+  window.location.assign(decorateUrl(to));
+}

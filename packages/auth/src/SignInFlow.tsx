@@ -3,7 +3,7 @@
 import { useSignIn } from "@clerk/nextjs";
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/field";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import {
   authErrorMessage,
@@ -24,7 +24,7 @@ import {
   TextButton,
 } from "./AuthParts";
 import { addPasswordHref } from "./account-paths";
-import { REDIRECT_PARAM, safeRedirect } from "./redirect";
+import { openSignedIn, REDIRECT_PARAM, safeRedirect } from "./redirect";
 
 type Step =
   | "email"
@@ -66,13 +66,12 @@ export function SignInFlow({
   fallbackRedirect?: string;
   /** The app's account page, where an account without a password is offered one. */
   accountPath: string;
-  /** What to do when no account has the email: each app says its own. */
-  noAccount: ReactNode;
+  /** After "Couldn't find your account.": what to do, where the app has a way. */
+  noAccount?: ReactNode;
   /** Under the first card: the way to sign up, where there is one. */
   footer?: ReactNode;
 }) {
   const { signIn, fetchStatus } = useSignIn();
-  const router = useRouter();
   const params = useSearchParams();
   const busy = fetchStatus === "fetching";
 
@@ -98,7 +97,12 @@ export function SignInFlow({
     if (refusal.code === "form_identifier_not_found") {
       setError({
         at: "email",
-        text: <>There&rsquo;s no account with this email. {noAccount}</>,
+        text: (
+          <>
+            Couldn&rsquo;t find your account.
+            {noAccount ? <> {noAccount}</> : null}
+          </>
+        ),
       });
       return false;
     }
@@ -135,11 +139,7 @@ export function SignInFlow({
       ? addPasswordHref(accountPath, destination)
       : destination;
     const { error: refusal } = await signIn.finalize({
-      navigate: ({ decorateUrl }) => {
-        const url = decorateUrl(to);
-        if (url.startsWith("http")) window.location.href = url;
-        else router.push(url);
-      },
+      navigate: (session) => openSignedIn(session, to),
     });
     if (refusal) fail(refusal, "form");
   }

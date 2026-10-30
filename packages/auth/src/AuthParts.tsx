@@ -162,35 +162,93 @@ export function PasswordInput({
   );
 }
 
+/** How many digits an emailed code has. */
+const CODE_LENGTH = 6;
+
 /**
- * The six digits of an emailed code, in one box the phone fills from the
- * email (`one-time-code`). Its form is sent as the sixth digit lands.
+ * The six digits of an emailed code, a box each. One real input lies
+ * over the boxes, so typing, deleting, pasting the whole code and the
+ * phone filling it from the email (`one-time-code`) all work as in any
+ * field; the boxes only draw what it holds, the next box lit while it has
+ * focus. Its form is sent as the sixth digit lands.
  */
 export function CodeInput({
   className,
+  onFocus,
+  onBlur,
   ...props
-}: Omit<ComponentProps<"input">, "type" | "onChange">) {
+}: Omit<
+  ComponentProps<"input">,
+  "type" | "onChange" | "value" | "defaultValue"
+>) {
+  const [digits, setDigits] = useState("");
+  const [focused, setFocused] = useState(false);
+  const invalid = Boolean(props["aria-invalid"]);
   return (
-    <AuthInput
-      name="code"
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      pattern="[0-9]{6}"
-      maxLength={6}
-      required
-      autoFocus
-      className={cx(
-        "h-13 text-center font-mono text-2xl tracking-[0.5em]",
-        className,
-      )}
-      onChange={(event) => {
-        const input = event.currentTarget;
-        const digits = input.value.replace(/\D/g, "").slice(0, 6);
-        if (digits !== input.value) input.value = digits;
-        if (digits.length === 6) input.form?.requestSubmit();
-      }}
-      {...props}
-    />
+    <div className={cx("relative", className)}>
+      <div aria-hidden className="grid grid-cols-6 gap-2">
+        {Array.from({ length: CODE_LENGTH }, (_, index) => {
+          const current =
+            focused &&
+            (index === digits.length ||
+              (digits.length === CODE_LENGTH && index === CODE_LENGTH - 1));
+          return (
+            <span
+              key={index}
+              className={cx(
+                "grid h-13 place-items-center rounded-control border bg-white font-mono text-2xl text-ink transition-colors",
+                invalid ? "border-danger" : "border-edge",
+                current &&
+                  (invalid
+                    ? "outline-2 outline-danger"
+                    : "border-ring outline-2 outline-ring"),
+              )}
+            >
+              {digits[index] ??
+                (current ? (
+                  <span className="h-6 w-px bg-ink motion-safe:animate-pulse" />
+                ) : null)}
+            </span>
+          );
+        })}
+      </div>
+      <input
+        name="code"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        pattern="[0-9]{6}"
+        maxLength={CODE_LENGTH}
+        required
+        autoFocus
+        spellCheck={false}
+        // Over the boxes, unseen: its caret and text would only show twice.
+        className="absolute inset-0 size-full cursor-text appearance-none bg-transparent text-transparent caret-transparent outline-none selection:bg-transparent"
+        value={digits}
+        onChange={(event) => {
+          const next = event.currentTarget.value
+            .replace(/\D/g, "")
+            .slice(0, CODE_LENGTH);
+          setDigits(next);
+          if (next.length === CODE_LENGTH) {
+            const form = event.currentTarget.form;
+            // Once the boxes show the last digit.
+            requestAnimationFrame(() => form?.requestSubmit());
+          }
+        }}
+        onFocus={(event) => {
+          setFocused(true);
+          // Typing always goes at the end, as the boxes show it.
+          const end = event.currentTarget.value.length;
+          event.currentTarget.setSelectionRange(end, end);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        {...props}
+      />
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useSignUp } from "@clerk/nextjs";
 import { Button } from "@repo/ui/button";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { authErrorMessage, authErrorOf } from "./auth-errors";
 import {
@@ -16,7 +16,7 @@ import {
   ResendCode,
   TextButton,
 } from "./AuthParts";
-import { REDIRECT_PARAM, safeRedirect } from "./redirect";
+import { openSignedIn, REDIRECT_PARAM, safeRedirect } from "./redirect";
 
 type Where = "firstName" | "lastName" | "email" | "password" | "code" | "form";
 
@@ -51,7 +51,6 @@ export function SignUpFlow({
   signInPath: string;
 }) {
   const { signUp, fetchStatus } = useSignUp();
-  const router = useRouter();
   const params = useSearchParams();
   const busy = fetchStatus === "fetching";
 
@@ -151,11 +150,7 @@ export function SignUpFlow({
       window.location.origin,
     );
     const done = await signUp.finalize({
-      navigate: ({ decorateUrl }) => {
-        const url = decorateUrl(destination);
-        if (url.startsWith("http")) window.location.href = url;
-        else router.push(url);
-      },
+      navigate: (session) => openSignedIn(session, destination),
     });
     if (done.error) fail(done.error, "form");
   }

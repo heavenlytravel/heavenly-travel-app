@@ -14,8 +14,8 @@ export type AccountMenuLink = { label: string; href: string; icon?: ReactNode };
  * picture or initials, which open their name and email, the app's own
  * links ("My bookings"), "Your account" and "Sign out". In a header it is
  * the round picture alone; in Connect's side menu (`showName`) the name
- * and email stand beside it. Nothing while Clerk loads but a circle that
- * keeps its place.
+ * and email stand beside it. While Clerk loads, a circle keeps its place;
+ * signed out, nothing.
  */
 export function AccountMenu({
   accountHref,
@@ -33,7 +33,8 @@ export function AccountMenu({
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
 
-  if (!isLoaded || !user) {
+  if (isLoaded && !user) return null;
+  if (!user) {
     return (
       <span
         aria-hidden

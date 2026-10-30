@@ -50,7 +50,7 @@ export function AuthCard({
         </p>
         <h1
           id="auth-title"
-          className="font-display text-[1.65rem] leading-tight tracking-[-0.01em] text-ink"
+          className="font-serif text-[1.65rem] leading-tight tracking-[-0.01em] text-ink"
         >
           {title}
         </h1>

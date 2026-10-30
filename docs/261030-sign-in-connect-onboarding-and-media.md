@@ -284,3 +284,9 @@ View, Add staff and Make staff, and the other teams' menus.
 - Device Trust on or off, the user's call.
 - Production: publish Connect's page in the editor after the merge (until then it shows
   its built-in words), and check its Clerk instance requires a password at sign-up.
+- Vercel, Connect: `NEXT_PUBLIC_CLERK_SIGN_UP_URL` to `/register`; remove
+  `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL`, no longer read.
+- Click through what was not tried in a browser (above), and one new registration end to
+  end, to see the phone and names kept on the account.
+- Connect scoped by location (`/[location]/…` in place of `~`), once a vendor works in
+  more than one location.

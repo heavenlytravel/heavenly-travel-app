@@ -19,8 +19,10 @@ export type Person = { name: string; role: string };
  * palette (Ctrl or Cmd + K), then the signed-in admin's picture, which
  * opens their own menu (the account, signing out) and names them and
  * their level on hover. Nothing else: the page's own title says where it
- * is. On a phone it is a white bar with the picker and the picture; the
- * menu and the search are in the dock.
+ * is. The bar is the brand's pale tint at every width, its controls white
+ * on it, so it reads as the console's frame with the sidebar and leaves
+ * the canvas to the page. On a phone it holds the picker and the picture;
+ * the menu and the search are in the dock.
  */
 export function ConsoleTopBar({
   locations,
@@ -32,7 +34,7 @@ export function ConsoleTopBar({
   person: Person;
 }) {
   return (
-    <header className="sticky top-0 z-(--layer-sticky) flex h-(--header-height) shrink-0 items-center gap-3 border-b border-edge bg-white px-4 md:bg-canvas/90 md:px-7 md:backdrop-blur">
+    <header className="sticky top-0 z-(--layer-sticky) flex h-(--header-height) shrink-0 items-center gap-3 border-b border-slot bg-brand-tint px-4 md:px-7">
       <NavigationProgress
         className="absolute inset-x-0 top-0"
         gradient={["var(--navy)", "var(--azure)"]}

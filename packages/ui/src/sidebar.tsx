@@ -326,7 +326,7 @@ export function SidebarTrigger({
         aria-keyshortcuts="Control+B Meta+B"
         onClick={toggleSidebar}
         className={cx(
-          "ui:touch-target ui:inline-flex ui:size-9 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring",
+          "ui:touch-target ui:inline-flex ui:size-9 ui:items-center ui:justify-center ui:rounded-md ui:text-navy ui:transition-colors ui:hover:bg-white ui:focus-ring",
           className,
         )}
         {...props}

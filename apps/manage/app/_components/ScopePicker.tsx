@@ -74,8 +74,9 @@ export function ScopePicker({
           type="button"
           // Named by its own words, "Location" and the one shown, as it reads.
           className={cx(
-            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border border-edge bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring",
-            full ? "w-full" : "w-64",
+            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring",
+            // On the top bar's tint its edge is the tint's own; in the phone panel, the panel's.
+            full ? "w-full border-edge" : "w-64 border-slot",
           )}
         >
           <ScopeMark location={current} />

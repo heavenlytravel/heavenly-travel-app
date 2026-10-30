@@ -42,7 +42,7 @@ export function CommandPaletteTrigger({
       onClick={onOpen}
       aria-keyshortcuts="Control+K Meta+K"
       className={cx(
-        "ui:inline-flex ui:h-10 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-control ui:border ui:border-edge ui:bg-white ui:px-3 ui:text-sm ui:text-muted ui:shadow-control ui:transition-colors ui:hover:border-edge-strong ui:focus-ring",
+        "ui:inline-flex ui:h-10 ui:w-full ui:shrink-0 ui:items-center ui:gap-2 ui:rounded-control ui:border ui:border-slot ui:bg-white ui:px-3 ui:text-sm ui:text-muted ui:shadow-control ui:transition-colors ui:hover:border-edge-strong ui:focus-ring",
         className,
       )}
     >

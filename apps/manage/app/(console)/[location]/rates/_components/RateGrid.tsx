@@ -139,8 +139,6 @@ function groupsOf(classes: readonly ClassColumn[]) {
 const ZONE_NAME = "block max-w-44 truncate font-medium text-ink";
 
 /** A link in a line of the grid's text: to Coverage, to the classes. */
-const TEXT_LINK = "font-semibold text-brand underline-offset-4 hover:underline";
-
 const byName = (a: string, b: string) =>
   a.localeCompare(b, "en", { sensitivity: "base" });
 
@@ -414,7 +412,7 @@ export function RateGrid({
     return (
       <p className="px-5 py-5 text-sm text-muted">
         A route runs between two zones, or within one. Draw the zones on{" "}
-        <Link href={coverageHref(locationSlug)} className={TEXT_LINK}>
+        <Link href={coverageHref(locationSlug)} className="text-link">
           Coverage
         </Link>{" "}
         to put a route on the grid.
@@ -428,7 +426,7 @@ export function RateGrid({
           ? `No ${category.toLowerCase()} class is on sale here. `
           : "Each class on sale is a column of the grid. "}
         Put a class on sale in{" "}
-        <Link href={classesHref(locationSlug)} className={TEXT_LINK}>
+        <Link href={classesHref(locationSlug)} className="text-link">
           Classes
         </Link>{" "}
         to price a route for it.
@@ -827,10 +825,11 @@ export function RateGrid({
       <div className="relative">
         <div
           ref={gridRef}
-          className="relative max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
+          className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="sticky top-0 z-2 bg-shade text-2xs text-muted">
+            {/* Raised in the grid's own stacking (`isolate`), so it stays under the console's top bar. */}
+            <thead className="sticky top-0 z-(--layer-raised) bg-shade text-2xs text-muted">
               {grouped ? (
                 <tr>
                   {leadHeadings}
@@ -881,7 +880,7 @@ export function RateGrid({
                       <button
                         type="button"
                         onClick={() => narrowTo("", false)}
-                        className={TEXT_LINK}
+                        className="text-link"
                       >
                         Show every route
                       </button>
@@ -1140,7 +1139,7 @@ export function RateGrid({
               view; on a phone it ends the grid, as a form's button does. */}
           <div
             className={cx(
-              "z-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
+              "z-(--layer-sticky) flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
               dirty
                 ? "bg-navy text-white shadow-band"
                 : "border-t border-hairline bg-white",

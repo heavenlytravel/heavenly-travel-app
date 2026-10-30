@@ -185,12 +185,6 @@ function MediaTile({
 
   return (
     <Tile>
-      {chosen ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-2 rounded-card ring-2 ring-brand ring-inset"
-        />
-      ) : null}
       <div className="relative">
         <CardImage
           src={row.url}
@@ -244,6 +238,13 @@ function MediaTile({
           </ul>
         ) : null}
       </div>
+      {/* Last, so it is drawn over the tile's raised parts, its foot too. */}
+      {chosen ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-(--layer-raised) rounded-card ring-2 ring-brand ring-inset"
+        />
+      ) : null}
     </Tile>
   );
 }

@@ -3,8 +3,8 @@
 import type { AdminTeam } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { Sheet } from "@repo/ui/sheet";
-import { FormError } from "@repo/console/FormError";
+import { Sheet, SheetHeader } from "@repo/ui/sheet";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../_lib/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
@@ -46,15 +46,13 @@ export function AdminAccessSheet({
       title={email ? `Level and teams for ${email}` : "Promote to staff"}
     >
       <form {...formProps} className="grid gap-5 p-6 text-left">
-        <div>
-          <h2 className="text-lg font-bold tracking-title text-ink">
-            {email ? "Level and teams" : "Promote to staff"}
-          </h2>
-          <p className="mt-1 text-sm break-all text-muted">
-            {email ??
-              "They need an account: made on the site, or created on Customers."}
-          </p>
-        </div>
+        <SheetHeader
+          title={email ? "Level and teams" : "Promote to staff"}
+          description={
+            email ??
+            "They need an account: made on the site, or created on Customers."
+          }
+        />
         {email ? (
           <input type="hidden" name="email" value={email} />
         ) : (

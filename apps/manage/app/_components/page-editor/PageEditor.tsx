@@ -28,11 +28,12 @@ import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
+import { scrollBehavior } from "@repo/ui/motion";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { errorOf } from "../../_lib/action-state";
 import { useLeaveGuard } from "../../_lib/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { MarkdownField } from "../MarkdownField";
 import { UploadsContext, useUploadCount } from "../use-image-upload";
 import {
@@ -44,7 +45,7 @@ import {
   savePageDraftAction,
   unpublishPageAction,
 } from "./actions";
-import { Count } from "./Count";
+import { Count, Counted } from "./Count";
 import { ImageField } from "./ImageField";
 import {
   SavedAddressPicker,
@@ -69,24 +70,6 @@ const formContentOf = (content: PageContent): FormContent => ({
   faqs: content.faqs.map((faq, i) => ({ ...faq, key: `faq-${i}` })),
 });
 
-/** A label with how much of its limit the text has used. */
-function Counted({
-  label,
-  value,
-  limit,
-}: {
-  label: string;
-  value: string;
-  limit: number;
-}) {
-  return (
-    <span className="flex items-baseline justify-between gap-3">
-      {label}
-      <Count value={value.length} limit={limit} />
-    </span>
-  );
-}
-
 /** The id of the part of the editor a check is about, which "Go to it" scrolls to. */
 const partId = (key: PageCheck["key"]) => `page-${key}`;
 
@@ -108,9 +91,6 @@ const TAGLINE_FIELD: Partial<
     hint: "The word over the headline, in the handwriting type. Optional.",
   },
 };
-
-/** The rows of a list in a card, the FAQs: hairlines between them, no frames. */
-const ROWS = "divide-y divide-hairline";
 
 /**
  * One part of a card of the editor, under its name and a line of help,
@@ -336,7 +316,7 @@ export function PageEditor({
     requestAnimationFrame(() =>
       document
         .getElementById(partId(check.key))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" }),
     );
   }
 
@@ -634,7 +614,7 @@ export function PageEditor({
                 {content.faqs.length === 0 ? (
                   <p className="text-sm text-muted">No FAQs yet.</p>
                 ) : (
-                  <ol className={ROWS}>
+                  <ol className="divide-y divide-hairline">
                     {content.faqs.map((faq, index) => (
                       <li key={faq.key} className="grid gap-3 py-4 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">

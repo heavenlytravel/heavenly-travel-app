@@ -4,11 +4,11 @@ import { PLACE_TYPE_LABELS, isPlaceSection, type PlaceSection } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type ComponentProps } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { PageEditor } from "../../../../_components/page-editor/PageEditor";
 import { errorOf } from "../../../../_lib/action-state";
 import {
@@ -175,7 +175,7 @@ function RenameDialog({
           under={`/${entry.locationSlug}/${page}`}
         />
         <FormError error={error} />
-        <div className="flex justify-end gap-2">
+        <DialogActions>
           <Button
             type="button"
             variant="secondary"
@@ -190,7 +190,7 @@ function RenameDialog({
           >
             {pending ? "Changing…" : type ? "Change" : "Change slug"}
           </Button>
-        </div>
+        </DialogActions>
       </form>
     </Dialog>
   );

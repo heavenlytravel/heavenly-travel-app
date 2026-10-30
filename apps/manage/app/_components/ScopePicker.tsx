@@ -148,14 +148,11 @@ function ScopeMark({
     );
   }
   return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        "grid shrink-0 place-items-center bg-brand font-bold text-white",
-        small ? "size-5 rounded-sm text-[9px]" : "size-6.5 rounded-md text-2xs",
-      )}
-    >
-      All
-    </span>
+    <LocationMark
+      name="Every location"
+      state="live"
+      initial="All"
+      size={small ? "md" : "picker"}
+    />
   );
 }

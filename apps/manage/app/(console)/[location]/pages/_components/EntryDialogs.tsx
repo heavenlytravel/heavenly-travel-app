@@ -2,12 +2,12 @@
 
 import { ENTRY_LIMITS, PAGE_LIMITS, slugify } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { useState } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import { createLocationEntryAction } from "../../../../_lib/location-actions";
 import {
@@ -59,8 +59,7 @@ export function AddEntryDialog({
       <Tooltip content={`Add ${one}`}>
         <Button
           variant="ghost"
-          size="sm"
-          className="w-8 px-0"
+          size="icon-sm"
           aria-label={`Add ${one}`}
           onClick={() => setOpen(true)}
         >
@@ -118,7 +117,7 @@ export function AddEntryDialog({
             </Field>
           ) : null}
           <FormError error={error} />
-          <div className="flex justify-end gap-2">
+          <DialogActions>
             <Button
               type="button"
               variant="secondary"
@@ -129,7 +128,7 @@ export function AddEntryDialog({
             <Button type="submit" pending={pending}>
               {pending ? "Adding…" : `Add ${one}`}
             </Button>
-          </div>
+          </DialogActions>
         </form>
       </Dialog>
     </>

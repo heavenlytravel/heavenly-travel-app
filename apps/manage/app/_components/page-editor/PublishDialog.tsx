@@ -3,8 +3,8 @@
 import type { PageCheck } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Dialog } from "@repo/ui/dialog";
-import { Notice } from "@repo/console/Notice";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
+import { Notice } from "@repo/ui/notice";
 
 /**
  * What "Publish" opens: the checks the page must pass, each ticked or
@@ -95,7 +95,7 @@ export function PublishDialog({
                     <button
                       type="button"
                       onClick={() => onGoTo(check)}
-                      className="shrink-0 self-start rounded-sm text-xs font-semibold text-brand underline-offset-4 hover:underline focus-ring"
+                      className="shrink-0 self-start rounded-sm text-xs text-link"
                     >
                       Go to it
                     </button>
@@ -133,9 +133,9 @@ export function PublishDialog({
           )}
         </section>
 
-        <div className="flex justify-end gap-2">
+        <DialogActions>
           <Button
-            variant="ghost"
+            variant="secondary"
             disabled={pending}
             onClick={() => onOpenChange(false)}
           >
@@ -144,7 +144,7 @@ export function PublishDialog({
           <Button disabled={!ready} pending={pending} onClick={onPublish}>
             {pending ? "Publishing…" : "Publish now"}
           </Button>
-        </div>
+        </DialogActions>
       </div>
     </Dialog>
   );

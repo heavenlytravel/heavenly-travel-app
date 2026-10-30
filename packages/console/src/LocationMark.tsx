@@ -21,16 +21,19 @@ const MARK_SIZES = {
 /**
  * A location's initial on a rounded square coloured by its state, brand
  * blue once live: beside its name in the location picker, a list or a
- * heading.
+ * heading. `initial` says something else in its place: "All" for every
+ * location.
  */
 export function LocationMark({
   name,
   state,
+  initial = name.charAt(0).toUpperCase(),
   size = "sm",
   className,
 }: {
   name: string;
   state: string;
+  initial?: string;
   size?: keyof typeof MARK_SIZES;
   className?: string;
 }) {
@@ -44,7 +47,7 @@ export function LocationMark({
         className,
       )}
     >
-      {name.charAt(0).toUpperCase()}
+      {initial}
     </span>
   );
 }

@@ -14,12 +14,12 @@ import {
 import { suggestionStateOf, type Bounds } from "@repo/places";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field, Input, inputClassName } from "@repo/ui/field";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import { useId, useState, useTransition, type FormEvent } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { EntrySlugField } from "../../settings/SlugField";
 import { checkAddressPlaceAction } from "../../../../_lib/location-actions";
 
@@ -290,8 +290,8 @@ function AddressForm({
         </>
       ) : null}
 
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel}>
+      <DialogActions>
+        <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button
@@ -314,7 +314,7 @@ function AddressForm({
                 ? "Add address and page"
                 : "Add address"}
         </Button>
-      </div>
+      </DialogActions>
     </form>
   );
 }

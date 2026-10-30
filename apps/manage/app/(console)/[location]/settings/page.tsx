@@ -25,9 +25,9 @@ import { PlusIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Card, CardTitle, TILE_LINK, Tile, TileGrid } from "@repo/console/Card";
+import { Card, CardTitle, Tile, TileGrid } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { PageHeader } from "@repo/console/PageHeader";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import {
@@ -37,6 +37,7 @@ import {
 } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { CardImage } from "../../../_components/CardImage";
+import { LocationInitial } from "../../../_components/LocationInitial";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
   locationDetails,
@@ -177,11 +178,7 @@ function LocationTile({
       <CardImage
         src={hero?.url ?? null}
         sizes="(min-width: 1024px) 20rem, (min-width: 640px) 50vw, 100vw"
-        fallback={
-          <span className="font-serif text-5xl text-slot">
-            {location.name.charAt(0).toUpperCase()}
-          </span>
-        }
+        fallback={<LocationInitial name={location.name} />}
       >
         <LocationStateBadge state={location.state} />
       </CardImage>
@@ -190,7 +187,7 @@ function LocationTile({
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-title text-ink">
             {/* The link's box covers the tile, so the whole tile opens the location's settings. */}
-            <Link href={settingsHref(location.slug)} className={TILE_LINK}>
+            <Link href={settingsHref(location.slug)} className="card-link">
               {location.name}
             </Link>
           </h3>
@@ -214,7 +211,7 @@ function LocationTile({
                 <Tooltip content="Bookings awaiting confirmation">
                   <Link
                     href={bookingsHref(location.slug, { status: "received" })}
-                    className="relative z-1 inline-flex items-center gap-1.5 rounded-sm align-top text-warning underline-offset-4 hover:underline focus-ring"
+                    className="relative z-(--layer-raised) inline-flex items-center gap-1.5 rounded-sm align-top text-warning underline-offset-4 hover:underline focus-ring"
                   >
                     <span
                       aria-hidden="true"

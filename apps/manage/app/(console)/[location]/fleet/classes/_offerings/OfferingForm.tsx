@@ -23,11 +23,10 @@ import { Checkbox, Field, Input, Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
-import Link from "next/link";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { ChargeInput } from "../../../../../_components/ChargeInput";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import {
   OFFERING_FROM_PARAM,
   offeringBackHref,
@@ -349,24 +348,21 @@ export function OfferingForm({
           </div>
         </Card>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" pending={pending || uploads.uploading}>
-            {uploads.uploading
-              ? "Uploading the picture…"
-              : pending
-                ? "Saving…"
-                : isNew
-                  ? "Add class"
-                  : "Save"}
-          </Button>
-          <Link
-            href={offeringBackHref(locationSlug, from)}
-            className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
-          <FormError error={error} />
-        </div>
+        <FormFoot
+          submit={
+            <Button type="submit" pending={pending || uploads.uploading}>
+              {uploads.uploading
+                ? "Uploading the picture…"
+                : pending
+                  ? "Saving…"
+                  : isNew
+                    ? "Add class"
+                    : "Save"}
+            </Button>
+          }
+          cancelHref={offeringBackHref(locationSlug, from)}
+          error={error}
+        />
         {leaveDialog}
       </form>
     </UploadsContext>

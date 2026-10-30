@@ -24,10 +24,9 @@ import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { ExpiryDateField } from "../../../../../_components/ExpiryDateField";
 import {
@@ -327,24 +326,21 @@ export function VehicleForm({
           }
         />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" pending={pending || uploads.uploading}>
-            {uploads.uploading
-              ? "Uploading photos…"
-              : pending
-                ? "Saving…"
-                : isNew
-                  ? "Add vehicle"
-                  : "Save"}
-          </Button>
-          <Link
-            href={vehiclesHref(scope)}
-            className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
-          <FormError error={error} />
-        </div>
+        <FormFoot
+          submit={
+            <Button type="submit" pending={pending || uploads.uploading}>
+              {uploads.uploading
+                ? "Uploading photos…"
+                : pending
+                  ? "Saving…"
+                  : isNew
+                    ? "Add vehicle"
+                    : "Save"}
+            </Button>
+          }
+          cancelHref={vehiclesHref(scope)}
+          error={error}
+        />
         {leaveDialog}
       </form>
     </UploadsContext>

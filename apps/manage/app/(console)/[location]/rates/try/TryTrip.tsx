@@ -17,10 +17,12 @@ import { ArrowLeftRightIcon, ChevronDownIcon, CopyIcon } from "@repo/ui/icons";
 import { Menu, MenuItem } from "@repo/ui/menu";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
+import { scrollBehavior } from "@repo/ui/motion";
+import { useMediaQuery } from "@repo/ui/use-media-query";
 import { useId, useRef, useState, useTransition } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
-import { Notice } from "@repo/console/Notice";
+import { FormError } from "@repo/ui/form-error";
+import { Notice } from "@repo/ui/notice";
 import { Choices } from "../../../../_components/Choices";
 import {
   FullScreenButton,
@@ -238,12 +240,18 @@ function Workspace({
   const calls = answered?.trace.calls ?? 0;
   const className = classes.find((c) => c.id === classId)?.name ?? "";
 
+  /** Below `lg` the map sits above the calculation instead of beside it. */
+  const stacked = useMediaQuery("(max-width: 1023px)");
+
   /** A calculation line picked or put back; stacked, the map comes back into view to show it. */
   function pick(index: number) {
     const next = picked === index ? null : index;
     setPicked(next);
-    if (next !== null && window.matchMedia("(max-width: 1023px)").matches) {
-      mapBox.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (next !== null && stacked) {
+      mapBox.current?.scrollIntoView({
+        behavior: scrollBehavior(),
+        block: "center",
+      });
     }
   }
 
@@ -337,7 +345,8 @@ function Workspace({
             )}
             <Button
               variant="secondary"
-              className="w-10 px-0 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
+              size="icon"
+              className="max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
               aria-label="Swap the pick-up and the drop-off"
               title="Swap A and B"
               disabled={!pickup.end && !dropoff.end}

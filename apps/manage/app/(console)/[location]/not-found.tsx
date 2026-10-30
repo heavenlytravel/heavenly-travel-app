@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { Card } from "@repo/console/Card";
-import { PageHeader } from "@repo/console/PageHeader";
+import { StopScreen } from "../../_components/StopScreen";
 import { dashboardHref } from "../../_lib/routes";
 
 /**
@@ -11,16 +10,15 @@ import { dashboardHref } from "../../_lib/routes";
  */
 export default function ConsoleNotFound() {
   return (
-    <>
-      <PageHeader title="Page not found" />
-      <Card className="max-w-xl">
-        <p className="text-sm text-body">
-          This address doesn&apos;t lead to a screen in the console.
-        </p>
-        <Button asChild variant="secondary" className="mt-4">
+    <StopScreen
+      title="Page not found"
+      action={
+        <Button asChild variant="secondary">
           <Link href={dashboardHref(null)}>Go to the dashboard</Link>
         </Button>
-      </Card>
-    </>
+      }
+    >
+      This address doesn&apos;t lead to a screen in the console.
+    </StopScreen>
   );
 }

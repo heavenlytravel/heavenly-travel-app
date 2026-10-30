@@ -7,10 +7,10 @@ import {
   ringgitInputValue,
 } from "@repo/db";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { CancelLink } from "@repo/console/FormFoot";
+import { FormError } from "@repo/ui/form-error";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/field";
-import Link from "next/link";
 import { Fragment, useId, useState, type ReactNode } from "react";
 import { Choices } from "../../../../_components/Choices";
 
@@ -146,12 +146,7 @@ export function BookingSummary({
               {missing}
             </p>
           ) : null}
-          <Link
-            href={cancelHref}
-            className="justify-self-center text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
+          <CancelLink href={cancelHref} className="justify-self-center" />
         </div>
       </div>
       {foot ? (
@@ -195,7 +190,7 @@ function AgreedPrice({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="justify-self-start text-sm font-semibold text-brand underline-offset-4 hover:underline"
+          className="justify-self-start text-sm text-link"
         >
           {name
             ? `Agree a different price for ${name.toLowerCase()}`

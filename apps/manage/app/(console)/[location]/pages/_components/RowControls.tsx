@@ -29,11 +29,10 @@ export function RowControls({
       <Tooltip content="Move up">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon-sm"
           disabled={isFirst}
           pending={disabled}
           aria-label={`Move ${name} up`}
-          className="w-8 px-0"
           onClick={() => onMove(-1)}
         >
           <ArrowUpIcon />
@@ -42,11 +41,10 @@ export function RowControls({
       <Tooltip content="Move down">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon-sm"
           disabled={isLast}
           pending={disabled}
           aria-label={`Move ${name} down`}
-          className="w-8 px-0"
           onClick={() => onMove(1)}
         >
           <ArrowDownIcon />
@@ -54,10 +52,9 @@ export function RowControls({
       </Tooltip>
       {onRemove ? (
         <Button
-          variant="ghost"
+          variant="ghost-danger"
           size="sm"
           aria-label={`Remove ${name}`}
-          className="text-danger hover:bg-danger-tint hover:text-danger-strong"
           onClick={onRemove}
         >
           Remove

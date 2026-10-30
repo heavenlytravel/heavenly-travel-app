@@ -4,6 +4,7 @@ import { SURFACE } from "@repo/console/Card";
 import { StepMark } from "@repo/console/StepMark";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
+import { scrollBehavior } from "@repo/ui/motion";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
@@ -45,7 +46,7 @@ export function Step({
   useEffect(() => {
     if (open && !wasOpen.current) {
       const node = card.current;
-      node?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      node?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
       node
         ?.querySelector<HTMLElement>(
           "input:not([type=hidden]), button, select, textarea",

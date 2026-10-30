@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./button.js";
+import { DialogActions } from "./dialog.js";
 import { Input } from "./field.js";
 import { ModalBody, onModalClose, useModal } from "./modal.js";
 
@@ -131,7 +132,7 @@ function Answers({
           />
         </label>
       ) : null}
-      <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+      <DialogActions>
         <Button variant="secondary" onClick={() => onAnswer(false)}>
           {request.cancel ?? "Cancel"}
         </Button>
@@ -142,7 +143,7 @@ function Answers({
         >
           {request.action}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

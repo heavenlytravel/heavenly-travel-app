@@ -45,10 +45,10 @@ export function PickupDateFilter({
       {value ? (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon-sm"
           aria-label="Any pick-up date"
           onClick={() => go("")}
-          className="size-9 shrink-0 px-0 text-muted hover:text-ink"
+          className="shrink-0"
         >
           <XIcon className="size-4" />
         </Button>

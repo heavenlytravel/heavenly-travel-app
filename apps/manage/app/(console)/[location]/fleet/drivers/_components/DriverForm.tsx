@@ -19,9 +19,8 @@ import { Button } from "@repo/ui/button";
 import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { ExpiryDateField } from "../../../../../_components/ExpiryDateField";
 import { DATES_CARDS, SCOPE_FIELD } from "../../../../../_lib/fleet-form";
@@ -203,18 +202,15 @@ export function DriverForm({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" pending={pending}>
-          {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
-        </Button>
-        <Link
-          href={driversHref(scope)}
-          className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
+      <FormFoot
+        submit={
+          <Button type="submit" pending={pending}>
+            {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
+          </Button>
+        }
+        cancelHref={driversHref(scope)}
+        error={error}
+      />
       {leaveDialog}
     </form>
   );

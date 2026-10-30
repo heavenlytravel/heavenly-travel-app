@@ -4,7 +4,7 @@ import { listVehicleClasses, type CatalogueClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { BusIcon } from "@repo/ui/icons";
-import { TILE_LINK, Tile, TileFoot } from "@repo/console/Card";
+import { Tile, TileFoot } from "@repo/console/Card";
 import { LocationMark } from "@repo/console/LocationMark";
 import { Streamed } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
@@ -102,7 +102,7 @@ function ClassCard({
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold tracking-tight text-ink">
             {manages ? (
-              <Link href={href} className={TILE_LINK}>
+              <Link href={href} className="card-link">
                 {vehicleClass.name}
               </Link>
             ) : (
@@ -122,7 +122,7 @@ function ClassCard({
             <p className="mt-1 text-sm text-muted">No location yet</p>
           ) : (
             // Above the card's link, so each row opens its location's rates.
-            <ul className="relative z-1 -mx-2 mt-1 grid">
+            <ul className="relative z-(--layer-raised) -mx-2 mt-1 grid">
               {offerings.map((offering) => (
                 <li key={offering.id}>
                   <Link

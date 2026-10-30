@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/button";
-import { Card } from "@repo/console/Card";
-import { PageHeader } from "@repo/console/PageHeader";
+import { StopScreen } from "../../_components/StopScreen";
 
 /**
  * A console screen that failed to render: in the console's chrome, the
@@ -12,16 +11,15 @@ import { PageHeader } from "@repo/console/PageHeader";
  */
 export default function ConsoleError({ retry }: { retry: () => void }) {
   return (
-    <>
-      <PageHeader title="Something went wrong" />
-      <Card className="max-w-xl">
-        <p className="text-sm text-body">
-          This screen could not load. Try again, or come back in a minute.
-        </p>
-        <Button variant="secondary" className="mt-4" onClick={() => retry()}>
+    <StopScreen
+      title="Something went wrong"
+      action={
+        <Button variant="secondary" onClick={() => retry()}>
           Try again
         </Button>
-      </Card>
-    </>
+      }
+    >
+      This screen could not load. Try again, or come back in a minute.
+    </StopScreen>
   );
 }

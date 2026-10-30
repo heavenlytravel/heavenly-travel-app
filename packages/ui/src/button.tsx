@@ -32,6 +32,9 @@ const VARIANTS = {
     "ui:bg-danger ui:text-white ui:hover:bg-danger-strong ui:active:bg-danger-strong ui:border-transparent",
   ghost:
     "ui:bg-transparent ui:text-muted ui:border-transparent ui:hover:bg-hairline ui:hover:text-body ui:active:bg-hairline ui:active:text-body",
+  /** `danger` without its edge, among quiet controls: remove a row, a choice. */
+  "ghost-danger":
+    "ui:bg-transparent ui:text-danger ui:border-transparent ui:hover:bg-danger-tint ui:hover:text-danger-strong ui:active:bg-danger-tint ui:active:text-danger-strong",
 } as const;
 
 /**
@@ -96,7 +99,8 @@ export function Button({
       {...props}
     >
       {pending ? <SpinnerIcon className="ui:size-4" /> : null}
-      {children}
+      {/* A square icon button has room for one icon: the spinner, while it works. */}
+      {pending && size.startsWith("icon") ? null : children}
     </button>
   );
 }

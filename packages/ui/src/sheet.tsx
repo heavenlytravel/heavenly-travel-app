@@ -65,3 +65,29 @@ export function Sheet({
     </dialog>
   );
 }
+
+/**
+ * The visible head of a sheet that holds a form: its title and the line
+ * under it. The sheet's `title` still names the dialog for screen
+ * readers, and may say more ("Level and teams for …").
+ */
+export function SheetHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description?: ReactNode;
+}) {
+  return (
+    <div>
+      <h2 className="ui:text-lg ui:font-bold ui:tracking-title ui:text-ink">
+        {title}
+      </h2>
+      {description ? (
+        <p className="ui:mt-1 ui:text-sm ui:wrap-anywhere ui:text-muted">
+          {description}
+        </p>
+      ) : null}
+    </div>
+  );
+}

@@ -6,31 +6,8 @@ import {
   type PageImage,
   type PageKind,
 } from "@repo/db";
-import { Badge } from "@repo/ui/badge";
 import Image from "next/image";
-import type { ReactNode } from "react";
-
-function Part({
-  label,
-  changed,
-  children,
-}: {
-  label: string;
-  changed: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <dt className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {label}
-        {changed ? <Badge tone="amber">Changed</Badge> : null}
-      </dt>
-      <dd className="mt-1 text-sm text-ink">{children}</dd>
-    </div>
-  );
-}
-
-const NONE = <span className="text-muted">None</span>;
+import { ContentPart, NONE } from "./ContentPart";
 
 function Paragraphs({ text }: { text: string }) {
   const paragraphs = paragraphsOf(text);
@@ -96,51 +73,57 @@ export function PageContentView({
 
   return (
     <dl className="grid gap-4">
-      <Part label="Meta title" changed={changed("metaTitle")}>
+      <ContentPart label="Meta title" changed={changed("metaTitle")}>
         {content.metaTitle || NONE}
-      </Part>
-      <Part label="Meta description" changed={changed("metaDescription")}>
+      </ContentPart>
+      <ContentPart
+        label="Meta description"
+        changed={changed("metaDescription")}
+      >
         {content.metaDescription || NONE}
-      </Part>
-      <Part label="Search engines" changed={changed("indexable")}>
+      </ContentPart>
+      <ContentPart label="Search engines" changed={changed("indexable")}>
         {content.indexable ? "Shown" : "Hidden"}
-      </Part>
-      <Part label="Share image" changed={changed("shareImage")}>
+      </ContentPart>
+      <ContentPart label="Share image" changed={changed("shareImage")}>
         {content.shareImage ? (
           <Picture image={content.shareImage} />
         ) : (
           <span className="text-muted">The hero image</span>
         )}
-      </Part>
+      </ContentPart>
       {rule.tagline ? (
-        <Part label="Tagline" changed={changed("tagline")}>
+        <ContentPart label="Tagline" changed={changed("tagline")}>
           {content.tagline || NONE}
-        </Part>
+        </ContentPart>
       ) : null}
-      <Part label={labels.headline} changed={changed("heroHeadline")}>
+      <ContentPart label={labels.headline} changed={changed("heroHeadline")}>
         {content.heroHeadline || NONE}
-      </Part>
-      <Part label={labels.subheadline} changed={changed("heroSubheadline")}>
+      </ContentPart>
+      <ContentPart
+        label={labels.subheadline}
+        changed={changed("heroSubheadline")}
+      >
         {content.heroSubheadline || NONE}
-      </Part>
-      <Part label="Hero image" changed={changed("heroImage")}>
+      </ContentPart>
+      <ContentPart label="Hero image" changed={changed("heroImage")}>
         <Picture image={content.heroImage} />
-      </Part>
+      </ContentPart>
       {rule.address ? (
-        <Part label="Saved address" changed={changed("addressId")}>
+        <ContentPart label="Saved address" changed={changed("addressId")}>
           {content.addressId === null
             ? NONE
             : (addressNames.get(content.addressId) ??
               "One that has since been removed")}
-        </Part>
+        </ContentPart>
       ) : null}
       {rule.intro !== "none" ? (
-        <Part label="Intro" changed={changed("intro")}>
+        <ContentPart label="Intro" changed={changed("intro")}>
           <Paragraphs text={content.intro} />
-        </Part>
+        </ContentPart>
       ) : null}
       {rule.body ? (
-        <Part label="Text" changed={changed("body")}>
+        <ContentPart label="Text" changed={changed("body")}>
           {content.body ? (
             <pre className="max-h-[480px] overflow-auto rounded-md bg-shade p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-body">
               {content.body}
@@ -148,9 +131,9 @@ export function PageContentView({
           ) : (
             NONE
           )}
-        </Part>
+        </ContentPart>
       ) : null}
-      <Part label="FAQs" changed={changed("faqs")}>
+      <ContentPart label="FAQs" changed={changed("faqs")}>
         {content.faqs.length === 0 ? (
           NONE
         ) : (
@@ -165,7 +148,7 @@ export function PageContentView({
             ))}
           </ol>
         )}
-      </Part>
+      </ContentPart>
     </dl>
   );
 }

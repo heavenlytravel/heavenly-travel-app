@@ -23,3 +23,21 @@ export function Count({
     </span>
   );
 }
+
+/** A label with how much of its limit the text has used. */
+export function Counted({
+  label,
+  value,
+  limit,
+}: {
+  label: string;
+  value: string;
+  limit: number;
+}) {
+  return (
+    <span className="flex items-baseline justify-between gap-3">
+      {label}
+      <Count value={value.length} limit={limit} />
+    </span>
+  );
+}

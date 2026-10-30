@@ -93,3 +93,16 @@ export function Dialog({
     </dialog>
   );
 }
+
+/**
+ * The buttons at the foot of a dialog: the way out first, a secondary
+ * "Cancel", then the action. Side by side at the right; stacked on a
+ * phone, the action on top.
+ */
+export function DialogActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+      {children}
+    </div>
+  );
+}

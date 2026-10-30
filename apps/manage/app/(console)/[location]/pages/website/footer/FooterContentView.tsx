@@ -8,32 +8,12 @@ import {
   type FooterLink,
   type PageImage,
 } from "@repo/db";
-import { Badge } from "@repo/ui/badge";
 import Image from "next/image";
-import type { ReactNode } from "react";
+import {
+  ContentPart,
+  NONE,
+} from "../../../../../_components/page-editor/ContentPart";
 import { logoSrc } from "./logo-src";
-
-function Part({
-  label,
-  changed,
-  children,
-}: {
-  label: string;
-  changed: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div>
-      <dt className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {label}
-        {changed ? <Badge tone="amber">Changed</Badge> : null}
-      </dt>
-      <dd className="mt-1 grid gap-1 text-sm text-ink">{children}</dd>
-    </div>
-  );
-}
-
-const NONE = <span className="text-muted">None</span>;
 
 /** Where a link goes, as the editor names it: "About us", "Location: langkawi", the address. */
 function targetName({ target }: FooterLink) {
@@ -107,10 +87,10 @@ export function FooterContentView({
   const address = addressLinesOf(content);
   return (
     <dl className="grid gap-5">
-      <Part label="Tagline" changed={changed.has("Tagline")}>
+      <ContentPart label="Tagline" changed={changed.has("Tagline")}>
         {content.tagline || NONE}
-      </Part>
-      <Part label="Link columns" changed={changed.has("Link columns")}>
+      </ContentPart>
+      <ContentPart label="Link columns" changed={changed.has("Link columns")}>
         {content.columns.length === 0
           ? NONE
           : content.columns.map((column, i) => (
@@ -119,8 +99,8 @@ export function FooterContentView({
                 <Links links={column.links} />
               </div>
             ))}
-      </Part>
-      <Part label="Social links" changed={changed.has("Social links")}>
+      </ContentPart>
+      <ContentPart label="Social links" changed={changed.has("Social links")}>
         <Heading text={content.socialHeading} />
         {content.social.length === 0 ? (
           NONE
@@ -134,8 +114,11 @@ export function FooterContentView({
             ))}
           </ul>
         )}
-      </Part>
-      <Part label="Contact details" changed={changed.has("Contact details")}>
+      </ContentPart>
+      <ContentPart
+        label="Contact details"
+        changed={changed.has("Contact details")}
+      >
         <Heading text={content.contactHeading} />
         <span>WhatsApp: {content.whatsapp || "None"}</span>
         <span>Phone: {content.phone || "None"}</span>
@@ -151,8 +134,8 @@ export function FooterContentView({
         ) : (
           <span>Address: None</span>
         )}
-      </Part>
-      <Part label="Registrations" changed={changed.has("Registrations")}>
+      </ContentPart>
+      <ContentPart label="Registrations" changed={changed.has("Registrations")}>
         <Heading text={content.badgesHeading} />
         {content.badges.length === 0
           ? NONE
@@ -169,8 +152,8 @@ export function FooterContentView({
                 </span>
               </div>
             ))}
-      </Part>
-      <Part label="Payment logos" changed={changed.has("Payment logos")}>
+      </ContentPart>
+      <ContentPart label="Payment logos" changed={changed.has("Payment logos")}>
         <Heading text={content.paymentHeading} />
         {content.paymentLogos.length === 0 ? (
           NONE
@@ -184,15 +167,18 @@ export function FooterContentView({
           </ul>
         )}
         {content.paymentNote ? <span>{content.paymentNote}</span> : null}
-      </Part>
-      <Part label="Copyright line" changed={changed.has("Copyright line")}>
+      </ContentPart>
+      <ContentPart
+        label="Copyright line"
+        changed={changed.has("Copyright line")}
+      >
         <span>
           {content.legalName || "No company name"}
           {content.registration ? ` · ${content.registration}` : ""}
         </span>
         <span className="text-muted">From {content.since ?? "this year"}</span>
         <Links links={content.legalLinks} />
-      </Part>
+      </ContentPart>
     </dl>
   );
 }

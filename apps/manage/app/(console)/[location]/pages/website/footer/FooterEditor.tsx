@@ -30,15 +30,15 @@ import {
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { Card, CardRows, CardTitle } from "@repo/console/Card";
+import { FormError } from "@repo/ui/form-error";
 import { ImageUpload } from "../../../../../_components/ImageUpload";
-import { Count } from "../../../../../_components/page-editor/Count";
+import { Counted } from "../../../../../_components/page-editor/Count";
 import { SideBySide } from "../../../../../_components/page-editor/PageHistory";
 import {
   BarLink,
@@ -93,27 +93,6 @@ const rowed = <T extends object>(row: T): Rowed<T> => ({
   ...row,
   rowId: `row-${nextRow++}`,
 });
-
-/** A label with how much of its limit the text has used. */
-function Counted({
-  label,
-  value,
-  limit,
-}: {
-  label: string;
-  value: string;
-  limit: number;
-}) {
-  return (
-    <span className="flex items-baseline justify-between gap-3">
-      {label}
-      <Count value={value.length} limit={limit} />
-    </span>
-  );
-}
-
-/** The rows of a list in a card: hairlines between them, no frames. */
-const ROWS = "divide-y divide-hairline";
 
 /**
  * The footer's editor, under its header (`EditorHeader`): the publish bar
@@ -423,7 +402,7 @@ export function FooterEditor({
               onChange={(socialHeading) => edit({ socialHeading })}
             />
             {content.social.length > 0 ? (
-              <ul className={ROWS}>
+              <CardRows>
                 {content.social.map((row, index) => {
                   const update = (patch: Partial<FooterSocial>) =>
                     edit({
@@ -477,7 +456,7 @@ export function FooterEditor({
                     </li>
                   );
                 })}
-              </ul>
+              </CardRows>
             ) : null}
           </div>
         </Card>
@@ -588,7 +567,7 @@ export function FooterEditor({
                 </Button>
               </div>
             ) : (
-              <ul className={ROWS}>
+              <CardRows>
                 {content.badges.map((badge, index) => {
                   const update = (patch: Partial<FooterBadge>) =>
                     edit({
@@ -676,7 +655,7 @@ export function FooterEditor({
                     </li>
                   );
                 })}
-              </ul>
+              </CardRows>
             )}
           </div>
         </Card>
@@ -797,7 +776,7 @@ export function FooterEditor({
               </p>
             )}
             {!limits.ok ? <FormError error={limits.error} size="xs" /> : null}
-            <div className="flex justify-end gap-2">
+            <DialogActions>
               <Button variant="secondary" onClick={() => setPublishing(false)}>
                 Cancel
               </Button>
@@ -810,7 +789,7 @@ export function FooterEditor({
               >
                 {pending ? "Publishing…" : "Publish now"}
               </Button>
-            </div>
+            </DialogActions>
           </div>
         </Dialog>
         {published ? (
@@ -962,7 +941,7 @@ function LinkRows({
   return (
     <div className="grid gap-3">
       {links.length > 0 ? (
-        <ul className={ROWS}>
+        <CardRows>
           {links.map((link, index) => {
             const { target } = link;
             const hidden =
@@ -1061,7 +1040,7 @@ function LinkRows({
               </li>
             );
           })}
-        </ul>
+        </CardRows>
       ) : null}
       <div>
         <Button
@@ -1180,7 +1159,7 @@ function PaymentCard({
         />
         <FormError error={error} size="xs" />
         {logos.length > 0 ? (
-          <ul className={ROWS}>
+          <CardRows>
             {logos.map((logo, index) => (
               <li
                 key={logo.rowId}
@@ -1223,7 +1202,7 @@ function PaymentCard({
                 />
               </li>
             ))}
-          </ul>
+          </CardRows>
         ) : (
           <p className="text-sm text-muted">
             No logos yet. The footer leaves this part out until there are.

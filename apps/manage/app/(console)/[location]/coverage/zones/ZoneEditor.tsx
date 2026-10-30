@@ -27,7 +27,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Card } from "@repo/console/Card";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { coverageHref } from "../../../../_lib/routes";
 import {
   checkOverlapsAction,
@@ -46,7 +46,7 @@ import {
 } from "./ZoneMap";
 import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { pricedFromSentence } from "../zone-lines";
 
 /** What the check after a change found in the way of a shape, with the shape it was asked for. */
@@ -840,7 +840,7 @@ export function ZoneEditor({
                   <button
                     type="button"
                     onClick={() => drawCircle(center, radiusM)}
-                    className="font-medium text-ink underline-offset-4 hover:underline"
+                    className="rounded-sm text-link"
                   >
                     Redraw the circle
                   </button>

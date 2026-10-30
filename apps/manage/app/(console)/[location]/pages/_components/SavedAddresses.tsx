@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../../_lib/action-state";
 import { RowControls, movedRow } from "./RowControls";
 import type { AddressArea } from "./SavedAddressPicker";
@@ -152,8 +152,7 @@ export function SavedAddresses({
           >
             <Button
               variant="ghost"
-              size="sm"
-              className="w-8 px-0"
+              size="icon-sm"
               aria-label="Add an address"
               disabled={full || saving}
               onClick={() =>
@@ -214,9 +213,8 @@ export function SavedAddresses({
                 <Tooltip content="Rename">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     aria-label={`Rename ${address.name}`}
-                    className="w-8 px-0"
                     disabled={saving}
                     onClick={() =>
                       setEditing({

@@ -11,19 +11,18 @@ import {
   CardRows,
   CardTitle,
 } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { LocationMark } from "@repo/console/LocationMark";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   locationDetails,
   locationOfferings,
 } from "../../../../_lib/location-data";
 import { RATES_PAGE_LABELS, ratesHref } from "../../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../../_lib/scope";
-import { RatesPager } from "../_components/RatesPager";
 import { TryTrip } from "./TryTrip";
 
 /**
@@ -39,18 +38,14 @@ export default async function TryTripPage({
   params,
 }: PageProps<"/[location]/rates/try">) {
   await requireAdmin("coverage.view");
-  const { slug, location } = await scopeOf(params);
+  const { location } = await scopeOf(params);
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-try")}
-        title={RATES_PAGE_LABELS.try}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.try} />
       <Streamed fallback={<CardSkeleton rows={location ? 8 : 3} />}>
         {() => (location ? locationTry(location) : chooseLocation())}
       </Streamed>
-      <RatesPager scope={slug} page="try" />
     </>
   );
 }
@@ -92,9 +87,7 @@ async function chooseLocation() {
     <Card flush>
       <CardTitle inset>Pick a location</CardTitle>
       {locations.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted">
-          No location yet.
-        </p>
+        <EmptyState>No location yet.</EmptyState>
       ) : (
         <CardRows>
           {locations.map((location) => (
@@ -106,10 +99,10 @@ async function chooseLocation() {
               <LocationStateBadge state={location.state} />
               <Link
                 href={ratesHref(location.slug, "try")}
-                aria-label={`Try a trip in ${location.name}`}
+                aria-label={`${RATES_PAGE_LABELS.try} in ${location.name}`}
                 className={cx(CARD_LINK, "inline-flex items-center gap-1")}
               >
-                Try a trip
+                {RATES_PAGE_LABELS.try}
                 <ArrowRightIcon className="size-3.5" />
               </Link>
             </CardRow>

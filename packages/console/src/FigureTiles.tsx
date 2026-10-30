@@ -1,19 +1,8 @@
 import Link from "next/link";
+import { StatusDot, type BadgeTone } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { SURFACE } from "./Card";
-
-/** The disc beside a figure's name, in its status's colour. */
-const DOTS = {
-  amber: "bg-amber-500",
-  brand: "bg-brand",
-  navy: "bg-navy",
-  green: "bg-green-600",
-  neutral: "bg-slate-300",
-  red: "bg-red-600",
-} as const;
-
-export type FigureTone = keyof typeof DOTS;
 
 /** One figure: its name, its number, and where it leads when it is a filter. */
 export type Figure = {
@@ -21,7 +10,7 @@ export type Figure = {
   label: string;
   value: ReactNode;
   /** A disc before the name, in a status's colour. */
-  tone?: FigureTone;
+  tone?: BadgeTone;
   /** The list narrowed to it; none for a figure that only counts. */
   href?: string;
   /** The list on screen is narrowed to it: a brand ring. */
@@ -58,16 +47,16 @@ export function FigureTiles({
 function FigureTile({ figure }: { figure: Figure }) {
   const body = (
     <>
-      <span className="flex items-center gap-2 text-[13px] font-medium text-muted">
-        {figure.tone ? <Dot tone={figure.tone} /> : null}
+      <span className="flex items-center gap-2 text-caption font-medium text-muted">
+        {figure.tone ? <StatusDot tone={figure.tone} /> : null}
         <span className="truncate">{figure.label}</span>
         {figure.current ? (
-          <span className="ml-auto text-[10.5px] font-bold tracking-[0.06em] text-brand uppercase max-sm:hidden">
+          <span className="ml-auto text-caps font-bold text-brand max-sm:hidden">
             Showing
           </span>
         ) : null}
       </span>
-      <span className="mt-2 block font-serif text-[1.75rem] leading-none text-ink tabular-nums">
+      <span className="mt-2 block font-serif text-figure leading-none text-ink tabular-nums">
         {figure.value}
       </span>
     </>
@@ -83,7 +72,7 @@ function FigureTile({ figure }: { figure: Figure }) {
       aria-current={figure.current ? "page" : undefined}
       className={cx(
         classes,
-        "transition-shadow outline-none hover:border-edge focus-visible:ring-2 focus-visible:ring-brand",
+        "transition-shadow hover:border-edge focus-ring",
         figure.current && "hover:border-brand",
       )}
     >
@@ -113,11 +102,11 @@ export function FigureStrip({
         {figures.map((figure) => {
           const body = (
             <>
-              <span className="block font-serif text-[1.75rem] leading-none text-ink tabular-nums">
+              <span className="block font-serif text-figure leading-none text-ink tabular-nums">
                 {figure.value}
               </span>
-              <span className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-muted">
-                {figure.tone ? <Dot tone={figure.tone} /> : null}
+              <span className="mt-1.5 flex items-center gap-1.5 text-caption text-muted">
+                {figure.tone ? <StatusDot tone={figure.tone} /> : null}
                 {figure.label}
               </span>
             </>
@@ -134,7 +123,7 @@ export function FigureStrip({
                   aria-current={figure.current ? "page" : undefined}
                   className={cx(
                     classes,
-                    "transition-colors outline-none hover:bg-hover focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset",
+                    "transition-colors hover:bg-hover focus-ring-inset",
                   )}
                 >
                   {body}
@@ -147,14 +136,5 @@ export function FigureStrip({
         })}
       </ul>
     </section>
-  );
-}
-
-function Dot({ tone }: { tone: FigureTone }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cx("size-2 shrink-0 rounded-full", DOTS[tone])}
-    />
   );
 }

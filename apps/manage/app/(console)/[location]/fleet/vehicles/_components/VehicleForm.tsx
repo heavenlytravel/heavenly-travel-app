@@ -24,10 +24,9 @@ import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { ExpiryDateField } from "../../../../../_components/ExpiryDateField";
 import {
@@ -204,12 +203,8 @@ export function VehicleForm({
                       />
                     </Field>
                     <Field
-                      label={
-                        <span className="inline-flex items-center gap-1.5">
-                          {VEHICLE_FIELD_LABELS.vehicleClassId}
-                          <InfoTip text="The class the customer books it as. Its models are the brands and models of the vehicles entered in it." />
-                        </span>
-                      }
+                      label={VEHICLE_FIELD_LABELS.vehicleClassId}
+                      tip="The class the customer books it as. Its models are the brands and models of the vehicles entered in it."
                     >
                       <Select
                         name="vehicleClassId"
@@ -270,12 +265,8 @@ export function VehicleForm({
                       />
                     </Field>
                     <Field
-                      label={
-                        <span className="inline-flex items-center gap-1.5">
-                          {VEHICLE_FIELD_LABELS.locationId}
-                          <InfoTip text="To move a vehicle to another location, change where it is based." />
-                        </span>
-                      }
+                      label={VEHICLE_FIELD_LABELS.locationId}
+                      tip="To move a vehicle to another location, change where it is based."
                     >
                       <Select
                         name="locationId"
@@ -298,16 +289,17 @@ export function VehicleForm({
                       defaultValue={fields?.notes}
                     />
                   </Field>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      name="isActive"
-                      defaultChecked={fields?.isActive ?? true}
-                    />
-                    <span className="inline-flex items-center gap-1.5">
+                  {/* The tip beside the label, not in it: its button would join the box's name. */}
+                  <span className="flex items-center gap-1.5 text-sm">
+                    <label className="flex items-center gap-2">
+                      <Checkbox
+                        name="isActive"
+                        defaultChecked={fields?.isActive ?? true}
+                      />
                       {VEHICLE_FIELD_LABELS.isActive}
-                      <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
-                    </span>
-                  </label>
+                    </label>
+                    <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
+                  </span>
                 </div>
               </Card>
             </>
@@ -334,24 +326,21 @@ export function VehicleForm({
           }
         />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={pending || uploads.uploading}>
-            {uploads.uploading
-              ? "Uploading photos…"
-              : pending
-                ? "Saving…"
-                : isNew
-                  ? "Add vehicle"
-                  : "Save"}
-          </Button>
-          <Link
-            href={vehiclesHref(scope)}
-            className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
-          <FormError error={error} />
-        </div>
+        <FormFoot
+          submit={
+            <Button type="submit" pending={pending || uploads.uploading}>
+              {uploads.uploading
+                ? "Uploading photos…"
+                : pending
+                  ? "Saving…"
+                  : isNew
+                    ? "Add vehicle"
+                    : "Save"}
+            </Button>
+          }
+          cancelHref={vehiclesHref(scope)}
+          error={error}
+        />
         {leaveDialog}
       </form>
     </UploadsContext>

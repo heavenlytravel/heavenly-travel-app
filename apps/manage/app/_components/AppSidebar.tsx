@@ -2,45 +2,40 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import type { Permission } from "@repo/db";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
+import { cx } from "@repo/ui/cx";
+import { Logo } from "@repo/ui/logo";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarTrigger,
   useSidebar,
   useSidebarCollapsed,
 } from "@repo/ui/sidebar";
 import type { MouseEvent, ReactNode } from "react";
+import { dashboardHref } from "../_lib/routes";
 import { ConsoleDock } from "./ConsoleSearch";
 import { ScopePicker, type PickerLocation } from "./ScopePicker";
 
-/** The signed-in admin, at the sidebar's foot. */
-export type Person = { name: string; role: string };
-
 /**
  * The console's sidebar, navy to ink: the brand on top, then the one
- * menu, then the signed-in admin at its foot with their own menu (the
- * account, signing out). Collapsed it is a rail of icons with the names as
- * tooltips. Below `md` it is a panel over the page, opened from the dock
- * floating at the screen's foot, which holds the search too, with the
- * location picker on top in the brand's place. A link in the panel closes
- * it; opening a section does not. See
- * docs/261029-manage-signature-overhaul.md, "The menu".
+ * menu. Collapsed it is a rail of icons with the names as tooltips; the
+ * button that folds it is in the top bar, where it stays either way. Below
+ * `md` it is a panel over the page, opened from the dock floating at the
+ * screen's foot, which holds the search too, with the location picker on
+ * top in the brand's place. A link in the panel closes it; opening a
+ * section does not. See docs/261029-manage-signature-overhaul.md, "The
+ * menu".
  */
 export function AppSidebar({
   menu,
   locations,
   permissions,
-  person,
 }: {
   /** The menu, drawn on the server with its counts streaming in. */
   menu: ReactNode;
   locations: readonly PickerLocation[];
   permissions: readonly Permission[];
-  person: Person;
 }) {
   const { setOpenMobile } = useSidebar();
   // A link pressed anywhere in the panel closes it; a button does not. On a
@@ -53,17 +48,12 @@ export function AppSidebar({
     <>
       <Sidebar title="Console menu" tone="navy" dock={<ConsoleDock />}>
         <SidebarHeader className="border-b border-white/10 p-3 md:hidden">
-          <ScopePicker
-            locations={locations}
-            permissions={permissions}
-            className="w-full"
-          />
+          <ScopePicker locations={locations} permissions={permissions} full />
         </SidebarHeader>
         <Brand onLink={closeOnLink} />
         <SidebarContent onClick={closeOnLink} className="py-3">
           {menu}
         </SidebarContent>
-        <PersonRow person={person} />
       </Sidebar>
       <ConsoleDock />
     </>
@@ -72,8 +62,9 @@ export function AppSidebar({
 
 /**
  * The brand at the sidebar's head, as high as the top bar beside it: the
- * logo in white with "Manage", and the button that folds the sidebar to a
- * rail. On the rail, the brand's mark alone, and the button under it.
+ * logo in white, a link to the dashboard of every location. On the rail,
+ * the brand's mark alone. The link goes to `/~` itself: `/` only sends
+ * on to it, and the page between would show blank for a moment.
  */
 function Brand({
   onLink,
@@ -84,16 +75,15 @@ function Brand({
   return (
     <SidebarHeader
       onClick={onLink}
-      className={
-        collapsed
-          ? "items-center gap-2 border-b border-white/10 py-3 max-md:hidden"
-          : "h-[72px] flex-row items-center gap-2.5 border-b border-white/10 px-5 max-md:hidden"
-      }
+      className={cx(
+        "h-(--header-height) flex-row items-center border-b border-white/10 max-md:hidden",
+        collapsed ? "justify-center" : "px-5",
+      )}
     >
       <Link
-        href="/"
-        aria-label="Heavenly Travel Manage, the dashboard"
-        className="flex min-w-0 items-center gap-2.5 rounded-md outline-hidden focus-visible:ring-2 focus-visible:ring-azure-light"
+        href={dashboardHref(null)}
+        aria-label="Heavenly Travel, the dashboard"
+        className="flex min-w-0 items-center rounded-md focus-ring focus-ring-dark"
       >
         {collapsed ? (
           <Image
@@ -105,62 +95,9 @@ function Brand({
             className="size-8 rounded-lg"
           />
         ) : (
-          <>
-            <Image
-              src="/brand/logo-blue.svg"
-              alt=""
-              width={112}
-              height={26}
-              priority
-              className="h-[26px] w-auto brightness-0 invert"
-            />
-            <span className="rounded-[5px] bg-white/12 px-1.5 py-0.5 text-[10.5px] font-semibold tracking-[0.06em] text-white uppercase">
-              Manage
-            </span>
-          </>
+          <Logo tone="white" alt="" loading="eager" className="h-6.5" />
         )}
       </Link>
-      <SidebarTrigger
-        aria-label={collapsed ? "Expand the menu" : "Fold the menu"}
-        className={
-          collapsed
-            ? "size-9 text-azure-light hover:bg-white/14 hover:text-white"
-            : "ml-auto text-azure-light hover:bg-white/14 hover:text-white"
-        }
-      />
     </SidebarHeader>
-  );
-}
-
-/**
- * The signed-in admin at the sidebar's foot: their picture, which opens
- * their own menu, their name and their level. On the rail, the picture
- * alone.
- */
-function PersonRow({ person }: { person: Person }) {
-  const collapsed = useSidebarCollapsed();
-  return (
-    <div
-      className={
-        collapsed
-          ? "flex justify-center border-t border-white/10 py-3"
-          : "flex items-center gap-2.5 border-t border-white/10 px-4 py-3"
-      }
-    >
-      {/* The box holds the button's place while Clerk loads, so the row does not shift. */}
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-azure">
-        <UserButton appearance={clerkUserButton} />
-      </span>
-      {collapsed ? null : (
-        <span className="grid min-w-0 leading-tight">
-          <span className="truncate text-[13px] font-semibold text-white">
-            {person.name}
-          </span>
-          <span className="truncate text-xs text-azure-light">
-            {person.role}
-          </span>
-        </span>
-      )}
-    </div>
   );
 }

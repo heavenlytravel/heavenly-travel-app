@@ -3,7 +3,7 @@
 import { useId, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { XIcon } from "./icons.js";
-import { ModalBody, onModalClose, useModal } from "./modal.js";
+import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 
 const WIDTHS = {
   sm: "ui:w-[min(28rem,92vw)]",
@@ -50,12 +50,9 @@ export function Dialog({
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
       onClose={onModalClose(() => onOpenChange(false))}
-      onClick={(event) => {
-        // The dialog element itself is only hit through the backdrop.
-        if (event.target === event.currentTarget) onOpenChange(false);
-      }}
+      {...backdropClose(() => onOpenChange(false))}
       className={cx(
-        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45 ui:[--dialog-height:min(48rem,90dvh)]",
+        "ui:m-auto ui:max-h-none ui:overflow-hidden ui:rounded-popover ui:border ui:border-card-edge ui:bg-white ui:p-0 ui:text-inherit ui:shadow-overlay ui:backdrop:bg-ink/45 ui:[--dialog-height:min(48rem,90dvh)]",
         WIDTHS[width],
         className,
       )}
@@ -74,7 +71,7 @@ export function Dialog({
                 {description ? (
                   <p
                     id={descriptionId}
-                    className="ui:mt-1 ui:text-sm ui:text-slate-600"
+                    className="ui:mt-1 ui:text-sm ui:text-muted"
                   >
                     {description}
                   </p>
@@ -84,7 +81,7 @@ export function Dialog({
                 type="button"
                 aria-label="Close"
                 onClick={() => onOpenChange(false)}
-                className="ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-500 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-slate-900"
+                className="ui:touch-target ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring"
               >
                 <XIcon />
               </button>
@@ -94,5 +91,18 @@ export function Dialog({
         ) : null}
       </ModalBody>
     </dialog>
+  );
+}
+
+/**
+ * The buttons at the foot of a dialog: the way out first, a secondary
+ * "Cancel", then the action. Side by side at the right; stacked on a
+ * phone, the action on top.
+ */
+export function DialogActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+      {children}
+    </div>
   );
 }

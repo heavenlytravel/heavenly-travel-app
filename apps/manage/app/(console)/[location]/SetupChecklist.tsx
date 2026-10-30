@@ -57,9 +57,9 @@ export function SetupChecklist({
                   {step.title}
                   {next ? <Badge tone="amber">Next</Badge> : null}
                 </p>
-                <p className="mt-0.5 text-[13px] text-muted">{step.status}</p>
+                <p className="mt-0.5 text-caption text-muted">{step.status}</p>
                 {step.todos.map((todo) => (
-                  <p key={todo} className="mt-1 text-[13px] text-amber-800">
+                  <p key={todo} className="mt-1 text-caption text-warning">
                     {todo}.
                   </p>
                 ))}
@@ -78,7 +78,7 @@ export function SetupChecklist({
         })}
       </ol>
       {progress.next ? null : (
-        <p className="border-t border-hairline px-5 py-3.5 text-[13px] text-body">
+        <p className="border-t border-hairline px-5 py-3.5 text-caption text-body">
           Every step is done: the location goes live from its Settings.
         </p>
       )}

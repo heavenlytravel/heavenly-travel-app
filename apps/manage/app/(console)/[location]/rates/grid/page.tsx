@@ -21,10 +21,10 @@ import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
 import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
-import { Bone, CardSkeleton, Streamed } from "@repo/console/Skeleton";
+import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 import { FilterLinks } from "../../../../_components/FilterLinks";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   locationDetails,
   locationOfferings,
@@ -40,7 +40,6 @@ import {
 import { scopeOf } from "../../../../_lib/scope";
 import { RateGrid } from "../_components/RateGrid";
 import { RatesByLocation } from "../_components/RatesByLocation";
-import { RatesPager } from "../_components/RatesPager";
 import { visiblePriceLists } from "../_components/price-lists";
 
 /** Beside the grid's name: what its rows and columns are. */
@@ -69,10 +68,7 @@ export default async function RateGridPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-grid")}
-        title={RATES_PAGE_LABELS.grid}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.grid} />
       {location ? null : (
         <div className="mb-5">
           <CategoryFilter scope={slug} category={category} />
@@ -94,7 +90,6 @@ export default async function RateGridPage({
             : everyLocationGrid({ manages, category })
         }
       </Streamed>
-      <RatesPager scope={slug} page="grid" />
     </>
   );
 }
@@ -237,7 +232,7 @@ async function locationGrid({
   return (
     <>
       <FigureStrip
-        label="Trip rules"
+        label={RATES_PAGE_LABELS.rules}
         figures={ruleFigures(tripRulesOf(details), ratesHref(slug, "rules"))}
       />
       <Card flush>

@@ -4,8 +4,7 @@ import { photoAlt } from "@repo/db";
 import { Dialog } from "@repo/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import Image from "next/image";
-import { useState } from "react";
-import { focus } from "../(site)/_components/Page";
+import { useEffect, useEffectEvent, useState } from "react";
 
 /** A model of a class as the customer sees it: its name and its photos in order. Plain data. */
 export type GalleryModel = {
@@ -19,17 +18,24 @@ function hasPhotos(models: readonly GalleryModel[]) {
   return models.some((model) => model.photos.length > 0);
 }
 
-const pill = `rounded-full border px-3.5 py-1.5 text-[0.88rem] font-semibold transition-colors ${focus}`;
+const pill =
+  "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors focus-ring";
+
+/** The round buttons over the photo to the one before and after; the caller places each. */
+const photoStep =
+  "absolute top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow-control focus-ring";
 
 /**
  * The photos of a class's models, or of one model, in a dialog, one model
  * at a time: the models as toggle buttons when there are several, the one
  * shown pressed, the photo large with its caption, the one before and
- * after, and the photos as thumbnails. The photo takes the room the rest
- * leaves, shown whole in its frame, so the dialog fits the window without
- * scrolling. Controlled: the page owns `open`, so the options form keeps
- * one gallery outside its cards, whose clicks would otherwise choose the
- * class. It opens at the first model.
+ * after, and the photos as thumbnails. Left and Right show the one before
+ * and after from anywhere in the dialog, and "2 of 5" is read out as it
+ * changes. The photo takes the room the rest leaves, shown whole in its
+ * frame, so the dialog fits the window without scrolling. Controlled: the
+ * page owns `open`, so the options form keeps one gallery outside its
+ * cards, whose clicks would otherwise choose the class. It opens at the
+ * first model.
  */
 export function ModelGallery({
   title,
@@ -50,11 +56,27 @@ export function ModelGallery({
   const [modelId, setModelId] = useState<string | null>(null);
   const [at, setAt] = useState(0);
   const model = shown.find((m) => m.id === modelId) ?? shown[0];
-  if (!model) return null;
-  const index = Math.min(at, model.photos.length - 1);
-  const photo = model.photos[index]!;
-  const count = model.photos.length;
+  const count = model?.photos.length ?? 0;
+  const index = Math.max(0, Math.min(at, count - 1));
   const go = (step: number) => setAt((index + step + count) % count);
+
+  // The arrows while the dialog is open: it is modal, so nothing behind
+  // it wants them, and a thumbnail strip they would scroll stays put.
+  const onArrow = useEffectEvent((e: KeyboardEvent) => {
+    if (count < 2 || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    go(e.key === "ArrowLeft" ? -1 : 1);
+  });
+  useEffect(() => {
+    if (!open) return;
+    const listener = (e: KeyboardEvent) => onArrow(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, [open]);
+
+  if (!model) return null;
+  const photo = model.photos[index]!;
 
   return (
     <Dialog
@@ -87,7 +109,7 @@ export function ModelGallery({
                   className={`${pill} ${
                     on
                       ? "border-brand bg-brand text-white"
-                      : "border-slate-200 bg-white text-brand hover:border-brand"
+                      : "border-card-edge bg-white text-brand hover:border-brand"
                   }`}
                 >
                   {m.name}
@@ -98,7 +120,7 @@ export function ModelGallery({
         ) : null}
 
         <figure className="flex min-h-0 flex-col gap-2">
-          <div className="relative aspect-[3/2] min-h-0 w-full overflow-hidden rounded-[12px] bg-mist">
+          <div className="relative aspect-[3/2] min-h-0 w-full overflow-hidden rounded-xl bg-mist">
             <Image
               key={photo.url}
               src={photo.url}
@@ -113,7 +135,7 @@ export function ModelGallery({
                   type="button"
                   aria-label="Previous photo"
                   onClick={() => go(-1)}
-                  className={`absolute top-1/2 left-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow ${focus}`}
+                  className={`left-3 ${photoStep}`}
                 >
                   <ChevronLeftIcon className="size-5" />
                 </button>
@@ -121,20 +143,20 @@ export function ModelGallery({
                   type="button"
                   aria-label="Next photo"
                   onClick={() => go(1)}
-                  className={`absolute top-1/2 right-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-brand shadow ${focus}`}
+                  className={`right-3 ${photoStep}`}
                 >
                   <ChevronRightIcon className="size-5" />
                 </button>
               </>
             ) : null}
           </div>
-          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-[0.92rem] text-slate-700">
+          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-copy text-body">
             <span>
               <strong className="text-ink">{model.name}</strong>
               {photo.caption ? `, ${photo.caption}` : null}
             </span>
             {count > 1 ? (
-              <span className="text-slate-500 tabular-nums">
+              <span aria-live="polite" className="text-muted tabular-nums">
                 {index + 1} of {count}
               </span>
             ) : null}
@@ -145,14 +167,15 @@ export function ModelGallery({
           <ol className="flex shrink-0 gap-2 overflow-x-auto pb-1">
             {model.photos.map((p, i) => (
               <li key={`${p.url}-${i}`} className="shrink-0">
+                {/* Its ring drawn inside: the strip scrolls, and clips. */}
                 <button
                   type="button"
                   aria-label={`Photo ${i + 1}${p.caption ? `, ${p.caption}` : ""}`}
                   aria-current={i === index}
                   onClick={() => setAt(i)}
-                  className={`relative block aspect-[3/2] w-20 overflow-hidden rounded-[8px] border-2 bg-mist ${
+                  className={`relative block aspect-[3/2] w-20 overflow-hidden rounded-lg border-2 bg-mist focus-ring-inset ${
                     i === index ? "border-brand" : "border-transparent"
-                  } ${focus}`}
+                  }`}
                 >
                   <Image
                     src={p.url}
@@ -197,7 +220,7 @@ export function ModelPhotosButton({
           setOpened((count) => count + 1);
           setOpen(true);
         }}
-        className={`font-semibold text-brand underline-offset-4 hover:underline ${focus} ${className}`}
+        className={`text-link ${className}`}
       >
         See photos
       </button>

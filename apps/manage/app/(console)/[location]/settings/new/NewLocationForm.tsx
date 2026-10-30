@@ -6,7 +6,7 @@ import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useState } from "react";
 import { Card } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { settingsHref } from "../../../../_lib/routes";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import { LocationSlugField } from "../SlugField";
@@ -68,7 +68,11 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
       </Card>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending || stateCodes.length === 0}>
+        <Button
+          type="submit"
+          disabled={stateCodes.length === 0}
+          pending={pending}
+        >
           {pending ? "Adding…" : "Add location"}
         </Button>
         <Button asChild variant="ghost">

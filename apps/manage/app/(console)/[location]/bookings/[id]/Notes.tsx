@@ -4,7 +4,7 @@ import { BOOKING_NOTE_MAX_LENGTH, formatLocalDateTime } from "@repo/db";
 import type { BookingNoteEntry } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { FieldGroup, Textarea } from "@repo/ui/field";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import { addNoteAction } from "./actions";
 
@@ -33,8 +33,14 @@ export function Notes({
       ) : (
         <ol className="grid gap-2 text-sm">
           {notes.map((note) => (
-            <li key={note.id} className="rounded-[10px] bg-shade px-3.5 py-3">
-              <p className="whitespace-pre-wrap text-body">{note.body}</p>
+            <li
+              key={note.id}
+              className="min-w-0 rounded-control bg-shade px-3.5 py-3"
+            >
+              {/* A long link or reference breaks where it must, not past the card. */}
+              <p className="whitespace-pre-wrap text-body [overflow-wrap:anywhere]">
+                {note.body}
+              </p>
               <p className="mt-1 text-xs text-muted">
                 {note.authorName}, {formatLocalDateTime(note.createdAt)}
               </p>
@@ -55,7 +61,7 @@ export function Notes({
           />
         </FieldGroup>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={pending}>
+          <Button type="submit" size="sm" pending={pending}>
             {pending ? "Adding…" : "Add note"}
           </Button>
           <FormError error={error} size="xs" />

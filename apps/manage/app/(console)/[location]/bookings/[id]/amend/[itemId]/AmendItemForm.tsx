@@ -156,7 +156,11 @@ export function AmendItemForm({
             canPrice={canPrice}
             priceNote={priceNote}
             submit={
-              <Button type="submit" disabled={pending || missing !== null}>
+              <Button
+                type="submit"
+                disabled={missing !== null}
+                pending={pending}
+              >
                 {pending
                   ? "Saving…"
                   : totalSen !== null

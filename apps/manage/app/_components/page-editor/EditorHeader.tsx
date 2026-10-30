@@ -1,25 +1,23 @@
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import type { ReactNode } from "react";
+import { PageHeader } from "@repo/console/PageHeader";
 import { PublishHistoryButton, type PagePublishEntry } from "./PageHistory";
 
 /**
  * The top of an editor of what the customer site shows, a page or the
- * footer: the way back to its list on Pages, its name under where it is
- * ("Langkawi · Popular places", "Website"), and once it has been published,
- * "Publish history" at the right. The publish bar follows it, in the
+ * footer: its name, where it is under it ("Langkawi · Popular places",
+ * "Website"), and once it has been published, "Publish history" at the
+ * right. The publish bar follows it, in the
  * editor.
  */
 export function EditorHeader({
-  back,
-  section,
+  where,
   title,
   publishes,
   allHref,
   allLabel,
 }: {
-  /** Its list on Pages: the section's, or every page. */
-  back: { href: string; label: string };
-  /** Where the page is, small over its name. */
-  section: string;
+  /** Where the page is, under its name; a section with a list of its own links to it. */
+  where: ReactNode;
   title: string;
   /** Its publishes, newest first. */
   publishes: readonly PagePublishEntry[];
@@ -29,10 +27,9 @@ export function EditorHeader({
 }) {
   return (
     <>
-      <BackLink href={back.href}>{back.label}</BackLink>
       <PageHeader
-        section={section}
         title={title}
+        meta={where}
         action={
           publishes.length > 0 ? (
             <PublishHistoryButton

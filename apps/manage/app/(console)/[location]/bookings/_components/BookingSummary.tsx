@@ -7,12 +7,12 @@ import {
   ringgitInputValue,
 } from "@repo/db";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { CancelLink } from "@repo/console/FormFoot";
+import { FormError } from "@repo/ui/form-error";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/field";
-import Link from "next/link";
 import { Fragment, useId, useState, type ReactNode } from "react";
-import { Choices } from "./Choices";
+import { Choices } from "../../../../_components/Choices";
 
 /** The reasons staff give most, one tap each; anything else is typed. */
 const REASONS = ["Agreed on the phone", "Goodwill", "Repeat customer"] as const;
@@ -146,12 +146,7 @@ export function BookingSummary({
               {missing}
             </p>
           ) : null}
-          <Link
-            href={cancelHref}
-            className="justify-self-center text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
+          <CancelLink href={cancelHref} className="justify-self-center" />
         </div>
       </div>
       {foot ? (
@@ -195,19 +190,19 @@ function AgreedPrice({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="justify-self-start text-sm font-semibold text-brand underline-offset-4 hover:underline"
+          className="justify-self-start text-sm text-link"
         >
           {name
             ? `Agree a different price for ${name.toLowerCase()}`
             : "Agree a different price"}
         </button>
-        {note ? <p className="text-xs text-amber-800">{note}</p> : null}
+        {note ? <p className="text-xs text-warning">{note}</p> : null}
       </div>
     );
   }
 
   return (
-    <div className="mt-1 mb-1 grid gap-3 rounded-[10px] border border-dashed border-slot p-3">
+    <div className="mt-1 mb-1 grid gap-3 rounded-control border border-dashed border-slot p-3">
       <label htmlFor={`${ids}-amount`} className="grid gap-1.5">
         <span className="text-xs font-semibold text-body">
           {name ? `${name}, agreed price (RM)` : "Agreed price (RM)"}
@@ -253,7 +248,7 @@ function AgreedPrice({
         ) : null}
       </div>
       <p className="text-xs text-muted">The quote stays on the receipt.</p>
-      {note ? <p className="text-xs text-amber-800">{note}</p> : null}
+      {note ? <p className="text-xs text-warning">{note}</p> : null}
       <Button
         variant="ghost"
         size="sm"

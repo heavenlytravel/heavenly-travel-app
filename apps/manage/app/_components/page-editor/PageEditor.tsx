@@ -28,10 +28,12 @@ import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
+import { scrollBehavior } from "@repo/ui/motion";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { errorOf } from "../../_lib/action-state";
 import { useLeaveGuard } from "../../_lib/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
+import { Notice } from "@repo/ui/notice";
 import { MarkdownField } from "../MarkdownField";
 import { UploadsContext, useUploadCount } from "../use-image-upload";
 import {
@@ -43,7 +45,7 @@ import {
   savePageDraftAction,
   unpublishPageAction,
 } from "./actions";
-import { Count } from "./Count";
+import { Count, Counted } from "./Count";
 import { ImageField } from "./ImageField";
 import {
   SavedAddressPicker,
@@ -68,24 +70,6 @@ const formContentOf = (content: PageContent): FormContent => ({
   faqs: content.faqs.map((faq, i) => ({ ...faq, key: `faq-${i}` })),
 });
 
-/** A label with how much of its limit the text has used. */
-function Counted({
-  label,
-  value,
-  limit,
-}: {
-  label: string;
-  value: string;
-  limit: number;
-}) {
-  return (
-    <span className="flex items-baseline justify-between gap-3">
-      {label}
-      <Count value={value.length} limit={limit} />
-    </span>
-  );
-}
-
 /** The id of the part of the editor a check is about, which "Go to it" scrolls to. */
 const partId = (key: PageCheck["key"]) => `page-${key}`;
 
@@ -107,13 +91,6 @@ const TAGLINE_FIELD: Partial<
     hint: "The word over the headline, in the handwriting type. Optional.",
   },
 };
-
-/** The rows of a list in a card, the FAQs: hairlines between them, no frames. */
-const ROWS = "divide-y divide-hairline";
-
-/** A sentence that warns of what a change will do: amber, in its own box. */
-const WARNING =
-  "rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900";
 
 /**
  * One part of a card of the editor, under its name and a line of help,
@@ -140,7 +117,7 @@ function Part({
       )}
     >
       <h3 className="text-sm font-bold text-ink">{title}</h3>
-      {hint ? <p className="mt-0.5 text-[13px] text-muted">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-caption text-muted">{hint}</p> : null}
       <div className="mt-3.5">{children}</div>
     </section>
   );
@@ -269,7 +246,7 @@ export function PageEditor({
       .filter((check) => check.tab === card)
       .reduce((sum, check) => sum + check.missing.length, 0);
     return missing > 0 ? (
-      <span className="font-semibold text-amber-800">
+      <span className="font-semibold text-warning">
         {missing} to do before publishing
       </span>
     ) : undefined;
@@ -339,7 +316,7 @@ export function PageEditor({
     requestAnimationFrame(() =>
       document
         .getElementById(partId(check.key))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" }),
     );
   }
 
@@ -402,9 +379,9 @@ export function PageEditor({
   ) : pending ? (
     <span className="text-muted">Saving…</span>
   ) : error ? (
-    <span className="font-medium text-red-700">{error}</span>
+    <span className="font-medium text-danger">{error}</span>
   ) : !limits.ok ? (
-    <span className="font-medium text-red-700">{limits.error}</span>
+    <span className="font-medium text-danger">{limits.error}</span>
   ) : (
     <span className="text-muted">{standingNote}</span>
   );
@@ -637,7 +614,7 @@ export function PageEditor({
                 {content.faqs.length === 0 ? (
                   <p className="text-sm text-muted">No FAQs yet.</p>
                 ) : (
-                  <ol className={ROWS}>
+                  <ol className="divide-y divide-hairline">
                     {content.faqs.map((faq, index) => (
                       <li key={faq.key} className="grid gap-3 py-4 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -826,7 +803,7 @@ export function PageEditor({
                 </div>
               </div>
               {indexingChange ? (
-                <p className={cx("mt-3", WARNING)}>{indexingChange}</p>
+                <Notice className="mt-3">{indexingChange}</Notice>
               ) : null}
             </Part>
 
@@ -863,11 +840,11 @@ export function PageEditor({
             ) : null}
 
             <Part title="Set for you">
-              <p className={cx("mb-3", WARNING)}>
+              <Notice className="mb-3">
                 Until the site moves to heavenlytravel.my, search engines are
                 asked not to list any of its pages. These fields count from
                 then; shared links use them already.
-              </p>
+              </Notice>
               <ul className="grid list-disc gap-1.5 pl-5 text-sm text-muted">
                 <li>
                   The page&apos;s address and its canonical link, so search

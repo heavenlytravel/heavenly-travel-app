@@ -73,8 +73,8 @@ export function SavedAddressPicker({
         <Button
           type="button"
           variant="secondary"
-          size="md"
-          className="w-10 shrink-0 px-0"
+          size="icon"
+          className="shrink-0"
           aria-label="Add a saved address"
           disabled={disabled}
           onClick={() => setAdding(true)}

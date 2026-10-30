@@ -1,18 +1,5 @@
-import { tripRows, type Place, type TripView } from "@repo/db";
-import { Rows } from "../../_components/Page";
-
-function placeLine(place: Place) {
-  return (
-    <>
-      <span className="block">{place.label}</span>
-      {place.address !== place.label && (
-        <span className="block text-[0.85rem] font-normal text-slate-500">
-          {place.address}
-        </span>
-      )}
-    </>
-  );
-}
+import { tripRows, type TripView } from "@repo/db";
+import { PlaceValue, Rows } from "@repo/ui/rows";
 
 /** The trip as rows, in the booking pages' style. The rows come from `tripRows`. */
 export function TripSummary({
@@ -26,7 +13,11 @@ export function TripSummary({
   const rows: [string, React.ReactNode][] = tripRows(trip).map(
     ([label, value]) => [
       label,
-      typeof value === "string" ? value : placeLine(value),
+      typeof value === "string" ? (
+        value
+      ) : (
+        <PlaceValue place={value} size="caption" />
+      ),
     ],
   );
   return <Rows rows={[...rows, ...extra]} />;

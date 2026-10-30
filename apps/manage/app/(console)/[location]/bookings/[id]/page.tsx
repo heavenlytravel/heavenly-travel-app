@@ -1,7 +1,5 @@
-import { BackLink } from "@repo/console/PageHeader";
 import { Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
-import { bookingsHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { BookingSkeleton, bookingScreen } from "./BookingScreen";
 
@@ -20,11 +18,8 @@ export default async function BookingPage({
   const { id } = await params;
 
   return (
-    <>
-      <BackLink href={bookingsHref(scope.slug)}>Bookings</BackLink>
-      <Streamed fallback={<BookingSkeleton />}>
-        {() => bookingScreen({ id, scope })}
-      </Streamed>
-    </>
+    <Streamed fallback={<BookingSkeleton />}>
+      {() => bookingScreen({ id, scope })}
+    </Streamed>
   );
 }

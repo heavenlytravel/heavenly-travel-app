@@ -33,15 +33,9 @@ const TIPS: Partial<Record<VehicleClassField, string>> = {
     "Off hides the class from every location's options page and search card.",
 };
 
-/** A field label with its tooltip, when it has one. */
-function ClassFieldLabel({ field }: { field: VehicleClassField }) {
-  const tip = TIPS[field];
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {VEHICLE_CLASS_FIELD_LABELS[field]}
-      {tip ? <InfoTip text={tip} /> : null}
-    </span>
-  );
+/** A field's label and its tip, when it has one, as `Field` takes them. */
+function classField(field: VehicleClassField) {
+  return { label: VEHICLE_CLASS_FIELD_LABELS[field], tip: TIPS[field] };
 }
 
 function WholeNumberInput({
@@ -102,7 +96,7 @@ export function VehicleClassFieldset({
         <CardTitle>Details</CardTitle>
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={<ClassFieldLabel field="name" />}>
+            <Field {...classField("name")}>
               <Input
                 name="name"
                 required
@@ -123,7 +117,7 @@ export function VehicleClassFieldset({
               </Field>
             )}
           </div>
-          <Field label={<ClassFieldLabel field="description" />}>
+          <Field {...classField("description")}>
             <Input
               name="description"
               required
@@ -132,7 +126,7 @@ export function VehicleClassFieldset({
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={<ClassFieldLabel field="category" />}>
+            <Field {...classField("category")}>
               <Select
                 name="category"
                 value={category}
@@ -143,7 +137,7 @@ export function VehicleClassFieldset({
                 }))}
               />
             </Field>
-            <Field label={<ClassFieldLabel field="sortOrder" />}>
+            <Field {...classField("sortOrder")}>
               <WholeNumberInput
                 field="sortOrder"
                 defaultValue={vehicleClass?.sortOrder ?? 0}
@@ -151,13 +145,17 @@ export function VehicleClassFieldset({
             </Field>
           </div>
           {showActive ? (
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                name="isActive"
-                defaultChecked={vehicleClass?.isActive ?? true}
-              />
-              <ClassFieldLabel field="isActive" />
-            </label>
+            // The tip beside the label, not in it: its button would join the box's name.
+            <span className="flex items-center gap-1.5 text-sm">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  name="isActive"
+                  defaultChecked={vehicleClass?.isActive ?? true}
+                />
+                {VEHICLE_CLASS_FIELD_LABELS.isActive}
+              </label>
+              <InfoTip text={TIPS.isActive!} />
+            </span>
           ) : null}
         </div>
       </Card>
@@ -182,21 +180,21 @@ export function VehicleClassFieldset({
       <Card>
         <CardTitle>Seats and luggage</CardTitle>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label={<ClassFieldLabel field="minPassengers" />}>
+          <Field {...classField("minPassengers")}>
             <WholeNumberInput
               field="minPassengers"
               min={1}
               defaultValue={vehicleClass?.minPassengers ?? 1}
             />
           </Field>
-          <Field label={<ClassFieldLabel field="maxPassengers" />}>
+          <Field {...classField("maxPassengers")}>
             <WholeNumberInput
               field="maxPassengers"
               min={1}
               defaultValue={vehicleClass?.maxPassengers}
             />
           </Field>
-          <Field label={<ClassFieldLabel field="luggage" />}>
+          <Field {...classField("luggage")}>
             <Input
               name="luggage"
               required

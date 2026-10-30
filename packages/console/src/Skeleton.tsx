@@ -1,8 +1,8 @@
 import { cx } from "@repo/ui/cx";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { Suspense, type ComponentProps, type ReactNode } from "react";
 import { Card, Frame, TileGrid } from "./Card";
 import { DetailColumns } from "./PageColumn";
-import { WhenExpanded } from "./SidebarVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
 /**
@@ -48,21 +48,7 @@ export async function Streamed({
   const content = children();
   await settledWithin(content, GRACE_MS);
   return (
-    <Suspense
-      fallback={
-        bare ? (
-          fallback
-        ) : (
-          <div
-            role="status"
-            aria-label="Loading"
-            className="motion-safe:animate-pulse"
-          >
-            {fallback}
-          </div>
-        )
-      }
-    >
+    <Suspense fallback={bare ? fallback : <Loading>{fallback}</Loading>}>
       <Loaded content={content} />
     </Suspense>
   );
@@ -70,11 +56,6 @@ export async function Streamed({
 
 async function Loaded({ content }: { content: Promise<ReactNode> }) {
   return content;
-}
-
-/** One grey bar in place of a line of text. The class gives its size. */
-export function Bone({ className }: { className: string }) {
-  return <span className={cx("block rounded bg-slate-200/80", className)} />;
 }
 
 /** A `PageHeader` whose title is the record's name, so it loads with it. */
@@ -85,11 +66,6 @@ export function HeaderSkeleton() {
       <Bone className="mt-2 h-4 w-80 max-w-full" />
     </div>
   );
-}
-
-/** The back link above a page, where it names the record. */
-export function BackLinkSkeleton() {
-  return <Bone className="mb-3.5 h-5 w-28" />;
 }
 
 const CELL_WIDTHS = ["w-16", "w-24", "w-20", "w-14", "w-12", "w-10"];
@@ -176,7 +152,7 @@ export function TileGridSkeleton({
         <li key={tile}>
           <Frame className="overflow-hidden">
             {image ? (
-              <Bone className="aspect-[16/9] w-full rounded-none" />
+              <Bone className="aspect-video w-full rounded-none" />
             ) : null}
             <div className="grid gap-2.5 p-4">
               <Bone className="h-5 w-28" />
@@ -201,30 +177,6 @@ export function DetailSkeleton({
   return <DetailColumns main={main} side={side} />;
 }
 
-/**
- * The menu in the navy sidebar while its counts load: rows of an icon and
- * a name; collapsed to a rail, the icons alone.
- */
-export function MenuSkeleton() {
-  return (
-    <div className="grid gap-5 px-5 py-4">
-      {Array.from({ length: 9 }, (_, row) => (
-        <div key={row} className="flex items-center gap-3">
-          <span className="block size-4 shrink-0 rounded bg-white/15" />
-          <WhenExpanded>
-            <span
-              className={cx(
-                "block h-3.5 rounded bg-white/15",
-                row % 2 ? "w-20" : "w-28",
-              )}
-            />
-          </WhenExpanded>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /** A form: cards of labelled fields, then its button. */
 export function FormSkeleton({
   sections = 1,
@@ -240,12 +192,12 @@ export function FormSkeleton({
           {Array.from({ length: fields }, (_, field) => (
             <div key={field}>
               <Bone className="mb-1.5 h-4 w-24" />
-              <Bone className="h-10 w-full rounded-md" />
+              <Bone className="h-10 w-full" />
             </div>
           ))}
         </Card>
       ))}
-      <Bone className="h-10 w-28 rounded-md" />
+      <Bone className="h-10 w-28" />
     </div>
   );
 }

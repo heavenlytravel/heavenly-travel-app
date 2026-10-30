@@ -292,12 +292,9 @@ export function NeedsYou({ needs }: { needs: readonly Need[] }) {
       </CardTitle>
       {needs.length === 0 ? (
         <p className="flex items-center gap-3 px-5 py-5 text-sm text-muted">
-          <span
-            aria-hidden="true"
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-green-200 bg-green-50 text-green-700"
-          >
+          <IconMark tone="green">
             <CheckIcon />
-          </span>
+          </IconMark>
           Nothing waits on you right now.
         </p>
       ) : (

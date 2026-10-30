@@ -87,7 +87,7 @@ export function paletteIndex({
           ? [
               {
                 href: savedAddressesHref(location.slug),
-                title: "Saved addresses",
+                title: "Saved Addresses",
                 meta: location.name,
                 icon: "addresses",
                 words: "take me here places hotels airport",
@@ -98,31 +98,31 @@ export function paletteIndex({
 
   const actions: PaletteEntry[] = [
     ...(may("bookings.create")
-      ? [{ href: newBookingHref(null), title: "New booking", words: "add" }]
+      ? [{ href: newBookingHref(null), title: "New Booking", words: "add" }]
       : []),
     ...(may("fleet.manage")
       ? [
-          { href: newVehicleHref(null), title: "Add vehicle", words: "new" },
-          { href: newDriverHref(null), title: "Add driver", words: "new" },
+          { href: newVehicleHref(null), title: "Add Vehicle", words: "new" },
+          { href: newDriverHref(null), title: "Add Driver", words: "new" },
         ]
       : []),
     ...(may("coverage.manage")
       ? [
           {
             href: newClassHref(null),
-            title: "Add vehicle class",
+            title: "Add Vehicle Class",
             words: "new",
           },
           ...locations.flatMap((location) => [
             {
               href: newZoneHref(location.slug),
-              title: "Add zone",
+              title: "Add Zone",
               meta: location.name,
               words: "new coverage",
             },
             {
               href: newClassHref(location.slug),
-              title: "Put a class on sale",
+              title: "Put a Class on Sale",
               meta: location.name,
               words: "add vehicle class offering",
             },
@@ -130,7 +130,7 @@ export function paletteIndex({
         ]
       : []),
     ...(may("locations.manage")
-      ? [{ href: NEW_LOCATION_PATH, title: "Add location", words: "new" }]
+      ? [{ href: NEW_LOCATION_PATH, title: "Add Location", words: "new" }]
       : []),
   ];
 

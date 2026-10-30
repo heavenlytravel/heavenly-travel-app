@@ -11,11 +11,13 @@ import { AppSidebar } from "./AppSidebar";
 import { ConsoleMenu } from "./ConsoleMenu";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { ConsoleTopBar } from "./ConsoleTopBar";
+import { PageTrail } from "./PageTrail";
 
 /**
  * The console's chrome round a page: the navy sidebar with the one menu,
- * the top bar with the location picker and the search, the page's column
- * on the mist canvas, and the toasts. Chrome only: access is checked by
+ * the top bar with the sidebar's fold button, the location picker, the
+ * search and the signed-in admin, the page's column on the mist canvas,
+ * and the toasts. Chrome only: access is checked by
  * each page with `requireAdmin`, which redirects before anything here
  * reaches the browser. The permissions read here only choose which rows
  * the menu shows. Someone who is not an admin gets the page alone, which
@@ -57,11 +59,17 @@ export async function ConsoleShell({
           }
           locations={locations}
           permissions={permissions}
-          person={person}
         />
         <SidebarInset>
-          <ConsoleTopBar locations={locations} permissions={permissions} />
-          <PageColumn>{children}</PageColumn>
+          <ConsoleTopBar
+            locations={locations}
+            permissions={permissions}
+            person={person}
+          />
+          <PageColumn>
+            <PageTrail />
+            {children}
+          </PageColumn>
         </SidebarInset>
       </ConsoleSearch>
       {/* The console's one place for "Saved" and the like, at the corner. */}

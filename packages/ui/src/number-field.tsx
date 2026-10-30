@@ -2,7 +2,7 @@
 
 import { useRef, type ComponentProps } from "react";
 import { cx } from "./cx.js";
-import { inputClassName } from "./field.js";
+import { inputClassName, useFieldControl } from "./field.js";
 import { MinusIcon, PlusIcon } from "./icons.js";
 
 /**
@@ -21,6 +21,7 @@ export function NumberField({
   ...props
 }: Omit<ComponentProps<"input">, "type"> & { bare?: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
+  const field = useFieldControl(props);
 
   function step(by: 1 | -1) {
     const input = ref.current;
@@ -41,10 +42,10 @@ export function NumberField({
   }
 
   const button = cx(
-    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-slate-600 ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:focus-visible:outline-2 ui:focus-visible:outline-ring ui:disabled:pointer-events-none ui:disabled:opacity-40",
+    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-muted ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:disabled:pointer-events-none ui:disabled:opacity-50",
     bare
-      ? "ui:size-8 ui:self-center ui:rounded-full ui:border ui:border-line"
-      : "ui:size-10",
+      ? "ui:touch-target ui:size-8 ui:self-center ui:rounded-full ui:border ui:border-edge"
+      : "ui:aspect-square ui:h-full",
   );
 
   // The field comes first in the markup and the minus is drawn before it:
@@ -55,7 +56,7 @@ export function NumberField({
       className={cx(
         bare
           ? "ui:flex ui:w-full ui:items-center ui:gap-2"
-          : "ui:flex ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-[var(--ui-field-radius,0.375rem)] ui:border ui:border-slate-300 ui:bg-white ui:has-[input:disabled]:bg-slate-100 ui:has-[input[aria-invalid=true]]:border-red-500",
+          : "ui:flex ui:h-10 ui:w-full ui:items-stretch ui:overflow-hidden ui:rounded-control ui:border ui:border-edge ui:bg-white ui:pointer-coarse:h-11 ui:has-[input:disabled]:bg-shade ui:has-[input:focus-visible]:outline-2 ui:has-[input:focus-visible]:outline-ring ui:has-[input[aria-invalid=true]]:border-danger",
         className,
       )}
     >
@@ -67,10 +68,14 @@ export function NumberField({
         className={cx(
           bare
             ? "ui:min-w-0 ui:bg-transparent ui:outline-none"
-            : cx(inputClassName, "ui:h-10 ui:rounded-none ui:border-0"),
+            : cx(
+                inputClassName,
+                "ui:h-full ui:rounded-none ui:border-0 ui:outline-none ui:pointer-coarse:h-full",
+              ),
           "ui:order-2 ui:min-w-0 ui:flex-1 ui:text-center ui:tabular-nums ui:[appearance:textfield] ui:[&::-webkit-inner-spin-button]:appearance-none ui:[&::-webkit-outer-spin-button]:appearance-none",
         )}
         {...props}
+        {...field}
       />
       <button
         type="button"
@@ -81,7 +86,7 @@ export function NumberField({
         className={cx(
           button,
           "ui:order-1",
-          !bare && "ui:border-r ui:border-slate-200",
+          !bare && "ui:border-r ui:border-hairline",
         )}
       >
         <MinusIcon />
@@ -95,7 +100,7 @@ export function NumberField({
         className={cx(
           button,
           "ui:order-3",
-          !bare && "ui:border-l ui:border-slate-200",
+          !bare && "ui:border-l ui:border-hairline",
         )}
       >
         <PlusIcon />

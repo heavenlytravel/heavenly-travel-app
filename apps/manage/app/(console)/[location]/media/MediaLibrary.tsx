@@ -18,6 +18,7 @@ import { ImageIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { Tile, TileGrid } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { CardImage } from "../../../_components/CardImage";
 import { DeleteButton } from "../../../_components/DeleteButton";
 import {
@@ -82,11 +83,7 @@ export function MediaLibrary({
     });
 
   if (rows.length === 0) {
-    return (
-      <p className="px-6 py-10 text-center text-sm text-muted">
-        {emptyMessage}
-      </p>
-    );
+    return <EmptyState>{emptyMessage}</EmptyState>;
   }
 
   return (
@@ -97,7 +94,8 @@ export function MediaLibrary({
           dark ? "bg-ink text-white" : "border-b border-hairline text-body",
         )}
       >
-        <label className="flex items-center gap-2.5 text-sm">
+        {/* The words take the click too; on a touch screen the row is 44px tall to a finger. */}
+        <label className="flex touch-target items-center gap-2.5 text-sm">
           <input
             type="checkbox"
             className="size-4 accent-brand"
@@ -187,25 +185,20 @@ function MediaTile({
 
   return (
     <Tile>
-      {chosen ? (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-2 rounded-card ring-2 ring-brand ring-inset"
-        />
-      ) : null}
       <div className="relative">
         <CardImage
           src={row.url}
           fit="contain"
           sizes="(min-width: 1024px) 14rem, (min-width: 640px) 50vw, 100vw"
-          fallback={<ImageIcon className="size-7 text-slate-300" />}
+          fallback={<ImageIcon className="size-7 text-slot" />}
         >
           <Badge dot tone={STATUS_TONES[row.status]}>
             {MEDIA_STATUS_LABELS[row.status]}
           </Badge>
         </CardImage>
+        {/* The box round the tick takes the press: 44px on a touch screen. */}
         <label
-          className="absolute top-2.5 right-2.5 flex size-8 items-center justify-center rounded-md bg-white/90 shadow-control"
+          className="absolute top-2.5 right-2.5 flex size-8 cursor-pointer items-center justify-center rounded-md bg-white/90 shadow-control pointer-coarse:size-11"
           title={
             onPage
               ? "On a location's page: replace it there, then delete it here"
@@ -224,12 +217,12 @@ function MediaTile({
       </div>
       <div className="grid gap-2.5 px-4 pt-3 pb-4">
         <div className="min-w-0">
-          <h3
+          <h2
             className="truncate text-sm font-semibold text-ink"
             title={row.name}
           >
             {row.name}
-          </h3>
+          </h2>
           <p className="text-xs text-muted tabular-nums">
             {formatBytes(row.size)} ·{" "}
             {formatLocalDate(new Date(row.uploadedAt))}
@@ -245,13 +238,20 @@ function MediaTile({
           </ul>
         ) : null}
       </div>
+      {/* Last, so it is drawn over the tile's raised parts, its foot too. */}
+      {chosen ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-(--layer-raised) rounded-card ring-2 ring-brand ring-inset"
+        />
+      ) : null}
     </Tile>
   );
 }
 
 /** A use as a small chip that opens it. */
 const USE_CHIP =
-  "block truncate rounded-md bg-shade px-2 py-0.5 text-xs text-body transition-colors hover:bg-brand-tint hover:text-navy";
+  "block truncate rounded-md bg-shade px-2 py-0.5 text-xs text-body transition-colors hover:bg-brand-tint hover:text-navy focus-ring";
 
 /** Where a use is, as a link to it: the page in its editor, the class, the vehicle, the past version. */
 function UseLink({ use }: { use: MediaUse }) {

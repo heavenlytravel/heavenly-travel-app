@@ -6,7 +6,6 @@ import { CARD_LINK, Card, CardTitle } from "@repo/console/Card";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import { locationOfferings } from "../../../../_lib/location-data";
 import {
   RATES_PAGE_LABELS,
@@ -17,7 +16,6 @@ import {
 import { scopeOf } from "../../../../_lib/scope";
 import { ClassRates } from "../_components/ClassRates";
 import { RatesByLocation } from "../_components/RatesByLocation";
-import { RatesPager } from "../_components/RatesPager";
 import { visiblePriceLists } from "../_components/price-lists";
 
 /**
@@ -33,15 +31,12 @@ export default async function RateClassesPage({
   params,
 }: PageProps<"/[location]/rates/classes">) {
   await requireAdmin("coverage.view");
-  const { slug, location } = await scopeOf(params);
+  const { location } = await scopeOf(params);
   const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-classes")}
-        title={RATES_PAGE_LABELS.classes}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.classes} />
       <Streamed fallback={<CardSkeleton rows={4} />}>
         {() =>
           location
@@ -49,7 +44,6 @@ export default async function RateClassesPage({
             : everyLocationClasses({ manages })
         }
       </Streamed>
-      <RatesPager scope={slug} page="classes" />
     </>
   );
 }

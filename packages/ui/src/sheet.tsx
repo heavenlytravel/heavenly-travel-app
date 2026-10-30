@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { cx } from "./cx.js";
-import { ModalBody, onModalClose, useModal } from "./modal.js";
+import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 
 const WIDTHS = {
   md: "ui:w-[min(22rem,88vw)]",
@@ -51,12 +51,9 @@ export function Sheet({
       aria-label={title}
       data-side={side}
       onClose={onModalClose(() => onOpenChange(false))}
-      onClick={(event) => {
-        // The dialog element itself is only hit through the backdrop.
-        if (event.target === event.currentTarget) onOpenChange(false);
-      }}
+      {...backdropClose(() => onOpenChange(false))}
       className={cx(
-        "ui-sheet ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45",
+        "ui-sheet ui:fixed ui:m-0 ui:max-w-none ui:overflow-hidden ui:bg-white ui:p-0 ui:text-inherit ui:shadow-overlay ui:backdrop:bg-ink/45",
         side !== "bottom" && WIDTHS[width],
         SIDES[side],
         className,
@@ -66,5 +63,31 @@ export function Sheet({
         {children}
       </ModalBody>
     </dialog>
+  );
+}
+
+/**
+ * The visible head of a sheet that holds a form: its title and the line
+ * under it. The sheet's `title` still names the dialog for screen
+ * readers, and may say more ("Level and teams for …").
+ */
+export function SheetHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description?: ReactNode;
+}) {
+  return (
+    <div>
+      <h2 className="ui:text-lg ui:font-bold ui:tracking-title ui:text-ink">
+        {title}
+      </h2>
+      {description ? (
+        <p className="ui:mt-1 ui:text-sm ui:wrap-anywhere ui:text-muted">
+          {description}
+        </p>
+      ) : null}
+    </div>
   );
 }

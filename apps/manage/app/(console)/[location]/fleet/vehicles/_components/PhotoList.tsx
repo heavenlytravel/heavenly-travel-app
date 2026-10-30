@@ -21,7 +21,7 @@ import Image from "next/image";
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useImageUpload } from "../../../../../_components/use-image-upload";
 import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 
 /**
  * A vehicle's photos, in the order the customer swipes through them: each
@@ -90,7 +90,7 @@ export function PhotoList({
         {photos.map((photo, i) => (
           <li
             key={photo.url}
-            className="grid gap-2 rounded-[10px] border border-hairline p-2"
+            className="grid gap-2 rounded-control border border-hairline p-2"
           >
             <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-shade">
               <Image
@@ -149,7 +149,7 @@ export function PhotoList({
         {pending.map((file, i) => (
           <li
             key={`${file}-${i}`}
-            className="grid content-start gap-2 rounded-[10px] border border-dashed border-slot p-2"
+            className="grid content-start gap-2 rounded-control border border-dashed border-slot p-2"
           >
             <div className="grid aspect-[3/2] animate-pulse place-items-center rounded-md bg-shade text-xs text-muted">
               {i === 0 ? "Uploading…" : "Waiting…"}
@@ -163,7 +163,7 @@ export function PhotoList({
               type="button"
               disabled={uploading}
               onClick={() => input.current?.click()}
-              className="grid min-h-36 place-content-center justify-items-center gap-1.5 rounded-[10px] border border-dashed border-slot px-4 py-6 text-center transition-colors hover:bg-hover disabled:pointer-events-none disabled:opacity-60"
+              className="grid min-h-36 place-content-center justify-items-center gap-1.5 rounded-control border border-dashed border-slot px-4 py-6 text-center transition-colors hover:bg-hover focus-ring disabled:pointer-events-none disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 {empty ? <ImageIcon /> : <PlusIcon />}

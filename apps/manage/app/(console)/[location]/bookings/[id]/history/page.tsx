@@ -36,7 +36,7 @@ async function bookingHistory(id: string, scope: ConsoleScope) {
   ]);
   return (
     <RecordHistory
-      back={{
+      record={{
         href: bookingHref(scope.slug, booking.id),
         label: booking.reference,
       }}

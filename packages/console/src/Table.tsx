@@ -22,17 +22,17 @@ export function Table({
       {children}
     </table>
   );
+  // A table wider than its card scrolls sideways, a shadow on the side that hides more.
   return bare ? (
-    <div className="relative min-w-0 overflow-x-auto rounded-b-card">
+    <div className="relative min-w-0 scroll-shade-x overflow-x-auto rounded-b-card">
       {table}
     </div>
   ) : (
-    <Frame className="relative overflow-x-auto">{table}</Frame>
+    <Frame className="relative scroll-shade-x overflow-x-auto">{table}</Frame>
   );
 }
 
-const HEAD =
-  "border-b border-hairline bg-shade text-[11px] tracking-[0.05em] text-muted uppercase";
+const HEAD = "border-b border-hairline bg-shade text-caps text-muted";
 
 /** The heading row; put `Th` cells inside. */
 export function THead({ children }: { children: ReactNode }) {
@@ -59,13 +59,17 @@ export function ThGroup({
   span?: number;
   children?: ReactNode;
 }) {
+  // A cell over no group is no heading: an empty <th> names nothing.
+  if (!children) return <td colSpan={span} className="px-3.5 pt-3 pb-0" />;
   return (
-    <th colSpan={span} className="px-3.5 pt-3 pb-0 font-semibold">
-      {children ? (
-        <span className="block border-b border-edge pb-1.5 text-center whitespace-nowrap text-slate-600">
-          {children}
-        </span>
-      ) : null}
+    <th
+      colSpan={span}
+      scope="colgroup"
+      className="px-3.5 pt-3 pb-0 font-semibold"
+    >
+      <span className="block border-b border-edge pb-1.5 text-center whitespace-nowrap text-muted">
+        {children}
+      </span>
     </th>
   );
 }
@@ -85,13 +89,15 @@ export function Th({
   children?: ReactNode;
   align?: "right";
 }) {
+  const classes = cx(
+    "px-3.5 py-2.5 font-semibold whitespace-nowrap",
+    align === "right" && "text-right",
+  );
+  // A column with no name (its buttons) gets no heading: an empty <th> names nothing.
+  if (children === undefined || children === null || children === "")
+    return <td className={classes} />;
   return (
-    <th
-      className={cx(
-        "px-3.5 py-2.5 font-semibold whitespace-nowrap",
-        align === "right" && "text-right",
-      )}
-    >
+    <th scope="col" className={classes}>
       {children}
     </th>
   );
@@ -104,9 +110,7 @@ export function Td({
   children?: ReactNode;
   className?: string;
 }) {
-  return (
-    <td className={cx("h-[3.25rem] px-3.5 py-2.5", className)}>{children}</td>
-  );
+  return <td className={cx("h-13 px-3.5 py-2.5", className)}>{children}</td>;
 }
 
 /** The one row a table shows when it has nothing to list. */
@@ -119,8 +123,11 @@ export function EmptyRow({
 }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-10 text-center text-muted">
-        {children}
+      <td colSpan={colSpan} className="px-4 py-10 text-muted">
+        {/* Held in view on a phone, where the table is wider than the screen. */}
+        <div className="sticky left-4 max-w-[calc(100vw-4rem)] text-center sm:max-w-none">
+          {children}
+        </div>
       </td>
     </tr>
   );
@@ -137,10 +144,11 @@ export function TwoLines({
   className?: string;
 }) {
   return (
-    <span className={cx("grid min-w-0", className)}>
+    // A floor under the width, so a narrow table cuts the words short rather than to nothing.
+    <span className={cx("grid min-w-24", className)}>
       <span className="truncate font-medium text-body">{top}</span>
       {bottom ? (
-        <span className="truncate text-[12.5px] text-muted">{bottom}</span>
+        <span className="truncate text-caption text-muted">{bottom}</span>
       ) : null}
     </span>
   );

@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en" className={fontVars}>
+      <html lang="en" data-app="console" className={fontVars}>
         <body>{children}</body>
       </html>
     </ClerkProvider>

@@ -342,12 +342,30 @@ function pageAt(pathname: string): PageAt | null {
   return found;
 }
 
-/** The section a page is in, for the label over its title: "Fleet" over "Vehicles". Only a section of several pages names itself. */
-export function sectionLabelOf(pageKey: string): string | undefined {
-  const section = CONSOLE_SECTIONS.find((entry) =>
-    entry.pages.some((page) => page.key === pageKey),
-  );
-  return section && section.pages.length > 1 ? section.label : undefined;
+/**
+ * A step of the trail over a page's title: a name, where it leads when it
+ * is a page to go back to, and whether it is the page the admin is on.
+ */
+export type Crumb = { label: string; href?: string; current?: boolean };
+
+/**
+ * The trail over a page's title, read off its address, so every page has
+ * one in the same place and its title never moves. It is the page's place
+ * in the menu: its section when that holds several pages, which has no
+ * page of its own, then its row. On the row's own page the row is where
+ * the admin is: "Bookings", "Fleet › Vehicles". Under it, on a record or
+ * a form, the row is the link back: "Fleet › Vehicles" over Add Vehicle.
+ * None on the dashboard, which has its band, nor on an address of no page.
+ */
+export function trailOf(pathname: string): Crumb[] {
+  const at = pageAt(pathname);
+  if (!at || at.page.path === "") return [];
+  const row: Crumb = at.own
+    ? { label: at.page.label, current: true }
+    : { label: at.page.label, href: pageHref(at.page, at.scope) };
+  return at.section.pages.length > 1
+    ? [{ label: at.section.label }, row]
+    : [row];
 }
 
 /** A page by its key. */

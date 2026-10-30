@@ -1,6 +1,7 @@
 "use client";
 
 import type { DeleteImpact } from "@repo/db";
+import { Notice } from "@repo/ui/notice";
 import { DeleteButton, ImpactList } from "../../../_components/DeleteButton";
 import { deleteLocationAction } from "../../../_lib/location-actions";
 
@@ -30,7 +31,7 @@ export function DeleteLocation({
   return (
     <div className="grid gap-3 text-sm">
       {hasBeenLive ? (
-        <div className="grid gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+        <Notice className="grid gap-2">
           <p>
             This location is public at /{slug}. Its ranking in search engines is
             not given back if the location is added again.
@@ -40,7 +41,7 @@ export function DeleteLocation({
             remove it for good, or to put a wrong slug right by adding the
             location again.
           </p>
-        </div>
+        </Notice>
       ) : (
         <p className="text-muted">
           This location has never been live, so nothing public is lost. To try

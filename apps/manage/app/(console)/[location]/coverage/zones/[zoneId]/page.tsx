@@ -15,12 +15,11 @@ import {
 } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { notFound } from "next/navigation";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { FormSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
 import { locationDetails } from "../../../../../_lib/location-data";
 import { districtChoices, stateOutlines } from "../../../../../_lib/outlines";
-import { coverageHref } from "../../../../../_lib/routes";
 import { scopeOf } from "../../../../../_lib/scope";
 import { drawnAs } from "../../zone-lines";
 import { ZoneEditor } from "../ZoneEditor";
@@ -45,7 +44,6 @@ export default async function ZonePage({
 
   return (
     <>
-      <BackLink href={coverageHref(location.slug)}>Coverage</BackLink>
       <Streamed
         fallback={
           <>
@@ -120,7 +118,7 @@ async function zoneEditor({
   return (
     <>
       <PageHeader
-        title={existing ? existing.name : "Add zone"}
+        title={existing ? existing.name : "Add Zone"}
         meta={
           existing
             ? `${drawnAs(existing)} · ${details.name}`

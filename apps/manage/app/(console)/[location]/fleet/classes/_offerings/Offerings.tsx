@@ -7,7 +7,7 @@ import {
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { BusIcon } from "@repo/ui/icons";
-import { TILE_LINK, Tile, TileFoot } from "@repo/console/Card";
+import { Tile, TileFoot } from "@repo/console/Card";
 import { Streamed } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import { CardImage } from "../../../../../_components/CardImage";
@@ -134,7 +134,7 @@ function OfferingCard({
           <div className="min-w-0">
             <h3 className="truncate text-base font-bold tracking-tight text-ink">
               {manages ? (
-                <Link href={href} className={TILE_LINK}>
+                <Link href={href} className="card-link">
                   {vehicleClass.name}
                 </Link>
               ) : (
@@ -146,7 +146,7 @@ function OfferingCard({
             </p>
           </div>
           {/* Above the card's link, so it switches instead of opening. */}
-          <div className="relative z-1 shrink-0">
+          <div className="relative z-(--layer-raised) shrink-0">
             {manages ? (
               <OfferingActiveSwitch
                 offering={offering}
@@ -162,7 +162,7 @@ function OfferingCard({
           </div>
         </div>
         {!vehicleClass.isActive ? (
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-warning">
             Off in the catalogue, so sold nowhere.
           </p>
         ) : null}

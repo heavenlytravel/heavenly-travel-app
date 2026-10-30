@@ -17,9 +17,13 @@ import { ArrowLeftRightIcon, ChevronDownIcon, CopyIcon } from "@repo/ui/icons";
 import { Menu, MenuItem } from "@repo/ui/menu";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
+import { scrollBehavior } from "@repo/ui/motion";
+import { useMediaQuery } from "@repo/ui/use-media-query";
 import { useId, useRef, useState, useTransition } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
+import { Notice } from "@repo/ui/notice";
+import { Choices } from "../../../../_components/Choices";
 import {
   FullScreenButton,
   useFullScreen,
@@ -35,7 +39,19 @@ import {
 import { MAP_COLORS, TripMap, type TripPin } from "./TripMap";
 
 /** The name over each of the controls. */
-const LABEL = "text-[13px] font-medium text-body";
+const LABEL = "text-caption font-medium text-body";
+
+/** What a click on the map places, as the switch over the map offers it. */
+const PLACINGS = [
+  { value: "A", label: "Pick-up A" },
+  { value: "B", label: "Drop-off B" },
+] as const;
+
+/** The two ways the breakdown shows the price. */
+const VIEWS = [
+  { value: "calculation", label: "Calculation" },
+  { value: "steps", label: "Steps" },
+] as const;
 
 /** What Google bills a route request past the free allowance, in US dollars. */
 const ROUTE_REQUEST_USD = 0.005;
@@ -224,12 +240,18 @@ function Workspace({
   const calls = answered?.trace.calls ?? 0;
   const className = classes.find((c) => c.id === classId)?.name ?? "";
 
+  /** Below `lg` the map sits above the calculation instead of beside it. */
+  const stacked = useMediaQuery("(max-width: 1023px)");
+
   /** A calculation line picked or put back; stacked, the map comes back into view to show it. */
   function pick(index: number) {
     const next = picked === index ? null : index;
     setPicked(next);
-    if (next !== null && window.matchMedia("(max-width: 1023px)").matches) {
-      mapBox.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (next !== null && stacked) {
+      mapBox.current?.scrollIntoView({
+        behavior: scrollBehavior(),
+        block: "center",
+      });
     }
   }
 
@@ -306,7 +328,7 @@ function Workspace({
       <Card className="grid shrink-0 gap-3">
         {full ? (
           <h2 className="font-serif text-2xl text-ink">
-            Try a trip in {locationName}
+            Try a Trip in {locationName}
           </h2>
         ) : null}
         {/* The two ends, then the class, the day and the time, which move
@@ -323,7 +345,8 @@ function Workspace({
             )}
             <Button
               variant="secondary"
-              className="w-10 px-0 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
+              size="icon"
+              className="max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
               aria-label="Swap the pick-up and the drop-off"
               title="Swap A and B"
               disabled={!pickup.end && !dropoff.end}
@@ -379,7 +402,9 @@ function Workspace({
           <CardTitle inset action={examplesMenu}>
             The trip
           </CardTitle>
-          <div className="relative flex flex-1 flex-col gap-2 p-3 lg:min-h-0">
+          {/* Isolated: the map's buttons and its legend stay under the
+              console's sticky header on a scroll. */}
+          <div className="relative isolate flex flex-1 flex-col gap-2 p-3 lg:min-h-0">
             {mapKey ? (
               <>
                 <div
@@ -400,31 +425,21 @@ function Workspace({
                     onPlace={(at) => pin(placing, at)}
                     onMove={pin}
                   />
-                  <div
-                    role="radiogroup"
-                    aria-label="A click on the map places"
-                    className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 rounded-md bg-white p-1 text-sm shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]"
-                  >
-                    <span className="px-1.5 text-muted max-sm:sr-only">
+                  <div className="absolute top-2.5 left-2.5 z-(--layer-raised) flex items-center gap-1 rounded-sm bg-white p-0.5 text-sm shadow-map">
+                    {/* The group's own name says it to a screen reader. */}
+                    <span
+                      aria-hidden="true"
+                      className="px-1.5 text-muted max-sm:hidden"
+                    >
                       A click places
                     </span>
-                    {(["A", "B"] as const).map((letter) => (
-                      <button
-                        key={letter}
-                        type="button"
-                        role="radio"
-                        aria-checked={placing === letter}
-                        onClick={() => setPlacing(letter)}
-                        className={cx(
-                          "rounded px-2 py-1 font-medium",
-                          placing === letter
-                            ? "bg-brand text-white"
-                            : "text-body hover:bg-hover",
-                        )}
-                      >
-                        {letter === "A" ? "Pick-up A" : "Drop-off B"}
-                      </button>
-                    ))}
+                    <Choices
+                      label="A click on the map places"
+                      size="sm"
+                      value={placing}
+                      options={PLACINGS}
+                      onChange={setPlacing}
+                    />
                   </div>
                   <FullScreenButton full={full} onToggle={toggle} />
                 </div>
@@ -466,38 +481,22 @@ function Workspace({
               <>
                 <Fare answer={answered} className={className} />
                 {answered.customer.length > 0 ? (
-                  <ul className="grid gap-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                    {answered.customer.map((note) => (
-                      <li key={note}>{note}</li>
-                    ))}
-                  </ul>
+                  <Notice>
+                    <ul className="grid gap-1">
+                      {answered.customer.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  </Notice>
                 ) : null}
-                <div
-                  role="group"
-                  aria-label="Show the price as"
-                  className="inline-flex w-fit gap-0.5 rounded-lg border border-edge bg-shade p-0.5"
-                >
-                  {(
-                    [
-                      ["calculation", "Calculation"],
-                      ["steps", "Steps"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-pressed={view === key}
-                      onClick={() => setView(key)}
-                      className={cx(
-                        "rounded-md px-3 py-1 text-sm font-semibold whitespace-nowrap transition-colors",
-                        view === key
-                          ? "bg-white text-ink shadow-control"
-                          : "text-muted hover:text-ink",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div>
+                  <Choices
+                    label="Show the price as"
+                    size="sm"
+                    value={view}
+                    options={VIEWS}
+                    onChange={setView}
+                  />
                 </div>
                 {view === "calculation" ? (
                   <ol className="grid gap-1">
@@ -505,7 +504,7 @@ function Workspace({
                       const canLight = (line.focus?.length ?? 0) > 0;
                       const body = (
                         <>
-                          <span className="text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">
+                          <span className="text-caps font-semibold text-muted">
                             {line.label}
                           </span>
                           <span
@@ -631,7 +630,7 @@ function Fare({
   const price = quote?.price;
   return (
     <div className="grid gap-1 rounded-lg border border-hairline bg-shade p-4">
-      <span className="text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">
+      <span className="text-caps font-semibold text-muted">
         {className}
         {quote ? ` · ${quote.location}` : ""}
       </span>
@@ -645,7 +644,7 @@ function Fare({
         </>
       ) : price ? (
         <>
-          <span className="font-serif text-[2.25rem] leading-tight text-ink tabular-nums">
+          <span className="font-serif text-4xl leading-tight text-ink tabular-nums">
             {formatMyr(price.totalSen)}
           </span>
           <dl className="mt-1 grid gap-0.5 text-sm">
@@ -685,7 +684,7 @@ function Legend() {
     ["Route as Google drew it", MAP_COLORS.route, "solid"],
   ];
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-body sm:absolute sm:bottom-8 sm:left-5 sm:z-10 sm:grid sm:gap-1 sm:rounded-md sm:bg-white/95 sm:px-3 sm:py-2 sm:shadow-[0_1px_4px_-1px_rgb(0_0_0/0.3)]">
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-body sm:absolute sm:bottom-8 sm:left-5 sm:z-(--layer-raised) sm:grid sm:gap-1 sm:rounded-sm sm:bg-white/95 sm:px-3 sm:py-2 sm:shadow-map">
       {items.map(([label, color, kind]) => (
         <li key={label} className="flex items-center gap-2">
           {kind === "dot" ? (

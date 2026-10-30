@@ -23,11 +23,10 @@ import { Checkbox, Field, Input, Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
-import Link from "next/link";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { ChargeInput } from "../../../../../_components/ChargeInput";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import {
   OFFERING_FROM_PARAM,
   offeringBackHref,
@@ -66,15 +65,12 @@ const ruleTexts = (rules: OfferingRules): RuleTexts => ({
   minHourlyHours: String(rules.minHourlyHours),
 });
 
-/** A field's label, its unit, and its tooltip when it has one. */
-function FieldLabel({ field, unit }: { field: OfferingField; unit: string }) {
-  const tip = TIPS[field];
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {OFFERING_FIELD_LABELS[field]} ({unit})
-      {tip ? <InfoTip text={tip} /> : null}
-    </span>
-  );
+/** A field's label with its unit, and its tip when it has one, as `Field` takes them. */
+function offeringField(field: OfferingField, unit: string) {
+  return {
+    label: `${OFFERING_FIELD_LABELS[field]} (${unit})`,
+    tip: TIPS[field],
+  };
 }
 
 function MoneyInput({
@@ -85,7 +81,7 @@ function MoneyInput({
   defaultSen: number | undefined;
 }) {
   return (
-    <Field label={<FieldLabel field={field} unit="RM" />}>
+    <Field {...offeringField(field, "RM")}>
       <Input
         name={OFFERING_MONEY_FIELDS[field]}
         inputMode="decimal"
@@ -306,16 +302,17 @@ export function OfferingForm({
               />
             </div>
             <ModelChoiceField offering={offering} />
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                name="isActive"
-                defaultChecked={offering?.isActive ?? true}
-              />
-              <span className="inline-flex items-center gap-1.5">
+            {/* The tip beside the label, not in it: its button would join the box's name. */}
+            <span className="flex items-center gap-1.5 text-sm">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  name="isActive"
+                  defaultChecked={offering?.isActive ?? true}
+                />
                 {OFFERING_FIELD_LABELS.isActive}
-                <InfoTip text="Off hides the class from this location's options page and search card. Bookings already made are not changed." />
-              </span>
-            </label>
+              </label>
+              <InfoTip text="Off hides the class from this location's options page and search card. Bookings already made are not changed." />
+            </span>
           </div>
         </Card>
 
@@ -323,10 +320,7 @@ export function OfferingForm({
           <CardTitle>Rules at this location</CardTitle>
           <div className="grid gap-4 sm:grid-cols-3">
             {OFFERING_RULE_FIELDS.map((field) => (
-              <Field
-                key={field}
-                label={<FieldLabel field={field} unit="hours" />}
-              >
+              <Field key={field} {...offeringField(field, "hours")}>
                 <NumberField
                   name={field}
                   step={1}
@@ -354,24 +348,21 @@ export function OfferingForm({
           </div>
         </Card>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={pending || uploads.uploading}>
-            {uploads.uploading
-              ? "Uploading the picture…"
-              : pending
-                ? "Saving…"
-                : isNew
-                  ? "Add class"
-                  : "Save"}
-          </Button>
-          <Link
-            href={offeringBackHref(locationSlug, from)}
-            className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
-          <FormError error={error} />
-        </div>
+        <FormFoot
+          submit={
+            <Button type="submit" pending={pending || uploads.uploading}>
+              {uploads.uploading
+                ? "Uploading the picture…"
+                : pending
+                  ? "Saving…"
+                  : isNew
+                    ? "Add class"
+                    : "Save"}
+            </Button>
+          }
+          cancelHref={offeringBackHref(locationSlug, from)}
+          error={error}
+        />
         {leaveDialog}
       </form>
     </UploadsContext>

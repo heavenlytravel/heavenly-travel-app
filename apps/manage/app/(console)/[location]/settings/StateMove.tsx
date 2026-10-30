@@ -11,7 +11,7 @@ import { toast } from "@repo/ui/toast";
 import { Button } from "@repo/ui/button";
 import { useState, useTransition } from "react";
 import { moveLocationStateAction } from "../../../_lib/location-actions";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../_lib/action-state";
 
 /** What the admin is asked before a move the public notices; null for the rest. */
@@ -85,7 +85,8 @@ export function StateMove({
     <div className="flex flex-col items-start gap-1.5">
       <Button
         variant={state === "live" ? "caution" : "primary"}
-        disabled={pending || blocked}
+        disabled={blocked}
+        pending={pending}
         onClick={move}
       >
         {LOCATION_MOVE_LABELS[state]}

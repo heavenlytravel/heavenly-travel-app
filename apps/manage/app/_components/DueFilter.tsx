@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { TriangleAlertIcon, XIcon } from "@repo/ui/icons";
 
@@ -19,20 +20,25 @@ export function DueFilter({
   href: string;
 }) {
   return (
-    <Link
-      href={href}
-      aria-current={due ? "page" : undefined}
-      aria-label={due ? `${label}, on: show all` : undefined}
+    <Button
+      asChild
+      variant="secondary"
       className={cx(
-        "inline-flex h-10 shrink-0 items-center gap-2 rounded-[9px] border px-3.5 text-sm font-semibold transition-colors",
+        "shrink-0",
         due
           ? "border-brand bg-brand-tint text-brand hover:bg-white"
-          : "border-edge bg-white text-body shadow-control hover:border-slate-300 hover:text-ink",
+          : "text-body shadow-control hover:text-ink",
       )}
     >
-      <TriangleAlertIcon className={due ? "text-brand" : "text-muted"} />
-      {label}
-      {due ? <XIcon className="size-3.5" /> : null}
-    </Link>
+      <Link
+        href={href}
+        aria-current={due ? "page" : undefined}
+        aria-label={due ? `${label}, on: show all` : undefined}
+      >
+        <TriangleAlertIcon className={due ? "text-brand" : "text-muted"} />
+        {label}
+        {due ? <XIcon className="size-3.5" /> : null}
+      </Link>
+    </Button>
   );
 }

@@ -1,17 +1,19 @@
 import { formatDay, type DocumentDue } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { TriangleAlertIcon } from "@repo/ui/icons";
+import { Notice } from "@repo/ui/notice";
 
 const TONES = {
   due: {
-    banner: "border-amber-200 bg-amber-50 text-amber-900",
-    icon: "text-amber-600",
-    link: "border-amber-300 hover:bg-amber-100",
+    notice: "warning",
+    icon: "text-warning",
+    link: "border-warning-edge text-warning-strong hover:bg-warning-soft",
   },
   expired: {
-    banner: "border-red-200 bg-red-50 text-red-900",
-    icon: "text-red-600",
-    link: "border-red-300 hover:bg-red-100",
+    notice: "danger",
+    icon: "text-danger",
+    link: "border-danger-edge text-danger hover:bg-danger-tint",
   },
 } as const;
 
@@ -38,36 +40,35 @@ export function DocumentBanner({
     ];
   const several = due.length > 1;
   return (
-    <div
-      role="status"
-      className={cx(
-        "mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card border px-5 py-4 text-sm",
-        tone.banner,
-      )}
-    >
-      <TriangleAlertIcon className={cx("size-5", tone.icon)} />
-      <div className="min-w-0 grow basis-64">
-        {due.map((document) => (
-          <p key={document.label} className="font-semibold">
-            {document.label}{" "}
-            {document.state === "expired" ? "expired" : "expires"} on{" "}
-            {formatDay(document.expiresOn)}.
-          </p>
-        ))}
-        <p>
-          Renew {several ? "them" : "it"}, then put the new{" "}
-          {several ? "dates" : "date"} in {card.name}.
-        </p>
-      </div>
-      <a
-        href={`#${card.id}`}
-        className={cx(
-          "inline-flex h-9 shrink-0 items-center rounded-[9px] border bg-white px-3 font-semibold transition-colors",
-          tone.link,
-        )}
+    <div role="status" className="mb-5">
+      <Notice
+        tone={tone.notice}
+        className="flex flex-wrap items-center gap-x-4 gap-y-3"
       >
-        {several ? "Update the dates" : "Update the date"}
-      </a>
+        <TriangleAlertIcon className={cx("size-5", tone.icon)} />
+        <div className="min-w-0 grow basis-64">
+          {due.map((document) => (
+            <p key={document.label} className="font-semibold">
+              {document.label}{" "}
+              {document.state === "expired" ? "expired" : "expires"} on{" "}
+              {formatDay(document.expiresOn)}.
+            </p>
+          ))}
+          <p>
+            Renew {several ? "them" : "it"}, then put the new{" "}
+            {several ? "dates" : "date"} in {card.name}.
+          </p>
+        </div>
+        <Button
+          asChild
+          variant="secondary"
+          className={cx("shrink-0", tone.link)}
+        >
+          <a href={`#${card.id}`}>
+            {several ? "Update the dates" : "Update the date"}
+          </a>
+        </Button>
+      </Notice>
     </div>
   );
 }

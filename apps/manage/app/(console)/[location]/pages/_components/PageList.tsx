@@ -22,7 +22,7 @@ import type {
   PageSummary,
   SitePageSummary,
 } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
+import { Badge, StatusDot } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { ExternalLinkIcon, PencilIcon } from "@repo/ui/icons";
@@ -276,13 +276,7 @@ function SearchEnginesCell({ row }: { row: PageRow }) {
         row.indexable ? "text-body" : "text-muted",
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cx(
-          "size-2 rounded-full",
-          row.indexable ? "bg-green-600" : "bg-slate-300",
-        )}
-      />
+      <StatusDot tone={row.indexable ? "green" : "neutral"} />
       {row.indexable ? "Shown" : "Hidden"}
     </span>
   );
@@ -299,7 +293,7 @@ function IconAction({
 }) {
   return (
     <Tooltip content={label}>
-      <Button asChild variant="ghost" size="sm" className="w-8 px-0">
+      <Button asChild variant="ghost" size="icon-sm">
         {children}
       </Button>
     </Tooltip>
@@ -527,7 +521,7 @@ function PartHeadingRow({
             <span className="font-semibold text-ink">{heading.label}</span>
           )}
           {heading.meta ? (
-            <span className="text-[13px] text-muted">{heading.meta}</span>
+            <span className="text-caption text-muted">{heading.meta}</span>
           ) : null}
         </span>
       </td>

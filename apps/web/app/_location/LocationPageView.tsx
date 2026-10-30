@@ -21,10 +21,11 @@ import {
   type LocationViewPage,
   type TripCategory,
 } from "@repo/db/server";
-import { eyebrow, focus } from "../(site)/_components/Page";
+import { eyebrow } from "../(site)/_components/Page";
 import { ProductIcon } from "../_components/Brand";
 import { ClassCard } from "../_components/ClassCard";
 import {
+  Breadcrumbs,
   Cover,
   Faqs,
   Intro,
@@ -43,13 +44,17 @@ import {
   missingLook,
   type EmptyPart,
   type PageCardData,
+  CardCta,
+  PhotoBadge,
+  photoZoom,
 } from "../_components/page-parts";
+import { ArticleHeading, HeroHeading } from "../_components/page-headings";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
 import { SEARCH_CARD_ID, type ProductKey } from "../_lib/search";
 import { vehicleClassCards, type VehicleClassCard } from "../_lib/locations";
 import { TakeMeHere } from "./LocationSearch";
-import { crumbsOf, structuredDataOf, type Crumb } from "./seo";
+import { crumbsOf, structuredDataOf } from "./seo";
 
 /**
  * One page of a location, laid out by its kind. Every page but the blog's
@@ -391,7 +396,7 @@ function Hero({
         <div className={`${styles.heroWash} absolute inset-0`} />
       </div>
       <div
-        className={`relative z-[1] flex min-h-[340px] flex-1 flex-col justify-center pt-7 pb-8 ${gutter}`}
+        className={`relative z-(--layer-raised) flex min-h-[340px] flex-1 flex-col justify-center pt-7 pb-8 ${gutter}`}
       >
         <div className={column}>
           {missingImage && (
@@ -399,35 +404,25 @@ function Hero({
               <MissingMark part={missingImage} alone />
             </p>
           )}
-          <Crumbs crumbs={crumbsOf(location, page, preview)} />
-          <p className={`${eyebrow} mt-7 mb-3`}>
-            {eyebrowOf(location, page)}
-            {/* The main page's eyebrow is its tagline, "Destination" until it is written. */}
-            {page.page === LANDING_PAGE &&
-              !location.tagline &&
-              empty.tagline && <MissingMark part={empty.tagline} />}
-          </p>
-          <h1
-            id="hero-title"
-            className="max-w-[18ch] font-(family-name:--font-display) text-[clamp(2.5rem,6vw,4.6rem)] leading-[0.98] text-ink"
+          <Breadcrumbs crumbs={crumbsOf(location, page, preview)} />
+          <HeroHeading
+            eyebrow={
+              <>
+                {eyebrowOf(location, page)}
+                {/* The main page's eyebrow is its tagline, "Destination" until it is written. */}
+                {page.page === LANDING_PAGE &&
+                  !location.tagline &&
+                  empty.tagline && <MissingMark part={empty.tagline} />}
+              </>
+            }
+            line={content.heroSubheadline}
+            emptyLine={empty.subheadline}
           >
             {content.heroHeadline || pageNameInView(location, page)}
             {!content.heroHeadline && empty.headline && (
               <MissingMark part={empty.headline} />
             )}
-          </h1>
-          {content.heroSubheadline ? (
-            <p className="mt-4 max-w-[540px] text-slate-700 sm:text-[1.14rem]">
-              {content.heroSubheadline}
-            </p>
-          ) : (
-            empty.subheadline && (
-              <MissingPart
-                part={empty.subheadline}
-                className="mt-4 min-h-11 max-w-[540px] rounded-xl"
-              />
-            )
-          )}
+          </HeroHeading>
           {address ? (
             <TakeMeHere address={address} />
           ) : (
@@ -445,7 +440,7 @@ function Hero({
         id={SEARCH_CARD_ID}
         role="search"
         aria-label="Travel booking search"
-        className="relative z-[3] mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
+        className="relative z-(--layer-overlap) mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
       >
         {paused ? <PausedNotice name={location.name} /> : <ServiceTabsSearch />}
       </div>
@@ -453,49 +448,15 @@ function Hero({
   );
 }
 
-function Crumbs({ crumbs }: { crumbs: Crumb[] }) {
-  return (
-    <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-x-2 text-[0.85rem] text-slate-700">
-        {crumbs.map((crumb, i) => {
-          const last = i === crumbs.length - 1;
-          return (
-            <li key={crumb.path} className="flex items-center gap-x-2">
-              {last ? (
-                <span aria-current="page" className="font-semibold">
-                  {crumb.name}
-                </span>
-              ) : (
-                <>
-                  <Link
-                    href={crumb.path}
-                    className={`underline-offset-4 hover:underline ${focus}`}
-                  >
-                    {crumb.name}
-                  </Link>
-                  <span aria-hidden>/</span>
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
 /** What takes the search card's place while the location is paused. */
 function PausedNotice({ name }: { name: string }) {
   return (
-    <div className="rounded-[18px] bg-white px-6 py-7 text-slate-900 shadow-[0_22px_55px_rgba(0,38,75,0.16)] sm:rounded-[22px] sm:px-9 sm:py-8">
+    <div className="rounded-card bg-white px-6 py-7 text-body shadow-panel sm:rounded-panel sm:px-9 sm:py-8">
       <p className={eyebrow}>Not taking bookings for now</p>
-      <p className="mt-2 max-w-[62ch] text-[1.05rem] text-slate-700">
+      <p className="mt-2 max-w-[62ch] text-lead text-body">
         We are not taking new bookings for {name} at the moment. Please check
         back soon, or{" "}
-        <Link
-          href="/"
-          className={`font-semibold text-brand underline underline-offset-4 ${focus}`}
-        >
+        <Link href="/" className="text-link underline">
           see where else we go
         </Link>
         .
@@ -512,11 +473,11 @@ function ComingSoon({ label, name }: { label: string; name: string }) {
       className={`pt-[50px] sm:pt-[70px] ${gutter}`}
     >
       <div
-        className={`${column} flex flex-col items-start justify-between gap-5 rounded-[20px] border border-azure/30 bg-brand-tint px-6 py-6 sm:flex-row sm:items-center sm:px-8`}
+        className={`${column} flex flex-col items-start justify-between gap-5 rounded-card border border-azure/30 bg-brand-tint px-6 py-6 sm:flex-row sm:items-center sm:px-8`}
       >
         <div>
           <p className={eyebrow}>Coming soon</p>
-          <p className="mt-1.5 max-w-[60ch] text-[1.05rem] text-slate-700">
+          <p className="mt-1.5 max-w-[60ch] text-lead text-body">
             Booking {label.toLowerCase()} in {name} online is on its way. Until
             then, tell us what you need and we will arrange it for you.
           </p>
@@ -525,9 +486,12 @@ function ComingSoon({ label, name }: { label: string; name: string }) {
           href={CONTACT.whatsappHref}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex min-h-[48px] shrink-0 items-center rounded-full bg-brand px-6 font-bold text-white hover:bg-brand-strong ${focus}`}
+          className="inline-flex min-h-12 shrink-0 items-center rounded-full bg-brand px-6 text-base font-bold text-white hover:bg-brand-strong focus-ring"
         >
-          WhatsApp us <span className="ml-2.5">↗</span>
+          WhatsApp us{" "}
+          <span aria-hidden className="ml-2.5">
+            ↗
+          </span>
         </a>
       </div>
     </section>
@@ -564,23 +528,20 @@ function Services({
               <li key={entry.page}>
                 <Link
                   href={pathOf(entry)}
-                  className={`group flex h-full flex-col overflow-hidden rounded-[18px] border border-transparent bg-white shadow-[0_12px_35px_rgba(0,38,75,0.08)] hover:border-brand/40 ${focus}`}
+                  className="group flex h-full flex-col overflow-hidden rounded-card border border-transparent bg-white shadow-card hover:border-brand/40 focus-ring"
                 >
                   <span className="relative block aspect-[16/9] w-full bg-mist">
+                    {/* The link reads its own words: the photo would only repeat them. */}
                     {image && (
                       <Image
                         src={image.url}
-                        alt={image.alt}
+                        alt=""
                         fill
                         sizes="(min-width: 64rem) 400px, (min-width: 40rem) 50vw, 100vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+                        className={photoZoom}
                       />
                     )}
-                    {def.comingSoon && (
-                      <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-[0.7rem] font-bold tracking-[0.14em] text-azure uppercase">
-                        Soon
-                      </span>
-                    )}
+                    {def.comingSoon && <PhotoBadge>Soon</PhotoBadge>}
                   </span>
                   <span className="flex items-start gap-4 p-5 sm:p-6">
                     {product && (
@@ -592,18 +553,15 @@ function Services({
                       </span>
                     )}
                     <span className="min-w-0">
-                      <strong className="block font-(family-name:--font-display) text-[1.5rem] leading-tight font-normal text-ink">
+                      <strong className="block font-serif text-2xl leading-tight font-normal text-ink">
                         {def.label}
                       </strong>
-                      <span className="mt-1 block text-slate-500">
-                        {def.note}
-                      </span>
-                      <span className="mt-3 block text-[0.92rem] font-bold text-brand underline-offset-4 group-hover:underline">
+                      <span className="mt-1 block text-muted">{def.note}</span>
+                      <CardCta>
                         {childrenOf(entry.page)?.type === "classes"
                           ? "See vehicles and prices"
-                          : "Explore"}{" "}
-                        <span className="ml-1.5">→</span>
-                      </span>
+                          : "Explore"}
+                      </CardCta>
                     </span>
                   </span>
                 </Link>
@@ -678,7 +636,7 @@ function EntryCards({
       }
     >
       {lead ? (
-        <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-[1.05rem] leading-relaxed text-slate-700">
+        <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-lead leading-relaxed text-body">
           {paragraphsOf(lead).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
@@ -687,7 +645,7 @@ function EntryCards({
         emptyLead && (
           <MissingPart
             part={emptyLead}
-            className="-mt-2 mb-8 min-h-24 max-w-[70ch] rounded-[17px]"
+            className="-mt-2 mb-8 min-h-24 max-w-[70ch] rounded-card"
           />
         )
       )}
@@ -749,7 +707,7 @@ async function VehicleClasses({
               />
             ))}
           </ul>
-          <p className="mt-5 text-[0.92rem] text-slate-500">
+          <p className="mt-5 text-copy text-muted">
             The price of a trip depends on its distance or its hours. Search
             above for yours: the driver and fuel are included.
           </p>
@@ -773,10 +731,10 @@ function LocationClassCard({
 }) {
   return (
     <ClassCard vehicleClass={vehicleClass} pictured={pictured}>
-      <p className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 pt-5 text-slate-500">
+      <p className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 pt-5 text-muted">
         <span>
           From{" "}
-          <strong className="text-[1.3rem] font-bold text-brand">
+          <strong className="text-xl font-bold text-brand">
             {formatMyr(vehicleClass.fromSen)}
           </strong>
         </span>
@@ -870,31 +828,19 @@ function BlogHeader({
   return (
     <header className={`pt-7 ${gutter}`}>
       <div className="mx-auto w-full max-w-[900px]">
-        <Crumbs crumbs={crumbsOf(location, page, preview)} />
-        <p className={`${eyebrow} mt-8 mb-3`}>{eyebrowOf(location, page)}</p>
-        <h1
-          id="hero-title"
-          className="font-(family-name:--font-display) text-[clamp(2.3rem,5.4vw,4rem)] leading-[1.02] text-ink"
+        <Breadcrumbs crumbs={crumbsOf(location, page, preview)} />
+        <ArticleHeading
+          eyebrow={eyebrowOf(location, page)}
+          line={content.heroSubheadline}
+          emptyLine={empty.subheadline}
         >
           {content.heroHeadline || pageNameInView(location, page)}
           {!content.heroHeadline && empty.headline && (
             <MissingMark part={empty.headline} />
           )}
-        </h1>
-        {content.heroSubheadline ? (
-          <p className="mt-4 max-w-[640px] text-[1.12rem] text-slate-700">
-            {content.heroSubheadline}
-          </p>
-        ) : (
-          empty.subheadline && (
-            <MissingPart
-              part={empty.subheadline}
-              className="mt-4 min-h-11 max-w-[640px] rounded-xl"
-            />
-          )
-        )}
+        </ArticleHeading>
         {published && (
-          <p className="mt-5 text-[0.9rem] text-slate-500">
+          <p className="mt-5 text-copy text-muted">
             <time dateTime={published}>{formatPageDate(published)}</time>
             {updated && (
               <>

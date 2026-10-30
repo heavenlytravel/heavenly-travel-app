@@ -22,6 +22,7 @@ import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import Image from "next/image";
 import { useId, type ReactNode } from "react";
+import { FormError } from "@repo/ui/form-error";
 import { radioKeys } from "../../../../_lib/radio-keys";
 import {
   chosenVehicle,
@@ -35,7 +36,7 @@ import {
   type TripDraft,
   type VehicleDraft,
 } from "../_lib/trip-form";
-import { Choices } from "./Choices";
+import { Choices } from "../../../../_components/Choices";
 import { Step, StepFoot } from "./Step";
 import { useTripQuote } from "./use-trip-quote";
 
@@ -92,7 +93,7 @@ export function TripStep({
       done={done}
       summary={
         clash ? (
-          <span className="text-red-700">{clash.label}</span>
+          <span className="text-danger">{clash.label}</span>
         ) : (
           tripLine(draft)
         )
@@ -233,16 +234,12 @@ function TripFields({
               timeZone={BOOKING_RULES.timeZone}
             />
           </Field>
-          {clash ? (
-            <p role="alert" className="text-sm font-medium text-red-700">
-              {clash.note}
-            </p>
-          ) : null}
+          <FormError error={clash?.note} />
         </div>
       </div>
 
       {!hasGoogle ? (
-        <p className="text-xs text-amber-800">
+        <p className="text-xs text-warning">
           Google is not set up on this server, so the list offers the districts
           themselves and one-way trips cannot be priced.
         </p>
@@ -252,7 +249,7 @@ function TripFields({
         {quoting ? (
           <p className="text-muted">Pricing the trip…</p>
         ) : draft.quoteError ? (
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-red-700">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-danger">
             {draft.quoteError}
             <Button variant="secondary" size="sm" onClick={retry}>
               Try again
@@ -260,7 +257,7 @@ function TripFields({
           </p>
         ) : quote ? (
           <p className="text-muted">
-            <span className="font-semibold text-green-700">Priced.</span>{" "}
+            <span className="font-semibold text-success">Priced.</span>{" "}
             {quoteSummary(quote)}
           </p>
         ) : null}
@@ -411,20 +408,19 @@ function VehicleFields({
                 disabled={!ok}
                 onClick={() => chooseClass(option.id)}
                 className={cx(
-                  "relative flex flex-col overflow-hidden rounded-xl border bg-white text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed",
-                  on
-                    ? "border-brand ring-1 ring-brand"
-                    : "border-edge hover:border-slate-300",
+                  "relative flex flex-col overflow-hidden rounded-card border bg-white text-left text-sm transition-colors focus-ring disabled:cursor-not-allowed",
+                  on ? "border-brand ring-1 ring-brand" : "border-edge",
                 )}
               >
-                <span className="relative block aspect-[16/9] bg-shade">
+                <span className="relative block aspect-video bg-shade">
                   {option.imageUrl ? (
+                    // The whole vehicle in view, as `CardImage fit="contain"` shows it.
                     <Image
                       src={option.imageUrl}
                       alt=""
                       fill
                       sizes="(min-width: 64rem) 14rem, 50vw"
-                      className={cx("object-cover", !ok && "opacity-50")}
+                      className={cx("object-contain", !ok && "opacity-50")}
                     />
                   ) : (
                     <span className="absolute inset-0 grid place-items-center text-xs text-muted">
@@ -449,7 +445,7 @@ function VehicleFields({
                   <span className="text-xs text-muted">
                     {seatsLabel(option)} · {option.luggage}
                     {option.unavailable ? (
-                      <span className="text-amber-800">
+                      <span className="text-warning">
                         {" "}
                         · {option.unavailable}
                       </span>

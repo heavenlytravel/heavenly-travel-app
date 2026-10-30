@@ -6,7 +6,7 @@ import {
   vehicleDeleteImpactOf,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import {
   DetailSkeleton,
   CardSkeleton,
@@ -19,7 +19,6 @@ import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
 import { DATES_CARDS } from "../../../../../_lib/fleet-form";
 import {
   recordHistoryHref,
@@ -51,7 +50,6 @@ export default async function VehiclePage({
 
   return (
     <>
-      <BackLink href={vehiclesHref(scope.slug)}>Vehicles</BackLink>
       <Streamed
         fallback={
           <>
@@ -85,7 +83,6 @@ async function vehicleScreen(scope: ConsoleScope, vehicleId: string) {
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("vehicles")}
         title={vehicle.plate}
         badge={<ServiceBadge active={vehicle.isActive} />}
         meta={`${modelName(model)} · ${model.vehicleClass.name} · ${vehicle.location.name}`}

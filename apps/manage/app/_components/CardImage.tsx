@@ -35,7 +35,7 @@ export function CardImage({
           className={cx(fit === "cover" ? "object-cover" : "object-contain")}
         />
       ) : (
-        <div className="flex h-full items-center justify-center text-slate-400">
+        <div className="flex h-full items-center justify-center text-slot">
           {fallback}
         </div>
       )}

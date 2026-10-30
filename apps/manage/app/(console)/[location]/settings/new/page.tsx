@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../_lib/access";
-import { settingsHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { stateOptions } from "../../../../_lib/state-options";
 import { NewLocationForm } from "./NewLocationForm";
@@ -22,8 +21,7 @@ export default async function NewLocationPage({
 
   return (
     <>
-      <BackLink href={settingsHref(null)}>Settings</BackLink>
-      <PageHeader title="Add location" meta="Step 1 of 4, as a draft" />
+      <PageHeader title="Add Location" meta="Step 1 of 4, as a draft" />
       <Streamed fallback={<FormSkeleton fields={3} />}>
         {() => newLocation()}
       </Streamed>

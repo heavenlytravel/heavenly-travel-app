@@ -3,9 +3,9 @@ import { cx } from "./cx.js";
 
 const TONES = {
   /** Paper background, ink text. The customer site. */
-  light: "ui:bg-slate-50 ui:text-slate-900",
+  light: "ui:bg-canvas ui:text-body",
   /** Navy deepening to ink, pale text. The admin console. */
-  dark: "ui:bg-linear-160 ui:from-navy ui:to-ink ui:text-slate-100",
+  dark: "ui:bg-linear-160 ui:from-navy ui:to-ink ui:text-white",
 } as const;
 
 /**
@@ -45,35 +45,37 @@ export function AuthShell({
         </aside>
       ) : null}
 
-      <div className="ui:flex ui:min-h-svh ui:min-w-0 ui:flex-col ui:px-6 ui:py-7 ui:sm:px-10">
-        <main className="ui:flex ui:flex-1 ui:flex-col ui:items-center ui:justify-center ui:py-10">
+      {/* The small print under the card is part of the page's main
+          content: it is not a second page footer beside the site's own. */}
+      <main className="ui:flex ui:min-h-svh ui:min-w-0 ui:flex-col ui:px-6 ui:py-7 ui:sm:px-10">
+        <div className="ui:flex ui:flex-1 ui:flex-col ui:items-center ui:justify-center ui:py-10">
           {brand ? (
             <div className="ui:mb-8 ui:flex ui:justify-center">{brand}</div>
           ) : null}
           {eyebrow ? (
             <p
               className={cx(
-                "ui:mb-6 ui:text-xs ui:font-semibold ui:tracking-[0.2em] ui:uppercase",
-                tone === "dark" ? "ui:text-azure-light" : "ui:text-slate-600",
+                "ui:mb-6 ui:text-xs ui:font-semibold ui:tracking-eyebrow ui:uppercase",
+                tone === "dark" ? "ui:text-azure-light" : "ui:text-muted",
               )}
             >
               {eyebrow}
             </p>
           ) : null}
           {children}
-        </main>
+        </div>
 
         {footer ? (
-          <footer
+          <div
             className={cx(
               "ui:text-center ui:text-sm",
-              tone === "dark" ? "ui:text-slate-300" : "ui:text-slate-600",
+              tone === "dark" ? "ui:text-white/80" : "ui:text-muted",
             )}
           >
             {footer}
-          </footer>
+          </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

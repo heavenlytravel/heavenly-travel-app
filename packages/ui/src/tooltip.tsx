@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip as Primitive } from "radix-ui";
-import { useState, type ReactNode } from "react";
+import { isValidElement, useState, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { usePortalContainer } from "./portal-container.js";
 
@@ -34,6 +34,10 @@ export function Tooltip({
   const { ref, container } = usePortalContainer();
   const [open, setOpen] = useState(false);
   if (!content) return <>{children}</>;
+  // A disabled button takes no focus, so the span takes it for the reason.
+  const disabledChild =
+    isValidElement<{ disabled?: boolean }>(children) &&
+    children.props.disabled === true;
   return (
     <Primitive.Provider delayDuration={250} skipDelayDuration={100}>
       <Primitive.Root open={open} onOpenChange={setOpen}>
@@ -42,7 +46,12 @@ export function Tooltip({
             ref={ref}
             // The press closed it; the click that follows opens it again.
             onClick={openOnClick ? () => setOpen(true) : undefined}
-            className={cx("ui:inline-flex", className)}
+            tabIndex={disabledChild ? 0 : undefined}
+            className={cx(
+              "ui:inline-flex",
+              disabledChild && "ui:rounded-control ui:focus-ring",
+              className,
+            )}
           >
             {children}
           </span>
@@ -52,7 +61,7 @@ export function Tooltip({
             side={side}
             sideOffset={6}
             collisionPadding={8}
-            className="ui:z-50 ui:max-w-64 ui:rounded-md ui:bg-ink ui:px-2.5 ui:py-1.5 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg"
+            className="ui:z-(--layer-popover) ui:max-w-64 ui:rounded-md ui:bg-ink ui:px-2.5 ui:py-1.5 ui:text-xs ui:leading-snug ui:font-normal ui:text-white ui:shadow-lg"
           >
             {content}
             <Primitive.Arrow className="ui:fill-ink" />

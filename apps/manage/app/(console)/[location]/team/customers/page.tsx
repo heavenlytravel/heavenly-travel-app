@@ -19,7 +19,6 @@ import {
 import { Pager, pageOf } from "../../../../_components/Pager";
 import { SearchBox } from "../../../../_components/SearchBox";
 import { requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   PAGE_PARAM,
   SEARCH_PARAM,
@@ -51,11 +50,7 @@ export default async function CustomersPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("customers")}
-        title="Customers"
-        action={<CreateUserForm />}
-      />
+      <PageHeader title="Customers" action={<CreateUserForm />} />
       <Streamed fallback={<TableSkeleton columns={5} rows={8} />}>
         {() => customersList({ q, page })}
       </Streamed>

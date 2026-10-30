@@ -11,6 +11,7 @@ import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
+import { Notice } from "@repo/ui/notice";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import {
@@ -24,7 +25,6 @@ import {
 } from "@repo/console/Table";
 import { SearchBox } from "../../../_components/SearchBox";
 import { requireAdmin } from "../../../_lib/access";
-import { sectionLabelOf } from "../../../_lib/console-map";
 import { SEARCH_PARAM, staffHref } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
 import { AdminRowControls } from "./AdminRowControls";
@@ -49,11 +49,7 @@ export default async function StaffPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("staff")}
-        title="Staff"
-        action={<PromoteButton />}
-      />
+      <PageHeader title="Staff" action={<PromoteButton />} />
       <Streamed
         fallback={
           <div className="grid gap-5">
@@ -83,31 +79,30 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
   return (
     <div className="grid gap-5">
       <Card>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-[15px] font-bold tracking-[-0.01em] text-ink">
-              The wall between teams
-              <Badge dot tone={wallActive ? "green" : "neutral"}>
-                {wallActive ? "On" : "Off"}
-              </Badge>
-            </h2>
-            <p className="mt-1 text-[13px] text-muted">
-              {wallActive
-                ? "Each admin reaches only the screens and actions of their teams."
-                : "Every admin reaches every team screen and action."}{" "}
-              Staff stays with SUPER admins either way.
-            </p>
-          </div>
-          <WallSwitch active={wallActive} />
-        </div>
+        <CardTitle
+          meta={
+            <Badge dot tone={wallActive ? "green" : "neutral"}>
+              {wallActive ? "On" : "Off"}
+            </Badge>
+          }
+          action={<WallSwitch active={wallActive} />}
+        >
+          The wall between teams
+        </CardTitle>
+        <p className="text-sm text-body">
+          {wallActive
+            ? "Each admin reaches only the screens and actions of their teams."
+            : "Every admin reaches every team screen and action."}{" "}
+          Staff stays with SUPER admins either way.
+        </p>
         {withoutTeam > 0 ? (
-          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+          <Notice className="mt-4">
             {withoutTeam === 1
               ? "1 admin has no team."
               : `${withoutTeam} admins have no team.`}{" "}
             With the wall on they reach only the dashboard and the
             locations&apos; overviews.
-          </p>
+          </Notice>
         ) : null}
       </Card>
       <Card flush>

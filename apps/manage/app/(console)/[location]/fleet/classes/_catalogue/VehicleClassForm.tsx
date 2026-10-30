@@ -2,8 +2,7 @@
 
 import type { VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import Link from "next/link";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import { classesHref } from "../../../../../_lib/routes";
 import { useActionForm } from "../../../../../_lib/use-action-form";
 import { createVehicleClassAction, updateVehicleClassAction } from "./actions";
@@ -44,24 +43,21 @@ export function VehicleClassForm({
           <input type="hidden" name="id" value={vehicleClass.id} />
         ) : null}
         <VehicleClassFieldset vehicleClass={vehicleClass} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={pending || uploads.uploading}>
-            {uploads.uploading
-              ? "Uploading the picture…"
-              : pending
-                ? "Saving…"
-                : isNew
-                  ? "Add class"
-                  : "Save"}
-          </Button>
-          <Link
-            href={classesHref(null)}
-            className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Cancel
-          </Link>
-          <FormError error={error} />
-        </div>
+        <FormFoot
+          submit={
+            <Button type="submit" pending={pending || uploads.uploading}>
+              {uploads.uploading
+                ? "Uploading the picture…"
+                : pending
+                  ? "Saving…"
+                  : isNew
+                    ? "Add class"
+                    : "Save"}
+            </Button>
+          }
+          cancelHref={classesHref(null)}
+          error={error}
+        />
         {leaveDialog}
       </form>
     </UploadsContext>

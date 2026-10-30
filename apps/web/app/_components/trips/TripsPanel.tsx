@@ -2,12 +2,12 @@
 
 import type { ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
+import { scrollBehavior } from "@repo/ui/motion";
 import type { PlacePresets } from "@repo/ui/place-input";
 import type { FieldKey } from "../../_lib/search";
 import type { PlannedTrip } from "../../_lib/trip-plan";
 import { AddAnotherTrip, TripForm } from "./TripForm";
 import {
-  scrollBehavior,
   TripsBar,
   TripsFold,
   UnderHeader,
@@ -85,7 +85,10 @@ export function TripsPanel({
     element?.scrollIntoView({ block: "start", behavior: scrollBehavior() });
   }
 
-  const list = (onPick: (id: string) => void) =>
+  // A box that scrolls clips a ring drawn outside a trip, so there it is
+  // drawn inside: the bar's sheets, and the phone's fold.
+  const folded = foldOnSmall && any;
+  const list = (onPick: (id: string) => void, focusRing: string) =>
     any ? (
       <TripTimeline
         trips={trips}
@@ -93,6 +96,7 @@ export function TripsPanel({
         onPick={onPick}
         priceOf={priceOf}
         noteOf={noteOf}
+        focusRing={focusRing}
         className={planner.form ? "mb-5" : "mb-3"}
       />
     ) : null;
@@ -102,7 +106,7 @@ export function TripsPanel({
       <span className="hidden flex-1 @3xl:block" />
       <span
         aria-hidden
-        className="my-1 w-full border-t border-slate-100 @3xl:hidden"
+        className="my-1 w-full border-t border-hairline @3xl:hidden"
       />
       {passengers}
       {action}
@@ -128,14 +132,17 @@ export function TripsPanel({
   );
   const body = (
     <div className="@container">
-      {list(planner.open)}
+      {list(
+        planner.open,
+        folded ? "max-lg:focus-ring-inset lg:focus-ring" : "focus-ring",
+      )}
       {formInSheet ? null : rest}
     </div>
   );
 
   return (
     <>
-      {foldOnSmall && any ? (
+      {folded ? (
         <TripsFold
           trips={trips}
           summary={summary}
@@ -174,14 +181,17 @@ export function TripsPanel({
             <>
               {/* Only the list scrolls, so the form below it stays in view. */}
               <div className="max-h-[40dvh] overflow-y-auto">
-                {list(planner.open)}
+                {list(planner.open, "focus-ring-inset")}
               </div>
               {formInSheet ? <div className="@container">{rest}</div> : null}
             </>
           ) : (
             <div className="@container">
               <div className="max-h-[40dvh] overflow-y-auto">
-                {list((id) => backToPage(() => planner.open(id)))}
+                {list(
+                  (id) => backToPage(() => planner.open(id)),
+                  "focus-ring-inset",
+                )}
               </div>
               {closed(() => backToPage(() => planner.openNew()))}
             </div>

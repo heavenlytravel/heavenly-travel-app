@@ -188,7 +188,7 @@ function FoldChevron({
       aria-expanded={open}
       aria-label={label}
       onClick={onClick}
-      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-hairline hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+      className="flex size-6 shrink-0 touch-target items-center justify-center rounded-md text-muted transition-colors hover:bg-hairline hover:text-ink focus-ring"
     >
       <ChevronRightIcon
         className={cx(

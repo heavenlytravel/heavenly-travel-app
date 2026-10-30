@@ -2,18 +2,18 @@ import { locationStateOf, type LocationState } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 
 const MARK_TONES: Record<LocationState, string> = {
-  draft: "bg-slate-200 text-slate-700",
+  draft: "bg-hairline text-body",
   live: "bg-brand text-white",
-  paused: "bg-amber-100 text-amber-800",
+  paused: "bg-warning-soft text-warning",
 };
 
 const MARK_SIZES = {
   /** Beside a row's label, in a list. */
-  sm: "size-[18px] rounded-[5px] text-[10px]",
+  sm: "size-4.5 rounded text-2xs",
   /** Beside a name in the location picker's menu. */
-  md: "size-5 rounded-[5px] text-[11px]",
+  md: "size-5 rounded text-2xs",
   /** On the picker's button. */
-  picker: "size-[26px] rounded-[7px] text-xs",
+  picker: "size-6.5 rounded-md text-xs",
   /** Beside a heading, a row of the dashboard. */
   lg: "size-8 rounded-lg text-sm",
 } as const;
@@ -21,16 +21,19 @@ const MARK_SIZES = {
 /**
  * A location's initial on a rounded square coloured by its state, brand
  * blue once live: beside its name in the location picker, a list or a
- * heading.
+ * heading. `initial` says something else in its place: "All" for every
+ * location.
  */
 export function LocationMark({
   name,
   state,
+  initial = name.charAt(0).toUpperCase(),
   size = "sm",
   className,
 }: {
   name: string;
   state: string;
+  initial?: string;
   size?: keyof typeof MARK_SIZES;
   className?: string;
 }) {
@@ -44,7 +47,7 @@ export function LocationMark({
         className,
       )}
     >
-      {name.charAt(0).toUpperCase()}
+      {initial}
     </span>
   );
 }

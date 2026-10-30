@@ -131,7 +131,7 @@ export function PublishHistoryButton({
                   <span className="block text-ink">
                     {formatLocalDateTime(publish.at)}
                     {index === 0 ? (
-                      <span className="ml-2 text-xs font-semibold text-green-800">
+                      <span className="ml-2 text-xs font-semibold text-success">
                         Latest
                       </span>
                     ) : null}

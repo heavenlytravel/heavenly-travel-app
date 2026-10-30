@@ -6,7 +6,8 @@ import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
  * The buttons of one row of a list Marketing orders by hand: up and down
  * as arrows, and remove in red where a row can be removed here, all quiet
  * so a long list does not fill up with boxes. `name` is what a screen
- * reader hears the row called. `disabled` holds them while a move is saved.
+ * reader hears the row called. `disabled` holds the arrows while a move is
+ * saved, the one pressed keeping the focus.
  */
 export function RowControls({
   name,
@@ -28,10 +29,10 @@ export function RowControls({
       <Tooltip content="Move up">
         <Button
           variant="ghost"
-          size="sm"
-          disabled={disabled || isFirst}
+          size="icon-sm"
+          disabled={isFirst}
+          pending={disabled}
           aria-label={`Move ${name} up`}
-          className="w-8 px-0"
           onClick={() => onMove(-1)}
         >
           <ArrowUpIcon />
@@ -40,10 +41,10 @@ export function RowControls({
       <Tooltip content="Move down">
         <Button
           variant="ghost"
-          size="sm"
-          disabled={disabled || isLast}
+          size="icon-sm"
+          disabled={isLast}
+          pending={disabled}
           aria-label={`Move ${name} down`}
-          className="w-8 px-0"
           onClick={() => onMove(1)}
         >
           <ArrowDownIcon />
@@ -51,10 +52,9 @@ export function RowControls({
       </Tooltip>
       {onRemove ? (
         <Button
-          variant="ghost"
+          variant="ghost-danger"
           size="sm"
           aria-label={`Remove ${name}`}
-          className="text-red-700 hover:bg-red-50 hover:text-red-800"
           onClick={onRemove}
         >
           Remove

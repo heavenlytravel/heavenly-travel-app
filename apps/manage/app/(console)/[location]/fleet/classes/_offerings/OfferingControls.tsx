@@ -8,7 +8,7 @@ import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setOfferingActiveAction } from "./actions";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../../../_lib/action-state";
 
 /**

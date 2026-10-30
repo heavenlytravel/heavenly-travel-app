@@ -14,7 +14,6 @@ import { FormSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import { VehiclesTable } from "../../../../../_components/VehiclesTable";
 import { getPermissions } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
 import {
   classHref,
   newVehicleHref,
@@ -61,7 +60,7 @@ async function newOffering(location: LocationName, from: OfferingFrom) {
   const candidates = await listClassesNotOffered(location.id);
   return (
     <>
-      <PageHeader section={sectionLabelOf("classes")} title="Add class" />
+      <PageHeader title="Add Class" />
       <OfferingForm
         locationId={location.id}
         locationSlug={location.slug}
@@ -93,7 +92,6 @@ async function existingOffering(
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("classes")}
         title={vehicleClass.name}
         badge={
           <ServiceBadge

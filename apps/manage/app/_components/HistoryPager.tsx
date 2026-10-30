@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Button } from "@repo/ui/button";
+import { PagerNav } from "./Pager";
 
 /**
  * The way between the pages of a history read newest first, across the
@@ -18,20 +17,11 @@ export function HistoryPager({
 }) {
   if (!newestHref && !olderHref) return null;
   return (
-    <nav
-      aria-label="Pages"
-      className="flex items-center justify-end gap-1.5 border-t border-hairline px-5 py-3"
-    >
-      {newestHref ? (
-        <Button asChild variant="secondary" size="sm">
-          <Link href={newestHref}>Newest</Link>
-        </Button>
-      ) : null}
-      {olderHref ? (
-        <Button asChild variant="secondary" size="sm">
-          <Link href={olderHref}>Older changes</Link>
-        </Button>
-      ) : null}
-    </nav>
+    <PagerNav
+      links={[
+        { label: "Newest", href: newestHref },
+        { label: "Older changes", href: olderHref },
+      ]}
+    />
   );
 }

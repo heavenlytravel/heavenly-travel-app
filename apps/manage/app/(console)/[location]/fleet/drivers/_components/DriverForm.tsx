@@ -19,9 +19,8 @@ import { Button } from "@repo/ui/button";
 import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormFoot } from "@repo/console/FormFoot";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { ExpiryDateField } from "../../../../../_components/ExpiryDateField";
 import { DATES_CARDS, SCOPE_FIELD } from "../../../../../_lib/fleet-form";
@@ -102,12 +101,8 @@ export function DriverForm({
                     />
                   </Field>
                   <Field
-                    label={
-                      <span className="inline-flex items-center gap-1.5">
-                        {DRIVER_FIELD_LABELS.locationId}
-                        <InfoTip text="To move a driver to another location, change where they are based." />
-                      </span>
-                    }
+                    label={DRIVER_FIELD_LABELS.locationId}
+                    tip="To move a driver to another location, change where they are based."
                   >
                     <Select
                       name="locationId"
@@ -130,16 +125,17 @@ export function DriverForm({
                     defaultValue={fields?.notes}
                   />
                 </Field>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    name="isActive"
-                    defaultChecked={fields?.isActive ?? true}
-                  />
-                  <span className="inline-flex items-center gap-1.5">
+                {/* The tip beside the label, not in it: its button would join the box's name. */}
+                <span className="flex items-center gap-1.5 text-sm">
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      name="isActive"
+                      defaultChecked={fields?.isActive ?? true}
+                    />
                     {DRIVER_FIELD_LABELS.isActive}
-                    <InfoTip text="Inactive, the driver keeps their history and their licences are not checked." />
-                  </span>
-                </label>
+                  </label>
+                  <InfoTip text="Inactive, the driver keeps their history and their licences are not checked." />
+                </span>
               </div>
             </Card>
 
@@ -206,18 +202,15 @@ export function DriverForm({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
-        </Button>
-        <Link
-          href={driversHref(scope)}
-          className="text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
+      <FormFoot
+        submit={
+          <Button type="submit" pending={pending}>
+            {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
+          </Button>
+        }
+        cancelHref={driversHref(scope)}
+        error={error}
+      />
       {leaveDialog}
     </form>
   );

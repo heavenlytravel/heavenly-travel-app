@@ -29,7 +29,7 @@ import { NumberField } from "@repo/ui/number-field";
 import { Switch } from "@repo/ui/switch";
 import { useRef, useState, type ReactNode } from "react";
 import { ChargeInput } from "../../../../_components/ChargeInput";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import { setTripRulesAction } from "./actions";
 import { crossLocationNote, extraRoadNote } from "./trip-reach-note";
@@ -130,10 +130,10 @@ function ExtraRoadBar({ free, max }: { free: number; max: number }) {
   const freeShare = max > 0 ? Math.min(1, Math.max(0, free / max)) : 0;
   return (
     <div aria-hidden="true" className="grid gap-1">
-      <div className="flex h-7 overflow-hidden rounded-md text-[11px] font-medium">
+      <div className="flex h-7 overflow-hidden rounded-md text-2xs font-medium">
         {freeShare > 0 ? (
           <div
-            className="flex items-center justify-center bg-emerald-100 text-emerald-800"
+            className="flex items-center justify-center bg-success-tint text-success"
             style={{ width: `${freeShare * 82}%` }}
           >
             Free
@@ -147,11 +147,11 @@ function ExtraRoadBar({ free, max }: { free: number; max: number }) {
             Per extra km
           </div>
         ) : null}
-        <div className="flex flex-1 items-center justify-center bg-slate-100 text-muted">
+        <div className="flex flex-1 items-center justify-center bg-hairline text-muted">
           WhatsApp
         </div>
       </div>
-      <div className="relative h-4 text-[11px] text-muted tabular-nums">
+      <div className="relative h-4 text-2xs text-muted tabular-nums">
         <span className="absolute left-0">0 km</span>
         {freeShare > 0 && freeShare < 1 ? (
           <span
@@ -186,7 +186,7 @@ function WeekdayPicker({
       <span className="text-sm font-medium text-body">Weekend days</span>
       <div
         ref={box}
-        className="flex flex-wrap gap-1.5 rounded-md aria-invalid:ring-2 aria-invalid:ring-red-500"
+        className="flex flex-wrap gap-1.5 rounded-md aria-invalid:ring-2 aria-invalid:ring-danger"
       >
         {WEEKDAYS_FROM_MONDAY.map((day) => {
           const on = days.includes(day);
@@ -202,7 +202,7 @@ function WeekdayPicker({
                 )
               }
               className={cx(
-                "h-9 w-12 rounded-md border text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                "h-9 w-12 rounded-md border text-sm font-medium transition-colors focus-ring",
                 on
                   ? "border-brand bg-brand text-white"
                   : "border-edge bg-white text-body hover:bg-hover",
@@ -265,7 +265,7 @@ function HolidayPicker({
               type="button"
               aria-label={`Remove ${formatDay(date)}`}
               onClick={() => onChange(dates.filter((d) => d !== date))}
-              className="grid size-6 place-items-center rounded-full text-muted hover:bg-slate-200 hover:text-body"
+              className="grid size-6 place-items-center rounded-full text-muted hover:bg-card-edge hover:text-body focus-ring"
             >
               <XIcon className="size-3.5" />
             </button>
@@ -481,7 +481,7 @@ export function TripRulesForm({
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-hairline pt-5">
-        <Button type="submit" disabled={pending || unchanged}>
+        <Button type="submit" disabled={unchanged} pending={pending}>
           {pending ? "Saving…" : "Save rules"}
         </Button>
         <FormError error={error} />

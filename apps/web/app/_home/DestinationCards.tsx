@@ -8,19 +8,20 @@ import styles from "./home.module.css";
  * Marketing's top choices, each opening the location's page.
  */
 
-const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-azure";
-
 // A quarter of the row each, centred, so fewer cards make a shorter row.
 const cell = "w-full sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]";
 
-const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-[17px] bg-navy p-[25px] text-left text-white sm:h-[330px] ${focus}`;
+const card = `${styles.card} relative block h-[235px] w-full overflow-hidden rounded-card bg-navy p-[25px] text-left text-white focus-ring sm:h-[330px]`;
 
-/** One photo card: where it opens, its picture, and its words. */
+/**
+ * One photo card: where it opens, its picture, and its words. The card is
+ * one link that reads its words, so its picture is not read: it would only
+ * say the name again.
+ */
 export type PhotoCard = {
   key: string;
   href: string;
-  image: { url: string; alt: string } | null;
+  image: { url: string } | null;
   /** The small line over the name; null for none. */
   tag: string | null;
   name: string;
@@ -38,18 +39,21 @@ function CardText({
 }) {
   return (
     <>
-      <span className="absolute right-[60px] bottom-6 left-[25px] z-[1]">
+      <span className="absolute right-[60px] bottom-6 left-[25px] z-(--layer-raised)">
         {tag && (
-          <small className="block text-[0.69rem] tracking-[0.16em] text-white/72 uppercase">
+          <small className="block text-2xs tracking-eyebrow text-white/90 uppercase">
             {tag}
           </small>
         )}
-        <strong className="mt-1 mb-[7px] block font-(family-name:--font-display) text-[2rem] leading-[1.1] font-normal">
+        <strong className="mt-1 mb-[7px] block font-serif text-3xl leading-[1.1] font-normal">
           {name}
         </strong>
-        <span className="block text-[0.82rem] text-white/82">{line}</span>
+        <span className="block text-caption text-white/82">{line}</span>
       </span>
-      <span aria-hidden className="absolute right-6 bottom-6 z-[1] text-2xl">
+      <span
+        aria-hidden
+        className="absolute right-6 bottom-6 z-(--layer-raised) text-2xl"
+      >
         ↗
       </span>
     </>
@@ -67,7 +71,7 @@ export function PhotoCards({ cards }: { cards: readonly PhotoCard[] }) {
               <>
                 <Image
                   src={entry.image.url}
-                  alt={entry.image.alt}
+                  alt=""
                   fill
                   sizes="(min-width: 64rem) 25vw, (min-width: 40rem) 50vw, 100vw"
                   className="object-cover"

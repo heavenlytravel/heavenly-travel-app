@@ -73,13 +73,15 @@ export function CardTitle({
     >
       <div className="min-w-0 grow basis-56">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-          <h2 className="text-[15px] font-bold tracking-[-0.01em] text-ink">
+          <h2 className="text-copy font-bold tracking-title text-ink">
             {children}
           </h2>
-          {meta ? <span className="text-[13px] text-muted">{meta}</span> : null}
+          {meta ? (
+            <span className="text-caption text-muted">{meta}</span>
+          ) : null}
         </div>
         {description ? (
-          <p className="mt-0.5 text-[13px] text-muted">{description}</p>
+          <p className="mt-0.5 text-caption text-muted">{description}</p>
         ) : null}
       </div>
       {action ? (
@@ -90,8 +92,7 @@ export function CardTitle({
 }
 
 /** A link at a card title's right: "All bookings →". */
-export const CARD_LINK =
-  "text-[13px] font-semibold text-brand underline-offset-4 hover:underline";
+export const CARD_LINK = "rounded-sm text-caption text-link";
 
 /** The card's surface with nothing else: around a table that stands alone, or a figure. */
 export function Frame({
@@ -124,8 +125,9 @@ export function TileGrid({
 
 /**
  * One card of a grid: a page, a class, a top choice, an image. Its
- * title's link covers it through `TILE_LINK`, so the whole card opens it;
- * anything else that takes a click stands above with `relative z-1`.
+ * title's link covers it with `card-link`, so the whole card opens it;
+ * anything else that takes a click stands above with
+ * `relative z-(--layer-raised)`.
  */
 export function Tile({
   dim = false,
@@ -139,9 +141,9 @@ export function Tile({
     <li className="min-w-0">
       <article
         className={cx(
-          "relative flex h-full flex-col overflow-hidden transition-shadow hover:border-edge hover:shadow-[0_10px_28px_-12px_rgb(0_38_75/0.28)]",
+          "relative flex h-full flex-col overflow-hidden transition-shadow hover:border-edge hover:shadow-raised",
           SURFACE,
-          dim && "bg-slate-50",
+          dim && "bg-shade",
         )}
       >
         {children}
@@ -150,14 +152,10 @@ export function Tile({
   );
 }
 
-/** The class of a tile's title link, whose box covers the tile. */
-export const TILE_LINK =
-  "after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-brand";
-
 /** The foot of a tile: its buttons, above the tile's link, on a hairline. */
 export function TileFoot({ children }: { children: ReactNode }) {
   return (
-    <div className="relative z-1 mt-auto flex items-center gap-2 border-t border-hairline px-4 py-3">
+    <div className="relative z-(--layer-raised) mt-auto flex items-center gap-2 border-t border-hairline px-4 py-3">
       {children}
     </div>
   );

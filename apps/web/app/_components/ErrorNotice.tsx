@@ -1,0 +1,32 @@
+"use client";
+
+import { Button } from "@repo/ui/button";
+import { Stop } from "../(site)/_components/Page";
+import { HomeLink } from "./Brand";
+
+/**
+ * A calm page for an error that kept a page from drawing, in place of the
+ * browser's bare "Application error": the logo, which goes home, what
+ * happened, and "Try again", `onRetry`. The error boundary shows it under
+ * the site's own document; the one for the root layout in a document of
+ * its own.
+ */
+export function ErrorNotice({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main className="grid min-h-svh place-items-center bg-canvas px-5 py-16">
+      <div className="grid w-full max-w-[560px] justify-items-center gap-8">
+        <HomeLink loading="eager" />
+        <Stop
+          level={1}
+          title="Something went wrong"
+          message="This page could not load. Try again, or come back in a minute."
+          action={
+            <Button size="lg" onClick={onRetry} className="mt-6">
+              Try again
+            </Button>
+          }
+        />
+      </div>
+    </main>
+  );
+}

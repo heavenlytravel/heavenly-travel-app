@@ -5,7 +5,6 @@ import { PlusIcon } from "@repo/ui/icons";
 import { PageHeader } from "@repo/console/PageHeader";
 import { FleetList } from "../../../../_components/FleetList";
 import { requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   DUE_PARAM,
   newDriverHref,
@@ -35,7 +34,6 @@ export default async function DriversPage({
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("drivers")}
         title="Drivers"
         action={
           <Button asChild>

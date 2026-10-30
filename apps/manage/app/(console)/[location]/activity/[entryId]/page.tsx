@@ -5,17 +5,12 @@ import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
-import {
-  BackLinkSkeleton,
-  CardSkeleton,
-  HeaderSkeleton,
-  Streamed,
-} from "@repo/console/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { PageContentView } from "../../../../_components/page-editor/PageContentView";
 import { requireAdmin } from "../../../../_lib/access";
 import { locationDetails } from "../../../../_lib/location-data";
-import { activityHref, locationPageHref } from "../../../../_lib/routes";
+import { locationPageHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 
 /** The page as it was and as it was published, side by side where the column has room. */
@@ -40,7 +35,6 @@ export default async function LocationPublishPage({
     <Streamed
       fallback={
         <>
-          <BackLinkSkeleton />
           <HeaderSkeleton />
           <div className="@container">
             <div className={COLUMNS}>
@@ -77,7 +71,6 @@ async function publishDetails({
 
   return (
     <>
-      <BackLink href={activityHref(location.slug)}>Activity</BackLink>
       <PageHeader
         title={describeActivity(entry)}
         meta={

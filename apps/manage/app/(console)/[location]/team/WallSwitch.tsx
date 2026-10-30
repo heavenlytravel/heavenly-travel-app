@@ -5,7 +5,7 @@ import { useConfirm, type ConfirmRequest } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../_lib/action-state";
 import { setWallAction } from "./actions";
 

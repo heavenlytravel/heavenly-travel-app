@@ -11,12 +11,13 @@ import { Select } from "@repo/ui/select";
 import { ArrowLeftIcon, ArrowRightIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { TILE_LINK, Tile, TileFoot, TileGrid } from "@repo/console/Card";
+import { Tile, TileFoot, TileGrid } from "@repo/console/Card";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { dashboardHref } from "../../../../_lib/routes";
 import { CardImage } from "../../../../_components/CardImage";
+import { LocationInitial } from "../../../../_components/LocationInitial";
 import { changeTopChoiceAction } from "./actions";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../../_lib/action-state";
 
 /**
@@ -80,18 +81,14 @@ export function TopChoiceControl({
               <CardImage
                 src={choice.heroImage?.url ?? null}
                 sizes="(min-width: 1024px) 18rem, (min-width: 640px) 50vw, 100vw"
-                fallback={
-                  <span className="text-5xl font-semibold text-slate-300">
-                    {choice.name.charAt(0).toUpperCase()}
-                  </span>
-                }
+                fallback={<LocationInitial name={choice.name} />}
               >
                 <Badge>{place + 1}</Badge>
                 <LocationStateBadge state={choice.state} />
               </CardImage>
               <div className="min-w-0 px-4 pt-3 pb-4">
                 <h3 className="truncate text-base font-bold tracking-tight text-ink">
-                  <Link href={dashboardHref(choice.slug)} className={TILE_LINK}>
+                  <Link href={dashboardHref(choice.slug)} className="card-link">
                     {choice.name}
                   </Link>
                 </h3>
@@ -105,10 +102,10 @@ export function TopChoiceControl({
                 <Tooltip content="Move earlier">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    disabled={pending || place === 0}
+                    size="icon-sm"
+                    disabled={place === 0}
+                    pending={pending}
                     aria-label={`Move ${choice.name} earlier`}
-                    className="w-8 px-0"
                     onClick={() => change(choice.id, "up")}
                   >
                     <ArrowLeftIcon />
@@ -117,21 +114,21 @@ export function TopChoiceControl({
                 <Tooltip content="Move later">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    disabled={pending || place === choices.length - 1}
+                    size="icon-sm"
+                    disabled={place === choices.length - 1}
+                    pending={pending}
                     aria-label={`Move ${choice.name} later`}
-                    className="w-8 px-0"
                     onClick={() => change(choice.id, "down")}
                   >
                     <ArrowRightIcon />
                   </Button>
                 </Tooltip>
                 <Button
-                  variant="ghost"
+                  variant="ghost-danger"
                   size="sm"
-                  disabled={pending}
+                  pending={pending}
                   aria-label={`Remove ${choice.name}`}
-                  className="ml-auto text-red-700 hover:bg-red-50 hover:text-red-800"
+                  className="ml-auto"
                   onClick={() => change(choice.id, "remove")}
                 >
                   Remove
@@ -158,7 +155,8 @@ export function TopChoiceControl({
                     />
                     <Button
                       variant="secondary"
-                      disabled={pending || toAdd === ""}
+                      disabled={toAdd === ""}
+                      pending={pending}
                       onClick={() => change(toAdd, "add")}
                     >
                       Add to the home page

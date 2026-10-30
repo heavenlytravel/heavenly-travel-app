@@ -7,8 +7,12 @@ import {
   tripViewOfItem,
 } from "@repo/db";
 import type { BookingItemWithDetails, BookingWithItems } from "@repo/db/server";
-import { Panel, Rows } from "../../_components/Page";
-import { ItemStatusBadge, StatusBadge } from "./StatusBadge";
+import {
+  BookingStatusBadge,
+  ItemStatusBadge,
+} from "@repo/console/StatusBadges";
+import { Rows } from "@repo/ui/rows";
+import { Panel } from "../../_components/Page";
 import { TripSummary } from "./TripSummary";
 
 /** One line under the title, per booking status, as the customer reads it. */
@@ -44,13 +48,13 @@ export function BookingDetail({
 
   const rows: [string, ReactNode][] = [
     ["Reference", <strong key="ref">{booking.reference}</strong>],
-    ["Status", <StatusBadge key="status" status={booking.status} />],
+    ["Status", <BookingStatusBadge key="status" status={booking.status} />],
     ["Name", booking.contactName],
     ["Phone", booking.contactPhone],
   ];
   rows.push([
     "Total",
-    <span key="total" className="text-[1.15rem] font-bold text-brand">
+    <span key="total" className="text-lg font-bold text-brand">
       {formatMyr(booking.priceTotalSen)}
     </span>,
   ]);
@@ -64,7 +68,7 @@ export function BookingDetail({
         {trips.map(({ item, trip }) => (
           <Panel key={item.id}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <h2 className="font-(family-name:--font-display) text-[1.5rem]">
+              <h2 className="font-serif text-2xl">
                 {several
                   ? `Trip ${item.position} · ${itemHeading(item)}`
                   : itemHeading(item)}

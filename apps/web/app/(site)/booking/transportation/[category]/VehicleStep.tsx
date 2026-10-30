@@ -8,13 +8,17 @@ import {
   CONTACT,
   formatMyr,
   largestGroup,
-  TRIP_CATEGORY_LABELS,
+  plural,
   type TripCategory,
   type TripSearch,
 } from "@repo/db";
+import { Button } from "@repo/ui/button";
+import { Notice } from "@repo/ui/notice";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import { ClassCard } from "../../../../_components/ClassCard";
 import { PassengersStepper } from "../../../../_components/trips/PassengersStepper";
+import { clearOfHeader } from "../../../../_components/trips/TripsBar";
 import { TripsPanel } from "../../../../_components/trips/TripsPanel";
 import { useLinkSeed } from "../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../_components/trips/useNewBooking";
@@ -39,22 +43,17 @@ import {
   tripBookingPath,
   tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
-import {
-  surface,
-  PageTitle,
-  panel,
-  Pending,
-  primaryButton,
-  Stop,
-  textLink,
-} from "../../../_components/Page";
+import { useNavigate } from "../../../../_lib/useNavigate";
+import { surface, panel, Pending, Stop } from "../../../_components/Page";
+import { BookingStepTitle, FoldedTripsBones } from "./StepParts";
 import { usePlanPricing } from "./usePlanPricing";
 
 const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
-const alertBox =
-  "mb-4 rounded-xl bg-[#fdecea] px-4 py-3 text-[0.95rem] text-[#8c1d16]";
+/** The site's reading size in a `Notice`, and its room below. */
+const alertBox = "mb-4 text-copy";
+/** A link inside a coloured message: in the message's colour, so underlined. */
 const noteLink =
-  "font-semibold underline underline-offset-4 hover:no-underline";
+  "font-semibold underline underline-offset-4 hover:no-underline focus-ring";
 
 /** What a link brought: today's one-trip search, read as a list of one. */
 export type VehicleSeed = { search: TripSearch; passengers: number | null };
@@ -87,6 +86,8 @@ export function VehicleStep({
 }) {
   const plan = useTripPlan();
   const router = useRouter();
+  // Continue opens the confirm page; until it is on screen the button says so.
+  const { pending: continuing, go } = useNavigate();
   const newBooking = useNewBooking();
   // A link's trip starts the plan, asking first when it would replace
   // other trips; the trips are priced once it is in.
@@ -131,13 +132,19 @@ export function VehicleStep({
   });
 
   if (!plan || !seeded || plan.category !== category) {
-    return newBooking.dialog;
+    return (
+      <>
+        <VehicleStepSkeleton category={category} />
+        {newBooking.dialog}
+      </>
+    );
   }
   const { trips, passengers, priced, classId } = plan;
   if (trips.length === 0) {
     return (
       <>
         <Stop
+          level={1}
           title="Start with a search"
           message="Tell us where and when you need a driver, and we will show you prices."
           linkLabel="Search for a trip"
@@ -174,8 +181,9 @@ export function VehicleStep({
   const pictured = shown.some((c) => c.card.imageUrl !== null);
 
   function choose(id: string) {
+    if (continuing) return;
     updatePlan((now) => ({ ...now, classId: id }));
-    router.push(tripConfirmPath(category));
+    go(tripConfirmPath(category));
   }
 
   function toCoaches() {
@@ -184,30 +192,23 @@ export function VehicleStep({
   }
 
   const coachLink = (label: string) => (
-    <button type="button" onClick={toCoaches} className={textLink}>
+    <button type="button" onClick={toCoaches} className="text-link">
       {label}
     </button>
   );
 
   return (
     <>
-      <PageTitle
-        eyebrow={`${TRIP_CATEGORY_LABELS[category]}${several ? ` · ${trips.length} trips` : ""}`}
-        title={several ? "Your trips, priced." : "Your trip, priced."}
-      >
-        {several ? "One vehicle does every trip, so you choose it once. " : ""}
-        Prices include the driver and fuel. Pay nothing now: we confirm your
-        booking first.
-      </PageTitle>
+      <StepTitle category={category} count={trips.length} />
 
       <TripsPanel
         planner={planner}
         category={category}
         foldOnSmall
         attention={failed.length > 0 || clashesOf(trips).size > 0}
-        className={`${surface} mb-8 scroll-mt-28 lg:p-7`}
+        className={`${surface} mb-8 ${clearOfHeader} lg:p-7`}
         summary={[
-          passengers === 1 ? "1 passenger" : `${passengers} passengers`,
+          plural(passengers, "passenger"),
           ...(chosen?.fit.ok
             ? [`${chosen.card.name} · ${formatMyr(chosen.fit.totalSen)}`]
             : []),
@@ -223,7 +224,7 @@ export function VehicleStep({
         }
         priceOf={(trip) => {
           const quote = quoteOf(priced, trip);
-          if (!quote) return <span className="text-slate-400">…</span>;
+          if (!quote) return <span className="text-muted">…</span>;
           if (!chosen) return null;
           const price = classOnTrip(quote, chosen.card.id)?.totalSen;
           return price === undefined || price === null
@@ -239,7 +240,7 @@ export function VehicleStep({
       <section aria-labelledby="vehicles">
         <h2
           id="vehicles"
-          className="mx-1 mb-4 font-(family-name:--font-display) text-[1.7rem] leading-tight text-ink"
+          className="mx-1 mb-4 font-serif text-figure leading-tight text-ink"
         >
           {several
             ? "Choose one vehicle for every trip"
@@ -247,65 +248,87 @@ export function VehicleStep({
         </h2>
 
         {error ? (
-          <div role="alert" className={alertBox}>
-            {error}{" "}
-            <button type="button" onClick={retry} className={noteLink}>
-              Try again
-            </button>
+          <div role="alert">
+            <Notice tone="danger" className={alertBox}>
+              {error}{" "}
+              <button type="button" onClick={retry} className={noteLink}>
+                Try again
+              </button>
+            </Notice>
           </div>
         ) : failed.length > 0 ? (
-          <p role="alert" className={alertBox}>
-            Change or remove the {failed.length === 1 ? "trip" : "trips"} marked
-            in red above to choose your vehicle.
-          </p>
+          <div role="alert">
+            <Notice tone="danger" className={alertBox}>
+              Change or remove the {failed.length === 1 ? "trip" : "trips"}{" "}
+              marked in red above to choose your vehicle.
+            </Notice>
+          </div>
         ) : !complete || (pricing && choices.length === 0) ? (
-          <p className={`${panel} flex items-center text-slate-600`}>
-            <Pending>
-              Finding prices for{" "}
-              {several ? `your ${trips.length} trips` : "your trip"}…
-            </Pending>
-          </p>
+          <>
+            <p
+              role="status"
+              className={`${panel} mb-4 flex items-center text-muted`}
+            >
+              <Pending>
+                Finding prices for{" "}
+                {several ? `your ${trips.length} trips` : "your trip"}…
+              </Pending>
+            </p>
+            {/* The cards' room kept while their prices come, so the page
+                below does not jump when they do. */}
+            <VehicleCardsSkeleton className="motion-safe:animate-pulse" />
+          </>
         ) : choices.length === 0 ? (
-          <p className={alertBox}>
+          <Notice tone="danger" className={alertBox}>
             We have no vehicle to offer for{" "}
-            {several ? "these trips" : "this trip"} right now. Message us on
-            WhatsApp and we will help.
-          </p>
+            {several ? "these trips" : "this trip"} right now.{" "}
+            <a
+              href={CONTACT.whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={noteLink}
+            >
+              Message us on WhatsApp
+            </a>{" "}
+            and we will help.
+          </Notice>
         ) : (
           <>
             {passengers > largest ? (
-              <p role="alert" className={alertBox}>
-                No {isCar ? "car" : "coach"} seats {passengers}.{" "}
-                {isCar ? (
-                  <>
-                    A coach does:{" "}
-                    <button
-                      type="button"
-                      onClick={toCoaches}
-                      className={noteLink}
-                    >
-                      see coach charter
-                    </button>
-                    . Or make a booking for each car.
-                  </>
-                ) : (
-                  <>
-                    Make a booking for each coach, or{" "}
-                    <a
-                      href={CONTACT.whatsappHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={noteLink}
-                    >
-                      WhatsApp us
-                    </a>{" "}
-                    and we plan it with you.
-                  </>
-                )}
-              </p>
+              <div role="alert">
+                <Notice tone="danger" className={alertBox}>
+                  No {isCar ? "car" : "coach"} seats {passengers}.{" "}
+                  {isCar ? (
+                    <>
+                      A coach does:{" "}
+                      <button
+                        type="button"
+                        onClick={toCoaches}
+                        className={noteLink}
+                      >
+                        see coach charter
+                      </button>
+                      . Or make a booking for each car.
+                    </>
+                  ) : (
+                    <>
+                      Make a booking for each coach, or{" "}
+                      <a
+                        href={CONTACT.whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={noteLink}
+                      >
+                        WhatsApp us
+                      </a>{" "}
+                      and we plan it with you.
+                    </>
+                  )}
+                </Notice>
+              </div>
             ) : null}
             {notShown.length > 0 ? (
-              <p className="mx-1 -mt-2 mb-4 text-[0.9rem] text-slate-500">
+              <p className="mx-1 -mt-2 mb-4 text-copy text-muted">
                 Not shown: {notShown.join("; ")}.
               </p>
             ) : null}
@@ -318,33 +341,39 @@ export function VehicleStep({
                       sum + (classOnTrip(quote, card.id)?.oddHoursSen ?? 0),
                     0,
                   );
+                  const isChosen = chosen?.card.id === card.id;
+                  // The chosen one turns while the confirm page opens; the
+                  // rest wait, and keep the focus where it is.
+                  const opening = continuing && isChosen;
                   return (
                     <ClassCard
                       key={card.id}
                       vehicleClass={card}
                       pictured={pictured}
                       badge={
-                        chosen?.card.id === card.id ? (
-                          <span className="mt-1 shrink-0 rounded-full bg-brand-tint px-2 py-0.5 text-[0.75rem] font-semibold text-brand">
+                        isChosen ? (
+                          <span className="mt-1 shrink-0 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-semibold text-brand">
                             Your choice
                           </span>
                         ) : null
                       }
                     >
                       {oddHoursSen > 0 ? (
-                        <p className="mt-1 text-[0.85rem] text-[#7a5a00]">
+                        <p className="mt-1 text-caption text-warning">
                           Includes {formatMyr(oddHoursSen)} for{" "}
                           {several ? "pick-ups" : "a pick-up"} in odd hours
                         </p>
                       ) : null}
                       <div className="mt-auto pt-5">
-                        <button
-                          type="button"
+                        <Button
+                          size="lg"
                           onClick={() => choose(card.id)}
-                          className={`${primaryButton} w-full`}
+                          pending={opening}
+                          aria-disabled={continuing || undefined}
+                          className="w-full aria-disabled:cursor-wait"
                         >
                           Continue · {formatMyr(total)}
-                        </button>
+                        </Button>
                       </div>
                     </ClassCard>
                   );
@@ -354,7 +383,7 @@ export function VehicleStep({
           </>
         )}
 
-        <p className="mx-1 mt-5 text-[0.92rem] text-slate-500">
+        <p className="mx-1 mt-5 text-copy text-muted">
           {several ? "Every trip is done in the vehicle you choose. " : ""}A
           second vehicle, or a different one on some trips, is a booking of its
           own.
@@ -369,6 +398,77 @@ export function VehicleStep({
       </section>
       {newBooking.dialog}
     </>
+  );
+}
+
+/** The page's title: the category, how many trips when several, and what the prices hold. */
+function StepTitle({
+  category,
+  count,
+}: {
+  category: TripCategory;
+  count: number;
+}) {
+  const several = count > 1;
+  return (
+    <BookingStepTitle
+      category={category}
+      count={count}
+      title={several ? "Your trips, priced." : "Your trip, priced."}
+    >
+      {several ? "One vehicle does every trip, so you choose it once. " : ""}
+      Prices include the driver and fuel. Pay nothing now: we confirm your
+      booking first.
+    </BookingStepTitle>
+  );
+}
+
+/**
+ * The page while the browser's trips are read: its title as it reads for
+ * one trip, then bones about the height of the trips and the vehicles
+ * (on a phone the folded line, from `lg` the list and its foot), so the
+ * page and the footer do not jump when they come.
+ */
+function VehicleStepSkeleton({ category }: { category: TripCategory }) {
+  return (
+    <>
+      <StepTitle category={category} count={1} />
+      <Loading>
+        <div className={`${surface} mb-8 lg:p-7`}>
+          <FoldedTripsBones />
+          <div className="hidden lg:block">
+            <Bone className="mb-3 h-24 w-full" />
+            <div className="flex items-center justify-between gap-3">
+              <Bone className="h-11 w-44" />
+              <Bone className="h-14 w-[250px]" />
+            </div>
+          </div>
+        </div>
+        <Bone className="mx-1 mb-4 h-9 w-64 max-w-full" />
+        <VehicleCardsSkeleton />
+      </Loading>
+    </>
+  );
+}
+
+/** Bones in the shape of the vehicle cards: a picture, a name, a few lines and Continue. */
+function VehicleCardsSkeleton({ className = "" }: { className?: string }) {
+  return (
+    <ul
+      aria-hidden
+      className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${className}`}
+    >
+      {[0, 1, 2].map((card) => (
+        <li key={card} className={`${panel} flex flex-col`}>
+          <Bone className="mb-4 aspect-[3/2] w-full" />
+          <Bone className="h-7 w-36" />
+          <Bone className="mt-3 h-4 w-full" />
+          <Bone className="mt-2 h-4 w-4/5" />
+          <Bone className="mt-4 h-4 w-28" />
+          <Bone className="mt-6 h-13 w-full" />
+        </li>
+      ))}
+    </ul>
   );
 }
 

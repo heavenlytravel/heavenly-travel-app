@@ -1,4 +1,5 @@
 import { cx } from "@repo/ui/cx";
+import { CheckIcon } from "@repo/ui/icons";
 
 /**
  * Where one step stands, as a small circle: a tick on green once it is
@@ -22,29 +23,12 @@ export function StepMark({
       role="img"
       aria-label={done ? `${name}, done` : `${name}, to do`}
       className={cx(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
-        done
-          ? "bg-brand text-white"
-          : "border-2 border-slate-300 text-slate-500",
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-2xs font-semibold tabular-nums",
+        done ? "bg-brand text-white" : "border-2 border-edge text-muted",
         className,
       )}
     >
-      {done ? (
-        <svg
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          className="size-3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M2.5 6.5 5 9l4.5-5.5" />
-        </svg>
-      ) : (
-        number
-      )}
+      {done ? <CheckIcon className="size-3" strokeWidth={4} /> : number}
     </span>
   );
 }

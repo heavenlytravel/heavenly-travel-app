@@ -4,7 +4,7 @@ import type { AdminTeam } from "@repo/db";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../_lib/use-action-form";
 import { AdminAccessSheet } from "./AdminAccessSheet";
 import { revokeAdminAction } from "./actions";
@@ -47,7 +47,7 @@ export function AdminRowControls({
             type="submit"
             variant="danger"
             size="sm"
-            disabled={revoke.pending}
+            pending={revoke.pending}
           >
             Revoke
           </Button>

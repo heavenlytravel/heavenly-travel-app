@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { describeActivity, formatLocalDate, formatLocalTime } from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { HistoryIcon } from "@repo/ui/icons";
 import {
   Card,
@@ -9,24 +10,19 @@ import {
   CardRows,
   CardTitle,
 } from "@repo/console/Card";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
-import {
-  BackLinkSkeleton,
-  CardSkeleton,
-  HeaderSkeleton,
-} from "@repo/console/Skeleton";
+import { PageHeader, RecordLink } from "@repo/console/PageHeader";
+import { CardSkeleton, HeaderSkeleton } from "@repo/console/Skeleton";
 import { HistoryTimeline } from "./HistoryTimeline";
 
 /** "History" in a record's header: the way to the record's history page, as a quiet button. */
 export function HistoryLink({ href }: { href: string }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-edge bg-white px-3 text-sm font-semibold text-body shadow-control transition-colors hover:border-slate-300 hover:text-ink"
-    >
-      <HistoryIcon className="size-4 text-muted" />
-      History
-    </Link>
+    <Button asChild variant="secondary">
+      <Link href={href}>
+        <HistoryIcon className="size-4 text-muted" />
+        History
+      </Link>
+    </Button>
   );
 }
 
@@ -86,29 +82,27 @@ export function HistoryCard({
 }
 
 /**
- * One record's history page: the way back to the record, by its name,
- * then "History" with the record's name beside it, and every change to
- * it, newest first, by day. A vehicle, a driver, a class and a booking
+ * One record's history page: "History", the record's name under it as
+ * the way back to it, and every change to it, newest first, by day. A vehicle, a driver, a class and a booking
  * each have one, which their header links to with `HistoryLink`.
  */
 export function RecordHistory({
-  section,
-  back,
+  record,
   entries,
   emptyMessage,
 }: {
-  /** The section label over the title: "Fleet", "Bookings". */
-  section?: string;
   /** The record's page and its name: "KV589E". */
-  back: { href: string; label: string };
+  record: { href: string; label: string };
   /** Oldest first, as the log reads them. */
   entries: readonly ActivityEntry[];
   emptyMessage: string;
 }) {
   return (
     <>
-      <BackLink href={back.href}>{back.label}</BackLink>
-      <PageHeader section={section} title={`History of ${back.label}`} />
+      <PageHeader
+        title="History"
+        meta={<RecordLink href={record.href}>{record.label}</RecordLink>}
+      />
       <HistoryTimeline entries={entries} emptyMessage={emptyMessage} />
     </>
   );
@@ -118,7 +112,6 @@ export function RecordHistory({
 export function RecordHistorySkeleton() {
   return (
     <>
-      <BackLinkSkeleton />
       <HeaderSkeleton />
       <CardSkeleton rows={5} />
     </>

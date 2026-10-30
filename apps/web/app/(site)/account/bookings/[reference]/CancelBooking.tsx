@@ -1,13 +1,10 @@
 "use client";
 
 import { answerOf } from "@repo/ui/action-answer";
+import { Button } from "@repo/ui/button";
+import { FormError } from "@repo/ui/form-error";
 import { toast } from "@repo/ui/toast";
-import { useActionState, useState } from "react";
-import {
-  dangerButton,
-  Pending,
-  secondaryButton,
-} from "../../../_components/Page";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   cancelBookingAction,
   cancelTripAction,
@@ -29,7 +26,9 @@ type Words = {
  * cancelled, or when that ended. Past the deadline it is `blocked` and the
  * button shows disabled, so the customer learns the rule instead of
  * wondering where the button went. A cancel that went through says so in
- * a toast; one refused says why under the buttons.
+ * a toast; one refused says why under the buttons. The focus follows the
+ * swap: opening puts it on the question, so it is read first and Enter
+ * pressed twice does not cancel; keeping puts it back on the button.
  */
 function CancelControl({
   fields,
@@ -53,19 +52,36 @@ function CancelControl({
     },
     null,
   );
+  const openButton = useRef<HTMLButtonElement>(null);
+  const question = useRef<HTMLParagraphElement>(null);
+  // Set by a press of either button, so the focus moves once the other
+  // part is drawn, and never on the page's first draw.
+  const swapped = useRef(false);
+  useEffect(() => {
+    if (!swapped.current) return;
+    swapped.current = false;
+    (armed ? question : openButton).current?.focus();
+  }, [armed]);
+
+  function arm(next: boolean) {
+    swapped.current = true;
+    setArmed(next);
+  }
 
   if (!armed || blocked) {
     return (
       <>
-        <button
-          type="button"
+        <Button
+          ref={openButton}
+          variant="outline"
+          size="lg"
           disabled={blocked}
-          onClick={() => setArmed(true)}
-          className={`${secondaryButton} w-full`}
+          onClick={() => arm(true)}
+          className="w-full"
         >
           {words.open}
-        </button>
-        <p className="mt-2 text-center text-[0.85rem] text-slate-500">{hint}</p>
+        </Button>
+        <p className="mt-2 text-center text-caption text-muted">{hint}</p>
       </>
     );
   }
@@ -75,23 +91,26 @@ function CancelControl({
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <p className="text-[0.95rem] text-slate-700">{words.question}</p>
-      <button type="submit" disabled={pending} className={dangerButton}>
-        {pending ? <Pending>Cancelling…</Pending> : words.confirm}
-      </button>
-      <button
-        type="button"
+      {/* Takes the focus as the form opens, a place to read from, not a control. */}
+      <p
+        ref={question}
+        tabIndex={-1}
+        className="text-copy text-body outline-none"
+      >
+        {words.question}
+      </p>
+      <Button type="submit" variant="destructive" size="lg" pending={pending}>
+        {pending ? "Cancelling…" : words.confirm}
+      </Button>
+      <Button
+        variant="outline"
+        size="lg"
         disabled={pending}
-        onClick={() => setArmed(false)}
-        className={secondaryButton}
+        onClick={() => arm(false)}
       >
         {words.keep}
-      </button>
-      {state?.error && (
-        <p role="alert" className="text-[0.95rem] text-[#b3261e]">
-          {state.error}
-        </p>
-      )}
+      </Button>
+      <FormError size="copy" error={state?.error} />
     </form>
   );
 }

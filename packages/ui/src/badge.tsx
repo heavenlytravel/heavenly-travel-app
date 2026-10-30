@@ -8,12 +8,12 @@ import { cx } from "./cx.js";
  * Each pair reads at 4.5:1 or better.
  */
 const TONES = {
-  neutral: "ui:bg-slate-100 ui:text-slate-600",
-  amber: "ui:bg-amber-100 ui:text-amber-800",
+  neutral: "ui:bg-hairline ui:text-muted",
+  amber: "ui:bg-warning-soft ui:text-warning",
   brand: "ui:bg-brand-tint ui:text-brand-strong",
   navy: "ui:bg-navy/10 ui:text-navy",
-  green: "ui:bg-green-100 ui:text-green-800",
-  red: "ui:bg-red-100 ui:text-red-800",
+  green: "ui:bg-success-tint ui:text-success",
+  red: "ui:bg-danger-tint ui:text-danger",
 } as const;
 
 export type BadgeTone = keyof typeof TONES;
@@ -50,5 +50,38 @@ export function Badge({
       ) : null}
       {children}
     </span>
+  );
+}
+
+const DOTS: Record<BadgeTone, string> = {
+  neutral: "ui:bg-edge",
+  amber: "ui:bg-warning-dot",
+  brand: "ui:bg-brand",
+  navy: "ui:bg-navy",
+  green: "ui:bg-success-dot",
+  red: "ui:bg-danger-dot",
+};
+
+/**
+ * A status as a disc alone, in the brighter shade of its tone, beside words
+ * that name it: a figure tile, a page shown or hidden. A chip draws its own
+ * disc with `dot`.
+ */
+export function StatusDot({
+  tone,
+  className,
+}: {
+  tone: BadgeTone;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "ui:size-2 ui:shrink-0 ui:rounded-full",
+        DOTS[tone],
+        className,
+      )}
+    />
   );
 }

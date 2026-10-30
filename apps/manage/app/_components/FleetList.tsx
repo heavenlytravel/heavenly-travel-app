@@ -8,7 +8,8 @@ import {
 } from "@repo/db/server";
 import { Card } from "@repo/console/Card";
 import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
-import { Bone, Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 import {
   driversHref,
   vehiclesHref,
@@ -19,6 +20,7 @@ import { DriversTable } from "./DriversTable";
 import { DueFilter } from "./DueFilter";
 import { SearchBox } from "./SearchBox";
 import { VehiclesTable } from "./VehiclesTable";
+import { ListToolbar } from "./ListToolbar";
 
 /**
  * How each list names its records, their standing and the documents it
@@ -183,7 +185,7 @@ export function FleetList({
         )}
       </Streamed>
       <Card flush>
-        <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-5 py-4">
+        <ListToolbar>
           <SearchBox
             href={hrefOf({ due })}
             value={q ?? ""}
@@ -195,7 +197,7 @@ export function FleetList({
             due={due}
             href={hrefOf({ due: !due, q })}
           />
-        </div>
+        </ListToolbar>
         <Streamed
           key={`${due}:${q ?? ""}`}
           fallback={
@@ -223,7 +225,7 @@ export function FleetList({
                   />
                 )}
                 {count > 0 ? (
-                  <p className="border-t border-hairline px-5 py-3 text-[13px] text-muted tabular-nums">
+                  <p className="border-t border-hairline px-5 py-3 text-caption text-muted tabular-nums">
                     {count === total.rows.length
                       ? plural(count, names.one)
                       : `${count} of ${plural(total.rows.length, names.one)}`}

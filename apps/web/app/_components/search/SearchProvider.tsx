@@ -7,6 +7,7 @@ import {
   type BBox,
   type LocationSearch,
 } from "@repo/db";
+import { scrollBehavior } from "@repo/ui/motion";
 import type { PlacePresets } from "@repo/ui/place-input";
 import {
   PRODUCTS,
@@ -54,10 +55,9 @@ type SearchCard = {
 const SearchCardContext = createContext<SearchCard | null>(null);
 
 function bringIntoView() {
-  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document
     .getElementById(SEARCH_CARD_ID)
-    ?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "center" });
+    ?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
 }
 
 export function SearchProvider({

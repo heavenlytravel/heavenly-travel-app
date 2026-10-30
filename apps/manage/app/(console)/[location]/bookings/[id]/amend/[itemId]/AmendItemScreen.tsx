@@ -12,12 +12,9 @@ import { hasGooglePlaces } from "@repo/places/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card } from "@repo/console/Card";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
-import {
-  BackLinkSkeleton,
-  FormSkeleton,
-  HeaderSkeleton,
-} from "@repo/console/Skeleton";
+import { Notice } from "@repo/ui/notice";
+import { PageHeader, RecordLink } from "@repo/console/PageHeader";
+import { FormSkeleton, HeaderSkeleton } from "@repo/console/Skeleton";
 import { ItemStatusBadge } from "@repo/console/StatusBadges";
 import { getPermissions } from "../../../../../../_lib/access";
 import { bookingHref } from "../../../../../../_lib/routes";
@@ -27,11 +24,10 @@ import { amendDraftOf } from "../../../_lib/trip-form";
 import { quoteTripView } from "../../../_lib/trip-server";
 import { AmendItemForm } from "./AmendItemForm";
 
-/** What stands where the item is loading: the way back, the header and the form. */
+/** What stands where the item is loading: the header and the form. */
 export function AmendItemSkeleton() {
   return (
     <>
-      <BackLinkSkeleton />
       <HeaderSkeleton />
       <FormSkeleton fields={6} />
     </>
@@ -64,12 +60,13 @@ export async function amendItemScreen({
   const category = item.tripDetails?.vehicleClassCategory;
   if (!trip || !isTripCategory(category)) notFound();
 
-  const back = (
-    <BackLink href={bookingHref(scope.slug, booking.id)}>
+  const title = `Amend Trip ${item.position}`;
+  // The booking it is a trip of, the way back to it.
+  const meta = (
+    <RecordLink href={bookingHref(scope.slug, booking.id)}>
       {booking.reference}
-    </BackLink>
+    </RecordLink>
   );
-  const title = `Amend trip ${item.position} of ${booking.reference}`;
 
   if (item.status !== "received" && item.status !== "confirmed") {
     const status = isItemStatus(item.status)
@@ -77,10 +74,10 @@ export async function amendItemScreen({
       : item.status;
     return (
       <>
-        {back}
         <PageHeader
           title={title}
           badge={<ItemStatusBadge status={item.status} />}
+          meta={meta}
         />
         <Card>
           <p className="text-sm text-body">
@@ -113,20 +110,17 @@ export async function amendItemScreen({
 
   return (
     <>
-      {back}
       <PageHeader
         title={title}
+        meta={meta}
         badge={
           <InfoTip text="Saving prices the trip again with today's rates, and the customer gets a “Booking updated” email." />
         }
       />
       {droppedModel ? (
-        <p
-          role="note"
-          className="mb-5 rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-        >
-          {droppedModel}
-        </p>
+        <div role="note" className="mb-5">
+          <Notice>{droppedModel}</Notice>
+        </div>
       ) : null}
       <AmendItemForm
         itemId={item.id}

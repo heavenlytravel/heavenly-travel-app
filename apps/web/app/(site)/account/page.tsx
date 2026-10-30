@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { fullName } from "@repo/db";
 import { getAccess } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
+import { Rows } from "@repo/ui/rows";
 import { redirect } from "next/navigation";
-import { PageTitle, Panel, Rows, primaryButton } from "../_components/Page";
+import { PageTitle, Panel } from "../_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
   ACCOUNT_PATH,
@@ -19,7 +22,7 @@ export default async function AccountPage() {
   if (access.status === "signed-out") redirect(signInHref(ACCOUNT_PATH));
 
   const { user } = access;
-  const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  const name = fullName(user);
 
   return (
     <>
@@ -32,12 +35,9 @@ export default async function AccountPage() {
             ["Phone", user.phone ?? "Not set"],
           ]}
         />
-        <Link
-          href={ACCOUNT_BOOKINGS_PATH}
-          className={`${primaryButton} mt-6 w-full`}
-        >
-          My bookings
-        </Link>
+        <Button asChild size="lg" className="mt-6 w-full">
+          <Link href={ACCOUNT_BOOKINGS_PATH}>My bookings</Link>
+        </Button>
       </Panel>
     </>
   );

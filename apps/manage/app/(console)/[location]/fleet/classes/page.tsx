@@ -3,7 +3,6 @@ import { Button } from "@repo/ui/button";
 import { PlusIcon } from "@repo/ui/icons";
 import { PageHeader } from "@repo/console/PageHeader";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import { newClassHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { Catalogue } from "./_catalogue/Catalogue";
@@ -26,7 +25,6 @@ export default async function ClassesPage({
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("classes")}
         title="Classes"
         action={
           manages ? (

@@ -9,7 +9,7 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { CheckIcon, XIcon } from "@repo/ui/icons";
 import Link from "next/link";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import {
   advanceItemAction,
@@ -79,7 +79,6 @@ export function ItemActions({
   });
   const cancellable =
     canCancel && status !== "cancelled" && status !== "completed";
-  const pending = advance.pending || cancel.pending;
 
   if (!next && !cancellable && !amendHref && !price) return null;
 
@@ -90,7 +89,12 @@ export function ItemActions({
           <form {...advance.formProps}>
             <input type="hidden" name="itemId" value={itemId} />
             <input type="hidden" name="to" value={next} />
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={cancel.pending}
+              pending={advance.pending}
+            >
               {next === "confirmed" ? <CheckIcon className="size-4" /> : null}
               {advance.pending ? "Saving…" : ADVANCE_LABELS[next]}
             </Button>
@@ -107,7 +111,13 @@ export function ItemActions({
         {cancellable ? (
           <form {...cancel.formProps} className="ml-auto">
             <input type="hidden" name="itemId" value={itemId} />
-            <Button type="submit" variant="ghost" size="sm" disabled={pending}>
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              disabled={advance.pending}
+              pending={cancel.pending}
+            >
               Cancel item
             </Button>
           </form>
@@ -147,12 +157,7 @@ export function CancelBookingControl({
   return (
     <form {...formProps} className="grid justify-items-end gap-1.5">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Button
-        type="submit"
-        variant="secondary"
-        disabled={pending}
-        className="h-9"
-      >
+      <Button type="submit" variant="secondary" pending={pending}>
         <XIcon className="size-4" />
         {pending ? "Cancelling…" : "Cancel booking"}
       </Button>

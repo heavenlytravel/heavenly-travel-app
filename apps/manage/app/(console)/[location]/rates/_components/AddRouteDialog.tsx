@@ -3,11 +3,11 @@
 import { parseRinggit } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { Fragment, useState, useTransition, type FormEvent } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import {
   CELL_BAD,
   CELL_INPUT,
@@ -215,7 +215,7 @@ function RouteForm({
       <div className="grid gap-2">
         <div className="overflow-hidden rounded-lg border border-card-edge">
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="bg-shade text-[11px] tracking-[0.05em] text-muted uppercase">
+            <thead className="bg-shade text-caps text-muted">
               <tr>
                 <th scope="col" className="px-3 py-2 text-left font-semibold">
                   Class
@@ -294,14 +294,14 @@ function RouteForm({
       </div>
 
       <FormError error={error} />
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel} disabled={pending}>
+      <DialogActions>
+        <Button variant="secondary" onClick={onCancel} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || !toId}>
+        <Button type="submit" disabled={!toId} pending={pending}>
           {pending ? "Adding…" : "Add route"}
         </Button>
-      </div>
+      </DialogActions>
     </form>
   );
 }

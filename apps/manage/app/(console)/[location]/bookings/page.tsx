@@ -18,7 +18,8 @@ import Link from "next/link";
 import { Card } from "@repo/console/Card";
 import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
-import { Bone, Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 import { BOOKING_TONES } from "@repo/console/StatusBadges";
 import { PickupDateFilter } from "../../../_components/BookingFilters";
 import { BookingsTable } from "../../../_components/BookingsTable";
@@ -35,6 +36,7 @@ import {
   type ScopeSlug,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
+import { ListToolbar } from "../../../_components/ListToolbar";
 
 /** How many bookings a page of the list holds. */
 const PAGE_SIZE = 50;
@@ -103,7 +105,7 @@ export default async function BookingsPage({
         {() => statusTiles(scope.slug, filter, where)}
       </Streamed>
       <Card flush>
-        <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-5 py-4">
+        <ListToolbar>
           <SearchBox
             href={bookingsHref(scope.slug, { status, date })}
             value={q ?? ""}
@@ -114,7 +116,7 @@ export default async function BookingsPage({
             href={bookingsHref(scope.slug, { status, q })}
             value={date ?? ""}
           />
-        </div>
+        </ListToolbar>
         {/* Keyed by the filters, so another filter shows the skeleton, not
             the rows of the one before. */}
         <Streamed

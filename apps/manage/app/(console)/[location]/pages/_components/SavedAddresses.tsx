@@ -11,6 +11,8 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "../../../../_lib/action-state";
 import { RowControls, movedRow } from "./RowControls";
 import type { AddressArea } from "./SavedAddressPicker";
@@ -150,8 +152,7 @@ export function SavedAddresses({
           >
             <Button
               variant="ghost"
-              size="sm"
-              className="w-8 px-0"
+              size="icon-sm"
               aria-label="Add an address"
               disabled={full || saving}
               onClick={() =>
@@ -170,15 +171,15 @@ export function SavedAddresses({
         }
       >
         <span className="inline-flex items-center gap-1.5">
-          Saved addresses
+          Saved Addresses
           <InfoTip text="The places most customers go to here, in this order. The drop-off offers them before anything is typed; typing still searches any exact place. Exact spots only, never an area, each in one of the location's states." />
         </span>
       </CardTitle>
 
       {addresses.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted">
+        <EmptyState>
           None yet. The drop-off then shows the normal search.
-        </p>
+        </EmptyState>
       ) : (
         <ol className="divide-y divide-hairline">
           {addresses.map((address, index) => (
@@ -202,7 +203,7 @@ export function SavedAddresses({
                   </span>
                 ) : null}
                 {address.isStray ? (
-                  <span className="block text-xs text-amber-800">
+                  <span className="block text-xs text-warning">
                     Outside this location’s states. Remove it, or tick its
                     state.
                   </span>
@@ -212,9 +213,8 @@ export function SavedAddresses({
                 <Tooltip content="Rename">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     aria-label={`Rename ${address.name}`}
-                    className="w-8 px-0"
                     disabled={saving}
                     onClick={() =>
                       setEditing({
@@ -249,14 +249,10 @@ export function SavedAddresses({
         </ol>
       )}
 
-      {error ? (
-        <p
-          aria-live="polite"
-          className="rounded-b-card border-t border-hairline bg-shade px-5 py-3 text-sm font-medium text-red-700"
-        >
-          {error}
-        </p>
-      ) : null}
+      <FormError
+        error={error}
+        className="rounded-b-card border-t border-hairline bg-shade px-5 py-3"
+      />
 
       <AddressDialog
         locationId={locationId}

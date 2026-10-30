@@ -18,6 +18,7 @@ import {
   UndoIcon,
 } from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
+import { EmptyRow } from "@repo/console/Table";
 import {
   useEffect,
   useRef,
@@ -138,8 +139,6 @@ function groupsOf(classes: readonly ClassColumn[]) {
 const ZONE_NAME = "block max-w-44 truncate font-medium text-ink";
 
 /** A link in a line of the grid's text: to Coverage, to the classes. */
-const TEXT_LINK = "font-semibold text-brand underline-offset-4 hover:underline";
-
 const byName = (a: string, b: string) =>
   a.localeCompare(b, "en", { sensitivity: "base" });
 
@@ -162,7 +161,7 @@ function SortHeading({
       type="button"
       onClick={onSort}
       className={cx(
-        "group/sort inline-flex items-center gap-1 rounded-sm font-semibold tracking-[0.05em] uppercase hover:text-ink focus-visible:outline-2 focus-visible:outline-brand",
+        "group/sort inline-flex items-center gap-1 rounded-sm font-semibold tracking-caps uppercase hover:text-ink focus-ring",
         align === "right" && "flex-row-reverse",
       )}
     >
@@ -413,7 +412,7 @@ export function RateGrid({
     return (
       <p className="px-5 py-5 text-sm text-muted">
         A route runs between two zones, or within one. Draw the zones on{" "}
-        <Link href={coverageHref(locationSlug)} className={TEXT_LINK}>
+        <Link href={coverageHref(locationSlug)} className="text-link">
           Coverage
         </Link>{" "}
         to put a route on the grid.
@@ -427,7 +426,7 @@ export function RateGrid({
           ? `No ${category.toLowerCase()} class is on sale here. `
           : "Each class on sale is a column of the grid. "}
         Put a class on sale in{" "}
-        <Link href={classesHref(locationSlug)} className={TEXT_LINK}>
+        <Link href={classesHref(locationSlug)} className="text-link">
           Classes
         </Link>{" "}
         to price a route for it.
@@ -801,16 +800,19 @@ export function RateGrid({
                 options={zoneOptions}
                 className="w-full sm:w-64"
               />
-              <label className="flex items-center gap-2 text-sm text-body">
-                <Checkbox
-                  checked={gapsOnly}
-                  onChange={(event) =>
-                    narrowTo(zoneShown, event.target.checked)
-                  }
-                />
-                Only routes with an empty cell ({gaps})
+              {/* The tip beside the label, not in it: its button would join the box's name. */}
+              <span className="flex items-center gap-2 text-sm text-body">
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={gapsOnly}
+                    onChange={(event) =>
+                      narrowTo(zoneShown, event.target.checked)
+                    }
+                  />
+                  Only routes with an empty cell ({gaps})
+                </label>
                 <InfoTip text="A route where a class has no saved price. A row filled in stays until the save." />
-              </label>
+              </span>
               {filtering ? (
                 <p className="text-sm text-muted tabular-nums sm:ml-auto">
                   {shown.length} of {plural(routes.length, "route")} shown
@@ -823,10 +825,11 @@ export function RateGrid({
       <div className="relative">
         <div
           ref={gridRef}
-          className="max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
+          className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline"
         >
           <table className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="sticky top-0 z-2 bg-shade text-[11px] text-muted">
+            {/* Raised in the grid's own stacking (`isolate`), so it stays under the console's top bar. */}
+            <thead className="sticky top-0 z-(--layer-raised) bg-shade text-2xs text-muted">
               {grouped ? (
                 <tr>
                   {leadHeadings}
@@ -837,7 +840,7 @@ export function RateGrid({
                       colSpan={group.span}
                       className="px-1.5 pt-2.5 pb-0 font-semibold"
                     >
-                      <span className="block border-b border-edge pb-1.5 text-center tracking-[0.05em] whitespace-nowrap text-body uppercase">
+                      <span className="block border-b border-edge pb-1.5 text-center tracking-caps whitespace-nowrap text-body uppercase">
                         {group.label}
                       </span>
                     </th>
@@ -870,27 +873,22 @@ export function RateGrid({
             </thead>
             <tbody>
               {shown.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={classes.length + (readOnly ? 2 : 3)}
-                    className="px-5 py-10 text-center text-muted"
-                  >
-                    {routes.length > 0 ? (
-                      <>
-                        No route matches.{" "}
-                        <button
-                          type="button"
-                          onClick={() => narrowTo("", false)}
-                          className={TEXT_LINK}
-                        >
-                          Show every route
-                        </button>
-                      </>
-                    ) : (
-                      "No routes yet, so no one-way trip can be priced here: every trip is priced from the grid."
-                    )}
-                  </td>
-                </tr>
+                <EmptyRow colSpan={classes.length + (readOnly ? 2 : 3)}>
+                  {routes.length > 0 ? (
+                    <>
+                      No route matches.{" "}
+                      <button
+                        type="button"
+                        onClick={() => narrowTo("", false)}
+                        className="text-link"
+                      >
+                        Show every route
+                      </button>
+                    </>
+                  ) : (
+                    "No routes yet, so no one-way trip can be priced here: every trip is priced from the grid."
+                  )}
+                </EmptyRow>
               ) : (
                 shown.map((route, row) => {
                   const [a, b] = shownEndsOf(route);
@@ -908,7 +906,7 @@ export function RateGrid({
                   const isDoomed = doomed.has(routeKey(route));
                   // The row's shade, the same in every cell of it.
                   const shade = isDoomed
-                    ? "bg-red-50/70"
+                    ? "bg-danger-tint/70"
                     : isTicked
                       ? "bg-shade"
                       : "group-hover:bg-hover";
@@ -931,7 +929,7 @@ export function RateGrid({
                                 disabled={pending}
                                 onClick={() => keep(route)}
                                 aria-label={`Keep the route between ${label}`}
-                                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-muted hover:bg-red-100 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+                                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-muted hover:bg-danger-edge/50 hover:text-ink focus-ring"
                               >
                                 <UndoIcon className="size-3.5" />
                               </button>
@@ -1026,12 +1024,15 @@ export function RateGrid({
                           >
                             {readOnly ? (
                               <span
-                                aria-label={`${label}, ${column.name}, ${empty ? emptyMeans.toLowerCase() : "price in RM"}`}
                                 className={cx(
                                   "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
                                   empty && EMPTY_CELL,
                                 )}
                               >
+                                {/* Read out before the price: a label on a plain span is not. */}
+                                <span className="sr-only">
+                                  {`${label}, ${column.name}, ${empty ? emptyMeans.toLowerCase() : "price in RM"} `}
+                                </span>
                                 {values[key]}
                               </span>
                             ) : (
@@ -1101,7 +1102,7 @@ export function RateGrid({
               <CellKey swatch="border-brand bg-brand-tint">
                 Changed, not saved
               </CellKey>
-              <CellKey swatch="border-red-200 bg-red-50">
+              <CellKey swatch="border-danger-edge bg-danger-tint">
                 Deleted on save
               </CellKey>
             </>
@@ -1138,7 +1139,7 @@ export function RateGrid({
               view; on a phone it ends the grid, as a form's button does. */}
           <div
             className={cx(
-              "z-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
+              "z-(--layer-sticky) flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
               dirty
                 ? "bg-navy text-white shadow-band"
                 : "border-t border-hairline bg-white",
@@ -1150,12 +1151,12 @@ export function RateGrid({
                 "min-w-0 text-sm",
                 status.tone === "error"
                   ? dirty
-                    ? "font-semibold text-red-200"
-                    : "text-red-700"
+                    ? "font-semibold text-danger-edge"
+                    : "text-danger"
                   : dirty
                     ? "font-semibold"
                     : status.tone === "done"
-                      ? "text-emerald-700"
+                      ? "text-success"
                       : status.tone === "idle"
                         ? "text-muted"
                         : "text-body",
@@ -1176,7 +1177,8 @@ export function RateGrid({
               ) : null}
               <Button
                 variant={dirty ? "secondary" : "primary"}
-                disabled={pending || !dirty || invalid.size > 0}
+                disabled={!dirty || invalid.size > 0}
+                pending={pending}
                 onClick={save}
               >
                 {pending ? "Saving…" : "Save rates"}

@@ -6,7 +6,9 @@ import { cx } from "@repo/ui/cx";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { CARD_LINK, Card, CardTitle } from "@repo/console/Card";
+import { EmptyState } from "@repo/console/EmptyState";
 import { LocationMark } from "@repo/console/LocationMark";
+import { Notice } from "@repo/ui/notice";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { CoverageMap, type MappedZone } from "./CoverageMap";
@@ -92,11 +94,11 @@ export function CoverageZones({
           }}
         />
       ) : (
-        <p className="m-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <Notice className="m-5">
           The map needs the browser key for Google Maps,
           NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY. A zone that is a district still
           works without it.
-        </p>
+        </Notice>
       )}
     </Card>
   );
@@ -120,9 +122,7 @@ export function CoverageZones({
         {listTitle}
       </CardTitle>
       {groups.length === 0 || (!grouped && zones.length === 0) ? (
-        <p className="px-5 py-8 text-center text-sm text-muted">
-          {emptyMessage}
-        </p>
+        <EmptyState>{emptyMessage}</EmptyState>
       ) : grouped ? (
         groups.map((group) => (
           <section
@@ -143,7 +143,7 @@ export function CoverageZones({
                   {group.location.name}
                 </Link>
                 <LocationStateBadge state={group.location.state} />
-                <span className="text-[12.5px] font-normal text-muted">
+                <span className="text-caption font-normal text-muted">
                   {group.zones.length === 0
                     ? "No zone yet, so no pickup is served"
                     : plural(group.zones.length, "zone")}
@@ -162,7 +162,7 @@ export function CoverageZones({
         rows(zones, "Zones")
       )}
       {foot ? (
-        <p className="border-t border-hairline px-5 py-3 text-[13px] text-muted">
+        <p className="border-t border-hairline px-5 py-3 text-caption text-muted">
           {foot}
         </p>
       ) : null}
@@ -196,7 +196,7 @@ function ZoneRow({
       <span
         aria-hidden="true"
         className={cx(
-          "mt-1 size-3 shrink-0 rounded-[4px] border transition-transform",
+          "mt-1 size-3 shrink-0 rounded-sm border transition-transform",
           lit && "scale-125",
         )}
         style={{
@@ -215,15 +215,15 @@ function ZoneRow({
         ) : (
           <span className="text-sm font-semibold text-ink">{zone.name}</span>
         )}
-        <span className="block text-[12.5px] text-muted">{zone.drawnAs}</span>
+        <span className="block text-caption text-muted">{zone.drawnAs}</span>
         {zone.pricedFrom.length > 0 ? (
-          <span className="block text-[12.5px] text-muted">
+          <span className="block text-caption text-muted">
             {pricedFromSentence(zone.pricedFrom)}
           </span>
         ) : null}
       </div>
       <div className="grid shrink-0 justify-items-end gap-0.5 text-right">
-        <span className="text-[12.5px] font-semibold whitespace-nowrap text-body tabular-nums">
+        <span className="text-caption font-semibold whitespace-nowrap text-body tabular-nums">
           {zone.routes === 0
             ? "No priced route"
             : plural(zone.routes, "priced route")}

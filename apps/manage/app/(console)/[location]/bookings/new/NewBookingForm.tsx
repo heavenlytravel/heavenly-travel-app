@@ -227,7 +227,7 @@ export function NewBookingForm({
             <button
               type="button"
               onClick={addTrip}
-              className="flex h-12 items-center justify-center gap-2 rounded-card border border-dashed border-slot text-sm font-semibold text-brand transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-brand"
+              className="flex h-12 items-center justify-center gap-2 rounded-card border border-dashed border-slot text-sm font-semibold text-brand transition-colors hover:bg-white focus-ring"
             >
               <PlusIcon className="size-4" />
               Add another trip
@@ -315,7 +315,8 @@ export function NewBookingForm({
             submit={
               <Button
                 type="submit"
-                disabled={create.pending || missing !== null}
+                disabled={missing !== null}
+                pending={create.pending}
               >
                 {create.pending
                   ? "Creating…"

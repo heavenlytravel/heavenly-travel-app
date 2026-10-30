@@ -9,7 +9,7 @@ import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { errorOf, type ActionState } from "../_lib/action-state";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 
 /**
  * What a delete takes, a line each, as the server worked it out
@@ -128,21 +128,11 @@ export function DeleteButton({
 
   const button = (
     <Button
-      variant={
-        look === "card" || look === "bar"
-          ? "danger"
-          : look === "row"
-            ? "ghost"
-            : "secondary"
-      }
+      variant={look === "row" ? "ghost-danger" : "danger"}
       size={look === "header" ? undefined : "sm"}
-      disabled={disabled || pending}
+      disabled={disabled}
+      pending={pending}
       aria-label={ariaLabel}
-      className={
-        look === "card" || look === "bar"
-          ? undefined
-          : "text-red-700 hover:bg-red-50 hover:text-red-800"
-      }
       onClick={remove}
     >
       {pending ? pendingLabel : label}

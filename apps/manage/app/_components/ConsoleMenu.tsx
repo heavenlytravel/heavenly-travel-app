@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { StepMark } from "@repo/console/StepMark";
 import { cx } from "@repo/ui/cx";
-import { ChevronDownIcon, ChevronRightIcon } from "@repo/ui/icons";
+import { ChevronRightIcon } from "@repo/ui/icons";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -30,8 +30,8 @@ import {
 /**
  * The one menu, in the navy sidebar: its groups under their names, each
  * section a row in the same place whatever the location. A section of one
- * page is a link. A section of several opens in place under its row, one
- * at a time: opening another closes the one that was open. The section of
+ * page is a link. A section of several slides open in place under its
+ * row, one at a time: opening another shuts the one that was open. The section of
  * the page on screen opens as its page loads. The page on screen is a
  * bright white pill; its open section is lit softly. Counts stand only
  * where something waits. Collapsed to a rail, the open section's pages
@@ -148,7 +148,6 @@ function SectionRows({
 }) {
   const collapsed = useSidebarCollapsed();
   const Icon = MENU_ICONS[section.icon];
-  const Chevron = open ? ChevronDownIcon : ChevronRightIcon;
   return (
     <>
       <SidebarMenuItem>
@@ -168,13 +167,18 @@ function SectionRows({
               {open ? null : (
                 <RowEnd count={section.count} mark={section.mark} />
               )}
-              <Chevron className="text-azure-light/80" />
+              <ChevronRightIcon
+                className={cx(
+                  "text-azure-light/80 transition-transform duration-200 motion-reduce:transition-none",
+                  open && "rotate-90",
+                )}
+              />
             </>
           )}
         </SidebarMenuButton>
       </SidebarMenuItem>
-      {open && !collapsed ? (
-        <SidebarMenuSub label={section.label}>
+      {collapsed ? null : (
+        <SidebarMenuSub label={section.label} open={open}>
           {section.pages.map((page) => (
             <PageRow
               key={page.key}
@@ -184,7 +188,7 @@ function SectionRows({
             />
           ))}
         </SidebarMenuSub>
-      ) : null}
+      )}
     </>
   );
 }
@@ -222,8 +226,8 @@ function Count({ count, current }: { count: MenuCount; current: boolean }) {
       <span
         aria-hidden="true"
         className={cx(
-          "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[11.5px] font-semibold tabular-nums",
-          current ? "bg-brand text-white" : "bg-amber-400 text-ink",
+          "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-2xs font-semibold tabular-nums",
+          current ? "bg-brand text-white" : "bg-warning-dot text-ink",
         )}
       >
         {count.value}

@@ -4,6 +4,7 @@ import { SURFACE } from "@repo/console/Card";
 import { StepMark } from "@repo/console/StepMark";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
+import { scrollBehavior } from "@repo/ui/motion";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
@@ -45,7 +46,7 @@ export function Step({
   useEffect(() => {
     if (open && !wasOpen.current) {
       const node = card.current;
-      node?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      node?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
       node
         ?.querySelector<HTMLElement>(
           "input:not([type=hidden]), button, select, textarea",
@@ -56,10 +57,10 @@ export function Step({
   }, [open]);
 
   const name = (
-    <span className="text-base font-bold tracking-[-0.01em] text-ink">
+    <span className="text-base font-bold tracking-title text-ink">
       {title}
       {optional ? (
-        <span className="ml-2 text-[13px] font-normal text-muted">
+        <span className="ml-2 text-caption font-normal text-muted">
           Optional
         </span>
       ) : null}
@@ -84,7 +85,7 @@ export function Step({
             <span className="grid min-w-0 gap-0.5">
               {name}
               {hint ? (
-                <span className="text-[13px] font-normal text-muted">
+                <span className="text-caption font-normal text-muted">
                   {hint}
                 </span>
               ) : null}
@@ -96,12 +97,12 @@ export function Step({
         <button
           type="button"
           onClick={onOpen}
-          className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3.5 rounded-card px-5 py-4 text-left transition-colors hover:bg-hover focus-visible:outline-2 focus-visible:outline-brand"
+          className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3.5 rounded-card px-5 py-4 text-left transition-colors hover:bg-hover focus-ring"
         >
           <StepMark number={number} done={done} className="size-7 text-xs" />
           <span className="grid min-w-0 gap-0.5">
             {name}
-            <span className="truncate text-[13px] text-muted">{summary}</span>
+            <span className="truncate text-caption text-muted">{summary}</span>
           </span>
           <span className="text-sm font-semibold text-brand">
             {done ? "Edit" : "Open"}

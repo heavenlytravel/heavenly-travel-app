@@ -20,11 +20,9 @@ export function SectionHeader({
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 className="text-lg font-bold tracking-[-0.01em] text-ink">
-          {title}
-        </h2>
+        <h2 className="text-lg font-bold tracking-title text-ink">{title}</h2>
         {badge}
-        {meta ? <span className="text-[13px] text-muted">{meta}</span> : null}
+        {meta ? <span className="text-caption text-muted">{meta}</span> : null}
       </div>
       {action ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">

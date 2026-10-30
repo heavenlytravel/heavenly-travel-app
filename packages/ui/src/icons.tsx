@@ -617,20 +617,171 @@ export function MessageCircleIcon(props: IconProps) {
   );
 }
 
-export function MailIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <rect width="20" height="16" x="2" y="4" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-    </Icon>
-  );
-}
-
 export function UserRoundIcon(props: IconProps) {
   return (
     <Icon {...props}>
       <circle cx="12" cy="8" r="5" />
       <path d="M20 21a8 8 0 0 0-16 0" />
+    </Icon>
+  );
+}
+
+/*
+ * The customer site's own drawings, not Lucide's: its product marks, its
+ * account menu, and its footer's lock and social networks. Same 1em box;
+ * the ones drawn on a 16-unit grid or with their own stroke say so.
+ */
+
+/** A car seen from the front, the site's mark for a car with driver. */
+export function CarPlainIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11" />
+      <rect x="3" y="11" width="18" height="6" rx="2" />
+      <path d="M6.5 17v1.5M17.5 17v1.5" />
+    </Icon>
+  );
+}
+
+/** A coach seen from the front, the site's mark for coach charter. */
+export function CoachIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="4" width="16" height="13" rx="2.5" />
+      <path d="M4 11h16M9 4v7M15 4v7M7.5 17v2M16.5 17v2" />
+    </Icon>
+  );
+}
+
+export function TicketIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z" />
+      <path d="M14 6v2.5M14 11v2M14 15.5V18" />
+    </Icon>
+  );
+}
+
+/** A bed with one headboard, the site's mark for a hotel. */
+export function BedPlainIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7M3 15h18M3 18v1.5M21 18v1.5" />
+      <path d="M6.5 9V7.5A1.5 1.5 0 0 1 8 6h8a1.5 1.5 0 0 1 1.5 1.5V9" />
+    </Icon>
+  );
+}
+
+export function KeyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M11 12l8.5-8.5M16 7l2.5 2.5M13.5 9.5l2 2" />
+    </Icon>
+  );
+}
+
+export function SuitcaseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="4" y="8" width="16" height="12" rx="2" />
+      <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M4 13h16" />
+    </Icon>
+  );
+}
+
+/** Lines of a list, on a 16-unit grid. */
+export function ListIcon(props: IconProps) {
+  return (
+    <Icon
+      viewBox="0 0 16 16"
+      strokeWidth={1.6}
+      strokeLinejoin="miter"
+      {...props}
+    >
+      <path d="M2.5 4h11M2.5 8h11M2.5 12h7" />
+    </Icon>
+  );
+}
+
+/** A head and shoulders, on a 16-unit grid. */
+export function PersonIcon(props: IconProps) {
+  return (
+    <Icon
+      viewBox="0 0 16 16"
+      strokeWidth={1.6}
+      strokeLinejoin="miter"
+      {...props}
+    >
+      <circle cx="8" cy="5.5" r="3" />
+      <path d="M2.5 14a5.5 5.5 0 0 1 11 0" />
+    </Icon>
+  );
+}
+
+/** A padlock with square ends: secure payment. */
+export function LockIcon(props: IconProps) {
+  return (
+    <Icon strokeLinecap="butt" strokeLinejoin="miter" {...props}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </Icon>
+  );
+}
+
+export function FacebookIcon(props: IconProps) {
+  return (
+    <Icon fill="currentColor" stroke="none" {...props}>
+      <path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H7.9v3h2.6V21z" />
+    </Icon>
+  );
+}
+
+export function InstagramIcon(props: IconProps) {
+  return (
+    <Icon strokeWidth={1.8} {...props}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+/** The mark of X, the network; `XIcon` is the close cross. */
+export function XLogoIcon(props: IconProps) {
+  return (
+    <Icon fill="currentColor" stroke="none" {...props}>
+      <path d="M4.5 4h4.2l10.8 16h-4.2z" />
+      <path
+        d="M19 4.2 5 19.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </Icon>
+  );
+}
+
+export function TikTokIcon(props: IconProps) {
+  return (
+    <Icon fill="currentColor" stroke="none" {...props}>
+      <path d="M14.5 3h2.7c.3 2 1.6 3.5 3.8 3.7v2.8c-1.4 0-2.7-.4-3.8-1.1v6.3a5.6 5.6 0 1 1-5.6-5.6h.6v2.9a2.8 2.8 0 1 0 2.3 2.7z" />
+    </Icon>
+  );
+}
+
+export function YouTubeIcon(props: IconProps) {
+  return (
+    <Icon fill="currentColor" stroke="none" {...props}>
+      <path d="M21.6 7.2c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8c.2.9.9 1.6 1.8 1.8 1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z" />
+    </Icon>
+  );
+}
+
+export function LinkedInIcon(props: IconProps) {
+  return (
+    <Icon fill="currentColor" stroke="none" {...props}>
+      <path d="M4.5 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zm6 0h2.9v1.6h.1c.4-.8 1.4-1.8 3-1.8 3.2 0 3.8 2.1 3.8 4.8V21h-3v-6.6c0-1.6 0-3.6-2.2-3.6s-2.6 1.7-2.6 3.5V21H9z" />
     </Icon>
   );
 }

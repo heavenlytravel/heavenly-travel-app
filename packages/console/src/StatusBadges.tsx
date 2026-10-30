@@ -14,7 +14,8 @@ import {
 import { Badge, type BadgeTone } from "@repo/ui/badge";
 
 /**
- * The status chips, one colour per status, the same on every screen:
+ * The status chips, one colour per status, the same on every screen of
+ * both apps (the customer site shows a booking's status with these too):
  * received waits (amber), confirmed is agreed (brand blue), a driver
  * assigned is in hand (navy), completed is done (green), and cancelled has
  * stepped aside (grey). Red is never a status: it is kept for a real

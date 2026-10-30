@@ -58,7 +58,7 @@ export function AppSidebar({
           <ScopePicker
             locations={locations}
             permissions={permissions}
-            className="w-full"
+            full
           />
         </SidebarHeader>
         <Brand onLink={closeOnLink} />

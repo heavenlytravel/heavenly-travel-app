@@ -40,12 +40,12 @@ export type PickerLocation = {
 export function ScopePicker({
   locations,
   permissions,
-  className,
+  full = false,
 }: {
   locations: readonly PickerLocation[];
   permissions: readonly Permission[];
-  /** On its button: `w-full` atop the menu's panel on a phone. */
-  className?: string;
+  /** As wide as where it stands: atop the menu's panel on a phone. */
+  full?: boolean;
 }) {
   const pathname = usePathname();
   const search = useSearchParams().toString();
@@ -66,14 +66,16 @@ export function ScopePicker({
   return (
     <Menu
       label="Locations"
-      className="w-72"
+      // The list is as wide as the button, which keeps one width whatever
+      // the location, so neither jumps.
+      className="w-(--radix-dropdown-menu-trigger-width)"
       trigger={
         <button
           type="button"
           // Named by its own words, "Location" and the one shown, as it reads.
           className={cx(
-            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border border-edge bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring md:min-w-56",
-            className,
+            "flex h-11 min-w-0 shrink items-center gap-2.5 rounded-control border border-edge bg-white pr-3 pl-2 text-left shadow-control transition-colors focus-ring",
+            full ? "w-full" : "w-64",
           )}
         >
           <ScopeMark location={current} />

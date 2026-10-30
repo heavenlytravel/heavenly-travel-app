@@ -1,23 +1,27 @@
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { requireAdmin } from "../../_lib/access";
-import { dashboardHref } from "../../_lib/routes";
+import { getPermissions, requireAdmin } from "../../_lib/access";
+import { homeHref } from "../../_lib/console-map";
 import { StopScreen } from "../../_components/StopScreen";
 
 /**
  * Route: /restricted. Where `requireAdmin` sends an admin whose teams do
- * not reach a screen. /no-access is for a person who is not staff at all.
+ * not reach a screen, with the way back to where it starts. /no-access
+ * is for a person who is not staff at all.
  */
 export default async function RestrictedPage() {
-  await requireAdmin("dashboard.view");
+  await requireAdmin("locations.view");
+  const home = homeHref({ scope: null, permissions: await getPermissions() });
 
   return (
     <StopScreen
       title="This Screen Belongs to Another Team"
       action={
-        <Button asChild variant="secondary">
-          <Link href={dashboardHref(null)}>Back to the dashboard</Link>
-        </Button>
+        home ? (
+          <Button asChild variant="secondary">
+            <Link href={home}>Back to your start page</Link>
+          </Button>
+        ) : null
       }
     >
       Your teams do not reach it. A SUPER admin sets the teams of each admin,

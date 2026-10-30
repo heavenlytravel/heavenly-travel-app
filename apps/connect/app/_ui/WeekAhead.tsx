@@ -39,7 +39,7 @@ export function WeekAhead({
     <Panel className="hidden gap-4 p-5 lg:grid">
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-bold text-ink">Next 7 days</h2>
-        <span className="text-xs font-semibold text-slate-500">
+        <span className="text-xs font-semibold text-muted">
           {total} {total === 1 ? "trip" : "trips"}
         </span>
       </div>
@@ -48,12 +48,12 @@ export function WeekAhead({
           <li
             key={d.key}
             className={cx(
-              "grid gap-1 rounded-2xl py-2.5",
-              d.count > 0 ? "bg-brand-tint" : "bg-slate-50",
+              "grid gap-1 rounded-control py-2.5",
+              d.count > 0 ? "bg-brand-tint" : "bg-shade",
               i === 0 && "ring-2 ring-brand",
             )}
           >
-            <span className="text-[0.65rem] font-bold text-slate-400 uppercase">
+            <span className="text-2xs font-bold text-muted uppercase">
               {d.weekday}
             </span>
             <span className="text-sm font-bold text-ink tabular-nums">
@@ -61,7 +61,7 @@ export function WeekAhead({
             </span>
             <span
               className={cx(
-                "mx-auto grid size-5 place-items-center rounded-full text-[0.65rem] font-bold tabular-nums",
+                "mx-auto grid size-5 place-items-center rounded-full text-2xs font-bold tabular-nums",
                 d.count > 0 ? "bg-brand text-white" : "text-transparent",
               )}
             >

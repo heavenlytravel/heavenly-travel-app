@@ -3,6 +3,7 @@
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";
+export * from "./activity-areas";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";
@@ -43,6 +44,7 @@ export * from "./console-paths";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";
+export * from "./connect-page";
 export * from "./footer-content";
 export * from "./location-view";
 export * from "./location-search";

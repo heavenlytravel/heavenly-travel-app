@@ -122,7 +122,7 @@ async function editorDetails(id: string, ref: LocationPageRef) {
         }
         title={pageTitleOf(ref, name)}
         publishes={publishes}
-        allHref={activityHref(location.slug, { kind: "pages" })}
+        allHref={activityHref(location.slug, { area: "pages" })}
         allLabel="All changes to this location's pages"
       />
       <LocationPageEditor

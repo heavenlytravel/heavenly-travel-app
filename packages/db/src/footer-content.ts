@@ -15,9 +15,9 @@ import { isUploadUrl, uploadKeyOf } from "./images";
 import { isValidPhone, normalizePhone } from "./phone";
 import {
   SITE_PAGES_PATH,
-  isSitePageKey,
+  isWebsitePageKey,
   sitePagePath,
-  type SitePageKey,
+  type WebsitePageKey,
 } from "./site-page-input";
 
 /**
@@ -50,7 +50,7 @@ export const FOOTER_LINK_KIND_LABELS: Record<FooterLinkKind, string> = {
 };
 
 export type FooterLinkTarget =
-  | { kind: "page"; page: SitePageKey }
+  | { kind: "page"; page: WebsitePageKey }
   | { kind: "location"; slug: string }
   | { kind: "url"; url: string };
 
@@ -242,7 +242,7 @@ function listOf(value: unknown): unknown[] {
 
 function targetOf(value: unknown): FooterLinkTarget {
   const raw = recordOf(value);
-  if (raw.kind === "page" && isSitePageKey(raw.page)) {
+  if (raw.kind === "page" && isWebsitePageKey(raw.page)) {
     return { kind: "page", page: raw.page };
   }
   if (raw.kind === "location") {
@@ -316,7 +316,7 @@ export function sameFooterContent(a: FooterContent, b: FooterContent) {
   return samePageContent(a, b);
 }
 
-const pageLink = (page: SitePageKey, label: string): FooterLink => ({
+const pageLink = (page: WebsitePageKey, label: string): FooterLink => ({
   label,
   target: { kind: "page", page },
 });
@@ -466,7 +466,7 @@ export function footerLinksOf(content: FooterContent): FooterLink[] {
 export function visibleFooterOf(
   content: FooterContent,
   shown: {
-    pages: ReadonlySet<SitePageKey>;
+    pages: ReadonlySet<WebsitePageKey>;
     locations: ReadonlySet<string>;
   },
 ): FooterContent {

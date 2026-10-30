@@ -1,9 +1,10 @@
 import { formatDay, type DocumentDue } from "@repo/db";
 import { cx } from "@repo/ui/cx";
-import { ChevronRight, FileWarning, type LucideIcon } from "lucide-react";
+import { ChevronRightIcon } from "@repo/ui/icons";
+import { FileWarning } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { EmptyState, Panel, Pill } from "../_ui/parts";
+import { EmptyState, Panel, Pill, type IconComponent } from "../_ui/parts";
 
 /** One vehicle or driver on a vendor's list. */
 export type FleetItem = {
@@ -31,7 +32,12 @@ export function FleetList({
 }: {
   items: FleetItem[];
   hrefOf: (id: string) => string;
-  empty: { icon: LucideIcon; title: string; text: string; action: ReactNode };
+  empty: {
+    icon: IconComponent;
+    title: string;
+    text: string;
+    action: ReactNode;
+  };
 }) {
   if (items.length === 0) {
     return (
@@ -42,16 +48,17 @@ export function FleetList({
   }
   return (
     // One panel of rows on a phone; a grid of cards on a large screen.
-    <Panel className="connect-rise overflow-hidden lg:overflow-visible lg:rounded-none lg:bg-transparent lg:shadow-none lg:ring-0">
-      <ul className="divide-y divide-slate-100 lg:grid lg:grid-cols-2 lg:gap-4 lg:divide-y-0 xl:grid-cols-3">
+    <Panel className="connect-rise overflow-hidden lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none">
+      <ul className="divide-y divide-hairline lg:grid lg:grid-cols-2 lg:gap-4 lg:divide-y-0 xl:grid-cols-3">
         {items.map((item) => (
+          // On a large screen each is a console tile of its own.
           <li
             key={item.id}
-            className="lg:overflow-hidden lg:rounded-3xl lg:bg-white lg:shadow-[0_1px_2px_rgba(0,38,75,0.06),0_12px_32px_-16px_rgba(0,38,75,0.18)] lg:ring-1 lg:ring-slate-900/5 lg:transition-shadow lg:hover:shadow-[0_1px_2px_rgba(0,38,75,0.06),0_18px_40px_-16px_rgba(0,38,75,0.3)]"
+            className="lg:overflow-hidden lg:rounded-card lg:border lg:border-card-edge lg:bg-white lg:shadow-card lg:transition-shadow lg:hover:border-edge lg:hover:shadow-raised"
           >
             <Link
               href={hrefOf(item.id)}
-              className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-slate-50 active:bg-slate-100 sm:px-5 lg:h-full lg:items-start lg:p-5"
+              className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-hover focus-ring-inset active:bg-hairline sm:px-5 lg:h-full lg:items-start lg:rounded-card lg:p-5"
             >
               <span
                 className={cx(
@@ -65,16 +72,16 @@ export function FleetList({
                 <span
                   className={cx(
                     "truncate font-semibold",
-                    item.isActive ? "text-slate-900" : "text-slate-500",
+                    item.isActive ? "text-ink" : "text-muted",
                   )}
                 >
                   {item.title}
                 </span>
-                <span className="line-clamp-2 text-sm text-slate-500">
+                <span className="line-clamp-2 text-sm text-muted">
                   {item.detail}
                 </span>
                 {item.flag ? (
-                  <span className="text-xs font-semibold text-amber-700">
+                  <span className="text-xs font-semibold text-warning">
                     {item.flag}
                   </span>
                 ) : null}
@@ -83,8 +90,8 @@ export function FleetList({
                 ) : null}
               </span>
               <span className="flex shrink-0 items-center gap-1">
-                {item.isActive ? null : <Pill tone="slate">Off</Pill>}
-                <ChevronRight aria-hidden className="size-5 text-slate-300" />
+                {item.isActive ? null : <Pill tone="neutral">Off</Pill>}
+                <ChevronRightIcon className="size-5 text-edge" />
               </span>
             </Link>
           </li>
@@ -104,7 +111,7 @@ function Documents({
 }) {
   if (due.length === 0) {
     return anyEntered ? null : (
-      <span className="text-xs text-slate-400">No document dates yet</span>
+      <span className="text-xs text-muted">No document dates yet</span>
     );
   }
   return (
@@ -116,7 +123,7 @@ function Documents({
             key={document.label}
             className={cx(
               "flex items-center gap-1.5 text-xs font-semibold",
-              expired ? "text-red-700" : "text-amber-700",
+              expired ? "text-danger" : "text-warning",
             )}
           >
             <FileWarning aria-hidden className="size-3.5 shrink-0" />

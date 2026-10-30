@@ -34,12 +34,12 @@ export {
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {
+  checkMediaDelete,
   deletedMediaRefusal,
   listMediaUses,
   logMediaDeleted,
-  releaseMedia,
 } from "./media";
-export type { DeletedMedia, MediaReleased, StoredMedia } from "./media";
+export type { DeletedMedia, StoredMedia } from "./media";
 export {
   listLocationOverviews,
   getLocationOverview,
@@ -354,11 +354,14 @@ export type {
 export { listBookingNotes, addBookingNote } from "./booking-notes";
 export type { BookingNoteEntry } from "./booking-notes";
 export { findUserByEmail, listUsers } from "./users";
-export { createUser } from "./accounts";
+export { listVendorOpenings } from "./vendor-openings";
+export type { VendorOpening } from "./vendor-openings";
+export { addStaff, createUser, keepApplicantProfile } from "./accounts";
 export type { ListedUser } from "./users";
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";
+export * from "./activity-areas";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";
@@ -396,6 +399,7 @@ export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";
+export * from "./connect-page";
 export * from "./footer-content";
 export * from "./location-view";
 export * from "./location-search";

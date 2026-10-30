@@ -1,0 +1,35 @@
+{
+  "name": "@repo/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.tsx",
+    "./auth-errors": "./src/auth-errors.ts",
+    "./redirect": "./src/redirect.ts",
+    "./account-paths": "./src/account-paths.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --max-warnings 0"
+  },
+  "dependencies": {
+    "@repo/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@clerk/nextjs": "7.9.4",
+    "next": "16.3.1",
+    "react": "19.2.8"
+  },
+  "devDependencies": {
+    "@clerk/nextjs": "7.9.4",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "eslint": "10.8.1",
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "typescript": "7.0.2"
+  }
+}

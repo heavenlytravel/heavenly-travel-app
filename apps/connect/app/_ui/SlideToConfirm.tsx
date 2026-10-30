@@ -74,8 +74,8 @@ export function SlideToConfirm({
       <div
         ref={track}
         className={cx(
-          "relative h-16 overflow-hidden rounded-[1.25rem] shadow-[0_12px_28px_-10px_rgba(4,107,210,0.75)] select-none",
-          sent ? "bg-emerald-600" : "bg-brand",
+          "relative h-16 overflow-hidden rounded-card shadow-raised select-none",
+          sent ? "bg-success" : "bg-brand",
         )}
       >
         <span
@@ -107,7 +107,7 @@ export function SlideToConfirm({
           onClick={(event) => {
             if (event.detail === 0 && !sent) confirm();
           }}
-          className="absolute top-1 left-1 grid size-14 cursor-grab touch-none place-items-center rounded-2xl bg-white text-brand shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:cursor-grabbing"
+          className="absolute top-1 left-1 grid size-14 cursor-grab touch-none place-items-center rounded-control bg-white text-brand shadow-control focus-ring [--focus-color:white] active:cursor-grabbing"
           style={{
             transform: `translateX(${x}px)`,
             transition: dragging ? "none" : "transform 0.25s ease-out",
@@ -116,7 +116,7 @@ export function SlideToConfirm({
           {sent ? (
             <Check
               aria-hidden
-              className="size-6 text-emerald-600"
+              className="size-6 text-success"
               strokeWidth={3}
             />
           ) : (
@@ -125,7 +125,7 @@ export function SlideToConfirm({
         </button>
       </div>
       {hint ? (
-        <p className="text-center text-xs font-medium text-slate-500">{hint}</p>
+        <p className="text-center text-xs font-medium text-muted">{hint}</p>
       ) : null}
     </div>
   );

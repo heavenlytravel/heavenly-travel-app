@@ -7,11 +7,11 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "HT Connect",
     description:
       "Jobs and trip reports for Heavenly Travel's vendors and drivers",
-    start_url: "/",
+    start_url: "/~",
     display: "standalone",
-    // The brand's mist (--mist) behind the splash, its ink (--ink) for the bar.
+    // The brand's mist (--mist) behind the splash, its navy (--navy) for the bar.
     background_color: "#f0f5fa",
-    theme_color: "#00264b",
+    theme_color: "#003876",
     icons: [{ src: "/icon.png", sizes: "any", type: "image/png" }],
   };
 }

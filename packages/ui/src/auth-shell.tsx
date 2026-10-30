@@ -9,12 +9,11 @@ const TONES = {
 } as const;
 
 /**
- * The page around a sign-in or sign-up form, shared by both apps. From `lg`
+ * The page around a sign-in or sign-up form, shared by the three apps. From `lg`
  * up an optional `aside` (a photo panel) takes the left half and the form the
  * right; below that only the form column shows. Above the form, centred, sit
  * the brand and an eyebrow line; a footer sits at the bottom. The form itself
- * is whatever is passed as children, so swapping Clerk's prebuilt component
- * for a custom one later changes nothing here.
+ * is whatever is passed as children: the screens of @repo/auth.
  */
 export function AuthShell({
   tone = "light",

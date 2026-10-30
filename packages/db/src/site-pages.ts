@@ -2,6 +2,7 @@ import { getActivityEntry, logActivity, type ActivityEntry } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
+import { CONNECT_PAGE_COPY } from "./connect-page";
 import { deletedMediaRefusal } from "./media";
 import {
   PAGE_LOCALE,
@@ -25,6 +26,7 @@ import {
   type PageSaved,
 } from "./page-writes";
 import {
+  CONNECT_PAGE,
   SITE_PAGES,
   checkSitePageUnpublish,
   isSitePageKey,
@@ -44,6 +46,14 @@ import {
 const pageKey = (page: SitePageKey) => ({
   page_locale: { page, locale: PAGE_LOCALE },
 });
+
+/**
+ * A page never written: empty, but for Connect's, which opens on the words
+ * it was built with, so publishing it as it stands is one press.
+ */
+function unwrittenDraftOf(page: SitePageKey, kind: PageKind): PageContent {
+  return page === CONNECT_PAGE ? CONNECT_PAGE_COPY : emptyPageContent(kind);
+}
 
 /** A site page as the Site pages screen lists it. */
 export type SitePageSummary = {
@@ -66,7 +76,9 @@ export async function listSitePageSummaries(): Promise<SitePageSummary[]> {
   return SITE_PAGES.map((page) => {
     const kind = sitePageKindOf(page);
     const row = rows.find((entry) => entry.page === page);
-    const draft = row ? pageContentOf(kind, row.draft) : emptyPageContent(kind);
+    const draft = row
+      ? pageContentOf(kind, row.draft)
+      : unwrittenDraftOf(page, kind);
     const publicCopy = row ? publicCopyOf(kind, row) : null;
     return {
       page,
@@ -136,7 +148,7 @@ export async function getSitePage(page: SitePageKey): Promise<SitePageDetails> {
   return {
     page,
     kind,
-    draft: row ? pageContentOf(kind, row.draft) : emptyPageContent(kind),
+    draft: row ? pageContentOf(kind, row.draft) : unwrittenDraftOf(page, kind),
     published: row ? publicCopyOf(kind, row) : null,
     publishedAt: row?.isOn ? row.publishedAt : null,
     firstPublishedAt: row?.firstPublishedAt ?? null,

@@ -18,7 +18,7 @@ import {
 } from "@repo/console/Table";
 import { Pager, pageOf } from "../../../../_components/Pager";
 import { SearchBox } from "../../../../_components/SearchBox";
-import { requireAdmin } from "../../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   PAGE_PARAM,
   SEARCH_PARAM,
@@ -35,8 +35,8 @@ const PAGE_SIZE = 50;
  * Route: /~/team/customers?q=…&page=2. Every account, made on the site or
  * created here, the newest first, narrowed by a search of names and
  * emails; a customer promoted to staff from their row, an account created
- * on someone's behalf. Console-wide: under a slug it is not found. SUPER
- * only.
+ * on someone's behalf, made staff in the same go by an admin who manages
+ * staff. Console-wide: under a slug it is not found. SUPER only.
  */
 export default async function CustomersPage({
   params,
@@ -47,10 +47,18 @@ export default async function CustomersPage({
   const query = await searchParams;
   const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
   const page = pageOf(query[PAGE_PARAM]);
+  const permissions = await getPermissions();
 
   return (
     <>
-      <PageHeader title="Customers" action={<CreateUserForm />} />
+      <PageHeader
+        title="Customers"
+        action={
+          <CreateUserForm
+            mayMakeStaff={permissions.includes("admins.manage")}
+          />
+        }
+      />
       <Streamed fallback={<TableSkeleton columns={5} rows={8} />}>
         {() => customersList({ q, page })}
       </Streamed>

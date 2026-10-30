@@ -90,6 +90,11 @@ const TAGLINE_FIELD: Partial<
     placeholder: "Travel",
     hint: "The word over the headline, in the handwriting type. Optional.",
   },
+  connect: {
+    label: "Kicker",
+    placeholder: "For car-with-driver and coach companies",
+    hint: "The short line over the headline: who the page speaks to. Optional.",
+  },
 };
 
 /**
@@ -454,7 +459,9 @@ export function PageEditor({
                     ? "The top of the post. Its title, summary and cover are also its card on the blog."
                     : kind === "document"
                       ? "The top of the page. The image is optional."
-                      : "The top of the page. Its image is also what a shared link shows, unless a share image is set under SEO."
+                      : kind === "connect"
+                        ? "The top of the page. Without an image it shows Connect's offer card in a phone. The buttons to register and sign in are fixed."
+                        : "The top of the page. Its image is also what a shared link shows, unless a share image is set under SEO."
               }
             >
               <div className="grid gap-4">
@@ -556,7 +563,11 @@ export function PageEditor({
               <Part
                 id={partId("intro")}
                 title="Intro"
-                hint={`Plain paragraphs. Start a new line for a new paragraph.${rule.intro === "optional" ? " Optional." : ""}`}
+                hint={
+                  kind === "connect"
+                    ? "Who Connect is for, under “A fleet of forty, or one good car”. Plain paragraphs. Start a new line for a new paragraph."
+                    : `Plain paragraphs. Start a new line for a new paragraph.${rule.intro === "optional" ? " Optional." : ""}`
+                }
               >
                 <Field
                   label={
@@ -590,7 +601,11 @@ export function PageEditor({
               <Part
                 id={partId("body")}
                 title="Text"
-                hint="Written in Markdown, with a live preview. ## is a section heading and ### a smaller one; the title above is the page's only top heading. Import a .md file to fill the title, the summary and the meta description too. Every image is uploaded here, with its alt text."
+                hint={
+                  kind === "connect"
+                    ? "Written in Markdown. Each ## heading starts a card, side by side on a computer: “Have these at hand”, “From us”, “From you”. A list under it reads as the card's points."
+                    : "Written in Markdown, with a live preview. ## is a section heading and ### a smaller one; the title above is the page's only top heading. Import a .md file to fill the title, the summary and the meta description too. Every image is uploaded here, with its alt text."
+                }
               >
                 <MarkdownField
                   value={content.body}

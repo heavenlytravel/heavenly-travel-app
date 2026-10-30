@@ -81,6 +81,6 @@ export function shellMember(member: MemberAccess | null) {
 export async function requireMember(): Promise<MemberAccess> {
   const access = await requireSignedIn();
   const member = access.status === "ok" ? memberOf(access) : null;
-  if (!member) redirect("/");
+  if (!member) redirect("/~");
   return member;
 }

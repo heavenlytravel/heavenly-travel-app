@@ -5,8 +5,9 @@ import type { OfferRole, VendorOfferView } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { CarFront, Clock, UserRound } from "lucide-react";
-import { buttonClass } from "../_ui/button";
+import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
+import { CarFrontIcon, ClockIcon, UserRoundIcon } from "@repo/ui/icons";
 import { Countdown } from "../_ui/Countdown";
 import { Avatar, Pill, Plate } from "../_ui/parts";
 import { answerVendorOfferAction, nameRecordAction } from "../vendor-actions";
@@ -46,10 +47,10 @@ export function VendorOfferCard({
             {offer.ownDriving ? <Pill tone="brand">You drive</Pill> : null}
           </span>
           <span
-            className="flex items-center gap-1 text-xs font-semibold text-amber-800"
+            className="flex items-center gap-1 text-xs font-semibold text-warning"
             title={formatLocalDateTime(offer.respondBy)}
           >
-            <Clock aria-hidden className="size-3.5" />
+            <ClockIcon className="size-3.5" />
             Answer <Countdown at={offer.respondBy} />
           </span>
         </>
@@ -57,14 +58,12 @@ export function VendorOfferCard({
     >
       <div className="flex items-end justify-between gap-3">
         <div className="grid gap-1">
-          <span className="text-xs font-bold tracking-[0.12em] text-slate-500 uppercase">
-            We pay you
-          </span>
-          <span className="text-4xl font-extrabold tracking-tight text-ink tabular-nums">
+          <span className="text-caps font-semibold text-muted">We pay you</span>
+          <span className="font-serif text-4xl leading-none text-ink tabular-nums">
             {formatMyr(total)}
           </span>
         </div>
-        <span className="pb-1 text-xs font-semibold text-slate-400 tabular-nums">
+        <span className="pb-1 text-xs font-semibold text-muted tabular-nums">
           {offer.reference}
         </span>
       </div>
@@ -73,19 +72,16 @@ export function VendorOfferCard({
         now={now}
         extra={(trip) =>
           offer.trips.length > 1 || offer.roles.length > 1 ? (
-            <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex flex-wrap gap-2">
               {offer.roles.map((role) => {
                 const cost = role.costs.find(
                   (c) => c.position === trip.position,
                 );
                 return (
-                  <span
-                    key={role.role}
-                    className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-800 tabular-nums"
-                  >
+                  <Badge key={role.role} tone="green" className="tabular-nums">
                     {PART_ROLE_LABELS[role.role]}{" "}
                     {formatMyr(cost?.costSen ?? 0)}
-                  </span>
+                  </Badge>
                 );
               })}
             </div>
@@ -111,12 +107,12 @@ export function VendorOfferCard({
 
 /** What the offer asks of the vendor for one role: named already, or theirs to choose. */
 function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
-  const Icon = role.role === "vehicle" ? CarFront : UserRound;
+  const Icon = role.role === "vehicle" ? CarFrontIcon : UserRoundIcon;
   return (
-    <div className="grid gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+    <div className="grid gap-3 rounded-card border border-card-edge bg-shade p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-sm font-bold text-ink">
-          <Icon aria-hidden className="size-4 text-slate-500" />
+          <Icon className="size-4 text-muted" />
           {PART_ROLE_LABELS[role.role]}
         </span>
         {role.named ? (
@@ -144,7 +140,7 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
   });
   if (role.choices.length === 0) {
     return (
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         You have no {role.role} in service yet. Add one in Fleet, or decline.
       </p>
     );
@@ -170,12 +166,12 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
                 disabled={blocked}
                 className="peer sr-only"
               />
-              <span className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 ring-1 ring-slate-200 transition peer-checked:ring-2 peer-checked:ring-brand peer-focus-visible:outline-2 peer-focus-visible:outline-azure peer-disabled:opacity-55">
+              <span className="flex items-center gap-3 rounded-control border border-edge bg-white px-3 py-2.5 transition-colors peer-checked:border-brand peer-checked:ring-1 peer-checked:ring-brand peer-focus-visible:outline-(length:--ring-width) peer-focus-visible:outline-offset-(length:--ring-offset) peer-focus-visible:outline-ring peer-disabled:opacity-55">
                 <span className="grid min-w-0 flex-1 gap-0.5">
-                  <span className="truncate text-sm font-semibold text-slate-900">
+                  <span className="truncate text-sm font-semibold text-ink">
                     {choice.name}
                   </span>
-                  <span className="truncate text-xs text-slate-500">
+                  <span className="truncate text-xs text-muted">
                     {blocked
                       ? choice.reasons.join(", ")
                       : [choice.locationName, ...choice.warnings].join(" · ")}
@@ -183,20 +179,16 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
                 </span>
                 <span
                   aria-hidden
-                  className="size-5 shrink-0 rounded-full ring-2 ring-slate-300 ring-inset [input:checked+span_&]:ring-[6px] [input:checked+span_&]:ring-brand"
+                  className="size-5 shrink-0 rounded-full ring-2 ring-edge-strong ring-inset [input:checked+span_&]:ring-[6px] [input:checked+span_&]:ring-brand"
                 />
               </span>
             </label>
           );
         })}
       </fieldset>
-      <button
-        type="submit"
-        className={buttonClass({ variant: "dark" })}
-        disabled={pending}
-      >
+      <Button type="submit" variant="secondary" pending={pending}>
         {pending ? "Saving…" : `Choose this ${role.role}`}
-      </button>
+      </Button>
       <FormError error={error} />
     </form>
   );

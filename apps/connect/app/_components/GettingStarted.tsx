@@ -1,5 +1,5 @@
 import { cx } from "@repo/ui/cx";
-import { Check, ChevronRight } from "lucide-react";
+import { CheckIcon, ChevronRightIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { Panel } from "../_ui/parts";
 
@@ -26,19 +26,19 @@ export function GettingStarted({
     {
       title: "Add a vehicle",
       text: "Its class is what we offer you jobs for, where it is based.",
-      href: "/vehicles/new",
+      href: "/~/vehicles/new",
       done: vehicles > 0,
     },
     {
       title: "Add a driver",
       text: "Driving yourself? Add yourself, with your own email.",
-      href: "/drivers/new",
+      href: "/~/drivers/new",
       done: drivers > 0,
     },
     {
       title: "A driver signs in",
       text: "With the email you entered for them, to take and report their jobs.",
-      href: "/drivers",
+      href: "/~/drivers",
       done: driversSignedIn > 0,
     },
     {
@@ -55,19 +55,21 @@ export function GettingStarted({
     <Panel className="connect-rise overflow-hidden">
       <div className="grid gap-3 p-5 pb-4">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-bold text-ink">Get set up</h2>
-          <span className="text-sm font-semibold text-slate-500 tabular-nums">
+          <h2 className="text-lg font-bold tracking-title text-ink">
+            Get set up
+          </h2>
+          <span className="text-sm font-semibold text-muted tabular-nums">
             {doneCount} of {steps.length}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-2 overflow-hidden rounded-full bg-hairline">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand to-azure transition-[width]"
+            className="h-full rounded-full bg-linear-to-r from-brand to-azure transition-[width]"
             style={{ width: `${(doneCount / steps.length) * 100}%` }}
           />
         </div>
       </div>
-      <ol className="divide-y divide-slate-100 border-t border-slate-100">
+      <ol className="divide-y divide-hairline border-t border-hairline">
         {steps.map((step) => {
           const current = step === next;
           const body = (
@@ -76,14 +78,14 @@ export function GettingStarted({
                 className={cx(
                   "grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold",
                   step.done
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-success text-white"
                     : current
                       ? "bg-brand text-white ring-4 ring-brand-tint"
-                      : "bg-slate-100 text-slate-400",
+                      : "bg-hairline text-muted",
                 )}
               >
                 {step.done ? (
-                  <Check aria-hidden className="size-4" strokeWidth={3} />
+                  <CheckIcon className="size-4" strokeWidth={3} />
                 ) : (
                   steps.indexOf(step) + 1
                 )}
@@ -93,18 +95,18 @@ export function GettingStarted({
                   className={cx(
                     "font-semibold",
                     step.done
-                      ? "text-slate-400 line-through decoration-slate-300"
-                      : "text-slate-900",
+                      ? "text-muted line-through decoration-edge"
+                      : "text-ink",
                   )}
                 >
                   {step.title}
                 </span>
                 {current && step.text ? (
-                  <span className="text-sm text-slate-500">{step.text}</span>
+                  <span className="text-sm text-muted">{step.text}</span>
                 ) : null}
               </span>
               {step.href && !step.done ? (
-                <ChevronRight aria-hidden className="size-5 text-slate-300" />
+                <ChevronRightIcon className="size-5 text-edge" />
               ) : null}
             </>
           );
@@ -114,7 +116,7 @@ export function GettingStarted({
                 <Link
                   href={step.href}
                   className={cx(
-                    "flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50",
+                    "flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-hover focus-ring-inset",
                     current && "bg-brand-tint/40",
                   )}
                 >

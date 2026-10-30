@@ -19,7 +19,7 @@ import { markdownImagesOf, markdownWordCount } from "./markdown";
  * service's page, such as car with driver; a page that lists others, such
  * as popular places; a vehicle class's page; a place, an attraction or a
  * hotel; a blog post; the site's home page; one of the site's documents,
- * such as the terms.
+ * such as the terms; Connect's landing page, for vendors.
  */
 export const PAGE_KINDS = [
   "landing",
@@ -30,6 +30,7 @@ export const PAGE_KINDS = [
   "article",
   "home",
   "document",
+  "connect",
 ] as const;
 export type PageKind = (typeof PAGE_KINDS)[number];
 
@@ -113,6 +114,19 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     intro: "none",
     body: true,
     faqs: "optional",
+    address: false,
+  },
+  /**
+   * The intro is who Connect is for; the text, a Markdown of `##` parts,
+   * lays out as a card for each (./connect-page). The hero shows the
+   * product in a phone unless an image is set.
+   */
+  connect: {
+    tagline: true,
+    heroImage: "optional",
+    intro: "required",
+    body: true,
+    faqs: "required",
     address: false,
   },
 };

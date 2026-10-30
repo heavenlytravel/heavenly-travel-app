@@ -14,6 +14,7 @@ import {
   pageKeyOfSegment,
   plural,
   searchTermOf,
+  sitePageAppOf,
   type LocationPageKey,
   type PageFilter,
   type PageStatus,
@@ -24,7 +25,7 @@ import {
   listSitePageSummaries,
   type PageSummary,
 } from "@repo/db/server";
-import { HouseIcon } from "@repo/ui/icons";
+import { BuildingIcon, HouseIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
@@ -73,10 +74,11 @@ type Filter = {
 /**
  * Route: /[location]/pages?section=…&status=…&q=…. The pages in one
  * tree: each section's own page with every page under it, tied to it by
- * a line and folding away under it. Under `~`, the customer site's own
- * pages for Marketing and SEO (`website.manage`: the home page, the
- * services' hubs, about us, contact us, the legal pages and the footer),
- * then every location's, each under its heading. Under a slug, the
+ * a line and folding away under it. Under `~`, in three parts: the
+ * customer site's own pages for Marketing and SEO (`website.manage`: the
+ * home page, the services' hubs, about us, contact us, the legal pages and
+ * the footer), then Connect's landing page, then every location's, each
+ * under its heading. Under a slug, the
  * location's alone, with the saved addresses its places take customers to
  * for Marketing; narrowed to a section, it is that section's list,
  * where its row leads: its places in their order, which move here, with
@@ -245,23 +247,43 @@ async function everyPage(filter: Filter) {
   const parts: PagePart[] = [];
   const counted: Counted[] = [];
 
-  const websiteRows = [
-    ...sitePages.map(sitePageRow),
-    ...(footer ? [footerRow(footer)] : []),
-  ];
-  counted.push(...websiteRows.map(countedOfRow));
-  const websiteGroups: PageGroup[] = websiteRows
-    .filter((row) => isPageInList(countedOfRow(row), row.path, filter))
-    .map((row) => ({ key: row.key, own: { row }, under: [], folds: false }));
-  if (websiteGroups.length > 0) {
-    parts.push({
+  // The site's pages by the app they are on: the customer site's with its
+  // footer, then Connect's, each a part of its own.
+  const appParts = [
+    {
       key: "part:website",
+      label: "Website",
+      mark: <HouseIcon className="size-4 text-muted" />,
+      rows: [
+        ...sitePages
+          .filter((page) => sitePageAppOf(page.page) === "website")
+          .map(sitePageRow),
+        ...(footer ? [footerRow(footer)] : []),
+      ],
+    },
+    {
+      key: "part:connect",
+      label: "Connect",
+      mark: <BuildingIcon className="size-4 text-muted" />,
+      rows: sitePages
+        .filter((page) => sitePageAppOf(page.page) === "connect")
+        .map(sitePageRow),
+    },
+  ];
+  for (const part of appParts) {
+    counted.push(...part.rows.map(countedOfRow));
+    const groups: PageGroup[] = part.rows
+      .filter((row) => isPageInList(countedOfRow(row), row.path, filter))
+      .map((row) => ({ key: row.key, own: { row }, under: [], folds: false }));
+    if (groups.length === 0) continue;
+    parts.push({
+      key: part.key,
       heading: {
-        label: "Website",
-        mark: <HouseIcon className="size-4 text-muted" />,
-        meta: plural(websiteGroups.length, "page"),
+        label: part.label,
+        mark: part.mark,
+        meta: plural(groups.length, "page"),
       },
-      groups: websiteGroups,
+      groups,
     });
   }
 

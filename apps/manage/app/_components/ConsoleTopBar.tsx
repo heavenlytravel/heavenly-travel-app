@@ -1,11 +1,11 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
 import type { Permission } from "@repo/db";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
+import { AccountMenu } from "@repo/auth/AccountMenu";
 import { NavigationProgress } from "@repo/ui/navigation-progress";
 import { SidebarTrigger } from "@repo/ui/sidebar";
 import { Tooltip } from "@repo/ui/tooltip";
+import { ACCOUNT_HREF } from "../_lib/routes";
 import { SearchBox } from "./ConsoleSearch";
 import { ScopePicker, type PickerLocation } from "./ScopePicker";
 
@@ -53,10 +53,7 @@ export function ConsoleTopBar({
           }
           className="shrink-0"
         >
-          {/* The box holds the button's place while Clerk loads, so the bar does not shift. */}
-          <span className="flex size-8 items-center justify-center rounded-full bg-azure">
-            <UserButton appearance={clerkUserButton} />
-          </span>
+          <AccountMenu accountHref={ACCOUNT_HREF} />
         </Tooltip>
       </div>
     </header>

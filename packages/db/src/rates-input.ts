@@ -786,16 +786,6 @@ export type TripRules = {
   weekend: WeekendSurcharge | null;
 };
 
-/** "Up to 15 km, cross-location, odd hours, weekends": the rules in force, short. */
-export function tripRulesLabel(rules: TripRules) {
-  return [
-    extraRoadLabel(rules.reach),
-    ...(rules.reach.crossLocation ? ["cross-location"] : []),
-    ...(rules.oddHours ? ["odd hours"] : []),
-    ...(rules.weekend ? ["weekends"] : []),
-  ].join(", ");
-}
-
 /** A location's columns as its trip rules. */
 export function tripRulesOf(
   location: TripReach &

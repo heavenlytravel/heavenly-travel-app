@@ -1,3 +1,5 @@
+import type { Permission } from "@repo/db";
+
 /**
  * What the console's search finds in the database, as `SEARCH_PATH`
  * answers it: the records of each kind the admin may open, a group each,
@@ -26,6 +28,34 @@ export const RECORD_KIND_LABELS: Record<RecordKind, string> = {
   "vehicle-classes": "Classes",
   zones: "Zones",
 };
+
+/** What each kind asks: a kind the admin may not open is not searched. */
+export const RECORD_KIND_PERMISSIONS: Record<RecordKind, Permission> = {
+  bookings: "bookings.view",
+  vehicles: "fleet.manage",
+  drivers: "fleet.manage",
+  users: "users.manage",
+  "vehicle-classes": "coverage.view",
+  zones: "coverage.view",
+};
+
+/** Each kind as the search box names it: a vehicle by its plate, drivers and customers as people. */
+const RECORD_KIND_WORDS: Record<RecordKind, string> = {
+  bookings: "bookings",
+  vehicles: "plates",
+  drivers: "people",
+  users: "people",
+  "vehicle-classes": "classes",
+  zones: "zones",
+};
+
+/** The search box's words: the pages, and what else this admin may search. "Search pages, bookings, plates, people…" */
+export function searchPlaceholder(permissions: readonly Permission[]) {
+  const words = RECORD_KINDS.filter((kind) =>
+    permissions.includes(RECORD_KIND_PERMISSIONS[kind]),
+  ).map((kind) => RECORD_KIND_WORDS[kind]);
+  return `Search ${["pages", ...new Set(words)].join(", ")}…`;
+}
 
 /** How many of each kind the search lists; the rest are on the kind's own list. */
 export const SEARCH_LIMIT = 5;

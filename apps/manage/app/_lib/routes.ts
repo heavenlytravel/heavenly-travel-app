@@ -1,11 +1,12 @@
 import {
   ALL_LOCATIONS_SEGMENT,
+  CONNECT_PAGE,
+  CONNECT_PAGE_EDITOR_PATH,
   SITE_PAGES_PATH,
   pageEditorPath,
   pageSegmentOf,
-  type ActivityEntityType,
+  type ActivityArea,
   type BookingStatus,
-  type LocationHistoryKind,
   type LocationPageKey,
   type LocationPageRef,
   type MediaFilter,
@@ -59,6 +60,9 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
 /** The page as the address names it: none for the first. */
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
+
+/** The admin's own account: their name, email, password and devices, opened from their picture. */
+export const ACCOUNT_HREF = consolePath(null, "account");
 
 /** Where an admin lands when a screen belongs to another team. */
 export const RESTRICTED_PATH = "/restricted";
@@ -349,7 +353,9 @@ export { SITE_PAGES_PATH };
 
 /** The editor of one of the site's own pages. */
 export function sitePageHref(page: string) {
-  return `${SITE_PAGES_PATH}/${page}`;
+  return page === CONNECT_PAGE
+    ? CONNECT_PAGE_EDITOR_PATH
+    : `${SITE_PAGES_PATH}/${page}`;
 }
 
 /** What one publish of a site page put on it, by the log entry's id. */
@@ -381,23 +387,15 @@ export function customersHref(filter: { q?: string; page?: number } = {}) {
 }
 
 /**
- * The activity: under `~` the full log or the entries of one type of
- * record; under a slug the location's own history, or one part of it.
- * At the page of it older than the entry with the id `before`.
+ * The activity: under `~` the log across the app, under a slug the
+ * location's own history, either one narrowed to the entries of one
+ * area. At the page of it older than the entry with the id `before`.
  */
 export function activityHref(
   scope: ScopeSlug,
-  filter: {
-    type?: ActivityEntityType;
-    kind?: LocationHistoryKind;
-    before?: string;
-  } = {},
+  filter: { area?: ActivityArea; before?: string } = {},
 ) {
-  return listHref(consolePath(scope, "activity"), {
-    type: scope === null ? filter.type : undefined,
-    kind: scope === null ? undefined : filter.kind,
-    before: filter.before,
-  });
+  return listHref(consolePath(scope, "activity"), filter);
 }
 
 /** What one publish in a location's history put on a page, by the log entry's id. */

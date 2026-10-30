@@ -9,7 +9,8 @@ import { UTApi } from "uploadthing/server";
 
 /**
  * Storing an image on UploadThing, for both apps' upload routes: the
- * admin's pictures and photos, and Connect's vehicle photos. The file
+ * admin's pictures and photos, and Connect's vehicle photos; and reading
+ * one stored back, for the admin's "Choose from Media". The file
  * goes through the app's server: the browser never holds the token. What
  * the file is and how large it draws are read from its bytes, not from
  * what the browser says. Each database has its own UploadThing app. See
@@ -82,6 +83,27 @@ export async function uploadImage(file: File): Promise<ImageUpload> {
       height: size.height,
     },
   };
+}
+
+/**
+ * A file already stored, answered as its upload was: its address and key,
+ * and the size it draws at, read from its bytes. For an image field that
+ * takes a file from Media instead of a second upload. Null when it cannot
+ * be read, or is not a JPEG, a PNG or a WebP image.
+ */
+export async function storedImageOf(
+  url: string,
+  key: string,
+): Promise<UploadedImage | null> {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+    const size = drawnSize(new Uint8Array(await response.arrayBuffer()));
+    if (!size?.type || size.width < 1 || size.height < 1) return null;
+    return { url, key, width: size.width, height: size.height };
+  } catch {
+    return null;
+  }
 }
 
 /**

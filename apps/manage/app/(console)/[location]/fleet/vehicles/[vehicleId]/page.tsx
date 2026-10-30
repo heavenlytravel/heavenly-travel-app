@@ -19,6 +19,7 @@ import {
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
+import { MediaPicker } from "../../../../../_components/MediaPicker";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";
 import { DATES_CARDS } from "@repo/console/fleet-form";
@@ -134,6 +135,7 @@ async function vehicleScreen(scope: ConsoleScope, vehicleId: string) {
         action={updateVehicleAction}
         cancelHref={vehiclesHref(scope.slug)}
         uploadPath={VEHICLE_IMAGE_UPLOAD_PATH}
+        mediaPicker={MediaPicker}
         held={held}
       />
     </>

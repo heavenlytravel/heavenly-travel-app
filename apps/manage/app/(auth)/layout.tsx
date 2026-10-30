@@ -5,7 +5,7 @@ import { Logo } from "@repo/ui/logo";
 import { redirect } from "next/navigation";
 
 /**
- * The admin sign-in page: dark, the logo above "Admin portal", no sign-up.
+ * The admin sign-in page: dark, the logo above the card, no sign-up.
  * Someone already signed in is sent to the console from the server, so the
  * form never flashes; `requireAdmin` there sends non-admins to /no-access.
  */
@@ -24,7 +24,6 @@ export default async function AuthLayout({
   return (
     <AuthShell
       tone="dark"
-      eyebrow="Admin portal"
       brand={<Logo tone="white" loading="eager" className="h-9" />}
     >
       {children}

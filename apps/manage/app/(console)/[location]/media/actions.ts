@@ -1,18 +1,18 @@
 "use server";
 
 import {
+  checkMediaDelete,
   deleteConfirmationOf,
   logMediaDeleted,
-  releaseMedia,
+  mediaReachOf,
 } from "@repo/db/server";
-import { actorOf, getAdmin } from "../../../_lib/access";
+import { actorOf, getAdmin, getPermissions } from "../../../_lib/access";
 import {
   FORBIDDEN,
   STALE,
   refusalOf,
   type ActionState,
 } from "@repo/console/action-state";
-import { revalidateFleet } from "../../../_lib/fleet-actions";
 import { revalidateLocation } from "../../../_lib/revalidate";
 import { deleteStoredFiles, listStoredFiles } from "../../../_lib/uploads";
 
@@ -22,11 +22,10 @@ const MAX_KEYS = 500;
 /**
  * Deletes the chosen files for good, by their keys. `seen` and `typed`
  * are what the dialog showed and what the admin typed (@repo/db's
- * delete-impact): the database takes them off the vehicles and classes
- * that use them first (`releaseMedia`), and refuses one on a page or a
- * delete that takes more than was shown; then they go from UploadThing,
- * and what went is logged. The customer site's classes and models
- * refresh when a photo or a picture went. SUPER only.
+ * delete-impact): the database refuses a file in use, one the admin does
+ * not see, or a delete that takes more than was shown
+ * (`checkMediaDelete`); then they go from UploadThing, and what went is
+ * logged. Media's own key, and what the admin's keys reach of the files.
  */
 export async function deleteMediaAction(
   keys: string[],
@@ -46,15 +45,20 @@ export async function deleteMediaAction(
     return STALE;
   }
 
-  const stored = await listStoredFiles();
+  const [stored, permissions] = await Promise.all([
+    listStoredFiles(),
+    getPermissions(),
+  ]);
   if (!stored.ok) return { error: stored.error };
   const asked = new Set(keys);
   // One gone meanwhile leaves the impact short of what was shown.
   const chosen = stored.files.filter((file) => asked.has(file.key));
-  const released = await releaseMedia(actorOf(admin), chosen, confirmation);
-  if (!released.ok) return refusalOf(released);
-  // The vehicles and classes changed, whatever storage does next.
-  if (released.fleetChanged) revalidateFleet("vehicles");
+  const checked = await checkMediaDelete(
+    chosen,
+    mediaReachOf(permissions),
+    confirmation,
+  );
+  if (!checked.ok) return refusalOf(checked);
 
   const deleted = await deleteStoredFiles(chosen.map((file) => file.key));
   // What went is logged, and only that: the log is how a form opened
@@ -75,7 +79,7 @@ export async function deleteMediaAction(
   if (!deleted) {
     return {
       error:
-        "Storage did not delete every image. They are off the vehicles and classes now: choose those still listed and delete again.",
+        "Storage did not delete every image. Choose those still listed and delete again.",
     };
   }
   return null;

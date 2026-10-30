@@ -20,6 +20,7 @@ import {
 } from "react";
 import {
   RECORD_KIND_LABELS,
+  searchPlaceholder,
   type RecordKind,
   type SearchHit,
   type SearchResponse,
@@ -260,7 +261,7 @@ export function ConsoleSearch({
       {children}
       <CommandPalette
         label="Search the console"
-        placeholder="Search pages, bookings, plates, people…"
+        placeholder={searchPlaceholder(permissions)}
         open={open}
         onOpenChange={setOpen}
         value={text}

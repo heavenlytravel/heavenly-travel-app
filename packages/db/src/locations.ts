@@ -847,7 +847,7 @@ async function changeTopChoiceIn(
     if (!changed) continue;
     await tx.location.update({ where: { id: row.id }, data: changed.after });
     await logActivity(tx, actor, {
-      action: "location.updated",
+      action: "location.top-choice.updated",
       entityId: row.id,
       before: changed.before,
       after: changed.after,

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "7.9.4",
+    "@repo/auth": "workspace:*",
     "@repo/console": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/email": "workspace:*",

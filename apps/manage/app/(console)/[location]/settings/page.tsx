@@ -59,21 +59,22 @@ import { SafetyBufferForm } from "./SafetyBufferForm";
 import { StateMove } from "./StateMove";
 
 /**
- * Route: /[location]/settings. Under `~` the locations, a tile each with
- * its main page's hero image, its state, its numbers and how far its
- * setup has come, opening its own settings, and for SUPER "Add
- * location". Under a location its own settings: for Marketing its
- * details, step 1 of the setup (the name, the slug and the states it lies
- * in); for every admin where it stands with the public, with what still
- * stands in the way of going live, and for SUPER the one move its state
- * allows, "Go live", "Pause" or "Resume", then its deletion. Its saved
- * addresses are with its pages. See
- * docs/261015-locations-as-operation-areas.md.
+ * Route: /[location]/settings. For an admin who holds the key of one of
+ * its cards (`settings.view`): Marketing, Operation and SUPER. Under `~`
+ * the locations, a tile each with its main page's hero image, its state,
+ * its numbers and how far its setup has come, opening its own settings,
+ * and for SUPER "Add location". Under a location its own settings: for
+ * Marketing its details, step 1 of the setup (the name, the slug and the
+ * states it lies in); where it stands with the public, with what still
+ * stands in the way of going live; for Operation the time between its
+ * jobs; and for SUPER the one move its state allows, "Go live", "Pause"
+ * or "Resume", then its deletion. Its saved addresses are with its
+ * pages. See docs/261015-locations-as-operation-areas.md.
  */
 export default async function SettingsPage({
   params,
 }: PageProps<"/[location]/settings">) {
-  await requireAdmin("locations.view");
+  await requireAdmin("settings.view");
   const [scope, permissions] = await Promise.all([
     scopeOf(params),
     getPermissions(),
@@ -300,8 +301,8 @@ function stateNote(state: LocationState, slug: string) {
 }
 
 /**
- * The location's details for Marketing, its state for everyone, the time
- * between its jobs for Operation, and its deletion for SUPER.
+ * The location's details for Marketing, its state for every admin here,
+ * the time between its jobs for Operation, and its deletion for SUPER.
  */
 async function locationSettings({
   location: { id },

@@ -24,6 +24,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Choices } from "./Choices";
 import { Count } from "./page-editor/Count";
+import { MediaPicker } from "./MediaPicker";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
 import { FormError } from "@repo/ui/form-error";
 import { useImageUpload } from "@repo/console/use-image-upload";
@@ -480,7 +481,8 @@ function ToolButton({
 
 /**
  * The image to put in at the cursor: its alt text, then the file, which is
- * uploaded the moment it is chosen and goes in as it lands.
+ * uploaded the moment it is chosen and goes in as it lands, or one
+ * already stored, chosen from Media.
  */
 function AddImageDialog({
   open,
@@ -551,6 +553,16 @@ function AddImageDialog({
           <Button pending={uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Choose image"}
           </Button>
+          <MediaPicker
+            label="Image in the text"
+            most={1}
+            disabled={uploading}
+            onPick={([picked]) => {
+              if (!picked) return;
+              onAdd(alt.trim(), picked);
+              setAlt("");
+            }}
+          />
           <span className="text-xs text-muted">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
           </span>
@@ -563,7 +575,7 @@ function AddImageDialog({
 
 /**
  * Every image in the text, each with its alt text to write and, for one
- * that links elsewhere, "Upload" to bring it here.
+ * that links elsewhere, "Upload" or "Choose from Media" to bring it here.
  */
 function TextImages({
   images,
@@ -678,6 +690,14 @@ function TextImage({
           >
             {uploading ? "Uploading…" : "Upload"}
           </Button>
+          <MediaPicker
+            label={`Image ${image.index + 1}`}
+            most={1}
+            disabled={uploading}
+            onPick={([picked]) => {
+              if (picked) onUploaded(picked);
+            }}
+          />
         </>
       )}
     </div>

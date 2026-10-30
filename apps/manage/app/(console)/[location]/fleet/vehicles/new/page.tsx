@@ -11,6 +11,7 @@ import {
   FormSkeleton,
   Streamed,
 } from "@repo/console/Skeleton";
+import { MediaPicker } from "../../../../../_components/MediaPicker";
 import { requireAdmin } from "../../../../../_lib/access";
 import {
   ALL,
@@ -74,6 +75,7 @@ export default async function NewVehiclePage({
               action={createVehicleAction}
               cancelHref={vehiclesHref(scope.slug)}
               uploadPath={VEHICLE_IMAGE_UPLOAD_PATH}
+              mediaPicker={MediaPicker}
             />
           );
         }}

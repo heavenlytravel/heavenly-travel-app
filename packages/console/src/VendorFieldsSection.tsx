@@ -27,20 +27,22 @@ import { Card, CardTitle } from "./Card";
  * A vendor's fields, one copy for the admin's vendor form and Connect's
  * registration: company or individual, its name and registration, who
  * the team speaks to, what it offers, and the locations it serves, where
- * its vehicles and drivers are based. In Connect the email is the
- * account's (`emailFixed`) and only live locations are offered. See
- * docs/261028-fulfilment-vendors-and-connect.md, "Signing up".
+ * its vehicles and drivers are based. In Connect's registration
+ * (`applicant`) the person is asked for apart, as the account's owner,
+ * so the contact's fields are left out, and only live locations are
+ * offered. See docs/261030-sign-in-connect-onboarding-and-media.md,
+ * "Connect".
  */
 export function VendorFieldsSection({
   vendor,
   locations,
-  emailFixed,
+  applicant = false,
 }: {
   /** Absent for a new vendor. */
   vendor?: VendorWithLocations;
   locations: readonly { id: string; name: string }[];
-  /** The account's email, shown and sent but not typed. */
-  emailFixed?: string;
+  /** Connect's registration: the business alone, the contact asked for apart. */
+  applicant?: boolean;
 }) {
   const fields = vendor ? vendorFieldsOf(vendor) : null;
   const services = new Set<string>(fields?.services ?? []);
@@ -49,7 +51,7 @@ export function VendorFieldsSection({
   return (
     <>
       <Card>
-        <CardTitle>Details</CardTitle>
+        <CardTitle>{applicant ? "Your business" : "Details"}</CardTitle>
         <div className="grid gap-4">
           <fieldset className="grid gap-2">
             <legend className="mb-1 text-sm font-semibold text-ink">
@@ -93,45 +95,41 @@ export function VendorFieldsSection({
                 defaultValue={fields?.registrationNo}
               />
             </Field>
-            <Field label={VENDOR_FIELD_LABELS.contactName}>
-              <Input
-                name="contactName"
-                required
-                autoComplete="off"
-                maxLength={VENDOR_LIMITS.contactName}
-                defaultValue={fields?.contactName}
-              />
-            </Field>
-            <Field
-              label={VENDOR_FIELD_LABELS.contactPhone}
-              hint="Their WhatsApp, with the country code."
-            >
-              <Input
-                name="contactPhone"
-                type="tel"
-                required
-                autoComplete="off"
-                placeholder="+60 12-345 6789"
-                defaultValue={fields?.contactPhone}
-              />
-            </Field>
-            <Field
-              label={VENDOR_FIELD_LABELS.contactEmail}
-              hint={
-                emailFixed
-                  ? "Your account's email: where we write to you."
-                  : undefined
-              }
-            >
-              <Input
-                name="contactEmail"
-                type="email"
-                required
-                autoComplete="off"
-                readOnly={emailFixed !== undefined}
-                defaultValue={emailFixed ?? fields?.contactEmail}
-              />
-            </Field>
+            {applicant ? null : (
+              <>
+                <Field label={VENDOR_FIELD_LABELS.contactName}>
+                  <Input
+                    name="contactName"
+                    required
+                    autoComplete="off"
+                    maxLength={VENDOR_LIMITS.contactName}
+                    defaultValue={fields?.contactName}
+                  />
+                </Field>
+                <Field
+                  label={VENDOR_FIELD_LABELS.contactPhone}
+                  hint="Their WhatsApp, with the country code."
+                >
+                  <Input
+                    name="contactPhone"
+                    type="tel"
+                    required
+                    autoComplete="off"
+                    placeholder="+60 12-345 6789"
+                    defaultValue={fields?.contactPhone}
+                  />
+                </Field>
+                <Field label={VENDOR_FIELD_LABELS.contactEmail}>
+                  <Input
+                    name="contactEmail"
+                    type="email"
+                    required
+                    autoComplete="off"
+                    defaultValue={fields?.contactEmail}
+                  />
+                </Field>
+              </>
+            )}
             <Field label={VENDOR_FIELD_LABELS.address}>
               <Textarea
                 name="address"

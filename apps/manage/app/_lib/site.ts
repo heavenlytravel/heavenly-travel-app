@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  CONNECT_URL,
   REVALIDATE_PATH,
   SITE_PAGES_TAG,
   SITE_URL,
@@ -9,6 +10,7 @@ import {
   locationPagePath,
   locationPreviewPath,
   locationTag,
+  sitePageAppOf,
   sitePagePath,
   sitePagePreviewPath,
   type LocationPageRef,
@@ -34,14 +36,26 @@ export function locationPublicUrl(slug: string, ref?: LocationPageRef) {
   return SITE_URL + locationPagePath(slug, ref);
 }
 
+/** The app a site page is on: the customer site's address, or Connect's. */
+function originOf(page: SitePageKey) {
+  return sitePageAppOf(page) === "connect" ? CONNECT_URL : SITE_URL;
+}
+
 /** Where staff preview a site page's draft. */
 export function sitePagePreviewUrl(page: SitePageKey) {
-  return SITE_URL + sitePagePreviewPath(page);
+  return originOf(page) + sitePagePreviewPath(page);
 }
 
 /** Where the public reads a site page, once it is published. */
 export function sitePagePublicUrl(page: SitePageKey) {
-  return SITE_URL + sitePagePath(page);
+  return originOf(page) + sitePagePath(page);
+}
+
+/** A site page's address as the console shows it: "/about-us", or Connect's host for its page. */
+export function sitePageShownPath(page: SitePageKey) {
+  return sitePageAppOf(page) === "connect"
+    ? `${new URL(CONNECT_URL).host}/`
+    : sitePagePath(page);
 }
 
 /** How long the refresh may take before it is given up. */

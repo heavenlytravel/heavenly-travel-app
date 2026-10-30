@@ -17,6 +17,7 @@ import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 import { bookingLocations } from "../../_lib/booking-locations";
 import {
   RECORD_KINDS,
+  RECORD_KIND_PERMISSIONS,
   SEARCH_LIMIT,
   type RecordKind,
   type SearchHit,
@@ -41,11 +42,10 @@ const nameOf = (user: {
   email: string;
 }) => [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
 
-/** What a kind asks to be searched, and how it is found: its records as lines, each to its page. */
+/** How each kind is found: its records as lines, each to its page. */
 const FINDERS: Record<
   RecordKind,
   {
-    permission: Permission;
     find: (
       search: string,
       permissions: readonly Permission[],
@@ -53,7 +53,6 @@ const FINDERS: Record<
   }
 > = {
   bookings: {
-    permission: "bookings.view",
     find: async (search) =>
       (await findBookingMatches(search, SEARCH_LIMIT)).map((booking) => {
         const locations = bookingLocations(booking);
@@ -71,7 +70,6 @@ const FINDERS: Record<
       }),
   },
   vehicles: {
-    permission: "fleet.manage",
     find: async (search) =>
       (await findVehicleMatches(search, SEARCH_LIMIT)).map((vehicle) => ({
         title: vehicle.plate,
@@ -81,7 +79,6 @@ const FINDERS: Record<
       })),
   },
   drivers: {
-    permission: "fleet.manage",
     find: async (search) =>
       (await findDriverMatches(search, SEARCH_LIMIT)).map((driver) => ({
         title: driver.name,
@@ -91,7 +88,6 @@ const FINDERS: Record<
       })),
   },
   users: {
-    permission: "users.manage",
     find: async (search) =>
       (await findUserMatches(search, SEARCH_LIMIT)).map((user) => ({
         title: nameOf(user),
@@ -101,7 +97,6 @@ const FINDERS: Record<
       })),
   },
   "vehicle-classes": {
-    permission: "coverage.view",
     // The class's own page is Operation's, to change it; the others read the catalogue.
     find: async (search, permissions) =>
       (await findVehicleClassMatches(search, SEARCH_LIMIT)).map(
@@ -115,7 +110,6 @@ const FINDERS: Record<
       ),
   },
   zones: {
-    permission: "coverage.view",
     // The zone's editor is Operation's; the others read the location's map.
     find: async (search, permissions) =>
       (await findZoneMatches(search, SEARCH_LIMIT)).map((zone) => ({
@@ -149,7 +143,7 @@ export async function GET(request: Request) {
     return Response.json({ groups: [] } satisfies SearchResponse);
   }
   const kinds = RECORD_KINDS.filter((kind) =>
-    permissions.includes(FINDERS[kind].permission),
+    permissions.includes(RECORD_KIND_PERMISSIONS[kind]),
   );
   const found = await Promise.all(
     kinds.map((kind) => FINDERS[kind].find(search, permissions)),

@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { RESERVED_SLUGS } from "./location-input";
 import { isLocationSection } from "./location-page-input";
+import { CONNECT_PAGE_COPY } from "./connect-page";
+import { checkPageComplete, pageContentOf } from "./page-content";
 import {
+  CONNECT_PAGE,
   HUB_PAGES,
   SITE_PAGES,
+  SITE_PAGE_PATHS,
+  WEBSITE_PAGES,
   checkSitePageUnpublish,
   hasBuiltInCopy,
   isSitePagePublic,
+  sitePageAppOf,
+  sitePageEditorPath,
   sitePageKindOf,
   sitePageFallbackTitle,
   sitePagePath,
@@ -75,5 +82,32 @@ describe("the services' hubs", () => {
 
   it("take addresses no location may", () => {
     for (const page of HUB_PAGES) assert.ok(RESERVED_SLUGS.has(page));
+  });
+});
+
+describe("Connect's landing page", () => {
+  it("is a site page of its own kind, at / and /preview on Connect", () => {
+    assert.equal(sitePageKindOf(CONNECT_PAGE), "connect");
+    assert.equal(sitePageAppOf(CONNECT_PAGE), "connect");
+    assert.equal(sitePagePath(CONNECT_PAGE), "/");
+    assert.equal(sitePagePreviewPath(CONNECT_PAGE), "/preview");
+    assert.equal(sitePageEditorPath(CONNECT_PAGE), "/~/pages/connect");
+  });
+
+  it("is not one of the customer site's pages or reserved addresses", () => {
+    assert.ok(!WEBSITE_PAGES.includes(CONNECT_PAGE as never));
+    assert.ok(!SITE_PAGE_PATHS.includes(CONNECT_PAGE));
+    assert.equal(WEBSITE_PAGES.length, SITE_PAGES.length - 1);
+  });
+
+  it("stays published once it is, shown in its built-in words before", () => {
+    assert.ok(hasBuiltInCopy(CONNECT_PAGE));
+    assert.equal(checkSitePageUnpublish(CONNECT_PAGE).ok, false);
+  });
+
+  it("is built with words that can be published as they stand", () => {
+    const content = pageContentOf("connect", CONNECT_PAGE_COPY);
+    assert.deepEqual(content, CONNECT_PAGE_COPY);
+    assert.deepEqual(checkPageComplete("connect", content), { ok: true });
   });
 });

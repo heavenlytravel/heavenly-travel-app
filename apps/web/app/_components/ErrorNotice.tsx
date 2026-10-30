@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { primaryButton, Stop } from "../(site)/_components/Page";
+import { Button } from "@repo/ui/button";
+import { Stop } from "../(site)/_components/Page";
 import { Logo } from "./Brand";
 
 /**
@@ -23,13 +24,9 @@ export function ErrorNotice({ onRetry }: { onRetry: () => void }) {
           title="Something went wrong"
           message="This page could not load. Try again, or come back in a minute."
           action={
-            <button
-              type="button"
-              onClick={onRetry}
-              className={`${primaryButton} mt-6`}
-            >
+            <Button size="lg" onClick={onRetry} className="mt-6">
               Try again
-            </button>
+            </Button>
           }
         />
       </div>

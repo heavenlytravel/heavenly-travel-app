@@ -14,6 +14,7 @@ import {
   type TripOptions,
   type TripSearch,
 } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { ClassPicture } from "../../../../../_components/ClassPicture";
 import { ModelPhotosButton } from "../../../../../_components/ModelGallery";
@@ -50,7 +51,6 @@ import {
   panel,
   panelFromLarge,
   Pending,
-  secondaryButton,
   Stop,
   surface,
   textLink,
@@ -154,7 +154,7 @@ export function ConfirmStep({
     // The page's one heading while the next opens, in the line's own look.
     return (
       <div className={`${panel} max-w-[560px]`}>
-        <h1 className="flex items-center text-slate-600">
+        <h1 className="flex items-center text-muted">
           <Pending>Booked. Opening your booking…</Pending>
         </h1>
       </div>
@@ -377,10 +377,10 @@ export function ConfirmStep({
           <p className="font-serif text-2xl leading-tight text-ink">
             {card.name}
           </p>
-          <p className="mt-1.5 text-slate-700">{card.description}</p>
+          <p className="mt-1.5 text-body">{card.description}</p>
           {card.models.length > 0 ? (
             // A div, not a p: the gallery's dialog is not phrasing content.
-            <div className="mt-2 text-copy text-slate-700">
+            <div className="mt-2 text-copy text-body">
               {modelsLine(card.models.map((m) => m.name))}, or similar.{" "}
               <ModelPhotosButton title={card.name} models={card.models} />
             </div>
@@ -421,12 +421,14 @@ export function ConfirmStep({
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:gap-7">
               {tripsPanel}
               {vehiclePanel}
-              <Link
-                href={vehiclePage}
-                className={`${secondaryButton} w-full lg:hidden`}
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full lg:hidden"
               >
-                Edit trips or vehicle
-              </Link>
+                <Link href={vehiclePage}>Edit trips or vehicle</Link>
+              </Button>
             </div>
           </TripsFold>
         </div>

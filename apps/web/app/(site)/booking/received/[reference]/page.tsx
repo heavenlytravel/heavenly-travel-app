@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { isMaskedEmail, isReference, normalizeReference } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
-import {
-  eyebrow,
-  PageTitle,
-  Panel,
-  primaryButton,
-  textLink,
-} from "../../../_components/Page";
+import { eyebrow, PageTitle, Panel, textLink } from "../../../_components/Page";
 import { accountBookingHref, signUpHref } from "../../../../_lib/routes";
 
 export const metadata: Metadata = {
@@ -44,7 +39,7 @@ export default async function ReceivedPage({
       <Panel className="max-w-[560px]">
         <p className={eyebrow}>Your reference</p>
         <p className="mt-2 font-serif text-display leading-none">{reference}</p>
-        <p className="mt-5 text-slate-700">
+        <p className="mt-5 text-body">
           {sentTo ? (
             <>
               We have emailed the details to{" "}
@@ -64,9 +59,9 @@ export default async function ReceivedPage({
             Create an account
           </Link>
         </p>
-        <Link href="/" className={`${primaryButton} mt-6 w-full`}>
-          Back to Heavenly Travel
-        </Link>
+        <Button asChild size="lg" className="mt-6 w-full">
+          <Link href="/">Back to Heavenly Travel</Link>
+        </Button>
       </Panel>
     </>
   );

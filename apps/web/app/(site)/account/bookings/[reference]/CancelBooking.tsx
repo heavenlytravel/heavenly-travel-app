@@ -1,13 +1,9 @@
 "use client";
 
 import { answerOf } from "@repo/ui/action-answer";
+import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { useActionState, useEffect, useRef, useState } from "react";
-import {
-  dangerButton,
-  Pending,
-  secondaryButton,
-} from "../../../_components/Page";
 import {
   cancelBookingAction,
   cancelTripAction,
@@ -74,15 +70,16 @@ function CancelControl({
   if (!armed || blocked) {
     return (
       <>
-        <button
+        <Button
           ref={openButton}
-          type="button"
+          variant="outline"
+          size="lg"
           disabled={blocked}
           onClick={() => arm(true)}
-          className={`${secondaryButton} w-full`}
+          className="w-full"
         >
           {words.open}
-        </button>
+        </Button>
         <p className="mt-2 text-center text-caption text-muted">{hint}</p>
       </>
     );
@@ -97,21 +94,21 @@ function CancelControl({
       <p
         ref={question}
         tabIndex={-1}
-        className="text-copy text-slate-700 outline-none"
+        className="text-copy text-body outline-none"
       >
         {words.question}
       </p>
-      <button type="submit" disabled={pending} className={dangerButton}>
-        {pending ? <Pending>Cancelling…</Pending> : words.confirm}
-      </button>
-      <button
-        type="button"
+      <Button type="submit" variant="destructive" size="lg" pending={pending}>
+        {pending ? "Cancelling…" : words.confirm}
+      </Button>
+      <Button
+        variant="outline"
+        size="lg"
         disabled={pending}
         onClick={() => arm(false)}
-        className={secondaryButton}
       >
         {words.keep}
-      </button>
+      </Button>
       {state?.error && (
         <p role="alert" className="text-copy text-danger">
           {state.error}

@@ -5,6 +5,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import Image from "next/image";
 import { useEffect, useEffectEvent, useState } from "react";
+import { textLink } from "../(site)/_components/Page";
 
 /** A model of a class as the customer sees it: its name and its photos in order. Plain data. */
 export type GalleryModel = {
@@ -150,7 +151,7 @@ export function ModelGallery({
               </>
             ) : null}
           </div>
-          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-copy text-slate-700">
+          <figcaption className="flex shrink-0 flex-wrap justify-between gap-x-4 text-copy text-body">
             <span>
               <strong className="text-ink">{model.name}</strong>
               {photo.caption ? `, ${photo.caption}` : null}
@@ -220,7 +221,7 @@ export function ModelPhotosButton({
           setOpened((count) => count + 1);
           setOpen(true);
         }}
-        className={`font-semibold text-brand underline-offset-4 hover:underline focus-ring ${className}`}
+        className={`${textLink} ${className}`}
       >
         See photos
       </button>

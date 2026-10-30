@@ -9,21 +9,17 @@ import {
   type TripCategory,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
+import { Button } from "@repo/ui/button";
 import { showFieldError, useFormErrors } from "@repo/ui/validation";
 import Link from "next/link";
 import { clearOfFold } from "../../../../../_components/trips/TripsBar";
 import type { ForDriver } from "../../../../../_lib/trip-plan";
-import {
-  control,
-  Pending,
-  primaryButton,
-  textLink,
-} from "../../../../_components/Page";
+import { control, textLink } from "../../../../_components/Page";
 import { createTripsBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
 const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
-const label = "mb-1.5 block text-copy font-semibold text-slate-800";
+const label = "mb-1.5 block text-copy font-semibold text-body";
 const hint = "mt-1.5 block text-caption text-muted";
 const refused = "mt-1.5 block text-caption text-danger";
 /** A field given the focus comes into view clear of the site header and, on a phone, the pinned trips. */
@@ -212,7 +208,7 @@ export function ConfirmForm({
           readOnly={locked}
           autoComplete="email"
           aria-describedby={emailLine.describedBy}
-          className={`${control} ${inView} ${locked ? "bg-mist text-slate-700" : ""}`}
+          className={`${control} ${inView} ${locked ? "bg-mist text-body" : ""}`}
         />
       </Field>
       {arriving !== null ? (
@@ -280,21 +276,23 @@ export function ConfirmForm({
             {alert}
           </p>
         ) : missing.length > 0 ? (
-          <p className="text-copy text-slate-600">
+          <p className="text-copy text-muted">
             Fill in your {listFormat.format(missing)} to confirm.
           </p>
         ) : null}
-        <button
+        <Button
           type="submit"
-          disabled={pending || blocked !== null || missing.length > 0}
-          className={`${primaryButton} w-full`}
+          size="lg"
+          pending={pending}
+          disabled={blocked !== null || missing.length > 0}
+          className="w-full"
         >
           {pending ? (
-            <Pending>Booking…</Pending>
+            "Booking…"
           ) : (
             <>Confirm booking&nbsp;· {formatMyr(totalSen)}</>
           )}
-        </button>
+        </Button>
       </div>
       <div className="grid gap-1 text-caption">
         {cancellation ? <p className="text-success">{cancellation}</p> : null}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Button } from "@repo/ui/button";
 import { SpinnerIcon } from "@repo/ui/icons";
 
 /**
@@ -15,18 +16,10 @@ export const pageColumn =
 export const eyebrow =
   "text-xs font-bold tracking-eyebrow text-brand uppercase";
 
-export const primaryButton =
-  "inline-flex min-h-13 items-center justify-center rounded-control bg-brand px-6 text-base font-bold whitespace-nowrap text-white shadow-cta hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50 focus-ring";
-
-/** The quiet counterpart to `primaryButton`: an outlined button on white. */
-export const secondaryButton =
-  "inline-flex min-h-12 items-center justify-center rounded-control border border-card-edge bg-white px-5 text-copy font-bold whitespace-nowrap text-brand hover:border-brand disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-card-edge focus-ring";
-
-/** A destructive action: filled red, used only after the customer confirms. */
-export const dangerButton =
-  "inline-flex min-h-12 items-center justify-center rounded-control bg-danger px-5 text-copy font-bold whitespace-nowrap text-white hover:bg-danger-strong disabled:cursor-not-allowed disabled:opacity-50 focus-ring";
-
-/** What a button shows while it waits: a spinner and what it is doing. */
+/**
+ * A line that says what is under way, after a spinner: "Checking today's
+ * prices…". A button that waits says so itself (`Button pending`).
+ */
 export function Pending({ children }: { children: ReactNode }) {
   return (
     <>
@@ -109,11 +102,11 @@ export function Stop({
       <Heading className="font-serif text-figure leading-tight">
         {title}
       </Heading>
-      <p className="mt-2 text-slate-700">{message}</p>
+      <p className="mt-2 text-body">{message}</p>
       {action ?? (
-        <Link href={href} className={`${primaryButton} mt-6`}>
-          {linkLabel}
-        </Link>
+        <Button asChild size="lg" className="mt-6">
+          <Link href={href}>{linkLabel}</Link>
+        </Button>
       )}
     </Panel>
   );
@@ -140,7 +133,7 @@ export function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
 
 /** One grey bar in place of what is loading; the class gives its size and room, not its corners. */
 export function Bone({ className }: { className: string }) {
-  return <span className={`block rounded-lg bg-slate-200/80 ${className}`} />;
+  return <span className={`block rounded-lg bg-card-edge ${className}`} />;
 }
 
 /**

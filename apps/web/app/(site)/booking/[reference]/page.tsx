@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageTitle, primaryButton, textLink } from "../../_components/Page";
+import { Button } from "@repo/ui/button";
+import { PageTitle, textLink } from "../../_components/Page";
 import { ACCOUNT_BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 import {
   BOOKING_STATUS_LINES,
@@ -43,9 +44,9 @@ export default async function BookingPage({
               Keep this reference. Quote it when you contact us about your
               booking.
             </p>
-            <Link href="/" className={`${primaryButton} mt-6 w-full`}>
-              Back to Heavenly Travel
-            </Link>
+            <Button asChild size="lg" className="mt-6 w-full">
+              <Link href="/">Back to Heavenly Travel</Link>
+            </Button>
             <p className="mt-4 text-center text-copy">
               <Link href={ACCOUNT_BOOKINGS_PATH} className={textLink}>
                 See all your bookings

@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { Radio } from "@repo/ui/field";
 import { PlusIcon, TrashIcon, XIcon } from "@repo/ui/icons";
 import type { PlacePresets } from "@repo/ui/place-input";
-import { secondaryButton } from "../../(site)/_components/Page";
 import {
   fieldKeys,
   PRODUCTS,
@@ -26,9 +26,12 @@ import { TripNumber } from "./TripTimeline";
 import type { Planner } from "./usePlanner";
 
 /** Save: the full width of a narrow form, beside Cancel in a wide one. */
-const saveButton = `${secondaryButton} w-full @3xl:w-auto`;
+const save = "w-full @3xl:w-auto";
 
-/** Cancel and Remove: side by side under Save in a narrow form, after it in a wide one. */
+/**
+ * Cancel and Remove: words at a button's height, side by side under Save
+ * in a narrow form, after it in a wide one.
+ */
 const textButton =
   "inline-flex min-h-12 flex-1 items-center justify-center gap-1.5 px-1 text-copy font-semibold hover:underline focus-ring @3xl:flex-none";
 
@@ -138,7 +141,7 @@ export function TripForm({
               {kind.options?.map(({ value, label }) => (
                 <label
                   key={value}
-                  className="flex cursor-pointer items-center gap-2 text-base/6 font-semibold whitespace-nowrap text-slate-600 hover:text-ink has-[:checked]:text-brand"
+                  className="flex cursor-pointer items-center gap-2 text-base/6 font-semibold whitespace-nowrap text-muted hover:text-ink has-[:checked]:text-brand"
                 >
                   <Radio
                     name={id(kind.key)}
@@ -166,7 +169,9 @@ export function TripForm({
             <div
               key={f.key}
               className={`${fieldBox} ${fieldRing} @3xl:-ml-px @3xl:rounded-none ${
-                invalid ? "z-[1] border-danger" : "border-card-edge"
+                invalid
+                  ? "z-(--layer-raised) border-danger"
+                  : "border-card-edge"
               } ${last ? "@3xl:rounded-r-control" : ""} ${
                 f.kind === "place"
                   ? "@3xl:flex-[2]"
@@ -195,7 +200,7 @@ export function TripForm({
                   type="button"
                   aria-label={`Clear ${f.label}`}
                   onClick={() => clear(f)}
-                  className="absolute right-2.5 bottom-[11px] z-[1] flex size-7 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-slate-100 hover:text-ink focus-ring"
+                  className="absolute right-2.5 bottom-[11px] z-(--layer-raised) flex size-7 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-hairline hover:text-ink focus-ring"
                 >
                   <XIcon className="size-4" />
                 </button>
@@ -217,17 +222,18 @@ export function TripForm({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {editing ? (
           <>
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="lg"
               onClick={planner.commit}
-              className={saveButton}
+              className={save}
             >
               Save changes
-            </button>
+            </Button>
             <button
               type="button"
               onClick={planner.close}
-              className={`${textButton} text-slate-600`}
+              className={`${textButton} text-muted`}
             >
               Cancel
             </button>
@@ -242,17 +248,18 @@ export function TripForm({
           </>
         ) : planner.trips.length > 0 ? (
           <>
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="lg"
               onClick={planner.commit}
-              className={saveButton}
+              className={save}
             >
               Save trip
-            </button>
+            </Button>
             <button
               type="button"
               onClick={planner.close}
-              className={`${textButton} text-slate-600`}
+              className={`${textButton} text-muted`}
             >
               Cancel
             </button>

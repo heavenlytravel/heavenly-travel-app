@@ -1,12 +1,12 @@
 "use client";
 
+import { Button } from "@repo/ui/button";
 import { PRODUCTS, type Product } from "../../_lib/search";
 import {
   bookableCategory,
   tripBookingPath,
 } from "../../_lib/transportation-booking";
 import { useNavigate } from "../../_lib/useNavigate";
-import { Pending } from "../../(site)/_components/Page";
 import { ProductIcon } from "../Brand";
 import { PassengersStepper } from "../trips/PassengersStepper";
 import { clearOfHeader } from "../trips/TripsBar";
@@ -97,7 +97,7 @@ export function ServiceTabsSearch() {
   return (
     // No overflow clip on the card: the place fields open a suggestion list
     // below themselves that must be free to hang past its bottom edge.
-    <div className="rounded-card bg-white text-slate-900 shadow-panel sm:rounded-panel">
+    <div className="rounded-card bg-white text-body shadow-panel sm:rounded-panel">
       {/* On a phone the tabs scroll sideways, a shadow at the side that
           hides more; the chosen tab is the one Tab reaches, the arrows
           the rest. */}
@@ -174,13 +174,15 @@ export function ServiceTabsSearch() {
                 />
               }
               action={
-                <button
+                // As tall as the fields beside it.
+                <Button
                   type="submit"
-                  disabled={pending}
-                  className="flex min-h-14 w-full items-center justify-center rounded-control bg-brand px-5 text-base font-bold whitespace-nowrap text-white shadow-cta hover:bg-brand-strong focus-ring disabled:cursor-wait disabled:opacity-70 @3xl:w-auto @3xl:min-w-[230px]"
+                  size="lg"
+                  pending={pending}
+                  className="h-14 w-full @3xl:w-auto @3xl:min-w-[230px]"
                 >
                   {pending ? (
-                    <Pending>Finding prices…</Pending>
+                    "Finding prices…"
                   ) : (
                     <>
                       {planner.count > 1
@@ -189,7 +191,7 @@ export function ServiceTabsSearch() {
                       <span aria-hidden>&nbsp;→</span>
                     </>
                   )}
-                </button>
+                </Button>
               }
               className={clearOfHeader}
             />

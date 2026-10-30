@@ -12,6 +12,7 @@ import {
   type TripCategory,
   type TripSearch,
 } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { toast } from "@repo/ui/toast";
 import { ClassCard } from "../../../../_components/ClassCard";
 import { PassengersStepper } from "../../../../_components/trips/PassengersStepper";
@@ -48,7 +49,6 @@ import {
   PageTitle,
   panel,
   Pending,
-  primaryButton,
   Stop,
   textLink,
 } from "../../../_components/Page";
@@ -57,6 +57,7 @@ import { usePlanPricing } from "./usePlanPricing";
 const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
 const alertBox =
   "mb-4 rounded-xl bg-danger-tint px-4 py-3 text-copy text-danger-strong";
+/** A link inside a coloured message: in the message's colour, so underlined. */
 const noteLink =
   "font-semibold underline underline-offset-4 hover:no-underline focus-ring";
 
@@ -268,7 +269,7 @@ export function VehicleStep({
           <>
             <p
               role="status"
-              className={`${panel} mb-4 flex items-center text-slate-600`}
+              className={`${panel} mb-4 flex items-center text-muted`}
             >
               <Pending>
                 Finding prices for{" "}
@@ -364,19 +365,15 @@ export function VehicleStep({
                         </p>
                       ) : null}
                       <div className="mt-auto pt-5">
-                        <button
-                          type="button"
+                        <Button
+                          size="lg"
                           onClick={() => choose(card.id)}
+                          pending={opening}
                           aria-disabled={continuing || undefined}
-                          aria-busy={opening || undefined}
-                          className={`${primaryButton} w-full aria-disabled:cursor-wait`}
+                          className="w-full aria-disabled:cursor-wait"
                         >
-                          {opening ? (
-                            <Pending>Continue · {formatMyr(total)}</Pending>
-                          ) : (
-                            <>Continue · {formatMyr(total)}</>
-                          )}
-                        </button>
+                          Continue · {formatMyr(total)}
+                        </Button>
                       </div>
                     </ClassCard>
                   );

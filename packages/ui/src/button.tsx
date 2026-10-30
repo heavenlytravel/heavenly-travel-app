@@ -76,14 +76,10 @@ export function Button({
       className={classes}
       aria-busy={pending || undefined}
       aria-disabled={pending || undefined}
-      onClick={(event) => {
-        // A press, or Enter in the form, while the work runs does nothing.
-        if (pending) {
-          event.preventDefault();
-          return;
-        }
-        onClick?.(event);
-      }}
+      // A press, or Enter in the form, while the work runs does nothing. Only
+      // a pending button gets a handler of its own, so a server component
+      // can still render a plain one (it can pass no functions).
+      onClick={pending ? (event) => event.preventDefault() : onClick}
       {...props}
     >
       {children}

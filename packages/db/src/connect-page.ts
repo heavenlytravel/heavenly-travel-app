@@ -5,9 +5,11 @@ import type { PageContent } from "./page-content";
  * kind "connect" (./site-page-input): what a visitor signed out reads at
  * connect's `/` until Marketing publishes their own, and what the editor
  * opens with before the page is first saved. Every part is Marketing's to
- * change in the editor; the four steps of a job and the "Open now" board
- * are drawn by Connect from the product and the locations, not written.
- * The text, a Markdown of `##` parts, lays out as a card for each part.
+ * change in the editor; the four steps of a job, who it is for, and the
+ * "Open now" board are drawn by Connect from the product and the
+ * locations, not written. The intro leads "Who it's for"; the text, a
+ * Markdown of `##` parts, lays out as a card for each part, its task
+ * list (`- [x]`) as ticked and open boxes.
  * See docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  * Browser-safe.
  */
@@ -22,19 +24,18 @@ export const CONNECT_PAGE_COPY: PageContent = {
     "We sell car-with-driver and coach charter trips. Connect hands them to vendors we trust: the pay is on the offer, and the trip runs from your driver's phone.",
   heroImage: null,
   intro: [
-    "Heavenly Travel sells car-with-driver and coach charter trips to travellers and companies across Malaysia. We don't own the vehicles that carry them: our vendors do. Connect is where those trips reach you.",
-    "Every offer shows the trip, the vehicle class and what we pay, before you say yes. Accept it, name the driver and the vehicle, and the trip runs from the driver's phone, step by step, with Operation seeing each step as it happens.",
-    "A company with a fleet registers once with its SSM number, adds its office staff to answer offers, and gives each driver a sign-in of their own. One person with one good car registers with their IC, and is the vendor and its driver in one account.",
+    "Heavenly Travel sells car-with-driver and coach charter trips to travellers and companies across Malaysia. We don't own the vehicles that carry them: our vendors do, and Connect is where those trips reach you.",
+    "Every offer shows the trip, the vehicle class and what we pay, before you say yes. Accept it, name the driver and the vehicle, and the trip runs from the driver's phone, step by step, with Operation seeing each step as it happens. No calls to chase, no screenshots to send. Whether you run a fleet of forty or drive one good car yourself, the work reaches you the same way.",
   ].join("\n\n"),
   body: [
     "## Have these at hand",
     "",
     "About five minutes, on a phone or a computer.",
     "",
-    "- Your SSM number, or your IC if you register as one person",
-    "- A WhatsApp number we can reach you on",
-    "- The places you serve and the services you run",
-    "- Later, once you're in: each vehicle's plate, road tax and insurance dates, and each driver's email",
+    "- [x] Your SSM number, or your IC if you register as one person",
+    "- [x] A WhatsApp number we can reach you on",
+    "- [x] The places you serve and the services you run",
+    "- [ ] Later, once you're in: each vehicle's plate, road tax and insurance dates, and each driver's email",
     "",
     "## From us",
     "",

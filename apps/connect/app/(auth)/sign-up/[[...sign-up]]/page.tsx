@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 
-// Connect takes no sign-ups for now: drivers sign in with the email their
-// vendor or Operation entered, and vendors are entered by staff in
-// manage. A vendor's own sign-up returns with Connect's landing page and
-// its registration form. An old link to here lands on sign-in.
+// Connect signs vendors up through their registration, /register: the
+// whole form, then the code that makes the account. Drivers sign in with
+// the email their vendor entered. An old link to here lands there.
 export default function SignUpPage() {
-  redirect("/sign-in");
+  redirect("/register");
 }

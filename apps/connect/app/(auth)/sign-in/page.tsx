@@ -18,7 +18,10 @@ export default function SignInPage() {
       footer={
         <>
           New to Connect?{" "}
-          <Link href="/register" className="font-semibold text-brand underline-offset-4 hover:underline">
+          <Link
+            href="/register"
+            className="font-semibold text-brand underline-offset-4 hover:underline"
+          >
             Register your business
           </Link>
         </>

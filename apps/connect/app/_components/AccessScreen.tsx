@@ -1,7 +1,6 @@
 import { CONTACT } from "@repo/db";
 import {
   Ban,
-  Hourglass,
   Mail,
   MessageCircle,
   PauseCircle,
@@ -10,7 +9,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { SignedIn } from "../_lib/access";
-import { buttonClass } from "../_ui/button";
+import { RegistrationStatus } from "./RegistrationStatus";
+import { Button } from "@repo/ui/button";
 import { BandHeading, Screen } from "../_ui/Screen";
 import { Panel } from "../_ui/parts";
 
@@ -19,11 +19,24 @@ type Shut = Exclude<SignedIn, { status: "ok" }>;
 /**
  * What a signed-in visitor Connect does not let in sees, one screen per
  * case: not a driver or a vendor yet, with the way to register a vendor,
- * a vendor waiting for approval, one not approved, or one suspended. Each
- * says how to reach the team, by WhatsApp first.
+ * one not approved, or one suspended. Each
+ * says how to reach the team, by WhatsApp first. A vendor waiting for
+ * approval has its status page instead (RegistrationStatus).
  */
 export function AccessScreen({ access }: { access: Shut }) {
-  const screen = screenOf(access);
+  if (access.status === "pending") {
+    return (
+      <RegistrationStatus
+        vendorId={access.vendor.id}
+        vendorName={access.vendor.name}
+        email={access.user.email}
+      />
+    );
+  }
+  const screen = screenOf(
+    access.status,
+    access.status === "register" ? null : access.vendor.name,
+  );
   const Icon = screen.icon;
   return (
     <Screen
@@ -59,32 +72,27 @@ export function AccessScreen({ access }: { access: Shut }) {
                 </li>
               ))}
             </ul>
-            <Link
-              href="/register"
-              className={buttonClass({ size: "lg", className: "w-full" })}
-            >
-              Register as a vendor
-            </Link>
+            <Button asChild size="lg" className="w-full">
+              <Link href="/register">Register your business</Link>
+            </Button>
           </>
         ) : null}
       </Panel>
       <Panel className="grid gap-3 p-5">
         <p className="text-sm font-semibold text-ink">Talk to the team</p>
         <div className="grid grid-cols-2 gap-2">
-          <a
-            href={CONTACT.whatsappHref}
-            className={buttonClass({ variant: "soft" })}
-          >
-            <MessageCircle aria-hidden className="size-4" />
-            WhatsApp
-          </a>
-          <a
-            href={`mailto:${CONTACT.bookingEmail}`}
-            className={buttonClass({ variant: "soft" })}
-          >
-            <Mail aria-hidden className="size-4" />
-            Email
-          </a>
+          <Button asChild variant="secondary">
+            <a href={CONTACT.whatsappHref} target="_blank" rel="noreferrer">
+              <MessageCircle aria-hidden className="size-4" />
+              WhatsApp
+            </a>
+          </Button>
+          <Button asChild variant="secondary">
+            <a href={`mailto:${CONTACT.bookingEmail}`}>
+              <Mail aria-hidden className="size-4" />
+              Email
+            </a>
+          </Button>
         </div>
         <p className="text-xs text-muted">
           {CONTACT.whatsappNumber} · {CONTACT.bookingEmail}
@@ -94,14 +102,17 @@ export function AccessScreen({ access }: { access: Shut }) {
   );
 }
 
-function screenOf(access: Shut): {
+function screenOf(
+  status: "register" | "refused" | "suspended",
+  vendorName: string | null,
+): {
   eyebrow: string;
   title: string;
   text: string;
   icon: LucideIcon;
   iconClass: string;
 } {
-  switch (access.status) {
+  switch (status) {
     case "register":
       return {
         eyebrow: "Welcome to Connect",
@@ -110,17 +121,9 @@ function screenOf(access: Shut): {
         icon: Sparkles,
         iconClass: "bg-brand-tint text-brand",
       };
-    case "pending":
-      return {
-        eyebrow: access.vendor.name,
-        title: "Waiting for approval",
-        text: "We check every vendor before Connect opens to it, and email you as soon as it does.",
-        icon: Hourglass,
-        iconClass: "bg-warning-soft text-warning",
-      };
     case "refused":
       return {
-        eyebrow: access.vendor.name,
+        eyebrow: vendorName ?? "",
         title: "Not approved",
         text: "This vendor was not approved for Connect. Talk to the team if you think this is wrong.",
         icon: Ban,
@@ -128,7 +131,7 @@ function screenOf(access: Shut): {
       };
     case "suspended":
       return {
-        eyebrow: access.vendor.name,
+        eyebrow: vendorName ?? "",
         title: "Suspended",
         text: "This vendor is suspended, so its jobs are paused. Talk to the team to know why and what happens next.",
         icon: PauseCircle,

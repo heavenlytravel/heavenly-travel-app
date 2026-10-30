@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+import { CONNECT_PAGE, sitePageFallbackTitle } from "@repo/db";
 import {
+  getConnectAccess,
   listDriverJobs,
   listDrivers,
   listVehicles,
@@ -9,12 +12,13 @@ import {
 } from "@repo/db/server";
 import { CalendarCheckIcon, InboxIcon } from "@repo/ui/icons";
 import { AccessScreen } from "./_components/AccessScreen";
+import { Landing } from "./_landing/Landing";
+import { landingData } from "./_landing/landing-data";
 import { GettingStarted } from "./_components/GettingStarted";
 import { OfferCard } from "./_components/OfferCard";
 import { VendorOfferCard } from "./_components/VendorOfferCard";
 import {
   memberOf,
-  requireSignedIn,
   shellMember,
   type LetIn,
   type MemberAccess,
@@ -27,9 +31,21 @@ import { BandStats } from "./_ui/BandStats";
 import { DoneTrips, NextJobCard, TripDays } from "./_ui/Trips";
 import { WeekAhead } from "./_ui/WeekAhead";
 
+/** The landing page's search title and description, for a visitor signed out. */
+export async function generateMetadata(): Promise<Metadata> {
+  const access = await getConnectAccess();
+  if (access.status !== "signed-out") return {};
+  const { content } = await landingData("public");
+  return {
+    title: content.metaTitle || sitePageFallbackTitle(CONNECT_PAGE),
+    description: content.metaDescription,
+  };
+}
+
 /**
- * Route: /. Who is signed in decides the screen: why Connect is shut to
- * them; a vendor's work for its owner and staff, the offers waiting for
+ * Route: /. Who is visiting decides the screen: the landing page for a
+ * visitor signed out; the status page of a registration waiting for
+ * approval; why Connect is shut to them; a vendor's work for its owner and staff, the offers waiting for
  * its yes and the jobs it accepted; and a driver's own, the job that
  * matters now first, the offers waiting for their yes, today's jobs,
  * those coming up and those done lately. A one-person vendor sees both,
@@ -37,7 +53,10 @@ import { WeekAhead } from "./_ui/WeekAhead";
  * "What people see in Connect".
  */
 export default async function HomePage() {
-  const access = await requireSignedIn();
+  const access = await getConnectAccess();
+  if (access.status === "signed-out") {
+    return <Landing {...await landingData("public")} />;
+  }
   if (access.status !== "ok") return <AccessScreen access={access} />;
   const member = memberOf(access);
   const now = new Date();

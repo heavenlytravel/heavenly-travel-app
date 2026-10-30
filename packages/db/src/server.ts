@@ -354,6 +354,8 @@ export type {
 export { listBookingNotes, addBookingNote } from "./booking-notes";
 export type { BookingNoteEntry } from "./booking-notes";
 export { findUserByEmail, listUsers } from "./users";
+export { listVendorOpenings } from "./vendor-openings";
+export type { VendorOpening } from "./vendor-openings";
 export { addStaff, createUser } from "./accounts";
 export type { ListedUser } from "./users";
 export * from "./roles";

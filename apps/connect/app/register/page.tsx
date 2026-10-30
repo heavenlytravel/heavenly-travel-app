@@ -1,17 +1,20 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { listRegistrationLocations } from "@repo/db/server";
+import { getConnectAccess, listRegistrationLocations } from "@repo/db/server";
 import { BadgeCheck, CarFront, Smartphone } from "lucide-react";
-import { requireSignedIn } from "../_lib/access";
 import { Panel } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
-import { RegisterForm } from "./RegisterForm";
+import { RegisterFlow } from "./RegisterFlow";
 
-/** What a vendor gets, and how it starts. */
+export const metadata: Metadata = { title: "Register your business | Connect" };
+
+/** What happens after the registration, beside the form. */
 const STEPS = [
   {
     icon: BadgeCheck,
     title: "We check and approve you",
-    text: "We look at every vendor and email you once Connect opens to you.",
+    text: "We look at every registration by hand, and email you once Connect opens.",
   },
   {
     icon: CarFront,
@@ -26,22 +29,28 @@ const STEPS = [
 ];
 
 /**
- * Route: /register. A signed-in account that is neither a vendor's member
- * nor a driver registers a vendor, company or individual, and becomes its
- * owner. Anyone else goes home, where their screen says where they stand.
- * See docs/261028-fulfilment-vendors-and-connect.md, "Signing up".
+ * Route: /register. The way into Connect for a vendor: the whole form,
+ * then the code that confirms the email and makes the account, and the
+ * registration with it (RegisterFlow). A visitor signed out fills it all;
+ * an account signed in with no business sends it as itself. An account
+ * that registered a business already, or drives for one, goes home: its
+ * status page, or Connect. /join and /sign-up lead here. See
+ * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export default async function RegisterPage() {
-  const access = await requireSignedIn();
-  if (access.status !== "register") redirect("/");
+  const access = await getConnectAccess();
+  if (access.status !== "signed-out" && access.status !== "register") {
+    redirect("/");
+  }
   const locations = await listRegistrationLocations();
+  const user = access.status === "register" ? access.user : null;
   return (
     <Screen
       nav={false}
       back={{ href: "/", label: "Back" }}
       asideFirst
       aside={
-        <Panel className="connect-rise p-5">
+        <Panel className="connect-rise grid gap-5 p-5">
           <ol className="grid gap-4">
             {STEPS.map((step, index) => (
               <li key={step.title} className="flex gap-3">
@@ -58,19 +67,41 @@ export default async function RegisterPage() {
               </li>
             ))}
           </ol>
+          {user ? null : (
+            <p className="border-t border-hairline pt-4 text-sm text-muted">
+              Registered already, or driving for a vendor?{" "}
+              <Link
+                href="/sign-in"
+                className="font-semibold text-brand underline-offset-4 hover:underline focus-ring"
+              >
+                Sign in
+              </Link>
+            </p>
+          )}
         </Panel>
       }
       band={
         <BandHeading
-          eyebrow="Drive with Heavenly Travel"
-          title="Register as a vendor"
+          eyebrow="Heavenly Travel Connect"
+          title="Register your business"
         >
-          Supply vehicles, drivers or both. A driver for a vendor already with
-          us does not register: their vendor adds them.
+          Fill it all in, then confirm your email with a code. A driver for a
+          vendor already with us doesn&rsquo;t register: their vendor adds them.
         </BandHeading>
       }
     >
-      <RegisterForm email={access.user.email} locations={locations} />
+      <RegisterFlow
+        signedIn={
+          user
+            ? {
+                email: user.email,
+                firstName: user.firstName ?? "",
+                lastName: user.lastName ?? "",
+              }
+            : null
+        }
+        locations={locations}
+      />
     </Screen>
   );
 }

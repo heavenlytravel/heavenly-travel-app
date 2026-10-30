@@ -14,20 +14,11 @@ import {
   listSitePageSummaries,
 } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import {
-  BackLinkSkeleton,
-  CardSkeleton,
-  HeaderSkeleton,
-  Streamed,
-} from "@repo/console/Skeleton";
+import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { EditorHeader } from "../../../../../_components/page-editor/EditorHeader";
 import type { PagePublishEntry } from "../../../../../_components/page-editor/PageHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import {
-  activityHref,
-  pagesHref,
-  sitePagePublishHref,
-} from "../../../../../_lib/routes";
+import { activityHref, sitePagePublishHref } from "../../../../../_lib/routes";
 import { scopeOf } from "../../../../../_lib/scope";
 import { sitePagePreviewUrl } from "../../../../../_lib/site";
 import { FooterEditor } from "./FooterEditor";
@@ -50,7 +41,6 @@ export default async function FooterEditorPage({
     <Streamed
       fallback={
         <>
-          <BackLinkSkeleton />
           <HeaderSkeleton />
           <div className="grid gap-5">
             <CardSkeleton rows={2} />
@@ -87,8 +77,7 @@ async function editorDetails() {
   return (
     <>
       <EditorHeader
-        back={{ href: pagesHref(null), label: "Pages" }}
-        section="Website"
+        where="Website"
         title={FOOTER_LABEL}
         publishes={publishes}
         allHref={activityHref(null, { type: "site-page" })}

@@ -11,6 +11,7 @@ import { AppSidebar } from "./AppSidebar";
 import { ConsoleMenu } from "./ConsoleMenu";
 import { ConsoleSearch } from "./ConsoleSearch";
 import { ConsoleTopBar } from "./ConsoleTopBar";
+import { PageTrail } from "./PageTrail";
 
 /**
  * The console's chrome round a page: the navy sidebar with the one menu,
@@ -65,7 +66,10 @@ export async function ConsoleShell({
             permissions={permissions}
             person={person}
           />
-          <PageColumn>{children}</PageColumn>
+          <PageColumn>
+            <PageTrail />
+            {children}
+          </PageColumn>
         </SidebarInset>
       </ConsoleSearch>
       {/* The console's one place for "Saved" and the like, at the corner. */}

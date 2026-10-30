@@ -1,5 +1,5 @@
 import { listClassOptions } from "@repo/db/server";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import {
   CardSkeleton,
   DetailSkeleton,
@@ -7,8 +7,6 @@ import {
   Streamed,
 } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
-import { driversHref } from "../../../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../../../_lib/scope";
 import { DriverForm } from "../_components/DriverForm";
 
@@ -26,8 +24,7 @@ export default async function NewDriverPage({
 
   return (
     <>
-      <BackLink href={driversHref(scope.slug)}>Drivers</BackLink>
-      <PageHeader section={sectionLabelOf("drivers")} title="Add driver" />
+      <PageHeader title="Add driver" />
       <Streamed
         fallback={
           <DetailSkeleton

@@ -68,11 +68,6 @@ export function HeaderSkeleton() {
   );
 }
 
-/** The back link above a page, where it names the record. */
-export function BackLinkSkeleton() {
-  return <Bone className="mb-3.5 h-5 w-28" />;
-}
-
 const CELL_WIDTHS = ["w-16", "w-24", "w-20", "w-14", "w-12", "w-10"];
 
 export function TableSkeleton({

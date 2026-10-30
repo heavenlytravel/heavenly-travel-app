@@ -11,16 +11,11 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
-import {
-  BackLinkSkeleton,
-  CardSkeleton,
-  HeaderSkeleton,
-  Streamed,
-} from "@repo/console/Skeleton";
+import { PageHeader } from "@repo/console/PageHeader";
+import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
 import { PageContentView } from "../../../../../../_components/page-editor/PageContentView";
 import { requireAdmin } from "../../../../../../_lib/access";
-import { activityHref, sitePageHref } from "../../../../../../_lib/routes";
+import { sitePageHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 import { FooterContentView } from "../../footer/FooterContentView";
 
@@ -46,7 +41,6 @@ export default async function SitePagePublishPage({
     <Streamed
       fallback={
         <>
-          <BackLinkSkeleton />
           <HeaderSkeleton />
           <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
             <CardSkeleton rows={7} />
@@ -132,7 +126,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
   );
 }
 
-/** A publish's sentence as its title, who and when, the way back to its editor, then `children` side by side. */
+/** A publish's sentence as its title, who and when, the way to its editor, then `children` side by side. */
 function PublishHeader({
   entry,
   edit,
@@ -144,11 +138,7 @@ function PublishHeader({
 }) {
   return (
     <>
-      <BackLink href={activityHref(null, { type: "site-page" })}>
-        Changes to the site&apos;s pages
-      </BackLink>
       <PageHeader
-        section="Website"
         title={describeActivity(entry)}
         badge={
           <InfoTip text="To roll back, copy the old text into the editor and publish again." />

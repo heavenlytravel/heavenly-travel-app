@@ -6,7 +6,6 @@ import {
   RecordHistorySkeleton,
 } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../../_lib/console-map";
 import { driverHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 
@@ -35,8 +34,7 @@ export default async function DriverHistoryPage({
         }
         return (
           <RecordHistory
-            section={sectionLabelOf("drivers")}
-            back={{
+            record={{
               href: driverHref(scope.slug, driver.id),
               label: driver.name,
             }}

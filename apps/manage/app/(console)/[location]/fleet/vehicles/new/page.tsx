@@ -1,5 +1,5 @@
 import { listClassOptions, listModelSuggestions } from "@repo/db/server";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import {
   CardSkeleton,
   DetailSkeleton,
@@ -7,8 +7,7 @@ import {
   Streamed,
 } from "@repo/console/Skeleton";
 import { requireAdmin } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
-import { VEHICLE_CLASS_PARAM, vehiclesHref } from "../../../../../_lib/routes";
+import { VEHICLE_CLASS_PARAM } from "../../../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../../../_lib/scope";
 import { VehicleForm } from "../_components/VehicleForm";
 
@@ -29,8 +28,7 @@ export default async function NewVehiclePage({
 
   return (
     <>
-      <BackLink href={vehiclesHref(scope.slug)}>Vehicles</BackLink>
-      <PageHeader section={sectionLabelOf("vehicles")} title="Add vehicle" />
+      <PageHeader title="Add vehicle" />
       <Streamed
         fallback={
           <DetailSkeleton

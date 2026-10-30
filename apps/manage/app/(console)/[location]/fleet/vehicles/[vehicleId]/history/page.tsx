@@ -6,7 +6,6 @@ import {
   RecordHistorySkeleton,
 } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../../_lib/console-map";
 import { vehicleHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 
@@ -35,8 +34,7 @@ export default async function VehicleHistoryPage({
         }
         return (
           <RecordHistory
-            section={sectionLabelOf("vehicles")}
-            back={{
+            record={{
               href: vehicleHref(scope.slug, vehicle.id),
               label: vehicle.plate,
             }}

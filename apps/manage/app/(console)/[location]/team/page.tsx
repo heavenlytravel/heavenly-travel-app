@@ -25,7 +25,6 @@ import {
 } from "@repo/console/Table";
 import { SearchBox } from "../../../_components/SearchBox";
 import { requireAdmin } from "../../../_lib/access";
-import { sectionLabelOf } from "../../../_lib/console-map";
 import { SEARCH_PARAM, staffHref } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
 import { AdminRowControls } from "./AdminRowControls";
@@ -50,11 +49,7 @@ export default async function StaffPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("staff")}
-        title="Staff"
-        action={<PromoteButton />}
-      />
+      <PageHeader title="Staff" action={<PromoteButton />} />
       <Streamed
         fallback={
           <div className="grid gap-5">

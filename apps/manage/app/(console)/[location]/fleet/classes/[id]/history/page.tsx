@@ -6,7 +6,6 @@ import {
   RecordHistorySkeleton,
 } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../../_lib/console-map";
 import { classHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 
@@ -34,8 +33,7 @@ export default async function ClassHistoryPage({
         if (!vehicleClass) notFound();
         return (
           <RecordHistory
-            section={sectionLabelOf("classes")}
-            back={{ href: classHref(null, id), label: vehicleClass.name }}
+            record={{ href: classHref(null, id), label: vehicleClass.name }}
             entries={entries}
             emptyMessage="No changes recorded. This class was seeded before the log."
           />

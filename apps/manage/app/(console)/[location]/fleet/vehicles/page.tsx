@@ -5,7 +5,6 @@ import { PlusIcon } from "@repo/ui/icons";
 import { PageHeader } from "@repo/console/PageHeader";
 import { FleetList } from "../../../../_components/FleetList";
 import { requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   DUE_PARAM,
   newVehicleHref,
@@ -34,7 +33,6 @@ export default async function VehiclesPage({
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("vehicles")}
         title="Vehicles"
         action={
           <Button asChild>

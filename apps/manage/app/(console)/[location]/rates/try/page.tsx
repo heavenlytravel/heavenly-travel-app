@@ -17,7 +17,6 @@ import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   locationDetails,
   locationOfferings,
@@ -43,10 +42,7 @@ export default async function TryTripPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-try")}
-        title={RATES_PAGE_LABELS.try}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.try} />
       <Streamed fallback={<CardSkeleton rows={location ? 8 : 3} />}>
         {() => (location ? locationTry(location) : chooseLocation())}
       </Streamed>

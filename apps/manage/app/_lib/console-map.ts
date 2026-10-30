@@ -27,6 +27,10 @@ export const CONSOLE_GROUPS = [
 
 export type ConsoleGroup = (typeof CONSOLE_GROUPS)[number]["key"];
 
+const GROUP_LABELS = Object.fromEntries(
+  CONSOLE_GROUPS.map((group) => [group.key, group.label]),
+) as Record<ConsoleGroup, string>;
+
 /** What a page's `requireAdmin` asks, the same in every scope or one under `~` and another under a location. */
 type PagePermission = Permission | { all: Permission; location: Permission };
 
@@ -342,12 +346,30 @@ function pageAt(pathname: string): PageAt | null {
   return found;
 }
 
-/** The section a page is in, for the label over its title: "Fleet" over "Vehicles". Only a section of several pages names itself. */
-export function sectionLabelOf(pageKey: string): string | undefined {
-  const section = CONSOLE_SECTIONS.find((entry) =>
-    entry.pages.some((page) => page.key === pageKey),
-  );
-  return section && section.pages.length > 1 ? section.label : undefined;
+/** A step of the trail over a page's title: a name, and where it leads if it is a page. */
+export type Crumb = { label: string; href?: string };
+
+/**
+ * The trail over a page's title, read off its address, so every page has
+ * one in the same place and its title never moves. It starts with where
+ * the page sits in the menu: its section when that holds several pages
+ * ("Fleet" over Vehicles), its group otherwise ("Operations" over
+ * Bookings). A record or a form under a page adds that page, a link back
+ * to it: "Fleet / Vehicles" over a vehicle or Add vehicle. None on the
+ * dashboard, which has its band, nor on an address of no page.
+ */
+export function trailOf(pathname: string): Crumb[] {
+  const at = pageAt(pathname);
+  if (!at || at.page.path === "") return [];
+  const head = {
+    label:
+      at.section.pages.length > 1
+        ? at.section.label
+        : GROUP_LABELS[at.section.group],
+  };
+  return at.own
+    ? [head]
+    : [head, { label: at.page.label, href: pageHref(at.page, at.scope) }];
 }
 
 /** A page by its key. */

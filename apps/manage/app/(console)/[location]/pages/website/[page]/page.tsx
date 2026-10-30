@@ -19,7 +19,6 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import {
-  BackLinkSkeleton,
   CardSkeleton,
   HeaderSkeleton,
   Streamed,
@@ -29,11 +28,7 @@ import { EditorHeader } from "../../../../../_components/page-editor/EditorHeade
 import { PageEditor } from "../../../../../_components/page-editor/PageEditor";
 import type { PagePublishEntry } from "../../../../../_components/page-editor/PageHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import {
-  activityHref,
-  pagesHref,
-  sitePagePublishHref,
-} from "../../../../../_lib/routes";
+import { activityHref, sitePagePublishHref } from "../../../../../_lib/routes";
 import { scopeOf } from "../../../../../_lib/scope";
 import {
   sitePagePreviewUrl,
@@ -62,7 +57,6 @@ export default async function SitePageEditorPage({
     <Streamed
       fallback={
         <>
-          <BackLinkSkeleton />
           <HeaderSkeleton />
           <div className="grid gap-5">
             <CardSkeleton rows={1} />
@@ -95,8 +89,7 @@ async function editorDetails({ page }: { page: SitePageKey }) {
   return (
     <>
       <EditorHeader
-        back={{ href: pagesHref(null), label: "Pages" }}
-        section="Website"
+        where="Website"
         title={label}
         publishes={publishes}
         allHref={activityHref(null, { type: "site-page" })}

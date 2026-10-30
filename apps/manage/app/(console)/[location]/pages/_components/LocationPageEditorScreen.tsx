@@ -16,12 +16,8 @@ import {
 import { getLocationPage, listPagePublishes } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Notice } from "@repo/ui/notice";
-import {
-  BackLinkSkeleton,
-  CardSkeleton,
-  HeaderSkeleton,
-  Streamed,
-} from "@repo/console/Skeleton";
+import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
+import { RecordLink } from "@repo/console/PageHeader";
 import { EditorHeader } from "../../../../_components/page-editor/EditorHeader";
 import type { PagePublishEntry } from "../../../../_components/page-editor/PageHistory";
 import {
@@ -53,7 +49,6 @@ export function LocationPageEditorScreen({
     <Streamed
       fallback={
         <>
-          <BackLinkSkeleton />
           <HeaderSkeleton />
           <div className="grid gap-5">
             <CardSkeleton rows={1} />
@@ -106,17 +101,24 @@ async function editorDetails(id: string, ref: LocationPageRef) {
   return (
     <>
       <EditorHeader
-        // Back to the section's list where it has one, else to every page.
-        back={{
-          href: pagesHref(location.slug, {
-            section: children ? ref.page : undefined,
-          }),
-          label: children ? sectionLabel : "Pages",
-        }}
-        section={
-          isChildPage(ref)
-            ? `${location.name} · ${sectionLabel}`
-            : location.name
+        // A page under a section links to the section's list.
+        where={
+          isChildPage(ref) ? (
+            <>
+              {location.name} ·{" "}
+              {children ? (
+                <RecordLink
+                  href={pagesHref(location.slug, { section: ref.page })}
+                >
+                  {sectionLabel}
+                </RecordLink>
+              ) : (
+                sectionLabel
+              )}
+            </>
+          ) : (
+            location.name
+          )
         }
         title={pageTitleOf(ref, name)}
         publishes={publishes}

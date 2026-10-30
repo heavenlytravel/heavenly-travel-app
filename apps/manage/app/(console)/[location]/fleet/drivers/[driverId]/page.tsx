@@ -1,7 +1,7 @@
 import { DRIVER_DELETE_IMPACT, driverDocumentsDue } from "@repo/db";
 import { getDriver, listClassOptions } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import {
   CardSkeleton,
   DetailSkeleton,
@@ -14,7 +14,6 @@ import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
 import { DATES_CARDS } from "../../../../../_lib/fleet-form";
 import {
   driverHref,
@@ -46,7 +45,6 @@ export default async function DriverPage({
 
   return (
     <>
-      <BackLink href={driversHref(scope.slug)}>Drivers</BackLink>
       <Streamed
         fallback={
           <>
@@ -77,7 +75,6 @@ async function driverScreen(scope: ConsoleScope, driverId: string) {
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("drivers")}
         title={driver.name}
         badge={
           <ServiceBadge active={driver.isActive} on="Active" off="Inactive" />

@@ -1,8 +1,7 @@
 import { getLocationSearch } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
-import { BackLink, PageHeader } from "@repo/console/PageHeader";
+import { PageHeader } from "@repo/console/PageHeader";
 import { requireAdmin } from "../../../../_lib/access";
-import { bookingsHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { NewBookingForm } from "./NewBookingForm";
 
@@ -24,7 +23,6 @@ export default async function NewBookingPage({
 
   return (
     <>
-      <BackLink href={bookingsHref(scope.slug)}>Bookings</BackLink>
       <PageHeader title="New booking" />
       <NewBookingForm
         hasGoogle={hasGooglePlaces}

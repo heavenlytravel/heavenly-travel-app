@@ -6,7 +6,6 @@ import { FORM_WIDTH } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, FormSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import { locationDetails } from "../../../../_lib/location-data";
 import { RATES_PAGE_LABELS, ratesHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
@@ -33,10 +32,7 @@ export default async function TripRulesPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-rules")}
-        title={RATES_PAGE_LABELS.rules}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.rules} />
       <Streamed
         fallback={
           location && manages ? (

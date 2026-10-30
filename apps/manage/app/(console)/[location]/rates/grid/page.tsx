@@ -25,7 +25,6 @@ import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import { FilterLinks } from "../../../../_components/FilterLinks";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import {
   locationDetails,
   locationOfferings,
@@ -69,10 +68,7 @@ export default async function RateGridPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-grid")}
-        title={RATES_PAGE_LABELS.grid}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.grid} />
       {location ? null : (
         <div className="mb-5">
           <CategoryFilter scope={slug} category={category} />

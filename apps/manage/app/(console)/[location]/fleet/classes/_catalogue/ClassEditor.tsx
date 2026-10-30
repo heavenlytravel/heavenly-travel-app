@@ -21,7 +21,6 @@ import {
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { getPermissions } from "../../../../../_lib/access";
-import { sectionLabelOf } from "../../../../../_lib/console-map";
 import {
   classHref,
   newVehicleHref,
@@ -81,7 +80,6 @@ function VehicleClassScreen({
   return (
     <>
       <PageHeader
-        section={sectionLabelOf("classes")}
         title={vehicleClass ? vehicleClass.name : "Add class"}
         badge={
           vehicleClass ? (

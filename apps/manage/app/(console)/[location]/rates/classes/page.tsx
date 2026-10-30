@@ -6,7 +6,6 @@ import { CARD_LINK, Card, CardTitle } from "@repo/console/Card";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
-import { sectionLabelOf } from "../../../../_lib/console-map";
 import { locationOfferings } from "../../../../_lib/location-data";
 import {
   RATES_PAGE_LABELS,
@@ -37,10 +36,7 @@ export default async function RateClassesPage({
 
   return (
     <>
-      <PageHeader
-        section={sectionLabelOf("rates-classes")}
-        title={RATES_PAGE_LABELS.classes}
-      />
+      <PageHeader title={RATES_PAGE_LABELS.classes} />
       <Streamed fallback={<CardSkeleton rows={4} />}>
         {() =>
           location

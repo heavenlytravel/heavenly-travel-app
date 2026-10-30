@@ -1,9 +1,5 @@
-import { BackLink } from "@repo/console/PageHeader";
 import { requireAdmin } from "../../../../../_lib/access";
 import {
-  RATES_PAGE_LABELS,
-  classesHref,
-  offeringBackHref,
   offeringFromOf,
   OFFERING_FROM_PARAM,
 } from "../../../../../_lib/routes";
@@ -26,21 +22,7 @@ export default async function ClassPage({
   const scope = await scopeOf(params);
   const { id } = await params;
 
-  if (!scope.location) {
-    return (
-      <>
-        <BackLink href={classesHref(null)}>Classes</BackLink>
-        <ClassEditor id={id} />
-      </>
-    );
-  }
+  if (!scope.location) return <ClassEditor id={id} />;
   const from = offeringFromOf((await searchParams)[OFFERING_FROM_PARAM]);
-  return (
-    <>
-      <BackLink href={offeringBackHref(scope.location.slug, from)}>
-        {from === "rates" ? RATES_PAGE_LABELS.classes : "Classes"}
-      </BackLink>
-      <OfferingEditor location={scope.location} id={id} from={from} />
-    </>
-  );
+  return <OfferingEditor location={scope.location} id={id} from={from} />;
 }

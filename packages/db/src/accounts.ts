@@ -1,4 +1,4 @@
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, type User as ClerkUser } from "@clerk/nextjs/server";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
@@ -21,6 +21,19 @@ const CLERK_FIELDS: Record<string, keyof NewUserFields> = {
   last_name: "lastName",
 };
 
+/** The names a person typed for themselves: the last one may be empty. */
+type Names = { firstName: string; lastName: string };
+
+/** The Clerk account given the names typed, when it has none of its own. */
+async function namedWhenBlank(held: ClerkUser, names: Names) {
+  if (held.firstName || held.lastName || !names.firstName) return held;
+  const clerk = await clerkClient();
+  return clerk.users.updateUser(held.id, {
+    firstName: names.firstName,
+    lastName: names.lastName || undefined,
+  });
+}
+
 /** The account in Clerk for the email: the one it holds, its names filled when blank, or a new one. */
 async function clerkAccountFor(fields: NewUserFields) {
   const clerk = await clerkClient();
@@ -36,14 +49,7 @@ async function clerkAccountFor(fields: NewUserFields) {
     });
     return { clerkUser: created, existing: false };
   }
-  const named =
-    held.firstName || held.lastName
-      ? held
-      : await clerk.users.updateUser(held.id, {
-          firstName: fields.firstName,
-          lastName: fields.lastName || undefined,
-        });
-  return { clerkUser: named, existing: true };
+  return { clerkUser: await namedWhenBlank(held, fields), existing: true };
 }
 
 /**
@@ -142,4 +148,34 @@ export async function addStaff(
     );
   }
   return createUser(actor, fields, access);
+}
+
+/**
+ * Keeps on someone's account what they typed about themselves in
+ * Connect's registration: the phone, ours, as a booking keeps it; and
+ * the names, in Clerk and mirrored here at once, only where the account
+ * has none (its own page changes them). Not part of the registration: a
+ * failure here leaves it sent.
+ */
+export async function keepApplicantProfile(
+  user: {
+    id: string;
+    clerkId: string;
+    firstName: string | null;
+    lastName: string | null;
+  },
+  fields: Names & { phone: string },
+): Promise<void> {
+  await db.user.update({
+    where: { id: user.id },
+    data: { phone: fields.phone },
+  });
+  // Ours mirrors Clerk's names: named here, named there.
+  if (user.firstName || user.lastName || !fields.firstName) return;
+  const clerk = await clerkClient();
+  const held = await clerk.users.getUser(user.clerkId);
+  const named = await namedWhenBlank(held, fields);
+  if (named === held) return;
+  const snapshot = snapshotFromBackendUser(named);
+  if (snapshot) await upsertUserFromClerk(snapshot);
 }

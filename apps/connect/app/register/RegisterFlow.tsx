@@ -57,8 +57,9 @@ type Step =
  * the password typed, or its own, or a code; either way the registration
  * goes in once signed in. An account that already registered a business,
  * or drives for one, is not sent a second: it goes home, to its status page
- * or to Connect. Nothing is stored before the email is confirmed. The form
- * is kept in the tab's storage. See
+ * or to Connect. Nothing is stored before the email is confirmed; then the
+ * names and phone are kept on the account too. The form is kept in the
+ * tab's storage. See
  * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export function RegisterFlow({
@@ -405,8 +406,8 @@ export function RegisterFlow({
               />
             </Field>
             <Field
-              label="WhatsApp number"
-              hint="With the country code. We reach you here."
+              label="Phone number"
+              hint="Your WhatsApp, with the country code. We reach you here, and keep it on your account."
             >
               <Input
                 name="contactPhone"

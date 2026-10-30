@@ -3,6 +3,7 @@
 import {
   createVendor,
   getConnectAccess,
+  keepApplicantProfile,
   mayRegisterVendor,
   parseVendorFields,
   VENDOR_LOCATIONS_FIELD,
@@ -45,10 +46,11 @@ export async function checkRegistrationAction(
 /**
  * A vendor's registration, once the email is confirmed and the session
  * started: the signed-in applicant becomes the owner of a vendor waiting
- * for approval, with their account's email as its contact. An account
- * that already works for a vendor or drives for one is not given a second:
- * it goes to its status page, which hands an approved one on to Connect.
- * The team hears of a registration by email. See
+ * for approval, with their account's email as its contact; the phone and
+ * names they typed are kept on their account too. An account that already
+ * works for a vendor or drives for one is not given a second: it goes to
+ * its status page, which hands an approved one on to Connect. The team
+ * hears of a registration by email. See
  * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export async function registerVendorAction(
@@ -71,6 +73,17 @@ export async function registerVendorAction(
   });
   if (!result.ok) return stateOf(result);
   const { name, contactName, contactEmail, contactPhone } = fields.value;
+  const names = {
+    firstName: String(formData.get("firstName") ?? "").trim(),
+    lastName: String(formData.get("lastName") ?? "").trim(),
+  };
+  after(async () => {
+    try {
+      await keepApplicantProfile(user, { ...names, phone: contactPhone });
+    } catch (error) {
+      console.error("Keeping the applicant's profile failed", error);
+    }
+  });
   after(() =>
     sendVendorEmail("registered", {
       id: result.id,

@@ -141,9 +141,15 @@ One menu. It does not change when the location changes:
 
 How it behaves:
 
-- **A section with pages opens in place** under its row. Only one is open at a time:
-  opening another closes the one that was open. The section of the page on screen is open
-  when a page loads. There are no drills and no "back" row.
+- **A section with pages opens in place** under its row, sliding open in 200ms. Only one
+  is open at a time: opening another closes the one that was open, in the same slide. The
+  section of the page on screen is open when a page loads. There are no drills and no
+  "back" row.
+- **What gets a row:** a page someone goes to again and again, a list or a board, gets a
+  row. Pages that belong together (Vehicles, Drivers, Classes) make a section that opens in
+  place; a section has no page of its own. A form (New booking, Add vehicle) or a record (a
+  booking, a vehicle) never gets a row: it is reached from its list, which stays lit in the
+  menu while it is open, and from the search palette's actions.
 - **The page you are on is a white pill** with ink text and a brand-blue icon. It is
   bright, with no dot and no bar.
   - Its open section is lit softly (white at 10%).
@@ -158,9 +164,15 @@ How it behaves:
 - **A draft location keeps its setup marks** on the rows of its setup steps.
 - **The rail:** the collapsed sidebar shows each page of an open section as its own icon,
   as today.
-- **The person** sits at the sidebar's foot (name, level, menu), not in the top bar.
-- **The top bar holds** the picker and Search (Ctrl/Cmd+K) and nothing else. No breadcrumb
-  repeats the title, and there is no bell.
+- **The top bar holds,** from the left: the button that folds the sidebar (it stays there
+  either way, with a tooltip naming Ctrl/Cmd+B), the picker, then Search (Ctrl/Cmd+K) and
+  the person's picture at the right, which opens their menu and names them and their level
+  on hover. There is no bell. The sidebar's head is the logo alone, a link to `/~`.
+- **A trail over every title,** read off the address by the shell, so a title stands in
+  the same place on every page: the section ("Fleet") or the group ("Operations") over a
+  list, and "Fleet › Vehicles" over a record or a form under it, the list a link. It goes no
+  deeper than the list; a page under a record (a trip's amend, a history) names its record
+  as a link under the title. None on the dashboard.
 - **On a phone** the same menu fills the panel, sections opening in place, the picker
   on top.
 - **The search palette** keeps working as today, with its index moved to the new addresses.
@@ -173,7 +185,6 @@ The menu is built from one list where each row names its group, so a later produ
 The CEO does not like tabs.
 
 - **A section's pages** (Fleet, Rates, Team) live in the menu, not in tabs on the page.
-- **Rates' four pages end with "Before" and "Next" cards**, so they read in order.
 - **Status filters become figure tiles you click:**
   - Bookings: Received, Confirmed, Completed, Cancelled, All, each with its count from
     `countBookings`
@@ -346,7 +357,7 @@ The rule: anything two screens or two apps can share is shared. Variants, never 
 A replaced part is deleted in the PR that replaces it.
 
 - **A new package, `packages/console` (`@repo/console`),** for the console's own parts:
-  - `Card`, `PageHeader` (with the section label), `SectionHeader`, `Table`, `Skeleton`,
+  - `Card`, `PageHeader` with the `Trail` over it, `SectionHeader`, `Table`, `Skeleton`,
     `PageColumn`
   - the status chips, `FigureTiles`, the document chips and `FormError`
   - the shell: the sidebar menu, the picker, the top bar and the phone panel

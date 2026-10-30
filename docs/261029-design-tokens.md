@@ -63,7 +63,7 @@ The new sizes set no line height, so they keep the one around them, as typed siz
 `leading-display` (1.1) sets a big title tight.
 
 Letter spacing: `tracking-title` (−0.01em) for a bold title, `tracking-caps` (0.06em) for
-small capitals, `tracking-kicker` (0.08em) for the console's page kicker,
+small capitals, `tracking-kicker` (0.08em) for the console's trail over a title,
 `tracking-eyebrow` (0.18em) for the site's eyebrow over a section. The `text-caps`
 utility is size, spacing and capitals in one: `text-caps font-semibold text-muted`.
 
@@ -106,6 +106,9 @@ bar (`top-(--header-height)`, `scroll-mt-…`) instead of retyping the number.
 - `text-caps`: small capitals.
 - `scroll-shade-x`: a box that scrolls sideways shows a shadow on the side that hides
   more. On white.
+- Scroll bars are thin everywhere, with no arrows: a soft thumb on a clear track, the
+  browser's own bar (no wrapper). `scrollbar-on-dark` lightens the thumb on navy or
+  ink; `scrollbar-quiet` hides it until the pointer is over the box (the sidebar).
 - `text-link`: a link in a line of words or beside a button: bold, brand, underlined
   under the pointer, with its ring. Add `underline` when it sits inside a sentence.
 - `card-link`: the link that makes a whole card the target. The card is `relative`;
@@ -134,10 +137,11 @@ compile `@repo/console`'s classes, so anything the site shows lives in `@repo/ui
     `secondary`); `SheetHeader`.
   - One icon library, `@repo/ui/icons`, the site's own drawings included.
   - Browser helpers: `useMediaQuery` / `useNarrow`, `useDismiss` (Escape and a press
-    outside), `isTyping`, `scrollBehavior` and `prefersReducedMotion`.
-- `@repo/console`: `Card`, `Tile`, `Table`, `PageHeader`, `SectionHeader`, `EmptyState`
-  and `EmptyRow`, `FigureTiles`, `StepMark`, `LocationMark`, `FormFoot` and
-  `CancelLink`, the page skeletons. Status chips (`BookingStatusBadge`,
+    outside), `isTyping`, `useShortcutLabel` ("Ctrl K" or "⌘ K"), `scrollBehavior` and
+    `prefersReducedMotion`.
+- `@repo/console`: `Card`, `Tile`, `Table`, `PageHeader` with `Trail` and `RecordLink`,
+  `SectionHeader`, `EmptyState` and `EmptyRow`, `FigureTiles`, `StepMark`, `LocationMark`,
+  `FormFoot` and `CancelLink`, the page skeletons. Status chips (`BookingStatusBadge`,
   `ItemStatusBadge`, `PAGE_TONES`…) are in `@repo/console/StatusBadges` and shown by
   both apps; they may only use `Badge`, never console classes of their own.
 

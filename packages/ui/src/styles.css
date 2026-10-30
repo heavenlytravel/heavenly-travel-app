@@ -178,6 +178,28 @@ html:has(dialog:modal) {
 }
 
 /*
+ * A section's pages under its row in the sidebar slide open and shut: the
+ * row's height runs from none to the pages' own (a grid row from 0fr to
+ * 1fr, which needs no height measured), and they fade in as they come.
+ * One section opens as another shuts, in the same time.
+ */
+.ui-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  padding-block: 0;
+  transition-property: grid-template-rows, opacity, padding-block;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+.ui-fold[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  padding-block: 0.25rem 0.375rem;
+}
+
+/*
  * The room the dock at the foot of a phone's screen takes, which a toast
  * stands above. Nothing where there is no dock.
  */
@@ -194,6 +216,7 @@ html:has(dialog:modal) {
   .ui-pop,
   .ui-pop::backdrop,
   .ui-pop-panel,
+  .ui-fold,
   .ui-nav-progress {
     transition: none;
   }

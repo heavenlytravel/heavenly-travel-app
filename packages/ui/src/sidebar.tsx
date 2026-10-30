@@ -457,22 +457,26 @@ export function SidebarMenuCluster({
 /**
  * The pages of a section, open in place under its row: indented, on a
  * line down their left. A row of a `SidebarMenu` holding its own list of
- * `SidebarMenuItem`s, named by `label` for assistive technology.
+ * `SidebarMenuItem`s, named by `label` for assistive technology. It is
+ * always drawn, so it can slide open and shut (`ui-fold` in styles.css);
+ * shut, it is out of reach of the keyboard and assistive technology.
  */
 export function SidebarMenuSub({
   label,
+  open,
   children,
 }: {
   label: string;
+  open: boolean;
   children: ReactNode;
 }) {
   const navy = useSidebarTone() === "navy";
   return (
-    <li>
+    <li data-open={open || undefined} inert={!open} className="ui-fold">
       <ul
         aria-label={label}
         className={cx(
-          "ui:mt-1 ui:mb-1.5 ui:ml-4.5 ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
+          "ui:min-h-0 ui:overflow-hidden ui:ml-4.5 ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
           navy ? "ui:border-white/15" : "ui:border-card-edge",
         )}
       >

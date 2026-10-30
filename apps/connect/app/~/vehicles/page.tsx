@@ -56,7 +56,7 @@ export default async function VehiclesPage() {
           due: vehicleDocumentsDue(v),
           anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
         }))}
-        hrefOf={(id) => `/vehicles/${id}`}
+        hrefOf={(id) => `/~/vehicles/${id}`}
         empty={{
           icon: CarFrontIcon,
           title: "No vehicle yet",

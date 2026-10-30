@@ -63,7 +63,7 @@ export default async function DriversPage() {
           due: driverDocumentsDue(d),
           anyEntered: DRIVER_DOCUMENTS.some((key) => d[key]),
         }))}
-        hrefOf={(id) => `/drivers/${id}`}
+        hrefOf={(id) => `/~/drivers/${id}`}
         empty={{
           icon: UserRoundIcon,
           title: "No driver yet",

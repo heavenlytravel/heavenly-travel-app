@@ -46,7 +46,7 @@ export function PageHeader({ title, badge, meta, action }: HeaderProps) {
 
 /**
  * The record a page belongs to, named in its header's line of facts as a
- * link back to it: "HT-4D9DJZ" under "Amend trip 1", "KV589E" under a
+ * link back to it: "HT-4D9DJZ" under "Amend Trip 1", "KV589E" under a
  * vehicle's history. The trail over the title goes no deeper than the
  * record's list.
  */
@@ -66,14 +66,15 @@ export function RecordLink({
 
 /**
  * The line over a page's title, small and upper case: where the page sits,
- * "Fleet" over Vehicles, and the way back from a record or a form, "Fleet
- * › Vehicles", the page a link. One line, the same height on every page,
- * so a title stands in the same place on each.
+ * "Fleet › Vehicles". A step with no page of its own is grey, the page the
+ * admin is on is in ink, and a page to go back to, from a record or a
+ * form under it, is a link. One line, the same height on every page, so a
+ * title stands in the same place on each.
  */
 export function Trail({
   crumbs,
 }: {
-  crumbs: readonly { label: string; href?: string }[];
+  crumbs: readonly { label: string; href?: string; current?: boolean }[];
 }) {
   return (
     <nav
@@ -95,6 +96,10 @@ export function Trail({
             >
               {crumb.label}
             </Link>
+          ) : crumb.current ? (
+            <span aria-current="page" className="truncate text-ink">
+              {crumb.label}
+            </span>
           ) : (
             <span className="truncate">{crumb.label}</span>
           )}

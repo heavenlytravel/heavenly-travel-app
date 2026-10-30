@@ -28,7 +28,7 @@ export default async function NewVehiclePage({
 
   return (
     <>
-      <PageHeader title="Add vehicle" />
+      <PageHeader title="Add Vehicle" />
       <Streamed
         fallback={
           <DetailSkeleton

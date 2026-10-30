@@ -80,7 +80,7 @@ function VehicleClassScreen({
   return (
     <>
       <PageHeader
-        title={vehicleClass ? vehicleClass.name : "Add class"}
+        title={vehicleClass ? vehicleClass.name : "Add Class"}
         badge={
           vehicleClass ? (
             <ServiceBadge

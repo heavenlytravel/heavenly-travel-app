@@ -60,7 +60,7 @@ export async function amendItemScreen({
   const category = item.tripDetails?.vehicleClassCategory;
   if (!trip || !isTripCategory(category)) notFound();
 
-  const title = `Amend trip ${item.position}`;
+  const title = `Amend Trip ${item.position}`;
   // The booking it is a trip of, the way back to it.
   const meta = (
     <RecordLink href={bookingHref(scope.slug, booking.id)}>

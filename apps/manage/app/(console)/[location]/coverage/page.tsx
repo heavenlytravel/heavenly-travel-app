@@ -25,6 +25,7 @@ import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { locationDetails } from "../../../_lib/location-data";
 import { stateOutlines } from "../../../_lib/outlines";
 import {
+  RATES_PAGE_LABELS,
   coverageHref,
   newZoneHref,
   ratesHref,
@@ -174,7 +175,7 @@ async function locationCoverage({
               href={ratesHref(location.slug, "grid")}
               className="font-semibold text-brand underline-offset-4 hover:underline"
             >
-              Rate grid
+              {RATES_PAGE_LABELS.grid}
             </Link>
             .
           </>

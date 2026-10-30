@@ -246,10 +246,10 @@ export type RatesPage = (typeof RATES_PAGES)[number];
 
 /** Each of Rates' pages by its name: in the menu, its title, the search. */
 export const RATES_PAGE_LABELS: Record<RatesPage, string> = {
-  classes: "Classes and hourly",
-  grid: "Rate grid",
-  rules: "Trip rules",
-  try: "Try a trip",
+  classes: "Classes and Hourly",
+  grid: "Rate Grid",
+  rules: "Trip Rules",
+  try: "Try a Trip",
 };
 
 /** One of Rates' pages. */

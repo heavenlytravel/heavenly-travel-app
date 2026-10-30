@@ -17,13 +17,13 @@ export default function GlobalError({ retry }: { retry: () => void }) {
   return (
     <html lang="en" data-app="console" className={fontVars}>
       <body>
-        <title>Something went wrong</title>
+        <title>Something Went Wrong</title>
         <AuthShell
           tone="dark"
           eyebrow="Admin portal"
           brand={<Logo tone="white" loading="eager" className="h-9" />}
         >
-          <PortalCard title="Something went wrong">
+          <PortalCard title="Something Went Wrong">
             <p className="mt-3 text-muted">
               This screen could not load. Try again, or come back in a minute.
             </p>

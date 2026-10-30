@@ -232,7 +232,7 @@ async function locationGrid({
   return (
     <>
       <FigureStrip
-        label="Trip rules"
+        label={RATES_PAGE_LABELS.rules}
         figures={ruleFigures(tripRulesOf(details), ratesHref(slug, "rules"))}
       />
       <Card flush>

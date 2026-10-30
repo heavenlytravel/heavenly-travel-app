@@ -118,7 +118,7 @@ async function zoneEditor({
   return (
     <>
       <PageHeader
-        title={existing ? existing.name : "Add zone"}
+        title={existing ? existing.name : "Add Zone"}
         meta={
           existing
             ? `${drawnAs(existing)} · ${details.name}`

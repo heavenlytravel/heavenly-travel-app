@@ -171,7 +171,7 @@ export function SavedAddresses({
         }
       >
         <span className="inline-flex items-center gap-1.5">
-          Saved addresses
+          Saved Addresses
           <InfoTip text="The places most customers go to here, in this order. The drop-off offers them before anything is typed; typing still searches any exact place. Exact spots only, never an area, each in one of the location's states." />
         </span>
       </CardTitle>

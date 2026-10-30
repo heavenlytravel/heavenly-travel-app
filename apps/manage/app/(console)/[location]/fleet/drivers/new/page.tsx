@@ -24,7 +24,7 @@ export default async function NewDriverPage({
 
   return (
     <>
-      <PageHeader title="Add driver" />
+      <PageHeader title="Add Driver" />
       <Streamed
         fallback={
           <DetailSkeleton

@@ -328,7 +328,7 @@ function Workspace({
       <Card className="grid shrink-0 gap-3">
         {full ? (
           <h2 className="font-serif text-2xl text-ink">
-            Try a trip in {locationName}
+            Try a Trip in {locationName}
           </h2>
         ) : null}
         {/* The two ends, then the class, the day and the time, which move

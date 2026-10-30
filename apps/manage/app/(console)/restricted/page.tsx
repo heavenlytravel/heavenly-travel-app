@@ -13,7 +13,7 @@ export default async function RestrictedPage() {
 
   return (
     <StopScreen
-      title="This screen belongs to another team"
+      title="This Screen Belongs to Another Team"
       action={
         <Button asChild variant="secondary">
           <Link href={dashboardHref(null)}>Back to the dashboard</Link>

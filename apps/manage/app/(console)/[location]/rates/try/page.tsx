@@ -99,10 +99,10 @@ async function chooseLocation() {
               <LocationStateBadge state={location.state} />
               <Link
                 href={ratesHref(location.slug, "try")}
-                aria-label={`Try a trip in ${location.name}`}
+                aria-label={`${RATES_PAGE_LABELS.try} in ${location.name}`}
                 className={cx(CARD_LINK, "inline-flex items-center gap-1")}
               >
-                Try a trip
+                {RATES_PAGE_LABELS.try}
                 <ArrowRightIcon className="size-3.5" />
               </Link>
             </CardRow>

@@ -12,7 +12,7 @@ import { StopScreen } from "../../_components/StopScreen";
 export default function ConsoleError({ retry }: { retry: () => void }) {
   return (
     <StopScreen
-      title="Something went wrong"
+      title="Something Went Wrong"
       action={
         <Button variant="secondary" onClick={() => retry()}>
           Try again

@@ -18,7 +18,7 @@ export default function NotFound() {
       eyebrow="Admin portal"
       brand={<Logo tone="white" loading="eager" className="h-9" />}
     >
-      <PortalCard title="Page not found">
+      <PortalCard title="Page Not Found">
         <p className="mt-3 text-muted">
           This address doesn&apos;t lead to a screen in the console.
         </p>

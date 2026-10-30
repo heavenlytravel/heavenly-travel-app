@@ -21,7 +21,7 @@ export default async function NewLocationPage({
 
   return (
     <>
-      <PageHeader title="Add location" meta="Step 1 of 4, as a draft" />
+      <PageHeader title="Add Location" meta="Step 1 of 4, as a draft" />
       <Streamed fallback={<FormSkeleton fields={3} />}>
         {() => newLocation()}
       </Streamed>

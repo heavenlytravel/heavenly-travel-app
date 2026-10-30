@@ -17,7 +17,7 @@ export default async function NoAccessPage() {
       eyebrow="Admin portal"
       brand={<Logo tone="white" loading="eager" className="h-9" />}
     >
-      <PortalCard title="No admin access">
+      <PortalCard title="No Admin Access">
         <p className="mt-3 text-muted">
           {/* A long address breaks where it must, not past the card. */}
           <span className="[overflow-wrap:anywhere]">

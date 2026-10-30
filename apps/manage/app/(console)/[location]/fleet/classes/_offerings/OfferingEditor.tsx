@@ -60,7 +60,7 @@ async function newOffering(location: LocationName, from: OfferingFrom) {
   const candidates = await listClassesNotOffered(location.id);
   return (
     <>
-      <PageHeader title="Add class" />
+      <PageHeader title="Add Class" />
       <OfferingForm
         locationId={location.id}
         locationSlug={location.slug}

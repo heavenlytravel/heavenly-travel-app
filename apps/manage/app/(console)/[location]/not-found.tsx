@@ -11,7 +11,7 @@ import { dashboardHref } from "../../_lib/routes";
 export default function ConsoleNotFound() {
   return (
     <StopScreen
-      title="Page not found"
+      title="Page Not Found"
       action={
         <Button asChild variant="secondary">
           <Link href={dashboardHref(null)}>Go to the dashboard</Link>

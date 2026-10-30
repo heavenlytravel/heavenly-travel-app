@@ -23,7 +23,7 @@ export default async function NewBookingPage({
 
   return (
     <>
-      <PageHeader title="New booking" />
+      <PageHeader title="New Booking" />
       <NewBookingForm
         hasGoogle={hasGooglePlaces}
         scope={scope.slug}

@@ -13,7 +13,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../../_lib/revalidate";
 import { classesHref } from "../../../../../_lib/routes";
 import { refreshVehicleClassesAfter } from "../../../../../_lib/site";

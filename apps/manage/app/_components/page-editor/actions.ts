@@ -22,7 +22,7 @@ import {
   STALE_MESSAGE,
   stateOf,
   type ActionState,
-} from "../../_lib/action-state";
+} from "@repo/console/action-state";
 import { refreshLocationAfter, refreshSitePagesAfter } from "../../_lib/site";
 import { pageTargetOf, type PageTarget } from "./target";
 

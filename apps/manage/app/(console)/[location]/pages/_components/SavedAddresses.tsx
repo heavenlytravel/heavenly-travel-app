@@ -13,7 +13,7 @@ import { useState, useTransition } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
 import { FormError } from "@repo/ui/form-error";
-import { errorOf } from "../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 import { RowControls, movedRow } from "./RowControls";
 import type { AddressArea } from "./SavedAddressPicker";
 import {

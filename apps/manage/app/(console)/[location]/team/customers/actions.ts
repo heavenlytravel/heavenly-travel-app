@@ -7,7 +7,7 @@ import {
   type ActionState,
   refusalOf,
   stateOf,
-} from "../../../../_lib/action-state";
+} from "@repo/console/action-state";
 
 /**
  * Creates an account on someone's behalf, in Clerk and here. Server

@@ -27,7 +27,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "../../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../_lib/revalidate";
 import { prepareFormItem, savedBookingHref } from "../_lib/trip-server";
 

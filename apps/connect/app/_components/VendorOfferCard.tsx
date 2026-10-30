@@ -3,7 +3,7 @@
 import { formatLocalDateTime, formatMyr, PART_ROLE_LABELS } from "@repo/db";
 import type { OfferRole, VendorOfferView } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { CarFront, Clock, UserRound } from "lucide-react";
 import { buttonClass } from "../_ui/button";

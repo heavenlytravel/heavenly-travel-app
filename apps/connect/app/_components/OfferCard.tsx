@@ -9,7 +9,7 @@ import type { DriverOffer, DriverTrip } from "@repo/db/server";
 import { Input } from "@repo/ui/field";
 import { useState, type ReactNode } from "react";
 import type { ActionState } from "@repo/console/action-state";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { Check, TriangleAlert, Users, X } from "lucide-react";
 import { dayLabel } from "../_lib/when";

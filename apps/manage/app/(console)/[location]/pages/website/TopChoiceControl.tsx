@@ -18,7 +18,7 @@ import { CardImage } from "../../../../_components/CardImage";
 import { LocationInitial } from "../../../../_components/LocationInitial";
 import { changeTopChoiceAction } from "./actions";
 import { FormError } from "@repo/ui/form-error";
-import { errorOf } from "../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 
 /**
  * The home page's top choices as the cards they become there, in their

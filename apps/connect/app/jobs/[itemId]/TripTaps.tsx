@@ -13,7 +13,7 @@ import { Input, Textarea } from "@repo/ui/field";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { CloudOff, PenLine, TriangleAlert, UserX } from "lucide-react";
 import { reportTapAction, type TapPayload } from "../../actions";
 import { buttonClass } from "../../_ui/button";

@@ -2,7 +2,7 @@
 
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Field, Input } from "@repo/ui/field";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { UserPlus } from "lucide-react";
 import { buttonClass } from "../_ui/button";

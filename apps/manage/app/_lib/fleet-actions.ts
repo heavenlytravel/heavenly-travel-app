@@ -1,6 +1,6 @@
 import "server-only";
 import { getLocationSlug, textOf } from "@repo/db/server";
-import { SCOPE_FIELD } from "./fleet-form";
+import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { refreshVehicleClassesAfter } from "./site";
 import { revalidateLocation } from "./revalidate";
 import {

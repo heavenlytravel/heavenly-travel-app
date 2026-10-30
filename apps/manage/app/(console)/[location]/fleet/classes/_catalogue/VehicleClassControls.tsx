@@ -9,7 +9,7 @@ import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setVehicleClassActiveAction } from "./actions";
 import { FormError } from "@repo/ui/form-error";
-import { errorOf } from "../../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 
 /**
  * The class's switch. Turning off the last active class of a category asks

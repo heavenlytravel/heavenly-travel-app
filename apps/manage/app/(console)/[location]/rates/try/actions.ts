@@ -16,7 +16,7 @@ import {
 import { listOfferings, quoteTrip, type QuotedEnd } from "@repo/db/server";
 import { resolvePlace, tripRouting } from "@repo/places/server";
 import { getAdmin } from "../../../../_lib/access";
-import { FORBIDDEN_MESSAGE } from "../../../../_lib/action-state";
+import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 
 /** An end as Try a trip sends it: a place picked from the search, or a pin dropped on the map. */
 export type TryEnd =

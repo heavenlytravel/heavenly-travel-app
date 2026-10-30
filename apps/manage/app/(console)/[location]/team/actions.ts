@@ -9,7 +9,7 @@ import {
 } from "@repo/db/server";
 import { revalidateLocation } from "../../../_lib/revalidate";
 import { actorOf, getAdmin } from "../../../_lib/access";
-import { type ActionState, STALE, stateOf } from "../../../_lib/action-state";
+import { type ActionState, STALE, stateOf } from "@repo/console/action-state";
 
 const FORBIDDEN: ActionState = {
   error: "Only SUPER admins can manage staff.",

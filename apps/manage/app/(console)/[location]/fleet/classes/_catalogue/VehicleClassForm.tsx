@@ -4,13 +4,10 @@ import type { VehicleClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { FormFoot } from "@repo/console/FormFoot";
 import { classesHref } from "../../../../../_lib/routes";
-import { useActionForm } from "../../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createVehicleClassAction, updateVehicleClassAction } from "./actions";
 import { VehicleClassFieldset } from "./VehicleClassFields";
-import {
-  UploadsContext,
-  useUploadCount,
-} from "../../../../../_components/use-image-upload";
+import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /**

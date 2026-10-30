@@ -1,6 +1,6 @@
 "use client";
 
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { VendorFieldsSection } from "@repo/console/VendorFieldsSection";
 import { Send } from "lucide-react";

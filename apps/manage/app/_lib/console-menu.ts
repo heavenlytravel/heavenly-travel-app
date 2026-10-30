@@ -7,7 +7,7 @@ import {
   type Permission,
   type SetupStepKey,
 } from "@repo/db";
-import type { LocationOverview } from "@repo/db/server";
+import { countPendingVendors, type LocationOverview } from "@repo/db/server";
 import type {
   Menu,
   MenuCount,
@@ -66,7 +66,8 @@ function sumOf(overviews: readonly LocationOverview[]): Waiting {
  * row (Media, Team) leads to `~` from a location. Without `counts`, the
  * menu alone, drawn at once while the counts load: the received bookings
  * and the documents due, summed under `~`, and a draft location's setup
- * marks. See docs/261029-manage-signature-overhaul.md, "The menu".
+ * marks, and under `~` the vendors waiting for approval. See
+ * docs/261029-manage-signature-overhaul.md, "The menu".
  */
 export async function consoleMenu(
   scope: ConsoleScope,
@@ -96,7 +97,17 @@ export async function consoleMenu(
   } else if (counts) {
     waiting = sumOf(await locationOverviews());
   }
-  const pageCounts = waiting ? countsOf(waiting) : {};
+  const pageCounts: Record<string, MenuCount | undefined> = waiting
+    ? countsOf(waiting)
+    : {};
+  // The vendors waiting for a SUPER's review, on every location's Vendors.
+  if (counts && !scope.location && permissions.includes("vendors.review")) {
+    const pending = await countPendingVendors();
+    pageCounts.vendors = countOf(
+      pending,
+      `${plural(pending, "vendor")} waiting for approval`,
+    );
+  }
 
   const groups = CONSOLE_GROUPS.map((group) => ({
     key: group.key,

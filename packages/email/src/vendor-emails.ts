@@ -1,3 +1,4 @@
+import { consoleVendorPath } from "@repo/db";
 import type { BookingEmail, EmailSettings } from "./booking-emails";
 import { email, toOps } from "./booking-emails";
 
@@ -25,7 +26,7 @@ export function vendorRegisteredEmails(
   vendor: VendorEmailFacts,
   settings: EmailSettings,
 ): BookingEmail[] {
-  const href = `${settings.adminUrl}/vendors/${vendor.id}`;
+  const href = `${settings.adminUrl}${consoleVendorPath(vendor.id)}`;
   return [
     toOps(`vendor:${vendor.id}:registered:${vendor.at.getTime()}`, settings, {
       subject: `New vendor sign-up: ${vendor.name}`,

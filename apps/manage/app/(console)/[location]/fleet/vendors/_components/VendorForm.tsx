@@ -2,9 +2,8 @@
 
 import type { LocationName, VendorWithLocations } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import Link from "next/link";
-import { FormError } from "@repo/console/FormError";
-import { FORM_WIDTH } from "@repo/console/PageColumn";
+import { SCOPE_FIELD } from "@repo/console/fleet-form";
+import { FormFoot } from "@repo/console/FormFoot";
 import { useActionForm } from "@repo/console/use-action-form";
 import { VendorFieldsSection } from "@repo/console/VendorFieldsSection";
 import { createVendorAction, updateVendorAction } from "../actions";
@@ -12,17 +11,20 @@ import { createVendorAction, updateVendorAction } from "../actions";
 /**
  * The admin's form for a vendor, new or existing: the fields Connect's
  * registration asks too (`VendorFieldsSection`). A new one opens its
- * page once saved.
+ * page, in the scope the form was opened in, once saved.
  */
 export function VendorForm({
   vendor,
   locations,
-  backHref,
+  scope,
+  cancelHref,
 }: {
   /** Absent on the "new" page. */
   vendor?: VendorWithLocations;
-  locations: LocationName[];
-  backHref: string;
+  locations: readonly LocationName[];
+  /** The scope the form is open in: a slug, or `~`. */
+  scope: string;
+  cancelHref: string;
 }) {
   const isNew = !vendor;
   const { pending, error, formProps, leaveDialog } = useActionForm(
@@ -36,23 +38,21 @@ export function VendorForm({
   );
 
   return (
-    <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
+    <form {...formProps} className="grid gap-5">
       {vendor ? <input type="hidden" name="id" value={vendor.id} /> : null}
+      <input type="hidden" name={SCOPE_FIELD} value={scope} />
 
       <VendorFieldsSection vendor={vendor} locations={locations} />
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add vendor" : "Save"}
-        </Button>
-        <Link
-          href={backHref}
-          className="text-sm text-slate-600 underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
+      <FormFoot
+        submit={
+          <Button type="submit" pending={pending}>
+            {pending ? "Saving…" : isNew ? "Add vendor" : "Save"}
+          </Button>
+        }
+        cancelHref={cancelHref}
+        error={error}
+      />
       {leaveDialog}
     </form>
   );

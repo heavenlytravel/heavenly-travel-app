@@ -110,6 +110,23 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     ],
   },
   {
+    key: "board",
+    label: "Board",
+    icon: "board",
+    group: "operations",
+    pages: [
+      {
+        key: "board",
+        label: "Board",
+        path: "board",
+        icon: "board",
+        permission: "bookings.fulfil",
+        live: true,
+        words: "dispatch assign trips today drivers vendors",
+      },
+    ],
+  },
+  {
     key: "fleet",
     label: "Fleet",
     icon: "fleet",
@@ -132,6 +149,15 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         permission: "fleet.manage",
         shared: true,
         words: "fleet licence",
+      },
+      {
+        key: "vendors",
+        label: "Vendors",
+        path: "fleet/vendors",
+        icon: "vendors",
+        permission: "fleet.manage",
+        shared: true,
+        words: "fleet partners suppliers transport companies connect approve",
       },
       {
         key: "classes",

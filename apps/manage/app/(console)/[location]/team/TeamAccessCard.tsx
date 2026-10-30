@@ -16,12 +16,14 @@ const PERMISSION_WORDS: Record<Permission, string> = {
   "bookings.view": "See bookings",
   "bookings.manage": "Confirm, amend and cancel bookings",
   "bookings.create": "Enter a booking and change a price",
-  "bookings.fulfil": "Mark a trip driver assigned or completed",
+  "bookings.fulfil":
+    "Assign vehicles and drivers, and report a trip's steps for its driver",
   "bookings.notes": "Write notes on a booking",
   "coverage.manage":
     "Change zones, classes on sale, rates and the class catalogue",
   "coverage.view": "See coverage, classes and rates",
-  "fleet.manage": "Vehicles and drivers",
+  "fleet.manage": "Vendors, vehicles and drivers",
+  "vendors.review": "Approve, refuse and suspend vendors",
   "locations.view": "Open a location",
   "locations.manage": "Add a location; its details, saved addresses and pages",
   "website.manage": "The website's own pages and its top choices",

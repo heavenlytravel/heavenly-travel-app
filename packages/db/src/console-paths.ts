@@ -13,3 +13,8 @@ export const ALL_LOCATIONS_SEGMENT = "~";
 export function consoleBookingPath(bookingId: string) {
   return `/${ALL_LOCATIONS_SEGMENT}/bookings/${bookingId}`;
 }
+
+/** One vendor in the console, under every location. */
+export function consoleVendorPath(vendorId: string) {
+  return `/${ALL_LOCATIONS_SEGMENT}/fleet/vendors/${vendorId}`;
+}

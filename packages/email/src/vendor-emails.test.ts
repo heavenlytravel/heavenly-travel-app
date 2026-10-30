@@ -21,7 +21,10 @@ describe("vendorRegisteredEmails", () => {
       ops!.message.subject,
       "New vendor sign-up: Pulau Coach Sdn Bhd",
     );
-    assert.match(ops!.message.text, /https:\/\/admin\.test\/vendors\/ven1/);
+    assert.match(
+      ops!.message.text,
+      /https:\/\/admin\.test\/~\/fleet\/vendors\/ven1/,
+    );
     assert.match(ops!.message.text, /Phone: \+60123456789/);
   });
 });

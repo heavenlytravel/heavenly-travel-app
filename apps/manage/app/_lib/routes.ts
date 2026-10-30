@@ -135,6 +135,14 @@ export function amendItemHref(
   return `${bookingHref(scope, bookingId)}/amend/${itemId}`;
 }
 
+/**
+ * Operation's board: a day's trips in their columns, in the scope. No day
+ * is today in Malaysia.
+ */
+export function boardHref(scope: ScopeSlug, day?: string) {
+  return listHref(consolePath(scope, "board"), { day });
+}
+
 /* Fleet */
 
 /** What a list of vehicles or drivers narrows to: the ones with a document due, a search, or both. */
@@ -183,6 +191,43 @@ export function driverHref(scope: ScopeSlug, id: string) {
 /** A new driver; under a slug, based there. */
 export function newDriverHref(scope: ScopeSlug) {
   return consolePath(scope, "fleet", "drivers", "new");
+}
+
+/** The parameter of a vehicle's or a driver's add page naming the vendor it starts with. */
+export const VENDOR_PARAM = "vendor";
+
+/**
+ * The vendors, ours first: every one under `~`, those serving the
+ * location under a slug, narrowed to a status or a search.
+ */
+export function vendorsHref(
+  scope: ScopeSlug,
+  filter: { status?: string; q?: string } = {},
+) {
+  return listHref(consolePath(scope, "fleet", "vendors"), {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/** One vendor, by id; "new" for the add page. */
+export function vendorHref(scope: ScopeSlug, id: string) {
+  return consolePath(scope, "fleet", "vendors", id);
+}
+export function newVendorHref(scope: ScopeSlug) {
+  return vendorHref(scope, "new");
+}
+
+/** A new vehicle or driver of a vendor, from its page. */
+export function newVendorVehicleHref(scope: ScopeSlug, vendorId: string) {
+  return listHref(consolePath(scope, "fleet", "vehicles", "new"), {
+    [VENDOR_PARAM]: vendorId,
+  });
+}
+export function newVendorDriverHref(scope: ScopeSlug, vendorId: string) {
+  return listHref(consolePath(scope, "fleet", "drivers", "new"), {
+    [VENDOR_PARAM]: vendorId,
+  });
 }
 
 /**

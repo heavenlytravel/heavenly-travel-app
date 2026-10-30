@@ -12,9 +12,9 @@ import {
   type VendorMove,
 } from "@repo/db/server";
 import { sendVendorEmail } from "@repo/email";
-import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { actorOf, getAdmin } from "../../_lib/access";
+import { SCOPE_FIELD } from "@repo/console/fleet-form";
+import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   FORBIDDEN,
@@ -22,8 +22,8 @@ import {
   STALE,
   stateOf,
 } from "@repo/console/action-state";
-import { revalidateFleet } from "../../_lib/fleet-actions";
-import { vendorHref, VENDORS_PATH } from "../../_lib/routes";
+import { revalidateFleet } from "../../../../_lib/fleet-actions";
+import { ALL, scopeSlugOf, vendorHref } from "../../../../_lib/routes";
 
 /**
  * The vendor screens' actions. Entering and changing a vendor is
@@ -41,13 +41,18 @@ function parsed(formData: FormData) {
   );
 }
 
+/**
+ * Every console page, whose fleet lists name the vendors, and the
+ * customer site's class cards, which read the vehicles.
+ */
 function revalidateVendors() {
-  revalidatePath(VENDORS_PATH, "layout");
   revalidateFleet("vehicles");
-  revalidateFleet("drivers");
 }
 
-/** A vendor staff enter: active at once, never ours. */
+/**
+ * A vendor staff enter: active at once, never ours. Saved, it opens in
+ * the scope its form was opened in.
+ */
 export async function createVendorAction(
   _previous: ActionState,
   formData: FormData,
@@ -61,7 +66,8 @@ export async function createVendorAction(
   });
   if (!result.ok) return stateOf(result);
   revalidateVendors();
-  return { href: vendorHref(result.id) };
+  const scope = scopeSlugOf(textOf(formData.get(SCOPE_FIELD)) ?? ALL);
+  return { href: vendorHref(scope, result.id) };
 }
 
 export async function updateVendorAction(

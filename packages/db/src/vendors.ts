@@ -51,6 +51,8 @@ export type VendorFilter = {
   status?: VendorStatus;
   /** Part of its name, its contact's name or phone, or its registration. */
   search?: string;
+  /** A location it serves, by id. */
+  locationId?: string;
 };
 
 /** Where a vendor matches a search. */
@@ -73,6 +75,9 @@ export function listVendors(
   const where: Prisma.VendorWhereInput[] = [];
   if (filter.status) where.push({ status: filter.status });
   if (filter.search) where.push(vendorSearchWhere(filter.search));
+  if (filter.locationId) {
+    where.push({ locations: { some: { id: filter.locationId } } });
+  }
   return db.vendor.findMany({
     where: { AND: where },
     orderBy: [{ isOurs: "desc" }, { name: "asc" }],

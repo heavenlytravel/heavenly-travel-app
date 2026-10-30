@@ -20,15 +20,14 @@ import {
   type BoardPart,
 } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
+import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FilterSelect } from "../../_components/FilterSelect";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
-import { requireAdmin } from "../../_lib/access";
-import { locationFilterOptions } from "../../_lib/filter-options";
-import { locationNames } from "../../_lib/location-names";
-import { boardHref, bookingHref } from "../../_lib/routes";
+import { requireAdmin } from "../../../_lib/access";
+import { boardHref, bookingHref, type ScopeSlug } from "../../../_lib/routes";
+import { scopeOf } from "../../../_lib/scope";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,88 +36,67 @@ const dayFrom = (day: string, days: number) =>
   dayOf(new Date(dateOfDay(day)!.getTime() + days * DAY_MS))!;
 
 /**
- * Route: /board?day=2026-11-03&location=…. Operation's board: a day's
+ * Route: /[location]/board?day=2026-11-03. Operation's board: a day's
  * trips in the column each stands in, To assign, Waiting to accept,
  * Assigned, On the road and Done, worked out from its status and who was
- * asked, at one location or every one; and, above them, our vehicles
- * waiting for Operation's own yes. For watching: a card moves when a
+ * asked, at every location under `~` or at the one under its slug; and,
+ * above them, our vehicles waiting for Operation's own yes. For watching: a card moves when a
  * vendor or a driver acts, and opens its booking, where it is assigned.
  * See docs/261028-fulfilment-vendors-and-connect.md, "The booking's life".
  */
-export default async function BoardPage({ searchParams }: PageProps<"/board">) {
+export default async function BoardPage({
+  params,
+  searchParams,
+}: PageProps<"/[location]/board">) {
   await requireAdmin("bookings.fulfil");
-  const params = await searchParams;
+  const [scope, query] = await Promise.all([scopeOf(params), searchParams]);
   const today = todayInMalaysia();
   const day =
-    typeof params.day === "string" && isDay(params.day) ? params.day : today;
-  const location =
-    typeof params.location === "string" && params.location
-      ? params.location
-      : undefined;
-  const locations = await locationNames();
+    typeof query.day === "string" && isDay(query.day) ? query.day : today;
+  const steps = [
+    { label: "Previous day", day: dayFrom(day, -1) },
+    { label: "Next day", day: dayFrom(day, 1) },
+    ...(day === today ? [] : [{ label: "Today", day: undefined }]),
+  ];
 
   return (
     <>
       <PageHeader
         title="Board"
-        description="A day's trips by where they stand. Open one to assign it; a card moves when its vendor or driver answers."
+        meta={`${formatLocalDate(dateOfDay(day)!)}${day === today ? ", today" : ""}`}
+        action={
+          <nav aria-label="Day" className="flex flex-wrap gap-2">
+            {steps.map((step) => (
+              <Button key={step.label} asChild variant="secondary" size="sm">
+                <Link href={boardHref(scope.slug, step.day)}>{step.label}</Link>
+              </Button>
+            ))}
+          </nav>
+        }
       />
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <nav aria-label="Day" className="flex items-center gap-1 text-sm">
-          <DayLink href={boardHref({ day: dayFrom(day, -1), location })}>
-            Previous day
-          </DayLink>
-          <span className="px-2 font-medium text-slate-900">
-            {formatLocalDate(dateOfDay(day)!)}
-            {day === today ? " (today)" : null}
-          </span>
-          <DayLink href={boardHref({ day: dayFrom(day, 1), location })}>
-            Next day
-          </DayLink>
-          {day !== today ? (
-            <DayLink href={boardHref({ location })}>Today</DayLink>
-          ) : null}
-        </nav>
-        <FilterSelect
-          label="Location"
-          value={location ?? ""}
-          options={locationFilterOptions(locations, (next) =>
-            boardHref({ day: day === today ? undefined : day, location: next }),
-          )}
-        />
-      </div>
-      <div className="mt-6 grid gap-6">
-        <Streamed
-          fallback={
-            <div className="grid gap-4 lg:grid-cols-5">
-              {BOARD_COLUMNS.map((column) => (
-                <CardSkeleton key={column} rows={2} />
-              ))}
-            </div>
-          }
-        >
-          {() => board(day, location)}
-        </Streamed>
-      </div>
+      <Streamed
+        fallback={
+          <div className="grid gap-4 lg:grid-cols-5">
+            {BOARD_COLUMNS.map((column) => (
+              <CardSkeleton key={column} rows={2} />
+            ))}
+          </div>
+        }
+      >
+        {() => board(scope.slug, day, scope.location?.id)}
+      </Streamed>
     </>
   );
 }
 
-function DayLink({ href, children }: { href: string; children: string }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-md px-2 py-1 text-slate-600 underline-offset-4 hover:bg-slate-100 hover:underline"
-    >
-      {children}
-    </Link>
-  );
-}
-
-async function board(day: string, location: string | undefined) {
+async function board(
+  scope: ScopeSlug,
+  day: string,
+  location: string | undefined,
+) {
   const [cards, ours] = await Promise.all([
     listBoard(day, location),
-    listOursToAccept(),
+    listOursToAccept(location),
   ]);
   return (
     <>
@@ -127,23 +105,23 @@ async function board(day: string, location: string | undefined) {
           <CardTitle description="Our vehicles asked for and not yet checked. Open the booking to accept for us.">
             Waiting for Operation
           </CardTitle>
-          <ul className="divide-y divide-slate-100 text-sm">
+          <ul className="divide-y divide-hairline text-sm">
             {ours.map((part) => (
               <li
                 key={`${part.reference}-${part.position}-${part.role}`}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
               >
                 <Link
-                  href={bookingHref(part.bookingId)}
+                  href={bookingHref(scope, part.bookingId)}
                   className="font-medium tabular-nums underline-offset-4 hover:underline"
                 >
                   {part.reference}
                 </Link>
-                <span className="text-slate-600">
+                <span className="text-muted">
                   Trip {part.position}, {formatLocalDate(part.startsAt)}{" "}
                   {formatLocalTime(part.startsAt)}
                 </span>
-                <span className="text-slate-600">
+                <span className="text-muted">
                   {PART_ROLE_LABELS[part.role as PartRole] ?? part.role}
                   {part.name ? ` ${part.name}` : ""}
                 </span>
@@ -159,19 +137,19 @@ async function board(day: string, location: string | undefined) {
             <section
               key={column}
               aria-label={BOARD_COLUMN_LABELS[column]}
-              className="grid min-w-0 gap-2 rounded-xl bg-slate-50 p-3"
+              className="grid min-w-0 gap-2 rounded-card bg-shade p-3"
             >
-              <h2 className="flex items-center justify-between text-sm font-semibold text-slate-800">
+              <h2 className="flex items-center justify-between text-sm font-semibold text-body">
                 {BOARD_COLUMN_LABELS[column]}
-                <span className="text-xs font-medium text-slate-500 tabular-nums">
+                <span className="text-xs font-medium text-muted tabular-nums">
                   {inColumn.length}
                 </span>
               </h2>
               {inColumn.length === 0 ? (
-                <p className="py-2 text-xs text-slate-400">None</p>
+                <p className="py-2 text-xs text-muted">None</p>
               ) : (
                 inColumn.map((card) => (
-                  <BoardCardView key={card.itemId} card={card} />
+                  <BoardCardView key={card.itemId} card={card} scope={scope} />
                 ))
               )}
             </section>
@@ -199,51 +177,51 @@ function waitingLabel(part: BoardPart) {
 }
 
 /** One trip: when, where, what, and who does it. Opens its booking. */
-function BoardCardView({ card }: { card: BoardCard }) {
+function BoardCardView({ card, scope }: { card: BoardCard; scope: ScopeSlug }) {
   const { job } = card;
   return (
     <Link
-      href={bookingHref(card.bookingId)}
+      href={bookingHref(scope, card.bookingId)}
       className={cx(
-        "grid gap-1 rounded-lg border bg-white p-3 text-sm shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300",
-        card.overdue ? "border-amber-300" : "border-slate-200",
+        "grid gap-1 rounded-control border bg-white p-3 text-sm shadow-card focus-ring hover:border-edge",
+        card.overdue ? "border-warning-edge" : "border-card-edge",
       )}
     >
       <span className="flex items-baseline justify-between gap-2">
         <span className="font-semibold tabular-nums">
           {formatLocalTime(job.startsAt)}
         </span>
-        <span className="text-xs text-slate-500 tabular-nums">
+        <span className="text-xs text-muted tabular-nums">
           {card.reference}
           {card.position > 1 ? ` · ${card.position}` : ""}
         </span>
       </span>
-      <span className="text-slate-700">
+      <span className="text-body">
         {job.dropoff
           ? `${job.pickup.label} → ${job.dropoff.label}`
           : job.pickup.label}
       </span>
-      <span className="text-xs text-slate-500">
+      <span className="text-xs text-muted">
         {card.className} · {card.passengers} pax
-        {card.locationName ? ` · ${card.locationName}` : ""}
+        {scope === null && card.locationName ? ` · ${card.locationName}` : ""}
       </span>
       {card.parts.map((part) => {
         const waiting = waitingLabel(part);
         return (
-          <span key={part.role} className="text-xs text-slate-600">
+          <span key={part.role} className="text-xs text-muted">
             <span className="font-medium">
               {PART_ROLE_LABELS[part.role as PartRole] ?? part.role}:
             </span>{" "}
             {part.name ?? "not chosen yet"}
             {part.vendorName ? ` (${part.vendorName})` : ""}
             {waiting ? (
-              <span className="block text-amber-700">{waiting}</span>
+              <span className="block text-warning">{waiting}</span>
             ) : null}
           </span>
         );
       })}
       {card.lastEvent ? (
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-muted">
           <span className="font-medium">
             {isTripEventKind(card.lastEvent.kind)
               ? TRIP_EVENT_LABELS[card.lastEvent.kind]

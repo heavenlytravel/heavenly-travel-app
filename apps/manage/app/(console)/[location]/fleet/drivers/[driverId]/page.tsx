@@ -1,5 +1,10 @@
 import { DRIVER_DELETE_IMPACT, driverDocumentsDue } from "@repo/db";
-import { getDriver, listClassOptions } from "@repo/db/server";
+import {
+  getDriver,
+  heldBookingsOf,
+  listClassOptions,
+  listVendorOptions,
+} from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@repo/console/PageHeader";
 import {
@@ -14,8 +19,9 @@ import { DeleteButton } from "../../../../../_components/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import { DATES_CARDS } from "../../../../../_lib/fleet-form";
+import { DATES_CARDS } from "@repo/console/fleet-form";
 import {
+  ALL,
   driverHref,
   driversHref,
   recordHistoryHref,
@@ -25,14 +31,15 @@ import {
   scopeOf,
   type ConsoleScope,
 } from "../../../../../_lib/scope";
-import { deleteDriverAction } from "../actions";
-import { DriverForm } from "../_components/DriverForm";
+import { deleteDriverAction, updateDriverAction } from "../actions";
+import { DriverForm } from "@repo/console/DriverForm";
 
 /**
- * Route: /[location]/fleet/drivers/[driverId]. One of our drivers: their
- * name, whether they are active, the classes they may drive and their
- * location over a banner while a licence is due or expired, then their
- * form (details, classes, the dates of their licences), the way to their
+ * Route: /[location]/fleet/drivers/[driverId]. A driver, ours or
+ * another vendor's: their name, whether they are active, the classes
+ * they may drive, their vendor when not ours and their location over a
+ * banner while a licence is due or expired, then their form (vendor,
+ * details, classes, the dates of their licences), the way to their
  * history and the delete for one entered by mistake. Under `~` any
  * driver opens; under a location, one based elsewhere is not found.
  */
@@ -63,10 +70,12 @@ export default async function DriverPage({
 }
 
 async function driverScreen(scope: ConsoleScope, driverId: string) {
-  const [driver, classes, locations] = await Promise.all([
+  const [driver, held, classes, locations, vendors] = await Promise.all([
     getDriver(driverId),
+    heldBookingsOf({ driverId }),
     listClassOptions(),
     locationsVisible(),
+    listVendorOptions(),
   ]);
   if (!driver) notFound();
   if (scope.location && driver.locationId !== scope.location.id) notFound();
@@ -81,6 +90,7 @@ async function driverScreen(scope: ConsoleScope, driverId: string) {
         }
         meta={[
           driver.vehicleClasses.map((c) => c.name).join(", "),
+          driver.vendor.isOurs ? null : driver.vendor.name,
           driver.location.name,
         ]
           .filter(Boolean)
@@ -109,10 +119,14 @@ async function driverScreen(scope: ConsoleScope, driverId: string) {
       ) : null}
       <DriverForm
         key={driver.id}
-        scope={scope.slug}
+        scope={scope.slug ?? ALL}
         driver={driver}
+        vendors={vendors}
         classes={classes}
         locations={locations}
+        action={updateDriverAction}
+        cancelHref={driversHref(scope.slug)}
+        held={held}
       />
     </>
   );

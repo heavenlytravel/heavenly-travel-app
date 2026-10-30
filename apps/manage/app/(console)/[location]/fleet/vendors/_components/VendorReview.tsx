@@ -8,7 +8,7 @@ import { Field, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { useState, useTransition, type ReactNode } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "@repo/console/action-state";
 import { useActionForm } from "@repo/console/use-action-form";
 import { moveVendorAction, setVendorOursAction } from "../actions";
@@ -142,7 +142,7 @@ export function VendorReview({
                 />
               </Field>
               <div className="flex items-center gap-2">
-                <Button type="submit" variant="caution" disabled={form.pending}>
+                <Button type="submit" variant="caution" pending={form.pending}>
                   {asking.label}
                 </Button>
                 <Button
@@ -232,7 +232,7 @@ function OursSwitch({
         />
         <span>
           <span className="font-medium">Ours</span>
-          <span className="block text-slate-500">
+          <span className="block text-muted">
             No cost, accepted for by Operation, and its vehicles reach the
             website.
           </span>

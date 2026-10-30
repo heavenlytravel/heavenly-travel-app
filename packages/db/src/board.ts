@@ -169,14 +169,19 @@ export type OursToAccept = {
   name: string | null;
 };
 
-/** Our parts not yet accepted for ours, soonest first. */
-export async function listOursToAccept(): Promise<OursToAccept[]> {
+/** Our parts not yet accepted for ours, soonest first; at one location (its id) or every one. */
+export async function listOursToAccept(
+  locationId?: string,
+): Promise<OursToAccept[]> {
   await expireOffers();
   const parts = await db.tripPart.findMany({
     where: {
       vendorAcceptedAt: null,
       offer: { vendor: { isOurs: true } },
-      item: { status: { in: ["confirmed", "assigned"] } },
+      item: {
+        status: { in: ["confirmed", "assigned"] },
+        ...(locationId ? { locationId } : {}),
+      },
     },
     orderBy: { item: { startsAt: "asc" } },
     select: {

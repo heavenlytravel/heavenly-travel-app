@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { Sheet, SheetHeader } from "@repo/ui/sheet";
 import { FormError } from "@repo/ui/form-error";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { AdminFields } from "./AdminFields";
 import { setAdminAction } from "./actions";
 

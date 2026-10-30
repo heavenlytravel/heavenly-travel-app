@@ -74,24 +74,25 @@ type Filter = {
  * Route: /[location]/pages?section=…&status=…&q=…. The pages in one
  * tree: each section's own page with every page under it, tied to it by
  * a line and folding away under it. Under `~`, the customer site's own
- * pages for SUPER (`website.manage`: the home page, the services' hubs,
- * about us, contact us, the legal pages and the footer), then every
- * location's, each under its heading. Under a slug, the location's alone,
- * with the saved addresses its places take customers to; narrowed to a
- * section, it is that section's list, where its row leads: its places in
- * their order, which move here, with their saved address; its posts with
- * their first publish; its classes with why there is none. A section's
- * plus adds a page under it. Over the list, a strip counts the pages by
- * status and narrows the list to one; the section and a search narrow it
- * too. A location's page is written and published in its editor, under
- * the location's address. Behind `locations.manage`. See
+ * pages for Marketing and SEO (`website.manage`: the home page, the
+ * services' hubs, about us, contact us, the legal pages and the footer),
+ * then every location's, each under its heading. Under a slug, the
+ * location's alone, with the saved addresses its places take customers to
+ * for Marketing; narrowed to a section, it is that section's list,
+ * where its row leads: its places in their order, which move here, with
+ * their saved address; its posts with their first publish; its classes
+ * with why there is none. A section's plus adds a page under it. Over the
+ * list, a strip counts the pages by status and narrows the list to one;
+ * the section and a search narrow it too. A location's page is written
+ * and published in its editor, under the location's address. Behind
+ * `pages.manage`. See
  * docs/261025-marketing-pages.md, "The console's Pages".
  */
 export default async function PagesPage({
   params,
   searchParams,
 }: PageProps<"/[location]/pages">) {
-  await requireAdmin("locations.manage");
+  await requireAdmin("pages.manage");
   const scope = await scopeOf(params);
   const query = await searchParams;
   const filter: Filter = {
@@ -224,7 +225,7 @@ const pagesIn = (groups: readonly PageGroup[]) =>
   groups.reduce((sum, group) => sum + 1 + group.under.length, 0);
 
 /**
- * Under `~`: the website's pages for SUPER, which belong to no section,
+ * Under `~`: the website's pages for Marketing and SEO, which belong to no section,
  * then every location's the person may see, each under its heading,
  * which opens the location's own Pages.
  */
@@ -313,7 +314,10 @@ async function everyPage(filter: Filter) {
  * it, a place's order on its section's list, then its saved addresses.
  */
 async function locationPages(id: string, filter: Filter) {
-  const location = await locationDetails(id);
+  const [location, permissions] = await Promise.all([
+    locationDetails(id),
+    getPermissions(),
+  ]);
   if (!location) notFound();
   const slug = location.slug;
   const { section, status, q } = filter;
@@ -472,7 +476,8 @@ async function locationPages(id: string, filter: Filter) {
           />
         </Card>
 
-        {section ? null : (
+        {/* The saved addresses are Marketing's (`locations.manage`), not SEO's. */}
+        {section || !permissions.includes("locations.manage") ? null : (
           <SavedAddresses
             id={SAVED_ADDRESSES_ID}
             locationId={location.id}

@@ -30,7 +30,7 @@ import {
   type TripRequest,
 } from "@repo/db/server";
 import { resolveTrip, tripRouting } from "@repo/places/server";
-import { SCOPE_FIELD } from "../../../../_lib/fleet-form";
+import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { bookingHref } from "../../../../_lib/routes";
 import { CATEGORY_FIELD, FLIGHT_FIELDS, type TripQuoteView } from "./trip-form";
 

@@ -54,6 +54,14 @@ The wall has two layers, screens and actions.
 | Payments (OP6, not in this plan)               |           |             |       | yes     |
 | Admins, the wall switch, the full activity log | `SUPER`   |             |       |         |
 
+Since 2026-10-30 two more teams hold website work (the table above predates them):
+`MARKETING` keeps a location's details and saved addresses (`locations.manage`), and
+shares with `SEO` (the outside SEO agency) a location's pages (`pages.manage`), the
+website's own pages and top choices (`website.manage`) and Media (`media.manage`).
+Adding a location (`locations.create`) is `SUPER`'s. Before an SEO account is created,
+the wall must be on in production: with it off, every `REGULAR` admin reaches every
+screen, bookings and customers included.
+
 - The whole map lives in one module in `packages/db`, next to `getAccess`. Pages and
   server actions ask it. No page holds its own rule.
 - Checks stay in pages and server actions, not in `proxy.ts` or layouts, as today.

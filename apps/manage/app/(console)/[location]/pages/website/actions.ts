@@ -8,7 +8,7 @@ import {
   FORBIDDEN,
   STALE,
   stateOf,
-} from "../../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { refreshTopChoicesAfter } from "../../../../_lib/site";
 
 /**

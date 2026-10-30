@@ -16,11 +16,12 @@ import {
 } from "@repo/console/Table";
 
 /**
- * Our vehicles as a table, in the scope on screen: the plate and model,
- * the class where the list holds several, the location under `~`, the
- * colour and year, the documents due, and whether it is in service. Each
- * opens in the scope it was listed in. The fleet's list and a class's
- * page at a location show it; `bare` is for a `flush` card.
+ * The vehicles as a table, in the scope on screen: the plate and model
+ * (and the vendor, when not ours), the class where the list holds
+ * several, the location under `~`, the colour and year, the documents
+ * due, and whether it is in service. Each opens in the scope it was
+ * listed in. The fleet's list and a class's page at a location show
+ * it; `bare` is for a `flush` card.
  */
 export function VehiclesTable({
   vehicles,
@@ -69,7 +70,11 @@ export function VehiclesTable({
                           {vehicle.plate}
                         </Link>
                       }
-                      bottom={modelName(vehicle.vehicleModel)}
+                      bottom={
+                        vehicle.vendor.isOurs
+                          ? modelName(vehicle.vehicleModel)
+                          : `${modelName(vehicle.vehicleModel)} · ${vehicle.vendor.name}`
+                      }
                     />
                   </span>
                 </Td>

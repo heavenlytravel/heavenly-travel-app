@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type ComponentProps } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { PageEditor } from "../../../../_components/page-editor/PageEditor";
-import { errorOf } from "../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 import {
   deleteLocationEntryAction,
   renameLocationEntryAction,

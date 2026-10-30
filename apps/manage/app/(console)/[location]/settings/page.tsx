@@ -22,6 +22,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { PlusIcon } from "@repo/ui/icons";
+import { InfoTip } from "@repo/ui/info-tip";
 import { Tooltip } from "@repo/ui/tooltip";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -54,12 +55,13 @@ import { stateOptions } from "../../../_lib/state-options";
 import { DeleteLocation } from "./DeleteLocation";
 import { LocationDetailsForm } from "./LocationDetailsForm";
 import { SetupBar } from "./SetupBar";
+import { SafetyBufferForm } from "./SafetyBufferForm";
 import { StateMove } from "./StateMove";
 
 /**
  * Route: /[location]/settings. Under `~` the locations, a tile each with
  * its main page's hero image, its state, its numbers and how far its
- * setup has come, opening its own settings, and for Marketing "Add
+ * setup has come, opening its own settings, and for SUPER "Add
  * location". Under a location its own settings: for Marketing its
  * details, step 1 of the setup (the name, the slug and the states it lies
  * in); for every admin where it stands with the public, with what still
@@ -101,7 +103,7 @@ export default async function SettingsPage({
       <PageHeader
         title="Settings"
         action={
-          permissions.includes("locations.manage") ? (
+          permissions.includes("locations.create") ? (
             <Button asChild>
               <Link href={NEW_LOCATION_PATH}>
                 <PlusIcon />
@@ -297,7 +299,10 @@ function stateNote(state: LocationState, slug: string) {
   }
 }
 
-/** The location's details for Marketing, its state for everyone, and its deletion for SUPER. */
+/**
+ * The location's details for Marketing, its state for everyone, the time
+ * between its jobs for Operation, and its deletion for SUPER.
+ */
 async function locationSettings({
   location: { id },
   permissions,
@@ -371,6 +376,20 @@ async function locationSettings({
           )}
         </div>
       </Card>
+      {may("coverage.manage") ? (
+        <Card>
+          <CardTitle>
+            <span className="inline-flex items-center gap-1.5">
+              Between Jobs
+              <InfoTip text="The time a vehicle or a driver is kept free after a job here, on top of the drive to the next pickup. Roads differ by place; drivers arrive early too." />
+            </span>
+          </CardTitle>
+          <SafetyBufferForm
+            locationId={location.id}
+            minutes={location.safetyBufferMinutes}
+          />
+        </Card>
+      ) : null}
       {moves ? (
         <Card>
           <CardTitle>Delete location</CardTitle>

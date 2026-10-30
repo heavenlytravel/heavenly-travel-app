@@ -22,13 +22,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  adminProfile   AdminProfile?
-  driver         Driver?
-  partnerProfile PartnerProfile?
-  bookings       Booking[]
-  bookingNotes   BookingNote[]
-  /// No longer read: see DriverProfile.
-  driverProfile  DriverProfile?
+  adminProfile  AdminProfile?
+  driver        Driver?
+  /// The vendors they own or work for, in Connect.
+  vendorMembers VendorMember[]
+  bookings      Booking[]
+  bookingNotes  BookingNote[]
 }
 
 /// Staff access. `level` is one of the AdminLevel values and `teams` holds
@@ -86,50 +85,145 @@ model ActivityLog {
   @@index([locationIds], type: Gin)
 }
 
-/// No longer read: a driver is a `Driver` since
-/// docs/261019-vehicles-and-drivers.md, and nothing wrote to this. Kept so
-/// the schema push before the deploy leaves the running code, which reads
-/// it at sign-in, working; dropped in a follow-up.
-model DriverProfile {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isActive  Boolean   @default(false)
-  activeAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+// ---------------------------------------------------------------------------
+// Vendors. See docs/261028-fulfilment-vendors-and-connect.md. Every vehicle
+// and driver belongs to one, Heavenly Travel included. Kinds, statuses,
+// services and roles are strings checked against the const arrays in
+// src/vendor-input.ts.
+// ---------------------------------------------------------------------------
+
+/// Whoever supplies a vehicle, a driver or both: a company, or an individual
+/// whose only driver may be themself. Ours when SUPER switches `isOurs` on;
+/// the code finds ours by it, never by the name.
+model Vendor {
+  id             String    @id @default(cuid())
+  name           String
+  /// "company" | "individual"
+  kind           String
+  /// Ours: no cost, no members, accepted for by Operation, and its vehicles
+  /// reach the website. Only SUPER switches it.
+  isOurs         Boolean   @default(false)
+  /// "pending" | "active" | "refused" | "suspended"
+  status         String
+  /// The SSM number, or an individual's IC; empty when not given.
+  registrationNo String    @default("")
+  contactName    String
+  /// As src/phone.ts keeps it.
+  contactPhone   String
+  contactEmail   String
+  address        String    @default("")
+  /// What it supplies, VENDOR_SERVICES: asked of every kind at sign-up.
+  services       String[]  @default([])
+  /// Why it was refused or suspended. Staff only.
+  reviewNote     String?
+  reviewedAt     DateTime?
+  /// No relation, so the record outlives the reviewer.
+  reviewedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  /// The locations it serves; each of its vehicles and drivers is based at one.
+  locations Location[]
+  members   VendorMember[]
+  vehicles  Vehicle[]
+  drivers   Driver[]
+  offers    VendorOffer[]
+
+  @@index([status])
 }
 
-/// Stub. Real partner fields (company details) arrive with that feature.
-model PartnerProfile {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isActive  Boolean   @default(false)
-  activeAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+/// What one vendor is asked for one booking: a vehicle, a driver or both,
+/// for each of its trips, at an amount per trip and part (`TripPart`).
+/// Ours gets one too, at no cost, accepted for by Operation. A part
+/// declined, unanswered or backed out of is deleted and its trip reopened;
+/// the offer keeps its status and the activity log the history. See
+/// docs/261028-fulfilment-vendors-and-connect.md, "Acceptance".
+model VendorOffer {
+  id            String    @id @default(cuid())
+  bookingId     String
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendorId      String
+  vendor        Vendor    @relation(fields: [vendorId], references: [id])
+  /// "offered" | "accepted" | "declined" | "expired" | "withdrawn" | "released"
+  status        String
+  /// Unanswered by then, its parts are reopened.
+  respondBy     DateTime
+  /// "not-available" | "too-far" | "other", with `declineNote` for other.
+  declineReason String?
+  declineNote   String?
+  /// No relations, so the record outlives the accounts.
+  sentById      String?
+  sentAt        DateTime  @default(now())
+  answeredById  String?
+  answeredAt    DateTime?
+  /// Who accepted saw the timing warnings then, as they read.
+  warningsSeen  String[]  @default([])
+
+  parts TripPart[]
+
+  @@index([bookingId])
+  @@index([vendorId, status])
+}
+
+/// The vehicle or the driver of one trip, from one vendor's offer, with
+/// what we owe that vendor for it. Accepted once its vendor has, and, for
+/// a driver, once the driver has too.
+model TripPart {
+  id               String      @id @default(cuid())
+  itemId           String
+  item             BookingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  offerId          String
+  offer            VendorOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  /// "vehicle" | "driver"
+  role             String
+  /// Named by Operation, or by the vendor when asked for one; null until then.
+  vehicleId        String?
+  vehicle          Vehicle?    @relation(fields: [vehicleId], references: [id])
+  driverId         String?
+  driver           Driver?     @relation(fields: [driverId], references: [id])
+  /// What we owe the vendor for this part of this trip; 0 for ours.
+  costSen          Int         @default(0)
+  vendorAcceptedAt DateTime?
+  /// The driver's own acceptance; for a vehicle, unused.
+  driverAcceptedAt DateTime?
+  createdAt        DateTime    @default(now())
+
+  @@unique([itemId, role])
+  @@index([offerId])
+  @@index([vehicleId])
+  @@index([driverId])
+}
+
+/// An account that works for a vendor in Connect, its owner or its staff.
+/// Ours has none: accepting for ours is `bookings.fulfil` in the admin.
+model VendorMember {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "owner" | "staff"
+  role      String
+  createdAt DateTime @default(now())
+
+  @@unique([vendorId, userId])
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------
 // Coverage. See docs/260930-coverage.md and
 // docs/261015-locations-as-operation-areas.md. The rows are Malaysia's fixed
 // states and districts, seeded from data/malaysia-districts.json and keyed
-// by its codes; the boundaries stay in that file. A district belongs to at
-// most one location, and Operation flips its switch on the location's
-// Coverage tab.
+// by its codes; the boundaries stay in that file. Coverage is each
+// location's zones.
 // ---------------------------------------------------------------------------
 
 /// One of the 13 states and 3 federal territories. `code` is ISO 3166-2,
 /// "MY-10" for Selangor.
 model State {
-  code       String   @id
-  name       String
-  /// No longer read: rates are set per location since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  multiplier Float    @default(1)
-  updatedAt  DateTime @updatedAt
+  code      String   @id
+  name      String
+  updatedAt DateTime @updatedAt
 
   districts District[]
   /// The locations that lie in it: a location ticks its states, and its
@@ -138,9 +232,7 @@ model State {
 }
 
 /// One administrative district. `code` is the slug of its name, the key in
-/// data/malaysia-districts.json. Off means pickups there are told the area
-/// is not served yet. A district with no location is off: a pickup is
-/// priced by its location.
+/// data/malaysia-districts.json.
 /// Malaysia's districts, for placing an address: a booking records the
 /// district its pickup fell in, and the zone maker draws the district
 /// outlines under the zones. Coverage is the zones', not the districts'.
@@ -149,9 +241,6 @@ model District {
   name      String
   stateCode String
   state     State    @relation(fields: [stateCode], references: [code])
-  /// No longer read: coverage is the location's zones since
-  /// docs/261015-locations-as-operation-areas.md. Dropped in a follow-up.
-  isActive  Boolean  @default(false)
   updatedAt DateTime @updatedAt
 
   items BookingItem[]
@@ -168,59 +257,50 @@ model District {
 // validated against the const arrays in src/location-input.ts.
 // ---------------------------------------------------------------------------
 
-/// A town, an island, a city or a state, with the districts it owns. Its
-/// state, not a district's switch, decides what the public sees; the
-/// district's switch decides whether a pickup there is served.
+/// A town, an island, a city or a state. Its state decides what the public
+/// sees; its zones decide whether a pickup there is served.
 model Location {
-  id                 String    @id @default(cuid())
+  id                  String    @id @default(cuid())
   /// The address of its pages: /langkawi. Locked the first time it goes live.
-  slug               String    @unique
-  name               String
-  /// No longer read: the tagline is on the landing page's content since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  tagline            String?
-  /// No longer read: coverage is the location's zones. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  districtCodes      String[]  @default([])
+  slug                String    @unique
+  name                String
   /// "draft" | "live" | "paused"
-  state              String
+  state               String
   /// Set once, the first time the location goes live.
-  wentLiveAt         DateTime?
+  wentLiveAt          DateTime?
   /// Its place among the home page's top choices; null when it is not one.
-  topChoiceOrder     Int?
-  /// No longer read: nearest-zone pricing replaced the drop-off rule with
-  /// maxExtraKm and crossLocation (docs/261023-nearest-zone-pricing.md).
-  /// Dropped in a follow-up once the change runs on every database.
-  dropoffRule        String    @default("anywhere")
+  topChoiceOrder      Int?
   /// The furthest extra road, in whole km: an end of a trip outside every
   /// zone further than this by road from its nearest zone is not priced.
-  maxExtraKm         Int       @default(15)
+  maxExtraKm          Int       @default(15)
   /// The free extra road, in whole km: each end outside every zone pays
   /// only for its road past this. 0 charges all of it.
-  freeExtraKm        Int       @default(0)
+  freeExtraKm         Int       @default(0)
   /// Whether trips may end in another location's zone, on the routes out
   /// this location prices to it. Off keeps every trip to its own zones.
-  crossLocation      Boolean   @default(false)
+  crossLocation       Boolean   @default(false)
   /// The odd-hours surcharge: a window as minutes of the local day (23:00
   /// is 1380, 07:00 is 420), and what it adds, a percentage of the price or
   /// a flat amount in sen, exactly one of the two. All null when there is
   /// none. See OddHours in src/rates-input.ts.
-  oddHoursFromMinute Int?
-  oddHoursToMinute   Int?
-  oddHoursPercent    Int?
-  oddHoursFlatSen    Int?
+  oddHoursFromMinute  Int?
+  oddHoursToMinute    Int?
+  oddHoursPercent     Int?
+  oddHoursFlatSen     Int?
   /// The weekend and holiday surcharge: the days of the week it applies
   /// on (0 is Sunday, 6 Saturday), the dates it also applies on
   /// ("2026-12-25"), and what it adds, a percentage or a flat amount in
   /// sen, exactly one of the two. The amounts null when there is none.
   /// See WeekendSurcharge in src/rates-input.ts.
-  weekendDays        Int[]     @default([])
-  holidayDates       String[]  @default([])
-  weekendPercent     Int?
-  weekendFlatSen     Int?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  weekendDays         Int[]     @default([])
+  holidayDates        String[]  @default([])
+  weekendPercent      Int?
+  weekendFlatSen      Int?
+  /// Minutes a vehicle or driver is kept free after a job, on top of the
+  /// drive to the next: roads differ by place. 0 turns it off.
+  safetyBufferMinutes Int       @default(15)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   pages     LocationPage[]
   addresses LocationAddress[]
@@ -233,6 +313,8 @@ model Location {
   items     BookingItem[]
   vehicles  Vehicle[]
   drivers   Driver[]
+  /// The vendors that serve it.
+  vendors   Vendor[]
 
   @@index([state])
 }
@@ -251,11 +333,6 @@ model LocationVehicleClass {
   vehicleClassId          String
   vehicleClass            VehicleClass @relation(fields: [vehicleClassId], references: [id])
   isActive                Boolean      @default(true)
-  /// No longer read: only the metered price used them, and nearest-zone
-  /// pricing has none (docs/261023-nearest-zone-pricing.md). Dropped in a
-  /// follow-up once the change runs on every database.
-  baseFareSen             Int          @default(0)
-  minimumFareSen          Int          @default(0)
   /// The rate per extra km: the road past a zone's edge.
   perKmSen                Int
   hourlyRateSen           Int
@@ -345,7 +422,7 @@ model LocationPage {
   position         Int       @default(0)
   /// Whether the page is published: true from a publish until it is
   /// unpublished. Not whether the product can be booked there: that is the
-  /// district's switch.
+  /// location's zones.
   isOn             Boolean   @default(false)
   /// The working copy.
   draft            Json
@@ -414,38 +491,24 @@ model LocationAddress {
 /// deleted, only deactivated. A booking snapshots what it shows, so
 /// editing or retiring a class never changes one.
 model VehicleClass {
-  id                      String   @id @default(cuid())
-  slug                    String   @unique
+  id            String   @id @default(cuid())
+  slug          String   @unique
   /// "car-with-driver" | "coach-charter"
-  category                String
-  name                    String
-  description             String
-  isActive                Boolean  @default(true)
-  sortOrder               Int      @default(0)
+  category      String
+  name          String
+  description   String
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
   /// Information only ("from 15 seats"): fit is by maxPassengers alone.
-  minPassengers           Int
-  maxPassengers           Int
-  luggage                 String
+  minPassengers Int
+  maxPassengers Int
+  luggage       String
   /// Its neutral picture, a file on UploadThing (src/images.ts); null for
   /// none. A location shows the first photo of its vehicles of the class in
   /// its place, once one has a photo.
-  imageUrl                String?
-  /// No longer read: rates are on the location's offering since
-  /// docs/261015-locations-as-operation-areas.md. Kept until the copy
-  /// script has run on every database; dropped in a follow-up.
-  baseFareSen             Int      @default(0)
-  perKmSen                Int      @default(0)
-  hourlyRateSen           Int      @default(0)
-  minimumFareSen          Int      @default(0)
-  /// No longer read: the rules are on the location's offering since
-  /// docs/261018-location-work-and-class-catalogue.md. Kept until
-  /// db:migrate-offering-rules has run on every database; dropped in a
-  /// follow-up.
-  minLeadHours            Int      @default(0)
-  cancellationCutoffHours Int      @default(0)
-  minHourlyHours          Int      @default(0)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   tripItems TripItemDetails[]
   offerings LocationVehicleClass[]
@@ -487,6 +550,9 @@ model VehicleModel {
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())
+  /// Whose it is.
+  vendorId            String
+  vendor              Vendor       @relation(fields: [vendorId], references: [id])
   /// In capitals without spaces: "VLE1234".
   plate               String       @unique
   vehicleModelId      String
@@ -508,9 +574,11 @@ model Vehicle {
   updatedAt           DateTime     @updatedAt
 
   photos VehiclePhoto[]
+  parts  TripPart[]
 
   @@index([locationId, isActive])
   @@index([vehicleModelId])
+  @@index([vendorId])
 }
 
 /// One photo of a vehicle, in its order; the first is the vehicle's cover.
@@ -527,14 +595,20 @@ model VehiclePhoto {
   @@index([vehicleId, sortOrder])
 }
 
-/// One of our drivers, based at a location. A driver exists before they
-/// have an account; the account is linked when the driver portal opens, and
-/// `getAccess("driver")` reads this row, active or pending. See
-/// docs/261019-vehicles-and-drivers.md.
+/// A vendor's driver, ours or another's, based at a location. A driver
+/// exists before they have an account; it is linked by `email` when an
+/// account with it exists or is made (src/sync.ts), and opens Connect. See
+/// docs/261019-vehicles-and-drivers.md and
+/// docs/261028-fulfilment-vendors-and-connect.md.
 model Driver {
   id               String         @id @default(cuid())
+  /// Whose driver they are.
+  vendorId         String
+  vendor           Vendor         @relation(fields: [vendorId], references: [id])
   userId           String?        @unique
   user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Lowercase; what links their account. Null until known.
+  email            String?        @unique
   locationId       String
   location         Location       @relation(fields: [locationId], references: [id])
   name             String
@@ -550,7 +624,36 @@ model Driver {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
+  /// The trips they were named for.
+  parts TripPart[]
+
   @@index([locationId, isActive])
+  @@index([vendorId])
+}
+
+/// One tap of a trip's driver on the day, or Operation's on their
+/// behalf: on the way, arrived, passenger on board, dropped off, no-show,
+/// a problem. Never edited or deleted. Dropped off and no-show complete the
+/// trip. Made with an id from the phone, so a tap sent again never counts
+/// twice. See docs/261028-fulfilment-vendors-and-connect.md, "On the day".
+model TripEvent {
+  id        String      @id @default(cuid())
+  itemId    String
+  item      BookingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// The driver it is about; no relation, so it outlives the driver's row.
+  driverId  String?
+  /// The account that tapped: the driver's, or the admin's for them.
+  actorId   String?
+  /// TRIP_EVENT_KINDS
+  kind      String
+  /// When it happened, by the phone's clock.
+  at        DateTime
+  note      String?
+  /// Made on the phone; a retry never counts twice.
+  clientId  String      @unique
+  createdAt DateTime    @default(now())
+
+  @@index([itemId, at])
 }
 
 /// An order: one or more items, each one product on one day. `status` is
@@ -589,8 +692,9 @@ model Booking {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  items BookingItem[]
-  notes BookingNote[]
+  items  BookingItem[]
+  notes  BookingNote[]
+  offers VendorOffer[]
 
   @@index([userId, createdAt])
   @@index([status, startsAt])
@@ -657,6 +761,10 @@ model BookingItem {
   updatedAt               DateTime  @updatedAt
 
   tripDetails TripItemDetails?
+  /// Who does it: the vehicle and the driver, each from a vendor's offer.
+  parts       TripPart[]
+  /// What its driver reported on the day, in order.
+  events      TripEvent[]
 
   @@unique([bookingId, position])
   @@index([status, startsAt])
@@ -675,6 +783,11 @@ model TripItemDetails {
   /// Snapshots, so a renamed, moved or retired class never changes an old
   /// booking.
   vehicleClassName     String
+  /// One-way: Google's drive, pin to pin, in whole minutes without
+  /// traffic, from the route pricing asked for; the trip ends at its pickup
+  /// plus this. Null for hourly, and on trips booked before it was kept,
+  /// whose end is estimated from their distance.
+  driveMinutes         Int?
   /// The model the customer chose, which the receipt charges for, and its
   /// name as a snapshot: "Toyota Alphard". Both null when any model of the
   /// class will do.

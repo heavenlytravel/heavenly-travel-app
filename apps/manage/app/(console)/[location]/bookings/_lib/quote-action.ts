@@ -2,7 +2,7 @@
 
 import { isTripCategory, parseTripSearch, textOf } from "@repo/db";
 import { getAdmin } from "../../../../_lib/access";
-import { FORBIDDEN_MESSAGE } from "../../../../_lib/action-state";
+import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 import { CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
 import { quoteTripView } from "./trip-server";
 

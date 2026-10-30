@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Card } from "@repo/console/Card";
 import { FormError } from "@repo/ui/form-error";
 import { settingsHref } from "../../../../_lib/routes";
-import { useActionForm } from "../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { LocationSlugField } from "../SlugField";
 import { StatePicker, type StateOption } from "../StatePicker";
 import { createLocationAction } from "../../../../_lib/location-actions";

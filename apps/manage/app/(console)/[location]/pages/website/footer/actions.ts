@@ -7,10 +7,7 @@ import {
 } from "@repo/db/server";
 import { revalidateLocation } from "../../../../../_lib/revalidate";
 import { actorOf, getAdmin } from "../../../../../_lib/access";
-import {
-  FORBIDDEN_MESSAGE,
-  STALE_MESSAGE,
-} from "../../../../../_lib/action-state";
+import { FORBIDDEN_MESSAGE, STALE_MESSAGE } from "@repo/console/action-state";
 import { refreshSitePagesAfter } from "../../../../../_lib/site";
 
 /**

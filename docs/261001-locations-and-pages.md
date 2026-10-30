@@ -293,6 +293,9 @@ is gone. "Unpublish" shows only where the page may be unpublished.
 - A fifth team, `MARKETING`, with one permission, `locations.manage`: add a location,
   keep its saved addresses, write, publish and unpublish its pages, change its
   state and mark the top choices.
+  Since 2026-10-30 this is split (docs/260930-admin-teams-and-access.md): the pages are
+  `pages.manage`, shared with a sixth team, `SEO`; `locations.manage` keeps the details
+  and saved addresses; adding a location is `SUPER`'s (`locations.create`).
 - Operation keeps the district switch. It does not show, hide or change a location.
 - Any Marketing admin edits any location. There is no assignment per location; the
   history shows who did what.

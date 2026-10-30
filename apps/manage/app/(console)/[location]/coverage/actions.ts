@@ -30,7 +30,7 @@ import {
   FORBIDDEN_MESSAGE,
   STALE,
   stateOf,
-} from "../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { refreshLocationAfter } from "../../../_lib/site";
 import { revalidateLocation } from "../../../_lib/revalidate";
 import type { MukimChoice } from "./zones/map-shapes";

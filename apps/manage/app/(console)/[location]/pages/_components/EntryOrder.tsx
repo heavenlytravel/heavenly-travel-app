@@ -3,7 +3,7 @@
 import { answerOf } from "@repo/ui/action-answer";
 import { useState, useTransition } from "react";
 import { FormError } from "@repo/ui/form-error";
-import { errorOf } from "../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 import { moveLocationEntryAction } from "../../../../_lib/location-actions";
 import { RowControls } from "./RowControls";
 

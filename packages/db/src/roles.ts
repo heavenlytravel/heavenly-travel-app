@@ -17,6 +17,7 @@ export const ADMIN_TEAMS = [
   "SALES",
   "FINANCE",
   "MARKETING",
+  "SEO",
 ] as const;
 export type AdminTeam = (typeof ADMIN_TEAMS)[number];
 export const isAdminTeam = guardFor(ADMIN_TEAMS);
@@ -26,6 +27,7 @@ export const ADMIN_TEAM_LABELS: Record<AdminTeam, string> = {
   SALES: "Sales",
   FINANCE: "Finance",
   MARKETING: "Marketing",
+  SEO: "SEO",
 };
 
 /** The known teams among the values, once each, in `ADMIN_TEAMS` order. */
@@ -41,6 +43,6 @@ export function needsTeam(admin: { level: string; teams: readonly string[] }) {
   );
 }
 
-/** Areas of the product a signed-in user may enter. See `getAccess`. */
-export const AREAS = ["user", "driver", "partner", "admin"] as const;
+/** Areas of the product a signed-in user may enter. See `getAccess`, and `getConnectAccess` for Connect. */
+export const AREAS = ["user", "admin"] as const;
 export type Area = (typeof AREAS)[number];

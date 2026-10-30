@@ -119,12 +119,22 @@ export function parsePlace(body: unknown): Place | null {
 type RoutesResponse = {
   routes?: {
     distanceMeters?: number;
+    /** "1234s". */
+    duration?: string;
     polyline?: { encodedPolyline?: string };
   }[];
 };
 
+/** Google's "1234s" as whole minutes, rounded up; undefined for anything else. */
+function minutesOf(duration: string | undefined) {
+  const seconds = duration ? Number(duration.replace(/s$/, "")) : NaN;
+  return Number.isFinite(seconds) && seconds >= 0
+    ? Math.ceil(seconds / 60)
+    : undefined;
+}
+
 /**
- * The first route's length in km and its line; null when Google found
+ * The first route's length in km, its line and its drive time; null when Google found
  * none, or answered without a line. A route of 0 m, from a point to
  * itself, may come with no distance at all.
  */
@@ -134,5 +144,10 @@ export function parseRoute(body: unknown): RoadRoute | null {
   if (!route || typeof encoded !== "string") return null;
   const line = decodePolyline(encoded);
   if (line.length === 0) return null;
-  return { distanceKm: (route.distanceMeters ?? 0) / 1000, line };
+  const durationMinutes = minutesOf(route.duration);
+  return {
+    distanceKm: (route.distanceMeters ?? 0) / 1000,
+    line,
+    ...(durationMinutes !== undefined ? { durationMinutes } : {}),
+  };
 }

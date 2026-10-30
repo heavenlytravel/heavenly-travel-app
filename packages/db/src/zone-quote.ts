@@ -141,6 +141,8 @@ export type TripPlacing =
       dropoff: PlacedEnd | null;
       /** One-way: the full road distance, pin to pin. */
       distanceKm: number | null;
+      /** One-way: the drive, pin to pin, in whole minutes without traffic; null when the router does not say. */
+      driveMinutes: number | null;
       /** Null when both ends are in zones: the cell is the price. */
       measure: ZoneTripMeasure | null;
     }
@@ -400,6 +402,7 @@ async function placeBoth(
       pickup,
       dropoff: null,
       distanceKm: null,
+      driveMinutes: null,
       measure: null,
     };
   }
@@ -452,12 +455,21 @@ async function placeBoth(
     );
   }
   const distanceKm = roundKm(full.distanceKm);
+  const driveMinutes = full.durationMinutes ?? null;
   if (!pickup.nearest && !dropoff.nearest) {
     trace?.steps.push({
       kind: "trip",
       route: traced(full, { fromKm: 0, toKm: full.distanceKm, km: distanceKm }),
     });
-    return { ok: true, location, pickup, dropoff, distanceKm, measure: null };
+    return {
+      ok: true,
+      location,
+      pickup,
+      dropoff,
+      distanceKm,
+      driveMinutes,
+      measure: null,
+    };
   }
 
   const tripPart = trimmedKm(
@@ -506,6 +518,7 @@ async function placeBoth(
     pickup,
     dropoff,
     distanceKm,
+    driveMinutes,
     measure: {
       pickup: endOf(pickup),
       dropoff: endOf(dropoff),

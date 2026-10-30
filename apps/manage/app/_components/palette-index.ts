@@ -129,7 +129,7 @@ export function paletteIndex({
           ]),
         ]
       : []),
-    ...(may("locations.manage")
+    ...(may("locations.create")
       ? [{ href: NEW_LOCATION_PATH, title: "Add Location", words: "new" }]
       : []),
   ];

@@ -9,13 +9,13 @@ import { NewLocationForm } from "./NewLocationForm";
 /**
  * Route: /~/settings/new. A name, a slug and the states the place lies in
  * make a location, a draft whose classes, coverage and rates, and pages
- * follow on its dashboard's checklist. Marketing's screen behind
- * `locations.manage`, console-wide: under a location it is not found.
+ * follow on its dashboard's checklist. SUPER's screen behind
+ * `locations.create`, console-wide: under a location it is not found.
  */
 export default async function NewLocationPage({
   params,
 }: PageProps<"/[location]/settings/new">) {
-  await requireAdmin("locations.manage");
+  await requireAdmin("locations.create");
   const { slug } = await scopeOf(params);
   if (slug !== null) notFound();
 

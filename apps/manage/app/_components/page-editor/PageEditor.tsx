@@ -30,12 +30,12 @@ import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { scrollBehavior } from "@repo/ui/motion";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { errorOf } from "../../_lib/action-state";
-import { useLeaveGuard } from "../../_lib/use-leave-guard";
+import { errorOf } from "@repo/console/action-state";
+import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
 import { Notice } from "@repo/ui/notice";
 import { MarkdownField } from "../MarkdownField";
-import { UploadsContext, useUploadCount } from "../use-image-upload";
+import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import {
   RowControls,
   movedRow,

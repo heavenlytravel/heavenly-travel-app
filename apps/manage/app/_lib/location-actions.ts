@@ -12,11 +12,13 @@ import {
   moveLocationEntry,
   moveLocationState,
   parseAddressEntries,
+  parseSafetyBuffer,
   parseLocationFields,
   renameLocationEntry,
   savedAddressRefusal,
   addLocationAddress,
   setLocationAddresses,
+  setSafetyBuffer,
   textOf,
   updateLocation,
   type AddressWrite,
@@ -31,7 +33,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "./action-state";
+} from "@repo/console/action-state";
 import {
   dashboardHref,
   locationPageHref,
@@ -43,9 +45,12 @@ import { revalidateLocation, revalidateLocations } from "./revalidate";
 
 /**
  * The actions on a location: its settings, its saved addresses and the
- * pages added to its sections. Each checks `locations.manage` again, or
- * `locations.activate` for the state move and the delete, passes the admin
- * as the actor and lets the writer in @repo/db check the rest. Arguments
+ * pages added to its sections. Each checks its permission again:
+ * `locations.create` to add one, `locations.manage` for its details and
+ * saved addresses, `pages.manage` for its pages, `locations.activate` for
+ * the state move and the delete, `coverage.manage` for the safety
+ * buffer; passes the admin as the actor and lets the writer in @repo/db
+ * check the rest. Arguments
  * passed directly, not through a form, are checked for their type here: an
  * action is reachable by direct POST. A change the public can see also
  * refreshes the customer site. A page's own writes are the page editor's,
@@ -71,7 +76,7 @@ export async function createLocationAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("locations.create");
   if (!admin) return FORBIDDEN;
   const parsed = parseLocationFields(locationValues(formData));
   if (!parsed.ok) return refusalOf(parsed);
@@ -267,6 +272,29 @@ export async function moveLocationStateAction(
 }
 
 /**
+ * The safety buffer, on the location's settings: Operation's, as its
+ * coverage is (`coverage.manage`). Nothing the public sees.
+ */
+export async function setSafetyBufferAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  const locationId = textOf(formData.get("locationId"));
+  if (!locationId) return STALE;
+  const minutes = parseSafetyBuffer(Object.fromEntries(formData));
+  if (!minutes.ok) return refusalOf(minutes);
+  const result = await setSafetyBuffer(
+    actorOf(admin),
+    locationId,
+    minutes.value,
+  );
+  if (result.ok) revalidateLocation();
+  return stateOf(result);
+}
+
+/**
  * Adds a page to a section that takes pages on demand, from its plus on
  * the location's Pages, and opens its editor. The slug is the one the dialog
  * filled from the name, as Marketing left it.
@@ -275,7 +303,7 @@ export async function createLocationEntryAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("pages.manage");
   if (!admin) return FORBIDDEN;
   const locationId = textOf(formData.get("locationId"));
   const page = formData.get("page");
@@ -305,7 +333,7 @@ export async function renameLocationEntryAction(
   toPage: string,
   to: string,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("pages.manage");
   if (!admin) return FORBIDDEN;
   if (
     typeof locationId !== "string" ||
@@ -335,7 +363,7 @@ export async function deleteLocationEntryAction(
   page: string,
   slug: string,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("pages.manage");
   if (!admin) return FORBIDDEN;
   if (
     typeof locationId !== "string" ||
@@ -363,7 +391,7 @@ export async function moveLocationEntryAction(
   slug: string,
   by: number,
 ): Promise<ActionState> {
-  const admin = await getAdmin("locations.manage");
+  const admin = await getAdmin("pages.manage");
   if (!admin) return FORBIDDEN;
   if (
     typeof locationId !== "string" ||

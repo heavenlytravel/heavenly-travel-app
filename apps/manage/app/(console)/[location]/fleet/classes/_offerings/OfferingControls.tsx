@@ -9,7 +9,7 @@ import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
 import { setOfferingActiveAction } from "./actions";
 import { FormError } from "@repo/ui/form-error";
-import { errorOf } from "../../../../../_lib/action-state";
+import { errorOf } from "@repo/console/action-state";
 
 /**
  * An offering's switch. Taking the last class of a category off sale asks

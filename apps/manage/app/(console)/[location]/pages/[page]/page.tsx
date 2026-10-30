@@ -15,7 +15,7 @@ import { LocationPageEditorScreen } from "../_components/LocationPageEditorScree
 export default async function LocationPageEditorPage({
   params,
 }: PageProps<"/[location]/pages/[page]">) {
-  await requireAdmin("locations.manage");
+  await requireAdmin("pages.manage");
   const { location } = await scopeOf(params);
   const key = pageKeyOfSegment((await params).page);
   if (!location || !key) notFound();

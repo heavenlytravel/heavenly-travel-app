@@ -3,7 +3,7 @@
 import { locationAt, resolveDistrict } from "@repo/db/server";
 import { resolvePlace } from "@repo/places/server";
 import { getAdmin } from "../../../_lib/access";
-import { FORBIDDEN_MESSAGE } from "../../../_lib/action-state";
+import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 
 /** What "Test an address" learns about a place the admin picked. */
 export type AddressTest =

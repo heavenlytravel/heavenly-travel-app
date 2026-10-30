@@ -3,8 +3,10 @@ import { describe, it } from "node:test";
 import { driverFieldsOf, parseDriverFields } from "./driver-input";
 
 const FORM: Record<string, string> = {
+  vendorId: "ven1",
   name: " Ali bin Abu ",
   phone: "+60 12-345 6789",
+  email: " Ali@Example.com ",
   locationId: "loc1",
   isActive: "on",
   notes: "",
@@ -23,8 +25,10 @@ describe("parseDriverFields", () => {
     assert.deepEqual(result, {
       ok: true,
       value: {
+        vendorId: "ven1",
         name: "Ali bin Abu",
         phone: "+60123456789",
+        email: "ali@example.com",
         locationId: "loc1",
         vehicleClassIds: ["vc1", "vc2"],
         isActive: true,
@@ -35,7 +39,14 @@ describe("parseDriverFields", () => {
     });
   });
 
-  it("needs a name, a phone that dials, a location and a class", () => {
+  it("keeps no email when none is typed, and refuses one that is not an address", () => {
+    const result = parseDriverFields({ ...FORM, email: " " }, ["vc1"]);
+    assert.equal(result.ok && result.value.email, null);
+    assert.match(errorOf({ email: "ali@" }) ?? "", /email/);
+  });
+
+  it("needs a vendor, a name, a phone that dials, a location and a class", () => {
+    assert.match(errorOf({ vendorId: "" }) ?? "", /whose driver/);
     assert.match(errorOf({ name: "" }) ?? "", /name/);
     assert.match(errorOf({ phone: "12" }) ?? "", /phone/);
     assert.match(errorOf({ locationId: "" }) ?? "", /based/);
@@ -53,8 +64,10 @@ describe("parseDriverFields", () => {
 describe("driverFieldsOf", () => {
   it("reads a stored driver's classes by id, sorted, and its dates as days", () => {
     const fields = driverFieldsOf({
+      vendorId: "ven1",
       name: "Ali",
       phone: "+60123456789",
+      email: null,
       locationId: "loc1",
       vehicleClasses: [{ id: "vc2" }, { id: "vc1" }],
       isActive: true,

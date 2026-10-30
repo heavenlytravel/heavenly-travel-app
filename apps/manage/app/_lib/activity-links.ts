@@ -15,6 +15,7 @@ import {
   sitePageHref,
   sitePagePublishHref,
   vehicleHref,
+  vendorHref,
 } from "./routes";
 
 /**
@@ -32,6 +33,7 @@ export const ACTIVITY_RECORD_NAMES: Record<
   location: { one: "Location", many: "Locations" },
   vehicle: { one: "Vehicle", many: "Vehicles" },
   driver: { one: "Driver", many: "Drivers" },
+  vendor: { one: "Vendor", many: "Vendors" },
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
   user: { one: "User", many: "Users" },
   admin: { one: "Admin", many: "Admins" },
@@ -92,7 +94,7 @@ export function activityEntryHref(
   if (entry.entityType === "location") {
     const slug = slugs.get(entry.entityId);
     if (!slug) return null;
-    if (entry.action === "location.page.published" && may("locations.manage")) {
+    if (entry.action === "location.page.published" && may("pages.manage")) {
       return locationPublishHref(slug, entry.id);
     }
     return entry.entityId === here ? null : dashboardHref(slug);
@@ -112,6 +114,8 @@ export function activityEntryHref(
       return based && may("fleet.manage")
         ? driverHref(based, entry.entityId)
         : null;
+    case "vendor":
+      return may("fleet.manage") ? vendorHref(null, entry.entityId) : null;
     case "vehicle-class":
       return may("coverage.view") ? classHref(null, entry.entityId) : null;
     case "media":

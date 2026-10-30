@@ -58,7 +58,7 @@ describe("status guards", () => {
 
   it("step forward one status at a time and stop at completed", () => {
     assert.equal(NEXT_ITEM_STATUS.received, "confirmed");
-    assert.equal(NEXT_ITEM_STATUS.confirmed, "assigned");
+    assert.equal("confirmed" in NEXT_ITEM_STATUS, false);
     assert.equal(NEXT_ITEM_STATUS.assigned, "completed");
     assert.equal("completed" in NEXT_ITEM_STATUS, false);
     assert.equal("cancelled" in NEXT_ITEM_STATUS, false);

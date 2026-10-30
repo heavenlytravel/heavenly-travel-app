@@ -19,8 +19,10 @@ import {
   type Place,
 } from "@repo/db";
 import {
+  getBookingFulfilment,
   listActivityFor,
   listBookingNotes,
+  listTripEvents,
   type ActivityEntry,
   type BookingItemWithDetails,
   type BookingWithItems,
@@ -60,6 +62,8 @@ import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
 import { CancelBookingControl, ItemActions } from "./BookingControls";
 import { Notes } from "./Notes";
+import { TripReports } from "./TripReports";
+import { WhoDoesIt } from "./WhoDoesIt";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -108,7 +112,8 @@ function bookedLine(
 
 /**
  * One booking for ops, under its reference: who made it, when and where,
- * then a card per trip with its steps, its stops and details, its price
+ * then who does its trips and what its drivers reported, then a card per
+ * trip with its steps, its stops and details, its price
  * and what may be done to it; beside them the booking's summary, the
  * customer, the staff's notes and the last of its history. "History" and
  * "Cancel booking" stand in the header. Every team opens it; the controls
@@ -122,12 +127,15 @@ export async function bookingScreen({
   id: string;
   scope: ConsoleScope;
 }) {
-  const [booking, permissions, notes, entries] = await Promise.all([
+  const [booking, permissions, notes, entries, fulfilment] = await Promise.all([
     scopedBooking(id, scope),
     getPermissions(),
     listBookingNotes(id),
     listActivityFor("booking", id),
+    getBookingFulfilment(id),
   ]);
+  const events = await listTripEvents(fulfilment.map((trip) => trip.id));
+  const canFulfil = permissions.includes("bookings.fulfil");
   const href = bookingHref(scope.slug, booking.id);
   const open = booking.status !== "cancelled" && booking.status !== "completed";
 
@@ -174,15 +182,30 @@ export async function bookingScreen({
       />
 
       <DetailColumns
-        main={booking.items.map((item) => (
-          <TripCard
-            key={item.id}
-            item={item}
-            reference={booking.reference}
-            permissions={permissions}
-            scope={scope.slug}
-          />
-        ))}
+        main={
+          <>
+            <WhoDoesIt
+              bookingId={booking.id}
+              trips={fulfilment}
+              canFulfil={canFulfil}
+            />
+            <TripReports
+              bookingId={booking.id}
+              trips={fulfilment}
+              events={events}
+              canFulfil={canFulfil}
+            />
+            {booking.items.map((item) => (
+              <TripCard
+                key={item.id}
+                item={item}
+                reference={booking.reference}
+                permissions={permissions}
+                scope={scope.slug}
+              />
+            ))}
+          </>
+        }
         side={
           <>
             <Card>
@@ -349,7 +372,8 @@ function TripCard({
     permissions.includes("bookings.create") &&
     item.status !== "cancelled" &&
     item.status !== "completed";
-  // A trip can be amended until a driver is assigned to it.
+  // A trip can be amended until it is assigned; amending a trip with a
+  // vehicle or driver asked for lets them go, to ask again.
   const canAmend =
     permissions.includes("bookings.manage") &&
     trip !== null &&

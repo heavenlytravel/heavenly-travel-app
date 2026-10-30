@@ -118,7 +118,7 @@ export function ScopePicker({
           </MenuItem>
         );
       })}
-      {permissions.includes("locations.manage") ? (
+      {permissions.includes("locations.create") ? (
         <>
           <MenuSeparator />
           <MenuItem asChild current={pathname === NEW_LOCATION_PATH}>

@@ -199,7 +199,7 @@ async function dayColumns(day: Day) {
       : null,
   ]);
   const byLocation = scope.location ? null : (
-    <ByLocation overviews={overviews} mayAdd={may("locations.manage")} />
+    <ByLocation overviews={overviews} mayAdd={may("locations.create")} />
   );
   const wide = pickups ?? (glance ? <Glance rows={glance} /> : null);
 

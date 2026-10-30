@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 import { CheckIcon, XIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { FormError } from "@repo/ui/form-error";
-import { useActionForm } from "../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import {
   advanceItemAction,
   cancelBookingAction,
@@ -21,14 +21,12 @@ import { PriceOverrideControl } from "./PriceOverride";
 /** What the toast says once each step is taken. */
 const ADVANCED: Record<NextItemStatus, string> = {
   confirmed: "Trip confirmed. The customer is told.",
-  assigned: "Driver assigned.",
   completed: "Trip completed.",
 };
 
 /** What the forward button says for each step it would take. */
 const ADVANCE_LABELS: Record<NextItemStatus, string> = {
   confirmed: "Confirm",
-  assigned: "Mark driver assigned",
   completed: "Mark completed",
 };
 

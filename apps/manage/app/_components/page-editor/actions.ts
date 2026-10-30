@@ -22,14 +22,14 @@ import {
   STALE_MESSAGE,
   stateOf,
   type ActionState,
-} from "../../_lib/action-state";
+} from "@repo/console/action-state";
 import { refreshLocationAfter, refreshSitePagesAfter } from "../../_lib/site";
 import { pageTargetOf, type PageTarget } from "./target";
 
 /**
  * The page editor's writes, for a location's page and a site page alike:
  * save the draft, publish, unpublish. Each checks the target's permission
- * again (`locations.manage` for a location's page, `website.manage` for a
+ * again (`pages.manage` for a location's page, `website.manage` for a
  * site page) and reads the target and the version for their type, since an action is
  * reachable by direct POST; the writers in @repo/db check the rest. A
  * change the public can see refreshes the customer site after the answer.
@@ -52,7 +52,7 @@ function refreshAfter(target: PageTarget, publicChange: boolean) {
 
 /** Who may write the target: Marketing a location's page, SUPER a site page. */
 function permissionOf(target: PageTarget): Permission {
-  return target.scope === "location" ? "locations.manage" : "website.manage";
+  return target.scope === "location" ? "pages.manage" : "website.manage";
 }
 
 async function writePage(

@@ -22,3 +22,9 @@ export const ADMIN_URL = origin(
   process.env.ADMIN_URL,
   "https://manage.heavenlytravel.my",
 );
+
+/** Connect, the vendors' and drivers' app. */
+export const CONNECT_URL = origin(
+  process.env.CONNECT_URL,
+  "https://connect.heavenlytravel.my",
+);

@@ -32,17 +32,14 @@ import {
   offeringBackHref,
   type OfferingFrom,
 } from "../../../../../_lib/routes";
-import { useActionForm } from "../../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import {
   DEFAULT_CATEGORY,
   VehicleClassFieldset,
 } from "../_catalogue/VehicleClassFields";
 import { createOfferingAction, updateOfferingAction } from "./actions";
 import { SOURCES, SOURCE_FIELD } from "./offering-form";
-import {
-  UploadsContext,
-  useUploadCount,
-} from "../../../../../_components/use-image-upload";
+import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {

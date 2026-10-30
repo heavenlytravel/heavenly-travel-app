@@ -3,9 +3,9 @@
 import { formatMyr } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
-import { SCOPE_FIELD } from "../../../../../../_lib/fleet-form";
+import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { ALL, type ScopeSlug } from "../../../../../../_lib/routes";
-import { useActionForm } from "../../../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { BookingSummary } from "../../../_components/BookingSummary";
 import { DetailsStep } from "../../../_components/DetailsStep";
 import { HiddenFields } from "../../../_components/HiddenFields";

@@ -63,6 +63,14 @@ export const clerkAppearance = {
     },
     otpCodeFieldInput: { height: "3rem", fontSize: "1rem" },
     footerActionLink: { color: brand, fontWeight: 600 },
+    // "Secured by Clerk" (and "Development mode" on the development
+    // instance): the same element under the sign-in and sign-up cards, in
+    // the account window and in the user button's menu, apart from the
+    // "Sign up" or "Sign in" link (`footerAction`), which stays. The
+    // menu's footer holds nothing else, so it goes with it. Until Clerk's
+    // paid plan removes the badge itself.
+    footerItem: { display: "none" },
+    userButtonPopoverFooter: { display: "none" },
   },
 } as const;
 

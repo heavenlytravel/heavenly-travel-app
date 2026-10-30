@@ -144,6 +144,8 @@ export type TripQuote = {
   /** The location whose rates priced the trip: the one the pickup's zone is. */
   location: QuotedLocation;
   basis: PricingBasis;
+  /** One-way: Google's drive, pin to pin, in whole minutes; null for hourly or when unknown. Saved on the trip for fulfilment. */
+  driveMinutes: number | null;
   pickup: QuotedEnd;
   /** Null for hourly hire. */
   dropoff: QuotedEnd | null;
@@ -454,6 +456,7 @@ async function quoteOne(
           location.maxExtraKm,
       },
       basis,
+      driveMinutes: placed.driveMinutes,
       pickup: endOf(pickup),
       dropoff: dropoff ? endOf(dropoff) : null,
       zoneTrip: placed.measure,
@@ -609,6 +612,7 @@ function itemOf(
             : Prisma.DbNull,
         hours: basis.mode === "hourly" ? basis.hours : null,
         distanceKm: basis.mode === "oneway" ? basis.distanceKm : null,
+        driveMinutes: basis.mode === "oneway" ? quote.driveMinutes : null,
         passengers: request.passengers,
         childSeats: offersChildSeats(category) ? request.childSeats : 0,
         flightNumber: request.flightNumber,

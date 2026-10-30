@@ -94,10 +94,14 @@ export function bookingStatusOf(
   return "confirmed";
 }
 
-/** The forward step an admin may take from each item status, one at a time. */
+/**
+ * The forward step an admin may take from each item status, one at a time.
+ * Assigned is no button: a trip is assigned once its vehicle and driver
+ * are named and accepted (./fulfilment). Operation marks one completed for
+ * its driver.
+ */
 export const NEXT_ITEM_STATUS = {
   received: "confirmed",
-  confirmed: "assigned",
   assigned: "completed",
 } as const satisfies Partial<Record<ItemStatus, ItemStatus>>;
 export type NextItemStatus =

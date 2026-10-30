@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * Route: /preview/langkawi. A location's main page as drafted, for staff
- * who hold `locations.manage`: the public page's components over the working
+ * who hold `pages.manage`: the public page's components over the working
  * draft, in any state. The access check is `previewPageAt`'s. There is no
  * layout here, so the check runs in the page.
  */

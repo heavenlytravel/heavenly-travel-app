@@ -1,6 +1,7 @@
 import {
   ActivityIcon,
   BanknoteIcon,
+  BuildingIcon,
   BusIcon,
   CalendarCheckIcon,
   CarFrontIcon,
@@ -10,6 +11,7 @@ import {
   Grid3x3Icon,
   IdCardIcon,
   ImageIcon,
+  KanbanIcon,
   LayoutDashboardIcon,
   MapIcon,
   MapPinIcon,
@@ -34,9 +36,11 @@ import {
 export const MENU_ICONS = {
   dashboard: LayoutDashboardIcon,
   bookings: CalendarCheckIcon,
+  board: KanbanIcon,
   fleet: CarFrontIcon,
   vehicles: CarIcon,
   drivers: IdCardIcon,
+  vendors: BuildingIcon,
   classes: BusIcon,
   coverage: MapIcon,
   rates: BanknoteIcon,

@@ -365,6 +365,7 @@ setup step: a location with no row on the grid is metered.
   every setup step is done.
 - Adding a location stays Marketing's (`locations.manage`): the name, slug and state.
   Operation takes it from there. Both teams see it in draft.
+  Reversed 2026-10-30: adding a location is `SUPER`'s (`locations.create`).
 - The console home (`/`) is the locations overview, behind `dashboard.view`: one card per
   location with its main page's hero image, its state, its states, its zones, its classes
   on sale, its queue, how far its setup has come, "Add location" for Marketing, "Test an

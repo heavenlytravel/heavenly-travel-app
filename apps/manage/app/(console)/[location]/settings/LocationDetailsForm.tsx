@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
-import { useActionForm } from "../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { LocationSlugField } from "./SlugField";
 import { StatePicker, type StateOption } from "./StatePicker";
 import { updateLocationAction } from "../../../_lib/location-actions";

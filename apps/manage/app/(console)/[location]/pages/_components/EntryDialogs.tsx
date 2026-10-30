@@ -8,7 +8,7 @@ import { PlusIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
-import { useActionForm } from "../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { createLocationEntryAction } from "../../../../_lib/location-actions";
 import {
   SavedAddressPicker,

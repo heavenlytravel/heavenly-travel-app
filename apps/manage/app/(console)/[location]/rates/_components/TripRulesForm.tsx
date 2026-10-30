@@ -30,7 +30,7 @@ import { Switch } from "@repo/ui/switch";
 import { useRef, useState, type ReactNode } from "react";
 import { ChargeInput } from "../../../../_components/ChargeInput";
 import { FormError } from "@repo/ui/form-error";
-import { useActionForm } from "../../../../_lib/use-action-form";
+import { useActionForm } from "@repo/console/use-action-form";
 import { setTripRulesAction } from "./actions";
 import { crossLocationNote, extraRoadNote } from "./trip-reach-note";
 

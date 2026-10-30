@@ -14,9 +14,11 @@ import {
 } from "@repo/db";
 import type {
   ClassOption,
+  HeldBooking,
   LocationName,
   ModelSuggestion,
   VehicleWithModel,
+  VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Combobox } from "@repo/ui/combobox";
@@ -25,23 +27,17 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
 import { useState } from "react";
-import { Card, CardTitle } from "@repo/console/Card";
-import { FormFoot } from "@repo/console/FormFoot";
-import { DetailColumns } from "@repo/console/PageColumn";
-import { ExpiryDateField } from "../../../../../_components/ExpiryDateField";
-import {
-  UploadsContext,
-  useUploadCount,
-} from "../../../../../_components/use-image-upload";
-import {
-  classGroups,
-  DATES_CARDS,
-  SCOPE_FIELD,
-} from "../../../../../_lib/fleet-form";
-import { ALL, vehiclesHref, type ScopeSlug } from "../../../../../_lib/routes";
-import { useActionForm } from "../../../../../_lib/use-action-form";
-import { createVehicleAction, updateVehicleAction } from "../actions";
+import type { ActionState } from "./action-state";
+import { Card, CardTitle } from "./Card";
+import { ExpiryDateField } from "./ExpiryDateField";
+import { classGroups, DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
+import { FormFoot } from "./FormFoot";
+import { DetailColumns } from "./PageColumn";
 import { PhotoList } from "./PhotoList";
+import { useActionForm } from "./use-action-form";
+import { UploadsContext, useUploadCount } from "./use-image-upload";
+import { useOutOfServiceAsk } from "./use-out-of-service-ask";
+import { VendorField } from "./VendorField";
 
 /** Each name once, in the spelling it was first entered with. */
 function distinct(names: readonly string[]) {
@@ -104,29 +100,56 @@ function ModelNote({
 }
 
 /**
- * The form for one of our vehicles, new or existing, across the record's
- * page: its photos and its details (plate, class, brand and model, chosen
- * from the ones entered before or added new, colour and year, where it is
- * based, notes, whether it is in service), and beside them the expiry
- * dates of its documents. A model the class does not have yet is added
- * to it on save. Saved, it opens the vehicles of the scope it was opened
- * in: every location's under `~`, else the location it is based at.
+ * The form for a vendor's vehicle, new or existing, across the record's
+ * page: its photos and its details (whose it is, plate, class, brand and
+ * model, chosen from the ones entered before or added new, colour and
+ * year, where it is based, notes, whether it is in service), and beside
+ * them the expiry dates of its documents. A model the class does not have
+ * yet is added to it on save. One copy for both apps: the admin chooses
+ * the vendor from every one, and Connect fixes it to the member's vendor
+ * and offers only the locations it serves and the classes on sale at
+ * each. Each app passes its own action and upload route; where a saved
+ * vehicle opens is the action's answer.
  */
 export function VehicleForm({
   vehicle,
   scope,
   locationId,
   vehicleClassId,
+  vendorId,
+  vendors,
   classes,
+  classesAt,
   suggestions,
   locations,
+  action,
+  cancelHref,
+  uploadPath,
+  photosNote = "What the customers of the location it is based at see of its model, plate and all, and swipe through when they choose one. The first cover of the class there is the class's picture at the location.",
+  held = [],
 }: {
   /** Absent on the "new" page. */
   vehicle?: VehicleWithModel;
-  /** The scope the form is open in, which Cancel and a save go back to. */
-  scope: ScopeSlug;
-  /** Where a new vehicle is based to start with: the location under a slug. */
+  /** The admin's scope the form is open in (a slug, or `~`), which a save goes back to; absent in Connect. */
+  scope?: string;
+  /** Where a new vehicle is based to start with. */
   locationId?: string;
+  /** Whose a new vehicle is to start with, ours when absent; with no `vendors`, fixed. */
+  vendorId?: string;
+  /** The vendors to choose from, in the admin; absent in Connect, where it is the member's. */
+  vendors?: readonly VendorOption[];
+  /** The classes on sale at each location, by its id: Connect narrows the class to them. */
+  classesAt?: Record<string, readonly string[]>;
+  /** The save, new or existing, as the app checks it. */
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /** Where Cancel goes. */
+  cancelHref: string;
+  /** The app's upload route for a vehicle's photo. */
+  uploadPath: string;
+  /** What the photos are for, in the tip beside their title. */
+  photosNote?: string;
+  /** The accepted bookings still to come it is on, which taking it out of service takes it off. */
+  held?: readonly HeldBooking[];
   /** The class a new vehicle starts in, when it is added from the class's page. */
   vehicleClassId?: string;
   /** Every class in the catalogue, in its order. */
@@ -136,9 +159,16 @@ export function VehicleForm({
   locations: readonly LocationName[];
 }) {
   const isNew = !vehicle;
+  const outOfService = useOutOfServiceAsk({
+    name: vehicle?.plate ?? "",
+    wasActive: vehicle?.isActive ?? false,
+    held,
+    action: "Take out of service",
+  });
   const { pending, error, formProps, markDirty, leaveDialog } = useActionForm(
-    isNew ? createVehicleAction : updateVehicleAction,
+    action,
     {
+      ask: outOfService.ask,
       done: isNew ? "Vehicle added." : "Vehicle saved.",
       leave: isNew
         ? "The vehicle is not added."
@@ -155,6 +185,14 @@ export function VehicleForm({
   const [photos, setPhotos] = useState<Photo[]>(
     vehicle?.photos.map(({ url, caption }) => ({ url, caption })) ?? [],
   );
+  const [basedAt, setBasedAt] = useState(
+    fields?.locationId ?? locationId ?? "",
+  );
+  const onSale = classesAt ? new Set(classesAt[basedAt] ?? []) : null;
+  const classChoices = onSale
+    ? classes.filter((c) => onSale.has(c.id) || c.id === classId)
+    : classes;
+  const vendor = fields?.vendorId || vendorId || "";
 
   return (
     <UploadsContext value={uploads.track}>
@@ -165,7 +203,9 @@ export function VehicleForm({
           name={PHOTOS_FIELD}
           value={JSON.stringify(photos)}
         />
-        <input type="hidden" name={SCOPE_FIELD} value={scope ?? ALL} />
+        {scope ? (
+          <input type="hidden" name={SCOPE_FIELD} value={scope} />
+        ) : null}
 
         <DetailColumns
           main={
@@ -174,10 +214,11 @@ export function VehicleForm({
                 <CardTitle meta="The first is the cover">
                   <span className="inline-flex items-center gap-1.5">
                     {VEHICLE_FIELD_LABELS.photos}
-                    <InfoTip text="What the customers of the location it is based at see of its model, plate and all, and swipe through when they choose one. The first cover of the class there is the class's picture at the location." />
+                    <InfoTip text={photosNote} />
                   </span>
                 </CardTitle>
                 <PhotoList
+                  uploadPath={uploadPath}
                   name={modelName({ brand: brand.trim(), name: model.trim() })}
                   photos={photos}
                   setPhotos={(next) => {
@@ -191,6 +232,15 @@ export function VehicleForm({
                 <CardTitle>Details</CardTitle>
                 <div className="grid gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
+                    {vendors ? (
+                      <VendorField
+                        vendors={vendors}
+                        defaultValue={vendor}
+                        what="vehicle"
+                      />
+                    ) : (
+                      <input type="hidden" name="vendorId" value={vendor} />
+                    )}
                     <Field label={VEHICLE_FIELD_LABELS.plate}>
                       <Input
                         name="plate"
@@ -212,7 +262,7 @@ export function VehicleForm({
                         placeholder="Choose the class"
                         value={classId}
                         onValueChange={setClassId}
-                        options={classGroups(classes)}
+                        options={classGroups(classChoices)}
                       />
                     </Field>
                     <Field label={VEHICLE_FIELD_LABELS.brand}>
@@ -272,7 +322,8 @@ export function VehicleForm({
                         name="locationId"
                         required
                         placeholder="Choose the location"
-                        defaultValue={fields?.locationId ?? locationId ?? ""}
+                        value={basedAt}
+                        onValueChange={setBasedAt}
                         options={locations.map((location) => ({
                           value: location.id,
                           label: location.name,
@@ -295,6 +346,11 @@ export function VehicleForm({
                       <Checkbox
                         name="isActive"
                         defaultChecked={fields?.isActive ?? true}
+                        onChange={(event) =>
+                          outOfService.onActiveChange(
+                            event.currentTarget.checked,
+                          )
+                        }
                       />
                       {VEHICLE_FIELD_LABELS.isActive}
                     </label>
@@ -338,10 +394,11 @@ export function VehicleForm({
                     : "Save"}
             </Button>
           }
-          cancelHref={vehiclesHref(scope)}
+          cancelHref={cancelHref}
           error={error}
         />
         {leaveDialog}
+        {outOfService.dialog}
       </form>
     </UploadsContext>
   );

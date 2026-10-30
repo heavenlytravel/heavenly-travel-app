@@ -344,6 +344,16 @@ describe("activityActionMeta", () => {
   const INTERNAL_BOOKING_ACTIONS: string[] = [
     "booking.item.priced",
     "booking.note.added",
+    // Fulfilment: vendors, their costs and their declines are staff only.
+    "booking.item.reopened",
+    "booking.offer.sent",
+    "booking.part.accepted",
+    "booking.part.declined",
+    "booking.part.named",
+    "booking.part.released",
+    "booking.part.cost.changed",
+    "booking.trip.reported",
+    "booking.contact.viewed",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

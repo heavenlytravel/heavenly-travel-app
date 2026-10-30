@@ -9,7 +9,7 @@ import {
   type ActionState,
   FORBIDDEN,
   refusalOf,
-} from "../../../../_lib/action-state";
+} from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../_lib/revalidate";
 import { CONTACT_FIELDS } from "../_lib/trip-form";
 import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";

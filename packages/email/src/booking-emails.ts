@@ -23,9 +23,9 @@ import type {
   BookingWithItems,
 } from "@repo/db/server";
 import {
+  type Block,
   renderHtml,
   renderText,
-  type Block,
   type EmailContent,
 } from "./render";
 import type { EmailMessage } from "./types";
@@ -45,6 +45,8 @@ export type EmailSettings = {
   siteUrl: string;
   /** The admin console, for "Open in console". */
   adminUrl: string;
+  /** Connect, for vendors and drivers. */
+  connectUrl: string;
   /** Where the ops copies go. */
   opsTo: string;
   /** "[Development] " outside production, so the environment is obvious. */
@@ -170,7 +172,7 @@ function headline(booking: BookingWithItems) {
 const severalLive = (booking: BookingWithItems) =>
   booking.items.filter(isLive).length > 1;
 
-function email(
+export function email(
   to: string,
   key: string,
   content: EmailContent,
@@ -201,7 +203,11 @@ function toCustomer(
   return to ? [email(to, `${key}:customer`, content, settings)] : [];
 }
 
-function toOps(key: string, settings: EmailSettings, content: EmailContent) {
+export function toOps(
+  key: string,
+  settings: EmailSettings,
+  content: EmailContent,
+) {
   return email(settings.opsTo, `${key}:ops`, content, settings);
 }
 
@@ -413,6 +419,59 @@ function amended(
     "Your booking is updated",
     `Hi ${booking.contactName}, we have updated booking ${booking.reference} as agreed. The trip is now as below; please check the pick-up time and place. Message us if anything is not right.`,
   );
+}
+
+/** Who does one trip, as the customer is told: the driver, their phone and the vehicle. */
+export type TripCrew = {
+  position: number;
+  startsAt: Date;
+  driverName: string;
+  driverPhone: string;
+  plate: string;
+  /** "Toyota Alphard". */
+  model: string;
+  colour: string;
+};
+
+/**
+ * The customer's email once trips are assigned, and again when the
+ * driver or the vehicle changes: who picks them up for each trip. Its key
+ * is the crews, so the same crews never send twice.
+ */
+export function driverEmails(
+  booking: BookingWithItems,
+  crews: readonly TripCrew[],
+  settings: EmailSettings,
+): BookingEmail[] {
+  if (crews.length === 0) return [];
+  const key = `${booking.id}:assigned:${crews
+    .map((c) => `${c.position}-${c.plate}-${c.driverPhone}`)
+    .join(",")}`;
+  const several = crews.length > 1;
+  return toCustomer(booking, key, settings, {
+    subject: `Your driver for ${booking.reference}`,
+    heading: several ? "Your drivers" : "Your driver",
+    blocks: [
+      {
+        type: "paragraph",
+        text: `Hi ${booking.contactName}, here is who picks you up for booking ${booking.reference}. Your driver may call or message you on ${booking.contactPhone} before the pick-up.`,
+      },
+      ...crews.map((crew): Block => ({
+        type: "rows",
+        title: several
+          ? `Trip ${crew.position}, ${formatLocalDateTime(crew.startsAt)}`
+          : formatLocalDateTime(crew.startsAt),
+        rows: [
+          ["Driver", crew.driverName],
+          ["Driver's phone", crew.driverPhone],
+          ["Vehicle", `${crew.model}, ${crew.colour}`],
+          ["Plate", crew.plate],
+        ],
+      })),
+      ...bookingButton(booking, settings),
+      { type: "contact" },
+    ],
+  });
 }
 
 /**

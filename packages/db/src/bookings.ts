@@ -20,6 +20,7 @@ import {
   type Product,
 } from "./booking-status";
 import { db } from "./client";
+import { releaseParts, settleCancelledTrips } from "./fulfilment";
 import { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
 import { priceBreakdownOf } from "./pricing";
@@ -400,6 +401,7 @@ async function refreshBooking(
   cancelledBy: Canceller | null,
   now: Date,
 ): Promise<{ booking: BookingWithItems; event: BookingEvent | null }> {
+  await settleCancelledTrips(tx, bookingId, now);
   const booking = await tx.booking.findUniqueOrThrow({
     where: { id: bookingId },
     include: { items: true },
@@ -449,8 +451,8 @@ async function refreshBooking(
 }
 
 /**
- * Moves one item forward one step: received -> confirmed -> assigned ->
- * completed. The target is explicit so a stale button press fails instead
+ * Moves one item forward one step: received -> confirmed, or assigned ->
+ * completed; assigning is ./fulfilment's. The target is explicit so a stale button press fails instead
  * of skipping a step.
  */
 export function advanceItem(
@@ -739,6 +741,15 @@ export function amendItem(
         },
       });
     }
+    // The vendors were asked for the trip as it was: it is asked again.
+    await releaseParts(
+      tx,
+      actor,
+      { itemId: item.id },
+      "released",
+      now,
+      "The trip was amended",
+    );
     const refreshed = await refreshBooking(tx, item.bookingId, null, now);
     return { ok: true, booking: refreshed.booking, event: "amended" };
   });

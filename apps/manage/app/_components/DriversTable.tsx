@@ -15,10 +15,11 @@ import {
 } from "@repo/console/Table";
 
 /**
- * Our drivers as a table, in the scope on screen: the name and phone, the
- * classes they may drive, the location under `~`, the licences due, and
- * whether they are active. Each opens in the scope it was listed in.
- * `bare` is for a `flush` card.
+ * The drivers as a table, in the scope on screen: the name and phone
+ * (and the vendor, when not ours), the classes they may drive, the
+ * location under `~`, the licences due, and whether they are active.
+ * Each opens in the scope it was listed in. `bare` is for a `flush`
+ * card.
  */
 export function DriversTable({
   drivers,
@@ -58,7 +59,12 @@ export function DriversTable({
                       {driver.name}
                     </Link>
                   }
-                  bottom={<span className="tabular-nums">{driver.phone}</span>}
+                  bottom={
+                    <>
+                      <span className="tabular-nums">{driver.phone}</span>
+                      {driver.vendor.isOurs ? null : ` · ${driver.vendor.name}`}
+                    </>
+                  }
                 />
               </Td>
               <Td className="min-w-40">

@@ -23,3 +23,17 @@ export function isValidPhone(normalized: string) {
     digits.length <= MAX_DIGITS
   );
 }
+
+/**
+ * A number's WhatsApp link, "https://wa.me/60123456789": wa.me wants the
+ * country code without the plus, so a local "012…" is read as Malaysian.
+ */
+export function whatsappHref(phone: string) {
+  const normalized = normalizePhone(phone);
+  const digits = normalized.replace(/\D/g, "");
+  const international =
+    normalized.startsWith("+") || digits.startsWith("60")
+      ? digits
+      : `60${digits.replace(/^0/, "")}`;
+  return `https://wa.me/${international}`;
+}

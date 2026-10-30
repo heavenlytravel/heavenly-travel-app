@@ -13,7 +13,7 @@ import {
   findZoneMatches,
 } from "@repo/db/server";
 import { getPermissions } from "../../_lib/access";
-import { FORBIDDEN_MESSAGE } from "../../_lib/action-state";
+import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 import { bookingLocations } from "../../_lib/booking-locations";
 import {
   RECORD_KINDS,

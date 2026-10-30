@@ -51,6 +51,7 @@ import {
 } from "./page-content";
 import { isPlace, type Place } from "./place";
 import { routesIntoLocation } from "./zones";
+import { checkSafetyBuffer } from "./fulfilment-rules";
 
 export type { Location, LocationAddress };
 
@@ -304,6 +305,40 @@ export async function createLocation(
       after: { name: fields.name, slug: fields.slug, stateCodes },
     });
     return { ok: true, id: location.id };
+  });
+}
+
+/**
+ * Sets the minutes a location keeps a vehicle or a driver free after a
+ * job, on top of the drive to the next; 0 turns it off. Roads differ by
+ * place, not by vendor. Saving what is already there logs nothing. See
+ * docs/261028-fulfilment-vendors-and-connect.md, "Clashes and timing".
+ */
+export async function setSafetyBuffer(
+  actor: Actor,
+  id: string,
+  minutes: number,
+): Promise<Change> {
+  const check = checkSafetyBuffer(minutes);
+  if (!check.ok) return check;
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({
+      where: { id },
+      select: { safetyBufferMinutes: true },
+    });
+    if (!location) return NOT_FOUND;
+    if (location.safetyBufferMinutes === minutes) return { ok: true };
+    await tx.location.update({
+      where: { id },
+      data: { safetyBufferMinutes: minutes },
+    });
+    await logActivity(tx, actor, {
+      action: "location.buffer.updated",
+      entityId: id,
+      before: { safetyBufferMinutes: location.safetyBufferMinutes },
+      after: { safetyBufferMinutes: minutes },
+    });
+    return { ok: true };
   });
 }
 

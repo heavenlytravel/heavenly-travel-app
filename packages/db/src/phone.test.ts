@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isValidPhone, normalizePhone } from "./phone";
+import { isValidPhone, normalizePhone, whatsappHref } from "./phone";
 
 describe("phone", () => {
   it("keeps digits and a leading plus only", () => {
@@ -16,5 +16,12 @@ describe("phone", () => {
     assert.equal(isValidPhone("1234567890123456"), false);
     assert.equal(isValidPhone(""), false);
     assert.equal(isValidPhone("+"), false);
+  });
+
+  it("links WhatsApp with the country code, a local number as Malaysian", () => {
+    assert.equal(whatsappHref("+60123456789"), "https://wa.me/60123456789");
+    assert.equal(whatsappHref("+65 9123 4567"), "https://wa.me/6591234567");
+    assert.equal(whatsappHref("012-345 6789"), "https://wa.me/60123456789");
+    assert.equal(whatsappHref("60123456789"), "https://wa.me/60123456789");
   });
 });

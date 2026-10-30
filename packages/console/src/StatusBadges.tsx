@@ -3,13 +3,16 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
+  VENDOR_STATUS_LABELS,
   isBookingStatus,
   isItemStatus,
   isLocationState,
+  isVendorStatus,
   type BookingStatus,
   type ItemStatus,
   type LocationState,
   type PageStatus,
+  type VendorStatus,
 } from "@repo/db";
 import { Badge, type BadgeTone } from "@repo/ui/badge";
 
@@ -103,6 +106,26 @@ export function ServiceBadge({
   return (
     <Badge dot tone={active ? "green" : "neutral"}>
       {active ? on : off}
+    </Badge>
+  );
+}
+
+export const VENDOR_TONES: Record<VendorStatus, BadgeTone> = {
+  pending: "amber",
+  active: "green",
+  refused: "neutral",
+  suspended: "red",
+};
+
+/**
+ * Where a vendor stands: waiting for a SUPER's review, active, refused,
+ * or suspended, a real problem while it holds work, so red.
+ */
+export function VendorStatusBadge({ status }: { status: string }) {
+  if (!isVendorStatus(status)) return <Badge>{status}</Badge>;
+  return (
+    <Badge dot tone={VENDOR_TONES[status]}>
+      {VENDOR_STATUS_LABELS[status]}
     </Badge>
   );
 }

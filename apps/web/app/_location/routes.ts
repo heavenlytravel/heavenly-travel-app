@@ -98,7 +98,7 @@ export async function publicPageAt(
 
 /**
  * The staff preview of the page at the address: the draft, for a signed-in
- * admin who holds `locations.manage`. A signed-out visitor is sent to sign
+ * admin who holds `pages.manage`. A signed-out visitor is sent to sign
  * in and comes back here; anyone else gets a 404. The address is checked
  * before the session is read, because the proxy attaches no session to a
  * path that looks like a file.
@@ -112,7 +112,7 @@ export async function previewPageAt(
   const ref = refOf(section, entry);
   if (!ref) notFound();
 
-  const access = await getAdminAccess("locations.manage");
+  const access = await getAdminAccess("pages.manage");
   if (access.status === "signed-out") {
     redirect(signInHref(locationPreviewPath(slug, ref)));
   }

@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { useImageUpload } from "./use-image-upload";
+import { useImageUpload } from "@repo/console/use-image-upload";
 import { FormError } from "@repo/ui/form-error";
 
 /**

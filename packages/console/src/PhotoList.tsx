@@ -19,8 +19,7 @@ import {
 } from "@repo/ui/icons";
 import Image from "next/image";
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { useImageUpload } from "../../../../../_components/use-image-upload";
-import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
+import { useImageUpload } from "./use-image-upload";
 import { FormError } from "@repo/ui/form-error";
 
 /**
@@ -36,7 +35,10 @@ export function PhotoList({
   name,
   photos,
   setPhotos,
+  uploadPath,
 }: {
+  /** The app's upload route for a vehicle's photo. */
+  uploadPath: string;
   /** What the photos show as typed, "Toyota Alphard", for their alt text. */
   name: string;
   photos: Photo[];
@@ -45,7 +47,7 @@ export function PhotoList({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, pending, error } = useImageUpload(
-    VEHICLE_IMAGE_UPLOAD_PATH,
+    uploadPath,
     "photo",
   );
   const [leftOut, setLeftOut] = useState<string | null>(null);

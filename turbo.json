@@ -10,6 +10,7 @@
     "REVALIDATE_SECRET",
     "SITE_URL",
     "ADMIN_URL",
+    "CONNECT_URL",
     "EMAIL_FROM",
     "EMAIL_OPS_TO",
     "VERCEL_ENV",

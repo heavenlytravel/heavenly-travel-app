@@ -13,7 +13,7 @@ import { LocationPageEditorScreen } from "../../_components/LocationPageEditorSc
 export default async function LocationEntryEditorPage({
   params,
 }: PageProps<"/[location]/pages/[page]/[entry]">) {
-  await requireAdmin("locations.manage");
+  await requireAdmin("pages.manage");
   const { location } = await scopeOf(params);
   const { page, entry } = await params;
   const ref = { page, slug: entry };

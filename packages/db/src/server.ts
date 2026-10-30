@@ -1,7 +1,19 @@
 export { db } from "./client";
-export { getSession, getAccess, getAdminAccess } from "./session";
-export type { SessionUser, Access, AdminUser, AdminAccess } from "./session";
-export { SITE_URL, ADMIN_URL } from "./origins";
+export {
+  getSession,
+  getAccess,
+  getAdminAccess,
+  getConnectAccess,
+} from "./session";
+export type {
+  SessionUser,
+  Access,
+  AdminUser,
+  AdminAccess,
+  ConnectAccess,
+  ConnectVendor,
+} from "./session";
+export { SITE_URL, ADMIN_URL, CONNECT_URL } from "./origins";
 export {
   snapshotFromWebhook,
   snapshotFromBackendUser,
@@ -80,6 +92,84 @@ export {
 } from "./drivers";
 export type { DriverWithClasses } from "./drivers";
 export {
+  getBookingFulfilment,
+  listCandidates,
+  assignBooking,
+  answerParts,
+  nameParts,
+  releaseAction,
+  expireOffers,
+  setPartCost,
+  heldBookingsOf,
+  tripCrewsOf,
+  jobOf,
+} from "./fulfilment";
+export type {
+  FulfilmentTrip,
+  TripPartView,
+  Candidate,
+  PartAsk,
+  AssignInput,
+  PartAnswer,
+  HeldBooking,
+} from "./fulfilment";
+export { listBoard, listOursToAccept, boardDayRange } from "./board";
+export type { BoardCard, BoardPart, OursToAccept } from "./board";
+export {
+  listDriverJobs,
+  getDriverJob,
+  answerAsDriver,
+  reportTripEvent,
+  listTripEvents,
+} from "./driver-jobs";
+export type {
+  DriverJobs,
+  DriverJob,
+  DriverTrip,
+  DriverOffer,
+  JobStop,
+  TripEventView,
+  Reporter,
+} from "./driver-jobs";
+export {
+  listVendors,
+  countPendingVendors,
+  getVendor,
+  listVendorOptions,
+  createVendor,
+  updateVendor,
+  moveVendor,
+  setVendorOurs,
+  listVendorMembers,
+  addVendorStaff,
+  removeVendorStaff,
+  listRegistrationLocations,
+  vendorFleetChoices,
+  mayRegisterVendor,
+} from "./vendors";
+export {
+  listVendorOffers,
+  nameForVendor,
+  answerAsVendor,
+  listVendorJobs,
+  getVendorJob,
+} from "./vendor-work";
+export type {
+  OfferRole,
+  VendorOfferView,
+  VendorTrip,
+  VendorJobs,
+  VendorJob,
+} from "./vendor-work";
+export type {
+  VendorWithLocations,
+  VendorFilter,
+  VendorOption,
+  VendorMove,
+  VendorMemberView,
+  VendorContact,
+} from "./vendors";
+export {
   listOfferings,
   listPicturedOfferings,
   listActiveOfferings,
@@ -137,6 +227,7 @@ export {
   getLocationSlug,
   createLocation,
   updateLocation,
+  setSafetyBuffer,
   deleteLocation,
   savedAddressRefusal,
   setLocationAddresses,
@@ -292,6 +383,9 @@ export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./vendor-input";
+export * from "./fulfilment-rules";
+export * from "./trip-events-input";
 export * from "./user-input";
 export * from "./expiry";
 export * from "./location-input";

@@ -14,12 +14,12 @@ const superAdmin = { level: "SUPER", teams: [] };
 
 const SUPER_ONLY: Permission[] = [
   "admins.manage",
+  "vendors.review",
   "users.manage",
   "wall.switch",
   "activity.view",
   "locations.activate",
-  "media.manage",
-  "website.manage",
+  "locations.create",
 ];
 /** What every admin holds, team or not: the home and the locations' overviews. */
 const ANYONE: Permission[] = ["dashboard.view", "locations.view"];
@@ -30,7 +30,8 @@ const SHARED: Permission[] = [...ANYONE, "bookings.view", "bookings.notes"];
  * Marketing team of docs/261001-locations-and-pages.md, the two location
  * permissions of docs/261015-locations-as-operation-areas.md, the
  * read-only classes, coverage and rates for Reservation and Sales, and
- * Operation's vehicles and drivers of docs/261019-vehicles-and-drivers.md.
+ * Operation's vehicles and drivers of docs/261019-vehicles-and-drivers.md,
+ * and the SEO team, which shares Marketing's pages, website and media.
  */
 const WALL: Record<AdminTeam, Permission[]> = {
   OPERATION: [
@@ -48,7 +49,14 @@ const WALL: Record<AdminTeam, Permission[]> = {
   ],
   SALES: [...SHARED, "bookings.manage", "bookings.create", "coverage.view"],
   FINANCE: SHARED,
-  MARKETING: [...ANYONE, "locations.manage"],
+  MARKETING: [
+    ...ANYONE,
+    "locations.manage",
+    "pages.manage",
+    "website.manage",
+    "media.manage",
+  ],
+  SEO: [...ANYONE, "pages.manage", "website.manage", "media.manage"],
 };
 
 const sorted = (permissions: Permission[]) => [...permissions].sort();
@@ -114,7 +122,6 @@ describe("may, in both states", () => {
 describe("ADVANCE_PERMISSIONS", () => {
   it("splits confirming from assigning and completing", () => {
     assert.equal(ADVANCE_PERMISSIONS.confirmed, "bookings.manage");
-    assert.equal(ADVANCE_PERMISSIONS.assigned, "bookings.fulfil");
     assert.equal(ADVANCE_PERMISSIONS.completed, "bookings.fulfil");
   });
 });

@@ -10,11 +10,12 @@ import {
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
+import { FormError } from "@repo/ui/form-error";
 import { showFieldError, useFormErrors } from "@repo/ui/validation";
 import Link from "next/link";
 import { clearOfFold } from "../../../../../_components/trips/TripsBar";
 import type { ForDriver } from "../../../../../_lib/trip-plan";
-import { control, textLink } from "../../../../_components/Page";
+import { control } from "../../../../_components/Page";
 import { createTripsBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
@@ -168,7 +169,7 @@ export function ConfirmForm({
       {signInHref && (
         <p className="text-copy text-muted">
           Have an account?{" "}
-          <Link href={signInHref} className={textLink}>
+          <Link href={signInHref} className="text-link">
             Sign in
           </Link>
         </p>
@@ -272,9 +273,7 @@ export function ConfirmForm({
       </div>
       <div className="grid gap-3">
         {alert ? (
-          <p role="alert" className="text-copy text-danger">
-            {alert}
-          </p>
+          <FormError size="copy" error={alert} />
         ) : missing.length > 0 ? (
           <p className="text-copy text-muted">
             Fill in your {listFormat.format(missing)} to confirm.
@@ -307,7 +306,10 @@ export function ConfirmForm({
 /**
  * A field of the form: its label around the control, which takes its
  * name from it, and `line`, its hint or why it was refused, under the
- * label, which the control points at (`aria-describedby`).
+ * label, which the control points at (`aria-describedby`). @repo/ui's
+ * `Field` does the same in the console's sizes; the site's form reads at
+ * 15px with 13px lines, marks a field "(optional)", and takes its errors
+ * from the whole form (`useFormErrors`), the server's too.
  */
 function Field({
   label: text,

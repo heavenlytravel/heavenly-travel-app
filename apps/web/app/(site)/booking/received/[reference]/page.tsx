@@ -3,7 +3,7 @@ import Link from "next/link";
 import { isMaskedEmail, isReference, normalizeReference } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
-import { eyebrow, PageTitle, Panel, textLink } from "../../../_components/Page";
+import { eyebrow, PageTitle, Panel } from "../../../_components/Page";
 import { accountBookingHref, signUpHref } from "../../../../_lib/routes";
 
 export const metadata: Metadata = {
@@ -54,7 +54,7 @@ export default async function ReceivedPage({
           Verify your email once to see updates and cancel online.{" "}
           <Link
             href={signUpHref(null, accountBookingHref(reference))}
-            className={textLink}
+            className="text-link"
           >
             Create an account
           </Link>

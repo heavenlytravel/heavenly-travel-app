@@ -8,11 +8,13 @@ import {
   CONTACT,
   formatMyr,
   largestGroup,
-  TRIP_CATEGORY_LABELS,
+  plural,
   type TripCategory,
   type TripSearch,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { Notice } from "@repo/ui/notice";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import { ClassCard } from "../../../../_components/ClassCard";
 import { PassengersStepper } from "../../../../_components/trips/PassengersStepper";
@@ -42,21 +44,13 @@ import {
   tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
 import { useNavigate } from "../../../../_lib/useNavigate";
-import {
-  Bone,
-  Loading,
-  surface,
-  PageTitle,
-  panel,
-  Pending,
-  Stop,
-  textLink,
-} from "../../../_components/Page";
+import { surface, panel, Pending, Stop } from "../../../_components/Page";
+import { BookingStepTitle, FoldedTripsBones } from "./StepParts";
 import { usePlanPricing } from "./usePlanPricing";
 
 const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
-const alertBox =
-  "mb-4 rounded-xl bg-danger-tint px-4 py-3 text-copy text-danger-strong";
+/** The site's reading size in a `Notice`, and its room below. */
+const alertBox = "mb-4 text-copy";
 /** A link inside a coloured message: in the message's colour, so underlined. */
 const noteLink =
   "font-semibold underline underline-offset-4 hover:no-underline focus-ring";
@@ -198,7 +192,7 @@ export function VehicleStep({
   }
 
   const coachLink = (label: string) => (
-    <button type="button" onClick={toCoaches} className={textLink}>
+    <button type="button" onClick={toCoaches} className="text-link">
       {label}
     </button>
   );
@@ -214,7 +208,7 @@ export function VehicleStep({
         attention={failed.length > 0 || clashesOf(trips).size > 0}
         className={`${surface} mb-8 ${clearOfHeader} lg:p-7`}
         summary={[
-          passengers === 1 ? "1 passenger" : `${passengers} passengers`,
+          plural(passengers, "passenger"),
           ...(chosen?.fit.ok
             ? [`${chosen.card.name} · ${formatMyr(chosen.fit.totalSen)}`]
             : []),
@@ -254,17 +248,21 @@ export function VehicleStep({
         </h2>
 
         {error ? (
-          <div role="alert" className={alertBox}>
-            {error}{" "}
-            <button type="button" onClick={retry} className={noteLink}>
-              Try again
-            </button>
+          <div role="alert">
+            <Notice tone="danger" className={alertBox}>
+              {error}{" "}
+              <button type="button" onClick={retry} className={noteLink}>
+                Try again
+              </button>
+            </Notice>
           </div>
         ) : failed.length > 0 ? (
-          <p role="alert" className={alertBox}>
-            Change or remove the {failed.length === 1 ? "trip" : "trips"} marked
-            in red above to choose your vehicle.
-          </p>
+          <div role="alert">
+            <Notice tone="danger" className={alertBox}>
+              Change or remove the {failed.length === 1 ? "trip" : "trips"}{" "}
+              marked in red above to choose your vehicle.
+            </Notice>
+          </div>
         ) : !complete || (pricing && choices.length === 0) ? (
           <>
             <p
@@ -281,7 +279,7 @@ export function VehicleStep({
             <VehicleCardsSkeleton className="motion-safe:animate-pulse" />
           </>
         ) : choices.length === 0 ? (
-          <p className={alertBox}>
+          <Notice tone="danger" className={alertBox}>
             We have no vehicle to offer for{" "}
             {several ? "these trips" : "this trip"} right now.{" "}
             <a
@@ -293,39 +291,41 @@ export function VehicleStep({
               Message us on WhatsApp
             </a>{" "}
             and we will help.
-          </p>
+          </Notice>
         ) : (
           <>
             {passengers > largest ? (
-              <p role="alert" className={alertBox}>
-                No {isCar ? "car" : "coach"} seats {passengers}.{" "}
-                {isCar ? (
-                  <>
-                    A coach does:{" "}
-                    <button
-                      type="button"
-                      onClick={toCoaches}
-                      className={noteLink}
-                    >
-                      see coach charter
-                    </button>
-                    . Or make a booking for each car.
-                  </>
-                ) : (
-                  <>
-                    Make a booking for each coach, or{" "}
-                    <a
-                      href={CONTACT.whatsappHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={noteLink}
-                    >
-                      WhatsApp us
-                    </a>{" "}
-                    and we plan it with you.
-                  </>
-                )}
-              </p>
+              <div role="alert">
+                <Notice tone="danger" className={alertBox}>
+                  No {isCar ? "car" : "coach"} seats {passengers}.{" "}
+                  {isCar ? (
+                    <>
+                      A coach does:{" "}
+                      <button
+                        type="button"
+                        onClick={toCoaches}
+                        className={noteLink}
+                      >
+                        see coach charter
+                      </button>
+                      . Or make a booking for each car.
+                    </>
+                  ) : (
+                    <>
+                      Make a booking for each coach, or{" "}
+                      <a
+                        href={CONTACT.whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={noteLink}
+                      >
+                        WhatsApp us
+                      </a>{" "}
+                      and we plan it with you.
+                    </>
+                  )}
+                </Notice>
+              </div>
             ) : null}
             {notShown.length > 0 ? (
               <p className="mx-1 -mt-2 mb-4 text-copy text-muted">
@@ -411,14 +411,15 @@ function StepTitle({
 }) {
   const several = count > 1;
   return (
-    <PageTitle
-      eyebrow={`${TRIP_CATEGORY_LABELS[category]}${several ? ` · ${count} trips` : ""}`}
+    <BookingStepTitle
+      category={category}
+      count={count}
       title={several ? "Your trips, priced." : "Your trip, priced."}
     >
       {several ? "One vehicle does every trip, so you choose it once. " : ""}
       Prices include the driver and fuel. Pay nothing now: we confirm your
       booking first.
-    </PageTitle>
+    </BookingStepTitle>
   );
 }
 
@@ -434,10 +435,7 @@ function VehicleStepSkeleton({ category }: { category: TripCategory }) {
       <StepTitle category={category} count={1} />
       <Loading>
         <div className={`${surface} mb-8 lg:p-7`}>
-          <div className="grid gap-1.5 px-4 py-2.5 sm:px-5 lg:hidden">
-            <Bone className="h-5 w-40" />
-            <Bone className="h-5 w-56 max-w-full" />
-          </div>
+          <FoldedTripsBones />
           <div className="hidden lg:block">
             <Bone className="mb-3 h-24 w-full" />
             <div className="flex items-center justify-between gap-3">

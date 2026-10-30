@@ -8,13 +8,15 @@ import {
   formatMyr,
   modelsLine,
   isAirportPlace,
-  TRIP_CATEGORY_LABELS,
+  plural,
   tripItemField,
   type TripCategory,
   type TripOptions,
   type TripSearch,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
+import { FormError } from "@repo/ui/form-error";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import { ClassPicture } from "../../../../../_components/ClassPicture";
 import { ModelPhotosButton } from "../../../../../_components/ModelGallery";
@@ -45,16 +47,13 @@ import {
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
 import {
-  Bone,
-  Loading,
-  PageTitle,
   panel,
   panelFromLarge,
   Pending,
   Stop,
   surface,
-  textLink,
 } from "../../../../_components/Page";
+import { BookingStepTitle, FoldedTripsBones } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
 import { ConfirmForm } from "./ConfirmForm";
 import { CONFIRM_FIELDS } from "./fields";
@@ -317,7 +316,7 @@ export function ConfirmStep({
       action={
         <Link
           href={vehiclePage}
-          className={`hidden text-copy lg:inline ${textLink}`}
+          className="hidden text-copy text-link lg:inline"
         >
           Edit trips
         </Link>
@@ -338,12 +337,12 @@ export function ConfirmStep({
     <section aria-label="Your trips" className={panelFromLarge}>
       {timeline}
       {error ? (
-        <p role="alert" className="mx-1 mt-3 text-copy text-danger">
-          {error}{" "}
-          <button type="button" onClick={retry} className={textLink}>
+        <div className="mx-1 mt-3 flex flex-wrap items-baseline gap-x-1 text-copy">
+          <FormError size="copy" error={error} />
+          <button type="button" onClick={retry} className="text-link">
             Try again
           </button>
-        </p>
+        </div>
       ) : pricing && complete ? (
         <p
           role="status"
@@ -361,7 +360,7 @@ export function ConfirmStep({
         <h2 className="font-serif text-2xl leading-tight">Your vehicle</h2>
         <Link
           href={vehiclePage}
-          className={`hidden text-copy lg:inline ${textLink}`}
+          className="hidden text-copy text-link lg:inline"
         >
           Change
         </Link>
@@ -392,7 +391,7 @@ export function ConfirmStep({
               : several
                 ? `all ${trips.length} trips`
                 : "the trip"}{" "}
-            · {passengers} {passengers === 1 ? "passenger" : "passengers"}
+            · {plural(passengers, "passenger")}
           </p>
         </div>
       </div>
@@ -410,9 +409,7 @@ export function ConfirmStep({
           <TripsFold
             trips={trips}
             summary={
-              card
-                ? `${card.name} · ${passengers} ${passengers === 1 ? "passenger" : "passengers"}`
-                : null
+              card ? `${card.name} · ${plural(passengers, "passenger")}` : null
             }
             attention={red.length > 0 || error !== null}
             label="Your trips and vehicle"
@@ -489,16 +486,16 @@ function StepTitle({
   category: TripCategory;
   count: number;
 }) {
-  const several = count > 1;
   return (
-    <PageTitle
-      eyebrow={`${TRIP_CATEGORY_LABELS[category]}${several ? ` · ${count} trips` : ""}`}
+    <BookingStepTitle
+      category={category}
+      count={count}
       title="Confirm your booking."
     >
-      {several ? "Every trip is priced" : "Your trip is priced"} with
+      {count > 1 ? "Every trip is priced" : "Your trip is priced"} with
       today&apos;s rates. Nothing is booked until you confirm, and you pay
       nothing now.
-    </PageTitle>
+    </BookingStepTitle>
   );
 }
 
@@ -514,12 +511,7 @@ function ConfirmStepSkeleton({ category }: { category: TripCategory }) {
       <StepTitle category={category} count={1} />
       <Loading className={columns}>
         <div className="grid gap-6 lg:gap-7">
-          <div
-            className={`${surface} grid gap-1.5 px-4 py-2.5 sm:px-5 lg:hidden`}
-          >
-            <Bone className="h-5 w-40" />
-            <Bone className="h-5 w-56 max-w-full" />
-          </div>
+          <FoldedTripsBones className={surface} />
           <div className={`hidden lg:block ${panelFromLarge}`}>
             <Bone className="h-24 w-full" />
           </div>

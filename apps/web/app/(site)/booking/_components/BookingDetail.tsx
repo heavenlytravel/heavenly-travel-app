@@ -11,7 +11,8 @@ import {
   BookingStatusBadge,
   ItemStatusBadge,
 } from "@repo/console/StatusBadges";
-import { Panel, Rows } from "../../_components/Page";
+import { Rows } from "@repo/ui/rows";
+import { Panel } from "../../_components/Page";
 import { TripSummary } from "./TripSummary";
 
 /** One line under the title, per booking status, as the customer reads it. */

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { checkCustomerCancel, checkCustomerTripCancel, isLive } from "@repo/db";
-import { PageTitle, textLink } from "../../../_components/Page";
+import { PageTitle } from "../../../_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
   accountBookingHref,
@@ -37,7 +37,7 @@ export default async function AccountBookingPage({
   return (
     <>
       <p className="mb-6 text-copy">
-        <Link href={ACCOUNT_BOOKINGS_PATH} className={textLink}>
+        <Link href={ACCOUNT_BOOKINGS_PATH} className="text-link">
           All bookings
         </Link>
       </p>

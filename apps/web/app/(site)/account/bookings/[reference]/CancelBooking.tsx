@@ -2,6 +2,7 @@
 
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
+import { FormError } from "@repo/ui/form-error";
 import { toast } from "@repo/ui/toast";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
@@ -109,11 +110,7 @@ function CancelControl({
       >
         {words.keep}
       </Button>
-      {state?.error && (
-        <p role="alert" className="text-copy text-danger">
-          {state.error}
-        </p>
-      )}
+      <FormError size="copy" error={state?.error} />
     </form>
   );
 }

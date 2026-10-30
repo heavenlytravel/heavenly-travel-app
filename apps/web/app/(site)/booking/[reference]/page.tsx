@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { PageTitle, textLink } from "../../_components/Page";
+import { PageTitle } from "../../_components/Page";
 import { ACCOUNT_BOOKINGS_PATH, bookingHref } from "../../../_lib/routes";
 import {
   BOOKING_STATUS_LINES,
@@ -48,7 +48,7 @@ export default async function BookingPage({
               <Link href="/">Back to Heavenly Travel</Link>
             </Button>
             <p className="mt-4 text-center text-copy">
-              <Link href={ACCOUNT_BOOKINGS_PATH} className={textLink}>
+              <Link href={ACCOUNT_BOOKINGS_PATH} className="text-link">
                 See all your bookings
               </Link>
             </p>

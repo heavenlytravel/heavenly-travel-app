@@ -5,7 +5,6 @@ import { Dialog } from "@repo/ui/dialog";
 import { ChevronLeftIcon, ChevronRightIcon } from "@repo/ui/icons";
 import Image from "next/image";
 import { useEffect, useEffectEvent, useState } from "react";
-import { textLink } from "../(site)/_components/Page";
 
 /** A model of a class as the customer sees it: its name and its photos in order. Plain data. */
 export type GalleryModel = {
@@ -221,7 +220,7 @@ export function ModelPhotosButton({
           setOpened((count) => count + 1);
           setOpen(true);
         }}
-        className={`${textLink} ${className}`}
+        className={`text-link ${className}`}
       >
         See photos
       </button>

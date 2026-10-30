@@ -29,9 +29,6 @@ export function Pending({ children }: { children: ReactNode }) {
   );
 }
 
-export const textLink =
-  "font-semibold text-brand underline-offset-4 hover:underline focus-ring";
-
 export const control =
   "w-full rounded-xl border border-card-edge bg-white px-4 py-3 text-ink outline-none placeholder:text-muted focus:border-brand aria-invalid:border-danger data-placeholder:text-muted focus-ring";
 
@@ -109,52 +106,5 @@ export function Stop({
         </Button>
       )}
     </Panel>
-  );
-}
-
-/**
- * Label and value pairs, one per line. A long value, such as an email,
- * breaks where it must instead of running out of a phone's screen.
- */
-export function Rows({ rows }: { rows: [label: string, value: ReactNode][] }) {
-  return (
-    <dl className="divide-y divide-hairline">
-      {rows.map(([label, value]) => (
-        <div key={label} className="flex justify-between gap-6 py-2.5">
-          <dt className="shrink-0 text-muted">{label}</dt>
-          <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
-            {value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/** One grey bar in place of what is loading; the class gives its size and room, not its corners. */
-export function Bone({ className }: { className: string }) {
-  return <span className={`block rounded-lg bg-card-edge ${className}`} />;
-}
-
-/**
- * The shape of a part that is not read yet, such as the trips the browser
- * keeps: bones where its words go, at about its height, so nothing below
- * moves when it comes. It pulses unless the customer asks for less motion.
- */
-export function Loading({
-  className = "",
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      role="status"
-      aria-label="Loading"
-      className={`motion-safe:animate-pulse ${className}`}
-    >
-      {children}
-    </div>
   );
 }

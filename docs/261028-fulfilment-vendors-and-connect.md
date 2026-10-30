@@ -59,6 +59,11 @@ received ──► confirmed ──► assigned ──► completed
   a vendor or driver accepts, a driver taps. Clicking a card opens it, and a card in To
   assign opens the assign panel with the picker. Dragging trips onto a driver's day is
   in "Later".
+- **Where it lives in manage** (the Signature console's addresses, see
+  `docs/261029-manage-signature-overhaul.md`): the board at `/[location]/board`, every
+  location's under `~`; vendors under Fleet at `/[location]/fleet/vendors`, those serving
+  a location under its slug; who does a trip and what its driver reported on the
+  booking's page; the safety buffer on the location's Settings.
 
 ### Vendors
 

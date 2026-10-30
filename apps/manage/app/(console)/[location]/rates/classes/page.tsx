@@ -17,7 +17,6 @@ import {
 import { scopeOf } from "../../../../_lib/scope";
 import { ClassRates } from "../_components/ClassRates";
 import { RatesByLocation } from "../_components/RatesByLocation";
-import { RatesPager } from "../_components/RatesPager";
 import { visiblePriceLists } from "../_components/price-lists";
 
 /**
@@ -33,7 +32,7 @@ export default async function RateClassesPage({
   params,
 }: PageProps<"/[location]/rates/classes">) {
   await requireAdmin("coverage.view");
-  const { slug, location } = await scopeOf(params);
+  const { location } = await scopeOf(params);
   const manages = (await getPermissions()).includes("coverage.manage");
 
   return (
@@ -49,7 +48,6 @@ export default async function RateClassesPage({
             : everyLocationClasses({ manages })
         }
       </Streamed>
-      <RatesPager scope={slug} page="classes" />
     </>
   );
 }

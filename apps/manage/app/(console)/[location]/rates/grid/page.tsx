@@ -41,7 +41,6 @@ import {
 import { scopeOf } from "../../../../_lib/scope";
 import { RateGrid } from "../_components/RateGrid";
 import { RatesByLocation } from "../_components/RatesByLocation";
-import { RatesPager } from "../_components/RatesPager";
 import { visiblePriceLists } from "../_components/price-lists";
 
 /** Beside the grid's name: what its rows and columns are. */
@@ -95,7 +94,6 @@ export default async function RateGridPage({
             : everyLocationGrid({ manages, category })
         }
       </Streamed>
-      <RatesPager scope={slug} page="grid" />
     </>
   );
 }

@@ -24,7 +24,6 @@ import {
 } from "../../../../_lib/location-data";
 import { RATES_PAGE_LABELS, ratesHref } from "../../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../../_lib/scope";
-import { RatesPager } from "../_components/RatesPager";
 import { TryTrip } from "./TryTrip";
 
 /**
@@ -40,7 +39,7 @@ export default async function TryTripPage({
   params,
 }: PageProps<"/[location]/rates/try">) {
   await requireAdmin("coverage.view");
-  const { slug, location } = await scopeOf(params);
+  const { location } = await scopeOf(params);
 
   return (
     <>
@@ -51,7 +50,6 @@ export default async function TryTripPage({
       <Streamed fallback={<CardSkeleton rows={location ? 8 : 3} />}>
         {() => (location ? locationTry(location) : chooseLocation())}
       </Streamed>
-      <RatesPager scope={slug} page="try" />
     </>
   );
 }

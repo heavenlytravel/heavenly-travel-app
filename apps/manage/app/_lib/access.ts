@@ -56,7 +56,7 @@ export async function requireAdmin(permission: Permission): Promise<AdminUser> {
 }
 
 /**
- * The signed-in admin as the sidebar's foot names them: their name, or
+ * The signed-in admin as the top bar names them: their name, or
  * their email without one, and their level, or their teams. Null when
  * nobody is signed in as an admin.
  */

@@ -23,13 +23,13 @@ export function Trust() {
     <section
       id="why-us"
       aria-label="Why Heavenly"
-      className="scroll-mt-8 border-b border-slate-200 px-5 py-7 sm:px-[clamp(20px,5vw,78px)] sm:py-9"
+      className="scroll-mt-8 border-b border-card-edge px-5 py-7 sm:px-[clamp(20px,5vw,78px)] sm:py-9"
     >
       <ul className="mx-auto grid max-w-[1240px] sm:grid-cols-3">
         {TRUST.map((t) => (
           <li
             key={t.title}
-            className="flex gap-[13px] border-b border-slate-200 px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
+            className="flex gap-[13px] border-b border-card-edge px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
           >
             <span aria-hidden className="text-figure text-brand">
               {t.icon}

@@ -115,7 +115,7 @@ export function HubView({
           <div className={`${styles.heroWash} absolute inset-0`} />
         </div>
         <div
-          className={`relative z-[1] flex flex-1 flex-col justify-center pt-7 pb-12 ${gutter}`}
+          className={`relative z-(--layer-raised) flex flex-1 flex-col justify-center pt-7 pb-12 ${gutter}`}
         >
           <div className={column}>
             {content && !content.heroImage && empty.heroImage && (
@@ -134,7 +134,7 @@ export function HubView({
                 <MissingMark part={empty.headline} />
               )}
             </h1>
-            <p className="mt-4 max-w-[540px] text-slate-700 sm:text-lg">
+            <p className="mt-4 max-w-[540px] text-body sm:text-lg">
               {subheadline}
               {content && !content.heroSubheadline && empty.subheadline && (
                 <MissingMark part={empty.subheadline} />
@@ -166,7 +166,7 @@ export function HubView({
             className={missingBlock}
           />
         ) : (
-          <p className="max-w-[60ch] text-lead text-slate-700">
+          <p className="max-w-[60ch] text-lead text-body">
             We are bringing {label.toLowerCase()} to more places soon.
           </p>
         )}

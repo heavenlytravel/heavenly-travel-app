@@ -63,7 +63,7 @@ export function SiteDocumentView({
               )}
             </h1>
             {content.heroSubheadline ? (
-              <p className="mt-4 max-w-[640px] text-lg text-slate-700">
+              <p className="mt-4 max-w-[640px] text-lg text-body">
                 {content.heroSubheadline}
               </p>
             ) : (
@@ -117,7 +117,7 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
         <div>
           <p className={`${eyebrow} mb-2`}>Office</p>
           {address.length > 0 && (
-            <address className="leading-relaxed text-slate-700 not-italic">
+            <address className="leading-relaxed text-body not-italic">
               {address.map((line, i) => (
                 <span key={i} className="block">
                   {line}

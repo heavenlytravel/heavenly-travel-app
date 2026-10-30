@@ -110,9 +110,9 @@ function Answers({
     <>
       {wanted !== undefined ? (
         <label className="ui:grid ui:gap-1.5 ui:text-sm">
-          <span className="ui:font-medium ui:text-slate-800">
+          <span className="ui:font-medium ui:text-body">
             Type{" "}
-            <span className="ui:rounded ui:bg-slate-100 ui:px-1 ui:font-mono">
+            <span className="ui:rounded ui:bg-hairline ui:px-1 ui:font-mono">
               {wanted}
             </span>{" "}
             to confirm

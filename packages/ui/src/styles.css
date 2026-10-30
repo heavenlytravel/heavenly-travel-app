@@ -14,7 +14,7 @@
   --color-accent: var(--brand-tint);
   --color-accent-foreground: var(--navy);
   --color-popover: #ffffff;
-  --color-popover-foreground: --theme(--color-slate-900);
+  --color-popover-foreground: var(--body);
   --color-popover-line: var(--card-edge);
 }
 

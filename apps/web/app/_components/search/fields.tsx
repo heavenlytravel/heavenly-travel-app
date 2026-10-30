@@ -212,7 +212,7 @@ export const fieldRing =
 
 /** The label laid over the top of a `fieldBox`, its icon leading. */
 export const fieldLabel =
-  "pointer-events-none absolute top-2.5 left-[18px] z-[1] flex items-center gap-1.5 text-caption/5 font-semibold text-slate-800";
+  "pointer-events-none absolute top-2.5 left-[18px] z-(--layer-raised) flex items-center gap-1.5 text-caption/5 font-semibold text-body";
 
 /**
  * A field filling its `fieldBox`, under the label: what is filled in ink,

@@ -48,7 +48,7 @@ export function Calendar({
   const first = min ? dayOf(min) : null;
   const last = max ? dayOf(max) : null;
   const button =
-    "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:enabled:hover:bg-accent ui:focus-ring ui:touch-target ui:disabled:cursor-not-allowed ui:disabled:opacity-50";
+    "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:enabled:hover:bg-accent ui:focus-ring ui:touch-target ui:disabled:cursor-not-allowed ui:disabled:opacity-50";
 
   return (
     <DayPicker
@@ -92,8 +92,8 @@ export function Calendar({
           "ui:font-semibold ui:[&>button]:bg-accent ui:[&>button]:text-accent-foreground",
         selected:
           "ui:font-semibold ui:[&>button]:bg-primary! ui:[&>button]:text-primary-foreground! ui:[&>button]:hover:opacity-90",
-        outside: "ui:text-slate-300",
-        disabled: "ui:text-slate-300 ui:[&>button]:cursor-not-allowed",
+        outside: "ui:text-edge",
+        disabled: "ui:text-edge ui:[&>button]:cursor-not-allowed",
         hidden: "ui:invisible",
       }}
     />

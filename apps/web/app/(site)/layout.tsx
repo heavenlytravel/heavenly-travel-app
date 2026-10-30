@@ -19,7 +19,7 @@ export default async function SiteLayout({
 }) {
   return (
     <div
-      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-slate-900 antialiased`}
+      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-body antialiased`}
     >
       <SiteHeader destinations={await headerDestinations()} />
       {/* At least a screen tall, so the footer starts below the fold and

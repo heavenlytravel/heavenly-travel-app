@@ -49,10 +49,10 @@ export function ClassCard({
         </h3>
         {badge}
       </div>
-      <p className="mt-1.5 text-slate-700">{vehicleClass.description}</p>
+      <p className="mt-1.5 text-body">{vehicleClass.description}</p>
       {vehicleClass.models.length > 0 ? (
         // A div, not a p: the gallery's dialog is not phrasing content.
-        <div className="mt-2 text-copy text-slate-700">
+        <div className="mt-2 text-copy text-body">
           {modelsLine(vehicleClass.models.map((m) => m.name))}, or similar.{" "}
           <ModelPhotosButton
             title={vehicleClass.name}

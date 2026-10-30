@@ -18,7 +18,7 @@ import { useFieldError } from "./validation.js";
  * is changed.
  */
 export const inputClassName =
-  "ui:h-10 ui:w-full ui:rounded-control ui:border ui:border-edge ui:bg-white ui:px-3 ui:text-sm ui:text-slate-900 ui:placeholder:text-muted ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-ring ui:disabled:cursor-not-allowed ui:disabled:bg-shade ui:disabled:text-muted ui:aria-invalid:border-danger ui:aria-invalid:focus-visible:outline-danger ui:pointer-coarse:h-11 ui:pointer-coarse:text-base";
+  "ui:h-10 ui:w-full ui:rounded-control ui:border ui:border-edge ui:bg-white ui:px-3 ui:text-sm ui:text-body ui:placeholder:text-muted ui:focus-visible:outline-2 ui:focus-visible:outline-offset-0 ui:focus-visible:outline-ring ui:disabled:cursor-not-allowed ui:disabled:bg-shade ui:disabled:text-muted ui:aria-invalid:border-danger ui:aria-invalid:focus-visible:outline-danger ui:pointer-coarse:h-11 ui:pointer-coarse:text-base";
 
 /**
  * What a `Field` tells the control inside it: the id its label points at,
@@ -67,7 +67,7 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
   );
 }
 
-const LABEL = "ui:text-sm ui:font-medium ui:text-slate-800";
+const LABEL = "ui:text-sm ui:font-medium ui:text-body";
 
 /**
  * A label above a control, with an optional hint below it and an optional

@@ -39,10 +39,10 @@ export type PreviewPage = {
 export type PreviewGroup = PreviewPage & { children: PreviewPage[] };
 
 const STANDINGS: Record<PreviewStanding, { label: string; dot: string }> = {
-  published: { label: PAGE_STATUS_LABELS.published, dot: "bg-emerald-500" },
-  changed: { label: PAGE_STATUS_LABELS.changed, dot: "bg-amber-500" },
-  unpublished: { label: PAGE_STATUS_LABELS.unpublished, dot: "bg-slate-400" },
-  paused: { label: "Paused: the class is off here", dot: "bg-orange-500" },
+  published: { label: PAGE_STATUS_LABELS.published, dot: "bg-success-dot" },
+  changed: { label: PAGE_STATUS_LABELS.changed, dot: "bg-warning-dot" },
+  unpublished: { label: PAGE_STATUS_LABELS.unpublished, dot: "bg-edge" },
+  paused: { label: "Paused: the class is off here", dot: "bg-warning-dot" },
 };
 
 /** A button or link on the pill. */

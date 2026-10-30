@@ -203,7 +203,7 @@ export function CommandPalette({
               onClick={() => onOpenChange(false)}
               className={cx(
                 dock ? "ui:max-md:hidden" : null,
-                "ui:touch-target ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring",
+                "ui:touch-target ui:inline-flex ui:h-8 ui:min-w-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:hover:bg-hairline ui:hover:text-body ui:focus-ring",
               )}
             >
               <span className="ui:max-md:hidden">

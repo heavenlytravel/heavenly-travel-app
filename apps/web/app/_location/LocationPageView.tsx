@@ -392,7 +392,7 @@ function Hero({
         <div className={`${styles.heroWash} absolute inset-0`} />
       </div>
       <div
-        className={`relative z-[1] flex min-h-[340px] flex-1 flex-col justify-center pt-7 pb-8 ${gutter}`}
+        className={`relative z-(--layer-raised) flex min-h-[340px] flex-1 flex-col justify-center pt-7 pb-8 ${gutter}`}
       >
         <div className={column}>
           {missingImage && (
@@ -418,7 +418,7 @@ function Hero({
             )}
           </h1>
           {content.heroSubheadline ? (
-            <p className="mt-4 max-w-[540px] text-slate-700 sm:text-lg">
+            <p className="mt-4 max-w-[540px] text-body sm:text-lg">
               {content.heroSubheadline}
             </p>
           ) : (
@@ -457,9 +457,9 @@ function Hero({
 /** What takes the search card's place while the location is paused. */
 function PausedNotice({ name }: { name: string }) {
   return (
-    <div className="rounded-card bg-white px-6 py-7 text-slate-900 shadow-panel sm:rounded-panel sm:px-9 sm:py-8">
+    <div className="rounded-card bg-white px-6 py-7 text-body shadow-panel sm:rounded-panel sm:px-9 sm:py-8">
       <p className={eyebrow}>Not taking bookings for now</p>
-      <p className="mt-2 max-w-[62ch] text-lead text-slate-700">
+      <p className="mt-2 max-w-[62ch] text-lead text-body">
         We are not taking new bookings for {name} at the moment. Please check
         back soon, or{" "}
         <Link
@@ -486,7 +486,7 @@ function ComingSoon({ label, name }: { label: string; name: string }) {
       >
         <div>
           <p className={eyebrow}>Coming soon</p>
-          <p className="mt-1.5 max-w-[60ch] text-lead text-slate-700">
+          <p className="mt-1.5 max-w-[60ch] text-lead text-body">
             Booking {label.toLowerCase()} in {name} online is on its way. Until
             then, tell us what you need and we will arrange it for you.
           </p>
@@ -652,7 +652,7 @@ function EntryCards({
       }
     >
       {lead ? (
-        <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-lead leading-relaxed text-slate-700">
+        <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-lead leading-relaxed text-body">
           {paragraphsOf(lead).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
@@ -856,7 +856,7 @@ function BlogHeader({
           )}
         </h1>
         {content.heroSubheadline ? (
-          <p className="mt-4 max-w-[640px] text-lg text-slate-700">
+          <p className="mt-4 max-w-[640px] text-lg text-body">
             {content.heroSubheadline}
           </p>
         ) : (

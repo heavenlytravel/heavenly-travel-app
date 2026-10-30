@@ -8,7 +8,7 @@ import { cx } from "./cx.js";
  * Each pair reads at 4.5:1 or better.
  */
 const TONES = {
-  neutral: "ui:bg-slate-100 ui:text-slate-600",
+  neutral: "ui:bg-hairline ui:text-muted",
   amber: "ui:bg-warning-soft ui:text-warning",
   brand: "ui:bg-brand-tint ui:text-brand-strong",
   navy: "ui:bg-navy/10 ui:text-navy",

@@ -214,7 +214,7 @@ export function TimeList({
                   ? "ui:bg-accent ui:font-semibold ui:text-accent-foreground"
                   : ok
                     ? "ui:hover:bg-accent ui:hover:text-accent-foreground"
-                    : "ui:cursor-not-allowed ui:text-slate-300",
+                    : "ui:cursor-not-allowed ui:text-edge",
               )}
             >
               {clockOf(minute)}

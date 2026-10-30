@@ -35,7 +35,7 @@ export async function SiteFrame({
 }) {
   return (
     <div
-      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-slate-900 antialiased`}
+      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-body antialiased`}
     >
       <SiteHeader overlay={overlay} destinations={await headerDestinations()} />
       {children}

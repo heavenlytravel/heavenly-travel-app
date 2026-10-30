@@ -39,7 +39,7 @@ function CardText({
 }) {
   return (
     <>
-      <span className="absolute right-[60px] bottom-6 left-[25px] z-[1]">
+      <span className="absolute right-[60px] bottom-6 left-[25px] z-(--layer-raised)">
         {tag && (
           <small className="block text-2xs tracking-eyebrow text-white/90 uppercase">
             {tag}
@@ -50,7 +50,10 @@ function CardText({
         </strong>
         <span className="block text-caption text-white/82">{line}</span>
       </span>
-      <span aria-hidden className="absolute right-6 bottom-6 z-[1] text-2xl">
+      <span
+        aria-hidden
+        className="absolute right-6 bottom-6 z-(--layer-raised) text-2xl"
+      >
         ↗
       </span>
     </>

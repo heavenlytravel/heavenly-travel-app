@@ -102,7 +102,7 @@ export function TripTimeline({
                 <b className="text-ink">{whenOf(trip)}</b>
                 <span
                   className={`min-w-0 ${fullRoutes ? "" : "@xl:truncate"} ${
-                    problem ? "text-danger" : "text-slate-600"
+                    problem ? "text-danger" : "text-muted"
                   }`}
                 >
                   {problem ?? routeOf(trip)}
@@ -133,7 +133,7 @@ export function TripTimeline({
                 >
                   {body}
                   {isOpen ? null : (
-                    <PencilIcon className="size-3.5 shrink-0 text-slate-400" />
+                    <PencilIcon className="size-3.5 shrink-0 text-muted" />
                   )}
                 </button>
               ) : (

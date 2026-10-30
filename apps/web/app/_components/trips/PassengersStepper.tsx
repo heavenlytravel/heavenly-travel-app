@@ -28,7 +28,7 @@ export function PassengersStepper({
   return (
     <label
       htmlFor={id}
-      className={`flex min-h-14 items-center gap-3 rounded-control border border-card-edge bg-white py-1.5 pr-2.5 pl-4 text-copy font-semibold text-slate-800 focus-within:border-brand ${fieldRing} ${className}`}
+      className={`flex min-h-14 items-center gap-3 rounded-control border border-card-edge bg-white py-1.5 pr-2.5 pl-4 text-copy font-semibold text-body focus-within:border-brand ${fieldRing} ${className}`}
     >
       <UsersIcon className="size-[18px] shrink-0 text-muted" />
       Passengers

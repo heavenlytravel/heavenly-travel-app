@@ -123,7 +123,7 @@ function TripsLine({
               ? "1 trip"
               : `${trips.length} trips`}
         </b>
-        <span className="min-w-0 truncate text-slate-600">
+        <span className="min-w-0 truncate text-muted">
           {trips.length === 0 ? "Where and when" : spanOf(trips)}
         </span>
         {summary ? (

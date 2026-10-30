@@ -53,7 +53,7 @@ export async function LocationFrame({
   ]);
   return (
     <div
-      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-slate-900 antialiased`}
+      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-body antialiased`}
     >
       <SiteHeader destinations={destinations} />
       <LocationSearch

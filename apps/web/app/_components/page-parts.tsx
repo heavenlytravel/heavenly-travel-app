@@ -118,7 +118,7 @@ export function MissingPart({
 }) {
   return (
     <p
-      className={`flex items-center justify-center ${missingLook} px-5 py-2 text-center text-copy font-semibold text-slate-600 ${className}`}
+      className={`flex items-center justify-center ${missingLook} px-5 py-2 text-center text-copy font-semibold text-muted ${className}`}
     >
       {part}
     </p>
@@ -140,7 +140,7 @@ export function MissingMark({
 }) {
   return (
     <span
-      className={`${alone ? "" : "ml-3"} inline-block rounded-full border ${dashed} px-2.5 py-0.5 align-middle font-sans text-xs leading-normal font-bold tracking-normal text-slate-600 normal-case`}
+      className={`${alone ? "" : "ml-3"} inline-block rounded-full border ${dashed} px-2.5 py-0.5 align-middle font-sans text-xs leading-normal font-bold tracking-normal text-muted normal-case`}
     >
       {part}
     </span>
@@ -197,7 +197,7 @@ export function Intro({
           {title}
         </h2>
         {paragraphs.length > 0 ? (
-          <div className="grid max-w-[70ch] gap-4 text-lead leading-relaxed text-slate-700">
+          <div className="grid max-w-[70ch] gap-4 text-lead leading-relaxed text-body">
             {paragraphs.map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
@@ -217,7 +217,7 @@ export function Intro({
 
 /** How a text in Markdown reads on the site: the home page's type, a measure for reading. */
 const PROSE = [
-  "max-w-[70ch] text-lead leading-relaxed text-slate-700",
+  "max-w-[70ch] text-lead leading-relaxed text-body",
   "[&_h2]:mt-11 [&_h2]:mb-3 [&_h2]:font-serif [&_h2]:text-heading [&_h2]:leading-tight [&_h2]:text-ink",
   "[&_h3]:mt-8 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-ink",
   "[&_h4]:mt-6 [&_h4]:mb-2 [&_h4]:font-bold [&_h4]:text-ink",
@@ -226,9 +226,9 @@ const PROSE = [
   "[&_a]:font-semibold [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-4",
   "[&_blockquote]:my-7 [&_blockquote]:border-l-4 [&_blockquote]:border-azure [&_blockquote]:pl-5 [&_blockquote]:text-lg [&_blockquote]:text-ink",
   "[&_img]:my-8 [&_img]:h-auto [&_img]:w-full [&_img]:rounded-card [&_img]:bg-mist",
-  "[&_hr]:my-10 [&_hr]:border-slate-200",
-  "[&_table]:my-6 [&_table]:w-full [&_table]:text-copy [&_th]:border-b [&_th]:border-slate-300 [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:text-ink [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-2 [&_td]:pr-4",
-  "[&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1.5 [&_code]:text-[0.92em] [&_pre]:my-5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-slate-100 [&_pre]:p-4",
+  "[&_hr]:my-10 [&_hr]:border-card-edge",
+  "[&_table]:my-6 [&_table]:w-full [&_table]:text-copy [&_th]:border-b [&_th]:border-edge [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:text-ink [&_td]:border-b [&_td]:border-hairline [&_td]:py-2 [&_td]:pr-4",
+  "[&_code]:rounded [&_code]:bg-hairline [&_code]:px-1.5 [&_code]:text-[0.92em] [&_pre]:my-5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-hairline [&_pre]:p-4",
   "[&>div>:first-child]:mt-0",
 ].join(" ");
 
@@ -298,9 +298,9 @@ export function Faqs({
   return (
     <Section id="faqs" eyebrow="Good to know" title={title}>
       {filled.length > 0 ? (
-        <div className="max-w-[820px] border-t border-slate-200">
+        <div className="max-w-[820px] border-t border-card-edge">
           {filled.map((faq, i) => (
-            <details key={i} className="group border-b border-slate-200">
+            <details key={i} className="group border-b border-card-edge">
               <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-lead font-semibold text-ink focus-ring [&::-webkit-details-marker]:hidden">
                 {faq.question}
                 <span
@@ -310,7 +310,7 @@ export function Faqs({
                   +
                 </span>
               </summary>
-              <div className="grid max-w-[70ch] gap-3 pb-6 text-slate-700">
+              <div className="grid max-w-[70ch] gap-3 pb-6 text-body">
                 {paragraphsOf(faq.answer).map((paragraph, j) => (
                   <p key={j}>{paragraph}</p>
                 ))}
@@ -387,7 +387,7 @@ export function PageCards({
               {card.title}
             </Link>
           </h3>
-          {card.text && <p className="mt-1.5 text-slate-700">{card.text}</p>}
+          {card.text && <p className="mt-1.5 text-body">{card.text}</p>}
           {card.cta && (
             <span className="mt-3 text-copy font-bold text-brand underline-offset-4 group-hover:underline">
               {card.cta}{" "}
@@ -396,7 +396,9 @@ export function PageCards({
               </span>
             </span>
           )}
-          {card.extra && <div className="relative z-[1]">{card.extra}</div>}
+          {card.extra && (
+            <div className="relative z-(--layer-raised)">{card.extra}</div>
+          )}
         </li>
       ))}
     </ul>
@@ -414,7 +416,7 @@ export type Crumb = { name: string; path: string };
 export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-x-2 text-caption text-slate-700">
+      <ol className="flex flex-wrap items-center gap-x-2 text-caption text-body">
         {crumbs.map((crumb, i) => (
           <li key={crumb.path} className="flex items-center gap-x-2">
             {i === crumbs.length - 1 ? (

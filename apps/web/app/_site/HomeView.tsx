@@ -98,7 +98,7 @@ export function HomeView({
               height as well as its width, so the headline and the whole card
               fit on one screen down to about 600px tall; the script word is
               sized from it, so the pair keeps its proportions. */}
-          <div className="relative z-[1] flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
+          <div className="relative z-(--layer-raised) flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
             {!image && empty.heroImage && (
               <p className="mb-6">
                 <MissingMark part={empty.heroImage} alone />
@@ -127,7 +127,7 @@ export function HomeView({
                 )}
               </h1>
             </div>
-            <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-lg">
+            <p className="max-w-[330px] text-body sm:max-w-[500px] sm:text-lg">
               {subheadline}
               {!content?.heroSubheadline && empty.subheadline && (
                 <MissingMark part={empty.subheadline} />
@@ -136,7 +136,7 @@ export function HomeView({
           </div>
           <p
             aria-hidden
-            className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-hand text-3xl leading-[0.85] text-white lg:block"
+            className="absolute top-[16%] right-[7%] z-(--layer-raised) mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-hand text-3xl leading-[0.85] text-white lg:block"
           >
             More
             <br />

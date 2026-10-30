@@ -17,5 +17,5 @@ html {
 }
 
 body {
-  @apply text-slate-900;
+  color: var(--body);
 }

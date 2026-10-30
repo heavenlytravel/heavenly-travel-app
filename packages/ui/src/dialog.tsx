@@ -81,7 +81,7 @@ export function Dialog({
                 type="button"
                 aria-label="Close"
                 onClick={() => onOpenChange(false)}
-                className="ui:touch-target ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring"
+                className="ui:touch-target ui:-mt-1 ui:-mr-1 ui:inline-flex ui:size-8 ui:shrink-0 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring"
               >
                 <XIcon />
               </button>

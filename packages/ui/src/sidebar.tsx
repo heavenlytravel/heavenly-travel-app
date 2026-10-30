@@ -168,7 +168,7 @@ export function Sidebar({
           "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:motion-reduce:transition-none ui:md:flex",
           navy
             ? "ui:bg-linear-to-b ui:from-navy ui:to-ink ui:text-white/80"
-            : "ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900",
+            : "ui:border-r ui:border-card-edge ui:bg-white ui:text-body",
           open ? "ui:w-64" : "ui:w-15",
         )}
       >
@@ -186,7 +186,7 @@ export function Sidebar({
         {...backdropClose(() => setOpenMobile(false))}
         className={cx(
           "ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:backdrop:bg-ink/45",
-          navy ? "ui:text-white/80" : "ui:text-slate-900",
+          navy ? "ui:text-white/80" : "ui:text-body",
         )}
       >
         <div
@@ -195,7 +195,7 @@ export function Sidebar({
             PANEL,
             navy
               ? "ui:border-white/10 ui:bg-linear-to-b ui:from-navy ui:to-ink"
-              : "ui:border-slate-200 ui:bg-white",
+              : "ui:border-card-edge ui:bg-white",
           )}
         >
           {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
@@ -271,7 +271,7 @@ export function SidebarDockButton({
         onClick?.(event);
       }}
       className={cx(
-        "ui:inline-flex ui:h-11 ui:min-w-11 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-3 ui:text-sm ui:font-medium ui:text-slate-700 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring-inset ui:[&>svg]:size-4.5",
+        "ui:inline-flex ui:h-11 ui:min-w-11 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-3 ui:text-sm ui:font-medium ui:text-body ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring-inset ui:[&>svg]:size-4.5",
         className,
       )}
       {...props}
@@ -292,7 +292,7 @@ function SidebarRail() {
       onClick={toggleSidebar}
       className={cx(
         "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5",
-        navy ? "ui:hover:after:bg-azure/60" : "ui:hover:after:bg-slate-200",
+        navy ? "ui:hover:after:bg-azure/60" : "ui:hover:after:bg-card-edge",
         open ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}
     />
@@ -311,7 +311,7 @@ export function SidebarTrigger({
       aria-label="Toggle sidebar"
       onClick={toggleSidebar}
       className={cx(
-        "ui:touch-target ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-ring",
+        "ui:touch-target ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring",
         className,
       )}
       {...props}
@@ -426,7 +426,7 @@ export function SidebarMenuCluster({
         "ui:-mx-0.5 ui:rounded-xl ui:p-0.5 ui:ring-1 ui:ring-inset",
         navy
           ? "ui:bg-white/10 ui:ring-white/10"
-          : "ui:bg-slate-50 ui:ring-slate-200",
+          : "ui:bg-shade ui:ring-card-edge",
       )}
     >
       <ul aria-label={label} className="ui:flex ui:flex-col ui:gap-0.5">
@@ -455,7 +455,7 @@ export function SidebarMenuSub({
         aria-label={label}
         className={cx(
           "ui:mt-1 ui:mb-1.5 ui:ml-4.5 ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
-          navy ? "ui:border-white/15" : "ui:border-slate-200",
+          navy ? "ui:border-white/15" : "ui:border-card-edge",
         )}
       >
         {children}
@@ -475,10 +475,10 @@ const MENU_BUTTON =
 const MENU_TONES = {
   light: {
     shape: "ui:rounded-md",
-    rest: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
+    rest: "ui:hover:bg-hairline ui:hover:text-body",
     active:
       "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:[&>svg]:text-brand",
-    open: "ui:hover:bg-slate-100 ui:hover:text-slate-900",
+    open: "ui:hover:bg-hairline ui:hover:text-body",
   },
   navy: {
     shape: "ui:rounded-control ui:font-medium ui:focus-ring-dark",

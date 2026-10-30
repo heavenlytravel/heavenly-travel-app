@@ -223,7 +223,7 @@ function Count({ count, current }: { count: MenuCount; current: boolean }) {
         aria-hidden="true"
         className={cx(
           "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-2xs font-semibold tabular-nums",
-          current ? "bg-brand text-white" : "bg-amber-400 text-ink",
+          current ? "bg-brand text-white" : "bg-warning-dot text-ink",
         )}
       >
         {count.value}

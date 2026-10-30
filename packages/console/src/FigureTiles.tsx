@@ -5,12 +5,12 @@ import { SURFACE } from "./Card";
 
 /** The disc beside a figure's name, in its status's colour. */
 const DOTS = {
-  amber: "bg-amber-500",
+  amber: "bg-warning-dot",
   brand: "bg-brand",
   navy: "bg-navy",
-  green: "bg-green-600",
-  neutral: "bg-slate-300",
-  red: "bg-red-600",
+  green: "bg-success-dot",
+  neutral: "bg-edge",
+  red: "bg-danger-dot",
 } as const;
 
 export type FigureTone = keyof typeof DOTS;

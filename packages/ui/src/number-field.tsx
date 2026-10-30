@@ -42,7 +42,7 @@ export function NumberField({
   }
 
   const button = cx(
-    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-slate-600 ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:disabled:pointer-events-none ui:disabled:opacity-50",
+    "ui:inline-flex ui:shrink-0 ui:items-center ui:justify-center ui:text-muted ui:transition-colors ui:hover:bg-accent ui:hover:text-accent-foreground ui:disabled:pointer-events-none ui:disabled:opacity-50",
     bare
       ? "ui:touch-target ui:size-8 ui:self-center ui:rounded-full ui:border ui:border-edge"
       : "ui:aspect-square ui:h-full",

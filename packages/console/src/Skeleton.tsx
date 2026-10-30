@@ -73,7 +73,7 @@ async function Loaded({ content }: { content: Promise<ReactNode> }) {
 
 /** One grey bar in place of a line of text. The class gives its size. */
 export function Bone({ className }: { className: string }) {
-  return <span className={cx("block rounded bg-slate-200/80", className)} />;
+  return <span className={cx("block rounded bg-card-edge", className)} />;
 }
 
 /** A `PageHeader` whose title is the record's name, so it loads with it. */

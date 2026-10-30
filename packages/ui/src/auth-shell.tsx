@@ -3,9 +3,9 @@ import { cx } from "./cx.js";
 
 const TONES = {
   /** Paper background, ink text. The customer site. */
-  light: "ui:bg-slate-50 ui:text-slate-900",
+  light: "ui:bg-canvas ui:text-body",
   /** Navy deepening to ink, pale text. The admin console. */
-  dark: "ui:bg-linear-160 ui:from-navy ui:to-ink ui:text-slate-100",
+  dark: "ui:bg-linear-160 ui:from-navy ui:to-ink ui:text-white",
 } as const;
 
 /**
@@ -56,7 +56,7 @@ export function AuthShell({
             <p
               className={cx(
                 "ui:mb-6 ui:text-xs ui:font-semibold ui:tracking-eyebrow ui:uppercase",
-                tone === "dark" ? "ui:text-azure-light" : "ui:text-slate-600",
+                tone === "dark" ? "ui:text-azure-light" : "ui:text-muted",
               )}
             >
               {eyebrow}
@@ -69,7 +69,7 @@ export function AuthShell({
           <div
             className={cx(
               "ui:text-center ui:text-sm",
-              tone === "dark" ? "ui:text-slate-300" : "ui:text-slate-600",
+              tone === "dark" ? "ui:text-white/80" : "ui:text-muted",
             )}
           >
             {footer}

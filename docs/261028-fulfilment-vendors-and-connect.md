@@ -105,6 +105,12 @@ received ──► confirmed ──► assigned ──► completed
 
 ### Signing up
 
+**Paused 2026-10-30:** Connect is sign-in only until its landing page and a
+registration form that creates the account and the vendor together are built.
+`/sign-up` redirects to `/sign-in`; vendors are entered by staff in `manage.`. An
+account that already exists and signs in can still register from its access screen.
+What follows is the flow as first built.
+
 Clerk first, then our form (decided 2026-10-28):
 
 1. **`connect.heavenlytravel.my/sign-up` is Clerk's sign-up,** with an email code.

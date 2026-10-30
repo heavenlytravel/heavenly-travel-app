@@ -1,16 +1,9 @@
-import { SignUp } from "@clerk/nextjs";
-import { clerkAdminSignIn } from "@repo/ui/clerk-appearance";
+import { redirect } from "next/navigation";
 
-// A vendor signs up with Clerk first, an email code proving the address
-// is theirs, then fills in the registration form. Someone who already has
-// an account, a customer's for one, signs in instead. See
-// docs/261028-fulfilment-vendors-and-connect.md, "Signing up".
+// Connect takes no sign-ups for now: drivers sign in with the email their
+// vendor or Operation entered, and vendors are entered by staff in
+// manage. A vendor's own sign-up returns with Connect's landing page and
+// its registration form. An old link to here lands on sign-in.
 export default function SignUpPage() {
-  return (
-    <SignUp
-      appearance={clerkAdminSignIn}
-      signInUrl="/sign-in"
-      forceRedirectUrl="/register"
-    />
-  );
+  redirect("/sign-in");
 }

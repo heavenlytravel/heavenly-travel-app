@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getConnectAccess, listRegistrationLocations } from "@repo/db/server";
 import { BadgeCheck, CarFront, Smartphone } from "lucide-react";
+import { HOME_PATH, STATUS_PATH } from "../_ui/nav";
 import { Panel } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
 import { RegisterFlow } from "./RegisterFlow";
@@ -33,20 +34,22 @@ const STEPS = [
  * then the code that confirms the email and makes the account, and the
  * registration with it (RegisterFlow). A visitor signed out fills it all;
  * an account signed in with no business sends it as itself. An account
- * that registered a business already, or drives for one, goes home: its
- * status page, or Connect. /join and /sign-up lead here. See
+ * that registered a business already goes to its status page, and one
+ * that Connect lets in to Connect. See
  * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export default async function RegisterPage() {
   const access = await getConnectAccess();
+  if (access.status === "pending") redirect(STATUS_PATH);
   if (access.status !== "signed-out" && access.status !== "register") {
-    redirect("/");
+    redirect(HOME_PATH);
   }
   const locations = await listRegistrationLocations();
   const user = access.status === "register" ? access.user : null;
   return (
     <Screen
       nav={false}
+      account={user !== null}
       back={{ href: "/", label: "Back" }}
       asideFirst
       aside={

@@ -68,7 +68,12 @@ export function vendorApprovedEmails(
             type: "paragraph",
             text: `Hi ${vendor.contactName}, ${vendor.name} is approved. Sign in to Connect to add your vehicles and drivers; the jobs we offer you show there to accept.`,
           },
-          { type: "button", label: "Open Connect", href: settings.connectUrl },
+          {
+            type: "button",
+            label: "Open Connect",
+            // Connect itself; its root is the landing page.
+            href: `${settings.connectUrl}/~`,
+          },
           { type: "contact" },
         ],
       },

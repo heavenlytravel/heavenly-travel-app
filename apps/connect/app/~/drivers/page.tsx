@@ -2,12 +2,12 @@ import Link from "next/link";
 import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
 import { listDrivers, listVehicles } from "@repo/db/server";
 import { PlusIcon, UserRoundIcon } from "@repo/ui/icons";
-import { FleetList } from "../_components/FleetList";
-import { FleetTabs } from "../_components/FleetTabs";
-import { requireMember, shellMember } from "../_lib/access";
+import { FleetList } from "../../_components/FleetList";
+import { FleetTabs } from "../../_components/FleetTabs";
+import { requireMember, shellMember } from "../../_lib/access";
 import { Button } from "@repo/ui/button";
-import { Avatar } from "../_ui/parts";
-import { BandHeading, Screen } from "../_ui/Screen";
+import { Avatar } from "../../_ui/parts";
+import { BandHeading, Screen } from "../../_ui/Screen";
 
 /**
  * Route: /drivers. A vendor's own drivers, for its owner and staff, each
@@ -25,7 +25,7 @@ export default async function DriversPage() {
   ]);
   const add = (
     <Button asChild variant="secondary" size="sm">
-      <Link href="/drivers/new">
+      <Link href="/~/drivers/new">
         <PlusIcon />
         Add
       </Link>
@@ -70,7 +70,7 @@ export default async function DriversPage() {
           text: "Add one to be offered jobs for them. Driving yourself? Add yourself, with your own email.",
           action: (
             <Button asChild>
-              <Link href="/drivers/new">
+              <Link href="/~/drivers/new">
                 <PlusIcon />
                 Add a driver
               </Link>

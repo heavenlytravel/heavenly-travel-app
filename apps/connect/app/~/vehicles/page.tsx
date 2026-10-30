@@ -2,12 +2,12 @@ import Link from "next/link";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import { listDrivers, listVehicles } from "@repo/db/server";
 import { CarFrontIcon, PlusIcon } from "@repo/ui/icons";
-import { FleetList } from "../_components/FleetList";
-import { FleetTabs } from "../_components/FleetTabs";
-import { requireMember, shellMember } from "../_lib/access";
+import { FleetList } from "../../_components/FleetList";
+import { FleetTabs } from "../../_components/FleetTabs";
+import { requireMember, shellMember } from "../../_lib/access";
 import { Button } from "@repo/ui/button";
-import { Plate } from "../_ui/parts";
-import { BandHeading, Screen } from "../_ui/Screen";
+import { Plate } from "../../_ui/parts";
+import { BandHeading, Screen } from "../../_ui/Screen";
 
 /**
  * Route: /vehicles. A vendor's own vehicles, for its owner and staff, each
@@ -24,7 +24,7 @@ export default async function VehiclesPage() {
   ]);
   const add = (
     <Button asChild variant="secondary" size="sm">
-      <Link href="/vehicles/new">
+      <Link href="/~/vehicles/new">
         <PlusIcon />
         Add
       </Link>
@@ -63,7 +63,7 @@ export default async function VehiclesPage() {
           text: "Add one to be offered jobs for it. It can take jobs as soon as it is saved.",
           action: (
             <Button asChild>
-              <Link href="/vehicles/new">
+              <Link href="/~/vehicles/new">
                 <PlusIcon />
                 Add a vehicle
               </Link>

@@ -8,10 +8,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { SignedIn } from "../_lib/access";
-import { RegistrationStatus } from "./RegistrationStatus";
 import { Button } from "@repo/ui/button";
 import { BandHeading, Screen } from "../_ui/Screen";
+import { STATUS_PATH } from "../_ui/nav";
 import { Panel } from "../_ui/parts";
 
 type Shut = Exclude<SignedIn, { status: "ok" }>;
@@ -21,18 +22,10 @@ type Shut = Exclude<SignedIn, { status: "ok" }>;
  * case: not a driver or a vendor yet, with the way to register a vendor,
  * one not approved, or one suspended. Each
  * says how to reach the team, by WhatsApp first. A vendor waiting for
- * approval has its status page instead (RegistrationStatus).
+ * approval goes to its status page, /status, instead.
  */
 export function AccessScreen({ access }: { access: Shut }) {
-  if (access.status === "pending") {
-    return (
-      <RegistrationStatus
-        vendorId={access.vendor.id}
-        vendorName={access.vendor.name}
-        email={access.user.email}
-      />
-    );
-  }
+  if (access.status === "pending") redirect(STATUS_PATH);
   const screen = screenOf(
     access.status,
     access.status === "register" ? null : access.vendor.name,

@@ -15,16 +15,16 @@ import {
   UsersIcon,
 } from "@repo/ui/icons";
 import { Hourglass, NotebookText, Plane } from "lucide-react";
-import { AccessScreen } from "../../_components/AccessScreen";
+import { AccessScreen } from "../../../_components/AccessScreen";
 import {
   actorOf,
   memberOf,
   requireSignedIn,
   shellMember,
-} from "../../_lib/access";
-import { googleMapsHref, wazeHref } from "../../_lib/navigate";
-import { tripStateOf } from "../../_lib/trip-state";
-import { dayLabel } from "../../_lib/when";
+} from "../../../_lib/access";
+import { googleMapsHref, wazeHref } from "../../../_lib/navigate";
+import { tripStateOf } from "../../../_lib/trip-state";
+import { dayLabel } from "../../../_lib/when";
 import {
   Avatar,
   BigTime,
@@ -34,10 +34,10 @@ import {
   Plate,
   RouteLine,
   type Stop,
-} from "../../_ui/parts";
-import { Screen } from "../../_ui/Screen";
-import { TripTimeline } from "../../_ui/TripTimeline";
-import { areaStops } from "../../_ui/Trips";
+} from "../../../_ui/parts";
+import { Screen } from "../../../_ui/Screen";
+import { TripTimeline } from "../../../_ui/TripTimeline";
+import { areaStops } from "../../../_ui/Trips";
 import { TripTaps } from "./TripTaps";
 
 /**
@@ -49,7 +49,9 @@ import { TripTaps } from "./TripTaps";
  * customer's details is logged. See
  * docs/261028-fulfilment-vendors-and-connect.md, "On the day".
  */
-export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
+export default async function JobPage({
+  params,
+}: PageProps<"/~/jobs/[itemId]">) {
   const access = await requireSignedIn();
   if (access.status !== "ok") return <AccessScreen access={access} />;
   const { itemId } = await params;
@@ -107,7 +109,7 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
     <Screen
       member={shellMember(member)}
       aside={onTheDay}
-      back={{ href: "/", label: "Jobs" }}
+      back={{ href: "/~", label: "Jobs" }}
       band={
         <div className="grid gap-4">
           <div className="flex items-center justify-between gap-3">

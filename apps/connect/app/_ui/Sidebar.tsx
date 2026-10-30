@@ -6,8 +6,8 @@ import { cx } from "@repo/ui/cx";
 import { MessageCircleIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ACCOUNT_PATH, isActive, navItems } from "./nav";
-import { ConnectMark } from "./parts";
+import { ACCOUNT_PATH, HOME_PATH, isActive, navItems } from "./nav";
+import { Logo } from "@repo/ui/logo";
 
 /**
  * Connect on a large screen: manage's navy column at the left, navy to
@@ -20,11 +20,11 @@ export function Sidebar({ member }: { member?: { owner: boolean } }) {
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col bg-linear-to-b from-navy to-ink px-4 py-6 text-white/80 lg:flex">
       <Link
-        href="/"
+        href={HOME_PATH}
         className="flex items-center gap-2.5 self-start rounded-md px-2 focus-ring focus-ring-dark"
         aria-label="Heavenly Travel Connect, home"
       >
-        <ConnectMark />
+        <Logo tone="white" alt="" loading="eager" className="h-7" />
       </Link>
       <nav aria-label="Connect" className="mt-10">
         <ul className="grid gap-0.5">

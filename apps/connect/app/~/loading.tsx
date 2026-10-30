@@ -1,5 +1,5 @@
 import { Bone } from "@repo/ui/skeleton";
-import { Panel } from "./_ui/parts";
+import { Panel } from "../_ui/parts";
 
 /**
  * Any Connect screen while it loads: the band with its heading in

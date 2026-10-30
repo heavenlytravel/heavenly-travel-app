@@ -19,7 +19,7 @@ import { BandHeading, Screen } from "../_ui/Screen";
  * The status page of a registration waiting for approval (S1): where it
  * stands, sent, being checked, then Connect opening; what was sent; and how
  * to reach the team. Nothing of Connect opens before the approval: this is
- * what its owner sees at `/` until then. See
+ * what its owner sees, at /status, until then. See
  * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export async function RegistrationStatus({

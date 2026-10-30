@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignInFlow } from "@repo/auth/SignInFlow";
-import { ACCOUNT_PATH } from "../../_ui/nav";
+import { ACCOUNT_PATH, HOME_PATH } from "../../_ui/nav";
 
 export const metadata: Metadata = { title: "Sign in | Connect" };
 
@@ -13,6 +13,7 @@ export default function SignInPage() {
   return (
     <SignInFlow
       portal="Connect"
+      fallbackRedirect={HOME_PATH}
       accountPath={ACCOUNT_PATH}
       noAccount="Driving for a vendor? Ask them to add you with this email. Running one? Register your business below."
       footer={

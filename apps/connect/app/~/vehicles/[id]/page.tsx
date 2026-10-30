@@ -6,10 +6,10 @@ import {
   vendorFleetChoices,
 } from "@repo/db/server";
 import { VehicleForm } from "@repo/console/VehicleForm";
-import { FormFrame } from "../../_ui/FormFrame";
-import { BandHeading, Screen } from "../../_ui/Screen";
-import { requireMember, shellMember } from "../../_lib/access";
-import { saveVehicleAction } from "../../fleet-actions";
+import { FormFrame } from "../../../_ui/FormFrame";
+import { BandHeading, Screen } from "../../../_ui/Screen";
+import { requireMember, shellMember } from "../../../_lib/access";
+import { saveVehicleAction } from "../../../fleet-actions";
 
 /** Where Connect's vehicle form stores a photo. */
 const UPLOAD_PATH = "/api/uploads/vehicle-image";
@@ -22,7 +22,7 @@ const UPLOAD_PATH = "/api/uploads/vehicle-image";
  */
 export default async function VehiclePage({
   params,
-}: PageProps<"/vehicles/[id]">) {
+}: PageProps<"/~/vehicles/[id]">) {
   const member = await requireMember();
   const { id } = await params;
   const isNew = id === "new";
@@ -39,7 +39,7 @@ export default async function VehiclePage({
     <Screen
       member={shellMember(member)}
       width="narrow"
-      back={{ href: "/vehicles", label: "Vehicles" }}
+      back={{ href: "/~/vehicles", label: "Vehicles" }}
       band={
         <BandHeading
           eyebrow={member.vendor.name}
@@ -63,7 +63,7 @@ export default async function VehiclePage({
           action={saveVehicleAction}
           uploadPath={UPLOAD_PATH}
           photosNote="Optional, for our team: they never show on the website. The first is its cover."
-          cancelHref="/vehicles"
+          cancelHref="/~/vehicles"
           held={held}
         />
       </FormFrame>

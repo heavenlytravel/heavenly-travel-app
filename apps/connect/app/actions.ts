@@ -47,7 +47,7 @@ export async function answerOfferAction(
   );
   if (!result.ok) return refusalOf(result);
   for (const id of result.assigned ?? []) after(() => sendDriverEmailFor(id));
-  revalidatePath("/");
+  revalidatePath("/~");
   return null;
 }
 
@@ -92,7 +92,7 @@ export async function reportTapAction(
     },
   );
   if (!result.ok) return { ok: false, error: result.error };
-  revalidatePath("/");
-  revalidatePath(`/jobs/${tap.itemId}`);
+  revalidatePath("/~");
+  revalidatePath(`/~/jobs/${tap.itemId}`);
   return { ok: true };
 }

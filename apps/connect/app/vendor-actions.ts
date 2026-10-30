@@ -42,7 +42,7 @@ export async function nameRecordAction(
     recordId,
   );
   if (!result.ok) return refusalOf(result);
-  revalidatePath("/");
+  revalidatePath("/~");
   return null;
 }
 
@@ -69,6 +69,6 @@ export async function answerVendorOfferAction(
   );
   if (!result.ok) return refusalOf(result);
   for (const id of result.assigned ?? []) after(() => sendDriverEmailFor(id));
-  revalidatePath("/");
+  revalidatePath("/~");
   return null;
 }

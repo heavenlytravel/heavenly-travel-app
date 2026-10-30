@@ -18,9 +18,9 @@ import { Button } from "@repo/ui/button";
 import { TriangleAlertIcon } from "@repo/ui/icons";
 import { Notice } from "@repo/ui/notice";
 import { CloudOff, PenLine, UserX } from "lucide-react";
-import { reportTapAction, type TapPayload } from "../../actions";
-import { SlideToConfirm } from "../../_ui/SlideToConfirm";
-import { TripTimeline, type TimelineEvent } from "../../_ui/TripTimeline";
+import { reportTapAction, type TapPayload } from "../../../actions";
+import { SlideToConfirm } from "../../../_ui/SlideToConfirm";
+import { TripTimeline, type TimelineEvent } from "../../../_ui/TripTimeline";
 
 /** Where the phone keeps the taps not sent yet, across reloads and lost signal. */
 const QUEUE_KEY = "connect.pending-taps";

@@ -2,7 +2,6 @@ import { SURFACE } from "@repo/console/Card";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import { Badge } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
-import { Logo } from "@repo/ui/logo";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import type { Tone } from "../_lib/trip-state";
 import { clockOf } from "../_lib/when";
@@ -14,18 +13,6 @@ import { clockOf } from "../_lib/when";
  * the empty state. Phone first: large type for what a driver reads at a
  * glance, everything else quiet.
  */
-
-/** The logo in white and the word "Connect" beside it, on the band and in the sidebar. */
-export function ConnectMark() {
-  return (
-    <>
-      <Logo tone="white" alt="" loading="eager" className="h-7" />
-      <span className="rounded-full bg-white/10 px-2 py-0.5 text-2xs font-bold tracking-eyebrow text-azure-light uppercase ring-1 ring-white/10">
-        Connect
-      </span>
-    </>
-  );
-}
 
 /** An icon a part draws: one of `@repo/ui/icons` or of lucide. */
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;

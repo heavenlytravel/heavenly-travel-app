@@ -16,6 +16,7 @@ import {
 } from "@repo/console/action-state";
 import { after } from "next/server";
 import { actorOf } from "../_lib/access";
+import { STATUS_PATH } from "../_ui/nav";
 import { ALREADY_REGISTERED_HREF } from "./paths";
 
 /** The registration's fields as the vendor's, the contact's email the one given. */
@@ -46,8 +47,8 @@ export async function checkRegistrationAction(
  * started: the signed-in applicant becomes the owner of a vendor waiting
  * for approval, with their account's email as its contact. An account
  * that already works for a vendor or drives for one is not given a second:
- * it goes home, where its status page or Connect is. The team hears of a
- * registration by email. See
+ * it goes to its status page, which hands an approved one on to Connect.
+ * The team hears of a registration by email. See
  * docs/261030-sign-in-connect-onboarding-and-media.md, "Connect".
  */
 export async function registerVendorAction(
@@ -80,5 +81,5 @@ export async function registerVendorAction(
       at: new Date(),
     }),
   );
-  return { href: "/" };
+  return { href: STATUS_PATH };
 }

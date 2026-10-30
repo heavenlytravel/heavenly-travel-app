@@ -26,19 +26,19 @@ export function GettingStarted({
     {
       title: "Add a vehicle",
       text: "Its class is what we offer you jobs for, where it is based.",
-      href: "/vehicles/new",
+      href: "/~/vehicles/new",
       done: vehicles > 0,
     },
     {
       title: "Add a driver",
       text: "Driving yourself? Add yourself, with your own email.",
-      href: "/drivers/new",
+      href: "/~/drivers/new",
       done: drivers > 0,
     },
     {
       title: "A driver signs in",
       text: "With the email you entered for them, to take and report their jobs.",
-      href: "/drivers",
+      href: "/~/drivers",
       done: driversSignedIn > 0,
     },
     {

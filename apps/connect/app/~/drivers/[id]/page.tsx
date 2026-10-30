@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import { getDriver, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { DriverForm } from "@repo/console/DriverForm";
-import { FormFrame } from "../../_ui/FormFrame";
-import { BandHeading, Screen } from "../../_ui/Screen";
-import { requireMember, shellMember } from "../../_lib/access";
-import { saveDriverAction } from "../../fleet-actions";
+import { FormFrame } from "../../../_ui/FormFrame";
+import { BandHeading, Screen } from "../../../_ui/Screen";
+import { requireMember, shellMember } from "../../../_lib/access";
+import { saveDriverAction } from "../../../fleet-actions";
 
 /**
  * Route: /drivers/[id], and /drivers/new. A vendor's driver on the admin's
@@ -13,7 +13,7 @@ import { saveDriverAction } from "../../fleet-actions";
  */
 export default async function DriverPage({
   params,
-}: PageProps<"/drivers/[id]">) {
+}: PageProps<"/~/drivers/[id]">) {
   const member = await requireMember();
   const { id } = await params;
   const isNew = id === "new";
@@ -29,7 +29,7 @@ export default async function DriverPage({
     <Screen
       member={shellMember(member)}
       width="narrow"
-      back={{ href: "/drivers", label: "Drivers" }}
+      back={{ href: "/~/drivers", label: "Drivers" }}
       band={
         <BandHeading
           eyebrow={member.vendor.name}
@@ -49,7 +49,7 @@ export default async function DriverPage({
           classes={choices.classes}
           locations={choices.locations}
           action={saveDriverAction}
-          cancelHref="/drivers"
+          cancelHref="/~/drivers"
           held={held}
         />
       </FormFrame>

@@ -7,6 +7,7 @@ import { ArrowRight, Check, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { HOME_PATH } from "../_ui/nav";
 import { PhoneShowcase } from "./PhoneShowcase";
 
 /** The width every part of the page keeps to. */
@@ -15,13 +16,14 @@ const KICKER = "text-xs font-bold tracking-kicker text-brand uppercase";
 const TITLE = "font-serif text-3xl leading-display text-ink sm:text-4xl";
 
 /**
- * Connect's landing page, for a visitor signed out: what Connect is, where
+ * Connect's landing page, at `/` for everyone: what Connect is, where
  * it takes vendors now, how one job runs, who it is for, what to have at
  * hand and what each side owes, the questions, and the way to register.
  * Its words are the page Marketing publishes in the console (a site page
  * of the kind "connect"), or the words it was built with; the board, the
- * steps and the two kinds of vendor are drawn here. `ribbon` is the staff
- * preview's bar. See docs/261030-sign-in-connect-onboarding-and-media.md,
+ * steps and the two kinds of vendor are drawn here. Someone signed in is
+ * offered the way into Connect in place of signing in. `ribbon` is the
+ * staff preview's bar. See docs/261030-sign-in-connect-onboarding-and-media.md,
  * "Connect".
  */
 export function Landing({
@@ -29,17 +31,20 @@ export function Landing({
   openings,
   ribbon,
   terms,
+  signedIn = false,
 }: {
   content: PageContent;
   openings: VendorOpening[];
   ribbon?: ReactNode;
   /** The customer site's terms and privacy policy, linked in the footer. */
   terms: { termsHref: string; privacyHref: string };
+  /** A session is open: "Open Connect" in place of "Sign in". */
+  signedIn?: boolean;
 }) {
   return (
     <div className="min-h-dvh bg-canvas text-body">
       {ribbon}
-      <Hero content={content} />
+      <Hero content={content} signedIn={signedIn} />
       <OpenNow openings={openings} />
       <HowAJobRuns />
       <WhoItsFor intro={content.intro} />
@@ -68,26 +73,29 @@ export function Landing({
   );
 }
 
-function Hero({ content }: { content: PageContent }) {
+function Hero({
+  content,
+  signedIn,
+}: {
+  content: PageContent;
+  signedIn: boolean;
+}) {
   return (
     <header className="bg-band text-white">
       <nav
         aria-label="Connect"
         className={cx(COLUMN, "flex items-center gap-6 py-5")}
       >
-        <Link href="/" className="flex items-center gap-2.5 focus-ring">
+        <Link href="/" className="focus-ring">
           <Image
             src="/brand/logo-blue.svg"
-            alt="Heavenly Travel"
+            alt="Heavenly Travel Connect"
             width={120}
             height={28}
             priority
             // The logo is navy; drawn white on the band.
             className="h-7 w-auto brightness-0 invert"
           />
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.18em] text-azure-light uppercase ring-1 ring-white/15">
-            Connect
-          </span>
         </Link>
         <ul className="hidden items-center gap-6 text-sm text-white/80 md:flex">
           <li>
@@ -107,15 +115,26 @@ function Hero({ content }: { content: PageContent }) {
           </li>
         </ul>
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/sign-in"
-            className="rounded-control px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 focus-ring"
-          >
-            Sign in
-          </Link>
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/register">Register</Link>
-          </Button>
+          {signedIn ? (
+            <Button asChild variant="secondary" size="sm">
+              <Link href={HOME_PATH}>
+                Open Connect
+                <ArrowRight aria-hidden className="size-4" />
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="rounded-control px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 focus-ring"
+              >
+                Sign in
+              </Link>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/register">Register</Link>
+              </Button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -144,12 +163,14 @@ function Hero({ content }: { content: PageContent }) {
                 <ArrowRight aria-hidden className="size-4" />
               </Link>
             </Button>
-            <Link
-              href="/sign-in"
-              className="text-sm font-semibold text-azure-light underline underline-offset-4 hover:text-white focus-ring"
-            >
-              Drive for a vendor already? Sign in
-            </Link>
+            {signedIn ? null : (
+              <Link
+                href="/sign-in"
+                className="text-sm font-semibold text-azure-light underline underline-offset-4 hover:text-white focus-ring"
+              >
+                Drive for a vendor already? Sign in
+              </Link>
+            )}
           </div>
         </div>
         <PhoneShowcase image={content.heroImage} />

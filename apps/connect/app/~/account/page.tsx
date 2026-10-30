@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ADD_PASSWORD_PARAM, NEXT_PARAM } from "@repo/auth/account-paths";
 import { AccountSettings } from "@repo/auth/AccountSettings";
 import { safeRedirect } from "@repo/auth/redirect";
-import { memberOf, requireSignedIn, shellMember } from "../_lib/access";
-import { BandHeading, Screen } from "../_ui/Screen";
+import { memberOf, requireSignedIn, shellMember } from "../../_lib/access";
+import { BandHeading, Screen } from "../../_ui/Screen";
 
 export const metadata: Metadata = { title: "Your account | Connect" };
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Your account | Connect" };
  */
 export default async function AccountPage({
   searchParams,
-}: PageProps<"/account">) {
+}: PageProps<"/~/account">) {
   const access = await requireSignedIn();
   const member = access.status === "ok" ? memberOf(access) : null;
   const query = await searchParams;
@@ -26,7 +26,7 @@ export default async function AccountPage({
     <Screen
       member={shellMember(member)}
       nav={access.status === "ok"}
-      back={{ href: "/", label: "Back" }}
+      back={{ href: "/~", label: "Back" }}
       band={<BandHeading title="Your account" />}
       width="narrow"
     >

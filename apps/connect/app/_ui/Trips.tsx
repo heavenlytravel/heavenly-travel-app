@@ -86,7 +86,7 @@ export function NextJobCard({ trip, now }: { trip: Trip; now: Date }) {
       </div>
       {/* Square, across the card's foot: the card's corners round it. */}
       <Button asChild size="lg" className="w-full rounded-none">
-        <Link href={`/jobs/${trip.itemId}`}>
+        <Link href={`/~/jobs/${trip.itemId}`}>
           {going ? "Continue the job" : "Open job"}
           <ArrowRightIcon className="size-5" />
         </Link>
@@ -111,7 +111,7 @@ export function TripRow({
   return (
     <li>
       <Link
-        href={`/jobs/${trip.itemId}`}
+        href={`/~/jobs/${trip.itemId}`}
         className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-hover active:bg-hairline focus-ring-inset sm:px-5"
       >
         <span className="grid w-16 shrink-0 justify-items-start gap-0.5">

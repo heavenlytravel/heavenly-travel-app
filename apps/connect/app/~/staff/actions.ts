@@ -8,7 +8,7 @@ import {
   getMemberAccess,
   NOT_A_MEMBER,
   type MemberAccess,
-} from "../_lib/access";
+} from "../../_lib/access";
 
 /**
  * The owner's staff actions: add an account by its email, remove one.
@@ -40,7 +40,7 @@ export async function addStaffAction(
     member.vendor.id,
     textOf(formData.get("email")),
   );
-  if (result.ok) revalidatePath("/staff");
+  if (result.ok) revalidatePath("/~/staff");
   return stateOf(result);
 }
 
@@ -58,6 +58,6 @@ export async function removeStaffAction(
     member.vendor.id,
     memberId,
   );
-  if (result.ok) revalidatePath("/staff");
+  if (result.ok) revalidatePath("/~/staff");
   return stateOf(result);
 }

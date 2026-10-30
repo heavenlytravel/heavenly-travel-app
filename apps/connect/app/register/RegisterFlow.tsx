@@ -30,6 +30,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { STATUS_PATH } from "../_ui/nav";
 import { ALREADY_REGISTERED_HREF } from "./paths";
 import { checkRegistrationAction, registerVendorAction } from "./actions";
 
@@ -148,7 +149,7 @@ export function RegisterFlow({
       return;
     }
     sessionStorage.removeItem(STORAGE_KEY);
-    const href = answer?.href ?? "/";
+    const href = answer?.href ?? STATUS_PATH;
     if (href === ALREADY_REGISTERED_HREF) {
       toast.info(
         "This account has registered already. Here is where it stands.",

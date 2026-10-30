@@ -66,8 +66,8 @@ export async function saveVehicleAction(
     ? await updateVehicle(actor, existing.id, fields)
     : await createVehicle(actor, fields);
   if (!result.ok) return stateOf(result);
-  revalidatePath("/vehicles");
-  return { href: "/vehicles" };
+  revalidatePath("/~/vehicles");
+  return { href: "/~/vehicles" };
 }
 
 export async function saveDriverAction(
@@ -100,7 +100,7 @@ export async function saveDriverAction(
     ? await updateDriver(actor, existing.id, fields)
     : await createDriver(actor, fields);
   if (!result.ok) return stateOf(result);
-  revalidatePath("/drivers");
-  revalidatePath("/");
-  return { href: "/drivers" };
+  revalidatePath("/~/drivers");
+  revalidatePath("/~");
+  return { href: "/~/drivers" };
 }

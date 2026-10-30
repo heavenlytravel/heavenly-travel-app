@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { VENDOR_ROLE_LABELS, isVendorRole } from "@repo/db";
 import { listVendorMembers } from "@repo/db/server";
 import { Crown } from "lucide-react";
-import { requireMember, shellMember } from "../_lib/access";
-import { Avatar, Panel } from "../_ui/parts";
-import { BandHeading, Screen } from "../_ui/Screen";
+import { requireMember, shellMember } from "../../_lib/access";
+import { Avatar, Panel } from "../../_ui/parts";
+import { BandHeading, Screen } from "../../_ui/Screen";
 import { AddStaffForm, RemoveStaffButton } from "./StaffControls";
 
 /**
@@ -15,7 +15,7 @@ import { AddStaffForm, RemoveStaffButton } from "./StaffControls";
  */
 export default async function StaffPage() {
   const member = await requireMember();
-  if (member.role !== "owner") redirect("/");
+  if (member.role !== "owner") redirect("/~");
   const members = await listVendorMembers(member.vendor.id);
   return (
     <Screen

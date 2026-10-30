@@ -3,8 +3,8 @@ import { cx } from "@repo/ui/cx";
 import { ChevronLeftIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ACCOUNT_PATH } from "./nav";
-import { ConnectMark } from "./parts";
+import { ACCOUNT_PATH, HOME_PATH } from "./nav";
+import { Logo } from "@repo/ui/logo";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
@@ -31,6 +31,7 @@ const WIDTHS = {
 export function Screen({
   member,
   nav = true,
+  account = true,
   back,
   band,
   aside,
@@ -42,6 +43,8 @@ export function Screen({
   member?: { owner: boolean };
   /** The places, in the sidebar; off for someone not let in yet. */
   nav?: boolean;
+  /** The account menu at the band's right; off for a visitor signed out. */
+  account?: boolean;
   /** A screen under another: the way back, in place of the logo. */
   back?: { href: string; label: string };
   /** The heading inside the band: the greeting, the job's time, a title. */
@@ -95,21 +98,23 @@ export function Screen({
                 </Link>
               ) : (
                 <Link
-                  href="/"
+                  href={HOME_PATH}
                   className="flex items-center gap-2.5 rounded-md focus-ring focus-ring-dark"
                   aria-label="Heavenly Travel Connect, home"
                 >
-                  <ConnectMark />
+                  <Logo tone="white" alt="" loading="eager" className="h-7" />
                 </Link>
               )}
-              <span
-                className={cx(
-                  "grid size-10 place-items-center rounded-full ring-2 ring-white/15",
-                  nav && "lg:hidden",
-                )}
-              >
-                <AccountMenu accountHref={ACCOUNT_PATH} />
-              </span>
+              {account ? (
+                <span
+                  className={cx(
+                    "grid size-10 place-items-center rounded-full ring-2 ring-white/15",
+                    nav && "lg:hidden",
+                  )}
+                >
+                  <AccountMenu accountHref={ACCOUNT_PATH} />
+                </span>
+              ) : null}
             </div>
             {band ? (
               <div className={cx("mt-5", nav && !back && "lg:mt-0")}>

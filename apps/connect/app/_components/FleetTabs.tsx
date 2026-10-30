@@ -15,8 +15,13 @@ export function FleetTabs({
   drivers: number;
 }) {
   const tabs = [
-    { key: "vehicles", href: "/vehicles", label: "Vehicles", count: vehicles },
-    { key: "drivers", href: "/drivers", label: "Drivers", count: drivers },
+    {
+      key: "vehicles",
+      href: "/~/vehicles",
+      label: "Vehicles",
+      count: vehicles,
+    },
+    { key: "drivers", href: "/~/drivers", label: "Drivers", count: drivers },
   ] as const;
   return (
     <nav

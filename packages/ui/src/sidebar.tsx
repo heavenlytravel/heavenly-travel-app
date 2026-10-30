@@ -15,7 +15,7 @@ import {
 } from "react";
 import { cx } from "./cx.js";
 import { haptic } from "./haptic.js";
-import { isTyping } from "./keys.js";
+import { isTyping, useShortcutLabel } from "./keys.js";
 import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
 import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
@@ -295,25 +295,45 @@ function SidebarRail() {
   );
 }
 
-/** The button in the page header that opens or collapses the sidebar; on a phone the dock's does. */
+/**
+ * The button in the page's top bar that folds the sidebar to a rail or
+ * opens it again, named by what it does now; its tooltip names its keys
+ * too. It stays where it is either way. On a phone the dock's menu button
+ * opens the panel instead.
+ */
 export function SidebarTrigger({
   className,
   ...props
 }: ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
+  const shortcut = useShortcutLabel("B");
+  const label = open ? "Collapse menu" : "Expand menu";
   return (
-    <button
-      type="button"
-      aria-label="Toggle sidebar"
-      onClick={toggleSidebar}
-      className={cx(
-        "ui:touch-target ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring",
-        className,
-      )}
-      {...props}
+    <Tooltip
+      side="bottom"
+      content={
+        <span className="ui:flex ui:items-center ui:gap-2">
+          {label}
+          <kbd className="ui:rounded ui:bg-white/15 ui:px-1.5 ui:font-sans ui:text-2xs">
+            {shortcut}
+          </kbd>
+        </span>
+      }
     >
-      <PanelLeftIcon />
-    </button>
+      <button
+        type="button"
+        aria-label={label}
+        aria-keyshortcuts="Control+B Meta+B"
+        onClick={toggleSidebar}
+        className={cx(
+          "ui:touch-target ui:inline-flex ui:size-9 ui:items-center ui:justify-center ui:rounded-md ui:text-muted ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring",
+          className,
+        )}
+        {...props}
+      >
+        <PanelLeftIcon />
+      </button>
+    </Tooltip>
   );
 }
 

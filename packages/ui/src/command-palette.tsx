@@ -1,15 +1,10 @@
 "use client";
 
 import { Command } from "cmdk";
-import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { SearchIcon, SpinnerIcon, XIcon } from "./icons.js";
+import { useShortcutLabel } from "./keys.js";
 import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 
 /** One row of the palette: what it shows, and the value `onChoose` is handed. */
@@ -29,16 +24,6 @@ export type CommandPaletteGroup = {
 /** How long a search may take before the palette says it is searching, so a quick one does not flicker. */
 const SPINNER_DELAY_MS = 150;
 
-const noSubscribe = () => () => {};
-const isMac = () => /Mac|iPhone|iPad/.test(navigator.platform);
-
-/** The keys that open the palette, as this device names them: ⌘ K on a Mac, Ctrl K elsewhere. */
-export function useShortcutLabel() {
-  return useSyncExternalStore(noSubscribe, isMac, () => false)
-    ? "⌘ K"
-    : "Ctrl K";
-}
-
 /** The button in a bar that opens the palette: a box that reads like a search field, with its keys at the end. */
 export function CommandPaletteTrigger({
   label,
@@ -50,7 +35,7 @@ export function CommandPaletteTrigger({
   onOpen: () => void;
   className?: string;
 }) {
-  const shortcut = useShortcutLabel();
+  const shortcut = useShortcutLabel("K");
   return (
     <button
       type="button"

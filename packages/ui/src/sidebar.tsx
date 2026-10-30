@@ -189,7 +189,13 @@ export function Sidebar({
           )}
         >
           {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
-          <ModalBody open={openMobile} className="ui:h-full ui:pt-2 ui:pb-20">
+          <ModalBody
+            open={openMobile}
+            className={cx(
+              "ui:h-full ui:pt-2 ui:pb-20",
+              navy && "ui:scrollbar-on-dark",
+            )}
+          >
             <CollapsedContext.Provider value={false}>
               {children}
             </CollapsedContext.Provider>
@@ -333,12 +339,14 @@ export function SidebarHeader({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** The scrolling part under the header. */
+/** The scrolling part under the header; its scroll bar shows while the pointer is over it. */
 export function SidebarContent({ className, ...props }: ComponentProps<"div">) {
+  const navy = useSidebarTone() === "navy";
   return (
     <div
       className={cx(
-        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-x-hidden ui:overflow-y-auto",
+        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-x-hidden ui:overflow-y-auto ui:scrollbar-quiet",
+        navy && "ui:scrollbar-on-dark",
         className,
       )}
       {...props}

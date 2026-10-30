@@ -356,6 +356,40 @@
   background-color: #fff;
 }
 
+/*
+ * Scroll bars, on the page and in every box that scrolls, in both apps:
+ * thin, with no arrows, a soft thumb on a clear track, after shadcn's
+ * scroll area but with the browser's own bar, so nothing is wrapped and
+ * the keyboard and the wheel scroll as ever. A phone's bars float over
+ * the page as they always do. In the base layer, so a utility overrides
+ * it. `scrollbar-on-dark` lightens the thumb on navy or ink;
+ * `scrollbar-quiet` keeps it hidden until the pointer is over the box,
+ * for chrome such as the sidebar, and its room stays, so nothing moves.
+ */
+:root {
+  --scrollbar-thumb: rgb(98 116 142 / 0.45);
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+@utility scrollbar-on-dark {
+  --scrollbar-thumb: rgb(255 255 255 / 0.28);
+}
+
+@utility scrollbar-quiet {
+  scrollbar-color: transparent transparent;
+
+  &:hover,
+  &:focus-within {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
 /* Words in small capitals: a column's name, a menu group, a chip. */
 @utility text-caps {
   font-size: --theme(--text-2xs);

@@ -15,6 +15,7 @@ export type SelectGroup = { label: string; options: SelectOption[] };
 /**
  * Radix keeps "" for "nothing chosen", so a real option worth "" (such as
  * "No address") is carried as this inside the list and handed out as "".
+ * Without such an option, "" stays "" and Radix shows the placeholder.
  */
 const EMPTY = "\u0000empty";
 const inner = (value: string) => (value === "" ? EMPTY : value);
@@ -67,6 +68,11 @@ export function Select({
   const [own, setOwn] = useState(defaultValue);
   const current = value ?? own;
   const { ref, container, trigger } = usePortalContainer();
+  const hasEmpty = options.some((entry) =>
+    isGroup(entry)
+      ? entry.options.some((option) => option.value === "")
+      : entry.value === "",
+  );
 
   const item = (option: SelectOption) => (
     <Primitive.Item
@@ -87,7 +93,7 @@ export function Select({
   return (
     <>
       <Primitive.Root
-        value={inner(current)}
+        value={current === "" && !hasEmpty ? "" : inner(current)}
         onValueChange={(next) => {
           const chosen = outer(next);
           setOwn(chosen);

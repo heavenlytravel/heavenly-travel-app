@@ -327,6 +327,14 @@ is gone. "Unpublish" shows only where the page may be unpublished.
   - An image on a location's page, working or published, cannot be chosen: it is
     replaced in the page editor and published, so a public page never changes without a
     publish (the Tech Lead, 2026-10-22).
+  - **Since 2026-10-31** (docs/261030-sign-in-connect-onboarding-and-media.md, "Media"):
+    no image in use can be chosen or deleted, a vehicle's photo and a class's picture
+    included; its card says to change it where it is used and links each place. Only
+    files nothing uses, and those in a page's history alone (after typing "delete"), are
+    deleted here. Each admin sees the files its keys reach (`mediaReachOf`): the pages'
+    for Marketing and SEO, the fleet's for Operation, those nothing uses for all three;
+    SUPER sees all. A grid or a table, and "Choose from Media" in every image field of
+    the console. What follows about taking photos off vehicles is the first build.
   - The server works out the impact again and refuses when it changed since the dialog
     showed it (`@repo/db`'s `delete-impact`), and logs what it removed
     (`media.deleted`). The photos and pictures it takes off are those of the same read.

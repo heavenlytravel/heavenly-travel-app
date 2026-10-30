@@ -3,6 +3,12 @@
 The plan for the sign-in and sign-up pages on both apps, and what is deferred.
 Read `260918-auth-and-database.md` first for how sessions and access work.
 
+**Replaced 2026-10-31:** our own screens on Clerk's custom flows (`@repo/auth`) draw the
+sign-in, the sign-up, the user menu and the account window in all three apps; the
+password is the way in, with a code as the other way. See
+docs/261030-sign-in-connect-onboarding-and-media.md, "Our own sign-in". What follows is
+the first build, on Clerk's prebuilt components.
+
 ## Routes and methods
 
 | App   | Route      | Sign up           | Method     |

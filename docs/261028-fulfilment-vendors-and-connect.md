@@ -105,13 +105,15 @@ received ──► confirmed ──► assigned ──► completed
 
 ### Signing up
 
-**Paused 2026-10-30:** Connect is sign-in only until its landing page and a
-registration form that creates the account and the vendor together are built.
-`/sign-up` redirects to `/sign-in`; vendors are entered by staff in `manage.`. An
-account that already exists and signs in can still register from its access screen.
-What follows is the flow as first built.
+**Since 2026-10-31 the form comes first, then the account** (PR `feat/auth-connect-onboarding`,
+docs/261030-sign-in-connect-onboarding-and-media.md, "Connect"): `/register` takes the
+whole form and a password, and sending it starts the sign-up, whose email code makes the
+account and sends the registration together. An email with an account signs in instead,
+and an account that registered already goes to its status page. `/join` and `/sign-up`
+lead to `/register`; Connect's landing page at `/` leads there too. A pending vendor sees
+its status page, not "Waiting for approval". What follows is the flow as first built.
 
-Clerk first, then our form (decided 2026-10-28):
+Clerk first, then our form (decided 2026-10-28, replaced 2026-10-31):
 
 1. **`connect.heavenlytravel.my/sign-up` is Clerk's sign-up,** with an email code.
    Someone who already has an account, a customer's for one, signs in instead. Clerk's

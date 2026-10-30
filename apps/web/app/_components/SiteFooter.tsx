@@ -13,7 +13,16 @@ import {
   type FooterLink,
   type SocialNetwork,
 } from "@repo/db";
-import { Logo } from "./Brand";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  LinkedInIcon,
+  LockIcon,
+  TikTokIcon,
+  XLogoIcon,
+  YouTubeIcon,
+} from "@repo/ui/icons";
+import { HomeLink } from "./Brand";
 
 /**
  * The foot of every page of the customer site, as SUPER writes it in the
@@ -44,14 +53,8 @@ export function SiteFooter({ content }: { content: FooterContent }) {
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
             <div className="max-w-[340px]">
-              <Link
-                href="/"
-                aria-label="Heavenly Travel home"
-                className={`inline-block ${focus}`}
-              >
-                {/* The blue logo, drawn white on the blue. */}
-                <Logo className="h-10 w-auto brightness-0 invert" />
-              </Link>
+              {/* The blue logo, drawn white on the blue. */}
+              <HomeLink tone="white" className="inline-block" />
               {content.tagline && (
                 <p className="mt-4 leading-relaxed text-white/90">
                   {content.tagline}
@@ -170,7 +173,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   </ul>
                   {content.paymentNote && (
                     <p className="mt-3 flex items-center gap-1.5 text-sm text-white/90">
-                      <LockGlyph />
+                      <LockIcon className="size-3.75" />
                       {content.paymentNote}
                     </p>
                   )}
@@ -234,11 +237,13 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   );
 }
 
-/** The focus ring, white: it shows on the navy as the site's blue ring would not. */
-const focus = "focus-ring focus-ring-dark";
-
-/** A link of the footer; on a touch screen its hit area grows to a finger's, without moving the lines. */
-const linkClass = `touch-target text-white underline-offset-4 hover:underline ${focus}`;
+/**
+ * A link of the footer; on a touch screen its hit area grows to a finger's,
+ * without moving the lines. Its focus ring is white: it shows on the navy as
+ * the site's blue ring would not.
+ */
+const linkClass =
+  "touch-target text-white underline-offset-4 hover:underline focus-ring focus-ring-dark";
 
 /** A heading over a part of the footer; `id` names the part for a screen reader. */
 function Heading({ id, children }: { id?: string; children: string }) {
@@ -282,78 +287,18 @@ function FooterAnchor({ link }: { link: FooterLink }) {
   );
 }
 
-const glyph = {
-  viewBox: "0 0 24 24",
-  width: 18,
-  height: 18,
-  "aria-hidden": true,
-  className: "shrink-0",
-} as const;
+/** Each network's mark, drawn in the link's colour. */
+const SOCIAL_ICONS = {
+  facebook: FacebookIcon,
+  instagram: InstagramIcon,
+  x: XLogoIcon,
+  tiktok: TikTokIcon,
+  youtube: YouTubeIcon,
+  linkedin: LinkedInIcon,
+} satisfies Record<SocialNetwork, unknown>;
 
-/** The mark of a social network, in the link's colour. */
+/** The mark of a social network, 18px, in the link's colour. */
 function SocialGlyph({ network }: { network: SocialNetwork }) {
-  switch (network) {
-    case "facebook":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H7.9v3h2.6V21z" />
-        </svg>
-      );
-    case "instagram":
-      return (
-        <svg {...glyph} fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
-          <circle cx="12" cy="12" r="4" />
-          <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case "x":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M4.5 4h4.2l10.8 16h-4.2z" />
-          <path
-            d="M19 4.2 5 19.8"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "tiktok":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M14.5 3h2.7c.3 2 1.6 3.5 3.8 3.7v2.8c-1.4 0-2.7-.4-3.8-1.1v6.3a5.6 5.6 0 1 1-5.6-5.6h.6v2.9a2.8 2.8 0 1 0 2.3 2.7z" />
-        </svg>
-      );
-    case "youtube":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M21.6 7.2c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8c.2.9.9 1.6 1.8 1.8 1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z" />
-        </svg>
-      );
-    case "linkedin":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M4.5 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zm6 0h2.9v1.6h.1c.4-.8 1.4-1.8 3-1.8 3.2 0 3.8 2.1 3.8 4.8V21h-3v-6.6c0-1.6 0-3.6-2.2-3.6s-2.6 1.7-2.6 3.5V21H9z" />
-        </svg>
-      );
-  }
-}
-
-function LockGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={15}
-      height={15}
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className="shrink-0"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
+  const Icon = SOCIAL_ICONS[network];
+  return <Icon className="size-4.5" />;
 }

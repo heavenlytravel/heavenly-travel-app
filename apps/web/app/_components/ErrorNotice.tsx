@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { Stop } from "../(site)/_components/Page";
-import { Logo } from "./Brand";
+import { HomeLink } from "./Brand";
 
 /**
  * A calm page for an error that kept a page from drawing, in place of the
@@ -16,9 +15,7 @@ export function ErrorNotice({ onRetry }: { onRetry: () => void }) {
   return (
     <main className="grid min-h-svh place-items-center bg-canvas px-5 py-16">
       <div className="grid w-full max-w-[560px] justify-items-center gap-8">
-        <Link href="/" aria-label="Heavenly Travel home" className="focus-ring">
-          <Logo className="h-10 w-auto" loading="eager" />
-        </Link>
+        <HomeLink loading="eager" />
         <Stop
           level={1}
           title="Something went wrong"

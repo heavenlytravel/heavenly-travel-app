@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { AuthShell } from "@repo/ui/auth-shell";
 import { redirect } from "next/navigation";
-import { Logo, Photo } from "../_components/Brand";
+import { HomeLink, Photo } from "../_components/Brand";
 import { Footer } from "../_components/Footer";
 import { fontVars } from "../_home/fonts";
 
@@ -28,15 +28,7 @@ export default async function AuthLayout({
   return (
     <div className={`${fontVars} font-sans leading-normal antialiased`}>
       <AuthShell
-        brand={
-          <Link
-            href="/"
-            aria-label="Heavenly Travel home"
-            className="focus-ring"
-          >
-            <Logo className="h-10 w-auto" loading="eager" />
-          </Link>
-        }
+        brand={<HomeLink loading="eager" />}
         aside={<HeroPanel />}
         footer={
           <Link

@@ -1,5 +1,6 @@
 "use client";
 
+import { plural } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { PRODUCTS, type Product } from "../../_lib/search";
 import {
@@ -163,9 +164,7 @@ export function ServiceTabsSearch() {
               category={category}
               presetsOf={presetsOf}
               near={near}
-              summary={
-                passengers === 1 ? "1 passenger" : `${passengers} passengers`
-              }
+              summary={plural(passengers, "passenger")}
               passengers={
                 <PassengersStepper
                   value={passengers}

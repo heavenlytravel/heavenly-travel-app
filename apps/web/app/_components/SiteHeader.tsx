@@ -10,6 +10,7 @@ import {
   locationPagePath,
   sitePagePath,
 } from "@repo/db";
+import { ChevronDownIcon } from "@repo/ui/icons";
 import { Menu, MenuItem, MenuSeparator } from "@repo/ui/menu";
 import { Sheet } from "@repo/ui/sheet";
 import { cx } from "@repo/ui/cx";
@@ -21,7 +22,7 @@ import {
   signInHref,
   signUpHref,
 } from "../_lib/routes";
-import { Logo } from "./Brand";
+import { HomeLink } from "./Brand";
 
 /** A location the Destinations menu offers: the home page's top choices. */
 export type HeaderDestination = { slug: string; name: string };
@@ -107,13 +108,11 @@ export function SiteHeader({
         className={`flex ${row} items-center justify-between gap-4 px-5 sm:px-[clamp(20px,5vw,76px)]`}
       >
         <div className="flex min-w-0 items-center gap-8">
-          <Link
-            href="/"
-            aria-label="Heavenly Travel home"
-            className="shrink-0 focus-ring"
-          >
-            <Logo className="h-8 w-auto sm:h-10" loading="eager" />
-          </Link>
+          <HomeLink
+            loading="eager"
+            className="shrink-0"
+            logoClassName="h-8 sm:h-10"
+          />
 
           <nav aria-label="Site" className="hidden items-center gap-1 lg:flex">
             {HUB_PAGES.map((page) => (
@@ -136,7 +135,10 @@ export function SiteHeader({
                   className={navLink}
                 >
                   Destinations
-                  <ChevronGlyph />
+                  <ChevronDownIcon
+                    strokeWidth={2.7}
+                    className="size-3.5 transition-transform [[data-state=open]>&]:rotate-180"
+                  />
                 </button>
               }
             >
@@ -269,24 +271,5 @@ export function SiteHeader({
         </nav>
       </Sheet>
     </header>
-  );
-}
-
-function ChevronGlyph() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      width={14}
-      height={14}
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="transition-transform [[data-state=open]>&]:rotate-180"
-    >
-      <path d="m4 6 4 4 4-4" />
-    </svg>
   );
 }

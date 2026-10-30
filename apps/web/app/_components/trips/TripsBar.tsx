@@ -1,13 +1,10 @@
 "use client";
 
-import {
-  useEffect,
-  useEffectEvent,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { ChevronDownIcon, MapIcon } from "@repo/ui/icons";
+import { isTyping } from "@repo/ui/keys";
+import { prefersReducedMotion } from "@repo/ui/motion";
+import { useMediaQuery } from "@repo/ui/use-media-query";
 import { spanOf, type PlannedTrip } from "../../_lib/trip-plan";
 
 /** What pins under the site header sits at its height, its border included. */
@@ -41,26 +38,9 @@ const FOLD_AFTER_PX = 24;
 export const underHeaderFrame =
   "rounded-b-card border border-t-0 border-card-edge bg-white shadow-raised";
 
-/** A scroll the customer can follow, or a jump when they ask for less motion. */
-export function scrollBehavior(): ScrollBehavior {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? "auto"
-    : "smooth";
-}
-
-function onLargeChange(listener: () => void) {
-  const large = window.matchMedia(LARGE);
-  large.addEventListener("change", listener);
-  return () => large.removeEventListener("change", listener);
-}
-
 /** Whether the screen is `lg` or wider; false on the server and a phone. */
 export function useLarge() {
-  return useSyncExternalStore(
-    onLargeChange,
-    () => window.matchMedia(LARGE).matches,
-    () => false,
-  );
+  return useMediaQuery(LARGE);
 }
 
 /**
@@ -74,10 +54,10 @@ export function useFoldOnScroll(open: boolean, fold: () => void) {
     if (!open) return;
     const from = window.scrollY;
     function onScroll() {
-      const typing = document.activeElement?.matches(
-        "input, textarea, select, [contenteditable='true']",
-      );
-      if (!typing && Math.abs(window.scrollY - from) > FOLD_AFTER_PX) {
+      if (
+        !isTyping(document.activeElement) &&
+        Math.abs(window.scrollY - from) > FOLD_AFTER_PX
+      ) {
         onScrolled();
       }
     }
@@ -169,9 +149,7 @@ export function TripsBar({
   const [settled, setSettled] = useState(false);
 
   function show(next: boolean) {
-    setSettled(
-      next && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
+    setSettled(next && prefersReducedMotion());
     onOpenChange(next);
   }
 

@@ -198,9 +198,13 @@ export function FieldIcon({
   return <Icon className={className} />;
 }
 
-/** A field's box on the search card: the field fills it, its label laid over its top. */
+/**
+ * A field's box on the search card: the field fills it, its label laid over
+ * its top. With the focus it reaches over the boxes after it, so its open
+ * list of places is not covered by their raised labels.
+ */
 export const fieldBox =
-  "relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-10 focus-within:border-brand";
+  "relative grid min-w-0 grid-cols-1 rounded-xl border bg-white focus-within:z-(--layer-overlap) focus-within:border-brand";
 
 /**
  * The keyboard's ring around a `fieldBox` whose field has the focus: the

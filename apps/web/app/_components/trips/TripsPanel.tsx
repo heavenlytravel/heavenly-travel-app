@@ -2,12 +2,12 @@
 
 import type { ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
+import { scrollBehavior } from "@repo/ui/motion";
 import type { PlacePresets } from "@repo/ui/place-input";
 import type { FieldKey } from "../../_lib/search";
 import type { PlannedTrip } from "../../_lib/trip-plan";
 import { AddAnotherTrip, TripForm } from "./TripForm";
 import {
-  scrollBehavior,
   TripsBar,
   TripsFold,
   UnderHeader,

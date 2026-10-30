@@ -4,6 +4,7 @@ import {
   SITE_PAGE_LABELS,
   isPagePublished,
   isSitePagePublic,
+  isWebsitePageKey,
 } from "@repo/db";
 import {
   SITE_URL,
@@ -88,14 +89,18 @@ async function editorDetails() {
         published={details.published}
         publishedAt={details.publishedAt}
         version={details.version}
-        pages={summaries.map((summary) => ({
-          page: summary.page,
-          label: SITE_PAGE_LABELS[summary.page],
-          published: isSitePagePublic(
-            summary.page,
-            isPagePublished(summary.status),
-          ),
-        }))}
+        pages={summaries.flatMap(({ page, status }) =>
+          // The footer is the customer site's: Connect's page is not linked.
+          isWebsitePageKey(page)
+            ? [
+                {
+                  page,
+                  label: SITE_PAGE_LABELS[page],
+                  published: isSitePagePublic(page, isPagePublished(status)),
+                },
+              ]
+            : [],
+        )}
         locations={locations.map((location) => ({
           slug: location.slug,
           name: location.name,

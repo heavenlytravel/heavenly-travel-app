@@ -6,7 +6,8 @@ import type { PageKind } from "./page-content";
 
 /**
  * The pages of the whole site, pure and browser-safe: the home page's
- * content, the services' hubs, about us, contact us and the legal pages. Each is one row of
+ * content, the services' hubs, about us, contact us and the legal pages,
+ * and Connect's landing page, on Connect's own address. Each is one row of
  * `SitePage`, written in the same editor as a location's pages and with the
  * same content (./page-content); they differ in kind. A new site page is a
  * code change: a key here, and its route and its preview's route on the
@@ -29,6 +30,9 @@ export const HUB_PAGES = [
 export type HubPage = (typeof HUB_PAGES)[number];
 export const isHubPage = guardFor(HUB_PAGES);
 
+/** Connect's landing page: what a visitor signed out reads at Connect's `/`. */
+export const CONNECT_PAGE = "connect";
+
 export const SITE_PAGES = [
   HOME_PAGE,
   ...HUB_PAGES,
@@ -37,9 +41,21 @@ export const SITE_PAGES = [
   "terms",
   "privacy-policy",
   "refund-policy",
+  CONNECT_PAGE,
 ] as const;
 export type SitePageKey = (typeof SITE_PAGES)[number];
 export const isSitePageKey = guardFor(SITE_PAGES);
+
+/**
+ * The site pages on the customer site, every one but Connect's: those its
+ * routes, its footer and its reserved addresses know.
+ */
+export const WEBSITE_PAGES = SITE_PAGES.filter(
+  (page): page is Exclude<SitePageKey, typeof CONNECT_PAGE> =>
+    page !== CONNECT_PAGE,
+);
+export type WebsitePageKey = (typeof WEBSITE_PAGES)[number];
+export const isWebsitePageKey = guardFor(WEBSITE_PAGES);
 
 export const SITE_PAGE_LABELS: Record<SitePageKey, string> = {
   home: "Home page",
@@ -50,6 +66,7 @@ export const SITE_PAGE_LABELS: Record<SitePageKey, string> = {
   terms: "Terms and conditions",
   "privacy-policy": "Privacy policy",
   "refund-policy": "Cancellation and refunds",
+  connect: "Connect's landing page",
 };
 
 /** The site's name, after a page's own title in a browser tab and a search result. */
@@ -62,27 +79,28 @@ export const SITE_NAME = "Heavenly Travel";
  * Travel".
  */
 export function sitePageFallbackTitle(page: SitePageKey): string {
-  return page === HOME_PAGE
-    ? `${SITE_NAME} — Travel made simple`
-    : `${SITE_PAGE_LABELS[page]} | ${SITE_NAME}`;
+  if (page === HOME_PAGE) return `${SITE_NAME} — Travel made simple`;
+  if (page === CONNECT_PAGE) return `Connect | ${SITE_NAME}`;
+  return `${SITE_PAGE_LABELS[page]} | ${SITE_NAME}`;
 }
 
 /**
- * The home page holds its own sections; a hub is a service's page, as a
- * location's is; every other site page is a document.
+ * The home page holds its own sections, and Connect's its own; a hub is a
+ * service's page, as a location's is; every other site page is a document.
  */
 export function sitePageKindOf(page: SitePageKey): PageKind {
   if (page === HOME_PAGE) return "home";
+  if (page === CONNECT_PAGE) return "connect";
   return isHubPage(page) ? "service" : "document";
 }
 
 /**
  * Whether the site shows the page before it is first published, in the
- * words it was built with: the home page and the hubs. A document is a 404
- * until then.
+ * words it was built with: the home page, the hubs and Connect's. A
+ * document is a 404 until then.
  */
 export function hasBuiltInCopy(page: SitePageKey) {
-  return page === HOME_PAGE || isHubPage(page);
+  return page === HOME_PAGE || page === CONNECT_PAGE || isHubPage(page);
 }
 
 /**
@@ -94,16 +112,21 @@ export function isSitePagePublic(page: SitePageKey, published: boolean) {
   return published || hasBuiltInCopy(page);
 }
 
-/** Where a site page is on the customer site: /, /about-us. */
+/** Where a site page is on its app: /, /about-us on the customer site; / on Connect. */
 export function sitePagePath(page: SitePageKey) {
-  return page === HOME_PAGE ? "/" : `/${page}`;
+  return page === HOME_PAGE || page === CONNECT_PAGE ? "/" : `/${page}`;
+}
+
+/** The app a site page is on: the customer site, or Connect. */
+export function sitePageAppOf(page: SitePageKey): "website" | "connect" {
+  return page === CONNECT_PAGE ? "connect" : "website";
 }
 
 /**
  * The top-level addresses the site pages take, which no location's slug
  * may: not their public pages, nor their previews under /preview.
  */
-export const SITE_PAGE_PATHS: readonly string[] = SITE_PAGES.filter(
+export const SITE_PAGE_PATHS: readonly string[] = WEBSITE_PAGES.filter(
   (page) => page !== HOME_PAGE,
 );
 
@@ -114,29 +137,42 @@ export const SITE_PAGE_PATHS: readonly string[] = SITE_PAGES.filter(
  */
 export const SITE_PAGES_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/website`;
 
-/** Where a site page is edited in the console; the customer site's preview links it as Edit. */
+/** Where Connect's landing page is edited: Pages has a part of its own for Connect. */
+export const CONNECT_PAGE_EDITOR_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/connect`;
+
+/** Where a site page is edited in the console; the preview links it as Edit. */
 export function sitePageEditorPath(page: SitePageKey) {
-  return `${SITE_PAGES_PATH}/${page}`;
+  return page === CONNECT_PAGE
+    ? CONNECT_PAGE_EDITOR_PATH
+    : `${SITE_PAGES_PATH}/${page}`;
 }
 
 /**
  * Where staff preview a site page's draft: /preview and its address, as a
  * location's page is previewed. /preview/about-us, and /preview for the
- * home page.
+ * home page and for Connect's, on Connect.
  */
 export function sitePagePreviewPath(page: SitePageKey) {
-  return page === HOME_PAGE ? "/preview" : `/preview${sitePagePath(page)}`;
+  return page === HOME_PAGE || page === CONNECT_PAGE
+    ? "/preview"
+    : `/preview${sitePagePath(page)}`;
 }
 
 /**
- * Whether a site page can be unpublished. The home page and the hubs stay
- * published once they are: unpublished, they would fall back to the text
- * they had before Marketing wrote them, which is no one's choice.
+ * Whether a site page can be unpublished. The home page, the hubs and
+ * Connect's stay published once they are: unpublished, they would fall
+ * back to the text they had before Marketing wrote them, which is no one's
+ * choice.
  */
 export function checkSitePageUnpublish(page: SitePageKey): Change {
-  return hasBuiltInCopy(page)
-    ? refuse(
-        `${page === HOME_PAGE ? "The home page" : "A service's page"} stays published once it is. Publish a change instead.`,
-      )
-    : { ok: true };
+  if (!hasBuiltInCopy(page)) return { ok: true };
+  const which =
+    page === HOME_PAGE
+      ? "The home page"
+      : page === CONNECT_PAGE
+        ? "Connect's landing page"
+        : "A service's page";
+  return refuse(
+    `${which} stays published once it is. Publish a change instead.`,
+  );
 }

@@ -1,5 +1,7 @@
 import {
   ALL_LOCATIONS_SEGMENT,
+  CONNECT_PAGE,
+  CONNECT_PAGE_EDITOR_PATH,
   SITE_PAGES_PATH,
   pageEditorPath,
   pageSegmentOf,
@@ -351,7 +353,9 @@ export { SITE_PAGES_PATH };
 
 /** The editor of one of the site's own pages. */
 export function sitePageHref(page: string) {
-  return `${SITE_PAGES_PATH}/${page}`;
+  return page === CONNECT_PAGE
+    ? CONNECT_PAGE_EDITOR_PATH
+    : `${SITE_PAGES_PATH}/${page}`;
 }
 
 /** What one publish of a site page put on it, by the log entry's id. */

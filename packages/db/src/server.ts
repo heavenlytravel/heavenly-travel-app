@@ -397,6 +397,7 @@ export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";
+export * from "./connect-page";
 export * from "./footer-content";
 export * from "./location-view";
 export * from "./location-search";

@@ -5,7 +5,7 @@ import {
   getFooter,
   getPublishedFooter,
   getSitePage,
-  SITE_PAGES,
+  WEBSITE_PAGES,
   isSitePagePublic,
   listPublishedSitePages,
   visibleFooterOf,
@@ -79,7 +79,7 @@ export async function shownFooter(preview: boolean): Promise<FooterContent> {
   ]);
   return visibleFooterOf(content, {
     pages: new Set(
-      SITE_PAGES.filter((page) => isSitePagePublic(page, page in pages)),
+      WEBSITE_PAGES.filter((page) => isSitePagePublic(page, page in pages)),
     ),
     locations: new Set(locations),
   });

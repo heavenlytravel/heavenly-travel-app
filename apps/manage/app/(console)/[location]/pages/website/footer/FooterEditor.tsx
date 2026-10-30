@@ -15,7 +15,7 @@ import {
   footerProblems,
   formatLocalDateTime,
   isFooterLinkKind,
-  isSitePageKey,
+  isWebsitePageKey,
   isSocialNetwork,
   pageStatusOf,
   sameFooterContent,
@@ -25,7 +25,7 @@ import {
   type FooterLinkTarget,
   type FooterSocial,
   type PageImage,
-  type SitePageKey,
+  type WebsitePageKey,
   type UploadedImage,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
@@ -77,7 +77,7 @@ type FormContent = Omit<
 
 /** A site page a link may open, and whether the public sees it. */
 export type LinkablePage = {
-  page: SitePageKey;
+  page: WebsitePageKey;
   label: string;
   published: boolean;
 };
@@ -991,7 +991,7 @@ function LinkRows({
                           : `${p.label} (not published)`,
                       }))}
                       onValueChange={(page) => {
-                        if (isSitePageKey(page)) {
+                        if (isWebsitePageKey(page)) {
                           choose(link, { kind: "page", page });
                         }
                       }}

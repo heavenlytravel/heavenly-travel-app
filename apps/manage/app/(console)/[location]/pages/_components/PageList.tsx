@@ -12,7 +12,6 @@ import {
   childrenOf,
   formatLocalDate,
   locationPagePath,
-  sitePagePath,
   type LocationPageKey,
   type PageImage,
   type PageStatus,
@@ -35,7 +34,11 @@ import {
   pagesHref,
   sitePageHref,
 } from "../../../../_lib/routes";
-import { locationPreviewUrl, sitePagePreviewUrl } from "../../../../_lib/site";
+import {
+  locationPreviewUrl,
+  sitePagePreviewUrl,
+  sitePageShownPath,
+} from "../../../../_lib/site";
 import { PageSectionSelect, type SectionOption } from "./PageSectionSelect";
 import {
   FoldAllToggle,
@@ -103,9 +106,9 @@ function locationPageRow(
 /** One of the site's own pages as a row. */
 export function sitePageRow(page: SitePageSummary): PageRow {
   return {
-    key: `website/${page.page}`,
+    key: `site/${page.page}`,
     label: SITE_PAGE_LABELS[page.page],
-    path: sitePagePath(page.page),
+    path: sitePageShownPath(page.page),
     image: page.heroImage,
     status: page.status,
     paused: false,

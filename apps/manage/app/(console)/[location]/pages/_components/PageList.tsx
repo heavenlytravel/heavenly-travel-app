@@ -299,7 +299,7 @@ function IconAction({
 }) {
   return (
     <Tooltip content={label}>
-      <Button asChild variant="ghost" size="sm" className="w-8 px-0">
+      <Button asChild variant="ghost" size="icon-sm">
         {children}
       </Button>
     </Tooltip>

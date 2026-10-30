@@ -4,9 +4,9 @@ import { SAFETY_BUFFER_FIELD, SAFETY_BUFFER_MAX_MINUTES } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Field } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { setSafetyBufferAction } from "../actions";
+import { setSafetyBufferAction } from "../../../_lib/location-actions";
 
 /**
  * The minutes this location keeps a vehicle or a driver free after a job,
@@ -41,7 +41,7 @@ export function SafetyBufferForm({
         />
       </Field>
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" pending={pending}>
           {pending ? "Saving…" : "Save"}
         </Button>
         <FormError error={error} />

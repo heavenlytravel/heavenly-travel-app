@@ -12,11 +12,13 @@ import {
   moveLocationEntry,
   moveLocationState,
   parseAddressEntries,
+  parseSafetyBuffer,
   parseLocationFields,
   renameLocationEntry,
   savedAddressRefusal,
   addLocationAddress,
   setLocationAddresses,
+  setSafetyBuffer,
   textOf,
   updateLocation,
   type AddressWrite,
@@ -31,7 +33,7 @@ import {
   refusalOf,
   STALE,
   stateOf,
-} from "./action-state";
+} from "@repo/console/action-state";
 import {
   dashboardHref,
   locationPageHref,
@@ -263,6 +265,29 @@ export async function moveLocationStateAction(
 
   const result = await moveLocationState(actorOf(admin), locationId, to);
   if (result.ok) revalidateEverywhere(locationId);
+  return stateOf(result);
+}
+
+/**
+ * The safety buffer, on the location's settings: Operation's, as its
+ * coverage is (`coverage.manage`). Nothing the public sees.
+ */
+export async function setSafetyBufferAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  const locationId = textOf(formData.get("locationId"));
+  if (!locationId) return STALE;
+  const minutes = parseSafetyBuffer(Object.fromEntries(formData));
+  if (!minutes.ok) return refusalOf(minutes);
+  const result = await setSafetyBuffer(
+    actorOf(admin),
+    locationId,
+    minutes.value,
+  );
+  if (result.ok) revalidateLocation();
   return stateOf(result);
 }
 

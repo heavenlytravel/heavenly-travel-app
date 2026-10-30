@@ -34,7 +34,7 @@ nothing new is added behind the screens.
   we do not build" and are not built.
 - **Status labels stay**, "Received" included. Only their colours change.
 - **The phone keeps today's pattern:**
-  - the picker in a white bar at the top
+  - the picker in the tinted bar at the top
   - the floating Search and menu pill at the bottom (`ConsoleDock`)
   - the menu opening as a panel over the page
 - **Each page keeps its permission check** (`requireAdmin`).
@@ -168,11 +168,20 @@ How it behaves:
   either way, with a tooltip naming Ctrl/Cmd+B), the picker, then Search (Ctrl/Cmd+K) and
   the person's picture at the right, which opens their menu and names them and their level
   on hover. There is no bell. The sidebar's head is the logo alone, a link to `/~`.
+- **The top bar is the brand's pale tint** (`--brand-tint`, its edge `--slot`) at every
+  width, with the picker and the search white on it and the fold button navy, so the bar
+  and the sidebar frame the page and the canvas holds only its content.
 - **A trail over every title,** read off the address by the shell, so a title stands in
-  the same place on every page: the section ("Fleet") or the group ("Operations") over a
-  list, and "Fleet › Vehicles" over a record or a form under it, the list a link. It goes no
-  deeper than the list; a page under a record (a trip's amend, a history) names its record
-  as a link under the title. None on the dashboard.
+  the same place on every page. It is the page's place in the menu: the section when it
+  holds several pages, grey as it has no page of its own, then the row. On a list the row
+  is where the admin is, in ink: "Bookings", "Fleet › Vehicles". Over a record or a form
+  under it the row is the link back: "Fleet › Vehicles" over Add Vehicle. It goes no deeper
+  than the list; a page under a record (a trip's amend, a history) names its record as a
+  link under the title. None on the dashboard. Groups ("Operations") are not in the trail.
+- **Titles are in Title Case:** a page's title, its row's name and what the search calls
+  it ("Add Zone", "Rate Grid", "Try a Trip"), with a, an, the, and, or, of, to, in, on and
+  for small inside a title. Buttons, card headings, dialogs, labels and sentences stay in
+  sentence case ("Add zone" on the button that opens Add Zone).
 - **On a phone** the same menu fills the panel, sections opening in place, the picker
   on top.
 - **The search palette** keeps working as today, with its index moved to the new addresses.

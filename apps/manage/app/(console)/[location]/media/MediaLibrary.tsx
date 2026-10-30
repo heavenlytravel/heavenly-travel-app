@@ -1,10 +1,11 @@
 "use client";
 
 import {
+  MEDIA_IN_USE_HINT,
   MEDIA_STATUS_LABELS,
   formatBytes,
   formatLocalDate,
-  isOnPage,
+  isMediaInUse,
   mediaDeleteImpact,
   mediaPageName,
   plural,
@@ -15,11 +16,14 @@ import { Badge, type BadgeTone } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { ImageIcon } from "@repo/ui/icons";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Tile, TileGrid } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
+import { TBody, THead, Table, Td, Th } from "@repo/console/Table";
 import { CardImage } from "../../../_components/CardImage";
+import { Choices } from "../../../_components/Choices";
 import { DeleteButton } from "../../../_components/DeleteButton";
 import {
   classHref,
@@ -30,6 +34,12 @@ import {
   vehicleHref,
 } from "../../../_lib/routes";
 import { deleteMediaAction } from "./actions";
+import {
+  MEDIA_VIEWS,
+  MEDIA_VIEW_LABELS,
+  rememberMediaView,
+  type MediaView,
+} from "./media-view";
 
 /** One image as the screen lists it, with where it stands and its uses. */
 export type MediaRow = {
@@ -51,24 +61,34 @@ const STATUS_TONES: Record<MediaStatus, BadgeTone> = {
   recent: "amber",
 };
 
+const VIEW_OPTIONS = MEDIA_VIEWS.map((value) => ({
+  value,
+  label: MEDIA_VIEW_LABELS[value],
+}));
+
 /**
  * One page of the Media screen, in its card: the bar on top, which
- * chooses every image there or none, and once some are chosen turns dark,
- * counts them and deletes them, then the images as cards, each with a box
- * to choose it. An image on a location's page cannot be chosen: it is
- * replaced in the page editor first. The delete lists what the chosen
- * images leave behind (`mediaDeleteImpact`), as the server works it out
+ * chooses every image there or none and switches between the grid and
+ * the table, and once some are chosen turns dark, counts them and
+ * deletes them; then the images, as cards or as rows, each with a box to
+ * choose it. An image in use has no box and says why: it is changed
+ * where it is used, never deleted from here. The delete lists what the
+ * chosen images reach (`mediaDeleteImpact`), as the server works it out
  * again.
  */
 export function MediaLibrary({
   rows,
+  view: firstView,
   emptyMessage,
 }: {
   rows: MediaRow[];
+  /** The view the admin chose last, read from its cookie. */
+  view: MediaView;
   emptyMessage: string;
 }) {
+  const [view, setView] = useState(firstView);
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
-  const choosable = rows.filter((row) => !isOnPage(row.uses));
+  const choosable = rows.filter((row) => !isMediaInUse(row.uses));
   const picked = rows.filter((row) => chosen.has(row.key));
   const size = picked.reduce((sum, row) => sum + row.size, 0);
   const all = choosable.length > 0 && picked.length === choosable.length;
@@ -118,7 +138,7 @@ export function MediaLibrary({
             "Choose images to delete them"
           ) : (
             <span className="text-muted">
-              Every image here is on a page: replace it there to delete it
+              Every image here is in use: change it where it is used
             </span>
           )}
         </label>
@@ -148,22 +168,44 @@ export function MediaLibrary({
               onDeleted={() => setChosen(new Set())}
             />
           </div>
-        ) : null}
+        ) : (
+          <Choices
+            label="Show the images as"
+            size="sm"
+            value={view}
+            options={VIEW_OPTIONS}
+            onChange={(next) => {
+              setView(next);
+              rememberMediaView(next);
+            }}
+          />
+        )}
       </div>
-      <div className="p-5">
-        <TileGrid min="14rem">
-          {rows.map((row) => (
-            <MediaTile
-              key={row.key}
-              row={row}
-              chosen={chosen.has(row.key)}
-              onToggle={() => toggle(row.key)}
-            />
-          ))}
-        </TileGrid>
-      </div>
+      {view === "grid" ? (
+        <div className="p-5">
+          <TileGrid min="14rem">
+            {rows.map((row) => (
+              <MediaTile
+                key={row.key}
+                row={row}
+                chosen={chosen.has(row.key)}
+                onToggle={() => toggle(row.key)}
+              />
+            ))}
+          </TileGrid>
+        </div>
+      ) : (
+        <MediaTable rows={rows} chosen={chosen} onToggle={toggle} />
+      )}
     </>
   );
+}
+
+/** The uses a file lists: a past version matters only while nothing else uses it. */
+function listedUses(row: MediaRow) {
+  return row.status === "used"
+    ? row.uses.filter((use) => use.kind !== "earlier")
+    : row.uses;
 }
 
 /** One image: its picture and where it stands, the box that chooses it, its name, size and day, and its uses. */
@@ -176,12 +218,7 @@ function MediaTile({
   chosen: boolean;
   onToggle: () => void;
 }) {
-  const onPage = isOnPage(row.uses);
-  // A past version matters only while nothing else uses the image.
-  const listed =
-    row.status === "used"
-      ? row.uses.filter((use) => use.kind !== "earlier")
-      : row.uses;
+  const inUse = isMediaInUse(row.uses);
 
   return (
     <Tile>
@@ -196,24 +233,18 @@ function MediaTile({
             {MEDIA_STATUS_LABELS[row.status]}
           </Badge>
         </CardImage>
-        {/* The box round the tick takes the press: 44px on a touch screen. */}
-        <label
-          className="absolute top-2.5 right-2.5 flex size-8 cursor-pointer items-center justify-center rounded-md bg-white/90 shadow-control pointer-coarse:size-11"
-          title={
-            onPage
-              ? "On a location's page: replace it there, then delete it here"
-              : undefined
-          }
-        >
-          <input
-            type="checkbox"
-            className="size-4 accent-brand"
-            aria-label={`Choose ${row.name}`}
-            checked={chosen}
-            disabled={onPage}
-            onChange={onToggle}
-          />
-        </label>
+        {inUse ? null : (
+          // The box round the tick takes the press: 44px on a touch screen.
+          <label className="absolute top-2.5 right-2.5 flex size-8 cursor-pointer items-center justify-center rounded-md bg-white/90 shadow-control pointer-coarse:size-11">
+            <input
+              type="checkbox"
+              className="size-4 accent-brand"
+              aria-label={`Choose ${row.name}`}
+              checked={chosen}
+              onChange={onToggle}
+            />
+          </label>
+        )}
       </div>
       <div className="grid gap-2.5 px-4 pt-3 pb-4">
         <div className="min-w-0">
@@ -228,15 +259,10 @@ function MediaTile({
             {formatLocalDate(new Date(row.uploadedAt))}
           </p>
         </div>
-        {listed.length > 0 ? (
-          <ul className="flex flex-wrap gap-1.5">
-            {listed.map((use, index) => (
-              <li key={index} className="max-w-full min-w-0">
-                <UseLink use={use} />
-              </li>
-            ))}
-          </ul>
+        {inUse ? (
+          <p className="text-xs text-muted">{MEDIA_IN_USE_HINT}.</p>
         ) : null}
+        <UseList uses={listedUses(row)} />
       </div>
       {/* Last, so it is drawn over the tile's raised parts, its foot too. */}
       {chosen ? (
@@ -249,11 +275,112 @@ function MediaTile({
   );
 }
 
+/** The images as rows: the box, the image and its name, its size and day, where it stands and every place it is used. */
+function MediaTable({
+  rows,
+  chosen,
+  onToggle,
+}: {
+  rows: MediaRow[];
+  chosen: ReadonlySet<string>;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <Table bare>
+      <THead>
+        <Th />
+        <Th>Image</Th>
+        <Th align="right">Size</Th>
+        <Th>Uploaded</Th>
+        <Th>Status</Th>
+        <Th>Used in</Th>
+      </THead>
+      <TBody>
+        {rows.map((row) => {
+          const inUse = isMediaInUse(row.uses);
+          const on = chosen.has(row.key);
+          return (
+            <tr key={row.key} className={cx(on && "bg-brand-tint")}>
+              <Td className="w-10">
+                {inUse ? null : (
+                  // The cell's height takes the press with the box.
+                  <label className="flex touch-target cursor-pointer items-center">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-brand"
+                      aria-label={`Choose ${row.name}`}
+                      checked={on}
+                      onChange={() => onToggle(row.key)}
+                    />
+                  </label>
+                )}
+              </Td>
+              <Td>
+                <span className="flex max-w-80 min-w-48 items-center gap-3">
+                  <Image
+                    src={row.url}
+                    alt=""
+                    width={64}
+                    height={40}
+                    sizes="64px"
+                    className="h-10 w-16 shrink-0 rounded border border-card-edge bg-canvas object-contain"
+                  />
+                  <span
+                    className="truncate font-medium text-body"
+                    title={row.name}
+                  >
+                    {row.name}
+                  </span>
+                </span>
+              </Td>
+              <Td className="text-right whitespace-nowrap text-muted tabular-nums">
+                {formatBytes(row.size)}
+              </Td>
+              <Td className="whitespace-nowrap text-muted tabular-nums">
+                {formatLocalDate(new Date(row.uploadedAt))}
+              </Td>
+              <Td>
+                <span className="grid justify-items-start gap-1">
+                  <Badge dot tone={STATUS_TONES[row.status]}>
+                    {MEDIA_STATUS_LABELS[row.status]}
+                  </Badge>
+                  {inUse ? (
+                    <span className="text-caption whitespace-nowrap text-muted">
+                      {MEDIA_IN_USE_HINT}
+                    </span>
+                  ) : null}
+                </span>
+              </Td>
+              <Td className="min-w-56">
+                <UseList uses={listedUses(row)} />
+              </Td>
+            </tr>
+          );
+        })}
+      </TBody>
+    </Table>
+  );
+}
+
+/** Every place a file is used, each a chip that opens it. */
+function UseList({ uses }: { uses: readonly MediaUse[] }) {
+  if (uses.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {uses.map((use, index) => (
+        <li key={index} className="max-w-full min-w-0">
+          <UseLink use={use} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** A use as a small chip that opens it. */
 const USE_CHIP =
   "block truncate rounded-md bg-shade px-2 py-0.5 text-xs text-body transition-colors hover:bg-brand-tint hover:text-navy focus-ring";
 
-/** Where a use is, as a link to it: the page in its editor, the class, the vehicle, the past version. */
+/** Where a use is, as a link to it: the page or the footer in its editor, the class, the vehicle, the past version. */
 function UseLink({ use }: { use: MediaUse }) {
   switch (use.kind) {
     case "page": {

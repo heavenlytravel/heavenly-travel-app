@@ -34,12 +34,12 @@ export {
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {
+  checkMediaDelete,
   deletedMediaRefusal,
   listMediaUses,
   logMediaDeleted,
-  releaseMedia,
 } from "./media";
-export type { DeletedMedia, MediaReleased, StoredMedia } from "./media";
+export type { DeletedMedia, StoredMedia } from "./media";
 export {
   listLocationOverviews,
   getLocationOverview,

@@ -49,6 +49,7 @@ const WALL: Record<AdminTeam, Permission[]> = {
     "coverage.view",
     "fleet.manage",
     "settings.view",
+    "media.manage",
   ],
   RESERVATION: [
     ...SHARED,

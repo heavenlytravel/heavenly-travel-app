@@ -4,26 +4,31 @@ import {
   MEDIA_FILTER_LABELS,
   formatBytes,
   isMediaFilter,
-  mediaStatusOf,
   type MediaFilter,
   type MediaStatus,
 } from "@repo/db";
-import { listMediaUses } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Card, Frame } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
 import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
-import { Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
+import {
+  Streamed,
+  TableSkeleton,
+  TileGridSkeleton,
+} from "@repo/console/Skeleton";
 import type { BadgeTone } from "@repo/ui/badge";
 import { Bone } from "@repo/ui/skeleton";
 import { Pager, pageOf } from "../../../_components/Pager";
-import { requireAdmin } from "../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../_lib/access";
+import { listMediaFiles } from "../../../_lib/media";
 import { PAGE_PARAM, mediaHref } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
-import { listStoredFiles, type StoredFile } from "../../../_lib/uploads";
+import type { StoredFile } from "../../../_lib/uploads";
 import { MediaLibrary, type MediaRow } from "./MediaLibrary";
+import { MEDIA_VIEW_COOKIE, mediaViewOf, type MediaView } from "./media-view";
 
 /** How many images a page of the screen holds. */
 const PAGE_SIZE = 48;
@@ -45,14 +50,18 @@ const FILTERS_TIP = FILTERS.map((filter) => {
 }).join(" ");
 
 /**
- * Route: /~/media?show=unused&page=2. Every image uploaded in the console,
- * newest first, as UploadThing keeps them, each with where it is used: a
- * location's page, working or published, a class's picture, a vehicle's
- * photo, or only a page's past version, which its History shows. The
- * tiles at the head count each standing and narrow the list to it.
- * Images are chosen and deleted together; one on a page is replaced there
- * first, and the delete names what loses the rest (`mediaDeleteImpact`).
- * Console-wide: under a slug it is not found. SUPER only. See
+ * Route: /~/media?show=unused&page=2. The images uploaded in the console
+ * that the admin's team works with, newest first, as UploadThing keeps
+ * them: the pages' to the pages and the website, the fleet's to the
+ * fleet, those nothing uses to Media's key, every one to SUPER
+ * (`isMediaInReach`). Each lists every place it is used, a link to where
+ * it is changed: a location's page, working or published, the footer, a
+ * class's picture, a vehicle's photo, or only a page's past version,
+ * which its History shows. The tiles at the head count each standing and
+ * narrow the list to it. Shown as a grid or a table, the choice
+ * remembered. Images are chosen and deleted together; one in use cannot
+ * be chosen, and the delete names what the rest reach
+ * (`mediaDeleteImpact`). Console-wide: under a slug it is not found. See
  * docs/261001-locations-and-pages.md, "Images".
  */
 export default async function MediaPage({
@@ -61,9 +70,10 @@ export default async function MediaPage({
 }: PageProps<"/[location]/media">) {
   await requireAdmin("media.manage");
   if ((await scopeOf(params)).slug !== null) notFound();
-  const query = await searchParams;
+  const [query, store] = await Promise.all([searchParams, cookies()]);
   const show = isMediaFilter(query.show) ? query.show : undefined;
   const page = pageOf(query[PAGE_PARAM]);
+  const view = mediaViewOf(store.get(MEDIA_VIEW_COOKIE)?.value);
 
   return (
     <>
@@ -77,11 +87,15 @@ export default async function MediaPage({
                 <Bone key={tile} className="h-[5.5rem] w-full" />
               ))}
             </div>
-            <TileGridSkeleton tiles={8} min="14rem" />
+            {view === "table" ? (
+              <TableSkeleton columns={6} />
+            ) : (
+              <TileGridSkeleton tiles={8} min="14rem" />
+            )}
           </>
         }
       >
-        {() => mediaList({ show, page })}
+        {() => mediaList({ show, page, view })}
       </Streamed>
     </>
   );
@@ -103,30 +117,21 @@ function filesValue(files: readonly StoredFile[]) {
 async function mediaList({
   show,
   page,
+  view,
 }: {
   show: MediaFilter | undefined;
   page: number;
+  view: MediaView;
 }) {
-  const [stored, uses] = await Promise.all([
-    listStoredFiles(),
-    listMediaUses(),
-  ]);
-  if (!stored.ok) {
+  const listed = await listMediaFiles(await getPermissions());
+  if (!listed.ok) {
     return (
       <Frame>
-        <EmptyState>{stored.error}</EmptyState>
+        <EmptyState>{listed.error}</EmptyState>
       </Frame>
     );
   }
-  const now = new Date();
-  const rows = stored.files.map((file) => {
-    const fileUses = uses.get(file.key) ?? [];
-    return {
-      file,
-      uses: fileUses,
-      status: mediaStatusOf(file.uploadedAt, fileUses, now),
-    };
-  });
+  const rows = listed.files;
   const of = (filter: MediaFilter) =>
     rows.filter((row) =>
       (MEDIA_FILTERS[filter] as readonly MediaStatus[]).includes(row.status),
@@ -134,14 +139,14 @@ async function mediaList({
   const shown = show ? of(show) : rows;
   const onPage: MediaRow[] = shown
     .slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-    .map(({ file, uses: fileUses, status }) => ({
+    .map(({ file, uses, status }) => ({
       key: file.key,
       name: file.name,
       size: file.size,
       uploadedAt: file.uploadedAt.toISOString(),
       url: file.url,
       status,
-      uses: fileUses,
+      uses,
     }));
   const figures: Figure[] = [
     {
@@ -169,6 +174,7 @@ async function mediaList({
         <MediaLibrary
           key={`${show ?? "all"}:${page}`}
           rows={onPage}
+          view={view}
           emptyMessage={
             show
               ? `No images ${MEDIA_FILTER_LABELS[show].toLowerCase()}.`

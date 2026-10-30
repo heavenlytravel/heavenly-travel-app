@@ -1,6 +1,6 @@
 import { logActivity } from "./activity";
 import { MEDIA_RECORD_ID, type Actor } from "./activity-actions";
-import { refuse, type Refusal } from "./change";
+import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
 import type { Prisma } from "./generated/prisma/client";
@@ -29,6 +29,7 @@ import {
   mediaPageKey,
   mediaStatusOf,
   type MediaPage,
+  type MediaReach,
   type MediaUse,
 } from "./media-status";
 
@@ -36,10 +37,10 @@ import {
  * Where the console's uploaded files are used, for the Media screen: the
  * locations' pages, the site's and its footer, working and published, the vehicle
  * classes' pictures, the vehicles' photos, and the past versions a page's
- * History shows; the delete that takes files off them; and the check that keeps a
- * form opened before the delete from putting a deleted file back. The
- * rules are in ./media-status. See docs/261001-locations-and-pages.md,
- * "Images".
+ * History shows; the check before a delete, which leaves a file in use
+ * alone; and the check that keeps a form opened before the delete from
+ * putting a deleted file back. The rules are in ./media-status. See
+ * docs/261001-locations-and-pages.md, "Images".
  */
 
 /** What a published page or footer showed, from a log entry's `{ content }`; null for none. */
@@ -124,15 +125,12 @@ async function readSources(client: Prisma.TransactionClient) {
       }),
       client.vehiclePhoto.findMany({
         select: {
-          id: true,
           url: true,
           vehicle: {
             select: {
               id: true,
               plate: true,
-              locationId: true,
               location: { select: { slug: true } },
-              _count: { select: { photos: true } },
             },
           },
         },
@@ -339,91 +337,31 @@ export type StoredMedia = {
   uploadedAt: Date;
 };
 
-/** What taking the files off their uses came to: whether a vehicle or a class changed, for the pages to refresh; or why not. */
-export type MediaReleased = { ok: true; fleetChanged: boolean } | Refusal;
-
 /**
- * Takes the files off what uses them, once the admin confirmed what that
- * takes as it stands (`mediaDeleteImpact`, ./delete-impact): each vehicle
- * loses those of its photos and each class its picture, logged in their
- * own history; a page's past version stays in the log and shows without
- * them. A file on a location's page is refused (`mediaDeleteRefusal`).
- * The photos and pictures changed are those of the same read the impact
- * was weighed on, so nothing is taken that was not shown. The files
- * themselves are deleted from storage after, by the admin.
+ * Whether the files may be deleted from storage, weighed on their uses as
+ * they stand now: none in use and each the admin's to see
+ * (`mediaDeleteRefusal`), and the admin confirmed what the delete takes
+ * as it reads now (`mediaDeleteImpact`, ./delete-impact). Nothing in the
+ * database changes: a page's past version stays in the log and shows
+ * without them. The files are deleted from storage after, by the admin.
  */
-export async function releaseMedia(
-  actor: Actor,
+export async function checkMediaDelete(
   files: readonly StoredMedia[],
+  reach: MediaReach,
   confirmation: DeleteConfirmation,
-): Promise<MediaReleased> {
-  return db.$transaction(
-    async (tx) => {
-      const sources = await readSources(tx);
-      const uses = usesOf(sources);
-      const now = new Date();
-      const weighed = files.map((file) => {
-        const fileUses = uses.get(file.key) ?? [];
-        return {
-          name: file.name,
-          size: file.size,
-          uses: fileUses,
-          status: mediaStatusOf(file.uploadedAt, fileUses, now),
-        };
-      });
-      const refusal = mediaDeleteRefusal(weighed);
-      if (refusal) return refuse(refusal);
-      const confirmed = checkDeleteConfirmed(
-        mediaDeleteImpact(weighed),
-        confirmation,
-      );
-      if (!confirmed.ok) return confirmed;
-
-      const keys = new Set(files.map((file) => file.key));
-      const isReleased = (url: string) => keys.has(uploadKeyOf(url) ?? "");
-
-      const byVehicle = new Map<string, Sources["photos"]>();
-      for (const photo of sources.photos.filter((p) => isReleased(p.url))) {
-        byVehicle.set(photo.vehicle.id, [
-          ...(byVehicle.get(photo.vehicle.id) ?? []),
-          photo,
-        ]);
-      }
-      for (const [vehicleId, released] of byVehicle) {
-        const { vehicle } = released[0]!;
-        await tx.vehiclePhoto.deleteMany({
-          where: { id: { in: released.map((photo) => photo.id) } },
-        });
-        await logActivity(tx, actor, {
-          action: "vehicle.updated",
-          entityId: vehicleId,
-          before: { photos: vehicle._count.photos },
-          after: { photos: vehicle._count.photos - released.length },
-          locationIds: [vehicle.locationId],
-        });
-      }
-
-      const pictures = sources.classes.filter(
-        (vehicleClass) =>
-          vehicleClass.imageUrl !== null && isReleased(vehicleClass.imageUrl),
-      );
-      for (const vehicleClass of pictures) {
-        // Cleared only while it is still that picture.
-        await tx.vehicleClass.updateMany({
-          where: { id: vehicleClass.id, imageUrl: vehicleClass.imageUrl },
-          data: { imageUrl: null },
-        });
-        await logActivity(tx, actor, {
-          action: "vehicle-class.updated",
-          entityId: vehicleClass.id,
-          before: { imageUrl: vehicleClass.imageUrl },
-          after: { imageUrl: null },
-        });
-      }
-
-      return { ok: true, fleetChanged: byVehicle.size + pictures.length > 0 };
-    },
-    // Every page, publish and photo is read to weigh the delete.
-    { timeout: 20_000 },
-  );
+): Promise<Change> {
+  const uses = await listMediaUses();
+  const now = new Date();
+  const weighed = files.map((file) => {
+    const fileUses = uses.get(file.key) ?? [];
+    return {
+      name: file.name,
+      size: file.size,
+      uses: fileUses,
+      status: mediaStatusOf(file.uploadedAt, fileUses, now),
+    };
+  });
+  const refusal = mediaDeleteRefusal(weighed, reach);
+  if (refusal) return refuse(refusal);
+  return checkDeleteConfirmed(mediaDeleteImpact(weighed), confirmation);
 }

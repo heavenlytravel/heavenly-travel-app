@@ -53,8 +53,11 @@ const RULES = {
   "wall.switch": "super",
   /** Activity, under `~` and a location: the entries of the areas the admin holds, `activityAreasHeld`. */
   "activity.view": "any",
-  /** Every uploaded image and where it is used; delete those on no page. */
-  "media.manage": ["MARKETING", "SEO"],
+  /**
+   * Every uploaded image the admin's keys reach (`mediaReachOf`) and where it
+   * is used; delete those nothing uses. Operation's are the fleet's photos.
+   */
+  "media.manage": ["MARKETING", "SEO", "OPERATION"],
 } as const satisfies Record<string, "any" | "super" | readonly AdminTeam[]>;
 
 export type Permission = keyof typeof RULES;

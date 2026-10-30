@@ -22,9 +22,9 @@ import {
   type VendorOption,
 } from "@repo/db/server";
 import { sendDriverEmailFor } from "@repo/email";
-import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { actorOf, getAdmin } from "../../../_lib/access";
+import { actorOf, getAdmin } from "../../../../_lib/access";
+import { revalidateLocation } from "../../../../_lib/revalidate";
 import {
   type ActionState,
   FORBIDDEN,
@@ -32,11 +32,6 @@ import {
   STALE,
   stateOf,
 } from "@repo/console/action-state";
-import {
-  BOOKINGS_PATH,
-  LOCATION_ROUTE,
-  bookingHref,
-} from "../../../_lib/routes";
 
 /**
  * The booking's fulfilment: asking vendors for a vehicle and a driver,
@@ -52,14 +47,12 @@ type FulfilResult =
   | { ok: true; assigned?: string[] }
   | { ok: false; error: string; field?: string };
 
-function finish(bookingId: string, result: FulfilResult): ActionState {
+function finish(result: FulfilResult): ActionState {
   if (!result.ok) return refusalOf(result);
   for (const id of result.assigned ?? []) {
     after(() => sendDriverEmailFor(id));
   }
-  revalidatePath(bookingHref(bookingId));
-  revalidatePath(BOOKINGS_PATH);
-  revalidatePath(LOCATION_ROUTE, "layout");
+  revalidateLocation();
   return null;
 }
 
@@ -157,7 +150,6 @@ export async function assignAction(
     };
   }
   return finish(
-    bookingId,
     await assignBooking(actorOf(admin), {
       bookingId,
       itemIds,
@@ -193,7 +185,6 @@ export async function answerPartsAction(
   const accept = formData.get("accept") === "true";
   const reason = textOf(formData.get("reason"));
   return finish(
-    bookingId,
     await answerParts(actorOf(admin), {
       partIds,
       as,
@@ -217,7 +208,7 @@ export async function namePartsAction(
   const recordId = textOf(formData.get("recordId"));
   if (!bookingId || partIds.length === 0) return STALE;
   if (!recordId) return { error: "Choose which one.", field: "recordId" };
-  return finish(bookingId, await nameParts(actorOf(admin), partIds, recordId));
+  return finish(await nameParts(actorOf(admin), partIds, recordId));
 }
 
 /** Lets one part go, or every part of the booking with `all`. */
@@ -232,16 +223,13 @@ export async function releaseFulfilAction(
   if (!bookingId) return STALE;
   const actor = actorOf(admin);
   if (partIds.length === 0) {
-    return finish(
-      bookingId,
-      await releaseAction(actor, { bookingId }, "released"),
-    );
+    return finish(await releaseAction(actor, { bookingId }, "released"));
   }
   for (const partId of partIds) {
     const result = await releaseAction(actor, { partId }, "released");
     if (!result.ok) return refusalOf(result);
   }
-  return finish(bookingId, { ok: true });
+  return finish({ ok: true });
 }
 
 /** What we owe a vendor for a part of a cancelled trip, with why. */
@@ -264,7 +252,7 @@ export async function setPartCostAction(
     sen,
     textOf(formData.get("reason")),
   );
-  if (result.ok) revalidatePath(bookingHref(bookingId));
+  if (result.ok) revalidateLocation();
   return stateOf(result);
 }
 
@@ -284,7 +272,6 @@ export async function reportForDriverAction(
   if (!bookingId || !itemId || !isTripEventKind(kind)) return STALE;
   const note = textOf(formData.get("note"));
   return finish(
-    bookingId,
     await reportTripEvent(
       actorOf(admin),
       { admin: true },

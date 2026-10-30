@@ -20,7 +20,7 @@ import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState, useTransition, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { AssignButton } from "./AssignPanel";
 import {
@@ -129,7 +129,7 @@ export function WhoDoesIt({
   if (live.length === 0 && owed.length === 0) return null;
 
   return (
-    <Card className="grid gap-4">
+    <Card>
       <CardTitle
         action={
           canFulfil && toAsk.length > 0 ? (
@@ -139,58 +139,64 @@ export function WhoDoesIt({
       >
         Who does it
       </CardTitle>
-      {received ? (
-        <p className="text-sm text-slate-500">
-          A trip is assigned once it is confirmed.
-        </p>
-      ) : null}
-      <ul className="grid gap-1 text-sm">
-        {live.map((trip) => (
-          <li key={trip.id} className="flex flex-wrap items-center gap-2">
-            <span>
-              Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
-            </span>
-            {trip.assigned ? (
-              <Badge tone="green">Assigned</Badge>
-            ) : trip.parts.length > 0 ? (
-              <Badge tone="amber">Waiting to accept</Badge>
-            ) : (
-              <Badge>To assign</Badge>
-            )}
-          </li>
-        ))}
-      </ul>
-      {groups.map((group) => (
-        <GroupRow
-          key={`${group.role}:${group.parts[0]!.offerId}`}
-          bookingId={bookingId}
-          group={group}
-          canFulfil={canFulfil}
-        />
-      ))}
-      {canFulfil && groups.length > 0 ? (
-        <ReleaseAll bookingId={bookingId} />
-      ) : null}
-      {owed.map((trip) => (
-        <div
-          key={trip.id}
-          className="grid gap-2 border-t border-slate-100 pt-3"
-        >
-          <p className="text-sm font-medium">
-            Trip {trip.position}, cancelled: what we owe
+      <div className="grid gap-4">
+        {received ? (
+          <p className="text-sm text-muted">
+            A trip is assigned once it is confirmed.
           </p>
-          {trip.parts
-            .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
-            .map((part) => (
-              <CostRow
-                key={part.id}
-                bookingId={bookingId}
-                part={part}
-                canFulfil={canFulfil}
-              />
-            ))}
-        </div>
-      ))}
+        ) : null}
+        <ul className="grid gap-1 text-sm">
+          {live.map((trip) => (
+            <li key={trip.id} className="flex flex-wrap items-center gap-2">
+              <span>
+                Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
+              </span>
+              {trip.assigned ? (
+                <Badge dot tone="navy">
+                  Assigned
+                </Badge>
+              ) : trip.parts.length > 0 ? (
+                <Badge dot tone="amber">
+                  Waiting to accept
+                </Badge>
+              ) : (
+                <Badge dot>To assign</Badge>
+              )}
+            </li>
+          ))}
+        </ul>
+        {groups.map((group) => (
+          <GroupRow
+            key={`${group.role}:${group.parts[0]!.offerId}`}
+            bookingId={bookingId}
+            group={group}
+            canFulfil={canFulfil}
+          />
+        ))}
+        {canFulfil && groups.length > 0 ? (
+          <ReleaseAll bookingId={bookingId} />
+        ) : null}
+        {owed.map((trip) => (
+          <div
+            key={trip.id}
+            className="grid gap-2 border-t border-hairline pt-3"
+          >
+            <p className="text-sm font-medium">
+              Trip {trip.position}, cancelled: what we owe
+            </p>
+            {trip.parts
+              .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
+              .map((part) => (
+                <CostRow
+                  key={part.id}
+                  bookingId={bookingId}
+                  part={part}
+                  canFulfil={canFulfil}
+                />
+              ))}
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
@@ -217,16 +223,18 @@ function GroupRow({
     group.parts.some((p) => !p.driverAcceptedAt);
 
   return (
-    <div className="grid gap-2 border-t border-slate-100 pt-3">
+    <div className="grid gap-2 border-t border-hairline pt-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-medium">
           {PART_ROLE_LABELS[group.role]}, {tripsName(group.positions)}
         </span>
         <span>{vendor.name}</span>
-        {vendor.isOurs ? <Badge tone="blue">Ours</Badge> : null}
-        <Badge tone={state.tone}>{state.label}</Badge>
+        {vendor.isOurs ? <Badge tone="brand">Ours</Badge> : null}
+        <Badge dot tone={state.tone}>
+          {state.label}
+        </Badge>
       </div>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {named ?? "Vendor to choose"}
         {!vendor.isOurs ? ` · We owe ${formatMyr(cost)}` : null}
       </p>
@@ -314,7 +322,7 @@ function AnswerButton({
       <input type="hidden" name="as" value={as} />
       <input type="hidden" name="accept" value="true" />
       <input type="hidden" name="recorded" value={String(recorded)} />
-      <Button type="submit" size="sm" disabled={pending}>
+      <Button type="submit" size="sm" pending={pending}>
         {label}
       </Button>
       <FormError error={error} size="xs" />
@@ -353,7 +361,7 @@ function DeclineControl({
   return (
     <form
       {...formProps}
-      className="grid w-full gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+      className="grid w-full gap-2 rounded-control border border-card-edge bg-shade p-3"
     >
       <PartFields bookingId={bookingId} partIds={partIds} />
       <input type="hidden" name="as" value={as} />
@@ -377,7 +385,7 @@ function DeclineControl({
         </Field>
       ) : null}
       <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" variant="caution" disabled={pending}>
+        <Button type="submit" size="sm" variant="caution" pending={pending}>
           Record decline
         </Button>
         <Button
@@ -445,7 +453,7 @@ function NameControl({
   return (
     <form
       {...formProps}
-      className="grid w-full gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+      className="grid w-full gap-2 rounded-control border border-card-edge bg-shade p-3"
     >
       <PartFields bookingId={bookingId} partIds={partIds} />
       <Field label={`The ${role} the vendor chose`}>
@@ -460,7 +468,7 @@ function NameControl({
         />
       </Field>
       <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <Button type="submit" size="sm" pending={pending}>
           Name {role}
         </Button>
         <Button
@@ -499,7 +507,7 @@ function ReleaseButton({
   return (
     <form {...formProps} className="grid gap-1">
       <PartFields bookingId={bookingId} partIds={partIds} />
-      <Button type="submit" size="sm" variant="ghost" disabled={pending}>
+      <Button type="submit" size="sm" variant="ghost" pending={pending}>
         Release
       </Button>
       <FormError error={error} size="xs" />
@@ -525,7 +533,7 @@ function ReleaseAll({ bookingId }: { bookingId: string }) {
   return (
     <form {...formProps} className="grid justify-items-start gap-1">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+      <Button type="submit" size="sm" variant="secondary" pending={pending}>
         Release all
       </Button>
       <FormError error={error} size="xs" />
@@ -575,7 +583,7 @@ function CostRow({
   return (
     <form
       {...formProps}
-      className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3"
+      className="grid gap-2 rounded-control border border-card-edge bg-shade p-3"
     >
       {line}
       <input type="hidden" name="bookingId" value={bookingId} />
@@ -594,7 +602,7 @@ function CostRow({
         </Field>
       </div>
       <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <Button type="submit" size="sm" pending={pending}>
           Save
         </Button>
         <Button

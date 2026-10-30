@@ -14,7 +14,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState, useTransition } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import {
   assignAction,
@@ -194,7 +194,7 @@ function RolePicker({
   const label = PART_ROLE_LABELS[role];
   if (trips.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted">
         Every trip has its {role} asked for already.
       </p>
     );
@@ -214,9 +214,7 @@ function RolePicker({
 
   return (
     <fieldset className="grid gap-2">
-      <legend className="mb-1 text-sm font-medium text-slate-800">
-        {label}
-      </legend>
+      <legend className="mb-1 text-sm font-medium text-body">{label}</legend>
       <input type="hidden" name={role} value={posted} />
       {choice.kind === "named" ? (
         <input
@@ -261,11 +259,11 @@ function RolePicker({
         />
       ) : null}
       <ul
-        className="grid max-h-72 gap-1 overflow-y-auto rounded-md border border-slate-200 p-1"
+        className="grid max-h-72 gap-1 overflow-y-auto rounded-control border border-card-edge p-1"
         data-field={role}
       >
         {candidates.length === 0 ? (
-          <li className="p-2 text-sm text-slate-500">No {role} in service.</li>
+          <li className="p-2 text-sm text-muted">No {role} in service.</li>
         ) : (
           candidates.map((candidate) => {
             const usable = candidate.reasons.length === 0;
@@ -274,7 +272,7 @@ function RolePicker({
             return (
               <li key={candidate.id}>
                 <label
-                  className={`flex gap-2 rounded-md p-2 text-sm ${chosen ? "bg-slate-100" : ""} ${usable ? "cursor-pointer hover:bg-slate-50" : "text-slate-400"}`}
+                  className={`flex gap-2 rounded-control p-2 text-sm ${chosen ? "bg-hairline" : ""} ${usable ? "cursor-pointer hover:bg-shade" : "text-muted"}`}
                 >
                   <input
                     type="radio"
@@ -288,11 +286,11 @@ function RolePicker({
                     <span className="flex flex-wrap items-center gap-1.5">
                       <span className="font-medium">{candidate.name}</span>
                       {candidate.vendor.isOurs ? (
-                        <Badge tone="blue">Ours</Badge>
+                        <Badge tone="brand">Ours</Badge>
                       ) : (
                         <span className="text-xs">{candidate.vendor.name}</span>
                       )}
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-muted">
                         {candidate.locationName}
                       </span>
                     </span>
@@ -302,12 +300,12 @@ function RolePicker({
                       </span>
                     ))}
                     {candidate.warnings.map((warning) => (
-                      <span key={warning} className="text-xs text-amber-700">
+                      <span key={warning} className="text-xs text-warning">
                         {warning}
                       </span>
                     ))}
                     {candidate.day.map((line) => (
-                      <span key={line} className="text-xs text-slate-500">
+                      <span key={line} className="text-xs text-muted">
                         {line}
                       </span>
                     ))}

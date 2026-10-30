@@ -14,7 +14,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { reportForDriverAction } from "./fulfil-actions";
 
@@ -50,52 +50,54 @@ export function TripReports({
   );
   if (shown.length === 0) return null;
   return (
-    <Card className="grid gap-4">
+    <Card>
       <CardTitle description="What each driver reported on the day.">
         On the day
       </CardTitle>
-      {shown.map((trip) => {
-        const own = events.filter((e) => e.itemId === trip.id);
-        const waited = waitingMinutes(own);
-        return (
-          <div key={trip.id} className="grid gap-2">
-            <p className="text-sm font-medium">Trip {trip.position}</p>
-            {own.length > 0 ? (
-              <ul className="grid gap-1 text-sm text-slate-700">
-                {own.map((event) => (
-                  <li key={event.id}>
-                    <span className="tabular-nums">
-                      {formatLocalTime(event.at)}
-                    </span>{" "}
-                    {isTripEventKind(event.kind)
-                      ? TRIP_EVENT_LABELS[event.kind]
-                      : event.kind}
-                    {event.note ? (
-                      <span className="text-slate-500"> · {event.note}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">No report yet.</p>
-            )}
-            {waited !== null ? (
-              <p className="text-sm text-slate-600">
-                Waited {waited} min for the passenger.
-              </p>
-            ) : null}
-            {canFulfil &&
-            trip.status !== "cancelled" &&
-            trip.status !== "completed" ? (
-              <ReportForm
-                bookingId={bookingId}
-                itemId={trip.id}
-                next={nextTripStep(own)}
-              />
-            ) : null}
-          </div>
-        );
-      })}
+      <div className="grid gap-4">
+        {shown.map((trip) => {
+          const own = events.filter((e) => e.itemId === trip.id);
+          const waited = waitingMinutes(own);
+          return (
+            <div key={trip.id} className="grid gap-2">
+              <p className="text-sm font-medium">Trip {trip.position}</p>
+              {own.length > 0 ? (
+                <ul className="grid gap-1 text-sm text-body">
+                  {own.map((event) => (
+                    <li key={event.id}>
+                      <span className="tabular-nums">
+                        {formatLocalTime(event.at)}
+                      </span>{" "}
+                      {isTripEventKind(event.kind)
+                        ? TRIP_EVENT_LABELS[event.kind]
+                        : event.kind}
+                      {event.note ? (
+                        <span className="text-muted"> · {event.note}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted">No report yet.</p>
+              )}
+              {waited !== null ? (
+                <p className="text-sm text-muted">
+                  Waited {waited} min for the passenger.
+                </p>
+              ) : null}
+              {canFulfil &&
+              trip.status !== "cancelled" &&
+              trip.status !== "completed" ? (
+                <ReportForm
+                  bookingId={bookingId}
+                  itemId={trip.id}
+                  next={nextTripStep(own)}
+                />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </Card>
   );
 }
@@ -117,7 +119,7 @@ function ReportForm({
   return (
     <form
       {...formProps}
-      className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[12rem_1fr_auto] sm:items-end"
+      className="grid gap-2 rounded-control border border-card-edge bg-shade p-3 sm:grid-cols-[12rem_1fr_auto] sm:items-end"
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <input type="hidden" name="itemId" value={itemId} />
@@ -140,7 +142,7 @@ function ReportForm({
           placeholder="Optional; needed for a problem"
         />
       </Field>
-      <Button type="submit" variant="secondary" disabled={pending}>
+      <Button type="submit" variant="secondary" pending={pending}>
         {pending ? "Saving…" : "Save"}
       </Button>
       <FormError error={error} />

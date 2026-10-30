@@ -33,10 +33,13 @@ reach for, and what to do with a value that has none.
 | `danger`, `danger-strong`, `danger-edge`, `danger-tint`                     | Errors, deleting, expired                                                               |
 | `warning`, `warning-strong`, `warning-edge`, `warning-soft`, `warning-tint` | Waiting on someone, a notice                                                            |
 | `success`, `success-tint`                                                   | Done, saved                                                                             |
+| `danger-dot`, `warning-dot`, `success-dot`                                  | A status's disc of a few pixels, brighter than its words (`StatusDot`)                  |
 | `ring`, `ring-on-dark`                                                      | The keyboard's ring, and on navy or ink                                                 |
 
-Tailwind's slate scale is still there for greys no role covers (a button's hover
-`slate-100`, a skeleton's bone). Never type a hex value or `rgb()` in a class.
+Every grey is one of these roles: no class names Tailwind's palette (`slate-…`,
+`amber-…`) any more. The two exceptions copy colours that are not ours: the zone map's
+legend (the map's own strokes) and the page editor's Google preview (Google's link blue).
+Never type a hex value or `rgb()` in a class.
 
 ## Type
 
@@ -66,23 +69,26 @@ utility is size, spacing and capitals in one: `text-caps font-semibold text-mute
 
 ## Corners, shadows, layers
 
-| Token                                                       | Console      | Site            | Use                                                                                          |
-| ----------------------------------------------------------- | ------------ | --------------- | -------------------------------------------------------------------------------------------- |
-| `rounded-control`                                           | 10px         | 14px            | Buttons and fields                                                                           |
-| `rounded-card`                                              | 14px         | 18px            | Cards and tiles                                                                              |
-| `rounded-panel`                                             | 14px         | 22px            | The site's big panels: the search card                                                       |
-| `rounded-popover`                                           | 12px         | 16px            | Menus, lists, dialogs, toasts                                                                |
-| `shadow-card`                                               | soft navy    | the home page's | A card on the canvas                                                                         |
-| `shadow-raised`                                             |              |                 | A card under the pointer, a pinned bar                                                       |
-| `shadow-panel`                                              |              |                 | A big panel over a photo                                                                     |
-| `shadow-bar`                                                |              |                 | A bar held at the top                                                                        |
-| `shadow-overlay`                                            | same in both |                 | A dialog, sheet, palette, the phone's panel and dock                                         |
-| `shadow-control`, `shadow-cta`, `shadow-band`, `shadow-map` |              |                 | A control on the canvas, the site's primary button, the dashboard's band, a control on a map |
+| Token                                         | Console      | Site            | Use                                                               |
+| --------------------------------------------- | ------------ | --------------- | ----------------------------------------------------------------- |
+| `rounded-control`                             | 10px         | 14px            | Buttons and fields                                                |
+| `rounded-card`                                | 14px         | 18px            | Cards and tiles                                                   |
+| `rounded-panel`                               | 14px         | 22px            | The site's big panels: the search card                            |
+| `rounded-popover`                             | 12px         | 16px            | Menus, lists, dialogs, toasts                                     |
+| `shadow-card`                                 | soft navy    | the home page's | A card on the canvas                                              |
+| `shadow-raised`                               |              |                 | A card under the pointer, a pinned bar                            |
+| `shadow-panel`                                |              |                 | A big panel over a photo                                          |
+| `shadow-bar`                                  |              |                 | A bar held at the top                                             |
+| `shadow-overlay`                              | same in both |                 | A dialog, sheet, palette, the phone's panel and dock              |
+| `shadow-cta`                                  | none         | a blue glow     | The primary button (`Button` adds it)                             |
+| `shadow-control`, `shadow-band`, `shadow-map` | same in both |                 | A control on the canvas, the dashboard's band, a control on a map |
 
-Layers, for `z-(--layer-…)`: `raised` 1, `sticky` 10, `float` 20, `chrome` 30 (the
-header, the dock), `popover` 50. Dialogs and sheets are native `<dialog>`s in the
-top layer, above all of them. A part with its own stack (a map's buttons) is wrapped in
-`isolate`, so its layers stay inside it.
+Layers, for `z-(--layer-…)`: `raised` 1, `overlap` 2 (the hero's search card, whose
+place list opens over the sections below), `sticky` 10, `float` 20, `chrome` 30 (the
+header, the dock), `staff` 40 (the site's preview bar), `popover` 50. Dialogs and
+sheets are native `<dialog>`s in the top layer, above all of them. A part with its own
+stack (a map's buttons, the rate grid's sticky head) is wrapped in `isolate`, so its
+layers stay inside it; small local numbers there are fine.
 
 `--header-height` is the bar held at the top: the console's top bar (64px, 72px from
 `md`) and the site's header (69px, 77px from `sm`). Use it for anything placed under the
@@ -100,45 +106,72 @@ bar (`top-(--header-height)`, `scroll-mt-…`) instead of retyping the number.
 - `text-caps`: small capitals.
 - `scroll-shade-x`: a box that scrolls sideways shows a shadow on the side that hides
   more. On white.
+- `text-link`: a link in a line of words or beside a button: bold, brand, underlined
+  under the pointer, with its ring. Add `underline` when it sits inside a sentence.
+- `card-link`: the link that makes a whole card the target. The card is `relative`;
+  the link's `::after` covers it and takes the ring inside the card's corners.
 
 ## Shared parts to use
 
-- `@repo/ui`: `Button` (`pending` while its work runs, so it keeps the focus), `Field`
-  (`tip` for the "i" beside a label, never an `InfoTip` inside `label`), `Badge`, the
-  inputs. Status chips: `BookingStatusBadge` and `ItemStatusBadge` from
-  `@repo/console/StatusBadges`, in both apps.
-- `@repo/console`: `Notice` (warning, danger, info) for a boxed notice, `EmptyState` and
-  `EmptyRow` for "nothing yet", `FormError` for a refused action.
+Where a part goes: used by both apps, or generic, in `@repo/ui`; used only by the console
+in `@repo/console`; used by one app only, in a module of that app. The site does not
+compile `@repo/console`'s classes, so anything the site shows lives in `@repo/ui`.
+
+- `@repo/ui`:
+  - `Button`: variants `primary`, `secondary`, `outline` (the site's quiet choice, in
+    brand), `danger`, `caution`, `destructive`, `ghost`, `ghost-danger`; sizes `sm`
+    32px, `md` 40px, `lg` 48px (the site's booking buttons), `icon-sm` and `icon`
+    (square, with an `aria-label`). Pressed shows the hover colour and gives a little;
+    `pending` spins and keeps the focus while the work runs; `asChild` styles a `Link`.
+    No app writes its own button classes.
+  - `Field` (`tip` for the "i" beside a label, never an `InfoTip` inside `label`),
+    `Input`, `Select`, `Combobox`, `DateField`, `NumberField`, `Checkbox`, `Radio`,
+    `Switch`.
+  - `Badge` and `StatusDot` (same tones); `Notice` (warning, danger, info) for a boxed
+    notice; `FormError` for a refused action; `Bone` and `Loading` for skeletons;
+    `Rows` and `PlaceValue` for label and value lists; `Logo` (brand or white; the
+    site's `HomeLink` wraps it); `DialogActions` for a dialog's buttons (Cancel is
+    `secondary`); `SheetHeader`.
+  - One icon library, `@repo/ui/icons`, the site's own drawings included.
+  - Browser helpers: `useMediaQuery` / `useNarrow`, `useDismiss` (Escape and a press
+    outside), `isTyping`, `scrollBehavior` and `prefersReducedMotion`.
+- `@repo/console`: `Card`, `Tile`, `Table`, `PageHeader`, `SectionHeader`, `EmptyState`
+  and `EmptyRow`, `FigureTiles`, `StepMark`, `LocationMark`, `FormFoot` and
+  `CancelLink`, the page skeletons. Status chips (`BookingStatusBadge`,
+  `ItemStatusBadge`, `PAGE_TONES`…) are in `@repo/console/StatusBadges` and shown by
+  both apps; they may only use `Badge`, never console classes of their own.
 
 ## Mapping a typed value
 
-| Typed                                              | Token                                                     |
-| -------------------------------------------------- | --------------------------------------------------------- |
-| 10–11.5px, 0.55–0.72rem                            | `text-2xs`                                                |
-| 12px, 0.75–0.78rem                                 | `text-xs`                                                 |
-| 12.5–13px, 0.8–0.85rem                             | `text-caption`                                            |
-| 14px, 0.875–0.88rem                                | `text-sm`                                                 |
-| 15px, 0.9–0.98rem                                  | `text-copy`                                               |
-| 16px, 1–1.02rem                                    | `text-base`                                               |
-| 1.05–1.08rem                                       | `text-lead`                                               |
-| 1.12–1.2rem                                        | `text-lg`                                                 |
-| 1.3–1.4rem                                         | `text-xl`                                                 |
-| 1.5rem                                             | `text-2xl`                                                |
-| 1.65–1.8rem                                        | `text-figure`                                             |
-| 1.875–2rem                                         | `text-3xl`                                                |
-| 2.125rem                                           | `text-title`                                              |
-| 2.25–2.5rem                                        | `text-4xl`                                                |
-| 9px, 10px corners in the console; 14px on the site | `rounded-control`                                         |
-| 14px in the console; 17–20px on the site           | `rounded-card`                                            |
-| 22px on the site                                   | `rounded-panel`                                           |
-| slate-500, slate-600 text                          | `text-muted`                                              |
-| slate-700 to slate-900 text                        | `text-body`, or `text-ink` for a heading                  |
-| slate-200 edge                                     | `border-card-edge`, or `border-hairline` between rows     |
-| slate-300 edge                                     | `border-edge`                                             |
-| slate-50 / slate-100 fill                          | `bg-shade` / `bg-hairline`                                |
-| red, `#b3261e`                                     | `danger`; its tints `danger-tint`, `danger-edge`          |
-| amber, `#7a5a00`, `#fff4d6`                        | `warning`, `warning-soft`, `warning-tint`, `warning-edge` |
-| green, emerald                                     | `success`, `success-tint`                                 |
+| Typed                                              | Token                                                           |
+| -------------------------------------------------- | --------------------------------------------------------------- |
+| 10–11.5px, 0.55–0.72rem                            | `text-2xs`                                                      |
+| 12px, 0.75–0.78rem                                 | `text-xs`                                                       |
+| 12.5–13px, 0.8–0.85rem                             | `text-caption`                                                  |
+| 14px, 0.875–0.88rem                                | `text-sm`                                                       |
+| 15px, 0.9–0.98rem                                  | `text-copy`                                                     |
+| 16px, 1–1.02rem                                    | `text-base`                                                     |
+| 1.05–1.08rem                                       | `text-lead`                                                     |
+| 1.12–1.2rem                                        | `text-lg`                                                       |
+| 1.3–1.4rem                                         | `text-xl`                                                       |
+| 1.5rem                                             | `text-2xl`                                                      |
+| 1.65–1.8rem                                        | `text-figure`                                                   |
+| 1.875–2rem                                         | `text-3xl`                                                      |
+| 2.125rem                                           | `text-title`                                                    |
+| 2.25–2.5rem                                        | `text-4xl`                                                      |
+| 9px, 10px corners in the console; 14px on the site | `rounded-control`                                               |
+| 14px in the console; 17–20px on the site           | `rounded-card`                                                  |
+| 22px on the site                                   | `rounded-panel`                                                 |
+| slate-500, slate-600 text                          | `text-muted`                                                    |
+| slate-700 to slate-900 text                        | `text-body`, or `text-ink` for a heading                        |
+| slate-200 edge                                     | `border-card-edge`, or `border-hairline` between rows           |
+| slate-300 edge                                     | `border-edge`                                                   |
+| slate-50 / slate-100 fill                          | `bg-shade` / `bg-hairline`                                      |
+| red, `#b3261e`                                     | `danger`; its tints `danger-tint`, `danger-edge`                |
+| amber, `#7a5a00`, `#fff4d6`                        | `warning`, `warning-soft`, `warning-tint`, `warning-edge`       |
+| green, emerald                                     | `success`, `success-tint`                                       |
+| a status dot: amber, green or red 500–600          | `StatusDot`, or `bg-warning-dot` / `success-dot` / `danger-dot` |
+| `z-[1]`, `z-10`…                                   | the `--layer-…` with that job                                   |
 
 Left as typed, on purpose: sizes in `em` (relative to their text), layout arithmetic
 (`max-w-[calc(100vw-4rem)]`, grid templates), and the colours Google Maps draws with (its

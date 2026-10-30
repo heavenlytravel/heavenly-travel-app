@@ -36,17 +36,18 @@ reaches 400 ms and shows nothing.
 
 ### Forms say so on their button
 
-A move made by a form is not a link click, so a form shows its own state. `Pending` (in
-`(site)/_components/Page.tsx`) is the one way to write it: a turning `SpinnerIcon` from
-`@repo/ui/icons` and what the button is doing. Every pending button on the site uses it:
+A move made by a form is not a link click, so a form shows its own state. The shared
+`Button`'s `pending` is the one way to write it: the button spins, fades and ignores
+presses, but keeps the focus. Where the words change, they say what it is doing.
+`Pending` (in `(site)/_components/Page.tsx`) is only for the status lines that are not
+buttons. The pending buttons on the site:
 
-| Button                       | Pending text            |
-| ---------------------------- | ----------------------- |
-| Search card                  | Finding prices…         |
-| Continue on the options page | Preparing your booking… |
-| Edit in the trip bar         | Updating prices…        |
-| Confirm booking              | Booking…                |
-| Yes, cancel this booking     | Cancelling…             |
+| Button                       | Pending text    |
+| ---------------------------- | --------------- |
+| Search card                  | Finding prices… |
+| Continue on the options page | Continue · RM … |
+| Confirm booking              | Booking…        |
+| Yes, cancel this booking     | Cancelling…     |
 
 `useNavigate` (in `_lib`) is how a form opens a page: a `router.push` inside a transition,
 so `pending` stays true until the next page is on screen. `useTripSubmit` goes through it,

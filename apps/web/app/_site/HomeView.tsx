@@ -9,6 +9,7 @@ import {
   MissingPart,
   emptyPartsOf,
 } from "../_components/page-parts";
+import { HomeSectionHeading } from "../_components/page-headings";
 import { SearchProvider } from "../_components/search/SearchProvider";
 import {
   DestinationCards,
@@ -17,7 +18,6 @@ import {
 } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
 import { Booking, Trust } from "../_home/Sections";
-import { eyebrow } from "../(site)/_components/Page";
 import { faqDataOf } from "../_lib/seo";
 
 /**
@@ -153,16 +153,13 @@ export function HomeView({
           aria-labelledby="services-title"
           className="scroll-mt-8 px-3 pt-[75px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px]"
         >
-          <p className={`${eyebrow} mb-2`}>What we offer</p>
-          <h2
+          <HomeSectionHeading
             id="services-title"
-            className="font-serif text-display leading-none"
+            eyebrow="What we offer"
+            lead="See where each one runs."
           >
             Our services
-          </h2>
-          <p className="mt-[13px] mb-[34px] text-lead text-muted">
-            See where each one runs.
-          </p>
+          </HomeSectionHeading>
           <PhotoCards cards={services} />
         </section>
 
@@ -171,16 +168,13 @@ export function HomeView({
           aria-labelledby="destinations-title"
           className="scroll-mt-8 px-3 pt-[75px] pb-[55px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px] sm:pb-[90px]"
         >
-          <p className={`${eyebrow} mb-2`}>Locations we cover</p>
-          <h2
+          <HomeSectionHeading
             id="destinations-title"
-            className="font-serif text-display leading-none"
+            eyebrow="Locations we cover"
+            lead="Start with where you are going."
           >
             Choose your destination
-          </h2>
-          <p className="mt-[13px] mb-[34px] text-lead text-muted">
-            Start with where you are going.
-          </p>
+          </HomeSectionHeading>
           <DestinationCards choices={choices} />
         </section>
 

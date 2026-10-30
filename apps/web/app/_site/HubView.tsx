@@ -11,7 +11,6 @@ import {
   type ServiceLocationCard,
   type SitePageKey,
 } from "@repo/db/server";
-import { eyebrow } from "../(site)/_components/Page";
 import {
   Faqs,
   HomeCrumbs,
@@ -26,6 +25,7 @@ import {
   gutter,
   missingBlock,
 } from "../_components/page-parts";
+import { HeroHeading } from "../_components/page-headings";
 import type { PhotoCard } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
 import { faqDataOf } from "../_lib/seo";
@@ -124,22 +124,22 @@ export function HubView({
               </p>
             )}
             <HomeCrumbs current={label} />
-            <p className={`${eyebrow} mt-7 mb-3`}>Our services</p>
-            <h1
-              id="hero-title"
-              className="max-w-[18ch] font-serif text-display-lg leading-[0.98] text-ink"
+            <HeroHeading
+              eyebrow="Our services"
+              line={
+                <>
+                  {subheadline}
+                  {content && !content.heroSubheadline && empty.subheadline && (
+                    <MissingMark part={empty.subheadline} />
+                  )}
+                </>
+              }
             >
               {headline}
               {content && !content.heroHeadline && empty.headline && (
                 <MissingMark part={empty.headline} />
               )}
-            </h1>
-            <p className="mt-4 max-w-[540px] text-body sm:text-lg">
-              {subheadline}
-              {content && !content.heroSubheadline && empty.subheadline && (
-                <MissingMark part={empty.subheadline} />
-              )}
-            </p>
+            </HeroHeading>
           </div>
         </div>
       </section>

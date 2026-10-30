@@ -7,19 +7,19 @@ import {
   type PageContent,
   type SitePageKey,
 } from "@repo/db/server";
-import { eyebrow, textLink } from "../(site)/_components/Page";
+import { eyebrow } from "../(site)/_components/Page";
 import {
   Cover,
   Faqs,
   HomeCrumbs,
   JsonLd,
   MissingMark,
-  MissingPart,
   Prose,
   emptyPartsOf,
   formatPageDate,
   gutter,
 } from "../_components/page-parts";
+import { ArticleHeading } from "../_components/page-headings";
 import { faqDataOf } from "../_lib/seo";
 
 /**
@@ -55,25 +55,16 @@ export function SiteDocumentView({
         <header className={`pt-7 ${gutter}`}>
           <div className="mx-auto w-full max-w-[900px]">
             <HomeCrumbs current={label} />
-            <p className={`${eyebrow} mt-8 mb-3`}>Heavenly Travel</p>
-            <h1 className="font-serif text-display leading-[1.02] text-ink">
+            <ArticleHeading
+              eyebrow="Heavenly Travel"
+              line={content.heroSubheadline}
+              emptyLine={empty.subheadline}
+            >
               {content.heroHeadline || label}
               {!content.heroHeadline && empty.headline && (
                 <MissingMark part={empty.headline} />
               )}
-            </h1>
-            {content.heroSubheadline ? (
-              <p className="mt-4 max-w-[640px] text-lg text-body">
-                {content.heroSubheadline}
-              </p>
-            ) : (
-              empty.subheadline && (
-                <MissingPart
-                  part={empty.subheadline}
-                  className="mt-4 min-h-11 max-w-[640px] rounded-xl"
-                />
-              )
-            )}
+            </ArticleHeading>
             {publishedAt && page !== "about-us" && page !== "contact-us" && (
               <p className="mt-5 text-copy text-muted">
                 Last updated{" "}
@@ -134,12 +125,12 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
         <div className="grid content-start gap-2">
           <p className={`${eyebrow} mb-0`}>Reach us</p>
           {phoneHref && (
-            <a href={phoneHref} className={textLink}>
+            <a href={phoneHref} className="text-link">
               {footer.phone}
             </a>
           )}
           {footer.email && (
-            <a href={`mailto:${footer.email}`} className={textLink}>
+            <a href={`mailto:${footer.email}`} className="text-link">
               {footer.email}
             </a>
           )}
@@ -148,7 +139,7 @@ function CompanyDetails({ footer }: { footer: FooterContent }) {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className={textLink}
+              className="text-link"
             >
               WhatsApp {footer.whatsapp}
             </a>

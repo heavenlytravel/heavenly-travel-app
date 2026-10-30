@@ -44,7 +44,11 @@ import {
   missingLook,
   type EmptyPart,
   type PageCardData,
+  CardCta,
+  PhotoBadge,
+  photoZoom,
 } from "../_components/page-parts";
+import { ArticleHeading, HeroHeading } from "../_components/page-headings";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
 import { SEARCH_CARD_ID, type ProductKey } from "../_lib/search";
@@ -401,34 +405,24 @@ function Hero({
             </p>
           )}
           <Breadcrumbs crumbs={crumbsOf(location, page, preview)} />
-          <p className={`${eyebrow} mt-7 mb-3`}>
-            {eyebrowOf(location, page)}
-            {/* The main page's eyebrow is its tagline, "Destination" until it is written. */}
-            {page.page === LANDING_PAGE &&
-              !location.tagline &&
-              empty.tagline && <MissingMark part={empty.tagline} />}
-          </p>
-          <h1
-            id="hero-title"
-            className="max-w-[18ch] font-serif text-display-lg leading-[0.98] text-ink"
+          <HeroHeading
+            eyebrow={
+              <>
+                {eyebrowOf(location, page)}
+                {/* The main page's eyebrow is its tagline, "Destination" until it is written. */}
+                {page.page === LANDING_PAGE &&
+                  !location.tagline &&
+                  empty.tagline && <MissingMark part={empty.tagline} />}
+              </>
+            }
+            line={content.heroSubheadline}
+            emptyLine={empty.subheadline}
           >
             {content.heroHeadline || pageNameInView(location, page)}
             {!content.heroHeadline && empty.headline && (
               <MissingMark part={empty.headline} />
             )}
-          </h1>
-          {content.heroSubheadline ? (
-            <p className="mt-4 max-w-[540px] text-body sm:text-lg">
-              {content.heroSubheadline}
-            </p>
-          ) : (
-            empty.subheadline && (
-              <MissingPart
-                part={empty.subheadline}
-                className="mt-4 min-h-11 max-w-[540px] rounded-xl"
-              />
-            )
-          )}
+          </HeroHeading>
           {address ? (
             <TakeMeHere address={address} />
           ) : (
@@ -446,7 +440,7 @@ function Hero({
         id={SEARCH_CARD_ID}
         role="search"
         aria-label="Travel booking search"
-        className="relative z-[3] mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
+        className="relative z-(--layer-overlap) mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
       >
         {paused ? <PausedNotice name={location.name} /> : <ServiceTabsSearch />}
       </div>
@@ -462,10 +456,7 @@ function PausedNotice({ name }: { name: string }) {
       <p className="mt-2 max-w-[62ch] text-lead text-body">
         We are not taking new bookings for {name} at the moment. Please check
         back soon, or{" "}
-        <Link
-          href="/"
-          className="font-semibold text-brand underline underline-offset-4 focus-ring"
-        >
+        <Link href="/" className="text-link underline">
           see where else we go
         </Link>
         .
@@ -547,14 +538,10 @@ function Services({
                         alt=""
                         fill
                         sizes="(min-width: 64rem) 400px, (min-width: 40rem) 50vw, 100vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+                        className={photoZoom}
                       />
                     )}
-                    {def.comingSoon && (
-                      <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-caps font-bold text-brand">
-                        Soon
-                      </span>
-                    )}
+                    {def.comingSoon && <PhotoBadge>Soon</PhotoBadge>}
                   </span>
                   <span className="flex items-start gap-4 p-5 sm:p-6">
                     {product && (
@@ -570,14 +557,11 @@ function Services({
                         {def.label}
                       </strong>
                       <span className="mt-1 block text-muted">{def.note}</span>
-                      <span className="mt-3 block text-copy font-bold text-brand underline-offset-4 group-hover:underline">
+                      <CardCta>
                         {childrenOf(entry.page)?.type === "classes"
                           ? "See vehicles and prices"
-                          : "Explore"}{" "}
-                        <span aria-hidden className="ml-1.5">
-                          →
-                        </span>
-                      </span>
+                          : "Explore"}
+                      </CardCta>
                     </span>
                   </span>
                 </Link>
@@ -845,28 +829,16 @@ function BlogHeader({
     <header className={`pt-7 ${gutter}`}>
       <div className="mx-auto w-full max-w-[900px]">
         <Breadcrumbs crumbs={crumbsOf(location, page, preview)} />
-        <p className={`${eyebrow} mt-8 mb-3`}>{eyebrowOf(location, page)}</p>
-        <h1
-          id="hero-title"
-          className="font-serif text-display leading-[1.02] text-ink"
+        <ArticleHeading
+          eyebrow={eyebrowOf(location, page)}
+          line={content.heroSubheadline}
+          emptyLine={empty.subheadline}
         >
           {content.heroHeadline || pageNameInView(location, page)}
           {!content.heroHeadline && empty.headline && (
             <MissingMark part={empty.headline} />
           )}
-        </h1>
-        {content.heroSubheadline ? (
-          <p className="mt-4 max-w-[640px] text-lg text-body">
-            {content.heroSubheadline}
-          </p>
-        ) : (
-          empty.subheadline && (
-            <MissingPart
-              part={empty.subheadline}
-              className="mt-4 min-h-11 max-w-[640px] rounded-xl"
-            />
-          )
-        )}
+        </ArticleHeading>
         {published && (
           <p className="mt-5 text-copy text-muted">
             <time dateTime={published}>{formatPageDate(published)}</time>

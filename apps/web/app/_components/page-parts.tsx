@@ -330,6 +330,31 @@ export function Faqs({
   );
 }
 
+/** A card's photo that grows a touch while its card (a `group`) is under the pointer. */
+export const photoZoom =
+  "object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none";
+
+/** A small mark over a card's photo, which must be `relative`: "Soon". */
+export function PhotoBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-caps font-bold text-brand">
+      {children}
+    </span>
+  );
+}
+
+/** Under a card's words, where it leads, with its arrow, underlined while the card (a `group`) is under the pointer. */
+export function CardCta({ children }: { children: ReactNode }) {
+  return (
+    <span className="mt-3 block text-copy font-bold text-brand underline-offset-4 group-hover:underline">
+      {children}{" "}
+      <span aria-hidden className="ml-1.5">
+        →
+      </span>
+    </span>
+  );
+}
+
 /** One card that opens a page: its hero image, its name and its line. */
 export type PageCardData = {
   key: string;
@@ -370,32 +395,18 @@ export function PageCards({
                 alt={card.image.alt}
                 fill
                 sizes="(min-width: 64rem) 400px, (min-width: 40rem) 50vw, 100vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+                className={photoZoom}
               />
             )}
-            {card.badge && (
-              <span className="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-caps font-bold text-brand">
-                {card.badge}
-              </span>
-            )}
+            {card.badge && <PhotoBadge>{card.badge}</PhotoBadge>}
           </div>
           <h3 className="mt-4 font-serif text-2xl leading-tight text-ink">
-            <Link
-              href={card.href}
-              className="after:absolute after:inset-0 after:rounded-card after:content-[''] hover:text-brand focus-ring"
-            >
+            <Link href={card.href} className="card-link hover:text-brand">
               {card.title}
             </Link>
           </h3>
           {card.text && <p className="mt-1.5 text-body">{card.text}</p>}
-          {card.cta && (
-            <span className="mt-3 text-copy font-bold text-brand underline-offset-4 group-hover:underline">
-              {card.cta}{" "}
-              <span aria-hidden className="ml-1.5">
-                →
-              </span>
-            </span>
-          )}
+          {card.cta && <CardCta>{card.cta}</CardCta>}
           {card.extra && (
             <div className="relative z-(--layer-raised)">{card.extra}</div>
           )}

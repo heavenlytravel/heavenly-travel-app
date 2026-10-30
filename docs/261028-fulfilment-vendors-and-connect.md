@@ -109,9 +109,10 @@ received ──► confirmed ──► assigned ──► completed
 docs/261030-sign-in-connect-onboarding-and-media.md, "Connect"): `/register` takes the
 whole form and a password, and sending it starts the sign-up, whose email code makes the
 account and sends the registration together. An email with an account signs in instead,
-and an account that registered already goes to its status page. `/join` and `/sign-up`
-lead to `/register`; Connect's landing page at `/` leads there too. A pending vendor sees
-its status page, not "Waiting for approval". What follows is the flow as first built.
+and an account that registered already goes to its status page. Connect's landing page
+at `/` leads there. A pending vendor sees its status page, `/status`, not "Waiting for
+approval". Connect's own screens are under `/~` (`/~/jobs`, `/~/vehicles`, `/~/staff`,
+`/~/account`), as manage's are, so `/` stays the landing page for everyone. What follows is the flow as first built.
 
 Clerk first, then our form (decided 2026-10-28, replaced 2026-10-31):
 

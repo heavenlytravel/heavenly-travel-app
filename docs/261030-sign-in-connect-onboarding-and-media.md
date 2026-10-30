@@ -128,7 +128,8 @@ Signed in as `claude_seo+clerk_test@example.com` (REGULAR, team SEO, the wall on
   signed in, a pending one goes straight to its status page and an approved one straight to
   Connect's dashboard; refused or suspended, to its screen. A signed-in visitor who opens
   `/join` goes the same way. An account that drives for a vendor is refused, as today.
-- **Addresses**: `/register` is the one way in; `/join` and `/sign-up` redirect to it.
+- **Addresses**: `/register` is the one way in (round two dropped `/join` and
+  `/sign-up`).
 - **Status is a page, not Connect** (S1): `/` shows a pending vendor's owner the tracker
   (sent, being checked, Connect opens), what was sent, and how to reach the team. Nothing
   of Connect opens before the approval. Refused and suspended keep their screens, redone
@@ -194,6 +195,37 @@ own CSS keeps only motion (the rising card, the live ping).
   Status.
 - `bg-band` moved into the shared tokens; manage's dashboard and every Connect screen use
   it.
+
+### Round two, after the user's review (2026-10-31)
+
+- **Connect's screens moved under `/~`**, as manage's are: `/~` is the home (jobs),
+  then `/~/jobs/…`, `/~/vehicles`, `/~/drivers`, `/~/staff` and `/~/account`. `/` is
+  the landing page for everyone; signed in, its header offers "Open Connect" in place of
+  "Sign in" and "Register". A scope by location could take the `~`'s place later. A
+  sign-in lands on `/~`, the app's start (`start_url`) is `/~`, and the approval
+  email's "Open Connect" opens `/~`.
+- **The status page is `/status`**: a pending vendor sent to `/~` or `/register` goes
+  there, and anyone else who opens it goes to `/~`.
+- **No `/join` or `/sign-up` in Connect**: neither was ever linked from production
+  (`/join` never reached `main`), so they were removed rather than kept as redirects.
+  Connect's `NEXT_PUBLIC_CLERK_SIGN_UP_URL` is `/register`, and it no longer reads
+  `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL`.
+- **The registration keeps the person on the account**: the phone typed goes to the
+  account's `phone` (as a booking's does), and the names to Clerk when the account
+  has none (`keepApplicantProfile`). The field is "Phone number", the WhatsApp.
+- **The code is six boxes**: one real input over them, so typing, pasting and the phone's
+  fill from the email work as in any field.
+- **No account with the email** reads as Clerk says it, "Couldn't find your account.";
+  the website and Connect add their way on (sign up, register), manage nothing.
+- **A sign-in or sign-up leaves by a whole page load**, not a client navigation: every
+  server component reads the new session, and React's timings in development no longer
+  throw "cannot have a negative time stamp" when the page they land on redirects.
+- **Connect**: the logo stands alone, without the "Connect" chip; the landing page's links
+  to its parts scroll smoothly; the loading skeleton is `/~`'s only, so the landing,
+  `/register` and `/status` no longer flash the dashboard's; `/register` signed out has
+  no account circle.
+- **The website's sign-up stays names, email and password**: the phone is asked at a
+  booking's confirm step, which keeps it on the account.
 
 ## Outside the code (the developer, in Clerk's dashboard, both instances)
 

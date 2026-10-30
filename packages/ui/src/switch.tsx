@@ -21,8 +21,9 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cx(
-        "ui:relative ui:inline-flex ui:h-6 ui:w-11 ui:shrink-0 ui:items-center ui:rounded-full ui:transition-colors ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring ui:disabled:opacity-50",
-        checked ? "ui:bg-emerald-600" : "ui:bg-slate-300",
+        "ui:touch-target ui:inline-flex ui:h-6 ui:w-11 ui:shrink-0 ui:items-center ui:rounded-full ui:transition-colors ui:focus-ring ui:disabled:cursor-not-allowed ui:disabled:opacity-50",
+        // Off, the track is the strong edge, 3:1 on white as a control must be.
+        checked ? "ui:bg-brand" : "ui:bg-edge-strong",
       )}
     >
       <span

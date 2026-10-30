@@ -2,105 +2,102 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { Permission } from "@repo/db";
+import { cx } from "@repo/ui/cx";
+import { Logo } from "@repo/ui/logo";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
+  useSidebarCollapsed,
 } from "@repo/ui/sidebar";
 import type { MouseEvent, ReactNode } from "react";
-import { KEEPS_PANEL } from "./ConsoleMenu";
-import type { Permission } from "@repo/db";
+import { dashboardHref } from "../_lib/routes";
 import { ConsoleDock } from "./ConsoleSearch";
-import { ScopePicker } from "./ScopePicker";
-
-/** A location as the picker lists it. */
-export type SidebarLocation = {
-  id: string;
-  name: string;
-  slug: string;
-  state: string;
-};
+import { ScopePicker, type PickerLocation } from "./ScopePicker";
 
 /**
- * The console's sidebar: the brand mark on top, then the menu of the
- * scope the picker in the header is on, from the layout's `@scope` slot.
- * On a location it holds that location alone; on All locations, the views
- * across locations and the console's own screens. Collapsed it is a rail
- * of icons with the labels as tooltips. Below `md` it is a panel over the
- * page, opened from the dock floating at the screen's foot, which holds
- * the search too. In place of the brand mark it has the location picker,
- * so the admin sees which location the menu is of, and can change it
- * there: the panel stays, with the other location's menu. A link in the
- * menu closes it, except a drill's row, which opens its menu there. See
- * docs/261023-console-sidebar.md.
+ * The console's sidebar, navy to ink: the brand on top, then the one
+ * menu. Collapsed it is a rail of icons with the names as tooltips; the
+ * button that folds it is in the top bar, where it stays either way. Below
+ * `md` it is a panel over the page, opened from the dock floating at the
+ * screen's foot, which holds the search too, with the location picker on
+ * top in the brand's place. A link in the panel closes it; opening a
+ * section does not. See docs/261029-manage-signature-overhaul.md, "The
+ * menu".
  */
 export function AppSidebar({
-  scope,
+  menu,
   locations,
   permissions,
 }: {
-  /** The scope's menu, from the `@scope` slot. */
-  scope: ReactNode;
-  locations: readonly SidebarLocation[];
+  /** The menu, drawn on the server with its counts streaming in. */
+  menu: ReactNode;
+  locations: readonly PickerLocation[];
   permissions: readonly Permission[];
 }) {
   const { setOpenMobile } = useSidebar();
-  // A link pressed anywhere in the panel closes it; a drill's row and a
-  // button do not. On a wide screen there is no panel to close.
+  // A link pressed anywhere in the panel closes it; a button does not. On a
+  // wide screen there is no panel to close.
   const closeOnLink = (event: MouseEvent<HTMLElement>) => {
-    const link = (event.target as Element).closest("a");
-    if (link && !link.matches(KEEPS_PANEL)) setOpenMobile(false);
+    if ((event.target as Element).closest("a")) setOpenMobile(false);
   };
 
   return (
     <>
-      <Sidebar title="Console menu" dock={<ConsoleDock />}>
-        <SidebarHeader className="md:hidden">
-          <ScopePicker
-            locations={locations}
-            permissions={permissions}
-            className="w-full"
-          />
+      <Sidebar title="Console menu" tone="navy" dock={<ConsoleDock />}>
+        <SidebarHeader className="border-b border-white/10 p-3 md:hidden">
+          <ScopePicker locations={locations} permissions={permissions} full />
         </SidebarHeader>
-        <SidebarHeader onClick={closeOnLink} className="max-md:hidden">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                size="lg"
-                tooltip="Heavenly Travel Admin"
-              >
-                <Link href="/">
-                  <Image
-                    src="/brand/favicon.png"
-                    alt=""
-                    width={32}
-                    height={32}
-                    priority
-                    className="size-8 shrink-0 rounded-lg"
-                  />
-                  <span className="grid flex-1 leading-tight">
-                    <SidebarLabel className="text-sm font-semibold">
-                      Heavenly Travel
-                    </SidebarLabel>
-                    <SidebarLabel className="text-xs text-slate-500">
-                      Admin console
-                    </SidebarLabel>
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-
-        <SidebarContent onClick={closeOnLink}>{scope}</SidebarContent>
+        <Brand onLink={closeOnLink} />
+        <SidebarContent onClick={closeOnLink} className="py-3">
+          {menu}
+        </SidebarContent>
       </Sidebar>
       <ConsoleDock />
     </>
+  );
+}
+
+/**
+ * The brand at the sidebar's head, as high as the top bar beside it: the
+ * logo in white, a link to the dashboard of every location. On the rail,
+ * the brand's mark alone. The link goes to `/~` itself: `/` only sends
+ * on to it, and the page between would show blank for a moment.
+ */
+function Brand({
+  onLink,
+}: {
+  onLink: (event: MouseEvent<HTMLElement>) => void;
+}) {
+  const collapsed = useSidebarCollapsed();
+  return (
+    <SidebarHeader
+      onClick={onLink}
+      className={cx(
+        "h-(--header-height) flex-row items-center border-b border-white/10 max-md:hidden",
+        collapsed ? "justify-center" : "px-5",
+      )}
+    >
+      <Link
+        href={dashboardHref(null)}
+        aria-label="Heavenly Travel, the dashboard"
+        className="flex min-w-0 items-center rounded-md focus-ring focus-ring-dark"
+      >
+        {collapsed ? (
+          <Image
+            src="/brand/favicon.png"
+            alt=""
+            width={32}
+            height={32}
+            priority
+            className="size-8 rounded-lg"
+          />
+        ) : (
+          <Logo tone="white" alt="" loading="eager" className="h-6.5" />
+        )}
+      </Link>
+    </SidebarHeader>
   );
 }

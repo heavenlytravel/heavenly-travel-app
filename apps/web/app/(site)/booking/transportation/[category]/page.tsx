@@ -13,7 +13,7 @@ type Props = PageProps<"/booking/transportation/[category]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const category = bookableCategory((await params).category);
-  if (!category) return {};
+  if (!category) notFound();
   return { title: `${TRIP_CATEGORY_LABELS[category]} | Heavenly Travel` };
 }
 

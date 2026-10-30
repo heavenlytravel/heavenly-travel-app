@@ -1,18 +1,21 @@
-@theme {
-  --color-blue-1000: #2a8af6;
-  --color-purple-1000: #a853ba;
-  --color-red-1000: #e92a67;
-}
-
 /*
- * Heavenly Travel's colours, read from heavenlytravel.my and its logo, for
- * both apps and @repo/ui. They are plain custom properties so the apps, the
- * `ui:`-prefixed build of @repo/ui and inline styles all read one name; the
- * theme below makes each a utility (`bg-brand`, `text-ink`, `ui:bg-brand`).
- * The greys are Tailwind's slate, the cool grey of the site's own text.
- * The colour notes are in docs/260923-home-design.md.
+ * Heavenly Travel's design tokens, the one source for both apps and for
+ * @repo/ui. The rules for using them are in docs/261029-design-tokens.md.
+ *
+ * Every token is a plain custom property, so the apps, the `ui:`-prefixed
+ * build of @repo/ui and inline styles (Clerk's theme) all read one name.
+ * The `@theme inline` blocks make each a utility: `bg-brand`, `text-muted`,
+ * `rounded-card`, `shadow-overlay`, `text-caption`, `ui:border-edge`.
+ *
+ * Colours are the same in both apps. Shape (corners, shadows) and a few
+ * sizes differ: the customer site is rounder and softer than the console.
+ * Each app names itself on <html> (`data-app="site"` or `"console"`), and
+ * the blocks at the end set its values; the defaults under :root are the
+ * console's, so a part shown outside either app still looks finished.
  */
 :root {
+  /* Brand, read from heavenlytravel.my and its logo (docs/260923-home-design.md). */
+
   /* The site's primary: buttons, links, the active tab, prices. */
   --brand: #046bd2;
   /* The primary under the pointer, and pressed. */
@@ -23,12 +26,132 @@
   --navy: #003876;
   /* The site's headings, and the darkest surfaces. */
   --ink: #00264b;
-  /* The logo's light blue: focus rings, accent bars and lines. */
+  /* The logo's light blue: accent bars and lines. */
   --azure: #0f86ce;
-  /* The same light blue lifted for words on navy and ink. */
+  /* The same light blue lifted for words and focus rings on navy and ink. */
   --azure-light: #8fcdf4;
-  /* The site's pale section background, and empty photo frames. */
+  /* The pale section background, the console's canvas, empty photo frames. */
   --mist: #f0f5fa;
+
+  /* Neutrals: Tailwind's slate, the cool grey of the site's own text. */
+
+  /* The page behind the cards: mist in the console, slate-50 on the site. */
+  --canvas: var(--mist);
+
+  /* The text of a page. */
+  --body: #1e293b;
+  /* Words that step back: meta, a column's name, a placeholder. 5:1 on white, 4.6:1 on mist. */
+  --muted: #5b6b80;
+  /* The edge of a control: a field, a button, the picker. */
+  --edge: #cad5e2;
+  /* The edge of a box you tick or flip, 3:1 on white as a control's outline must be. */
+  --edge-strong: #62748e;
+  /* A card's edge, a shade lighter than a control's. */
+  --card-edge: #e3eaf2;
+  /* The hairline between a card's rows and under its title. */
+  --hairline: #eef2f7;
+  /* A table's heading row, a grouping row, a quiet chip. */
+  --shade: #f7f9fc;
+  /* A row or a quiet button under the pointer. */
+  --hover: #f6f9fd;
+  /* The dashed edge of an empty slot: add a photo, add another trip. */
+  --slot: #b8cde3;
+
+  /*
+   * Feedback, each pair 4.5:1 or better as text on its tint. The `-dot`
+   * shade is brighter, for a status's disc of a few pixels: a figure tile,
+   * a page's state, a count waiting in the menu.
+   */
+
+  /* Something went wrong or will be lost: errors, delete, an expired document. */
+  --danger: #b3261e;
+  --danger-strong: #961d16;
+  --danger-edge: oklch(88.5% 0.062 18.334);
+  --danger-tint: #fbe9e7;
+  --danger-dot: oklch(57.7% 0.245 27.325);
+  /* Something waits on someone, or needs a look: a received booking, a notice. */
+  --warning: oklch(47.3% 0.137 46.201);
+  --warning-strong: oklch(41.4% 0.112 45.904);
+  --warning-edge: oklch(92.4% 0.12 95.746);
+  --warning-soft: oklch(96.2% 0.059 95.617);
+  --warning-tint: oklch(98.7% 0.022 95.277);
+  --warning-dot: oklch(76.9% 0.188 70.08);
+  /* Done or fine: completed, saved. */
+  --success: oklch(44.8% 0.119 151.328);
+  --success-tint: oklch(96.2% 0.044 156.743);
+  --success-dot: oklch(62.7% 0.194 149.214);
+
+  /* The keyboard's ring: its colour, its width and its gap, and its colour on navy or ink. */
+  --ring: var(--brand);
+  --ring-width: 2px;
+  --ring-offset: 2px;
+  --ring-on-dark: var(--azure-light);
+
+  /*
+   * Layers, low to high, for `z-(--layer-…)`. Dialogs and sheets are native
+   * <dialog>s in the browser's top layer, above all of these.
+   */
+  /* A part lifted over its neighbours inside a card or a map. */
+  --layer-raised: 1;
+  /* A part that reaches over the sections after it, above their raised parts: the hero's search card and its open place list. */
+  --layer-overlap: 2;
+  /* A bar held at the top while the page scrolls. */
+  --layer-sticky: 10;
+  /* What floats over the page's content: a pinned panel, a place list. */
+  --layer-float: 20;
+  /* The header and the phone's dock, above what floats. */
+  --layer-chrome: 30;
+  /* The staff's preview bar over the site, above its header and dock. */
+  --layer-staff: 40;
+  /* Menus, lists and tooltips opened from a control, above everything. */
+  --layer-popover: 50;
+
+  /* Shape and sizes: the console's, the customer site's in its block below. */
+  --control-radius: 10px;
+  --card-radius: 14px;
+  --panel-radius: 14px;
+  --popover-radius: 12px;
+  --control-weight: 600;
+  --card-shadow:
+    0 1px 2px rgb(0 38 75 / 0.04), 0 6px 18px -8px rgb(0 38 75 / 0.12);
+  --raised-shadow: 0 10px 28px -12px rgb(0 38 75 / 0.28);
+  --panel-shadow: 0 22px 55px rgb(0 38 75 / 0.22);
+  --bar-shadow: 0 1px 3px rgb(0 38 75 / 0.08);
+  /* The primary button's glow in its own blue: the site's only. */
+  --cta-shadow: 0 0 #0000;
+  /* The height of the bar held at the top: the console's top bar, the site's header. */
+  --header-height: 4rem;
+}
+
+@media (width >= 48rem) {
+  :root {
+    --header-height: 4.5rem;
+  }
+}
+
+:root[data-app="site"] {
+  --canvas: #f8fafc;
+  --control-radius: 14px;
+  --card-radius: 18px;
+  --panel-radius: 22px;
+  --popover-radius: 16px;
+  --control-weight: 700;
+  --card-shadow: 0 12px 35px rgb(0 38 75 / 0.08);
+  --raised-shadow: 0 18px 40px rgb(0 38 75 / 0.14);
+  --panel-shadow: 0 22px 55px rgb(0 38 75 / 0.16);
+  --bar-shadow: 0 6px 24px rgb(0 38 75 / 0.06);
+  --cta-shadow: 0 8px 20px rgb(4 107 210 / 0.18);
+  --ring: var(--azure);
+  --ring-width: 3px;
+  --ring-offset: 4px;
+  --ring-on-dark: #ffffff;
+  --header-height: 4.3125rem;
+}
+
+@media (width >= 40rem) {
+  :root[data-app="site"] {
+    --header-height: 4.8125rem;
+  }
 }
 
 @theme inline {
@@ -40,4 +163,236 @@
   --color-azure: var(--azure);
   --color-azure-light: var(--azure-light);
   --color-mist: var(--mist);
+
+  --color-canvas: var(--canvas);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-card-edge: var(--card-edge);
+  --color-hairline: var(--hairline);
+  --color-shade: var(--shade);
+  --color-hover: var(--hover);
+  --color-slot: var(--slot);
+
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-edge: var(--danger-edge);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-dot: var(--danger-dot);
+  --color-warning: var(--warning);
+  --color-warning-strong: var(--warning-strong);
+  --color-warning-edge: var(--warning-edge);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-dot: var(--warning-dot);
+  --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
+  --color-success-dot: var(--success-dot);
+
+  --color-ring: var(--ring);
+  --color-ring-on-dark: var(--ring-on-dark);
+
+  /* Type: DM Serif Display for titles and figures, DM Sans for the rest (next/font sets both). */
+  --font-serif: var(--font-display), Georgia, serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  /* The site's handwriting: "Travel", "More than a trip". */
+  --font-hand: var(--font-script), cursive;
+
+  /*
+   * Sizes between Tailwind's steps, the ones both apps had typed by hand.
+   * With no line height of their own, they keep the line height around
+   * them, as the hand-typed sizes did.
+   */
+  /* Small capitals over a column, a menu group, a chip's word. */
+  --text-2xs: 0.6875rem;
+  /* A meta line under a name, a card's aside, a hint. */
+  --text-caption: 0.8125rem;
+  /* Reading text on the site, a card's title in the console. */
+  --text-copy: 0.9375rem;
+  /* The line under a page's title on the site. */
+  --text-lead: 1.0625rem;
+  /* A figure in a tile, the console's numbers. */
+  --text-figure: 1.75rem;
+  /* The console's page title on a wide screen. */
+  --text-title: 2.125rem;
+  /* The site's headings, growing with the screen. */
+  --text-heading: clamp(1.6rem, 2.6vw, 2.15rem);
+  --text-display-sm: clamp(2.2rem, 4vw, 3.2rem);
+  --text-display: clamp(2.4rem, 5.4vw, 4.2rem);
+  --text-display-lg: clamp(2.5rem, 6vw, 4.6rem);
+  /* The home page's opening words, sized by the screen's width and height. */
+  --text-hero: clamp(3.75rem, min(9vw, 12svh), 6.5rem);
+
+  /* Lines of a big title, set tight. */
+  --leading-display: 1.1;
+
+  /* A title's letters drawn a touch closer. */
+  --tracking-title: -0.01em;
+  /* Letter spacing of words in capitals: a small label, a page's kicker, the site's eyebrow. */
+  --tracking-caps: 0.06em;
+  --tracking-kicker: 0.08em;
+  --tracking-eyebrow: 0.18em;
+
+  --radius-control: var(--control-radius);
+  --radius-card: var(--card-radius);
+  --radius-panel: var(--panel-radius);
+  --radius-popover: var(--popover-radius);
+
+  --shadow-card: var(--card-shadow);
+  --shadow-raised: var(--raised-shadow);
+  --shadow-panel: var(--panel-shadow);
+  --shadow-bar: var(--bar-shadow);
+  /* A dialog, a sheet, the palette, the phone's panel: over a dimmed page. */
+  --shadow-overlay: 0 22px 55px rgb(0 38 75 / 0.22);
+  /* A control standing on the canvas: the picker, the search button. */
+  --shadow-control: 0 1px 3px rgb(0 38 75 / 0.08);
+  /* The primary button, lit in its own blue on the site; nothing in the console. */
+  --shadow-cta: var(--cta-shadow);
+  /* The console dashboard's band. */
+  --shadow-band: 0 18px 40px -22px rgb(0 38 75 / 0.6);
+  /* A small control on a map, after Google's own buttons. */
+  --shadow-map: 0 1px 4px -1px rgb(0 0 0 / 0.3);
+}
+
+/*
+ * The keyboard's ring, one look per app (the console's two pixels of the
+ * brand, the site's three of azure), shown only for the keyboard.
+ * `focus-ring-inset` draws it inside, for a control at the edge of a box
+ * that clips; on navy or ink, add `focus-ring-dark`.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: var(--ring-offset);
+  }
+}
+
+@utility focus-ring-inset {
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: calc(var(--ring-width) * -1);
+  }
+}
+
+@utility focus-ring-dark {
+  --focus-color: var(--ring-on-dark);
+}
+
+/*
+ * A link in a line of words or beside a button: bold, in the brand's
+ * colour, underlined under the pointer, with the keyboard's ring.
+ */
+@utility text-link {
+  font-weight: 600;
+  color: var(--brand);
+  text-underline-offset: 4px;
+
+  &:hover {
+    text-decoration-line: underline;
+  }
+
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: var(--ring-offset);
+  }
+}
+
+/*
+ * A link that makes its whole card the target: its `::after` covers the
+ * card, which must be `relative`, and the keyboard's ring is drawn just
+ * inside the card's corners.
+ */
+@utility card-link {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--card-radius);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: calc(var(--ring-width) * -1);
+  }
+}
+
+/*
+ * A small target a finger can still hit: on a touch screen its hit area
+ * grows to 44 by 44 pixels around it, without moving anything. Uses
+ * `::before`, so it suits a control whose `::after` is taken.
+ */
+@utility touch-target {
+  position: relative;
+
+  @media (pointer: coarse) {
+    &::before {
+      content: "";
+      position: absolute;
+      inset: min(0px, calc((100% - 2.75rem) / 2));
+    }
+  }
+}
+
+/*
+ * A box that scrolls sideways shows there is more: a soft shadow on each
+ * edge that hides something, gone once that end is reached. The covers,
+ * in the card's white, scroll with the content; the shadows stay put.
+ */
+@utility scroll-shade-x {
+  background:
+    linear-gradient(to right, #fff 30%, rgb(255 255 255 / 0)) left center /
+      2.5rem 100% no-repeat local,
+    linear-gradient(to left, #fff 30%, rgb(255 255 255 / 0)) right center /
+      2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 38 75 / 0.16), transparent)
+      left center / 0.875rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 38 75 / 0.16), transparent)
+      right center / 0.875rem 100% no-repeat scroll;
+  background-color: #fff;
+}
+
+/*
+ * Scroll bars, on the page and in every box that scrolls, in both apps:
+ * thin, with no arrows, a soft thumb on a clear track, after shadcn's
+ * scroll area but with the browser's own bar, so nothing is wrapped and
+ * the keyboard and the wheel scroll as ever. A phone's bars float over
+ * the page as they always do. In the base layer, so a utility overrides
+ * it. `scrollbar-on-dark` lightens the thumb on navy or ink;
+ * `scrollbar-quiet` keeps it hidden until the pointer is over the box,
+ * for chrome such as the sidebar, and its room stays, so nothing moves.
+ */
+:root {
+  --scrollbar-thumb: rgb(98 116 142 / 0.45);
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+@utility scrollbar-on-dark {
+  --scrollbar-thumb: rgb(255 255 255 / 0.28);
+}
+
+@utility scrollbar-quiet {
+  scrollbar-color: transparent transparent;
+
+  &:hover,
+  &:focus-within {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+/* Words in small capitals: a column's name, a menu group, a chip. */
+@utility text-caps {
+  font-size: --theme(--text-2xs);
+  letter-spacing: --theme(--tracking-caps);
+  text-transform: uppercase;
 }

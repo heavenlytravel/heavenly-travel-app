@@ -28,33 +28,31 @@ import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
+import { scrollBehavior } from "@repo/ui/motion";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import { errorOf } from "@repo/console/action-state";
-import { useLeaveGuard } from "@repo/console/use-leave-guard";
+import { errorOf } from "../../_lib/action-state";
+import { useLeaveGuard } from "../../_lib/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
+import { Notice } from "@repo/ui/notice";
 import { MarkdownField } from "../MarkdownField";
-import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
+import { UploadsContext, useUploadCount } from "../use-image-upload";
 import {
   RowControls,
   movedRow,
-} from "../../(console)/locations/_components/RowControls";
+} from "../../(console)/[location]/pages/_components/RowControls";
 import {
   publishPageAction,
   savePageDraftAction,
   unpublishPageAction,
 } from "./actions";
-import { Count } from "./Count";
+import { Count, Counted } from "./Count";
 import { ImageField } from "./ImageField";
 import {
   SavedAddressPicker,
   type AddressArea,
   type PickableAddress,
-} from "../../(console)/locations/_components/SavedAddressPicker";
-import {
-  CompareDialog,
-  HistoryDialog,
-  type PagePublishEntry,
-} from "./PageHistory";
+} from "../../(console)/[location]/pages/_components/SavedAddressPicker";
+import { CompareDialog } from "./PageHistory";
 import { BarLink, PublishBar } from "./PublishBar";
 import { PublishDialog } from "./PublishDialog";
 import { useSaveShortcut } from "./use-save-shortcut";
@@ -72,34 +70,11 @@ const formContentOf = (content: PageContent): FormContent => ({
   faqs: content.faqs.map((faq, i) => ({ ...faq, key: `faq-${i}` })),
 });
 
-/** A label with how much of its limit the text has used. */
-function Counted({
-  label,
-  value,
-  limit,
-}: {
-  label: string;
-  value: string;
-  limit: number;
-}) {
-  return (
-    <span className="flex items-baseline justify-between gap-3">
-      {label}
-      <Count value={value.length} limit={limit} />
-    </span>
-  );
-}
-
-const TABS: { key: PageEditorTab; label: string }[] = [
-  { key: "content", label: "Page content" },
-  { key: "search", label: "SEO" },
-];
-
 /** The id of the part of the editor a check is about, which "Go to it" scrolls to. */
 const partId = (key: PageCheck["key"]) => `page-${key}`;
 
-/** Where a part lands when "Go to it" scrolls to it: clear of the console header and the publish bar. */
-const PART_SCROLL = "scroll-mt-44";
+/** Where a part lands when "Go to it" scrolls to it: clear of the console's top bar and the publish bar. */
+const PART_SCROLL = "scroll-mt-52";
 
 /** How the tagline is asked for, on the kinds that have one. */
 const TAGLINE_FIELD: Partial<
@@ -117,8 +92,36 @@ const TAGLINE_FIELD: Partial<
   },
 };
 
-/** The rows of a list in a card, the FAQs: hairlines between them, no frames. */
-const ROWS = "divide-y divide-slate-100";
+/**
+ * One part of a card of the editor, under its name and a line of help,
+ * split from the one before by a hairline. "Go to it" lands on it by its
+ * `id`.
+ */
+function Part({
+  id,
+  title,
+  hint,
+  children,
+}: {
+  id?: string;
+  title: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className={cx(
+        "border-t border-hairline pt-5 first:border-t-0 first:pt-0",
+        id && PART_SCROLL,
+      )}
+    >
+      <h3 className="text-sm font-bold text-ink">{title}</h3>
+      {hint ? <p className="mt-0.5 text-caption text-muted">{hint}</p> : null}
+      <div className="mt-3.5">{children}</div>
+    </section>
+  );
+}
 
 /** What a page under a section, added on demand, offers besides its content: its slug and its delete. */
 export type EntryControls = {
@@ -135,24 +138,24 @@ export type EntryControls = {
 };
 
 /**
- * The editor of one page: a location's or one of the site's own. On top,
- * the publish bar, held in view while the form scrolls. Its first line is
- * the page's name and where it stands, level with "Preview" of the saved
- * draft, "Save draft" (also Ctrl+S) and "Publish". Its second line is the
- * page's address and what its standing means for the public, then the quiet
- * moves: "Compare" while the draft differs from what the public sees,
- * "History" once it has been published, "Unpublish" where allowed, and on
- * a page added on demand "Delete". Under it, the page in two tabs: its
- * content, the parts its kind holds, and what search engines and shared
- * links show. "Publish" opens the checks the page must pass, each with a
- * way to the part that needs work, and what the publish changes; "Publish
- * now" waits until every check passes. A save is refused when someone else
- * changed the page since the form was opened.
+ * The editor of one page: a location's or one of the site's own, under
+ * its header (`EditorHeader`). On top, the publish bar, held in view while
+ * the form scrolls: where the page stands and what that means for the
+ * public, level with "Preview" of the saved draft, "Save draft" (also
+ * Ctrl+S) and "Publish"; under them its address and the quiet moves:
+ * "Compare" while the draft differs from what the public sees,
+ * "Unpublish" where allowed, and on a page added on demand "Delete".
+ * Under it, two cards: the page's content, the parts its kind holds, then
+ * its SEO, what search engines and shared links show with a preview of
+ * each, each card counting what it still needs before a publish.
+ * "Publish" opens the checks the page must pass, each with a way to the
+ * part that needs work, and what the publish changes; "Publish now" waits
+ * until every check passes. A save is refused when someone else changed
+ * the page since the form was opened.
  */
 export function PageEditor({
   target,
   kind,
-  title,
   pageName,
   path,
   draft,
@@ -168,17 +171,12 @@ export function PageEditor({
   previewUrl,
   publicUrl,
   fallbackTitle,
-  publishes,
-  historyHref,
-  historyLabel,
   entry,
   notice,
   unpublishedNote = "The public does not see this page.",
 }: {
   target: PageTarget;
   kind: PageKind;
-  /** The page's name: "Main page", "Eagle Square", "About us". */
-  title: string;
   /** How a sentence names it: "the main page". */
   pageName: string;
   /** Its address on the customer site: "/langkawi". */
@@ -212,11 +210,6 @@ export function PageEditor({
   publicUrl: string;
   /** The title the page shows while no meta title is written. */
   fallbackTitle: string;
-  /** The page's publishes, newest first. */
-  publishes: PagePublishEntry[];
-  /** Where every change to such pages is listed. */
-  historyHref: string;
-  historyLabel: string;
   /** On a page added on demand, its slug and its delete. */
   entry?: EntryControls;
   /** A line over the form about what the page is not yet: a class off sale. */
@@ -238,10 +231,8 @@ export function PageEditor({
   const uploads = useUploadCount();
   // An image still uploading is not in the page yet: saving waits for it.
   const busy = pending || uploads.uploading;
-  const [tab, setTab] = useState<PageEditorTab>("content");
   const [publishing, setPublishing] = useState(false);
   const [comparing, setComparing] = useState(false);
-  const [readingHistory, setReadingHistory] = useState(false);
   const nextKey = useRef(0);
 
   // The content in its one shape, as it would be stored: what every count,
@@ -249,14 +240,21 @@ export function PageEditor({
   const normal = pageContentOf(kind, content);
   const limits = checkPageLimits(normal);
   const checks = pageChecks(kind, normal);
-  const missingIn = (which: PageEditorTab) =>
-    checks
-      .filter((check) => check.tab === which)
+  /** What a card still needs before a publish, beside its name; nothing once it is done. */
+  const toDoIn = (card: PageEditorTab) => {
+    const missing = checks
+      .filter((check) => check.tab === card)
       .reduce((sum, check) => sum + check.missing.length, 0);
+    return missing > 0 ? (
+      <span className="font-semibold text-warning">
+        {missing} to do before publishing
+      </span>
+    ) : undefined;
+  };
   const dirty = !samePageContent(normal, saved);
   const status = pageStatusOf(normal, published);
   const publishedOn = publishedAt ? formatLocalDateTime(publishedAt) : "";
-  // What the status means for the public, under the badge.
+  // What the status means for the public, beside the badge.
   const standingNote =
     status === "unpublished"
       ? unpublishedNote
@@ -312,14 +310,13 @@ export function PageEditor({
     toast.success("Imported. Check the fields it filled, then save.");
   }
 
-  /** Shows the part of the page a check is about: its tab, then the part itself. */
+  /** Shows the part of the page a check is about. */
   function goTo(check: PageCheck) {
     setPublishing(false);
-    setTab(check.tab);
     requestAnimationFrame(() =>
       document
         .getElementById(partId(check.key))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" }),
     );
   }
 
@@ -378,30 +375,23 @@ export function PageEditor({
   });
 
   const message = uploads.uploading ? (
-    <span className="text-slate-500">Uploading the image…</span>
+    <span className="text-muted">Uploading the image…</span>
   ) : pending ? (
-    <span className="text-slate-500">Saving…</span>
+    <span className="text-muted">Saving…</span>
   ) : error ? (
-    <span className="text-red-700">{error}</span>
+    <span className="font-medium text-danger">{error}</span>
   ) : !limits.ok ? (
-    <span className="text-red-700">{limits.error}</span>
+    <span className="font-medium text-danger">{limits.error}</span>
   ) : (
-    <span className="text-slate-600">{standingNote}</span>
+    <span className="text-muted">{standingNote}</span>
   );
 
-  // The quiet moves after the note.
+  // The quiet moves after the address.
   const moves: ReactNode[] = [];
   if (status === "changed" && published) {
     moves.push(
       <BarLink key="compare" onClick={() => setComparing(true)}>
         Compare with published
-      </BarLink>,
-    );
-  }
-  if (publishes.length > 0) {
-    moves.push(
-      <BarLink key="history" onClick={() => setReadingHistory(true)}>
-        History
       </BarLink>,
     );
   }
@@ -427,89 +417,46 @@ export function PageEditor({
 
   return (
     <UploadsContext value={uploads.track}>
-      <div className="grid gap-6">
-        <PublishBar
-          title={title}
-          status={status}
-          dirty={dirty}
-          previewUrl={previewUrl}
-          canSave={!busy && dirty && limits.ok}
-          onSave={() => write(false)}
-          canPublish={
-            !busy && status !== "published" && publishBlocked === null
-          }
-          publishHint={
-            publishBlocked ??
-            (status === "published"
-              ? "The public sees this draft already."
-              : null)
-          }
-          onPublish={() => setPublishing(true)}
-          path={path}
-          message={message}
-          moves={moves}
-        />
+      <PublishBar
+        status={status}
+        dirty={dirty}
+        previewUrl={previewUrl}
+        canSave={!busy && dirty && limits.ok}
+        onSave={() => write(false)}
+        canPublish={!busy && status !== "published" && publishBlocked === null}
+        publishHint={
+          publishBlocked ??
+          (status === "published"
+            ? "The public sees this draft already."
+            : null)
+        }
+        onPublish={() => setPublishing(true)}
+        path={path}
+        message={message}
+        moves={moves}
+      />
 
+      <div className="mt-3 grid gap-5">
         {notice}
 
-        <div
-          role="tablist"
-          aria-label="Parts of the page"
-          className="flex gap-1 border-b border-slate-200"
-        >
-          {TABS.map((entry) => {
-            const selected = tab === entry.key;
-            const missing = missingIn(entry.key);
-            return (
-              <button
-                key={entry.key}
-                type="button"
-                role="tab"
-                id={`tab-${entry.key}`}
-                aria-selected={selected}
-                aria-controls={`panel-${entry.key}`}
-                onClick={() => setTab(entry.key)}
-                className={cx(
-                  "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
-                  selected
-                    ? "border-brand text-brand"
-                    : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900",
-                )}
-              >
-                {entry.label}
-                {missing > 0 ? (
-                  <Tooltip content={`${missing} to do before publishing`}>
-                    <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
-                      {missing}
-                    </span>
-                  </Tooltip>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {tab === "content" ? (
-          <div
-            role="tabpanel"
-            id="panel-content"
-            aria-labelledby="tab-content"
-            className="grid gap-6"
-          >
-            <Card id={partId("hero")} className={PART_SCROLL}>
-              <CardTitle
-                description={
-                  kind === "place"
-                    ? "The top of the page. Its name, short description and image are also its card, wherever the site lists it."
-                    : kind === "article"
-                      ? "The top of the post. Its title, summary and cover are also its card on the blog."
-                      : kind === "document"
-                        ? "The top of the page. The image is optional."
-                        : "The top of the page. Its image is also what a shared link shows, unless a share image is set under SEO."
-                }
-              >
-                {kind === "article" || kind === "document" ? "Title" : "Hero"}
-              </CardTitle>
+        <Card>
+          <CardTitle meta={toDoIn("content")}>Page content</CardTitle>
+          <div className="grid gap-5">
+            <Part
+              id={partId("hero")}
+              title={
+                kind === "article" || kind === "document" ? "Title" : "Hero"
+              }
+              hint={
+                kind === "place"
+                  ? "The top of the page. Its name, short description and image are also its card, wherever the site lists it."
+                  : kind === "article"
+                    ? "The top of the post. Its title, summary and cover are also its card on the blog."
+                    : kind === "document"
+                      ? "The top of the page. The image is optional."
+                      : "The top of the page. Its image is also what a shared link shows, unless a share image is set under SEO."
+              }
+            >
               <div className="grid gap-4">
                 {tagline ? (
                   <Field
@@ -529,9 +476,7 @@ export function PageEditor({
                         edit({ tagline: event.target.value })
                       }
                     />
-                    <p className="mt-1 text-xs text-slate-500">
-                      {tagline.hint}
-                    </p>
+                    <p className="mt-1 text-xs text-muted">{tagline.hint}</p>
                   </Field>
                 ) : null}
                 <Field
@@ -569,10 +514,10 @@ export function PageEditor({
                   />
                 </Field>
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-800">
+                  <p className="mb-1.5 text-sm font-medium text-body">
                     {kind === "article" ? "Cover image" : "Image"}
                     {rule.heroImage === "optional" ? (
-                      <span className="font-normal text-slate-500">
+                      <span className="font-normal text-muted">
                         {" "}
                         · optional
                       </span>
@@ -585,13 +530,13 @@ export function PageEditor({
                   />
                 </div>
               </div>
-            </Card>
+            </Part>
 
             {rule.address && places ? (
-              <Card>
-                <CardTitle description="Optional. With an address, the page and its card show “Take me here”, which fills the drop-off with it. Not saved yet? Add it with the plus: it is saved at once, to the location's saved addresses.">
-                  Saved address
-                </CardTitle>
+              <Part
+                title="Saved address"
+                hint="Optional. With an address, the page and its card show “Take me here”, which fills the drop-off with it. Not saved yet? Add it with the plus: it is saved at once, to the location's saved addresses."
+              >
                 <SavedAddressPicker
                   locationId={places.locationId}
                   addresses={places.addresses}
@@ -604,22 +549,21 @@ export function PageEditor({
                   }
                   onChange={(addressId) => edit({ addressId })}
                 />
-              </Card>
+              </Part>
             ) : null}
 
             {rule.intro !== "none" ? (
-              <Card id={partId("intro")} className={PART_SCROLL}>
-                <CardTitle
-                  description={`Plain paragraphs. Start a new line for a new paragraph.${rule.intro === "optional" ? " Optional." : ""}`}
-                >
-                  Intro
-                </CardTitle>
+              <Part
+                id={partId("intro")}
+                title="Intro"
+                hint={`Plain paragraphs. Start a new line for a new paragraph.${rule.intro === "optional" ? " Optional." : ""}`}
+              >
                 <Field
                   label={
                     <span className="flex items-baseline justify-between gap-3">
                       <span>
                         Text{" "}
-                        <span className="text-xs font-normal text-slate-500 tabular-nums">
+                        <span className="text-xs font-normal text-muted tabular-nums">
                           · {introWords} {introWords === 1 ? "word" : "words"}
                           {rule.intro === "required"
                             ? `, at least ${PAGE_LIMITS.introWords}`
@@ -639,42 +583,42 @@ export function PageEditor({
                     onChange={(event) => edit({ intro: event.target.value })}
                   />
                 </Field>
-              </Card>
+              </Part>
             ) : null}
 
             {rule.body ? (
-              <Card id={partId("body")} className={PART_SCROLL}>
-                <CardTitle description="Written in Markdown, with a live preview. ## is a section heading and ### a smaller one; the title above is the page's only top heading. Import a .md file to fill the title, the summary and the meta description too. Every image is uploaded here, with its alt text.">
-                  Text
-                </CardTitle>
+              <Part
+                id={partId("body")}
+                title="Text"
+                hint="Written in Markdown, with a live preview. ## is a section heading and ### a smaller one; the title above is the page's only top heading. Import a .md file to fill the title, the summary and the meta description too. Every image is uploaded here, with its alt text."
+              >
                 <MarkdownField
                   value={content.body}
                   onChange={(body) => edit({ body })}
                   limit={PAGE_LIMITS.body}
                   onImport={importFile}
                 />
-              </Card>
+              </Part>
             ) : null}
 
-            <Card id={partId("faqs")} className={PART_SCROLL}>
-              <CardTitle
-                description={
-                  rule.faqs === "required"
-                    ? `At least ${PAGE_LIMITS.minFaqs}, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`
-                    : `Optional, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`
-                }
-              >
-                FAQs
-              </CardTitle>
+            <Part
+              id={partId("faqs")}
+              title="FAQs"
+              hint={
+                rule.faqs === "required"
+                  ? `At least ${PAGE_LIMITS.minFaqs}, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`
+                  : `Optional, at most ${PAGE_LIMITS.maxFaqs}. Shown in this order.`
+              }
+            >
               <div className="grid gap-4">
                 {content.faqs.length === 0 ? (
-                  <p className="text-sm text-slate-500">No FAQs yet.</p>
+                  <p className="text-sm text-muted">No FAQs yet.</p>
                 ) : (
-                  <ol className={ROWS}>
+                  <ol className="divide-y divide-hairline">
                     {content.faqs.map((faq, index) => (
                       <li key={faq.key} className="grid gap-3 py-4 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-sm font-medium">
+                          <span className="text-sm font-semibold text-ink">
                             FAQ {index + 1}
                           </span>
                           <RowControls
@@ -749,19 +693,18 @@ export function PageEditor({
                   </Button>
                 </div>
               </div>
-            </Card>
+            </Part>
           </div>
-        ) : (
-          <div
-            role="tabpanel"
-            id="panel-search"
-            aria-labelledby="tab-search"
-            className="grid gap-6"
-          >
-            <Card id={partId("search")} className={PART_SCROLL}>
-              <CardTitle description="What a search result shows. Not on the page itself.">
-                Search results
-              </CardTitle>
+        </Card>
+
+        <Card>
+          <CardTitle meta={toDoIn("search")}>SEO</CardTitle>
+          <div className="grid gap-5">
+            <Part
+              id={partId("search")}
+              title="In a search result"
+              hint="What a search result shows. Not on the page itself."
+            >
               <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 <div className="grid gap-4">
                   <Field
@@ -806,15 +749,15 @@ export function PageEditor({
                   fallbackTitle={fallbackTitle}
                 />
               </div>
-            </Card>
+            </Part>
 
-            <Card>
-              <CardTitle description="What WhatsApp, Facebook and others show when someone shares the page: the meta title and description, with this image.">
-                Shared links
-              </CardTitle>
+            <Part
+              title="When it is shared"
+              hint="What WhatsApp, Facebook and others show when someone shares the page: the meta title and description, with this image."
+            >
               <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 <div>
-                  <p className="mb-1.5 text-sm font-medium text-slate-800">
+                  <p className="mb-1.5 text-sm font-medium text-body">
                     Share image
                   </p>
                   <ImageField
@@ -822,7 +765,7 @@ export function PageEditor({
                     image={content.shareImage}
                     onChange={(shareImage) => edit({ shareImage })}
                   />
-                  <p className="mt-1.5 text-xs text-slate-500">
+                  <p className="mt-1.5 text-xs text-muted">
                     Optional. Without one, a shared link shows the hero image.
                     Best at 1200 by 630 pixels, with what matters in the middle.
                   </p>
@@ -834,12 +777,12 @@ export function PageEditor({
                   image={normal.shareImage ?? normal.heroImage}
                 />
               </div>
-            </Card>
+            </Part>
 
-            <Card>
-              <CardTitle description="Whether Google and other search engines may list this page in their results.">
-                Search engine optimisation (SEO)
-              </CardTitle>
+            <Part
+              title="Search engines"
+              hint="Whether Google and other search engines may list this page in their results."
+            >
               <div className="flex items-start gap-3">
                 <Switch
                   checked={normal.indexable}
@@ -847,12 +790,12 @@ export function PageEditor({
                   label="Show this page in search engines"
                 />
                 <div className="text-sm">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-semibold text-ink">
                     {normal.indexable
                       ? "On: shown in search engines"
                       : "Off: hidden from search engines"}
                   </p>
-                  <p className="mt-1 text-slate-600">
+                  <p className="mt-1 text-muted">
                     {normal.indexable
                       ? "Search engines may list it once they visit it; when is up to them, and a place in their results is never promised. Turn this off for a page meant only for people who have its link."
                       : "The page asks search engines not to list it, so no one finds it through a search and it brings no visits from there. Anyone with its link can still open it, and a shared link still shows its title and image."}
@@ -860,30 +803,24 @@ export function PageEditor({
                 </div>
               </div>
               {indexingChange ? (
-                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  {indexingChange}
-                </p>
+                <Notice className="mt-3">{indexingChange}</Notice>
               ) : null}
-            </Card>
+            </Part>
 
             {entry ? (
-              <Card>
-                <CardTitle
-                  description={
-                    entry.slugLocked
-                      ? `Locked since the page was first published: a new ${entry.type ? "type or slug" : "slug"} needs a redirect from the old address, which comes with the move to heavenlytravel.my.`
-                      : `The end of its address on the site${entry.type ? ", after its type" : ""}. It can change until the page is first published; then it is locked.`
-                  }
-                >
-                  {entry.type ? "Type and slug" : "Slug"}
-                </CardTitle>
+              <Part
+                title={entry.type ? "Type and slug" : "Slug"}
+                hint={
+                  entry.slugLocked
+                    ? `Locked since the page was first published: a new ${entry.type ? "type or slug" : "slug"} needs a redirect from the old address, which comes with the move to heavenlytravel.my.`
+                    : `The end of its address on the site${entry.type ? ", after its type" : ""}. It can change until the page is first published; then it is locked.`
+                }
+              >
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   {entry.type ? (
-                    <span className="font-medium text-slate-800">
-                      {entry.type}
-                    </span>
+                    <span className="font-medium text-body">{entry.type}</span>
                   ) : null}
-                  <code className="rounded bg-slate-100 px-2 py-1 text-slate-800">
+                  <code className="rounded-md bg-shade px-2 py-1 text-body">
                     {path}
                   </code>
                   {entry.slugLocked ? null : (
@@ -899,17 +836,16 @@ export function PageEditor({
                     </Tooltip>
                   )}
                 </div>
-              </Card>
+              </Part>
             ) : null}
 
-            <Card>
-              <CardTitle>Set for you</CardTitle>
-              <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <Part title="Set for you">
+              <Notice className="mb-3">
                 Until the site moves to heavenlytravel.my, search engines are
                 asked not to list any of its pages. These fields count from
                 then; shared links use them already.
-              </p>
-              <ul className="grid gap-1.5 text-sm text-slate-600">
+              </Notice>
+              <ul className="grid list-disc gap-1.5 pl-5 text-sm text-muted">
                 <li>
                   The page&apos;s address and its canonical link, so search
                   engines list one address for it.
@@ -927,9 +863,9 @@ export function PageEditor({
                   Keywords are left out: search engines no longer read them.
                 </li>
               </ul>
-            </Card>
+            </Part>
           </div>
-        )}
+        </Card>
 
         <PublishDialog
           open={publishing}
@@ -953,13 +889,6 @@ export function PageEditor({
             addressNames={addressNames}
           />
         ) : null}
-        <HistoryDialog
-          open={readingHistory}
-          onOpenChange={setReadingHistory}
-          publishes={publishes}
-          allHref={historyHref}
-          allLabel={historyLabel}
-        />
         {confirmDialog}
         {leaveDialog}
       </div>

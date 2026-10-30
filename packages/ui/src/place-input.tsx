@@ -43,6 +43,8 @@ export function PlaceInput({
   keep,
   inline = false,
   className,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: {
   id: string;
   value: string;
@@ -56,11 +58,18 @@ export function PlaceInput({
   keep?: (suggestion: PlaceSuggestion) => boolean;
   inline?: boolean;
   className?: string;
+  /** Refused by the form: marked, and tied to the line that says why. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
   const listId = useId();
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  // Where the search for the typed words stands, for the line in the list.
+  const [status, setStatus] = useState<
+    "idle" | "searching" | "none" | "failed"
+  >("idle");
   const session = useRef<string>(undefined);
   const root = useRef<HTMLDivElement>(null);
 
@@ -79,13 +88,16 @@ export function PlaceInput({
     const area = { within: boxOf(withinKey), near: boxOf(nearKey) };
     const controller = new AbortController();
     const timer = setTimeout(() => {
+      setStatus("searching");
       fetchPlaceSuggestions(value, sessionToken(), controller.signal, area)
         .then((rows) => {
           setSuggestions(rows);
           setActive(-1);
+          setStatus(rows.length ? "idle" : "none");
         })
         .catch(() => {
-          // Aborted by a newer keystroke, or the network failed: keep quiet.
+          // Aborted by a newer keystroke: that one answers instead.
+          if (!controller.signal.aborted) setStatus("failed");
         });
     }, DEBOUNCE_MS);
     return () => {
@@ -110,14 +122,23 @@ export function PlaceInput({
         ? suggestions.filter(keep)
         : suggestions
       : [];
-  const showing = open && rows.length > 0;
+  // A line for the search itself, while it runs or when it found nothing.
+  const note =
+    !offered && searchable && status !== "idle"
+      ? {
+          searching: "Searching…",
+          none: "No places match. Try another name or address.",
+          failed: "The search is not working right now. Try again.",
+        }[status]
+      : null;
+  const showing = open && (rows.length > 0 || note !== null);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!showing) return;
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" && rows.length) {
       e.preventDefault();
       setActive((i) => (i + 1) % rows.length);
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp" && rows.length) {
       e.preventDefault();
       setActive((i) => (i <= 0 ? rows.length - 1 : i - 1));
     } else if (e.key === "Enter" && active >= 0) {
@@ -125,6 +146,9 @@ export function PlaceInput({
       const chosen = rows[active];
       if (chosen) pick(chosen);
     } else if (e.key === "Escape") {
+      // Only the list: a dialog around the field stays open.
+      e.preventDefault();
+      e.stopPropagation();
       setOpen(false);
     }
   }
@@ -149,6 +173,8 @@ export function PlaceInput({
         aria-expanded={showing}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         aria-activedescendant={
           showing && active >= 0 ? `${listId}-${active}` : undefined
         }
@@ -169,20 +195,29 @@ export function PlaceInput({
           role="listbox"
           aria-label={offered?.heading}
           className={cx(
-            "ui:mt-1 ui:w-full ui:overflow-auto ui:rounded-xl ui:border ui:border-popover-line ui:bg-white ui:py-1.5 ui:text-left ui:text-slate-900",
+            "ui:mt-1 ui:w-full ui:overflow-auto ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:py-1.5 ui:text-left ui:text-popover-foreground",
             inline
               ? "ui:max-h-80"
-              : "ui:absolute ui:top-full ui:left-0 ui:z-20 ui:max-h-72 ui:shadow-[0_18px_40px_rgba(0,38,75,0.18)]",
+              : "ui:absolute ui:top-full ui:left-0 ui:z-(--layer-popover) ui:max-h-72 ui:shadow-lg",
           )}
         >
           {offered && (
             <li
               role="presentation"
-              className="ui:px-3.5 ui:pt-1.5 ui:pb-1 ui:text-[0.7rem] ui:font-bold ui:tracking-[0.16em] ui:text-slate-500 ui:uppercase"
+              className="ui:px-3.5 ui:pt-1.5 ui:pb-1 ui:text-2xs ui:font-bold ui:tracking-eyebrow ui:text-muted ui:uppercase"
             >
               {offered.heading}
             </li>
           )}
+          {note ? (
+            <li
+              role="presentation"
+              aria-live="polite"
+              className="ui:px-3.5 ui:py-2 ui:text-sm ui:text-muted"
+            >
+              {note}
+            </li>
+          ) : null}
           {rows.map((s, i) => (
             <li
               key={s.placeId}
@@ -198,11 +233,11 @@ export function PlaceInput({
                 i === active && "ui:bg-accent",
               )}
             >
-              <span className="ui:block ui:text-[0.95rem] ui:font-semibold ui:text-ink">
+              <span className="ui:block ui:text-copy ui:font-semibold ui:text-ink">
                 {s.label}
               </span>
               {s.detail && (
-                <span className="ui:block ui:text-[0.8rem] ui:text-slate-500">
+                <span className="ui:block ui:text-caption ui:text-muted">
                   {s.detail}
                 </span>
               )}

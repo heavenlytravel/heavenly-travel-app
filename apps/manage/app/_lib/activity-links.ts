@@ -7,20 +7,19 @@ import {
 import type { ActivityEntry } from "@repo/db/server";
 import {
   bookingHref,
-  locationDriverHref,
-  locationHref,
+  classHref,
+  dashboardHref,
+  driverHref,
   locationPublishHref,
-  locationVehicleHref,
-  MEDIA_PATH,
+  mediaHref,
   sitePageHref,
   sitePagePublishHref,
-  vehicleClassHref,
-  vendorHref,
+  vehicleHref,
 } from "./routes";
 
 /**
- * How the log's entries read on the screens that list them, the Activity
- * screen across the console and a location's History: the record each
+ * How the log's entries read on the Activity screen, the console's log
+ * under `~` and a location's own under its slug: the record each
  * belongs to, named at the right of its line, and the page it opens.
  */
 
@@ -33,7 +32,6 @@ export const ACTIVITY_RECORD_NAMES: Record<
   location: { one: "Location", many: "Locations" },
   vehicle: { one: "Vehicle", many: "Vehicles" },
   driver: { one: "Driver", many: "Drivers" },
-  vendor: { one: "Vendor", many: "Vendors" },
   "vehicle-class": { one: "Class", many: "Vehicle classes" },
   user: { one: "User", many: "Users" },
   admin: { one: "Admin", many: "Admins" },
@@ -73,9 +71,9 @@ export function activityEntryTag(
  * record has none, is gone, or is not theirs to open. A publish opens the
  * page as it was before and after, for Marketing, and a site page's other
  * entries its editor; any other entry the record itself: a booking, a
- * location, a class, a vehicle or a driver inside the location it is based
- * at now. `slugs` are the locations' by
- * id. On a location's own history (`here`, its id) its entries open
+ * location's dashboard, a class, a vehicle or a driver at the location it
+ * is based at now. `slugs` are the slugs of the locations the person may
+ * see, by id. On a location's own history (`here`, its id) its entries open
  * nothing more, but a publish.
  */
 export function activityEntryHref(
@@ -97,7 +95,7 @@ export function activityEntryHref(
     if (entry.action === "location.page.published" && may("locations.manage")) {
       return locationPublishHref(slug, entry.id);
     }
-    return entry.entityId === here ? null : locationHref(slug);
+    return entry.entityId === here ? null : dashboardHref(slug);
   }
   if (entry.isDeleted) return null;
   const based = entry.recordLocationId
@@ -105,21 +103,19 @@ export function activityEntryHref(
     : undefined;
   switch (entry.entityType) {
     case "booking":
-      return may("bookings.view") ? bookingHref(entry.entityId) : null;
+      return may("bookings.view") ? bookingHref(null, entry.entityId) : null;
     case "vehicle":
       return based && may("fleet.manage")
-        ? locationVehicleHref(based, entry.entityId)
+        ? vehicleHref(based, entry.entityId)
         : null;
     case "driver":
       return based && may("fleet.manage")
-        ? locationDriverHref(based, entry.entityId)
+        ? driverHref(based, entry.entityId)
         : null;
-    case "vendor":
-      return may("fleet.manage") ? vendorHref(entry.entityId) : null;
     case "vehicle-class":
-      return may("coverage.view") ? vehicleClassHref(entry.entityId) : null;
+      return may("coverage.view") ? classHref(null, entry.entityId) : null;
     case "media":
-      return may("media.manage") ? MEDIA_PATH : null;
+      return may("media.manage") ? mediaHref() : null;
     case "site-page":
       // A publish opens the page or the footer before and after; any other entry, its editor.
       if (!may("website.manage")) return null;

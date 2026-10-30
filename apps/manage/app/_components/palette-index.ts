@@ -3,24 +3,19 @@ import {
   locationStateOf,
   type Permission,
 } from "@repo/db";
+import { CONSOLE_PAGES, pageHref, pageShown } from "../_lib/console-map";
 import {
-  NEW_BOOKING_PATH,
   NEW_LOCATION_PATH,
-  NEW_VEHICLE_CLASS_PATH,
-  RATES_PART_LABELS,
-  locationHref,
-  locationRatesPartHref,
-  locationTabHref,
-  locationTabsMayOpen,
+  dashboardHref,
+  newBookingHref,
+  newClassHref,
   newDriverHref,
-  newLocationOfferingHref,
-  newLocationZoneHref,
   newVehicleHref,
-  type RatesPart,
+  newZoneHref,
+  savedAddressesHref,
 } from "../_lib/routes";
-import type { SidebarLocation } from "./AppSidebar";
 import type { MenuIcon } from "./menu";
-import { ALL_LOCATIONS_NAV, viewsFor } from "./nav";
+import type { PickerLocation } from "./ScopePicker";
 
 /**
  * What the console's search finds without asking the server: its pages,
@@ -38,41 +33,16 @@ export type PaletteEntry = {
   /** A page's icon; an action has the add icon, a location its mark. */
   icon?: MenuIcon;
   /** A location, drawn with its mark. */
-  location?: SidebarLocation;
+  location?: PickerLocation;
   /** Other words it is found by: "prices" for Rates. */
   words?: string;
 };
 
 export type PaletteIndex = {
-  /** Every page, across locations then each location's. */
+  /** Every page, on every location then each location's. */
   pages: PaletteEntry[];
   actions: PaletteEntry[];
   locations: PaletteEntry[];
-};
-
-/** Words a page is found by beside its name. */
-const PAGE_WORDS: Partial<Record<MenuIcon, string>> = {
-  overview: "home dashboard",
-  vehicles: "fleet cars plates",
-  drivers: "fleet",
-  "vehicle-classes": "fleet catalogue",
-  coverage: "zones map",
-  rates: "prices grid",
-  pages: "content website home page top choices terms privacy",
-  users: "accounts customers",
-  admins: "staff teams",
-  activity: "log",
-  media: "images uploads",
-};
-
-/**
- * The parts of a location's Rates found by their own names, beside the
- * tab: the trip rules and Try a trip, which staff look for by name. The
- * class rates and the grid are what the tab itself is found by.
- */
-const RATES_PARTS_FOUND: Partial<Record<RatesPart, string>> = {
-  rules: "surcharge odd hours weekend holiday extra km cross-location",
-  tryTrip: "quote price check",
 };
 
 /** The console's pages, actions and locations an admin with these permissions may open. */
@@ -81,70 +51,78 @@ export function paletteIndex({
   locations,
 }: {
   permissions: readonly Permission[];
-  locations: readonly SidebarLocation[];
+  locations: readonly PickerLocation[];
 }): PaletteIndex {
   const may = (permission: Permission) => permissions.includes(permission);
 
-  const across: PaletteEntry[] = ALL_LOCATIONS_NAV.flatMap((part) =>
-    part.sections.flatMap((section) =>
-      viewsFor(section, permissions).map((view) => ({
-        href: view.href,
-        title: view.label,
-        meta: "All locations",
-        icon: view.icon,
-        words: PAGE_WORDS[view.icon],
-      })),
-    ),
-  );
-  const tabsOf = (location: SidebarLocation): PaletteEntry[] =>
-    locationTabsMayOpen(locationStateOf(location.state), permissions).flatMap(
-      (tab) => [
-        {
-          href: locationTabHref(location.slug, tab.key),
-          title: tab.label,
-          meta: location.name,
-          icon: tab.key,
-          words: PAGE_WORDS[tab.key],
-        },
-        ...(tab.key === "rates"
-          ? (Object.keys(RATES_PARTS_FOUND) as RatesPart[]).map((part) => ({
-              href: locationRatesPartHref(location.slug, part),
-              title: RATES_PART_LABELS[part],
-              meta: location.name,
-              icon: tab.key,
-              words: RATES_PARTS_FOUND[part],
-            }))
-          : []),
-      ],
-    );
+  const across: PaletteEntry[] = CONSOLE_PAGES.filter((page) =>
+    pageShown(page, { scope: null, permissions }),
+  ).map((page) => ({
+    href: pageHref(page, null),
+    title: page.label,
+    meta: page.wide ? undefined : "All locations",
+    icon: page.icon,
+    words: page.words,
+  }));
+  const pagesOf = (location: PickerLocation): PaletteEntry[] =>
+    CONSOLE_PAGES.filter(
+      (page) =>
+        !page.wide &&
+        pageShown(page, {
+          scope: location.slug,
+          permissions,
+          state: locationStateOf(location.state),
+        }),
+    )
+      .map((page): PaletteEntry => ({
+        href: pageHref(page, location.slug),
+        title: page.label,
+        meta: location.name,
+        icon: page.icon,
+        words: page.words,
+      }))
+      // The saved addresses are a card on the location's Pages, found by their own name.
+      .concat(
+        may("locations.manage")
+          ? [
+              {
+                href: savedAddressesHref(location.slug),
+                title: "Saved Addresses",
+                meta: location.name,
+                icon: "addresses",
+                words: "take me here places hotels airport",
+              },
+            ]
+          : [],
+      );
 
   const actions: PaletteEntry[] = [
     ...(may("bookings.create")
-      ? [{ href: NEW_BOOKING_PATH, title: "New booking", words: "add" }]
+      ? [{ href: newBookingHref(null), title: "New Booking", words: "add" }]
       : []),
     ...(may("fleet.manage")
       ? [
-          { href: newVehicleHref(), title: "Add vehicle", words: "new" },
-          { href: newDriverHref(), title: "Add driver", words: "new" },
+          { href: newVehicleHref(null), title: "Add Vehicle", words: "new" },
+          { href: newDriverHref(null), title: "Add Driver", words: "new" },
         ]
       : []),
     ...(may("coverage.manage")
       ? [
           {
-            href: NEW_VEHICLE_CLASS_PATH,
-            title: "Add vehicle class",
+            href: newClassHref(null),
+            title: "Add Vehicle Class",
             words: "new",
           },
           ...locations.flatMap((location) => [
             {
-              href: newLocationZoneHref(location.slug),
-              title: "Add zone",
+              href: newZoneHref(location.slug),
+              title: "Add Zone",
               meta: location.name,
               words: "new coverage",
             },
             {
-              href: newLocationOfferingHref(location.slug),
-              title: "Put a class on sale",
+              href: newClassHref(location.slug),
+              title: "Put a Class on Sale",
               meta: location.name,
               words: "add vehicle class offering",
             },
@@ -152,15 +130,15 @@ export function paletteIndex({
         ]
       : []),
     ...(may("locations.manage")
-      ? [{ href: NEW_LOCATION_PATH, title: "Add location", words: "new" }]
+      ? [{ href: NEW_LOCATION_PATH, title: "Add Location", words: "new" }]
       : []),
   ];
 
   return {
-    pages: [...across, ...locations.flatMap(tabsOf)],
+    pages: [...across, ...locations.flatMap(pagesOf)],
     actions,
     locations: locations.map((location) => ({
-      href: locationHref(location.slug),
+      href: dashboardHref(location.slug),
       title: location.name,
       meta: LOCATION_STATE_LABELS[locationStateOf(location.state)],
       location,

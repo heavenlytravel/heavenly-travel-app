@@ -3,7 +3,7 @@
  * answers it: the records of each kind the admin may open, a group each,
  * in this order. The pages, the actions and the locations are found in the
  * browser, from what the console already holds. See
- * docs/261023-console-sidebar.md.
+ * docs/261029-manage-signature-overhaul.md.
  */
 
 /** The kinds of record the search asks the database for, in the order the palette lists them. */
@@ -22,8 +22,8 @@ export const RECORD_KIND_LABELS: Record<RecordKind, string> = {
   bookings: "Bookings",
   vehicles: "Vehicles",
   drivers: "Drivers",
-  users: "Users",
-  "vehicle-classes": "Vehicle classes",
+  users: "Customers",
+  "vehicle-classes": "Classes",
   zones: "Zones",
 };
 

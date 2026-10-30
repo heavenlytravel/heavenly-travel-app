@@ -3,7 +3,26 @@
 /* The shared console parts live outside this app. */
 @source "../../../packages/console/src";
 
+/*
+ * The console's look, "Signature" (docs/261029-manage-signature-overhaul.md),
+ * is set by the tokens in @repo/tailwind-config under `data-app="console"`
+ * (docs/261029-design-tokens.md). What is here is the console's alone.
+ */
+
+/* The dashboard's band: navy to ink, lit from its top right by the logo's blue. */
+@utility bg-band {
+  background:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      rgb(15 134 206 / 0.55) 0%,
+      rgb(15 134 206 / 0) 55%
+    ),
+    linear-gradient(135deg, var(--navy) 0%, var(--ink) 100%);
+}
+
 body {
-  background: var(--color-slate-50);
-  color: var(--color-slate-900);
+  background: var(--canvas);
+  color: var(--body);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }

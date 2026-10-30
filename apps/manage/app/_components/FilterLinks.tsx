@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
- * A row of links that narrow a list, "All" first and the one in force
- * marked. `hrefOf` names the list with the value in its address, so the
- * filter survives a reload and a shared link. The bookings lists filter by
- * status with it, a location's history by the part of the location.
+ * A row of chips that narrow a list, "All" first and the one in force
+ * filled in navy. `hrefOf` names the list with the value in its address, so the
+ * filter survives a reload and a shared link. Activity filters by the type
+ * of record with it, a location's by the part of the location.
  */
 export function FilterLinks<Value extends string>({
   label,
@@ -20,7 +20,7 @@ export function FilterLinks<Value extends string>({
   hrefOf: (value: Value | undefined) => string;
 }) {
   return (
-    <nav aria-label={label} className="flex flex-wrap gap-1">
+    <nav aria-label={label} className="flex flex-wrap gap-1.5">
       <FilterLink href={hrefOf(undefined)} active={active === undefined}>
         All
       </FilterLink>
@@ -50,10 +50,11 @@ function FilterLink({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+      // A chip is 32px tall; on a touch screen its hit area reaches 44px round it.
+      className={`inline-flex h-8 touch-target items-center rounded-full border px-3.5 text-caption font-semibold transition-colors focus-ring ${
         active
-          ? "bg-brand-tint text-navy"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          ? "border-ink bg-ink text-white"
+          : "border-edge bg-white text-body hover:text-ink"
       }`}
     >
       {children}

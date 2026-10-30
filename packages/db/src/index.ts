@@ -39,6 +39,7 @@ export * from "./images";
 export * from "./media-status";
 export * from "./delete-impact";
 export * from "./zone-routes";
+export * from "./console-paths";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";

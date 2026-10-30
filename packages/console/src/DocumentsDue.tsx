@@ -1,10 +1,11 @@
-import { formatDay, type DocumentDue } from "@repo/db";
+import { expiryText, formatDay, type DocumentDue } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 
 /**
- * A vehicle's or a driver's documents as a list reads them: each one due
- * within the warning or expired, soonest first, with its date; "In date"
- * when none is, or "No dates yet" when none was entered.
+ * A vehicle's or a driver's documents as a list reads them: a chip each
+ * for the ones due within the warning (amber) or expired (red, a real
+ * problem), soonest first, saying how far off it is, its date on hover;
+ * "In date" when none is, or "No dates yet" when none was entered.
  */
 export function DocumentsDue({
   due,
@@ -16,27 +17,27 @@ export function DocumentsDue({
 }) {
   if (due.length === 0) {
     return (
-      <span className="text-slate-500">
+      <span className="text-muted">
         {anyEntered ? "In date" : "No dates yet"}
       </span>
     );
   }
   return (
-    <ul className="grid gap-1">
+    <ul className="flex flex-wrap gap-1.5">
       {due.map((document) => (
-        <li
-          key={document.label}
-          className="flex flex-wrap items-center gap-x-2 gap-y-0.5"
-        >
-          <Badge tone={document.state === "expired" ? "red" : "amber"}>
-            {document.state === "expired" ? "Expired" : "Due"}
-          </Badge>
-          <span className="text-slate-700">{document.label}</span>
-          <span className="text-xs text-slate-500 tabular-nums">
-            {formatDay(document.expiresOn)}
-          </span>
+        <li key={document.label} title={formatDay(document.expiresOn)}>
+          <DocumentChip document={document} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/** One document due or expired: "Road tax · expires in 5 days". */
+export function DocumentChip({ document }: { document: DocumentDue }) {
+  return (
+    <Badge dot tone={document.state === "expired" ? "red" : "amber"}>
+      {document.label} · {expiryText(document.expiresOn).toLowerCase()}
+    </Badge>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, type ReactNode } from "react";
+import { useActionState, useId, useRef, useState, type ReactNode } from "react";
 import {
   CONTACT_NAME_MAX_LENGTH,
   formatMyr,
@@ -9,24 +9,22 @@ import {
   type TripCategory,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
+import { Button } from "@repo/ui/button";
+import { FormError } from "@repo/ui/form-error";
 import { showFieldError, useFormErrors } from "@repo/ui/validation";
 import Link from "next/link";
+import { clearOfFold } from "../../../../../_components/trips/TripsBar";
 import type { ForDriver } from "../../../../../_lib/trip-plan";
-import {
-  control,
-  Pending,
-  primaryButton,
-  textLink,
-} from "../../../../_components/Page";
+import { control } from "../../../../_components/Page";
 import { createTripsBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
 const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
-const label = "mb-1.5 block text-[0.9rem] font-semibold text-slate-800";
-const hint = "mt-1.5 block text-[0.85rem] text-slate-500";
-const refused = "mt-1.5 block text-[0.85rem] text-[#b3261e]";
-/** A field given the focus comes into view clear of the site header and the pinned trips. */
-const inView = "scroll-mt-28 scroll-mb-8";
+const label = "mb-1.5 block text-copy font-semibold text-body";
+const hint = "mt-1.5 block text-caption text-muted";
+const refused = "mt-1.5 block text-caption text-danger";
+/** A field given the focus comes into view clear of the site header and, on a phone, the pinned trips. */
+const inView = `${clearOfFold} scroll-mb-8`;
 
 /**
  * "Your details": name, phone and email, the flights when a trip picks up
@@ -112,15 +110,48 @@ export function ConfirmForm({
   const [email, setEmail] = useState(accountEmail ?? "");
   const locked = accountEmail !== null;
   const { errors, formProps } = useFormErrors();
-  /** The line under a field: why it was refused, or its hint. */
-  const note = (field: string, text?: string) =>
-    errors[field] ? (
-      <span role="alert" className={refused}>
+  const ids = useId();
+  /**
+   * The line under a field, outside its label: why it was refused, or its
+   * hint; `describedBy` ties the field's control to it, so it is read as
+   * the field's description, not as part of its name.
+   */
+  const lineOf = (field: string, text?: string) => {
+    const id = `${ids}-${field}`;
+    const line = errors[field] ? (
+      <span id={id} role="alert" className={refused}>
         {errors[field]}
       </span>
     ) : text ? (
-      <span className={hint}>{text}</span>
+      <span id={id} className={hint}>
+        {text}
+      </span>
     ) : null;
+    return { line, describedBy: line ? id : undefined };
+  };
+  const nameLine = lineOf(CONFIRM_FIELDS.name);
+  const phoneLine = lineOf(
+    CONFIRM_FIELDS.phone,
+    "Your driver will reach you on WhatsApp or by call.",
+  );
+  const emailLine = lineOf(
+    CONFIRM_FIELDS.email,
+    locked
+      ? "From your account. Your booking emails go here."
+      : "We need your email to send your booking confirmation.",
+  );
+  const arrivingLine = lineOf(
+    CONFIRM_FIELDS.arrivingFlight,
+    `For the pick-up at ${arriving}. Your driver follows it, and waits if it lands late.`,
+  );
+  const departingLine = lineOf(
+    CONFIRM_FIELDS.departingFlight,
+    `For the drop-off at ${departing}, so your driver leaves time for check-in.`,
+  );
+  const notesLine = lineOf(
+    CONFIRM_FIELDS.notes,
+    "Every driver on this booking sees it.",
+  );
   const error = state && "error" in state ? state.error : null;
   const missing = [
     name.trim() === "" ? "name" : null,
@@ -136,14 +167,14 @@ export function ConfirmForm({
         <input key={field} type="hidden" name={field} value={value} />
       ))}
       {signInHref && (
-        <p className="text-[0.9rem] text-slate-500">
+        <p className="text-copy text-muted">
           Have an account?{" "}
-          <Link href={signInHref} className={textLink}>
+          <Link href={signInHref} className="text-link">
             Sign in
           </Link>
         </p>
       )}
-      <Field label="Name for the driver">
+      <Field label="Name for the driver" line={nameLine.line}>
         <input
           name={CONFIRM_FIELDS.name}
           required
@@ -151,11 +182,11 @@ export function ConfirmForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="name"
+          aria-describedby={nameLine.describedBy}
           className={`${control} ${inView}`}
         />
-        {note(CONFIRM_FIELDS.name)}
       </Field>
-      <Field label="Phone number">
+      <Field label="Phone number" line={phoneLine.line}>
         <input
           name={CONFIRM_FIELDS.phone}
           type="tel"
@@ -164,14 +195,11 @@ export function ConfirmForm({
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+60 12 345 6789"
           autoComplete="tel"
+          aria-describedby={phoneLine.describedBy}
           className={`${control} ${inView}`}
         />
-        {note(
-          CONFIRM_FIELDS.phone,
-          "Your driver will reach you on WhatsApp or by call.",
-        )}
       </Field>
-      <Field label="Email">
+      <Field label="Email" line={emailLine.line}>
         <input
           name={CONFIRM_FIELDS.email}
           type="email"
@@ -180,17 +208,12 @@ export function ConfirmForm({
           onChange={(e) => setEmail(e.target.value)}
           readOnly={locked}
           autoComplete="email"
-          className={`${control} ${inView} ${locked ? "bg-mist text-slate-700" : ""}`}
+          aria-describedby={emailLine.describedBy}
+          className={`${control} ${inView} ${locked ? "bg-mist text-body" : ""}`}
         />
-        {note(
-          CONFIRM_FIELDS.email,
-          locked
-            ? "From your account. Your booking emails go here."
-            : "We need your email to send your booking confirmation.",
-        )}
       </Field>
       {arriving !== null ? (
-        <Field label="Arriving flight" optional>
+        <Field label="Arriving flight" optional line={arrivingLine.line}>
           <input
             name={CONFIRM_FIELDS.arrivingFlight}
             value={forDriver.arrivingFlight}
@@ -200,16 +223,13 @@ export function ConfirmForm({
             }
             placeholder="MH 1234"
             autoComplete="off"
+            aria-describedby={arrivingLine.describedBy}
             className={`${control} ${inView} uppercase`}
           />
-          <span className={hint}>
-            For the pick-up at {arriving}. Your driver follows it, and waits if
-            it lands late.
-          </span>
         </Field>
       ) : null}
       {departing !== null ? (
-        <Field label="Departing flight" optional>
+        <Field label="Departing flight" optional line={departingLine.line}>
           <input
             name={CONFIRM_FIELDS.departingFlight}
             value={forDriver.departingFlight}
@@ -219,15 +239,12 @@ export function ConfirmForm({
             }
             placeholder="AK 6305"
             autoComplete="off"
+            aria-describedby={departingLine.describedBy}
             className={`${control} ${inView} uppercase`}
           />
-          <span className={hint}>
-            For the drop-off at {departing}, so your driver leaves time for
-            check-in.
-          </span>
         </Field>
       ) : null}
-      <Field label="Notes for the driver" optional>
+      <Field label="Notes for the driver" optional line={notesLine.line}>
         <textarea
           name={CONFIRM_FIELDS.notes}
           value={forDriver.notes}
@@ -235,9 +252,9 @@ export function ConfirmForm({
           onChange={(e) => onForDriver({ notes: e.target.value })}
           rows={3}
           placeholder="Luggage, a child seat, a meeting point, anything we should know"
+          aria-describedby={notesLine.describedBy}
           className={control}
         />
-        <span className={hint}>Every driver on this booking sees it.</span>
       </Field>
       {/* Honeypot: off screen and out of the tab order, so only a bot fills it. */}
       <div
@@ -256,31 +273,29 @@ export function ConfirmForm({
       </div>
       <div className="grid gap-3">
         {alert ? (
-          <p role="alert" className="text-[0.95rem] text-[#b3261e]">
-            {alert}
-          </p>
+          <FormError size="copy" error={alert} />
         ) : missing.length > 0 ? (
-          <p className="text-[0.95rem] text-slate-600">
+          <p className="text-copy text-muted">
             Fill in your {listFormat.format(missing)} to confirm.
           </p>
         ) : null}
-        <button
+        <Button
           type="submit"
-          disabled={pending || blocked !== null || missing.length > 0}
-          className={`${primaryButton} w-full`}
+          size="lg"
+          pending={pending}
+          disabled={blocked !== null || missing.length > 0}
+          className="w-full"
         >
           {pending ? (
-            <Pending>Booking…</Pending>
+            "Booking…"
           ) : (
             <>Confirm booking&nbsp;· {formatMyr(totalSen)}</>
           )}
-        </button>
+        </Button>
       </div>
-      <div className="grid gap-1 text-[0.85rem]">
-        {cancellation ? (
-          <p className="text-emerald-800">{cancellation}</p>
-        ) : null}
-        <p className="text-slate-500">
+      <div className="grid gap-1 text-caption">
+        {cancellation ? <p className="text-success">{cancellation}</p> : null}
+        <p className="text-muted">
           No payment now. We will confirm your booking by email.
         </p>
       </div>
@@ -288,24 +303,37 @@ export function ConfirmForm({
   );
 }
 
+/**
+ * A field of the form: its label around the control, which takes its
+ * name from it, and `line`, its hint or why it was refused, under the
+ * label, which the control points at (`aria-describedby`). @repo/ui's
+ * `Field` does the same in the console's sizes; the site's form reads at
+ * 15px with 13px lines, marks a field "(optional)", and takes its errors
+ * from the whole form (`useFormErrors`), the server's too.
+ */
 function Field({
   label: text,
   optional = false,
+  line,
   children,
 }: {
   label: string;
   optional?: boolean;
+  line: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className={label}>
-        {text}
-        {optional ? (
-          <span className="font-normal text-slate-500"> (optional)</span>
-        ) : null}
-      </span>
-      {children}
-    </label>
+    <div>
+      <label className="block">
+        <span className={label}>
+          {text}
+          {optional ? (
+            <span className="font-normal text-muted"> (optional)</span>
+          ) : null}
+        </span>
+        {children}
+      </label>
+      {line}
+    </div>
   );
 }

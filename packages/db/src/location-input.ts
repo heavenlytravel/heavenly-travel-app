@@ -300,8 +300,12 @@ const SET_ASIDE = [
   "sitemap",
   "robots",
 ];
-/** The console's own: a location's address there is its slug, and `/locations/new` adds one. */
-const CONSOLE_PATHS = ["new"];
+/**
+ * The console's own words at its root: every console address starts with
+ * the location's slug (`~` for every location, which `slugify` drops), so
+ * a slug must never be one of the console's fixed pages.
+ */
+const CONSOLE_PATHS = ["api", "sign-in", "no-access", "restricted"];
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   ...SITE_PATHS,
   ...LOCATION_SECTIONS,

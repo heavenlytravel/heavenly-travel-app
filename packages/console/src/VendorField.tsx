@@ -2,7 +2,6 @@
 
 import type { VendorOption } from "@repo/db/server";
 import { Field } from "@repo/ui/field";
-import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 
 /**
@@ -29,14 +28,8 @@ export function VendorField({
   });
   return (
     <Field
-      label={
-        <span className="inline-flex items-center gap-1.5">
-          Vendor
-          <InfoTip
-            text={`Whose ${what} it is. Ours costs nothing; another vendor's is paid per trip and accepts each job itself.`}
-          />
-        </span>
-      }
+      label="Vendor"
+      tip={`Whose ${what} it is. Ours costs nothing; another vendor's is paid per trip and accepts each job itself.`}
     >
       <Select
         name="vendorId"

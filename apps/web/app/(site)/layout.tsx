@@ -4,6 +4,7 @@ import { Footer } from "../_components/Footer";
 import { SiteHeader } from "../_components/SiteHeader";
 import { fontVars } from "../_home/fonts";
 import { headerDestinations } from "../_lib/locations";
+import { pageColumn } from "./_components/Page";
 
 /**
  * Every customer page after the home page: booking and account. The home
@@ -18,10 +19,14 @@ export default async function SiteLayout({
 }) {
   return (
     <div
-      className={`${fontVars} min-h-screen bg-slate-50 font-(family-name:--font-body) leading-normal text-slate-900 antialiased`}
+      className={`${fontVars} min-h-screen bg-canvas font-sans leading-normal text-body antialiased`}
     >
       <SiteHeader destinations={await headerDestinations()} />
-      <main className="mx-auto w-full max-w-[1100px] px-5 pt-6 pb-24 sm:px-8 sm:pt-10">
+      {/* At least a screen tall, so the footer starts below the fold and
+          stays there while a step swaps its skeleton for a shorter answer. */}
+      <main
+        className={`${pageColumn} min-h-[calc(100svh-var(--header-height))]`}
+      >
         {children}
       </main>
       <Footer />

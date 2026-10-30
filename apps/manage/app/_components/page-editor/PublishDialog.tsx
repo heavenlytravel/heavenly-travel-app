@@ -3,7 +3,8 @@
 import type { PageCheck } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Dialog } from "@repo/ui/dialog";
+import { Dialog, DialogActions } from "@repo/ui/dialog";
+import { Notice } from "@repo/ui/notice";
 
 /**
  * What "Publish" opens: the checks the page must pass, each ticked or
@@ -36,7 +37,7 @@ export function PublishDialog({
   changes: readonly string[] | null;
   pending: boolean;
   onPublish: () => void;
-  /** Shows the part of the page a check is about, in its tab. */
+  /** Shows the part of the page a check is about. */
   onGoTo: (check: PageCheck) => void;
 }) {
   const left = checks.filter((check) => check.missing.length > 0).length;
@@ -55,41 +56,35 @@ export function PublishDialog({
       width="md"
     >
       <div className="grid gap-5">
-        {goesLive ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            {goesLive}
-          </p>
-        ) : null}
+        {goesLive ? <Notice>{goesLive}</Notice> : null}
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-slate-800">
-            Before publishing
-          </h3>
-          <ol className="divide-y divide-slate-100 rounded-md border border-slate-200">
+          <h3 className="text-sm font-semibold text-ink">Before publishing</h3>
+          <ol className="divide-y divide-hairline rounded-card border border-card-edge">
             {checks.map((check) => {
               const done = check.missing.length === 0;
               return (
-                <li key={check.key} className="flex gap-3 px-3 py-2.5">
+                <li key={check.key} className="flex gap-3 px-3.5 py-3">
                   <span
                     aria-hidden="true"
                     className={cx(
-                      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-2xs font-bold",
                       done
-                        ? "bg-emerald-600 text-white"
-                        : "border border-amber-400 bg-amber-50 text-amber-700",
+                        ? "bg-success text-white"
+                        : "border border-warning-edge bg-warning-tint text-warning",
                     )}
                   >
                     {done ? "✓" : "!"}
                   </span>
                   <div className="min-w-0 flex-1 text-sm">
-                    <p className={done ? "text-slate-700" : "text-slate-900"}>
+                    <p className={done ? "text-muted" : "text-ink"}>
                       <span className="sr-only">
                         {done ? "Done: " : "Not done: "}
                       </span>
                       {check.label}
                     </p>
                     {done ? null : (
-                      <ul className="mt-1 grid gap-0.5 text-xs text-amber-800">
+                      <ul className="mt-1 grid gap-0.5 text-xs text-warning">
                         {check.missing.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
@@ -100,7 +95,7 @@ export function PublishDialog({
                     <button
                       type="button"
                       onClick={() => onGoTo(check)}
-                      className="shrink-0 self-start text-xs font-medium text-slate-900 underline-offset-4 hover:underline"
+                      className="shrink-0 self-start rounded-sm text-xs text-link"
                     >
                       Go to it
                     </button>
@@ -110,18 +105,18 @@ export function PublishDialog({
             })}
           </ol>
           {limitsError ? (
-            <p className="text-sm text-red-700">{limitsError}</p>
+            <p className="text-sm text-danger">{limitsError}</p>
           ) : null}
         </section>
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-medium text-slate-800">What changes</h3>
+          <h3 className="text-sm font-semibold text-ink">What changes</h3>
           {changes === null ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               Nothing is published yet: this is the page&apos;s first publish.
             </p>
           ) : changes.length === 0 ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               Nothing: the draft is the published copy.
             </p>
           ) : (
@@ -129,7 +124,7 @@ export function PublishDialog({
               {changes.map((part) => (
                 <li
                   key={part}
-                  className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800"
+                  className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning"
                 >
                   {part}
                 </li>
@@ -138,18 +133,18 @@ export function PublishDialog({
           )}
         </section>
 
-        <div className="flex justify-end gap-2">
+        <DialogActions>
           <Button
-            variant="ghost"
+            variant="secondary"
             disabled={pending}
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
-          <Button disabled={pending || !ready} onClick={onPublish}>
+          <Button disabled={!ready} pending={pending} onClick={onPublish}>
             {pending ? "Publishing…" : "Publish now"}
           </Button>
-        </div>
+        </DialogActions>
       </div>
     </Dialog>
   );

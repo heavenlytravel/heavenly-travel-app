@@ -2,7 +2,9 @@ import { SignOutButton } from "@clerk/nextjs";
 import { getAccess } from "@repo/db/server";
 import { AuthShell } from "@repo/ui/auth-shell";
 import { Button } from "@repo/ui/button";
+import { Logo } from "@repo/ui/logo";
 import { redirect } from "next/navigation";
+import { PortalCard } from "../_components/PortalCard";
 
 export default async function NoAccessPage() {
   const access = await getAccess("admin");
@@ -10,21 +12,26 @@ export default async function NoAccessPage() {
   if (access.status === "ok") redirect("/");
 
   return (
-    <AuthShell tone="dark" eyebrow="Admin portal">
-      <div className="w-full max-w-[26rem] rounded-xl bg-white p-8 text-center text-slate-900 shadow-[0_22px_55px_rgba(0,38,75,0.14)]">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          No admin access
-        </h1>
-        <p className="mt-3 text-slate-600">
-          {access.user.email} is signed in but has no admin profile. Access is
-          by invitation from a SUPER admin.
+    <AuthShell
+      tone="dark"
+      eyebrow="Admin portal"
+      brand={<Logo tone="white" loading="eager" className="h-9" />}
+    >
+      <PortalCard title="No Admin Access">
+        <p className="mt-3 text-muted">
+          {/* A long address breaks where it must, not past the card. */}
+          <span className="[overflow-wrap:anywhere]">
+            {access.user.email}
+          </span>{" "}
+          is signed in but has no admin profile. Access is by invitation from a
+          SUPER admin.
         </p>
         <SignOutButton>
           <Button variant="secondary" className="mt-8">
             Sign out
           </Button>
         </SignOutButton>
-      </div>
+      </PortalCard>
     </AuthShell>
   );
 }

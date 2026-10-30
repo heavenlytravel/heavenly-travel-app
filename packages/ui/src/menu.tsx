@@ -12,7 +12,8 @@ import { usePortalContainer } from "./portal-container.js";
  * with Enter, closed with Escape or a click outside. The trigger is the
  * caller's own button; each item is a `MenuItem`, a `Link` inside it with
  * `asChild`. In a dialog or full screen it opens in that layer, as a
- * select's list does.
+ * select's list does. It is at least as wide as its button, as a
+ * select's list is, and never narrower than 14rem.
  */
 export function Menu({
   trigger,
@@ -43,7 +44,7 @@ export function Menu({
           sideOffset={6}
           collisionPadding={8}
           className={cx(
-            "ui:z-50 ui:max-h-[var(--radix-dropdown-menu-content-available-height)] ui:min-w-56 ui:overflow-y-auto ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:p-1 ui:text-popover-foreground ui:shadow-lg",
+            "ui:z-(--layer-popover) ui:max-h-[var(--radix-dropdown-menu-content-available-height)] ui:min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))] ui:overflow-y-auto ui:rounded-popover ui:border ui:border-popover-line ui:bg-popover ui:p-1 ui:text-popover-foreground ui:shadow-lg",
             className,
           )}
         >
@@ -94,7 +95,7 @@ export function MenuLabel({ className, ...props }: ComponentProps<"div">) {
   return (
     <Primitive.Label
       className={cx(
-        "ui:px-2 ui:pt-2 ui:pb-1 ui:text-xs ui:font-medium ui:text-slate-500",
+        "ui:px-2 ui:pt-2 ui:pb-1 ui:text-xs ui:font-medium ui:text-muted",
         className,
       )}
       {...props}
@@ -106,7 +107,7 @@ export function MenuLabel({ className, ...props }: ComponentProps<"div">) {
 export function MenuSeparator({ className }: { className?: string }) {
   return (
     <Primitive.Separator
-      className={cx("ui:-mx-1 ui:my-1 ui:h-px ui:bg-slate-200", className)}
+      className={cx("ui:-mx-1 ui:my-1 ui:h-px ui:bg-hairline", className)}
     />
   );
 }

@@ -1,36 +1,21 @@
 @import "tailwindcss";
 @import "@repo/tailwind-config";
 
+/*
+ * The site's look is set by the tokens in @repo/tailwind-config under
+ * `data-app="site"` (docs/261029-design-tokens.md). The site has no dark
+ * theme: it says so, so the browser keeps its own controls light too.
+ */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  color-scheme: light;
 }
 
 /* A jump to a part of a page lands clear of the header held at the top. */
 html {
-  scroll-padding-top: 84px;
-}
-
-/* The menus of the form controls from @repo/ui, rounder on the site. */
-:root {
-  --ui-popover-radius: 16px;
+  scroll-padding-top: calc(var(--header-height) + 0.5rem);
+  background: var(--canvas);
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  color: var(--body);
 }

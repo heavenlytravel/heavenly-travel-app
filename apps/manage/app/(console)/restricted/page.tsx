@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { PageHeader } from "@repo/console/PageHeader";
+import { Button } from "@repo/ui/button";
 import { requireAdmin } from "../../_lib/access";
+import { dashboardHref } from "../../_lib/routes";
+import { StopScreen } from "../../_components/StopScreen";
 
 /**
  * Route: /restricted. Where `requireAdmin` sends an admin whose teams do
@@ -10,19 +12,16 @@ export default async function RestrictedPage() {
   await requireAdmin("dashboard.view");
 
   return (
-    <>
-      <PageHeader
-        title="This screen belongs to another team"
-        description="Your teams do not reach it. A SUPER admin sets the teams of each admin."
-      />
-      <p className="mt-6 text-sm">
-        <Link
-          href="/"
-          className="font-medium text-slate-600 underline-offset-4 hover:underline"
-        >
-          Back to the locations
-        </Link>
-      </p>
-    </>
+    <StopScreen
+      title="This Screen Belongs to Another Team"
+      action={
+        <Button asChild variant="secondary">
+          <Link href={dashboardHref(null)}>Back to the dashboard</Link>
+        </Button>
+      }
+    >
+      Your teams do not reach it. A SUPER admin sets the teams of each admin,
+      under Team.
+    </StopScreen>
   );
 }

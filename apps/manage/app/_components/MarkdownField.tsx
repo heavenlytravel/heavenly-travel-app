@@ -17,22 +17,29 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Dialog } from "@repo/ui/dialog";
-import { Input } from "@repo/ui/field";
+import { Input, Textarea } from "@repo/ui/field";
 import { ImageIcon } from "@repo/ui/icons";
 import { Markdown } from "@repo/ui/markdown";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Choices } from "./Choices";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
-import { FormError } from "@repo/console/FormError";
-import { useImageUpload } from "@repo/console/use-image-upload";
+import { FormError } from "@repo/ui/form-error";
+import { useImageUpload } from "./use-image-upload";
 
 /**
  * How the console's preview shows a body: the elements styled from the
- * wrapper, in the console's slate tones. The customer site styles its own.
+ * wrapper, in the console's own tones. The customer site styles its own.
  */
 const PROSE =
-  "text-sm leading-relaxed text-slate-700 [&>:first-child]:mt-0 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-slate-900 [&_h3]:mt-5 [&_h3]:mb-1.5 [&_h3]:font-semibold [&_h3]:text-slate-900 [&_h4]:mt-4 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-slate-900 [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600 [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:my-4 [&_table]:w-full [&_table]:text-left [&_th]:border-b [&_th]:border-slate-300 [&_th]:py-1.5 [&_th]:pr-3 [&_td]:border-b [&_td]:border-slate-100 [&_td]:py-1.5 [&_td]:pr-3 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:text-[0.85em] [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_hr]:my-6 [&_hr]:border-slate-200";
+  "text-sm leading-relaxed text-body [&>:first-child]:mt-0 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-5 [&_h3]:mb-1.5 [&_h3]:font-semibold [&_h3]:text-ink [&_h4]:mt-4 [&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-ink [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-4 [&_blockquote]:border-l-2 [&_blockquote]:border-edge [&_blockquote]:pl-4 [&_blockquote]:text-muted [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:my-4 [&_table]:w-full [&_table]:text-left [&_th]:border-b [&_th]:border-edge [&_th]:py-1.5 [&_th]:pr-3 [&_td]:border-b [&_td]:border-hairline [&_td]:py-1.5 [&_td]:pr-3 [&_code]:rounded [&_code]:bg-hairline [&_code]:px-1 [&_code]:text-[0.85em] [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-hairline [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_hr]:my-6 [&_hr]:border-card-edge";
+
+/** The switch between the text and its preview, where the two do not fit side by side. */
+const VIEWS = [
+  { value: "write", label: "Write" },
+  { value: "preview", label: "Preview" },
+] as const;
 
 /** The files "Import .md" takes, by their name. */
 const MARKDOWN_FILE = /\.(md|markdown|txt)$/i;
@@ -280,7 +287,7 @@ export function MarkdownField({
           {tool("Subheading", "H3", (text, span) =>
             prefixLines(text, span, () => "### "),
           )}
-          <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+          <span aria-hidden className="mx-1 h-5 w-px bg-edge" />
           {tool(
             "Bold",
             <span className="font-bold">B</span>,
@@ -294,7 +301,7 @@ export function MarkdownField({
             "Ctrl+I",
           )}
           {tool("Link", "Link", link)}
-          <span aria-hidden className="mx-1 h-5 w-px bg-slate-200" />
+          <span aria-hidden className="mx-1 h-5 w-px bg-edge" />
           {tool("Bulleted list", "• List", (text, span) =>
             prefixLines(text, span, () => "- "),
           )}
@@ -336,32 +343,19 @@ export function MarkdownField({
       </div>
       <FormError error={importError} size="xs" />
 
-      <div
-        role="tablist"
-        aria-label="Write or preview"
-        className="flex gap-1 border-b border-slate-200 lg:hidden"
-      >
-        {(["write", "preview"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={view === tab}
-            onClick={() => setView(tab)}
-            className={cx(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
-              view === tab
-                ? "border-brand text-brand"
-                : "border-transparent text-slate-500 hover:text-slate-900",
-            )}
-          >
-            {tab === "write" ? "Write" : "Preview"}
-          </button>
-        ))}
+      {/* Where the two do not fit side by side: one at a time, a switch of two. */}
+      <div className="lg:hidden">
+        <Choices
+          label="Write or preview"
+          size="sm"
+          value={view}
+          options={VIEWS}
+          onChange={setView}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <textarea
+        <Textarea
           ref={area}
           id={fieldId}
           value={value}
@@ -373,19 +367,19 @@ export function MarkdownField({
             "Write here. Start a line with ## for a heading.\nLeave a blank line between paragraphs."
           }
           className={cx(
-            "block min-h-80 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
+            "min-h-80 resize-y font-mono text-caption pointer-coarse:text-base",
             view === "preview" && "hidden lg:block",
           )}
         />
         <div
           aria-label="Preview"
           className={cx(
-            "min-h-80 overflow-auto rounded-md border border-slate-200 bg-white px-4 py-3",
+            "min-h-80 overflow-auto rounded-control border border-card-edge bg-white px-4 py-3",
             view === "write" && "hidden lg:block",
           )}
         >
           {value.trim() === "" ? (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-muted">
               The text shows here as the page will read it.
             </p>
           ) : (
@@ -477,7 +471,7 @@ function ToolButton({
       // Keeps the text area's selection: the press must not take the focus.
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-medium text-slate-700 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      className="inline-flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 text-xs font-semibold text-body hover:border-edge hover:bg-shade hover:text-ink focus-ring"
     >
       {children}
     </button>
@@ -519,7 +513,7 @@ function AddImageDialog({
         <div>
           <label
             htmlFor={altId}
-            className="mb-1.5 block text-sm font-medium text-slate-800"
+            className="mb-1.5 block text-sm font-medium text-body"
           >
             Alt text
           </label>
@@ -531,7 +525,7 @@ function AddImageDialog({
             value={alt}
             onChange={(event) => setAlt(event.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted">
             A page publishes only once every image has one. You can write it
             later under “Images in the text”.
           </p>
@@ -554,10 +548,10 @@ function AddImageDialog({
               });
             }}
           />
-          <Button disabled={uploading} onClick={() => input.current?.click()}>
+          <Button pending={uploading} onClick={() => input.current?.click()}>
             {uploading ? "Uploading…" : "Choose image"}
           </Button>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted">
             JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
           </span>
         </div>
@@ -583,17 +577,17 @@ function TextImages({
   const away = images.filter((image) => !isUploadUrl(image.url)).length;
   return (
     <section aria-label="Images in the text" className="grid gap-2">
-      <h3 className="text-sm font-medium text-slate-800">
+      <h3 className="text-sm font-semibold text-ink">
         Images in the text
         {away > 0 ? (
-          <span className="ml-2 text-xs font-normal text-amber-800">
+          <span className="ml-2 text-xs font-normal text-warning">
             {away === 1
               ? "1 is not uploaded here"
               : `${away} are not uploaded here`}
           </span>
         ) : null}
       </h3>
-      <ol className="divide-y divide-slate-100 rounded-md border border-slate-200 bg-white">
+      <ol className="divide-y divide-hairline rounded-card border border-card-edge bg-white">
         {images.map((image) => (
           // The address and the place together: the same file may be in twice.
           <li key={`${image.index}-${image.url}`}>
@@ -635,10 +629,10 @@ function TextImage({
           width={96}
           height={64}
           sizes="96px"
-          className="h-16 w-24 shrink-0 rounded border border-slate-200 object-cover"
+          className="h-16 w-24 shrink-0 rounded border border-card-edge object-cover"
         />
       ) : (
-        <span className="grid h-16 w-24 shrink-0 place-items-center rounded border border-dashed border-amber-300 bg-amber-50 px-1 text-center text-[11px] leading-tight text-amber-800">
+        <span className="grid h-16 w-24 shrink-0 place-items-center rounded border border-dashed border-warning-edge bg-warning-tint px-1 text-center text-2xs leading-tight text-warning">
           Not uploaded here
         </span>
       )}
@@ -655,7 +649,7 @@ function TextImage({
           className="h-8"
         />
         {here ? null : (
-          <p className="truncate text-xs text-slate-500" title={image.url}>
+          <p className="truncate text-xs text-muted" title={image.url}>
             Links to {image.url}
           </p>
         )}
@@ -679,7 +673,7 @@ function TextImage({
           <Button
             variant="secondary"
             size="sm"
-            disabled={uploading}
+            pending={uploading}
             onClick={() => input.current?.click()}
           >
             {uploading ? "Uploading…" : "Upload"}

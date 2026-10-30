@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./button.js";
+import { DialogActions } from "./dialog.js";
 import { Input } from "./field.js";
 import { ModalBody, onModalClose, useModal } from "./modal.js";
 
@@ -57,7 +58,7 @@ export function AlertDialog({
       onClose={onModalClose(() => {
         if (open) onAnswer(false);
       })}
-      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-xl ui:border ui:border-slate-200 ui:bg-white ui:p-0 ui:text-inherit ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)] ui:backdrop:bg-ink/45"
+      className="ui:m-auto ui:max-h-none ui:w-[min(30rem,92vw)] ui:overflow-hidden ui:rounded-popover ui:border ui:border-card-edge ui:bg-white ui:p-0 ui:text-inherit ui:shadow-overlay ui:backdrop:bg-ink/45"
     >
       <ModalBody open={open} className="ui:max-h-[90dvh]">
         {request ? (
@@ -70,10 +71,7 @@ export function AlertDialog({
                 {request.title}
               </h2>
               {request.description ? (
-                <div
-                  id={descriptionId}
-                  className="ui:text-sm ui:text-slate-600"
-                >
+                <div id={descriptionId} className="ui:text-sm ui:text-muted">
                   {request.description}
                 </div>
               ) : null}
@@ -113,9 +111,9 @@ function Answers({
     <>
       {wanted !== undefined ? (
         <label className="ui:grid ui:gap-1.5 ui:text-sm">
-          <span className="ui:font-medium ui:text-slate-800">
+          <span className="ui:font-medium ui:text-body">
             Type{" "}
-            <span className="ui:rounded ui:bg-slate-100 ui:px-1 ui:font-mono">
+            <span className="ui:rounded ui:bg-hairline ui:px-1 ui:font-mono">
               {wanted}
             </span>{" "}
             to confirm
@@ -134,7 +132,7 @@ function Answers({
           />
         </label>
       ) : null}
-      <div className="ui:flex ui:flex-col-reverse ui:gap-2 ui:sm:flex-row ui:sm:justify-end">
+      <DialogActions>
         <Button variant="secondary" onClick={() => onAnswer(false)}>
           {request.cancel ?? "Cancel"}
         </Button>
@@ -145,7 +143,7 @@ function Answers({
         >
           {request.action}
         </Button>
-      </div>
+      </DialogActions>
     </>
   );
 }

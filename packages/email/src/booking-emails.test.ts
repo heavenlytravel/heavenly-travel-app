@@ -33,7 +33,7 @@ describe("bookingEmails", () => {
     assert.equal(ops!.message.to, "ops@site.test");
     assert.equal(ops!.message.subject, "New booking HT-7K3QZM");
     assert.match(ops!.message.text, /Phone: \+60123456789/);
-    assert.match(ops!.message.text, /https:\/\/admin\.test\/bookings\/b1/);
+    assert.match(ops!.message.text, /https:\/\/admin\.test\/~\/bookings\/b1/);
   });
 
   it("writes only to ops for an old guest booking with no email", () => {

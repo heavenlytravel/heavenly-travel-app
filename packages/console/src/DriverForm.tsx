@@ -13,67 +13,65 @@ import {
 import type {
   ClassOption,
   DriverWithClasses,
-  LocationName,
   HeldBooking,
+  LocationName,
   VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import type { ActionState } from "./action-state";
-import { Card } from "./Card";
+import { Card, CardTitle } from "./Card";
 import { ExpiryDateField } from "./ExpiryDateField";
-import { FLEET_BACK_FIELD } from "./fleet-form";
-import { FormError } from "./FormError";
-import { FORM_WIDTH } from "./PageColumn";
+import { DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
+import { FormFoot } from "./FormFoot";
+import { DetailColumns } from "./PageColumn";
 import { useActionForm } from "./use-action-form";
 import { useOutOfServiceAsk } from "./use-out-of-service-ask";
 import { VendorField } from "./VendorField";
 
 /**
- * The form for a vendor's driver, new or existing: whose driver they are,
- * who they are and how to reach them, the email they sign in to Connect
- * with, where they are based, the classes they may drive, the
- * expiry dates of their licences, and notes. A saved driver opens the
- * Drivers tab of the location they are based at, or the list across
- * locations they were added from. One copy for both apps: the admin
+ * The form for a vendor's driver, new or existing, across the record's
+ * page: whose driver they are, who they are and how to reach them, the
+ * email they sign in to Connect with, where they are based, notes and
+ * whether they are active, the classes they may drive, and beside them
+ * the expiry dates of their licences. One copy for both apps: the admin
  * chooses the vendor from every one, and Connect fixes it to the
  * member's vendor, with only the locations it serves and the classes on
  * sale at them.
  */
 export function DriverForm({
+  driver,
+  scope,
   locationId,
   vendorId,
-  driver,
+  vendors,
   classes,
   locations,
-  vendors,
   action,
-  backHref,
-  backToList = false,
+  cancelHref,
   held = [],
 }: {
-  /** Where a new driver is based to start with; absent on the list across locations. */
+  /** Absent on the "new" page. */
+  driver?: DriverWithClasses;
+  /** The admin's scope the form is open in (a slug, or `~`), which a save goes back to; absent in Connect. */
+  scope?: string;
+  /** Where a new driver is based to start with. */
   locationId?: string;
   /** Whose a new driver is to start with; ours when absent. */
   vendorId?: string;
-  /** Absent on the "new" page. */
-  driver?: DriverWithClasses;
   /** The vendors to choose from, in the admin; absent in Connect, where it is the member's. */
-  vendors?: VendorOption[];
+  vendors?: readonly VendorOption[];
+  /** Every class they may be allowed on, in the catalogue's order. */
+  classes: ClassOption[];
+  locations: readonly LocationName[];
   /** The save, new or existing, as the app checks it. */
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  /** Every class it may be allowed on, in the catalogue's order. */
-  classes: ClassOption[];
-  locations: LocationName[];
-  /** Where "Cancel" goes; with `backToList`, where a saved driver goes too. */
-  backHref: string;
-  /** Opened from the list across locations, which a saved driver goes back to. */
-  backToList?: boolean;
+  /** Where Cancel goes. */
+  cancelHref: string;
   /** The accepted bookings still to come they are on, which making them inactive takes them off. */
-  held?: HeldBooking[];
+  held?: readonly HeldBooking[];
 }) {
   const isNew = !driver;
   const outOfService = useOutOfServiceAsk({
@@ -91,178 +89,177 @@ export function DriverForm({
   });
   const fields = driver ? driverFieldsOf(driver) : null;
   const ticked = new Set(fields?.vehicleClassIds ?? []);
+  const vendor = fields?.vendorId || vendorId || "";
 
   return (
-    <form {...formProps} className={`grid gap-6 ${FORM_WIDTH}`}>
+    <form {...formProps} className="grid gap-5">
       {driver ? <input type="hidden" name="id" value={driver.id} /> : null}
-      {backToList ? (
-        <input type="hidden" name={FLEET_BACK_FIELD} value={backHref} />
-      ) : null}
+      {scope ? <input type="hidden" name={SCOPE_FIELD} value={scope} /> : null}
 
-      <Card className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {vendors ? (
-            <VendorField
-              vendors={vendors}
-              defaultValue={fields?.vendorId || vendorId || ""}
-              what="driver"
-            />
-          ) : (
-            <input
-              type="hidden"
-              name="vendorId"
-              value={fields?.vendorId || vendorId || ""}
-            />
-          )}
-          <Field label={DRIVER_FIELD_LABELS.name}>
-            <Input
-              name="name"
-              required
-              autoComplete="off"
-              maxLength={DRIVER_LIMITS.name}
-              defaultValue={fields?.name}
-            />
-          </Field>
-          <Field
-            label={DRIVER_FIELD_LABELS.phone}
-            hint="Their WhatsApp, with the country code."
-          >
-            <Input
-              name="phone"
-              type="tel"
-              required
-              autoComplete="off"
-              placeholder="+60 12-345 6789"
-              defaultValue={fields?.phone}
-            />
-          </Field>
-          <Field
-            label={DRIVER_FIELD_LABELS.email}
-            hint="The email they sign in to Connect with, to see and report their jobs."
-          >
-            <Input
-              name="email"
-              type="email"
-              autoComplete="off"
-              placeholder="ali@example.com"
-              defaultValue={fields?.email ?? ""}
-            />
-          </Field>
-          <Field
-            label={
-              <span className="inline-flex items-center gap-1.5">
-                {DRIVER_FIELD_LABELS.locationId}
-                <InfoTip text="To move a driver to another location, change where they are based." />
-              </span>
-            }
-          >
-            <Select
-              name="locationId"
-              required
-              placeholder="Choose the location"
-              defaultValue={fields?.locationId ?? locationId ?? ""}
-              options={locations.map((location) => ({
-                value: location.id,
-                label: location.name,
-              }))}
-            />
-          </Field>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            onChange={(event) =>
-              outOfService.onActiveChange(event.currentTarget.checked)
-            }
-            name="isActive"
-            defaultChecked={fields?.isActive ?? true}
-          />
-          <span className="inline-flex items-center gap-1.5">
-            {DRIVER_FIELD_LABELS.isActive}
-            <InfoTip text="Inactive, the driver keeps their history and their licences are not checked." />
-          </span>
-        </label>
-      </Card>
-
-      <Card className="grid gap-4">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            {DRIVER_FIELD_LABELS.vehicleClassIds}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            The classes they are licensed and trusted to drive. A coach driver
-            is not a sedan driver.
-          </p>
-        </div>
-        <FieldGroup className="grid gap-4 sm:grid-cols-2">
-          {TRIP_CATEGORIES.map((category) => {
-            const ofCategory = classes.filter((c) => c.category === category);
-            if (ofCategory.length === 0) return null;
-            return (
-              <fieldset key={category} className="grid content-start gap-2">
-                <legend className="mb-1 text-sm font-medium text-slate-800">
-                  {TRIP_CATEGORY_LABELS[category]}
-                </legend>
-                {ofCategory.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      name={DRIVER_CLASSES_FIELD}
-                      value={c.id}
-                      defaultChecked={ticked.has(c.id)}
+      <DetailColumns
+        main={
+          <>
+            <Card>
+              <CardTitle>Details</CardTitle>
+              <div className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {vendors ? (
+                    <VendorField
+                      vendors={vendors}
+                      defaultValue={vendor}
+                      what="driver"
                     />
-                    {c.name}
+                  ) : (
+                    <input type="hidden" name="vendorId" value={vendor} />
+                  )}
+                  <Field label={DRIVER_FIELD_LABELS.name}>
+                    <Input
+                      name="name"
+                      required
+                      autoComplete="off"
+                      maxLength={DRIVER_LIMITS.name}
+                      defaultValue={fields?.name}
+                    />
+                  </Field>
+                  <Field
+                    label={DRIVER_FIELD_LABELS.phone}
+                    hint="Their WhatsApp, with the country code."
+                  >
+                    <Input
+                      name="phone"
+                      type="tel"
+                      required
+                      autoComplete="off"
+                      placeholder="+60 12-345 6789"
+                      defaultValue={fields?.phone}
+                    />
+                  </Field>
+                  <Field
+                    label={DRIVER_FIELD_LABELS.email}
+                    hint="The email they sign in to Connect with, to see and report their jobs."
+                  >
+                    <Input
+                      name="email"
+                      type="email"
+                      autoComplete="off"
+                      placeholder="ali@example.com"
+                      defaultValue={fields?.email ?? ""}
+                    />
+                  </Field>
+                  <Field
+                    label={DRIVER_FIELD_LABELS.locationId}
+                    tip="To move a driver to another location, change where they are based."
+                  >
+                    <Select
+                      name="locationId"
+                      required
+                      placeholder="Choose the location"
+                      defaultValue={fields?.locationId ?? locationId ?? ""}
+                      options={locations.map((location) => ({
+                        value: location.id,
+                        label: location.name,
+                      }))}
+                    />
+                  </Field>
+                </div>
+                <Field label={DRIVER_FIELD_LABELS.notes}>
+                  <Textarea
+                    name="notes"
+                    rows={3}
+                    maxLength={DRIVER_LIMITS.notes}
+                    placeholder="Languages, the vehicle they usually drive, anything the team should know"
+                    defaultValue={fields?.notes}
+                  />
+                </Field>
+                {/* The tip beside the label, not in it: its button would join the box's name. */}
+                <span className="flex items-center gap-1.5 text-sm">
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      name="isActive"
+                      defaultChecked={fields?.isActive ?? true}
+                      onChange={(event) =>
+                        outOfService.onActiveChange(event.currentTarget.checked)
+                      }
+                    />
+                    {DRIVER_FIELD_LABELS.isActive}
                   </label>
-                ))}
-              </fieldset>
-            );
-          })}
-        </FieldGroup>
-      </Card>
+                  <InfoTip text="Inactive, the driver keeps their history and their licences are not checked." />
+                </span>
+              </div>
+            </Card>
 
-      <Card className="grid gap-4">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Licences</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            The expiry dates of their driving licence and of the PSV licence
-            that lets them drive paying passengers. A date within 30 days shows
-            as due.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {DRIVER_DOCUMENTS.map((key) => (
-            <ExpiryDateField
-              key={key}
-              name={key}
-              label={DRIVER_DOCUMENT_LABELS[key]}
-              defaultValue={fields?.[key] ?? null}
-            />
-          ))}
-        </div>
-      </Card>
+            <Card>
+              <CardTitle>
+                <span className="inline-flex items-center gap-1.5">
+                  {DRIVER_FIELD_LABELS.vehicleClassIds}
+                  <InfoTip text="The classes they are licensed and trusted to drive. A coach driver is not a sedan driver." />
+                </span>
+              </CardTitle>
+              <FieldGroup className="grid gap-4 sm:grid-cols-2">
+                {TRIP_CATEGORIES.map((category) => {
+                  const ofCategory = classes.filter(
+                    (c) => c.category === category,
+                  );
+                  if (ofCategory.length === 0) return null;
+                  return (
+                    <fieldset
+                      key={category}
+                      className="grid content-start gap-2"
+                    >
+                      <legend className="mb-1 text-sm font-semibold text-ink">
+                        {TRIP_CATEGORY_LABELS[category]}
+                      </legend>
+                      {ofCategory.map((c) => (
+                        <label
+                          key={c.id}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            name={DRIVER_CLASSES_FIELD}
+                            value={c.id}
+                            defaultChecked={ticked.has(c.id)}
+                          />
+                          {c.name}
+                        </label>
+                      ))}
+                    </fieldset>
+                  );
+                })}
+              </FieldGroup>
+            </Card>
+          </>
+        }
+        side={
+          <Card id={DATES_CARDS.drivers.id}>
+            <CardTitle>
+              <span className="inline-flex items-center gap-1.5">
+                {DATES_CARDS.drivers.name}
+                <InfoTip text="The expiry dates of their driving licence and of the PSV licence that lets them drive paying passengers. A date within 30 days shows as due." />
+              </span>
+            </CardTitle>
+            <div className="grid gap-4">
+              {DRIVER_DOCUMENTS.map((key) => (
+                <ExpiryDateField
+                  key={key}
+                  name={key}
+                  label={DRIVER_DOCUMENT_LABELS[key]}
+                  defaultValue={fields?.[key] ?? null}
+                />
+              ))}
+            </div>
+          </Card>
+        }
+      />
 
-      <Card className="grid gap-4">
-        <Field label={DRIVER_FIELD_LABELS.notes}>
-          <Textarea
-            name="notes"
-            rows={3}
-            maxLength={DRIVER_LIMITS.notes}
-            placeholder="Languages, the vehicle they usually drive, anything the team should know"
-            defaultValue={fields?.notes}
-          />
-        </Field>
-      </Card>
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
-        </Button>
-        <Link
-          href={backHref}
-          className="text-sm text-slate-600 underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        <FormError error={error} />
-      </div>
+      <FormFoot
+        submit={
+          <Button type="submit" pending={pending}>
+            {pending ? "Saving…" : isNew ? "Add driver" : "Save"}
+          </Button>
+        }
+        cancelHref={cancelHref}
+        error={error}
+      />
       {leaveDialog}
       {outOfService.dialog}
     </form>

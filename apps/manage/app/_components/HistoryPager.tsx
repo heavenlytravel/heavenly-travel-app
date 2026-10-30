@@ -1,12 +1,10 @@
-import Link from "next/link";
-
-const LINK = "font-medium text-slate-600 underline-offset-4 hover:underline";
+import { PagerNav } from "./Pager";
 
 /**
- * The way between the pages of a history read newest first: back to the
- * newest once past the first page, and on to the older changes while
- * there are more. Nothing when the history fits one page. The Activity
- * screen and a location's History read it.
+ * The way between the pages of a history read newest first, across the
+ * foot of its card (`HistoryTimeline`'s `foot`): back to the newest once
+ * past the first page, and on to the older changes while there are more.
+ * Nothing when the history fits one page. The Activity screen reads it.
  */
 export function HistoryPager({
   newestHref,
@@ -19,22 +17,11 @@ export function HistoryPager({
 }) {
   if (!newestHref && !olderHref) return null;
   return (
-    <nav
-      aria-label="Pages"
-      className="mt-4 flex items-center justify-between text-sm"
-    >
-      {newestHref ? (
-        <Link href={newestHref} className={LINK}>
-          Newest
-        </Link>
-      ) : (
-        <span />
-      )}
-      {olderHref ? (
-        <Link href={olderHref} className={LINK}>
-          Older changes
-        </Link>
-      ) : null}
-    </nav>
+    <PagerNav
+      links={[
+        { label: "Newest", href: newestHref },
+        { label: "Older changes", href: olderHref },
+      ]}
+    />
   );
 }

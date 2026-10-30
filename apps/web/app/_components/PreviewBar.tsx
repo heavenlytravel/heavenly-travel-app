@@ -1,6 +1,8 @@
 "use client";
 
 import { PAGE_STATUS_LABELS, type PageStatus } from "@repo/db";
+import { PAGE_TONES } from "@repo/console/StatusBadges";
+import { StatusDot, type BadgeTone } from "@repo/ui/badge";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -8,18 +10,11 @@ import {
   PencilIcon,
   SearchIcon,
 } from "@repo/ui/icons";
+import { useDismiss } from "@repo/ui/use-dismiss";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useEffectEvent,
-  useId,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
-import { focus } from "../(site)/_components/Page";
 
 /** Where a page stands, as its dot shows it: its status, or paused, a class's page while the class is off sale there. */
 export type PreviewStanding = PageStatus | "paused";
@@ -36,23 +31,26 @@ export type PreviewPage = {
 /** A page in the picker with the pages under it, which it lists indented. */
 export type PreviewGroup = PreviewPage & { children: PreviewPage[] };
 
-const STANDINGS: Record<PreviewStanding, { label: string; dot: string }> = {
-  published: { label: PAGE_STATUS_LABELS.published, dot: "bg-emerald-500" },
-  changed: { label: PAGE_STATUS_LABELS.changed, dot: "bg-amber-500" },
-  unpublished: { label: PAGE_STATUS_LABELS.unpublished, dot: "bg-slate-400" },
-  paused: { label: "Paused: the class is off here", dot: "bg-orange-500" },
+/** Each standing's words, and its dot in the tone the console's page chips use; paused is amber, as everywhere. */
+const STANDINGS: Record<PreviewStanding, { label: string; tone: BadgeTone }> = {
+  published: {
+    label: PAGE_STATUS_LABELS.published,
+    tone: PAGE_TONES.published,
+  },
+  changed: { label: PAGE_STATUS_LABELS.changed, tone: PAGE_TONES.changed },
+  unpublished: {
+    label: PAGE_STATUS_LABELS.unpublished,
+    tone: PAGE_TONES.unpublished,
+  },
+  paused: { label: "Paused: the class is off here", tone: "amber" },
 };
 
-/** A button or link on the pill. */
-const pillButton = `inline-flex min-h-[36px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-semibold hover:bg-white/10 ${focus}`;
+/** A button or link on the pill; the keyboard's ring is the site's, in white on the ink. */
+const pillButton =
+  "inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-semibold hover:bg-white/10 focus-ring focus-ring-dark";
 
 function Dot({ standing }: { standing: PreviewStanding }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`size-2 shrink-0 rounded-full ${STANDINGS[standing].dot}`}
-    />
-  );
+  return <StatusDot tone={STANDINGS[standing].tone} />;
 }
 
 /**
@@ -100,25 +98,10 @@ export function PreviewBar({
     setOpen(false);
     pagesButton.current?.focus();
   };
-  const onEscape = useEffectEvent(close);
 
-  // While the pages are open, Escape closes them, and so does a click
+  // While the pages are open, Escape closes them, and so does a press
   // outside the pill and the pages, which leaves the focus where it lands.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onEscape();
-    };
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointer);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open]);
+  useDismiss(root, open, (by) => (by === "escape" ? close() : setOpen(false)));
 
   // The button that takes the place of the one pressed keeps the focus.
   const fold = (to: boolean) => {
@@ -137,7 +120,7 @@ export function PreviewBar({
       <aside
         ref={root}
         aria-label="Preview"
-        className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex flex-col items-center gap-2 px-3 text-[0.85rem] text-white"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-(--layer-staff) flex flex-col items-center gap-2 px-3 text-caption text-white"
       >
         {open && (
           <PagePicker
@@ -155,7 +138,7 @@ export function PreviewBar({
             type="button"
             aria-label={`Show the preview bar: ${name}, ${label}`}
             onClick={() => fold(false)}
-            className={`pointer-events-auto relative flex size-11 cursor-pointer items-center justify-center rounded-full bg-ink shadow-lg ring-1 shadow-ink/30 ring-white/15 hover:bg-navy ${focus}`}
+            className="pointer-events-auto relative flex size-11 cursor-pointer items-center justify-center rounded-full bg-ink shadow-overlay ring-1 ring-white/15 hover:bg-navy focus-ring focus-ring-dark"
           >
             <ChevronUpIcon className="size-5" />
             <span className="absolute top-1.5 right-1.5 flex rounded-full ring-2 ring-ink">
@@ -163,9 +146,9 @@ export function PreviewBar({
             </span>
           </button>
         ) : (
-          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full bg-ink py-1 pr-1 pl-4 shadow-lg ring-1 shadow-ink/30 ring-white/15">
+          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full bg-ink py-1 pr-1 pl-4 shadow-overlay ring-1 ring-white/15">
             <p className="flex min-w-0 items-center gap-2.5 pr-1">
-              <strong className="shrink-0 text-[0.75rem] tracking-[0.16em] uppercase">
+              <strong className="shrink-0 text-xs tracking-eyebrow uppercase">
                 Preview
               </strong>
               <span className="max-w-[16rem] min-w-0 truncate font-semibold max-sm:sr-only">
@@ -212,7 +195,7 @@ export function PreviewBar({
 
 /** A page's row in the picker; its outline is drawn inside, as the list clips it. */
 const pickerRow =
-  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-azure-light aria-[current=page]:bg-brand aria-[current=page]:font-semibold";
+  "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 hover:bg-white/10 focus-ring-inset focus-ring-dark aria-[current=page]:bg-brand aria-[current=page]:font-semibold";
 
 /**
  * The pages that can be previewed with the one shown, above the pill,
@@ -284,14 +267,14 @@ function PagePicker({
   return (
     <div
       id={id}
-      className="pointer-events-auto flex max-h-[min(34rem,calc(100dvh-6rem))] w-full max-w-[26rem] flex-col overflow-hidden rounded-2xl bg-ink shadow-2xl ring-1 shadow-ink/40 ring-white/15"
+      className="pointer-events-auto flex max-h-[min(34rem,calc(100dvh-6rem))] w-full max-w-[26rem] flex-col overflow-hidden rounded-2xl bg-ink shadow-overlay ring-1 ring-white/15"
     >
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-        <h2 id={titleId} className="truncate text-[0.95rem] font-bold">
+        <h2 id={titleId} className="truncate text-copy font-bold">
           {title}
         </h2>
         {note && (
-          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-0.5 text-[0.75rem] font-semibold">
+          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold">
             {note}
           </span>
         )}
@@ -307,7 +290,7 @@ function PagePicker({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={searchLabel}
             autoComplete="off"
-            className="w-full rounded-xl bg-white/10 py-2 pr-3 pl-9 text-[0.9rem] text-white placeholder:text-white/55 focus-visible:outline-2 focus-visible:outline-azure-light"
+            className="w-full rounded-xl bg-white/10 py-2 pr-3 pl-9 text-copy text-white placeholder:text-white/55 focus-ring-inset focus-ring-dark"
           />
         </label>
       </form>

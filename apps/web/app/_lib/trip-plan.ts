@@ -1,12 +1,11 @@
 import {
   BOOKING_RULES,
+  byStart,
   classFit,
-  formatClock,
   formatLocalTime,
-  localMinuteOfDay,
+  hireEndOf,
   parseTripSearch,
-  pickupInstant,
-  tripClashes,
+  startOfTrip,
   tripItemField,
   tripSearchParams,
   type ClassFit,
@@ -144,20 +143,6 @@ export function tripOfSearch(search: TripSearch): PlannedTrip {
   };
 }
 
-/** The moment a trip starts, read in Malaysia. */
-export function startOfTrip(trip: Pick<PlannedTrip, "date" | "time">) {
-  return pickupInstant(trip.date, trip.time);
-}
-
-/** The trips by start, the order they are numbered, priced and booked in. */
-export function byStart<Trip extends Pick<PlannedTrip, "date" | "time">>(
-  trips: readonly Trip[],
-): Trip[] {
-  return [...trips].sort((a, b) =>
-    `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`),
-  );
-}
-
 /** Whether two lists hold the same trips, whatever their ids. */
 export function sameTrips(
   a: readonly PlannedTrip[],
@@ -270,48 +255,6 @@ export function routeOf(trip: PlannedTrip) {
   return `${name(trip.pickup)} → ${name(trip.dropoff)}`;
 }
 
-/** When an hourly hire ends: "5:00 PM", and the day after when it runs past midnight. */
-export function endOf(trip: PlannedTrip) {
-  const start = startOfTrip(trip);
-  if (!start || trip.hours === null) return "";
-  const end = new Date(start.getTime() + trip.hours * 60 * 60 * 1000);
-  const time = formatClock(localMinuteOfDay(end));
-  return dayFormat.format(end) === dayFormat.format(start)
-    ? time
-    : `${time} the next day`;
-}
-
-/** For each trip, the trip it cannot share the vehicle with, and why. */
-export function clashesOf(
-  trips: readonly PlannedTrip[],
-): Map<string, { with: PlannedTrip; kind: TripClash["kind"] }> {
-  const timed = trips.flatMap((trip) => {
-    const startsAt = startOfTrip(trip);
-    return startsAt
-      ? [
-          {
-            trip,
-            startsAt,
-            hours: trip.mode === "hourly" ? trip.hours : null,
-          },
-        ]
-      : [];
-  });
-  const found = new Map<
-    string,
-    { with: PlannedTrip; kind: TripClash["kind"] }
-  >();
-  tripClashes(timed).forEach((clash, index) => {
-    if (clash) {
-      found.set(timed[index]!.trip.id, {
-        with: timed[clash.with]!.trip,
-        kind: clash.kind,
-      });
-    }
-  });
-  return found;
-}
-
 /** What the list says of a trip that clashes, in a few words. */
 export function clashLabel(kind: TripClash["kind"]) {
   return kind === "during-hire"
@@ -325,7 +268,7 @@ export function clashLabel(kind: TripClash["kind"]) {
  */
 export function clashMessage(other: PlannedTrip, number: number) {
   if (other.mode === "hourly" && other.date && other.time) {
-    const end = endOf(other);
+    const end = hireEndOf(other);
     return `Your ${other.hours}-hour hire on ${dayOf(other)} (trip ${number}) runs until ${end}, and this trip starts during it. Your driver can take you there as part of the hire: remove this trip and tell the driver, or start it after ${end}.`;
   }
   return `Trip ${number} starts at the same time, from ${other.pickup.label}. One vehicle cannot do both: choose another time, or book a second vehicle on its own.`;

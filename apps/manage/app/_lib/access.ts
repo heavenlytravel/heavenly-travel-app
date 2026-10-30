@@ -1,5 +1,12 @@
 import "server-only";
 import {
+  ADMIN_TEAM_LABELS,
+  adminLevelOf,
+  adminTeamsOf,
+  andList,
+  fullName,
+} from "@repo/db";
+import {
   getAccess,
   getAdminAccess,
   isWallActive,
@@ -46,6 +53,32 @@ export async function requireAdmin(permission: Permission): Promise<AdminUser> {
   if (access.status === "forbidden") redirect("/no-access");
   if (access.status === "restricted") redirect(RESTRICTED_PATH);
   return access.admin;
+}
+
+/**
+ * The signed-in admin as the top bar names them: their name, or
+ * their email without one, and their level, or their teams. Null when
+ * nobody is signed in as an admin.
+ */
+export async function getPerson(): Promise<{
+  name: string;
+  role: string;
+} | null> {
+  const access = await getAccess("admin");
+  if (access.status !== "ok") return null;
+  const { user } = access;
+  if (!user.adminProfile) return null;
+  const { level, teams } = user.adminProfile;
+  const teamNames = adminTeamsOf(teams).map((team) => ADMIN_TEAM_LABELS[team]);
+  return {
+    name: fullName(user) || user.email,
+    role:
+      adminLevelOf(level) === "SUPER"
+        ? "Super admin"
+        : teamNames.length > 0
+          ? andList(teamNames)
+          : "No team yet",
+  };
 }
 
 /**

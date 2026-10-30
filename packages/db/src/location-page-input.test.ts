@@ -143,19 +143,19 @@ describe("where a page is edited in the console", () => {
   it("is the page's address on the site under the location's Pages, the main page at main", () => {
     assert.equal(
       pageEditorPath("langkawi", LANDING_REF),
-      "/locations/langkawi/pages/main",
+      "/langkawi/pages/main",
     );
     assert.equal(
       pageEditorPath("langkawi", { page: "car-rental", slug: "" }),
-      "/locations/langkawi/pages/car-rental",
+      "/langkawi/pages/car-rental",
     );
     assert.equal(
       pageEditorPath("langkawi", { page: "popular-places", slug: "" }),
-      "/locations/langkawi/pages/popular-places",
+      "/langkawi/pages/popular-places",
     );
     assert.equal(
       pageEditorPath("langkawi", { page: "car-with-driver", slug: "sedan" }),
-      "/locations/langkawi/pages/car-with-driver/sedan",
+      "/langkawi/pages/car-with-driver/sedan",
     );
   });
 });

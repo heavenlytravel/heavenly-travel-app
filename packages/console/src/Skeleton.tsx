@@ -1,8 +1,8 @@
 import { cx } from "@repo/ui/cx";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { Suspense, type ComponentProps, type ReactNode } from "react";
 import { Card, Frame, TileGrid } from "./Card";
 import { DetailColumns } from "./PageColumn";
-import { WhenExpanded } from "./SidebarVisibility";
 import { Table, TBody, Td, Th, THead } from "./Table";
 
 /**
@@ -35,27 +35,20 @@ function settledWithin(promise: Promise<unknown>, ms: number) {
  */
 export async function Streamed({
   fallback,
+  bare = false,
   children,
 }: {
   /** The shape of what is loading, built from the skeletons below. */
   fallback: ReactNode;
+  /** The fallback is the real thing, less what is loading: the menu without its counts. Shown as it is, not pulsing. */
+  bare?: boolean;
   /** Reads the data and renders it. Called once, here. */
   children: () => Promise<ReactNode>;
 }) {
   const content = children();
   await settledWithin(content, GRACE_MS);
   return (
-    <Suspense
-      fallback={
-        <div
-          role="status"
-          aria-label="Loading"
-          className="motion-safe:animate-pulse"
-        >
-          {fallback}
-        </div>
-      }
-    >
+    <Suspense fallback={bare ? fallback : <Loading>{fallback}</Loading>}>
       <Loaded content={content} />
     </Suspense>
   );
@@ -65,24 +58,14 @@ async function Loaded({ content }: { content: Promise<ReactNode> }) {
   return content;
 }
 
-/** One grey bar in place of a line of text. The class gives its size. */
-export function Bone({ className }: { className: string }) {
-  return <span className={cx("block rounded bg-slate-200", className)} />;
-}
-
 /** A `PageHeader` whose title is the record's name, so it loads with it. */
 export function HeaderSkeleton() {
   return (
-    <div>
-      <Bone className="h-8 w-56" />
-      <Bone className="mt-1 h-5 w-80 max-w-full" />
+    <div className="mb-6">
+      <Bone className="h-9 w-64 max-w-full" />
+      <Bone className="mt-2 h-4 w-80 max-w-full" />
     </div>
   );
-}
-
-/** The back link above a page, where it names the record. */
-export function BackLinkSkeleton() {
-  return <Bone className="mb-4 h-5 w-32" />;
 }
 
 const CELL_WIDTHS = ["w-16", "w-24", "w-20", "w-14", "w-12", "w-10"];
@@ -90,13 +73,16 @@ const CELL_WIDTHS = ["w-16", "w-24", "w-20", "w-14", "w-12", "w-10"];
 export function TableSkeleton({
   columns,
   rows = 6,
+  bare = false,
 }: {
   columns: number;
   rows?: number;
+  /** For a table inside a `flush` card, as `Table`'s `bare`. */
+  bare?: boolean;
 }) {
   const cells = Array.from({ length: columns }, (_, i) => i);
   return (
-    <Table>
+    <Table bare={bare}>
       <THead>
         {cells.map((cell) => (
           <Th key={cell}>
@@ -127,7 +113,7 @@ export function TableSkeleton({
 /** Label and value lines, as `Rows` lays them out. */
 export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="divide-y divide-slate-100">
+    <div className="divide-y divide-hairline">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex justify-between gap-6 py-2.5">
           <Bone className="h-4 w-20" />
@@ -142,7 +128,9 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
 export function CardSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <Card>
-      <Bone className="mb-5 h-7 w-32" />
+      <div className="-mx-5 -mt-5 mb-5 border-b border-hairline px-5 py-4">
+        <Bone className="h-5 w-32" />
+      </div>
       <RowsSkeleton rows={rows} />
     </Card>
   );
@@ -164,7 +152,7 @@ export function TileGridSkeleton({
         <li key={tile}>
           <Frame className="overflow-hidden">
             {image ? (
-              <Bone className="aspect-[16/9] w-full rounded-none" />
+              <Bone className="aspect-video w-full rounded-none" />
             ) : null}
             <div className="grid gap-2.5 p-4">
               <Bone className="h-5 w-28" />
@@ -189,25 +177,6 @@ export function DetailSkeleton({
   return <DetailColumns main={main} side={side} />;
 }
 
-/**
- * A location's menu in the sidebar while it loads: rows of an icon and a
- * name; collapsed to a rail, the icons alone.
- */
-export function ScopeNavSkeleton() {
-  return (
-    <div className="grid gap-3 p-4">
-      {Array.from({ length: 7 }, (_, row) => (
-        <div key={row} className="flex items-center gap-3">
-          <Bone className="size-4 shrink-0 rounded" />
-          <WhenExpanded>
-            <Bone className={cx("h-4", row % 2 ? "w-20" : "w-28")} />
-          </WhenExpanded>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /** A form: cards of labelled fields, then its button. */
 export function FormSkeleton({
   sections = 1,
@@ -223,12 +192,12 @@ export function FormSkeleton({
           {Array.from({ length: fields }, (_, field) => (
             <div key={field}>
               <Bone className="mb-1.5 h-4 w-24" />
-              <Bone className="h-10 w-full rounded-md" />
+              <Bone className="h-10 w-full" />
             </div>
           ))}
         </Card>
       ))}
-      <Bone className="h-10 w-28 rounded-md" />
+      <Bone className="h-10 w-28" />
     </div>
   );
 }

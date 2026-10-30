@@ -13,7 +13,16 @@ import {
   type FooterLink,
   type SocialNetwork,
 } from "@repo/db";
-import { Photo } from "./Brand";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  LinkedInIcon,
+  LockIcon,
+  TikTokIcon,
+  XLogoIcon,
+  YouTubeIcon,
+} from "@repo/ui/icons";
+import { HomeLink } from "./Brand";
 
 /**
  * The foot of every page of the customer site, as SUPER writes it in the
@@ -39,23 +48,13 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   const hasLower = content.badges.length > 0 || content.paymentLogos.length > 0;
 
   return (
-    <footer className="bg-navy text-[0.95rem] text-white">
+    <footer className="bg-navy text-copy text-white">
       <div className="px-5 py-10 sm:px-[clamp(20px,5vw,78px)] sm:pt-12 sm:pb-10">
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
             <div className="max-w-[340px]">
-              <Link
-                href="/"
-                aria-label="Heavenly Travel home"
-                className={`inline-block ${focus}`}
-              >
-                {/* The blue logo, drawn white on the blue. */}
-                <Photo
-                  src="/brand/logo-blue.svg"
-                  alt="Heavenly, your travel engineer"
-                  className="h-10 w-auto brightness-0 invert"
-                />
-              </Link>
+              {/* The blue logo, drawn white on the blue. */}
+              <HomeLink tone="white" className="inline-block" />
               {content.tagline && (
                 <p className="mt-4 leading-relaxed text-white/90">
                   {content.tagline}
@@ -133,7 +132,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {address.length > 0 && (
                       <span className="leading-relaxed text-white/90">
                         {address.map((line, i) => (
-                          <span key={i} className="block lg:whitespace-nowrap">
+                          <span key={i} className="block">
                             {line}
                           </span>
                         ))}
@@ -173,8 +172,8 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     ))}
                   </ul>
                   {content.paymentNote && (
-                    <p className="mt-3 flex items-center gap-1.5 text-[0.875rem] text-white/90">
-                      <LockGlyph />
+                    <p className="mt-3 flex items-center gap-1.5 text-sm text-white/90">
+                      <LockIcon className="size-3.75" />
                       {content.paymentNote}
                     </p>
                   )}
@@ -188,7 +187,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                     {content.badges.map((badge, i) => (
                       <li
                         key={i}
-                        className="flex flex-col items-center gap-2 text-center text-[0.875rem] text-white/90"
+                        className="flex flex-col items-center gap-2 text-center text-sm text-white/90"
                       >
                         {badge.image && (
                           <Image
@@ -202,7 +201,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                           />
                         )}
                         <span>
-                          <strong className="block text-[0.9rem] leading-snug text-white">
+                          <strong className="block text-copy leading-snug text-white">
                             {badge.name}
                           </strong>
                           {badge.detail}
@@ -217,7 +216,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
         </div>
       </div>
 
-      <div className="border-t border-white/25 px-5 py-[18px] text-[0.875rem] text-white/90 sm:px-[clamp(20px,5vw,78px)]">
+      <div className="border-t border-white/25 px-5 py-[18px] text-sm text-white/90 sm:px-[clamp(20px,5vw,78px)]">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <p>
             {copyrightOf(content, year)}
@@ -238,18 +237,20 @@ export function SiteFooter({ content }: { content: FooterContent }) {
   );
 }
 
-/** The focus ring, white: it shows on the navy as the site's blue ring would not. */
-const focus =
-  "focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white";
-
-const linkClass = `text-white underline-offset-4 hover:underline ${focus}`;
+/**
+ * A link of the footer; on a touch screen its hit area grows to a finger's,
+ * without moving the lines. Its focus ring is white: it shows on the navy as
+ * the site's blue ring would not.
+ */
+const linkClass =
+  "touch-target text-white underline-offset-4 hover:underline focus-ring focus-ring-dark";
 
 /** A heading over a part of the footer; `id` names the part for a screen reader. */
 function Heading({ id, children }: { id?: string; children: string }) {
   return (
     <h2
       id={id}
-      className="mb-4 text-[0.8rem] font-bold tracking-[0.18em] text-azure-light uppercase lg:whitespace-nowrap"
+      className="mb-4 text-caption font-bold tracking-eyebrow text-azure-light uppercase lg:whitespace-nowrap"
     >
       {children}
     </h2>
@@ -286,78 +287,18 @@ function FooterAnchor({ link }: { link: FooterLink }) {
   );
 }
 
-const glyph = {
-  viewBox: "0 0 24 24",
-  width: 18,
-  height: 18,
-  "aria-hidden": true,
-  className: "shrink-0",
-} as const;
+/** Each network's mark, drawn in the link's colour. */
+const SOCIAL_ICONS = {
+  facebook: FacebookIcon,
+  instagram: InstagramIcon,
+  x: XLogoIcon,
+  tiktok: TikTokIcon,
+  youtube: YouTubeIcon,
+  linkedin: LinkedInIcon,
+} satisfies Record<SocialNetwork, unknown>;
 
-/** The mark of a social network, in the link's colour. */
+/** The mark of a social network, 18px, in the link's colour. */
 function SocialGlyph({ network }: { network: SocialNetwork }) {
-  switch (network) {
-    case "facebook":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H7.9v3h2.6V21z" />
-        </svg>
-      );
-    case "instagram":
-      return (
-        <svg {...glyph} fill="none" stroke="currentColor" strokeWidth="1.8">
-          <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
-          <circle cx="12" cy="12" r="4" />
-          <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case "x":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M4.5 4h4.2l10.8 16h-4.2z" />
-          <path
-            d="M19 4.2 5 19.8"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "tiktok":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M14.5 3h2.7c.3 2 1.6 3.5 3.8 3.7v2.8c-1.4 0-2.7-.4-3.8-1.1v6.3a5.6 5.6 0 1 1-5.6-5.6h.6v2.9a2.8 2.8 0 1 0 2.3 2.7z" />
-        </svg>
-      );
-    case "youtube":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M21.6 7.2c-.2-.9-.9-1.6-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4c-.9.2-1.6.9-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8c.2.9.9 1.6 1.8 1.8 1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z" />
-        </svg>
-      );
-    case "linkedin":
-      return (
-        <svg {...glyph} fill="currentColor">
-          <path d="M4.5 3.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zm6 0h2.9v1.6h.1c.4-.8 1.4-1.8 3-1.8 3.2 0 3.8 2.1 3.8 4.8V21h-3v-6.6c0-1.6 0-3.6-2.2-3.6s-2.6 1.7-2.6 3.5V21H9z" />
-        </svg>
-      );
-  }
-}
-
-function LockGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={15}
-      height={15}
-      aria-hidden
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className="shrink-0"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
+  const Icon = SOCIAL_ICONS[network];
+  return <Icon className="size-4.5" />;
 }

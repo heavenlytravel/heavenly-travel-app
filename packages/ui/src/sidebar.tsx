@@ -15,8 +15,9 @@ import {
 } from "react";
 import { cx } from "./cx.js";
 import { haptic } from "./haptic.js";
+import { isTyping, useShortcutLabel } from "./keys.js";
 import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
-import { ModalBody, onModalClose, useModal } from "./modal.js";
+import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
 
 /**
@@ -46,6 +47,21 @@ export function useSidebar() {
   const context = useContext(SidebarContext);
   if (!context) throw new Error("useSidebar needs a SidebarProvider.");
   return context;
+}
+
+/**
+ * The sidebar's colours: `light`, white with slate words, or `navy`, a
+ * navy-to-ink gradient with white words, azure-light icons and the page on
+ * screen as a bright white pill. Set on `Sidebar`, read by every piece
+ * inside it.
+ */
+export type SidebarTone = "light" | "navy";
+
+const ToneContext = createContext<SidebarTone>("light");
+
+/** The sidebar's colours, for a piece drawn inside it. */
+export function useSidebarTone() {
+  return useContext(ToneContext);
 }
 
 /** Whether the pieces inside are drawn as icons only. False inside the mobile sheet. */
@@ -85,10 +101,12 @@ export function SidebarProvider({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "b") {
-        event.preventDefault();
-        toggleSidebar();
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (event.key.toLowerCase() !== "b") return;
+      // A field that took the keys (the page editor's bold) keeps them.
+      if (event.defaultPrevented || isTyping(event.target)) return;
+      event.preventDefault();
+      toggleSidebar();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -117,24 +135,31 @@ export function SidebarProvider({
 export function Sidebar({
   title,
   dock,
+  tone = "light",
   children,
 }: {
   /** The panel's accessible name: "Console menu". */
   title: string;
   /** The `SidebarDock` the page has, drawn again over the panel. */
   dock?: ReactNode;
+  /** Its colours, on a wide screen and in the panel alike. */
+  tone?: SidebarTone;
   children: ReactNode;
 }) {
   const { open, openMobile, setOpenMobile } = useSidebar();
   const ref = useModal(openMobile);
+  const navy = tone === "navy";
 
   return (
-    <>
+    <ToneContext.Provider value={tone}>
       <aside
         data-state={open ? "expanded" : "collapsed"}
         className={cx(
-          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:border-r ui:border-slate-200 ui:bg-white ui:text-slate-900 ui:transition-[width] ui:duration-200 ui:ease-linear ui:md:flex",
-          open ? "ui:w-64" : "ui:w-12",
+          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:motion-reduce:transition-none ui:md:flex",
+          navy
+            ? "ui:bg-linear-to-b ui:from-navy ui:to-ink ui:text-white/80"
+            : "ui:border-r ui:border-card-edge ui:bg-white ui:text-body",
+          open ? "ui:w-64" : "ui:w-15",
         )}
       >
         <CollapsedContext.Provider value={!open}>
@@ -147,15 +172,30 @@ export function Sidebar({
         ref={ref}
         aria-label={title}
         onClose={onModalClose(() => setOpenMobile(false))}
-        onClick={(event) => {
-          // The dialog itself, clear around the panel, is the margin over the page.
-          if (event.target === event.currentTarget) setOpenMobile(false);
-        }}
-        className="ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:text-slate-900 ui:backdrop:bg-ink/45"
+        // The dialog itself, clear around the panel, is the margin over the page.
+        {...backdropClose(() => setOpenMobile(false))}
+        className={cx(
+          "ui-pop ui:fixed ui:inset-0 ui:m-0 ui:size-full ui:max-h-none ui:max-w-none ui:bg-transparent ui:p-0 ui:backdrop:bg-ink/45",
+          navy ? "ui:text-white/80" : "ui:text-body",
+        )}
       >
-        <div className={cx("ui-pop-panel", PANEL)}>
+        <div
+          className={cx(
+            "ui-pop-panel",
+            PANEL,
+            navy
+              ? "ui:border-white/10 ui:bg-linear-to-b ui:from-navy ui:to-ink"
+              : "ui:border-card-edge ui:bg-white",
+          )}
+        >
           {/* Room at the foot for the dock, so the last row scrolls clear of it. */}
-          <ModalBody open={openMobile} className="ui:h-full ui:pt-2 ui:pb-20">
+          <ModalBody
+            open={openMobile}
+            className={cx(
+              "ui:h-full ui:pt-2 ui:pb-20",
+              navy && "ui:scrollbar-on-dark",
+            )}
+          >
             <CollapsedContext.Provider value={false}>
               {children}
             </CollapsedContext.Provider>
@@ -163,7 +203,7 @@ export function Sidebar({
         </div>
         {dock}
       </dialog>
-    </>
+    </ToneContext.Provider>
   );
 }
 
@@ -173,7 +213,7 @@ export function Sidebar({
  * command palette takes the same room.
  */
 const PANEL =
-  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-slate-200 ui:bg-white ui:shadow-[0_22px_55px_rgba(0,38,75,0.22)]";
+  "ui:absolute ui:inset-2 ui:overflow-hidden ui:rounded-2xl ui:border ui:border-card-edge ui:bg-white ui:shadow-overlay";
 
 /**
  * The bar that floats at the bottom of a phone's screen, over every page:
@@ -194,10 +234,10 @@ export function SidebarDock({
 }) {
   const { openMobile, setOpenMobile } = useSidebar();
   return (
-    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-30 ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-slate-300 ui:bg-white/95 ui:p-1 ui:shadow-[0_12px_32px_rgba(15,23,42,0.22),0_2px_6px_rgba(15,23,42,0.1)] ui:backdrop-blur ui:md:hidden">
+    <div className="ui-dock ui:fixed ui:bottom-4 ui:left-1/2 ui:z-(--layer-chrome) ui:flex ui:-translate-x-1/2 ui:items-center ui:gap-1 ui:rounded-full ui:border ui:border-edge ui:bg-white/95 ui:p-1 ui:shadow-overlay ui:backdrop-blur ui:md:hidden">
       {children}
       {children ? (
-        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-slate-200" />
+        <span aria-hidden="true" className="ui:h-5 ui:w-px ui:bg-hairline" />
       ) : null}
       <SidebarDockButton
         aria-label={openMobile ? "Close menu" : "Open menu"}
@@ -227,7 +267,7 @@ export function SidebarDockButton({
         onClick?.(event);
       }}
       className={cx(
-        "ui:inline-flex ui:h-9 ui:min-w-9 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-2.5 ui:text-sm ui:font-medium ui:text-slate-700 ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:[&>svg]:size-[18px]",
+        "ui:inline-flex ui:h-11 ui:min-w-11 ui:items-center ui:justify-center ui:gap-2 ui:rounded-full ui:px-3 ui:text-sm ui:font-medium ui:text-body ui:transition-colors ui:hover:bg-hairline ui:hover:text-body ui:focus-ring-inset ui:[&>svg]:size-4.5",
         className,
       )}
       {...props}
@@ -238,6 +278,7 @@ export function SidebarDockButton({
 /** The thin strip on the sidebar's edge that toggles it. */
 function SidebarRail() {
   const { open, toggleSidebar } = useSidebar();
+  const navy = useSidebarTone() === "navy";
   return (
     <button
       type="button"
@@ -246,32 +287,53 @@ function SidebarRail() {
       tabIndex={-1}
       onClick={toggleSidebar}
       className={cx(
-        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5 ui:hover:after:bg-slate-200",
+        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-(--layer-float) ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5",
+        navy ? "ui:hover:after:bg-azure/60" : "ui:hover:after:bg-card-edge",
         open ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}
     />
   );
 }
 
-/** The button in the page header that opens or collapses the sidebar; on a phone the dock's does. */
+/**
+ * The button in the page's top bar that folds the sidebar to a rail or
+ * opens it again, named by what it does now; its tooltip names its keys
+ * too. It stays where it is either way. On a phone the dock's menu button
+ * opens the panel instead.
+ */
 export function SidebarTrigger({
   className,
   ...props
 }: ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
+  const shortcut = useShortcutLabel("B");
+  const label = open ? "Collapse menu" : "Expand menu";
   return (
-    <button
-      type="button"
-      aria-label="Toggle sidebar"
-      onClick={toggleSidebar}
-      className={cx(
-        "ui:inline-flex ui:size-8 ui:items-center ui:justify-center ui:rounded-md ui:text-slate-600 ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-slate-900",
-        className,
-      )}
-      {...props}
+    <Tooltip
+      side="bottom"
+      content={
+        <span className="ui:flex ui:items-center ui:gap-2">
+          {label}
+          <kbd className="ui:rounded ui:bg-white/15 ui:px-1.5 ui:font-sans ui:text-2xs">
+            {shortcut}
+          </kbd>
+        </span>
+      }
     >
-      <PanelLeftIcon />
-    </button>
+      <button
+        type="button"
+        aria-label={label}
+        aria-keyshortcuts="Control+B Meta+B"
+        onClick={toggleSidebar}
+        className={cx(
+          "ui:touch-target ui:inline-flex ui:size-9 ui:items-center ui:justify-center ui:rounded-md ui:text-navy ui:transition-colors ui:hover:bg-white ui:focus-ring",
+          className,
+        )}
+        {...props}
+      >
+        <PanelLeftIcon />
+      </button>
+    </Tooltip>
   );
 }
 
@@ -297,12 +359,14 @@ export function SidebarHeader({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-/** The scrolling part under the header. */
+/** The scrolling part under the header; its scroll bar shows while the pointer is over it. */
 export function SidebarContent({ className, ...props }: ComponentProps<"div">) {
+  const navy = useSidebarTone() === "navy";
   return (
     <div
       className={cx(
-        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-x-hidden ui:overflow-y-auto",
+        "ui:flex ui:min-h-0 ui:flex-1 ui:flex-col ui:gap-2 ui:overflow-x-hidden ui:overflow-y-auto ui:scrollbar-quiet",
+        navy && "ui:scrollbar-on-dark",
         className,
       )}
       {...props}
@@ -314,7 +378,7 @@ export function SidebarGroup({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cx(
-        "ui:relative ui:flex ui:w-full ui:min-w-0 ui:flex-col ui:p-2",
+        "ui:relative ui:flex ui:w-full ui:min-w-0 ui:flex-col ui:px-3 ui:py-1",
         className,
       )}
       {...props}
@@ -328,11 +392,15 @@ export function SidebarGroupLabel({
   ...props
 }: ComponentProps<"div">) {
   const collapsed = useSidebarCollapsed();
+  const navy = useSidebarTone() === "navy";
   if (collapsed) return null;
   return (
     <div
       className={cx(
-        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2 ui:text-xs ui:font-medium ui:text-slate-500",
+        "ui:flex ui:h-8 ui:shrink-0 ui:items-center ui:rounded-md ui:px-2.5",
+        navy
+          ? "ui:text-caps ui:font-semibold ui:text-azure-light/80"
+          : "ui:text-xs ui:font-medium ui:text-muted",
         className,
       )}
       {...props}
@@ -369,8 +437,16 @@ export function SidebarMenuCluster({
   label: string;
   children: ReactNode;
 }) {
+  const navy = useSidebarTone() === "navy";
   return (
-    <li className="ui:-mx-0.5 ui:rounded-lg ui:bg-slate-50 ui:p-0.5 ui:ring-1 ui:ring-slate-200 ui:ring-inset">
+    <li
+      className={cx(
+        "ui:-mx-0.5 ui:rounded-xl ui:p-0.5 ui:ring-1 ui:ring-inset",
+        navy
+          ? "ui:bg-white/10 ui:ring-white/10"
+          : "ui:bg-shade ui:ring-card-edge",
+      )}
+    >
       <ul aria-label={label} className="ui:flex ui:flex-col ui:gap-0.5">
         {children}
       </ul>
@@ -378,11 +454,67 @@ export function SidebarMenuCluster({
   );
 }
 
-const MENU_BUTTON =
-  "ui:flex ui:w-full ui:items-center ui:gap-2 ui:overflow-hidden ui:rounded-md ui:p-2 ui:text-left ui:text-sm ui:outline-hidden ui:transition-colors ui:hover:bg-slate-100 ui:hover:text-slate-900 ui:focus-visible:ring-2 ui:focus-visible:ring-ring ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+/**
+ * The pages of a section, open in place under its row: indented, on a
+ * line down their left. A row of a `SidebarMenu` holding its own list of
+ * `SidebarMenuItem`s, named by `label` for assistive technology. It is
+ * always drawn, so it can slide open and shut (`ui-fold` in styles.css);
+ * shut, it is out of reach of the keyboard and assistive technology.
+ */
+export function SidebarMenuSub({
+  label,
+  open,
+  children,
+}: {
+  label: string;
+  open: boolean;
+  children: ReactNode;
+}) {
+  const navy = useSidebarTone() === "navy";
+  return (
+    <li data-open={open || undefined} inert={!open} className="ui-fold">
+      <ul
+        aria-label={label}
+        className={cx(
+          "ui:min-h-0 ui:overflow-hidden ui:ml-4.5 ui:flex ui:flex-col ui:gap-0.5 ui:border-l ui:pl-2.5",
+          navy ? "ui:border-white/15" : "ui:border-card-edge",
+        )}
+      >
+        {children}
+      </ul>
+    </li>
+  );
+}
 
+const MENU_BUTTON =
+  "ui:flex ui:w-full ui:items-center ui:gap-2.5 ui:overflow-hidden ui:p-2 ui:text-left ui:text-sm ui:transition-colors ui:focus-ring-inset ui:disabled:pointer-events-none ui:disabled:opacity-50 ui:[&>svg]:size-4 ui:[&>svg]:shrink-0 ui:[&>span:last-child]:truncate";
+
+/**
+ * A row's look by the sidebar's tone: its shape, then its colours at
+ * rest, as the page on screen, or as the section open under it. A row has
+ * one set of colours at a time, so none overrides another.
+ */
+const MENU_TONES = {
+  light: {
+    shape: "ui:rounded-md",
+    rest: "ui:hover:bg-hairline ui:hover:text-body",
+    active:
+      "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:[&>svg]:text-brand",
+    open: "ui:hover:bg-hairline ui:hover:text-body",
+  },
+  navy: {
+    shape: "ui:rounded-control ui:font-medium ui:focus-ring-dark",
+    rest: "ui:text-white/80 ui:hover:bg-white/14 ui:hover:text-white ui:[&>svg]:text-azure-light",
+    active: "ui:bg-white ui:font-semibold ui:text-ink ui:[&>svg]:text-brand",
+    open: "ui:bg-white/10 ui:text-white ui:hover:bg-white/14 ui:[&>svg]:text-azure-light",
+  },
+} as const;
+
+/** On a touch screen, in the phone's panel, a row is 44px tall. */
 const MENU_SIZES = {
-  default: "ui:h-8",
+  default: "ui:h-9 ui:pointer-coarse:h-11",
+  /** A page under its section's row, opened in place. */
+  sm: "ui:h-8 ui:pointer-coarse:h-11",
   /** Room for two lines beside a square: a logo and a subtitle, a user and an email. */
   lg: "ui:h-12",
 } as const;
@@ -399,6 +531,7 @@ const MENU_SIZES = {
 export function SidebarMenuButton({
   asChild = false,
   active = false,
+  open = false,
   size = "default",
   tooltip,
   className,
@@ -406,20 +539,25 @@ export function SidebarMenuButton({
   ...props
 }: ComponentProps<"button"> & {
   asChild?: boolean;
+  /** The page on screen. */
   active?: boolean;
+  /** A section's row whose pages are open under it: lit softly. */
+  open?: boolean;
   size?: keyof typeof MENU_SIZES;
   /** Shown on hover while collapsed; defaults to nothing. */
   tooltip?: string;
 }) {
   const collapsed = useSidebarCollapsed();
+  const tone = MENU_TONES[useSidebarTone()];
   const classes = cx(
     MENU_BUTTON,
     MENU_SIZES[size],
-    active &&
-      "ui:bg-accent ui:font-medium ui:text-accent-foreground ui:hover:bg-accent ui:hover:text-accent-foreground ui:[&>svg]:text-brand",
+    tone.shape,
+    active ? tone.active : open ? tone.open : tone.rest,
     // Collapsed, every row is a square: padded around a 1rem icon, or edge
     // to edge around a 2rem mark.
-    collapsed && (size === "lg" ? "ui:size-8! ui:p-0!" : "ui:size-8! ui:p-2!"),
+    collapsed &&
+      (size === "lg" ? "ui:size-9! ui:p-0!" : "ui:size-9! ui:p-2.5!"),
     className,
   );
   const shared = {
@@ -455,21 +593,6 @@ export function SidebarLabel({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       className={cx(collapsed ? "ui:sr-only" : "ui:truncate", className)}
-      {...props}
-    />
-  );
-}
-
-export function SidebarSeparator({
-  className,
-  ...props
-}: ComponentProps<"hr">) {
-  return (
-    <hr
-      className={cx(
-        "ui:mx-2 ui:border-0 ui:border-t ui:border-slate-200",
-        className,
-      )}
       {...props}
     />
   );

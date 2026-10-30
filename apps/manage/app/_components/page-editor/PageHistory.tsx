@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { formatLocalDateTime, type PageContent, type PageKind } from "@repo/db";
+import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
+import { HistoryIcon } from "@repo/ui/icons";
+import { useState, type ReactNode } from "react";
+import { CARD_LINK } from "@repo/console/Card";
 import { PageContentView } from "./PageContentView";
 
 /** One publish of the page, as its history lists it. */
@@ -42,96 +46,111 @@ export function CompareDialog({
       description="What the public sees now beside what you are editing. The parts that differ are marked Changed."
       width="lg"
     >
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="min-w-0">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">
-            Published
-          </h3>
+      <SideBySide
+        left={
           <PageContentView
             kind={kind}
             content={published}
             comparedTo={draft}
             addressNames={addressNames}
           />
-        </section>
-        <section className="min-w-0 md:border-l md:border-slate-200 md:pl-6">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">
-            This draft
-          </h3>
+        }
+        right={
           <PageContentView
             kind={kind}
             content={draft}
             comparedTo={published}
             addressNames={addressNames}
           />
-        </section>
-      </div>
+        }
+      />
     </Dialog>
   );
 }
 
+/** The published copy and the draft side by side, in a comparing dialog: a page's or the footer's. */
+export function SideBySide({
+  left,
+  right,
+}: {
+  /** The published copy. */
+  left: ReactNode;
+  /** The draft. */
+  right: ReactNode;
+}) {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <section className="min-w-0">
+        <h3 className="mb-3 text-sm font-semibold text-ink">Published</h3>
+        {left}
+      </section>
+      <section className="min-w-0 md:border-l md:border-hairline md:pl-6">
+        <h3 className="mb-3 text-sm font-semibold text-ink">This draft</h3>
+        {right}
+      </section>
+    </div>
+  );
+}
+
 /**
- * "History": the page's publishes, newest first, each opening the page as
- * it was before and after it, and the way to every change of its kind:
- * the location's pages, or the site's.
+ * "Publish history" in an editor's header: the page's publishes, newest
+ * first, each opening the page as it was before and after it, and the way
+ * to every change of its kind: the location's pages, or the site's.
  */
-export function HistoryDialog({
-  open,
-  onOpenChange,
+export function PublishHistoryButton({
   publishes,
   allHref,
   allLabel,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   publishes: readonly PagePublishEntry[];
-  /** Every change of the page's kind: the location's history, narrowed to its pages. */
+  /** Every change of the page's kind: the location's activity, narrowed to its pages. */
   allHref: string;
   allLabel: string;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Publish history"
-      description="Every publish of this page, newest first. Open one to read the page before and after it; to roll back, copy the old text into the editor and publish again."
-    >
-      <div className="grid gap-4">
-        <ol className="divide-y divide-slate-100 rounded-md border border-slate-200 text-sm">
-          {publishes.map((publish, index) => (
-            <li
-              key={publish.id}
-              className="flex items-center justify-between gap-3 px-3 py-2.5"
-            >
-              <span className="min-w-0">
-                <span className="block text-slate-900">
-                  {formatLocalDateTime(publish.at)}
-                  {index === 0 ? (
-                    <span className="ml-2 text-xs text-emerald-700">
-                      Latest
-                    </span>
-                  ) : null}
-                </span>
-                <span className="block truncate text-xs text-slate-500">
-                  {publish.actorName}
-                </span>
-              </span>
-              <Link
-                href={publish.href}
-                className="shrink-0 text-xs font-medium underline-offset-4 hover:underline"
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        <HistoryIcon />
+        Publish history
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Publish history"
+        description="Every publish of this page, newest first. Open one to read the page before and after it; to roll back, copy the old text into the editor and publish again."
+      >
+        <div className="grid gap-4">
+          <ol className="divide-y divide-hairline rounded-card border border-card-edge text-sm">
+            {publishes.map((publish, index) => (
+              <li
+                key={publish.id}
+                className="flex items-center justify-between gap-3 px-4 py-3"
               >
-                Before and after
-              </Link>
-            </li>
-          ))}
-        </ol>
-        <Link
-          href={allHref}
-          className="text-sm text-slate-600 underline-offset-4 hover:underline"
-        >
-          {allLabel}
-        </Link>
-      </div>
-    </Dialog>
+                <span className="min-w-0">
+                  <span className="block text-ink">
+                    {formatLocalDateTime(publish.at)}
+                    {index === 0 ? (
+                      <span className="ml-2 text-xs font-semibold text-success">
+                        Latest
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="block truncate text-xs text-muted">
+                    {publish.actorName}
+                  </span>
+                </span>
+                <Link href={publish.href} className={`shrink-0 ${CARD_LINK}`}>
+                  Before and after
+                </Link>
+              </li>
+            ))}
+          </ol>
+          <Link href={allHref} className={CARD_LINK}>
+            {allLabel} →
+          </Link>
+        </div>
+      </Dialog>
+    </>
   );
 }

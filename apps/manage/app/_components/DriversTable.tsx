@@ -1,33 +1,44 @@
 import Link from "next/link";
 import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
 import type { DriverWithClasses } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
-import { locationDriverHref } from "../_lib/routes";
+import { driverHref, type ScopeSlug } from "../_lib/routes";
 import { DocumentsDue } from "@repo/console/DocumentsDue";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
+import { ServiceBadge } from "@repo/console/StatusBadges";
+import {
+  EmptyRow,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  TwoLines,
+} from "@repo/console/Table";
 
 /**
- * Our drivers as a table, for a location's Drivers tab and the list across
- * locations: the name and phone, the classes they may drive, the location
- * where the list spans several, the licences due, and whether they are
- * active. Each opens inside its location.
+ * Our drivers as a table, in the scope on screen: the name and phone, the
+ * classes they may drive, the location under `~`, the licences due, and
+ * whether they are active. Each opens in the scope it was listed in.
+ * `bare` is for a `flush` card.
  */
 export function DriversTable({
   drivers,
-  showLocation = false,
+  scope,
+  bare = false,
   emptyMessage,
 }: {
-  drivers: DriverWithClasses[];
-  showLocation?: boolean;
+  drivers: readonly DriverWithClasses[];
+  scope: ScopeSlug;
+  bare?: boolean;
   emptyMessage: string;
 }) {
+  const showLocation = scope === null;
   const columns = showLocation ? 5 : 4;
   return (
-    <Table>
+    <Table bare={bare}>
       <THead>
         <Th>Driver</Th>
         <Th>May drive</Th>
-        {showLocation ? <Th>Based at</Th> : null}
+        {showLocation ? <Th>Location</Th> : null}
         <Th>Licences</Th>
         <Th>Status</Th>
       </THead>
@@ -36,29 +47,25 @@ export function DriversTable({
           <EmptyRow colSpan={columns}>{emptyMessage}</EmptyRow>
         ) : (
           drivers.map((driver) => (
-            <tr
-              key={driver.id}
-              className={driver.isActive ? undefined : "text-slate-500"}
-            >
+            <tr key={driver.id}>
               <Td className="whitespace-nowrap">
-                <Link
-                  href={locationDriverHref(driver.location.slug, driver.id)}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {driver.name}
-                </Link>
-                <span className="block text-xs text-slate-500 tabular-nums">
-                  {driver.phone}
-                  {!driver.vendor.isOurs ? ` · ${driver.vendor.name}` : null}
-                </span>
+                <TwoLines
+                  top={
+                    <Link
+                      href={driverHref(scope, driver.id)}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {driver.name}
+                    </Link>
+                  }
+                  bottom={<span className="tabular-nums">{driver.phone}</span>}
+                />
               </Td>
-              <Td className="min-w-40 text-slate-600">
+              <Td className="min-w-40">
                 {driver.vehicleClasses.map((c) => c.name).join(", ")}
               </Td>
               {showLocation ? (
-                <Td className="whitespace-nowrap text-slate-600">
-                  {driver.location.name}
-                </Td>
+                <Td className="whitespace-nowrap">{driver.location.name}</Td>
               ) : null}
               <Td className="min-w-56">
                 {driver.isActive ? (
@@ -67,13 +74,15 @@ export function DriversTable({
                     anyEntered={DRIVER_DOCUMENTS.some((key) => driver[key])}
                   />
                 ) : (
-                  <span className="text-slate-500">Not checked</span>
+                  <span className="text-muted">Not checked</span>
                 )}
               </Td>
               <Td className="whitespace-nowrap">
-                <Badge tone={driver.isActive ? "green" : "neutral"}>
-                  {driver.isActive ? "Active" : "Inactive"}
-                </Badge>
+                <ServiceBadge
+                  active={driver.isActive}
+                  on="Active"
+                  off="Inactive"
+                />
               </Td>
             </tr>
           ))

@@ -9,6 +9,7 @@ import {
   MissingPart,
   emptyPartsOf,
 } from "../_components/page-parts";
+import { HomeSectionHeading } from "../_components/page-headings";
 import { SearchProvider } from "../_components/search/SearchProvider";
 import {
   DestinationCards,
@@ -16,7 +17,7 @@ import {
   type PhotoCard,
 } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
-import { Booking, Trust, eyebrow } from "../_home/Sections";
+import { Booking, Trust } from "../_home/Sections";
 import { faqDataOf } from "../_lib/seo";
 
 /**
@@ -97,15 +98,15 @@ export function HomeView({
               height as well as its width, so the headline and the whole card
               fit on one screen down to about 600px tall; the script word is
               sized from it, so the pair keeps its proportions. */}
-          <div className="relative z-[1] flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
+          <div className="relative z-(--layer-raised) flex flex-1 flex-col justify-center px-[22px] pt-[125px] pb-6 sm:px-[clamp(24px,6vw,96px)] sm:pt-[92px] sm:pb-8">
             {!image && empty.heroImage && (
               <p className="mb-6">
                 <MissingMark part={empty.heroImage} alone />
               </p>
             )}
-            <div className="text-[3.75rem] sm:text-[clamp(3.75rem,min(9vw,12svh),6.5rem)]">
+            <div className="text-6xl sm:text-hero">
               {tagline ? (
-                <p className="origin-left -rotate-3 font-(family-name:--font-script) text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
+                <p className="origin-left -rotate-3 font-hand text-[1.07em] leading-[0.75] text-ink sm:text-[0.83em]">
                   {tagline}
                 </p>
               ) : (
@@ -118,7 +119,7 @@ export function HomeView({
               )}
               <h1
                 id="hero-title"
-                className="mt-[0.1em] mb-[0.25em] max-w-[14ch] font-(family-name:--font-display) text-[1em] leading-[0.9] text-ink sm:max-w-none"
+                className="mt-[0.1em] mb-[0.25em] max-w-[14ch] font-serif text-[1em] leading-[0.9] text-ink sm:max-w-none"
               >
                 {headline}
                 {!content?.heroHeadline && empty.headline && (
@@ -126,7 +127,7 @@ export function HomeView({
                 )}
               </h1>
             </div>
-            <p className="max-w-[330px] text-slate-700 sm:max-w-[500px] sm:text-[1.18rem]">
+            <p className="max-w-[330px] text-body sm:max-w-[500px] sm:text-lg">
               {subheadline}
               {!content?.heroSubheadline && empty.subheadline && (
                 <MissingMark part={empty.subheadline} />
@@ -135,7 +136,7 @@ export function HomeView({
           </div>
           <p
             aria-hidden
-            className="absolute top-[16%] right-[7%] z-[1] mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-(family-name:--font-script) text-[2rem] leading-[0.85] text-white lg:block"
+            className="absolute top-[16%] right-[7%] z-(--layer-raised) mt-8 hidden -rotate-[7deg] border-b-[3px] border-azure font-hand text-3xl leading-[0.85] text-white lg:block"
           >
             More
             <br />
@@ -152,16 +153,13 @@ export function HomeView({
           aria-labelledby="services-title"
           className="scroll-mt-8 px-3 pt-[75px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px]"
         >
-          <p className={`${eyebrow} mb-2`}>What we offer</p>
-          <h2
+          <HomeSectionHeading
             id="services-title"
-            className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
+            eyebrow="What we offer"
+            lead="See where each one runs."
           >
             Our services
-          </h2>
-          <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
-            See where each one runs.
-          </p>
+          </HomeSectionHeading>
           <PhotoCards cards={services} />
         </section>
 
@@ -170,16 +168,13 @@ export function HomeView({
           aria-labelledby="destinations-title"
           className="scroll-mt-8 px-3 pt-[75px] pb-[55px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px] sm:pb-[90px]"
         >
-          <p className={`${eyebrow} mb-2`}>Locations we cover</p>
-          <h2
+          <HomeSectionHeading
             id="destinations-title"
-            className="font-(family-name:--font-display) text-[clamp(2.7rem,5vw,4.4rem)] leading-none"
+            eyebrow="Locations we cover"
+            lead="Start with where you are going."
           >
             Choose your destination
-          </h2>
-          <p className="mt-[13px] mb-[34px] text-[1.06rem] text-slate-500">
-            Start with where you are going.
-          </p>
+          </HomeSectionHeading>
           <DestinationCards choices={choices} />
         </section>
 

@@ -4,6 +4,8 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
 } from "react";
@@ -50,6 +52,25 @@ export function useModal(open: boolean) {
 export function onModalClose(close: () => void) {
   return (event: SyntheticEvent<HTMLDialogElement>) => {
     if (!event.currentTarget.open) close();
+  };
+}
+
+/**
+ * A modal's `onPointerDown` and `onClick` for its dimmed backdrop: `close`
+ * runs only for a press that began and ended on the backdrop itself (the
+ * dialog element, hit only through it). A drag from a field, selecting its
+ * text, that ends on the backdrop leaves the modal and its form open.
+ */
+export function backdropClose(close: () => void) {
+  let downOnBackdrop = false;
+  return {
+    onPointerDown: (event: PointerEvent<HTMLElement>) => {
+      downOnBackdrop = event.target === event.currentTarget;
+    },
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      if (downOnBackdrop && event.target === event.currentTarget) close();
+      downOnBackdrop = false;
+    },
   };
 }
 

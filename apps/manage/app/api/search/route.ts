@@ -24,14 +24,14 @@ import {
 } from "../../_lib/console-search";
 import {
   SEARCH_PARAM,
-  VEHICLE_CLASSES_PATH,
   bookingHref,
-  locationDriverHref,
-  locationTabHref,
-  locationVehicleHref,
-  locationZoneHref,
-  usersHref,
-  vehicleClassHref,
+  classHref,
+  classesHref,
+  coverageHref,
+  customersHref,
+  driverHref,
+  vehicleHref,
+  zoneHref,
 } from "../../_lib/routes";
 
 /** "Ahmad Fikri", or the email for an account with no name. */
@@ -64,8 +64,8 @@ const FINDERS: Record<
           meta: locations.map((location) => location.name).join(", "),
           // Inside the location it picks up in; one across two on its own page.
           href: bookingHref(
+            locations.length === 1 ? locations[0]!.slug : null,
             booking.id,
-            locations.length === 1 ? locations[0]!.slug : undefined,
           ),
         };
       }),
@@ -77,7 +77,7 @@ const FINDERS: Record<
         title: vehicle.plate,
         detail: `${vehicle.vehicleModel.brand} ${vehicle.vehicleModel.name}${vehicle.isActive ? "" : " · Out of service"}`,
         meta: vehicle.location.name,
-        href: locationVehicleHref(vehicle.location.slug, vehicle.id),
+        href: vehicleHref(vehicle.location.slug, vehicle.id),
       })),
   },
   drivers: {
@@ -87,7 +87,7 @@ const FINDERS: Record<
         title: driver.name,
         detail: `${driver.phone}${driver.isActive ? "" : " · Inactive"}`,
         meta: driver.location.name,
-        href: locationDriverHref(driver.location.slug, driver.id),
+        href: driverHref(driver.location.slug, driver.id),
       })),
   },
   users: {
@@ -97,7 +97,7 @@ const FINDERS: Record<
         title: nameOf(user),
         detail: user.email,
         meta: user.adminProfile ? "Admin" : undefined,
-        href: usersHref({ q: user.email }),
+        href: customersHref({ q: user.email }),
       })),
   },
   "vehicle-classes": {
@@ -109,8 +109,8 @@ const FINDERS: Record<
           title: vehicleClass.name,
           detail: vehicleClass.isActive ? undefined : "Turned off",
           href: permissions.includes("coverage.manage")
-            ? vehicleClassHref(vehicleClass.id)
-            : VEHICLE_CLASSES_PATH,
+            ? classHref(null, vehicleClass.id)
+            : classesHref(null),
         }),
       ),
   },
@@ -122,8 +122,8 @@ const FINDERS: Record<
         title: zone.name,
         meta: zone.location.name,
         href: permissions.includes("coverage.manage")
-          ? locationZoneHref(zone.location.slug, zone.id)
-          : locationTabHref(zone.location.slug, "coverage"),
+          ? zoneHref(zone.location.slug, zone.id)
+          : coverageHref(zone.location.slug),
       })),
   },
 };

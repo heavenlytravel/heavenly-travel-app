@@ -1,6 +1,7 @@
 import {
   accountBookingPath,
   bookingPath,
+  consoleBookingPath,
   customerEmailOf,
   formatLocalDateTime,
   formatMyr,
@@ -151,7 +152,7 @@ function consoleButton(
   return {
     type: "button",
     label: "Open in console",
-    href: `${settings.adminUrl}/bookings/${booking.id}`,
+    href: `${settings.adminUrl}${consoleBookingPath(booking.id)}`,
   };
 }
 

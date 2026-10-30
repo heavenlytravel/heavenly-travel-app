@@ -13,8 +13,7 @@ import {
   type PageSaved,
   type Permission,
 } from "@repo/db/server";
-import { revalidatePath } from "next/cache";
-import { revalidateLocation } from "../../(console)/locations/_lib/revalidate";
+import { revalidateLocation } from "../../_lib/revalidate";
 import { actorOf, getAdmin } from "../../_lib/access";
 import {
   FORBIDDEN,
@@ -23,8 +22,7 @@ import {
   STALE_MESSAGE,
   stateOf,
   type ActionState,
-} from "@repo/console/action-state";
-import { SITE_PAGES_PATH } from "../../_lib/routes";
+} from "../../_lib/action-state";
 import { refreshLocationAfter, refreshSitePagesAfter } from "../../_lib/site";
 import { pageTargetOf, type PageTarget } from "./target";
 
@@ -40,15 +38,16 @@ import { pageTargetOf, type PageTarget } from "./target";
  * new one.
  */
 
-/** After a change: the console's screens of the page, and on a publish or an unpublish the customer site's. */
+/**
+ * After a change: every console screen (the page's status on Pages, its
+ * images on Media, its publish in the activity), and on a publish or an
+ * unpublish the customer site's.
+ */
 function refreshAfter(target: PageTarget, publicChange: boolean) {
-  if (target.scope === "location") {
-    revalidateLocation();
-    if (publicChange) refreshLocationAfter(target.locationId);
-    return;
-  }
-  revalidatePath(SITE_PAGES_PATH, "layout");
-  if (publicChange) refreshSitePagesAfter();
+  revalidateLocation();
+  if (!publicChange) return;
+  if (target.scope === "location") refreshLocationAfter(target.locationId);
+  else refreshSitePagesAfter();
 }
 
 /** Who may write the target: Marketing a location's page, SUPER a site page. */

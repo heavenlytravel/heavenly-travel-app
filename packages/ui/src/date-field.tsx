@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { Calendar, dayOf } from "./calendar.js";
 import { cx } from "./cx.js";
-import { inputClassName } from "./field.js";
+import { Button } from "./button.js";
+import { inputClassName, useFieldControl } from "./field.js";
 import { FormValue } from "./form-value.js";
 import { CalendarIcon, ClockIcon } from "./icons.js";
 import { Picker } from "./picker.js";
@@ -18,7 +19,7 @@ import {
 
 const BOX = cx(
   inputClassName,
-  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-slate-400",
+  "ui:flex ui:items-center ui:justify-between ui:gap-2 ui:text-left ui:data-placeholder:text-muted",
 );
 /** A trigger with no box of its own, for a search card that draws the box. */
 const BARE =
@@ -64,26 +65,33 @@ type Common = {
   /** Where "now" and "today" are read: Malaysia for a pick-up. */
   timeZone?: string;
   "aria-label"?: string;
+  /** Refused by the form: marked, and tied to the line that says why. */
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 };
 
 /** The field's button: its value, or the placeholder, and an icon unless bare. */
 function trigger({
   id,
+  "aria-describedby": describedBy,
   ref,
   disabled,
   bare,
   className,
   ariaLabel,
+  invalid,
   text,
   placeholder,
   icon,
 }: {
   id?: string;
+  "aria-describedby"?: string;
   ref: (node: HTMLElement | null) => void;
   disabled?: boolean;
   bare?: boolean;
   className?: string;
   ariaLabel?: string;
+  invalid?: boolean;
   text: string | null;
   placeholder: string;
   icon: ReactNode;
@@ -95,6 +103,8 @@ function trigger({
       id={id}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-describedby={describedBy}
+      aria-invalid={invalid || undefined}
       data-placeholder={text ? undefined : ""}
       className={cx(bare ? BARE : BOX, className)}
     >
@@ -124,6 +134,8 @@ export function DateField({
   className,
   placeholder = "Pick a day",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   name?: string;
   value?: string;
@@ -138,6 +150,7 @@ export function DateField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   return (
     <>
@@ -147,12 +160,13 @@ export function DateField({
         title={ariaLabel ?? "Date"}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
           className,
           ariaLabel,
+          invalid,
           text: dayLabel(current),
           placeholder,
           icon: <CalendarIcon />,
@@ -201,6 +215,8 @@ export function TimeField({
   timeZone,
   placeholder = "Pick a time",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   name?: string;
   value?: string;
@@ -212,6 +228,7 @@ export function TimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   return (
     <>
@@ -221,12 +238,13 @@ export function TimeField({
         title={ariaLabel ?? "Time"}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
           className,
           ariaLabel,
+          invalid,
           text: timeLabel(current),
           placeholder,
           icon: <ClockIcon />,
@@ -284,6 +302,8 @@ export function DateTimeField({
   placeholder = "Pick a date and time",
   title = "Date and time",
   "aria-label": ariaLabel,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
 }: Common & {
   dateName?: string;
   timeName?: string;
@@ -300,6 +320,7 @@ export function DateTimeField({
   const [open, setOpen] = useState(false);
   const current = value ?? own;
   const { ref, container, trigger: shown } = usePortalContainer();
+  const field = useFieldControl({ id, "aria-describedby": describedBy });
 
   const day = dayLabel(current.date, true);
   const time = timeLabel(current.time);
@@ -319,12 +340,13 @@ export function DateTimeField({
         title={title}
         container={container}
         trigger={trigger({
-          id,
+          ...field,
           ref,
           disabled,
           bare,
           className,
           ariaLabel,
+          invalid,
           text,
           placeholder,
           icon: <CalendarIcon />,
@@ -412,16 +434,12 @@ function MomentPanel({
         />
       </div>
       <div className="ui:mt-4 ui:flex ui:items-center ui:justify-between ui:gap-3 ui:text-sm ui:sm:mt-0 ui:sm:border-t ui:sm:border-popover-line ui:sm:px-3 ui:sm:py-2.5">
-        <span className="ui:min-w-0 ui:truncate ui:text-slate-600">
+        <span className="ui:min-w-0 ui:truncate ui:text-muted">
           {summary || "Pick a day and a time"}
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="ui:shrink-0 ui:rounded-md ui:bg-primary ui:px-3.5 ui:py-1.5 ui:text-sm ui:font-semibold ui:text-primary-foreground ui:hover:opacity-90 ui:focus-visible:outline-2 ui:focus-visible:outline-offset-2 ui:focus-visible:outline-ring"
-        >
+        <Button size="sm" onClick={onClose} className="ui:shrink-0">
           Done
-        </button>
+        </Button>
       </div>
     </div>
   );

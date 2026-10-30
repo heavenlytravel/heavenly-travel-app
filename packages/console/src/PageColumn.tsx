@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 
 /**
- * The column a console page is read in: centred, up to 80rem, so a list,
- * the rate grid and a map take the room the sidebar leaves. A form keeps
- * its own narrower width (`FORM_WIDTH`).
+ * The column a console page is read in: on the mist canvas, centred, up
+ * to 80rem, so a list, the rate grid and a map take the room the sidebar
+ * leaves. A form keeps its own narrower width (`FORM_WIDTH`).
  */
 export function PageColumn({ children }: { children: ReactNode }) {
   return (
     <div className="min-w-0 flex-1">
-      <div className="mx-auto w-full max-w-7xl px-5 pt-8 pb-32 md:px-10 md:pt-10">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-32 md:px-7 md:pt-7">
         {children}
       </div>
     </div>
@@ -34,12 +34,12 @@ export function DetailColumns({
   side?: ReactNode;
 }) {
   return (
-    <div className="mt-6 @container">
+    <div className="@container">
       <div
-        className={`grid gap-6 ${side ? "@3xl:grid-cols-[1fr_320px] @3xl:items-start" : ""}`}
+        className={`grid gap-5 ${side ? "@3xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)] @3xl:items-start" : ""}`}
       >
-        <div className="grid min-w-0 gap-6">{main}</div>
-        {side ? <div className="grid min-w-0 gap-6">{side}</div> : null}
+        <div className="grid min-w-0 gap-5">{main}</div>
+        {side ? <div className="grid min-w-0 gap-5">{side}</div> : null}
       </div>
     </div>
   );

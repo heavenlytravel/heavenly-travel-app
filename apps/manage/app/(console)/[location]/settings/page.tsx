@@ -61,7 +61,7 @@ import { StateMove } from "./StateMove";
 /**
  * Route: /[location]/settings. Under `~` the locations, a tile each with
  * its main page's hero image, its state, its numbers and how far its
- * setup has come, opening its own settings, and for Marketing "Add
+ * setup has come, opening its own settings, and for SUPER "Add
  * location". Under a location its own settings: for Marketing its
  * details, step 1 of the setup (the name, the slug and the states it lies
  * in); for every admin where it stands with the public, with what still
@@ -103,7 +103,7 @@ export default async function SettingsPage({
       <PageHeader
         title="Settings"
         action={
-          permissions.includes("locations.manage") ? (
+          permissions.includes("locations.create") ? (
             <Button asChild>
               <Link href={NEW_LOCATION_PATH}>
                 <PlusIcon />

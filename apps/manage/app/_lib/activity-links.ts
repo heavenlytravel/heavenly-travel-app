@@ -94,7 +94,7 @@ export function activityEntryHref(
   if (entry.entityType === "location") {
     const slug = slugs.get(entry.entityId);
     if (!slug) return null;
-    if (entry.action === "location.page.published" && may("locations.manage")) {
+    if (entry.action === "location.page.published" && may("pages.manage")) {
       return locationPublishHref(slug, entry.id);
     }
     return entry.entityId === here ? null : dashboardHref(slug);

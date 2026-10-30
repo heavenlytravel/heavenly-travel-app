@@ -30,10 +30,14 @@ const RULES = {
   "vendors.review": "super",
   /** Open a location and read its overview. Every team works inside one. */
   "locations.view": "any",
-  /** Add a location, its details, saved addresses and pages. */
+  /** A location's details and its saved addresses. */
   "locations.manage": ["MARKETING"],
-  /** The customer site's own pages (the home page, about us, the legal pages) and the home page's top choices. */
-  "website.manage": "super",
+  /** Add a location: a draft, which its checklist takes from there. */
+  "locations.create": "super",
+  /** A location's pages: write, preview, publish and unpublish them, add and order a section's pages, upload their images. */
+  "pages.manage": ["MARKETING", "SEO"],
+  /** The customer site's own pages (the home page, about us, the legal pages, the footer) and the home page's top choices. */
+  "website.manage": ["MARKETING", "SEO"],
   /** Take a location live, pause it, resume it, delete it. */
   "locations.activate": "super",
   "admins.manage": "super",
@@ -42,7 +46,7 @@ const RULES = {
   "wall.switch": "super",
   "activity.view": "super",
   /** Every uploaded image and where it is used; delete those on no page. */
-  "media.manage": "super",
+  "media.manage": ["MARKETING", "SEO"],
 } as const satisfies Record<string, "any" | "super" | readonly AdminTeam[]>;
 
 export type Permission = keyof typeof RULES;

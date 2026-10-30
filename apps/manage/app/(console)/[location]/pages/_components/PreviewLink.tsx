@@ -6,7 +6,7 @@ import { Tooltip } from "@repo/ui/tooltip";
  * "Preview": opens a page of a location as staff preview it on the
  * customer site, the saved draft whatever the location's state and
  * whether the page is published. A plain link in a new tab, from
- * `locationPreviewUrl`; the customer site checks `locations.manage`.
+ * `locationPreviewUrl`; the customer site checks `pages.manage`.
  */
 export function PreviewLink({
   href,

@@ -28,7 +28,7 @@ import { FooterEditor } from "./FooterEditor";
  * the customer site ends with, among the website's pages: the publish bar
  * under its title, a card per part, and its publishes for its history.
  * The home page's preview shows its saved draft. Console-wide: under a
- * slug it is not found. SUPER's alone (`website.manage`). See
+ * slug it is not found. Marketing's and SEO's (`website.manage`). See
  * docs/261026-site-footer.md.
  */
 export default async function FooterEditorPage({

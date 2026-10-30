@@ -43,7 +43,7 @@ import { TopChoiceControl } from "../TopChoiceControl";
  * A site page is public as soon as it is published; the home page stays
  * published once it is, and has its top choices under it, the location
  * cards it shows, which are saved at once. Console-wide: under a slug it
- * is not found. SUPER's alone (`website.manage`).
+ * is not found. Marketing's and SEO's (`website.manage`).
  */
 export default async function SitePageEditorPage({
   params,

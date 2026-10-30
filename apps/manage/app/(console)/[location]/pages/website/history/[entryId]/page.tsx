@@ -27,8 +27,8 @@ const NO_ADDRESSES: ReadonlyMap<string, string> = new Map();
  * or of the footer: as it was before and as it was published, with the
  * parts that differ marked. There is no restore button: to roll back,
  * Marketing copies the old text into the editor and publishes again.
- * Console-wide: under a slug it is not found. SUPER's alone
- * (`website.manage`).
+ * Console-wide: under a slug it is not found. Marketing's and
+ * SEO's (`website.manage`).
  */
 export default async function SitePagePublishPage({
   params,

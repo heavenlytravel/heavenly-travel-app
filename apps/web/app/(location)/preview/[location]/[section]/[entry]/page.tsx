@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /**
  * Route: /preview/langkawi/popular-places/eagle-square. A page under a
  * section as drafted, published or not, for staff who hold
- * `locations.manage`. The access check is `previewPageAt`'s.
+ * `pages.manage`. The access check is `previewPageAt`'s.
  */
 export default async function LocationEntryPreview({ params }: Props) {
   const { location: slug, section, entry } = await params;

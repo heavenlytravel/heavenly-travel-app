@@ -212,7 +212,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         label: "Pages",
         path: "pages",
         icon: "pages",
-        permission: "locations.manage",
+        permission: "pages.manage",
         step: "pages",
         words: "content website home page top choices terms privacy footer",
       },

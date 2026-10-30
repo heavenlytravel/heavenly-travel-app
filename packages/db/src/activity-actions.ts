@@ -169,10 +169,19 @@ const ACTIONS = {
   "driver.deleted": { entityType: "driver", customerVisible: false },
   "location.created": { entityType: "location", customerVisible: false },
   /**
-   * The states are logged by their codes, a top choice by its place on
-   * the home page: 1, 2 or 3, null for none.
+   * The states are logged by their codes. Entries from before
+   * `location.top-choice.updated` hold a top choice too.
    */
   "location.updated": { entityType: "location", customerVisible: false },
+  /**
+   * `topChoiceOrder`, before and after: its place among the home page's
+   * top choices, 1, 2 or 3, null for none. One entry for each location
+   * whose place changed.
+   */
+  "location.top-choice.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /** The whole list before and after, in its order: id, name and place label. */
   "location.addresses.updated": {
     entityType: "location",
@@ -301,80 +310,6 @@ export const isActivityAction = guardFor(ACTIVITY_ACTIONS);
 
 export function activityActionMeta(action: ActivityAction) {
   return ACTIONS[action];
-}
-
-/** The parts of a location its history can be narrowed to, in the History tab's order. */
-export const LOCATION_HISTORY_KINDS = [
-  "details",
-  "classes",
-  "coverage",
-  "fleet",
-  "pages",
-  "status",
-] as const;
-export type LocationHistoryKind = (typeof LOCATION_HISTORY_KINDS)[number];
-export const isLocationHistoryKind = guardFor(LOCATION_HISTORY_KINDS);
-export const LOCATION_HISTORY_KIND_LABELS: Record<LocationHistoryKind, string> =
-  {
-    details: "Details",
-    classes: "Vehicle classes",
-    coverage: "Coverage and rates",
-    fleet: "Vehicles and drivers",
-    pages: "Pages",
-    status: "Status",
-  };
-
-/** The part of a location an entry of its history is about; null for an action that is not a location's. */
-export function locationHistoryKindOf(
-  action: string,
-): LocationHistoryKind | null {
-  switch (action) {
-    case "location.updated":
-      return "details";
-    case "location.offering.created":
-    case "location.offering.updated":
-      return "classes";
-    case "location.zone.created":
-    case "location.zone.updated":
-    case "location.zone.deleted":
-    case "location.rates.updated":
-    case "location.surcharge.updated":
-    case "location.dropoff.updated":
-    case "location.reach.updated":
-    case "location.weekend.updated":
-      return "coverage";
-    case "vehicle.created":
-    case "vehicle.updated":
-    case "vehicle.deleted":
-    case "driver.created":
-    case "driver.updated":
-    case "driver.deleted":
-    case "location.buffer.updated":
-      return "fleet";
-    case "location.page.published":
-    case "location.page.updated":
-    case "location.page.created":
-    case "location.page.renamed":
-    case "location.page.deleted":
-    case "location.pages.ordered":
-    case "location.addresses.updated":
-      return "pages";
-    case "location.created":
-    case "location.state.changed":
-    case "location.deleted":
-      return "status";
-    default:
-      return null;
-  }
-}
-
-/** The actions one part of a location's history holds. */
-export function locationHistoryActions(
-  kind: LocationHistoryKind,
-): ActivityAction[] {
-  return ACTIVITY_ACTIONS.filter(
-    (action) => locationHistoryKindOf(action) === kind,
-  );
 }
 
 /** The action that moves an item to each status, for `advanceItem`. */
@@ -993,6 +928,7 @@ export function describeActivity(entry: DescribableActivity): string {
     case "location.created":
       return "Created the location";
     case "location.updated":
+    case "location.top-choice.updated":
       return locationChanges(entry.before, entry.after);
     case "location.addresses.updated":
       return addressChanges(entry.before, entry.after);

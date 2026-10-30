@@ -14,18 +14,17 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
-import { getPermissions, requireAdmin } from "../../_lib/access";
+import { getPermissions, requireAdminOr } from "../../_lib/access";
 import {
   CONSOLE_PAGES,
-  consolePage,
+  homeHref,
   pageHref,
   pageShown,
-  permissionOf,
   type MenuFor,
 } from "../../_lib/console-map";
 import { locationOverview, scopeOverviews } from "../../_lib/location-data";
 import { formatLongDate } from "../../_lib/local-days";
-import { newBookingHref, scopeSlugOf } from "../../_lib/routes";
+import { RESTRICTED_PATH, newBookingHref } from "../../_lib/routes";
 import { scopeOf } from "../../_lib/scope";
 import {
   Band,
@@ -34,38 +33,35 @@ import {
   greetingOf,
 } from "./_dashboard/Band";
 import { ByLocation } from "./_dashboard/ByLocation";
-import { Glance, glanceOf } from "./_dashboard/Glance";
 import { NeedsYou, needsOf } from "./_dashboard/NeedsYou";
 import { todaysPickups } from "./_dashboard/TodaysPickups";
 import { mayIn, type Day } from "./_dashboard/day";
 import { SetupChecklist } from "./SetupChecklist";
 
 /**
- * Route: /[location]. The dashboard, for every admin. Under `~` the day
+ * Route: /[location]. The dashboard, for the teams that work the bookings
+ * (`dashboard.view`); any other admin is taken to where it starts, the
+ * first page of its menu: Pages, for Marketing and SEO. Under `~` the day
  * of every location the person may see, summed; under a location's slug
  * that location's day, under its name and state. The navy band greets the
  * admin with the date and four figures (pick-ups today, bookings
  * received, trips awaiting a driver, documents due), each a link to the
  * list behind it for a team that may open it; then what needs the admin,
  * worst first, today's pick-ups for the teams that work the queue, and
- * under `~` each location's own figures. A team with no queue, such as
- * Marketing, sees a location's parts at a glance instead of its
- * pick-ups. A draft location opens on its setup checklist. See
+ * under `~` each location's own figures. A draft location opens on its
+ * setup checklist. See
  * docs/261029-manage-signature-overhaul.md, "Dashboard".
  */
 export default async function DashboardPage({
   params,
 }: PageProps<"/[location]">) {
-  const admin = await requireAdmin(
-    permissionOf(
-      consolePage("dashboard"),
-      scopeSlugOf((await params).location),
-    ),
-  );
-  const [scope, permissions] = await Promise.all([
-    scopeOf(params),
-    getPermissions(),
-  ]);
+  const read = () => Promise.all([scopeOf(params), getPermissions()]);
+  const admin = await requireAdminOr("dashboard.view", async () => {
+    const [{ slug, location }, permissions] = await read();
+    const state = location ? locationStateOf(location.state) : undefined;
+    return homeHref({ scope: slug, permissions, state }) ?? RESTRICTED_PATH;
+  });
+  const [scope, permissions] = await read();
   const { location } = scope;
   const may = mayIn(permissions);
   if (location && locationStateOf(location.state) === "draft") {
@@ -119,8 +115,8 @@ export default async function DashboardPage({
             wide={
               queue ? (
                 <TableSkeleton columns={4} rows={4} />
-              ) : (
-                <CardSkeleton rows={4} />
+              ) : location ? null : (
+                <CardSkeleton rows={2} />
               )
             }
             last={location || !queue ? null : <CardSkeleton rows={2} />}
@@ -136,10 +132,10 @@ export default async function DashboardPage({
 /* Under the band */
 
 /**
- * The day under the band: the wide card on the left (today's pick-ups,
- * or a location's parts at a glance), and on the right what needs the
- * admin, then every location; on a phone, what needs the admin comes
- * first. With one side empty, the rest stack in one column.
+ * The day under the band: today's pick-ups wide on the left, and on the
+ * right what needs the admin, then every location; on a phone, what
+ * needs the admin comes first. With one side empty, the rest stack in
+ * one column.
  */
 function DayColumns({
   first,
@@ -191,23 +187,19 @@ async function dayColumns(day: Day) {
   const may = mayIn(permissions);
   const queue = may("bookings.view");
   const overviews = await scopeOverviews(scope);
-  const [needs, pickups, glance] = await Promise.all([
+  const [needs, pickups] = await Promise.all([
     queue || may("fleet.manage") ? needsOf(day, overviews) : null,
     queue ? todaysPickups(day, overviews) : null,
-    scope.location && !queue && overviews[0]
-      ? glanceOf(scope.location, overviews[0], permissions)
-      : null,
   ]);
   const byLocation = scope.location ? null : (
     <ByLocation overviews={overviews} mayAdd={may("locations.create")} />
   );
-  const wide = pickups ?? (glance ? <Glance rows={glance} /> : null);
 
   return (
     <DayColumns
       first={needs ? <NeedsYou needs={needs} /> : null}
-      wide={wide ?? byLocation}
-      last={wide ? byLocation : null}
+      wide={pickups ?? byLocation}
+      last={pickups ? byLocation : null}
     />
   );
 }

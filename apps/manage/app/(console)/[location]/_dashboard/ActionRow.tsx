@@ -44,7 +44,6 @@ const MARK_TONES = {
   red: "border-danger-edge bg-danger-tint text-danger",
   amber: "border-warning-edge bg-warning-tint text-warning",
   green: "border-success/20 bg-success-tint text-success",
-  neutral: "border-hairline bg-shade text-navy",
 } as const;
 
 /** An icon in a rounded square, in the colour of what it is about. */
@@ -69,17 +68,13 @@ export function IconMark({
 }
 
 /** What a row does, a quiet button on a wide screen and a chevron on a phone; the row's own link does it. */
-export function RowEnd({ verb }: { verb?: string }) {
+export function RowEnd({ verb }: { verb: string }) {
   return (
     <>
-      {verb ? (
-        <Button asChild variant="secondary" size="sm" className="max-sm:hidden">
-          <span aria-hidden="true">{verb}</span>
-        </Button>
-      ) : null}
-      <ChevronRightIcon
-        className={cx("text-muted", verb ? "sm:hidden" : undefined)}
-      />
+      <Button asChild variant="secondary" size="sm" className="max-sm:hidden">
+        <span aria-hidden="true">{verb}</span>
+      </Button>
+      <ChevronRightIcon className="text-muted sm:hidden" />
     </>
   );
 }

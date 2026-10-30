@@ -27,9 +27,6 @@ export const CONSOLE_GROUPS = [
 
 export type ConsoleGroup = (typeof CONSOLE_GROUPS)[number]["key"];
 
-/** What a page's `requireAdmin` asks, the same in every scope or one under `~` and another under a location. */
-type PagePermission = Permission | { all: Permission; location: Permission };
-
 /** One screen of the console. */
 export type ConsolePage = {
   key: string;
@@ -37,7 +34,8 @@ export type ConsolePage = {
   /** Its path under the location's segment: "fleet/vehicles"; "" for the dashboard. */
   path: string;
   icon: MenuIcon;
-  permission: PagePermission;
+  /** What its `requireAdmin` asks, in every scope. */
+  permission: Permission;
   /** Console-wide: it exists under `~` alone, and under a location its row leads there. */
   wide?: boolean;
   /** Only a location that takes bookings has it: a draft has no Bookings yet. */
@@ -86,7 +84,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         label: "Dashboard",
         path: "",
         icon: "dashboard",
-        permission: { all: "dashboard.view", location: "locations.view" },
+        permission: "dashboard.view",
         words: "home overview today",
       },
     ],
@@ -272,7 +270,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         label: "Activity",
         path: "activity",
         icon: "activity",
-        permission: { all: "activity.view", location: "locations.view" },
+        permission: "activity.view",
         words: "log history changes",
       },
     ],
@@ -288,7 +286,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         label: "Settings",
         path: "settings",
         icon: "settings",
-        permission: "locations.view",
+        permission: "settings.view",
         step: "details",
         words: "locations details state go live pause delete",
       },
@@ -300,13 +298,6 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
 export const CONSOLE_PAGES: readonly ConsolePage[] = CONSOLE_SECTIONS.flatMap(
   (section) => section.pages,
 );
-
-/** What a page asks in a scope. */
-export function permissionOf(page: ConsolePage, scope: ScopeSlug): Permission {
-  const { permission } = page;
-  if (typeof permission === "string") return permission;
-  return scope === null ? permission.all : permission.location;
-}
 
 /** Who and where a row is shown for: the admin's permissions, and the location's state under a slug. */
 export type MenuFor = {
@@ -326,8 +317,18 @@ export function pageShown(
   { scope, permissions, state }: MenuFor,
 ) {
   const where = page.wide ? null : scope;
-  if (!permissions.includes(permissionOf(page, where))) return false;
+  if (!permissions.includes(page.permission)) return false;
   return !(page.live && where !== null && state === "draft");
+}
+
+/**
+ * Where an admin starts in a scope: the first row of the menu it holds,
+ * the dashboard for the booking teams, Pages for Marketing and SEO. Null
+ * for an admin who holds none.
+ */
+export function homeHref(menu: MenuFor): string | null {
+  const page = CONSOLE_PAGES.find((entry) => pageShown(entry, menu));
+  return page ? pageHref(page, menu.scope) : null;
 }
 
 /** Where a page's row leads in a scope: its own address there, or `~` for a console-wide page. */

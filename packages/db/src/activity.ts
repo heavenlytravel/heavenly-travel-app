@@ -2,12 +2,11 @@ import {
   activityActionMeta,
   ANONYMOUS_ACTOR_NAMES,
   isActorKind,
-  locationHistoryActions,
   type ActivityAction,
   type ActivityEntityType,
   type Actor,
-  type LocationHistoryKind,
 } from "./activity-actions";
+import { activityActionsIn, type ActivityArea } from "./activity-areas";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
 import type { LocationPageRef } from "./location-page-input";
@@ -370,39 +369,36 @@ export async function listActivityForMany(
   return decorate(rows);
 }
 
+/** Which entries of the log a reader asks for: the areas the admin holds, or one of them. */
+export type ActivityAreas = {
+  /** The areas the admin holds: `activityAreasHeld`. */
+  held: readonly ActivityArea[];
+  /** One of them, the filter's; none for all of them. */
+  area?: ActivityArea;
+};
+
 /**
- * A location's history, newest first, one page at a time: the changes to
- * the location itself, and to the vehicles and drivers based there when
- * each was made, or those of one part of it. `fleet` false leaves the
- * vehicles' and drivers' out, for an admin who does not manage them.
- * `before` is the id of the last entry of the previous page.
+ * The query's part that keeps the areas asked for: by action, so a page
+ * of the log is a page of what the admin may see. An area not held asks
+ * for nothing.
  */
-export async function listLocationHistory({
-  locationId,
-  kind,
-  fleet,
-  before,
-  take,
-}: {
-  locationId: string;
-  kind?: LocationHistoryKind;
-  fleet: boolean;
-  before?: string;
-  take: number;
-}): Promise<ActivityPage> {
+function areaWhere({
+  held,
+  area,
+}: ActivityAreas): Prisma.ActivityLogWhereInput {
+  const areas = area ? held.filter((each) => each === area) : held;
+  const actions = activityActionsIn(areas);
+  return actions ? { action: { in: actions } } : {};
+}
+
+/** One page of the log, newest first, after the entry `before`. */
+async function pageOf(
+  where: Prisma.ActivityLogWhereInput,
+  before: string | undefined,
+  take: number,
+): Promise<ActivityPage> {
   const rows = await db.activityLog.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { entityType: "location", entityId: locationId },
-            { locationIds: { has: locationId } },
-          ],
-        },
-        kind ? { action: { in: locationHistoryActions(kind) } } : {},
-        fleet ? {} : { entityType: { notIn: ["vehicle", "driver"] } },
-      ],
-    },
+    where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: take + 1,
     ...(before ? { cursor: { id: before }, skip: 1 } : {}),
@@ -412,6 +408,40 @@ export async function listLocationHistory({
     entries: await decorate(page),
     nextCursor: rows.length > take ? (page.at(-1)?.id ?? null) : null,
   };
+}
+
+/**
+ * A location's history, newest first, one page at a time: the changes to
+ * the location itself, and to the vehicles and drivers based there when
+ * each was made, of the areas asked for. `before` is the id of the last
+ * entry of the previous page.
+ */
+export function listLocationHistory({
+  locationId,
+  areas,
+  before,
+  take,
+}: {
+  locationId: string;
+  areas: ActivityAreas;
+  before?: string;
+  take: number;
+}): Promise<ActivityPage> {
+  return pageOf(
+    {
+      AND: [
+        {
+          OR: [
+            { entityType: "location", entityId: locationId },
+            { locationIds: { has: locationId } },
+          ],
+        },
+        areaWhere(areas),
+      ],
+    },
+    before,
+    take,
+  );
 }
 
 /**
@@ -479,28 +509,17 @@ export type ActivityPage = {
 };
 
 /**
- * The full log across the app, newest first, one page at a time, or the
- * entries of one type of record: the bookings', the vehicles'. `before`
- * is the id of the last entry of the previous page.
+ * The log across the app, newest first, one page at a time, of the areas
+ * asked for. `before` is the id of the last entry of the previous page.
  */
-export async function listActivity({
-  entityType,
+export function listActivity({
+  areas,
   before,
   take,
 }: {
-  entityType?: ActivityEntityType;
+  areas: ActivityAreas;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
-  const rows = await db.activityLog.findMany({
-    where: entityType ? { entityType } : undefined,
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: take + 1,
-    ...(before ? { cursor: { id: before }, skip: 1 } : {}),
-  });
-  const page = rows.slice(0, take);
-  return {
-    entries: await decorate(page),
-    nextCursor: rows.length > take ? (page.at(-1)?.id ?? null) : null,
-  };
+  return pageOf(areaWhere(areas), before, take);
 }

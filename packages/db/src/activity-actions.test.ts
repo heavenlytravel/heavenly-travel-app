@@ -4,7 +4,6 @@ import {
   ACTIVITY_ACTIONS,
   activityActionMeta,
   describeActivity,
-  locationHistoryKindOf,
 } from "./activity-actions";
 
 describe("describeActivity", () => {
@@ -369,16 +368,6 @@ describe("activityActionMeta", () => {
   });
 });
 
-describe("locationHistoryKindOf", () => {
-  it("names a part of the location for every action logged against one", () => {
-    for (const action of ACTIVITY_ACTIONS) {
-      if (activityActionMeta(action).entityType !== "location") continue;
-      assert.notEqual(locationHistoryKindOf(action), null, action);
-    }
-    assert.equal(locationHistoryKindOf("booking.created"), null);
-  });
-});
-
 describe("describeActivity, the fleet", () => {
   const entry = (action: string, before: unknown, after: unknown) =>
     describeActivity({ action, before, after });
@@ -461,15 +450,5 @@ describe("describeActivity, the fleet", () => {
       ),
       "Removed the model Toyota Alphard",
     );
-  });
-});
-
-describe("locationHistoryKindOf, the fleet", () => {
-  it("puts vehicles and drivers in their own part", () => {
-    for (const action of ACTIVITY_ACTIONS) {
-      const { entityType } = activityActionMeta(action);
-      if (entityType !== "vehicle" && entityType !== "driver") continue;
-      assert.equal(locationHistoryKindOf(action), "fleet", action);
-    }
   });
 });

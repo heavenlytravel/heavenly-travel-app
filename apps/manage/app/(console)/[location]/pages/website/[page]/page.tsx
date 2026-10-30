@@ -92,7 +92,7 @@ async function editorDetails({ page }: { page: SitePageKey }) {
         where="Website"
         title={label}
         publishes={publishes}
-        allHref={activityHref(null, { type: "site-page" })}
+        allHref={activityHref(null, { area: "website" })}
         allLabel="All changes to the site's pages"
       />
       <PageEditor

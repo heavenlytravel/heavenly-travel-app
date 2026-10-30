@@ -30,10 +30,11 @@ const PERMISSION_WORDS: Record<Permission, string> = {
   "pages.manage": "Write and publish a location's pages",
   "website.manage": "The website's own pages, its footer and top choices",
   "locations.activate": "Take a location live, pause or delete it",
+  "settings.view": "Open Settings",
   "admins.manage": "Staff, their levels and teams",
   "users.manage": "Customer accounts",
   "wall.switch": "Switch the wall",
-  "activity.view": "Activity across every location",
+  "activity.view": "See the activity of their own work",
   "media.manage": "Media",
 };
 

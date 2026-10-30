@@ -3,9 +3,8 @@ import {
   SITE_PAGES_PATH,
   pageEditorPath,
   pageSegmentOf,
-  type ActivityEntityType,
+  type ActivityArea,
   type BookingStatus,
-  type LocationHistoryKind,
   type LocationPageKey,
   type LocationPageRef,
   type MediaFilter,
@@ -384,23 +383,15 @@ export function customersHref(filter: { q?: string; page?: number } = {}) {
 }
 
 /**
- * The activity: under `~` the full log or the entries of one type of
- * record; under a slug the location's own history, or one part of it.
- * At the page of it older than the entry with the id `before`.
+ * The activity: under `~` the log across the app, under a slug the
+ * location's own history, either one narrowed to the entries of one
+ * area. At the page of it older than the entry with the id `before`.
  */
 export function activityHref(
   scope: ScopeSlug,
-  filter: {
-    type?: ActivityEntityType;
-    kind?: LocationHistoryKind;
-    before?: string;
-  } = {},
+  filter: { area?: ActivityArea; before?: string } = {},
 ) {
-  return listHref(consolePath(scope, "activity"), {
-    type: scope === null ? filter.type : undefined,
-    kind: scope === null ? undefined : filter.kind,
-    before: filter.before,
-  });
+  return listHref(consolePath(scope, "activity"), filter);
 }
 
 /** What one publish in a location's history put on a page, by the log entry's id. */

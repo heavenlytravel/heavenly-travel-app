@@ -100,8 +100,8 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
             {withoutTeam === 1
               ? "1 admin has no team."
               : `${withoutTeam} admins have no team.`}{" "}
-            With the wall on they reach only the dashboard and the
-            locations&apos; overviews.
+            With the wall on they reach no team&apos;s screens: only Activity,
+            of the locations&apos; status.
           </Notice>
         ) : null}
       </Card>

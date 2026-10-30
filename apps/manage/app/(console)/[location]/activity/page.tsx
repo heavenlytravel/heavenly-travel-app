@@ -1,9 +1,9 @@
 import {
-  LOCATION_HISTORY_KINDS,
-  LOCATION_HISTORY_KIND_LABELS,
-  isActivityEntityType,
-  isLocationHistoryKind,
-  type ActivityEntityType,
+  ACTIVITY_AREA_LABELS,
+  LOCATION_ACTIVITY_AREAS,
+  activityAreasHeld,
+  isActivityArea,
+  type ActivityArea,
   type Permission,
 } from "@repo/db";
 import {
@@ -23,28 +23,15 @@ import {
 } from "../../../_components/HistoryTimeline";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
-  ACTIVITY_RECORD_NAMES,
   activityEntryHref,
   activityEntryTag,
 } from "../../../_lib/activity-links";
-import { consolePage, permissionOf } from "../../../_lib/console-map";
-import { activityHref, scopeSlugOf } from "../../../_lib/routes";
+import { consolePage } from "../../../_lib/console-map";
+import { activityHref, type ScopeSlug } from "../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../_lib/scope";
 
 /** How many changes a page of the log holds. */
 const PAGE_SIZE = 50;
-
-/** The filter's types of record, in their order. */
-const TYPE_OPTIONS = (
-  Object.keys(ACTIVITY_RECORD_NAMES) as ActivityEntityType[]
-).map((type) => ({ value: type, label: ACTIVITY_RECORD_NAMES[type].many }));
-
-/** The parts of a location its filter offers: the fleet's only to an admin who manages it. */
-function kindOptions(fleet: boolean) {
-  return LOCATION_HISTORY_KINDS.filter((kind) => fleet || kind !== "fleet").map(
-    (kind) => ({ value: kind, label: LOCATION_HISTORY_KIND_LABELS[kind] }),
-  );
-}
 
 /** One log as the page reads it: its filter chips, its pages and where each is. */
 type Log = {
@@ -61,99 +48,88 @@ type Log = {
 };
 
 /**
- * Every admin, customer and system action across the console, narrowed to
- * one type of record by the chips. SUPER only.
+ * The log of a scope, for an admin who holds `held`: under `~` every
+ * action across the console, under a location the changes to it and to
+ * the vehicles and drivers based there. Either is narrowed to one area
+ * by the chips (`?area=`), which offer the areas held that the log can
+ * hold. The fleet's changes are Operation's, the team's SUPER's.
  */
-function consoleLog(type: unknown): Log {
-  const filter = isActivityEntityType(type) ? type : undefined;
-  return {
-    key: filter ?? "all",
-    chips: (
-      <FilterLinks
-        label="Filter by type of record"
-        options={TYPE_OPTIONS}
-        active={filter}
-        hrefOf={(value) => activityHref(null, { type: value })}
-      />
-    ),
-    emptyMessage: filter
-      ? `No changes to ${ACTIVITY_RECORD_NAMES[filter].many.toLowerCase()} recorded.`
-      : "No activity yet.",
-    read: (before) =>
-      listActivity({ entityType: filter, before, take: PAGE_SIZE }),
-    href: (before) => activityHref(null, { type: filter, before }),
-  };
-}
-
-/**
- * Every change to one location and to the vehicles and drivers based
- * there, narrowed to one part of it by the chips: its details, its
- * classes, its coverage and rates, its fleet, its pages or its status.
- * The fleet's changes are Operation's alone.
- */
-function locationLog(
-  location: LocationName,
-  kind: unknown,
-  permissions: readonly Permission[],
+function logOf(
+  slug: ScopeSlug,
+  location: LocationName | null,
+  area: unknown,
+  held: readonly ActivityArea[],
 ): Log {
-  const fleet = permissions.includes("fleet.manage");
+  const offered = location
+    ? held.filter((each) =>
+        (LOCATION_ACTIVITY_AREAS as readonly ActivityArea[]).includes(each),
+      )
+    : held;
   const filter =
-    isLocationHistoryKind(kind) && (fleet || kind !== "fleet")
-      ? kind
-      : undefined;
+    isActivityArea(area) && offered.includes(area) ? area : undefined;
+  // Asked by every area held, so SUPER's query asks nothing of the action.
+  const areas = { held, area: filter };
   return {
     key: filter ?? "all",
     chips: (
       <FilterLinks
-        label="Filter by part of the location"
-        options={kindOptions(fleet)}
+        label="Filter by area"
+        options={offered.map((each) => ({
+          value: each,
+          label: ACTIVITY_AREA_LABELS[each],
+        }))}
         active={filter}
-        hrefOf={(value) => activityHref(location.slug, { kind: value })}
+        hrefOf={(value) => activityHref(slug, { area: value })}
       />
     ),
     emptyMessage: filter
-      ? `No changes to ${LOCATION_HISTORY_KIND_LABELS[filter].toLowerCase()} recorded.`
-      : "No changes recorded for this location.",
+      ? `No changes to ${ACTIVITY_AREA_LABELS[filter].toLowerCase()} recorded.`
+      : location
+        ? "No changes recorded for this location."
+        : "No activity yet.",
     read: (before) =>
-      listLocationHistory({
-        locationId: location.id,
-        kind: filter,
-        fleet,
-        before,
-        take: PAGE_SIZE,
-      }),
-    href: (before) => activityHref(location.slug, { kind: filter, before }),
-    here: location.id,
+      location
+        ? listLocationHistory({
+            locationId: location.id,
+            areas,
+            before,
+            take: PAGE_SIZE,
+          })
+        : listActivity({ areas, before, take: PAGE_SIZE }),
+    href: (before) => activityHref(slug, { area: filter, before }),
+    here: location?.id,
   };
 }
 
 /**
- * Route: /[location]/activity?type=vehicle&before=<id>. What changed and
+ * Route: /[location]/activity?area=fleet&before=<id>. What changed and
  * who changed it, newest first, a page at a time, grouped by the day it
- * was made. Under `~` the console's whole log, for SUPER, narrowed to one
- * type of record (`?type=`); under a location its own history, for every
- * admin, narrowed to one part of it (`?kind=`). Each line names its record
- * at the right and opens it where it has a page: a booking, a location, a
- * class, a vehicle or a driver at the location it is based at, a publish
- * as the page was before and after (`_lib/activity-links`). One record's
- * history is on its own page.
+ * was made, for every admin: the entries of the areas its teams hold
+ * (`activityAreasHeld`), all of them for SUPER. Under `~` the console's
+ * whole log, under a location its own history; either narrowed to one
+ * area (`?area=`). Each line names its record at the right and opens it
+ * where it has a page: a booking, a location, a class, a vehicle or a
+ * driver at the location it is based at, a publish as the page was
+ * before and after (`_lib/activity-links`). One record's history is on
+ * its own page.
  */
 export default async function ActivityPage({
   params,
   searchParams,
 }: PageProps<"/[location]/activity">) {
-  await requireAdmin(
-    permissionOf(consolePage("activity"), scopeSlugOf((await params).location)),
-  );
+  await requireAdmin(consolePage("activity").permission);
   const scope = await scopeOf(params);
-  const [{ type, kind, before: cursor }, permissions] = await Promise.all([
+  const [{ area, before: cursor }, permissions] = await Promise.all([
     searchParams,
     getPermissions(),
   ]);
   const before = typeof cursor === "string" && cursor ? cursor : undefined;
-  const log = scope.location
-    ? locationLog(scope.location, kind, permissions)
-    : consoleLog(type);
+  const log = logOf(
+    scope.slug,
+    scope.location,
+    area,
+    activityAreasHeld(permissions),
+  );
 
   return (
     <>

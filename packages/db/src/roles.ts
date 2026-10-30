@@ -35,7 +35,7 @@ export function adminTeamsOf(teams: readonly unknown[]): AdminTeam[] {
   return ADMIN_TEAMS.filter((team) => teams.includes(team));
 }
 
-/** A REGULAR admin with no team reaches only the Dashboard once the wall is on. */
+/** A REGULAR admin with no team reaches no team's screen once the wall is on: Activity, of locations' status, alone. */
 export function needsTeam(admin: { level: string; teams: readonly string[] }) {
   return (
     adminLevelOf(admin.level) !== "SUPER" &&

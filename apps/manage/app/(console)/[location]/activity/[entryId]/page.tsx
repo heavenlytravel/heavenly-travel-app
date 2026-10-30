@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { describeActivity, formatLocalDateTime } from "@repo/db";
+import {
+  activityPermissionOf,
+  describeActivity,
+  formatLocalDateTime,
+} from "@repo/db";
 import { getPagePublish, type LocationName } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
@@ -19,14 +23,16 @@ const COLUMNS = "grid gap-5 @4xl:grid-cols-2 @4xl:items-start";
 /**
  * Route: /[location]/activity/[entryId]. One publish from a location's
  * activity: the page as it was before and as it was published, with the
- * parts that differ marked. Marketing's and SEO's (`pages.manage`), under
- * a location only. There is no restore button: to roll back, they copy
- * the old text into the editor and publish again.
+ * parts that differ marked. For an admin who holds the publishes' area,
+ * Pages (`pages.manage`): Marketing and SEO; `getPagePublish` reads a
+ * publish alone, so no other entry opens here. Under a location only.
+ * There is no restore button: to roll back, they copy the old text into
+ * the editor and publish again.
  */
 export default async function LocationPublishPage({
   params,
 }: PageProps<"/[location]/activity/[entryId]">) {
-  await requireAdmin("pages.manage");
+  await requireAdmin(activityPermissionOf("location.page.published"));
   const { location } = await scopeOf(params);
   if (!location) notFound();
   const { entryId } = await params;

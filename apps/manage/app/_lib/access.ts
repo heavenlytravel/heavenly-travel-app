@@ -47,11 +47,24 @@ export async function getAdmin(
  * /no-access, and an admin whose teams do not reach the screen goes to
  * /restricted.
  */
-export async function requireAdmin(permission: Permission): Promise<AdminUser> {
+export function requireAdmin(permission: Permission): Promise<AdminUser> {
+  return requireAdminOr(permission, async () => RESTRICTED_PATH);
+}
+
+/**
+ * As `requireAdmin`, for an address an admin is led to without choosing
+ * its screen, the dashboard, where signing in and the logo lead: an admin
+ * whose teams do not reach it goes to `elsewhere`, where it starts,
+ * rather than being told it is another team's.
+ */
+export async function requireAdminOr(
+  permission: Permission,
+  elsewhere: () => Promise<string>,
+): Promise<AdminUser> {
   const access = await getAdminAccess(permission);
   if (access.status === "signed-out") redirect("/sign-in");
   if (access.status === "forbidden") redirect("/no-access");
-  if (access.status === "restricted") redirect(RESTRICTED_PATH);
+  if (access.status === "restricted") redirect(await elsewhere());
   return access.admin;
 }
 

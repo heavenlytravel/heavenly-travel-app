@@ -359,6 +359,7 @@ export type { ListedUser } from "./users";
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";
+export * from "./activity-areas";
 export * from "./booking-status";
 export * from "./booking-rules";
 export * from "./money";

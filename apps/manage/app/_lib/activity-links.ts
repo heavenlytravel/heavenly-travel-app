@@ -1,6 +1,6 @@
 import {
-  LOCATION_HISTORY_KIND_LABELS,
-  locationHistoryKindOf,
+  ACTIVITY_AREA_LABELS,
+  entryAreaOf,
   type ActivityEntityType,
   type Permission,
 } from "@repo/db";
@@ -24,39 +24,36 @@ import {
  * belongs to, named at the right of its line, and the page it opens.
  */
 
-/** Each type of record by name, one and several, in the Activity filter's order. */
-export const ACTIVITY_RECORD_NAMES: Record<
-  ActivityEntityType,
-  { one: string; many: string }
-> = {
-  booking: { one: "Booking", many: "Bookings" },
-  location: { one: "Location", many: "Locations" },
-  vehicle: { one: "Vehicle", many: "Vehicles" },
-  driver: { one: "Driver", many: "Drivers" },
-  vendor: { one: "Vendor", many: "Vendors" },
-  "vehicle-class": { one: "Class", many: "Vehicle classes" },
-  user: { one: "User", many: "Users" },
-  admin: { one: "Admin", many: "Admins" },
-  "site-page": { one: "Site page", many: "Site pages" },
-  media: { one: "Media", many: "Media" },
-  setting: { one: "Setting", many: "Settings" },
-  state: { one: "State", many: "States" },
-  district: { one: "District", many: "Districts" },
+/** Each type of record by name, as an entry's tag names it. */
+const ACTIVITY_RECORD_NAMES: Record<ActivityEntityType, string> = {
+  booking: "Booking",
+  location: "Location",
+  vehicle: "Vehicle",
+  driver: "Driver",
+  vendor: "Vendor",
+  "vehicle-class": "Class",
+  user: "User",
+  admin: "Admin",
+  "site-page": "Site page",
+  media: "Media",
+  setting: "Setting",
+  state: "State",
+  district: "District",
 };
 
 /**
  * The record an entry belongs to, in a few words: "Booking HT-7K3QZM",
- * "Vehicle VLE1234", "The wall". A location's entry names the part of it
- * that changed, "Langkawi · Coverage and rates", and on the location's own
- * history (`here`, its id) the part alone.
+ * "Vehicle VLE1234", "The wall". A location's entry names the area of
+ * its change, "Langkawi · Coverage and rates", and on the location's own
+ * history (`here`, its id) the area alone.
  */
 export function activityEntryTag(
   entry: ActivityEntry,
   here?: string,
 ): string | null {
   if (entry.entityType === "location") {
-    const kind = locationHistoryKindOf(entry.action);
-    const part = kind ? LOCATION_HISTORY_KIND_LABELS[kind] : null;
+    const area = entryAreaOf(entry.action);
+    const part = area ? ACTIVITY_AREA_LABELS[area] : null;
     if (entry.entityId === here) return part;
     return part ? `${entry.entityLabel} · ${part}` : entry.entityLabel;
   }
@@ -64,8 +61,8 @@ export function activityEntryTag(
   if (entry.entityType === "setting" || entry.entityType === "media") {
     return entry.entityLabel;
   }
-  const names = ACTIVITY_RECORD_NAMES[entry.entityType as ActivityEntityType];
-  return names ? `${names.one} ${entry.entityLabel}` : entry.entityLabel;
+  const name = ACTIVITY_RECORD_NAMES[entry.entityType as ActivityEntityType];
+  return name ? `${name} ${entry.entityLabel}` : entry.entityLabel;
 }
 
 /**

@@ -11,7 +11,8 @@ import { adminLevelOf, type AdminTeam } from "./roles";
  *   teams   -> those teams once the wall is on, every admin while it is off
  */
 const RULES = {
-  "dashboard.view": "any",
+  /** The day's bookings and trips. An admin without it starts on the first page of its menu: Pages, for Marketing and SEO. */
+  "dashboard.view": ["OPERATION", "RESERVATION", "SALES", "FINANCE"],
   "bookings.view": ["OPERATION", "RESERVATION", "SALES", "FINANCE"],
   /** Confirm, amend and cancel. */
   "bookings.manage": ["RESERVATION", "SALES"],
@@ -40,17 +41,31 @@ const RULES = {
   "website.manage": ["MARKETING", "SEO"],
   /** Take a location live, pause it, resume it, delete it. */
   "locations.activate": "super",
+  /**
+   * Settings, for an admin who holds the key of one of its cards
+   * (`SETTINGS_CARDS`): Marketing's details, Operation's time between
+   * jobs, SUPER's status. A test keeps the teams to theirs.
+   */
+  "settings.view": ["MARKETING", "OPERATION"],
   "admins.manage": "super",
   /** Every account: list them and create one on someone's behalf. */
   "users.manage": "super",
   "wall.switch": "super",
-  "activity.view": "super",
+  /** Activity, under `~` and a location: the entries of the areas the admin holds, `activityAreasHeld`. */
+  "activity.view": "any",
   /** Every uploaded image and where it is used; delete those on no page. */
   "media.manage": ["MARKETING", "SEO"],
 } as const satisfies Record<string, "any" | "super" | readonly AdminTeam[]>;
 
 export type Permission = keyof typeof RULES;
 export const PERMISSIONS = Object.keys(RULES) as Permission[];
+
+/** The keys of Settings' cards: a location's details, its time between jobs, its status. Holding one opens Settings. */
+export const SETTINGS_CARDS = [
+  "locations.manage",
+  "coverage.manage",
+  "locations.activate",
+] as const satisfies readonly Permission[];
 
 /** What the wall reads of an admin: the two fields of `AdminProfile`. */
 export type PermissionHolder = { level: string; teams: readonly string[] };

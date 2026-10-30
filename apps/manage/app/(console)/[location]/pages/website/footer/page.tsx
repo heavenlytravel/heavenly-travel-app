@@ -80,7 +80,7 @@ async function editorDetails() {
         where="Website"
         title={FOOTER_LABEL}
         publishes={publishes}
-        allHref={activityHref(null, { type: "site-page" })}
+        allHref={activityHref(null, { area: "website" })}
         allLabel="All changes to the site's pages"
       />
       <FooterEditor

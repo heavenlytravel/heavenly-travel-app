@@ -1,27 +1,21 @@
-import type { Metadata } from "next";
-import { pageColumn, Stop } from "./(site)/_components/Page";
+import { pageColumn } from "./(site)/_components/Page";
+import { notFoundMetadata, PageNotFound } from "./_site/PageNotFound";
 import { SiteFrame } from "./_site/SiteFrame";
 
-export const metadata: Metadata = {
-  title: "We can't find that page | Heavenly Travel",
-};
+export const metadata = notFoundMetadata;
 
 /**
- * What an address with no page shows, a link that is old or mistyped, and
- * every `notFound()` of the site: in the site's frame, its header and
- * footer, so the way on is in reach, with a way home.
+ * What an address with no page shows, and a `notFound()` outside a frame
+ * of the site's (a location no one may see, say): in the site's frame, its
+ * header and footer, so the way on is in reach. A `notFound()` inside a
+ * booking page or a location's page has its own, in the frame its layout
+ * draws: `(site)/not-found.tsx`, `(location)/[location]/not-found.tsx`.
  */
 export default function NotFound() {
   return (
     <SiteFrame>
       <main className={pageColumn}>
-        <Stop
-          level={1}
-          title="We can't find that page"
-          message="The link may be old, or the address mistyped."
-          href="/"
-          linkLabel="Go to the home page"
-        />
+        <PageNotFound />
       </main>
     </SiteFrame>
   );

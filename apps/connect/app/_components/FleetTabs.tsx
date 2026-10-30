@@ -2,7 +2,7 @@ import { cx } from "@repo/ui/cx";
 import Link from "next/link";
 
 /**
- * Fleet's two lists as a switch on the band: Vehicles and Drivers, each
+ * Fleet's two lists as a switch on the band, in its glass: Vehicles and Drivers, each
  * with its count.
  */
 export function FleetTabs({
@@ -21,7 +21,7 @@ export function FleetTabs({
   return (
     <nav
       aria-label="Fleet"
-      className="grid grid-cols-2 gap-1 rounded-2xl bg-white/[0.07] p-1 ring-1 ring-white/10 lg:max-w-sm"
+      className="grid grid-cols-2 gap-1 rounded-xl border border-white/15 bg-white/6 p-1 lg:max-w-sm"
     >
       {tabs.map((tab) => {
         const active = tab.key === current;
@@ -31,10 +31,10 @@ export function FleetTabs({
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={cx(
-              "flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors",
+              "flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors focus-ring focus-ring-dark",
               active
-                ? "bg-white text-ink shadow-sm"
-                : "text-white/70 hover:text-white",
+                ? "bg-white text-ink shadow-control"
+                : "text-white/80 hover:bg-white/12 hover:text-white",
             )}
           >
             {tab.label}

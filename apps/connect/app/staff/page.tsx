@@ -22,7 +22,9 @@ export default async function StaffPage() {
       member={shellMember(member)}
       aside={
         <Panel className="grid gap-4 p-5">
-          <h2 className="text-lg font-bold text-ink">Add someone</h2>
+          <h2 className="text-lg font-bold tracking-title text-ink">
+            Add someone
+          </h2>
           <AddStaffForm />
         </Panel>
       }
@@ -34,7 +36,7 @@ export default async function StaffPage() {
       }
     >
       <Panel className="connect-rise overflow-hidden">
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-hairline">
           {members.map((m) => (
             <li
               key={m.id}
@@ -42,12 +44,12 @@ export default async function StaffPage() {
             >
               <Avatar name={m.name || m.email} />
               <span className="grid min-w-0 flex-1 gap-0.5">
-                <span className="truncate font-semibold text-slate-900">
+                <span className="truncate font-semibold text-ink">
                   {m.name || m.email}
                 </span>
-                <span className="flex items-center gap-1.5 truncate text-sm text-slate-500">
+                <span className="flex items-center gap-1.5 truncate text-sm text-muted">
                   {m.role === "owner" ? (
-                    <Crown aria-hidden className="size-3.5 text-amber-500" />
+                    <Crown aria-hidden className="size-3.5 text-warning" />
                   ) : null}
                   {isVendorRole(m.role) ? VENDOR_ROLE_LABELS[m.role] : m.role}
                   {m.name ? ` · ${m.email}` : ""}

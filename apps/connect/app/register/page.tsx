@@ -45,7 +45,7 @@ export default async function RegisterPage() {
           <ol className="grid gap-4">
             {STEPS.map((step, index) => (
               <li key={step.title} className="flex gap-3">
-                <span className="relative grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-tint text-brand">
+                <span className="relative grid size-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand">
                   <step.icon aria-hidden className="size-5" />
                   <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-ink text-[0.6rem] font-bold text-white">
                     {index + 1}
@@ -53,7 +53,7 @@ export default async function RegisterPage() {
                 </span>
                 <span className="grid gap-0.5">
                   <span className="font-semibold text-ink">{step.title}</span>
-                  <span className="text-sm text-slate-500">{step.text}</span>
+                  <span className="text-sm text-muted">{step.text}</span>
                 </span>
               </li>
             ))}

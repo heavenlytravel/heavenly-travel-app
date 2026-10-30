@@ -1,10 +1,10 @@
 import { AccountMenu } from "@repo/auth/AccountMenu";
 import { cx } from "@repo/ui/cx";
-import { ChevronLeft } from "lucide-react";
-import Image from "next/image";
+import { ChevronLeftIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ACCOUNT_PATH } from "./nav";
+import { ConnectMark } from "./parts";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
@@ -17,12 +17,13 @@ const WIDTHS = {
 } as const;
 
 /**
- * Every Connect screen: the ink band at the top, with the logo or the way
+ * Every Connect screen: the band at the top (manage's Signature band, navy
+ * to ink, its heading in the serif), with the logo or the way
  * back, the account, and the screen's own heading; then the screen's
  * panels, the first rising over the band's edge.
  *
  * On a phone it is one column, and a vendor's member has the tabs
- * floating at the foot. On a large screen the ink sidebar holds the logo,
+ * floating at the foot. On a large screen the navy sidebar holds the logo,
  * the places and the account; the content widens, and an `aside` stands
  * as a second column at the right, staying in view as the page scrolls.
  * On a phone the aside comes first or last, as `asideFirst` says.
@@ -57,7 +58,7 @@ export function Screen({
     <div
       className={cx(
         "min-h-dvh",
-        // The sidebar's ink runs the page's full height.
+        // The sidebar's ink runs the page's full height, past its own foot.
         nav &&
           "lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:bg-[linear-gradient(to_right,var(--ink)_15.5rem,transparent_15.5rem)]",
       )}
@@ -70,7 +71,7 @@ export function Screen({
             : "pb-[max(env(safe-area-inset-bottom),2.5rem)] lg:pb-16",
         )}
       >
-        <header className="connect-band text-white">
+        <header className="bg-band text-white shadow-band">
           <div
             className={cx(
               column,
@@ -87,29 +88,18 @@ export function Screen({
               {back ? (
                 <Link
                   href={back.href}
-                  className="-ml-2 flex h-10 items-center gap-1 rounded-full pr-3 pl-1 text-sm font-semibold text-azure-light hover:bg-white/10"
+                  className="-ml-2 flex h-10 items-center gap-1 rounded-control pr-3 pl-1 text-sm font-semibold text-azure-light transition-colors hover:bg-white/10 focus-ring focus-ring-dark"
                 >
-                  <ChevronLeft aria-hidden className="size-5" />
+                  <ChevronLeftIcon className="size-5" />
                   {back.label}
                 </Link>
               ) : (
                 <Link
                   href="/"
-                  className="flex items-center gap-2.5"
+                  className="flex items-center gap-2.5 rounded-md focus-ring focus-ring-dark"
                   aria-label="Heavenly Travel Connect, home"
                 >
-                  <Image
-                    src="/brand/logo-blue.svg"
-                    alt=""
-                    width={120}
-                    height={28}
-                    priority
-                    // The logo is navy; drawn white on the ink band.
-                    className="h-7 w-auto brightness-0 invert"
-                  />
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.65rem] font-bold tracking-[0.18em] text-azure-light uppercase ring-1 ring-white/10">
-                    Connect
-                  </span>
+                  <ConnectMark />
                 </Link>
               )}
               <span
@@ -163,7 +153,7 @@ export function Screen({
   );
 }
 
-/** A screen's heading in the band: a small line over a large title, and a line under. */
+/** A screen's heading in the band, as manage's dashboard has it: a kicker over a serif title, and a line under. */
 export function BandHeading({
   eyebrow,
   title,
@@ -179,13 +169,15 @@ export function BandHeading({
     <div className="flex items-end justify-between gap-4">
       <div className="grid min-w-0 gap-1">
         {eyebrow ? (
-          <p className="text-sm font-medium text-azure-light">{eyebrow}</p>
+          <p className="text-xs font-bold tracking-kicker text-azure-light uppercase">
+            {eyebrow}
+          </p>
         ) : null}
-        <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-balance lg:text-4xl">
+        <h1 className="mt-0.5 font-serif text-figure leading-display text-balance lg:text-4xl">
           {title}
         </h1>
         {children ? (
-          <div className="max-w-2xl text-sm text-white/70 lg:text-base">
+          <div className="mt-0.5 max-w-2xl text-sm text-white/80 lg:text-base">
             {children}
           </div>
         ) : null}

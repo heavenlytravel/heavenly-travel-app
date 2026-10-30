@@ -46,7 +46,7 @@ export function TripTimeline({
                   aria-hidden
                   className={cx(
                     "absolute top-8 bottom-0 left-[0.9375rem] w-0.5",
-                    event ? "bg-emerald-400" : "bg-slate-200",
+                    event ? "bg-success-dot" : "bg-card-edge",
                   )}
                 />
               )}
@@ -55,11 +55,11 @@ export function TripTimeline({
                   "relative grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
                   event
                     ? event.sent
-                      ? "bg-emerald-500 text-white"
-                      : "bg-amber-400 text-white"
+                      ? "bg-success text-white"
+                      : "bg-warning-soft text-warning"
                     : current
                       ? "bg-brand text-white ring-4 ring-brand-tint"
-                      : "bg-slate-100 text-slate-400",
+                      : "bg-hairline text-muted",
                 )}
               >
                 {event ? (
@@ -77,22 +77,22 @@ export function TripTimeline({
                   <span
                     className={cx(
                       "font-semibold",
-                      event || current ? "text-slate-900" : "text-slate-400",
+                      event || current ? "text-ink" : "text-muted",
                     )}
                   >
                     {TRIP_EVENT_LABELS[step]}
                   </span>
                   {event?.note ? (
-                    <span className="text-sm text-slate-500">{event.note}</span>
+                    <span className="text-sm text-muted">{event.note}</span>
                   ) : null}
                   {event && !event.sent ? (
-                    <span className="text-xs font-semibold text-amber-700">
+                    <span className="text-xs font-semibold text-warning">
                       Waiting for signal, sends by itself
                     </span>
                   ) : null}
                 </span>
                 {event ? (
-                  <span className="text-sm font-semibold text-slate-500 tabular-nums">
+                  <span className="text-sm font-semibold text-muted tabular-nums">
                     {formatLocalTime(event.at)}
                   </span>
                 ) : null}
@@ -108,26 +108,26 @@ export function TripTimeline({
             return (
               <li
                 key={event.key}
-                className="flex gap-3 rounded-2xl bg-red-50 p-3 text-sm ring-1 ring-red-100"
+                className="flex gap-3 rounded-control border border-danger-edge bg-danger-tint p-3 text-sm"
               >
                 <Icon
                   aria-hidden
-                  className="mt-0.5 size-4 shrink-0 text-red-600"
+                  className="mt-0.5 size-4 shrink-0 text-danger"
                 />
                 <span className="grid flex-1 gap-0.5">
-                  <span className="flex justify-between gap-2 font-semibold text-red-900">
+                  <span className="flex justify-between gap-2 font-semibold text-danger-strong">
                     {isTripEventKind(event.kind)
                       ? TRIP_EVENT_LABELS[event.kind]
                       : event.kind}
-                    <span className="font-medium text-red-700 tabular-nums">
+                    <span className="font-medium text-danger tabular-nums">
                       {formatLocalTime(event.at)}
                     </span>
                   </span>
                   {event.note ? (
-                    <span className="text-red-800">{event.note}</span>
+                    <span className="text-danger">{event.note}</span>
                   ) : null}
                   {event.sent ? null : (
-                    <span className="text-xs font-semibold text-amber-700">
+                    <span className="text-xs font-semibold text-warning">
                       Waiting for signal, sends by itself
                     </span>
                   )}

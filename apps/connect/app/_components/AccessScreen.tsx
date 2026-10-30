@@ -37,14 +37,14 @@ export function AccessScreen({ access }: { access: Shut }) {
     >
       <Panel className="connect-rise grid gap-5 p-6">
         <span
-          className={`grid size-14 place-items-center rounded-2xl ${screen.iconClass}`}
+          className={`grid size-14 place-items-center rounded-card ${screen.iconClass}`}
         >
           <Icon aria-hidden className="size-7" />
         </span>
-        <p className="text-base text-pretty text-slate-700">{screen.text}</p>
+        <p className="text-base text-pretty text-body">{screen.text}</p>
         {access.status === "register" ? (
           <>
-            <ul className="grid gap-2 text-sm text-slate-600">
+            <ul className="grid gap-2 text-sm text-muted">
               {[
                 "Get trips in the places you serve, by class",
                 "Keep your vehicles and drivers in one place",
@@ -86,7 +86,7 @@ export function AccessScreen({ access }: { access: Shut }) {
             Email
           </a>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           {CONTACT.whatsappNumber} · {CONTACT.bookingEmail}
         </p>
       </Panel>
@@ -116,7 +116,7 @@ function screenOf(access: Shut): {
         title: "Waiting for approval",
         text: "We check every vendor before Connect opens to it, and email you as soon as it does.",
         icon: Hourglass,
-        iconClass: "bg-amber-100 text-amber-700",
+        iconClass: "bg-warning-soft text-warning",
       };
     case "refused":
       return {
@@ -124,7 +124,7 @@ function screenOf(access: Shut): {
         title: "Not approved",
         text: "This vendor was not approved for Connect. Talk to the team if you think this is wrong.",
         icon: Ban,
-        iconClass: "bg-red-100 text-red-700",
+        iconClass: "bg-danger-tint text-danger",
       };
     case "suspended":
       return {
@@ -132,7 +132,7 @@ function screenOf(access: Shut): {
         title: "Suspended",
         text: "This vendor is suspended, so its jobs are paused. Talk to the team to know why and what happens next.",
         icon: PauseCircle,
-        iconClass: "bg-slate-200 text-slate-700",
+        iconClass: "bg-hairline text-muted",
       };
   }
 }

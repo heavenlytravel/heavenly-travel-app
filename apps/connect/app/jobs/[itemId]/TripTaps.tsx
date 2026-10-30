@@ -14,9 +14,11 @@ import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FormError } from "@repo/ui/form-error";
-import { CloudOff, PenLine, TriangleAlert, UserX } from "lucide-react";
+import { Button } from "@repo/ui/button";
+import { TriangleAlertIcon } from "@repo/ui/icons";
+import { Notice } from "@repo/ui/notice";
+import { CloudOff, PenLine, UserX } from "lucide-react";
 import { reportTapAction, type TapPayload } from "../../actions";
-import { buttonClass } from "../../_ui/button";
 import { SlideToConfirm } from "../../_ui/SlideToConfirm";
 import { TripTimeline, type TimelineEvent } from "../../_ui/TripTimeline";
 
@@ -177,13 +179,13 @@ export function TripTaps({
     <div className="grid gap-6">
       <TripTimeline events={shown} next={open ? next : null} />
       {waiting.length > 0 ? (
-        <p className="flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 ring-1 ring-amber-200">
+        <Notice className="flex items-center gap-2 px-4 py-3 font-medium">
           <CloudOff aria-hidden className="size-4 shrink-0" />
           {waiting.length === 1
             ? "1 report is waiting for signal."
             : `${waiting.length} reports are waiting for signal.`}{" "}
           They send by themselves.
-        </p>
+        </Notice>
       ) : null}
       {open && next && prompt ? (
         <div className="grid gap-3">
@@ -195,7 +197,7 @@ export function TripTaps({
           />
           {noting ? (
             <label className="grid gap-1.5">
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-semibold text-body">
                 Note, sent with your next report
               </span>
               <Input
@@ -211,7 +213,7 @@ export function TripTaps({
             <button
               type="button"
               onClick={() => setNoting(true)}
-              className="mx-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-brand hover:bg-brand-tint"
+              className="mx-auto flex items-center gap-1.5 rounded-sm py-1.5 text-sm text-link"
             >
               <PenLine aria-hidden className="size-4" />
               Add a note
@@ -222,30 +224,26 @@ export function TripTaps({
       {open ? (
         problem === null ? (
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => void noShow()}
-              className={buttonClass({ variant: "outline", size: "lg" })}
-            >
+            <Button variant="secondary" size="lg" onClick={() => void noShow()}>
               <UserX aria-hidden className="size-5" />
               No-show
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="danger"
+              size="lg"
               onClick={() => {
                 setError(null);
                 setProblem("");
               }}
-              className={buttonClass({ variant: "danger", size: "lg" })}
             >
-              <TriangleAlert aria-hidden className="size-5" />
+              <TriangleAlertIcon className="size-5" />
               Problem
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="grid gap-3 rounded-2xl bg-red-50 p-4 ring-1 ring-red-100">
+          <div className="grid gap-3 rounded-card border border-danger-edge bg-danger-tint p-4">
             <label className="grid gap-1.5">
-              <span className="text-sm font-bold text-red-900">
+              <span className="text-sm font-bold text-danger-strong">
                 What is the problem?
               </span>
               <Textarea
@@ -258,23 +256,19 @@ export function TripTaps({
               />
             </label>
             <div className="grid grid-cols-[1fr_1.4fr] gap-2">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => {
                   setError(null);
                   setProblem(null);
                 }}
-                className={buttonClass({ variant: "outline", size: "lg" })}
               >
                 Back
-              </button>
-              <button
-                type="button"
-                onClick={sendProblem}
-                className={buttonClass({ variant: "alarm", size: "lg" })}
-              >
+              </Button>
+              <Button variant="destructive" size="lg" onClick={sendProblem}>
                 Send to Operation
-              </button>
+              </Button>
             </div>
           </div>
         )

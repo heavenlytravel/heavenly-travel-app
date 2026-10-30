@@ -1,38 +1,25 @@
 import { twMerge } from "tailwind-merge";
 
+/*
+ * Every other Connect button is `@repo/ui`'s `Button`. These classes are
+ * left for the registration and the access screens alone, in its look
+ * (corners, weight and ring from the tokens), until they move to it too.
+ */
+
 const VARIANTS = {
-  /** The one move a screen is for. */
+  /** The one move a screen is for: `Button`'s `primary`. */
   primary:
-    "bg-brand text-white shadow-[0_8px_20px_-8px_rgba(4,107,210,0.7)] hover:bg-brand-strong active:bg-brand-strong",
-  /** A strong move on a light panel that is not the main one. */
-  dark: "bg-ink text-white hover:bg-navy active:bg-navy",
-  /** A move at hand: call, message, navigate. */
-  soft: "bg-mist text-navy hover:bg-brand-tint active:bg-brand-tint",
-  /** A quiet alternative: back, decline. */
-  outline:
-    "bg-white text-slate-700 ring-1 ring-slate-200 ring-inset hover:bg-slate-50 active:bg-slate-100",
-  /** Something went wrong: a problem, a no-show. */
-  danger:
-    "bg-white text-red-700 ring-1 ring-red-200 ring-inset hover:bg-red-50 active:bg-red-50",
-  /** Sends something wrong to Operation: a problem. */
-  alarm: "bg-red-600 text-white hover:bg-red-700 active:bg-red-700",
-  /** On the ink band. */
-  glass:
-    "bg-white/10 text-white ring-1 ring-white/15 ring-inset hover:bg-white/15 active:bg-white/20",
+    "border-transparent bg-brand text-white shadow-cta hover:bg-brand-strong active:bg-brand-strong",
+  /** A move at hand: `Button`'s `outline`. */
+  soft: "border-card-edge bg-white text-brand hover:border-brand active:border-brand",
 } as const;
 
 const SIZES = {
-  sm: "h-9 gap-1.5 rounded-xl px-3 text-sm",
-  md: "h-11 gap-2 rounded-2xl px-4 text-sm",
-  /** A thumb's target: answers and trip reports. */
-  lg: "h-14 gap-2 rounded-2xl px-5 text-base",
+  md: "h-10 gap-2 px-4 text-sm pointer-coarse:h-11",
+  lg: "h-12 gap-2 px-5 text-base",
 } as const;
 
-/**
- * Connect's buttons, as classes for a `button`, a `Link` or an `a`:
- * rounder and larger than the console's, for a thumb. A `className`
- * given overrides the classes it clashes with.
- */
+/** `Button`'s classes, for a `button`, a `Link` or an `a`; a `className` given overrides those it clashes with. */
 export function buttonClass({
   variant = "primary",
   size = "md",
@@ -43,7 +30,7 @@ export function buttonClass({
   className?: string;
 } = {}) {
   return twMerge(
-    "inline-flex items-center justify-center font-semibold whitespace-nowrap transition select-none [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex items-center justify-center rounded-control border [font-weight:var(--control-weight)] whitespace-nowrap transition-colors select-none focus-ring active:scale-98 disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:shrink-0",
     VARIANTS[variant],
     SIZES[size],
     className,

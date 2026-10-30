@@ -7,15 +7,14 @@ import {
   whatsappHref,
 } from "@repo/db";
 import { getDriverJob, getVendorJob, type JobStop } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import {
-  Hourglass,
-  Lock,
-  MessageCircle,
-  NotebookText,
-  Phone,
-  Plane,
-  Users,
-} from "lucide-react";
+  LockIcon,
+  MessageCircleIcon,
+  PhoneIcon,
+  UsersIcon,
+} from "@repo/ui/icons";
+import { Hourglass, NotebookText, Plane } from "lucide-react";
 import { AccessScreen } from "../../_components/AccessScreen";
 import {
   actorOf,
@@ -26,7 +25,6 @@ import {
 import { googleMapsHref, wazeHref } from "../../_lib/navigate";
 import { tripStateOf } from "../../_lib/trip-state";
 import { dayLabel } from "../../_lib/when";
-import { buttonClass } from "../../_ui/button";
 import {
   Avatar,
   BigTime,
@@ -78,9 +76,11 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
   const onTheDay = job.accepted ? (
     <Panel className="grid gap-5 p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold text-ink">On the day</h2>
+        <h2 className="text-lg font-bold tracking-title text-ink">
+          On the day
+        </h2>
         {waited !== null ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
             <Hourglass aria-hidden className="size-4" />
             Waited {waited} min
           </span>
@@ -115,7 +115,7 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
               {dayLabel(job.startsAt, now)}
               {job.position > 1 ? ` · trip ${job.position}` : ""}
             </span>
-            <Pill tone={state.tone} live={state.live}>
+            <Pill tone={state.tone} live={state.live} onBand>
               {state.label}
             </Pill>
           </div>
@@ -126,21 +126,21 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
               periodClassName="text-azure-light"
             />
             {job.endsAt ? (
-              <span className="pb-1.5 text-sm text-white/60">
+              <span className="pb-1.5 text-sm text-white/80">
                 until{" "}
                 <BigTime at={job.endsAt} className="text-base text-white" />
               </span>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="rounded-full bg-white/10 px-2.5 py-1 font-semibold ring-1 ring-white/10">
+            <span className="rounded-full border border-white/15 bg-white/6 px-2.5 py-1 font-semibold">
               {job.className}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 font-semibold ring-1 ring-white/10">
-              <Users aria-hidden className="size-3.5" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/6 px-2.5 py-1 font-semibold">
+              <UsersIcon className="size-3.5 text-azure-light" />
               {job.passengers}
             </span>
-            <span className="ml-auto font-semibold text-white/50 tabular-nums">
+            <span className="ml-auto font-semibold text-white/75 tabular-nums">
               {job.reference}
             </span>
           </div>
@@ -153,42 +153,37 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
             <div className="flex items-center gap-3">
               <Avatar name={job.customer.name} size="lg" />
               <div className="grid min-w-0 gap-0.5">
-                <span className="text-xs font-bold tracking-[0.12em] text-slate-500 uppercase">
+                <span className="text-caps font-semibold text-muted">
                   Passenger
                 </span>
-                <span className="truncate text-xl font-bold text-ink">
+                <span className="truncate text-xl font-bold tracking-title text-ink">
                   {job.customer.name}
                 </span>
-                <span className="text-sm text-slate-500 tabular-nums">
+                <span className="text-sm text-muted tabular-nums">
                   {job.customer.phone}
                 </span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <a
-                href={`tel:${job.customer.phone}`}
-                className={buttonClass({ variant: "soft", size: "lg" })}
-              >
-                <Phone aria-hidden className="size-5" />
-                Call
-              </a>
-              <a
-                href={whatsappHref(job.customer.phone)}
-                target="_blank"
-                rel="noreferrer"
-                className={buttonClass({
-                  variant: "soft",
-                  size: "lg",
-                  className:
-                    "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 active:bg-emerald-100",
-                })}
-              >
-                <MessageCircle aria-hidden className="size-5" />
-                WhatsApp
-              </a>
+              <Button asChild variant="outline" size="lg">
+                <a href={`tel:${job.customer.phone}`}>
+                  <PhoneIcon className="size-5" />
+                  Call
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <a
+                  href={whatsappHref(job.customer.phone)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MessageCircleIcon className="size-5" />
+                  WhatsApp
+                </a>
+              </Button>
             </div>
           </div>
-          <div className="border-t border-slate-100 pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+          <div className="border-t border-hairline pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
             <RouteLine
               stops={[
                 stopRow(job.customer.pickup, "Pick-up", job.pickupArea),
@@ -205,7 +200,7 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
             />
           </div>
           {job.customer.flightNumber || job.customer.notes ? (
-            <div className="grid gap-3 border-t border-slate-100 pt-5 lg:col-span-2">
+            <div className="grid gap-3 border-t border-hairline pt-5 lg:col-span-2">
               {job.customer.flightNumber ? (
                 <Fact icon={Plane} label="Flight">
                   {job.customer.flightNumber}
@@ -222,11 +217,8 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
       ) : (
         <Panel className="connect-rise grid gap-5 p-5">
           <RouteLine stops={areaStops(job)} />
-          <div className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-            <Lock
-              aria-hidden
-              className="mt-0.5 size-4 shrink-0 text-slate-400"
-            />
+          <div className="flex gap-3 rounded-control bg-shade p-4 text-sm text-muted">
+            <LockIcon className="mt-0.5 size-4" />
             <p>
               {job.accepted
                 ? `The customer's details are hidden ${CONTACT_VISIBLE_DAYS} days after the trip. Call Operation on ${CONTACT.whatsappNumber} if you need them.`
@@ -238,14 +230,12 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
 
       {vendorJob ? (
         <Panel className="grid gap-4 p-5">
-          <h2 className="text-xs font-bold tracking-[0.12em] text-slate-500 uppercase">
-            Who does it
-          </h2>
+          <h2 className="text-caps font-semibold text-muted">Who does it</h2>
           <div className="flex flex-wrap items-center justify-between gap-3">
             {vendorJob.vehicle ? (
               <Plate>{vendorJob.vehicle}</Plate>
             ) : (
-              <span className="text-sm text-slate-500">Vehicle not yours</span>
+              <span className="text-sm text-muted">Vehicle not yours</span>
             )}
             {vendorJob.driver ? (
               <span className="flex items-center gap-2 text-sm font-semibold">
@@ -253,7 +243,7 @@ export default async function JobPage({ params }: PageProps<"/jobs/[itemId]">) {
                 {vendorJob.driver}
               </span>
             ) : (
-              <span className="text-sm text-slate-500">Driver not yours</span>
+              <span className="text-sm text-muted">Driver not yours</span>
             )}
           </div>
         </Panel>
@@ -270,24 +260,26 @@ function stopRow(stop: JobStop | null, what: string, area: string): Stop {
     detail: stop.address,
     action: (
       <span className="flex gap-1.5">
-        <a
-          href={wazeHref(stop)}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`${what} in Waze`}
-          className={buttonClass({ variant: "soft", size: "sm" })}
-        >
-          Waze
-        </a>
-        <a
-          href={googleMapsHref(stop)}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`${what} in Google Maps`}
-          className={buttonClass({ variant: "soft", size: "sm" })}
-        >
-          Maps
-        </a>
+        <Button asChild variant="outline" size="sm">
+          <a
+            href={wazeHref(stop)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${what} in Waze`}
+          >
+            Waze
+          </a>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <a
+            href={googleMapsHref(stop)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${what} in Google Maps`}
+          >
+            Maps
+          </a>
+        </Button>
       </span>
     ),
   };

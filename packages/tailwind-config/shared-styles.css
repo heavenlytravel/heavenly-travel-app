@@ -261,6 +261,20 @@
  * `focus-ring-inset` draws it inside, for a control at the edge of a box
  * that clips; on navy or ink, add `focus-ring-dark`.
  */
+/*
+ * The Signature band: navy to ink, lit from its top right by the logo's
+ * azure. Manage's dashboard head and every Connect screen's head.
+ */
+@utility bg-band {
+  background:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      rgb(15 134 206 / 0.55) 0%,
+      rgb(15 134 206 / 0) 55%
+    ),
+    linear-gradient(135deg, var(--navy) 0%, var(--ink) 100%);
+}
+
 @utility focus-ring {
   &:focus-visible {
     outline: var(--ring-width) solid var(--focus-color, var(--ring));

@@ -1,11 +1,13 @@
 import { isTripEventKind, TRIP_EVENT_LABELS } from "@repo/db";
+import type { BadgeTone } from "@repo/ui/badge";
 
 /**
- * One colour per state, the same on every Connect screen: amber waits for
- * someone's yes, brand blue is booked and coming, azure is under way (and
- * pulses), green is done, red went wrong.
+ * One colour per state, the same on every Connect screen and as the
+ * console's chips have them: amber waits for someone's yes, brand blue is
+ * booked and coming, navy is under way (and pulses), green is done, red
+ * went wrong.
  */
-export type Tone = "amber" | "brand" | "azure" | "green" | "red" | "slate";
+export type Tone = BadgeTone;
 
 export type TripState = { label: string; tone: Tone; live: boolean };
 
@@ -30,8 +32,7 @@ export function tripStateOf(trip: {
   if (kind === "problem") {
     return { label: "Problem reported", tone: "red", live: true };
   }
-  if (kind)
-    return { label: TRIP_EVENT_LABELS[kind], tone: "azure", live: true };
+  if (kind) return { label: TRIP_EVENT_LABELS[kind], tone: "navy", live: true };
   if (!trip.accepted) return { label: "To accept", tone: "amber", live: false };
   return { label: "Booked", tone: "brand", live: false };
 }

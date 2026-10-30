@@ -7,7 +7,7 @@ import {
   type DriverJobs,
   type DriverTrip,
 } from "@repo/db/server";
-import { CalendarCheck, Inbox } from "lucide-react";
+import { CalendarCheckIcon, InboxIcon } from "@repo/ui/icons";
 import { AccessScreen } from "./_components/AccessScreen";
 import { GettingStarted } from "./_components/GettingStarted";
 import { OfferCard } from "./_components/OfferCard";
@@ -111,7 +111,7 @@ async function DriverHome({
         </section>
       ) : null}
       {empty ? (
-        <EmptyState icon={CalendarCheck} title="No jobs yet">
+        <EmptyState icon={CalendarCheckIcon} title="No jobs yet">
           A job Operation gives you shows here to accept. We tell you when one
           comes.
         </EmptyState>
@@ -208,7 +208,7 @@ async function MemberHome({
         </section>
       ) : null}
       {ready && quiet ? (
-        <EmptyState icon={Inbox} title="No offers right now">
+        <EmptyState icon={InboxIcon} title="No offers right now">
           The jobs we offer you show here, with what we pay. Keep your vehicles
           and drivers in service to be offered more.
         </EmptyState>

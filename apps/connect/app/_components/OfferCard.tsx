@@ -11,9 +11,10 @@ import { useState, type ReactNode } from "react";
 import type { ActionState } from "@repo/console/action-state";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { Check, TriangleAlert, Users, X } from "lucide-react";
+import { Button } from "@repo/ui/button";
+import { Notice } from "@repo/ui/notice";
+import { CheckIcon, TriangleAlertIcon, UsersIcon, XIcon } from "@repo/ui/icons";
 import { dayLabel } from "../_lib/when";
-import { buttonClass } from "../_ui/button";
 import { BigTime, Chip, Panel, Pill, RouteLine } from "../_ui/parts";
 import { areaStops } from "../_ui/Trips";
 import { answerOfferAction } from "../actions";
@@ -30,7 +31,7 @@ export function OfferCard({ offer, now }: { offer: DriverOffer; now: Date }) {
       head={
         <>
           <Pill tone="amber">New offer</Pill>
-          <span className="text-xs font-semibold text-slate-400 tabular-nums">
+          <span className="text-xs font-semibold text-muted tabular-nums">
             {offer.reference}
           </span>
         </>
@@ -43,7 +44,7 @@ export function OfferCard({ offer, now }: { offer: DriverOffer; now: Date }) {
   );
 }
 
-/** An offer's panel: an amber edge, as everything waiting for a yes has. */
+/** An offer's card: an amber edge and head, as everything waiting for a yes has. */
 export function OfferPanel({
   head,
   children,
@@ -52,8 +53,8 @@ export function OfferPanel({
   children: ReactNode;
 }) {
   return (
-    <Panel className="connect-rise overflow-hidden ring-2 ring-amber-300/70">
-      <div className="flex items-center justify-between gap-3 bg-amber-50 px-5 py-3">
+    <Panel className="connect-rise overflow-hidden border-warning-edge">
+      <div className="flex items-center justify-between gap-3 border-b border-warning-edge bg-warning-tint px-5 py-3">
         {head}
       </div>
       <div className="grid gap-5 p-5">{children}</div>
@@ -77,18 +78,18 @@ export function OfferTrips({
       {trips.map((trip) => (
         <li
           key={trip.itemId}
-          className="grid gap-3 border-slate-100 not-first:border-t not-first:pt-5"
+          className="grid gap-3 border-hairline not-first:border-t not-first:pt-5"
         >
           <div className="flex items-end justify-between gap-3">
             <div className="grid gap-1">
-              <span className="text-sm font-semibold text-slate-500">
+              <span className="text-sm font-semibold text-muted">
                 {dayLabel(trip.startsAt, now)}
                 {trips.length > 1 ? ` · trip ${trip.position}` : ""}
               </span>
               <BigTime at={trip.startsAt} className="text-3xl text-ink" />
             </div>
             {trip.endsAt ? (
-              <span className="pb-0.5 text-sm text-slate-500">
+              <span className="pb-0.5 text-sm text-muted">
                 until <BigTime at={trip.endsAt} className="text-base" />
               </span>
             ) : null}
@@ -96,7 +97,7 @@ export function OfferTrips({
           <RouteLine stops={areaStops(trip)} size="sm" />
           <div className="flex flex-wrap items-center gap-2">
             <Chip>{trip.className}</Chip>
-            <Chip icon={Users}>
+            <Chip icon={UsersIcon}>
               {trip.passengers}{" "}
               {trip.passengers === 1 ? "passenger" : "passengers"}
             </Chip>
@@ -112,11 +113,8 @@ export function OfferTrips({
 export function OfferWarnings({ warnings }: { warnings: string[] }) {
   if (warnings.length === 0) return null;
   return (
-    <div className="flex gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950 ring-1 ring-amber-200">
-      <TriangleAlert
-        aria-hidden
-        className="mt-0.5 size-5 shrink-0 text-amber-600"
-      />
+    <Notice className="flex gap-3 p-4">
+      <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
       <div className="grid gap-1">
         {warnings.map((warning) => (
           <p key={warning}>{warning}</p>
@@ -125,7 +123,7 @@ export function OfferWarnings({ warnings }: { warnings: string[] }) {
           If you accept, the timing is yours to keep.
         </p>
       </div>
-    </div>
+    </Notice>
   );
 }
 
@@ -157,7 +155,7 @@ export function OfferAnswer({
         value={declining ? "decline" : "accept"}
       />
       {declining ? (
-        <div className="grid gap-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+        <div className="grid gap-4 rounded-card border border-card-edge bg-shade p-4">
           <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-bold text-ink">
               Why can't you take it?
@@ -172,7 +170,7 @@ export function OfferAnswer({
                     required
                     className="peer sr-only"
                   />
-                  <span className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition peer-checked:bg-ink peer-checked:text-white peer-checked:ring-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-azure">
+                  <span className="inline-flex h-10 items-center rounded-full border border-edge bg-white px-4 text-sm font-semibold text-body transition-colors peer-checked:border-navy peer-checked:bg-navy peer-checked:text-white peer-focus-visible:outline-(length:--ring-width) peer-focus-visible:outline-offset-(length:--ring-offset) peer-focus-visible:outline-ring">
                     {DECLINE_REASON_LABELS[reason]}
                   </span>
                 </label>
@@ -180,55 +178,52 @@ export function OfferAnswer({
             </div>
           </fieldset>
           <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-slate-700">
+            <span className="text-sm font-semibold text-body">
               A few words{" "}
-              <span className="font-normal text-slate-500">
+              <span className="font-normal text-muted">
                 (needed for “Other”)
               </span>
             </span>
             <Input name="note" maxLength={DECLINE_NOTE_MAX_LENGTH} />
           </label>
           <div className="grid grid-cols-[1fr_1.4fr] gap-2">
-            <button
-              type="button"
-              className={buttonClass({ variant: "outline", size: "lg" })}
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={() => setDeclining(false)}
             >
               Back
-            </button>
-            <button
-              type="submit"
-              className={buttonClass({ variant: "danger", size: "lg" })}
-              disabled={pending}
-            >
+            </Button>
+            <Button type="submit" variant="danger" size="lg" pending={pending}>
               {pending ? "Sending…" : "Decline offer"}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <>
           {blocked ? (
-            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <p className="rounded-control bg-shade px-3 py-2 text-sm text-muted">
               {blocked}
             </p>
           ) : null}
           <div className="grid grid-cols-[1fr_1.6fr] gap-2">
-            <button
-              type="button"
-              className={buttonClass({ variant: "outline", size: "lg" })}
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={() => setDeclining(true)}
             >
-              <X aria-hidden className="size-5" />
+              <XIcon className="size-5" />
               Decline
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className={buttonClass({ size: "lg" })}
-              disabled={pending || blocked !== undefined}
+              size="lg"
+              pending={pending}
+              disabled={blocked !== undefined}
             >
-              <Check aria-hidden className="size-5" />
+              <CheckIcon className="size-5" />
               {pending ? "Sending…" : "Accept"}
-            </button>
+            </Button>
           </div>
         </>
       )}

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
 import { listDrivers, listVehicles } from "@repo/db/server";
-import { Plus, UserRound } from "lucide-react";
+import { PlusIcon, UserRoundIcon } from "@repo/ui/icons";
 import { FleetList } from "../_components/FleetList";
 import { FleetTabs } from "../_components/FleetTabs";
 import { requireMember, shellMember } from "../_lib/access";
-import { buttonClass } from "../_ui/button";
+import { Button } from "@repo/ui/button";
 import { Avatar } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
 
@@ -24,13 +24,12 @@ export default async function DriversPage() {
     listDrivers({ vendorId: member.vendor.id }),
   ]);
   const add = (
-    <Link
-      href="/drivers/new"
-      className={buttonClass({ variant: "glass", size: "sm" })}
-    >
-      <Plus aria-hidden className="size-4" />
-      Add
-    </Link>
+    <Button asChild variant="secondary" size="sm">
+      <Link href="/drivers/new">
+        <PlusIcon />
+        Add
+      </Link>
+    </Button>
   );
   return (
     <Screen
@@ -66,14 +65,16 @@ export default async function DriversPage() {
         }))}
         hrefOf={(id) => `/drivers/${id}`}
         empty={{
-          icon: UserRound,
+          icon: UserRoundIcon,
           title: "No driver yet",
           text: "Add one to be offered jobs for them. Driving yourself? Add yourself, with your own email.",
           action: (
-            <Link href="/drivers/new" className={buttonClass()}>
-              <Plus aria-hidden className="size-4" />
-              Add a driver
-            </Link>
+            <Button asChild>
+              <Link href="/drivers/new">
+                <PlusIcon />
+                Add a driver
+              </Link>
+            </Button>
           ),
         }}
       />

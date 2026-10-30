@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import { listDrivers, listVehicles } from "@repo/db/server";
-import { CarFront, Plus } from "lucide-react";
+import { CarFrontIcon, PlusIcon } from "@repo/ui/icons";
 import { FleetList } from "../_components/FleetList";
 import { FleetTabs } from "../_components/FleetTabs";
 import { requireMember, shellMember } from "../_lib/access";
-import { buttonClass } from "../_ui/button";
+import { Button } from "@repo/ui/button";
 import { Plate } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
 
@@ -23,13 +23,12 @@ export default async function VehiclesPage() {
     listDrivers({ vendorId: member.vendor.id }),
   ]);
   const add = (
-    <Link
-      href="/vehicles/new"
-      className={buttonClass({ variant: "glass", size: "sm" })}
-    >
-      <Plus aria-hidden className="size-4" />
-      Add
-    </Link>
+    <Button asChild variant="secondary" size="sm">
+      <Link href="/vehicles/new">
+        <PlusIcon />
+        Add
+      </Link>
+    </Button>
   );
   return (
     <Screen
@@ -59,14 +58,16 @@ export default async function VehiclesPage() {
         }))}
         hrefOf={(id) => `/vehicles/${id}`}
         empty={{
-          icon: CarFront,
+          icon: CarFrontIcon,
           title: "No vehicle yet",
           text: "Add one to be offered jobs for it. It can take jobs as soon as it is saved.",
           action: (
-            <Link href="/vehicles/new" className={buttonClass()}>
-              <Plus aria-hidden className="size-4" />
-              Add a vehicle
-            </Link>
+            <Button asChild>
+              <Link href="/vehicles/new">
+                <PlusIcon />
+                Add a vehicle
+              </Link>
+            </Button>
           ),
         }}
       />

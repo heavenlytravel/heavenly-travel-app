@@ -1,15 +1,21 @@
 "use server";
 
 import {
-  isAdminLevel,
-  isAdminTeam,
+  addStaff,
+  parseNewStaff,
+  parseStaffAccess,
   revokeAdmin,
   setAdmin,
   setWallActive,
 } from "@repo/db/server";
 import { revalidateLocation } from "../../../_lib/revalidate";
 import { actorOf, getAdmin } from "../../../_lib/access";
-import { type ActionState, STALE, stateOf } from "@repo/console/action-state";
+import {
+  type ActionState,
+  refusalOf,
+  STALE,
+  stateOf,
+} from "@repo/console/action-state";
 
 const FORBIDDEN: ActionState = {
   error: "Only SUPER admins can manage staff.",
@@ -20,6 +26,11 @@ const FORBIDDEN: ActionState = {
  * page is drawn again, the menu in its layout with it.
  */
 const revalidateAccess = revalidateLocation;
+
+/** The level and the teams the panel posts, read and checked. */
+function staffAccessOf(formData: FormData) {
+  return parseStaffAccess(formData.get("level"), formData.getAll("teams"));
+}
 
 /**
  * Promotes an existing user, or changes the level and teams of an existing
@@ -36,15 +47,10 @@ export async function setAdminAction(
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
-  const level = formData.get("level");
-  const teams = formData.getAll("teams");
-  if (!email) {
-    return { error: "Enter their email.", field: "email" };
-  }
-  if (!isAdminLevel(level)) {
-    return { error: "Choose a level.", field: "level" };
-  }
-  if (!teams.every(isAdminTeam)) return STALE;
+  if (!email) return STALE;
+  const access = staffAccessOf(formData);
+  if (!access.ok) return refusalOf(access);
+  const { level, teams } = access.value;
   if (email === actor.email.toLowerCase() && level !== "SUPER") {
     return {
       error: "You cannot lower your own level. Ask another SUPER admin.",
@@ -53,6 +59,27 @@ export async function setAdminAction(
   }
 
   const result = await setAdmin(actorOf(actor), email, level, teams);
+  if (result.ok) revalidateAccess();
+  return stateOf(result);
+}
+
+/**
+ * Add staff: promotes the account an email has, or creates it first and
+ * promotes it in the same go.
+ */
+export async function addStaffAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await getAdmin("admins.manage");
+  if (!actor) return FORBIDDEN;
+
+  const fields = parseNewStaff(Object.fromEntries(formData));
+  if (!fields.ok) return refusalOf(fields);
+  const access = staffAccessOf(formData);
+  if (!access.ok) return refusalOf(access);
+
+  const result = await addStaff(actorOf(actor), fields.value, access.value);
   if (result.ok) revalidateAccess();
   return stateOf(result);
 }

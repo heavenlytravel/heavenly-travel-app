@@ -27,16 +27,16 @@ import { SearchBox } from "../../../_components/SearchBox";
 import { requireAdmin } from "../../../_lib/access";
 import { SEARCH_PARAM, staffHref } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
+import { AddStaffButton } from "./AddStaffButton";
 import { AdminRowControls } from "./AdminRowControls";
-import { PromoteButton } from "./PromoteButton";
 import { TeamAccessCard } from "./TeamAccessCard";
 import { WallSwitch } from "./WallSwitch";
 
 /**
  * Route: /~/team?q=…. The staff: who has access, their level and teams,
  * each to edit or revoke, the list narrowed by a search of names and
- * emails; "Promote to staff" for an account that exists; the wall between
- * the teams; and what each team can do, read from the rules.
+ * emails; "Add staff", which promotes an account or makes one; the wall
+ * between the teams; and what each team can do, read from the rules.
  * Console-wide: under a slug it is not found. SUPER only.
  */
 export default async function StaffPage({
@@ -49,7 +49,7 @@ export default async function StaffPage({
 
   return (
     <>
-      <PageHeader title="Staff" action={<PromoteButton />} />
+      <PageHeader title="Staff" action={<AddStaffButton />} />
       <Streamed
         fallback={
           <div className="grid gap-5">

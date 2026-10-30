@@ -4,6 +4,7 @@ import { refuse, type Change } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { adminTeamsOf, type AdminLevel, type AdminTeam } from "./roles";
+import { NO_TEAM_ERROR, type StaffAccess } from "./user-input";
 import { userSearchWhere } from "./users";
 
 const withUser = {
@@ -14,7 +15,6 @@ export type AdminWithUser = Prisma.AdminProfileGetPayload<typeof withUser>;
 
 const LAST_SUPER_ERROR =
   "This is the only SUPER admin. Promote another SUPER admin first.";
-const NO_TEAM_ERROR = "A REGULAR admin needs at least one team. Tick one.";
 
 /**
  * Every admin, in the order they were made one, or those a search finds:
@@ -87,26 +87,40 @@ export async function setAdmin(
     }
 
     const after = { level, teams: held };
-    if (existing && sameState(existing, after)) return { ok: true };
+    if (!existing) {
+      await grantAdmin(tx, actor, user.id, after);
+      return { ok: true };
+    }
+    if (sameState(existing, after)) return { ok: true };
 
-    await tx.adminProfile.upsert({
-      where: { userId: user.id },
-      update: after,
-      create: { userId: user.id, ...after },
+    await tx.adminProfile.update({ where: { userId: user.id }, data: after });
+    await logActivity(tx, actor, {
+      action: "admin.updated",
+      entityId: user.id,
+      before: stateOf(existing),
+      after,
     });
-    await logActivity(
-      tx,
-      actor,
-      existing
-        ? {
-            action: "admin.updated",
-            entityId: user.id,
-            before: stateOf(existing),
-            after,
-          }
-        : { action: "admin.promoted", entityId: user.id, after },
-    );
     return { ok: true };
+  });
+}
+
+/**
+ * Makes an account that is not staff an admin, inside the caller's
+ * transaction, and logs the promotion against it: `setAdmin`, and an
+ * account created as staff in one go. The access is checked already.
+ */
+export async function grantAdmin(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  userId: string,
+  access: StaffAccess,
+) {
+  const after = { level: access.level, teams: access.teams };
+  await tx.adminProfile.create({ data: { userId, ...after } });
+  await logActivity(tx, actor, {
+    action: "admin.promoted",
+    entityId: userId,
+    after,
   });
 }
 

@@ -2,10 +2,16 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
+import { grantAdmin, setAdmin } from "./admins";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
+import { needsTeam } from "./roles";
 import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
-import type { NewUserFields } from "./user-input";
+import {
+  NO_TEAM_ERROR,
+  type NewUserFields,
+  type StaffAccess,
+} from "./user-input";
 import { findUserByEmail } from "./users";
 
 /** Clerk's names for the fields it refuses, as the create form names them. */
@@ -48,12 +54,16 @@ async function clerkAccountFor(fields: NewUserFields) {
  * already holds as an account's own, its webhook missed, is mirrored as
  * it is there, given the names typed when it has none; one it holds as
  * another account's second address is refused. The phone is ours and
- * stays out of Clerk.
+ * stays out of Clerk. With `staff`, the account is made an admin too, in
+ * the transaction that logs it. No one is ever given a password here.
  */
 export async function createUser(
   actor: Actor,
   fields: NewUserFields,
+  staff?: StaffAccess,
 ): Promise<Change> {
+  // Checked before Clerk, so an account is never made and left unpromoted.
+  if (staff && needsTeam(staff)) return refuse(NO_TEAM_ERROR, "teams");
   if (await findUserByEmail(fields.email)) {
     return refuse(`${fields.email} already has an account.`, "email");
   }
@@ -97,6 +107,39 @@ export async function createUser(
         ...(existing ? { existing: true } : {}),
       },
     });
+    if (staff) await grantAdmin(tx, actor, user.id, staff);
   });
   return { ok: true };
+}
+
+/**
+ * Adds a member of staff by email, as Staff's "Add staff" does: an email
+ * with an account is promoted, its names left as they are; one without
+ * is given an account first, as `createUser` makes it for Customers, and
+ * promoted in the same go. Someone on the staff already is refused: their
+ * row's Edit changes their level and teams.
+ */
+export async function addStaff(
+  actor: Actor,
+  fields: NewUserFields,
+  access: StaffAccess,
+): Promise<Change> {
+  const held = await db.user.findFirst({
+    where: { email: { equals: fields.email, mode: "insensitive" } },
+    select: { email: true, adminProfile: { select: { userId: true } } },
+  });
+  if (held?.adminProfile) {
+    return refuse(
+      `${fields.email} is on the staff already. Use Edit on their row to change their level and teams.`,
+      "email",
+    );
+  }
+  if (held) return setAdmin(actor, held.email, access.level, access.teams);
+  if (!fields.firstName) {
+    return refuse(
+      "Enter their first name: no account has this email yet, so one is made.",
+      "firstName",
+    );
+  }
+  return createUser(actor, fields, access);
 }

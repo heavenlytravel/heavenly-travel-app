@@ -57,22 +57,29 @@
   /* The dashed edge of an empty slot: add a photo, add another trip. */
   --slot: #b8cde3;
 
-  /* Feedback, each pair 4.5:1 or better as text on its tint. */
+  /*
+   * Feedback, each pair 4.5:1 or better as text on its tint. The `-dot`
+   * shade is brighter, for a status's disc of a few pixels: a figure tile,
+   * a page's state, a count waiting in the menu.
+   */
 
   /* Something went wrong or will be lost: errors, delete, an expired document. */
   --danger: #b3261e;
   --danger-strong: #961d16;
   --danger-edge: oklch(88.5% 0.062 18.334);
   --danger-tint: #fbe9e7;
+  --danger-dot: oklch(57.7% 0.245 27.325);
   /* Something waits on someone, or needs a look: a received booking, a notice. */
   --warning: oklch(47.3% 0.137 46.201);
   --warning-strong: oklch(41.4% 0.112 45.904);
   --warning-edge: oklch(92.4% 0.12 95.746);
   --warning-soft: oklch(96.2% 0.059 95.617);
   --warning-tint: oklch(98.7% 0.022 95.277);
+  --warning-dot: oklch(76.9% 0.188 70.08);
   /* Done or fine: completed, saved. */
   --success: oklch(44.8% 0.119 151.328);
   --success-tint: oklch(96.2% 0.044 156.743);
+  --success-dot: oklch(62.7% 0.194 149.214);
 
   /* The keyboard's ring: its colour, its width and its gap, and its colour on navy or ink. */
   --ring: var(--brand);
@@ -86,12 +93,16 @@
    */
   /* A part lifted over its neighbours inside a card or a map. */
   --layer-raised: 1;
+  /* A part that reaches over the sections after it, above their raised parts: the hero's search card and its open place list. */
+  --layer-overlap: 2;
   /* A bar held at the top while the page scrolls. */
   --layer-sticky: 10;
   /* What floats over the page's content: a pinned panel, a place list. */
   --layer-float: 20;
   /* The header and the phone's dock, above what floats. */
   --layer-chrome: 30;
+  /* The staff's preview bar over the site, above its header and dock. */
+  --layer-staff: 40;
   /* Menus, lists and tooltips opened from a control, above everything. */
   --layer-popover: 50;
 
@@ -106,6 +117,8 @@
   --raised-shadow: 0 10px 28px -12px rgb(0 38 75 / 0.28);
   --panel-shadow: 0 22px 55px rgb(0 38 75 / 0.22);
   --bar-shadow: 0 1px 3px rgb(0 38 75 / 0.08);
+  /* The primary button's glow in its own blue: the site's only. */
+  --cta-shadow: 0 0 #0000;
   /* The height of the bar held at the top: the console's top bar, the site's header. */
   --header-height: 4rem;
 }
@@ -127,6 +140,7 @@
   --raised-shadow: 0 18px 40px rgb(0 38 75 / 0.14);
   --panel-shadow: 0 22px 55px rgb(0 38 75 / 0.16);
   --bar-shadow: 0 6px 24px rgb(0 38 75 / 0.06);
+  --cta-shadow: 0 8px 20px rgb(4 107 210 / 0.18);
   --ring: var(--azure);
   --ring-width: 3px;
   --ring-offset: 4px;
@@ -165,13 +179,16 @@
   --color-danger-strong: var(--danger-strong);
   --color-danger-edge: var(--danger-edge);
   --color-danger-tint: var(--danger-tint);
+  --color-danger-dot: var(--danger-dot);
   --color-warning: var(--warning);
   --color-warning-strong: var(--warning-strong);
   --color-warning-edge: var(--warning-edge);
   --color-warning-soft: var(--warning-soft);
   --color-warning-tint: var(--warning-tint);
+  --color-warning-dot: var(--warning-dot);
   --color-success: var(--success);
   --color-success-tint: var(--success-tint);
+  --color-success-dot: var(--success-dot);
 
   --color-ring: var(--ring);
   --color-ring-on-dark: var(--ring-on-dark);
@@ -230,8 +247,8 @@
   --shadow-overlay: 0 22px 55px rgb(0 38 75 / 0.22);
   /* A control standing on the canvas: the picker, the search button. */
   --shadow-control: 0 1px 3px rgb(0 38 75 / 0.08);
-  /* The site's primary button, lit in its own blue. */
-  --shadow-cta: 0 8px 20px rgb(4 107 210 / 0.18);
+  /* The primary button, lit in its own blue on the site; nothing in the console. */
+  --shadow-cta: var(--cta-shadow);
   /* The console dashboard's band. */
   --shadow-band: 0 18px 40px -22px rgb(0 38 75 / 0.6);
   /* A small control on a map, after Google's own buttons. */
@@ -260,6 +277,48 @@
 
 @utility focus-ring-dark {
   --focus-color: var(--ring-on-dark);
+}
+
+/*
+ * A link in a line of words or beside a button: bold, in the brand's
+ * colour, underlined under the pointer, with the keyboard's ring.
+ */
+@utility text-link {
+  font-weight: 600;
+  color: var(--brand);
+  text-underline-offset: 4px;
+
+  &:hover {
+    text-decoration-line: underline;
+  }
+
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: var(--ring-offset);
+  }
+}
+
+/*
+ * A link that makes its whole card the target: its `::after` covers the
+ * card, which must be `relative`, and the keyboard's ring is drawn just
+ * inside the card's corners.
+ */
+@utility card-link {
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--card-radius);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::after {
+    outline: var(--ring-width) solid var(--focus-color, var(--ring));
+    outline-offset: calc(var(--ring-width) * -1);
+  }
 }
 
 /*

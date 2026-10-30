@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AuthShell } from "@repo/ui/auth-shell";
 import { Button } from "@repo/ui/button";
-import { ConsoleLogo, PortalCard } from "./_components/PortalCard";
+import { Logo } from "@repo/ui/logo";
+import { PortalCard } from "./_components/PortalCard";
 import { dashboardHref } from "./_lib/routes";
 
 /**
@@ -12,7 +13,11 @@ import { dashboardHref } from "./_lib/routes";
  */
 export default function NotFound() {
   return (
-    <AuthShell tone="dark" eyebrow="Admin portal" brand={<ConsoleLogo />}>
+    <AuthShell
+      tone="dark"
+      eyebrow="Admin portal"
+      brand={<Logo tone="white" loading="eager" className="h-9" />}
+    >
       <PortalCard title="Page not found">
         <p className="mt-3 text-muted">
           This address doesn&apos;t lead to a screen in the console.

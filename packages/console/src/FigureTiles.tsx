@@ -1,19 +1,8 @@
 import Link from "next/link";
+import { StatusDot, type BadgeTone } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { SURFACE } from "./Card";
-
-/** The disc beside a figure's name, in its status's colour. */
-const DOTS = {
-  amber: "bg-warning-dot",
-  brand: "bg-brand",
-  navy: "bg-navy",
-  green: "bg-success-dot",
-  neutral: "bg-edge",
-  red: "bg-danger-dot",
-} as const;
-
-export type FigureTone = keyof typeof DOTS;
 
 /** One figure: its name, its number, and where it leads when it is a filter. */
 export type Figure = {
@@ -21,7 +10,7 @@ export type Figure = {
   label: string;
   value: ReactNode;
   /** A disc before the name, in a status's colour. */
-  tone?: FigureTone;
+  tone?: BadgeTone;
   /** The list narrowed to it; none for a figure that only counts. */
   href?: string;
   /** The list on screen is narrowed to it: a brand ring. */
@@ -59,7 +48,7 @@ function FigureTile({ figure }: { figure: Figure }) {
   const body = (
     <>
       <span className="flex items-center gap-2 text-caption font-medium text-muted">
-        {figure.tone ? <Dot tone={figure.tone} /> : null}
+        {figure.tone ? <StatusDot tone={figure.tone} /> : null}
         <span className="truncate">{figure.label}</span>
         {figure.current ? (
           <span className="ml-auto text-caps font-bold text-brand max-sm:hidden">
@@ -117,7 +106,7 @@ export function FigureStrip({
                 {figure.value}
               </span>
               <span className="mt-1.5 flex items-center gap-1.5 text-caption text-muted">
-                {figure.tone ? <Dot tone={figure.tone} /> : null}
+                {figure.tone ? <StatusDot tone={figure.tone} /> : null}
                 {figure.label}
               </span>
             </>
@@ -147,14 +136,5 @@ export function FigureStrip({
         })}
       </ul>
     </section>
-  );
-}
-
-function Dot({ tone }: { tone: FigureTone }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cx("size-2 shrink-0 rounded-full", DOTS[tone])}
-    />
   );
 }

@@ -1,6 +1,7 @@
 /// <reference types="google.maps" />
 
 import { cutPolygonBetween, type LngLat, type MultiPolygon } from "@repo/db";
+import { isTyping } from "@repo/ui/keys";
 import { openRing as open, pathOf } from "./map-shapes";
 
 /**
@@ -199,12 +200,6 @@ function resized(resize: Resize, pointer: Pixel): OpenPiece {
 const adds = (event: unknown) =>
   event instanceof MouseEvent &&
   (event.shiftKey || event.ctrlKey || event.metaKey);
-
-/** Whether a key press belongs to a field being typed in, not the map. */
-export const typing = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  (target.isContentEditable ||
-    ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
 export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   const { map, library, style, selectedStyle } = options;
@@ -1037,7 +1032,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   // Delete and Backspace take away what is selected; Esc stops a cut, then
   // lets go of the corner, then of the pieces. Not while a field is typed in.
   function onKey(event: KeyboardEvent) {
-    if (!editable || chosen.length === 0 || typing(event.target)) return;
+    if (!editable || chosen.length === 0 || isTyping(event.target)) return;
     if (event.key === "Escape") {
       if (cutFrom) stopCut();
       else if (corner) selectCorner(null);

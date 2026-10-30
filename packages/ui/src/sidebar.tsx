@@ -15,6 +15,7 @@ import {
 } from "react";
 import { cx } from "./cx.js";
 import { haptic } from "./haptic.js";
+import { isTyping } from "./keys.js";
 import { MenuIcon, PanelLeftIcon, XIcon } from "./icons.js";
 import { backdropClose, ModalBody, onModalClose, useModal } from "./modal.js";
 import { Tooltip } from "./tooltip.js";
@@ -41,17 +42,6 @@ type SidebarContextValue = {
 };
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
-
-/** True where a keypress types: a field, a text area, editable text. */
-function isTyping(target: EventTarget | null) {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable ||
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement)
-  );
-}
 
 export function useSidebar() {
   const context = useContext(SidebarContext);
@@ -291,7 +281,7 @@ function SidebarRail() {
       tabIndex={-1}
       onClick={toggleSidebar}
       className={cx(
-        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-20 ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5",
+        "ui:absolute ui:inset-y-0 ui:-right-2 ui:z-(--layer-float) ui:w-4 ui:bg-transparent ui:transition-colors ui:after:absolute ui:after:inset-y-0 ui:after:left-1/2 ui:after:w-0.5",
         navy ? "ui:hover:after:bg-azure/60" : "ui:hover:after:bg-card-edge",
         open ? "ui:cursor-w-resize" : "ui:cursor-e-resize",
       )}

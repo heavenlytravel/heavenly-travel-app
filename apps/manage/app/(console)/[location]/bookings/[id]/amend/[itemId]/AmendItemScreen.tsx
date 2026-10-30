@@ -12,7 +12,7 @@ import { hasGooglePlaces } from "@repo/places/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card } from "@repo/console/Card";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { BackLink, PageHeader } from "@repo/console/PageHeader";
 import {
   BackLinkSkeleton,

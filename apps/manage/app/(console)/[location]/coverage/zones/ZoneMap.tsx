@@ -23,7 +23,9 @@ import {
   TrashIcon,
   UndoIcon,
 } from "@repo/ui/icons";
+import { isTyping } from "@repo/ui/keys";
 import { Tooltip } from "@repo/ui/tooltip";
+import { useDismiss } from "@repo/ui/use-dismiss";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { joinPiecesAction } from "../actions";
@@ -41,7 +43,6 @@ import {
 } from "./map-shapes";
 import {
   createPieceEditor,
-  typing,
   type PieceEditor,
   type PieceMenu,
   type PieceSelection,
@@ -395,7 +396,7 @@ export function ZoneMap({
     function onKey(event: KeyboardEvent) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
       const key = event.key.toLowerCase();
-      if ((key !== "z" && key !== "y") || typing(event.target)) return;
+      if ((key !== "z" && key !== "y") || isTyping(event.target)) return;
       event.preventDefault();
       if (key === "y" || event.shiftKey) {
         if (canRedo) onRedo();
@@ -418,25 +419,9 @@ export function ZoneMap({
   // An open menu takes the keyboard's focus, and closes on Escape or on a
   // press anywhere else.
   useEffect(() => {
-    if (!menu) return;
-    menuRef.current?.querySelector("button")?.focus();
-    const close = (event: Event) => {
-      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
-      if (
-        event instanceof PointerEvent &&
-        menuRef.current?.contains(event.target as Node)
-      ) {
-        return;
-      }
-      setMenu(null);
-    };
-    document.addEventListener("pointerdown", close, true);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close, true);
-      document.removeEventListener("keydown", close);
-    };
+    if (menu) menuRef.current?.querySelector("button")?.focus();
   }, [menu]);
+  useDismiss(menuRef, menu !== null, () => setMenu(null));
 
   const hint = failed
     ? MAP_FAILURES[failed]

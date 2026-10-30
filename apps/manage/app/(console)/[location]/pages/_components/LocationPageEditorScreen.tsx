@@ -15,7 +15,7 @@ import {
 } from "@repo/db";
 import { getLocationPage, listPagePublishes } from "@repo/db/server";
 import { notFound } from "next/navigation";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import {
   BackLinkSkeleton,
   CardSkeleton,

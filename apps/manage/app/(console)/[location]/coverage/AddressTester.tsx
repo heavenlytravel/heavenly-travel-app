@@ -8,7 +8,7 @@ import { inputClassName } from "@repo/ui/field";
 import { SearchIcon } from "@repo/ui/icons";
 import { PlaceInput } from "@repo/ui/place-input";
 import { useId, useState, useTransition } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { coverageHref } from "../../../_lib/routes";
 import { testAddressAction, type AddressTest } from "./tester-actions";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { DeleteImpact } from "@repo/db";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { DeleteButton, ImpactList } from "../../../_components/DeleteButton";
 import { deleteLocationAction } from "../../../_lib/location-actions";
 

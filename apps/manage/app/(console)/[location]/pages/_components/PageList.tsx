@@ -22,7 +22,7 @@ import type {
   PageSummary,
   SitePageSummary,
 } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
+import { Badge, StatusDot } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { ExternalLinkIcon, PencilIcon } from "@repo/ui/icons";
@@ -276,13 +276,7 @@ function SearchEnginesCell({ row }: { row: PageRow }) {
         row.indexable ? "text-body" : "text-muted",
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cx(
-          "size-2 rounded-full",
-          row.indexable ? "bg-success" : "bg-edge",
-        )}
-      />
+      <StatusDot tone={row.indexable ? "green" : "neutral"} />
       {row.indexable ? "Shown" : "Hidden"}
     </span>
   );

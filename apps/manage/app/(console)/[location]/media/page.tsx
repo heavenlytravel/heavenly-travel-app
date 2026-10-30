@@ -13,13 +13,11 @@ import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, Frame } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
-import {
-  FigureTiles,
-  type Figure,
-  type FigureTone,
-} from "@repo/console/FigureTiles";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
-import { Bone, Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
+import { Streamed, TileGridSkeleton } from "@repo/console/Skeleton";
+import type { BadgeTone } from "@repo/ui/badge";
+import { Bone } from "@repo/ui/skeleton";
 import { Pager, pageOf } from "../../../_components/Pager";
 import { requireAdmin } from "../../../_lib/access";
 import { PAGE_PARAM, mediaHref } from "../../../_lib/routes";
@@ -34,7 +32,7 @@ const PAGE_SIZE = 48;
 const FILTERS = Object.keys(MEDIA_FILTERS) as MediaFilter[];
 
 /** Each tile's disc: the colour of the status chip its images carry. */
-const FILTER_TONES: Record<MediaFilter, FigureTone> = {
+const FILTER_TONES: Record<MediaFilter, BadgeTone> = {
   used: "green",
   earlier: "navy",
   unused: "neutral",

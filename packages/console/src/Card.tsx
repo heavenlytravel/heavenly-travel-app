@@ -92,8 +92,7 @@ export function CardTitle({
 }
 
 /** A link at a card title's right: "All bookings →". */
-export const CARD_LINK =
-  "rounded-sm text-caption font-semibold text-brand underline-offset-4 hover:underline focus-ring";
+export const CARD_LINK = "rounded-sm text-caption text-link";
 
 /** The card's surface with nothing else: around a table that stands alone, or a figure. */
 export function Frame({
@@ -126,8 +125,9 @@ export function TileGrid({
 
 /**
  * One card of a grid: a page, a class, a top choice, an image. Its
- * title's link covers it through `TILE_LINK`, so the whole card opens it;
- * anything else that takes a click stands above with `relative z-1`.
+ * title's link covers it with `card-link`, so the whole card opens it;
+ * anything else that takes a click stands above with
+ * `relative z-(--layer-raised)`.
  */
 export function Tile({
   dim = false,
@@ -152,17 +152,10 @@ export function Tile({
   );
 }
 
-/**
- * The class of a tile's title link, whose box covers the tile. Its ring is
- * drawn inside that box: the tile clips what reaches past its edge.
- */
-export const TILE_LINK =
-  "after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-(length:--ring-width) focus-visible:after:-outline-offset-(length:--ring-width) focus-visible:after:outline-ring";
-
 /** The foot of a tile: its buttons, above the tile's link, on a hairline. */
 export function TileFoot({ children }: { children: ReactNode }) {
   return (
-    <div className="relative z-1 mt-auto flex items-center gap-2 border-t border-hairline px-4 py-3">
+    <div className="relative z-(--layer-raised) mt-auto flex items-center gap-2 border-t border-hairline px-4 py-3">
       {children}
     </div>
   );

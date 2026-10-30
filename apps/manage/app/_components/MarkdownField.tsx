@@ -25,7 +25,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Choices } from "./Choices";
 import { Count } from "./page-editor/Count";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useImageUpload } from "./use-image-upload";
 
 /**

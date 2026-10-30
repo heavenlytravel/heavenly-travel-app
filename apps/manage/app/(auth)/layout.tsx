@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { AuthShell } from "@repo/ui/auth-shell";
+import { Logo } from "@repo/ui/logo";
 import { redirect } from "next/navigation";
-import { ConsoleLogo } from "../_components/PortalCard";
 
 /**
  * The admin sign-in page: dark, the logo above "Admin portal", no sign-up.
@@ -22,7 +22,11 @@ export default async function AuthLayout({
   }
 
   return (
-    <AuthShell tone="dark" eyebrow="Admin portal" brand={<ConsoleLogo />}>
+    <AuthShell
+      tone="dark"
+      eyebrow="Admin portal"
+      brand={<Logo tone="white" loading="eager" className="h-9" />}
+    >
       {children}
     </AuthShell>
   );

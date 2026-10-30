@@ -2,7 +2,7 @@ import { formatDay, type DocumentDue } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { TriangleAlertIcon } from "@repo/ui/icons";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 
 const TONES = {
   due: {

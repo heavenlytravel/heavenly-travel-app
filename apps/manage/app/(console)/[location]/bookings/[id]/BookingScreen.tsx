@@ -31,7 +31,8 @@ import { CheckIcon, MessageCircleIcon, PhoneIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
+import { placeAddress, Rows } from "@repo/ui/rows";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import {
@@ -47,7 +48,6 @@ import {
   HistoryCard,
   HistoryLink,
 } from "../../../../_components/RecordHistory";
-import { Rows } from "../../../../_components/Rows";
 import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
@@ -187,7 +187,7 @@ export async function bookingScreen({
           <>
             <Card>
               <CardTitle>Booking</CardTitle>
-              <Rows rows={summary} />
+              <Rows rows={summary} className="text-sm" />
             </Card>
             <CustomerCard booking={booking} />
             {permissions.includes("bookings.notes") ? (
@@ -254,7 +254,7 @@ function CustomerCard({ booking }: { booking: BookingWithItems }) {
   return (
     <Card>
       <CardTitle meta={booking.user ? "Account" : "Guest"}>Customer</CardTitle>
-      <Rows rows={rows} />
+      <Rows rows={rows} className="text-sm" />
       <div className="mt-4 flex flex-wrap gap-2">
         <Button asChild variant="secondary" size="sm">
           <a href={call}>
@@ -401,9 +401,9 @@ function TripCard({
             ) : null}
           </ol>
         ) : null}
-        {rows.length > 0 ? <Rows rows={rows} /> : null}
+        {rows.length > 0 ? <Rows rows={rows} className="text-sm" /> : null}
         <div className="border-t border-hairline pt-2">
-          <Rows rows={price} />
+          <Rows rows={price} className="text-sm" />
         </div>
       </div>
       <ItemActions
@@ -435,9 +435,7 @@ function Stop({
   last: boolean;
   line: (string | null)[];
 }) {
-  const facts = [place.address !== place.label ? place.address : null, ...line]
-    .filter(Boolean)
-    .join(" · ");
+  const facts = [placeAddress(place), ...line].filter(Boolean).join(" · ");
   return (
     <li className="relative grid grid-cols-[1.25rem_1fr] gap-3">
       {!last ? (

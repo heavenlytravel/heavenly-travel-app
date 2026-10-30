@@ -1,4 +1,5 @@
 import { cx } from "@repo/ui/cx";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { Suspense, type ComponentProps, type ReactNode } from "react";
 import { Card, Frame, TileGrid } from "./Card";
 import { DetailColumns } from "./PageColumn";
@@ -47,21 +48,7 @@ export async function Streamed({
   const content = children();
   await settledWithin(content, GRACE_MS);
   return (
-    <Suspense
-      fallback={
-        bare ? (
-          fallback
-        ) : (
-          <div
-            role="status"
-            aria-label="Loading"
-            className="motion-safe:animate-pulse"
-          >
-            {fallback}
-          </div>
-        )
-      }
-    >
+    <Suspense fallback={bare ? fallback : <Loading>{fallback}</Loading>}>
       <Loaded content={content} />
     </Suspense>
   );
@@ -69,11 +56,6 @@ export async function Streamed({
 
 async function Loaded({ content }: { content: Promise<ReactNode> }) {
   return content;
-}
-
-/** One grey bar in place of a line of text. The class gives its size. */
-export function Bone({ className }: { className: string }) {
-  return <span className={cx("block rounded bg-card-edge", className)} />;
 }
 
 /** A `PageHeader` whose title is the record's name, so it loads with it. */
@@ -215,12 +197,12 @@ export function FormSkeleton({
           {Array.from({ length: fields }, (_, field) => (
             <div key={field}>
               <Bone className="mb-1.5 h-4 w-24" />
-              <Bone className="h-10 w-full rounded-md" />
+              <Bone className="h-10 w-full" />
             </div>
           ))}
         </Card>
       ))}
-      <Bone className="h-10 w-28 rounded-md" />
+      <Bone className="h-10 w-28" />
     </div>
   );
 }

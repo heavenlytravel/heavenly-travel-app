@@ -21,7 +21,7 @@ import Image from "next/image";
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useImageUpload } from "../../../../../_components/use-image-upload";
 import { VEHICLE_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 
 /**
  * A vehicle's photos, in the order the customer swipes through them: each

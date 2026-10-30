@@ -11,7 +11,7 @@ import { isWallActive, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import {

@@ -3,7 +3,7 @@
 import { Popover, Portal } from "radix-ui";
 import type { ReactElement, ReactNode } from "react";
 import { Sheet } from "./sheet.js";
-import { useNarrow } from "./use-narrow.js";
+import { useNarrow } from "./use-media-query.js";
 
 /**
  * Where a date or time field's picker opens: a popover under the field, or

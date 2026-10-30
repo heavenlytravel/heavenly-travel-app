@@ -1,17 +1,17 @@
-import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
+import { cx } from "./cx.js";
 
 const TONES = {
   /** Something to know before going on: a paused location, a draft, an old price. */
-  warning: "border-warning-edge bg-warning-tint text-warning-strong",
+  warning: "ui:border-warning-edge ui:bg-warning-tint ui:text-warning-strong",
   /** Something wrong that the page cannot fix by itself. */
-  danger: "border-danger-edge bg-danger-tint text-danger",
+  danger: "ui:border-danger-edge ui:bg-danger-tint ui:text-danger",
   /** A plain note, in the brand's blue. */
-  info: "border-brand/20 bg-brand-tint text-navy",
+  info: "ui:border-brand/20 ui:bg-brand-tint ui:text-navy",
 } as const;
 
 /**
- * A boxed line or two of notice on a page or in a dialog: the console's one
+ * A boxed line or two of notice on a page or in a dialog: both apps' one
  * look for it, amber by default. Not read out as it appears; a refusal of
  * the user's own action is a `FormError`.
  */
@@ -27,7 +27,7 @@ export function Notice({
   return (
     <div
       className={cx(
-        "rounded-control border px-3.5 py-2.5 text-sm",
+        "ui:rounded-control ui:border ui:px-3.5 ui:py-2.5 ui:text-sm",
         TONES[tone],
         className,
       )}

@@ -31,12 +31,8 @@ import { Card, CardTitle } from "@repo/console/Card";
 import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
 import { LocationMark } from "@repo/console/LocationMark";
 import { PageHeader } from "@repo/console/PageHeader";
-import {
-  Bone,
-  CardSkeleton,
-  Streamed,
-  TableSkeleton,
-} from "@repo/console/Skeleton";
+import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 import { PAGE_TONES } from "@repo/console/StatusBadges";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { addressChoicesOf } from "../../../_lib/address-choices";

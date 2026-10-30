@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { CARD_LINK, Card, CardTitle } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
 import { LocationMark } from "@repo/console/LocationMark";
-import { Notice } from "@repo/console/Notice";
+import { Notice } from "@repo/ui/notice";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { LocationStateBadge } from "@repo/console/StatusBadges";
 import { CoverageMap, type MappedZone } from "./CoverageMap";

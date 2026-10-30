@@ -1,4 +1,5 @@
 import { cx } from "@repo/ui/cx";
+import { CheckIcon } from "@repo/ui/icons";
 
 /**
  * Where one step stands, as a small circle: a tick on green once it is
@@ -27,22 +28,7 @@ export function StepMark({
         className,
       )}
     >
-      {done ? (
-        <svg
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-          className="size-3"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M2.5 6.5 5 9l4.5-5.5" />
-        </svg>
-      ) : (
-        number
-      )}
+      {done ? <CheckIcon className="size-3" strokeWidth={4} /> : number}
     </span>
   );
 }

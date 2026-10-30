@@ -5,6 +5,7 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import type { Permission } from "@repo/db";
 import { clerkUserButton } from "@repo/ui/clerk-appearance";
+import { Logo } from "@repo/ui/logo";
 import {
   Sidebar,
   SidebarContent,
@@ -106,16 +107,7 @@ function Brand({
           />
         ) : (
           <>
-            <Image
-              src="/brand/logo-blue.svg"
-              alt=""
-              // The file's own size; CSS sets the height and the width
-              // follows, so Next sees both changed.
-              width={120}
-              height={28}
-              priority
-              className="h-6.5 w-auto brightness-0 invert"
-            />
+            <Logo tone="white" alt="" loading="eager" className="h-6.5" />
             <span className="rounded-sm bg-white/12 px-1.5 py-0.5 text-caps font-semibold text-white">
               Manage
             </span>

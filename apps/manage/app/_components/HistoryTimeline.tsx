@@ -9,7 +9,7 @@ import { cx } from "@repo/ui/cx";
 import type { ReactNode } from "react";
 import { Card } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
-import { Bone } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 import { dayHeadingOf, localDayOf } from "../_lib/local-days";
 
 /** The entries by the Malaysian day they were made, the days and the entries newest first. */

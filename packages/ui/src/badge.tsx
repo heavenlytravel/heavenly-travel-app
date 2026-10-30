@@ -52,3 +52,36 @@ export function Badge({
     </span>
   );
 }
+
+const DOTS: Record<BadgeTone, string> = {
+  neutral: "ui:bg-edge",
+  amber: "ui:bg-warning-dot",
+  brand: "ui:bg-brand",
+  navy: "ui:bg-navy",
+  green: "ui:bg-success-dot",
+  red: "ui:bg-danger-dot",
+};
+
+/**
+ * A status as a disc alone, in the brighter shade of its tone, beside words
+ * that name it: a figure tile, a page shown or hidden. A chip draws its own
+ * disc with `dot`.
+ */
+export function StatusDot({
+  tone,
+  className,
+}: {
+  tone: BadgeTone;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx(
+        "ui:size-2 ui:shrink-0 ui:rounded-full",
+        DOTS[tone],
+        className,
+      )}
+    />
+  );
+}

@@ -5,7 +5,7 @@
 import type { LngLat, ZoneShape } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 import { useEffect, useRef, useState } from "react";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import {
   MAP_FAILURES,
   boundsOf,

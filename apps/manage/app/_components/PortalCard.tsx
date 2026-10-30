@@ -1,24 +1,6 @@
 import { cx } from "@repo/ui/cx";
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { SURFACE } from "@repo/console/Card";
-
-/**
- * The logo over the pages outside the console, on the navy of `AuthShell`:
- * the sign-in, a page not found. The file is navy; it is drawn white.
- */
-export function ConsoleLogo() {
-  return (
-    <Image
-      src="/brand/logo-blue.svg"
-      alt="Heavenly, your travel engineer"
-      width={120}
-      height={28}
-      priority
-      className="h-9 w-auto brightness-0 invert"
-    />
-  );
-}
 
 /**
  * A white card on the navy of `AuthShell`, centred, for a page outside the

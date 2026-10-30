@@ -9,7 +9,7 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { CheckIcon, XIcon } from "@repo/ui/icons";
 import Link from "next/link";
-import { FormError } from "@repo/console/FormError";
+import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "../../../../_lib/use-action-form";
 import {
   advanceItemAction,

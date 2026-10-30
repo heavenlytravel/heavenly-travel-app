@@ -29,7 +29,7 @@ export function ActionRow({
       <span className="min-w-0 flex-1">
         <Link
           href={href}
-          className="block text-sm font-semibold text-ink after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-brand"
+          className="block text-sm font-semibold text-ink card-link"
         >
           {title}
         </Link>

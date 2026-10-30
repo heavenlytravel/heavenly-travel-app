@@ -8,7 +8,8 @@ import type { ReactNode } from "react";
 import { TileGrid } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
 import { SectionHeader } from "@repo/console/SectionHeader";
-import { Bone, TileGridSkeleton } from "@repo/console/Skeleton";
+import { TileGridSkeleton } from "@repo/console/Skeleton";
+import { Bone } from "@repo/ui/skeleton";
 
 /**
  * One category of the classes, as the catalogue and a location's classes

@@ -15,6 +15,7 @@ import {
   useSidebarCollapsed,
 } from "@repo/ui/sidebar";
 import type { MouseEvent, ReactNode } from "react";
+import { dashboardHref } from "../_lib/routes";
 import { ConsoleDock } from "./ConsoleSearch";
 import { ScopePicker, type PickerLocation } from "./ScopePicker";
 
@@ -75,6 +76,8 @@ export function AppSidebar({
  * The brand at the sidebar's head, as high as the top bar beside it: the
  * logo in white with "Manage", and the button that folds the sidebar to a
  * rail. On the rail, the brand's mark alone, and the button under it.
+ * The link goes to `/~` itself: `/` only sends on to it, and the page
+ * between would show blank for a moment.
  */
 function Brand({
   onLink,
@@ -92,7 +95,7 @@ function Brand({
       }
     >
       <Link
-        href="/"
+        href={dashboardHref(null)}
         aria-label="Heavenly Travel Manage, the dashboard"
         className="flex min-w-0 items-center gap-2.5 rounded-md focus-ring focus-ring-dark"
       >

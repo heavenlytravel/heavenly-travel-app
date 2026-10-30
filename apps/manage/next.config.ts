@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     "akieez-h510m.tail4436c5.ts.net",
   ],
   transpilePackages: [
+    "@repo/auth",
     "@repo/console",
     "@repo/db",
     "@repo/email",

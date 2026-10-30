@@ -1,10 +1,10 @@
-import { UserButton } from "@clerk/nextjs";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
+import { AccountMenu } from "@repo/auth/AccountMenu";
 import { cx } from "@repo/ui/cx";
 import { ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ACCOUNT_PATH } from "./nav";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
@@ -118,7 +118,7 @@ export function Screen({
                   nav && "lg:hidden",
                 )}
               >
-                <UserButton appearance={clerkUserButton} />
+                <AccountMenu accountHref={ACCOUNT_PATH} />
               </span>
             </div>
             {band ? (

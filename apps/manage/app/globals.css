@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "@repo/tailwind-config";
-/* The shared console parts live outside this app. */
+/* The shared console parts and the sign-in screens live outside this app. */
 @source "../../../packages/console/src";
+@source "../../../packages/auth/src";
 
 /*
  * The console's look, "Signature" (docs/261029-manage-signature-overhaul.md),

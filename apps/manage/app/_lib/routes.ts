@@ -60,6 +60,9 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
 
+/** The admin's own account: their name, email, password and devices, opened from their picture. */
+export const ACCOUNT_HREF = consolePath(null, "account");
+
 /** Where an admin lands when a screen belongs to another team. */
 export const RESTRICTED_PATH = "/restricted";
 

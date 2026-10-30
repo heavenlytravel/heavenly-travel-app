@@ -7,7 +7,12 @@ const nextConfig: NextConfig = {
     "akieez-h510m",
     "akieez-h510m.tail4436c5.ts.net",
   ],
-  transpilePackages: ["@repo/console", "@repo/db", "@repo/email"],
+  transpilePackages: [
+    "@repo/auth",
+    "@repo/console",
+    "@repo/db",
+    "@repo/email",
+  ],
   images: {
     // A vendor's vehicle photos are on UploadThing, as the admin's are:
     // https://<app id>.ufs.sh/f/<key>, the host `isUploadUrl` in @repo/db checks.

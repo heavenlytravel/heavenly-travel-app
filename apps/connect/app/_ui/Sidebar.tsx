@@ -1,46 +1,13 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { AccountMenu } from "@repo/auth/AccountMenu";
 import { CONTACT } from "@repo/db";
-import { clerkUserButton } from "@repo/ui/clerk-appearance";
 import { cx } from "@repo/ui/cx";
 import { MessageCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isActive, navItems } from "./nav";
-
-/** The account button on the ink sidebar: the name beside it, in white. */
-const SIDEBAR_USER_BUTTON = {
-  elements: {
-    ...clerkUserButton.elements,
-    rootBox: { width: "100%" },
-    userButtonTrigger: {
-      ...clerkUserButton.elements.userButtonTrigger,
-      width: "100%",
-      justifyContent: "flex-start",
-      padding: "0.5rem",
-      borderRadius: "0.875rem",
-    },
-    userButtonBox: {
-      flexDirection: "row-reverse",
-      gap: "0.75rem",
-      minWidth: 0,
-      maxWidth: "100%",
-    },
-    userButtonOuterIdentifier: {
-      color: "white",
-      fontWeight: 600,
-      fontSize: "0.875rem",
-      paddingLeft: 0,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "10.5rem",
-    },
-    avatarBox: { width: "2.25rem", height: "2.25rem" },
-  },
-} as const;
+import { ACCOUNT_PATH, isActive, navItems } from "./nav";
 
 /**
  * Connect on a large screen: the ink column at the left with the logo,
@@ -116,7 +83,7 @@ export function Sidebar({ member }: { member?: { owner: boolean } }) {
           </span>
         </a>
         <div className="border-t border-white/10 pt-4">
-          <UserButton showName appearance={SIDEBAR_USER_BUTTON} />
+          <AccountMenu accountHref={ACCOUNT_PATH} showName align="start" />
         </div>
       </div>
     </aside>

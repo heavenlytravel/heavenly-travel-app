@@ -5,6 +5,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+/** The signed-in person's own page: their name, email, password and devices. */
+export const ACCOUNT_PATH = "/account";
+
 export type NavItem = {
   href: string;
   label: string;

@@ -5,7 +5,7 @@ import { AuthShell } from "@repo/ui/auth-shell";
 import { redirect } from "next/navigation";
 
 /**
- * Connect's sign-in page: dark, the logo above "Connect", as the admin's.
+ * Connect's sign-in page: dark, the logo above the card, as the admin's.
  * Someone already signed in goes to their jobs from the server, so the
  * form never flashes; the page there says why if Connect is not theirs.
  */
@@ -24,7 +24,6 @@ export default async function AuthLayout({
   return (
     <AuthShell
       tone="dark"
-      eyebrow="Connect"
       brand={
         <Image
           src="/brand/logo-blue.svg"

@@ -26,6 +26,9 @@ importers:
       '@clerk/nextjs':
         specifier: 7.9.4
         version: 7.9.4(next@16.3.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@repo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@repo/console':
         specifier: workspace:*
         version: link:../../packages/console
@@ -99,6 +102,9 @@ importers:
       '@clerk/nextjs':
         specifier: 7.9.4
         version: 7.9.4(next@16.3.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@repo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@repo/console':
         specifier: workspace:*
         version: link:../../packages/console
@@ -175,6 +181,9 @@ importers:
       '@clerk/nextjs':
         specifier: 7.9.4
         version: 7.9.4(next@16.3.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@repo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@repo/console':
         specifier: workspace:*
         version: link:../../packages/console
@@ -233,6 +242,40 @@ importers:
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/auth:
+    dependencies:
+      '@repo/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@clerk/nextjs':
+        specifier: 7.9.4
+        version: 7.9.4(next@16.3.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: 26.2.0
+        version: 26.2.0
+      '@types/react':
+        specifier: 19.2.18
+        version: 19.2.18
+      eslint:
+        specifier: 10.8.1
+        version: 10.8.1(jiti@2.7.0)
+      next:
+        specifier: 16.3.1
+        version: 16.3.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
       typescript:
         specifier: 7.0.2
         version: 7.0.2

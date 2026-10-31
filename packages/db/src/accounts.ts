@@ -10,6 +10,7 @@ import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
 import {
   NO_TEAM_ERROR,
   type NewUserFields,
+  type UserProfileFields,
   type StaffAccess,
 } from "./user-input";
 import { findUserByEmail } from "./users";
@@ -178,4 +179,162 @@ export async function keepApplicantProfile(
   if (named === held) return;
   const snapshot = snapshotFromBackendUser(named);
   if (snapshot) await upsertUserFromClerk(snapshot);
+}
+
+/** Clerk's refusal as a form's, on the field it names; anything else is thrown. */
+function clerkRefusal(error: unknown, field?: string): Change {
+  if (!isClerkAPIResponseError(error)) throw error;
+  const [first] = error.errors;
+  return refuse(first?.longMessage ?? first?.message ?? error.message, field);
+}
+
+/** The account and its Clerk id, or a refusal when it is gone. */
+async function heldUser(userId: string) {
+  return db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      clerkId: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+    },
+  });
+}
+
+const GONE = refuse("This account is gone. Go back to All Users.");
+
+/**
+ * Changes an account's names, in Clerk and mirrored here at once, and its
+ * phone, ours. Logged with the fields before and after when anything
+ * changed.
+ */
+export async function updateUserProfile(
+  actor: Actor,
+  userId: string,
+  fields: UserProfileFields,
+): Promise<Change> {
+  const user = await heldUser(userId);
+  if (!user) return GONE;
+  const before = {
+    firstName: user.firstName ?? "",
+    lastName: user.lastName ?? "",
+    phone: user.phone,
+  };
+  const after = { ...fields };
+  if (
+    before.firstName === after.firstName &&
+    before.lastName === after.lastName &&
+    before.phone === after.phone
+  ) {
+    return { ok: true };
+  }
+
+  if (
+    before.firstName !== after.firstName ||
+    before.lastName !== after.lastName
+  ) {
+    try {
+      const clerk = await clerkClient();
+      const updated = await clerk.users.updateUser(user.clerkId, {
+        firstName: after.firstName,
+        lastName: after.lastName,
+      });
+      const snapshot = snapshotFromBackendUser(updated);
+      if (snapshot) await upsertUserFromClerk(snapshot);
+    } catch (error) {
+      return clerkRefusal(error, "firstName");
+    }
+  }
+  await db.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: user.id },
+      data: { phone: after.phone },
+    });
+    await logActivity(tx, actor, {
+      action: "user.updated",
+      entityId: user.id,
+      before,
+      after,
+    });
+  });
+  return { ok: true };
+}
+
+/**
+ * Changes the email an account signs in with: Clerk takes the new one as
+ * verified and primary, and drops the others, so the account keeps one
+ * email, as it was made with. Nothing is sent to either address. An email
+ * another account holds, here or in Clerk, is refused.
+ */
+export async function changeUserEmail(
+  actor: Actor,
+  userId: string,
+  email: string,
+): Promise<Change> {
+  const user = await heldUser(userId);
+  if (!user) return GONE;
+  if (user.email.toLowerCase() === email) return { ok: true };
+  const other = await findUserByEmail(email);
+  if (other && other.id !== user.id) {
+    return refuse(`${email} is another account's email.`, "email");
+  }
+
+  try {
+    const clerk = await clerkClient();
+    const added = await clerk.emailAddresses.createEmailAddress({
+      userId: user.clerkId,
+      emailAddress: email,
+      verified: true,
+      primary: true,
+    });
+    const held = await clerk.users.getUser(user.clerkId);
+    for (const old of held.emailAddresses) {
+      if (old.id !== added.id) {
+        await clerk.emailAddresses.deleteEmailAddress(old.id);
+      }
+    }
+    const snapshot = snapshotFromBackendUser(
+      await clerk.users.getUser(user.clerkId),
+    );
+    if (snapshot) await upsertUserFromClerk(snapshot);
+  } catch (error) {
+    return clerkRefusal(error, "email");
+  }
+  await logActivity(db, actor, {
+    action: "user.email.changed",
+    entityId: user.id,
+    before: { email: user.email },
+    after: { email },
+  });
+  return { ok: true };
+}
+
+/**
+ * Sets an account's password in Clerk, which checks it as it checks one
+ * typed at sign-up, and signs the account out everywhere, so only the new
+ * password opens it. The password is never stored or logged here.
+ */
+export async function setUserPassword(
+  actor: Actor,
+  userId: string,
+  password: string,
+): Promise<Change> {
+  const user = await heldUser(userId);
+  if (!user) return GONE;
+  try {
+    const clerk = await clerkClient();
+    await clerk.users.updateUser(user.clerkId, {
+      password,
+      signOutOfOtherSessions: true,
+    });
+  } catch (error) {
+    return clerkRefusal(error, "password");
+  }
+  await logActivity(db, actor, {
+    action: "user.password.set",
+    entityId: user.id,
+  });
+  return { ok: true };
 }

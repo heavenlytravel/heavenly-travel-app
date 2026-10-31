@@ -55,9 +55,9 @@ export const MENU_ICONS = {
   page: FileTextIcon,
   addresses: MapPinIcon,
   media: ImageIcon,
-  team: UsersIcon,
-  staff: ShieldCheckIcon,
-  customers: UserRoundIcon,
+  users: UsersIcon,
+  admin: ShieldCheckIcon,
+  user: UserRoundIcon,
   activity: ActivityIcon,
   settings: SettingsIcon,
 };

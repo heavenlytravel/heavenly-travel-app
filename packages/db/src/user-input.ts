@@ -11,10 +11,10 @@ import {
 } from "./roles";
 
 /**
- * What Customers asks to create an account on someone's behalf, and Staff
- * to add a member, and the rules they check, pure and browser-safe. The
- * writer in ./accounts makes the account in Clerk and mirrors it here;
- * ./admins gives it its level and teams.
+ * What All Users asks to create an account on someone's behalf or change
+ * one, and Admin to add a member, and the rules they check, pure and
+ * browser-safe. The writers in ./accounts make and change the account in
+ * Clerk and mirror it here; ./admins gives it its level and teams.
  */
 
 export const USER_LIMITS = { name: 80 } as const;
@@ -52,15 +52,26 @@ function readUser(
   firstNameRequired: boolean,
 ): Parsed<NewUserFields> {
   const email = normalizeEmail(textOf(values.email));
+  if (!email) return refuse("Enter their email.", "email");
+  if (!isValidEmail(email)) {
+    return refuse("Enter an email like name@example.com.", "email");
+  }
+  const profile = readProfile(values, firstNameRequired);
+  return profile.ok
+    ? { ok: true, value: { email, ...profile.value } }
+    : profile;
+}
+
+/** The names and the phone a form typed, checked. */
+function readProfile(
+  values: Record<string, unknown>,
+  firstNameRequired: boolean,
+): Parsed<UserProfileFields> {
   const firstName = textOf(values.firstName);
   const lastName = textOf(values.lastName);
   const typedPhone = textOf(values.phone);
   const phone = typedPhone ? normalizePhone(typedPhone) : null;
 
-  if (!email) return refuse("Enter their email.", "email");
-  if (!isValidEmail(email)) {
-    return refuse("Enter an email like name@example.com.", "email");
-  }
   if (!firstName && firstNameRequired) {
     return refuse("Enter their first name.", "firstName");
   }
@@ -75,10 +86,57 @@ function readUser(
   if (phone !== null && !isValidPhone(phone)) {
     return refuse("Enter a phone number the team can call.", "phone");
   }
-  return { ok: true, value: { email, firstName, lastName, phone } };
+  return { ok: true, value: { firstName, lastName, phone } };
 }
 
-/** What a member of staff is given: a level, and the teams whose work is theirs. */
+/** What All Users edits on an account's profile; the email and password have forms of their own. */
+export type UserProfileFields = {
+  firstName: string;
+  /** "" for none. */
+  lastName: string;
+  /** As ./phone keeps it; null for none. */
+  phone: string | null;
+};
+
+export const USER_PROFILE_FIELDS = ["firstName", "lastName", "phone"] as const;
+
+export const USER_PROFILE_LABELS: Record<
+  (typeof USER_PROFILE_FIELDS)[number],
+  string
+> = { firstName: "first name", lastName: "last name", phone: "phone" };
+
+/** The profile form's values, read and checked. The first name is required. */
+export function parseUserProfile(
+  values: Record<string, unknown>,
+): Parsed<UserProfileFields> {
+  return readProfile(values, true);
+}
+
+/** An email typed for an account, in lower case, checked. */
+export function parseUserEmail(value: unknown): Parsed<string> {
+  const email = normalizeEmail(textOf(value));
+  if (!email) return refuse("Enter the new email.", "email");
+  if (!isValidEmail(email)) {
+    return refuse("Enter an email like name@example.com.", "email");
+  }
+  return { ok: true, value: email };
+}
+
+/** Clerk's shortest password; Clerk checks the rest, such as a leaked one. */
+export const PASSWORD_MIN = 8;
+
+/** A password staff type for an account, checked as far as we can before Clerk. */
+export function parseNewPassword(value: unknown): Parsed<string> {
+  const password = typeof value === "string" ? value : "";
+  if (password.length < PASSWORD_MIN) {
+    return refuse(
+      `A password is at least ${PASSWORD_MIN} characters.`,
+      "password",
+    );
+  }
+  return { ok: true, value: password };
+}
+
 export type StaffAccess = { level: AdminLevel; teams: AdminTeam[] };
 
 export const NO_TEAM_ERROR =

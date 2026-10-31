@@ -8,14 +8,14 @@ import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AccountFields, NoPasswordNote } from "../AccountFields";
-import { AdminFields } from "../AdminFields";
+import { AccountFields, NoPasswordNote } from "./admin/AccountFields";
+import { AdminFields } from "./admin/AdminFields";
 import { createUserAction } from "./actions";
 
 /**
- * "Create an account" in Customers' header: a panel that makes an account
- * on someone's behalf. For an admin who manages staff (`mayMakeStaff`),
- * Make staff, off at first, asks the level and the teams too, and the
+ * "Create an account" in All Users' header: a panel that makes an account
+ * on someone's behalf. For an admin who manages admins (`mayMakeStaff`),
+ * Make admin, off at first, asks the level and the teams too, and the
  * account is made staff in the same go. A refused create keeps what was
  * typed; a created one closes the panel.
  */
@@ -23,7 +23,7 @@ export function CreateUserForm({ mayMakeStaff }: { mayMakeStaff: boolean }) {
   const [open, setOpen] = useState(false);
   const [makeStaff, setMakeStaff] = useState(false);
   const { pending, error, formProps } = useActionForm(createUserAction, {
-    done: makeStaff ? "Account created and made staff." : "Account created.",
+    done: makeStaff ? "Account created and made an admin." : "Account created.",
     reset: true,
     onDone: () => {
       setOpen(false);
@@ -62,10 +62,10 @@ export function CreateUserForm({ mayMakeStaff }: { mayMakeStaff: boolean }) {
                   checked={makeStaff}
                   disabled={pending}
                   onCheckedChange={setMakeStaff}
-                  label="Make staff"
+                  label="Make admin"
                 />
                 <span>
-                  <span className="font-medium">Make staff</span>
+                  <span className="font-medium">Make admin</span>
                   <span className="block text-muted">
                     Give the account a level and teams now.
                   </span>

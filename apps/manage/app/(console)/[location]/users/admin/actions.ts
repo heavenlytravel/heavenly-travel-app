@@ -8,8 +8,8 @@ import {
   setAdmin,
   setWallActive,
 } from "@repo/db/server";
-import { revalidateLocation } from "../../../_lib/revalidate";
-import { actorOf, getAdmin } from "../../../_lib/access";
+import { revalidateLocation } from "../../../../_lib/revalidate";
+import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   refusalOf,

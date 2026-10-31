@@ -392,14 +392,14 @@ export function mediaHref(show?: MediaFilter, page?: number) {
 
 /* Admin */
 
-/** The staff: every admin, narrowed by a search. Console-wide. */
-export function staffHref(q?: string) {
-  return listHref(consolePath(null, "team"), { [SEARCH_PARAM]: q });
+/** Admin: every account with admin access, narrowed by a search. Console-wide. */
+export function adminsHref(q?: string) {
+  return listHref(consolePath(null, "users", "admin"), { [SEARCH_PARAM]: q });
 }
 
-/** Every customer account, the newest first, narrowed by a search, at a page. Console-wide. */
-export function customersHref(filter: { q?: string; page?: number } = {}) {
-  return listHref(consolePath(null, "team", "customers"), {
+/** All Users: every account, the newest first, narrowed by a search, at a page. Console-wide. */
+export function usersHref(filter: { q?: string; page?: number } = {}) {
+  return listHref(consolePath(null, "users"), {
     [SEARCH_PARAM]: filter.q,
     [PAGE_PARAM]: pageParam(filter.page),
   });
@@ -408,6 +408,11 @@ export function customersHref(filter: { q?: string; page?: number } = {}) {
 /**
  * The activity: under `~` the log across the app, under a slug the
  * location's own history, either one narrowed to the entries of one
+/** One account's page under All Users: its profile, its sign-in and where it has access. Console-wide. */
+export function userHref(id: string) {
+  return consolePath(null, "users", id);
+}
+
  * area. At the page of it older than the entry with the id `before`.
  */
 export function activityHref(

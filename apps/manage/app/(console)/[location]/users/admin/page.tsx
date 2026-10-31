@@ -23,33 +23,33 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
-import { SearchBox } from "../../../_components/SearchBox";
-import { requireAdmin } from "../../../_lib/access";
-import { SEARCH_PARAM, staffHref } from "../../../_lib/routes";
-import { scopeOf } from "../../../_lib/scope";
+import { SearchBox } from "../../../../_components/SearchBox";
+import { requireAdmin } from "../../../../_lib/access";
+import { SEARCH_PARAM, adminsHref } from "../../../../_lib/routes";
+import { scopeOf } from "../../../../_lib/scope";
 import { AddStaffButton } from "./AddStaffButton";
 import { AdminRowControls } from "./AdminRowControls";
 import { TeamAccessCard } from "./TeamAccessCard";
 import { WallSwitch } from "./WallSwitch";
 
 /**
- * Route: /~/team?q=…. The staff: who has access, their level and teams,
+ * Route: /~/users/admin?q=…. Admin: who has access to Manage, their level and teams,
  * each to edit or revoke, the list narrowed by a search of names and
- * emails; "Add staff", which promotes an account or makes one; the wall
+ * emails; "Add admin", which promotes an account or makes one; the wall
  * between the teams; and what each team can do, read from the rules.
  * Console-wide: under a slug it is not found. SUPER only.
  */
-export default async function StaffPage({
+export default async function AdminPage({
   params,
   searchParams,
-}: PageProps<"/[location]/team">) {
+}: PageProps<"/[location]/users/admin">) {
   const admin = await requireAdmin("admins.manage");
   if ((await scopeOf(params)).slug !== null) notFound();
   const q = searchTermOf((await searchParams)[SEARCH_PARAM]) ?? undefined;
 
   return (
     <>
-      <PageHeader title="Staff" action={<AddStaffButton />} />
+      <PageHeader title="Admin" action={<AddStaffButton />} />
       <Streamed
         fallback={
           <div className="grid gap-5">
@@ -93,7 +93,7 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
           {wallActive
             ? "Each admin reaches only the screens and actions of their teams."
             : "Every admin reaches every team screen and action."}{" "}
-          Staff stays with SUPER admins either way.
+          Users stays with SUPER admins either way.
         </p>
         {withoutTeam > 0 ? (
           <Notice className="mt-4">
@@ -111,9 +111,9 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
           meta={plural(shown.length, "person", "people")}
           action={
             <SearchBox
-              href={staffHref()}
+              href={adminsHref()}
               value={q ?? ""}
-              label="Search staff"
+              label="Search admins"
               placeholder="Name or email"
             />
           }

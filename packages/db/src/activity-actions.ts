@@ -14,6 +14,7 @@ import {
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
+import { USER_PROFILE_FIELDS, USER_PROFILE_LABELS } from "./user-input";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
   type VehicleClassField,
@@ -131,6 +132,12 @@ const ACTIONS = {
    * `existing` when Clerk held it already and it was only mirrored here.
    */
   "user.created": { entityType: "user", customerVisible: false },
+  /** Staff changed an account's names or phone: the fields before and after. */
+  "user.updated": { entityType: "user", customerVisible: false },
+  /** Staff changed the email an account signs in with: before and after. */
+  "user.email.changed": { entityType: "user", customerVisible: false },
+  /** Staff set an account's password, which is never logged; its sessions were ended. */
+  "user.password.set": { entityType: "user", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
@@ -871,6 +878,18 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "existing") === true
         ? "Added the account Clerk already held"
         : "Created the account";
+    case "user.updated": {
+      const changed = USER_PROFILE_FIELDS.filter(
+        (key) => field(entry.before, key) !== field(entry.after, key),
+      ).map((key) => USER_PROFILE_LABELS[key]);
+      return changed.length > 0
+        ? `Changed the ${andList(changed)}`
+        : "Changed the profile";
+    }
+    case "user.email.changed":
+      return `Changed the email to ${String(field(entry.after, "email") ?? "")}`;
+    case "user.password.set":
+      return "Set a new password and signed them out everywhere";
     case "admin.promoted":
       return `Promoted to ${adminState(entry.after)}`;
     case "admin.updated":

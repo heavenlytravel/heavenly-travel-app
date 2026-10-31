@@ -34,7 +34,7 @@ export const ACTIVITY_AREA_LABELS: Record<ActivityArea, string> = {
   website: "Website",
   details: "Details",
   status: "Status",
-  team: "Team",
+  team: "Users",
 };
 
 /** The key each area asks. The team's is SUPER's alone, as `admins.manage` is. */
@@ -88,6 +88,9 @@ const AREA_OF = {
   "booking.item.priced": "bookings",
   "booking.note.added": "bookings",
   "user.created": "team",
+  "user.updated": "team",
+  "user.email.changed": "team",
+  "user.password.set": "team",
   "admin.promoted": "team",
   "admin.updated": "team",
   "admin.revoked": "team",

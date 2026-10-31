@@ -33,6 +33,8 @@ export type ConsolePage = {
   label: string;
   /** Its path under the location's segment: "fleet/vehicles"; "" for the dashboard. */
   path: string;
+  /** Its path under `~` when it is not `path`: every location's pages are at "pages/locations", one location's at "pages". */
+  allPath?: string;
   icon: MenuIcon;
   /** What its `requireAdmin` asks, in every scope. */
   permission: Permission;
@@ -230,6 +232,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         key: "pages",
         label: "Locations",
         path: "pages",
+        allPath: "pages/locations",
         icon: "pages",
         permission: "pages.manage",
         step: "pages",
@@ -352,11 +355,17 @@ export function homeHref(menu: MenuFor): string | null {
   return page ? pageHref(page, menu.scope) : null;
 }
 
+/** A page's path under a scope's segment. */
+function pathIn(page: ConsolePage, scope: ScopeSlug) {
+  return scope === null ? (page.allPath ?? page.path) : page.path;
+}
+
 /** Where a page's row leads in a scope: its own address there, or `~` for a console-wide page. */
 export function pageHref(page: ConsolePage, scope: ScopeSlug) {
+  const where = page.wide ? null : scope;
   return page.path === ""
-    ? dashboardHref(scope)
-    : consolePath(page.wide ? null : scope, page.path);
+    ? dashboardHref(where)
+    : consolePath(where, pathIn(page, where));
 }
 
 /** The page an address is on, and what of it is past the page's own path: a record, "new", a publish. */
@@ -377,14 +386,15 @@ function pageAt(pathname: string): PageAt | null {
   const decoded = decodeURIComponent(first);
   const scope = decoded === consolePath(null).slice(1) ? null : decoded;
   const rest = parts.filter(Boolean).join("/");
-  let found: PageAt | null = null;
+  let found: (PageAt & { path: string }) | null = null;
   for (const section of CONSOLE_SECTIONS) {
     for (const page of section.pages) {
-      const own = rest === page.path;
-      const under = page.path !== "" && rest.startsWith(`${page.path}/`);
+      const path = pathIn(page, scope);
+      const own = rest === path;
+      const under = path !== "" && rest.startsWith(`${path}/`);
       if (!own && !under) continue;
-      if (found && found.page.path.length >= page.path.length) continue;
-      found = { page, section, scope, rest, own };
+      if (found && found.path.length >= path.length) continue;
+      found = { page, section, scope, rest, own, path };
     }
   }
   return found;

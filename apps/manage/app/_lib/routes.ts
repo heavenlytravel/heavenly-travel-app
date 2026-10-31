@@ -340,13 +340,17 @@ export function sitePagesHref(
 }
 
 /**
- * The locations' pages: every location's under `~`, one location's under
- * its slug, narrowed by status, section and a search.
+ * The locations' pages: every location's at /~/pages/locations, one
+ * location's at /[slug]/pages, narrowed by status, section and a search.
  * Narrowed to a section, it is that section's list: its own page and
  * every page under it.
  */
 export function pagesHref(scope: ScopeSlug, filter: PagesFilter = {}) {
-  return listHref(consolePath(scope, "pages"), {
+  const path =
+    scope === null
+      ? consolePath(null, "pages", "locations")
+      : consolePath(scope, "pages");
+  return listHref(path, {
     section: filter.section && pageSegmentOf(filter.section),
     status: filter.status,
     [SEARCH_PARAM]: filter.q,

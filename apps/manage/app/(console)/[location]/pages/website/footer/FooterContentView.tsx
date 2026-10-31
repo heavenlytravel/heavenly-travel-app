@@ -148,7 +148,12 @@ export function FooterContentView({
                   <span className="block font-medium">
                     {badge.name || "No name"}
                   </span>
-                  <span className="text-muted">{badge.detail}</span>
+                  <span className="block text-muted">{badge.detail}</span>
+                  {badge.link ? (
+                    <span className="block break-all text-muted">
+                      Certificate: {badge.link}
+                    </span>
+                  ) : null}
                 </span>
               </div>
             ))}

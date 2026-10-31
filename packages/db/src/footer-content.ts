@@ -135,11 +135,17 @@ export const BUNDLED_PAYMENT_LOGOS: readonly FooterImage[] = [
   bundled("/brand/payments/boost.svg", "Boost", 312, 113),
 ];
 
-/** A body the company is registered with: its mark, its name, and a line such as the member number. */
+/**
+ * A body the company is registered with: its mark, its name, its
+ * registration number, and where its certificate can be seen.
+ */
 export type FooterBadge = {
   image: FooterImage | null;
   name: string;
+  /** The registration number: "KPK/LN 10512". Optional. */
   detail: string;
+  /** The certificate, on the body's site or a file: the badge opens it. Optional. */
+  link: string;
 };
 
 const crest = () => bundled("/brand/mof.jpg", "", 280, 230);
@@ -150,16 +156,23 @@ const crest = () => bundled("/brand/mof.jpg", "", 280, 230);
  * offers to fill in.
  */
 export const BUNDLED_BADGES: readonly FooterBadge[] = [
-  { image: crest(), name: "Ministry of Finance Malaysia", detail: "" },
+  {
+    image: crest(),
+    name: "Ministry of Finance Malaysia",
+    detail: "",
+    link: "",
+  },
   {
     image: crest(),
     name: "Ministry of Tourism, Arts & Culture Malaysia",
     detail: "",
+    link: "",
   },
   {
     image: bundled("/brand/matta.jpg", "", 280, 230),
     name: "Malaysian Association of Tour and Travel Agents",
     detail: "",
+    link: "",
   },
 ];
 
@@ -291,11 +304,12 @@ export function footerContentOf(value: unknown): FooterContent {
     address: linesOf(raw.address),
     badgesHeading: lineOf(raw.badgesHeading),
     badges: listOf(raw.badges).map((row) => {
-      const { image, name, detail } = recordOf(row);
+      const { image, name, detail, link } = recordOf(row);
       return {
         image: footerImageOf(image),
         name: lineOf(name),
         detail: lineOf(detail),
+        link: lineOf(link),
       };
     }),
     paymentHeading: lineOf(raw.paymentHeading),
@@ -526,6 +540,7 @@ export function checkFooterLimits(content: FooterContent): Change {
       target.kind === "url" ? [target.url] : [],
     ),
     ...content.social.map((row) => row.url),
+    ...content.badges.map((badge) => badge.link),
   ];
   if (urls.some((url) => over(url, L.url))) {
     return refuse(`An address is at most ${L.url} characters.`);
@@ -548,7 +563,7 @@ export function checkFooterLimits(content: FooterContent): Change {
     ["The registration", content.registration, L.registration],
     ...content.badges.flatMap((badge): [string, string, number][] => [
       ["A registration's name", badge.name, L.badgeName],
-      ["A registration's line", badge.detail, L.badgeDetail],
+      ["A registration number", badge.detail, L.badgeDetail],
     ]),
   ];
   const long = fields.find(([, text, limit]) => over(text, limit));
@@ -625,6 +640,9 @@ export function footerProblems(content: FooterContent): string[] {
     if (badge.name === "")
       problems.push(`Registration ${index + 1} has no name.`);
     if (!badge.image) problems.push(`${where} has no logo.`);
+    if (badge.link && !isFooterUrl(badge.link)) {
+      problems.push(`${where}'s certificate link is not a web address.`);
+    }
   });
   if (content.paymentLogos.length > 0 && content.paymentHeading === "") {
     problems.push("The payment logos have no heading.");

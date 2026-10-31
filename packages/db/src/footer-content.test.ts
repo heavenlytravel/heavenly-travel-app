@@ -161,7 +161,9 @@ describe("footerProblems", () => {
       social: [{ network: "instagram", url: "instagram" }],
       phone: "123",
       email: "sales",
-      badges: [{ image: null, name: "MATTA", detail: "" }],
+      badges: [
+        { image: null, name: "MATTA", detail: "", link: "matta.org.my" },
+      ],
       paymentLogos: [logo("visa", "")],
     };
     assert.deepEqual(footerProblems(content), [
@@ -175,6 +177,7 @@ describe("footerProblems", () => {
       "The contact details have no heading.",
       "The registrations have no heading.",
       '"MATTA" has no logo.',
+      `"MATTA"'s certificate link is not a web address.`,
       "The payment logos have no heading.",
       "A payment logo has no name.",
       "The copyright line has no company name.",
@@ -183,7 +186,7 @@ describe("footerProblems", () => {
     assert.equal(check.ok, false);
     assert.match(
       check.ok ? "" : check.error,
-      /^Column 1 has no heading\. And 12 more/,
+      /^Column 1 has no heading\. And 13 more/,
     );
   });
 });
@@ -257,7 +260,9 @@ describe("footer parts", () => {
   it("finds the uploaded images, once each", () => {
     const content: FooterContent = {
       ...footerContentOf(null),
-      badges: [{ image: logo("matta", "MATTA"), name: "MATTA", detail: "" }],
+      badges: [
+        { image: logo("matta", "MATTA"), name: "MATTA", detail: "", link: "" },
+      ],
       paymentLogos: [logo("fpx", "FPX"), logo("fpx", "FPX")],
     };
     assert.deepEqual(footerImageKeys(content), ["matta", "fpx"]);

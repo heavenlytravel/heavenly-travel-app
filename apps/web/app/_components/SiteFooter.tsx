@@ -5,10 +5,12 @@ import {
   copyrightOf,
   footerLinkHref,
   isExternalFooterLink,
+  isFooterUrl,
   isUploadUrl,
   phoneHrefOf,
   whatsappHrefOf,
   SOCIAL_NETWORK_LABELS,
+  type FooterBadge,
   type FooterContent,
   type FooterLink,
   type SocialNetwork,
@@ -185,27 +187,8 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   {/* A row of marks, each over its name, as the WordPress site had them. */}
                   <ul className="grid grid-cols-3 gap-x-4 gap-y-5">
                     {content.badges.map((badge, i) => (
-                      <li
-                        key={i}
-                        className="flex flex-col items-center gap-2 text-center text-sm text-white/90"
-                      >
-                        {badge.image && (
-                          <Image
-                            src={badge.image.url}
-                            width={badge.image.width}
-                            height={badge.image.height}
-                            alt=""
-                            sizes="120px"
-                            unoptimized={!isUploadUrl(badge.image.url)}
-                            className="h-14 w-auto max-w-full rounded-lg bg-white object-contain p-1"
-                          />
-                        )}
-                        <span>
-                          <strong className="block text-copy leading-snug text-white">
-                            {badge.name}
-                          </strong>
-                          {badge.detail}
-                        </span>
+                      <li key={i}>
+                        <BadgeTile badge={badge} />
                       </li>
                     ))}
                   </ul>
@@ -254,6 +237,58 @@ function Heading({ id, children }: { id?: string; children: string }) {
     >
       {children}
     </h2>
+  );
+}
+
+const badgeClass =
+  "flex flex-col items-center gap-2 text-center text-sm text-white/90";
+
+/**
+ * A body the company is registered with: its mark over its name and its
+ * registration number. With a certificate link, the whole of it opens the
+ * certificate in a new tab, the number underlined as a link.
+ */
+function BadgeTile({ badge }: { badge: FooterBadge }) {
+  // A draft's preview shows a link before it is checked: only a sound one opens.
+  const href = isFooterUrl(badge.link) ? badge.link : null;
+  const body = (
+    <>
+      {badge.image && (
+        <Image
+          src={badge.image.url}
+          width={badge.image.width}
+          height={badge.image.height}
+          alt=""
+          sizes="120px"
+          unoptimized={!isUploadUrl(badge.image.url)}
+          className="h-14 w-auto max-w-full rounded-lg bg-white object-contain p-1"
+        />
+      )}
+      <span>
+        <strong className="block text-copy leading-snug text-white">
+          {badge.name}
+        </strong>
+        {href ? (
+          <span className="underline underline-offset-4 group-hover:text-white">
+            {badge.detail || "View certificate"}
+          </span>
+        ) : (
+          badge.detail
+        )}
+      </span>
+    </>
+  );
+  if (!href) return <div className={badgeClass}>{body}</div>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group rounded-lg focus-ring focus-ring-dark ${badgeClass}`}
+    >
+      {body}
+      <span className="sr-only">, certificate, opens in a new tab</span>
+    </a>
   );
 }
 

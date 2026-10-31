@@ -524,7 +524,7 @@ export function FooterEditor({
 
         <Card>
           <CardTitle
-            description="The bodies the company is registered with, each with its logo, its name and a line such as the member number."
+            description="The bodies the company is registered with, each with its logo, its name, its registration number and a link to its certificate, which the footer opens in a new tab."
             action={
               <Button
                 variant="secondary"
@@ -534,7 +534,12 @@ export function FooterEditor({
                   edit({
                     badges: [
                       ...content.badges,
-                      rowed({ image: null, name: "", detail: "" }),
+                      rowed({
+                        image: null,
+                        name: "",
+                        detail: "",
+                        link: "",
+                      }),
                     ],
                   })
                 }
@@ -618,7 +623,7 @@ export function FooterEditor({
                           <Field
                             label={
                               <Counted
-                                label="Line under it"
+                                label="Registration no"
                                 value={badge.detail.trim()}
                                 limit={L.badgeDetail}
                               />
@@ -626,7 +631,7 @@ export function FooterEditor({
                           >
                             <Input
                               autoComplete="off"
-                              placeholder="Member no. MA1234"
+                              placeholder="KPK/LN 10512"
                               value={badge.detail}
                               onChange={(event) =>
                                 update({ detail: event.target.value })
@@ -634,6 +639,20 @@ export function FooterEditor({
                             />
                           </Field>
                         </div>
+                        <Field
+                          label="Certificate link"
+                          hint="Optional. The certificate on the body's site, or a file of it. The footer's badge opens it."
+                        >
+                          <Input
+                            inputMode="url"
+                            autoComplete="off"
+                            placeholder="https://"
+                            value={badge.link}
+                            onChange={(event) =>
+                              update({ link: event.target.value })
+                            }
+                          />
+                        </Field>
                         <RowControls
                           name={name}
                           isFirst={index === 0}

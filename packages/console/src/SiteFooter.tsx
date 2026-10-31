@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   addressLinesOf,
   copyrightOf,
@@ -24,18 +25,31 @@ import {
   XLogoIcon,
   YouTubeIcon,
 } from "@repo/ui/icons";
-import { HomeLink } from "./Brand";
 
 /**
- * The foot of every page of the customer site, as SUPER writes it in the
- * console: the logo and the tagline; the link columns, "Follow us on" and
+ * The foot of every page of the customer site, and of Connect's public
+ * pages, as SUPER writes it in the console: the logo and the tagline; the link columns, "Follow us on" and
  * "Get in touch"; the ways to pay and the bodies the company is
  * registered with; then the copyright line with its links. A part with nothing in
  * it is left out and the others close up. `content` is the footer as it is
  * shown, its links to pages the public cannot open already left out. It
  * sits on the site's navy, its words in white, its headings light blue.
+ * `logo` is the app's own way home, drawn white. On Connect, `siteUrl` is
+ * the customer site's address: a link to one of its pages, and a mark it
+ * ships, are made absolute to it; on the customer site it is empty.
  */
-export function SiteFooter({ content }: { content: FooterContent }) {
+export function SiteFooter({
+  content,
+  logo,
+  siteUrl = "",
+}: {
+  content: FooterContent;
+  logo: ReactNode;
+  siteUrl?: string;
+}) {
+  /** An address on the customer site, a mark it ships or a path, from wherever the footer is. */
+  const shipped = (url: string) =>
+    siteUrl && url.startsWith("/") ? `${siteUrl}${url}` : url;
   const year = new Date().getFullYear();
   const whatsappHref = content.whatsapp
     ? whatsappHrefOf(content.whatsapp)
@@ -55,8 +69,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
         <div className="mx-auto w-full max-w-[1240px]">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_3fr] lg:gap-14">
             <div className="max-w-[340px]">
-              {/* The blue logo, drawn white on the blue. */}
-              <HomeLink tone="white" className="inline-block" />
+              {logo}
               {content.tagline && (
                 <p className="mt-4 leading-relaxed text-white/90">
                   {content.tagline}
@@ -73,7 +86,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   <ul className="grid gap-2">
                     {column.links.map((link, i) => (
                       <li key={i}>
-                        <FooterAnchor link={link} />
+                        <FooterAnchor link={link} siteUrl={siteUrl} />
                       </li>
                     ))}
                   </ul>
@@ -161,7 +174,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                         className="grid size-14 place-items-center rounded-lg bg-white p-1.5"
                       >
                         <Image
-                          src={logo.url}
+                          src={shipped(logo.url)}
                           width={logo.width}
                           height={logo.height}
                           alt={logo.alt}
@@ -188,7 +201,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
                   <ul className="grid grid-cols-3 gap-x-4 gap-y-5">
                     {content.badges.map((badge, i) => (
                       <li key={i}>
-                        <BadgeTile badge={badge} />
+                        <BadgeTile badge={badge} onSite={shipped} />
                       </li>
                     ))}
                   </ul>
@@ -209,7 +222,7 @@ export function SiteFooter({ content }: { content: FooterContent }) {
             <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
               {content.legalLinks.map((link, i) => (
                 <li key={i}>
-                  <FooterAnchor link={link} />
+                  <FooterAnchor link={link} siteUrl={siteUrl} />
                 </li>
               ))}
             </ul>
@@ -248,14 +261,21 @@ const badgeClass =
  * registration number. With a certificate link, the whole of it opens the
  * certificate in a new tab, the number underlined as a link.
  */
-function BadgeTile({ badge }: { badge: FooterBadge }) {
+function BadgeTile({
+  badge,
+  onSite,
+}: {
+  badge: FooterBadge;
+  /** An address on the customer site, from wherever the footer is. */
+  onSite: (url: string) => string;
+}) {
   // A draft's preview shows a link before it is checked: only a sound one opens.
-  const href = isFooterUrl(badge.link) ? badge.link : null;
+  const href = isFooterUrl(badge.link) ? onSite(badge.link) : null;
   const body = (
     <>
       {badge.image && (
         <Image
-          src={badge.image.url}
+          src={onSite(badge.image.url)}
           width={badge.image.width}
           height={badge.image.height}
           alt=""
@@ -293,8 +313,22 @@ function BadgeTile({ badge }: { badge: FooterBadge }) {
 }
 
 /** A link of the footer: on the site by `Link`, elsewhere in a new tab. */
-function FooterAnchor({ link }: { link: FooterLink }) {
+function FooterAnchor({
+  link,
+  siteUrl,
+}: {
+  link: FooterLink;
+  siteUrl: string;
+}) {
   const href = footerLinkHref(link.target);
+  if (siteUrl && href.startsWith("/")) {
+    // A page of the customer site, from Connect.
+    return (
+      <a href={`${siteUrl}${href}`} className={linkClass}>
+        {link.label}
+      </a>
+    );
+  }
   if (isExternalFooterLink(link.target)) {
     return (
       <a

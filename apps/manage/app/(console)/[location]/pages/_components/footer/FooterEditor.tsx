@@ -3,6 +3,7 @@
 import {
   BUNDLED_BADGES,
   BUNDLED_PAYMENT_LOGOS,
+  CONNECT_FOOTER_KEY,
   FOOTER_LIMITS,
   FOOTER_LINK_KINDS,
   FOOTER_LINK_KIND_LABELS,
@@ -21,6 +22,7 @@ import {
   sameFooterContent,
   type FooterBadge,
   type FooterContent,
+  type FooterKey,
   type FooterLink,
   type FooterLinkTarget,
   type FooterSocial,
@@ -31,7 +33,8 @@ import {
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
-import { Field, Input, Textarea } from "@repo/ui/field";
+import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
+import Link from "next/link";
 import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { useRef, useState, useTransition, type ReactNode } from "react";
@@ -52,7 +55,7 @@ import {
 } from "@repo/console/use-image-upload";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import { RowControls, movedRow } from "../../_components/RowControls";
+import { RowControls, movedRow } from "../RowControls";
 import { publishFooterAction, saveFooterDraftAction } from "./actions";
 import { FooterContentView } from "./FooterContentView";
 import { logoSrc } from "./logo-src";
@@ -95,14 +98,18 @@ const rowed = <T extends object>(row: T): Rowed<T> => ({
 });
 
 /**
- * The footer's editor, under its header (`EditorHeader`): the publish bar
- * on top, then a card per part of the footer in the order the site shows
+ * A footer's editor, under its header (`EditorHeader`): the publish bar
+ * on top, then a card per part of the footer in the order the app shows
  * them. "Publish" opens what still needs doing, else what the publish
- * changes; the footer goes live on every page at once. It stays published
- * once it is. A save is refused when someone else changed the footer
- * since the form was opened.
+ * changes; the footer goes live on every page it is on at once. It stays
+ * published once it is. A save is refused when someone else changed the
+ * footer since the form was opened. Connect's starts with "Use same as
+ * Website footer": on, its parts are hidden, kept for when it is off, and
+ * Connect shows the website's footer as published.
  */
 export function FooterEditor({
+  footerKey,
+  websiteFooterHref,
   draft,
   published: publishedAtOpen,
   publishedAt: publishedAtAtOpen,
@@ -112,6 +119,9 @@ export function FooterEditor({
   previewUrl,
   siteUrl,
 }: {
+  footerKey: FooterKey;
+  /** The website's footer's editor, which Connect's points to while it shows it. */
+  websiteFooterHref: string;
   draft: FooterContent;
   /** The copy the public is shown; null until the first publish. */
   published: FooterContent | null;
@@ -119,7 +129,7 @@ export function FooterEditor({
   version: string | null;
   pages: readonly LinkablePage[];
   locations: readonly LinkableLocation[];
-  /** The home page's preview, which shows the footer's saved draft. */
+  /** The preview of the page the footer is on, which shows its saved draft. */
   previewUrl: string;
   /** The customer site, where the logos it ships are. */
   siteUrl: string;
@@ -160,20 +170,26 @@ export function FooterEditor({
     year !== "" && normal.since === null
       ? "The copyright line's first year is not a year, such as 2024."
       : null;
-  const problems = [
-    ...(sinceProblem ? [sinceProblem] : []),
-    ...footerProblems(normal),
-  ];
-  const canWrite = limits.ok && sinceProblem === null;
+  const isConnect = footerKey === CONNECT_FOOTER_KEY;
+  // Showing the website's, Connect's own parts are kept unchecked.
+  const ownParts = !normal.sameAsWebsite;
+  const problems = ownParts
+    ? [...(sinceProblem ? [sinceProblem] : []), ...footerProblems(normal)]
+    : [];
+  /** Where the footer is, as the bar and the dialogs say it. */
+  const where = isConnect ? "Connect's landing page" : "Every page";
+  const canWrite = limits.ok && (sinceProblem === null || !ownParts);
   const dirty = !sameFooterContent(normal, saved);
   const status = pageStatusOf(normal, published);
   const publishedOn = publishedAt ? formatLocalDateTime(publishedAt) : "";
   const standingNote =
     status === "unpublished"
-      ? "Every page shows the footer the site started with until you publish."
+      ? isConnect
+        ? "Connect's landing page shows the website's footer until you publish."
+        : "Every page shows the footer the site started with until you publish."
       : status === "published"
         ? `Published ${publishedOn}.`
-        : `Every page shows the copy published ${publishedOn} until you publish again.`;
+        : `${where} shows the copy published ${publishedOn} until you publish again.`;
 
   const leaveDialog = useLeaveGuard(
     dirty,
@@ -189,6 +205,7 @@ export function FooterEditor({
     startTransition(async () => {
       const result = await answerOf(
         (publish ? publishFooterAction : saveFooterDraftAction)(
+          footerKey,
           version,
           normal,
         ),
@@ -221,7 +238,7 @@ export function FooterEditor({
     <span className="font-medium text-danger">{error}</span>
   ) : !limits.ok ? (
     <span className="font-medium text-danger">{limits.error}</span>
-  ) : sinceProblem ? (
+  ) : sinceProblem && ownParts ? (
     <span className="font-medium text-danger">{sinceProblem}</span>
   ) : (
     <span className="text-muted">{standingNote}</span>
@@ -248,521 +265,569 @@ export function FooterEditor({
         onSave={() => write(false)}
         canPublish={!busy && status !== "published"}
         publishHint={
-          status === "published" ? "Every page shows this already." : null
+          status === "published" ? `${where} shows this already.` : null
         }
         onPublish={() => setPublishing(true)}
-        path="On every page"
+        path={isConnect ? "On Connect's landing page" : "On every page"}
         message={message}
         moves={moves}
       />
 
       <div className="mt-3 grid gap-5">
-        <Card>
-          <CardTitle description="The line under the logo.">Tagline</CardTitle>
-          <Field
-            label={
-              <Counted
-                label="Tagline"
-                value={normal.tagline}
-                limit={L.tagline}
-              />
-            }
-          >
-            <Textarea
-              rows={2}
-              value={content.tagline}
-              onChange={(event) => edit({ tagline: event.target.value })}
-            />
-          </Field>
-        </Card>
-
-        <Card>
-          <CardTitle
-            description={`Up to ${L.columns} columns of up to ${L.links} links, such as Destinations and About Heavenly Travel. A link to a site page that is not published, or to a location the public does not see, is left out until it is.`}
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={content.columns.length >= L.columns}
-                onClick={() =>
-                  edit({
-                    columns: [
-                      ...content.columns,
-                      rowed({ heading: "", links: [] }),
-                    ],
-                  })
+        {isConnect ? (
+          <Card>
+            <label className="flex items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={content.sameAsWebsite}
+                onChange={(event) =>
+                  edit({ sameAsWebsite: event.target.checked })
                 }
-              >
-                Add a column
-              </Button>
-            }
-          >
-            Link columns
-          </CardTitle>
-          {content.columns.length === 0 ? (
-            <p className="text-sm text-muted">No columns yet.</p>
-          ) : (
-            <div className="grid gap-6">
-              {content.columns.map((column, index) => {
-                const update = (patch: Partial<FormColumn>) =>
-                  edit({
-                    columns: content.columns.map((c) =>
-                      c.rowId === column.rowId ? { ...c, ...patch } : c,
-                    ),
-                  });
-                const name = column.heading || `column ${index + 1}`;
-                return (
-                  <div
-                    key={column.rowId}
-                    className="grid gap-3 rounded-card bg-shade p-4"
-                  >
-                    <div className="flex flex-wrap items-end gap-3">
-                      <Field
-                        className="min-w-48 flex-1"
-                        label={
-                          <Counted
-                            label="Heading"
-                            value={column.heading.trim()}
-                            limit={L.heading}
-                          />
-                        }
-                      >
-                        <Input
-                          autoComplete="off"
-                          placeholder="Destinations"
-                          value={column.heading}
-                          onChange={(event) =>
-                            update({ heading: event.target.value })
-                          }
-                        />
-                      </Field>
-                      <RowControls
-                        name={name}
-                        isFirst={index === 0}
-                        isLast={index === content.columns.length - 1}
-                        onMove={(by) =>
-                          edit({
-                            columns: movedRow(content.columns, index, by),
-                          })
-                        }
-                        onRemove={() =>
-                          edit({
-                            columns: content.columns.filter(
-                              (c) => c.rowId !== column.rowId,
-                            ),
-                          })
-                        }
-                      />
-                    </div>
-                    <LinkRows
-                      links={column.links}
-                      max={L.links}
-                      pages={pages}
-                      locations={locations}
-                      onChange={(links) => update({ links })}
-                      newLink={() => rowed(firstLink(pages))}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardTitle
-            description="Each network with its icon and its name."
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={content.social.length >= L.social}
-                onClick={() =>
-                  edit({
-                    social: [
-                      ...content.social,
-                      rowed({
-                        network: unusedNetwork(content.social),
-                        url: "",
-                      }),
-                    ],
-                  })
-                }
-              >
-                Add a network
-              </Button>
-            }
-          >
-            Follow us on
-          </CardTitle>
-          <div className="grid gap-4">
-            <HeadingField
-              value={content.socialHeading}
-              placeholder="Follow us on"
-              onChange={(socialHeading) => edit({ socialHeading })}
-            />
-            {content.social.length > 0 ? (
-              <CardRows>
-                {content.social.map((row, index) => {
-                  const update = (patch: Partial<FooterSocial>) =>
-                    edit({
-                      social: content.social.map((r) =>
-                        r.rowId === row.rowId ? { ...r, ...patch } : r,
-                      ),
-                    });
-                  return (
-                    <li
-                      key={row.rowId}
-                      className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0"
-                    >
-                      <Select
-                        aria-label="Network"
-                        className="w-40"
-                        value={row.network}
-                        options={SOCIAL_NETWORKS.map((network) => ({
-                          value: network,
-                          label: SOCIAL_NETWORK_LABELS[network],
-                        }))}
-                        onValueChange={(network) => {
-                          if (isSocialNetwork(network)) update({ network });
-                        }}
-                      />
-                      <Input
-                        aria-label={`${SOCIAL_NETWORK_LABELS[row.network]} address`}
-                        className="min-w-56 flex-1"
-                        type="url"
-                        autoComplete="off"
-                        placeholder="https://www.instagram.com/…"
-                        value={row.url}
-                        onChange={(event) =>
-                          update({ url: event.target.value })
-                        }
-                      />
-                      <RowControls
-                        name={SOCIAL_NETWORK_LABELS[row.network]}
-                        isFirst={index === 0}
-                        isLast={index === content.social.length - 1}
-                        onMove={(by) =>
-                          edit({ social: movedRow(content.social, index, by) })
-                        }
-                        onRemove={() =>
-                          edit({
-                            social: content.social.filter(
-                              (r) => r.rowId !== row.rowId,
-                            ),
-                          })
-                        }
-                      />
-                    </li>
-                  );
-                })}
-              </CardRows>
-            ) : null}
-          </div>
-        </Card>
-
-        <Card>
-          <CardTitle description="Each one left empty is left out. Contact us shows these too, with the company's name and registration below.">
-            Get in touch
-          </CardTitle>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <HeadingField
-              className="sm:col-span-2"
-              value={content.contactHeading}
-              placeholder="Get in touch"
-              onChange={(contactHeading) => edit({ contactHeading })}
-            />
-            <Field
-              label="WhatsApp number"
-              hint="The footer links it as WhatsApp us."
-            >
-              <Input
-                type="tel"
-                autoComplete="off"
-                placeholder="+60 12-527 8808"
-                value={content.whatsapp}
-                onChange={(event) => edit({ whatsapp: event.target.value })}
               />
-            </Field>
-            <Field label="Phone">
-              <Input
-                type="tel"
-                autoComplete="off"
-                placeholder="012-527 8808"
-                value={content.phone}
-                onChange={(event) => edit({ phone: event.target.value })}
-              />
-            </Field>
-            <Field label="Email" className="sm:col-span-2">
-              <Input
-                type="email"
-                autoComplete="off"
-                placeholder="sales@heavenlytravel.my"
-                value={content.email}
-                onChange={(event) => edit({ email: event.target.value })}
-              />
-            </Field>
-            <Field
-              className="sm:col-span-2"
-              label={
-                <Counted
-                  label="Office address"
-                  value={normal.address}
-                  limit={L.address}
-                />
-              }
-              hint="A line each, as it is printed."
-            >
-              <Textarea
-                rows={3}
-                value={content.address}
-                onChange={(event) => edit({ address: event.target.value })}
-              />
-            </Field>
-          </div>
-        </Card>
-
-        <Card>
-          <CardTitle
-            description="The bodies the company is registered with, each with its logo, its name, its registration number and a link to its certificate, which the footer opens in a new tab."
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={content.badges.length >= L.badges}
-                onClick={() =>
-                  edit({
-                    badges: [
-                      ...content.badges,
-                      rowed({
-                        image: null,
-                        name: "",
-                        detail: "",
-                        link: "",
-                      }),
-                    ],
-                  })
-                }
-              >
-                Add a registration
-              </Button>
-            }
-          >
-            Registered with
-          </CardTitle>
-          <div className="grid gap-4">
-            <HeadingField
-              value={content.badgesHeading}
-              placeholder="Registered with"
-              onChange={(badgesHeading) => edit({ badgesHeading })}
-            />
-            {content.badges.length === 0 ? (
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-                None yet. The footer leaves this part out until there is one.
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() =>
-                    edit({
-                      badges: BUNDLED_BADGES.map((badge) => rowed(badge)),
-                    })
-                  }
+              <span className="grid gap-0.5 text-sm">
+                <span className="font-medium text-ink">
+                  Use same as Website footer
+                </span>
+                <span className="text-muted">
+                  Connect shows the website&apos;s footer as it is published,
+                  and follows each change to it. Turn this off to give Connect a
+                  footer of its own.
+                </span>
+              </span>
+            </label>
+            {content.sameAsWebsite ? (
+              <p className="mt-4 border-t border-edge pt-4 text-sm text-muted">
+                The website&apos;s footer is edited on{" "}
+                <Link
+                  href={websiteFooterHref}
+                  className="font-medium text-brand underline-offset-4 hover:underline"
                 >
-                  Add the old site&apos;s three
-                </Button>
-              </div>
-            ) : (
-              <CardRows>
-                {content.badges.map((badge, index) => {
-                  const update = (patch: Partial<FooterBadge>) =>
-                    edit({
-                      badges: content.badges.map((b) =>
-                        b.rowId === badge.rowId ? { ...b, ...patch } : b,
-                      ),
-                    });
-                  const name = badge.name || `registration ${index + 1}`;
-                  return (
-                    <li
-                      key={badge.rowId}
-                      className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,14rem)_1fr]"
-                    >
-                      <ImageUpload
-                        label={`Logo of ${name}`}
-                        uploadPath={LOCATION_IMAGE_UPLOAD_PATH}
-                        src={
-                          badge.image ? logoSrc(siteUrl, badge.image.url) : null
-                        }
-                        alt=""
-                        look="logo"
-                        onChange={(image) =>
-                          update({
-                            image: image ? { ...image, alt: "" } : null,
-                          })
-                        }
-                      />
-                      <div className="grid gap-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
+                  Website › Footer
+                </Link>
+                .
+              </p>
+            ) : null}
+          </Card>
+        ) : null}
+        {ownParts ? (
+          <>
+            <Card>
+              <CardTitle description="The line under the logo.">
+                Tagline
+              </CardTitle>
+              <Field
+                label={
+                  <Counted
+                    label="Tagline"
+                    value={normal.tagline}
+                    limit={L.tagline}
+                  />
+                }
+              >
+                <Textarea
+                  rows={2}
+                  value={content.tagline}
+                  onChange={(event) => edit({ tagline: event.target.value })}
+                />
+              </Field>
+            </Card>
+
+            <Card>
+              <CardTitle
+                description={`Up to ${L.columns} columns of up to ${L.links} links, such as Destinations and About Heavenly Travel. A link to a site page that is not published, or to a location the public does not see, is left out until it is.`}
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={content.columns.length >= L.columns}
+                    onClick={() =>
+                      edit({
+                        columns: [
+                          ...content.columns,
+                          rowed({ heading: "", links: [] }),
+                        ],
+                      })
+                    }
+                  >
+                    Add a column
+                  </Button>
+                }
+              >
+                Link columns
+              </CardTitle>
+              {content.columns.length === 0 ? (
+                <p className="text-sm text-muted">No columns yet.</p>
+              ) : (
+                <div className="grid gap-6">
+                  {content.columns.map((column, index) => {
+                    const update = (patch: Partial<FormColumn>) =>
+                      edit({
+                        columns: content.columns.map((c) =>
+                          c.rowId === column.rowId ? { ...c, ...patch } : c,
+                        ),
+                      });
+                    const name = column.heading || `column ${index + 1}`;
+                    return (
+                      <div
+                        key={column.rowId}
+                        className="grid gap-3 rounded-card bg-shade p-4"
+                      >
+                        <div className="flex flex-wrap items-end gap-3">
                           <Field
+                            className="min-w-48 flex-1"
                             label={
                               <Counted
-                                label="Name"
-                                value={badge.name.trim()}
-                                limit={L.badgeName}
+                                label="Heading"
+                                value={column.heading.trim()}
+                                limit={L.heading}
                               />
                             }
                           >
                             <Input
                               autoComplete="off"
-                              placeholder="MATTA"
-                              value={badge.name}
+                              placeholder="Destinations"
+                              value={column.heading}
                               onChange={(event) =>
-                                update({ name: event.target.value })
+                                update({ heading: event.target.value })
                               }
                             />
                           </Field>
-                          <Field
-                            label={
-                              <Counted
-                                label="Registration no"
-                                value={badge.detail.trim()}
-                                limit={L.badgeDetail}
-                              />
+                          <RowControls
+                            name={name}
+                            isFirst={index === 0}
+                            isLast={index === content.columns.length - 1}
+                            onMove={(by) =>
+                              edit({
+                                columns: movedRow(content.columns, index, by),
+                              })
                             }
-                          >
-                            <Input
-                              autoComplete="off"
-                              placeholder="KPK/LN 10512"
-                              value={badge.detail}
-                              onChange={(event) =>
-                                update({ detail: event.target.value })
-                              }
-                            />
-                          </Field>
-                        </div>
-                        <Field
-                          label="Certificate link"
-                          hint="Optional. The certificate on the body's site, or a file of it. The footer's badge opens it."
-                        >
-                          <Input
-                            inputMode="url"
-                            autoComplete="off"
-                            placeholder="https://"
-                            value={badge.link}
-                            onChange={(event) =>
-                              update({ link: event.target.value })
+                            onRemove={() =>
+                              edit({
+                                columns: content.columns.filter(
+                                  (c) => c.rowId !== column.rowId,
+                                ),
+                              })
                             }
                           />
-                        </Field>
-                        <RowControls
-                          name={name}
-                          isFirst={index === 0}
-                          isLast={index === content.badges.length - 1}
-                          onMove={(by) =>
-                            edit({
-                              badges: movedRow(content.badges, index, by),
-                            })
-                          }
-                          onRemove={() =>
-                            edit({
-                              badges: content.badges.filter(
-                                (b) => b.rowId !== badge.rowId,
-                              ),
-                            })
-                          }
+                        </div>
+                        <LinkRows
+                          links={column.links}
+                          max={L.links}
+                          pages={pages}
+                          locations={locations}
+                          onChange={(links) => update({ links })}
+                          newLink={() => rowed(firstLink(pages))}
                         />
                       </div>
-                    </li>
-                  );
-                })}
-              </CardRows>
-            )}
-          </div>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
 
-        <PaymentCard
-          content={content}
-          max={L.paymentLogos}
-          siteUrl={siteUrl}
-          onEdit={edit}
-          onAdd={(image) =>
-            // Uploads land one by one: each joins the list as it is then.
-            setContent((current) => ({
-              ...current,
-              paymentLogos: [...current.paymentLogos, rowed(image)],
-            }))
-          }
-        />
-
-        <Card>
-          <CardTitle description="The last line of the footer: the company and its registration, then links such as the terms. Contact us shows the name and the registration too.">
-            Copyright line
-          </CardTitle>
-          <div className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_8rem]">
-              <Field
-                label={
-                  <Counted
-                    label="Company name"
-                    value={normal.legalName}
-                    limit={L.legalName}
-                  />
+            <Card>
+              <CardTitle
+                description="Each network with its icon and its name."
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={content.social.length >= L.social}
+                    onClick={() =>
+                      edit({
+                        social: [
+                          ...content.social,
+                          rowed({
+                            network: unusedNetwork(content.social),
+                            url: "",
+                          }),
+                        ],
+                      })
+                    }
+                  >
+                    Add a network
+                  </Button>
                 }
               >
-                <Input
-                  autoComplete="off"
-                  placeholder="Heavenly Travel Sdn Bhd"
-                  value={content.legalName}
-                  onChange={(event) => edit({ legalName: event.target.value })}
+                Follow us on
+              </CardTitle>
+              <div className="grid gap-4">
+                <HeadingField
+                  value={content.socialHeading}
+                  placeholder="Follow us on"
+                  onChange={(socialHeading) => edit({ socialHeading })}
                 />
-              </Field>
-              <Field
-                label={
-                  <Counted
-                    label="Registration"
-                    value={normal.registration}
-                    limit={L.registration}
+                {content.social.length > 0 ? (
+                  <CardRows>
+                    {content.social.map((row, index) => {
+                      const update = (patch: Partial<FooterSocial>) =>
+                        edit({
+                          social: content.social.map((r) =>
+                            r.rowId === row.rowId ? { ...r, ...patch } : r,
+                          ),
+                        });
+                      return (
+                        <li
+                          key={row.rowId}
+                          className="flex flex-wrap items-center gap-2 py-3 first:pt-0 last:pb-0"
+                        >
+                          <Select
+                            aria-label="Network"
+                            className="w-40"
+                            value={row.network}
+                            options={SOCIAL_NETWORKS.map((network) => ({
+                              value: network,
+                              label: SOCIAL_NETWORK_LABELS[network],
+                            }))}
+                            onValueChange={(network) => {
+                              if (isSocialNetwork(network)) update({ network });
+                            }}
+                          />
+                          <Input
+                            aria-label={`${SOCIAL_NETWORK_LABELS[row.network]} address`}
+                            className="min-w-56 flex-1"
+                            type="url"
+                            autoComplete="off"
+                            placeholder="https://www.instagram.com/…"
+                            value={row.url}
+                            onChange={(event) =>
+                              update({ url: event.target.value })
+                            }
+                          />
+                          <RowControls
+                            name={SOCIAL_NETWORK_LABELS[row.network]}
+                            isFirst={index === 0}
+                            isLast={index === content.social.length - 1}
+                            onMove={(by) =>
+                              edit({
+                                social: movedRow(content.social, index, by),
+                              })
+                            }
+                            onRemove={() =>
+                              edit({
+                                social: content.social.filter(
+                                  (r) => r.rowId !== row.rowId,
+                                ),
+                              })
+                            }
+                          />
+                        </li>
+                      );
+                    })}
+                  </CardRows>
+                ) : null}
+              </div>
+            </Card>
+
+            <Card>
+              <CardTitle description="Each one left empty is left out. Contact us shows these too, with the company's name and registration below.">
+                Get in touch
+              </CardTitle>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <HeadingField
+                  className="sm:col-span-2"
+                  value={content.contactHeading}
+                  placeholder="Get in touch"
+                  onChange={(contactHeading) => edit({ contactHeading })}
+                />
+                <Field
+                  label="WhatsApp number"
+                  hint="The footer links it as WhatsApp us."
+                >
+                  <Input
+                    type="tel"
+                    autoComplete="off"
+                    placeholder="+60 12-527 8808"
+                    value={content.whatsapp}
+                    onChange={(event) => edit({ whatsapp: event.target.value })}
                   />
-                }
-              >
-                <Input
-                  autoComplete="off"
-                  placeholder="202301000086 (1494005-W)"
-                  value={content.registration}
-                  onChange={(event) =>
-                    edit({ registration: event.target.value })
+                </Field>
+                <Field label="Phone">
+                  <Input
+                    type="tel"
+                    autoComplete="off"
+                    placeholder="012-527 8808"
+                    value={content.phone}
+                    onChange={(event) => edit({ phone: event.target.value })}
+                  />
+                </Field>
+                <Field label="Email" className="sm:col-span-2">
+                  <Input
+                    type="email"
+                    autoComplete="off"
+                    placeholder="sales@heavenlytravel.my"
+                    value={content.email}
+                    onChange={(event) => edit({ email: event.target.value })}
+                  />
+                </Field>
+                <Field
+                  className="sm:col-span-2"
+                  label={
+                    <Counted
+                      label="Office address"
+                      value={normal.address}
+                      limit={L.address}
+                    />
                   }
-                />
-              </Field>
-              <Field
-                label="Since"
-                hint={
-                  year !== "" && normal.since === null
-                    ? "A year, such as 2024."
-                    : "The first year shown."
+                  hint="A line each, as it is printed."
+                >
+                  <Textarea
+                    rows={3}
+                    value={content.address}
+                    onChange={(event) => edit({ address: event.target.value })}
+                  />
+                </Field>
+              </div>
+            </Card>
+
+            <Card>
+              <CardTitle
+                description="The bodies the company is registered with, each with its logo, its name, its registration number and a link to its certificate, which the footer opens in a new tab."
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={content.badges.length >= L.badges}
+                    onClick={() =>
+                      edit({
+                        badges: [
+                          ...content.badges,
+                          rowed({
+                            image: null,
+                            name: "",
+                            detail: "",
+                            link: "",
+                          }),
+                        ],
+                      })
+                    }
+                  >
+                    Add a registration
+                  </Button>
                 }
               >
-                <Input
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="2024"
-                  value={content.since}
-                  onChange={(event) => edit({ since: event.target.value })}
+                Registered with
+              </CardTitle>
+              <div className="grid gap-4">
+                <HeadingField
+                  value={content.badgesHeading}
+                  placeholder="Registered with"
+                  onChange={(badgesHeading) => edit({ badgesHeading })}
                 />
-              </Field>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-medium text-body">Links</p>
-              <LinkRows
-                links={content.legalLinks}
-                max={L.legalLinks}
-                pages={pages}
-                locations={locations}
-                onChange={(legalLinks) => edit({ legalLinks })}
-                newLink={() => rowed(firstLink(pages))}
-              />
-            </div>
-          </div>
-        </Card>
+                {content.badges.length === 0 ? (
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
+                    None yet. The footer leaves this part out until there is
+                    one.
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        edit({
+                          badges: BUNDLED_BADGES.map((badge) => rowed(badge)),
+                        })
+                      }
+                    >
+                      Add the old site&apos;s three
+                    </Button>
+                  </div>
+                ) : (
+                  <CardRows>
+                    {content.badges.map((badge, index) => {
+                      const update = (patch: Partial<FooterBadge>) =>
+                        edit({
+                          badges: content.badges.map((b) =>
+                            b.rowId === badge.rowId ? { ...b, ...patch } : b,
+                          ),
+                        });
+                      const name = badge.name || `registration ${index + 1}`;
+                      return (
+                        <li
+                          key={badge.rowId}
+                          className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,14rem)_1fr]"
+                        >
+                          <ImageUpload
+                            label={`Logo of ${name}`}
+                            uploadPath={LOCATION_IMAGE_UPLOAD_PATH}
+                            src={
+                              badge.image
+                                ? logoSrc(siteUrl, badge.image.url)
+                                : null
+                            }
+                            alt=""
+                            look="logo"
+                            onChange={(image) =>
+                              update({
+                                image: image ? { ...image, alt: "" } : null,
+                              })
+                            }
+                          />
+                          <div className="grid gap-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <Field
+                                label={
+                                  <Counted
+                                    label="Name"
+                                    value={badge.name.trim()}
+                                    limit={L.badgeName}
+                                  />
+                                }
+                              >
+                                <Input
+                                  autoComplete="off"
+                                  placeholder="MATTA"
+                                  value={badge.name}
+                                  onChange={(event) =>
+                                    update({ name: event.target.value })
+                                  }
+                                />
+                              </Field>
+                              <Field
+                                label={
+                                  <Counted
+                                    label="Registration no"
+                                    value={badge.detail.trim()}
+                                    limit={L.badgeDetail}
+                                  />
+                                }
+                              >
+                                <Input
+                                  autoComplete="off"
+                                  placeholder="KPK/LN 10512"
+                                  value={badge.detail}
+                                  onChange={(event) =>
+                                    update({ detail: event.target.value })
+                                  }
+                                />
+                              </Field>
+                            </div>
+                            <Field
+                              label="Certificate link"
+                              hint="Optional. The certificate on the body's site, or a file of it. The footer's badge opens it."
+                            >
+                              <Input
+                                inputMode="url"
+                                autoComplete="off"
+                                placeholder="https://"
+                                value={badge.link}
+                                onChange={(event) =>
+                                  update({ link: event.target.value })
+                                }
+                              />
+                            </Field>
+                            <RowControls
+                              name={name}
+                              isFirst={index === 0}
+                              isLast={index === content.badges.length - 1}
+                              onMove={(by) =>
+                                edit({
+                                  badges: movedRow(content.badges, index, by),
+                                })
+                              }
+                              onRemove={() =>
+                                edit({
+                                  badges: content.badges.filter(
+                                    (b) => b.rowId !== badge.rowId,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </CardRows>
+                )}
+              </div>
+            </Card>
+
+            <PaymentCard
+              content={content}
+              max={L.paymentLogos}
+              siteUrl={siteUrl}
+              onEdit={edit}
+              onAdd={(image) =>
+                // Uploads land one by one: each joins the list as it is then.
+                setContent((current) => ({
+                  ...current,
+                  paymentLogos: [...current.paymentLogos, rowed(image)],
+                }))
+              }
+            />
+
+            <Card>
+              <CardTitle description="The last line of the footer: the company and its registration, then links such as the terms. Contact us shows the name and the registration too.">
+                Copyright line
+              </CardTitle>
+              <div className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-[1fr_1fr_8rem]">
+                  <Field
+                    label={
+                      <Counted
+                        label="Company name"
+                        value={normal.legalName}
+                        limit={L.legalName}
+                      />
+                    }
+                  >
+                    <Input
+                      autoComplete="off"
+                      placeholder="Heavenly Travel Sdn Bhd"
+                      value={content.legalName}
+                      onChange={(event) =>
+                        edit({ legalName: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label={
+                      <Counted
+                        label="Registration"
+                        value={normal.registration}
+                        limit={L.registration}
+                      />
+                    }
+                  >
+                    <Input
+                      autoComplete="off"
+                      placeholder="202301000086 (1494005-W)"
+                      value={content.registration}
+                      onChange={(event) =>
+                        edit({ registration: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label="Since"
+                    hint={
+                      year !== "" && normal.since === null
+                        ? "A year, such as 2024."
+                        : "The first year shown."
+                    }
+                  >
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="2024"
+                      value={content.since}
+                      onChange={(event) => edit({ since: event.target.value })}
+                    />
+                  </Field>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-body">Links</p>
+                  <LinkRows
+                    links={content.legalLinks}
+                    max={L.legalLinks}
+                    pages={pages}
+                    locations={locations}
+                    onChange={(legalLinks) => edit({ legalLinks })}
+                    newLink={() => rowed(firstLink(pages))}
+                  />
+                </div>
+              </div>
+            </Card>
+          </>
+        ) : null}
 
         <Dialog
           open={publishing}
@@ -771,7 +836,9 @@ export function FooterEditor({
           description={
             problems.length > 0
               ? `${problems.length === 1 ? "One thing needs" : `${problems.length} things need`} fixing before the footer can be published.`
-              : "Every page of the customer site shows it at once."
+              : isConnect
+                ? "Connect's landing page shows it at once."
+                : "Every page of the customer site shows it at once."
           }
           width="md"
         >
@@ -790,8 +857,9 @@ export function FooterEditor({
               </p>
             ) : (
               <p className="text-sm text-body">
-                Its first publish: it takes the place of the footer the site
-                started with.
+                {isConnect
+                  ? "Its first publish: Connect has shown the website's footer until now."
+                  : "Its first publish: it takes the place of the footer the site started with."}
               </p>
             )}
             {!limits.ok ? <FormError error={limits.error} size="xs" /> : null}
@@ -816,7 +884,7 @@ export function FooterEditor({
             open={comparing}
             onOpenChange={setComparing}
             title="The published footer and this draft"
-            description="What every page shows now beside what you are editing. The parts that differ are marked Changed."
+            description={`What ${where.toLowerCase()} shows now beside what you are editing. The parts that differ are marked Changed.`}
             width="lg"
           >
             <SideBySide

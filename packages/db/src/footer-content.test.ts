@@ -5,6 +5,10 @@ import {
   changedFooterParts,
   checkFooterComplete,
   checkFooterLimits,
+  CONNECT_FOOTER_KEY,
+  FOOTER_KEY,
+  footerAppOf,
+  footerEditorPath,
   copyrightOf,
   defaultFooterContent,
   footerContentOf,
@@ -277,6 +281,42 @@ describe("footer parts", () => {
     assert.equal(
       copyrightOf({ ...content, since: null }, 2026),
       "© 2026 Heavenly Travel Sdn Bhd",
+    );
+  });
+});
+
+describe("Connect's footer", () => {
+  it("keeps its own parts while it shows the website's", () => {
+    const content = footerContentOf({
+      ...defaultFooterContent(DESTINATIONS),
+      tagline: "Ours",
+      sameAsWebsite: true,
+    });
+    assert.equal(content.sameAsWebsite, true);
+    assert.equal(content.tagline, "Ours");
+    assert.equal(footerContentOf({}).sameAsWebsite, false);
+  });
+
+  it("publishes while it shows the website's, whatever its own parts lack", () => {
+    const empty = footerContentOf({});
+    assert.equal(checkFooterComplete(empty).ok, false);
+    assert.equal(
+      checkFooterComplete({ ...empty, sameAsWebsite: true }).ok,
+      true,
+    );
+    assert.deepEqual(
+      changedFooterParts(empty, { ...empty, sameAsWebsite: true }),
+      ["Same as Website"],
+    );
+  });
+
+  it("is edited among Connect's pages", () => {
+    assert.equal(footerAppOf(CONNECT_FOOTER_KEY), "connect");
+    assert.equal(footerAppOf(FOOTER_KEY), "website");
+    assert.equal(footerEditorPath(FOOTER_KEY), "/~/pages/website/footer");
+    assert.equal(
+      footerEditorPath(CONNECT_FOOTER_KEY),
+      "/~/pages/connect/footer",
     );
   });
 });

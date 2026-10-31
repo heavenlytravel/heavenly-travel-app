@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "@repo/tailwind-config";
-/* The sign-in and account screens live outside this app. */
+/* The sign-in and account screens, and the footer Connect shares, live outside this app. */
 @source "../../../packages/auth/src";
+@source "../../../packages/console/src/SiteFooter.tsx";
 
 /*
  * The site's look is set by the tokens in @repo/tailwind-config under

@@ -225,7 +225,7 @@ const ACTIONS = {
   "site.page.published": { entityType: "site-page", customerVisible: false },
   /** A site page's key and whether it is published. */
   "site.page.updated": { entityType: "site-page", customerVisible: false },
-  /** The footer's whole content, before and after. Logged against `FOOTER_KEY`. */
+  /** A footer's whole content, before and after. Logged against its key, `FOOTER_KEY` or `CONNECT_FOOTER_KEY`. */
   "site.footer.published": { entityType: "site-page", customerVisible: false },
   /**
    * The name, the slug, the state codes and the state it had, in

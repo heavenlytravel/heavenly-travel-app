@@ -3,6 +3,8 @@ import {
   CONNECT_PAGE,
   CONNECT_PAGE_EDITOR_PATH,
   SITE_PAGES_PATH,
+  footerEditorPath,
+  isFooterKey,
   pageEditorPath,
   pageSegmentOf,
   type ActivityArea,
@@ -370,8 +372,9 @@ export function locationPageHref(slug: string, ref: LocationPageRef) {
 
 export { SITE_PAGES_PATH };
 
-/** The editor of one of the site's own pages. */
+/** The editor of one of the site's own pages, or of a footer. */
 export function sitePageHref(page: string) {
+  if (isFooterKey(page)) return footerEditorPath(page);
   return page === CONNECT_PAGE
     ? CONNECT_PAGE_EDITOR_PATH
     : `${SITE_PAGES_PATH}/${page}`;
@@ -405,14 +408,14 @@ export function usersHref(filter: { q?: string; page?: number } = {}) {
   });
 }
 
-/**
- * The activity: under `~` the log across the app, under a slug the
- * location's own history, either one narrowed to the entries of one
 /** One account's page under All Users: its profile, its sign-in and where it has access. Console-wide. */
 export function userHref(id: string) {
   return consolePath(null, "users", id);
 }
 
+/**
+ * The activity: under `~` the log across the app, under a slug the
+ * location's own history, either one narrowed to the entries of one
  * area. At the page of it older than the entry with the id `before`.
  */
 export function activityHref(

@@ -1,7 +1,14 @@
-import { CONTACT, paragraphsOf, type PageContent } from "@repo/db";
+import {
+  CONTACT,
+  paragraphsOf,
+  type FooterContent,
+  type PageContent,
+} from "@repo/db";
 import type { VendorOpening } from "@repo/db/server";
+import { SiteFooter } from "@repo/console/SiteFooter";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
+import { Logo } from "@repo/ui/logo";
 import { Markdown } from "@repo/ui/markdown";
 import { ArrowRight, Check, MessageCircle } from "lucide-react";
 import Image from "next/image";
@@ -30,14 +37,14 @@ export function Landing({
   content,
   openings,
   ribbon,
-  terms,
+  footer,
   signedIn = false,
 }: {
   content: PageContent;
   openings: VendorOpening[];
   ribbon?: ReactNode;
-  /** The customer site's terms and privacy policy, linked in the footer. */
-  terms: { termsHref: string; privacyHref: string };
+  /** The footer as shown, and the customer site's address its links are on. */
+  footer: { content: FooterContent; siteUrl: string };
   /** A session is open: "Open Connect" in place of "Sign in". */
   signedIn?: boolean;
 }) {
@@ -51,24 +58,19 @@ export function Landing({
       <BodyCards body={content.body} />
       <Questions faqs={content.faqs} />
       <Closing />
-      <footer className="bg-ink text-white/75">
-        <div
-          className={cx(
-            COLUMN,
-            "flex flex-wrap items-center justify-between gap-3 py-5 text-xs",
-          )}
-        >
-          <span>Heavenly Travel Sdn Bhd · heavenlytravel.my</span>
-          <span className="flex gap-4">
-            <a href={terms.termsHref} className="hover:text-white focus-ring">
-              Terms
-            </a>
-            <a href={terms.privacyHref} className="hover:text-white focus-ring">
-              Privacy
-            </a>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter
+        content={footer.content}
+        siteUrl={footer.siteUrl}
+        logo={
+          <Link
+            href="/"
+            aria-label="Heavenly Travel Connect"
+            className="inline-block focus-ring focus-ring-dark"
+          >
+            <Logo tone="white" alt="" className="h-10" />
+          </Link>
+        }
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use server";
 
 import {
+  FOOTER_KEY,
+  isFooterKey,
   publishFooter,
   saveFooterDraft,
   type PageSaved,
@@ -11,49 +13,53 @@ import { FORBIDDEN_MESSAGE, STALE_MESSAGE } from "@repo/console/action-state";
 import { refreshSitePagesAfter } from "../../../../../_lib/site";
 
 /**
- * The footer editor's writes: save the draft, publish. Each checks
- * `website.manage` again, since an action is reachable by direct POST, and
- * reads the version for its type; the writers in @repo/db check the
- * content. A publish refreshes the customer site's pages after the answer:
- * the footer is on every one. `version` names the content the editor was
+ * The footer editors' writes, the website's footer's or Connect's: save
+ * the draft, publish. Each checks `website.manage` again, since an action
+ * is reachable by direct POST, and reads the key and the version for
+ * their types; the writers in @repo/db check the content. Publishing the
+ * website's refreshes the customer site's pages after the answer: the
+ * footer is on every one. Connect reads its footer fresh. `version` names the content the editor was
  * opened with, so a footer someone else changed meanwhile is not
  * overwritten; the answer carries the new one.
  */
 
 async function writeFooter(
+  key: unknown,
   version: unknown,
   content: unknown,
   publish: boolean,
 ): Promise<PageSaved> {
-  if (version !== null && typeof version !== "string") {
+  if (!isFooterKey(key) || (version !== null && typeof version !== "string")) {
     return { ok: false, error: STALE_MESSAGE };
   }
   const admin = await getAdmin("website.manage");
   if (!admin) return { ok: false, error: FORBIDDEN_MESSAGE };
 
   const result = publish
-    ? await publishFooter(actorOf(admin), version, content)
-    : await saveFooterDraft(version, content);
+    ? await publishFooter(key, actorOf(admin), version, content)
+    : await saveFooterDraft(key, version, content);
   if (result.ok) {
     revalidateLocation();
     // A draft changes nothing in public.
-    if (publish) refreshSitePagesAfter();
+    if (publish && key === FOOTER_KEY) refreshSitePagesAfter();
   }
   return result;
 }
 
-/** Overwrites the footer's draft. Nothing changes in public. */
+/** Overwrites a footer's draft. Nothing changes in public. */
 export async function saveFooterDraftAction(
+  key: string,
   version: string | null,
   content: unknown,
 ): Promise<PageSaved> {
-  return writeFooter(version, content, false);
+  return writeFooter(key, version, content, false);
 }
 
-/** Saves the footer and makes it what every page shows, when it is complete. */
+/** Saves a footer and makes it what its app shows, when it is complete. */
 export async function publishFooterAction(
+  key: string,
   version: string | null,
   content: unknown,
 ): Promise<PageSaved> {
-  return writeFooter(version, content, true);
+  return writeFooter(key, version, content, true);
 }

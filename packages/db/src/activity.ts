@@ -16,7 +16,7 @@ import {
   SITE_PAGE_LABELS,
   type SitePageKey,
 } from "./site-page-input";
-import { FOOTER_KEY, FOOTER_LABEL } from "./footer-content";
+import { FOOTER_KEYS, FOOTER_LABELS, type FooterKey } from "./footer-content";
 
 /**
  * The activity log: one row per change, written by the transaction that
@@ -245,7 +245,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     media: new Map(),
     "site-page": new Map([
       ...SITE_PAGES.map((page) => [page, SITE_PAGE_LABELS[page]] as const),
-      [FOOTER_KEY, FOOTER_LABEL],
+      ...FOOTER_KEYS.map((key) => [key, FOOTER_LABELS[key]] as const),
     ]),
     location: withDeleted(
       locations.map((l) => [l.id, l.name] as const),
@@ -478,12 +478,14 @@ export async function listSitePagePublishes(
   return publishesById(rows.map((row) => row.id));
 }
 
-/** The publishes of the footer, newest first, without their contents. */
-export async function listFooterPublishes(): Promise<ActivityEntry[]> {
+/** The publishes of a footer, newest first, without their contents. */
+export async function listFooterPublishes(
+  key: FooterKey,
+): Promise<ActivityEntry[]> {
   const rows = await db.activityLog.findMany({
     where: {
       entityType: "site-page",
-      entityId: FOOTER_KEY,
+      entityId: key,
       action: "site.footer.published",
     },
     select: { id: true },

@@ -140,11 +140,11 @@ export const SITE_PAGE_PATHS: readonly string[] = WEBSITE_PAGES.filter(
  */
 export const SITE_PAGES_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/website`;
 
-/**
- * Where Connect's landing page is edited: its home under Pages' Connect,
- * which lists Connect's pages.
- */
-export const CONNECT_PAGE_EDITOR_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/connect/home`;
+/** Where the console keeps Connect's pages, under its Pages: its home, its footer. */
+export const CONNECT_PAGES_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/connect`;
+
+/** Where Connect's landing page is edited: its home among Connect's pages. */
+export const CONNECT_PAGE_EDITOR_PATH = `${CONNECT_PAGES_PATH}/home`;
 
 /** Where a site page is edited in the console; the preview links it as Edit. */
 export function sitePageEditorPath(page: SitePageKey) {

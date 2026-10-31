@@ -289,6 +289,7 @@ export type {
   PublishedSitePage,
 } from "./site-pages";
 export {
+  getConnectFooter,
   getDefaultFooter,
   getFooter,
   getFooterPublish,

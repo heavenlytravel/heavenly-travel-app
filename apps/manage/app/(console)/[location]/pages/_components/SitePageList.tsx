@@ -1,4 +1,5 @@
 import {
+  FOOTER_KEY_OF,
   isPageInList,
   sitePageAppOf,
   type PageFilter,
@@ -48,8 +49,9 @@ export function SitePagesScreen(props: {
 /**
  * The pages of one app, the customer site's or Connect's, as Pages lists
  * a location's: the strip counting them by status, then the list, which
- * the strip and a search narrow. The website's ends with its footer,
- * which is on every one of its pages. Each route checks the access first.
+ * the strip and a search narrow. Each ends with its footer: the
+ * website's on every one of its pages, Connect's on its landing page.
+ * Each route checks the access first.
  */
 async function sitePageList({
   app,
@@ -60,15 +62,16 @@ async function sitePageList({
   status: PageFilter | undefined;
   q: string | undefined;
 }) {
+  const footerKey = FOOTER_KEY_OF[app];
   const [sitePages, footer] = await Promise.all([
     listSitePageSummaries(),
-    app === "website" ? getFooterSummary() : null,
+    getFooterSummary(footerKey),
   ]);
   const rows = [
     ...sitePages
       .filter((page) => sitePageAppOf(page.page) === app)
       .map(sitePageRow),
-    ...(footer ? [footerRow(footer)] : []),
+    footerRow(footerKey, footer),
   ];
   const groups: PageGroup[] = rows
     .filter((row) => isPageInList(countedOfRow(row), row.path, { status, q }))

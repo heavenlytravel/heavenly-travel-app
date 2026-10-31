@@ -91,7 +91,7 @@ describe("Connect's landing page", () => {
     assert.equal(sitePageAppOf(CONNECT_PAGE), "connect");
     assert.equal(sitePagePath(CONNECT_PAGE), "/");
     assert.equal(sitePagePreviewPath(CONNECT_PAGE), "/preview");
-    assert.equal(sitePageEditorPath(CONNECT_PAGE), "/~/pages/connect");
+    assert.equal(sitePageEditorPath(CONNECT_PAGE), "/~/pages/connect/home");
   });
 
   it("is not one of the customer site's pages or reserved addresses", () => {

@@ -117,8 +117,11 @@ export function sitePagePath(page: SitePageKey) {
   return page === HOME_PAGE || page === CONNECT_PAGE ? "/" : `/${page}`;
 }
 
-/** The app a site page is on: the customer site, or Connect. */
-export function sitePageAppOf(page: SitePageKey): "website" | "connect" {
+/** The apps a site page can be on: the customer site, or Connect. */
+export type SitePageApp = "website" | "connect";
+
+/** The app a site page is on. */
+export function sitePageAppOf(page: SitePageKey): SitePageApp {
   return page === CONNECT_PAGE ? "connect" : "website";
 }
 
@@ -137,8 +140,11 @@ export const SITE_PAGE_PATHS: readonly string[] = WEBSITE_PAGES.filter(
  */
 export const SITE_PAGES_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/website`;
 
-/** Where Connect's landing page is edited: Pages has a part of its own for Connect. */
-export const CONNECT_PAGE_EDITOR_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/connect`;
+/**
+ * Where Connect's landing page is edited: its home under Pages' Connect,
+ * which lists Connect's pages.
+ */
+export const CONNECT_PAGE_EDITOR_PATH = `/${ALL_LOCATIONS_SEGMENT}/pages/connect/home`;
 
 /** Where a site page is edited in the console; the preview links it as Edit. */
 export function sitePageEditorPath(page: SitePageKey) {

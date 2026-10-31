@@ -140,14 +140,16 @@ type PageTreeFilters = {
   /** The list's address as filtered, without the search. */
   searchHref: string;
   q: string | undefined;
-  /** "All sections", then each section, each with the list's address narrowed to it. */
-  sections: readonly SectionOption[];
-  /** The section in force; "" for every section. */
-  section: string;
+  /**
+   * "All sections", then each section, each with the list's address
+   * narrowed to it, and the section in force, "" for every section. None
+   * for a list without sections: the website's, Connect's.
+   */
+  sections?: { options: readonly SectionOption[]; value: string };
 };
 
 /**
- * The bar over a list of pages: the search and the section. One line
+ * The bar over a list of pages: the search and the section, if any. One line
  * where there is room; on a phone each takes a line.
  */
 function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
@@ -159,7 +161,12 @@ function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
         label="Search pages"
         placeholder="Name or address"
       />
-      <PageSectionSelect options={filters.sections} value={filters.section} />
+      {filters.sections ? (
+        <PageSectionSelect
+          options={filters.sections.options}
+          value={filters.sections.value}
+        />
+      ) : null}
     </div>
   );
 }

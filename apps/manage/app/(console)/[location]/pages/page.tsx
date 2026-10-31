@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   LOCATION_PAGES,
   LOCATION_PAGE_LABELS,
-  PAGE_FILTER_LABELS,
   childrenCount,
   childrenOf,
   formatLocalDate,
@@ -14,27 +13,17 @@ import {
   pageKeyOfSegment,
   plural,
   searchTermOf,
-  sitePageAppOf,
   type LocationPageKey,
   type PageFilter,
-  type PageStatus,
 } from "@repo/db";
-import {
-  getFooterSummary,
-  listLocationPages,
-  listSitePageSummaries,
-  type PageSummary,
-} from "@repo/db/server";
-import { BuildingIcon, HouseIcon } from "@repo/ui/icons";
+import { listLocationPages, type PageSummary } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
 import { LocationMark } from "@repo/console/LocationMark";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
-import { PAGE_TONES } from "@repo/console/StatusBadges";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import { addressChoicesOf } from "../../../_lib/address-choices";
 import { locationDetails } from "../../../_lib/location-data";
@@ -50,15 +39,17 @@ import { AddEntryDialog } from "./_components/EntryDialogs";
 import { EntryOrder } from "./_components/EntryOrder";
 import {
   PageTree,
-  footerRow,
   locationPageGroups,
-  sitePageRow,
   type PageGroup,
   type PagePart,
-  type PageRow,
   type TreeRow,
 } from "./_components/PageList";
 import type { SectionOption } from "./_components/PageSectionSelect";
+import {
+  PageStatusStrip,
+  emptyOf,
+  type Counted,
+} from "./_components/PageStatusStrip";
 import {
   SavedAddresses,
   type SavedAddress,
@@ -74,11 +65,9 @@ type Filter = {
 /**
  * Route: /[location]/pages?section=…&status=…&q=…. The pages in one
  * tree: each section's own page with every page under it, tied to it by
- * a line and folding away under it. Under `~`, in three parts: the
- * customer site's own pages for Marketing and SEO (`website.manage`: the
- * home page, the services' hubs, about us, contact us, the legal pages and
- * the footer), then Connect's landing page, then every location's, each
- * under its heading. Under a slug, the
+ * a line and folding away under it. Under `~`, every location's, each
+ * under its heading; the website's own pages and Connect's are Pages'
+ * other rows (SitePagesScreen). Under a slug, the
  * location's alone, with the saved addresses its places take customers to
  * for Marketing; narrowed to a section, it is that section's list,
  * where its row leads: its places in their order, which move here, with
@@ -106,7 +95,7 @@ export default async function PagesPage({
   return (
     <>
       <PageHeader
-        title="Pages"
+        title="Location Pages"
         badge={
           <InfoTip text="A page under a section shows once the section's own page is published too. “Published, edits waiting” means the public still sees the copy last published." />
         }
@@ -131,29 +120,6 @@ export default async function PagesPage({
   );
 }
 
-/** The strip's cells after "All pages", in the order the public meets them. */
-const STRIP: readonly PageFilter[] = [
-  "published",
-  "changed",
-  "unpublished",
-  "paused",
-];
-
-/** A page as the strip counts it. */
-type Counted = {
-  name: string;
-  path: string;
-  status: PageStatus;
-  paused: boolean;
-};
-
-const countedOfRow = (row: PageRow): Counted => ({
-  name: row.label,
-  path: row.path,
-  status: row.status,
-  paused: row.paused,
-});
-
 const countedOfPage = (slug: string, page: PageSummary): Counted => ({
   name: page.name,
   path: locationPagePath(slug, page),
@@ -161,10 +127,7 @@ const countedOfPage = (slug: string, page: PageSummary): Counted => ({
   paused: page.paused,
 });
 
-/**
- * The strip over the list: every page the section and the search keep,
- * then each status among them, each cell the list narrowed to it.
- */
+/** The strip over a list of a location's pages, or every location's, each cell the list narrowed to a status. */
 function StatusStrip({
   scope,
   pages,
@@ -174,28 +137,14 @@ function StatusStrip({
   pages: readonly Counted[];
   filter: Filter;
 }) {
-  const count = (status?: PageFilter) =>
-    pages.filter((page) =>
-      isPageInList(page, page.path, { status, q: filter.q }),
-    ).length;
-  const figures: Figure[] = [
-    {
-      key: "all",
-      label: "All pages",
-      value: count(),
-      href: pagesHref(scope, { ...filter, status: undefined }),
-      current: filter.status === undefined,
-    },
-    ...STRIP.map((status): Figure => ({
-      key: status,
-      label: PAGE_FILTER_LABELS[status],
-      value: count(status),
-      tone: status === "paused" ? "neutral" : PAGE_TONES[status],
-      href: pagesHref(scope, { ...filter, status }),
-      current: filter.status === status,
-    })),
-  ];
-  return <FigureStrip label="Pages by status" figures={figures} />;
+  return (
+    <PageStatusStrip
+      pages={pages}
+      status={filter.status}
+      q={filter.q}
+      hrefOf={(status) => pagesHref(scope, { ...filter, status })}
+    />
+  );
 }
 
 /** "All sections", then each of `sections`, each with the list's address narrowed to it. */
@@ -218,74 +167,24 @@ function sectionOptions(
   ];
 }
 
-/** What the list says with nothing to show. */
-const emptyOf = (filter: Filter) =>
-  filter.q ? `No page matches “${filter.q}”.` : "No page has this status.";
-
 /** How many pages a part shows: each section's own and those under it. */
 const pagesIn = (groups: readonly PageGroup[]) =>
   groups.reduce((sum, group) => sum + 1 + group.under.length, 0);
 
 /**
- * Under `~`: the website's pages for Marketing and SEO, which belong to no section,
- * then every location's the person may see, each under its heading,
- * which opens the location's own Pages.
+ * Under `~`: every location's pages the person may see, each under its
+ * heading, which opens the location's own Pages. The website's and
+ * Connect's have Pages' rows of their own.
  */
 async function everyPage(filter: Filter) {
-  const [permissions, visible] = await Promise.all([
-    getPermissions(),
-    locationsVisible(),
-  ]);
-  const website = permissions.includes("website.manage") && !filter.section;
-  const [lists, sitePages, footer] = await Promise.all([
+  const [lists, visible] = await Promise.all([
     listLocationPages(),
-    website ? listSitePageSummaries() : [],
-    website ? getFooterSummary() : null,
+    locationsVisible(),
   ]);
   const seen = new Set(visible.map((location) => location.id));
   const narrowed = filter.status !== undefined || filter.q !== undefined;
   const parts: PagePart[] = [];
   const counted: Counted[] = [];
-
-  // The site's pages by the app they are on: the customer site's with its
-  // footer, then Connect's, each a part of its own.
-  const appParts = [
-    {
-      key: "part:website",
-      label: "Website",
-      mark: <HouseIcon className="size-4 text-muted" />,
-      rows: [
-        ...sitePages
-          .filter((page) => sitePageAppOf(page.page) === "website")
-          .map(sitePageRow),
-        ...(footer ? [footerRow(footer)] : []),
-      ],
-    },
-    {
-      key: "part:connect",
-      label: "Connect",
-      mark: <BuildingIcon className="size-4 text-muted" />,
-      rows: sitePages
-        .filter((page) => sitePageAppOf(page.page) === "connect")
-        .map(sitePageRow),
-    },
-  ];
-  for (const part of appParts) {
-    counted.push(...part.rows.map(countedOfRow));
-    const groups: PageGroup[] = part.rows
-      .filter((row) => isPageInList(countedOfRow(row), row.path, filter))
-      .map((row) => ({ key: row.key, own: { row }, under: [], folds: false }));
-    if (groups.length === 0) continue;
-    parts.push({
-      key: part.key,
-      heading: {
-        label: part.label,
-        mark: part.mark,
-        meta: plural(groups.length, "page"),
-      },
-      groups,
-    });
-  }
 
   for (const location of lists) {
     if (!seen.has(location.id)) continue;
@@ -321,10 +220,12 @@ async function everyPage(filter: Filter) {
           filters={{
             searchHref: pagesHref(null, { ...filter, q: undefined }),
             q: filter.q,
-            sections: sectionOptions(null, filter, LOCATION_PAGES),
-            section: filter.section ?? "",
+            sections: {
+              options: sectionOptions(null, filter, LOCATION_PAGES),
+              value: filter.section ?? "",
+            },
           }}
-          empty={emptyOf(filter)}
+          empty={emptyOf(filter.q)}
         />
       </Card>
     </>
@@ -482,19 +383,21 @@ async function locationPages(id: string, filter: Filter) {
             filters={{
               searchHref: pagesHref(slug, { section, status }),
               q,
-              sections: sectionOptions(
-                slug,
-                filter,
-                location.pages
-                  .filter((page) => page.slug === "")
-                  .map((page) => page.page),
-              ),
-              section: section ?? "",
+              sections: {
+                options: sectionOptions(
+                  slug,
+                  filter,
+                  location.pages
+                    .filter((page) => page.slug === "")
+                    .map((page) => page.page),
+                ),
+                value: section ?? "",
+              },
             }}
             lead={
               isPlaces ? ["Saved address"] : isPosts ? ["First published"] : []
             }
-            empty={emptyOf(filter)}
+            empty={emptyOf(filter.q)}
           />
         </Card>
 

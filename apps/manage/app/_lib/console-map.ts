@@ -204,15 +204,36 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     label: "Pages",
     icon: "pages",
     group: "website",
+    // By the app a page is on: the customer site's own, Connect's, then
+    // the locations'. The first two exist under `~` alone.
     pages: [
       {
+        key: "pages-website",
+        label: "Website",
+        path: "pages/website",
+        icon: "website",
+        permission: "website.manage",
+        wide: true,
+        words:
+          "content home page top choices hubs about contact terms privacy footer",
+      },
+      {
+        key: "pages-connect",
+        label: "Connect",
+        path: "pages/connect",
+        icon: "connect",
+        permission: "website.manage",
+        wide: true,
+        words: "content vendors drivers landing page",
+      },
+      {
         key: "pages",
-        label: "Pages",
+        label: "Locations",
         path: "pages",
         icon: "pages",
         permission: "pages.manage",
         step: "pages",
-        words: "content website home page top choices terms privacy footer",
+        words: "content location pages places posts saved addresses",
       },
     ],
   },

@@ -10,6 +10,7 @@ import {
   type LocationPageKey,
   type LocationPageRef,
   type MediaFilter,
+  type SitePageApp,
   type TripCategory,
 } from "@repo/db";
 
@@ -325,8 +326,22 @@ export type PagesFilter = {
 };
 
 /**
- * The pages: the website's and every location's under `~`, one
- * location's under its slug, narrowed by status, section and a search.
+ * The pages of an app, the customer site's or Connect's, narrowed by
+ * status and a search. Console-wide.
+ */
+export function sitePagesHref(
+  app: SitePageApp,
+  filter: Omit<PagesFilter, "section"> = {},
+) {
+  return listHref(consolePath(null, "pages", app), {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/**
+ * The locations' pages: every location's under `~`, one location's under
+ * its slug, narrowed by status, section and a search.
  * Narrowed to a section, it is that section's list: its own page and
  * every page under it.
  */

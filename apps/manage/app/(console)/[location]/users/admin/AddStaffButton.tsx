@@ -11,16 +11,16 @@ import { AdminFields } from "./AdminFields";
 import { addStaffAction } from "./actions";
 
 /**
- * "Add staff" in Staff's header: a panel that takes an email, the names,
+ * "Add admin" in Admin's header: a panel that takes an email, the names,
  * the level and the teams. An email with an account is promoted, its
  * names left as they are; one without gets an account first, as
- * Customers makes it. A refused add keeps what was typed; an added one
+ * All Users makes it. A refused add keeps what was typed; an added one
  * closes the panel.
  */
 export function AddStaffButton() {
   const [open, setOpen] = useState(false);
   const { pending, error, formProps } = useActionForm(addStaffAction, {
-    done: "Staff added.",
+    done: "Admin added.",
     reset: true,
     onDone: () => setOpen(false),
   });
@@ -29,12 +29,12 @@ export function AddStaffButton() {
     <>
       <Button onClick={() => setOpen(true)}>
         <PlusIcon />
-        Add staff
+        Add admin
       </Button>
-      <Sheet open={open} onOpenChange={setOpen} title="Add staff">
+      <Sheet open={open} onOpenChange={setOpen} title="Add admin">
         <form {...formProps} className="grid gap-5 p-6 text-left">
           <SheetHeader
-            title="Add staff"
+            title="Add admin"
             description="An email with an account is promoted, its names left as they are. One without gets an account first."
           />
           <AccountFields

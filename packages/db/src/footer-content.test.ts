@@ -5,6 +5,10 @@ import {
   changedFooterParts,
   checkFooterComplete,
   checkFooterLimits,
+  CONNECT_FOOTER_KEY,
+  FOOTER_KEY,
+  footerAppOf,
+  footerEditorPath,
   copyrightOf,
   defaultFooterContent,
   footerContentOf,
@@ -161,7 +165,9 @@ describe("footerProblems", () => {
       social: [{ network: "instagram", url: "instagram" }],
       phone: "123",
       email: "sales",
-      badges: [{ image: null, name: "MATTA", detail: "" }],
+      badges: [
+        { image: null, name: "MATTA", detail: "", link: "matta.org.my" },
+      ],
       paymentLogos: [logo("visa", "")],
     };
     assert.deepEqual(footerProblems(content), [
@@ -175,6 +181,7 @@ describe("footerProblems", () => {
       "The contact details have no heading.",
       "The registrations have no heading.",
       '"MATTA" has no logo.',
+      `"MATTA"'s certificate link is not a web address.`,
       "The payment logos have no heading.",
       "A payment logo has no name.",
       "The copyright line has no company name.",
@@ -183,7 +190,7 @@ describe("footerProblems", () => {
     assert.equal(check.ok, false);
     assert.match(
       check.ok ? "" : check.error,
-      /^Column 1 has no heading\. And 12 more/,
+      /^Column 1 has no heading\. And 13 more/,
     );
   });
 });
@@ -257,7 +264,9 @@ describe("footer parts", () => {
   it("finds the uploaded images, once each", () => {
     const content: FooterContent = {
       ...footerContentOf(null),
-      badges: [{ image: logo("matta", "MATTA"), name: "MATTA", detail: "" }],
+      badges: [
+        { image: logo("matta", "MATTA"), name: "MATTA", detail: "", link: "" },
+      ],
       paymentLogos: [logo("fpx", "FPX"), logo("fpx", "FPX")],
     };
     assert.deepEqual(footerImageKeys(content), ["matta", "fpx"]);
@@ -272,6 +281,42 @@ describe("footer parts", () => {
     assert.equal(
       copyrightOf({ ...content, since: null }, 2026),
       "© 2026 Heavenly Travel Sdn Bhd",
+    );
+  });
+});
+
+describe("Connect's footer", () => {
+  it("keeps its own parts while it shows the website's", () => {
+    const content = footerContentOf({
+      ...defaultFooterContent(DESTINATIONS),
+      tagline: "Ours",
+      sameAsWebsite: true,
+    });
+    assert.equal(content.sameAsWebsite, true);
+    assert.equal(content.tagline, "Ours");
+    assert.equal(footerContentOf({}).sameAsWebsite, false);
+  });
+
+  it("publishes while it shows the website's, whatever its own parts lack", () => {
+    const empty = footerContentOf({});
+    assert.equal(checkFooterComplete(empty).ok, false);
+    assert.equal(
+      checkFooterComplete({ ...empty, sameAsWebsite: true }).ok,
+      true,
+    );
+    assert.deepEqual(
+      changedFooterParts(empty, { ...empty, sameAsWebsite: true }),
+      ["Same as Website"],
+    );
+  });
+
+  it("is edited among Connect's pages", () => {
+    assert.equal(footerAppOf(CONNECT_FOOTER_KEY), "connect");
+    assert.equal(footerAppOf(FOOTER_KEY), "website");
+    assert.equal(footerEditorPath(FOOTER_KEY), "/~/pages/website/footer");
+    assert.equal(
+      footerEditorPath(CONNECT_FOOTER_KEY),
+      "/~/pages/connect/footer",
     );
   });
 });

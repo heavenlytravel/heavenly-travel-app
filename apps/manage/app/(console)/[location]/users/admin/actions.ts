@@ -8,8 +8,8 @@ import {
   setAdmin,
   setWallActive,
 } from "@repo/db/server";
-import { revalidateLocation } from "../../../_lib/revalidate";
-import { actorOf, getAdmin } from "../../../_lib/access";
+import { revalidateLocation } from "../../../../_lib/revalidate";
+import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   refusalOf,
@@ -64,7 +64,7 @@ export async function setAdminAction(
 }
 
 /**
- * Add staff: promotes the account an email has, or creates it first and
+ * Add admin: promotes the account an email has, or creates it first and
  * promotes it in the same go.
  */
 export async function addStaffAction(

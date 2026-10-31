@@ -15,6 +15,7 @@ import {
   sitePageHref,
   sitePagePublishHref,
   vehicleHref,
+  userHref,
   vendorHref,
 } from "./routes";
 
@@ -124,8 +125,12 @@ export function activityEntryHref(
         entry.action === "site.footer.published"
         ? sitePagePublishHref(entry.id)
         : sitePageHref(entry.entityId);
+    case "user":
+    case "admin":
+      // An admin entry is logged against the account's user id.
+      return may("users.manage") ? userHref(entry.entityId) : null;
     default:
-      // A user, an admin, the wall, a state or a district has no page of its own.
+      // The wall, a state or a district has no page of its own.
       return null;
   }
 }

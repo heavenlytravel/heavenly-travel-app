@@ -12,8 +12,9 @@ import {
   type LocationPageRef,
 } from "./location-page-input";
 import {
-  FOOTER_KEY,
-  FOOTER_LABEL,
+  FOOTER_LABELS,
+  isFooterKey,
+  type FooterKey,
   footerContentOf,
   footerImageKeys,
 } from "./footer-content";
@@ -64,12 +65,12 @@ function footerSnapshotKeys(snapshot: unknown): string[] {
   return content ? footerImageKeys(footerContentOf(content)) : [];
 }
 
-/** The footer, as a use names it. */
-const FOOTER_PAGE: MediaPage = {
+/** A footer, as a use names it. */
+const footerPageOf = (key: FooterKey): MediaPage => ({
   site: true,
-  page: FOOTER_KEY,
-  title: FOOTER_LABEL,
-};
+  page: key,
+  title: FOOTER_LABELS[key],
+});
 
 /** A location's page as a use names it: "Popular places page", "Eagle Square". */
 function locationPageOf(
@@ -187,8 +188,8 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
     );
   }
   for (const row of sitePages) {
-    if (row.page === FOOTER_KEY) {
-      addPage(FOOTER_PAGE, footerKeysOf, row);
+    if (isFooterKey(row.page)) {
+      addPage(footerPageOf(row.page), footerKeysOf, row);
       continue;
     }
     if (!isSitePageKey(row.page)) continue;
@@ -205,7 +206,8 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
     let on: MediaPage;
     let keys: Set<string>;
     if (entry.action === "site.footer.published") {
-      on = FOOTER_PAGE;
+      if (!isFooterKey(entry.entityId)) continue;
+      on = footerPageOf(entry.entityId);
       keys = new Set([
         ...footerSnapshotKeys(entry.before),
         ...footerSnapshotKeys(entry.after),

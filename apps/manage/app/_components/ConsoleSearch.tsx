@@ -51,7 +51,7 @@ const KIND_ICONS: Record<RecordKind, MenuIcon> = {
   bookings: "bookings",
   vehicles: "vehicles",
   drivers: "drivers",
-  users: "customers",
+  users: "user",
   "vehicle-classes": "classes",
   zones: "coverage",
 };

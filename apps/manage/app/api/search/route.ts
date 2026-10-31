@@ -29,7 +29,7 @@ import {
   classHref,
   classesHref,
   coverageHref,
-  customersHref,
+  userHref,
   driverHref,
   vehicleHref,
   zoneHref,
@@ -93,7 +93,7 @@ const FINDERS: Record<
         title: nameOf(user),
         detail: user.email,
         meta: user.adminProfile ? "Admin" : undefined,
-        href: customersHref({ q: user.email }),
+        href: userHref(user.id),
       })),
   },
   "vehicle-classes": {

@@ -10,7 +10,7 @@ import { Select } from "@repo/ui/select";
 
 /**
  * The level and the teams of one admin, in every panel that sets them:
- * a member's Edit, Promote to staff, Add staff, and Make staff in Create
+ * a member's Edit, Make admin, Add admin, and Make admin in Create
  * an account. The server action reads them as `level` and `teams`.
  */
 export function AdminFields({

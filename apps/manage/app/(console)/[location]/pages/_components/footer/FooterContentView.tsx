@@ -87,6 +87,16 @@ export function FooterContentView({
   const address = addressLinesOf(content);
   return (
     <dl className="grid gap-5">
+      {content.sameAsWebsite || changed.has("Same as Website") ? (
+        <ContentPart
+          label="Same as Website"
+          changed={changed.has("Same as Website")}
+        >
+          {content.sameAsWebsite
+            ? "On: shows the website's footer. Its own parts below are kept for later."
+            : "Off: shows its own footer."}
+        </ContentPart>
+      ) : null}
       <ContentPart label="Tagline" changed={changed.has("Tagline")}>
         {content.tagline || NONE}
       </ContentPart>
@@ -148,7 +158,12 @@ export function FooterContentView({
                   <span className="block font-medium">
                     {badge.name || "No name"}
                   </span>
-                  <span className="text-muted">{badge.detail}</span>
+                  <span className="block text-muted">{badge.detail}</span>
+                  {badge.link ? (
+                    <span className="block break-all text-muted">
+                      Certificate: {badge.link}
+                    </span>
+                  ) : null}
                 </span>
               </div>
             ))}

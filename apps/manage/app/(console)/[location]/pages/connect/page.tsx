@@ -1,20 +1,28 @@
-import { CONNECT_PAGE } from "@repo/db";
+import { isPageFilter, searchTermOf } from "@repo/db";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "../../../../_lib/access";
+import { SEARCH_PARAM } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
-import { SitePageEditorScreen } from "../_components/SitePageEditorScreen";
+import { SitePagesScreen } from "../_components/SitePageList";
 
 /**
- * Route: /~/pages/connect. The editor of Connect's landing page, what a
- * visitor signed out reads at Connect's `/` (SitePageEditorScreen). It
- * opens on the words it was built with until it is first saved, and stays
- * published once it is. Console-wide: under a slug it is not found.
+ * Route: /~/pages/connect?status=…&q=…. Connect's pages, each opening its
+ * editor under /~/pages/connect: today its home, the landing page a
+ * visitor signed out reads. Console-wide: under a slug it is not found.
  * Marketing's and SEO's (`website.manage`).
  */
-export default async function ConnectPageEditorPage({
+export default async function ConnectPagesPage({
   params,
+  searchParams,
 }: PageProps<"/[location]/pages/connect">) {
   await requireAdmin("website.manage");
   if ((await scopeOf(params)).slug !== null) notFound();
-  return <SitePageEditorScreen page={CONNECT_PAGE} />;
+  const query = await searchParams;
+  return (
+    <SitePagesScreen
+      app="connect"
+      status={isPageFilter(query.status) ? query.status : undefined}
+      q={searchTermOf(query[SEARCH_PARAM]) ?? undefined}
+    />
+  );
 }

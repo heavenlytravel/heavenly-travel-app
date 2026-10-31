@@ -289,6 +289,7 @@ export type {
   PublishedSitePage,
 } from "./site-pages";
 export {
+  getConnectFooter,
   getDefaultFooter,
   getFooter,
   getFooterPublish,
@@ -353,11 +354,18 @@ export type {
 } from "./bookings";
 export { listBookingNotes, addBookingNote } from "./booking-notes";
 export type { BookingNoteEntry } from "./booking-notes";
-export { findUserByEmail, listUsers } from "./users";
+export { findUserByEmail, getUserDetails, listUsers } from "./users";
 export { listVendorOpenings } from "./vendor-openings";
 export type { VendorOpening } from "./vendor-openings";
-export { addStaff, createUser, keepApplicantProfile } from "./accounts";
-export type { ListedUser } from "./users";
+export {
+  addStaff,
+  changeUserEmail,
+  createUser,
+  keepApplicantProfile,
+  setUserPassword,
+  updateUserProfile,
+} from "./accounts";
+export type { ListedUser, UserDetails } from "./users";
 export * from "./roles";
 export * from "./permissions";
 export * from "./activity-actions";

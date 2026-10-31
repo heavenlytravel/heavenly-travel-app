@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  isVendorRole,
   isVendorStatus,
+  VENDOR_ROLE_LABELS,
   VENDOR_SERVICE_LABELS,
   vendorServicesOf,
 } from "@repo/db";
@@ -11,6 +13,7 @@ import {
   listActivityFor,
   listDrivers,
   listVehicles,
+  listVendorMembers,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { PlusIcon } from "@repo/ui/icons";
@@ -27,6 +30,15 @@ import {
   Streamed,
 } from "@repo/console/Skeleton";
 import { VendorStatusBadge } from "@repo/console/StatusBadges";
+import {
+  EmptyRow,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  TwoLines,
+} from "@repo/console/Table";
 import { DriversTable } from "../../../../../_components/DriversTable";
 import { HistoryTimeline } from "../../../../../_components/HistoryTimeline";
 import { VehiclesTable } from "../../../../../_components/VehiclesTable";
@@ -48,7 +60,7 @@ import { VendorReview } from "../_components/VendorReview";
 /**
  * Route: /[location]/fleet/vendors/[id], and …/vendors/new. A vendor's
  * details, its vehicles and drivers, which Operation keeps for one not on
- * Connect, and its history; for SUPER, its review and the "Ours" switch.
+ * Connect, the accounts that work for it in Connect, and its history; for SUPER, its review and the "Ours" switch.
  * Under a location, a vendor that does not serve it is not found, and its
  * vehicles and drivers are those based there. See
  * docs/261028-fulfilment-vendors-and-connect.md.
@@ -98,9 +110,10 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   if (!vendor) notFound();
   const here = scope.location;
   if (here && !vendor.locations.some((l) => l.id === here.id)) notFound();
-  const [vehicles, drivers, history] = await Promise.all([
+  const [vehicles, drivers, members, history] = await Promise.all([
     listVehicles({ vendorId: id, locationId: here?.id }),
     listDrivers({ vendorId: id, locationId: here?.id }),
+    listVendorMembers(id),
     listActivityFor("vendor", id),
   ]);
   const status = isVendorStatus(vendor.status) ? vendor.status : "pending";
@@ -183,6 +196,43 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                 emptyMessage="No driver yet."
               />
             </Card>
+            {vendor.isOurs ? null : (
+              <Card flush>
+                <CardTitle
+                  inset
+                  meta={members.length > 0 ? members.length : undefined}
+                  description="Who signs in to Connect for it: its owner, who adds and removes its staff there. A driver signs in on their own to see their jobs."
+                >
+                  Connect Accounts
+                </CardTitle>
+                <Table bare>
+                  <THead>
+                    <Th>Name</Th>
+                    <Th>Role</Th>
+                  </THead>
+                  <TBody>
+                    {members.length === 0 ? (
+                      <EmptyRow colSpan={2}>No account yet.</EmptyRow>
+                    ) : null}
+                    {members.map((member) => (
+                      <tr key={member.id}>
+                        <Td className="min-w-56">
+                          <TwoLines
+                            top={member.name || "—"}
+                            bottom={member.email}
+                          />
+                        </Td>
+                        <Td className="text-muted">
+                          {isVendorRole(member.role)
+                            ? VENDOR_ROLE_LABELS[member.role]
+                            : member.role}
+                        </Td>
+                      </tr>
+                    ))}
+                  </TBody>
+                </Table>
+              </Card>
+            )}
           </>
         }
         side={

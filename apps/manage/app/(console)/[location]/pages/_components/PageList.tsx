@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  FOOTER_KEY,
+  CONNECT_FOOTER_KEY,
+  CONNECT_PAGE,
   FOOTER_LABEL,
   HOME_PAGE,
   LANDING_PAGE,
@@ -11,7 +12,9 @@ import {
   SITE_PAGE_LABELS,
   childrenOf,
   formatLocalDate,
+  footerEditorPath,
   locationPagePath,
+  type FooterKey,
   type LocationPageKey,
   type PageImage,
   type PageStatus,
@@ -119,19 +122,28 @@ export function sitePageRow(page: SitePageSummary): PageRow {
   };
 }
 
-/** The footer as a row among the website's pages; its preview is the home page's. */
-export function footerRow(footer: FooterSummary): PageRow {
+/**
+ * A footer as a row among its app's pages: the website's, on every page,
+ * previewed on the home page; Connect's, on its landing page, previewed
+ * there, or the website's while it shows it.
+ */
+export function footerRow(key: FooterKey, footer: FooterSummary): PageRow {
+  const isConnect = key === CONNECT_FOOTER_KEY;
   return {
-    key: `website/${FOOTER_KEY}`,
+    key: `footer/${key}`,
     label: FOOTER_LABEL,
-    path: "On every page",
+    path: !isConnect
+      ? "On every page"
+      : footer.sameAsWebsite
+        ? "Same as Website footer"
+        : "On the landing page",
     image: null,
     status: footer.status,
     paused: false,
     indexable: null,
     changedAt: footer.updatedAt,
-    editHref: sitePageHref(FOOTER_KEY),
-    previewHref: sitePagePreviewUrl(HOME_PAGE),
+    editHref: footerEditorPath(key),
+    previewHref: sitePagePreviewUrl(isConnect ? CONNECT_PAGE : HOME_PAGE),
   };
 }
 
@@ -140,14 +152,16 @@ type PageTreeFilters = {
   /** The list's address as filtered, without the search. */
   searchHref: string;
   q: string | undefined;
-  /** "All sections", then each section, each with the list's address narrowed to it. */
-  sections: readonly SectionOption[];
-  /** The section in force; "" for every section. */
-  section: string;
+  /**
+   * "All sections", then each section, each with the list's address
+   * narrowed to it, and the section in force, "" for every section. None
+   * for a list without sections: the website's, Connect's.
+   */
+  sections?: { options: readonly SectionOption[]; value: string };
 };
 
 /**
- * The bar over a list of pages: the search and the section. One line
+ * The bar over a list of pages: the search and the section, if any. One line
  * where there is room; on a phone each takes a line.
  */
 function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
@@ -159,7 +173,12 @@ function PageTreeBar({ filters }: { filters: PageTreeFilters }) {
         label="Search pages"
         placeholder="Name or address"
       />
-      <PageSectionSelect options={filters.sections} value={filters.section} />
+      {filters.sections ? (
+        <PageSectionSelect
+          options={filters.sections.options}
+          value={filters.sections.value}
+        />
+      ) : null}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { setAdminAction } from "./actions";
 
 /**
  * The panel that sets one account's level and teams: a member's Edit on
- * Staff, and Promote to staff on a customer's row.
+ * Admin, and Make admin on a user's page.
  */
 export function AdminAccessSheet({
   open,

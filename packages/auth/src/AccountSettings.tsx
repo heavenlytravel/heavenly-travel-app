@@ -18,6 +18,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -35,8 +36,8 @@ import {
 import { Avatar } from "./AccountMenu";
 
 /**
- * The account window, ours in place of Clerk's: the name, the email (a new
- * one confirmed by a code before it replaces the old), the password (added
+ * The account window, ours in place of Clerk's: the photo and the name,
+ * the email (shown; our team changes it on request), the password (added
  * where there is none, changed where there is), the devices signed in, each
  * to sign out, and signing out here. The same in the three apps, each
  * putting it in its own page. A change Clerk counts as sensitive asks the
@@ -112,11 +113,41 @@ function refusalOf(error: unknown): AuthError | null {
   return authErrorOf(error);
 }
 
+/** The largest photo Clerk takes. */
+const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+
 function NameSection() {
   const { user } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
   if (!user) return null;
+
+  /** Uploads a photo to Clerk, or removes the one it holds with null. */
+  async function setPhoto(file: File | null) {
+    if (!user) return;
+    if (file && !file.type.startsWith("image/")) {
+      setError("Choose a photo: a JPG, PNG or WebP.");
+      return;
+    }
+    if (file && file.size > PHOTO_MAX_BYTES) {
+      setError("Choose a photo under 10 MB.");
+      return;
+    }
+    setError(null);
+    setPhotoBusy(true);
+    try {
+      await user.setProfileImage({ file });
+      await user.reload();
+      toast.success(file ? "Photo saved." : "Photo removed.");
+    } catch (caught) {
+      const refusal = refusalOf(caught);
+      if (refusal) setError(authErrorMessage(refusal));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,18 +171,51 @@ function NameSection() {
 
   return (
     <Section
-      title="Your name"
-      description="How we greet you, and the name on your bookings."
+      title="Your profile"
+      description="Your photo, how we greet you, and the name on your bookings."
     >
       <form onSubmit={save} className="grid gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Avatar
             imageUrl={user.hasImage ? user.imageUrl : null}
             name={
               user.fullName || (user.primaryEmailAddress?.emailAddress ?? "")
             }
-            className="size-12 text-sm"
+            className="size-16 text-base"
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={photoInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                event.currentTarget.value = "";
+                if (file) void setPhoto(file);
+              }}
+            />
+            <Button
+              variant="secondary"
+              pending={photoBusy}
+              onClick={() => photoInput.current?.click()}
+            >
+              {user.hasImage ? "Change photo" : "Upload photo"}
+            </Button>
+            {user.hasImage ? (
+              <Button
+                variant="ghost"
+                disabled={photoBusy}
+                onClick={() => void setPhoto(null)}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
           <div className="grid flex-1 gap-4 sm:grid-cols-2">
             <AuthField label="First name">
               {(control) => (
@@ -187,172 +251,22 @@ function NameSection() {
   );
 }
 
-type EmailStep =
-  | { name: "shown" }
-  | { name: "new" }
-  | { name: "code"; email: string; id: string };
-
+/**
+ * The email the account signs in with, shown, not changed here: it is who
+ * the person is to us, their bookings and their Connect access. Our team
+ * changes it on request, in the console's All Users.
+ */
 function EmailSection() {
   const { user } = useUser();
-  const [step, setStep] = useState<EmailStep>({ name: "shown" });
-  const [error, setError] = useState<{
-    at: "email" | "code" | "form";
-    text: string;
-  } | null>(null);
-  const [working, setWorking] = useState(false);
-
-  const addEmail = useGuarded(async (email: string) => {
-    if (!user) throw new Error("Signed out.");
-    const address = await user.createEmailAddress({ email });
-    await address.prepareVerification({ strategy: "email_code" });
-    return address.id;
-  });
-
-  const confirmEmail = useGuarded(async (id: string, code: string) => {
-    if (!user) throw new Error("Signed out.");
-    const address = user.emailAddresses.find((entry) => entry.id === id);
-    if (!address) throw new Error("That email is gone. Start again.");
-    await address.attemptVerification({ code });
-    const previous = user.emailAddresses.filter((entry) => entry.id !== id);
-    await user.update({ primaryEmailAddressId: id });
-    // The old address goes, so the account has one email, as it was made with.
-    for (const old of previous) await old.destroy();
-    await user.reload();
-  });
-
   if (!user) return null;
-  const current = user.primaryEmailAddress?.emailAddress ?? "";
-
-  async function run(
-    work: () => Promise<void>,
-    where: "email" | "code" | "form",
-  ) {
-    setError(null);
-    setWorking(true);
-    try {
-      await work();
-    } catch (caught) {
-      const refusal = refusalOf(caught);
-      if (refusal)
-        setError({
-          at:
-            refusal.code.includes("code") ||
-            refusal.code.startsWith("verification")
-              ? "code"
-              : where,
-          text: authErrorMessage(refusal),
-        });
-    } finally {
-      setWorking(false);
-    }
-  }
-
   return (
     <Section
       title="Email"
-      description="Where your codes and booking emails go, and how you sign in."
+      description="Where your codes and booking emails go, and how you sign in. To change it, contact us."
     >
-      {step.name === "shown" ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm font-medium text-body">{current}</span>
-          <Button variant="secondary" onClick={() => setStep({ name: "new" })}>
-            Change email
-          </Button>
-        </div>
-      ) : step.name === "new" ? (
-        <form
-          className="grid gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const email = String(
-              new FormData(event.currentTarget).get("email") ?? "",
-            )
-              .trim()
-              .toLowerCase();
-            void run(async () => {
-              const id = await addEmail(email);
-              setStep({ name: "code", email, id });
-            }, "email");
-          }}
-        >
-          <AuthField
-            label="New email"
-            hint="We send a code to it. It replaces your current email once confirmed."
-            error={error?.at === "email" ? error.text : null}
-          >
-            {(control) => (
-              <AuthInput
-                {...control}
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                autoFocus
-              />
-            )}
-          </AuthField>
-          <AuthAlert>{error?.at === "form" ? error.text : null}</AuthAlert>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" pending={working}>
-              Send a code
-            </Button>
-            <Button variant="ghost" onClick={() => setStep({ name: "shown" })}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <form
-          className="grid gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const code = String(new FormData(event.currentTarget).get("code"));
-            void run(async () => {
-              await confirmEmail(step.id, code);
-              toast.success(`Email changed to ${step.email}.`);
-              setStep({ name: "shown" });
-            }, "code");
-          }}
-        >
-          <p className="text-sm text-muted">
-            We sent a 6-digit code to{" "}
-            <strong className="text-body">{step.email}</strong>.
-          </p>
-          <AuthField
-            label="Code"
-            error={error?.at === "code" ? error.text : null}
-          >
-            {(control) => <CodeInput {...control} />}
-          </AuthField>
-          <AuthAlert>{error?.at === "form" ? error.text : null}</AuthAlert>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" pending={working}>
-              Confirm new email
-            </Button>
-            <Button variant="ghost" onClick={() => setStep({ name: "shown" })}>
-              Cancel
-            </Button>
-          </div>
-          <ResendCode
-            disabled={working}
-            onResend={async () => {
-              const address = user.emailAddresses.find(
-                (entry) => entry.id === step.id,
-              );
-              if (!address) return false;
-              try {
-                await address.prepareVerification({ strategy: "email_code" });
-                return true;
-              } catch (caught) {
-                const refusal = refusalOf(caught);
-                if (refusal)
-                  setError({ at: "form", text: authErrorMessage(refusal) });
-                return false;
-              }
-            }}
-          />
-        </form>
-      )}
+      <span className="text-sm font-medium text-body">
+        {user.primaryEmailAddress?.emailAddress ?? ""}
+      </span>
     </Section>
   );
 }

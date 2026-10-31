@@ -33,15 +33,26 @@ export function userSearchWhere(search?: string): Prisma.UserWhereInput {
   };
 }
 
-const listed = {
-  include: { adminProfile: { select: { level: true } } },
-} satisfies Prisma.UserDefaultArgs;
+/** Where an account has access beyond the customer site: Manage, and Connect as a vendor's member or driver. */
+const access = {
+  adminProfile: { select: { level: true, teams: true } },
+  vendorMembers: {
+    select: { role: true, vendor: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  },
+  driver: {
+    select: { id: true, vendor: { select: { id: true, name: true } } },
+  },
+} satisfies Prisma.UserInclude;
+
+const listed = { include: access } satisfies Prisma.UserDefaultArgs;
 
 export type ListedUser = Prisma.UserGetPayload<typeof listed>;
 
 /**
  * A page of every account, the newest first, or of those a search finds,
- * with the number of them all; each with its admin level when it is staff.
+ * with the number of them all; each with where it has access: its admin
+ * level, and the vendors it works or drives for in Connect.
  */
 export async function listUsers({
   search,
@@ -64,4 +75,17 @@ export async function listUsers({
     db.user.count({ where }),
   ]);
   return { users, total };
+}
+
+/** One account as All Users opens it: its profile, where it has access, and how many bookings it holds. */
+export type UserDetails = ListedUser & { bookingCount: number };
+
+export async function getUserDetails(id: string): Promise<UserDetails | null> {
+  const user = await db.user.findUnique({
+    where: { id },
+    include: { ...access, _count: { select: { bookings: true } } },
+  });
+  if (!user) return null;
+  const { _count, ...rest } = user;
+  return { ...rest, bookingCount: _count.bookings };
 }

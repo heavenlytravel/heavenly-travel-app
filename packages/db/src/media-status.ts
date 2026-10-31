@@ -1,7 +1,7 @@
 import type { DeleteImpact } from "./delete-impact";
 import { formatBytes } from "./images";
 import type { LocationPageRef } from "./location-page-input";
-import type { FOOTER_KEY } from "./footer-content";
+import type { FooterKey } from "./footer-content";
 import type { SitePageKey } from "./site-page-input";
 import { andList, compareNames } from "./names";
 import type { Permission } from "./permissions";
@@ -24,7 +24,7 @@ type LocationRef = { id: string; name: string; slug: string };
  */
 export type MediaPage =
   | { site: false; location: LocationRef; ref: LocationPageRef; title: string }
-  | { site: true; page: SitePageKey | typeof FOOTER_KEY; title: string };
+  | { site: true; page: SitePageKey | FooterKey; title: string };
 
 /** One key per page, to see a page once. */
 export function mediaPageKey(on: MediaPage) {

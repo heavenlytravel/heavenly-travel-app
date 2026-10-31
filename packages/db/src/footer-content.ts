@@ -14,9 +14,14 @@ import {
 import { isUploadUrl, uploadKeyOf } from "./images";
 import { isValidPhone, normalizePhone } from "./phone";
 import {
+  CONNECT_PAGES_PATH,
   SITE_PAGES_PATH,
+  WEBSITE_PAGES,
+  isSitePagePublic,
   isWebsitePageKey,
   sitePagePath,
+  type SitePageApp,
+  type SitePageKey,
   type WebsitePageKey,
 } from "./site-page-input";
 
@@ -30,13 +35,42 @@ import {
  * See docs/261026-site-footer.md.
  */
 
-/** The `SitePage` row the footer is kept in. No site page takes the key. */
+/** The `SitePage` row the website's footer is kept in. No site page takes the key. */
 export const FOOTER_KEY = "footer";
 
+/** The row of Connect's footer, on its public pages: its own, or the website's. */
+export const CONNECT_FOOTER_KEY = "connect-footer";
+
+export const FOOTER_KEYS = [FOOTER_KEY, CONNECT_FOOTER_KEY] as const;
+export type FooterKey = (typeof FOOTER_KEYS)[number];
+export const isFooterKey = guardFor(FOOTER_KEYS);
+
+/** Each app's footer row. */
+export const FOOTER_KEY_OF: Record<SitePageApp, FooterKey> = {
+  website: FOOTER_KEY,
+  connect: CONNECT_FOOTER_KEY,
+};
+
+/** The app a footer is on. */
+export function footerAppOf(key: FooterKey): SitePageApp {
+  return key === CONNECT_FOOTER_KEY ? "connect" : "website";
+}
+
+/** Its row in an app's list of pages, where the app is plain. */
 export const FOOTER_LABEL = "Footer";
 
-/** Where the footer is edited in the console, among the website's pages. */
-export const FOOTER_EDITOR_PATH = `${SITE_PAGES_PATH}/${FOOTER_KEY}`;
+/** Each footer's name where the app is not plain: the activity log, Media. */
+export const FOOTER_LABELS: Record<FooterKey, string> = {
+  footer: "Footer",
+  "connect-footer": "Connect footer",
+};
+
+/** Where a footer is edited in the console, among its app's pages. */
+export function footerEditorPath(key: FooterKey) {
+  return key === CONNECT_FOOTER_KEY
+    ? `${CONNECT_PAGES_PATH}/footer`
+    : `${SITE_PAGES_PATH}/${FOOTER_KEY}`;
+}
 
 /** What a link in the footer opens: one of the site's pages, a location's main page, or any address. */
 export const FOOTER_LINK_KINDS = ["page", "location", "url"] as const;
@@ -135,11 +169,17 @@ export const BUNDLED_PAYMENT_LOGOS: readonly FooterImage[] = [
   bundled("/brand/payments/boost.svg", "Boost", 312, 113),
 ];
 
-/** A body the company is registered with: its mark, its name, and a line such as the member number. */
+/**
+ * A body the company is registered with: its mark, its name, its
+ * registration number, and where its certificate can be seen.
+ */
 export type FooterBadge = {
   image: FooterImage | null;
   name: string;
+  /** The registration number: "KPK/LN 10512". Optional. */
   detail: string;
+  /** The certificate, on the body's site or a file: the badge opens it. Optional. */
+  link: string;
 };
 
 const crest = () => bundled("/brand/mof.jpg", "", 280, 230);
@@ -150,16 +190,23 @@ const crest = () => bundled("/brand/mof.jpg", "", 280, 230);
  * offers to fill in.
  */
 export const BUNDLED_BADGES: readonly FooterBadge[] = [
-  { image: crest(), name: "Ministry of Finance Malaysia", detail: "" },
+  {
+    image: crest(),
+    name: "Ministry of Finance Malaysia",
+    detail: "",
+    link: "",
+  },
   {
     image: crest(),
     name: "Ministry of Tourism, Arts & Culture Malaysia",
     detail: "",
+    link: "",
   },
   {
     image: bundled("/brand/matta.jpg", "", 280, 230),
     name: "Malaysian Association of Tour and Travel Agents",
     detail: "",
+    link: "",
   },
 ];
 
@@ -197,6 +244,12 @@ export type FooterContent = {
   since: number | null;
   /** The links beside the copyright line: the terms, the privacy policy. */
   legalLinks: FooterLink[];
+  /**
+   * Connect's footer alone: it shows the website's published footer in
+   * place of its own, the rest of it kept for when it is turned off.
+   * Always false on the website's.
+   */
+  sameAsWebsite: boolean;
 };
 
 export const FOOTER_LIMITS = {
@@ -291,11 +344,12 @@ export function footerContentOf(value: unknown): FooterContent {
     address: linesOf(raw.address),
     badgesHeading: lineOf(raw.badgesHeading),
     badges: listOf(raw.badges).map((row) => {
-      const { image, name, detail } = recordOf(row);
+      const { image, name, detail, link } = recordOf(row);
       return {
         image: footerImageOf(image),
         name: lineOf(name),
         detail: lineOf(detail),
+        link: lineOf(link),
       };
     }),
     paymentHeading: lineOf(raw.paymentHeading),
@@ -308,6 +362,7 @@ export function footerContentOf(value: unknown): FooterContent {
     registration: lineOf(raw.registration),
     since: sinceOf(raw.since),
     legalLinks: listOf(raw.legalLinks).map(linkOf),
+    sameAsWebsite: raw.sameAsWebsite === true,
   };
 }
 
@@ -385,6 +440,7 @@ export function defaultFooterContent(
       pageLink("privacy-policy", "Privacy"),
       pageLink("refund-policy", "Cancellation and refunds"),
     ],
+    sameAsWebsite: false,
   };
 }
 
@@ -459,6 +515,22 @@ export function footerLinksOf(content: FooterContent): FooterLink[] {
 }
 
 /**
+ * What a footer's links may open in public, from the site pages that are
+ * published, by key, and the locations the public sees.
+ */
+export function footerAudienceOf(
+  published: Partial<Record<SitePageKey, unknown>>,
+  locations: readonly string[],
+) {
+  return {
+    pages: new Set(
+      WEBSITE_PAGES.filter((page) => isSitePagePublic(page, page in published)),
+    ),
+    locations: new Set(locations),
+  };
+}
+
+/**
  * The footer as the public is shown it: each link to a site page that is
  * not published or a location that is not public left out, so none leads
  * to a 404, then each column with nothing left in it.
@@ -526,6 +598,7 @@ export function checkFooterLimits(content: FooterContent): Change {
       target.kind === "url" ? [target.url] : [],
     ),
     ...content.social.map((row) => row.url),
+    ...content.badges.map((badge) => badge.link),
   ];
   if (urls.some((url) => over(url, L.url))) {
     return refuse(`An address is at most ${L.url} characters.`);
@@ -548,7 +621,7 @@ export function checkFooterLimits(content: FooterContent): Change {
     ["The registration", content.registration, L.registration],
     ...content.badges.flatMap((badge): [string, string, number][] => [
       ["A registration's name", badge.name, L.badgeName],
-      ["A registration's line", badge.detail, L.badgeDetail],
+      ["A registration number", badge.detail, L.badgeDetail],
     ]),
   ];
   const long = fields.find(([, text, limit]) => over(text, limit));
@@ -625,6 +698,9 @@ export function footerProblems(content: FooterContent): string[] {
     if (badge.name === "")
       problems.push(`Registration ${index + 1} has no name.`);
     if (!badge.image) problems.push(`${where} has no logo.`);
+    if (badge.link && !isFooterUrl(badge.link)) {
+      problems.push(`${where}'s certificate link is not a web address.`);
+    }
   });
   if (content.paymentLogos.length > 0 && content.paymentHeading === "") {
     problems.push("The payment logos have no heading.");
@@ -643,6 +719,8 @@ export function footerProblems(content: FooterContent): string[] {
 export function checkFooterComplete(content: FooterContent): Change {
   const limits = checkFooterLimits(content);
   if (!limits.ok) return limits;
+  // Connect's showing the website's: its own is kept, unchecked, for later.
+  if (content.sameAsWebsite) return { ok: true };
   const [first, ...more] = footerProblems(content);
   if (!first) return { ok: true };
   return refuse(
@@ -654,6 +732,7 @@ export function checkFooterComplete(content: FooterContent): Change {
 
 /** The parts of the footer, in the editor's order, by the name the editor gives them. */
 const FOOTER_PARTS: [(content: FooterContent) => unknown, string][] = [
+  [(c) => c.sameAsWebsite, "Same as Website"],
   [(c) => c.tagline, "Tagline"],
   [(c) => c.columns, "Link columns"],
   [(c) => [c.socialHeading, c.social], "Social links"],

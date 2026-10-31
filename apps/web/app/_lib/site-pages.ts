@@ -1,12 +1,12 @@
 import "server-only";
 import {
+  FOOTER_KEY,
   SITE_PAGES_TAG,
   defaultFooterContent,
+  footerAudienceOf,
   getFooter,
   getPublishedFooter,
   getSitePage,
-  WEBSITE_PAGES,
-  isSitePagePublic,
   listPublishedSitePages,
   visibleFooterOf,
   type FooterContent,
@@ -51,7 +51,7 @@ export const sitePageDraft = cache(getSitePage);
 
 /** The footer as published; null until its first publish. */
 const publishedFooter = unstable_cache(
-  getPublishedFooter,
+  () => getPublishedFooter(FOOTER_KEY),
   ["published-footer", String(SITE_PAGES_VERSION)],
   { tags: [SITE_PAGES_TAG], revalidate: REFRESH_SECONDS },
 );
@@ -64,7 +64,9 @@ export async function publicFooter(): Promise<FooterContent> {
 }
 
 /** The footer's draft, for the staff preview, read fresh. Once per request. */
-export const footerDraft = cache(async () => (await getFooter()).draft);
+export const footerDraft = cache(
+  async () => (await getFooter(FOOTER_KEY)).draft,
+);
 
 /**
  * The footer as a page shows it, public or a staff preview's draft: each
@@ -77,10 +79,5 @@ export async function shownFooter(preview: boolean): Promise<FooterContent> {
     publishedSitePages(),
     publicLocationSlugs(),
   ]);
-  return visibleFooterOf(content, {
-    pages: new Set(
-      WEBSITE_PAGES.filter((page) => isSitePagePublic(page, page in pages)),
-    ),
-    locations: new Set(locations),
-  });
+  return visibleFooterOf(content, footerAudienceOf(pages, locations));
 }

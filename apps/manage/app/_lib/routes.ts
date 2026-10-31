@@ -3,6 +3,8 @@ import {
   CONNECT_PAGE,
   CONNECT_PAGE_EDITOR_PATH,
   SITE_PAGES_PATH,
+  footerEditorPath,
+  isFooterKey,
   pageEditorPath,
   pageSegmentOf,
   type ActivityArea,
@@ -10,6 +12,7 @@ import {
   type LocationPageKey,
   type LocationPageRef,
   type MediaFilter,
+  type SitePageApp,
   type TripCategory,
 } from "@repo/db";
 
@@ -325,13 +328,31 @@ export type PagesFilter = {
 };
 
 /**
- * The pages: the website's and every location's under `~`, one
- * location's under its slug, narrowed by status, section and a search.
+ * The pages of an app, the customer site's or Connect's, narrowed by
+ * status and a search. Console-wide.
+ */
+export function sitePagesHref(
+  app: SitePageApp,
+  filter: Omit<PagesFilter, "section"> = {},
+) {
+  return listHref(consolePath(null, "pages", app), {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/**
+ * The locations' pages: every location's at /~/pages/locations, one
+ * location's at /[slug]/pages, narrowed by status, section and a search.
  * Narrowed to a section, it is that section's list: its own page and
  * every page under it.
  */
 export function pagesHref(scope: ScopeSlug, filter: PagesFilter = {}) {
-  return listHref(consolePath(scope, "pages"), {
+  const path =
+    scope === null
+      ? consolePath(null, "pages", "locations")
+      : consolePath(scope, "pages");
+  return listHref(path, {
     section: filter.section && pageSegmentOf(filter.section),
     status: filter.status,
     [SEARCH_PARAM]: filter.q,
@@ -351,8 +372,9 @@ export function locationPageHref(slug: string, ref: LocationPageRef) {
 
 export { SITE_PAGES_PATH };
 
-/** The editor of one of the site's own pages. */
+/** The editor of one of the site's own pages, or of a footer. */
 export function sitePageHref(page: string) {
+  if (isFooterKey(page)) return footerEditorPath(page);
   return page === CONNECT_PAGE
     ? CONNECT_PAGE_EDITOR_PATH
     : `${SITE_PAGES_PATH}/${page}`;
@@ -373,17 +395,22 @@ export function mediaHref(show?: MediaFilter, page?: number) {
 
 /* Admin */
 
-/** The staff: every admin, narrowed by a search. Console-wide. */
-export function staffHref(q?: string) {
-  return listHref(consolePath(null, "team"), { [SEARCH_PARAM]: q });
+/** Admin: every account with admin access, narrowed by a search. Console-wide. */
+export function adminsHref(q?: string) {
+  return listHref(consolePath(null, "users", "admin"), { [SEARCH_PARAM]: q });
 }
 
-/** Every customer account, the newest first, narrowed by a search, at a page. Console-wide. */
-export function customersHref(filter: { q?: string; page?: number } = {}) {
-  return listHref(consolePath(null, "team", "customers"), {
+/** All Users: every account, the newest first, narrowed by a search, at a page. Console-wide. */
+export function usersHref(filter: { q?: string; page?: number } = {}) {
+  return listHref(consolePath(null, "users"), {
     [SEARCH_PARAM]: filter.q,
     [PAGE_PARAM]: pageParam(filter.page),
   });
+}
+
+/** One account's page under All Users: its profile, its sign-in and where it has access. Console-wide. */
+export function userHref(id: string) {
+  return consolePath(null, "users", id);
 }
 
 /**

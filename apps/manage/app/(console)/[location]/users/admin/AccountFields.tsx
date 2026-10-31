@@ -3,7 +3,7 @@ import { Field, Input } from "@repo/ui/field";
 
 /**
  * The email and the names of an account, in the panels that make one:
- * Create an account on Customers, and Add staff on Staff, where the names
+ * Create an account on All Users, and Add admin on Admin, where the names
  * are needed only for an email with no account yet. The server action
  * reads them as `email`, `firstName` and `lastName`.
  */

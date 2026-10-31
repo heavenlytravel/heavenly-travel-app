@@ -26,13 +26,13 @@ export function AdminRowControls({
   const revoke = useActionForm(revokeAdminAction, {
     ask: () =>
       confirm({
-        title: `Remove staff access for ${email}?`,
+        title: `Remove admin access for ${email}?`,
         description:
           "They can no longer open the console. Promoting them again here gives it back.",
         action: "Revoke",
         danger: true,
       }),
-    done: `Removed staff access for ${email}.`,
+    done: `Removed admin access for ${email}.`,
   });
 
   return (

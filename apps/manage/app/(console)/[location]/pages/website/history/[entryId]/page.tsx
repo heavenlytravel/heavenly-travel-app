@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { FOOTER_KEY, describeActivity, formatLocalDateTime } from "@repo/db";
+import {
+  CONNECT_FOOTER_KEY,
+  describeActivity,
+  footerEditorPath,
+  formatLocalDateTime,
+} from "@repo/db";
 import {
   SITE_URL,
   getFooterPublish,
@@ -17,7 +22,7 @@ import { PageContentView } from "../../../../../../_components/page-editor/PageC
 import { requireAdmin } from "../../../../../../_lib/access";
 import { sitePageHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
-import { FooterContentView } from "../../footer/FooterContentView";
+import { FooterContentView } from "../../../_components/footer/FooterContentView";
 
 /** A site page names no saved address. */
 const NO_ADDRESSES: ReadonlyMap<string, string> = new Map();
@@ -63,7 +68,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
     return (
       <PublishHeader
         entry={footer.entry}
-        edit={{ href: sitePageHref(FOOTER_KEY), label: "Edit the footer" }}
+        edit={{ href: footerEditorPath(footer.key), label: "Edit the footer" }}
       >
         <Card>
           <CardTitle>Before</CardTitle>
@@ -75,7 +80,9 @@ async function publishDetails({ entryId }: { entryId: string }) {
             />
           ) : (
             <p className="text-sm text-muted">
-              The footer the site started with: this was its first publish.
+              {footer.key === CONNECT_FOOTER_KEY
+                ? "Connect showed the website's footer: this was its first publish."
+                : "The footer the site started with: this was its first publish."}
             </p>
           )}
         </Card>

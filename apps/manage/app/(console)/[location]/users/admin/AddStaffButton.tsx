@@ -14,7 +14,7 @@ import { addStaffAction } from "./actions";
  * "Add admin" in Admin's header: a panel that takes an email, the names,
  * the level and the teams. An email with an account is promoted, its
  * names left as they are; one without gets an account first, as
- * Customers makes it. A refused add keeps what was typed; an added one
+ * All Users makes it. A refused add keeps what was typed; an added one
  * closes the panel.
  */
 export function AddStaffButton() {

@@ -24,7 +24,7 @@ export const RECORD_KIND_LABELS: Record<RecordKind, string> = {
   bookings: "Bookings",
   vehicles: "Vehicles",
   drivers: "Drivers",
-  users: "Customers",
+  users: "Users",
   "vehicle-classes": "Classes",
   zones: "Zones",
 };

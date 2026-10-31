@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  CONNECT_FOOTER_KEY,
   describeActivity,
   footerEditorPath,
   formatLocalDateTime,
@@ -79,7 +80,9 @@ async function publishDetails({ entryId }: { entryId: string }) {
             />
           ) : (
             <p className="text-sm text-muted">
-              The footer the site started with: this was its first publish.
+              {footer.key === CONNECT_FOOTER_KEY
+                ? "Connect showed the website's footer: this was its first publish."
+                : "The footer the site started with: this was its first publish."}
             </p>
           )}
         </Card>

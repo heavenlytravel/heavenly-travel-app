@@ -41,11 +41,7 @@ const access = {
     orderBy: { createdAt: "asc" },
   },
   driver: {
-    select: {
-      id: true,
-      location: { select: { slug: true } },
-      vendor: { select: { id: true, name: true } },
-    },
+    select: { id: true, vendor: { select: { id: true, name: true } } },
   },
 } satisfies Prisma.UserInclude;
 

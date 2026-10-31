@@ -64,7 +64,7 @@ export async function setAdminAction(
 }
 
 /**
- * Add staff: promotes the account an email has, or creates it first and
+ * Add admin: promotes the account an email has, or creates it first and
  * promotes it in the same go.
  */
 export async function addStaffAction(

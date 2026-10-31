@@ -32,7 +32,7 @@ const PERMISSION_WORDS: Record<Permission, string> = {
   "locations.activate": "Take a location live, pause or delete it",
   "settings.view": "Open Settings",
   "admins.manage": "Admin, their levels and teams",
-  "users.manage": "Customer accounts",
+  "users.manage": "All Users: every account, its email and password",
   "wall.switch": "Switch the wall",
   "activity.view": "See the activity of their own work",
   "media.manage": "Media",

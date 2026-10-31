@@ -24,7 +24,7 @@ import {
 
 /**
  * Creates an account on someone's behalf, in Clerk and here, and with
- * Make staff on, makes it staff in the same go. Server actions are
+ * Make admin on, makes it an admin in the same go. Server actions are
  * reachable by direct POST, so it checks the permissions again: making
  * staff asks the one that manages them.
  */

@@ -21,8 +21,6 @@ import {
   type PartAsk,
   type VendorOption,
 } from "@repo/db/server";
-import { sendDriverEmailFor } from "@repo/email";
-import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import { revalidateLocation } from "../../../../_lib/revalidate";
 import {
@@ -37,9 +35,10 @@ import {
  * The booking's fulfilment: asking vendors for a vehicle and a driver,
  * recording their answers, naming what a vendor chose, releasing a part,
  * and what we owe for a cancelled trip. Operation's (`bookings.fulfil`),
- * checked again in each. The writers in @repo/db check the rest; a trip
- * that became assigned sends the customer their driver once the response
- * is out. See docs/261028-fulfilment-vendors-and-connect.md.
+ * checked again in each. The writers in @repo/db check the rest. No
+ * email goes out from here, not even the customer's driver email: the
+ * console's own emails wait for their settings. See
+ * docs/261028-fulfilment-vendors-and-connect.md.
  */
 
 /** What a fulfilment write answers: done or why not, and the bookings whose trips became assigned. */
@@ -49,9 +48,6 @@ type FulfilResult =
 
 function finish(result: FulfilResult): ActionState {
   if (!result.ok) return refusalOf(result);
-  for (const id of result.assigned ?? []) {
-    after(() => sendDriverEmailFor(id));
-  }
   revalidateLocation();
   return null;
 }

@@ -107,6 +107,13 @@ describe("classFit", () => {
     assert.deepEqual(classFit(mpv, [[]], 7), { ok: false, reason: "seats" });
   });
 
+  it("seats any group for an admin", () => {
+    assert.deepEqual(classFit(mpv, [[price("mpv", 12000)]], 7, "admin"), {
+      ok: true,
+      totalSen: 12000,
+    });
+  });
+
   it("names the trip whose location does not sell the class", () => {
     assert.deepEqual(
       classFit(mpv, [[price("mpv", 12000)], [price("sedan", 8000)]], 2),

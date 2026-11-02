@@ -32,13 +32,19 @@ import {
 import { resolveTrip, tripRouting } from "@repo/places/server";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { bookingHref } from "../../../../_lib/routes";
-import { CATEGORY_FIELD, FLIGHT_FIELDS, type TripQuoteView } from "./trip-form";
+import {
+  ADMIN_SIDE,
+  CATEGORY_FIELD,
+  FLIGHT_FIELDS,
+  type TripQuoteView,
+} from "./trip-form";
 
 /**
  * The server side of the booking forms: the website's own resolving and
  * pricing, run for the trips the console posted. Both forms go through
- * here, so a booking entered or amended on the console can never differ
- * from one the site would have made for the same trips.
+ * here, so a booking entered or amended on the console is priced as the
+ * site would price the same trips. Only the website's limits are lifted
+ * (`ADMIN_SIDE`): an admin enters what was agreed.
  */
 
 /**
@@ -62,7 +68,9 @@ export async function quoteTripView(
 ): Promise<TripQuoteView> {
   const trip = await resolveTrip(search);
   if (!trip.ok) return { ok: false, error: trip.message };
-  const quoted = await quoteTrip(category, trip.request, trip.routing);
+  const quoted = await quoteTrip(category, trip.request, trip.routing, {
+    side: ADMIN_SIDE,
+  });
   if (!quoted.ok) return { ok: false, error: quoted.error.message };
 
   const { request } = trip;
@@ -129,7 +137,7 @@ function parseFormTrip(
   params: URLSearchParams,
 ): { ok: true; trip: FormTrip } | Refused {
   const category = textOf(params.get(CATEGORY_FIELD));
-  const search = parseTripSearch(params);
+  const search = parseTripSearch(params, ADMIN_SIDE);
   if (!isTripCategory(category) || !search) return NO_TRIP;
   const override = parsePriceOverride({
     amount: params.get(PRICE_OVERRIDE_FIELDS.amount),
@@ -145,8 +153,8 @@ export type PreparedFormItem =
 /**
  * The amend form's one item, parsed and then resolved and priced again on
  * the server: its trip as the item's fields, the vehicle and its details
- * once. Nothing from the browser is trusted; the website's rules apply,
- * with the same messages.
+ * once. Nothing from the browser is trusted; the website's checks apply
+ * with the same messages, but not its limits (`ADMIN_SIDE`).
  */
 export async function prepareFormItem(
   formData: FormData,
@@ -165,6 +173,7 @@ export async function prepareFormItem(
     category,
     { ...trip.request, ...options },
     trip.routing,
+    { side: ADMIN_SIDE },
   );
   if (!prepared.ok) return { ok: false, error: prepared.error.message };
   return { ok: true, item: prepared.item, override };
@@ -247,6 +256,7 @@ export async function prepareFormItems(
       flightNumber: flightOfTrip(request, flights),
     })),
     tripRouting,
+    { side: ADMIN_SIDE },
   );
   const items: PreparedItem[] = [];
   for (const [n, result] of prepared.entries()) {

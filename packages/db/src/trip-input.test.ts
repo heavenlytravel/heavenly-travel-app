@@ -50,6 +50,15 @@ describe("parseTripSearch", () => {
     assert.equal(parseTripSearch(oneway.replace("oneway", "return")), null);
   });
 
+  it("takes an admin's hours from one to a whole day", () => {
+    const hoursOf = (h: string) =>
+      parseTripSearch(hourly.replace("hours=4", `hours=${h}`), "admin")?.hours;
+    assert.equal(hoursOf("1"), 1);
+    assert.equal(hoursOf("24"), 24);
+    assert.equal(hoursOf("0"), undefined);
+    assert.equal(hoursOf("25"), undefined);
+  });
+
   it("reads the same names from a posted form", () => {
     const form = new FormData();
     form.set("mode", "hourly");

@@ -18,8 +18,6 @@ import {
   overrideItemPrice,
   type BookingChange,
 } from "@repo/db/server";
-import { sendBookingChangeEmail } from "@repo/email";
-import { after } from "next/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
@@ -34,14 +32,13 @@ import { prepareFormItem, savedBookingHref } from "../_lib/trip-server";
 /**
  * Every transition re-checks the session and the permission (actions are
  * reachable by direct POST), passes the admin as the actor for the log and
- * lets the booking core check the status. The result's `event` sends the
- * confirmed or cancelled emails once the response is out. A change moves
+ * lets the booking core check the status. No email goes out: the
+ * console's own emails wait for their settings. A change moves
  * the booking, the lists and the counts of every scope, and the menu's
  * count of what waits.
  */
 async function finish(result: BookingChange): Promise<ActionState> {
   if (!result.ok) return refusalOf(result);
-  after(() => sendBookingChangeEmail(result));
   revalidateLocation();
   return null;
 }

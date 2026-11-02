@@ -3,7 +3,7 @@
 import { isTripCategory, parseTripSearch, textOf } from "@repo/db";
 import { getAdmin } from "../../../../_lib/access";
 import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
-import { CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
+import { ADMIN_SIDE, CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
 import { quoteTripView } from "./trip-server";
 
 const INCOMPLETE_TRIP =
@@ -25,7 +25,7 @@ export async function quoteTripAction(
     return { ok: false, error: INCOMPLETE_TRIP };
   }
   const category = textOf(input[CATEGORY_FIELD]);
-  const search = parseTripSearch(input);
+  const search = parseTripSearch(input, ADMIN_SIDE);
   if (!isTripCategory(category) || !search) {
     return { ok: false, error: INCOMPLETE_TRIP };
   }

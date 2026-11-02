@@ -20,7 +20,7 @@ import { PriceOverrideControl } from "./PriceOverride";
 
 /** What the toast says once each step is taken. */
 const ADVANCED: Record<NextItemStatus, string> = {
-  confirmed: "Trip confirmed. The customer is told.",
+  confirmed: "Trip confirmed. No email is sent: tell the customer.",
   completed: "Trip completed.",
 };
 
@@ -68,7 +68,7 @@ export function ItemActions({
     ask: () =>
       confirm({
         title: `Cancel ${label}?`,
-        description: "The customer will be told.",
+        description: "No email is sent: tell the customer.",
         action: "Cancel item",
         cancel: "Keep it",
         danger: true,
@@ -144,7 +144,8 @@ export function CancelBookingControl({
     ask: () =>
       confirm({
         title: `Cancel booking ${reference}?`,
-        description: "Every open trip is cancelled and the customer is told.",
+        description:
+          "Every open trip is cancelled. No email is sent: tell the customer.",
         action: "Cancel booking",
         cancel: "Keep it",
         danger: true,

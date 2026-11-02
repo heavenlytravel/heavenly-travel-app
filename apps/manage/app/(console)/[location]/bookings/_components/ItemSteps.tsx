@@ -1,10 +1,11 @@
 "use client";
 
 import {
+  ADMIN_HOURLY_OPTIONS,
   BOOKING_RULES,
   formatMyr,
-  HOURLY_OPTIONS,
   largestGroup,
+  plural,
   seatsLabel,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
@@ -218,9 +219,9 @@ function TripFields({
             <Select
               value={trip.hours}
               onValueChange={(hours) => changeTrip({ hours })}
-              options={HOURLY_OPTIONS.map((h) => ({
+              options={ADMIN_HOURLY_OPTIONS.map((h) => ({
                 value: String(h),
-                label: `${h} hours`,
+                label: plural(h, "hour"),
               }))}
             />
           </Field>
@@ -232,6 +233,8 @@ function TripFields({
               value={{ date: trip.date, time: trip.time }}
               onChange={({ date, time }) => changeTrip({ date, time })}
               timeZone={BOOKING_RULES.timeZone}
+              // A booking taken earlier may be entered after its trip.
+              allowPast
             />
           </Field>
           <FormError error={clash?.note} />
@@ -365,21 +368,14 @@ function VehicleFields({
     <div className="grid gap-5">
       <Field
         label="Passengers"
+        // A hint, not a limit: an admin books the group that was agreed.
         hint={`The largest vehicle here seats ${maxPassengers}.`}
         className="max-w-48"
       >
         <NumberField
           min={1}
-          max={maxPassengers}
           value={vehicle.passengers}
-          onChange={(e) =>
-            onChange({
-              passengers:
-                Number(e.target.value) > maxPassengers
-                  ? String(maxPassengers)
-                  : e.target.value,
-            })
-          }
+          onChange={(e) => onChange({ passengers: e.target.value })}
         />
       </Field>
 

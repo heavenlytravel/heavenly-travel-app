@@ -3,6 +3,7 @@ import {
   localDateTimeInputs,
   localMinuteOfDay,
   pickupInstant,
+  type BookingSide,
   type ClassAvailability,
 } from "./booking-rules";
 import type { TripMode } from "./booking-status";
@@ -159,14 +160,16 @@ export type ClassFit =
  * every trip's location (a trip is priced by its pickup's), and take every
  * trip under its rules with a price on the grid. The group is checked
  * first, since changing a trip never fixes it. `trips` holds each trip's
- * priced classes, in the list's order.
+ * priced classes, in the list's order. An admin's group is not checked
+ * (`BookingSide`).
  */
 export function classFit(
   vehicleClass: { id: string; maxPassengers: number },
   trips: readonly (readonly TripClassPrice[])[],
   passengers: number,
+  side: BookingSide = "customer",
 ): ClassFit {
-  if (passengers > vehicleClass.maxPassengers) {
+  if (side === "customer" && passengers > vehicleClass.maxPassengers) {
     return { ok: false, reason: "seats" };
   }
   let totalSen = 0;

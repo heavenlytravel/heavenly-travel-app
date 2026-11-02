@@ -281,9 +281,11 @@ type Moment = { date: string; time: string };
  * side, as a car rental site asks for a pick-up. The button reads
  * "Wed, 28 Oct · 9:30 AM". The list opens near the time now and greys the
  * times already past when the day is today, both read in `timeZone`; a day
- * before today cannot be picked unless `min` says so. Choosing the time
- * after the day closes it, as does "Done". The two values post as
- * `dateName` and `timeName`, "2026-10-28" and "09:30".
+ * before today cannot be picked unless `min` says so. `allowPast` lets any
+ * moment be picked, past ones too, down to `min` when given: for a record
+ * of what already happened. Choosing the time after the day closes it, as
+ * does "Done". The two values post as `dateName` and `timeName`,
+ * "2026-10-28" and "09:30".
  */
 export function DateTimeField({
   id,
@@ -294,6 +296,7 @@ export function DateTimeField({
   onChange,
   min,
   max,
+  allowPast = false,
   disabled,
   required,
   bare,
@@ -312,6 +315,7 @@ export function DateTimeField({
   onChange?: (value: Moment) => void;
   min?: string;
   max?: string;
+  allowPast?: boolean;
   placeholder?: string;
   /** The sheet's heading on a phone. */
   title?: string;
@@ -356,6 +360,7 @@ export function DateTimeField({
           value={current}
           min={min}
           max={max}
+          allowPast={allowPast}
           timeZone={timeZone}
           onChange={change}
           onClose={() => setOpen(false)}
@@ -384,6 +389,7 @@ function MomentPanel({
   value,
   min,
   max,
+  allowPast,
   timeZone,
   onChange,
   onClose,
@@ -391,13 +397,15 @@ function MomentPanel({
   value: Moment;
   min?: string;
   max?: string;
+  allowPast: boolean;
   timeZone?: string;
   onChange: (value: Moment) => void;
   onClose: () => void;
 }) {
   const now = zonedNow(timeZone);
   const start = nextQuarter(now.minute);
-  const earliestOn = (date: string) => (date === now.today ? start : null);
+  const earliestOn = (date: string) =>
+    !allowPast && date === now.today ? start : null;
   const earliest = earliestOn(value.date);
   const summary = [dayLabel(value.date), timeLabel(value.time)]
     .filter(Boolean)
@@ -410,7 +418,7 @@ function MomentPanel({
           autoFocus={!value.date || !value.time}
           className="ui:max-sm:mx-auto ui:sm:border-r ui:sm:border-popover-line ui:sm:p-3"
           value={value.date}
-          min={min ?? now.today}
+          min={allowPast ? min : (min ?? now.today)}
           max={max}
           onPick={(date) => {
             // A time already past on the new day is dropped, not kept wrong.

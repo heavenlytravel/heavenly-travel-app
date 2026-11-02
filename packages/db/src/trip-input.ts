@@ -1,4 +1,8 @@
-import { BOOKING_RULES, localDateTimeInputs } from "./booking-rules";
+import {
+  hourlyRange,
+  localDateTimeInputs,
+  type BookingSide,
+} from "./booking-rules";
 import {
   isTripMode,
   offersChildSeats,
@@ -123,21 +127,21 @@ const intIn = (raw: string | null, min: number, max: number) => {
 
 /**
  * The search in a query or a form, or null when it is not a full search.
- * Hours run from the hourly floor to the maximum; the class's own minimum
- * is an availability state once the trip is priced.
+ * Hours run within the side's range (`hourlyRange`); the class's own
+ * minimum is an availability state once the trip is priced.
  */
-export function parseTripSearch(input: QueryInput): TripSearch | null {
+export function parseTripSearch(
+  input: QueryInput,
+  side: BookingSide = "customer",
+): TripSearch | null {
   const params = toParams(input);
   const mode = params.get(TRIP_PARAM.mode);
   const pickupId = params.get(TRIP_PARAM.pickup);
   const dropoffId = params.get(TRIP_PARAM.dropoff);
   const date = params.get(TRIP_PARAM.date);
   const time = params.get(TRIP_PARAM.time);
-  const hours = intIn(
-    params.get(TRIP_PARAM.hours),
-    BOOKING_RULES.hourlyFloorHours,
-    BOOKING_RULES.maxHourlyHours,
-  );
+  const range = hourlyRange(side);
+  const hours = intIn(params.get(TRIP_PARAM.hours), range.min, range.max);
 
   if (!isTripMode(mode) || !pickupId || !ID_RE.test(pickupId)) return null;
   if (!date || !DATE_RE.test(date) || !time || !TIME_RE.test(time)) return null;

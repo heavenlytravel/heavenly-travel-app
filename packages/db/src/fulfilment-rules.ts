@@ -8,7 +8,7 @@ import { kmBetween } from "./zone-trip";
 /**
  * Fulfilment's vocabulary and rules, pure and browser-safe: who does a
  * trip, when a vehicle or a driver is busy, what refuses a job and what
- * only warns, when a trip is assigned, and which column of the board it
+ * only warns, when a trip is assigned, and where on the Assign page it
  * stands in. The writers in ./fulfilment apply them inside their
  * transactions. See docs/261028-fulfilment-vendors-and-connect.md.
  */
@@ -265,16 +265,16 @@ export function tripAssigned(parts: readonly PartAcceptance[]) {
   });
 }
 
-/** The board's columns, worked out, never stored. */
-export const BOARD_COLUMNS = [
+/** Where a trip stands on the Assign page, worked out, never stored. */
+export const ASSIGN_STATES = [
   "to-assign",
   "waiting",
   "assigned",
   "on-the-road",
   "done",
 ] as const;
-export type BoardColumn = (typeof BOARD_COLUMNS)[number];
-export const BOARD_COLUMN_LABELS: Record<BoardColumn, string> = {
+export type AssignState = (typeof ASSIGN_STATES)[number];
+export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
   "to-assign": "To assign",
   waiting: "Waiting to accept",
   assigned: "Assigned",
@@ -282,13 +282,13 @@ export const BOARD_COLUMN_LABELS: Record<BoardColumn, string> = {
   done: "Done",
 };
 
-/** The board's column for a trip: by its status, its parts and whether its driver has reported. */
-export function boardColumnOf(trip: {
+/** Where a trip stands: by its status, its parts and whether its driver has reported. */
+export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
   /** Its driver has tapped "On the way" or later. */
   reported: boolean;
-}): BoardColumn {
+}): AssignState {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
   if (tripAssigned(trip.parts)) return "assigned";

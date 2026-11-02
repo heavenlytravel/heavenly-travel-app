@@ -114,8 +114,8 @@ export type {
   PartAnswer,
   HeldBooking,
 } from "./fulfilment";
-export { listBoard, listOursToAccept, boardDayRange } from "./board";
-export type { BoardCard, BoardPart, OursToAccept } from "./board";
+export { listAssignTrips, listOursToAccept } from "./assign-list";
+export type { AssignPart, AssignRow, OursToAccept } from "./assign-list";
 export {
   listDriverJobs,
   getDriverJob,

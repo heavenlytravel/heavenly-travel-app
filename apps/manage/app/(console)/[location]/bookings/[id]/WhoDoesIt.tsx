@@ -19,11 +19,14 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
-import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
+import {
+  AssignTripButton,
+  assignTripsOf,
+} from "../_components/AssignTripDialog";
 import {
   answerPartsAction,
   loadAssignChoices,
@@ -98,26 +101,26 @@ const tripsName = (positions: readonly number[]) =>
 /**
  * "Who does it" on a booking: each trip assigned or not, and each vehicle
  * and driver asked for, with its vendor, whom it names, what we owe and
- * whose answer it waits for. For Operation, the link to the Assign page, to record
+ * whose answer it waits for. For Operation, Assign on each trip still to
+ * assign (the same dialog as the Assign page's), to record
  * an answer given by phone, to name what a vendor chose and to release a
  * part; every other team reads it. See
  * docs/261028-fulfilment-vendors-and-connect.md.
  */
 export function WhoDoesIt({
   bookingId,
-  assignHref,
   trips,
   canFulfil,
 }: {
   bookingId: string;
-  /** The booking's Assign page, in the scope it was opened in. */
-  assignHref: string;
   trips: FulfilmentTrip[];
   canFulfil: boolean;
 }) {
   const live = trips.filter((t) => isLive(t) && t.status !== "completed");
   const groups = groupsOf(live);
-  const toAsk = live.filter((t) => rolesToAsk(t).length > 0);
+  const toAssign = assignTripsOf(
+    live.map((t) => ({ ...t, roles: rolesToAsk(t) })),
+  );
   const owed = trips.filter(
     (t) =>
       t.status === "cancelled" &&
@@ -128,17 +131,7 @@ export function WhoDoesIt({
 
   return (
     <Card>
-      <CardTitle
-        action={
-          canFulfil && toAsk.length > 0 ? (
-            <Button size="sm" asChild>
-              <Link href={assignHref}>Assign</Link>
-            </Button>
-          ) : null
-        }
-      >
-        Who does it
-      </CardTitle>
+      <CardTitle>Who does it</CardTitle>
       <div className="grid gap-4">
         {received ? (
           <p className="text-sm text-muted">
@@ -146,24 +139,38 @@ export function WhoDoesIt({
           </p>
         ) : null}
         <ul className="grid gap-1 text-sm">
-          {live.map((trip) => (
-            <li key={trip.id} className="flex flex-wrap items-center gap-2">
-              <span>
-                Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
-              </span>
-              {trip.assigned ? (
-                <Badge dot tone="navy">
-                  Assigned
-                </Badge>
-              ) : trip.parts.length > 0 ? (
-                <Badge dot tone="amber">
-                  Waiting to accept
-                </Badge>
-              ) : (
-                <Badge dot>To assign</Badge>
-              )}
-            </li>
-          ))}
+          {live.map((trip) => {
+            const open = toAssign.find((t) => t.id === trip.id);
+            return (
+              <li key={trip.id} className="flex flex-wrap items-center gap-2">
+                <span>
+                  Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
+                </span>
+                {trip.assigned ? (
+                  <Badge dot tone="navy">
+                    Assigned
+                  </Badge>
+                ) : trip.parts.length > 0 ? (
+                  <Badge dot tone="amber">
+                    Waiting to accept
+                  </Badge>
+                ) : (
+                  <Badge dot>To assign</Badge>
+                )}
+                {canFulfil && open ? (
+                  <span className="ml-auto">
+                    <AssignTripButton
+                      bookingId={bookingId}
+                      trip={open}
+                      others={toAssign.filter((t) => t.id !== trip.id)}
+                      label="Assign trip"
+                      variant={trip.parts.length > 0 ? "secondary" : "primary"}
+                    />
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
         {groups.map((group) => (
           <GroupRow
@@ -182,7 +189,7 @@ export function WhoDoesIt({
             className="grid gap-2 border-t border-hairline pt-3"
           >
             <p className="text-sm font-medium">
-              Trip {trip.position}, cancelled: what we owe
+              Trip {trip.position}, cancelled: pay vendor
             </p>
             {trip.parts
               .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
@@ -236,7 +243,7 @@ function GroupRow({
       </div>
       <p className="text-sm text-muted">
         {named ?? "Vendor to choose"}
-        {!vendor.isOurs ? ` · We owe ${formatMyr(cost)}` : null}
+        {!vendor.isOurs ? ` · Pay vendor ${formatMyr(cost)}` : null}
       </p>
       {canFulfil ? (
         <div className="flex flex-wrap items-start gap-2">

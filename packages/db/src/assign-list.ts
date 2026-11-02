@@ -1,27 +1,35 @@
 import { pickupInstant } from "./booking-rules";
+import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
 import {
-  boardColumnOf,
+  assignStateOf,
+  rolesToAsk,
   tripWindow,
-  type BoardColumn,
+  type AssignState,
   type Job,
+  type PartRole,
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
 import { modelName } from "./vehicle-model-input";
 
 /**
- * Operation's board: a day's trips in the columns they stand in, worked
- * out from their status and their parts, never stored; and the parts of
- * ours waiting for Operation's own yes. For watching: a card moves when
- * someone acts, never by a drag. See
- * docs/261028-fulfilment-vendors-and-connect.md, "The booking's life".
+ * Operation's Assign page: every trip from today on, where it stands (to
+ * assign, waiting to accept, assigned, on the road, done today), worked
+ * out from its status and its parts, never stored; and the parts of ours
+ * waiting for Operation's own yes. See
+ * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-const boardInclude = {
-  booking: { select: { id: true, reference: true } },
+const tripInclude = {
+  booking: {
+    select: {
+      id: true,
+      reference: true,
+      contactName: true,
+      items: { select: { status: true } },
+    },
+  },
   tripDetails: {
     select: {
       vehicleClassId: true,
@@ -32,6 +40,7 @@ const boardInclude = {
       distanceKm: true,
       passengers: true,
       mode: true,
+      hours: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -59,8 +68,8 @@ const boardInclude = {
   },
 } satisfies Prisma.BookingItemInclude;
 
-/** One part of a card: who, from whom, and what it waits for. */
-export type BoardPart = {
+/** One part of a trip: who, from whom, and what it waits for. */
+export type AssignPart = {
   role: string;
   /** "VLE1234 · Toyota Alphard", "Ali bin Abu"; null while the vendor is to choose. */
   name: string | null;
@@ -70,73 +79,82 @@ export type BoardPart = {
   waiting: "vendor" | "driver" | "name" | null;
 };
 
-/** A trip as a card on the board. */
-export type BoardCard = {
+/** A trip as the Assign page lists it. */
+export type AssignRow = {
   itemId: string;
   bookingId: string;
   reference: string;
+  /** The booking's customer, as booked. */
+  customer: string;
   position: number;
-  column: BoardColumn;
+  /** The booking's trips still live, for "Trip 2 of 3". */
+  tripCount: number;
+  startsAt: Date;
+  state: AssignState;
+  /** The roles it still needs asked for. */
+  roles: PartRole[];
   job: Job;
   className: string;
   passengers: number;
+  /** Hourly: the hours it runs; null for one-way. */
+  hours: number | null;
   locationName: string | null;
-  parts: BoardPart[];
+  parts: AssignPart[];
   /** Assigned or on the road, and past its estimated end with no Dropped off yet. */
   overdue: boolean;
   /** The driver's last tap, and when; null before the first. */
   lastEvent: { kind: string; at: Date } | null;
 };
 
-/** The instants a day in Malaysia runs between: "2026-11-03". Null for a day that is not one. */
-export function boardDayRange(day: string) {
-  const start = pickupInstant(day, "00:00");
-  return start ? { start, end: new Date(start.getTime() + DAY_MS) } : null;
-}
-
 /**
- * The cards of a day's trips, at one location or every one, by pickup:
- * the confirmed ones to assign or waiting, the assigned ones, and those
- * done that day. Offers past their time are expired first. A trip whose
- * driver has tapped in Connect is on the road.
+ * Every trip from the start of today in Malaysia on, at one location or
+ * every one, by pickup: those confirmed, to assign or waiting, the
+ * assigned ones, and those done today. Offers past their time are
+ * expired first. A trip whose driver has tapped in Connect is on the road.
  */
-export async function listBoard(
-  day: string,
+export async function listAssignTrips(
   locationId?: string,
   now: Date = new Date(),
-): Promise<BoardCard[]> {
-  const range = boardDayRange(day);
-  if (!range) return [];
+): Promise<AssignRow[]> {
+  const from = pickupInstant(todayInMalaysia(now), "00:00") ?? now;
   await expireOffers(now);
   const items = await db.bookingItem.findMany({
     where: {
       status: { in: ["confirmed", "assigned", "completed"] },
-      startsAt: { gte: range.start, lt: range.end },
+      startsAt: { gte: from },
       ...(locationId ? { locationId } : {}),
     },
     orderBy: [{ startsAt: "asc" }, { position: "asc" }],
-    include: boardInclude,
+    include: tripInclude,
   });
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
-    const reported = lastEvent !== null;
-    const column = boardColumnOf({
+    const state = assignStateOf({
       status: item.status,
       parts: item.parts,
-      reported,
+      reported: lastEvent !== null,
     });
     return {
       itemId: item.id,
       bookingId: item.booking.id,
       reference: item.booking.reference,
+      customer: item.booking.contactName,
       position: item.position,
-      column,
+      tripCount: item.booking.items.filter((i) => i.status !== "cancelled")
+        .length,
+      startsAt: item.startsAt,
+      state,
+      roles: rolesToAsk(item),
       job,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,
+      hours:
+        item.tripDetails?.mode === "hourly"
+          ? (item.tripDetails.hours ?? null)
+          : null,
       locationName: item.location?.name ?? null,
-      parts: item.parts.map((part): BoardPart => ({
+      parts: item.parts.map((part): AssignPart => ({
         role: part.role,
         name: part.vehicle
           ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
@@ -151,7 +169,7 @@ export async function listBoard(
               : null,
       })),
       overdue:
-        (column === "assigned" || column === "on-the-road") &&
+        (state === "assigned" || state === "on-the-road") &&
         tripWindow(job).end.getTime() < now.getTime(),
       lastEvent,
     };

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  boardColumnOf,
+  assignStateOf,
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
@@ -117,7 +117,7 @@ describe("timingWarnings", () => {
   });
 });
 
-describe("tripAssigned and boardColumnOf", () => {
+describe("tripAssigned and assignStateOf", () => {
   const accepted = at("2026-11-01T00:00:00Z");
   const vehicle = {
     role: "vehicle",
@@ -149,18 +149,18 @@ describe("tripAssigned and boardColumnOf", () => {
 
   it("puts a trip in its column", () => {
     const base = { status: "confirmed", reported: false };
-    assert.equal(boardColumnOf({ ...base, parts: [] }), "to-assign");
-    assert.equal(boardColumnOf({ ...base, parts: [vehicle] }), "waiting");
+    assert.equal(assignStateOf({ ...base, parts: [] }), "to-assign");
+    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "waiting");
     assert.equal(
-      boardColumnOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
+      assignStateOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
       "assigned",
     );
     assert.equal(
-      boardColumnOf({ status: "assigned", reported: true, parts: [] }),
+      assignStateOf({ status: "assigned", reported: true, parts: [] }),
       "on-the-road",
     );
     assert.equal(
-      boardColumnOf({ status: "completed", reported: true, parts: [] }),
+      assignStateOf({ status: "completed", reported: true, parts: [] }),
       "done",
     );
   });

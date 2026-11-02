@@ -13,7 +13,6 @@ import {
   HouseIcon,
   IdCardIcon,
   ImageIcon,
-  KanbanIcon,
   LayoutDashboardIcon,
   MapIcon,
   MapPinIcon,
@@ -22,6 +21,7 @@ import {
   ShieldCheckIcon,
   SlidersHorizontalIcon,
   TagIcon,
+  UserRoundCheckIcon,
   UserRoundIcon,
   UsersIcon,
 } from "@repo/ui/icons";
@@ -38,7 +38,7 @@ import {
 export const MENU_ICONS = {
   dashboard: LayoutDashboardIcon,
   bookings: CalendarCheckIcon,
-  board: KanbanIcon,
+  assign: UserRoundCheckIcon,
   fleet: CarFrontIcon,
   vehicles: CarIcon,
   drivers: IdCardIcon,

@@ -53,6 +53,7 @@ export * from "./trip-input";
 export * from "./trip-plan";
 export * from "./booking-input";
 export * from "./booking-contact";
+export * from "./email-switch";
 export * from "./booking-limits";
 export * from "./site-paths";
 export * from "./search";

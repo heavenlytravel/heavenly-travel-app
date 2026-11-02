@@ -47,7 +47,7 @@ export function ImpactList({
 type Look = "header" | "row" | "card" | "bar";
 
 /**
- * The one way the console deletes. The button asks in an alert dialog
+ * The one way the console and Connect delete. The button asks in an alert dialog
  * that lists what the delete takes (`impact`) and, for one that reaches
  * past the record, asks for its name to be typed. The action, bound to
  * the record, gets what the admin saw and typed: the server works the

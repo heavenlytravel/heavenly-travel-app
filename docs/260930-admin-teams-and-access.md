@@ -63,7 +63,9 @@ the wall must be on in production: with it off, every `REGULAR` admin reaches ev
 screen, bookings and customers included.
 
 - The whole map lives in one module in `packages/db`, next to `getAccess`. Pages and
-  server actions ask it. No page holds its own rule.
+  server actions ask it. No page holds its own rule. Since 2026-11-02 its teams are the
+  defaults: a `SUPER` admin changes them on Admin, What each team can do, with no
+  deployment (docs/261102-direct-accounts.md, "Team access").
 - Checks stay in pages and server actions, not in `proxy.ts` or layouts, as today.
   Server actions check again because they are reachable by direct POST.
 - A screen the admin cannot reach is hidden from the sidebar. Its URL opens a new page

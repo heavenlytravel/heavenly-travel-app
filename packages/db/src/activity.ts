@@ -201,26 +201,33 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
   );
   const userById = new Map(users.map((u) => [u.id, u]));
   const emails = new Map(users.map((u) => [u.id, u.email]));
-  const [deleted, deletedVehicles, deletedDrivers] = await Promise.all([
-    deletedNames(
-      "location.deleted",
-      "name",
-      ids.location,
-      new Set(locations.map((l) => l.id)),
-    ),
-    deletedNames(
-      "vehicle.deleted",
-      "plate",
-      ids.vehicle,
-      new Set(vehicles.map((v) => v.id)),
-    ),
-    deletedNames(
-      "driver.deleted",
-      "name",
-      ids.driver,
-      new Set(drivers.map((d) => d.id)),
-    ),
-  ]);
+  const [deleted, deletedVehicles, deletedDrivers, deletedUsers] =
+    await Promise.all([
+      deletedNames(
+        "location.deleted",
+        "name",
+        ids.location,
+        new Set(locations.map((l) => l.id)),
+      ),
+      deletedNames(
+        "vehicle.deleted",
+        "plate",
+        ids.vehicle,
+        new Set(vehicles.map((v) => v.id)),
+      ),
+      deletedNames(
+        "driver.deleted",
+        "name",
+        ids.driver,
+        new Set(drivers.map((d) => d.id)),
+      ),
+      deletedNames(
+        "user.deleted",
+        "email",
+        idsOf(rows, "user"),
+        new Set(emails.keys()),
+      ),
+    ]);
   const withDeleted = (
     live: readonly (readonly [string, string])[],
     gone: Map<string, string>,
@@ -233,13 +240,14 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     location: deleted,
     vehicle: deletedVehicles,
     driver: deletedDrivers,
+    user: deletedUsers,
   };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, b.reference])),
     state: new Map(states.map((s) => [s.code, s.name])),
     district: new Map(districts.map((d) => [d.code, d.name])),
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
-    user: emails,
+    user: withDeleted([...emails], deletedUsers),
     admin: emails,
     setting: new Map(),
     media: new Map(),

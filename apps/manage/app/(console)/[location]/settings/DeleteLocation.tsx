@@ -2,7 +2,7 @@
 
 import type { DeleteImpact } from "@repo/db";
 import { Notice } from "@repo/ui/notice";
-import { DeleteButton, ImpactList } from "../../../_components/DeleteButton";
+import { DeleteButton, ImpactList } from "@repo/console/DeleteButton";
 import { deleteLocationAction } from "../../../_lib/location-actions";
 
 /**

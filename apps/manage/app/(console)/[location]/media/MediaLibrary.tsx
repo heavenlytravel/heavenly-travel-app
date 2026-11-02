@@ -24,7 +24,7 @@ import { EmptyState } from "@repo/console/EmptyState";
 import { TBody, THead, Table, Td, Th } from "@repo/console/Table";
 import { CardImage } from "../../../_components/CardImage";
 import { Choices } from "../../../_components/Choices";
-import { DeleteButton } from "../../../_components/DeleteButton";
+import { DeleteButton } from "@repo/console/DeleteButton";
 import {
   classHref,
   locationPageHref,

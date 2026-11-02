@@ -1,4 +1,9 @@
-import type { User as ClerkBackendUser, UserJSON } from "@clerk/nextjs/server";
+import {
+  clerkClient,
+  type User as ClerkBackendUser,
+  type UserJSON,
+} from "@clerk/nextjs/server";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { db } from "./client";
 import type { Prisma, User } from "./generated/prisma/client";
 import { isUniqueViolation } from "./prisma-errors";
@@ -100,6 +105,27 @@ export async function upsertUserFromClerk(
     if (!isUniqueViolation(error, "clerkId")) throw error;
     return update();
   }
+}
+
+/**
+ * A webhook's `user.created` or `user.updated`, mirrored only while Clerk
+ * still holds the user. An account made and undone at once (a refused
+ * form, ./accounts) or deleted before its webhook arrived is not brought
+ * back as a row whose sign-in is gone, which would hold its email. Null
+ * when it is gone; any other Clerk failure throws, so the webhook is
+ * retried.
+ */
+export async function upsertUserFromWebhook(
+  snapshot: ClerkUserSnapshot,
+): Promise<User | null> {
+  try {
+    const clerk = await clerkClient();
+    await clerk.users.getUser(snapshot.clerkId);
+  } catch (error) {
+    if (isClerkAPIResponseError(error) && error.status === 404) return null;
+    throw error;
+  }
+  return upsertUserFromClerk(snapshot);
 }
 
 export async function deleteUserFromClerk(clerkId: string) {

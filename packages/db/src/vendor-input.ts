@@ -3,6 +3,7 @@ import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
 import { isValidPhone, normalizePhone } from "./phone";
+import { parseSignInCheck, type NewUserFields } from "./user-input";
 
 /**
  * A vendor's vocabulary and the rules on what the admin's vendor form and
@@ -246,4 +247,37 @@ export function checkReviewNote(note: string): Change {
     );
   }
   return { ok: true };
+}
+
+/**
+ * Who signs in to Connect as the owner of a vendor staff enter, as Add
+ * vendor asks it: the email twice and a password, or none for a code.
+ * Left empty, the vendor has no Connect account until SUPER sets its
+ * owner. A new account is named after the contact, and keeps their
+ * phone. See docs/261102-direct-accounts.md.
+ */
+export function parseVendorOwner(
+  values: Record<string, unknown>,
+  contact: { contactName: string; contactPhone: string },
+): Parsed<NewUserFields | null> {
+  const email = normalizeEmail(textOf(values.email));
+  if (email && !isValidEmail(email)) {
+    return refuse(
+      "Enter an email like name@example.com, or leave it empty.",
+      "email",
+    );
+  }
+  const password = parseSignInCheck(values, email || null);
+  if (!password.ok) return password;
+  if (!email) return { ok: true, value: null };
+  return {
+    ok: true,
+    value: {
+      email,
+      firstName: contact.contactName,
+      lastName: "",
+      phone: contact.contactPhone,
+      password: password.value,
+    },
+  };
 }

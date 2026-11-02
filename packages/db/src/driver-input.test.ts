@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { driverFieldsOf, parseDriverFields } from "./driver-input";
+import {
+  driverFieldsOf,
+  parseDriverFields,
+  parseDriverSignIn,
+} from "./driver-input";
 
 const FORM: Record<string, string> = {
   vendorId: "ven1",
@@ -78,5 +82,39 @@ describe("driverFieldsOf", () => {
     assert.deepEqual(fields.vehicleClassIds, ["vc1", "vc2"]);
     assert.equal(fields.licenceExpiresOn, "2028-01-31");
     assert.equal(fields.psvExpiresOn, null);
+  });
+});
+
+describe("parseDriverSignIn", () => {
+  it("asks for a new email again, and takes a password or none", () => {
+    assert.deepEqual(
+      parseDriverSignIn(
+        { confirmEmail: "ali@example.com" },
+        "ali@example.com",
+        null,
+      ),
+      { ok: true, value: null },
+    );
+    const typo = parseDriverSignIn(
+      { confirmEmail: "ali@exmple.com" },
+      "ali@example.com",
+      null,
+    );
+    assert.equal(typo.ok ? null : typo.field, "confirmEmail");
+    assert.deepEqual(
+      parseDriverSignIn(
+        { confirmEmail: "ali@example.com", password: "long enough" },
+        "ali@example.com",
+        null,
+      ),
+      { ok: true, value: "long enough" },
+    );
+  });
+
+  it("asks nothing once the email is saved: it is locked", () => {
+    assert.deepEqual(
+      parseDriverSignIn({}, "ali@example.com", "ali@example.com"),
+      { ok: true, value: null },
+    );
   });
 });

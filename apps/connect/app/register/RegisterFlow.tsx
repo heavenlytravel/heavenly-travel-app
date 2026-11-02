@@ -13,6 +13,7 @@ import {
   ResendCode,
   TextButton,
 } from "@repo/auth/AuthParts";
+import { EMAILS_ON } from "@repo/db";
 import { Card, CardTitle } from "@repo/console/Card";
 import { VendorFieldsSection } from "@repo/console/VendorFieldsSection";
 import { Button } from "@repo/ui/button";
@@ -157,7 +158,9 @@ export function RegisterFlow({
       );
     } else {
       toast.success(
-        "Sent. We check every registration and email you once Connect opens.",
+        EMAILS_ON
+          ? "Sent. We check every registration and email you once Connect opens."
+          : "Sent. We check every registration and WhatsApp you once Connect opens.",
       );
     }
     router.push(href);

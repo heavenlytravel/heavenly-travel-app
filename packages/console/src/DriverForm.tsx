@@ -27,6 +27,7 @@ import { ExpiryDateField } from "./ExpiryDateField";
 import { DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
 import { FormFoot } from "./FormFoot";
 import { DetailColumns } from "./PageColumn";
+import { SignInFields } from "./SignInFields";
 import { useActionForm } from "./use-action-form";
 import { useOutOfServiceAsk } from "./use-out-of-service-ask";
 import { VendorField } from "./VendorField";
@@ -34,7 +35,8 @@ import { VendorField } from "./VendorField";
 /**
  * The form for a vendor's driver, new or existing, across the record's
  * page: whose driver they are, who they are and how to reach them, the
- * email they sign in to Connect with, where they are based, notes and
+ * email they sign in to Connect with (typed twice, with an optional
+ * password, until saved, then locked), where they are based, notes and
  * whether they are active, the classes they may drive, and beside them
  * the expiry dates of their licences. One copy for both apps: the admin
  * chooses the vendor from every one, and Connect fixes it to the
@@ -89,6 +91,8 @@ export function DriverForm({
   });
   const fields = driver ? driverFieldsOf(driver) : null;
   const ticked = new Set(fields?.vehicleClassIds ?? []);
+  // Locked once saved: a typo is fixed by deleting the driver.
+  const savedEmail = fields?.email ?? null;
   const vendor = fields?.vendorId || vendorId || "";
 
   return (
@@ -134,18 +138,41 @@ export function DriverForm({
                       defaultValue={fields?.phone}
                     />
                   </Field>
-                  <Field
-                    label={DRIVER_FIELD_LABELS.email}
-                    hint="The email they sign in to Connect with, to see and report their jobs."
-                  >
-                    <Input
-                      name="email"
-                      type="email"
-                      autoComplete="off"
-                      placeholder="ali@example.com"
-                      defaultValue={fields?.email ?? ""}
-                    />
-                  </Field>
+                  {savedEmail ? (
+                    <Field
+                      label={DRIVER_FIELD_LABELS.email}
+                      hint={
+                        driver?.userId
+                          ? "They sign in to Connect with it. Entered wrong? Delete the driver and add them again."
+                          : "No account yet: saving gives them one, to sign in to Connect with."
+                      }
+                    >
+                      <Input
+                        name="email"
+                        type="email"
+                        readOnly
+                        value={savedEmail}
+                      />
+                    </Field>
+                  ) : (
+                    <>
+                      <Field
+                        label={DRIVER_FIELD_LABELS.email}
+                        hint="Optional. Saving gives them an account with it, to sign in to Connect and see their jobs."
+                      >
+                        <Input
+                          name="email"
+                          type="email"
+                          autoComplete="off"
+                          placeholder="ali@example.com"
+                        />
+                      </Field>
+                      <SignInFields
+                        required={false}
+                        placeholder="ali@example.com"
+                      />
+                    </>
+                  )}
                   <Field
                     label={DRIVER_FIELD_LABELS.locationId}
                     tip="To move a driver to another location, change where they are based."

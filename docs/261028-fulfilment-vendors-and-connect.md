@@ -307,7 +307,9 @@ and **Report a problem**.
   - One person can have both: one of our admins who also drives, say.
 - **A driver's account is linked by email.** A driver gets an email field; when an account
   with that email exists or is made, it is linked, as guest bookings are claimed in
-  `packages/db/src/sync.ts`.
+  `packages/db/src/sync.ts`. Since 2026-11-02 the account is made when the driver is
+  saved, and a vendor's owner can be given one from `manage.`: see
+  docs/261102-direct-accounts.md.
 - **`getAccess`'s `"driver"` and `"partner"` areas become one `"connect"` area.** Today
   any admin passes them (`gateProfile` in `packages/db/src/session.ts`); Connect shows a
   vendor's own work, so it lets in members and drivers only.

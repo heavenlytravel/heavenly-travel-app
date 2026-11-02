@@ -9,7 +9,7 @@ import {
 import {
   getAccess,
   getAdminAccess,
-  isWallActive,
+  getAccessPolicy,
   permissionsOf,
   type AdminActor,
   type AdminUser,
@@ -101,5 +101,5 @@ export async function getPerson(): Promise<{
 export async function getPermissions(): Promise<Permission[]> {
   const access = await getAccess("admin");
   if (access.status !== "ok" || !access.user.adminProfile) return [];
-  return permissionsOf(access.user.adminProfile, await isWallActive());
+  return permissionsOf(access.user.adminProfile, await getAccessPolicy());
 }

@@ -1,7 +1,17 @@
 "use server";
 
-import { addVendorStaff, removeVendorStaff, textOf } from "@repo/db/server";
-import { type ActionState, STALE, stateOf } from "@repo/console/action-state";
+import {
+  addVendorStaff,
+  parseAccountFor,
+  removeVendorStaff,
+  textOf,
+} from "@repo/db/server";
+import {
+  type ActionState,
+  refusalOf,
+  STALE,
+  stateOf,
+} from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
 import {
   actorOf,
@@ -11,8 +21,10 @@ import {
 } from "../../_lib/access";
 
 /**
- * The owner's staff actions: add an account by its email, remove one.
- * Only the vendor's owner; the writers check the rest.
+ * The owner's staff actions: add someone by the email they sign in with,
+ * their account made now when they have none, and remove one, their
+ * account going too when never used. Only the vendor's owner; the writers
+ * check the rest.
  */
 
 const NOT_THE_OWNER: ActionState = {
@@ -35,10 +47,12 @@ export async function addStaffAction(
   const owner = await ownerOf();
   if ("refused" in owner) return owner.refused;
   const { member } = owner;
+  const fields = parseAccountFor(Object.fromEntries(formData));
+  if (!fields.ok) return refusalOf(fields);
   const result = await addVendorStaff(
     actorOf(member.user),
     member.vendor.id,
-    textOf(formData.get("email")),
+    fields.value,
   );
   if (result.ok) revalidatePath("/~/staff");
   return stateOf(result);

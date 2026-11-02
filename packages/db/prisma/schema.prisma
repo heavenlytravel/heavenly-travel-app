@@ -48,8 +48,12 @@ model AppSetting {
   id         String   @id
   /// Off, every admin reaches every team screen and action. See
   /// src/permissions.ts.
-  wallActive Boolean  @default(false)
-  updatedAt  DateTime @updatedAt
+  wallActive  Boolean  @default(false)
+  /// The teams a SUPER admin gave a team rule, by permission, over the
+  /// defaults in src/permissions.ts: { "bookings.fulfil": ["OPERATION"] }.
+  /// A permission left out keeps its default. Read by ruleOverridesOf.
+  accessRules Json     @default("{}")
+  updatedAt   DateTime @updatedAt
 }
 
 /// One admin, customer or system action, written in the same transaction

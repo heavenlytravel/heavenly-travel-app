@@ -1,15 +1,19 @@
 import { notFound } from "next/navigation";
+import { DRIVER_DELETE_IMPACT } from "@repo/db";
 import { getDriver, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
+import { Card, CardTitle } from "@repo/console/Card";
+import { DeleteButton } from "@repo/console/DeleteButton";
 import { DriverForm } from "@repo/console/DriverForm";
 import { FormFrame } from "../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 import { requireMember, shellMember } from "../../../_lib/access";
-import { saveDriverAction } from "../../../fleet-actions";
+import { deleteDriverAction, saveDriverAction } from "../../../fleet-actions";
 
 /**
  * Route: /drivers/[id], and /drivers/new. A vendor's driver on the admin's
  * form, narrowed: based at a location the vendor serves, allowed only on
- * classes on sale where it serves.
+ * classes on sale where it serves. Under it, the delete for one entered
+ * by mistake, as a mistyped email, which is locked once saved.
  */
 export default async function DriverPage({
   params,
@@ -52,6 +56,21 @@ export default async function DriverPage({
           cancelHref="/~/drivers"
           held={held}
         />
+        {driver ? (
+          <Card className="mt-5">
+            <CardTitle description="For a driver entered by mistake, or with a mistyped email: delete them and add them again. One who has been on a job is made inactive instead.">
+              Delete driver
+            </CardTitle>
+            <DeleteButton
+              label="Delete driver"
+              title={`Delete ${driver.name}?`}
+              impact={DRIVER_DELETE_IMPACT}
+              action={deleteDriverAction.bind(null, driver.id)}
+              doneHref="/~/drivers"
+              doneMessage={`Deleted ${driver.name}.`}
+            />
+          </Card>
+        ) : null}
       </FormFrame>
     </Screen>
   );

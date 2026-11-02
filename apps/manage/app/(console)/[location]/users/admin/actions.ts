@@ -2,9 +2,12 @@
 
 import {
   addStaff,
-  parseNewStaff,
+  parseAccessRules,
+  SHOWN_RULES_FIELD,
+  parseAccountFor,
   parseStaffAccess,
   revokeAdmin,
+  setAccessRules,
   setAdmin,
   setWallActive,
 } from "@repo/db/server";
@@ -74,7 +77,7 @@ export async function addStaffAction(
   const actor = await getAdmin("admins.manage");
   if (!actor) return FORBIDDEN;
 
-  const fields = parseNewStaff(Object.fromEntries(formData));
+  const fields = parseAccountFor(Object.fromEntries(formData));
   if (!fields.ok) return refusalOf(fields);
   const access = staffAccessOf(formData);
   if (!access.ok) return refusalOf(access);
@@ -111,6 +114,26 @@ export async function setWallAction(wallActive: boolean): Promise<ActionState> {
   if (typeof wallActive !== "boolean") return STALE;
 
   await setWallActive(actorOf(actor), wallActive);
+  revalidateAccess();
+  return null;
+}
+
+/**
+ * Team access: the teams of every team rule as the grid posts them, or
+ * every default with Reset. What every admin may open changes with it.
+ */
+export async function setAccessRulesAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await getAdmin("admins.manage");
+  if (!actor) return FORBIDDEN;
+  const wanted = parseAccessRules(
+    (field) => formData.getAll(field),
+    formData.getAll(SHOWN_RULES_FIELD),
+    formData.get("reset") === "on",
+  );
+  await setAccessRules(actorOf(actor), wanted);
   revalidateAccess();
   return null;
 }

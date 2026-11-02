@@ -14,6 +14,7 @@ import {
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
+import { PERMISSION_LABELS, PERMISSIONS } from "./permissions";
 import { USER_PROFILE_FIELDS, USER_PROFILE_LABELS } from "./user-input";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
@@ -138,10 +139,17 @@ const ACTIONS = {
   "user.email.changed": { entityType: "user", customerVisible: false },
   /** Staff set an account's password, which is never logged; its sessions were ended. */
   "user.password.set": { entityType: "user", customerVisible: false },
+  /**
+   * An account no one used, deleted with the driver or the owner it was
+   * made for (a typo): its email in `before`, which names it once gone.
+   */
+  "user.deleted": { entityType: "user", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
   "wall.switched": { entityType: "setting", customerVisible: false },
+  /** SUPER changed which teams hold a permission: `permission` and its `teams`, before and after. */
+  "access.rule.changed": { entityType: "setting", customerVisible: false },
   "state.updated": { entityType: "state", customerVisible: false },
   "district.updated": { entityType: "district", customerVisible: false },
   "vehicle-class.created": {
@@ -301,6 +309,8 @@ const ACTIONS = {
   "vendor.member.added": { entityType: "vendor", customerVisible: false },
   /** A staff account the owner removed: its email and role, in `before`. */
   "vendor.member.removed": { entityType: "vendor", customerVisible: false },
+  /** SUPER set or replaced the account that owns it in Connect: the owner's email in `before`, when it had one, and `after`. */
+  "vendor.owner.changed": { entityType: "vendor", customerVisible: false },
   /**
    * The files the Media screen deleted, each with its key, name and size,
    * in `before`. Logged against `MEDIA_RECORD_ID`.
@@ -890,6 +900,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Changed the email to ${String(field(entry.after, "email") ?? "")}`;
     case "user.password.set":
       return "Set a new password and signed them out everywhere";
+    case "user.deleted":
+      return "Deleted the account, never used";
     case "admin.promoted":
       return `Promoted to ${adminState(entry.after)}`;
     case "admin.updated":
@@ -900,6 +912,15 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "wallActive") === true
         ? "Turned the wall on"
         : "Turned the wall off";
+    case "access.rule.changed": {
+      const permission = field(entry.after, "permission");
+      const teams = field(entry.after, "teams");
+      const named = adminTeamsOf(Array.isArray(teams) ? teams : []).map(
+        (team) => ADMIN_TEAM_LABELS[team],
+      );
+      const what = PERMISSIONS.find((p) => p === permission);
+      return `Gave "${what ? PERMISSION_LABELS[what] : String(permission)}" to ${named.length > 0 ? andList(named) : "no team"}`;
+    }
     case "state.updated": {
       const multiplier = field(entry.after, "multiplier");
       return typeof multiplier === "number"
@@ -1085,6 +1106,13 @@ export function describeActivity(entry: DescribableActivity): string {
       return typeof email === "string"
         ? `Removed ${email} from the staff`
         : "Removed a staff account";
+    }
+    case "vendor.owner.changed": {
+      const was = field(entry.before, "email");
+      const now = String(field(entry.after, "email") ?? "");
+      return typeof was === "string"
+        ? `Made ${now} the owner in place of ${was}`
+        : `Made ${now} the owner`;
     }
     case "vendor.ours.switched":
       return field(entry.after, "isOurs") === true

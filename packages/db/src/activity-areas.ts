@@ -91,10 +91,12 @@ const AREA_OF = {
   "user.updated": "team",
   "user.email.changed": "team",
   "user.password.set": "team",
+  "user.deleted": "team",
   "admin.promoted": "team",
   "admin.updated": "team",
   "admin.revoked": "team",
   "wall.switched": "team",
+  "access.rule.changed": "team",
   "state.updated": "coverage",
   "district.updated": "coverage",
   "vehicle-class.created": "coverage",
@@ -143,6 +145,7 @@ const AREA_OF = {
   "vendor.ours.switched": "fleet",
   "vendor.member.added": "fleet",
   "vendor.member.removed": "fleet",
+  "vendor.owner.changed": "fleet",
   // The files a page's images were: Media is the pages' teams'.
   "media.deleted": "pages",
 } as const satisfies Record<ActivityAction, ActivityArea>;

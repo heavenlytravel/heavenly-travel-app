@@ -1,5 +1,6 @@
 import {
   CONTACT,
+  EMAILS_ON,
   VENDOR_FIELD_LABELS,
   VENDOR_KIND_LABELS,
   VENDOR_SERVICE_LABELS,
@@ -47,7 +48,7 @@ export async function RegistrationStatus({
     },
     {
       title: "Connect opens",
-      text: `We email ${email} the moment it does. Then add your vehicles and drivers, and offers start coming.`,
+      text: `${EMAILS_ON ? `We email ${email} the moment it does.` : "We WhatsApp you the moment it does."} Then add your vehicles and drivers, and offers start coming.`,
       state: "next" as const,
     },
   ];

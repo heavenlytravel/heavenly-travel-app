@@ -3,16 +3,21 @@
 import {
   createDriver,
   createVehicle,
+  deleteConfirmationOf,
+  deleteDriver,
   DRIVER_CLASSES_FIELD,
   getDriver,
   getVehicle,
   parseDriverFields,
+  parseDriverSignIn,
   parseVehicleFields,
   textOf,
   updateDriver,
   updateVehicle,
   vendorFleetChoices,
 } from "@repo/db/server";
+import { sendDriverAddedEmail } from "@repo/email";
+import { after } from "next/server";
 import {
   type ActionState,
   refusalOf,
@@ -86,6 +91,12 @@ export async function saveDriverAction(
   const id = textOf(formData.get("id"));
   const existing = id ? await getDriver(id) : null;
   if (id && existing?.vendorId !== member.vendor.id) return STALE;
+  const password = parseDriverSignIn(
+    Object.fromEntries(formData),
+    fields.email,
+    existing?.email ?? null,
+  );
+  if (!password.ok) return refusalOf(password);
   const choices = await vendorFleetChoices(member.vendor.id);
   const onSale = new Set(choices.classes.map((c) => c.id));
   const kept = new Set(existing?.vehicleClasses.map((c) => c.id) ?? []);
@@ -96,11 +107,58 @@ export async function saveDriverAction(
     };
   }
   const actor = actorOf(member.user);
-  const result = existing
-    ? await updateDriver(actor, existing.id, fields)
-    : await createDriver(actor, fields);
-  if (!result.ok) return stateOf(result);
+  let driverId: string;
+  if (existing) {
+    const result = await updateDriver(
+      actor,
+      existing.id,
+      fields,
+      password.value,
+    );
+    if (!result.ok) return stateOf(result);
+    driverId = existing.id;
+  } else {
+    const result = await createDriver(actor, fields, password.value);
+    if (!result.ok) return stateOf(result);
+    driverId = result.id;
+  }
+  // Given their account by this save, the driver hears how to sign in.
+  const email = fields.email;
+  if (email && !existing?.userId) {
+    after(() =>
+      sendDriverAddedEmail({
+        driverId,
+        name: fields.name,
+        email,
+        vendorName: member.vendor.name,
+      }),
+    );
+  }
   revalidatePath("/~/drivers");
   revalidatePath("/~");
   return { href: "/~/drivers" };
+}
+
+/**
+ * Deletes one of the vendor's drivers entered by mistake, a mistyped
+ * email for one, with their account when never used; then the list
+ * opens. `seen` and `typed` are what the delete's dialog showed and what
+ * the member typed (@repo/db's delete-impact).
+ */
+export async function deleteDriverAction(
+  id: string,
+  seen: string[],
+  typed: string | null,
+): Promise<ActionState> {
+  const member = await getMemberAccess();
+  if (!member) return NOT_A_MEMBER;
+  const confirmation = deleteConfirmationOf(seen, typed);
+  if (typeof id !== "string" || !id || !confirmation) return STALE;
+  const driver = await getDriver(id);
+  if (driver?.vendorId !== member.vendor.id) return STALE;
+  const result = await deleteDriver(actorOf(member.user), id, confirmation);
+  if (!result.ok) return stateOf(result);
+  revalidatePath("/~/drivers");
+  revalidatePath("/~");
+  return null;
 }

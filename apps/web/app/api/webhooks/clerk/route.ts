@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   deleteUserFromClerk,
   snapshotFromWebhook,
-  upsertUserFromClerk,
+  upsertUserFromWebhook,
 } from "@repo/db/server";
 
 // Mirrors Clerk users into the User table. Register this URL once per Clerk
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       if (!snapshot) {
         return Response.json({ error: "No primary email" }, { status: 400 });
       }
-      await upsertUserFromClerk(snapshot);
+      await upsertUserFromWebhook(snapshot);
       break;
     }
     case "user.deleted": {

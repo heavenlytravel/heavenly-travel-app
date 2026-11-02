@@ -93,8 +93,12 @@ export function useActionForm(
       onInput: () => setDirty(true),
       onSubmit: async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // Read before the question, while the form is still there.
-        const formData = new FormData(event.currentTarget);
+        // Read before the question, while the form is still there, with
+        // the button that sent it, so a named one (Reset) is posted too.
+        const formData = new FormData(
+          event.currentTarget,
+          (event.nativeEvent as SubmitEvent).submitter,
+        );
         if (ask && !(await ask())) return;
         startTransition(() => dispatch(formData));
       },

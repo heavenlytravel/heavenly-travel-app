@@ -6,7 +6,7 @@ import { Sheet, SheetHeader } from "@repo/ui/sheet";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AccountFields, NoPasswordNote } from "./AccountFields";
+import { AccountFields } from "@repo/console/AccountFields";
 import { AdminFields } from "./AdminFields";
 import { addStaffAction } from "./actions";
 
@@ -55,7 +55,6 @@ export function AddStaffButton() {
             </Button>
           </div>
           <FormError error={error} />
-          <NoPasswordNote />
         </form>
       </Sheet>
     </>

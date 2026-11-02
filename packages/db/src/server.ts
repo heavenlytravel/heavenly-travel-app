@@ -18,11 +18,12 @@ export {
   snapshotFromWebhook,
   snapshotFromBackendUser,
   upsertUserFromClerk,
+  upsertUserFromWebhook,
   deleteUserFromClerk,
 } from "./sync";
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";
 export type { AdminWithUser } from "./admins";
-export { isWallActive, setWallActive } from "./settings";
+export { getAccessPolicy, setAccessRules, setWallActive } from "./settings";
 export {
   listActivityFor,
   listActivityForMany,
@@ -137,6 +138,8 @@ export {
   getVendor,
   listVendorOptions,
   createVendor,
+  createVendorWithOwner,
+  setVendorOwner,
   updateVendor,
   moveVendor,
   setVendorOurs,

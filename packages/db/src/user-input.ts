@@ -13,7 +13,8 @@ import {
 /**
  * What All Users asks to create an account on someone's behalf or change
  * one, and Admin to add a member, and the rules they check, pure and
- * browser-safe. The writers in ./accounts make and change the account in
+ * browser-safe. The email is typed twice and a password may be set, as on
+ * every form that gives someone an account. The writers in ./accounts make and change the account in
  * Clerk and mirror it here; ./admins gives it its level and teams.
  */
 
@@ -27,7 +28,53 @@ export type NewUserFields = {
   lastName: string;
   /** As ./phone keeps it; null for none. */
   phone: string | null;
+  /** Set on a new account; null, they sign in with a code sent to the email. */
+  password: string | null;
 };
+
+/**
+ * The second email box of every form that gives someone an account,
+ * typed again so a typo is caught before the account is made: the email
+ * is locked once saved. See docs/261102-direct-accounts.md.
+ */
+export const CONFIRM_EMAIL_FIELD = "confirmEmail";
+
+/** The email typed twice, the same both times; both empty passes, for a form where it is optional. */
+export function checkEmailConfirmed(
+  values: Record<string, unknown>,
+  email: string | null,
+): Parsed<null> {
+  const again = normalizeEmail(textOf(values[CONFIRM_EMAIL_FIELD]));
+  if ((email ?? "") === again) return { ok: true, value: null };
+  return refuse(
+    again
+      ? "The two emails differ. Type the same email in both."
+      : "Type the email again to confirm it.",
+    CONFIRM_EMAIL_FIELD,
+  );
+}
+
+/** The password a form may set on a new account: none when left empty. */
+export function parseOptionalPassword(value: unknown): Parsed<string | null> {
+  if (typeof value !== "string" || value === "") {
+    return { ok: true, value: null };
+  }
+  return parseNewPassword(value);
+}
+
+/**
+ * What a form that gives someone an account asks besides the email: the
+ * email again, and a password if one is set. Left empty, they sign in
+ * with a code sent to the email.
+ */
+export function parseSignInCheck(
+  values: Record<string, unknown>,
+  email: string | null,
+): Parsed<string | null> {
+  const confirmed = checkEmailConfirmed(values, email);
+  if (!confirmed.ok) return confirmed;
+  return parseOptionalPassword(values.password);
+}
 
 /** The create form's values, read and checked. The email and first name are required. */
 export function parseNewUser(
@@ -37,11 +84,13 @@ export function parseNewUser(
 }
 
 /**
- * Add staff's account fields, read as `parseNewUser` reads them, but a
- * blank first name passes: an email with an account keeps its names, and
- * only one without needs them, which `addStaff` knows.
+ * The account fields of a form that gives an email its account, or the
+ * one it has (Add admin, a vendor's Set owner), read as `parseNewUser`
+ * reads them, but a blank first name passes: an email with an account
+ * keeps its names, and only one without needs them, which ./accounts
+ * knows.
  */
-export function parseNewStaff(
+export function parseAccountFor(
   values: Record<string, unknown>,
 ): Parsed<NewUserFields> {
   return readUser(values, false);
@@ -57,9 +106,13 @@ function readUser(
     return refuse("Enter an email like name@example.com.", "email");
   }
   const profile = readProfile(values, firstNameRequired);
-  return profile.ok
-    ? { ok: true, value: { email, ...profile.value } }
-    : profile;
+  if (!profile.ok) return profile;
+  const password = parseSignInCheck(values, email);
+  if (!password.ok) return password;
+  return {
+    ok: true,
+    value: { email, ...profile.value, password: password.value },
+  };
 }
 
 /** The names and the phone a form typed, checked. */

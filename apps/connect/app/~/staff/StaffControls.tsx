@@ -1,14 +1,18 @@
 "use client";
 
 import { useConfirm } from "@repo/ui/alert-dialog";
-import { Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
+import { AccountFields } from "@repo/console/AccountFields";
 import { useActionForm } from "@repo/console/use-action-form";
 import { UserPlus } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { addStaffAction, removeStaffAction } from "./actions";
 
-/** The owner adds a staff account by the email it signs in with. */
+/**
+ * The owner adds someone to the team by the email they sign in with,
+ * typed twice: an email with no account gets one now, named as typed,
+ * with the password set here or none, so they sign in at once.
+ */
 export function AddStaffForm() {
   const { pending, error, formProps } = useActionForm(addStaffAction, {
     done: "Added. They see your offers and jobs when they sign in.",
@@ -16,12 +20,10 @@ export function AddStaffForm() {
   });
   return (
     <form {...formProps} className="grid gap-3">
-      <Field
-        label="Their email"
-        hint="The email of their Connect account. Someone without one signs up first."
-      >
-        <Input name="email" type="email" required autoComplete="off" />
-      </Field>
+      <AccountFields
+        firstNameRequired={false}
+        emailPlaceholder="name@example.com"
+      />
       <Button type="submit" size="lg" pending={pending} className="w-full">
         <UserPlus aria-hidden className="size-5" />
         {pending ? "Adding…" : "Add to the team"}
@@ -45,7 +47,8 @@ export function RemoveStaffButton({
     ask: () =>
       confirm({
         title: `Remove ${email}?`,
-        description: "They no longer see your offers, jobs or fleet.",
+        description:
+          "They no longer see your offers, jobs or fleet. Their account is deleted too if they never signed in.",
         action: "Remove",
         danger: true,
       }),

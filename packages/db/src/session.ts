@@ -5,7 +5,7 @@ import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { may, type Permission } from "./permissions";
 import type { Area } from "./roles";
-import { isWallActive } from "./settings";
+import { getAccessPolicy } from "./settings";
 import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
 
 const withProfiles = {
@@ -110,7 +110,7 @@ export async function getAdminAccess(
     return { status: "forbidden" };
   }
   const admin = access.user as AdminUser;
-  return may(admin.adminProfile, permission, await isWallActive())
+  return may(admin.adminProfile, permission, await getAccessPolicy())
     ? { status: "ok", admin }
     : { status: "restricted", admin };
 }

@@ -3,12 +3,14 @@ import { describe, it } from "node:test";
 import {
   ADVANCE_PERMISSIONS,
   may,
+  PERMISSION_GROUPS,
   PERMISSION_LABELS,
   PERMISSIONS,
   permissionsOf,
   ruleOverridesOf,
   SETTINGS_CARDS,
   TEAM_PERMISSIONS,
+  VIEW_ONLY_PERMISSIONS,
   type Permission,
 } from "./permissions";
 import { ADMIN_TEAMS, type AdminTeam } from "./roles";
@@ -212,6 +214,20 @@ describe("SUPER's team rules", () => {
   it("names every permission in plain words", () => {
     for (const permission of PERMISSIONS) {
       assert.ok(PERMISSION_LABELS[permission], permission);
+    }
+  });
+});
+
+describe("PERMISSION_GROUPS", () => {
+  it("lists every permission once", () => {
+    const listed = PERMISSION_GROUPS.flatMap((group) => group.permissions);
+    assert.deepEqual(sorted([...listed]), sorted(PERMISSIONS));
+    assert.equal(new Set(listed).size, listed.length);
+  });
+
+  it("marks as view only the permissions that change nothing", () => {
+    for (const permission of VIEW_ONLY_PERMISSIONS) {
+      assert.match(permission, /\.view$/, permission);
     }
   });
 });

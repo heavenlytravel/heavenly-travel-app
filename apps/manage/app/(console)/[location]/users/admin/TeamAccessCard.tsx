@@ -3,13 +3,15 @@
 import {
   ADMIN_TEAMS,
   ADMIN_TEAM_LABELS,
+  PERMISSION_GROUPS,
   PERMISSION_LABELS,
-  PERMISSIONS,
   TEAM_PERMISSIONS,
+  VIEW_ONLY_PERMISSIONS,
   defaultTeamsOf,
   may,
   ruleField,
   teamsOf,
+  type AdminTeam,
   type Permission,
   type PermissionHolder,
   type RuleOverrides,
@@ -17,7 +19,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { Checkbox } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
-import { CheckIcon } from "@repo/ui/icons";
+import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { TBody, Td, Th, THead, Table } from "@repo/console/Table";
 import { useActionForm } from "@repo/console/use-action-form";
@@ -25,7 +27,7 @@ import { setAccessRulesAction } from "./actions";
 
 /** The table's columns: each team as the wall sees it, alone, then SUPER. */
 const COLUMNS: readonly {
-  key: string;
+  key: AdminTeam | "SUPER";
   label: string;
   holder: PermissionHolder;
 }[] = [
@@ -37,18 +39,46 @@ const COLUMNS: readonly {
   { key: "SUPER", label: "Super admin", holder: { level: "SUPER", teams: [] } },
 ];
 
-const isTeamRule = (permission: Permission) =>
-  TEAM_PERMISSIONS.includes(permission);
+/** A box ticked or unticked away from the default, in amber. */
+const AWAY_FROM_DEFAULT =
+  "[&>input]:border-warning-dot [&>input:checked]:border-warning-dot [&>input:checked]:bg-warning-dot";
+
+/** One team's box on a team rule: amber while it differs from the default, as the admin ticks. */
+function TeamBox({
+  permission,
+  team,
+  checked,
+  label,
+}: {
+  permission: Permission;
+  team: AdminTeam;
+  checked: boolean;
+  label: string;
+}) {
+  const byDefault = defaultTeamsOf(permission).includes(team);
+  const [ticked, setTicked] = useState(checked);
+  return (
+    <Checkbox
+      name={ruleField(permission)}
+      value={team}
+      checked={ticked}
+      onChange={(event) => setTicked(event.currentTarget.checked)}
+      className={ticked === byDefault ? undefined : AWAY_FROM_DEFAULT}
+      aria-label={`${label}${byDefault ? " (on by default)" : " (off by default)"}`}
+    />
+  );
+}
 
 /**
- * "What each team can do": every permission in plain words down the side
- * (`PERMISSION_LABELS`, so the list is always the whole of them), each
- * team and SUPER across the top. A team rule's boxes are SUPER's to tick:
- * Save keeps the grid, Reset puts every rule back as the code ships it.
- * The other rows are fixed, SUPER only, every admin, or whoever holds a
- * Settings card, and show a tick read from the rules themselves (`may`).
- * Drawn as the wall has it when on; while it is off, it says so, since
- * every admin then has every team's ticks.
+ * "What each team can do": every permission in plain words, grouped by the
+ * part of Manage it opens (`PERMISSION_GROUPS`, so the list is always the
+ * whole of them), the view-only ones marked, each team and SUPER across
+ * the top. A team rule's boxes are SUPER's to tick, amber where they
+ * differ from the defaults: Save keeps the grid, Reset puts every rule
+ * back as the code ships it. The other rows' boxes are fixed (SUPER only,
+ * every admin, or whoever holds a Settings card) and read from the rules
+ * themselves (`may`). Drawn as the wall has it when on; while it is off,
+ * it says so, since every admin then has every team's ticks.
  */
 export function TeamAccessCard({
   wallActive,
@@ -61,9 +91,7 @@ export function TeamAccessCard({
     done: "Team access saved.",
   });
   const policy = { wallActive: true, overrides };
-  const changed = TEAM_PERMISSIONS.filter(
-    (permission) => overrides[permission],
-  );
+  const anyChanged = TEAM_PERMISSIONS.some((p) => overrides[p]);
 
   return (
     <Card flush>
@@ -75,14 +103,21 @@ export function TeamAccessCard({
               ? undefined
               : "With the wall off, every admin has every team's ticks"
           }
-          description={`Tick which teams hold each permission; the rows without boxes are fixed. ${
-            changed.length > 0
-              ? `${changed.length} changed from the defaults, marked "Changed".`
-              : "Every permission is as it ships."
-          }`}
+          description={
+            <>
+              Tick which teams hold each permission.{" "}
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="inline-block size-3 rounded-sm bg-warning-dot"
+                />
+                Not the default.
+              </span>
+            </>
+          }
           action={
             <div className="flex items-center gap-2">
-              {changed.length > 0 ? (
+              {anyChanged ? (
                 <Button
                   type="submit"
                   name="reset"
@@ -118,50 +153,58 @@ export function TeamAccessCard({
               </Th>
             ))}
           </THead>
-          <TBody>
-            {PERMISSIONS.map((permission) => (
-              <tr key={permission}>
-                <Td className="min-w-56 font-medium text-ink">
-                  {PERMISSION_LABELS[permission]}
-                  {overrides[permission] ? (
-                    <span className="ml-2 text-caption font-normal text-muted">
-                      Changed
-                    </span>
-                  ) : null}
-                </Td>
-                {COLUMNS.map((column) => (
-                  <Td key={column.key} className="text-center">
-                    {isTeamRule(permission) && column.key !== "SUPER" ? (
-                      <Checkbox
-                        name={ruleField(permission)}
-                        value={column.key}
-                        defaultChecked={teamsOf(permission, overrides).some(
-                          (team) => team === column.key,
-                        )}
-                        aria-label={`${column.label}: ${PERMISSION_LABELS[permission]}${
-                          defaultTeamsOf(permission).some(
-                            (team) => team === column.key,
-                          )
-                            ? " (on by default)"
-                            : ""
-                        }`}
-                      />
-                    ) : may(column.holder, permission, policy) ? (
-                      <span className="inline-flex size-5 items-center justify-center rounded-full bg-brand text-white">
-                        <CheckIcon className="size-3" aria-hidden="true" />
-                        <span className="sr-only">Yes</span>
-                      </span>
-                    ) : (
-                      <span className="text-muted">
-                        <span aria-hidden="true">—</span>
-                        <span className="sr-only">No</span>
-                      </span>
-                    )}
-                  </Td>
-                ))}
+          {PERMISSION_GROUPS.map((group) => (
+            <TBody key={group.label}>
+              <tr>
+                <th
+                  scope="colgroup"
+                  colSpan={COLUMNS.length + 1}
+                  className="bg-hairline px-3.5 py-2 text-left text-caption font-semibold tracking-title text-muted uppercase"
+                >
+                  {group.label}
+                </th>
               </tr>
-            ))}
-          </TBody>
+              {group.permissions.map((permission) => {
+                const words = PERMISSION_LABELS[permission];
+                const editable = TEAM_PERMISSIONS.includes(permission);
+                return (
+                  <tr key={permission}>
+                    <Td className="min-w-56 font-medium text-ink">
+                      {words}
+                      {VIEW_ONLY_PERMISSIONS.includes(permission) ? (
+                        <span className="ml-2 text-caption font-normal text-muted">
+                          View only
+                        </span>
+                      ) : null}
+                    </Td>
+                    {COLUMNS.map((column) => (
+                      <Td key={column.key}>
+                        <span className="flex justify-center">
+                          {editable && column.key !== "SUPER" ? (
+                            <TeamBox
+                              permission={permission}
+                              team={column.key}
+                              checked={teamsOf(permission, overrides).includes(
+                                column.key,
+                              )}
+                              label={`${column.label}: ${words}`}
+                            />
+                          ) : (
+                            <Checkbox
+                              disabled
+                              checked={may(column.holder, permission, policy)}
+                              readOnly
+                              aria-label={`${column.label}: ${words} (fixed)`}
+                            />
+                          )}
+                        </span>
+                      </Td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </TBody>
+          ))}
         </Table>
       </form>
     </Card>

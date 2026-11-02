@@ -151,21 +151,80 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "coverage.manage":
     "Change zones, classes on sale, rates and the class catalogue",
   "coverage.view": "See coverage, classes and rates",
-  "fleet.manage": "Vendors, vehicles and drivers",
+  "fleet.manage": "See and change vendors, vehicles and drivers",
   "vendors.review": "Approve, refuse and suspend vendors",
   "locations.view": "Open a location",
-  "locations.manage": "A location's details and saved addresses",
+  "locations.manage": "Change a location's details and saved addresses",
   "locations.create": "Add a location",
-  "pages.manage": "Write and publish a location's pages",
-  "website.manage": "The website's own pages, its footer and top choices",
+  "pages.manage": "See, write and publish a location's pages",
+  "website.manage":
+    "See and change the website's own pages, its footer and top choices",
   "locations.activate": "Take a location live, pause or delete it",
   "settings.view": "Open Settings",
-  "admins.manage": "Admin, their levels and teams",
+  "admins.manage": "Admin: who has access, their levels and teams",
   "users.manage": "All Users: every account, its email and password",
-  "wall.switch": "Switch the wall",
+  "wall.switch": "Switch the wall between teams",
   "activity.view": "See the activity of their own work",
-  "media.manage": "Media",
+  "media.manage": "See media and delete what nothing uses",
 };
+
+/** The permissions that only show: whoever holds one alone reads, and changes nothing. */
+export const VIEW_ONLY_PERMISSIONS: readonly Permission[] = [
+  "dashboard.view",
+  "bookings.view",
+  "coverage.view",
+  "locations.view",
+  "activity.view",
+];
+
+/**
+ * The permissions by the part of Manage they open, in the order Admin's
+ * team access lists them. A test keeps every permission in exactly one.
+ */
+export const PERMISSION_GROUPS: readonly {
+  label: string;
+  permissions: readonly Permission[];
+}[] = [
+  {
+    label: "Bookings",
+    permissions: [
+      "dashboard.view",
+      "bookings.view",
+      "bookings.notes",
+      "bookings.manage",
+      "bookings.create",
+      "bookings.fulfil",
+    ],
+  },
+  { label: "Fleet", permissions: ["fleet.manage", "vendors.review"] },
+  {
+    label: "Coverage and rates",
+    permissions: ["coverage.view", "coverage.manage"],
+  },
+  {
+    label: "Locations",
+    permissions: [
+      "locations.view",
+      "settings.view",
+      "locations.manage",
+      "locations.create",
+      "locations.activate",
+    ],
+  },
+  {
+    label: "Website",
+    permissions: ["pages.manage", "website.manage", "media.manage"],
+  },
+  {
+    label: "Team",
+    permissions: [
+      "activity.view",
+      "admins.manage",
+      "users.manage",
+      "wall.switch",
+    ],
+  },
+];
 
 /** The keys of Settings' cards: a location's details, its time between jobs, its status. Holding one opens Settings. */
 export const SETTINGS_CARDS = [

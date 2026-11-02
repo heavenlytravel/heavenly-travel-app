@@ -74,9 +74,13 @@ production instance has email code sign-in on too before relying on it there.
 
 ## Emails
 
-Console emails are off until `manage.` has its email settings (PR #64), so nothing is sent
-from `manage.`. A driver a vendor adds in Connect gets "added you on Heavenly Travel
-Connect" with the sign-in link (`driverAddedEmails` in `packages/email`).
+**Off since 2026-11-02**, until the emails are worked on again: `EMAILS_ON` in
+`packages/db/src/email-switch.ts` is false, so `@repo/email` logs each email's key and
+sends none, from the website, the console and Connect alike. The screens that said "we
+emailed you" read the same switch: the website's booking received page says we will
+contact them, and Connect's registration says we WhatsApp the vendor once approved. Clerk's
+own sign-in codes are not ours and still go out. When emails are on, a driver a vendor
+adds in Connect gets "added you on Heavenly Travel Connect" (`driverAddedEmails`).
 
 ## Team access
 
@@ -86,8 +90,10 @@ Which teams hold each permission was code only, so a change needed a deployment.
   (`packages/db/src/permissions.ts`), and the words Admin names each one with
   (`PERMISSION_LABELS`, typed by `Permission`, so a new permission cannot ship without
   its row on Admin).
-- **SUPER changes the teams of a team rule** on Admin, What each team can do: tick the
-  teams, Save. Reset to defaults puts every rule back. Each change is in Activity with the
+- **SUPER changes the teams of a team rule** on Admin, What each team can do: rows grouped
+  by the part of Manage they open (`PERMISSION_GROUPS`), the view-only ones marked; tick
+  the teams, Save. A box away from its default shows amber; fixed rows show disabled
+  boxes. Reset to defaults puts every rule back. Each change is in Activity with the
   teams before and after.
 - **Only what differs from the defaults is stored**, in `AppSetting.accessRules` (JSON,
   read by `ruleOverridesOf`, which drops what the code does not know). A rule set back to

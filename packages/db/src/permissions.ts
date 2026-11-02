@@ -109,20 +109,27 @@ export function ruleField(permission: Permission) {
   return `rule:${permission}`;
 }
 
+/** The field of Team access that names each team rule the grid showed, one value per rule. */
+export const SHOWN_RULES_FIELD = "rules";
+
 /**
- * Every team rule's teams as Team access posts them (`teamsAt` reads the
- * values of a field), or every default when it asks for a reset. A team
- * this code does not know is dropped.
+ * The teams of each team rule the grid showed (`shown`), as Team access
+ * posts them (`teamsAt` reads the values of a field), or every default
+ * when it asks for a reset. A rule the grid did not show, one added by a
+ * deployment while the page was open, is left out, so it keeps what it
+ * holds. A team this code does not know is dropped.
  */
 export function parseAccessRules(
   teamsAt: (field: string) => readonly unknown[],
+  shown: readonly unknown[],
   reset: boolean,
 ): RuleOverrides {
   const wanted: RuleOverrides = {};
   for (const permission of TEAM_PERMISSIONS) {
-    wanted[permission] = reset
-      ? defaultTeamsOf(permission)
-      : adminTeamsOf(teamsAt(ruleField(permission)));
+    if (reset) wanted[permission] = defaultTeamsOf(permission);
+    else if (shown.includes(permission)) {
+      wanted[permission] = adminTeamsOf(teamsAt(ruleField(permission)));
+    }
   }
   return wanted;
 }

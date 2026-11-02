@@ -62,6 +62,8 @@ async function clerkAccountFor(fields: NewUserFields) {
     });
     return { clerkUser: created, made: true };
   }
+  // A password typed for it is refused next: its names stay as they are.
+  if (fields.password) return { clerkUser: held, made: false };
   return { clerkUser: await namedWhenBlank(held, fields), made: false };
 }
 
@@ -187,23 +189,40 @@ export async function withAccount<R extends Change | Created>(
   return result;
 }
 
-/** A new account a refused change made, removed again; one Clerk held before stays, mirrored. */
+/**
+ * A new account a refused change made, removed again; one Clerk held
+ * before stays, mirrored. Never throws, so the change's own refusal or
+ * error is the one the form sees: a failure is logged, the account left.
+ */
 async function undoAccount(account: GivenAccount) {
   if (!account.made) return;
-  const clerk = await clerkClient();
-  await clerk.users.deleteUser(account.clerkId);
-  await deleteUserFromClerk(account.clerkId);
+  try {
+    const clerk = await clerkClient();
+    await clerk.users.deleteUser(account.clerkId);
+    await deleteUserFromClerk(account.clerkId);
+  } catch (error) {
+    console.error(`[accounts] could not undo ${account.email}:`, error);
+  }
 }
 
 /**
+ * What an account was made for, as its creation's entry keeps it
+ * (`madeFor`): a driver, or a vendor it owns or works for. Only an
+ * account made for that record goes with it (`deleteAccountIfUnused`).
+ */
+export type MadeFor = `driver:${string}` | `vendor:${string}`;
+
+/**
  * Inside the change's transaction: a new account keeps the phone typed
- * (ours, not Clerk's) and its creation is logged. An account held before
- * is left as it is.
+ * (ours, not Clerk's) and its creation is logged, with the record it was
+ * made for when it is a driver's or a vendor's (`madeFor`). An account
+ * held before is left as it is.
  */
 export async function keepNewAccount(
   tx: Prisma.TransactionClient,
   actor: Actor,
   account: GivenAccount,
+  madeFor?: MadeFor,
 ) {
   if (!account.isNew) return;
   if (account.phone) {
@@ -221,22 +240,42 @@ export async function keepNewAccount(
       lastName: account.lastName,
       phone: account.phone,
       ...(account.made ? {} : { existing: true }),
+      ...(madeFor ? { madeFor } : {}),
     },
   });
 }
 
 /**
  * Deletes an account no one has used, in Clerk and here: the one a typo
- * made when a driver or a vendor's owner was entered, once the driver is
- * deleted or the owner replaced. Used is signed in once, or holding
- * anything: a booking, a note, staff access, a vendor, a driver. A used
- * account is left as it is, and so is one Clerk fails to answer for.
- * Answers whether it was deleted.
+ * made when a driver or a vendor's owner or staff was entered, once the
+ * driver is deleted or the member removed. Only an account made in Clerk
+ * for that very record (`madeFor`, kept by `keepNewAccount`) can go: an
+ * account someone had before, even one never used, always stays. Used is
+ * signed in once, or holding anything: a booking, a note, staff access, a
+ * vendor, a driver. A used account is left as it is, and so is one Clerk
+ * fails to answer for. Answers whether it was deleted.
  */
 export async function deleteAccountIfUnused(
   actor: Actor,
   userId: string,
+  madeFor: MadeFor,
 ): Promise<boolean> {
+  const created = await db.activityLog.findFirst({
+    where: {
+      action: "user.created",
+      entityId: userId,
+      after: { path: ["madeFor"], equals: madeFor },
+    },
+    select: { after: true },
+  });
+  // Made in Clerk here: one Clerk held before, only mirrored, says `existing`.
+  const after = created?.after;
+  const madeHere =
+    after !== null &&
+    typeof after === "object" &&
+    !Array.isArray(after) &&
+    after.existing !== true;
+  if (!madeHere) return false;
   const user = await db.user.findUnique({
     where: { id: userId },
     select: {

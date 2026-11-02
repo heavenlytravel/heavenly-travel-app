@@ -18,6 +18,7 @@ export {
   snapshotFromWebhook,
   snapshotFromBackendUser,
   upsertUserFromClerk,
+  upsertUserFromWebhook,
   deleteUserFromClerk,
 } from "./sync";
 export { listAdmins, setAdmin, revokeAdmin } from "./admins";

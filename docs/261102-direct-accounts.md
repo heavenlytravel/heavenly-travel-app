@@ -27,7 +27,8 @@ password left alone: typing one for it is refused.
 
 A new account is made before the change it is for, since Clerk is outside the database
 transaction, and is **undone in Clerk and here when the change is refused**, so a refused
-form leaves no account behind.
+form leaves no account behind. Clerk's webhook mirrors a user only while Clerk still holds
+it (`upsertUserFromWebhook`), so an undone account does not come back as a row.
 
 | Form                                  | Who                           | The account                                    |
 | ------------------------------------- | ----------------------------- | ---------------------------------------------- |
@@ -44,8 +45,10 @@ form leaves no account behind.
 Once saved, a driver's email cannot be changed on the driver's form.
 
 - **A typo:** delete the driver and add them again. Deleting a driver deletes their account
-  too when it was never used (`deleteAccountIfUnused`): never signed in, and holding no
-  booking, note, staff access, vendor or driver. A used account always stays.
+  too when it was made for that driver and never used (`deleteAccountIfUnused`): made in
+  Clerk by Add driver for this very driver (its creation entry in Activity keeps
+  `madeFor`), never signed in, and holding no booking, note, staff access, vendor or
+  driver. An account the person had before always stays, used or not.
 - **A real change of address:** All Users, Change email. The driver row follows the
   account's email.
 - **Saved without an email:** one can be added later, once, with the same two boxes.

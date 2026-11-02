@@ -3,6 +3,7 @@
 import {
   addStaff,
   parseAccessRules,
+  SHOWN_RULES_FIELD,
   parseAccountFor,
   parseStaffAccess,
   revokeAdmin,
@@ -129,6 +130,7 @@ export async function setAccessRulesAction(
   if (!actor) return FORBIDDEN;
   const wanted = parseAccessRules(
     (field) => formData.getAll(field),
+    formData.getAll(SHOWN_RULES_FIELD),
     formData.get("reset") === "on",
   );
   await setAccessRules(actorOf(actor), wanted);

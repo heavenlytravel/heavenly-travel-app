@@ -10,6 +10,7 @@ import {
   defaultTeamsOf,
   may,
   ruleField,
+  SHOWN_RULES_FIELD,
   teamsOf,
   type AdminTeam,
   type Permission,
@@ -137,6 +138,14 @@ export function TeamAccessCard({
         >
           What each team can do
         </CardTitle>
+        {TEAM_PERMISSIONS.map((permission) => (
+          <input
+            key={permission}
+            type="hidden"
+            name={SHOWN_RULES_FIELD}
+            value={permission}
+          />
+        ))}
         {error ? (
           <div className="px-5 pt-3">
             <FormError error={error} />

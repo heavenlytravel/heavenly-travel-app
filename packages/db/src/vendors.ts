@@ -219,7 +219,6 @@ export async function createVendor(
   return db.$transaction(async (tx) => {
     const names = await locationNamesOf(tx, fields.locationIds);
     if (!names.ok) return names;
-    if (options.account) await keepNewAccount(tx, actor, options.account);
     const vendor = await tx.vendor.create({
       data: {
         ...vendorRow(fields),
@@ -230,6 +229,9 @@ export async function createVendor(
           : {}),
       },
     });
+    if (options.account) {
+      await keepNewAccount(tx, actor, options.account, `vendor:${vendor.id}`);
+    }
     await logActivity(tx, actor, {
       action: "vendor.created",
       entityId: vendor.id,
@@ -320,7 +322,7 @@ export async function setVendorOwner(
   if (!free.ok) return free;
   const result = await withAccount(fields, (account) =>
     db.$transaction(async (tx) => {
-      await keepNewAccount(tx, actor, account);
+      await keepNewAccount(tx, actor, account, `vendor:${vendorId}`);
       if (owner) await tx.vendorMember.delete({ where: { id: owner.id } });
       await tx.vendorMember.upsert({
         where: { vendorId_userId: { vendorId, userId: account.userId } },
@@ -336,7 +338,9 @@ export async function setVendorOwner(
       return { ok: true } as const;
     }),
   );
-  if (result.ok && owner) await deleteAccountIfUnused(actor, owner.userId);
+  if (result.ok && owner) {
+    await deleteAccountIfUnused(actor, owner.userId, `vendor:${vendorId}`);
+  }
   return result;
 }
 
@@ -629,11 +633,18 @@ export async function addVendorStaff(
 ): Promise<Change> {
   const vendor = await db.vendor.findUnique({
     where: { id: vendorId },
-    select: { name: true, isOurs: true },
+    select: {
+      name: true,
+      isOurs: true,
+      _count: { select: { members: { where: { role: "owner" } } } },
+    },
   });
   if (!vendor) return NOT_FOUND;
   if (vendor.isOurs) {
     return refuse("Ours has no Connect accounts: Operation accepts for it.");
+  }
+  if (vendor._count.members === 0) {
+    return refuse("Set the vendor's owner first, then add its staff.");
   }
   const held = await db.vendorMember.findFirst({
     where: { user: { email: { equals: fields.email, mode: "insensitive" } } },
@@ -646,7 +657,7 @@ export async function addVendorStaff(
   if (!free.ok) return free;
   return withAccount(fields, (account) =>
     db.$transaction(async (tx) => {
-      await keepNewAccount(tx, actor, account);
+      await keepNewAccount(tx, actor, account, `vendor:${vendorId}`);
       await tx.vendorMember.create({
         data: { vendorId, userId: account.userId, role: "staff" },
       });
@@ -693,7 +704,7 @@ export async function removeVendorStaff(
     return { ok: true as const, userId: member.userId };
   });
   if (!result.ok) return result;
-  await deleteAccountIfUnused(actor, result.userId);
+  await deleteAccountIfUnused(actor, result.userId, `vendor:${vendorId}`);
   return { ok: true };
 }
 

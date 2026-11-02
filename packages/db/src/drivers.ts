@@ -246,7 +246,9 @@ function createDriverIn(
         vehicleClasses: { connect: vehicleClassIds.map((id) => ({ id })) },
       },
     });
-    if (account) await keepNewAccount(tx, actor, account);
+    if (account) {
+      await keepNewAccount(tx, actor, account, `driver:${driver.id}`);
+    }
     await logActivity(tx, actor, {
       action: "driver.created",
       entityId: driver.id,
@@ -336,7 +338,7 @@ function updateDriverIn(
     const classesChanged =
       vehicleClassIds !== undefined &&
       vehicleClassIds.join(",") !== current.vehicleClassIds.join(",");
-    if (account) await keepNewAccount(tx, actor, account);
+    if (account) await keepNewAccount(tx, actor, account, `driver:${id}`);
     if (!changed && !classesChanged) {
       // Nothing of theirs changed; their account, if just given, links.
       if (account) {
@@ -430,7 +432,7 @@ export async function deleteDriver(
   if (!confirmed.ok) return confirmed;
   const result = await deleteDriverIn(actor, id);
   if (result.ok && result.userId) {
-    await deleteAccountIfUnused(actor, result.userId);
+    await deleteAccountIfUnused(actor, result.userId, `driver:${id}`);
   }
   return result.ok ? { ok: true } : result;
 }

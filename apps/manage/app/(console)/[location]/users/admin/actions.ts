@@ -2,7 +2,7 @@
 
 import {
   addStaff,
-  parseNewStaff,
+  parseAccountFor,
   parseStaffAccess,
   revokeAdmin,
   setAdmin,
@@ -74,7 +74,7 @@ export async function addStaffAction(
   const actor = await getAdmin("admins.manage");
   if (!actor) return FORBIDDEN;
 
-  const fields = parseNewStaff(Object.fromEntries(formData));
+  const fields = parseAccountFor(Object.fromEntries(formData));
   if (!fields.ok) return refusalOf(fields);
   const access = staffAccessOf(formData);
   if (!access.ok) return refusalOf(access);

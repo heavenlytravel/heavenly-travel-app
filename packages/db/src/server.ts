@@ -137,6 +137,8 @@ export {
   getVendor,
   listVendorOptions,
   createVendor,
+  createVendorWithOwner,
+  setVendorOwner,
   updateVendor,
   moveVendor,
   setVendorOurs,

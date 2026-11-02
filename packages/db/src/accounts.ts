@@ -3,10 +3,15 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { grantAdmin, setAdmin } from "./admins";
-import { refuse, type Change } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
+import type { Prisma } from "./generated/prisma/client";
 import { needsTeam } from "./roles";
-import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
+import {
+  deleteUserFromClerk,
+  snapshotFromBackendUser,
+  upsertUserFromClerk,
+} from "./sync";
 import {
   NO_TEAM_ERROR,
   type NewUserFields,
@@ -20,6 +25,7 @@ const CLERK_FIELDS: Record<string, keyof NewUserFields> = {
   email_address: "email",
   first_name: "firstName",
   last_name: "lastName",
+  password: "password",
 };
 
 /** The names a person typed for themselves: the last one may be empty. */
@@ -35,7 +41,11 @@ async function namedWhenBlank(held: ClerkUser, names: Names) {
   });
 }
 
-/** The account in Clerk for the email: the one it holds, its names filled when blank, or a new one. */
+/**
+ * The account in Clerk for the email: the one it holds, its names filled
+ * when blank, or a new one (`made`), with the email verified and the
+ * password typed, or none.
+ */
 async function clerkAccountFor(fields: NewUserFields) {
   const clerk = await clerkClient();
   const {
@@ -46,23 +56,230 @@ async function clerkAccountFor(fields: NewUserFields) {
       emailAddress: [fields.email],
       firstName: fields.firstName,
       lastName: fields.lastName || undefined,
-      skipPasswordRequirement: true,
+      ...(fields.password
+        ? { password: fields.password }
+        : { skipPasswordRequirement: true }),
     });
-    return { clerkUser: created, existing: false };
+    return { clerkUser: created, made: true };
   }
-  return { clerkUser: await namedWhenBlank(held, fields), existing: true };
+  return { clerkUser: await namedWhenBlank(held, fields), made: false };
+}
+
+/** A password typed for an email whose account exists: it is theirs to set. */
+function keepsOwnPassword(email: string): Refusal {
+  return refuse(
+    `${email} has an account already, which keeps its own way to sign in. Leave the password empty.`,
+    "password",
+  );
+}
+
+/** The account a form gives someone, for the change it is part of. */
+export type GivenAccount = {
+  userId: string;
+  clerkId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  /** The phone typed, which a new account keeps. */
+  phone: string | null;
+  /** Mirrored here by this form: the change logs its creation. */
+  isNew: boolean;
+  /** Made in Clerk by this form, so undone when the change is refused. */
+  made: boolean;
+};
+
+/**
+ * The account for an email: the one held here, or the one Clerk holds,
+ * its webhook missed, mirrored now, or a new one made in Clerk and
+ * mirrored at once, its guest bookings claimed and its driver row linked
+ * (./sync). One Clerk holds as another account's second address is
+ * refused, and so is a password typed for an account that exists. A new
+ * one needs a first name; an existing one keeps its own names.
+ */
+async function accountFor(
+  fields: NewUserFields,
+): Promise<{ ok: true; account: GivenAccount } | Refusal> {
+  const held = await db.user.findFirst({
+    where: { email: { equals: fields.email, mode: "insensitive" } },
+  });
+  if (held) {
+    if (fields.password) return keepsOwnPassword(held.email);
+    return {
+      ok: true,
+      account: { ...accountOf(held), phone: null, isNew: false, made: false },
+    };
+  }
+  if (!fields.firstName) {
+    return refuse(
+      "Enter their first name: no account has this email yet, so one is made.",
+      "firstName",
+    );
+  }
+  let found: Awaited<ReturnType<typeof clerkAccountFor>>;
+  try {
+    found = await clerkAccountFor(fields);
+  } catch (error) {
+    if (!isClerkAPIResponseError(error)) throw error;
+    const [first] = error.errors;
+    return refuse(
+      first?.longMessage ?? first?.message ?? error.message,
+      CLERK_FIELDS[first?.meta?.paramName ?? ""],
+    );
+  }
+  if (!found.made && fields.password) return keepsOwnPassword(fields.email);
+  const snapshot = snapshotFromBackendUser(found.clerkUser);
+  if (snapshot?.email.toLowerCase() !== fields.email) {
+    return refuse(
+      `${fields.email} is a second address of another account in Clerk. Use a different email.`,
+      "email",
+    );
+  }
+  const user = await upsertUserFromClerk(snapshot);
+  return {
+    ok: true,
+    account: {
+      ...accountOf(user),
+      phone: fields.phone,
+      isNew: true,
+      made: found.made,
+    },
+  };
+}
+
+function accountOf(user: {
+  id: string;
+  clerkId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  return {
+    userId: user.id,
+    clerkId: user.clerkId,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+  };
 }
 
 /**
- * Creates an account on someone's behalf: in Clerk, with the email
- * verified and no password, so they sign in with a code sent to it, and
- * mirrored into `User` at once, its guest bookings claimed, rather than
- * when the webhook arrives. Nothing is sent to them. An email Clerk
- * already holds as an account's own, its webhook missed, is mirrored as
- * it is there, given the names typed when it has none; one it holds as
- * another account's second address is refused. The phone is ours and
- * stays out of Clerk. With `staff`, the account is made an admin too, in
- * the transaction that logs it. No one is ever given a password here.
+ * Runs a change that gives someone the account for an email: a driver's,
+ * a vendor's owner, an admin. A new account is made first, outside the
+ * change's transaction since Clerk is not in it, and undone, in Clerk and
+ * here, when the change is refused or throws: a refused form leaves no
+ * account behind. The change logs a new account with `keepNewAccount`.
+ * See docs/261102-direct-accounts.md.
+ */
+export async function withAccount<R extends Change | Created>(
+  fields: NewUserFields,
+  change: (account: GivenAccount) => Promise<R>,
+): Promise<R | Refusal> {
+  const given = await accountFor(fields);
+  if (!given.ok) return given;
+  let result: R;
+  try {
+    result = await change(given.account);
+  } catch (error) {
+    await undoAccount(given.account);
+    throw error;
+  }
+  if (!result.ok) await undoAccount(given.account);
+  return result;
+}
+
+/** A new account a refused change made, removed again; one Clerk held before stays, mirrored. */
+async function undoAccount(account: GivenAccount) {
+  if (!account.made) return;
+  const clerk = await clerkClient();
+  await clerk.users.deleteUser(account.clerkId);
+  await deleteUserFromClerk(account.clerkId);
+}
+
+/**
+ * Inside the change's transaction: a new account keeps the phone typed
+ * (ours, not Clerk's) and its creation is logged. An account held before
+ * is left as it is.
+ */
+export async function keepNewAccount(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  account: GivenAccount,
+) {
+  if (!account.isNew) return;
+  if (account.phone) {
+    await tx.user.update({
+      where: { id: account.userId },
+      data: { phone: account.phone },
+    });
+  }
+  await logActivity(tx, actor, {
+    action: "user.created",
+    entityId: account.userId,
+    after: {
+      email: account.email,
+      firstName: account.firstName,
+      lastName: account.lastName,
+      phone: account.phone,
+      ...(account.made ? {} : { existing: true }),
+    },
+  });
+}
+
+/**
+ * Deletes an account no one has used, in Clerk and here: the one a typo
+ * made when a driver or a vendor's owner was entered, once the driver is
+ * deleted or the owner replaced. Used is signed in once, or holding
+ * anything: a booking, a note, staff access, a vendor, a driver. A used
+ * account is left as it is, and so is one Clerk fails to answer for.
+ * Answers whether it was deleted.
+ */
+export async function deleteAccountIfUnused(
+  actor: Actor,
+  userId: string,
+): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      clerkId: true,
+      email: true,
+      adminProfile: { select: { id: true } },
+      driver: { select: { id: true } },
+      _count: {
+        select: { vendorMembers: true, bookings: true, bookingNotes: true },
+      },
+    },
+  });
+  if (!user || user.adminProfile || user.driver) return false;
+  if (Object.values(user._count).some((count) => count > 0)) return false;
+  try {
+    const clerk = await clerkClient();
+    const held = await clerk.users.getUser(user.clerkId);
+    if (held.lastSignInAt !== null) return false;
+    await clerk.users.deleteUser(user.clerkId);
+  } catch (error) {
+    // Gone from Clerk already: only the row here is left to delete.
+    if (!isClerkAPIResponseError(error) || error.status !== 404) {
+      console.error(`[accounts] could not delete ${user.email}:`, error);
+      return false;
+    }
+  }
+  await db.$transaction(async (tx) => {
+    await tx.user.deleteMany({ where: { id: userId } });
+    await logActivity(tx, actor, {
+      action: "user.deleted",
+      entityId: userId,
+      before: { email: user.email },
+    });
+  });
+  return true;
+}
+
+/**
+ * Creates an account on someone's behalf, as `withAccount` gives one:
+ * in Clerk with the email verified, and the password typed or none, so
+ * they sign in with a code sent to it. Nothing is sent to them. An email
+ * with an account here is refused. With `staff`, the account is made an
+ * admin too, in the transaction that logs it.
  */
 export async function createUser(
   actor: Actor,
@@ -74,49 +291,13 @@ export async function createUser(
   if (await findUserByEmail(fields.email)) {
     return refuse(`${fields.email} already has an account.`, "email");
   }
-
-  let account: Awaited<ReturnType<typeof clerkAccountFor>>;
-  try {
-    account = await clerkAccountFor(fields);
-  } catch (error) {
-    if (!isClerkAPIResponseError(error)) throw error;
-    const [first] = error.errors;
-    return refuse(
-      first?.longMessage ?? first?.message ?? error.message,
-      CLERK_FIELDS[first?.meta?.paramName ?? ""],
-    );
-  }
-  const { clerkUser, existing } = account;
-
-  const snapshot = snapshotFromBackendUser(clerkUser);
-  if (snapshot?.email.toLowerCase() !== fields.email) {
-    return refuse(
-      `${fields.email} is a second address of another account in Clerk. Use a different email.`,
-      "email",
-    );
-  }
-  const user = await upsertUserFromClerk(snapshot);
-  await db.$transaction(async (tx) => {
-    if (fields.phone) {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { phone: fields.phone },
-      });
-    }
-    await logActivity(tx, actor, {
-      action: "user.created",
-      entityId: user.id,
-      after: {
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: fields.phone,
-        ...(existing ? { existing: true } : {}),
-      },
-    });
-    if (staff) await grantAdmin(tx, actor, user.id, staff);
-  });
-  return { ok: true };
+  return withAccount(fields, (account) =>
+    db.$transaction(async (tx) => {
+      await keepNewAccount(tx, actor, account);
+      if (staff) await grantAdmin(tx, actor, account.userId, staff);
+      return { ok: true } as const;
+    }),
+  );
 }
 
 /**
@@ -141,12 +322,9 @@ export async function addStaff(
       "email",
     );
   }
-  if (held) return setAdmin(actor, held.email, access.level, access.teams);
-  if (!fields.firstName) {
-    return refuse(
-      "Enter their first name: no account has this email yet, so one is made.",
-      "firstName",
-    );
+  if (held) {
+    if (fields.password) return keepsOwnPassword(held.email);
+    return setAdmin(actor, held.email, access.level, access.teams);
   }
   return createUser(actor, fields, access);
 }
@@ -265,8 +443,9 @@ export async function updateUserProfile(
 /**
  * Changes the email an account signs in with: Clerk takes the new one as
  * verified and primary, and drops the others, so the account keeps one
- * email, as it was made with. Nothing is sent to either address. An email
- * another account holds, here or in Clerk, is refused.
+ * email, as it was made with; their driver row, if any, takes it too.
+ * Nothing is sent to either address. An email another account or another
+ * driver holds, here or in Clerk, is refused.
  */
 export async function changeUserEmail(
   actor: Actor,
@@ -279,6 +458,16 @@ export async function changeUserEmail(
   const other = await findUserByEmail(email);
   if (other && other.id !== user.id) {
     return refuse(`${email} is another account's email.`, "email");
+  }
+  const driver = await db.driver.findFirst({
+    where: { email, NOT: { userId: user.id } },
+    select: { name: true },
+  });
+  if (driver) {
+    return refuse(
+      `${email} is the driver ${driver.name}'s email. Each driver signs in with their own.`,
+      "email",
+    );
   }
 
   try {
@@ -302,11 +491,16 @@ export async function changeUserEmail(
   } catch (error) {
     return clerkRefusal(error, "email");
   }
-  await logActivity(db, actor, {
-    action: "user.email.changed",
-    entityId: user.id,
-    before: { email: user.email },
-    after: { email },
+  await db.$transaction(async (tx) => {
+    // Their driver row keeps the email they sign in with: it is locked
+    // on the driver's form, and changes here.
+    await tx.driver.updateMany({ where: { userId: user.id }, data: { email } });
+    await logActivity(tx, actor, {
+      action: "user.email.changed",
+      entityId: user.id,
+      before: { email: user.email },
+      after: { email },
+    });
   });
   return { ok: true };
 }

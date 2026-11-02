@@ -81,3 +81,45 @@ export function vendorApprovedEmails(
     ),
   ];
 }
+
+/** What the email to a driver given an account reads. */
+export type DriverAddedFacts = {
+  driverId: string;
+  name: string;
+  email: string;
+  vendorName: string;
+};
+
+/**
+ * To a driver their vendor added in Connect with an email: they have an
+ * account and sign in to see their jobs, with no sign-up. Once per
+ * driver. See docs/261102-direct-accounts.md.
+ */
+export function driverAddedEmails(
+  driver: DriverAddedFacts,
+  settings: EmailSettings,
+): BookingEmail[] {
+  return [
+    email(
+      driver.email,
+      `driver:${driver.driverId}:added`,
+      {
+        subject: `${driver.vendorName} added you on Heavenly Travel Connect`,
+        heading: "Your jobs are on Connect",
+        blocks: [
+          {
+            type: "paragraph",
+            text: `Hi ${driver.name}, ${driver.vendorName} added you as a driver. Sign in to Connect with this email to see the jobs offered to you, accept them and report each trip. We send a code to this email when you sign in, unless you were given a password.`,
+          },
+          {
+            type: "button",
+            label: "Sign in to Connect",
+            href: `${settings.connectUrl}/sign-in`,
+          },
+          { type: "contact" },
+        ],
+      },
+      settings,
+    ),
+  ];
+}

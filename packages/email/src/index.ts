@@ -19,15 +19,17 @@ import {
 } from "./booking-emails";
 import { logSender } from "./log-sender";
 import {
+  driverAddedEmails,
   vendorApprovedEmails,
   vendorRegisteredEmails,
+  type DriverAddedFacts,
   type VendorEmailFacts,
 } from "./vendor-emails";
 import { resendSender } from "./resend";
 import type { EmailSender } from "./types";
 
 export type { BookingEmailEvent, TripCrew } from "./booking-emails";
-export type { VendorEmailFacts } from "./vendor-emails";
+export type { DriverAddedFacts, VendorEmailFacts } from "./vendor-emails";
 
 /**
  * Booking emails as the apps send them. The sender is chosen once per
@@ -127,6 +129,18 @@ export function sendVendorEmail(
       ? vendorRegisteredEmails(vendor, settings)
       : vendorApprovedEmails(vendor, settings),
     `vendor ${event} email for ${vendor.name}`,
+  );
+}
+
+/**
+ * Tells a driver their vendor added them in Connect, so they sign in.
+ * After the write has committed; never throws. The console sends none
+ * yet: its emails wait for their settings.
+ */
+export function sendDriverAddedEmail(driver: DriverAddedFacts): Promise<void> {
+  return sendAll(
+    driverAddedEmails(driver, settings),
+    `driver added email for ${driver.name}`,
   );
 }
 

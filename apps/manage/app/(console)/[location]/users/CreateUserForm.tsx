@@ -8,7 +8,7 @@ import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AccountFields, NoPasswordNote } from "./admin/AccountFields";
+import { AccountFields } from "../../../_components/AccountFields";
 import { AdminFields } from "./admin/AdminFields";
 import { createUserAction } from "./actions";
 
@@ -92,7 +92,6 @@ export function CreateUserForm({ mayMakeStaff }: { mayMakeStaff: boolean }) {
             </Button>
           </div>
           <FormError error={error} />
-          <NoPasswordNote />
         </form>
       </Sheet>
     </>

@@ -55,6 +55,7 @@ import {
   type ConsoleScope,
 } from "../../../../../_lib/scope";
 import { VendorForm } from "../_components/VendorForm";
+import { SetOwnerButton } from "../_components/SetOwnerButton";
 import { VendorReview } from "../_components/VendorReview";
 
 /**
@@ -202,6 +203,17 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                   inset
                   meta={members.length > 0 ? members.length : undefined}
                   description="Who signs in to Connect for it: its owner, who adds and removes its staff there. A driver signs in on their own to see their jobs."
+                  action={
+                    reviews ? (
+                      <SetOwnerButton
+                        vendorId={id}
+                        vendorName={vendor.name}
+                        owner={
+                          members.find((m) => m.role === "owner")?.email ?? null
+                        }
+                      />
+                    ) : null
+                  }
                 >
                   Connect Accounts
                 </CardTitle>

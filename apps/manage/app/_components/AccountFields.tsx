@@ -1,11 +1,14 @@
 import { USER_LIMITS } from "@repo/db";
 import { Field, Input } from "@repo/ui/field";
+import { SignInFields } from "@repo/console/SignInFields";
 
 /**
  * The email and the names of an account, in the panels that make one:
- * Create an account on All Users, and Add admin on Admin, where the names
- * are needed only for an email with no account yet. The server action
- * reads them as `email`, `firstName` and `lastName`.
+ * Create an account on All Users, Add admin on Admin, and a vendor's Set
+ * owner, where the names are needed only for an email with no account
+ * yet. The email is typed twice and a password may be set
+ * (`SignInFields`). The server action reads them as `email`,
+ * `confirmEmail`, `password`, `firstName` and `lastName`.
  */
 export function AccountFields({
   firstNameRequired,
@@ -25,6 +28,7 @@ export function AccountFields({
           placeholder={emailPlaceholder}
         />
       </Field>
+      <SignInFields placeholder={emailPlaceholder} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label="First name"
@@ -48,15 +52,5 @@ export function AccountFields({
         </Field>
       </div>
     </>
-  );
-}
-
-/** Under a panel that makes an account: how its person signs in, since no one sets a password for them. */
-export function NoPasswordNote() {
-  return (
-    <p className="text-xs text-muted">
-      An account made here has no password. They sign in with a code sent to
-      that email, and can add a password from their account.
-    </p>
   );
 }

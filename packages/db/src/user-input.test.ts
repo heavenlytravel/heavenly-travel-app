@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseNewStaff, parseNewUser, parseStaffAccess } from "./user-input";
+import {
+  parseAccountFor,
+  parseNewUser,
+  parseSignInCheck,
+  parseStaffAccess,
+} from "./user-input";
 
 const FORM: Record<string, string> = {
   email: " Aina@Example.COM ",
+  confirmEmail: "aina@example.com",
   firstName: " Nurul ",
   lastName: "Aina",
   phone: "+60 12-345 6789",
@@ -23,6 +29,7 @@ describe("parseNewUser", () => {
         firstName: "Nurul",
         lastName: "Aina",
         phone: "+60123456789",
+        password: null,
       },
     });
   });
@@ -41,24 +48,54 @@ describe("parseNewUser", () => {
     assert.equal(fieldOf({ lastName: "x".repeat(81) }), "lastName");
     assert.equal(fieldOf({ phone: "123" }), "phone");
   });
+
+  it("asks for the email again, the same, before the account is made", () => {
+    assert.equal(fieldOf({ confirmEmail: "" }), "confirmEmail");
+    assert.equal(fieldOf({ confirmEmail: "aina@example.co" }), "confirmEmail");
+  });
+
+  it("takes a password of at least 8 characters, or none", () => {
+    const set = parseNewUser({ ...FORM, password: "long enough" });
+    assert.ok(set.ok);
+    assert.equal(set.value.password, "long enough");
+    assert.equal(fieldOf({ password: "short" }), "password");
+  });
 });
 
-describe("parseNewStaff", () => {
+describe("parseSignInCheck", () => {
+  it("passes an optional email left empty twice", () => {
+    assert.deepEqual(parseSignInCheck({}, null), { ok: true, value: null });
+  });
+
+  it("refuses a second email typed for none", () => {
+    const result = parseSignInCheck({ confirmEmail: "ali@example.com" }, null);
+    assert.equal(result.ok ? null : result.field, "confirmEmail");
+  });
+});
+
+describe("parseAccountFor", () => {
   it("takes an email alone: an account that exists keeps its names", () => {
-    assert.deepEqual(parseNewStaff({ email: "Aina@Example.com" }), {
-      ok: true,
-      value: {
-        email: "aina@example.com",
-        firstName: "",
-        lastName: "",
-        phone: null,
+    assert.deepEqual(
+      parseAccountFor({
+        email: "Aina@Example.com",
+        confirmEmail: "aina@example.com ",
+      }),
+      {
+        ok: true,
+        value: {
+          email: "aina@example.com",
+          firstName: "",
+          lastName: "",
+          phone: null,
+          password: null,
+        },
       },
-    });
+    );
   });
 
   it("checks the email and the names as Customers does", () => {
     const refused = (values: Record<string, string>) => {
-      const result = parseNewStaff({ ...FORM, ...values });
+      const result = parseAccountFor({ ...FORM, ...values });
       return result.ok ? null : result.field;
     };
     assert.equal(refused({ email: "not-an-email" }), "email");

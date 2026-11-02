@@ -1,3 +1,9 @@
+import {
+  deleteAccountIfUnused,
+  keepNewAccount,
+  withAccount,
+  type GivenAccount,
+} from "./accounts";
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created, type Refusal } from "./change";
@@ -5,6 +11,7 @@ import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { releaseHeldWork } from "./fulfilment";
 import { phoneDigitsOf } from "./search";
+import type { NewUserFields } from "./user-input";
 import {
   checkReviewNote,
   checkVendorFields,
@@ -192,20 +199,27 @@ function vendorRow<F extends Partial<VendorFields>>(
 }
 
 /**
- * A new vendor. Staff enter one active; one that registers in Connect is
+ * A new vendor. Staff enter one active, with the owner they give it
+ * (`createVendorWithOwner`) or none; one that registers in Connect is
  * pending, with its applicant as its owner (`owner`). Never ours: only
  * SUPER switches that, on the vendor's page.
  */
 export async function createVendor(
   actor: Actor,
   fields: VendorFields,
-  options: { status: "active" | "pending"; owner?: string },
+  options: {
+    status: "active" | "pending";
+    owner?: string;
+    /** The owner's account, given with the vendor: a new one is logged with it. */
+    account?: GivenAccount;
+  },
 ): Promise<Created> {
   const check = checkVendorFields(fields);
   if (!check.ok) return check;
   return db.$transaction(async (tx) => {
     const names = await locationNamesOf(tx, fields.locationIds);
     if (!names.ok) return names;
+    if (options.account) await keepNewAccount(tx, actor, options.account);
     const vendor = await tx.vendor.create({
       data: {
         ...vendorRow(fields),
@@ -223,10 +237,107 @@ export async function createVendor(
         ...vendorRow(fields),
         locations: names.names,
         status: options.status,
+        ...(options.account ? { owner: options.account.email } : {}),
       },
     });
     return { ok: true, id: vendor.id };
   });
+}
+
+/** An account that works for another vendor cannot own this one: Connect shows one vendor's screens. */
+async function checkMayOwn(email: string, vendorId?: string): Promise<Change> {
+  const elsewhere = await db.vendorMember.findFirst({
+    where: {
+      user: { email: { equals: email, mode: "insensitive" } },
+      NOT: vendorId ? { vendorId } : undefined,
+    },
+    select: { vendor: { select: { name: true } } },
+  });
+  return elsewhere
+    ? refuse(
+        `${email} works for ${elsewhere.vendor.name}. An account works for one vendor.`,
+        "email",
+      )
+    : { ok: true };
+}
+
+/**
+ * A vendor staff enter, active, with the owner who signs in to Connect
+ * for it: the account for their email, made now when there is none, and
+ * undone if the vendor is refused (./accounts, `withAccount`).
+ */
+export async function createVendorWithOwner(
+  actor: Actor,
+  fields: VendorFields,
+  owner: NewUserFields,
+): Promise<Created> {
+  const check = checkVendorFields(fields);
+  if (!check.ok) return check;
+  const free = await checkMayOwn(owner.email);
+  if (!free.ok) return free;
+  return withAccount(owner, (account) =>
+    createVendor(actor, fields, {
+      status: "active",
+      owner: account.userId,
+      account,
+    }),
+  );
+}
+
+/**
+ * SUPER sets the account that owns a vendor in Connect, or replaces it:
+ * the account for the email, made now when there is none, is the owner,
+ * promoted when it is the vendor's staff. The owner it replaces leaves
+ * the vendor, and their account goes too when no one has used it, as one
+ * a typo made (./accounts, `deleteAccountIfUnused`). Ours has no owner.
+ * See docs/261102-direct-accounts.md.
+ */
+export async function setVendorOwner(
+  actor: Actor,
+  vendorId: string,
+  fields: NewUserFields,
+): Promise<Change> {
+  const vendor = await db.vendor.findUnique({
+    where: { id: vendorId },
+    select: {
+      name: true,
+      isOurs: true,
+      members: {
+        where: { role: "owner" },
+        select: { id: true, userId: true, user: { select: { email: true } } },
+      },
+    },
+  });
+  if (!vendor) return NOT_FOUND;
+  if (vendor.isOurs) {
+    return refuse("Ours has no Connect accounts: Operation accepts for it.");
+  }
+  const [owner] = vendor.members;
+  if (owner?.user.email.toLowerCase() === fields.email) {
+    return refuse(`${fields.email} owns ${vendor.name} already.`, "email");
+  }
+  const free = await checkMayOwn(fields.email, vendorId);
+  if (!free.ok) return free;
+  const result = await withAccount(fields, (account) =>
+    db.$transaction(async (tx) => {
+      await keepNewAccount(tx, actor, account);
+      if (owner) await tx.vendorMember.delete({ where: { id: owner.id } });
+      await tx.vendorMember.upsert({
+        where: { vendorId_userId: { vendorId, userId: account.userId } },
+        create: { vendorId, userId: account.userId, role: "owner" },
+        update: { role: "owner" },
+      });
+      await logActivity(tx, actor, {
+        action: "vendor.owner.changed",
+        entityId: vendorId,
+        ...(owner ? { before: { email: owner.user.email } } : {}),
+        after: { email: account.email },
+      });
+      return { ok: true } as const;
+    }),
+  );
+  if (result.ok && owner) await deleteAccountIfUnused(actor, owner.userId);
+  return result;
 }
 
 /**

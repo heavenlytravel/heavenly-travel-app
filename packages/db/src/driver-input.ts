@@ -4,6 +4,7 @@ import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import { isValidEmail, normalizeEmail } from "./booking-contact";
 import { isValidPhone, normalizePhone } from "./phone";
+import { parseSignInCheck } from "./user-input";
 
 /**
  * What the Drivers tab edits of one of our drivers and the rules it
@@ -178,11 +179,29 @@ export function parseDriverFields(
 }
 
 /**
- * What deleting a driver takes (./delete-impact): nothing beyond them,
- * since one who has been on a job cannot be deleted, so a plain yes
- * confirms it.
+ * What deleting a driver takes (./delete-impact): them, and their
+ * account when no one has used it, since one who has been on a job
+ * cannot be deleted, so a plain yes confirms it.
  */
 export const DRIVER_DELETE_IMPACT: DeleteImpact = {
-  lines: ["Nothing else changes: they have not been on a job."],
+  lines: [
+    "They have not been on a job, so no booking changes.",
+    "Their sign-in account goes too if it was never used, as one made with a mistyped email.",
+  ],
   confirmWith: null,
 };
+
+/**
+ * What the driver form asks besides the driver while their email is not
+ * saved yet: the email again and a password for their new account, none
+ * for a code at each sign-in. Once saved the email is locked, and this
+ * asks nothing. See docs/261102-direct-accounts.md.
+ */
+export function parseDriverSignIn(
+  values: Record<string, unknown>,
+  email: string | null,
+  savedEmail: string | null,
+): Parsed<string | null> {
+  if (savedEmail !== null) return { ok: true, value: null };
+  return parseSignInCheck(values, email);
+}

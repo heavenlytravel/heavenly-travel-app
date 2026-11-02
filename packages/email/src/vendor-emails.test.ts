@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { sampleSettings } from "./fixtures";
-import { vendorApprovedEmails, vendorRegisteredEmails } from "./vendor-emails";
+import {
+  driverAddedEmails,
+  vendorApprovedEmails,
+  vendorRegisteredEmails,
+} from "./vendor-emails";
 
 const vendor = {
   id: "ven1",
@@ -42,5 +46,24 @@ describe("vendorApprovedEmails", () => {
     const [a] = vendorApprovedEmails(vendor, sampleSettings);
     const [b] = vendorApprovedEmails(vendor, sampleSettings);
     assert.equal(a!.key, b!.key);
+  });
+});
+
+describe("driverAddedEmails", () => {
+  it("tells the driver to sign in to Connect with their email", () => {
+    const [mail, ...rest] = driverAddedEmails(
+      {
+        driverId: "drv1",
+        name: "Ali",
+        email: "ali@example.com",
+        vendorName: "Pulau Coach Sdn Bhd",
+      },
+      sampleSettings,
+    );
+    assert.equal(rest.length, 0);
+    assert.equal(mail!.key, "driver:drv1:added");
+    assert.equal(mail!.message.to, "ali@example.com");
+    assert.match(mail!.message.text, /https:\/\/connect\.test\/sign-in/);
+    assert.match(mail!.message.text, /Hi Ali, Pulau Coach Sdn Bhd added you/);
   });
 });

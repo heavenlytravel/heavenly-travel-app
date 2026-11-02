@@ -138,6 +138,11 @@ const ACTIONS = {
   "user.email.changed": { entityType: "user", customerVisible: false },
   /** Staff set an account's password, which is never logged; its sessions were ended. */
   "user.password.set": { entityType: "user", customerVisible: false },
+  /**
+   * An account no one used, deleted with the driver or the owner it was
+   * made for (a typo): its email in `before`, which names it once gone.
+   */
+  "user.deleted": { entityType: "user", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
@@ -301,6 +306,8 @@ const ACTIONS = {
   "vendor.member.added": { entityType: "vendor", customerVisible: false },
   /** A staff account the owner removed: its email and role, in `before`. */
   "vendor.member.removed": { entityType: "vendor", customerVisible: false },
+  /** SUPER set or replaced the account that owns it in Connect: the owner's email in `before`, when it had one, and `after`. */
+  "vendor.owner.changed": { entityType: "vendor", customerVisible: false },
   /**
    * The files the Media screen deleted, each with its key, name and size,
    * in `before`. Logged against `MEDIA_RECORD_ID`.
@@ -890,6 +897,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Changed the email to ${String(field(entry.after, "email") ?? "")}`;
     case "user.password.set":
       return "Set a new password and signed them out everywhere";
+    case "user.deleted":
+      return "Deleted the account, never used";
     case "admin.promoted":
       return `Promoted to ${adminState(entry.after)}`;
     case "admin.updated":
@@ -1085,6 +1094,13 @@ export function describeActivity(entry: DescribableActivity): string {
       return typeof email === "string"
         ? `Removed ${email} from the staff`
         : "Removed a staff account";
+    }
+    case "vendor.owner.changed": {
+      const was = field(entry.before, "email");
+      const now = String(field(entry.after, "email") ?? "");
+      return typeof was === "string"
+        ? `Made ${now} the owner in place of ${was}`
+        : `Made ${now} the owner`;
     }
     case "vendor.ours.switched":
       return field(entry.after, "isOurs") === true

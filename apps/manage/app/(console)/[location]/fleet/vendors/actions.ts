@@ -2,9 +2,13 @@
 
 import {
   createVendor,
+  createVendorWithOwner,
   moveVendor,
+  parseAccountFor,
   parseVendorFields,
+  parseVendorOwner,
   setVendorOurs,
+  setVendorOwner,
   textOf,
   updateVendor,
   VENDOR_LOCATIONS_FIELD,
@@ -28,7 +32,8 @@ import { ALL, scopeSlugOf, vendorHref } from "../../../../_lib/routes";
 /**
  * The vendor screens' actions. Entering and changing a vendor is
  * Operation's (`fleet.manage`); approving, refusing, suspending,
- * reinstating and switching one to ours is SUPER's (`vendors.review`).
+ * reinstating, switching one to ours and setting its owner is SUPER's
+ * (`vendors.review`).
  * Each checks again, passes the admin as the actor and lets the writer in
  * @repo/db check the rest. See docs/261028-fulfilment-vendors-and-connect.md.
  */
@@ -50,8 +55,10 @@ function revalidateVendors() {
 }
 
 /**
- * A vendor staff enter: active at once, never ours. Saved, it opens in
- * the scope its form was opened in.
+ * A vendor staff enter: active at once, never ours, with the owner who
+ * signs in to Connect for it when an email is given, their account made
+ * now. No email is sent from here yet, as for every console email.
+ * Saved, it opens in the scope its form was opened in.
  */
 export async function createVendorAction(
   _previous: ActionState,
@@ -61,9 +68,12 @@ export async function createVendorAction(
   if (!admin) return FORBIDDEN;
   const fields = parsed(formData);
   if (!fields.ok) return refusalOf(fields);
-  const result = await createVendor(actorOf(admin), fields.value, {
-    status: "active",
-  });
+  const owner = parseVendorOwner(Object.fromEntries(formData), fields.value);
+  if (!owner.ok) return refusalOf(owner);
+  const actor = actorOf(admin);
+  const result = owner.value
+    ? await createVendorWithOwner(actor, fields.value, owner.value)
+    : await createVendor(actor, fields.value, { status: "active" });
   if (!result.ok) return stateOf(result);
   revalidateVendors();
   const scope = scopeSlugOf(textOf(formData.get(SCOPE_FIELD)) ?? ALL);
@@ -132,6 +142,26 @@ export async function setVendorOursAction(
     return STALE;
   }
   const result = await setVendorOurs(actorOf(admin), id, isOurs);
+  if (result.ok) revalidateVendors();
+  return stateOf(result);
+}
+
+/**
+ * SUPER sets or replaces the account that owns a vendor in Connect: the
+ * email twice, the names for an email with no account yet, and a
+ * password or none. A replaced owner's account goes when never used.
+ */
+export async function setVendorOwnerAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("vendors.review");
+  if (!admin) return FORBIDDEN;
+  const id = textOf(formData.get("id"));
+  if (!id) return STALE;
+  const owner = parseAccountFor(Object.fromEntries(formData));
+  if (!owner.ok) return refusalOf(owner);
+  const result = await setVendorOwner(actorOf(admin), id, owner.value);
   if (result.ok) revalidateVendors();
   return stateOf(result);
 }

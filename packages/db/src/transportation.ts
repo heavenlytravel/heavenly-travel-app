@@ -5,6 +5,7 @@ import {
   isWithinHorizon,
   localDateTimeInputs,
   localMinuteOfDay,
+  type BookingSide,
   type ClassAvailability,
 } from "./booking-rules";
 import {
@@ -175,6 +176,12 @@ export type QuoteOptions = {
    * road, so the screen can say a customer would be refused.
    */
   unlimited?: boolean;
+  /**
+   * Whose booking it is (`BookingSide`): the console's admin forms pass
+   * "admin", so no notice, minimum hire, horizon or group limit refuses
+   * what was agreed. The website's, by default.
+   */
+  side?: BookingSide;
 };
 
 const fail = (code: TripQuoteErrorCode, message: string, reason?: string) => ({
@@ -265,7 +272,13 @@ async function quoteAll(
   category: TripCategory,
   requests: readonly TripRequest[],
   routing: TripRouting,
-  { now = new Date(), locationId, trace, unlimited = false }: QuoteOptions,
+  {
+    now = new Date(),
+    locationId,
+    trace,
+    unlimited = false,
+    side = "customer",
+  }: QuoteOptions,
 ): Promise<TripQuoteResult[]> {
   let reads: Promise<QuoteReads> | null = null;
   const readOnce = () =>
@@ -277,6 +290,7 @@ async function quoteAll(
         locationId,
         trace,
         unlimited,
+        side,
       }),
     ),
   );
@@ -292,10 +306,12 @@ async function quoteOne(
     locationId,
     trace,
     unlimited,
-  }: Required<Pick<QuoteOptions, "now" | "unlimited">> &
+    side,
+  }: Required<Pick<QuoteOptions, "now" | "unlimited" | "side">> &
     Pick<QuoteOptions, "locationId" | "trace">,
 ): Promise<TripQuoteResult> {
-  if (!unlimited && !isWithinHorizon(request.startsAt, now)) {
+  const horizon = !unlimited && side === "customer";
+  if (horizon && !isWithinHorizon(request.startsAt, now)) {
     return fail(
       "too-far",
       "That pickup is too far ahead. Choose an earlier date.",
@@ -309,7 +325,7 @@ async function quoteOne(
     }
   } else {
     hours = request.hours ?? 0;
-    if (!checkHours(hours).ok) {
+    if (!checkHours(hours, side).ok) {
       return fail("hours", "Choose how many hours you need the driver for.");
     }
   }
@@ -430,6 +446,7 @@ async function quoteOne(
         offering,
         { startsAt: request.startsAt, hours },
         now,
+        side,
       ),
     };
   });
@@ -485,17 +502,25 @@ export type PrepareTripItemResult =
  * the offering's cancellation cutoff, and the location that priced it, so
  * what was booked never changes when ops edits or retires the class or the
  * model or redraws a zone. A model must be one the quote lets the customer
- * choose, and the receipt charges for it.
+ * choose, and the receipt charges for it. An admin's (`side`) is checked
+ * as `QuoteOptions` says.
  */
 export async function prepareTripItem(
   category: TripCategory,
   request: TripItemRequest,
   routing: TripRouting,
-  now: Date = new Date(),
+  options: PrepareOptions = {},
 ): Promise<PrepareTripItemResult> {
-  const [prepared] = await prepareTripItems(category, [request], routing, now);
+  const [prepared] = await prepareTripItems(
+    category,
+    [request],
+    routing,
+    options,
+  );
   return prepared!;
 }
+
+type PrepareOptions = Pick<QuoteOptions, "now" | "side">;
 
 /**
  * `prepareTripItem` for every trip of a booking, in the same order, on the
@@ -506,11 +531,11 @@ export async function prepareTripItems(
   category: TripCategory,
   requests: readonly TripItemRequest[],
   routing: TripRouting,
-  now: Date = new Date(),
+  { now, side = "customer" }: PrepareOptions = {},
 ): Promise<PrepareTripItemResult[]> {
-  const quoted = await quoteTrips(category, requests, routing, { now });
+  const quoted = await quoteTrips(category, requests, routing, { now, side });
   return quoted.map((result, index) =>
-    result.ok ? itemOf(category, result.quote, requests[index]!) : result,
+    result.ok ? itemOf(category, result.quote, requests[index]!, side) : result,
   );
 }
 
@@ -519,6 +544,7 @@ function itemOf(
   category: TripCategory,
   quote: TripQuote,
   request: TripItemRequest,
+  side: BookingSide,
 ): PrepareTripItemResult {
   const { district, location, basis, classes } = quote;
 
@@ -557,7 +583,7 @@ function itemOf(
       `${vehicleClass.name} is not offered on that trip.`,
     );
   }
-  if (!fitsPassengers(vehicleClass, request.passengers)) {
+  if (!fitsPassengers(vehicleClass, request.passengers, side)) {
     return fail(
       "passengers",
       `${vehicleClass.name} seats up to ${vehicleClass.maxPassengers} passengers.`,

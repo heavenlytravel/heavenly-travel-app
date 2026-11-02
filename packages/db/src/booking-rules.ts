@@ -19,6 +19,12 @@ export const BOOKING_RULES = {
   hourlyFloorHours: 3,
   /** Longest hourly hire in one item; anything longer is a multi-day request. */
   maxHourlyHours: 12,
+  /**
+   * An admin's hourly hire: whatever was agreed, from one hour to a whole
+   * day. The two above are the website's.
+   */
+  adminMinHourlyHours: 1,
+  adminMaxHourlyHours: 24,
   /** The most trips one booking takes on the website: a long stay, not a fleet. */
   maxTripsPerBooking: 20,
   /** All customer-facing dates and times. Malaysia has no daylight saving. */
@@ -43,30 +49,55 @@ export function isWithinHorizon(startsAt: Date, now: Date = new Date()) {
   return startsAt.getTime() <= latestPickup(now).getTime();
 }
 
+/**
+ * Whose booking a trip is checked for. The website's customer meets every
+ * rule. An admin enters what was already agreed, often by phone and
+ * sometimes after the trip: no notice, no minimum hire, no horizon, any
+ * group, any whole hours in a day, and a pickup in the past too.
+ */
+export type BookingSide = "customer" | "admin";
+
+/** The fewest and the most hours an hourly hire may run, for a side. */
+export function hourlyRange(side: BookingSide = "customer") {
+  return side === "admin"
+    ? {
+        min: BOOKING_RULES.adminMinHourlyHours,
+        max: BOOKING_RULES.adminMaxHourlyHours,
+      }
+    : {
+        min: BOOKING_RULES.hourlyFloorHours,
+        max: BOOKING_RULES.maxHourlyHours,
+      };
+}
+
 export type HoursCheck =
   { ok: true } | { ok: false; reason: "not-whole" | "too-few" | "too-many" };
 
 /**
- * Hourly hires are whole hours between the hourly floor and the maximum. A
- * class may ask for more than the floor; `classAvailability` checks that.
+ * Hourly hires are whole hours within the side's range (`hourlyRange`). A
+ * class may ask a customer for more than the floor; `classAvailability`
+ * checks that.
  */
-export function checkHours(hours: number): HoursCheck {
+export function checkHours(
+  hours: number,
+  side: BookingSide = "customer",
+): HoursCheck {
   if (!Number.isInteger(hours)) return { ok: false, reason: "not-whole" };
-  if (hours < BOOKING_RULES.hourlyFloorHours) {
-    return { ok: false, reason: "too-few" };
-  }
-  if (hours > BOOKING_RULES.maxHourlyHours) {
-    return { ok: false, reason: "too-many" };
-  }
+  const range = hourlyRange(side);
+  if (hours < range.min) return { ok: false, reason: "too-few" };
+  if (hours > range.max) return { ok: false, reason: "too-many" };
   return { ok: true };
 }
 
-/** The hour choices a form offers for an hourly hire. */
-export const HOURLY_OPTIONS: readonly number[] = Array.from(
-  {
-    length: BOOKING_RULES.maxHourlyHours - BOOKING_RULES.hourlyFloorHours + 1,
-  },
-  (_, i) => BOOKING_RULES.hourlyFloorHours + i,
+const hourOptions = ({ min, max }: { min: number; max: number }) =>
+  Array.from({ length: max - min + 1 }, (_, i) => min + i);
+
+/** The hour choices the website offers for an hourly hire. */
+export const HOURLY_OPTIONS: readonly number[] = hourOptions(hourlyRange());
+
+/** The hour choices the console offers an admin for an hourly hire. */
+export const ADMIN_HOURLY_OPTIONS: readonly number[] = hourOptions(
+  hourlyRange("admin"),
 );
 
 /** The rules a location sets for a trip in one class, as stored on its offering. */
@@ -118,7 +149,10 @@ export function classAvailability(
     hours: number | null;
   },
   now: Date = new Date(),
+  side: BookingSide = "customer",
 ): ClassAvailability {
+  // The notice and the minimum hire are the website's; an admin books what was agreed.
+  if (side === "admin") return { ok: true };
   if (trip.startsAt.getTime() < hoursAfter(now, rules.minLeadHours).getTime()) {
     return { ok: false, reason: "too-soon", minLeadHours: rules.minLeadHours };
   }
@@ -145,15 +179,19 @@ export function unavailableReason(availability: ClassAvailability) {
   }
 }
 
-/** Whether a group fits a class. Only the maximum counts. */
+/**
+ * Whether a group fits a class. Only the maximum counts, and only for a
+ * customer: an admin may book any group, as agreed.
+ */
 export function fitsPassengers(
   vehicleClass: { maxPassengers: number },
   passengers: number,
+  side: BookingSide = "customer",
 ) {
   return (
     Number.isInteger(passengers) &&
     passengers >= 1 &&
-    passengers <= vehicleClass.maxPassengers
+    (side === "admin" || passengers <= vehicleClass.maxPassengers)
   );
 }
 

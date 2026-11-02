@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  ADMIN_HOURLY_OPTIONS,
   cancellationDeadline,
   checkHours,
   classAvailability,
@@ -48,6 +49,26 @@ describe("checkHours", () => {
   it("offers exactly the accepted hours as options", () => {
     assert.deepEqual(HOURLY_OPTIONS, [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     assert.ok(HOURLY_OPTIONS.every((h) => checkHours(h).ok));
+  });
+
+  it("lets an admin hire for any whole hours in a day", () => {
+    assert.deepEqual(checkHours(1, "admin"), { ok: true });
+    assert.deepEqual(checkHours(24, "admin"), { ok: true });
+    assert.deepEqual(checkHours(0, "admin"), { ok: false, reason: "too-few" });
+    assert.deepEqual(checkHours(25, "admin"), {
+      ok: false,
+      reason: "too-many",
+    });
+    assert.deepEqual(checkHours(1.5, "admin"), {
+      ok: false,
+      reason: "not-whole",
+    });
+  });
+
+  it("offers an admin exactly the hours it accepts", () => {
+    assert.equal(ADMIN_HOURLY_OPTIONS.length, 24);
+    assert.equal(ADMIN_HOURLY_OPTIONS[0], 1);
+    assert.ok(ADMIN_HOURLY_OPTIONS.every((h) => checkHours(h, "admin").ok));
   });
 });
 
@@ -103,6 +124,15 @@ describe("classAvailability", () => {
     });
   });
 
+  it("holds no notice or minimum hire against an admin, past pickups too", () => {
+    for (const startsAt of [after(HOUR), after(-48 * HOUR)]) {
+      assert.deepEqual(
+        classAvailability(coach, { startsAt, hours: 1 }, now, "admin"),
+        { ok: true },
+      );
+    }
+  });
+
   it("reports the notice first, because more hours never fix it", () => {
     assert.equal(
       unavailableReason(
@@ -141,6 +171,12 @@ describe("fitsPassengers", () => {
     assert.equal(fitsPassengers(minibus, 25), false);
     assert.equal(fitsPassengers(minibus, 0), false);
     assert.equal(fitsPassengers(minibus, 2.5), false);
+  });
+
+  it("fits any group for an admin, but still only a head count", () => {
+    assert.equal(fitsPassengers(minibus, 40, "admin"), true);
+    assert.equal(fitsPassengers(minibus, 0, "admin"), false);
+    assert.equal(fitsPassengers(minibus, 2.5, "admin"), false);
   });
 });
 

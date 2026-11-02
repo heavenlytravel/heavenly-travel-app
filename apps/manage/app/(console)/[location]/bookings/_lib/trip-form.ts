@@ -20,6 +20,7 @@ import {
   tripItemField,
   tripViewOfItem,
   unavailableReason,
+  type BookingSide,
   type ClassAvailability,
   type ClassFit,
   type TripCategory,
@@ -33,13 +34,20 @@ import type { BookingItemWithDetails } from "@repo/db/server";
  * the flights, child seats and a note asked once; the amend form holds one
  * item: its trip, its vehicle and its own details. The rules a list of
  * trips is checked by are the website's (`tripClashes`, `classFit` in
- * @repo/db). The trip's input names are `TRIP_PARAM` and
+ * @repo/db), without its limits (`ADMIN_SIDE`). The trip's input names are `TRIP_PARAM` and
  * `TRIP_OPTION_FIELDS` in @repo/db, the same names the website's URLs
  * carry: each trip under `tripItemField` with its number, the vehicle and
  * the details once; the agreed price's are `PRICE_OVERRIDE_FIELDS`. Only
  * the category, the flights and the customer block are these forms' own.
  * Browser-safe. See docs/261027-multi-trip-booking.md.
  */
+
+/**
+ * An admin enters what was already agreed, often by phone and sometimes
+ * after the trip: the website's notice, minimum hire, horizon, hours and
+ * group limits do not refuse it, and the pickup may be past.
+ */
+export const ADMIN_SIDE = "admin" satisfies BookingSide;
 
 export const CATEGORY_FIELD = "category";
 
@@ -421,6 +429,7 @@ export function vehicleOptions(
       c,
       priced.map((quote) => quote.classes),
       passengers,
+      ADMIN_SIDE,
     );
     const models = everywhere
       ? c.models.filter((model) =>
@@ -446,7 +455,7 @@ export function vehicleOptions(
       modelChoiceSen: models.length > 0 ? charge : null,
       unavailable: !fit.ok
         ? unfitReason(fit, priced.length > 1)
-        : fitsPassengers(c, passengers)
+        : fitsPassengers(c, passengers, ADMIN_SIDE)
           ? null
           : "Does not fit the group",
     };

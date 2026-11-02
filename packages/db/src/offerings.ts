@@ -180,7 +180,7 @@ export async function cheapestCellsAt(
 
 /**
  * Each class's cheapest hourly package at the location, by the class's
- * id, from any of its areas. A class with no package priced is not in it.
+ * id, from any of its zones. A class with no package priced is not in it.
  * For "from RM" (`startingPriceSen`).
  */
 export async function cheapestPackagesAt(
@@ -188,7 +188,7 @@ export async function cheapestPackagesAt(
 ): Promise<Map<string, number>> {
   const rows = await db.hourlyRate.groupBy({
     by: ["vehicleClassId"],
-    where: { package: { area: { location: { slug } } } },
+    where: { package: { zone: { location: { slug } } } },
     _min: { priceSen: true },
   });
   return minByClass(rows);

@@ -1,4 +1,4 @@
-# Accounts made directly: drivers, vendor owners, admins
+# Accounts made directly, and team access set by SUPER
 
 Decided 2026-11-02. Everyone we add gets their account when they are added, so they sign
 in without signing up. Before this, adding a driver only saved an email: a driver with no
@@ -34,6 +34,8 @@ form leaves no account behind.
 | Add driver, `manage.` and Connect     | Operation, the vendor's owner | The driver's; email optional                   |
 | Add vendor, `manage.`                 | Operation                     | The owner's; optional, named after the contact |
 | Set or Replace owner, the vendor page | `SUPER`                       | The owner's                                    |
+| Add staff, the vendor page            | `SUPER`                       | A vendor staff member's                        |
+| Add to the team, Connect's Team       | The vendor's owner            | A vendor staff member's                        |
 | Create an account, All Users          | `SUPER`                       | Anyone's                                       |
 | Add admin, Admin                      | `SUPER`                       | An admin's                                     |
 
@@ -51,13 +53,24 @@ Once saved, a driver's email cannot be changed on the driver's form.
 
 Connect now has a Delete driver card, so a vendor can fix its own typo.
 
-## A vendor's owner
+## A vendor's owner and staff
 
 Add vendor asks for the owner's email (optional, for a vendor not on Connect). After that,
 the owner is `SUPER`'s: **Set owner** on the vendor's Connect Accounts card, or **Replace
 owner** when it has one. The owner replaced leaves the vendor, and their account is deleted
 when never used, as one made with a typo. An account that works for another vendor cannot
-own this one.
+own or join this one.
+
+Staff are added by the owner on Connect's Team, or by `SUPER` with **Add staff** on the
+vendor's page, once it has an owner. Removing a staff member, in either place, deletes
+their account when never used, as deleting a driver does.
+
+## Signing in
+
+Checked on the development Clerk instance on 2026-11-02: an account made this way has its
+email verified, and Connect's sign-in offers it an email code, or its password and a code
+when one was set. An email no one added still gets "Couldn't find your account". Check that the
+production instance has email code sign-in on too before relying on it there.
 
 ## Emails
 
@@ -65,8 +78,24 @@ Console emails are off until `manage.` has its email settings (PR #64), so nothi
 from `manage.`. A driver a vendor adds in Connect gets "added you on Heavenly Travel
 Connect" with the sign-in link (`driverAddedEmails` in `packages/email`).
 
-## Not changed
+## Team access
 
-- Connect's Team, where an owner adds staff by email, still needs an account that exists.
-  Its message points to a sign-up Connect does not have; it should give the account as
-  Add driver does, with a name field.
+Which teams hold each permission was code only, so a change needed a deployment. Now:
+
+- **The code keeps the list of permissions and the default teams** of each
+  (`packages/db/src/permissions.ts`), and the words Admin names each one with
+  (`PERMISSION_LABELS`, typed by `Permission`, so a new permission cannot ship without
+  its row on Admin).
+- **SUPER changes the teams of a team rule** on Admin, What each team can do: tick the
+  teams, Save. Reset to defaults puts every rule back. Each change is in Activity with the
+  teams before and after.
+- **Only what differs from the defaults is stored**, in `AppSetting.accessRules` (JSON,
+  read by `ruleOverridesOf`, which drops what the code does not know). A rule set back to
+  its default stores nothing, so a later change of that default in code reaches it, and a
+  new permission works with its defaults on deployment, with no data script.
+- **Fixed rows:** the `SUPER`-only permissions (Admin, All Users, the wall, vendor review
+  and Connect accounts, adding and activating a location) and the every-admin ones (a
+  location, Activity) cannot be given to a team. Settings opens for whoever holds one of
+  its cards, so it follows the cards.
+- **Cost:** none per request. The wall was already read from `AppSetting` once per
+  request (`getAccessPolicy`, a React `cache`); the rules come in the same query.

@@ -7,7 +7,7 @@ import {
   plural,
   searchTermOf,
 } from "@repo/db";
-import { isWallActive, listAdmins } from "@repo/db/server";
+import { getAccessPolicy, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
@@ -36,7 +36,7 @@ import { WallSwitch } from "./WallSwitch";
  * Route: /~/users/admin?q=…. Admin: who has access to Manage, their level and teams,
  * each to edit or revoke, the list narrowed by a search of names and
  * emails; "Add admin", which promotes an account or makes one; the wall
- * between the teams; and what each team can do, read from the rules.
+ * between the teams; and what each team can do, which SUPER may change.
  * Console-wide: under a slug it is not found. SUPER only.
  */
 export default async function AdminPage({
@@ -67,10 +67,10 @@ export default async function AdminPage({
 
 /** The wall between teams, then every member of staff, or those the search finds, then what each team can do. */
 async function staffList({ selfId, q }: { selfId: string; q?: string }) {
-  const [admins, found, wallActive] = await Promise.all([
+  const [admins, found, { wallActive, overrides }] = await Promise.all([
     listAdmins(),
     q ? listAdmins(q) : null,
-    isWallActive(),
+    getAccessPolicy(),
   ]);
   // The warning counts every member, whatever the search shows.
   const withoutTeam = admins.filter(needsTeam).length;
@@ -194,7 +194,12 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
           </TBody>
         </Table>
       </Card>
-      <TeamAccessCard wallActive={wallActive} />
+      {/* Keyed by the rules, so a save or a reset shows the boxes as stored. */}
+      <TeamAccessCard
+        key={JSON.stringify(overrides)}
+        wallActive={wallActive}
+        overrides={overrides}
+      />
     </div>
   );
 }

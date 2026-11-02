@@ -13,9 +13,10 @@ import {
 import { may, PERMISSIONS, permissionsOf } from "./permissions";
 import { ADMIN_TEAMS, type AdminTeam } from "./roles";
 
+const wall = (wallActive: boolean) => ({ wallActive, overrides: {} });
 const regular = (...teams: AdminTeam[]) => ({ level: "REGULAR", teams });
 const heldBy = (...teams: AdminTeam[]) =>
-  activityAreasHeld(permissionsOf(regular(...teams), true));
+  activityAreasHeld(permissionsOf(regular(...teams), wall(true)));
 
 describe("activityAreaOf", () => {
   it("gives every action an area", () => {
@@ -60,7 +61,7 @@ describe("ACTIVITY_AREA_PERMISSIONS", () => {
     const everyTeam = regular(...ADMIN_TEAMS);
     for (const wallActive of [true, false]) {
       const key = ACTIVITY_AREA_PERMISSIONS.team;
-      assert.equal(may(everyTeam, key, wallActive), false);
+      assert.equal(may(everyTeam, key, wall(wallActive)), false);
     }
   });
 });
@@ -85,7 +86,7 @@ describe("activityAreasHeld", () => {
   });
 
   it("gives SUPER every area", () => {
-    const all = permissionsOf({ level: "SUPER", teams: [] }, true);
+    const all = permissionsOf({ level: "SUPER", teams: [] }, wall(true));
     assert.deepEqual(activityAreasHeld(all), [...ACTIVITY_AREAS]);
   });
 });

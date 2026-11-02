@@ -14,6 +14,7 @@ import {
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
+import { PERMISSION_LABELS, PERMISSIONS } from "./permissions";
 import { USER_PROFILE_FIELDS, USER_PROFILE_LABELS } from "./user-input";
 import {
   VEHICLE_CLASS_FIELD_LABELS,
@@ -147,6 +148,8 @@ const ACTIONS = {
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
   "wall.switched": { entityType: "setting", customerVisible: false },
+  /** SUPER changed which teams hold a permission: `permission` and its `teams`, before and after. */
+  "access.rule.changed": { entityType: "setting", customerVisible: false },
   "state.updated": { entityType: "state", customerVisible: false },
   "district.updated": { entityType: "district", customerVisible: false },
   "vehicle-class.created": {
@@ -909,6 +912,15 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "wallActive") === true
         ? "Turned the wall on"
         : "Turned the wall off";
+    case "access.rule.changed": {
+      const permission = field(entry.after, "permission");
+      const teams = field(entry.after, "teams");
+      const named = adminTeamsOf(Array.isArray(teams) ? teams : []).map(
+        (team) => ADMIN_TEAM_LABELS[team],
+      );
+      const what = PERMISSIONS.find((p) => p === permission);
+      return `Gave "${what ? PERMISSION_LABELS[what] : String(permission)}" to ${named.length > 0 ? andList(named) : "no team"}`;
+    }
     case "state.updated": {
       const multiplier = field(entry.after, "multiplier");
       return typeof multiplier === "number"

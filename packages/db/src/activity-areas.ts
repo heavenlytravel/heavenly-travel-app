@@ -96,6 +96,7 @@ const AREA_OF = {
   "admin.updated": "team",
   "admin.revoked": "team",
   "wall.switched": "team",
+  "access.rule.changed": "team",
   "state.updated": "coverage",
   "district.updated": "coverage",
   "vehicle-class.created": "coverage",

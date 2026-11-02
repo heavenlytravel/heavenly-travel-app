@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BOOKING_RULES,
   defaultRespondBy,
   fitAcross,
   formatLocalDateTime,
@@ -13,6 +14,7 @@ import type { Candidate } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
+import { DateTimeField } from "@repo/ui/date-field";
 import { Checkbox, Field, Input, Radio } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useRouter } from "next/navigation";
@@ -102,8 +104,8 @@ export function AssignForm({
       leave: "Nothing is sent.",
     },
   );
-  const respondBy = localDateTimeInputs(
-    defaultRespondBy(trips[0]?.startsAt ?? new Date()),
+  const [respondBy, setRespondBy] = useState(() =>
+    localDateTimeInputs(defaultRespondBy(trips[0]?.startsAt ?? new Date())),
   );
   const choiceFor = (role: PartRole, tripId: string) => {
     const state = roles[role];
@@ -123,6 +125,16 @@ export function AssignForm({
   return (
     <form {...formProps} className="grid gap-5">
       <input type="hidden" name="bookingId" value={bookingId} />
+      {/* As the action reads it: "2026-11-02T09:30", empty for none. */}
+      <input
+        type="hidden"
+        name="respondBy"
+        value={
+          respondBy.date && respondBy.time
+            ? `${respondBy.date}T${respondBy.time}`
+            : ""
+        }
+      />
       {trips.map((trip) => (
         <input key={trip.id} type="hidden" name="itemId" value={trip.id} />
       ))}
@@ -169,10 +181,11 @@ export function AssignForm({
             label="Answer by"
             hint="Unanswered by then, the vendor's part reopens."
           >
-            <Input
-              name="respondBy"
-              type="datetime-local"
-              defaultValue={`${respondBy.date}T${respondBy.time}`}
+            <DateTimeField
+              title="Answer by"
+              value={respondBy}
+              onChange={setRespondBy}
+              timeZone={BOOKING_RULES.timeZone}
             />
           </Field>
           {ourVehicleNamed ? (

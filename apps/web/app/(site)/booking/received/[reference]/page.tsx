@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { isMaskedEmail, isReference, normalizeReference } from "@repo/db";
+import {
+  EMAILS_ON,
+  isMaskedEmail,
+  isReference,
+  normalizeReference,
+} from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { eyebrow, PageTitle, Panel } from "../../../_components/Page";
@@ -14,7 +19,7 @@ export const metadata: Metadata = {
 /**
  * Route: /booking/received/HT-7K3QZM?to=a***@gmail.com
  * Where a guest lands after booking: the reference in large type and where
- * the emails went. It shows no trip and reads nothing from the database, so
+ * the emails went, while they are on (`EMAILS_ON`). It shows no trip and reads nothing from the database, so
  * it leaks nothing to anyone who guesses a reference and survives a
  * refresh. Both parts of the URL are shown only in the shape the action
  * makes them, so a crafted link cannot put other words on the page. The
@@ -34,13 +39,17 @@ export default async function ReceivedPage({
   return (
     <>
       <PageTitle eyebrow="Booking" title="Request received.">
-        We will check your booking and confirm it by email shortly.
+        {EMAILS_ON
+          ? "We will check your booking and confirm it by email shortly."
+          : "We will check your booking and contact you to confirm it shortly."}
       </PageTitle>
       <Panel className="max-w-[560px]">
         <p className={eyebrow}>Your reference</p>
         <p className="mt-2 font-serif text-display leading-none">{reference}</p>
         <p className="mt-5 text-body">
-          {sentTo ? (
+          {!EMAILS_ON ? (
+            "Keep this reference and quote it when you contact us about your booking."
+          ) : sentTo ? (
             <>
               We have emailed the details to{" "}
               <strong className="font-semibold">{sentTo}</strong>. Keep this

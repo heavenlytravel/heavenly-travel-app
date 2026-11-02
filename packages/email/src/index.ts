@@ -1,5 +1,5 @@
 import "server-only";
-import { CONTACT } from "@repo/db";
+import { CONTACT, EMAILS_ON } from "@repo/db";
 import {
   ADMIN_URL,
   CONNECT_URL,
@@ -50,7 +50,16 @@ const isProduction =
   process.env.NODE_ENV === "production" &&
   (process.env.VERCEL_ENV ?? "production") === "production";
 
+/** The sender while emails are off (`EMAILS_ON` of @repo/db): each one's key, no address or content, and nothing sent. */
+const heldSender: EmailSender = {
+  name: "held",
+  async send(_message, idempotencyKey) {
+    console.info(`[email] not sent, emails are off: ${idempotencyKey}`);
+  },
+};
+
 function pick(): EmailSender {
+  if (!EMAILS_ON) return heldSender;
   const key = process.env.RESEND_API_KEY;
   if (key) return resendSender(key, process.env.EMAIL_FROM || PRODUCTION_FROM);
   if (process.env.NODE_ENV === "production") {

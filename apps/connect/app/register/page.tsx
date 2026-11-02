@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EMAILS_ON } from "@repo/db";
 import { getConnectAccess, listRegistrationLocations } from "@repo/db/server";
 import { BadgeCheck, CarFront, Smartphone } from "lucide-react";
 import { HOME_PATH, STATUS_PATH } from "../_ui/nav";
@@ -15,7 +16,9 @@ const STEPS = [
   {
     icon: BadgeCheck,
     title: "We check and approve you",
-    text: "We look at every registration by hand, and email you once Connect opens.",
+    text: EMAILS_ON
+      ? "We look at every registration by hand, and email you once Connect opens."
+      : "We look at every registration by hand, and WhatsApp you once Connect opens.",
   },
   {
     icon: CarFront,

@@ -1,13 +1,14 @@
 # Booking operations: hourly grid, assigning per trip, and what waits on the teams
 
 Status: planned with the user on 2026-11-02, on branch `feat/booking-ops-2611`, to merge as
-one PR. Items 1 and 2 are clear to build. Items 3 to 7 wait on answers from the teams,
-listed under "To confirm". Nothing here is built unless marked so.
+one PR. Items 1 and 2 are built on the branch, not yet tried against a database. Items 3 to
+5 wait on answers from the teams, listed under "To confirm". Item 6 is decided: no return
+rule.
 
 Done on the branch: the sidebar no longer shifts its icons by a pixel on scroll (fixed, not
 sticky).
 
-## 1. Hourly rate grid (build)
+## 1. Hourly rate grid (built)
 
 Ops prices hourly hire like the zone grid, by where the pickup is. Today it is one hourly
 rate per class times the hours, with a 3-hour floor. The Langkawi sheet (2026-11-02):
@@ -33,6 +34,8 @@ too; its prices are not on the sheet.
 - **Hours used** ("max hour usage") is per area and package: the hours the package
   covers. It defaults to the package's hours; the port cruise's 4-hour package covers 5.
   It sets the trip's end (`endsAt`), so the clash checks and the driver's day know it.
+  It is not a cap: from the port cruise a customer may book the 4-hour package (5 hours),
+  4 + 2 extra (7 hours) or the 8-hour package. Extra hours count from 5 there.
 - **An additional hour rate per package and class,** the same for every area of the
   location (Sedan RM35 in the 4-hour package, RM30 in the 8-hour one).
 - **The customer picks a package and any additional hours.** 7 hours is 4 + 3 or 8: their
@@ -42,27 +45,49 @@ too; its prices are not on the sheet.
 - **The receipt keeps** the area, the package, its hours used and price, the additional
   hours and their rate. Receipts written before it still read.
 - **The old hourly rate and the minimum hire go** (`hourlyRateSen`, `minHourlyHours`, the
-  3-hour floor). "From RM…" uses the cheapest 4-hour cell.
-- **Screens:** an Hourly tab on Rates laid out like the sheet (areas and packages down,
-  classes across, the additional hour rows, hours used per row); Try a trip prices
-  hourly; the website's and `manage.`'s booking forms ask for the package and the
-  additional hours.
+  3-hour floor). "From RM…" is the cheaper of the grid's cheapest cell and the cheapest
+  package.
+- **A pickup outside every zone** is priced from its nearest zone's area, within the
+  location's furthest extra road, with no km charge (H5).
+- **A trip runs at most 24 hours**, the package's hours plus at most 12 extra (H4).
+- **Screens:** Rates > Hourly Rates, laid out like the sheet: each area with its zones,
+  its 4, 8 and 12-hour rows with the hours each covers and a price per class, then the
+  extra hour rows. Saved whole. The website's search card and planner, and `manage.`'s
+  booking and amend forms, ask for the package and the extra hours (`package` and
+  `extra` in the address, in place of `hours`). A trip booked before packages amends as
+  the biggest package it fills plus the rest as extra hours.
+- **Clashes between a booking's trips** are checked again after pricing, with the hours
+  each package covers from its area; while typing, by the package's name (4 + 3 = 7).
+- **Not in this PR:** Try a trip prices one-way trips only, as before. Hourly can be tried
+  from `manage.`'s new booking form, which shows the price without saving.
 
-### Schema (proposal, the user runs `db:push`)
+### Schema (as built; the user runs `db:push`)
 
-- `HourlyArea`: location, name, order; `Zone.hourlyAreaId` (nullable).
-- `HourlyAreaPackage`: area, package hours, hours used.
-- `HourlyRate`: area, package hours, class, price.
-- `HourlyExtraRate`: location, package hours, class, price per additional hour.
-- `TripItemDetails.packageHours` (nullable; `hours` stays the trip's total).
+- `HourlyArea`: location, name, order; `Zone.hourlyAreaId` (nullable, set null when the
+  area goes).
+- `HourlyPackage`: area, package size (4, 8 or 12), hours it covers.
+- `HourlyRate`: package, class, price.
+- `HourlyExtraRate`: location, package size, class, price per extra hour.
+- No column on the trip: the receipt (`priceBreakdown.hourly`) keeps the area, package,
+  hours covered and extra hours, and `TripItemDetails.hours` stays the trip's total.
+- `LocationVehicleClass.hourlyRateSen` gets a default of 0 and nothing reads it, nor
+  `minHourlyHours`. Both are dropped in a follow-up, once no deployed code reads them.
 
 ### Production order
 
-Prod is live. The new tables are pushed and Langkawi's grid is entered on prod **before**
-the merge, or hourly stops selling where there is no grid. The two old columns are dropped
-in the same push only if no deployed code reads them by then; otherwise in a follow-up.
+Prod is live. The push only adds tables, a nullable column and a default, so today's code
+runs on it unchanged. Before the merge:
 
-## 2. An Assign page, per trip (build)
+1. `pnpm db:push` on development, then try it; then `pnpm db:push:prod`.
+2. Enter each location's hourly list on prod (Langkawi from the sheet). The Hourly Rates
+   page works on the old deploy only after the merge, so either enter it right after the
+   merge, or accept that hourly hire is refused from a location until its list is in.
+3. Merge.
+
+After the merge, hourly hire is refused from any location without an hourly list ("We do
+not have hourly prices from there yet").
+
+## 2. An Assign page, per trip (built)
 
 Assigning moves from a dialog on the booking to its own page,
 `/bookings/[id]/assign`, beside amend. The data is per trip already (`TripPart`).
@@ -104,20 +129,22 @@ Proposal, agreed in principle by the user:
   confirmed: it was never quoted.
 - A quotation never confirmed keeps its number and never gets an invoice number: a lost
   lead.
-- **Continuing their numbers:** a one-time script sets each counter's start at go-live,
-  rehearsed on a Neon copy like other prod scripts. No setting screen.
+- **Continuing their numbers:** no counter table and no setting. The user sets the real
+  number on the first quotation and the first invoice made in the system; each one after
+  takes the highest number + 1. A unique index refuses a duplicate, and two bookings made
+  at the same moment retry (user, 2026-11-02).
 - **No editing** of a number, except an optional "existing number" when entering a booking
   the old system already numbered, checked for duplicates.
 - Both are found by the console search.
 
-## 6. Return trips and discounts (waits)
+## 6. Return trips and discounts (decided: no rule)
 
-- A return stays **two one-way trips**; the website has no "Add return" button.
-- A return could be recognised by the zones, not the addresses: Airport → Hotel and
-  7-Eleven beside the hotel → Airport are the same two zones reversed.
-- **In `manage.`** a discount is the trip's agreed price today ("Agreed on the phone").
-- **On the website** the price is paid at booking, so a discount must be in the quote
-  before payment, by a rule, or not at all.
+- A return stays **two one-way trips** on the rate grid; the website has no "Add return"
+  button (user, 2026-11-02).
+- **No return detection.** A loop such as A-B, B-C, C-A shows how quickly it gets
+  unclear.
+- **A discount is a trip's agreed price in `manage.`**, as today ("Agreed on the
+  phone"). A website booking is paid at its quoted price.
 
 ## To confirm
 
@@ -138,6 +165,3 @@ Proposal, agreed in principle by the user:
 | G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers                  | Ops            | Item 4      |
 | N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?                     | Sales, Finance | Item 5      |
 | N2  | The last numbers issued, and the day the old system stops issuing them                                       | Sales, Finance | Item 5      |
-| R1  | Is there a return discount at all? How much (RM or %), and does it need the same day?                        | Sales          | Item 6      |
-| R2  | On the website, applied automatically before payment, or only by staff in `manage.`?                         | Sales          | Item 6      |
-| R3  | Should a discount in `manage.` show the customer a named line ("Return trip discount")?                      | Sales          | Item 6      |

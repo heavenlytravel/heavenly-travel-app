@@ -4,23 +4,13 @@ import {
   HOURLY_LIMITS,
   HOURLY_PACKAGES,
   packageLabel,
-  parseRinggit,
   plural,
   ringgitInputValue,
   type HourlyList,
-  type HourlyPackageHours,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
-import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Dialog, DialogActions } from "@repo/ui/dialog";
-import { Checkbox, Input } from "@repo/ui/field";
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@repo/ui/icons";
+import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
@@ -34,103 +24,71 @@ import {
   CELL_PLAIN,
   CellKey,
   EMPTY_CELL,
+  ZONE_NAME,
+  groupsOf,
+  readCell,
+  tidy,
+  type ClassColumn,
 } from "./cells";
+import { SaveBar, type SaveStatus } from "./SaveBar";
 
 type Zone = { id: string; name: string };
-/** A column: a class on sale here, with the category it is sold under. */
-type ClassColumn = { id: string; name: string; category: string };
 
-/** One area as the page holds it, each value as its input shows it. */
-type AreaDraft = {
-  /** Keeps the area's rows while they are moved. */
-  key: string;
-  name: string;
-  zoneIds: string[];
-  /** The hours each package covers from here, by package size. */
-  covers: Record<HourlyPackageHours, string>;
+/** The list as the page holds it, each value as its input shows it. */
+type Values = {
   /** Prices by `priceKey`, in ringgit as typed. */
   prices: Record<string, string>;
-};
-
-type Draft = {
-  areas: AreaDraft[];
-  /** Extra hour rates by `priceKey`. */
+  /** The hours each zone's package covers, by `coversKey`. */
+  covers: Record<string, string>;
+  /** Extra hour rates by `extraKey`. */
   extras: Record<string, string>;
 };
 
-const priceKey = (size: HourlyPackageHours, classId: string) =>
-  `${size}|${classId}`;
+const priceKey = (zoneId: string, size: number, classId: string) =>
+  `${zoneId}|${size}|${classId}`;
+const coversKey = (zoneId: string, size: number) => `${zoneId}|${size}`;
+const extraKey = (size: number, classId: string) => `${size}|${classId}`;
 
-let lastKey = 0;
-const nextKey = () => `area-${(lastKey += 1)}`;
-
-function draftOf(list: HourlyList): Draft {
-  return {
-    areas: list.areas.map((area) => {
-      const covers = Object.fromEntries(
-        HOURLY_PACKAGES.map((size) => [size, String(size)]),
-      ) as Record<HourlyPackageHours, string>;
-      const prices: Record<string, string> = {};
-      for (const row of area.packages) {
-        covers[row.hours] = String(row.includedHours);
-        for (const [classId, sen] of Object.entries(row.prices)) {
-          prices[priceKey(row.hours, classId)] = ringgitInputValue(sen);
-        }
+function valuesOf(list: HourlyList, zones: readonly Zone[]): Values {
+  const values: Values = { prices: {}, covers: {}, extras: {} };
+  for (const zone of zones) {
+    for (const size of HOURLY_PACKAGES) {
+      values.covers[coversKey(zone.id, size)] = String(size);
+    }
+  }
+  for (const zone of list.zones) {
+    for (const row of zone.packages) {
+      values.covers[coversKey(zone.zoneId, row.hours)] = String(
+        row.includedHours,
+      );
+      for (const [classId, sen] of Object.entries(row.prices)) {
+        values.prices[priceKey(zone.zoneId, row.hours, classId)] =
+          ringgitInputValue(sen);
       }
-      return {
-        key: nextKey(),
-        name: area.name,
-        zoneIds: [...area.zoneIds],
-        covers,
-        prices,
-      };
-    }),
-    extras: Object.fromEntries(
-      list.extras.map((extra) => [
-        priceKey(extra.packageHours, extra.vehicleClassId),
-        ringgitInputValue(extra.priceSen),
-      ]),
-    ),
-  };
+    }
+  }
+  for (const extra of list.extras) {
+    values.extras[extraKey(extra.packageHours, extra.vehicleClassId)] =
+      ringgitInputValue(extra.priceSen);
+  }
+  return values;
 }
 
-function newArea(): AreaDraft {
+/** The values as the action reads them (`parseHourlyList`). */
+function postedOf(
+  values: Values,
+  zones: readonly Zone[],
+  classes: readonly ClassColumn[],
+) {
   return {
-    key: nextKey(),
-    name: "",
-    zoneIds: [],
-    covers: Object.fromEntries(
-      HOURLY_PACKAGES.map((size) => [size, String(size)]),
-    ) as Record<HourlyPackageHours, string>,
-    prices: {},
-  };
-}
-
-/** A price cell's text: a price, empty, or not a price. */
-function readPrice(text: string | undefined): "empty" | "bad" | number {
-  const trimmed = (text ?? "").trim();
-  if (trimmed === "") return "empty";
-  return parseRinggit(trimmed) ?? "bad";
-}
-
-/** "80" kept as "80.00"; anything else as typed. */
-function tidy(text: string) {
-  const read = readPrice(text);
-  return typeof read === "number" ? ringgitInputValue(read) : text.trim();
-}
-
-/** The draft as the action reads it (`parseHourlyList`). */
-function postedOf(draft: Draft, classes: readonly ClassColumn[]) {
-  return {
-    areas: draft.areas.map((area) => ({
-      name: area.name,
-      zoneIds: area.zoneIds,
+    zones: zones.map((zone) => ({
+      zoneId: zone.id,
       packages: HOURLY_PACKAGES.map((size) => ({
         hours: size,
-        includedHours: Number(area.covers[size]),
+        includedHours: Number(values.covers[coversKey(zone.id, size)]),
         prices: classes.map((column) => ({
           vehicleClassId: column.id,
-          price: area.prices[priceKey(size, column.id)] ?? "",
+          price: values.prices[priceKey(zone.id, size, column.id)] ?? "",
         })),
       })),
     })),
@@ -138,27 +96,38 @@ function postedOf(draft: Draft, classes: readonly ClassColumn[]) {
       classes.map((column) => ({
         packageHours: size,
         vehicleClassId: column.id,
-        price: draft.extras[priceKey(size, column.id)] ?? "",
+        price: values.extras[extraKey(size, column.id)] ?? "",
       })),
     ),
   };
 }
 
 /** Whether the hours a package covers are a whole number it may cover. */
-const coversOk = (text: string) => {
-  const n = Number(text);
+function coversOk(text: string | undefined) {
+  const trimmed = (text ?? "").trim();
   const { min, max } = HOURLY_LIMITS.includedHours;
-  return /^\d+$/.test(text.trim()) && n >= min && n <= max;
-};
+  return (
+    /^\d+$/.test(trimmed) && Number(trimmed) >= min && Number(trimmed) <= max
+  );
+}
+
+/** A price as it is compared with the save: sen, or null for empty or not a price. */
+function senOf(text: string | undefined) {
+  const reading = readCell(text);
+  return reading.ok ? reading.sen : null;
+}
+
+/** A heading of the lead columns, over both heading rows when the classes are grouped. */
+const LEAD_HEADING =
+  "border-b border-hairline py-2.5 align-bottom font-semibold text-body";
 
 /**
- * A location's hourly price list, as Operation keeps it: its hourly areas,
- * each a group of its zones a pickup is priced alike from; for each area
- * the 4, 8 and 12-hour packages, the hours each covers there, and its
- * price per class; then the rate per extra hour for each package size,
- * the same from every area. An empty price is not sold, and a package with
- * no price in any class is not sold from the area. Saved whole. Read only
- * for the teams that read the rates. See docs/261102-booking-ops.md.
+ * A location's hourly price list, in the rate grid's look: for each zone,
+ * "Pickup from" it, a row for each of the 4, 8 and 12-hour packages, the
+ * hours the package covers from there, and its price per class; then the
+ * rate per extra hour for each package size, the same from every zone. An
+ * empty price is not sold. Saved whole. Read only for the teams that read
+ * the rates. See docs/261102-booking-ops.md, "Hourly rate grid".
  */
 export function HourlyRates({
   locationId,
@@ -174,553 +143,392 @@ export function HourlyRates({
   list: HourlyList;
   readOnly?: boolean;
 }) {
-  const [saved, setSaved] = useState<Draft>(() => draftOf(list));
-  const [draft, setDraft] = useState<Draft>(saved);
+  const [saved, setSaved] = useState<Values>(() => valuesOf(list, zones));
+  const [values, setValues] = useState<Values>(saved);
   const [error, setError] = useState<string | null>(null);
-  /** The area whose zones are being chosen, by key. */
-  const [choosing, setChoosing] = useState<string | null>(null);
+  /** The zone whose rows alone are shown, or "" for every zone. */
+  const [zoneShown, setZoneShown] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const savedPosted = JSON.stringify(postedOf(saved, classes));
-  const posted = postedOf(draft, classes);
-  const dirty = JSON.stringify(posted) !== savedPosted;
+  // Against what is saved: the cells changed, and those that are not right.
+  const priceCells = [
+    ...zones.flatMap((zone) =>
+      HOURLY_PACKAGES.flatMap((size) =>
+        classes.map(
+          (column) => ["prices", priceKey(zone.id, size, column.id)] as const,
+        ),
+      ),
+    ),
+    ...HOURLY_PACKAGES.flatMap((size) =>
+      classes.map((column) => ["extras", extraKey(size, column.id)] as const),
+    ),
+  ];
+  const invalid = new Set<string>();
+  let changes = 0;
+  for (const [part, key] of priceCells) {
+    if (!readCell(values[part][key]).ok) invalid.add(key);
+    else if (senOf(values[part][key]) !== senOf(saved[part][key])) changes += 1;
+  }
+  for (const zone of zones) {
+    for (const size of HOURLY_PACKAGES) {
+      const key = coversKey(zone.id, size);
+      if (!coversOk(values.covers[key])) invalid.add(key);
+      else if (values.covers[key]?.trim() !== saved.covers[key]?.trim()) {
+        changes += 1;
+      }
+    }
+  }
+  const dirty = changes + invalid.size > 0;
   const leaveDialog = useLeaveGuard(
     dirty,
     "The hourly prices changed since the last save are lost.",
   );
 
-  const allPrices = [
-    ...draft.areas.flatMap((area) => Object.values(area.prices)),
-    ...Object.values(draft.extras),
-  ];
-  const badPrices = allPrices.filter(
-    (text) => readPrice(text) === "bad",
-  ).length;
-  const badCovers = draft.areas.flatMap((area) =>
-    HOURLY_PACKAGES.filter((size) => !coversOk(area.covers[size])),
-  ).length;
-  const nameless = draft.areas.filter((area) => !area.name.trim()).length;
-  const zoneless = draft.areas.filter(
-    (area) => area.zoneIds.length === 0,
-  ).length;
-
-  let problem: string | null = null;
-  if (badPrices > 0) {
-    problem = `${badPrices === 1 ? "One cell is" : `${badPrices} cells are`} not a price. Enter RM with at most two decimals, or clear ${badPrices === 1 ? "it" : "them"}.`;
-  } else if (badCovers > 0) {
-    problem = `A package covers ${HOURLY_LIMITS.includedHours.min} to ${HOURLY_LIMITS.includedHours.max} whole hours.`;
-  } else if (nameless > 0) {
-    problem = "Every area needs a name.";
-  } else if (zoneless > 0) {
-    problem = "Choose at least one zone for every area.";
-  }
-
-  const zoneName = new Map(zones.map((zone) => [zone.id, zone.name]));
-  const areaOfZone = new Map(
-    draft.areas.flatMap((area) =>
-      area.zoneIds.map((id) => [id, area] as const),
-    ),
-  );
-  const unplaced = zones.filter((zone) => !areaOfZone.has(zone.id));
-
-  function changeArea(key: string, change: (area: AreaDraft) => AreaDraft) {
+  function edit(part: keyof Values, key: string, text: string) {
     setError(null);
-    setDraft((current) => ({
+    setValues((current) => ({
       ...current,
-      areas: current.areas.map((area) =>
-        area.key === key ? change(area) : area,
-      ),
+      [part]: { ...current[part], [key]: text },
     }));
-  }
-
-  function moveArea(index: number, by: -1 | 1) {
-    setDraft((current) => {
-      const areas = [...current.areas];
-      const [moved] = areas.splice(index, 1);
-      areas.splice(index + by, 0, moved!);
-      return { ...current, areas };
-    });
-  }
-
-  function removeArea(key: string) {
-    setError(null);
-    setDraft((current) => ({
-      ...current,
-      areas: current.areas.filter((area) => area.key !== key),
-    }));
-  }
-
-  function addArea() {
-    const area = newArea();
-    setDraft((current) => ({ ...current, areas: [...current.areas, area] }));
-    setChoosing(area.key);
   }
 
   function save() {
-    if (problem) return;
+    if (invalid.size > 0) return;
     startTransition(async () => {
       const refused = errorOf(
-        await answerOf(setHourlyListAction(locationId, posted)),
+        await answerOf(
+          setHourlyListAction(locationId, postedOf(values, zones, classes)),
+        ),
       );
       if (refused) {
         setError(refused);
         return;
       }
-      setSaved(draft);
+      setSaved(values);
       setError(null);
       toast.success("Hourly rates saved.");
     });
   }
 
-  /** A price cell, coloured by its state against the save. */
-  function priceCell(
-    key: string,
-    label: string,
-    value: string | undefined,
-    savedValue: string | undefined,
-    onChange: (text: string) => void,
-  ) {
-    const text = value ?? "";
-    if (readOnly) {
-      const read = readPrice(text);
-      return (
-        <td key={key} className={cx(CELL_PAD, "text-right tabular-nums")}>
-          {typeof read === "number" ? (
-            ringgitInputValue(read)
-          ) : (
-            <span className="text-muted">–</span>
-          )}
-        </td>
-      );
-    }
-    const read = readPrice(text);
-    const was = readPrice(savedValue);
-    return (
-      <td key={key} className={CELL_PAD}>
-        <input
-          aria-label={label}
-          inputMode="decimal"
-          value={text}
-          readOnly={pending}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={(event) => onChange(tidy(event.target.value))}
-          className={cx(
-            CELL_INPUT,
-            read === "bad"
-              ? CELL_BAD
-              : read !== was
-                ? CELL_CHANGED
-                : CELL_PLAIN,
-            read === "empty" && EMPTY_CELL,
-          )}
-        />
-      </td>
-    );
-  }
-
-  const savedArea = (key: string) =>
-    saved.areas.find((area) => area.key === key);
-  const columns = classes.length + 2;
-  const chosenArea = draft.areas.find((area) => area.key === choosing);
+  let status: SaveStatus;
+  if (pending) status = { tone: "idle", text: "Saving…" };
+  else if (error) status = { tone: "error", text: error };
+  else if (invalid.size > 0) {
+    status = {
+      tone: "error",
+      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not right: a price is RM with at most two decimals, and a package covers ${HOURLY_LIMITS.includedHours.min} to ${HOURLY_LIMITS.includedHours.max} whole hours.`,
+    };
+  } else if (dirty) {
+    status = { tone: "dirty", text: `${plural(changes, "unsaved change")}.` };
+  } else status = { tone: "idle", text: "No unsaved changes." };
 
   if (zones.length === 0) {
     return (
       <p className="px-5 py-6 text-sm text-muted">
-        Draw this location&apos;s zones on Coverage first: an hourly area is a
-        group of them.
+        Draw this location&apos;s zones on Coverage first: hourly hire is priced
+        by the zone the pickup is in.
       </p>
     );
   }
 
+  const groups = groupsOf(classes);
+  const grouped = groups.length > 1;
+  const shownZones = zones.filter(
+    (zone) => zoneShown === "" || zone.id === zoneShown,
+  );
+  const unsold = zones.filter(
+    (zone) =>
+      !HOURLY_PACKAGES.some((size) =>
+        classes.some(
+          (column) =>
+            senOf(saved.prices[priceKey(zone.id, size, column.id)]) !== null,
+        ),
+      ),
+  ).length;
+
+  /** A price cell in the grid's look: a box, coloured by its state against the save. */
+  function priceCell(
+    part: "prices" | "extras",
+    key: string,
+    label: string,
+    line: string | false,
+  ) {
+    const text = values[part][key] ?? "";
+    const empty = text.trim() === "";
+    return (
+      <td key={key} className={cx(CELL_PAD, line)}>
+        {readOnly ? (
+          <span
+            className={cx(
+              "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
+              empty && EMPTY_CELL,
+            )}
+          >
+            {/* Read out before the price: a label on a plain span is not. */}
+            <span className="sr-only">{`${label}, ${empty ? "not sold" : "price in RM"} `}</span>
+            {text}
+          </span>
+        ) : (
+          <input
+            aria-label={`${label}, price in RM`}
+            aria-invalid={invalid.has(key) || undefined}
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            readOnly={pending}
+            value={text}
+            onChange={(event) => edit(part, key, event.target.value)}
+            onFocus={(event) => event.target.select()}
+            onBlur={(event) => {
+              const tidied = tidy(event.target.value);
+              if (tidied !== event.target.value) edit(part, key, tidied);
+            }}
+            className={cx(
+              CELL_INPUT,
+              invalid.has(key)
+                ? CELL_BAD
+                : senOf(text) !== senOf(saved[part][key])
+                  ? CELL_CHANGED
+                  : cx(CELL_PLAIN, empty && EMPTY_CELL),
+            )}
+          />
+        )}
+      </td>
+    );
+  }
+
+  const span = grouped ? 2 : undefined;
+  const leadHeadings = [
+    <th
+      key="from"
+      scope="col"
+      rowSpan={span}
+      className={cx(LEAD_HEADING, "pr-3 pl-5 text-left")}
+    >
+      Pickup from
+    </th>,
+    <th
+      key="package"
+      scope="col"
+      rowSpan={span}
+      className={cx(LEAD_HEADING, "px-3 text-left")}
+    >
+      Package
+    </th>,
+    <th
+      key="covers"
+      scope="col"
+      rowSpan={span}
+      className={cx(LEAD_HEADING, "px-3 text-right")}
+    >
+      Covers (h)
+    </th>,
+  ];
+
   return (
     <>
-      <div className="overflow-x-auto">
+      {zones.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-hairline px-5 py-3">
+          <Select
+            aria-label="Show the rates of one zone"
+            value={zoneShown}
+            onValueChange={setZoneShown}
+            options={[
+              { value: "", label: "Every zone" },
+              ...zones.map((zone) => ({ value: zone.id, label: zone.name })),
+            ]}
+            className="w-full sm:w-64"
+          />
+          {unsold > 0 ? (
+            <p className="text-sm text-muted tabular-nums sm:ml-auto">
+              {plural(unsold, "zone")} with no price, not sold hourly
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline">
         <table className="w-full border-separate border-spacing-0 text-sm">
-          <thead>
+          {/* Raised in the list's own stacking (`isolate`), so it stays under the console's top bar. */}
+          <thead className="sticky top-0 z-(--layer-raised) bg-shade text-2xs text-muted">
+            {grouped ? (
+              <tr>
+                {leadHeadings}
+                {groups.map((group, index) => (
+                  <th
+                    key={`${group.label}-${index}`}
+                    scope="colgroup"
+                    colSpan={group.span}
+                    className="px-1.5 pt-2.5 pb-0 font-semibold"
+                  >
+                    <span className="block border-b border-edge pb-1.5 text-center tracking-caps whitespace-nowrap text-body uppercase">
+                      {group.label}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            ) : null}
             <tr>
-              <th
-                scope="col"
-                className="border-b border-hairline py-2.5 pr-3 pl-5 text-left font-medium text-muted"
-              >
-                Package
-              </th>
-              <th
-                scope="col"
-                className="border-b border-hairline px-3 py-2.5 text-right font-medium text-muted"
-              >
-                Covers (h)
-              </th>
+              {grouped ? null : leadHeadings}
               {classes.map((column) => (
                 <th
                   key={column.id}
                   scope="col"
-                  className="border-b border-hairline px-3 py-2.5 text-right align-bottom"
+                  className={cx(LEAD_HEADING, "px-3 text-right")}
                 >
-                  <span className="block font-semibold text-ink">
-                    {column.name}
-                  </span>
-                  <span className="block text-caption font-normal text-muted">
-                    {column.category}
-                  </span>
+                  {column.name}
                 </th>
               ))}
             </tr>
           </thead>
-          {draft.areas.map((area, index) => (
-            <tbody key={area.key}>
-              <tr>
-                <td
-                  colSpan={columns}
-                  className="border-t border-hairline bg-shade px-5 py-3"
-                >
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    {readOnly ? (
-                      <span className="font-semibold text-ink">
-                        {area.name}
-                      </span>
-                    ) : (
-                      <Input
-                        aria-label="Area name"
-                        placeholder="Area name, such as Kuah Town / Beach"
-                        value={area.name}
-                        maxLength={HOURLY_LIMITS.areaNameLength}
-                        readOnly={pending}
-                        onChange={(event) =>
-                          changeArea(area.key, (a) => ({
-                            ...a,
-                            name: event.target.value,
-                          }))
-                        }
-                        className="max-w-80"
-                      />
+          <tbody>
+            {shownZones.map((zone) =>
+              HOURLY_PACKAGES.map((size, index) => {
+                const line =
+                  index === HOURLY_PACKAGES.length - 1 &&
+                  "border-b border-hairline";
+                const key = coversKey(zone.id, size);
+                return (
+                  <tr key={key}>
+                    {index === 0 ? (
+                      <th
+                        scope="rowgroup"
+                        rowSpan={HOURLY_PACKAGES.length}
+                        className="border-b border-hairline py-3.5 pr-3 pl-5 text-left align-top font-normal"
+                      >
+                        <span className={ZONE_NAME}>{zone.name}</span>
+                      </th>
+                    ) : null}
+                    <th
+                      scope="row"
+                      className={cx(
+                        "px-3 py-0 text-left align-middle font-normal whitespace-nowrap text-body",
+                        line,
+                      )}
+                    >
+                      {packageLabel(size)}
+                    </th>
+                    <td className={cx(CELL_PAD, "w-24", line)}>
+                      {readOnly ? (
+                        <span className="block h-9 px-2.5 text-right leading-9 tabular-nums">
+                          {values.covers[key]}
+                        </span>
+                      ) : (
+                        <input
+                          aria-label={`Hours the ${packageLabel(size)} covers from ${zone.name}`}
+                          aria-invalid={invalid.has(key) || undefined}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          readOnly={pending}
+                          value={values.covers[key] ?? ""}
+                          onChange={(event) =>
+                            edit("covers", key, event.target.value)
+                          }
+                          onFocus={(event) => event.target.select()}
+                          className={cx(
+                            CELL_INPUT,
+                            "min-w-16",
+                            invalid.has(key)
+                              ? CELL_BAD
+                              : values.covers[key]?.trim() !==
+                                  saved.covers[key]?.trim()
+                                ? CELL_CHANGED
+                                : CELL_PLAIN,
+                          )}
+                        />
+                      )}
+                    </td>
+                    {classes.map((column) =>
+                      priceCell(
+                        "prices",
+                        priceKey(zone.id, size, column.id),
+                        `From ${zone.name}, ${packageLabel(size)}, ${column.name}`,
+                        line,
+                      ),
                     )}
-                    <span className="min-w-0 flex-1 text-caption text-muted">
-                      {area.zoneIds.length > 0
-                        ? area.zoneIds
-                            .map((id) => zoneName.get(id) ?? "A removed zone")
-                            .join(", ")
-                        : "No zone yet"}
-                    </span>
-                    {readOnly ? null : (
-                      <span className="flex items-center gap-1">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={pending}
-                          onClick={() => setChoosing(area.key)}
-                        >
-                          Zones
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Move ${area.name || "the area"} up`}
-                          disabled={pending || index === 0}
-                          onClick={() => moveArea(index, -1)}
-                        >
-                          <ArrowUpIcon />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Move ${area.name || "the area"} down`}
-                          disabled={pending || index === draft.areas.length - 1}
-                          onClick={() => moveArea(index, 1)}
-                        >
-                          <ArrowDownIcon />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Remove ${area.name || "the area"}`}
-                          disabled={pending}
-                          onClick={() => removeArea(area.key)}
-                        >
-                          <TrashIcon />
-                        </Button>
-                      </span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-              {HOURLY_PACKAGES.map((size) => (
+                  </tr>
+                );
+              }),
+            )}
+          </tbody>
+          <tbody>
+            <tr>
+              <th
+                scope="colgroup"
+                colSpan={classes.length + 3}
+                className="border-b border-hairline bg-shade py-2.5 pr-3 pl-5 text-left text-2xs font-semibold tracking-caps text-body uppercase"
+              >
+                Extra hour, from every zone
+              </th>
+            </tr>
+            {HOURLY_PACKAGES.map((size, index) => {
+              const line =
+                index < HOURLY_PACKAGES.length - 1 &&
+                "border-b border-hairline";
+              return (
                 <tr key={size}>
                   <th
                     scope="row"
-                    className="py-1.5 pr-3 pl-5 text-left font-medium whitespace-nowrap text-body"
-                  >
-                    {packageLabel(size)}
-                  </th>
-                  <td className={cx(CELL_PAD, "w-24")}>
-                    {readOnly ? (
-                      <span className="block text-right tabular-nums">
-                        {area.covers[size]}
-                      </span>
-                    ) : (
-                      <input
-                        aria-label={`Hours the ${packageLabel(size)} covers from ${area.name || "the area"}`}
-                        inputMode="numeric"
-                        value={area.covers[size]}
-                        readOnly={pending}
-                        onChange={(event) =>
-                          changeArea(area.key, (a) => ({
-                            ...a,
-                            covers: { ...a.covers, [size]: event.target.value },
-                          }))
-                        }
-                        className={cx(
-                          CELL_INPUT,
-                          "min-w-16",
-                          !coversOk(area.covers[size])
-                            ? CELL_BAD
-                            : area.covers[size] !==
-                                (savedArea(area.key)?.covers[size] ??
-                                  String(size))
-                              ? CELL_CHANGED
-                              : CELL_PLAIN,
-                        )}
-                      />
+                    colSpan={3}
+                    className={cx(
+                      "py-0 pr-3 pl-5 text-left align-middle font-normal whitespace-nowrap text-body",
+                      line,
                     )}
-                  </td>
-                  {classes.map((column) => {
-                    const key = priceKey(size, column.id);
-                    return priceCell(
-                      column.id,
-                      `${area.name || "The area"}, ${packageLabel(size)}, ${column.name}`,
-                      area.prices[key],
-                      savedArea(area.key)?.prices[key],
-                      (text) =>
-                        changeArea(area.key, (a) => ({
-                          ...a,
-                          prices: { ...a.prices, [key]: text },
-                        })),
-                    );
-                  })}
+                  >
+                    After the {packageLabel(size)}
+                  </th>
+                  {classes.map((column) =>
+                    priceCell(
+                      "extras",
+                      extraKey(size, column.id),
+                      `Extra hour after the ${packageLabel(size)}, ${column.name}`,
+                      line,
+                    ),
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          ))}
-          <tbody>
-            <tr>
-              <td
-                colSpan={columns}
-                className="border-t border-hairline bg-shade px-5 py-3 font-semibold text-ink"
-              >
-                Extra hour, from every area
-              </td>
-            </tr>
-            {HOURLY_PACKAGES.map((size) => (
-              <tr key={size}>
-                <th
-                  scope="row"
-                  colSpan={2}
-                  className="py-1.5 pr-3 pl-5 text-left font-medium whitespace-nowrap text-body"
-                >
-                  After the {packageLabel(size)}
-                </th>
-                {classes.map((column) => {
-                  const key = priceKey(size, column.id);
-                  return priceCell(
-                    column.id,
-                    `Extra hour after the ${packageLabel(size)}, ${column.name}`,
-                    draft.extras[key],
-                    saved.extras[key],
-                    (text) => {
-                      setError(null);
-                      setDraft((current) => ({
-                        ...current,
-                        extras: { ...current.extras, [key]: text },
-                      }));
-                    },
-                  );
-                })}
-              </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <div className="grid gap-2 border-t border-hairline px-5 py-4 text-xs text-muted">
-        <p className="flex flex-wrap gap-x-5 gap-y-2">
-          <CellKey swatch={cx(CELL_PLAIN, EMPTY_CELL)}>
-            Empty: not sold in the class
+      <div className="grid gap-2 px-5 py-4 text-xs text-muted">
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <CellKey swatch={cx("border-edge", EMPTY_CELL)}>
+            Empty: the class is not sold for the package from the zone
           </CellKey>
           {readOnly ? null : (
-            <CellKey swatch={CELL_CHANGED}>Changed since the save</CellKey>
+            <CellKey swatch="border-brand bg-brand-tint">
+              Changed, not saved
+            </CellKey>
           )}
         </p>
         <p className="leading-relaxed">
-          A pickup is priced from the area its zone is in, or its nearest
-          zone&apos;s when it is outside them all. The customer picks a package
-          and any extra hours; &quot;Covers&quot; is how long the package runs
-          from the area, the port cruise&apos;s 4-hour package 5, say.
-          {unplaced.length > 0
-            ? ` In no area, so not sold hourly: ${unplaced.map((zone) => zone.name).join(", ")}.`
-            : null}
+          A pickup in a zone pays its row. One outside every zone pays the row
+          of its nearest zone with a price, plus its road to that zone past the
+          free km on Trip rules, at the class&apos;s rate per extra km.
+          &quot;Covers&quot; is how long the package runs from the zone, the
+          port cruise&apos;s 4-hour package 5, say; the extra hours count from
+          there.
         </p>
       </div>
 
       {readOnly ? null : (
         <>
-          <div className="border-t border-hairline px-5 py-3">
-            <Button variant="secondary" disabled={pending} onClick={addArea}>
-              <PlusIcon />
-              Add area
-            </Button>
-          </div>
-          <div
-            className={cx(
-              "z-(--layer-sticky) flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
-              dirty
-                ? "bg-navy text-white shadow-band"
-                : "border-t border-hairline bg-white",
-            )}
-          >
-            <p
-              aria-live="polite"
-              className={cx(
-                "min-w-0 text-sm",
-                (error ?? problem)
-                  ? dirty
-                    ? "font-semibold text-danger-edge"
-                    : "text-danger"
-                  : dirty
-                    ? "font-semibold"
-                    : "text-muted",
-              )}
-            >
-              {pending
-                ? "Saving…"
-                : (error ??
-                  problem ??
-                  (dirty ? "Unsaved changes." : "No unsaved changes."))}
-            </p>
-            <div className="ml-auto flex items-center gap-2">
-              {dirty ? (
-                <Button
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => {
-                    setDraft(saved);
-                    setError(null);
-                  }}
-                  className="text-white hover:bg-white/10 hover:text-white"
-                >
-                  Discard
-                </Button>
-              ) : null}
-              <Button
-                variant={dirty ? "secondary" : "primary"}
-                disabled={!dirty || problem !== null}
-                pending={pending}
-                onClick={save}
-              >
-                {pending ? "Saving…" : "Save hourly rates"}
-              </Button>
-            </div>
-          </div>
+          <SaveBar
+            dirty={dirty}
+            pending={pending}
+            status={status}
+            canSave={invalid.size === 0}
+            onDiscard={() => {
+              setValues(saved);
+              setError(null);
+            }}
+            onSave={save}
+            label="Save hourly rates"
+          />
           {leaveDialog}
-          {chosenArea ? (
-            <ZonesDialog
-              key={chosenArea.key}
-              area={chosenArea}
-              zones={zones}
-              takenBy={(id) => {
-                const other = areaOfZone.get(id);
-                return other && other.key !== chosenArea.key
-                  ? other.name || "another area"
-                  : null;
-              }}
-              onClose={() => setChoosing(null)}
-              onChoose={(zoneIds) => {
-                changeArea(chosenArea.key, (a) => ({ ...a, zoneIds }));
-                setChoosing(null);
-              }}
-            />
-          ) : null}
         </>
       )}
     </>
-  );
-}
-
-/** The zones of an area, ticked from the location's; a zone in another area is shown with its name and cannot be ticked. */
-function ZonesDialog({
-  area,
-  zones,
-  takenBy,
-  onClose,
-  onChoose,
-}: {
-  area: AreaDraft;
-  zones: Zone[];
-  takenBy: (zoneId: string) => string | null;
-  onClose: () => void;
-  onChoose: (zoneIds: string[]) => void;
-}) {
-  const [ticked, setTicked] = useState<ReadonlySet<string>>(
-    () => new Set(area.zoneIds),
-  );
-  return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      title={area.name ? `Zones of ${area.name}` : "Zones of the area"}
-      description="A pickup in a ticked zone is priced from this area. A zone is in one area at most."
-    >
-      <div className="grid gap-4">
-        <div className="grid gap-1.5">
-          <p className="text-sm font-medium text-body">
-            {plural(ticked.size, "zone")} ticked
-          </p>
-          <ul className="grid max-h-80 gap-1 overflow-y-auto">
-            {zones.map((zone) => {
-              const other = takenBy(zone.id);
-              return (
-                <li key={zone.id}>
-                  <label
-                    className={cx(
-                      "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm",
-                      other ? "text-muted" : "hover:bg-mist",
-                    )}
-                  >
-                    <Checkbox
-                      checked={ticked.has(zone.id)}
-                      disabled={other !== null}
-                      onChange={(event) =>
-                        setTicked((current) => {
-                          const next = new Set(current);
-                          if (event.target.checked) next.add(zone.id);
-                          else next.delete(zone.id);
-                          return next;
-                        })
-                      }
-                    />
-                    <span className="min-w-0 flex-1">{zone.name}</span>
-                    {other ? (
-                      <span className="text-caption">In {other}</span>
-                    ) : null}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        <DialogActions>
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() =>
-              onChoose(zones.filter((z) => ticked.has(z.id)).map((z) => z.id))
-            }
-          >
-            Use these zones
-          </Button>
-        </DialogActions>
-      </div>
-    </Dialog>
   );
 }

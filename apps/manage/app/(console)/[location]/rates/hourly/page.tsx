@@ -6,7 +6,6 @@ import {
   type Offering,
 } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
-import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
@@ -22,9 +21,9 @@ import { RatesByLocation } from "../_components/RatesByLocation";
 import { visiblePriceLists } from "../_components/price-lists";
 
 const HOURLY_TIP =
-  "Each area is a group of the zones drawn on Coverage. A pickup pays its area's package in the class, plus the extra hours at the rate for that package size.";
+  "A row for each zone drawn on Coverage and each package. A pickup pays its zone's package in the class, plus the extra hours at the rate for that package size.";
 
-const NO_HOURLY = { areas: [], extras: [] };
+const NO_HOURLY = { zones: [], extras: [] };
 
 /** The classes on sale, as the columns. */
 const columnsOf = (offerings: readonly Offering[]) =>
@@ -39,9 +38,10 @@ const columnsOf = (offerings: readonly Offering[]) =>
     }));
 
 /**
- * Route: /[location]/rates/hourly. Rates' hourly price list: a location's
- * hourly areas, the 4, 8 and 12-hour packages each sells with the hours
- * they cover and their price per class, and the rate per extra hour.
+ * Route: /[location]/rates/hourly. Rates' hourly price list: for each of
+ * a location's zones, the 4, 8 and 12-hour packages a pickup there is sold,
+ * with the hours they cover and their price per class, and the rate per
+ * extra hour.
  * Under a location, Operation (`coverage.manage`) edits it and
  * Reservation and Sales read it (`coverage.view`). Under `~`, every
  * location's, read only. See docs/261102-booking-ops.md, "Hourly rate
@@ -80,12 +80,11 @@ async function locationHourly({
     locationZoneNames(location.id),
     locationOfferings(location.id),
   ]);
-  if (!list) notFound();
   return (
     <Card flush>
       <CardTitle inset meta="RM for the whole vehicle">
         <span className="inline-flex items-center gap-1.5">
-          Areas and packages
+          Pickup zones and packages
           <InfoTip text={HOURLY_TIP} />
         </span>
       </CardTitle>
@@ -112,7 +111,7 @@ async function everyLocationHourly({ manages }: { manages: boolean }) {
       {(list) => (
         <Card flush>
           <CardTitle inset meta="RM for the whole vehicle">
-            Areas and packages
+            Pickup zones and packages
           </CardTitle>
           <HourlyRates
             locationId={list.id}

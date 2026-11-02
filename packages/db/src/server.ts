@@ -178,6 +178,7 @@ export {
   listActiveOfferings,
   listActiveOfferingsAt,
   cheapestCellsAt,
+  cheapestPackagesAt,
   getOffering,
   listClassesNotOffered,
   createOffering,
@@ -208,6 +209,7 @@ export {
   setTripRules,
   routesIntoLocation,
 } from "./zones";
+export { getHourlyList, listHourlyLists, setHourlyList } from "./hourly-rates";
 export type {
   Zone,
   ZoneRate,
@@ -392,6 +394,7 @@ export * from "./zone-trip";
 export * from "./zone-quote";
 export * from "./price-check";
 export * from "./rates-input";
+export * from "./hourly-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";

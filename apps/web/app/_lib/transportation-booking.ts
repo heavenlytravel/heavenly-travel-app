@@ -1,5 +1,6 @@
 import {
-  checkHours,
+  isExtraHours,
+  isHourlyPackage,
   isTripCategory,
   isTripMode,
   TRIP_PARAM,
@@ -75,9 +76,13 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
   if (!values.time) {
     issues.push({ field: "time", message: "Choose a pick-up time." });
   }
-  const hours = Number(values.hours);
-  if (mode === "hourly" && !checkHours(hours).ok) {
-    issues.push({ field: "hours", message: "Choose how many hours." });
+  const packageHours = Number(values.package);
+  const extraHours = Number(values.extra || "0");
+  if (mode === "hourly" && !isHourlyPackage(packageHours)) {
+    issues.push({ field: "package", message: "Choose a package." });
+  }
+  if (mode === "hourly" && !isExtraHours(extraHours)) {
+    issues.push({ field: "extra", message: "Choose the extra hours." });
   }
   if (issues.length > 0) return { ok: false, issues };
 
@@ -88,6 +93,9 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
     [TRIP_PARAM.time]: values.time,
   });
   if (mode === "oneway") params.set(TRIP_PARAM.dropoff, values.placeIds.to!);
-  else params.set(TRIP_PARAM.hours, String(hours));
+  else {
+    params.set(TRIP_PARAM.packageHours, String(packageHours));
+    if (extraHours > 0) params.set(TRIP_PARAM.extraHours, String(extraHours));
+  }
   return { ok: true, params };
 }

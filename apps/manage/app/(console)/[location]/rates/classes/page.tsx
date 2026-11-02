@@ -21,8 +21,8 @@ import { visiblePriceLists } from "../_components/price-lists";
 /**
  * Route: /[location]/rates/classes. Rates' first page: the classes a
  * location sells at their rates and under their rules, on sale or not,
- * the rate per extra km a one-way trip pays past a zone's edge and the
- * hourly rate. Under a location, Operation (`coverage.manage`) opens a
+ * the rate per extra km a one-way trip pays past a zone's edge. Hourly
+ * hire is priced on Hourly Rates. Under a location, Operation (`coverage.manage`) opens a
  * class's editor from its row, which comes back here; Reservation and
  * Sales read them (`coverage.view`). Under `~`, every location's, read
  * only, by location. See docs/261023-nearest-zone-pricing.md.

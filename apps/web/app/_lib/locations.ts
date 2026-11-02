@@ -9,6 +9,7 @@ import {
   getPublicLocation,
   listActiveOfferingsAt,
   cheapestCellsAt,
+  cheapestPackagesAt,
   listPublicLocationSlugs,
   listServiceLocationCards,
   listTopChoiceCards,
@@ -163,8 +164,8 @@ export type VehicleClassCard = {
     name: string;
     photos: { url: string; caption: string }[];
   }[];
-  /** The least it can cost there, in sen. */
-  fromSen: number;
+  /** The least it can cost there, in sen; null when nothing is priced in it yet. */
+  fromSen: number | null;
 };
 
 /**
@@ -177,9 +178,10 @@ export const vehicleClassCards = cache(
   (slug: string, category: TripCategory): Promise<VehicleClassCard[]> =>
     unstable_cache(
       async () => {
-        const [offerings, cheapest] = await Promise.all([
+        const [offerings, cheapest, packages] = await Promise.all([
           listActiveOfferingsAt(slug, category),
           cheapestCellsAt(slug),
+          cheapestPackagesAt(slug),
         ]);
         return offerings.map(({ vehicleClass, ...offering }) => ({
           id: vehicleClass.id,
@@ -192,12 +194,12 @@ export const vehicleClassCards = cache(
           imageUrl: offering.coverUrl,
           models: vehicleClass.models,
           fromSen: startingPriceSen(
-            offering,
             cheapest.get(vehicleClass.id) ?? null,
+            packages.get(vehicleClass.id) ?? null,
           ),
         }));
       },
-      ["vehicle-class-cards", "2", slug, category],
+      ["vehicle-class-cards", "3", slug, category],
       {
         tags: [locationTag(slug), VEHICLE_CLASSES_TAG],
         revalidate: REFRESH_SECONDS,

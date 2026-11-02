@@ -130,6 +130,7 @@ const AREA_OF = {
   "location.zone.updated": "coverage",
   "location.zone.deleted": "coverage",
   "location.rates.updated": "coverage",
+  "location.hourly.updated": "coverage",
   "location.surcharge.updated": "coverage",
   "location.dropoff.updated": "coverage",
   "location.reach.updated": "coverage",

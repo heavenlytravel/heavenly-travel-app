@@ -1,19 +1,21 @@
-import {
-  hourlyRange,
-  localDateTimeInputs,
-  type BookingSide,
-} from "./booking-rules";
+import { localDateTimeInputs } from "./booking-rules";
 import {
   isTripMode,
   offersChildSeats,
   type TripCategory,
   type TripMode,
 } from "./booking-status";
+import {
+  hourlyChoiceOfHours,
+  HOURLY_LIMITS,
+  isHourlyPackage,
+  type HourlyChoice,
+} from "./hourly-input";
 import type { TripView } from "./trip-view";
 
 /**
  * A trip as it travels between screens before it is a booking: the search
- * (mode, places, date, time, hours) and the options chosen after pricing
+ * (mode, places, date, time, the hourly package and extra hours) and the options chosen after pricing
  * (class, the model chosen, passengers, child seats, flight, notes). The website carries it
  * in the URL from the search card to the confirm page; the console's manual
  * booking form posts the same names. One parser reads both, so a booking
@@ -42,8 +44,8 @@ export type TripSearch = {
   date: string;
   /** "09:30" */
   time: string;
-  /** Hourly only. */
-  hours: number | null;
+  /** Hourly only: the package and the hours past it. */
+  hourly: HourlyChoice | null;
 };
 
 /** What is chosen once the trip is priced. */
@@ -64,7 +66,8 @@ export const TRIP_PARAM = {
   dropoff: "dropoff",
   date: "date",
   time: "time",
-  hours: "hours",
+  packageHours: "package",
+  extraHours: "extra",
   passengers: "passengers",
   vehicleClass: "class",
   vehicleModel: "model",
@@ -126,27 +129,38 @@ const intIn = (raw: string | null, min: number, max: number) => {
 };
 
 /**
- * The search in a query or a form, or null when it is not a full search.
- * Hours run within the side's range (`hourlyRange`); the class's own
- * minimum is an availability state once the trip is priced.
+ * The hourly choice in a query or a form: a package size, and extra hours
+ * (none when left out). Null when the package is not one there is.
  */
-export function parseTripSearch(
-  input: QueryInput,
-  side: BookingSide = "customer",
-): TripSearch | null {
+export function parseHourlyChoice(input: QueryInput): HourlyChoice | null {
+  const params = toParams(input);
+  const packageHours = intIn(params.get(TRIP_PARAM.packageHours), 1, 99);
+  const rawExtra = params.get(TRIP_PARAM.extraHours);
+  const extraHours =
+    rawExtra === null || rawExtra === ""
+      ? 0
+      : intIn(rawExtra, 0, HOURLY_LIMITS.maxExtraHours);
+  if (!isHourlyPackage(packageHours) || extraHours === null) return null;
+  return { packageHours, extraHours };
+}
+
+/**
+ * The search in a query or a form, or null when it is not a full search.
+ * Whether the pickup's area sells the package is the quote's to say.
+ */
+export function parseTripSearch(input: QueryInput): TripSearch | null {
   const params = toParams(input);
   const mode = params.get(TRIP_PARAM.mode);
   const pickupId = params.get(TRIP_PARAM.pickup);
   const dropoffId = params.get(TRIP_PARAM.dropoff);
   const date = params.get(TRIP_PARAM.date);
   const time = params.get(TRIP_PARAM.time);
-  const range = hourlyRange(side);
-  const hours = intIn(params.get(TRIP_PARAM.hours), range.min, range.max);
+  const hourly = parseHourlyChoice(params);
 
   if (!isTripMode(mode) || !pickupId || !ID_RE.test(pickupId)) return null;
   if (!date || !DATE_RE.test(date) || !time || !TIME_RE.test(time)) return null;
   if (mode === "oneway" && (!dropoffId || !ID_RE.test(dropoffId))) return null;
-  if (mode === "hourly" && hours === null) return null;
+  if (mode === "hourly" && hourly === null) return null;
 
   return {
     mode,
@@ -154,7 +168,7 @@ export function parseTripSearch(
     dropoffId: mode === "oneway" ? dropoffId : null,
     date,
     time,
-    hours: mode === "hourly" ? hours : null,
+    hourly: mode === "hourly" ? hourly : null,
   };
 }
 
@@ -212,7 +226,12 @@ export function tripSearchParams(search: TripSearch) {
     [TRIP_PARAM.time]: search.time,
   });
   if (search.dropoffId) params.set(TRIP_PARAM.dropoff, search.dropoffId);
-  if (search.hours !== null) params.set(TRIP_PARAM.hours, String(search.hours));
+  if (search.hourly) {
+    params.set(TRIP_PARAM.packageHours, String(search.hourly.packageHours));
+    if (search.hourly.extraHours > 0) {
+      params.set(TRIP_PARAM.extraHours, String(search.hourly.extraHours));
+    }
+  }
   return params;
 }
 
@@ -225,7 +244,10 @@ export function tripSearchOf(trip: TripView): TripSearch {
     dropoffId: trip.mode === "oneway" ? (trip.dropoff?.placeId ?? null) : null,
     date,
     time,
-    hours: trip.mode === "hourly" ? trip.hours : null,
+    hourly:
+      trip.mode === "hourly"
+        ? (trip.hourly ?? hourlyChoiceOfHours(trip.hours ?? 0))
+        : null,
   };
 }
 

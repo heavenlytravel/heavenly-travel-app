@@ -254,11 +254,6 @@ export function ConfirmStep({
             tone: "red",
             text: `Too soon to book online: ${card.name} needs ${here.availability.minLeadHours} hours notice. Choose a later time, or WhatsApp us.`,
           };
-        case "too-few-hours":
-          return {
-            tone: "red",
-            text: `${card.name} is hired for at least ${here.availability.minHourlyHours} hours. Make this hire longer.`,
-          };
         case "not-on-route":
           return {
             tone: "red",

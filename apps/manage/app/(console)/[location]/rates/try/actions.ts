@@ -138,7 +138,7 @@ export async function tryTripAction(
   const trace = emptyTrace();
   const quoted = await quoteTrip(
     category,
-    { mode: "oneway", pickup, dropoff, startsAt, hours: null },
+    { mode: "oneway", pickup, dropoff, startsAt, hourly: null },
     tripRouting,
     { locationId, trace, unlimited: true },
   );

@@ -1,3 +1,4 @@
+import type { HourlyList } from "./hourly-input";
 import { nearestPointOnShape, type LngLat } from "./geo";
 import {
   reachableZones,
@@ -49,6 +50,8 @@ export type QuoteLocation = {
   /** The other locations' zones its routes out end at. */
   zonesOut: QuoteZone[];
   zoneRates: (RateCellLike & { id?: string })[];
+  /** Its hourly price list. */
+  hourly: HourlyList;
   /** The odd-hours surcharge; null when it has none. */
   oddHours: OddHours | null;
   /** The weekend and holiday surcharge; null when it has none. */

@@ -1,5 +1,4 @@
 import {
-  checkHours,
   classAvailability,
   fitsPassengers,
   isWithinHorizon,
@@ -20,6 +19,16 @@ import {
   type DistrictWithState,
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
+import {
+  areaPackageOf,
+  hourlyAreaOf,
+  hourlyChargeOf,
+  HOURLY_LIMITS,
+  isExtraHours,
+  isHourlyPackage,
+  packageLabel,
+  type HourlyChoice,
+} from "./hourly-input";
 import { modelChoiceOf } from "./offering-input";
 import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
@@ -57,7 +66,8 @@ import {
  * The pickup names the location, by the zone it falls in or its nearest
  * zone by road, and the location's offerings, zones and rates price the
  * trip: one cell of its grid, plus the road past a zone's edge
- * (./zone-quote, ./zone-trip). The category only decides which offerings
+ * (./zone-quote, ./zone-trip), or for an hourly hire, the package its
+ * hourly area sells, plus the extra hours (./hourly-input). The category only decides which offerings
  * are priced. Everything product-specific lives here; the booking core in
  * bookings.ts only sees a `PreparedItem`. See docs/260928-coach-charter.md,
  * docs/261015-locations-as-operation-areas.md and
@@ -70,8 +80,8 @@ export type TripRequest = {
   /** Required for one-way, ignored for hourly. */
   dropoff: Place | null;
   startsAt: Date;
-  /** Hourly only. */
-  hours: number | null;
+  /** Hourly only: the package and the hours past it. */
+  hourly: HourlyChoice | null;
 };
 
 export type TripItemRequest = TripRequest & {
@@ -92,9 +102,10 @@ export type TripQuoteErrorCode =
   | "dropoff-required"
   | "distance-unavailable"
   | "hours"
+  | "hourly-not-served"
+  | "package-not-sold"
   | "class-unavailable"
   | "too-soon"
-  | "too-few-hours"
   | "passengers"
   | "model-unavailable";
 
@@ -138,6 +149,12 @@ export type QuotedEnd = {
   nearest: Omit<NearestZone, "zoneId"> | null;
 };
 
+/** An hourly hire as quoted: the area it is priced from, and the hours the package covers there. */
+export type QuotedHire = HourlyChoice & {
+  area: string;
+  includedHours: number;
+};
+
 export type TripQuote = {
   category: TripCategory;
   /** The district the pickup is in, for the record; null at sea. */
@@ -150,6 +167,8 @@ export type TripQuote = {
   pickup: QuotedEnd;
   /** Null for hourly hire. */
   dropoff: QuotedEnd | null;
+  /** Hourly: the area and the hours the package covers; null for one-way. */
+  hire: QuotedHire | null;
   /** What a trip with an end outside every zone measured; null otherwise. */
   zoneTrip: ZoneTripMeasure | null;
   /** The odd-hours surcharge that applies to this pickup time; null when none. */
@@ -318,16 +337,17 @@ async function quoteOne(
     );
   }
 
-  let hours: number | null = null;
+  const choice = request.mode === "hourly" ? request.hourly : null;
   if (request.mode === "oneway") {
     if (!request.dropoff) {
       return fail("dropoff-required", "Choose a drop-off for a one-way trip.");
     }
-  } else {
-    hours = request.hours ?? 0;
-    if (!checkHours(hours, side).ok) {
-      return fail("hours", "Choose how many hours you need the driver for.");
-    }
+  } else if (
+    !choice ||
+    !isHourlyPackage(choice.packageHours) ||
+    !isExtraHours(choice.extraHours)
+  ) {
+    return fail("hours", "Choose a package for the hourly hire.");
   }
 
   // The district is the record's: read alongside the locations.
@@ -352,12 +372,55 @@ async function quoteOne(
     return fail(placed.error.code, placed.error.message, placed.error.reason);
   }
   const { location, pickup, dropoff } = placed;
-  const basis: PricingBasis =
-    hours === null
-      ? { mode: "oneway", distanceKm: placed.distanceKm ?? 0 }
-      : { mode: "hourly", hours };
+
+  // An hourly hire is priced from the area its pickup's zone is in, by the
+  // package that area sells; the package's hours there set the trip's.
+  const area = choice ? hourlyAreaOf(location.hourly, pickup.zone.id) : null;
+  let hire: QuotedHire | null = null;
+  if (choice) {
+    if (!area) {
+      return fail(
+        "hourly-not-served",
+        "We do not have hourly prices from there yet. Message us on WhatsApp.",
+        `no hourly area holds ${pickup.zone.name}`,
+      );
+    }
+    const row = areaPackageOf(area, choice.packageHours);
+    if (!row) {
+      return fail(
+        "package-not-sold",
+        `The ${packageLabel(choice.packageHours)} is not offered from there. Choose another.`,
+        `${area.name} sells no ${packageLabel(choice.packageHours)}`,
+      );
+    }
+    if (row.includedHours + choice.extraHours > HOURLY_LIMITS.maxTripHours) {
+      return fail(
+        "hours",
+        `An hourly hire runs at most ${HOURLY_LIMITS.maxTripHours} hours. Choose fewer extra hours.`,
+      );
+    }
+    hire = { ...choice, area: area.name, includedHours: row.includedHours };
+  }
+  const basis: PricingBasis = hire
+    ? { mode: "hourly", hours: hire.includedHours + hire.extraHours }
+    : { mode: "oneway", distanceKm: placed.distanceKm ?? 0 };
 
   const offerings = await reads.offeringsAt(location.id);
+  const hourlyOf = (vehicleClassId: string) =>
+    choice && area
+      ? hourlyChargeOf(location.hourly, area, choice, vehicleClassId)
+      : null;
+  if (
+    choice &&
+    offerings.length > 0 &&
+    !offerings.some((offering) => hourlyOf(offering.vehicleClass.id))
+  ) {
+    return fail(
+      "hourly-not-served",
+      "We do not have a price for that hire yet. Message us on WhatsApp.",
+      `${area!.name} has no price for the ${packageLabel(choice.packageHours)}${choice.extraHours > 0 ? " with extra hours" : ""} in any class`,
+    );
+  }
   const cellOf = (vehicleClassId: string) =>
     dropoff
       ? routeRateOf(
@@ -408,7 +471,8 @@ async function quoteOne(
   const classes = offerings.map((offering): ClassQuote => {
     const { vehicleClass } = offering;
     const cell = cellOf(vehicleClass.id);
-    if (dropoff && !cell) {
+    const hourly = hourlyOf(vehicleClass.id);
+    if ((dropoff && !cell) || (choice && !hourly)) {
       return {
         vehicleClass,
         offering,
@@ -428,6 +492,7 @@ async function quoteOne(
               rateSen: cell.priceSen,
             }
           : null,
+      hourly,
       zoneTrip: placed.measure,
       freeExtraKm: location.freeExtraKm,
       surcharge,
@@ -444,7 +509,7 @@ async function quoteOne(
       ),
       availability: classAvailability(
         offering,
-        { startsAt: request.startsAt, hours },
+        { startsAt: request.startsAt },
         now,
         side,
       ),
@@ -476,6 +541,7 @@ async function quoteOne(
       driveMinutes: placed.driveMinutes,
       pickup: endOf(pickup),
       dropoff: dropoff ? endOf(dropoff) : null,
+      hire,
       zoneTrip: placed.measure,
       surcharge,
       weekend,
@@ -564,11 +630,6 @@ function itemOf(
         return fail(
           "too-soon",
           `${vehicleClass.name} needs ${availability.minLeadHours} hours notice. Choose a later time.`,
-        );
-      case "too-few-hours":
-        return fail(
-          "too-few-hours",
-          `${vehicleClass.name} is hired for at least ${availability.minHourlyHours} hours.`,
         );
       case "not-on-route":
         return fail(

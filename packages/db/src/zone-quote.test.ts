@@ -54,6 +54,8 @@ const kuah = square("Kuah Town", 0.6, 0, 0.7, 0.1);
 const timurLaut = square("Timur Laut", 3, 0, 3.1, 0.1);
 const klia = square("KLIA", 5, 0, 5.1, 0.1);
 
+const NO_HOURLY = { areas: [], extras: [] };
+
 const cell = (from: QuoteZone, to: QuoteZone, priceSen: number) => ({
   fromZoneId: from.id,
   toZoneId: to.id,
@@ -76,6 +78,7 @@ function langkawi(extra: Partial<QuoteLocation> = {}): QuoteLocation {
       cell(airport, datai, 8_000),
       cell(kuah, kuah, 2_500),
     ],
+    hourly: NO_HOURLY,
     oddHours: null,
     weekend: null,
     ...extra,
@@ -92,6 +95,7 @@ function penang(crossLocation: boolean): QuoteLocation {
     zones: [timurLaut],
     zonesOut: [klia],
     zoneRates: [cell(timurLaut, klia, 30_000)],
+    hourly: NO_HOURLY,
     oddHours: null,
     weekend: null,
     freeExtraKm: 0,
@@ -107,6 +111,7 @@ const selangor: QuoteLocation = {
   zones: [klia],
   zonesOut: [],
   zoneRates: [],
+  hourly: NO_HOURLY,
   oddHours: null,
   weekend: null,
   freeExtraKm: 0,
@@ -168,7 +173,7 @@ async function fare(
   if (!found) return { placed, price: null };
   const price = priceTrip({
     trip: { mode: "oneway", distanceKm: placed.distanceKm! },
-    rates: { perKmSen: PER_KM, hourlyRateSen: 6_000 },
+    rates: { perKmSen: PER_KM },
     route: {
       fromZone: placed.pickup.zone.name,
       toZone: placed.dropoff!.zone.name,

@@ -4,11 +4,14 @@ import {
   classFit,
   formatLocalTime,
   hireEndOf,
+  hourlyChoiceLabel,
+  namedHours,
   parseTripSearch,
   startOfTrip,
   tripItemField,
   tripSearchParams,
   type ClassFit,
+  type HourlyChoice,
   type TripClash,
   type TripClassPrice,
   type TripMode,
@@ -44,7 +47,13 @@ export type PlannedTrip = {
   date: string;
   /** "09:30" */
   time: string;
-  /** Hourly only. */
+  /** Hourly only: the package and the hours past it. */
+  hourly: HourlyChoice | null;
+  /**
+   * Hourly only: the hours it runs by its package's name (`namedHours`),
+   * for the clash checks while it is typed; the booking checks again with
+   * the hours the package covers from its area.
+   */
   hours: number | null;
 };
 
@@ -121,7 +130,7 @@ export function searchOfTrip(trip: PlannedTrip): TripSearch {
     dropoffId: trip.dropoff?.placeId ?? null,
     date: trip.date,
     time: trip.time,
-    hours: trip.hours,
+    hourly: trip.hourly,
   };
 }
 
@@ -139,7 +148,8 @@ export function tripOfSearch(search: TripSearch): PlannedTrip {
     dropoff: search.dropoffId ? { placeId: search.dropoffId, label: "" } : null,
     date: search.date,
     time: search.time,
-    hours: search.hours,
+    hourly: search.hourly,
+    hours: search.hourly ? namedHours(search.hourly) : null,
   };
 }
 
@@ -164,7 +174,8 @@ export function draftOf(trip: PlannedTrip): SearchValues {
     to: trip.dropoff?.label ?? "",
     date: trip.date,
     time: trip.time,
-    hours: String(trip.hours ?? EMPTY_SEARCH.hours),
+    package: String(trip.hourly?.packageHours ?? EMPTY_SEARCH.package),
+    extra: String(trip.hourly?.extraHours ?? EMPTY_SEARCH.extra),
     placeIds: {
       from: trip.pickup.placeId,
       to: trip.dropoff?.placeId,
@@ -196,7 +207,8 @@ export function tripOfDraft(
         : null,
       date: search.date,
       time: search.time,
-      hours: search.hours,
+      hourly: search.hourly,
+      hours: search.hourly ? namedHours(search.hourly) : null,
     },
   };
 }
@@ -245,12 +257,14 @@ export function spanOf(trips: readonly PlannedTrip[]) {
     : `${shortDayOf(first)} to ${shortDayOf(last)}`;
 }
 
-/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", or "8 hours from Pelangi Beach Resort". */
+/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", or "8-hour package from Pelangi Beach Resort". */
 export function routeOf(trip: PlannedTrip) {
   // A trip from a link has its places named once it is priced.
   const name = (place: PlanPlace | null) => place?.label || "…";
   if (trip.mode === "hourly") {
-    return `${trip.hours} hours from ${name(trip.pickup)}`;
+    return trip.hourly
+      ? `${hourlyChoiceLabel(trip.hourly)} from ${name(trip.pickup)}`
+      : `${trip.hours} hours from ${name(trip.pickup)}`;
   }
   return `${name(trip.pickup)} → ${name(trip.dropoff)}`;
 }

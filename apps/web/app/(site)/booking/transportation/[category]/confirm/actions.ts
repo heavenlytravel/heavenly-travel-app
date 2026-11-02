@@ -12,6 +12,7 @@ import {
   parseTripSearch,
   RATE_LIMITED_MESSAGE,
   textOf,
+  itemTiming,
   tripClashes,
   tripItemIndexes,
   tripItemParams,
@@ -128,23 +129,6 @@ export async function createTripsBookingAction(
     requests.push(trip.request);
   }
 
-  // One vehicle does one trip at a time.
-  const clashes = tripClashes(
-    requests.map((request) => ({
-      startsAt: request.startsAt,
-      hours: request.mode === "hourly" ? request.hours : null,
-    })),
-  );
-  const clashing = clashes.findIndex((found) => found !== null);
-  if (clashing >= 0) {
-    const clash = clashes[clashing]!;
-    return {
-      error: `Trip ${clashing + 1} starts ${
-        clash.kind === "same-time" ? "at the same time as" : "during"
-      } trip ${clash.with + 1}, and one vehicle cannot do both. Edit your trips to change one of them.`,
-    };
-  }
-
   const flights = {
     arriving: parseFlightNumber(
       textOf(formData.get(CONFIRM_FIELDS.arrivingFlight)),
@@ -182,6 +166,20 @@ export async function createTripsBookingAction(
         } from ${formatMyr(shown)}`,
       );
     }
+  }
+  // One vehicle does one trip at a time: an hourly hire runs the hours its
+  // package covers from its pickup's area, known once it is priced.
+  const clashes = tripClashes(
+    prepared.flatMap((result) => (result.ok ? [itemTiming(result.item)] : [])),
+  );
+  const clashing = clashes.findIndex((found) => found !== null);
+  if (clashing >= 0) {
+    const clash = clashes[clashing]!;
+    return {
+      error: `Trip ${clashing + 1} starts ${
+        clash.kind === "same-time" ? "at the same time as" : "during"
+      } trip ${clash.with + 1}, and one vehicle cannot do both. Edit your trips to change one of them.`,
+    };
   }
   if (changed.length > 0) {
     return {

@@ -3,28 +3,15 @@ import type { TripCategory } from "./booking-status";
 /**
  * Global business rules and the pure checks built on them. Pure: no database
  * and no `server-only`, so it runs in unit tests and in the browser. The
- * notice, the cancellation cutoff and the minimum hire are each location's
- * for each class it sells, on its offering (./offering-input); the rest is
- * global. See docs/261018-location-work-and-class-catalogue.md, "The rules
+ * notice and the cancellation cutoff are each location's for each class
+ * it sells, on its offering (./offering-input); the hours of an hourly
+ * hire are its packages' (./hourly-input); the rest is global. See docs/261018-location-work-and-class-catalogue.md, "The rules
  * per location and class".
  */
 
 export const BOOKING_RULES = {
   /** A pickup must be at most this far in the future (12 months). */
   maxHorizonDays: 365,
-  /**
-   * The lowest minimum hire any class may set. Forms and URLs accept hours
-   * from here, because they do not know the class yet.
-   */
-  hourlyFloorHours: 3,
-  /** Longest hourly hire in one item; anything longer is a multi-day request. */
-  maxHourlyHours: 12,
-  /**
-   * An admin's hourly hire: whatever was agreed, from one hour to a whole
-   * day. The two above are the website's.
-   */
-  adminMinHourlyHours: 1,
-  adminMaxHourlyHours: 24,
   /** The most trips one booking takes on the website: a long stay, not a fleet. */
   maxTripsPerBooking: 20,
   /** All customer-facing dates and times. Malaysia has no daylight saving. */
@@ -52,61 +39,17 @@ export function isWithinHorizon(startsAt: Date, now: Date = new Date()) {
 /**
  * Whose booking a trip is checked for. The website's customer meets every
  * rule. An admin enters what was already agreed, often by phone and
- * sometimes after the trip: no notice, no minimum hire, no horizon, any
- * group, any whole hours in a day, and a pickup in the past too.
+ * sometimes after the trip: no notice, no horizon, any group, and a
+ * pickup in the past too.
  */
 export type BookingSide = "customer" | "admin";
-
-/** The fewest and the most hours an hourly hire may run, for a side. */
-export function hourlyRange(side: BookingSide = "customer") {
-  return side === "admin"
-    ? {
-        min: BOOKING_RULES.adminMinHourlyHours,
-        max: BOOKING_RULES.adminMaxHourlyHours,
-      }
-    : {
-        min: BOOKING_RULES.hourlyFloorHours,
-        max: BOOKING_RULES.maxHourlyHours,
-      };
-}
-
-export type HoursCheck =
-  { ok: true } | { ok: false; reason: "not-whole" | "too-few" | "too-many" };
-
-/**
- * Hourly hires are whole hours within the side's range (`hourlyRange`). A
- * class may ask a customer for more than the floor; `classAvailability`
- * checks that.
- */
-export function checkHours(
-  hours: number,
-  side: BookingSide = "customer",
-): HoursCheck {
-  if (!Number.isInteger(hours)) return { ok: false, reason: "not-whole" };
-  const range = hourlyRange(side);
-  if (hours < range.min) return { ok: false, reason: "too-few" };
-  if (hours > range.max) return { ok: false, reason: "too-many" };
-  return { ok: true };
-}
-
-const hourOptions = ({ min, max }: { min: number; max: number }) =>
-  Array.from({ length: max - min + 1 }, (_, i) => min + i);
-
-/** The hour choices the website offers for an hourly hire. */
-export const HOURLY_OPTIONS: readonly number[] = hourOptions(hourlyRange());
-
-/** The hour choices the console offers an admin for an hourly hire. */
-export const ADMIN_HOURLY_OPTIONS: readonly number[] = hourOptions(
-  hourlyRange("admin"),
-);
 
 /** The rules a location sets for a trip in one class, as stored on its offering. */
 export type ClassRules = {
   minLeadHours: number;
-  minHourlyHours: number;
 };
 
-/** The three rules an offering carries, as stored on `LocationVehicleClass`. */
+/** The two rules an offering carries, as stored on `LocationVehicleClass`. */
 export type OfferingRules = ClassRules & {
   cancellationCutoffHours: number;
 };
@@ -120,48 +63,33 @@ export const CATEGORY_RULE_DEFAULTS: Record<TripCategory, OfferingRules> = {
   "car-with-driver": {
     minLeadHours: 4,
     cancellationCutoffHours: 24,
-    minHourlyHours: 3,
   },
   "coach-charter": {
     minLeadHours: 24,
     cancellationCutoffHours: 48,
-    minHourlyHours: 4,
   },
 };
 
 /**
  * Whether one class can take one trip, and if not, why: the pickup is
- * sooner than the class's notice, or an hourly hire is shorter than its
- * minimum. The notice is checked first, because more hours never fix it.
+ * sooner than the class's notice, or the class has no price for the trip.
  */
 export type ClassAvailability =
   | { ok: true }
   | { ok: false; reason: "too-soon"; minLeadHours: number }
-  | { ok: false; reason: "too-few-hours"; minHourlyHours: number }
-  /** The grid has no price for this class on this trip. */
+  /** The grid or the hourly list has no price for this class on this trip. */
   | { ok: false; reason: "not-on-route" };
 
 export function classAvailability(
   rules: ClassRules,
-  trip: {
-    startsAt: Date;
-    /** Hourly only; null for one-way. */
-    hours: number | null;
-  },
+  trip: { startsAt: Date },
   now: Date = new Date(),
   side: BookingSide = "customer",
 ): ClassAvailability {
-  // The notice and the minimum hire are the website's; an admin books what was agreed.
+  // The notice is the website's; an admin books what was agreed.
   if (side === "admin") return { ok: true };
   if (trip.startsAt.getTime() < hoursAfter(now, rules.minLeadHours).getTime()) {
     return { ok: false, reason: "too-soon", minLeadHours: rules.minLeadHours };
-  }
-  if (trip.hours !== null && trip.hours < rules.minHourlyHours) {
-    return {
-      ok: false,
-      reason: "too-few-hours",
-      minHourlyHours: rules.minHourlyHours,
-    };
   }
   return { ok: true };
 }
@@ -172,8 +100,6 @@ export function unavailableReason(availability: ClassAvailability) {
   switch (availability.reason) {
     case "too-soon":
       return `Needs ${availability.minLeadHours} hours notice`;
-    case "too-few-hours":
-      return `Minimum ${availability.minHourlyHours} hours`;
     case "not-on-route":
       return "Not offered on this trip";
   }

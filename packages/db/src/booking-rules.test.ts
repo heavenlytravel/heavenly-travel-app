@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  ADMIN_HOURLY_OPTIONS,
   cancellationDeadline,
-  checkHours,
   classAvailability,
   fitsPassengers,
-  HOURLY_OPTIONS,
   isWithinHorizon,
   largestGroup,
   latestPickup,
@@ -34,112 +31,40 @@ describe("booking horizon", () => {
   });
 });
 
-describe("checkHours", () => {
-  it("accepts whole hours from the floor to the maximum", () => {
-    assert.deepEqual(checkHours(3), { ok: true });
-    assert.deepEqual(checkHours(12), { ok: true });
-  });
-
-  it("rejects too few, too many and fractional hours", () => {
-    assert.deepEqual(checkHours(2), { ok: false, reason: "too-few" });
-    assert.deepEqual(checkHours(13), { ok: false, reason: "too-many" });
-    assert.deepEqual(checkHours(3.5), { ok: false, reason: "not-whole" });
-  });
-
-  it("offers exactly the accepted hours as options", () => {
-    assert.deepEqual(HOURLY_OPTIONS, [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-    assert.ok(HOURLY_OPTIONS.every((h) => checkHours(h).ok));
-  });
-
-  it("lets an admin hire for any whole hours in a day", () => {
-    assert.deepEqual(checkHours(1, "admin"), { ok: true });
-    assert.deepEqual(checkHours(24, "admin"), { ok: true });
-    assert.deepEqual(checkHours(0, "admin"), { ok: false, reason: "too-few" });
-    assert.deepEqual(checkHours(25, "admin"), {
-      ok: false,
-      reason: "too-many",
-    });
-    assert.deepEqual(checkHours(1.5, "admin"), {
-      ok: false,
-      reason: "not-whole",
-    });
-  });
-
-  it("offers an admin exactly the hours it accepts", () => {
-    assert.equal(ADMIN_HOURLY_OPTIONS.length, 24);
-    assert.equal(ADMIN_HOURLY_OPTIONS[0], 1);
-    assert.ok(ADMIN_HOURLY_OPTIONS.every((h) => checkHours(h, "admin").ok));
-  });
-});
-
 describe("classAvailability", () => {
-  const coach = { minLeadHours: 24, minHourlyHours: 4 };
+  const coach = { minLeadHours: 24 };
 
   it("is available with enough notice for a one-way trip", () => {
     assert.deepEqual(
-      classAvailability(
-        coach,
-        { startsAt: after(48 * HOUR), hours: null },
-        now,
-      ),
+      classAvailability(coach, { startsAt: after(48 * HOUR) }, now),
       { ok: true },
     );
   });
 
   it("needs the notice, the exact edge included", () => {
     assert.deepEqual(
-      classAvailability(
-        coach,
-        { startsAt: after(24 * HOUR), hours: null },
-        now,
-      ),
+      classAvailability(coach, { startsAt: after(24 * HOUR) }, now),
       { ok: true },
     );
     assert.deepEqual(
-      classAvailability(
-        coach,
-        { startsAt: after(24 * HOUR - 1), hours: null },
-        now,
-      ),
+      classAvailability(coach, { startsAt: after(24 * HOUR - 1) }, now),
       { ok: false, reason: "too-soon", minLeadHours: 24 },
     );
   });
 
   it("refuses a pickup already in the past", () => {
     assert.equal(
-      classAvailability(coach, { startsAt: after(-HOUR), hours: null }, now).ok,
+      classAvailability(coach, { startsAt: after(-HOUR) }, now).ok,
       false,
     );
   });
 
-  it("needs the minimum hours, the exact edge included", () => {
-    const startsAt = after(48 * HOUR);
-    assert.deepEqual(classAvailability(coach, { startsAt, hours: 4 }, now), {
-      ok: true,
-    });
-    assert.deepEqual(classAvailability(coach, { startsAt, hours: 3 }, now), {
-      ok: false,
-      reason: "too-few-hours",
-      minHourlyHours: 4,
-    });
-  });
-
-  it("holds no notice or minimum hire against an admin, past pickups too", () => {
+  it("holds no notice against an admin, past pickups too", () => {
     for (const startsAt of [after(HOUR), after(-48 * HOUR)]) {
-      assert.deepEqual(
-        classAvailability(coach, { startsAt, hours: 1 }, now, "admin"),
-        { ok: true },
-      );
+      assert.deepEqual(classAvailability(coach, { startsAt }, now, "admin"), {
+        ok: true,
+      });
     }
-  });
-
-  it("reports the notice first, because more hours never fix it", () => {
-    assert.equal(
-      unavailableReason(
-        classAvailability(coach, { startsAt: after(HOUR), hours: 3 }, now),
-      ),
-      "Needs 24 hours notice",
-    );
   });
 
   it("says why in the options page's words", () => {
@@ -147,14 +72,6 @@ describe("classAvailability", () => {
     assert.equal(
       unavailableReason({ ok: false, reason: "not-on-route" }),
       "Not offered on this trip",
-    );
-    assert.equal(
-      unavailableReason({
-        ok: false,
-        reason: "too-few-hours",
-        minHourlyHours: 4,
-      }),
-      "Minimum 4 hours",
     );
   });
 });

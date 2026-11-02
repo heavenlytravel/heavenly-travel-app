@@ -20,6 +20,19 @@ const HOUR_MS = 60 * 60 * 1000;
 /** When a trip takes the vehicle: its start, and the hours of an hourly hire (null for one-way). */
 export type TripTiming = { startsAt: Date; hours: number | null };
 
+/** A priced trip's timing: an hourly hire runs to its end, which its package set. */
+export function itemTiming(item: {
+  startsAt: Date;
+  endsAt: Date | null;
+}): TripTiming {
+  return {
+    startsAt: item.startsAt,
+    hours: item.endsAt
+      ? (item.endsAt.getTime() - item.startsAt.getTime()) / HOUR_MS
+      : null,
+  };
+}
+
 /** The trip a trip cannot share the vehicle with, by its index in the list, and why. */
 export type TripClash = {
   with: number;
@@ -211,8 +224,6 @@ export function classFitNote(
   switch (fit.availability.reason) {
     case "too-soon":
       return `which needs ${fit.availability.minLeadHours} hours notice for ${trip}`;
-    case "too-few-hours":
-      return `which needs at least ${fit.availability.minHourlyHours} hours for ${trip}`;
     case "not-on-route":
       return `which is not offered for ${trip}`;
   }

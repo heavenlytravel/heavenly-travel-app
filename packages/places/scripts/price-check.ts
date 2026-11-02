@@ -106,7 +106,7 @@ for (const check of checks) {
   const trace = emptyTrace();
   const quoted = await quoteTrip(
     vehicleClass.category,
-    { mode: "oneway", pickup, dropoff, startsAt, hours: null },
+    { mode: "oneway", pickup, dropoff, startsAt, hourly: null },
     routing,
     { locationId: location.id, trace },
   );

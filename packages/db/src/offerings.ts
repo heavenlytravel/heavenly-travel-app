@@ -175,6 +175,28 @@ export async function cheapestCellsAt(
     },
     _min: { priceSen: true },
   });
+  return minByClass(rows);
+}
+
+/**
+ * Each class's cheapest hourly package at the location, by the class's
+ * id, from any of its areas. A class with no package priced is not in it.
+ * For "from RM" (`startingPriceSen`).
+ */
+export async function cheapestPackagesAt(
+  slug: string,
+): Promise<Map<string, number>> {
+  const rows = await db.hourlyRate.groupBy({
+    by: ["vehicleClassId"],
+    where: { package: { area: { location: { slug } } } },
+    _min: { priceSen: true },
+  });
+  return minByClass(rows);
+}
+
+function minByClass(
+  rows: { vehicleClassId: string; _min: { priceSen: number | null } }[],
+) {
   return new Map(
     rows.flatMap((row) =>
       row._min.priceSen === null

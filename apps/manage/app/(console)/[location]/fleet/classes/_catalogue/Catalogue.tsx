@@ -149,8 +149,7 @@ function ClassCard({
                       </span>
                     </span>
                     <span className="col-start-2 text-xs text-muted tabular-nums">
-                      {formatMyr(offering.perKmSen)} per extra km ·{" "}
-                      {formatMyr(offering.hourlyRateSen)}/h
+                      {formatMyr(offering.perKmSen)} per extra km
                     </span>
                   </Link>
                 </li>

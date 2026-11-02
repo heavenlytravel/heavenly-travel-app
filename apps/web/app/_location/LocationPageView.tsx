@@ -732,12 +732,14 @@ function LocationClassCard({
   return (
     <ClassCard vehicleClass={vehicleClass} pictured={pictured}>
       <p className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 pt-5 text-muted">
-        <span>
-          From{" "}
-          <strong className="text-xl font-bold text-brand">
-            {formatMyr(vehicleClass.fromSen)}
-          </strong>
-        </span>
+        {vehicleClass.fromSen !== null ? (
+          <span>
+            From{" "}
+            <strong className="text-xl font-bold text-brand">
+              {formatMyr(vehicleClass.fromSen)}
+            </strong>
+          </span>
+        ) : null}
         {href && <MoreLink href={href}>About the {vehicleClass.name}</MoreLink>}
       </p>
     </ClassCard>

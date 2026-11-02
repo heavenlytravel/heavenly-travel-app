@@ -161,22 +161,6 @@ describe("classFitNote", () => {
       "which needs 24 hours notice for trip 1",
     );
     assert.equal(
-      classFitNote(
-        {
-          ok: false,
-          reason: "unavailable",
-          trip: 1,
-          availability: {
-            ok: false,
-            reason: "too-few-hours",
-            minHourlyHours: 4,
-          },
-        },
-        name,
-      ),
-      "which needs at least 4 hours for trip 2",
-    );
-    assert.equal(
       classFitNote({ ok: false, reason: "not-offered", trip: 2 }, name),
       "which is not offered for trip 3",
     );

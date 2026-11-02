@@ -262,6 +262,8 @@ const ACTIONS = {
   "location.zone.deleted": { entityType: "location", customerVisible: false },
   /** The changed cells, each named by its zones and class, before and after. */
   "location.rates.updated": { entityType: "location", customerVisible: false },
+  /** The whole hourly list, before and after: areas, packages, prices, extra hour rates. */
+  "location.hourly.updated": { entityType: "location", customerVisible: false },
   /** The window and percentage, before and after; null for none. */
   "location.surcharge.updated": {
     entityType: "location",
@@ -1033,6 +1035,8 @@ export function describeActivity(entry: DescribableActivity): string {
         ? "Changed a rate on the grid"
         : `Changed ${count} rates on the grid`;
     }
+    case "location.hourly.updated":
+      return "Changed the hourly prices";
     case "location.surcharge.updated": {
       const window = oddHoursIn(entry.after);
       return window

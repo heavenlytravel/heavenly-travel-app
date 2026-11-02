@@ -26,9 +26,9 @@ import { locationsVisible, scopeOf } from "../../../../_lib/scope";
 import { TryTrip } from "./TryTrip";
 
 /**
- * Route: /[location]/rates/try. Rates' last page: prices a trip as a
- * customer would be charged, and shows how: each end's zone, the
- * distances, and every call to Google. Nothing is booked or saved. A trip
+ * Route: /[location]/rates/try. Rates' last page: prices a one-way trip
+ * or an hourly hire as a customer would be charged, and shows how: each
+ * end's zone, the distances, and every call to Google. Nothing is booked or saved. A trip
  * starts in one location, so under `~` the page lists the locations to
  * try one in. For every team that reads the rates (`coverage.view`), for
  * quoting a customer. See docs/261023-nearest-zone-pricing.md, "Try a

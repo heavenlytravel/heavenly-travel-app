@@ -4,7 +4,9 @@ import {
   chargedKmOf,
   extraKmOf,
   formatMyr,
+  hourlyChoiceLabel,
   lineBetweenKm,
+  packageLabel,
   payableExtraKmOf,
   type LngLat,
   type TraceStep,
@@ -18,8 +20,10 @@ import type { TryTripAnswer } from "./actions";
  * the calculation in lines, the steps one by one, and the map's layers
  * for each, every line and dot with what it measures for the map's hover.
  * A calculation line names the layers it is about, so picking it lights
- * them up. Pure, so the workspace only renders. See
- * docs/261023-nearest-zone-pricing.md, "Try a trip, on the Rates tab".
+ * them up. An hourly hire has only its pickup: its zone, or its nearest
+ * zone that sells hourly hire and the road to it, then the package. Pure,
+ * so the workspace only renders. See docs/261023-nearest-zone-pricing.md,
+ * "Try a trip, on the Rates tab", and docs/261102-booking-ops.md.
  */
 
 /** What a layer stands for, so a calculation line can light it up. */
@@ -159,10 +163,14 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
         const where = (zone: string | null) =>
           zone ? `inside ${zone}` : "outside every zone";
         steps.push({
-          title: "Which zone each end is in",
+          title: answer.dropoff
+            ? "Which zone each end is in"
+            : "Which zone the pickup is in",
           asked: null,
           answered: null,
-          workedOut: `${answer.pickup.label} is ${where(step.pickup.zone)}; ${answer.dropoff.label} is ${where(step.dropoff?.zone ?? null)}.`,
+          workedOut: answer.dropoff
+            ? `${answer.pickup.label} is ${where(step.pickup.zone)}; ${answer.dropoff.label} is ${where(step.dropoff?.zone ?? null)}.`
+            : `${answer.pickup.label} is ${where(step.pickup.zone)}.${step.pickup.zone ? "" : " An hourly hire is priced from its nearest zone that sells hourly hire."}`,
           layers: [],
         });
         break;
@@ -333,7 +341,9 @@ function priceLine(answer: Answered) {
     return `${answer.refused.message}${answer.refused.reason ? ` (${answer.refused.reason})` : ""}`;
   }
   const quote = answer.quote;
-  if (!quote?.price) return "Not on the grid for this class.";
+  if (!quote?.price) {
+    return `Not on the ${quote?.hire ? "hourly list" : "grid"} for this class.`;
+  }
   return quote.rows.map(([label, value]) => `${label} ${value}`).join("; ");
 }
 
@@ -383,6 +393,86 @@ function extraRoadDetail(answer: Answered): string {
   return `${parts.join(" + ")} = ${km(payable)}${capped}, rounded up to ${wholeKm(charged)} × ${rate}${amount}`;
 }
 
+/**
+ * The road to an hourly pickup's nearest zone worked through: its km, less
+ * the free km, rounded up to the whole km, at the class's rate per extra
+ * km. The same sums `hourlyRoadCharge` does, set out.
+ */
+function hourlyRoadDetail(answer: Answered): string {
+  const road = answer.quote?.price?.hourly?.road;
+  const free = answer.quote?.reach.freeExtraKm ?? 0;
+  if (!road) {
+    return "The pickup is in the zone: no extra road.";
+  }
+  if (road.chargedKm === 0) {
+    return `${km(road.extraKm)} to the zone's edge, within the ${wholeKm(free)} free: nothing is added.`;
+  }
+  const less = road.freeKm > 0 ? ` − ${wholeKm(road.freeKm)} free` : "";
+  return `${km(road.extraKm)}${less} = ${km(Math.max(0, road.extraKm - road.freeKm))}, rounded up to ${wholeKm(road.chargedKm)} × ${formatMyr(road.perKmSen)} = ${formatMyr(road.extraSen)}`;
+}
+
+/** The surcharges and the fare, the last lines of either calculation. */
+function closingLines(answer: Answered): CalcLine[] {
+  const lines: CalcLine[] = [];
+  const price = answer.quote?.price;
+  if (price?.surcharge) {
+    lines.push({
+      label: "Odd hours",
+      detail: `${price.surcharge.percent !== null ? `+${price.surcharge.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.surcharge.amountSen)}`,
+    });
+  }
+  if (price?.weekend) {
+    lines.push({
+      label: WEEKEND_REASON_LABELS[price.weekend.reason],
+      detail: `${price.weekend.percent !== null ? `+${price.weekend.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.weekend.amountSen)}`,
+    });
+  }
+  if (price) {
+    lines.push({
+      label: "Fare",
+      detail: formatMyr(price.totalSen),
+      total: true,
+    });
+  }
+  return lines;
+}
+
+/** An hourly hire's calculation: the pickup's zone or its nearest, the package, the extra hours, the road, the fare. */
+function hourlyCalculation(answer: Answered, pickupLine: string): CalcLine[] {
+  const lines: CalcLine[] = [
+    { label: "Pickup", detail: pickupLine, focus: ["extra-pickup"] },
+  ];
+  if (answer.refused) {
+    lines.push({
+      label: "Not priced",
+      detail: `${answer.refused.message}${answer.refused.reason ? ` Why: ${answer.refused.reason}.` : ""}`,
+    });
+    return lines;
+  }
+  const quote = answer.quote;
+  const hire = quote?.hire;
+  if (!quote || !hire) return lines;
+  const charge = quote.price?.hourly;
+  lines.push({
+    label: "Package",
+    detail: charge
+      ? `${packageLabel(hire.packageHours)} from ${hire.zone}, covers ${hire.includedHours} hours = ${formatMyr(charge.packageSen)}`
+      : `${hourlyChoiceLabel(hire)} from ${hire.zone}: not on the hourly list yet for this class`,
+  });
+  if (charge && charge.extraHours > 0) {
+    lines.push({
+      label: "Extra hours",
+      detail: `${charge.extraHours} × ${formatMyr(charge.extraHourSen)} = ${formatMyr(charge.extraSen)}`,
+    });
+  }
+  lines.push({
+    label: "Extra road",
+    detail: hourlyRoadDetail(answer),
+    focus: ["extra-pickup"],
+  });
+  return [...lines, ...closingLines(answer)];
+}
+
 /** The calculation, as the pricing demo set it out: each end's zone, the base price, the distances, what is added, the fare. */
 export function explainCalculation(answer: Answered): CalcLine[] {
   const lines: CalcLine[] = [];
@@ -415,8 +505,12 @@ export function explainCalculation(answer: Answered): CalcLine[] {
       straight && straight.name !== nearest.zone
         ? `; nearest in a straight line is ${straight.name}, ${km(straight.straightKm)}, but its road is longer`
         : "";
-    return `${label} is outside every zone; nearest by road is ${nearest.zone}, ${km(nearest.extraKm ?? 0)} to its edge${differs}`;
+    const which = answer.dropoff ? "" : " that sells hourly hire";
+    return `${label} is outside every zone; nearest${which} by road is ${nearest.zone}, ${km(nearest.extraKm ?? 0)} to its edge${differs}`;
   };
+  if (!answer.dropoff) {
+    return hourlyCalculation(answer, endLine("pickup", answer.pickup.label));
+  }
   lines.push({
     label: "Pickup",
     detail: endLine("pickup", answer.pickup.label),
@@ -434,7 +528,7 @@ export function explainCalculation(answer: Answered): CalcLine[] {
     });
     return lines;
   }
-  if (!quote) return lines;
+  if (!quote?.dropoff) return lines;
   const cell =
     quote.pickup.zone === quote.dropoff.zone
       ? `within ${quote.pickup.zone}`
@@ -469,35 +563,20 @@ export function explainCalculation(answer: Answered): CalcLine[] {
       focus: ["extra-pickup", "extra-dropoff"],
     });
   }
-  const price = quote.price;
-  if (price?.surcharge) {
-    lines.push({
-      label: "Odd hours",
-      detail: `${price.surcharge.percent !== null ? `+${price.surcharge.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.surcharge.amountSen)}`,
-    });
-  }
-  if (price?.weekend) {
-    lines.push({
-      label: WEEKEND_REASON_LABELS[price.weekend.reason],
-      detail: `${price.weekend.percent !== null ? `+${price.weekend.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.weekend.amountSen)}`,
-    });
-  }
-  if (price) {
-    lines.push({
-      label: "Fare",
-      detail: formatMyr(price.totalSen),
-      total: true,
-    });
-  }
-  return lines;
+  return [...lines, ...closingLines(answer)];
 }
 
 /** The answer as text to paste in a chat: the trip, the receipt and the fare. */
 export function breakdownText(answer: Answered, className: string): string {
-  const head = `${answer.pickup.label} to ${answer.dropoff.label}, ${className}`;
+  const hire = answer.quote?.hire;
+  const head = answer.dropoff
+    ? `${answer.pickup.label} to ${answer.dropoff.label}, ${className}`
+    : `${hire ? hourlyChoiceLabel(hire) : "Hourly"} from ${answer.pickup.label}, ${className}`;
   if (answer.refused) return `${head}\n${answer.refused.message}`;
   const quote = answer.quote;
-  if (!quote?.price) return `${head}\nNot on the grid for this class.`;
+  if (!quote?.price) {
+    return `${head}\nNot on the ${hire ? "hourly list" : "grid"} for this class.`;
+  }
   return [
     head,
     ...quote.rows.map(([label, value]) => `${label}: ${value}`),

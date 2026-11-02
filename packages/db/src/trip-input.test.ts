@@ -16,11 +16,11 @@ import {
 
 const oneway = "mode=oneway&pickup=p1&dropoff=p2&date=2026-10-03&time=09:30";
 const hourly =
-  "mode=hourly&pickup=p1&package=4&extra=3&date=2026-10-03&time=09:30";
+  "mode=hourly&pickup=p1&duration=4&extra=3&date=2026-10-03&time=09:30";
 
 describe("parseTripSearch", () => {
-  it("reads a one-way search and drops the package", () => {
-    assert.deepEqual(parseTripSearch(`${oneway}&package=4`), {
+  it("reads a one-way search and drops the duration", () => {
+    assert.deepEqual(parseTripSearch(`${oneway}&duration=4`), {
       mode: "oneway",
       pickupId: "p1",
       dropoffId: "p2",
@@ -47,7 +47,7 @@ describe("parseTripSearch", () => {
       null,
     );
     assert.equal(
-      parseTripSearch(hourly.replace("package=4", "package=5")),
+      parseTripSearch(hourly.replace("duration=4", "duration=5")),
       null,
     );
     assert.equal(parseTripSearch(hourly.replace("extra=3", "extra=13")), null);
@@ -61,7 +61,7 @@ describe("parseTripSearch", () => {
       packageHours: 4,
       extraHours: 0,
     });
-    assert.deepEqual(parseHourlyChoice("package=12&extra=12"), {
+    assert.deepEqual(parseHourlyChoice("duration=12&extra=12"), {
       packageHours: 12,
       extraHours: 12,
     });
@@ -71,7 +71,7 @@ describe("parseTripSearch", () => {
     const form = new FormData();
     form.set("mode", "hourly");
     form.set("pickup", "local:petaling");
-    form.set("package", "8");
+    form.set("duration", "8");
     form.set("date", "2026-10-03");
     form.set("time", "08:00");
     assert.deepEqual(parseTripSearch(form), {
@@ -89,7 +89,7 @@ describe("parseTripSearch", () => {
     assert.deepEqual(parseTripSearch(tripSearchParams(search)), search);
     assert.deepEqual(
       [...tripSearchParams(search).keys()],
-      ["mode", "pickup", "date", "time", "package", "extra"],
+      ["mode", "pickup", "date", "time", "duration", "extra"],
     );
   });
 });

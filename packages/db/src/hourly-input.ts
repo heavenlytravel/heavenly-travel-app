@@ -47,15 +47,15 @@ export type HourlyChoice = {
   extraHours: number;
 };
 
-/** "4-hour package" */
-export function packageLabel(hours: number) {
-  return `${hours}-hour package`;
+/** A duration as every screen names it: "4 hours". */
+export function durationLabel(hours: number) {
+  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
-/** The package choices a booking form offers: "4 hours", "8 hours", "12 hours". */
-export const PACKAGE_CHOICES = HOURLY_PACKAGES.map((hours) => ({
+/** The durations a booking form offers: "4 hours", "8 hours", "12 hours". */
+export const DURATION_CHOICES = HOURLY_PACKAGES.map((hours) => ({
   value: String(hours),
-  label: `${hours} hours`,
+  label: durationLabel(hours),
 }));
 
 /** The extra hour choices a booking form offers: "None", "1 hour", "2 hours"... */
@@ -64,11 +64,11 @@ export const EXTRA_HOUR_CHOICES = EXTRA_HOUR_OPTIONS.map((hours) => ({
   label: hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`,
 }));
 
-/** "4-hour package + 3 extra hours", as a trip names its hire. */
+/** "4 hours + 3 extra hours", as a trip names its hire. */
 export function hourlyChoiceLabel(choice: HourlyChoice) {
   const { packageHours, extraHours } = choice;
-  if (extraHours === 0) return packageLabel(packageHours);
-  return `${packageLabel(packageHours)} + ${extraHours} extra ${extraHours === 1 ? "hour" : "hours"}`;
+  if (extraHours === 0) return durationLabel(packageHours);
+  return `${durationLabel(packageHours)} + ${extraHours} extra ${extraHours === 1 ? "hour" : "hours"}`;
 }
 
 /**

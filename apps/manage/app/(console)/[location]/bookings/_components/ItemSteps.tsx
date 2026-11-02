@@ -5,7 +5,7 @@ import {
   EXTRA_HOUR_CHOICES,
   formatMyr,
   largestGroup,
-  PACKAGE_CHOICES,
+  DURATION_CHOICES,
   seatsLabel,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
@@ -216,11 +216,11 @@ function TripFields({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Package">
+            <Field label="Duration">
               <Select
                 value={trip.packageHours}
                 onValueChange={(packageHours) => changeTrip({ packageHours })}
-                options={PACKAGE_CHOICES}
+                options={DURATION_CHOICES}
               />
             </Field>
             <Field label="Extra hours">

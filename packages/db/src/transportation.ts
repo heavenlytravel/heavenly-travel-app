@@ -24,7 +24,7 @@ import {
   HOURLY_LIMITS,
   isExtraHours,
   isHourlyPackage,
-  packageLabel,
+  durationLabel,
   sellsHourly,
   zonePackageOf,
   type HourlyChoice,
@@ -348,7 +348,7 @@ async function quoteOne(
     !isHourlyPackage(choice.packageHours) ||
     !isExtraHours(choice.extraHours)
   ) {
-    return fail("hours", "Choose a package for the hourly hire.");
+    return fail("hours", "Choose how long you need the hourly hire.");
   }
 
   // The district is the record's: read alongside the locations.
@@ -404,8 +404,8 @@ async function quoteOne(
     if (!row) {
       return fail(
         "package-not-sold",
-        `The ${packageLabel(choice.packageHours)} is not offered from there. Choose another.`,
-        `${pickup.zone.name} sells no ${packageLabel(choice.packageHours)}`,
+        `${durationLabel(choice.packageHours)} is not offered from there. Choose another duration.`,
+        `${pickup.zone.name} has no ${durationLabel(choice.packageHours)} price`,
       );
     }
     if (row.includedHours + choice.extraHours > HOURLY_LIMITS.maxTripHours) {
@@ -437,7 +437,7 @@ async function quoteOne(
     return fail(
       "hourly-not-served",
       "We do not have a price for that hire yet. Message us on WhatsApp.",
-      `${pickup.zone.name} has no price for the ${packageLabel(choice.packageHours)}${choice.extraHours > 0 ? " with extra hours" : ""} in any class`,
+      `${pickup.zone.name} has no price for ${durationLabel(choice.packageHours)}${choice.extraHours > 0 ? " with extra hours" : ""} in any class`,
     );
   }
   const cellOf = (vehicleClassId: string) =>

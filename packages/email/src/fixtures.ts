@@ -48,7 +48,7 @@ const sedanPrice = withModelChoice(
   { percent: 10, flatSen: null },
 );
 
-/** The coach's receipt: the 8-hour package from Kuala Lumpur, any coach of the class. */
+/** The coach's receipt: 8 hours from Kuala Lumpur, any coach of the class. */
 const coachPrice = priceTrip({
   trip: { mode: "hourly", hours: 8 },
   rates: { perKmSen: 0 },

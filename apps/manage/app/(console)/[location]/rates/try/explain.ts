@@ -6,7 +6,7 @@ import {
   formatMyr,
   hourlyChoiceLabel,
   lineBetweenKm,
-  packageLabel,
+  durationLabel,
   payableExtraKmOf,
   type LngLat,
   type TraceStep,
@@ -454,9 +454,9 @@ function hourlyCalculation(answer: Answered, pickupLine: string): CalcLine[] {
   if (!quote || !hire) return lines;
   const charge = quote.price?.hourly;
   lines.push({
-    label: "Package",
+    label: "Duration",
     detail: charge
-      ? `${packageLabel(hire.packageHours)} from ${hire.zone}, covers ${hire.includedHours} hours = ${formatMyr(charge.packageSen)}`
+      ? `${durationLabel(hire.packageHours)} from ${hire.zone}, covers ${hire.includedHours} hours = ${formatMyr(charge.packageSen)}`
       : `${hourlyChoiceLabel(hire)} from ${hire.zone}: not on the hourly list yet for this class`,
   });
   if (charge && charge.extraHours > 0) {

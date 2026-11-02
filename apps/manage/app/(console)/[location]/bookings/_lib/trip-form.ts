@@ -98,7 +98,7 @@ export type TripQuoteView =
       startsAt: string;
       /** Hourly: the hours the hire runs, the package's from its area plus the extra; null for one-way. */
       hours: number | null;
-      /** Hourly: "4-hour package from Kuah Town + 3 extra hours"; null for one-way. */
+      /** Hourly: "4 hours + 3 extra hours from Kuah Town"; null for one-way. */
       hire: string | null;
       distanceKm: number | null;
       /** "Petaling, Selangor", for the record; null at sea. */
@@ -311,7 +311,7 @@ export function tripInput(trip: TripValues): Record<string, string> {
   return input;
 }
 
-/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · 4-hour package from Kuah Town · extra road 1 km · 55.2 km by road · odd hours +50% · weekend +20%" */
+/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · 4 hours from Kuah Town · extra road 1 km · 55.2 km by road · odd hours +50% · weekend +20%" */
 export function quoteSummary(quote: PricedTrip) {
   const parts = [`${quote.location} rates`];
   if (quote.district) parts.push(quote.district);

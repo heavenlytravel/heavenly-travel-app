@@ -1,7 +1,7 @@
 import {
   EXTRA_HOUR_CHOICES,
   HOURLY_PACKAGES,
-  PACKAGE_CHOICES,
+  DURATION_CHOICES,
   TRIP_CATEGORY_LABELS,
   TRIP_MODE_LABELS,
   TRIP_MODES,
@@ -30,7 +30,7 @@ export type FieldKey =
   | "time"
   | "endTime"
   | "days"
-  | "package"
+  | "duration"
   | "extra"
   | "people"
   | "children"
@@ -49,7 +49,7 @@ export type FieldDef = {
   min?: number;
   /** The values a choice offers. */
   options?: { value: string; label: string }[];
-  /** A field another field's value makes irrelevant: the package on a one-way trip. */
+  /** A field another field's value makes irrelevant: the duration on a one-way trip. */
   hidden?: (values: SearchValues) => boolean;
 };
 
@@ -96,10 +96,10 @@ const TRIP_FIELDS: FieldDef[] = [
   pickUp,
   { ...dropOff, hidden: (v) => v.mode === "hourly" },
   {
-    key: "package",
+    key: "duration",
     kind: "choice",
-    label: "Package",
-    options: PACKAGE_CHOICES,
+    label: "Duration",
+    options: DURATION_CHOICES,
     hidden: (v) => v.mode !== "hourly",
   },
   {
@@ -263,7 +263,7 @@ export const EMPTY_SEARCH: SearchValues = {
   time: "",
   endTime: "",
   days: "3",
-  package: String(HOURLY_PACKAGES[0]),
+  duration: String(HOURLY_PACKAGES[0]),
   extra: "0",
   people: "2",
   children: "0",

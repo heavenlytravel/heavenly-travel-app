@@ -4,7 +4,7 @@ import { refuse, type Change } from "./change";
 import { db } from "./client";
 import {
   isHourlyPackage,
-  packageLabel,
+  durationLabel,
   type HourlyList,
   type HourlyListInput,
   type HourlyPackageRow,
@@ -92,7 +92,7 @@ function summaryOf(
       .map((zone) => ({
         zone: zoneName(zone.zoneId),
         packages: zone.packages.map((row) => ({
-          package: packageLabel(row.hours),
+          duration: durationLabel(row.hours),
           includedHours: row.includedHours,
           prices: Object.fromEntries(
             Object.entries(row.prices)
@@ -105,13 +105,14 @@ function summaryOf(
       .sort((a, b) => a.zone.localeCompare(b.zone)),
     extras: list.extras
       .map((extra) => ({
-        package: packageLabel(extra.packageHours),
+        duration: durationLabel(extra.packageHours),
         class: className(extra.vehicleClassId),
         priceSen: extra.priceSen,
       }))
       .sort(
         (a, b) =>
-          a.package.localeCompare(b.package) || a.class.localeCompare(b.class),
+          a.duration.localeCompare(b.duration) ||
+          a.class.localeCompare(b.class),
       ),
   };
 }

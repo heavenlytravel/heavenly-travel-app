@@ -141,7 +141,7 @@ export async function tryTripAction(
     return { ok: false, error: "Pick the drop-off." };
   }
   if (mode === "hourly" && !isHourlyChoice(given.hourly)) {
-    return { ok: false, error: "Pick the package and the extra hours." };
+    return { ok: false, error: "Pick the duration and the extra hours." };
   }
   const startsAt = pickupInstant(given.date, given.time);
   if (!startsAt) {

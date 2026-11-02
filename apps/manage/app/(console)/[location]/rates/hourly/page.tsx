@@ -21,7 +21,7 @@ import { RatesByLocation } from "../_components/RatesByLocation";
 import { visiblePriceLists } from "../_components/price-lists";
 
 const HOURLY_TIP =
-  "A row for each zone drawn on Coverage and each package. A pickup pays its zone's package in the class, plus the extra hours at the rate for that package size.";
+  "A row for each zone drawn on Coverage and each duration. A pickup pays its zone's price for the duration in the class, plus the extra hours at the rate after that duration.";
 
 const NO_HOURLY = { zones: [], extras: [] };
 
@@ -84,7 +84,7 @@ async function locationHourly({
     <Card flush>
       <CardTitle inset meta="RM for the whole vehicle">
         <span className="inline-flex items-center gap-1.5">
-          Pickup zones and packages
+          Pickup zones and durations
           <InfoTip text={HOURLY_TIP} />
         </span>
       </CardTitle>
@@ -111,7 +111,7 @@ async function everyLocationHourly({ manages }: { manages: boolean }) {
       {(list) => (
         <Card flush>
           <CardTitle inset meta="RM for the whole vehicle">
-            Pickup zones and packages
+            Pickup zones and durations
           </CardTitle>
           <HourlyRates
             locationId={list.id}

@@ -166,11 +166,11 @@ describe("hourlyChoiceLabel", () => {
   it("names the package and the extra hours", () => {
     assert.equal(
       hourlyChoiceLabel({ packageHours: 8, extraHours: 0 }),
-      "8-hour package",
+      "8 hours",
     );
     assert.equal(
       hourlyChoiceLabel({ packageHours: 4, extraHours: 1 }),
-      "4-hour package + 1 extra hour",
+      "4 hours + 1 extra hour",
     );
   });
 });

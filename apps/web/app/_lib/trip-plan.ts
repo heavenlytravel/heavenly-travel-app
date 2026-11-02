@@ -174,7 +174,7 @@ export function draftOf(trip: PlannedTrip): SearchValues {
     to: trip.dropoff?.label ?? "",
     date: trip.date,
     time: trip.time,
-    package: String(trip.hourly?.packageHours ?? EMPTY_SEARCH.package),
+    duration: String(trip.hourly?.packageHours ?? EMPTY_SEARCH.duration),
     extra: String(trip.hourly?.extraHours ?? EMPTY_SEARCH.extra),
     placeIds: {
       from: trip.pickup.placeId,
@@ -257,7 +257,7 @@ export function spanOf(trips: readonly PlannedTrip[]) {
     : `${shortDayOf(first)} to ${shortDayOf(last)}`;
 }
 
-/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", or "8-hour package from Pelangi Beach Resort". */
+/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", or "8 hours from Pelangi Beach Resort". */
 export function routeOf(trip: PlannedTrip) {
   // A trip from a link has its places named once it is priced.
   const name = (place: PlanPlace | null) => place?.label || "…";

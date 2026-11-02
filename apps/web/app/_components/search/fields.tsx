@@ -175,7 +175,7 @@ const FIELD_ICONS: Record<FieldKey, typeof MapPinIcon> = {
   time: ClockIcon,
   endTime: ClockIcon,
   days: CalendarIcon,
-  package: ClockIcon,
+  duration: ClockIcon,
   extra: ClockIcon,
   people: UsersIcon,
   children: UsersIcon,

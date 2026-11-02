@@ -7,7 +7,7 @@ import { CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
 import { quoteTripView } from "./trip-server";
 
 const INCOMPLETE_TRIP =
-  "Fill in the trip first: pick-up, drop-off or package, date and time.";
+  "Fill in the trip first: pick-up, drop-off or duration, date and time.";
 
 /**
  * The item editor's prices, asked for once the trip is filled in: every

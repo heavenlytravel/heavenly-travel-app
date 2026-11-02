@@ -95,7 +95,7 @@ export function usePlanner({
             hourly: null,
             hours: hourly
               ? namedHours({
-                  packageHours: Number(form.values.package),
+                  packageHours: Number(form.values.duration),
                   extraHours: Number(form.values.extra || "0"),
                 }) || null
               : null,

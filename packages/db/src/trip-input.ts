@@ -66,7 +66,7 @@ export const TRIP_PARAM = {
   dropoff: "dropoff",
   date: "date",
   time: "time",
-  packageHours: "package",
+  packageHours: "duration",
   extraHours: "extra",
   passengers: "passengers",
   vehicleClass: "class",

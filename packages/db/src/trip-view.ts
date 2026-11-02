@@ -8,7 +8,7 @@ import {
 import {
   hourlyChoiceLabel,
   hourlyReceiptOf,
-  packageLabel,
+  durationLabel,
   type HourlyChoice,
 } from "./hourly-input";
 import { formatMyr } from "./money";
@@ -214,7 +214,9 @@ export function priceRows(
   } else if (price.hourly) {
     const { hourly } = price;
     rows.push([
-      `${packageLabel(hourly.packageHours)} from ${hourly.zone}, ${hourly.includedHours} hours`,
+      hourly.includedHours === hourly.packageHours
+        ? `${durationLabel(hourly.packageHours)} from ${hourly.zone}`
+        : `${durationLabel(hourly.packageHours)} from ${hourly.zone}, covers ${durationLabel(hourly.includedHours)}`,
       formatMyr(hourly.packageSen),
     ]);
     if (hourly.extraHours > 0) {

@@ -3,7 +3,7 @@
 import {
   EXTRA_HOUR_CHOICES,
   HOURLY_PACKAGES,
-  PACKAGE_CHOICES,
+  DURATION_CHOICES,
   TRIP_MODE_LABELS,
   TRIP_MODES,
   formatMyr,
@@ -421,15 +421,15 @@ function Workspace({
             {hourly ? (
               <>
                 <div className="grid min-w-0 gap-1.5 sm:w-32">
-                  <span className={LABEL}>Package</span>
+                  <span className={LABEL}>Duration</span>
                   <Select
-                    aria-label="Package"
+                    aria-label="Duration"
                     value={String(packageHours)}
                     onValueChange={(next) => {
                       const size = Number(next);
                       if (isHourlyPackage(size)) change({ packageHours: size });
                     }}
-                    options={PACKAGE_CHOICES}
+                    options={DURATION_CHOICES}
                   />
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:w-32">
@@ -702,7 +702,7 @@ function Workspace({
               <div className="grid gap-2 text-sm text-muted">
                 <p className="font-semibold text-ink">
                   {hourly
-                    ? "Pick a pick-up and a package."
+                    ? "Pick a pick-up and a duration."
                     : "Pick a pick-up and a drop-off."}
                 </p>
                 <p>

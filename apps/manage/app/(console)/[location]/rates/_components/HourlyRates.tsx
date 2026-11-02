@@ -3,7 +3,7 @@
 import {
   HOURLY_LIMITS,
   HOURLY_PACKAGES,
-  packageLabel,
+  durationLabel,
   plural,
   ringgitInputValue,
   type HourlyList,
@@ -216,7 +216,7 @@ export function HourlyRates({
   else if (invalid.size > 0) {
     status = {
       tone: "error",
-      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not right: a price is RM with at most two decimals, and a package covers ${HOURLY_LIMITS.includedHours.min} to ${HOURLY_LIMITS.includedHours.max} whole hours.`,
+      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not right: a price is RM with at most two decimals, and a duration covers ${HOURLY_LIMITS.includedHours.min} to ${HOURLY_LIMITS.includedHours.max} whole hours.`,
     };
   } else if (dirty) {
     status = { tone: "dirty", text: `${plural(changes, "unsaved change")}.` };
@@ -308,12 +308,12 @@ export function HourlyRates({
       Pickup from
     </th>,
     <th
-      key="package"
+      key="duration"
       scope="col"
       rowSpan={span}
       className={cx(LEAD_HEADING, "px-3 text-left")}
     >
-      Package
+      Duration
     </th>,
     <th
       key="covers"
@@ -405,7 +405,7 @@ export function HourlyRates({
                         line,
                       )}
                     >
-                      {packageLabel(size)}
+                      {durationLabel(size)}
                     </th>
                     <td className={cx(CELL_PAD, "w-24", line)}>
                       {readOnly ? (
@@ -414,7 +414,7 @@ export function HourlyRates({
                         </span>
                       ) : (
                         <input
-                          aria-label={`Hours the ${packageLabel(size)} covers from ${zone.name}`}
+                          aria-label={`Hours ${durationLabel(size)} covers from ${zone.name}`}
                           aria-invalid={invalid.has(key) || undefined}
                           inputMode="numeric"
                           autoComplete="off"
@@ -441,7 +441,7 @@ export function HourlyRates({
                       priceCell(
                         "prices",
                         priceKey(zone.id, size, column.id),
-                        `From ${zone.name}, ${packageLabel(size)}, ${column.name}`,
+                        `From ${zone.name}, ${durationLabel(size)}, ${column.name}`,
                         line,
                       ),
                     )}
@@ -474,13 +474,13 @@ export function HourlyRates({
                       line,
                     )}
                   >
-                    After the {packageLabel(size)}
+                    After {durationLabel(size)}
                   </th>
                   {classes.map((column) =>
                     priceCell(
                       "extras",
                       extraKey(size, column.id),
-                      `Extra hour after the ${packageLabel(size)}, ${column.name}`,
+                      `Extra hour after ${durationLabel(size)}, ${column.name}`,
                       line,
                     ),
                   )}
@@ -494,7 +494,7 @@ export function HourlyRates({
       <div className="grid gap-2 px-5 py-4 text-xs text-muted">
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <CellKey swatch={cx("border-edge", EMPTY_CELL)}>
-            Empty: the class is not sold for the package from the zone
+            Empty: the class is not sold for the duration from the zone
           </CellKey>
           {readOnly ? null : (
             <CellKey swatch="border-brand bg-brand-tint">
@@ -506,8 +506,8 @@ export function HourlyRates({
           A pickup in a zone pays its row. One outside every zone pays the row
           of its nearest zone with a price, plus its road to that zone past the
           free km on Trip rules, at the class&apos;s rate per extra km.
-          &quot;Covers&quot; is how long the package runs from the zone, the
-          port cruise&apos;s 4-hour package 5, say; the extra hours count from
+          &quot;Covers&quot; is how long the duration runs from the zone: 4
+          hours from the port cruise covers 5, say; the extra hours count from
           there.
         </p>
       </div>

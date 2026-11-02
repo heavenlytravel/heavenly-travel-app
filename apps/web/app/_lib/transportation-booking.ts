@@ -76,10 +76,10 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
   if (!values.time) {
     issues.push({ field: "time", message: "Choose a pick-up time." });
   }
-  const packageHours = Number(values.package);
+  const packageHours = Number(values.duration);
   const extraHours = Number(values.extra || "0");
   if (mode === "hourly" && !isHourlyPackage(packageHours)) {
-    issues.push({ field: "package", message: "Choose a package." });
+    issues.push({ field: "duration", message: "Choose a duration." });
   }
   if (mode === "hourly" && !isExtraHours(extraHours)) {
     issues.push({ field: "extra", message: "Choose the extra hours." });

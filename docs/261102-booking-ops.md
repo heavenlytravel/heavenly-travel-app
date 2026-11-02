@@ -27,49 +27,47 @@ too; its prices are not on the sheet.
 ### Decisions
 
 - **Packages are 4, 8 and 12 hours.** A fixed list in code, not a table.
-- **An hourly area is a named group of a location's zones** ("Kuah Town / Beach / Pantai
-  Kok" is three zones). A zone is in at most one area.
-- **A price per area, package and class.** An empty cell means the package is not sold
+- **A row per zone, "Pickup from" it,** as the sheet's "From …" rows; no named groups of
+  zones (user, 2026-11-02). Six zones are six rows to fill.
+- **A price per zone, package and class.** An empty cell means the package is not sold
   there, so 12 hours stays off until it has prices.
-- **Hours used** ("max hour usage") is per area and package: the hours the package
-  covers. It defaults to the package's hours; the port cruise's 4-hour package covers 5.
-  It sets the trip's end (`endsAt`), so the clash checks and the driver's day know it.
-  It is not a cap: from the port cruise a customer may book the 4-hour package (5 hours),
-  4 + 2 extra (7 hours) or the 8-hour package. Extra hours count from 5 there.
-- **An additional hour rate per package and class,** the same for every area of the
-  location (Sedan RM35 in the 4-hour package, RM30 in the 8-hour one).
-- **The customer picks a package and any additional hours.** 7 hours is 4 + 3 or 8: their
-  choice (user, 2026-11-02). The trip's hours are the package's hours used plus the
-  additional hours.
+- **Hours used** ("Covers") is per zone and package: the hours the package covers. It
+  defaults to the package's hours; the port cruise's 4-hour package covers 5. It sets
+  the trip's end (`endsAt`), so the clash checks and the driver's day know it. It is not
+  a cap: from the port cruise a customer may book the 4-hour package (5 hours), 4 + 2
+  extra (7 hours) or the 8-hour package. Extra hours count from 5 there.
+- **An extra hour rate per package and class,** the same from every zone of the location
+  (Sedan RM35 after the 4-hour package, RM30 after the 8-hour one).
+- **The customer picks a package and any extra hours.** 7 hours is 4 + 3 or 8: their
+  choice (user, 2026-11-02).
 - **The odd-hours and weekend surcharges still apply** to hourly, as today. To confirm.
-- **The receipt keeps** the area, the package, its hours used and price, the additional
-  hours and their rate. Receipts written before it still read.
+- **A pickup outside every zone** is priced from its nearest zone by road that sells
+  hourly, within the location's furthest extra road, plus that road past the free km,
+  rounded up to the whole km at the class's rate per extra km: the one-way rule for an
+  end (user, 2026-11-02). Within the free km nothing is added.
+- **The receipt keeps** the zone, the package, its hours covered and price, the extra
+  hours and their rate, and the road charged. Receipts written before it still read.
 - **The old hourly rate and the minimum hire go** (`hourlyRateSen`, `minHourlyHours`, the
   3-hour floor). "From RM…" is the cheaper of the grid's cheapest cell and the cheapest
   package.
-- **A pickup outside every zone** is priced from its nearest zone's area, within the
-  location's furthest extra road, with no km charge (H5).
 - **A trip runs at most 24 hours**, the package's hours plus at most 12 extra (H4).
-- **Screens:** Rates > Hourly Rates, laid out like the sheet: each area with its zones,
-  its 4, 8 and 12-hour rows with the hours each covers and a price per class, then the
-  extra hour rows. Saved whole. The website's search card and planner, and `manage.`'s
-  booking and amend forms, ask for the package and the extra hours (`package` and
-  `extra` in the address, in place of `hours`). A trip booked before packages amends as
+- **Screens:** Rates > Hourly Rates in the rate grid's look: "Pickup from", Package,
+  Covers, a price per class; then the extra hour rows; a zone filter; saved whole. Try a
+  trip prices hourly too, with the same steps explained. The website's search card and
+  planner, and `manage.`'s booking and amend forms, ask for the package and the extra
+  hours (`package` and `extra` in the address). A trip booked before packages amends as
   the biggest package it fills plus the rest as extra hours.
 - **Clashes between a booking's trips** are checked again after pricing, with the hours
-  each package covers from its area; while typing, by the package's name (4 + 3 = 7).
-- **Not in this PR:** Try a trip prices one-way trips only, as before. Hourly can be tried
-  from `manage.`'s new booking form, which shows the price without saving.
+  each package covers from its zone; while typing, by the package's name (4 + 3 = 7).
+- **The word "Package"** may change; the user asked for other names (P1).
 
 ### Schema (as built; the user runs `db:push`)
 
-- `HourlyArea`: location, name, order; `Zone.hourlyAreaId` (nullable, set null when the
-  area goes).
-- `HourlyPackage`: area, package size (4, 8 or 12), hours it covers.
+- `HourlyPackage`: zone, package size (4, 8 or 12), hours it covers.
 - `HourlyRate`: package, class, price.
 - `HourlyExtraRate`: location, package size, class, price per extra hour.
-- No column on the trip: the receipt (`priceBreakdown.hourly`) keeps the area, package,
-  hours covered and extra hours, and `TripItemDetails.hours` stays the trip's total.
+- No column on the trip: the receipt (`priceBreakdown.hourly`) keeps it all, and
+  `TripItemDetails.hours` stays the trip's total.
 - `LocationVehicleClass.hourlyRateSen` gets a default of 0 and nothing reads it, nor
   `minHourlyHours`. Both are dropped in a follow-up, once no deployed code reads them.
 
@@ -148,20 +146,21 @@ Proposal, agreed in principle by the user:
 
 ## To confirm
 
-| #   | Question                                                                                                     | Who            | Holds up    |
-| --- | ------------------------------------------------------------------------------------------------------------ | -------------- | ----------- |
-| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                                        | Ops            | Nothing     |
-| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                                 | Ops            | Nothing     |
-| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                                      | Ops            | Selling 12h |
-| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours                              | Ops            | Nothing     |
-| H5  | A pickup outside every zone: priced as its nearest zone's area (within `maxExtraKm`), no km charge? Built so | Ops            | Nothing     |
-| T1  | Driver tip: compulsory or optional for the customer?                                                         | Ops            | Item 3      |
-| T2  | Tip on one-way coach trips too, or hourly only?                                                              | Ops            | Item 3      |
-| T3  | Tip paid through us, or cash to the driver (then only a note)?                                               | Ops, Finance   | Item 3      |
-| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                                          | Ops            | Item 4      |
-| G2  | Guides on hourly trips only?                                                                                 | Ops            | Item 4      |
-| G3  | Does the customer pick a language?                                                                           | Ops            | Item 4      |
-| G4  | Driver-guides: one person as driver and guide on one trip?                                                   | Ops            | Item 4      |
-| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers                  | Ops            | Item 4      |
-| N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?                     | Sales, Finance | Item 5      |
-| N2  | The last numbers issued, and the day the old system stops issuing them                                       | Sales, Finance | Item 5      |
+| #   | Question                                                                                                 | Who            | Holds up    |
+| --- | -------------------------------------------------------------------------------------------------------- | -------------- | ----------- |
+| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                                    | Ops            | Nothing     |
+| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                             | Ops            | Nothing     |
+| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                                  | Ops            | Selling 12h |
+| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours                          | Ops            | Nothing     |
+| P1  | Another word for "Package" (4-hour package)? Built as "Package" until chosen                             | User           | Nothing     |
+| A1  | The Assign layout (one table, two panes or steps) and its address (under the booking, its own, or Board) | User           | Assign      |
+| T1  | Driver tip: compulsory or optional for the customer?                                                     | Ops            | Item 3      |
+| T2  | Tip on one-way coach trips too, or hourly only?                                                          | Ops            | Item 3      |
+| T3  | Tip paid through us, or cash to the driver (then only a note)?                                           | Ops, Finance   | Item 3      |
+| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                                      | Ops            | Item 4      |
+| G2  | Guides on hourly trips only?                                                                             | Ops            | Item 4      |
+| G3  | Does the customer pick a language?                                                                       | Ops            | Item 4      |
+| G4  | Driver-guides: one person as driver and guide on one trip?                                               | Ops            | Item 4      |
+| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers              | Ops            | Item 4      |
+| N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?                 | Sales, Finance | Item 5      |
+| N2  | The last numbers issued, and the day the old system stops issuing them                                   | Sales, Finance | Item 5      |

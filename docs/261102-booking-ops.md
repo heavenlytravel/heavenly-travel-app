@@ -26,7 +26,8 @@ too; its prices are not on the sheet.
 
 ### Decisions
 
-- **Packages are 4, 8 and 12 hours.** A fixed list in code, not a table.
+- **Durations are 4, 8 and 12 hours** ("Duration" on every screen, each "4 hours"; the
+  code calls them packages). A fixed list in code, not a table.
 - **A row per zone, "Pickup from" it,** as the sheet's "From …" rows; no named groups of
   zones (user, 2026-11-02). Six zones are six rows to fill.
 - **A price per zone, package and class.** An empty cell means the package is not sold
@@ -51,15 +52,15 @@ too; its prices are not on the sheet.
   3-hour floor). "From RM…" is the cheaper of the grid's cheapest cell and the cheapest
   package.
 - **A trip runs at most 24 hours**, the package's hours plus at most 12 extra (H4).
-- **Screens:** Rates > Hourly Rates in the rate grid's look: "Pickup from", Package,
+- **Screens:** Rates > Hourly Rates in the rate grid's look: "Pickup from", Duration,
   Covers, a price per class; then the extra hour rows; a zone filter; saved whole. Try a
   trip prices hourly too, with the same steps explained. The website's search card and
   planner, and `manage.`'s booking and amend forms, ask for the package and the extra
-  hours (`package` and `extra` in the address). A trip booked before packages amends as
+  hours (`duration` and `extra` in the address). A trip booked before packages amends as
   the biggest package it fills plus the rest as extra hours.
 - **Clashes between a booking's trips** are checked again after pricing, with the hours
   each package covers from its zone; while typing, by the package's name (4 + 3 = 7).
-- **The word "Package"** may change; the user asked for other names (P1).
+- **"Duration", not "Package"** (user, 2026-11-02).
 
 ### Schema (as built; the user runs `db:push`)
 
@@ -157,7 +158,6 @@ Proposal, agreed in principle by the user:
 | H2  | "Exclude parking": a line on every hourly quote, or nothing?                                | Ops            | Nothing     |
 | H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                     | Ops            | Selling 12h |
 | H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours             | Ops            | Nothing     |
-| P1  | Another word for "Package" (4-hour package)? Built as "Package" until chosen                | User           | Nothing     |
 | A1  | (Settled 2026-11-02: per trip, Assign page in place of Board, no dragging)                  | User           | Nothing     |
 | T1  | Driver tip: compulsory or optional for the customer?                                        | Ops            | Item 3      |
 | T2  | Tip on one-way coach trips too, or hourly only?                                             | Ops            | Item 3      |

@@ -133,6 +133,11 @@ export function newBookingHref(scope: ScopeSlug) {
   return consolePath(scope, "bookings", "new");
 }
 
+/** Where Operation assigns a booking's trips: who drives each and in what. */
+export function assignHref(scope: ScopeSlug, bookingId: string) {
+  return `${bookingHref(scope, bookingId)}/assign`;
+}
+
 /** The form that amends one item of a booking: its trip, vehicle and details. */
 export function amendItemHref(
   scope: ScopeSlug,

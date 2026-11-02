@@ -10,6 +10,7 @@ import {
   modelName,
   PART_ROLE_LABELS,
   ringgitInputValue,
+  rolesToAsk,
   type PartRole,
 } from "@repo/db";
 import type { Candidate, FulfilmentTrip, TripPartView } from "@repo/db/server";
@@ -18,11 +19,11 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
+import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AssignButton } from "./AssignPanel";
 import {
   answerPartsAction,
   loadAssignChoices,
@@ -97,29 +98,26 @@ const tripsName = (positions: readonly number[]) =>
 /**
  * "Who does it" on a booking: each trip assigned or not, and each vehicle
  * and driver asked for, with its vendor, whom it names, what we owe and
- * whose answer it waits for. For Operation, the way to assign, to record
+ * whose answer it waits for. For Operation, the link to the Assign page, to record
  * an answer given by phone, to name what a vendor chose and to release a
  * part; every other team reads it. See
  * docs/261028-fulfilment-vendors-and-connect.md.
  */
 export function WhoDoesIt({
   bookingId,
+  assignHref,
   trips,
   canFulfil,
 }: {
   bookingId: string;
+  /** The booking's Assign page, in the scope it was opened in. */
+  assignHref: string;
   trips: FulfilmentTrip[];
   canFulfil: boolean;
 }) {
   const live = trips.filter((t) => isLive(t) && t.status !== "completed");
   const groups = groupsOf(live);
-  const toAsk = live.filter(
-    (t) =>
-      (t.status === "confirmed" || t.status === "assigned") &&
-      (["vehicle", "driver"] as const).some(
-        (role) => !t.parts.some((p) => p.role === role),
-      ),
-  );
+  const toAsk = live.filter((t) => rolesToAsk(t).length > 0);
   const owed = trips.filter(
     (t) =>
       t.status === "cancelled" &&
@@ -133,7 +131,9 @@ export function WhoDoesIt({
       <CardTitle
         action={
           canFulfil && toAsk.length > 0 ? (
-            <AssignButton bookingId={bookingId} trips={toAsk} />
+            <Button size="sm" asChild>
+              <Link href={assignHref}>Assign</Link>
+            </Button>
           ) : null
         }
       >

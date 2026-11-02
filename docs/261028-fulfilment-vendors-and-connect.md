@@ -166,10 +166,14 @@ by email (see "Accounts").
 
 Assigning is Operation's work (`bookings.fulfil`).
 
-- **One vehicle and one driver for the whole booking.** That is how Operation works, and
-  a booking is one vehicle since PR #56. It is saved against each trip, so a change on one
-  day works without a redesign. The screen assigns the booking; changing one trip is the
-  exception.
+- **One vehicle and one driver for the whole booking, or different ones per trip.** One
+  for all is how Operation works, and a booking is one vehicle since PR #56. It is saved
+  against each trip. Assigning has its own page, `bookings/[id]/assign` (2026-11-02,
+  docs/261102-booking-ops.md): a card per role with **"Same for every trip"**, on by
+  default; untick it and each trip gets its own picker and amount. The picker greys a
+  vehicle or driver per trip, so one busy on trip 3 is greyed there only; for every trip
+  at once it is greyed with the trip that refuses it. The trips with the same choice make
+  one ask, and offers stay one per vendor, a part per trip.
 - **Any vehicle with any driver:**
 
 | Driver     | Vehicle    | Vehicle accepted by | Driver accepted by        | Cost to us     |

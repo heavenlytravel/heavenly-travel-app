@@ -5,6 +5,8 @@ import {
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
+  fitAcross,
+  rolesToAsk,
   jobsClash,
   owesAfterCancel,
   timingWarnings,
@@ -196,5 +198,59 @@ describe("owesAfterCancel", () => {
   it("owes nothing before the free-cancellation deadline, and the cost after", () => {
     assert.equal(owesAfterCancel(trip, at("2026-11-01T23:00:00Z")), false);
     assert.equal(owesAfterCancel(trip, at("2026-11-02T00:00:00Z")), true);
+  });
+});
+
+describe("rolesToAsk", () => {
+  it("asks nothing of a trip not yet confirmed", () => {
+    assert.deepEqual(rolesToAsk({ status: "received", parts: [] }), []);
+  });
+
+  it("asks each role the trip has no part for", () => {
+    assert.deepEqual(rolesToAsk({ status: "confirmed", parts: [] }), [
+      "vehicle",
+      "driver",
+    ]);
+    assert.deepEqual(
+      rolesToAsk({ status: "confirmed", parts: [{ role: "vehicle" }] }),
+      ["driver"],
+    );
+    assert.deepEqual(
+      rolesToAsk({
+        status: "assigned",
+        parts: [{ role: "vehicle" }, { role: "driver" }],
+      }),
+      [],
+    );
+  });
+});
+
+describe("fitAcross", () => {
+  const trips = [
+    { id: "a", position: 1 },
+    { id: "b", position: 3 },
+  ];
+
+  it("names the trip that refuses it when it takes several", () => {
+    const fit = fitAcross(
+      {
+        a: { reasons: [], warnings: ["Tight"] },
+        b: { reasons: ["Has HT-X at the same time"], warnings: [] },
+      },
+      trips,
+    );
+    assert.deepEqual(fit, {
+      reasons: ["Trip 3: Has HT-X at the same time"],
+      warnings: ["Trip 1: Tight"],
+    });
+  });
+
+  it("keeps a single trip's lines as they are", () => {
+    assert.deepEqual(
+      fitAcross({ b: { reasons: ["Road tax expired"], warnings: [] } }, [
+        trips[1]!,
+      ]),
+      { reasons: ["Road tax expired"], warnings: [] },
+    );
   });
 });

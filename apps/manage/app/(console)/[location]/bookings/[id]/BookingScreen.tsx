@@ -54,6 +54,7 @@ import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
   amendItemHref,
+  assignHref,
   bookingHref,
   recordHistoryHref,
   type ScopeSlug,
@@ -186,6 +187,7 @@ export async function bookingScreen({
           <>
             <WhoDoesIt
               bookingId={booking.id}
+              assignHref={assignHref(scope.slug, booking.id)}
               trips={fulfilment}
               canFulfil={canFulfil}
             />

@@ -1,18 +1,21 @@
 import type { Parsed } from "./fields";
 import { textOf } from "./fields";
-import { formatMyr, parseRinggit } from "./money";
+import { parseRinggit } from "./money";
+import { wholeKmUp } from "./zone-trip";
 
 /**
- * Hourly hire priced like the zone grid, by where the pickup is: a
- * location groups its zones into hourly areas, each area sells packages of
- * 4, 8 or 12 hours at a price per class, a package covers its own hours
- * there (the sheet's "max hour usage", 5 for Langkawi's port cruise 4-hour
- * package), and each hour past it costs the location's rate for that
- * package size and class. The customer picks a package and any extra
- * hours; 7 hours is 4 + 3 or 8, their choice. Pure and browser-safe: the
- * Hourly tab and the booking forms check with it, the writer in
- * ./hourly-rates and the quote apply the same. See
- * docs/261102-booking-ops.md, "Hourly rate grid".
+ * Hourly hire priced like the zone grid, by the zone the pickup is in:
+ * each zone sells packages of 4, 8 or 12 hours at a price per class, a
+ * package covers its own hours from there (the sheet's "max hour usage", 5
+ * for Langkawi's port cruise 4-hour package), and each hour past it costs
+ * the location's rate for that package size and class. A pickup outside
+ * every zone is priced from its nearest zone by road, plus that road past
+ * the location's free km at the class's rate per extra km, as a one-way
+ * trip's end is. The customer picks a package and any extra hours; 7
+ * hours is 4 + 3 or 8, their choice. Pure and browser-safe: Hourly Rates
+ * and the booking forms check with it, the writer in ./hourly-rates and
+ * the quote apply the same. See docs/261102-booking-ops.md, "Hourly rate
+ * grid".
  */
 
 /** The package sizes, in hours, smallest first. */
@@ -28,9 +31,8 @@ export const HOURLY_LIMITS = {
   maxExtraHours: 12,
   /** The longest an hourly trip may run, the hours a package covers plus the extra. */
   maxTripHours: 24,
-  /** The hours a package may cover from an area. */
+  /** The hours a package may cover from a zone. */
   includedHours: { min: 1, max: 24 },
-  areaNameLength: 80,
 } as const;
 
 /** The extra hours a booking form offers: none, then one at a time. */
@@ -70,8 +72,8 @@ export function hourlyChoiceLabel(choice: HourlyChoice) {
 }
 
 /**
- * The hours a choice runs by its package's name, before the pickup's area
- * is known: a 4-hour package and 3 extra is 7. An area may cover more (the
+ * The hours a choice runs by its package's name, before the pickup's zone
+ * is known: a 4-hour package and 3 extra is 7. A zone may cover more (the
  * port cruise's 4-hour package covers 5), so a check made before the quote
  * is made again with the quoted hours.
  */
@@ -114,22 +116,22 @@ export function hourlyChoiceOfHours(hours: number): HourlyChoice {
 // The price list, as quoting reads it.
 // ---------------------------------------------------------------------------
 
-/** One package an area sells: the hours it covers there, and its price per class id. */
+/** One package a zone sells: the hours it covers from there, and its price per class id. */
 export type HourlyPackageRow = {
   hours: HourlyPackageHours;
   includedHours: number;
   prices: Record<string, number>;
 };
 
-export type HourlyAreaRow = {
-  name: string;
-  zoneIds: readonly string[];
+/** A zone's packages; a zone with none is not sold hourly. */
+export type HourlyZoneRow = {
+  zoneId: string;
   packages: readonly HourlyPackageRow[];
 };
 
-/** A location's hourly price list: its areas, and the extra hour rates by package size and class id. */
+/** A location's hourly price list: its zones' packages, and the extra hour rates by package size and class id. */
 export type HourlyList = {
-  areas: readonly HourlyAreaRow[];
+  zones: readonly HourlyZoneRow[];
   extras: readonly {
     packageHours: HourlyPackageHours;
     vehicleClassId: string;
@@ -137,20 +139,27 @@ export type HourlyList = {
   }[];
 };
 
-/** The area a zone is in; null when hourly hire from it has no price. */
-export function hourlyAreaOf(list: HourlyList, zoneId: string) {
-  return list.areas.find((area) => area.zoneIds.includes(zoneId)) ?? null;
+/** The package a zone sells of a size; null when it sells none. */
+export function zonePackageOf(
+  list: HourlyList,
+  zoneId: string,
+  hours: number,
+): HourlyPackageRow | null {
+  const zone = list.zones.find((row) => row.zoneId === zoneId);
+  return zone?.packages.find((row) => row.hours === hours) ?? null;
 }
 
-/** The package an area sells of a size; null when it does not sell it. */
-export function areaPackageOf(area: HourlyAreaRow, hours: number) {
-  return area.packages.find((row) => row.hours === hours) ?? null;
+/** Whether a zone sells any package. */
+export function sellsHourly(list: HourlyList, zoneId: string) {
+  return list.zones.some(
+    (row) => row.zoneId === zoneId && row.packages.length > 0,
+  );
 }
 
-/** What an hourly hire costs in one class, as its receipt keeps it. */
+/** What a package and its extra hours cost in one class. */
 export type HourlyCharge = {
-  /** The area the pickup was priced from. */
-  area: string;
+  /** The zone the pickup was priced from, by name. */
+  zone: string;
   packageHours: HourlyPackageHours;
   /** The hours the package covered from there. */
   includedHours: number;
@@ -163,17 +172,17 @@ export type HourlyCharge = {
 };
 
 /**
- * One class's price for a choice from an area, or null when the class has
+ * One class's price for a choice from a zone, or null when the class has
  * none: the package has no price in it, or extra hours were asked and the
  * location has no extra hour rate for it.
  */
 export function hourlyChargeOf(
   list: HourlyList,
-  area: HourlyAreaRow,
+  zone: { id: string; name: string },
   choice: HourlyChoice,
   vehicleClassId: string,
 ): HourlyCharge | null {
-  const row = areaPackageOf(area, choice.packageHours);
+  const row = zonePackageOf(list, zone.id, choice.packageHours);
   const packageSen = row?.prices[vehicleClassId];
   if (!row || packageSen === undefined) return null;
   let extraHourSen = 0;
@@ -187,7 +196,7 @@ export function hourlyChargeOf(
     extraHourSen = rate.priceSen;
   }
   return {
-    area: area.name,
+    zone: zone.name,
     packageHours: choice.packageHours,
     includedHours: row.includedHours,
     packageSen,
@@ -197,11 +206,46 @@ export function hourlyChargeOf(
   };
 }
 
+/**
+ * The road to the zone a pickup outside every zone is priced from: its
+ * km, the location's free km, the whole km charged past them, and what
+ * they added at the class's rate per extra km.
+ */
+export type HourlyRoad = {
+  extraKm: number;
+  freeKm: number;
+  chargedKm: number;
+  perKmSen: number;
+  extraSen: number;
+};
+
+/** What a pickup's road to its nearest zone adds: each km past the free km, rounded up to the whole km. */
+export function hourlyRoadCharge(
+  extraKm: number,
+  perKmSen: number,
+  freeKm = 0,
+): HourlyRoad {
+  if (!(extraKm >= 0)) throw new RangeError("extraKm must be zero or more");
+  if (!(perKmSen >= 0)) throw new RangeError("perKmSen must be zero or more");
+  if (!(freeKm >= 0)) throw new RangeError("freeKm must be zero or more");
+  const chargedKm = wholeKmUp(Math.max(0, extraKm - freeKm));
+  return {
+    extraKm,
+    freeKm,
+    chargedKm,
+    perKmSen,
+    extraSen: Math.round(perKmSen * chargedKm),
+  };
+}
+
+/** An hourly hire as its receipt keeps it: the package, the extra hours, and the road to a pickup outside every zone. */
+export type HourlyReceipt = HourlyCharge & { road: HourlyRoad | null };
+
 /** The least a package costs in a class anywhere on the list; null when none is priced. */
 export function cheapestPackageSen(list: HourlyList, vehicleClassId: string) {
   let cheapest: number | null = null;
-  for (const area of list.areas) {
-    for (const row of area.packages) {
+  for (const zone of list.zones) {
+    for (const row of zone.packages) {
       const sen = row.prices[vehicleClassId];
       if (sen !== undefined && (cheapest === null || sen < cheapest)) {
         cheapest = sen;
@@ -211,36 +255,52 @@ export function cheapestPackageSen(list: HourlyList, vehicleClassId: string) {
   return cheapest;
 }
 
-/** "RM 140.00 for 4 hours, then RM 35.00 an hour", for a receipt's line. */
-export function hourlyChargeLabel(charge: HourlyCharge) {
-  const covers = `${formatMyr(charge.packageSen)} for ${charge.includedHours} ${charge.includedHours === 1 ? "hour" : "hours"}`;
-  return charge.extraHours === 0
-    ? covers
-    : `${covers}, then ${formatMyr(charge.extraHourSen)} an hour`;
-}
-
-export function isHourlyCharge(value: unknown): value is HourlyCharge {
+function isHourlyRoad(value: unknown): value is HourlyRoad {
   if (typeof value !== "object" || value === null) return false;
-  const c = value as Record<string, unknown>;
+  const r = value as Record<string, unknown>;
   return (
-    typeof c.area === "string" &&
-    isHourlyPackage(c.packageHours) &&
-    typeof c.includedHours === "number" &&
-    typeof c.packageSen === "number" &&
-    typeof c.extraHours === "number" &&
-    typeof c.extraHourSen === "number" &&
-    typeof c.extraSen === "number"
+    typeof r.extraKm === "number" &&
+    typeof r.freeKm === "number" &&
+    typeof r.chargedKm === "number" &&
+    typeof r.perKmSen === "number" &&
+    typeof r.extraSen === "number"
   );
 }
 
+/** The hourly part of a stored receipt, or null when it is not one. */
+export function hourlyReceiptOf(value: unknown): HourlyReceipt | null {
+  if (typeof value !== "object" || value === null) return null;
+  const c = value as Record<string, unknown>;
+  if (
+    typeof c.zone !== "string" ||
+    !isHourlyPackage(c.packageHours) ||
+    typeof c.includedHours !== "number" ||
+    typeof c.packageSen !== "number" ||
+    typeof c.extraHours !== "number" ||
+    typeof c.extraHourSen !== "number" ||
+    typeof c.extraSen !== "number"
+  ) {
+    return null;
+  }
+  return {
+    zone: c.zone,
+    packageHours: c.packageHours,
+    includedHours: c.includedHours,
+    packageSen: c.packageSen,
+    extraHours: c.extraHours,
+    extraHourSen: c.extraHourSen,
+    extraSen: c.extraSen,
+    road: isHourlyRoad(c.road) ? c.road : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
-// The Hourly tab's form.
+// The Hourly Rates page's form.
 // ---------------------------------------------------------------------------
 
-/** One area as the Hourly tab posts it; prices in sen, null for an empty cell. */
-export type HourlyAreaInput = {
-  name: string;
-  zoneIds: string[];
+/** One zone's packages as Hourly Rates posts them; prices in sen, null for an empty cell. */
+export type HourlyZoneInput = {
+  zoneId: string;
   packages: {
     hours: HourlyPackageHours;
     includedHours: number;
@@ -248,9 +308,9 @@ export type HourlyAreaInput = {
   }[];
 };
 
-/** The whole hourly list as the tab saves it. */
+/** The whole hourly list as the page saves it. */
 export type HourlyListInput = {
-  areas: HourlyAreaInput[];
+  zones: HourlyZoneInput[];
   extras: {
     packageHours: HourlyPackageHours;
     vehicleClassId: string;
@@ -280,57 +340,25 @@ function priceOf(raw: unknown): Parsed<number | null> {
 }
 
 /**
- * The hourly list as posted: `{ areas: [{ name, zoneIds, packages: [{
- * hours, includedHours, prices: [{ vehicleClassId, price }] }] }], extras:
- * [{ packageHours, vehicleClassId, price }] }`, prices in ringgit as typed
- * or "" for none. Checks the shape and the rules a form can know: names,
- * hours, each zone in one area. Whether the zones and classes are the
- * location's is the writer's check.
+ * The hourly list as posted: `{ zones: [{ zoneId, packages: [{ hours,
+ * includedHours, prices: [{ vehicleClassId, price }] }] }], extras: [{
+ * packageHours, vehicleClassId, price }] }`, prices in ringgit as typed or
+ * "" for none. Checks the shape and the hours a package covers. Whether
+ * the zones and classes are the location's is the writer's check.
  */
 export function parseHourlyList(value: unknown): Parsed<HourlyListInput> {
   if (typeof value !== "object" || value === null) return UNREADABLE;
-  const { areas, extras } = value as Record<string, unknown>;
-  if (!Array.isArray(areas) || !Array.isArray(extras)) return UNREADABLE;
+  const { zones, extras } = value as Record<string, unknown>;
+  if (!Array.isArray(zones) || !Array.isArray(extras)) return UNREADABLE;
 
-  const parsedAreas: HourlyAreaInput[] = [];
-  const names = new Set<string>();
-  const zoneArea = new Map<string, string>();
-  for (const raw of areas as unknown[]) {
+  const parsedZones: HourlyZoneInput[] = [];
+  for (const raw of zones as unknown[]) {
     if (typeof raw !== "object" || raw === null) return UNREADABLE;
-    const area = raw as Record<string, unknown>;
-    const name = textOf(area.name);
-    if (!name) return { ok: false, error: "Every hourly area needs a name." };
-    if (name.length > HOURLY_LIMITS.areaNameLength) {
-      return {
-        ok: false,
-        error: `Keep "${name.slice(0, 20)}…" to ${HOURLY_LIMITS.areaNameLength} characters.`,
-      };
-    }
-    const key = name.toLowerCase();
-    if (names.has(key)) {
-      return { ok: false, error: `Two hourly areas are called "${name}".` };
-    }
-    names.add(key);
-    if (!Array.isArray(area.zoneIds) || !area.zoneIds.every(isId)) {
-      return UNREADABLE;
-    }
-    const zoneIds = [...new Set(area.zoneIds as string[])];
-    if (zoneIds.length === 0) {
-      return { ok: false, error: `Choose at least one zone for ${name}.` };
-    }
-    for (const zoneId of zoneIds) {
-      const other = zoneArea.get(zoneId);
-      if (other) {
-        return {
-          ok: false,
-          error: `A zone is in both ${other} and ${name}. A zone can be in one hourly area.`,
-        };
-      }
-      zoneArea.set(zoneId, name);
-    }
-    if (!Array.isArray(area.packages)) return UNREADABLE;
-    const packages: HourlyAreaInput["packages"] = [];
-    for (const rawPackage of area.packages as unknown[]) {
+    const zone = raw as Record<string, unknown>;
+    if (!isId(zone.zoneId) || !Array.isArray(zone.packages)) return UNREADABLE;
+    if (parsedZones.some((z) => z.zoneId === zone.zoneId)) return UNREADABLE;
+    const packages: HourlyZoneInput["packages"] = [];
+    for (const rawPackage of zone.packages as unknown[]) {
       if (typeof rawPackage !== "object" || rawPackage === null) {
         return UNREADABLE;
       }
@@ -349,10 +377,10 @@ export function parseHourlyList(value: unknown): Parsed<HourlyListInput> {
       ) {
         return {
           ok: false,
-          error: `The ${packageLabel(row.hours)} from ${name} covers ${min} to ${max} whole hours.`,
+          error: `A package covers ${min} to ${max} whole hours.`,
         };
       }
-      const prices: HourlyAreaInput["packages"][number]["prices"] = [];
+      const prices: HourlyZoneInput["packages"][number]["prices"] = [];
       for (const rawPrice of row.prices as unknown[]) {
         if (typeof rawPrice !== "object" || rawPrice === null) {
           return UNREADABLE;
@@ -371,7 +399,7 @@ export function parseHourlyList(value: unknown): Parsed<HourlyListInput> {
       }
       packages.push({ hours: row.hours, includedHours: included, prices });
     }
-    parsedAreas.push({ name, zoneIds, packages });
+    parsedZones.push({ zoneId: zone.zoneId, packages });
   }
 
   const parsedExtras: HourlyListInput["extras"] = [];
@@ -398,5 +426,5 @@ export function parseHourlyList(value: unknown): Parsed<HourlyListInput> {
       priceSen: price.value,
     });
   }
-  return { ok: true, value: { areas: parsedAreas, extras: parsedExtras } };
+  return { ok: true, value: { zones: parsedZones, extras: parsedExtras } };
 }

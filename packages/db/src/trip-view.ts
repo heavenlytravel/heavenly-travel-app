@@ -7,7 +7,7 @@ import {
 } from "./booking-status";
 import {
   hourlyChoiceLabel,
-  isHourlyCharge,
+  hourlyReceiptOf,
   packageLabel,
   type HourlyChoice,
 } from "./hourly-input";
@@ -54,8 +54,8 @@ export function tripViewOfItem(item: TripItemLike): TripView | null {
   const mode = details.mode === "hourly" ? "hourly" : "oneway";
   const receipt =
     typeof item.priceBreakdown === "object" && item.priceBreakdown !== null
-      ? (item.priceBreakdown as { hourly?: unknown }).hourly
-      : undefined;
+      ? hourlyReceiptOf((item.priceBreakdown as { hourly?: unknown }).hourly)
+      : null;
   return {
     mode,
     pickup: details.pickupPlace,
@@ -63,7 +63,7 @@ export function tripViewOfItem(item: TripItemLike): TripView | null {
     startsAt: item.startsAt,
     hours: details.hours,
     hourly:
-      mode === "hourly" && isHourlyCharge(receipt)
+      mode === "hourly" && receipt
         ? { packageHours: receipt.packageHours, extraHours: receipt.extraHours }
         : null,
     distanceKm: details.distanceKm,
@@ -214,13 +214,19 @@ export function priceRows(
   } else if (price.hourly) {
     const { hourly } = price;
     rows.push([
-      `${packageLabel(hourly.packageHours)} from ${hourly.area}, ${hourly.includedHours} hours`,
+      `${packageLabel(hourly.packageHours)} from ${hourly.zone}, ${hourly.includedHours} hours`,
       formatMyr(hourly.packageSen),
     ]);
     if (hourly.extraHours > 0) {
       rows.push([
         `Extra hours, ${hourly.extraHours} × ${formatMyr(hourly.extraHourSen)}`,
         formatMyr(hourly.extraSen),
+      ]);
+    }
+    if (hourly.road && hourly.road.extraSen > 0) {
+      rows.push([
+        `Extra road, ${kmLabel(hourly.road.chargedKm)} × ${formatMyr(hourly.road.perKmSen)}`,
+        formatMyr(hourly.road.extraSen),
       ]);
     }
   } else if (price.hours !== null) {

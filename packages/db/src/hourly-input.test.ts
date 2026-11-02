@@ -2,28 +2,28 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   cheapestPackageSen,
-  hourlyAreaOf,
   hourlyChargeOf,
   hourlyChoiceLabel,
   hourlyChoiceOfHours,
+  hourlyReceiptOf,
+  hourlyRoadCharge,
   parseHourlyList,
+  sellsHourly,
   type HourlyList,
 } from "./hourly-input";
 
 // Langkawi's sheet, 2026-11-02: Sedan and Bus.
 const list: HourlyList = {
-  areas: [
+  zones: [
     {
-      name: "Kuah Town / Beach / Pantai Kok",
-      zoneIds: ["kuah", "beach", "pantai-kok"],
+      zoneId: "kuah",
       packages: [
         { hours: 4, includedHours: 4, prices: { sedan: 14_000, bus: 57_000 } },
         { hours: 8, includedHours: 8, prices: { sedan: 25_000, bus: 95_000 } },
       ],
     },
     {
-      name: "Port cruise",
-      zoneIds: ["port"],
+      zoneId: "port",
       packages: [{ hours: 4, includedHours: 5, prices: { sedan: 23_000 } }],
     },
   ],
@@ -33,13 +33,13 @@ const list: HourlyList = {
   ],
 };
 
-const kuah = list.areas[0]!;
-const port = list.areas[1]!;
+const kuah = { id: "kuah", name: "Kuah Town" };
+const port = { id: "port", name: "Port cruise" };
 
-describe("hourlyAreaOf", () => {
-  it("finds the area a zone is in, or none", () => {
-    assert.equal(hourlyAreaOf(list, "beach"), kuah);
-    assert.equal(hourlyAreaOf(list, "datai"), null);
+describe("sellsHourly", () => {
+  it("is whether a zone sells any package", () => {
+    assert.equal(sellsHourly(list, "kuah"), true);
+    assert.equal(sellsHourly(list, "datai"), false);
   });
 });
 
@@ -48,7 +48,7 @@ describe("hourlyChargeOf", () => {
     assert.deepEqual(
       hourlyChargeOf(list, kuah, { packageHours: 4, extraHours: 3 }, "sedan"),
       {
-        area: "Kuah Town / Beach / Pantai Kok",
+        zone: "Kuah Town",
         packageHours: 4,
         includedHours: 4,
         packageSen: 14_000,
@@ -64,7 +64,7 @@ describe("hourlyChargeOf", () => {
     );
   });
 
-  it("covers the area's own hours, the port cruise's 4-hour package 5", () => {
+  it("covers the zone's own hours, the port cruise's 4-hour package 5", () => {
     const charge = hourlyChargeOf(
       list,
       port,
@@ -75,7 +75,7 @@ describe("hourlyChargeOf", () => {
     assert.equal(charge?.extraSen, 7_000);
   });
 
-  it("has no price for a package the area does not sell, or a class it does not price", () => {
+  it("has no price for a package the zone does not sell, or a class it does not price", () => {
     assert.equal(
       hourlyChargeOf(list, kuah, { packageHours: 12, extraHours: 0 }, "sedan"),
       null,
@@ -96,6 +96,41 @@ describe("hourlyChargeOf", () => {
       hourlyChargeOf(list, kuah, { packageHours: 4, extraHours: 1 }, "bus"),
       null,
     );
+  });
+});
+
+describe("hourlyRoadCharge", () => {
+  it("charges the whole km past the free km, none within them", () => {
+    assert.deepEqual(hourlyRoadCharge(5.2, 250, 3), {
+      extraKm: 5.2,
+      freeKm: 3,
+      chargedKm: 3,
+      perKmSen: 250,
+      extraSen: 750,
+    });
+    assert.equal(hourlyRoadCharge(2.9, 250, 3).extraSen, 0);
+    assert.equal(hourlyRoadCharge(0.4, 250).chargedKm, 1);
+  });
+});
+
+describe("hourlyReceiptOf", () => {
+  it("reads a receipt with or without its road", () => {
+    const charge = {
+      zone: "Kuah Town",
+      packageHours: 4,
+      includedHours: 4,
+      packageSen: 14_000,
+      extraHours: 0,
+      extraHourSen: 0,
+      extraSen: 0,
+    };
+    assert.deepEqual(hourlyReceiptOf(charge), { ...charge, road: null });
+    const road = hourlyRoadCharge(5, 250);
+    assert.deepEqual(hourlyReceiptOf({ ...charge, road }), {
+      ...charge,
+      road,
+    });
+    assert.equal(hourlyReceiptOf({ ...charge, packageHours: 5 }), null);
   });
 });
 
@@ -142,10 +177,9 @@ describe("hourlyChoiceLabel", () => {
 
 describe("parseHourlyList", () => {
   const posted = {
-    areas: [
+    zones: [
       {
-        name: " Port cruise ",
-        zoneIds: ["port"],
+        zoneId: "port",
         packages: [
           {
             hours: 4,
@@ -165,10 +199,9 @@ describe("parseHourlyList", () => {
     assert.deepEqual(parseHourlyList(posted), {
       ok: true,
       value: {
-        areas: [
+        zones: [
           {
-            name: "Port cruise",
-            zoneIds: ["port"],
+            zoneId: "port",
             packages: [
               {
                 hours: 4,
@@ -186,17 +219,10 @@ describe("parseHourlyList", () => {
     });
   });
 
-  it("refuses a zone in two areas, a nameless area and a bad price", () => {
-    const twice = {
-      ...posted,
-      areas: [posted.areas[0], { ...posted.areas[0], name: "Datai" }],
-    };
-    assert.equal(parseHourlyList(twice).ok, false);
+  it("refuses a zone twice and a bad price", () => {
     assert.equal(
-      parseHourlyList({
-        ...posted,
-        areas: [{ ...posted.areas[0], name: " " }],
-      }).ok,
+      parseHourlyList({ ...posted, zones: [posted.zones[0], posted.zones[0]] })
+        .ok,
       false,
     );
     assert.equal(
@@ -211,7 +237,7 @@ describe("parseHourlyList", () => {
   it("refuses a package that is not one there is, and hours it cannot cover", () => {
     const withPackage = (row: object) => ({
       ...posted,
-      areas: [{ ...posted.areas[0], packages: [row] }],
+      zones: [{ ...posted.zones[0], packages: [row] }],
     });
     assert.equal(
       parseHourlyList(withPackage({ hours: 6, includedHours: 6, prices: [] }))

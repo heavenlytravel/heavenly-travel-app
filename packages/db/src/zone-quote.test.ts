@@ -54,7 +54,7 @@ const kuah = square("Kuah Town", 0.6, 0, 0.7, 0.1);
 const timurLaut = square("Timur Laut", 3, 0, 3.1, 0.1);
 const klia = square("KLIA", 5, 0, 5.1, 0.1);
 
-const NO_HOURLY = { areas: [], extras: [] };
+const NO_HOURLY = { zones: [], extras: [] };
 
 const cell = (from: QuoteZone, to: QuoteZone, priceSen: number) => ({
   fromZoneId: from.id,

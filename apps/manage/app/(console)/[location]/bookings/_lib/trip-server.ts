@@ -90,7 +90,7 @@ export async function quoteTripView(
     startsAt: formatLocalDateTime(request.startsAt),
     hours: quote.basis.mode === "hourly" ? quote.basis.hours : null,
     hire: quote.hire
-      ? `${hourlyChoiceLabel(quote.hire)} from ${quote.hire.area}`
+      ? `${hourlyChoiceLabel(quote.hire)} from ${quote.hire.zone}`
       : null,
     distanceKm: quote.basis.mode === "oneway" ? quote.basis.distanceKm : null,
     district: quote.district

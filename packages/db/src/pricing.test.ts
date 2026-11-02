@@ -13,7 +13,7 @@ const rates: TripRates = { perKmSen: 250 };
 
 /** A 4-hour package from Kuah Town, no extra hours. */
 const kuah4: HourlyCharge = {
-  area: "Kuah Town",
+  zone: "Kuah Town",
   packageHours: 4,
   includedHours: 4,
   packageSen: 18_000,
@@ -92,7 +92,7 @@ describe("priceTrip", () => {
 
   it("prices an hourly hire as its package plus the extra hours", () => {
     const hourly: HourlyCharge = {
-      area: "Port cruise",
+      zone: "Port cruise",
       packageHours: 4,
       includedHours: 5,
       packageSen: 23_000,
@@ -108,12 +108,40 @@ describe("priceTrip", () => {
     assert.equal(price.subtotalSen, 30_000);
     assert.equal(price.totalSen, 30_000);
     assert.equal(price.hours, 7);
-    assert.deepEqual(price.hourly, hourly);
+    assert.deepEqual(price.hourly, { ...hourly, road: null });
     assert.equal(price.distanceKm, null);
     assert.deepEqual(
       priceBreakdownOf(JSON.parse(JSON.stringify(price))),
       price,
     );
+  });
+
+  it("adds a pickup's road to its nearest zone past the free km, rounded up", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates,
+      hourly: kuah4,
+      hourlyRoadKm: 5.2,
+      freeExtraKm: 3,
+    });
+    // 2.2 km past the free 3, rounded up to 3 km at RM 2.50.
+    assert.deepEqual(price.hourly?.road, {
+      extraKm: 5.2,
+      freeKm: 3,
+      chargedKm: 3,
+      perKmSen: 250,
+      extraSen: 750,
+    });
+    assert.equal(price.subtotalSen, 18_000 + 750);
+    const within = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates,
+      hourly: kuah4,
+      hourlyRoadKm: 2,
+      freeExtraKm: 3,
+    });
+    assert.equal(within.hourly?.road?.extraSen, 0);
+    assert.equal(within.subtotalSen, 18_000);
   });
 
   it("refuses an hourly hire whose hours are not the package's plus the extra", () => {

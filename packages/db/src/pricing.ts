@@ -1,5 +1,10 @@
 import { isTripMode, type TripMode } from "./booking-status";
-import { isHourlyCharge, type HourlyCharge } from "./hourly-input";
+import {
+  hourlyReceiptOf,
+  hourlyRoadCharge,
+  type HourlyCharge,
+  type HourlyReceipt,
+} from "./hourly-input";
 import type { SurchargeCharge } from "./rates-input";
 import {
   zoneTripCharge,
@@ -16,8 +21,10 @@ import {
  *   one-way: the grid's cell for the two zones, plus the extra road at
  *   the rate per extra km when an end is outside every zone and the trip
  *   is longer than the grid trip (./zone-trip)
- *   hourly:  the package's price from the pickup's hourly area, plus the
- *   extra hours at the location's rate (./hourly-input)
+ *   hourly:  the package's price from the pickup's zone, plus the extra
+ *   hours at the location's rate, plus, for a pickup outside every zone,
+ *   its road to that zone past the free km at the rate per extra km
+ *   (./hourly-input)
  *   then the odd-hours surcharge, when the pickup is in the window, and
  *   the weekend and holiday surcharge, when the pickup's day is one: each
  *   a percentage of the price, or a flat amount
@@ -61,6 +68,8 @@ export type TripPriceInput = {
   route?: RouteRate | null;
   /** The hourly list's price for the class; required for hourly, none for one-way. */
   hourly?: HourlyCharge | null;
+  /** Hourly: the pickup's road to its nearest zone's edge, in km, when it is outside every zone; null when inside one. */
+  hourlyRoadKm?: number | null;
   /** What a one-way trip with an end outside every zone measured; null when both ends are in zones. */
   zoneTrip?: ZoneTripMeasure | null;
   /** The location's free extra road of each end, in whole km; 0 when none. */
@@ -89,8 +98,8 @@ export type TripPriceBreakdown = {
   hours: number | null;
   /** The grid's cell the price is; null for hourly hire, and on receipts that were metered. */
   route: RouteRate | null;
-  /** The package and extra hours the price is; null for one-way, and on hourly receipts from before the hourly grid. */
-  hourly: HourlyCharge | null;
+  /** The package, the extra hours and the pickup's road the price is; null for one-way, and on hourly receipts from before the hourly grid. */
+  hourly: HourlyReceipt | null;
   /**
    * The road past a zone's edge, for a trip with an end outside every
    * zone: both ends' zones, the distances and what the extra road added.
@@ -121,7 +130,8 @@ export type TripPriceBreakdown = {
 export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   const { trip, rates } = input;
   const route = input.route ?? null;
-  const hourly = input.hourly ?? null;
+  const hourlyCharge = input.hourly ?? null;
+  let hourly: HourlyReceipt | null = null;
   const measure = input.zoneTrip ?? null;
   const charge = input.surcharge ?? null;
   const weekendCharge = input.weekend ?? null;
@@ -141,7 +151,7 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
       throw new RangeError("distanceKm must be zero or more");
     }
     if (!route) throw new RangeError("a one-way trip is priced by a route");
-    if (hourly) throw new RangeError("a one-way trip has no package");
+    if (hourlyCharge) throw new RangeError("a one-way trip has no package");
     if (!(route.rateSen >= 0)) {
       throw new RangeError("rateSen must be zero or more");
     }
@@ -152,14 +162,25 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
   } else {
     if (!(trip.hours > 0)) throw new RangeError("hours must be positive");
     if (route || measure) throw new RangeError("an hourly hire has no route");
-    if (!hourly) throw new RangeError("an hourly hire is priced by a package");
-    if (hourly.includedHours + hourly.extraHours !== trip.hours) {
+    if (!hourlyCharge) {
+      throw new RangeError("an hourly hire is priced by a package");
+    }
+    if (hourlyCharge.includedHours + hourlyCharge.extraHours !== trip.hours) {
       throw new RangeError("hours must be the package's plus the extra");
     }
-    if (!(hourly.packageSen >= 0) || !(hourly.extraHourSen >= 0)) {
+    if (!(hourlyCharge.packageSen >= 0) || !(hourlyCharge.extraHourSen >= 0)) {
       throw new RangeError("hourly prices must be zero or more");
     }
-    subtotalSen = hourly.packageSen + hourly.extraSen;
+    const roadKm = input.hourlyRoadKm ?? null;
+    hourly = {
+      ...hourlyCharge,
+      road:
+        roadKm === null
+          ? null
+          : hourlyRoadCharge(roadKm, rates.perKmSen, input.freeExtraKm ?? 0),
+    };
+    subtotalSen =
+      hourly.packageSen + hourly.extraSen + (hourly.road?.extraSen ?? 0);
   }
 
   const adds = (c: SurchargeCharge | null) =>
@@ -185,7 +206,7 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
           rateSen: route.rateSen,
         }
       : null,
-    hourly: hourly ? { ...hourly } : null,
+    hourly,
     zoneTrip,
     surcharge,
     weekend,
@@ -323,7 +344,7 @@ export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
     distanceKm: p.distanceKm as number | null,
     hours: p.hours as number | null,
     route: isRouteRate(p.route) ? p.route : null,
-    hourly: isHourlyCharge(p.hourly) ? p.hourly : null,
+    hourly: hourlyReceiptOf(p.hourly),
     zoneTrip: zoneTripChargeOf(p.zoneTrip),
     surcharge: isSurcharge(p.surcharge) ? p.surcharge : null,
     weekend: isWeekendCharge(p.weekend) ? p.weekend : null,

@@ -3,7 +3,7 @@ import { districtCodeAt } from "./district-index";
 import type { District, Prisma, State, Zone } from "./generated/prisma/client";
 import { pointOnSurface } from "./geo";
 import { isPublicState, LOCATION_STATES } from "./location-input";
-import { hourlyListOf, withHourly } from "./hourly-rates";
+import { listHourlyLists } from "./hourly-rates";
 import { oddHoursOf, weekendOf } from "./rates-input";
 import type { QuoteLocation, QuoteZone } from "./zone-quote";
 import {
@@ -99,8 +99,9 @@ export async function listQuoteLocations(
         ...(alsoId ? [{ id: alsoId }] : []),
       ],
     },
-    include: { ...withZones.include, ...withHourly.include, zoneRates: true },
+    include: { ...withZones.include, zoneRates: true },
   });
+  const hourly = await listHourlyLists(locations.map((l) => l.id));
   const own = new Set(locations.flatMap((l) => l.zones.map((z) => z.id)));
   const outIds = [
     ...new Set(
@@ -152,7 +153,7 @@ export async function listQuoteLocations(
       zones: zonesOf(location.zones),
       zonesOut: zonesOf(outs),
       zoneRates: location.zoneRates,
-      hourly: hourlyListOf(location),
+      hourly: hourly.get(location.id)!,
       oddHours: oddHoursOf(location),
       weekend: weekendOf(location),
     };

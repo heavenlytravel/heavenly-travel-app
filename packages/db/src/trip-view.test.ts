@@ -69,7 +69,7 @@ describe("priceRows", () => {
     trip: { mode: "hourly", hours: 4 },
     rates: { perKmSen: 0 },
     hourly: {
-      area: "Kuah Town",
+      zone: "Kuah Town",
       packageHours: 4,
       includedHours: 4,
       packageSen: 20_000,
@@ -129,7 +129,7 @@ describe("priceRows", () => {
       trip: { mode: "hourly", hours: 4 },
       rates: { perKmSen: 0 },
       hourly: {
-        area: "Kuah Town",
+        zone: "Kuah Town",
         packageHours: 4,
         includedHours: 4,
         packageSen: 20_000,
@@ -208,7 +208,7 @@ describe("priceRows", () => {
       trip: { mode: "hourly", hours: 7 },
       rates: { perKmSen: 0 },
       hourly: {
-        area: "Port cruise",
+        zone: "Port cruise",
         packageHours: 4,
         includedHours: 5,
         packageSen: 23_000,
@@ -220,6 +220,27 @@ describe("priceRows", () => {
     assert.deepEqual(priceRows(longer), [
       ["4-hour package from Port cruise, 5 hours", "RM 230.00"],
       ["Extra hours, 2 × RM 35.00", "RM 70.00"],
+    ]);
+  });
+
+  it("shows the road to the nearest zone when it was charged", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates: { perKmSen: 250 },
+      hourly: {
+        zone: "Kuah Town",
+        packageHours: 4,
+        includedHours: 4,
+        packageSen: 20_000,
+        extraHours: 0,
+        extraHourSen: 0,
+        extraSen: 0,
+      },
+      hourlyRoadKm: 4.4,
+    });
+    assert.deepEqual(priceRows(price), [
+      ["4-hour package from Kuah Town, 4 hours", "RM 200.00"],
+      ["Extra road, 5 km × RM 2.50", "RM 12.50"],
     ]);
   });
 

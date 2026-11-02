@@ -20,13 +20,13 @@ import {
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
 import {
-  areaPackageOf,
-  hourlyAreaOf,
   hourlyChargeOf,
   HOURLY_LIMITS,
   isExtraHours,
   isHourlyPackage,
   packageLabel,
+  sellsHourly,
+  zonePackageOf,
   type HourlyChoice,
 } from "./hourly-input";
 import { modelChoiceOf } from "./offering-input";
@@ -67,7 +67,8 @@ import {
  * zone by road, and the location's offerings, zones and rates price the
  * trip: one cell of its grid, plus the road past a zone's edge
  * (./zone-quote, ./zone-trip), or for an hourly hire, the package its
- * hourly area sells, plus the extra hours (./hourly-input). The category only decides which offerings
+ * zone sells, plus the extra hours and the road to a pickup outside every
+ * zone (./hourly-input). The category only decides which offerings
  * are priced. Everything product-specific lives here; the booking core in
  * bookings.ts only sees a `PreparedItem`. See docs/260928-coach-charter.md,
  * docs/261015-locations-as-operation-areas.md and
@@ -149,9 +150,9 @@ export type QuotedEnd = {
   nearest: Omit<NearestZone, "zoneId"> | null;
 };
 
-/** An hourly hire as quoted: the area it is priced from, and the hours the package covers there. */
+/** An hourly hire as quoted: the zone it is priced from, and the hours the package covers there. */
 export type QuotedHire = HourlyChoice & {
-  area: string;
+  zone: string;
   includedHours: number;
 };
 
@@ -167,7 +168,7 @@ export type TripQuote = {
   pickup: QuotedEnd;
   /** Null for hourly hire. */
   dropoff: QuotedEnd | null;
-  /** Hourly: the area and the hours the package covers; null for one-way. */
+  /** Hourly: the zone and the hours the package covers; null for one-way. */
   hire: QuotedHire | null;
   /** What a trip with an end outside every zone measured; null otherwise. */
   zoneTrip: ZoneTripMeasure | null;
@@ -366,31 +367,45 @@ async function quoteOne(
       dropoff: request.mode === "oneway" ? request.dropoff : null,
     },
     routing,
-    { pinned, trace },
+    {
+      pinned,
+      trace,
+      // An hourly pickup outside every zone goes to the nearest zone that
+      // sells hourly hire.
+      ...(request.mode === "hourly"
+        ? {
+            pickupSells: (l: QuoteLocation, zoneId: string) =>
+              sellsHourly(l.hourly, zoneId),
+          }
+        : {}),
+    },
   );
   if (!placed.ok) {
     return fail(placed.error.code, placed.error.message, placed.error.reason);
   }
   const { location, pickup, dropoff } = placed;
 
-  // An hourly hire is priced from the area its pickup's zone is in, by the
-  // package that area sells; the package's hours there set the trip's.
-  const area = choice ? hourlyAreaOf(location.hourly, pickup.zone.id) : null;
+  // An hourly hire is priced from its pickup's zone, by the package the
+  // zone sells; the package's hours there set the trip's.
   let hire: QuotedHire | null = null;
   if (choice) {
-    if (!area) {
+    if (!sellsHourly(location.hourly, pickup.zone.id)) {
       return fail(
         "hourly-not-served",
         "We do not have hourly prices from there yet. Message us on WhatsApp.",
-        `no hourly area holds ${pickup.zone.name}`,
+        `${pickup.zone.name} sells no hourly package`,
       );
     }
-    const row = areaPackageOf(area, choice.packageHours);
+    const row = zonePackageOf(
+      location.hourly,
+      pickup.zone.id,
+      choice.packageHours,
+    );
     if (!row) {
       return fail(
         "package-not-sold",
         `The ${packageLabel(choice.packageHours)} is not offered from there. Choose another.`,
-        `${area.name} sells no ${packageLabel(choice.packageHours)}`,
+        `${pickup.zone.name} sells no ${packageLabel(choice.packageHours)}`,
       );
     }
     if (row.includedHours + choice.extraHours > HOURLY_LIMITS.maxTripHours) {
@@ -399,7 +414,11 @@ async function quoteOne(
         `An hourly hire runs at most ${HOURLY_LIMITS.maxTripHours} hours. Choose fewer extra hours.`,
       );
     }
-    hire = { ...choice, area: area.name, includedHours: row.includedHours };
+    hire = {
+      ...choice,
+      zone: pickup.zone.name,
+      includedHours: row.includedHours,
+    };
   }
   const basis: PricingBasis = hire
     ? { mode: "hourly", hours: hire.includedHours + hire.extraHours }
@@ -407,8 +426,8 @@ async function quoteOne(
 
   const offerings = await reads.offeringsAt(location.id);
   const hourlyOf = (vehicleClassId: string) =>
-    choice && area
-      ? hourlyChargeOf(location.hourly, area, choice, vehicleClassId)
+    choice
+      ? hourlyChargeOf(location.hourly, pickup.zone, choice, vehicleClassId)
       : null;
   if (
     choice &&
@@ -418,7 +437,7 @@ async function quoteOne(
     return fail(
       "hourly-not-served",
       "We do not have a price for that hire yet. Message us on WhatsApp.",
-      `${area!.name} has no price for the ${packageLabel(choice.packageHours)}${choice.extraHours > 0 ? " with extra hours" : ""} in any class`,
+      `${pickup.zone.name} has no price for the ${packageLabel(choice.packageHours)}${choice.extraHours > 0 ? " with extra hours" : ""} in any class`,
     );
   }
   const cellOf = (vehicleClassId: string) =>
@@ -493,6 +512,7 @@ async function quoteOne(
             }
           : null,
       hourly,
+      hourlyRoadKm: choice ? (pickup.nearest?.extraKm ?? null) : null,
       zoneTrip: placed.measure,
       freeExtraKm: location.freeExtraKm,
       surcharge,

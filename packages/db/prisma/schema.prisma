@@ -314,8 +314,7 @@ model Location {
   offerings        LocationVehicleClass[]
   zones            Zone[]
   zoneRates        ZoneRate[]
-  /// Its hourly price list: areas of its zones, and the rate per extra hour.
-  hourlyAreas      HourlyArea[]
+  /// The rate per extra hour of its hourly price list; the packages are its zones'.
   hourlyExtraRates HourlyExtraRate[]
   items            BookingItem[]
   vehicles         Vehicle[]
@@ -369,28 +368,25 @@ model LocationVehicleClass {
 /// circle around a place. A zone may lie outside the location's districts:
 /// an outstation destination is a zone too. Coverage is the district's.
 model Zone {
-  id           String      @id @default(cuid())
-  locationId   String
-  location     Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  name         String
-  sortOrder    Int         @default(0)
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int      @default(0)
   /// One closed ring of [lng, lat], as src/geo.ts reads it.
-  shape        Json
+  shape      Json
   /// `{ placeId, label, radiusM }` when drawn as a circle around a place,
   /// so the editor can show and redo it; null for a drawn polygon.
-  drawnFrom    Json?
-  /// The hourly area a pickup in it is priced by; null when hourly hire
-  /// from it has no price.
-  hourlyAreaId String?
-  hourlyArea   HourlyArea? @relation(fields: [hourlyAreaId], references: [id], onDelete: SetNull)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  drawnFrom  Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  ratesFrom ZoneRate[] @relation("from")
-  ratesTo   ZoneRate[] @relation("to")
+  /// The hourly packages a pickup in it is sold, with their prices.
+  hourlyPackages HourlyPackage[]
+  ratesFrom      ZoneRate[]      @relation("from")
+  ratesTo        ZoneRate[]      @relation("to")
 
   @@index([locationId, sortOrder])
-  @@index([hourlyAreaId])
 }
 
 /// One cell of a location's rate grid: the fixed price of a class between
@@ -417,41 +413,24 @@ model ZoneRate {
   @@index([toZoneId])
 }
 
-/// A row group of a location's hourly price list: zones a pickup is priced
-/// alike from, "Kuah Town / Beach / Pantai Kok". A zone is in at most one.
+/// A package a pickup in a zone is sold: 4, 8 or 12 hours
+/// (HOURLY_PACKAGES), the hours it covers from there, and its price per
+/// class. A package with no price for a class is not sold in that class.
 /// See docs/261102-booking-ops.md, "Hourly rate grid".
-model HourlyArea {
-  id         String   @id @default(cuid())
-  locationId String
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  name       String
-  sortOrder  Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  zones    Zone[]
-  packages HourlyPackage[]
-
-  @@index([locationId, sortOrder])
-}
-
-/// A package an area sells: 4, 8 or 12 hours (HOURLY_PACKAGES), the hours
-/// it covers there, and its price per class. A package with no price for a
-/// class is not sold in that class.
 model HourlyPackage {
-  id            String     @id @default(cuid())
-  areaId        String
-  area          HourlyArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  zoneId        String
+  zone          Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
   /// 4, 8 or 12: what the package is called.
   hours         Int
-  /// The hours it covers from this area, the sheet's "max hour usage":
+  /// The hours it covers from this zone, the sheet's "max hour usage":
   /// usually `hours`, 5 for Langkawi's port cruise 4-hour package.
   includedHours Int
-  updatedAt     DateTime   @updatedAt
+  updatedAt     DateTime @updatedAt
 
   rates HourlyRate[]
 
-  @@unique([areaId, hours])
+  @@unique([zoneId, hours])
 }
 
 /// One cell of the hourly price list: a package's price in one class.
@@ -469,7 +448,7 @@ model HourlyRate {
 }
 
 /// What an hour past a package costs at a location, in one class: one rate
-/// per package size, the same from every area.
+/// per package size, the same from every zone.
 model HourlyExtraRate {
   id             String       @id @default(cuid())
   locationId     String

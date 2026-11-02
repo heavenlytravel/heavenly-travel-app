@@ -244,8 +244,8 @@ export async function createVendor(
   });
 }
 
-/** An account that works for another vendor cannot own this one: Connect shows one vendor's screens. */
-async function checkMayOwn(email: string, vendorId?: string): Promise<Change> {
+/** An account that works for another vendor cannot own or join this one: Connect shows one vendor's screens. */
+async function checkMayJoin(email: string, vendorId?: string): Promise<Change> {
   const elsewhere = await db.vendorMember.findFirst({
     where: {
       user: { email: { equals: email, mode: "insensitive" } },
@@ -273,7 +273,7 @@ export async function createVendorWithOwner(
 ): Promise<Created> {
   const check = checkVendorFields(fields);
   if (!check.ok) return check;
-  const free = await checkMayOwn(owner.email);
+  const free = await checkMayJoin(owner.email);
   if (!free.ok) return free;
   return withAccount(owner, (account) =>
     createVendor(actor, fields, {
@@ -316,7 +316,7 @@ export async function setVendorOwner(
   if (owner?.user.email.toLowerCase() === fields.email) {
     return refuse(`${fields.email} owns ${vendor.name} already.`, "email");
   }
-  const free = await checkMayOwn(fields.email, vendorId);
+  const free = await checkMayJoin(fields.email, vendorId);
   if (!free.ok) return free;
   const result = await withAccount(fields, (account) =>
     db.$transaction(async (tx) => {
@@ -616,69 +616,62 @@ export async function listVendorMembers(
 }
 
 /**
- * The owner adds an account as staff, by its email. The account must
- * exist: one that has never signed in is asked to sign up first. An
- * account that already works for a vendor, or drives for one, is refused:
- * Connect shows one vendor's screens.
+ * Adds an account as a vendor's staff, as its owner does on Connect's Team
+ * and SUPER on the vendor's page: the account for the email, made now
+ * when there is none (./accounts, `withAccount`), so they sign in at
+ * once. An account that works for a vendor already is refused: Connect
+ * shows one vendor's screens. Ours has no Connect accounts.
  */
 export async function addVendorStaff(
   actor: Actor,
   vendorId: string,
-  email: string,
+  fields: NewUserFields,
 ): Promise<Change> {
-  const wanted = email.trim().toLowerCase();
-  if (!wanted) return refuse("Enter their email.", "email");
-  return db.$transaction(async (tx) => {
-    const vendor = await tx.vendor.findUnique({
-      where: { id: vendorId },
-      select: { name: true, isOurs: true },
-    });
-    if (!vendor) return NOT_FOUND;
-    if (vendor.isOurs) {
-      return refuse("Ours has no Connect accounts: Operation accepts for it.");
-    }
-    const user = await tx.user.findFirst({
-      where: { email: { equals: wanted, mode: "insensitive" } },
-      select: {
-        id: true,
-        email: true,
-        vendorMembers: { select: { vendorId: true } },
-      },
-    });
-    if (!user) {
-      return refuse(
-        `No account has ${wanted} yet. Ask them to sign up on Connect first, then add them.`,
-        "email",
-      );
-    }
-    if (user.vendorMembers.some((m) => m.vendorId === vendorId)) {
-      return refuse(`${user.email} works for ${vendor.name} already.`, "email");
-    }
-    if (user.vendorMembers.length > 0) {
-      return refuse(
-        `${user.email} works for another vendor. An account works for one.`,
-        "email",
-      );
-    }
-    await tx.vendorMember.create({
-      data: { vendorId, userId: user.id, role: "staff" },
-    });
-    await logActivity(tx, actor, {
-      action: "vendor.member.added",
-      entityId: vendorId,
-      after: { email: user.email, role: "staff" },
-    });
-    return { ok: true };
+  const vendor = await db.vendor.findUnique({
+    where: { id: vendorId },
+    select: { name: true, isOurs: true },
   });
+  if (!vendor) return NOT_FOUND;
+  if (vendor.isOurs) {
+    return refuse("Ours has no Connect accounts: Operation accepts for it.");
+  }
+  const held = await db.vendorMember.findFirst({
+    where: { user: { email: { equals: fields.email, mode: "insensitive" } } },
+    select: { vendorId: true },
+  });
+  if (held?.vendorId === vendorId) {
+    return refuse(`${fields.email} works for ${vendor.name} already.`, "email");
+  }
+  const free = await checkMayJoin(fields.email);
+  if (!free.ok) return free;
+  return withAccount(fields, (account) =>
+    db.$transaction(async (tx) => {
+      await keepNewAccount(tx, actor, account);
+      await tx.vendorMember.create({
+        data: { vendorId, userId: account.userId, role: "staff" },
+      });
+      await logActivity(tx, actor, {
+        action: "vendor.member.added",
+        entityId: vendorId,
+        after: { email: account.email, role: "staff" },
+      });
+      return { ok: true } as const;
+    }),
+  );
 }
 
-/** The owner removes a staff member. The owner stays: a vendor always has one. */
+/**
+ * Removes a vendor's staff member, as its owner does on Connect's Team
+ * and SUPER on the vendor's page. The owner stays: a vendor always has
+ * one. Their account goes too when no one has used it, as one made with a
+ * mistyped email (./accounts, `deleteAccountIfUnused`).
+ */
 export async function removeVendorStaff(
   actor: Actor,
   vendorId: string,
   memberId: string,
 ): Promise<Change> {
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const member = await tx.vendorMember.findUnique({
       where: { id: memberId },
       include: { user: { select: { email: true } } },
@@ -687,7 +680,9 @@ export async function removeVendorStaff(
       return refuse("This account was removed meanwhile. Reload the page.");
     }
     if (member.role === "owner") {
-      return refuse("The owner stays. Ask the team to change the owner.");
+      return refuse(
+        "The owner stays. Ask Heavenly Travel to change the owner.",
+      );
     }
     await tx.vendorMember.delete({ where: { id: memberId } });
     await logActivity(tx, actor, {
@@ -695,8 +690,11 @@ export async function removeVendorStaff(
       entityId: vendorId,
       before: { email: member.user.email, role: member.role },
     });
-    return { ok: true };
+    return { ok: true as const, userId: member.userId };
   });
+  if (!result.ok) return result;
+  await deleteAccountIfUnused(actor, result.userId);
+  return { ok: true };
 }
 
 /** The locations a vendor may sign up to serve: those live on the website, by name. */

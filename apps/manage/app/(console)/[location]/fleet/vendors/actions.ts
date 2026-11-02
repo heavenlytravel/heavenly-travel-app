@@ -1,12 +1,14 @@
 "use server";
 
 import {
+  addVendorStaff,
   createVendor,
   createVendorWithOwner,
   moveVendor,
   parseAccountFor,
   parseVendorFields,
   parseVendorOwner,
+  removeVendorStaff,
   setVendorOurs,
   setVendorOwner,
   textOf,
@@ -32,7 +34,8 @@ import { ALL, scopeSlugOf, vendorHref } from "../../../../_lib/routes";
 /**
  * The vendor screens' actions. Entering and changing a vendor is
  * Operation's (`fleet.manage`); approving, refusing, suspending,
- * reinstating, switching one to ours and setting its owner is SUPER's
+ * reinstating, switching one to ours and its Connect accounts (owner and
+ * staff) is SUPER's
  * (`vendors.review`).
  * Each checks again, passes the admin as the actor and lets the writer in
  * @repo/db check the rest. See docs/261028-fulfilment-vendors-and-connect.md.
@@ -162,6 +165,40 @@ export async function setVendorOwnerAction(
   const owner = parseAccountFor(Object.fromEntries(formData));
   if (!owner.ok) return refusalOf(owner);
   const result = await setVendorOwner(actorOf(admin), id, owner.value);
+  if (result.ok) revalidateVendors();
+  return stateOf(result);
+}
+
+/**
+ * SUPER adds someone to a vendor's staff in Connect: the email twice, the
+ * names for an email with no account yet, and a password or none.
+ */
+export async function addVendorStaffAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("vendors.review");
+  if (!admin) return FORBIDDEN;
+  const id = textOf(formData.get("id"));
+  if (!id) return STALE;
+  const fields = parseAccountFor(Object.fromEntries(formData));
+  if (!fields.ok) return refusalOf(fields);
+  const result = await addVendorStaff(actorOf(admin), id, fields.value);
+  if (result.ok) revalidateVendors();
+  return stateOf(result);
+}
+
+/** SUPER removes a vendor's staff member; their account goes when never used. */
+export async function removeVendorStaffAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("vendors.review");
+  if (!admin) return FORBIDDEN;
+  const id = textOf(formData.get("id"));
+  const memberId = textOf(formData.get("memberId"));
+  if (!id || !memberId) return STALE;
+  const result = await removeVendorStaff(actorOf(admin), id, memberId);
   if (result.ok) revalidateVendors();
   return stateOf(result);
 }

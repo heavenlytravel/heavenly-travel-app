@@ -1,12 +1,12 @@
 import { USER_LIMITS } from "@repo/db";
 import { Field, Input } from "@repo/ui/field";
-import { SignInFields } from "@repo/console/SignInFields";
+import { SignInFields } from "./SignInFields";
 
 /**
  * The email and the names of an account, in the panels that make one:
- * Create an account on All Users, Add admin on Admin, and a vendor's Set
- * owner, where the names are needed only for an email with no account
- * yet. The email is typed twice and a password may be set
+ * Create an account on All Users, Add admin on Admin, a vendor's Set
+ * owner and Add staff, and Connect's Team, where the names are needed
+ * only for an email with no account yet. The email is typed twice and a password may be set
  * (`SignInFields`). The server action reads them as `email`,
  * `confirmEmail`, `password`, `firstName` and `lastName`.
  */

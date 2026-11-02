@@ -55,7 +55,11 @@ import {
   type ConsoleScope,
 } from "../../../../../_lib/scope";
 import { VendorForm } from "../_components/VendorForm";
-import { SetOwnerButton } from "../_components/SetOwnerButton";
+import {
+  RemoveVendorStaffButton,
+  VendorAccountButton,
+} from "../_components/VendorAccounts";
+import { addVendorStaffAction, setVendorOwnerAction } from "../actions";
 import { VendorReview } from "../_components/VendorReview";
 
 /**
@@ -118,6 +122,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
     listActivityFor("vendor", id),
   ]);
   const status = isVendorStatus(vendor.status) ? vendor.status : "pending";
+  const owner = members.find((m) => m.role === "owner") ?? null;
   const reviews = permissions.includes("vendors.review");
   const takesFleet = status === "active" || status === "suspended";
   // What suspending takes it off, read for SUPER while it can be suspended.
@@ -202,16 +207,33 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                 <CardTitle
                   inset
                   meta={members.length > 0 ? members.length : undefined}
-                  description="Who signs in to Connect for it: its owner, who adds and removes its staff there. A driver signs in on their own to see their jobs."
+                  description="Who signs in to Connect for it: its owner and staff, each with their own email. A driver signs in on their own to see their jobs."
                   action={
                     reviews ? (
-                      <SetOwnerButton
-                        vendorId={id}
-                        vendorName={vendor.name}
-                        owner={
-                          members.find((m) => m.role === "owner")?.email ?? null
-                        }
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        {owner ? (
+                          <VendorAccountButton
+                            vendorId={id}
+                            label="Add staff"
+                            description={`They sign in to Connect with this email and see ${vendor.name}'s offers, jobs and fleet. An email with no account gets one now, so they need no sign-up.`}
+                            done="Added to the staff."
+                            action={addVendorStaffAction}
+                            primary
+                          />
+                        ) : null}
+                        <VendorAccountButton
+                          vendorId={id}
+                          label={owner ? "Replace owner" : "Set owner"}
+                          description={
+                            owner
+                              ? `${owner.email} stops owning ${vendor.name} in Connect. Their account is deleted too if it was never used, as one made with a mistyped email. An email with no account gets one now.`
+                              : `They sign in to Connect with this email to run ${vendor.name}. An email with no account gets one now, so they need no sign-up.`
+                          }
+                          done="Owner saved."
+                          action={setVendorOwnerAction}
+                          primary={!owner}
+                        />
+                      </div>
                     ) : null
                   }
                 >
@@ -221,10 +243,17 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                   <THead>
                     <Th>Name</Th>
                     <Th>Role</Th>
+                    {reviews ? (
+                      <Th>
+                        <span className="sr-only">Actions</span>
+                      </Th>
+                    ) : null}
                   </THead>
                   <TBody>
                     {members.length === 0 ? (
-                      <EmptyRow colSpan={2}>No account yet.</EmptyRow>
+                      <EmptyRow colSpan={reviews ? 3 : 2}>
+                        No account yet.
+                      </EmptyRow>
                     ) : null}
                     {members.map((member) => (
                       <tr key={member.id}>
@@ -239,6 +268,17 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                             ? VENDOR_ROLE_LABELS[member.role]
                             : member.role}
                         </Td>
+                        {reviews ? (
+                          <Td className="text-right">
+                            {member.role === "owner" ? null : (
+                              <RemoveVendorStaffButton
+                                vendorId={id}
+                                memberId={member.id}
+                                email={member.email}
+                              />
+                            )}
+                          </Td>
+                        ) : null}
                       </tr>
                     ))}
                   </TBody>

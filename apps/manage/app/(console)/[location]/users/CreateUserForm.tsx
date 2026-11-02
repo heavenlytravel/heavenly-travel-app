@@ -8,7 +8,7 @@ import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AccountFields } from "../../../_components/AccountFields";
+import { AccountFields } from "@repo/console/AccountFields";
 import { AdminFields } from "./admin/AdminFields";
 import { createUserAction } from "./actions";
 

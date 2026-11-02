@@ -85,19 +85,24 @@ runs on it unchanged. Before the merge:
 After the merge, hourly hire is refused from any location without an hourly list ("We do
 not have hourly prices from there yet").
 
-## 2. An Assign page, per trip (built)
+## 2. Assigning per trip, on Operation's Assign page (built)
 
-Assigning moves from a dialog on the booking to its own page,
-`/bookings/[id]/assign`, beside amend. The data is per trip already (`TripPart`).
+Decided with the user on 2026-11-02, after three rounds of layouts (a table, two panes,
+steps, then cards to drag): keep it simple, per trip, no dragging.
 
-- One row per trip: Vehicle, Driver, and the amounts per trip as today.
-- **"Same for every trip"** per role, on by default: one picker for all. Off, each row has
-  its own picker. The amounts keep their own tick.
-- The picker greys per row: a driver free on trip 1 but busy on trip 3 is greyed on trip 3.
-- Offers stay one per vendor, a part per trip. Changing one trip later starts from the
-  trip's card.
-- On a phone the rows stack as cards. Built from `@repo/console` parts on the design
-  tokens; a Guide column joins when item 4 is confirmed.
+- **The Board becomes Assign,** `/[location]/assign`, Operation's page: every trip from
+  today on, To assign first; chips for Waiting to accept, Assigned, On the road, Done
+  (today) and All; listed by day or by booking. Our vehicles waiting for Operation's yes
+  stay at the top. A Trello-like board can come later if it is wanted.
+- **Each open trip has Assign,** on that page and as "Assign trip" on the booking: one
+  small dialog with the vehicle and the driver the trip still needs, "Pay vendor (RM)"
+  for a vendor not ours, Answer by, and "Also give the same to" the booking's other open
+  trips. One vehicle and driver for the whole booking is one dialog; a trip five days
+  away can wait.
+- **View** opens a quick view of the booking (customer, trips, total) without leaving
+  the page; "Open booking" goes to it.
+- **"Pay vendor"** replaces "what we owe" on the screens.
+- The tour guide joins as a third choice in the same dialog when item 4 is confirmed.
 
 ## 3. Driver tipping (waits)
 
@@ -146,21 +151,21 @@ Proposal, agreed in principle by the user:
 
 ## To confirm
 
-| #   | Question                                                                                                 | Who            | Holds up    |
-| --- | -------------------------------------------------------------------------------------------------------- | -------------- | ----------- |
-| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                                    | Ops            | Nothing     |
-| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                             | Ops            | Nothing     |
-| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                                  | Ops            | Selling 12h |
-| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours                          | Ops            | Nothing     |
-| P1  | Another word for "Package" (4-hour package)? Built as "Package" until chosen                             | User           | Nothing     |
-| A1  | The Assign layout (one table, two panes or steps) and its address (under the booking, its own, or Board) | User           | Assign      |
-| T1  | Driver tip: compulsory or optional for the customer?                                                     | Ops            | Item 3      |
-| T2  | Tip on one-way coach trips too, or hourly only?                                                          | Ops            | Item 3      |
-| T3  | Tip paid through us, or cash to the driver (then only a note)?                                           | Ops, Finance   | Item 3      |
-| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                                      | Ops            | Item 4      |
-| G2  | Guides on hourly trips only?                                                                             | Ops            | Item 4      |
-| G3  | Does the customer pick a language?                                                                       | Ops            | Item 4      |
-| G4  | Driver-guides: one person as driver and guide on one trip?                                               | Ops            | Item 4      |
-| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers              | Ops            | Item 4      |
-| N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?                 | Sales, Finance | Item 5      |
-| N2  | The last numbers issued, and the day the old system stops issuing them                                   | Sales, Finance | Item 5      |
+| #   | Question                                                                                    | Who            | Holds up    |
+| --- | ------------------------------------------------------------------------------------------- | -------------- | ----------- |
+| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                       | Ops            | Nothing     |
+| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                | Ops            | Nothing     |
+| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                     | Ops            | Selling 12h |
+| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours             | Ops            | Nothing     |
+| P1  | Another word for "Package" (4-hour package)? Built as "Package" until chosen                | User           | Nothing     |
+| A1  | (Settled 2026-11-02: per trip, Assign page in place of Board, no dragging)                  | User           | Nothing     |
+| T1  | Driver tip: compulsory or optional for the customer?                                        | Ops            | Item 3      |
+| T2  | Tip on one-way coach trips too, or hourly only?                                             | Ops            | Item 3      |
+| T3  | Tip paid through us, or cash to the driver (then only a note)?                              | Ops, Finance   | Item 3      |
+| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                         | Ops            | Item 4      |
+| G2  | Guides on hourly trips only?                                                                | Ops            | Item 4      |
+| G3  | Does the customer pick a language?                                                          | Ops            | Item 4      |
+| G4  | Driver-guides: one person as driver and guide on one trip?                                  | Ops            | Item 4      |
+| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers | Ops            | Item 4      |
+| N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?    | Sales, Finance | Item 5      |
+| N2  | The last numbers issued, and the day the old system stops issuing them                      | Sales, Finance | Item 5      |

@@ -53,16 +53,22 @@ received ──► confirmed ──► assigned ──► completed
 - **Assigned is no longer a button.** A trip is assigned once its vehicle and its driver
   are named and every acceptance is in (see "Acceptance").
 - **Completed** comes from the driver's "Dropped off", or from Operation on their behalf.
-- **The board's columns are worked out, not stored:** To assign, Waiting to accept,
+- **Where a trip stands is worked out, not stored:** To assign, Waiting to accept,
   Assigned, On the road, Done. The item status stays one of today's five.
-- **The board is for watching; cards are not dragged.** A card moves when someone acts:
-  a vendor or driver accepts, a driver taps. Clicking a card opens it, and a card in To
-  assign opens the assign panel with the picker. Dragging trips onto a driver's day is
-  in "Later".
-- **Where it lives in manage** (the Signature console's addresses, see
-  `docs/261029-manage-signature-overhaul.md`): the board at `/[location]/board`, every
-  location's under `~`; vendors under Fleet at `/[location]/fleet/vendors`, those serving
-  a location under its slug; who does a trip and what its driver reported on the
+- **Operation works on the Assign page** at `/[location]/assign` (every location's
+  under `~`), which replaced the Board on 2026-11-02: every trip from today on, To
+  assign first, chips for the other states, listed by day or by booking, with a quick
+  view of each booking. Our vehicles waiting for Operation's own yes are listed over
+  them. No dragging; a Trello-like board can come later if it is wanted.
+- **Assigning is per trip, in one small dialog,** the same from the Assign page and from
+  "Assign trip" on the booking: the vehicle and the driver the trip still needs (ours
+  first; one that cannot do the trip greyed with why; or a vendor to choose; or not
+  now), "Pay vendor (RM)" for a vendor not ours, Answer by, and "Also give the same to"
+  the booking's other open trips, so one vehicle and driver for every trip is one
+  dialog. A trip five days away can wait until nearer the day. The tour guide joins as a
+  third choice later.
+- **Elsewhere in manage:** vendors under Fleet at `/[location]/fleet/vendors`, those
+  serving a location under its slug; who does a trip and what its driver reported on the
   booking's page; the safety buffer on the location's Settings.
 
 ### Vendors
@@ -166,14 +172,14 @@ by email (see "Accounts").
 
 Assigning is Operation's work (`bookings.fulfil`).
 
-- **One vehicle and one driver for the whole booking, or different ones per trip.** One
-  for all is how Operation works, and a booking is one vehicle since PR #56. It is saved
-  against each trip. Assigning has its own page, `bookings/[id]/assign` (2026-11-02,
-  docs/261102-booking-ops.md): a card per role with **"Same for every trip"**, on by
-  default; untick it and each trip gets its own picker and amount. The picker greys a
-  vehicle or driver per trip, so one busy on trip 3 is greyed there only; for every trip
-  at once it is greyed with the trip that refuses it. The trips with the same choice make
-  one ask, and offers stay one per vendor, a part per trip.
+- **Per trip, or the same for every trip.** One vehicle and one driver for the whole
+  booking is how Operation usually works, and a booking is one vehicle since PR #56; it
+  is saved against each trip. Since 2026-11-02 (docs/261102-booking-ops.md) each trip is
+  assigned in a small dialog, from the Assign page or "Assign trip" on the booking, with
+  "Also give the same to" the booking's other open trips. The picker greys a vehicle or
+  driver for that trip, with why, and a trip ticked that the choice cannot do cannot be
+  ticked. The trips with the same choice make one ask, and offers stay one per vendor, a
+  part per trip.
 - **Any vehicle with any driver:**
 
 | Driver     | Vehicle    | Vehicle accepted by | Driver accepted by        | Cost to us     |

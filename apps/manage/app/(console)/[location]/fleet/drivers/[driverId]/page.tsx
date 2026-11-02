@@ -15,7 +15,7 @@ import {
   Streamed,
 } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
-import { DeleteButton } from "../../../../../_components/DeleteButton";
+import { DeleteButton } from "@repo/console/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";

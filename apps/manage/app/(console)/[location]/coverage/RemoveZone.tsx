@@ -1,7 +1,7 @@
 "use client";
 
 import { zoneDeleteImpact, type PricedFrom } from "@repo/db";
-import { DeleteButton } from "../../../_components/DeleteButton";
+import { DeleteButton } from "@repo/console/DeleteButton";
 import { deleteZoneAction } from "./actions";
 
 /**

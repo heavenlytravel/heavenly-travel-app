@@ -316,6 +316,44 @@ export function rolesToAsk(trip: {
   return PART_ROLES.filter((role) => !trip.parts.some((p) => p.role === role));
 }
 
+/** A trip still to assign, as the Assign dialog names it. */
+export type AssignTrip = {
+  id: string;
+  position: number;
+  startsAt: Date;
+  /** "Airport → Datai", or the pickup of an hourly hire. */
+  route: string;
+  /** The roles it still needs asked for. */
+  roles: PartRole[];
+};
+
+/** The trips of a booking still to assign, from its trips with their roles and places. */
+export function assignTripsOf(
+  trips: readonly {
+    id: string;
+    position: number;
+    startsAt: Date;
+    roles: PartRole[];
+    job: { pickup: { label: string }; dropoff: { label: string } | null };
+  }[],
+): AssignTrip[] {
+  return trips.flatMap((trip) =>
+    trip.roles.length === 0
+      ? []
+      : [
+          {
+            id: trip.id,
+            position: trip.position,
+            startsAt: trip.startsAt,
+            route: trip.job.dropoff
+              ? `${trip.job.pickup.label} → ${trip.job.dropoff.label}`
+              : trip.job.pickup.label,
+            roles: trip.roles,
+          },
+        ],
+  );
+}
+
 /** Why a vehicle or a driver cannot do one trip, and what only warns; both empty when it fits. */
 export type TripFit = { reasons: string[]; warnings: string[] };
 

@@ -6,6 +6,7 @@ import {
   formatLocalDateTime,
   localDateTimeInputs,
   PART_ROLE_LABELS,
+  type AssignTrip,
   type PartRole,
 } from "@repo/db";
 import type { Candidate } from "@repo/db/server";
@@ -22,44 +23,6 @@ import {
   loadAssignChoices,
   type AssignChoices,
 } from "../[id]/fulfil-actions";
-
-/** A trip still to assign, as the dialog names it. */
-export type AssignTrip = {
-  id: string;
-  position: number;
-  startsAt: Date;
-  /** "Airport → Datai", or the pickup of an hourly hire. */
-  route: string;
-  /** The roles it still needs asked for. */
-  roles: PartRole[];
-};
-
-/** The trips of a booking still to assign, from its trips with their roles and places. */
-export function assignTripsOf(
-  trips: readonly {
-    id: string;
-    position: number;
-    startsAt: Date;
-    roles: PartRole[];
-    job: { pickup: { label: string }; dropoff: { label: string } | null };
-  }[],
-): AssignTrip[] {
-  return trips.flatMap((trip) =>
-    trip.roles.length === 0
-      ? []
-      : [
-          {
-            id: trip.id,
-            position: trip.position,
-            startsAt: trip.startsAt,
-            route: trip.job.dropoff
-              ? `${trip.job.pickup.label} → ${trip.job.dropoff.label}`
-              : trip.job.pickup.label,
-            roles: trip.roles,
-          },
-        ],
-  );
-}
 
 /** A role's choice as its picker holds it: "" for not now, `vendor:<id>`, or a vehicle's or driver's id. */
 type Pick = string;

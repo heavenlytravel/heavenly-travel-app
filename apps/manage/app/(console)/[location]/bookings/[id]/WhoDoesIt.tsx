@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  assignTripsOf,
   DECLINE_NOTE_MAX_LENGTH,
   DECLINE_REASONS,
   DECLINE_REASON_LABELS,
@@ -23,10 +24,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import {
-  AssignTripButton,
-  assignTripsOf,
-} from "../_components/AssignTripDialog";
+import { AssignTripButton } from "../_components/AssignTripDialog";
 import {
   answerPartsAction,
   loadAssignChoices,

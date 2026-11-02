@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  assignTripsOf,
   ASSIGN_STATES,
   ASSIGN_STATE_LABELS,
   formatLocalDate,
@@ -31,10 +32,7 @@ import {
   type ScopeSlug,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
-import {
-  AssignTripButton,
-  assignTripsOf,
-} from "../bookings/_components/AssignTripDialog";
+import { AssignTripButton } from "../bookings/_components/AssignTripDialog";
 import { QuickViewButton } from "./QuickView";
 
 const isState = (value: unknown): value is AssignState =>

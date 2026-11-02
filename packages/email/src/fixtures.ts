@@ -53,7 +53,7 @@ const coachPrice = priceTrip({
   trip: { mode: "hourly", hours: 8 },
   rates: { perKmSen: 0 },
   hourly: {
-    area: "Kuala Lumpur",
+    zone: "Kuala Lumpur",
     packageHours: 8,
     includedHours: 8,
     packageSen: 144000,

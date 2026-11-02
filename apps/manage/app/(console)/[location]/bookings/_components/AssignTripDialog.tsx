@@ -17,7 +17,7 @@ import { Checkbox, Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 import { Loading } from "@repo/ui/skeleton";
 import { FieldsSkeleton } from "@repo/console/Skeleton";
-import { Select, type SelectGroup, type SelectOption } from "@repo/ui/select";
+import { Select } from "@repo/ui/select";
 import { useRef, useState, useTransition } from "react";
 import { useActionForm } from "@repo/console/use-action-form";
 import {
@@ -30,17 +30,19 @@ import {
 type RoleChoice = string;
 
 const NOT_NOW = "";
+/** A role's vehicle or driver left to its vendor to assign. */
+const ANY = "";
 
 /**
  * "Assign" on one trip, on the booking and on the Assign page alike: a
- * small dialog with the vehicle and the driver it still needs, each named
- * from the picker (ours first, one that cannot do the trip greyed with
- * why), left to a vendor to choose, or not now; what we pay a vendor that
- * is not ours; when they answer by; and the booking's other trips still
- * open, to give the same. A trip ticked that a choice cannot do cannot be
- * ticked, with why. Sent, each one asked accepts before the trip is
- * assigned. See docs/261028-fulfilment-vendors-and-connect.md, "Assigning
- * a booking".
+ * small dialog with the vehicle and the driver it still needs, each by its
+ * vendor first (ours first, or not now), then one of that vendor's (one
+ * that cannot do the trip greyed with why) or Any, which the vendor
+ * assigns, said plainly under it; what we pay a vendor that is not ours;
+ * when they answer by; and the booking's other trips still open, to give
+ * the same. A trip ticked that a choice cannot do cannot be ticked, with
+ * why. Sent, each one asked accepts before the trip is assigned. See
+ * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
 export function AssignTripButton({
   bookingId,
@@ -138,10 +140,25 @@ function AssignTripForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [picks, setPicks] = useState<Record<PartRole, RoleChoice>>({
-    vehicle: NOT_NOW,
-    driver: NOT_NOW,
+  // Each role: its vendor first ("" not now), then one of that vendor's
+  // vehicles or drivers, or "" for any, which the vendor assigns.
+  const [vendorIds, setVendorIds] = useState<Record<PartRole, string>>({
+    vehicle: "",
+    driver: "",
   });
+  const [records, setRecords] = useState<Record<PartRole, string>>({
+    vehicle: ANY,
+    driver: ANY,
+  });
+  const choiceOf = (role: PartRole): RoleChoice => {
+    const vendorId = vendorIds[role];
+    if (!vendorId) return NOT_NOW;
+    return records[role] === ANY ? `vendor:${vendorId}` : records[role];
+  };
+  const picks: Record<PartRole, RoleChoice> = {
+    vehicle: choiceOf("vehicle"),
+    driver: choiceOf("driver"),
+  };
   const [costs, setCosts] = useState<Record<PartRole, string>>({
     vehicle: "",
     driver: "",
@@ -243,24 +260,70 @@ function AssignTripForm({
         const candidate = candidateOf(role);
         const vendor = vendorOf(role);
         const fit = candidate?.trips[trip.id];
+        const own = vendorIds[role]
+          ? candidatesOf(role).filter((c) => c.vendor.id === vendorIds[role])
+          : [];
+        const any = vendor !== null && records[role] === ANY;
         return (
-          <div key={role} className="grid gap-2">
-            <Field label={PART_ROLE_LABELS[role]}>
-              {/* Named by its role, as the writer names it when it refuses. */}
-              <Select
-                name={role}
-                value={picks[role]}
-                onValueChange={(pick) =>
-                  setPicks((current) => ({ ...current, [role]: pick }))
-                }
-                options={optionsOf(
-                  role,
-                  candidatesOf(role),
-                  choices.vendors,
-                  trip.id,
-                )}
-              />
-            </Field>
+          <fieldset key={role} className="grid gap-2">
+            <legend className="mb-1 text-sm font-semibold text-ink">
+              {PART_ROLE_LABELS[role]}
+            </legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Vendor">
+                {/* Named by its role, as the writer names it when it refuses. */}
+                <Select
+                  name={role}
+                  value={vendorIds[role]}
+                  onValueChange={(vendorId) => {
+                    setVendorIds((current) => ({
+                      ...current,
+                      [role]: vendorId,
+                    }));
+                    setRecords((current) => ({ ...current, [role]: ANY }));
+                  }}
+                  options={[
+                    { value: NOT_NOW, label: "Not now" },
+                    ...choices.vendors.map((v) => ({
+                      value: v.id,
+                      label: v.isOurs ? `${v.name} (ours)` : v.name,
+                    })),
+                  ]}
+                />
+              </Field>
+              <Field label={PART_ROLE_LABELS[role]}>
+                <Select
+                  value={records[role]}
+                  disabled={!vendorIds[role]}
+                  onValueChange={(record) =>
+                    setRecords((current) => ({ ...current, [role]: record }))
+                  }
+                  options={[
+                    {
+                      value: ANY,
+                      label: vendor?.isOurs
+                        ? `Any, we name it later`
+                        : `Any, the vendor assigns`,
+                    },
+                    ...own.map((c) => {
+                      const reason = c.trips[trip.id]?.reasons[0];
+                      return {
+                        value: c.id,
+                        label: reason ? `${c.name} · ${reason}` : c.name,
+                        disabled: reason !== undefined,
+                      };
+                    }),
+                  ]}
+                />
+              </Field>
+            </div>
+            {any ? (
+              <p className="rounded-control bg-shade px-3 py-2 text-sm text-body">
+                {vendor.isOurs
+                  ? `No ${role} named yet: name it on the booking once you know.`
+                  : `${vendor.name} will assign the ${role}. You see who once they do.`}
+              </p>
+            ) : null}
             {fit?.warnings.map((warning) => (
               <p key={warning} className="text-caption text-warning">
                 {warning}
@@ -294,7 +357,7 @@ function AssignTripForm({
                 />
               </Field>
             ) : null}
-          </div>
+          </fieldset>
         );
       })}
 
@@ -368,42 +431,4 @@ function AssignTripForm({
       </DialogActions>
     </form>
   );
-}
-
-/**
- * A role's picker: not now, then each vendor's vehicles or drivers, ours
- * first, one that cannot do the trip disabled with why; then the vendors
- * that may choose for us.
- */
-function optionsOf(
-  role: PartRole,
-  candidates: readonly Candidate[],
-  vendors: AssignChoices["vendors"],
-  tripId: string,
-): (SelectOption | SelectGroup)[] {
-  const byVendor = new Map<string, SelectGroup>();
-  for (const candidate of candidates) {
-    const label = candidate.vendor.isOurs
-      ? `${candidate.vendor.name} (ours)`
-      : candidate.vendor.name;
-    const group = byVendor.get(candidate.vendor.id) ?? { label, options: [] };
-    const reason = candidate.trips[tripId]?.reasons[0];
-    group.options.push({
-      value: candidate.id,
-      label: reason ? `${candidate.name} · ${reason}` : candidate.name,
-      disabled: reason !== undefined,
-    });
-    byVendor.set(candidate.vendor.id, group);
-  }
-  return [
-    { value: NOT_NOW, label: "Not now" },
-    ...byVendor.values(),
-    {
-      label: "Let a vendor choose",
-      options: vendors.map((vendor) => ({
-        value: `vendor:${vendor.id}`,
-        label: `${vendor.name} chooses the ${role}`,
-      })),
-    },
-  ];
 }

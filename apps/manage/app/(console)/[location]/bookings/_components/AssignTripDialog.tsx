@@ -15,6 +15,7 @@ import { DateTimeField } from "@repo/ui/date-field";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
+import { Bone, Loading } from "@repo/ui/skeleton";
 import { Select, type SelectGroup, type SelectOption } from "@repo/ui/select";
 import { useState, useTransition } from "react";
 import { useActionForm } from "@repo/console/use-action-form";
@@ -58,43 +59,54 @@ export function AssignTripButton({
 }) {
   const [open, setOpen] = useState(false);
   const [choices, setChoices] = useState<AssignChoices | null>(null);
-  const [loading, startLoading] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [, startLoading] = useTransition();
+  // Each opening starts a fresh form and reads who is free now.
+  const [opening, setOpening] = useState(0);
 
   function openDialog() {
-    setError(null);
+    setOpen(true);
+    setFailed(false);
+    setChoices(null);
+    setOpening((n) => n + 1);
     startLoading(async () => {
       const loaded = await loadAssignChoices(bookingId);
-      if (!loaded) {
-        setError("Your teams cannot assign. Ask a SUPER admin.");
-        return;
-      }
-      setChoices(loaded);
-      setOpen(true);
+      if (loaded) setChoices(loaded);
+      else setFailed(true);
     });
   }
 
   return (
-    <span className="inline-grid justify-items-end gap-1">
-      <Button
-        size={size}
-        variant={variant}
-        onClick={openDialog}
-        pending={loading}
-      >
+    <>
+      <Button size={size} variant={variant} onClick={openDialog}>
         {label}
       </Button>
-      <FormError error={error} size="xs" />
-      {choices ? (
-        <Dialog
-          open={open}
-          onOpenChange={setOpen}
-          title={`Assign trip ${trip.position}`}
-          description={`${formatLocalDateTime(trip.startsAt)} · ${trip.route}`}
-          width="md"
-        >
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Assign trip ${trip.position}`}
+        description={`${formatLocalDateTime(trip.startsAt)} · ${trip.route}`}
+        width="md"
+      >
+        {failed ? (
+          <p className="text-sm text-danger">
+            Your teams cannot assign. Ask a SUPER admin.
+          </p>
+        ) : !choices ? (
+          <Loading label="Loading who is free">
+            <div className="grid gap-4">
+              {[0, 1].map((field) => (
+                <div key={field} className="grid gap-1.5">
+                  <Bone className="h-4 w-20" />
+                  <Bone className="h-10 w-full" />
+                </div>
+              ))}
+              <Bone className="ml-auto h-10 w-28" />
+            </div>
+          </Loading>
+        ) : (
           <AssignTripForm
-            key={open ? "open" : "closed"}
+            key={opening}
             bookingId={bookingId}
             trip={trip}
             others={others}
@@ -102,9 +114,9 @@ export function AssignTripButton({
             onDone={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />
-        </Dialog>
-      ) : null}
-    </span>
+        )}
+      </Dialog>
+    </>
   );
 }
 

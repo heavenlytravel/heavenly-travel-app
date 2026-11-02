@@ -387,6 +387,13 @@ export function HourlyRates({
                   index === HOURLY_PACKAGES.length - 1 &&
                   "border-b border-hairline";
                 const key = coversKey(zone.id, size);
+                // A duration with no price is not stored, nor how long it
+                // covers: its hours wait for a price.
+                const priced = classes.some(
+                  (column) =>
+                    senOf(values.prices[priceKey(zone.id, size, column.id)]) !==
+                    null,
+                );
                 return (
                   <tr key={key}>
                     {index === 0 ? (
@@ -415,6 +422,8 @@ export function HourlyRates({
                       ) : (
                         <input
                           aria-label={`Hours ${durationLabel(size)} covers from ${zone.name}`}
+                          title={priced ? undefined : "Price a class first"}
+                          disabled={!priced}
                           aria-invalid={invalid.has(key) || undefined}
                           inputMode="numeric"
                           autoComplete="off"

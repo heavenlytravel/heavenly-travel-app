@@ -6,7 +6,7 @@ import { Rows } from "@repo/ui/rows";
 import { Loading } from "@repo/ui/skeleton";
 import { RowsSkeleton } from "@repo/console/Skeleton";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { loadBookingQuickView, type BookingQuickView } from "./actions";
 
 /**
@@ -29,14 +29,23 @@ export function QuickViewButton({
   const [view, setView] = useState<BookingQuickView | null>(null);
   const [failed, setFailed] = useState(false);
   const [, startLoading] = useTransition();
+  // An answer to an earlier opening that comes late is dropped.
+  const latest = useRef(0);
 
   function openView() {
+    const ask = latest.current + 1;
+    latest.current = ask;
     setOpen(true);
     setFailed(false);
     startLoading(async () => {
-      const loaded = await loadBookingQuickView(bookingId);
-      if (loaded) setView(loaded);
-      else setFailed(true);
+      try {
+        const loaded = await loadBookingQuickView(bookingId);
+        if (latest.current !== ask) return;
+        if (loaded) setView(loaded);
+        else setFailed(true);
+      } catch {
+        if (latest.current === ask) setFailed(true);
+      }
     });
   }
 

@@ -1,4 +1,5 @@
 import {
+  ASSIGN_STATE_LABELS,
   BOOKING_STATUS_LABELS,
   ITEM_STATUS_LABELS,
   LOCATION_STATE_LABELS,
@@ -8,6 +9,7 @@ import {
   isItemStatus,
   isLocationState,
   isVendorStatus,
+  type AssignState,
   type BookingStatus,
   type ItemStatus,
   type LocationState,
@@ -38,6 +40,29 @@ export const BOOKING_TONES: Record<BookingStatus, BadgeTone> = {
   completed: "green",
   cancelled: "neutral",
 };
+
+/**
+ * Where a trip stands in Operation's work, on the Assign page and the
+ * booking alike: to assign waits on us (grey), waiting to accept waits on
+ * someone else (amber), assigned is in hand (navy, as an assigned item),
+ * on the road is moving (brand blue), done is done (green).
+ */
+export const ASSIGN_TONES: Record<AssignState, BadgeTone> = {
+  "to-assign": "neutral",
+  waiting: "amber",
+  assigned: "navy",
+  "on-the-road": "brand",
+  done: "green",
+};
+
+/** Where a trip stands in Operation's work. */
+export function AssignStateBadge({ state }: { state: AssignState }) {
+  return (
+    <Badge dot tone={ASSIGN_TONES[state]}>
+      {ASSIGN_STATE_LABELS[state]}
+    </Badge>
+  );
+}
 
 /** A booking's summary status, as stored on the booking. */
 export function BookingStatusBadge({ status }: { status: string }) {

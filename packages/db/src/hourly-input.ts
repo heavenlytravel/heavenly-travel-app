@@ -36,7 +36,7 @@ export const HOURLY_LIMITS = {
 } as const;
 
 /** The extra hours a booking form offers: none, then one at a time. */
-export const EXTRA_HOUR_OPTIONS: readonly number[] = Array.from(
+const EXTRA_HOUR_OPTIONS: readonly number[] = Array.from(
   { length: HOURLY_LIMITS.maxExtraHours + 1 },
   (_, i) => i,
 );
@@ -61,14 +61,14 @@ export const DURATION_CHOICES = HOURLY_PACKAGES.map((hours) => ({
 /** The extra hour choices a booking form offers: "None", "1 hour", "2 hours"... */
 export const EXTRA_HOUR_CHOICES = EXTRA_HOUR_OPTIONS.map((hours) => ({
   value: String(hours),
-  label: hours === 0 ? "None" : `${hours} ${hours === 1 ? "hour" : "hours"}`,
+  label: hours === 0 ? "None" : durationLabel(hours),
 }));
 
 /** "4 hours + 3 extra hours", as a trip names its hire. */
 export function hourlyChoiceLabel(choice: HourlyChoice) {
   const { packageHours, extraHours } = choice;
   if (extraHours === 0) return durationLabel(packageHours);
-  return `${durationLabel(packageHours)} + ${extraHours} extra ${extraHours === 1 ? "hour" : "hours"}`;
+  return `${durationLabel(packageHours)} + ${durationLabel(extraHours)} extra`;
 }
 
 /**
@@ -240,20 +240,6 @@ export function hourlyRoadCharge(
 
 /** An hourly hire as its receipt keeps it: the package, the extra hours, and the road to a pickup outside every zone. */
 export type HourlyReceipt = HourlyCharge & { road: HourlyRoad | null };
-
-/** The least a package costs in a class anywhere on the list; null when none is priced. */
-export function cheapestPackageSen(list: HourlyList, vehicleClassId: string) {
-  let cheapest: number | null = null;
-  for (const zone of list.zones) {
-    for (const row of zone.packages) {
-      const sen = row.prices[vehicleClassId];
-      if (sen !== undefined && (cheapest === null || sen < cheapest)) {
-        cheapest = sen;
-      }
-    }
-  }
-  return cheapest;
-}
 
 function isHourlyRoad(value: unknown): value is HourlyRoad {
   if (typeof value !== "object" || value === null) return false;

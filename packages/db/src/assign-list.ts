@@ -107,17 +107,32 @@ export type AssignRow = {
 };
 
 /**
- * Every trip from the start of today in Malaysia on, at one location or
- * every one, by pickup: those confirmed, to assign or waiting, the
- * assigned ones, and those done today. Offers past their time are
- * expired first. A trip whose driver has tapped in Connect is on the road.
+ * What the Assign page shows, at one location (its id) or every one: its
+ * trips and our parts waiting for Operation's yes. Offers past their time
+ * are expired once, first, so neither list shows one still offered.
  */
-export async function listAssignTrips(
+export async function getAssignPage(
   locationId?: string,
   now: Date = new Date(),
+): Promise<{ rows: AssignRow[]; ours: OursToAccept[] }> {
+  await expireOffers(now);
+  const [rows, ours] = await Promise.all([
+    listAssignTrips(locationId, now),
+    listOursToAccept(locationId),
+  ]);
+  return { rows, ours };
+}
+
+/**
+ * Every trip from the start of today in Malaysia on, by pickup: those
+ * confirmed, to assign or waiting, the assigned ones, and those done
+ * today. A trip whose driver has tapped in Connect is on the road.
+ */
+async function listAssignTrips(
+  locationId: string | undefined,
+  now: Date,
 ): Promise<AssignRow[]> {
   const from = pickupInstant(todayInMalaysia(now), "00:00") ?? now;
-  await expireOffers(now);
   const items = await db.bookingItem.findMany({
     where: {
       status: { in: ["confirmed", "assigned", "completed"] },
@@ -187,11 +202,10 @@ export type OursToAccept = {
   name: string | null;
 };
 
-/** Our parts not yet accepted for ours, soonest first; at one location (its id) or every one. */
-export async function listOursToAccept(
-  locationId?: string,
+/** Our parts not yet accepted for ours, soonest first. */
+async function listOursToAccept(
+  locationId: string | undefined,
 ): Promise<OursToAccept[]> {
-  await expireOffers();
   const parts = await db.tripPart.findMany({
     where: {
       vendorAcceptedAt: null,

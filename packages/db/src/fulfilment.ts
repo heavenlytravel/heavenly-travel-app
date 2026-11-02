@@ -419,7 +419,7 @@ export type AssignInput = {
 };
 
 const NO_BOOKING = refuse(
-  "This booking was deleted meanwhile. Go back to the board.",
+  "This booking was deleted meanwhile. Go back to Assign.",
 );
 
 /** The time a trip's part is taken: refused when it clashes with another job of the record. */

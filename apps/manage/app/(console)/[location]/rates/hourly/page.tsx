@@ -84,7 +84,7 @@ async function locationHourly({
     <Card flush>
       <CardTitle inset meta="RM for the whole vehicle">
         <span className="inline-flex items-center gap-1.5">
-          Pickup zones and durations
+          Pickup Zones and Durations
           <InfoTip text={HOURLY_TIP} />
         </span>
       </CardTitle>
@@ -111,7 +111,10 @@ async function everyLocationHourly({ manages }: { manages: boolean }) {
       {(list) => (
         <Card flush>
           <CardTitle inset meta="RM for the whole vehicle">
-            Pickup zones and durations
+            <span className="inline-flex items-center gap-1.5">
+              Pickup Zones and Durations
+              <InfoTip text={HOURLY_TIP} />
+            </span>
           </CardTitle>
           <HourlyRates
             locationId={list.id}

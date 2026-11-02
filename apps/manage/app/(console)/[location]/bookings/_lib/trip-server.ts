@@ -254,7 +254,7 @@ export async function prepareFormItems(
   }
 
   // One vehicle does one trip at a time: an hourly hire runs the hours its
-  // package covers from its pickup's area, known once it is priced.
+  // duration covers from its pickup's zone, known once it is priced.
   const clashes = tripClashes(items.map(itemTiming));
   const clashing = clashes.findIndex((found) => found !== null);
   if (clashing >= 0) {

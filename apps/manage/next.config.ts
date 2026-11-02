@@ -33,6 +33,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // The Board became Assign on 2026-11-02 (docs/261102-booking-ops.md):
+  // a bookmark of it lands on its page.
+  async redirects() {
+    return [
+      {
+        source: "/:location/board",
+        destination: "/:location/assign",
+        permanent: true,
+      },
+    ];
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

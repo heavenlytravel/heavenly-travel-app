@@ -10,7 +10,7 @@ import { cx } from "@repo/ui/cx";
  * it says), changed since the save, not a price, or deleted on the save.
  */
 export const CELL_INPUT =
-  "block h-9 w-full min-w-24 rounded-lg border px-2.5 text-right text-sm tabular-nums outline-hidden transition-colors focus:border-brand focus:bg-white focus:bg-none focus:ring-2 focus:ring-brand/25 read-only:cursor-wait";
+  "block h-9 w-full min-w-24 rounded-lg border px-2.5 text-right text-sm tabular-nums outline-hidden transition-colors focus:border-brand focus:bg-white focus:bg-none focus:ring-2 focus:ring-brand/25 read-only:cursor-wait disabled:cursor-not-allowed disabled:bg-shade disabled:text-muted disabled:shadow-none";
 
 /** The room round a cell's box in its table cell. */
 export const CELL_PAD = "px-1.5 py-1.5";

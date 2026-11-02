@@ -96,7 +96,7 @@ export type TripQuoteView =
       dropoffAirport: boolean;
       /** As people read it: "Sat, 3 Oct 2026, 9:30 AM". */
       startsAt: string;
-      /** Hourly: the hours the hire runs, the package's from its area plus the extra; null for one-way. */
+      /** Hourly: the hours the hire runs, the duration's from its zone plus the extra; null for one-way. */
       hours: number | null;
       /** Hourly: "4 hours + 3 extra hours from Kuah Town"; null for one-way. */
       hire: string | null;
@@ -356,7 +356,7 @@ export function clashNotes(
     mode: draft.trip.mode,
     date: draft.trip.date,
     time: draft.trip.time,
-    // Priced, the hours its package covers from its area; until then, by name.
+    // Priced, the hours its duration covers from its zone; until then, by name.
     hours:
       draft.trip.mode !== "hourly"
         ? null

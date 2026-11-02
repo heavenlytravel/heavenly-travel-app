@@ -52,7 +52,7 @@ export type PlannedTrip = {
   /**
    * Hourly only: the hours it runs by its package's name (`namedHours`),
    * for the clash checks while it is typed; the booking checks again with
-   * the hours the package covers from its area.
+   * the hours the duration covers from its zone.
    */
   hours: number | null;
 };

@@ -358,30 +358,6 @@ export function assignTripsOf(
 export type TripFit = { reasons: string[]; warnings: string[] };
 
 /**
- * A vehicle's or a driver's fit for several trips at once, from its fit
- * for each, for one choice that takes them all: every reason and warning
- * of each trip, named by the trip when there is more than one, so the
- * picker says which trip refuses it. A trip with no fit known adds
- * nothing.
- */
-export function fitAcross(
-  fits: Readonly<Record<string, TripFit>>,
-  trips: readonly { id: string; position: number }[],
-): TripFit {
-  const named = trips.length > 1;
-  const fit: TripFit = { reasons: [], warnings: [] };
-  for (const trip of trips) {
-    const one = fits[trip.id];
-    if (!one) continue;
-    const name = (line: string) =>
-      named ? `Trip ${trip.position}: ${line}` : line;
-    fit.reasons.push(...one.reasons.map(name));
-    fit.warnings.push(...one.warnings.map(name));
-  }
-  return fit;
-}
-
-/**
  * Whether a cancelled trip still owes its vendors: cancelled at or after
  * its free-cancellation deadline (its pickup less its cutoff, kept on the
  * trip at booking). Before it, the vendor gets nothing.

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  cheapestPackageSen,
   hourlyChargeOf,
   hourlyChoiceLabel,
   hourlyChoiceOfHours,
@@ -134,13 +133,6 @@ describe("hourlyReceiptOf", () => {
   });
 });
 
-describe("cheapestPackageSen", () => {
-  it("is a class's cheapest package from any area, or null", () => {
-    assert.equal(cheapestPackageSen(list, "sedan"), 14_000);
-    assert.equal(cheapestPackageSen(list, "mpv"), null);
-  });
-});
-
 describe("hourlyChoiceOfHours", () => {
   it("reads a stored hire as the biggest package it fills and the rest", () => {
     assert.deepEqual(hourlyChoiceOfHours(7), {
@@ -170,7 +162,7 @@ describe("hourlyChoiceLabel", () => {
     );
     assert.equal(
       hourlyChoiceLabel({ packageHours: 4, extraHours: 1 }),
-      "4 hours + 1 extra hour",
+      "4 hours + 1 hour extra",
     );
   });
 });

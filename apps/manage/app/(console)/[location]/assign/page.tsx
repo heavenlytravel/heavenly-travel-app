@@ -3,24 +3,26 @@ import {
   assignTripsOf,
   ASSIGN_STATES,
   ASSIGN_STATE_LABELS,
+  durationLabel,
   formatLocalDate,
   formatLocalTime,
   isTripEventKind,
   PART_ROLE_LABELS,
+  plural,
   TRIP_EVENT_LABELS,
   type AssignState,
+  type AssignTrip,
   type PartRole,
 } from "@repo/db";
 import {
-  listAssignTrips,
-  listOursToAccept,
+  getAssignPage,
   type AssignPart,
   type AssignRow,
 } from "@repo/db/server";
-import { Badge, type BadgeTone } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
 import { Card, CardTitle } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
+import { AssignStateBadge } from "@repo/console/StatusBadges";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { FilterLinks } from "../../../_components/FilterLinks";
@@ -42,8 +44,8 @@ const isState = (value: unknown): value is AssignState =>
  * Route: /[location]/assign?state=…&view=booking. Operation's page: every
  * trip from today on, at every location under `~` or at the one under its
  * slug, those to assign first; the chips show those waiting to accept,
- * assigned, on the road or done today, or all. Listed by trip, by day, or
- * by booking. Each trip still to assign has Assign, the same dialog as on
+ * assigned, on the road or done today, or all. Listed by day, or by
+ * booking. Each trip still to assign has Assign, the same dialog as on
  * the booking, and each booking a quick view. Over them, our vehicles
  * waiting for Operation's own yes. See
  * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
@@ -78,15 +80,12 @@ async function assignList(
   state: AssignState | "all",
   view: AssignFilter["view"],
 ) {
-  const [rows, ours] = await Promise.all([
-    listAssignTrips(locationId),
-    listOursToAccept(locationId),
-  ]);
+  const { rows, ours } = await getAssignPage(locationId);
   const shown = rows.filter((row) => state === "all" || row.state === state);
   const count = (s: AssignState) => rows.filter((r) => r.state === s).length;
   const filter = { state: state === "to-assign" ? undefined : state, view };
   // The trips of each booking still to assign, for "Also give the same to".
-  const open = new Map<string, ReturnType<typeof assignTripsOf>>();
+  const open: Open = new Map();
   for (const row of rows) {
     const trips = open.get(row.bookingId) ?? [];
     trips.push(...assignTripsOf([{ ...row, id: row.itemId }]));
@@ -146,28 +145,23 @@ async function assignList(
             })
           }
         />
-        <nav aria-label="List by" className="flex gap-1.5 sm:ml-auto">
-          {(
-            [
-              [undefined, "By trip"],
-              ["booking", "By booking"],
-            ] as const
-          ).map(([value, label]) => (
-            <Link
-              key={label}
-              href={assignHref(scope, { ...filter, view: value })}
-              aria-current={view === value ? "page" : undefined}
-              className={cx(
-                "rounded-full border px-3 py-1 text-sm font-medium focus-ring",
-                view === value
-                  ? "border-navy bg-navy text-white"
-                  : "border-card-edge bg-white text-body hover:border-edge",
-              )}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <div className="sm:ml-auto">
+          <FilterLinks
+            label="List by"
+            all={false}
+            options={[
+              { value: "trip", label: "By trip" },
+              { value: "booking", label: "By booking" },
+            ]}
+            active={view ?? "trip"}
+            hrefOf={(value) =>
+              assignHref(scope, {
+                ...filter,
+                view: value === "booking" ? "booking" : undefined,
+              })
+            }
+          />
+        </div>
       </div>
 
       {shown.length === 0 ? (
@@ -187,7 +181,8 @@ async function assignList(
   );
 }
 
-type Open = Map<string, ReturnType<typeof assignTripsOf>>;
+/** The trips of each booking still to assign, by the booking's id. */
+type Open = Map<string, AssignTrip[]>;
 
 /** The trips under their day, soonest first. */
 function ByDay({
@@ -208,7 +203,7 @@ function ByDay({
     <div className="grid gap-5">
       {[...days].map(([day, dayRows]) => (
         <Card key={day} flush>
-          <CardTitle inset meta={`${dayRows.length} trips`}>
+          <CardTitle inset meta={plural(dayRows.length, "trip")}>
             {day}
           </CardTitle>
           <ul className="divide-y divide-hairline">
@@ -244,7 +239,7 @@ function ByBooking({
           <Card key={bookingId} flush>
             <CardTitle
               inset
-              meta={`${first.customer} · ${first.tripCount} ${first.tripCount === 1 ? "trip" : "trips"}`}
+              meta={`${first.customer} · ${plural(first.tripCount, "trip")}`}
               action={
                 <QuickViewButton
                   bookingId={bookingId}
@@ -289,14 +284,6 @@ function waitingLabel(part: AssignPart) {
   }
 }
 
-const STATE_TONES: Record<AssignState, BadgeTone> = {
-  "to-assign": "neutral",
-  waiting: "amber",
-  assigned: "navy",
-  "on-the-road": "brand",
-  done: "green",
-};
-
 /**
  * One trip: when, where, what, who does it and where it stands; Assign
  * while a vehicle or a driver is still to ask for, and the booking's
@@ -320,7 +307,7 @@ function TripRow({
     <li
       className={cx(
         "grid gap-3 px-5 py-4 md:grid-cols-[6rem_minmax(0,1fr)_minmax(0,16rem)_auto] md:items-center",
-        row.overdue && "bg-warning-tint/40",
+        row.overdue && "bg-warning-tint",
       )}
     >
       <div className="grid gap-0.5">
@@ -340,15 +327,13 @@ function TripRow({
               ? `${job.pickup.label} → ${job.dropoff.label}`
               : job.pickup.label}
           </span>
-          <Badge dot tone={STATE_TONES[row.state]}>
-            {ASSIGN_STATE_LABELS[row.state]}
-          </Badge>
+          <AssignStateBadge state={row.state} />
         </span>
         <span className="text-caption text-muted">
           {[
             inBooking ? null : row.reference,
-            `Trip ${row.position} of ${row.tripCount}`,
-            row.hours ? `${row.hours} hours` : "One-way",
+            `Trip ${row.position}`,
+            row.hours ? durationLabel(row.hours) : "One-way",
             row.className,
             `${row.passengers} pax`,
             scope === null ? row.locationName : null,

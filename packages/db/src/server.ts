@@ -114,7 +114,7 @@ export type {
   PartAnswer,
   HeldBooking,
 } from "./fulfilment";
-export { listAssignTrips, listOursToAccept } from "./assign-list";
+export { getAssignPage } from "./assign-list";
 export type { AssignPart, AssignRow, OursToAccept } from "./assign-list";
 export {
   listDriverJobs,

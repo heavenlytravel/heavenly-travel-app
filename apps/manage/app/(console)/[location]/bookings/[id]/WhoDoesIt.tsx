@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  assignStateOf,
   assignTripsOf,
   DECLINE_NOTE_MAX_LENGTH,
   DECLINE_REASONS,
@@ -22,6 +23,7 @@ import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState, useTransition, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
+import { AssignStateBadge } from "@repo/console/StatusBadges";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { AssignTripButton } from "../_components/AssignTripDialog";
@@ -144,17 +146,9 @@ export function WhoDoesIt({
                 <span>
                   Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
                 </span>
-                {trip.assigned ? (
-                  <Badge dot tone="navy">
-                    Assigned
-                  </Badge>
-                ) : trip.parts.length > 0 ? (
-                  <Badge dot tone="amber">
-                    Waiting to accept
-                  </Badge>
-                ) : (
-                  <Badge dot>To assign</Badge>
-                )}
+                <AssignStateBadge
+                  state={assignStateOf({ ...trip, reported: false })}
+                />
                 {canFulfil && open ? (
                   <span className="ml-auto">
                     <AssignTripButton

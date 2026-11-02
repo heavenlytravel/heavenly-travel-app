@@ -31,7 +31,7 @@ const hours = (n: number) => `${n} h`;
  * A one-way trip is otherwise its cell on the grid, an hourly hire its
  * package on the hourly list.
  * With `editHref` each row links to its class's editor at the location.
- * Rates' Classes and hourly, in a location and, read only, across
+ * Rates' Classes, in a location and, read only, across
  * locations.
  */
 export function ClassRates({

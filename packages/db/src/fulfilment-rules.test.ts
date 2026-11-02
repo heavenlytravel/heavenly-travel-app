@@ -5,7 +5,6 @@ import {
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
-  fitAcross,
   rolesToAsk,
   jobsClash,
   owesAfterCancel,
@@ -221,36 +220,6 @@ describe("rolesToAsk", () => {
         parts: [{ role: "vehicle" }, { role: "driver" }],
       }),
       [],
-    );
-  });
-});
-
-describe("fitAcross", () => {
-  const trips = [
-    { id: "a", position: 1 },
-    { id: "b", position: 3 },
-  ];
-
-  it("names the trip that refuses it when it takes several", () => {
-    const fit = fitAcross(
-      {
-        a: { reasons: [], warnings: ["Tight"] },
-        b: { reasons: ["Has HT-X at the same time"], warnings: [] },
-      },
-      trips,
-    );
-    assert.deepEqual(fit, {
-      reasons: ["Trip 3: Has HT-X at the same time"],
-      warnings: ["Trip 1: Tight"],
-    });
-  });
-
-  it("keeps a single trip's lines as they are", () => {
-    assert.deepEqual(
-      fitAcross({ b: { reasons: ["Road tax expired"], warnings: [] } }, [
-        trips[1]!,
-      ]),
-      { reasons: ["Road tax expired"], warnings: [] },
     );
   });
 });

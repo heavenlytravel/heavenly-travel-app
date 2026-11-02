@@ -50,7 +50,7 @@ export async function setZoneRatesAction(
   return stateOf(result);
 }
 
-/** The whole hourly list as the Hourly Rates page holds it: areas, packages, prices, extra hour rates. */
+/** The whole hourly list as Hourly Rates holds it: each zone's durations and prices, and the extra hour rates. */
 export async function setHourlyListAction(
   locationId: string,
   list: unknown,

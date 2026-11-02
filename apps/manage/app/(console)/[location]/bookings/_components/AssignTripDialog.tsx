@@ -15,9 +15,10 @@ import { DateTimeField } from "@repo/ui/date-field";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
-import { Bone, Loading } from "@repo/ui/skeleton";
+import { Loading } from "@repo/ui/skeleton";
+import { FieldsSkeleton } from "@repo/console/Skeleton";
 import { Select, type SelectGroup, type SelectOption } from "@repo/ui/select";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useActionForm } from "@repo/console/use-action-form";
 import {
   assignAction,
@@ -26,7 +27,7 @@ import {
 } from "../[id]/fulfil-actions";
 
 /** A role's choice as its picker holds it: "" for not now, `vendor:<id>`, or a vehicle's or driver's id. */
-type Pick = string;
+type RoleChoice = string;
 
 const NOT_NOW = "";
 
@@ -61,18 +62,27 @@ export function AssignTripButton({
   const [choices, setChoices] = useState<AssignChoices | null>(null);
   const [failed, setFailed] = useState(false);
   const [, startLoading] = useTransition();
-  // Each opening starts a fresh form and reads who is free now.
+  // Each opening starts a fresh form and reads who is free now; an answer
+  // to an earlier opening that comes late is dropped.
   const [opening, setOpening] = useState(0);
+  const latest = useRef(0);
 
   function openDialog() {
+    const ask = latest.current + 1;
+    latest.current = ask;
     setOpen(true);
     setFailed(false);
     setChoices(null);
-    setOpening((n) => n + 1);
+    setOpening(ask);
     startLoading(async () => {
-      const loaded = await loadAssignChoices(bookingId);
-      if (loaded) setChoices(loaded);
-      else setFailed(true);
+      try {
+        const loaded = await loadAssignChoices(bookingId);
+        if (latest.current !== ask) return;
+        if (loaded) setChoices(loaded);
+        else setFailed(true);
+      } catch {
+        if (latest.current === ask) setFailed(true);
+      }
     });
   }
 
@@ -90,19 +100,12 @@ export function AssignTripButton({
       >
         {failed ? (
           <p className="text-sm text-danger">
-            Your teams cannot assign. Ask a SUPER admin.
+            Who is free could not be read, or your teams cannot assign. Close
+            and try again, or ask a SUPER admin.
           </p>
         ) : !choices ? (
           <Loading label="Loading who is free">
-            <div className="grid gap-4">
-              {[0, 1].map((field) => (
-                <div key={field} className="grid gap-1.5">
-                  <Bone className="h-4 w-20" />
-                  <Bone className="h-10 w-full" />
-                </div>
-              ))}
-              <Bone className="ml-auto h-10 w-28" />
-            </div>
+            <FieldsSkeleton />
           </Loading>
         ) : (
           <AssignTripForm
@@ -135,7 +138,7 @@ function AssignTripForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [picks, setPicks] = useState<Record<PartRole, Pick>>({
+  const [picks, setPicks] = useState<Record<PartRole, RoleChoice>>({
     vehicle: NOT_NOW,
     driver: NOT_NOW,
   });
@@ -144,9 +147,11 @@ function AssignTripForm({
     driver: "",
   });
   const [also, setAlso] = useState<ReadonlySet<string>>(new Set());
-  const [respondBy, setRespondBy] = useState(() =>
-    localDateTimeInputs(defaultRespondBy(trip.startsAt)),
-  );
+  // Untouched, Answer by follows the earliest trip being assigned.
+  const [respondByEdit, setRespondByEdit] = useState<{
+    date: string;
+    time: string;
+  } | null>(null);
   const { pending, error, formProps } = useActionForm(assignAction, {
     done: `Sent. Trip ${trip.position} is assigned once each one accepts.`,
     onDone,
@@ -185,6 +190,11 @@ function AssignTripForm({
     trip,
     ...others.filter((o) => also.has(o.id) && blockOf(o) === null),
   ];
+  const firstPickup = new Date(
+    Math.min(...posted.map((t) => t.startsAt.getTime())),
+  );
+  const respondBy =
+    respondByEdit ?? localDateTimeInputs(defaultRespondBy(firstPickup));
 
   return (
     <form {...formProps} className="grid gap-4">
@@ -201,6 +211,8 @@ function AssignTripForm({
       {posted.map((t) => (
         <input key={t.id} type="hidden" name="itemId" value={t.id} />
       ))}
+      {/* Each trip's choice under its id, as the action reads it. This
+          trip's amount is its visible field, so a refusal shows there. */}
       {posted.flatMap((t) =>
         t.roles.map((role) => {
           const pick = picks[role];
@@ -215,7 +227,7 @@ function AssignTripForm({
                   value={vendor.id}
                 />
               ) : null}
-              {vendor && !vendor.isOurs ? (
+              {vendor && !vendor.isOurs && t.id !== trip.id ? (
                 <input
                   type="hidden"
                   name={`${role}Cost:${t.id}`}
@@ -234,7 +246,9 @@ function AssignTripForm({
         return (
           <div key={role} className="grid gap-2">
             <Field label={PART_ROLE_LABELS[role]}>
+              {/* Named by its role, as the writer names it when it refuses. */}
               <Select
+                name={role}
                 value={picks[role]}
                 onValueChange={(pick) =>
                   setPicks((current) => ({ ...current, [role]: pick }))
@@ -258,8 +272,15 @@ function AssignTripForm({
               </p>
             ))}
             {vendor && !vendor.isOurs ? (
-              <Field label={`Pay ${vendor.name} (RM)`}>
+              <Field
+                label={
+                  posted.length > 1
+                    ? `Pay ${vendor.name} per trip (RM)`
+                    : `Pay ${vendor.name} (RM)`
+                }
+              >
                 <Input
+                  name={`${role}Cost:${trip.id}`}
                   inputMode="decimal"
                   required
                   value={costs[role]}
@@ -285,7 +306,7 @@ function AssignTripForm({
           <DateTimeField
             title="Answer by"
             value={respondBy}
-            onChange={setRespondBy}
+            onChange={setRespondByEdit}
             timeZone={BOOKING_RULES.timeZone}
           />
         </Field>

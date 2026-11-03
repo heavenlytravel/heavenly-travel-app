@@ -113,11 +113,15 @@ export async function createTripsBookingAction(
       : { error: contact.error };
   }
 
+  // Staff signed in on the website book for customers all day: the limit
+  // is for strangers, so it skips them.
   const createdIp = await requestIp();
-  const limited = await isBookingRateLimited({
-    contactEmail: contact.value.contactEmail,
-    createdIp,
-  });
+  const limited =
+    !user?.adminProfile &&
+    (await isBookingRateLimited({
+      contactEmail: contact.value.contactEmail,
+      createdIp,
+    }));
   if (limited) return { error: RATE_LIMITED_MESSAGE };
 
   const resolved = await Promise.all(

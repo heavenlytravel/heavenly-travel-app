@@ -80,6 +80,12 @@ export async function quoteTripsAction(
         totalSen: c.price?.totalSen ?? null,
         availability: c.availability,
         oddHoursSen: c.price?.surcharge?.amountSen ?? 0,
+        weekend: c.price?.weekend
+          ? {
+              reason: c.price.weekend.reason,
+              amountSen: c.price.weekend.amountSen,
+            }
+          : null,
         cancellationCutoffHours: c.offering.cancellationCutoffHours,
       })),
       guides: quote.guides,

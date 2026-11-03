@@ -64,8 +64,16 @@ export function ConfirmForm({
   /** The trips, the vehicle and the prices shown, as hidden fields. */
   entries: [name: string, value: string][];
   totalSen: number;
-  /** What the total is made of, a line each: the vehicle, the odd-hours surcharge, the guide. Empty while no vehicle is chosen. */
-  breakdown: readonly { label: string; amountSen: number }[];
+  /**
+   * What the total is made of, a line each: the vehicle, the odd-hours,
+   * weekend and holiday surcharges, the guide, each with which trips it is
+   * on when not every one. Empty while no vehicle is chosen.
+   */
+  breakdown: readonly {
+    label: string;
+    note: string | null;
+    amountSen: number;
+  }[];
   /** The cancellation terms under the button; null while no vehicle is chosen. */
   cancellation: string | null;
   /** What to fix before booking; null when nothing stops it. */
@@ -270,16 +278,37 @@ export function ConfirmForm({
       </div>
       <div className="grid gap-3">
         {breakdown.length > 0 ? (
-          <dl className="grid gap-1.5 text-copy">
-            {breakdown.map((line) => (
-              <div key={line.label} className="flex justify-between gap-4">
-                <dt className="text-body">{line.label}</dt>
-                <dd className="text-ink tabular-nums">
-                  {formatMyr(line.amountSen)}
+          <section
+            aria-label="Price"
+            className="rounded-card border border-hairline bg-mist px-4 py-3.5 sm:px-5"
+          >
+            <dl className="grid gap-2.5 text-copy">
+              {breakdown.map((line) => (
+                <div
+                  key={line.label}
+                  className="flex items-baseline justify-between gap-4"
+                >
+                  <dt className="min-w-0 text-body">
+                    {line.label}
+                    {line.note ? (
+                      <span className="block text-caption text-muted">
+                        {line.note}
+                      </span>
+                    ) : null}
+                  </dt>
+                  <dd className="shrink-0 text-ink tabular-nums">
+                    {formatMyr(line.amountSen)}
+                  </dd>
+                </div>
+              ))}
+              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-hairline pt-3">
+                <dt className="font-semibold text-ink">Total</dt>
+                <dd className="font-serif text-2xl leading-none text-ink tabular-nums">
+                  {formatMyr(totalSen)}
                 </dd>
               </div>
-            ))}
-          </dl>
+            </dl>
+          </section>
         ) : null}
         {alert ? <FormError size="copy" error={alert} /> : null}
         <Button

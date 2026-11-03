@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  andList,
   clashesOf,
   formatMyr,
   guideChoiceOf,
@@ -15,9 +16,12 @@ import {
   needsGuide,
   plural,
   tripItemField,
+  WEEKEND_REASON_LABELS,
+  WEEKEND_REASONS,
   type TripCategory,
   type TripOptions,
   type TripSearch,
+  type WeekendReason,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { FormError } from "@repo/ui/form-error";
@@ -80,6 +84,17 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
   return `${at(first)} on ${shortDayOf(first)}${
     trips.length > 1 ? `, and ${trips.length - 1} more` : ""
   }`;
+}
+
+/**
+ * Which trips a line of the price is on: "3 trips" when every one of
+ * several, "Trip 2" or "Trips 1 and 3" when some; null for a single trip.
+ */
+function tripsNote(on: readonly number[], count: number): string | null {
+  if (count === 1) return null;
+  if (on.length === count) return plural(count, "trip");
+  const numbers = on.map((index) => String(index + 1));
+  return `${on.length === 1 ? "Trip" : "Trips"} ${andList(numbers)}`;
 }
 
 /**
@@ -268,22 +283,42 @@ export function ConfirmStep({
     (sum, _, index) => sum + (priceOn(index) ?? 0),
     0,
   );
-  // What the total is made of, over every trip priced.
-  const sumOf = (part: (index: number) => number) =>
-    trips.reduce(
-      (sum, _, index) => sum + (priceOn(index) === null ? 0 : part(index)),
-      0,
-    );
-  const oddHoursSen = sumOf((index) => onTrip[index]?.oddHoursSen ?? 0);
-  const guideSen = sumOf(guideOn);
+  // What the total is made of, over every trip priced: a line for each
+  // part, saying which trips it is on when not every one.
+  const pricedTrips = trips.flatMap((_, index) =>
+    priceOn(index) === null ? [] : [index],
+  );
+  const lineOf = (label: string, part: (index: number) => number) => {
+    const on = pricedTrips.filter((index) => part(index) > 0);
+    const amountSen = on.reduce((sum, index) => sum + part(index), 0);
+    return amountSen > 0
+      ? [{ label, note: tripsNote(on, trips.length), amountSen }]
+      : [];
+  };
+  const oddHoursOn = (index: number) => onTrip[index]?.oddHoursSen ?? 0;
+  const weekendOn = (reason: WeekendReason) => (index: number) => {
+    const weekend = onTrip[index]?.weekend;
+    return weekend?.reason === reason ? weekend.amountSen : 0;
+  };
   const breakdown = card
     ? [
-        { label: card.name, amountSen: totalSen - oddHoursSen - guideSen },
-        ...(oddHoursSen > 0
-          ? [{ label: "Odd-hours surcharge", amountSen: oddHoursSen }]
-          : []),
-        ...(guideSen > 0 && guide.language
-          ? [{ label: `Tour guide, ${guide.language}`, amountSen: guideSen }]
+        ...lineOf(
+          card.name,
+          (index) =>
+            (priceOn(index) ?? 0) -
+            oddHoursOn(index) -
+            (onTrip[index]?.weekend?.amountSen ?? 0) -
+            guideOn(index),
+        ),
+        ...lineOf("Odd-hours surcharge", oddHoursOn),
+        ...WEEKEND_REASONS.flatMap((reason) =>
+          lineOf(
+            `${WEEKEND_REASON_LABELS[reason]} surcharge`,
+            weekendOn(reason),
+          ),
+        ),
+        ...(guide.language
+          ? lineOf(`Tour guide, ${guide.language}`, guideOn)
           : []),
       ]
     : [];

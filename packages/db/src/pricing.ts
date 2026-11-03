@@ -81,7 +81,8 @@ export type TripPriceInput = {
 };
 
 /** Why the weekend and holiday surcharge applied. */
-export type WeekendReason = "weekend" | "holiday";
+export const WEEKEND_REASONS = ["weekend", "holiday"] as const;
+export type WeekendReason = (typeof WEEKEND_REASONS)[number];
 
 /** How a receipt names the surcharge, by why it applied. */
 export const WEEKEND_REASON_LABELS: Record<WeekendReason, string> = {

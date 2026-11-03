@@ -1,9 +1,16 @@
-import { driverDocumentsDue, plural, vehicleDocumentsDue } from "@repo/db";
+import {
+  driverDocumentsDue,
+  guideDocumentsDue,
+  plural,
+  vehicleDocumentsDue,
+} from "@repo/db";
 import {
   listDrivers,
+  listGuides,
   listVehicles,
   type DriverWithClasses,
   type FleetFilter,
+  type GuideWithVendor,
   type ListedVehicle,
 } from "@repo/db/server";
 import { Card } from "@repo/console/Card";
@@ -12,12 +19,14 @@ import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import {
   driversHref,
+  guidesHref,
   vehiclesHref,
   type FleetListFilter,
 } from "../_lib/routes";
 import type { ConsoleScope } from "../_lib/scope";
 import { DriversTable } from "./DriversTable";
 import { DueFilter } from "./DueFilter";
+import { GuidesTable } from "./GuidesTable";
 import { SearchBox } from "./SearchBox";
 import { VehiclesTable } from "./VehiclesTable";
 import { ListToolbar } from "./ListToolbar";
@@ -50,6 +59,17 @@ const KINDS = {
     columns: 4,
     href: driversHref,
   },
+  guides: {
+    one: "tour guide",
+    active: "Active",
+    inactive: "Inactive",
+    due: "Licences due",
+    expired: "Licence expired",
+    dueEmpty: "has a licence due",
+    search: "Name or phone",
+    columns: 4,
+    href: guidesHref,
+  },
 } as const;
 
 type FleetKind = keyof typeof KINDS;
@@ -57,12 +77,18 @@ type FleetKind = keyof typeof KINDS;
 /** The rows of one list, by its kind. */
 type Listed =
   | { kind: "vehicles"; rows: ListedVehicle[] }
-  | { kind: "drivers"; rows: DriverWithClasses[] };
+  | { kind: "drivers"; rows: DriverWithClasses[] }
+  | { kind: "guides"; rows: GuideWithVendor[] };
 
 async function read(kind: FleetKind, filter: FleetFilter): Promise<Listed> {
-  return kind === "vehicles"
-    ? { kind, rows: await listVehicles(filter) }
-    : { kind, rows: await listDrivers(filter) };
+  switch (kind) {
+    case "vehicles":
+      return { kind, rows: await listVehicles(filter) };
+    case "drivers":
+      return { kind, rows: await listDrivers(filter) };
+    case "guides":
+      return { kind, rows: await listGuides(filter) };
+  }
 }
 
 /**
@@ -84,10 +110,15 @@ function countsOf(listed: Listed): Counts {
           isActive: v.isActive,
           due: vehicleDocumentsDue(v),
         }))
-      : listed.rows.map((d) => ({
-          isActive: d.isActive,
-          due: driverDocumentsDue(d),
-        }));
+      : listed.kind === "drivers"
+        ? listed.rows.map((d) => ({
+            isActive: d.isActive,
+            due: driverDocumentsDue(d),
+          }))
+        : listed.rows.map((g) => ({
+            isActive: g.isActive,
+            due: guideDocumentsDue(g),
+          }));
   const active = rows.filter((row) => row.isActive);
   const expired = active.filter((row) =>
     row.due.some((document) => document.state === "expired"),
@@ -133,7 +164,7 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
 }
 
 /**
- * Our vehicles or our drivers in the scope: every location's under `~`,
+ * Our vehicles, our drivers or the tour guides in the scope: every location's under `~`,
  * with a column of locations, or those based at one location. A strip of
  * figures sums up the scope; under it, in one card, the search, the
  * filter to those with a document due, and the table, with how many it
@@ -216,9 +247,16 @@ export function FleetList({
                     bare
                     emptyMessage={empty}
                   />
-                ) : (
+                ) : listed.kind === "drivers" ? (
                   <DriversTable
                     drivers={listed.rows}
+                    scope={scope.slug}
+                    bare
+                    emptyMessage={empty}
+                  />
+                ) : (
+                  <GuidesTable
+                    guides={listed.rows}
                     scope={scope.slug}
                     bare
                     emptyMessage={empty}

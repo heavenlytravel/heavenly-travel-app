@@ -7,6 +7,7 @@ import {
   ALL,
   dashboardHref,
   driversHref,
+  guidesHref,
   vehiclesHref,
   type ScopeSlug,
 } from "./routes";
@@ -16,12 +17,13 @@ import {
  * where a saved record opens.
  */
 
-/** Our vehicles or our drivers. */
-export type FleetKind = "vehicles" | "drivers";
+/** Our vehicles, our drivers or the tour guides. */
+export type FleetKind = "vehicles" | "drivers" | "guides";
 
 const LISTS: Record<FleetKind, (scope: ScopeSlug) => string> = {
   vehicles: vehiclesHref,
   drivers: driversHref,
+  guides: guidesHref,
 };
 
 /**

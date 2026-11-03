@@ -153,6 +153,15 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         words: "fleet licence",
       },
       {
+        key: "guides",
+        label: "Tour Guides",
+        path: "fleet/guides",
+        icon: "guides",
+        permission: "fleet.manage",
+        shared: true,
+        words: "fleet tour guide motac languages",
+      },
+      {
         key: "vendors",
         label: "Vendors",
         path: "fleet/vendors",

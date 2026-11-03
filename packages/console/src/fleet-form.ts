@@ -3,7 +3,7 @@ import type { ClassOption } from "@repo/db/server";
 import type { SelectGroup } from "@repo/ui/select";
 
 /**
- * What the vehicle and driver forms share with each other and with their
+ * What the vehicle, driver and guide forms share with each other and with their
  * actions: the catalogue's classes as they pick them, a vehicle's class
  * and a driver's classes, and the scope a form was opened in.
  * Browser-safe.
@@ -19,6 +19,7 @@ export const SCOPE_FIELD = "scope";
 export const DATES_CARDS = {
   vehicles: { id: "documents", name: "Documents" },
   drivers: { id: "licences", name: "Licences" },
+  guides: { id: "licence", name: "Licence" },
 } as const;
 
 /** The classes under their category, car with driver first; a class off in the catalogue says so. */

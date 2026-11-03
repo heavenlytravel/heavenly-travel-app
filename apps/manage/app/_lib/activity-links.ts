@@ -10,6 +10,7 @@ import {
   classHref,
   dashboardHref,
   driverHref,
+  guideHref,
   locationPublishHref,
   mediaHref,
   sitePageHref,
@@ -31,6 +32,7 @@ const ACTIVITY_RECORD_NAMES: Record<ActivityEntityType, string> = {
   location: "Location",
   vehicle: "Vehicle",
   driver: "Driver",
+  guide: "Tour guide",
   vendor: "Vendor",
   "vehicle-class": "Class",
   user: "User",
@@ -111,6 +113,10 @@ export function activityEntryHref(
     case "driver":
       return based && may("fleet.manage")
         ? driverHref(based, entry.entityId)
+        : null;
+    case "guide":
+      return based && may("fleet.manage")
+        ? guideHref(based, entry.entityId)
         : null;
     case "vendor":
       return may("fleet.manage") ? vendorHref(null, entry.entityId) : null;

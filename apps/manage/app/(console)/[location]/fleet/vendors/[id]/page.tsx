@@ -12,6 +12,7 @@ import {
   heldBookingsOf,
   listActivityFor,
   listDrivers,
+  listGuides,
   listVehicles,
   listVendorMembers,
 } from "@repo/db/server";
@@ -40,12 +41,14 @@ import {
   TwoLines,
 } from "@repo/console/Table";
 import { DriversTable } from "../../../../../_components/DriversTable";
+import { GuidesTable } from "../../../../../_components/GuidesTable";
 import { HistoryTimeline } from "../../../../../_components/HistoryTimeline";
 import { VehiclesTable } from "../../../../../_components/VehiclesTable";
 import { getPermissions, requireAdmin } from "../../../../../_lib/access";
 import {
   ALL,
   newVendorDriverHref,
+  newVendorGuideHref,
   newVendorVehicleHref,
   vendorsHref,
 } from "../../../../../_lib/routes";
@@ -115,9 +118,10 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   if (!vendor) notFound();
   const here = scope.location;
   if (here && !vendor.locations.some((l) => l.id === here.id)) notFound();
-  const [vehicles, drivers, members, history] = await Promise.all([
+  const [vehicles, drivers, guides, members, history] = await Promise.all([
     listVehicles({ vendorId: id, locationId: here?.id }),
     listDrivers({ vendorId: id, locationId: here?.id }),
+    listGuides({ vendorId: id, locationId: here?.id }),
     listVendorMembers(id),
     listActivityFor("vendor", id),
   ]);
@@ -125,6 +129,11 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   const owner = members.find((m) => m.role === "owner") ?? null;
   const reviews = permissions.includes("vendors.review");
   const takesFleet = status === "active" || status === "suspended";
+  // Guides show for ours and a vendor offering them, or one that has some.
+  const showsGuides =
+    vendor.isOurs ||
+    vendor.services.includes("tour-guide") ||
+    guides.length > 0;
   // What suspending takes it off, read for SUPER while it can be suspended.
   const held =
     reviews && status === "active"
@@ -202,6 +211,32 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                 emptyMessage="No driver yet."
               />
             </Card>
+            {showsGuides ? (
+              <Card flush>
+                <CardTitle
+                  inset
+                  meta={guides.length > 0 ? guides.length : undefined}
+                  action={
+                    takesFleet ? (
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={newVendorGuideHref(scope.slug, id)}>
+                          <PlusIcon />
+                          Add tour guide
+                        </Link>
+                      </Button>
+                    ) : null
+                  }
+                >
+                  Tour Guides
+                </CardTitle>
+                <GuidesTable
+                  guides={guides}
+                  scope={scope.slug}
+                  bare
+                  emptyMessage="No tour guide yet."
+                />
+              </Card>
+            ) : null}
             {vendor.isOurs ? null : (
               <Card flush>
                 <CardTitle

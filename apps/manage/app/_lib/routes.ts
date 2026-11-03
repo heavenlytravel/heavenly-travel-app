@@ -143,7 +143,7 @@ export function amendItemHref(
 }
 
 /** What narrows the Assign page: where the trips stand, and listed by trip or by booking. */
-export type AssignFilter = { state?: string; role?: string };
+export type AssignFilter = { state?: string };
 
 /** Operation's Assign page, in the scope: every trip from today on, to assign first. */
 export function assignHref(scope: ScopeSlug, filter: AssignFilter = {}) {

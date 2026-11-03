@@ -6,7 +6,6 @@ import {
   formatLocalDate,
   formatLocalDateTime,
   formatLocalTime,
-  isPartRole,
   isTripEventKind,
   PART_ROLE_LABELS,
   PART_ROLES,
@@ -14,7 +13,6 @@ import {
   TRIP_EVENT_LABELS,
   untilPickup,
   type AssignState,
-  type PartRole,
 } from "@repo/db";
 import {
   getAssignPage,
@@ -30,7 +28,6 @@ import { PageHeader } from "@repo/console/PageHeader";
 import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { ASSIGN_TONES, AssignStateBadge } from "@repo/console/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
-import { FilterLinks } from "../../../_components/FilterLinks";
 import { requireAdmin } from "../../../_lib/access";
 import {
   assignHref,
@@ -46,27 +43,14 @@ const isState = (value: unknown): value is AssignState =>
 
 type Shown = AssignState | "all";
 
-/** What the list is narrowed to: where trips stand, and one role or every one. */
-type Filter = { state: Shown; role: PartRole | undefined };
-
-/** Where a row stands: the trip, or the one role the list is narrowed to. */
-const standingOf = (row: AssignRow, role: PartRole | undefined) =>
-  role ? row.roleStates[role] : row.state;
-
-/** The address of the list narrowed to a filter; To assign is the default and left out. */
-const hrefOf = (scope: ScopeSlug, filter: Filter) =>
-  assignHref(scope, {
-    state: filter.state === "to-assign" ? undefined : filter.state,
-    role: filter.role,
-  });
+/** The address of the list narrowed to a state; To assign is the default and left out. */
+const hrefOf = (scope: ScopeSlug, state: Shown) =>
+  assignHref(scope, { state: state === "to-assign" ? undefined : state });
 
 /**
- * Route: /[location]/assign?state=…&role=vehicle. Operation's page: every
- * trip from today on, at every location under `~` or at the one under its
- * slug, in a table by pickup, those to assign first. Chips narrow it to
- * one role (the vehicles or the drivers; the tour guide later): the tiles
- * then count where that role stands and the table shows its column alone.
- * Figure tiles count where the trips stand and narrow the list to one.
+ * Route: /[location]/assign?state=…. Operation's page: every trip from
+ * today on, at every location under `~` or at the one under its slug, in
+ * a table by pickup, those to assign first. Figure tiles count where the trips stand and narrow the list to one.
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
  * opens a quick view of the booking, Assign or Open the trip's own page.
@@ -84,30 +68,17 @@ export default async function AssignPage({
       : isState(query.state)
         ? query.state
         : "to-assign";
-  const role = isPartRole(query.role) ? query.role : undefined;
-  const filter: Filter = { state, role };
 
   return (
     <>
       <PageHeader title="Assign" />
-      <div className="mb-4">
-        <FilterLinks
-          label="Assign by role"
-          options={PART_ROLES.map((value) => ({
-            value,
-            label: PART_ROLE_LABELS[value],
-          }))}
-          active={role}
-          hrefOf={(value) => hrefOf(scope.slug, { state, role: value })}
-        />
-      </div>
       <Streamed
-        key={`${scope.slug ?? "~"}:${state}:${role ?? "all"}`}
+        key={`${scope.slug ?? "~"}:${state}`}
         fallback={
           <>
             <FigureTiles
               label="Trips by where they stand"
-              figures={stateFigures(scope.slug, filter, null)}
+              figures={stateFigures(scope.slug, state, null)}
             />
             <Card flush>
               <TableSkeleton bare columns={6} />
@@ -115,7 +86,7 @@ export default async function AssignPage({
           </>
         }
       >
-        {() => assignList(scope.slug, scope.location?.id, filter)}
+        {() => assignList(scope.slug, scope.location?.id, state)}
       </Streamed>
     </>
   );
@@ -124,7 +95,7 @@ export default async function AssignPage({
 /** The tiles: each state, then All, with its count; the one on screen ringed. Without counts, bones. */
 function stateFigures(
   scope: ScopeSlug,
-  { state: shown, role }: Filter,
+  shown: Shown,
   counts: Record<Shown, number> | null,
 ): Figure[] {
   const valueOf = (key: Shown) =>
@@ -135,7 +106,7 @@ function stateFigures(
       label: ASSIGN_STATE_LABELS[state],
       value: valueOf(state),
       tone: ASSIGN_TONES[state],
-      href: hrefOf(scope, { state, role }),
+      href: hrefOf(scope, state),
       current: shown === state,
     })),
     {
@@ -143,7 +114,7 @@ function stateFigures(
       label: "All",
       value: valueOf("all"),
       tone: "neutral" as const,
-      href: hrefOf(scope, { state: "all", role }),
+      href: hrefOf(scope, "all"),
       current: shown === "all",
     },
   ];
@@ -162,28 +133,21 @@ const EMPTY: Record<Shown, string> = {
 async function assignList(
   scope: ScopeSlug,
   locationId: string | undefined,
-  filter: Filter,
+  state: Shown,
 ) {
-  const { state, role } = filter;
   const rows = await getAssignPage(locationId);
   const counts = Object.fromEntries([
-    ...ASSIGN_STATES.map((s) => [
-      s,
-      rows.filter((r) => standingOf(r, role) === s).length,
-    ]),
+    ...ASSIGN_STATES.map((s) => [s, rows.filter((r) => r.state === s).length]),
     ["all", rows.length],
   ]) as Record<Shown, number>;
-  const shown = rows.filter(
-    (row) => state === "all" || standingOf(row, role) === state,
-  );
-  const roles = role ? [role] : PART_ROLES;
+  const shown = rows.filter((row) => state === "all" || row.state === state);
   const now = new Date();
 
   return (
     <>
       <FigureTiles
         label="Trips by where they stand"
-        figures={stateFigures(scope, filter, counts)}
+        figures={stateFigures(scope, state, counts)}
       />
       <Card flush>
         <Table bare>
@@ -191,29 +155,20 @@ async function assignList(
             <Th>Pick-up</Th>
             <Th>Booking</Th>
             <Th>Trip</Th>
-            {roles.map((r) => (
-              <Th key={r}>{PART_ROLE_LABELS[r]}</Th>
+            {PART_ROLES.map((role) => (
+              <Th key={role}>{PART_ROLE_LABELS[role]}</Th>
             ))}
             <Th>Status</Th>
             <Th />
           </THead>
           <TBody>
             {shown.length === 0 ? (
-              <EmptyRow colSpan={5 + roles.length}>
-                {role && state === "to-assign"
-                  ? `Nothing to assign: every trip from today on has its ${role} asked for.`
-                  : EMPTY[state]}
+              <EmptyRow colSpan={5 + PART_ROLES.length}>
+                {EMPTY[state]}
               </EmptyRow>
             ) : (
               shown.map((row) => (
-                <TripRow
-                  key={row.itemId}
-                  row={row}
-                  scope={scope}
-                  roles={roles}
-                  state={standingOf(row, role)}
-                  now={now}
-                />
+                <TripRow key={row.itemId} row={row} scope={scope} now={now} />
               ))
             )}
           </TBody>
@@ -227,19 +182,13 @@ async function assignList(
 function TripRow({
   row,
   scope,
-  roles,
-  state,
   now,
 }: {
   row: AssignRow;
   scope: ScopeSlug;
-  /** The roles the table shows: every one, or the one it is narrowed to. */
-  roles: readonly PartRole[];
-  /** Where it stands: the trip, or the one role shown. */
-  state: AssignState;
   now: Date;
 }) {
-  const { job } = row;
+  const { job, state } = row;
   const until = untilPickup(row.startsAt, now);
   const toDo = state === "to-assign" || state === "waiting";
   const urgent = until.soon && toDo;
@@ -294,7 +243,7 @@ function TripRow({
           </span>
         ) : null}
       </Td>
-      {roles.map((role) => (
+      {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
           <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
         </Td>

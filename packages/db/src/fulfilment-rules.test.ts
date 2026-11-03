@@ -298,34 +298,3 @@ describe("untilPickup", () => {
     });
   });
 });
-
-describe("assignStateOf by role", () => {
-  const now = at("2026-11-03T00:00:00Z");
-  const vehicle = {
-    role: "vehicle",
-    vehicleId: "v",
-    driverId: null,
-    vendorAcceptedAt: now,
-    driverAcceptedAt: null,
-  };
-  const trip = { status: "confirmed", parts: [vehicle], reported: false };
-
-  it("stands each role on its own", () => {
-    assert.equal(assignStateOf(trip), "waiting");
-    assert.equal(assignStateOf(trip, "vehicle"), "assigned");
-    assert.equal(assignStateOf(trip, "driver"), "to-assign");
-    const asked = { ...trip, parts: [{ ...vehicle, vendorAcceptedAt: null }] };
-    assert.equal(assignStateOf(asked, "vehicle"), "waiting");
-  });
-
-  it("follows the trip once on the road or done", () => {
-    assert.equal(
-      assignStateOf({ ...trip, reported: true }, "driver"),
-      "on-the-road",
-    );
-    assert.equal(
-      assignStateOf({ ...trip, status: "completed" }, "driver"),
-      "done",
-    );
-  });
-});

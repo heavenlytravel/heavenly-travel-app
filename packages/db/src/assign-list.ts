@@ -102,8 +102,6 @@ export type AssignRow = {
   tripCount: number;
   startsAt: Date;
   state: AssignState;
-  /** Where each role stands on its own, for the list by role. */
-  roleStates: Record<PartRole, AssignState>;
   /** The roles it still needs asked for. */
   roles: PartRole[];
   job: Job;
@@ -153,12 +151,11 @@ async function listAssignTrips(
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
-    const standing = {
+    const state = assignStateOf({
       status: item.status,
       parts: item.parts,
       reported: isOnTheRoad(item.events),
-    };
-    const state = assignStateOf(standing);
+    });
     return {
       itemId: item.id,
       bookingId: item.booking.id,
@@ -169,10 +166,6 @@ async function listAssignTrips(
         .length,
       startsAt: item.startsAt,
       state,
-      roleStates: {
-        vehicle: assignStateOf(standing, "vehicle"),
-        driver: assignStateOf(standing, "driver"),
-      },
       roles: rolesToAsk(item),
       job,
       className: item.tripDetails?.vehicleClassName ?? "",

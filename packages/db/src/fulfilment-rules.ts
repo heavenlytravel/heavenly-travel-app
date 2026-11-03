@@ -337,28 +337,17 @@ export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
   done: "Done",
 };
 
-/**
- * Where a trip stands: by its status, its parts and whether its driver has
- * reported. With `role`, where that one role stands: to assign until it is
- * asked, assigned once it is accepted.
- */
-export function assignStateOf(
-  trip: {
-    status: string;
-    parts: readonly PartAcceptance[];
-    /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
-    reported: boolean;
-  },
-  role?: PartRole,
-): AssignState {
+/** Where a trip stands: by its status, its parts and whether its driver has reported. */
+export function assignStateOf(trip: {
+  status: string;
+  parts: readonly PartAcceptance[];
+  /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
+  reported: boolean;
+}): AssignState {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
-  const parts = role ? trip.parts.filter((p) => p.role === role) : trip.parts;
-  const assigned = role
-    ? parts.length > 0 && parts.every(partAccepted)
-    : tripAssigned(parts);
-  if (assigned) return "assigned";
-  if (parts.length > 0) return "waiting";
+  if (tripAssigned(trip.parts)) return "assigned";
+  if (trip.parts.length > 0) return "waiting";
   return "to-assign";
 }
 

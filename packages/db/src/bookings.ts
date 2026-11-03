@@ -6,6 +6,7 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
+import { bookingNumberYear, parseBookingNumber } from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import { localDayRange } from "./booking-rules";
@@ -121,7 +122,7 @@ export type CreateBookingInput = {
   items: PreparedItem[];
 };
 
-const REFERENCE_ATTEMPTS = 5;
+const CREATE_ATTEMPTS = 5;
 
 /**
  * Creates a booking with its items in one transaction and, when it belongs
@@ -129,7 +130,8 @@ const REFERENCE_ATTEMPTS = 5;
  * is the customer or the guest on the website, or the admin entering a
  * booking for them. An item with an agreed price is charged that price and
  * logged as priced, so it is never a special case later. The reference is
- * random, so a collision is retried. Emails are the caller's job, after
+ * random, and the running number the year's highest + 1 (./booking-number),
+ * so a collision of either, two bookings at once, is retried. Emails are the caller's job, after
  * this returns.
  */
 export async function createBooking(
@@ -182,8 +184,18 @@ export async function createBooking(
             data: { phone: input.contactPhone },
           });
         }
+        const numberYear = bookingNumberYear(new Date());
+        const last = await tx.booking.aggregate({
+          where: { numberYear },
+          _max: { number: true },
+        });
         const booking = await tx.booking.create({
-          data: { ...data, reference: generateReference() },
+          data: {
+            ...data,
+            reference: generateReference(),
+            numberYear,
+            number: (last._max.number ?? 0) + 1,
+          },
           ...withItems,
         });
         await logActivity(tx, actor, {
@@ -213,8 +225,11 @@ export async function createBooking(
       });
     } catch (error) {
       if (
-        attempt >= REFERENCE_ATTEMPTS ||
-        !isUniqueViolation(error, "reference")
+        attempt >= CREATE_ATTEMPTS ||
+        !(
+          isUniqueViolation(error, "reference") ||
+          isUniqueViolation(error, "number")
+        )
       ) {
         throw error;
       }
@@ -286,7 +301,7 @@ export type BookingFilter = {
   status?: BookingStatus;
   locationId?: string;
   pickupOn?: Date;
-  /** As `searchTermOf` reads it: the id, part of the reference, or of the customer's name, phone or email. */
+  /** As `searchTermOf` reads it: the id, the number, part of the reference, or of the customer's name, phone or email. */
   search?: string;
 };
 
@@ -306,7 +321,10 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   if (Object.keys(item).length > 0) where.items = { some: item };
   if (filter.search) {
     const phone = phoneDigitsOf(filter.search);
+    const number = parseBookingNumber(filter.search);
     where.OR = [
+      // "HTQ-26-00042" or "26-42": the booking with that number.
+      ...(number ? [number] : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
       { reference: { contains: filter.search.toUpperCase() } },
@@ -360,6 +378,9 @@ export function findBookingMatches(search: string, take: number) {
     select: {
       id: true,
       reference: true,
+      numberYear: true,
+      number: true,
+      confirmedAt: true,
       status: true,
       contactName: true,
       startsAt: true,

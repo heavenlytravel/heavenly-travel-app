@@ -124,24 +124,30 @@ Proposal, agreed in principle by the user:
 - Connect's sign-up gets "Tour guide" as a service.
 - When a booking has a guide, Assign shows a Guide column.
 
-## 5. Quotation and invoice numbers (waits on the formats)
+## 5. Quotation and invoice numbers (built 2026-11-03, `feat/tour-guide`)
 
-- **`reference` stays** (HT-7K3QZM, random): the booking's id in links and emails, for
-  guests and accounts. A running number in a link lets anyone guess other bookings.
-- **`quotationNo` and `invoiceNo`,** each from its own counter, taken in the same
-  database step as the booking, so no gaps and no duplicates (MyInvois, DR-09).
-- A booking entered in `manage.` gets a quotation number when made and an invoice number
-  when confirmed. **A website booking gets an invoice number only,** when paid and
-  confirmed: it was never quoted.
-- A quotation never confirmed keeps its number and never gets an invoice number: a lost
-  lead.
-- **Continuing their numbers:** no counter table and no setting. The user sets the real
-  number on the first quotation and the first invoice made in the system; each one after
-  takes the highest number + 1. A unique index refuses a duplicate, and two bookings made
-  at the same moment retry (user, 2026-11-02).
-- **No editing** of a number, except an optional "existing number" when entering a booking
-  the old system already numbered, checked for duplicates.
-- Both are found by the console search.
+- **The format** (user, 2026-11-03): one running number per booking, counted per year in
+  Malaysia, shown as **HTQ-YY-NNNNN**, the quotation, until the booking is first
+  confirmed, then as **HTI-YY-NNNNN**, its invoice: the same digits, so a quotation and
+  its invoice match at a glance (`src/booking-number.ts`). It replaces the old
+  system's HT-YYMMDD-XXX quotations and HT-XXX invoices. This replaces the two
+  counters planned before: a booking never confirmed keeps its HTQ number, so the
+  invoice numbers have gaps, which MyInvois allows (numbers unique, not gapless).
+- **`reference` stays** (HT-7K3QZM, random): the booking's id in links and emails, the
+  customer's way to look a guest booking up, and what Connect shows vendors and
+  drivers. A running number in a link lets anyone guess other bookings.
+- **Manage shows the number first:** the bookings list (the reference under it), the
+  booking's title (the reference in its line), Assign, the dashboard, the history and
+  Ctrl+K, which finds "HTQ-26-00042", "HTI-26-42" or "26-42".
+- **Taken when the booking is made:** the year's highest + 1, in the same database
+  step; a unique index refuses a duplicate and two bookings at once retry.
+- **Bookings from before** get theirs from `pnpm --filter @repo/db db:number-bookings`
+  (and `:prod`), oldest first, in the year each was made. Run after the schema push.
+- **Continuing the old numbers** waits on N2: once Sales and Finance give the last
+  numbers issued, the year's first is set from them.
+- Other formats, if the team prefers: `HTQ2600042` (no dashes, easier to type),
+  `HT-Q-2611-0042` (month too, restarting monthly), `Q26-00042` / `INV26-00042`
+  (shorter, without the brand).
 
 ## 6. Return trips and discounts (decided: no rule)
 
@@ -154,20 +160,19 @@ Proposal, agreed in principle by the user:
 
 ## To confirm
 
-| #   | Question                                                                                    | Who            | Holds up    |
-| --- | ------------------------------------------------------------------------------------------- | -------------- | ----------- |
-| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                       | Ops            | Nothing     |
-| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                | Ops            | Nothing     |
-| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                     | Ops            | Selling 12h |
-| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours             | Ops            | Nothing     |
-| A1  | (Settled 2026-11-02: per trip, Assign page in place of Board, no dragging)                  | User           | Nothing     |
-| T1  | Driver tip: compulsory or optional for the customer?                                        | Ops            | Item 3      |
-| T2  | Tip on one-way coach trips too, or hourly only?                                             | Ops            | Item 3      |
-| T3  | Tip paid through us, or cash to the driver (then only a note)?                              | Ops, Finance   | Item 3      |
-| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                         | Ops            | Item 4      |
-| G2  | Guides on hourly trips only?                                                                | Ops            | Item 4      |
-| G3  | Does the customer pick a language?                                                          | Ops            | Item 4      |
-| G4  | Driver-guides: one person as driver and guide on one trip?                                  | Ops            | Item 4      |
-| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers | Ops            | Item 4      |
-| N1  | The quotation and invoice formats; how they are told apart; digits; a restart each year?    | Sales, Finance | Item 5      |
-| N2  | The last numbers issued, and the day the old system stops issuing them                      | Sales, Finance | Item 5      |
+| #   | Question                                                                                    | Who            | Holds up        |
+| --- | ------------------------------------------------------------------------------------------- | -------------- | --------------- |
+| H1  | Do the odd-hours and weekend surcharges apply to hourly? Built as yes                       | Ops            | Nothing         |
+| H2  | "Exclude parking": a line on every hourly quote, or nothing?                                | Ops            | Nothing         |
+| H3  | The 12-hour package's prices and its additional hour rate, for Langkawi                     | Ops            | Selling 12h     |
+| H4  | Is there a cap on additional hours (4 + 6)? Built as: the trip at most 24 hours             | Ops            | Nothing         |
+| A1  | (Settled 2026-11-02: per trip, Assign page in place of Board, no dragging)                  | User           | Nothing         |
+| T1  | Driver tip: compulsory or optional for the customer?                                        | Ops            | Item 3          |
+| T2  | Tip on one-way coach trips too, or hourly only?                                             | Ops            | Item 3          |
+| T3  | Tip paid through us, or cash to the driver (then only a note)?                              | Ops, Finance   | Item 3          |
+| G1  | Guide priced how: flat per trip, per package (4/8/12h) or per hour?                         | Ops            | Item 4          |
+| G2  | Guides on hourly trips only?                                                                | Ops            | Item 4          |
+| G3  | Does the customer pick a language?                                                          | Ops            | Item 4          |
+| G4  | Driver-guides: one person as driver and guide on one trip?                                  | Ops            | Item 4          |
+| G5  | Who picks the guide: the vendor, or named by us and the guide accepts? Proposed: as drivers | Ops            | Item 4          |
+| N2  | The last numbers issued, and the day the old system stops issuing them                      | Sales, Finance | Continuing them |

@@ -150,6 +150,8 @@ export function sampleBooking(
   return {
     id: "b1",
     reference: "HT-7K3QZM",
+    numberYear: 26,
+    number: 42,
     userId: "u1",
     user: {
       id: "u1",

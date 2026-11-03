@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  bookingLabelOf,
   BOOKING_STATUS_LABELS,
   formatMyr,
   isBookingStatus,
@@ -45,7 +46,7 @@ export async function loadBookingQuickView(
   if (!booking) return null;
   return {
     id: booking.id,
-    reference: booking.reference,
+    reference: bookingLabelOf(booking),
     status: isBookingStatus(booking.status)
       ? BOOKING_STATUS_LABELS[booking.status]
       : booking.status,

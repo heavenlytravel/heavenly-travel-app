@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  bookingLabelOf,
   customerEmailOf,
   formatLocalDate,
   formatLocalTime,
@@ -65,8 +66,13 @@ export function BookingsTable({
                     href={bookingHref(scope, booking.id)}
                     className="underline-offset-4 hover:underline"
                   >
-                    {booking.reference}
+                    {bookingLabelOf(booking)}
                   </Link>
+                  {booking.number !== null ? (
+                    <span className="block text-xs text-muted">
+                      {booking.reference}
+                    </span>
+                  ) : null}
                   <span className="mt-1 block">
                     <BookingStatusBadge status={booking.status} />
                   </span>

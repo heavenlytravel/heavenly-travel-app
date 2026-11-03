@@ -1,4 +1,5 @@
 import {
+  bookingLabelOf,
   formatLocalDate,
   formatLocalTime,
   isVendorStatus,
@@ -63,7 +64,7 @@ const FINDERS: Record<
       (await findBookingMatches(search, SEARCH_LIMIT)).map((booking) => {
         const locations = bookingLocations(booking);
         return {
-          title: booking.reference,
+          title: bookingLabelOf(booking),
           status: booking.status,
           detail: `${booking.contactName} · ${formatLocalDate(booking.startsAt)}, ${formatLocalTime(booking.startsAt)}`,
           meta: locations.map((location) => location.name).join(", "),

@@ -209,7 +209,7 @@ function TripRow({
       <Td className="whitespace-nowrap">
         <QuickViewButton
           bookingId={row.bookingId}
-          reference={row.reference}
+          reference={row.label}
           href={bookingHref(scope, row.bookingId)}
         />
         <span className="block max-w-40 truncate text-xs text-muted">

@@ -811,6 +811,13 @@ model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
   reference     String    @unique
+  /// The running number staff know it by, counted per year in Malaysia
+  /// (`numberYear`, 26 for 2026): shown as HTQ-26-00042, a quotation,
+  /// until the booking is first confirmed (`confirmedAt`), then as
+  /// HTI-26-00042, its invoice. Null on bookings from before numbers until
+  /// `db:number-bookings` gives them one. See src/booking-number.ts.
+  numberYear    Int?
+  number        Int?
   /// The account the booking shows under; null for a guest.
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -841,6 +848,7 @@ model Booking {
   notes  BookingNote[]
   offers VendorOffer[]
 
+  @@unique([numberYear, number])
   @@index([userId, createdAt])
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])

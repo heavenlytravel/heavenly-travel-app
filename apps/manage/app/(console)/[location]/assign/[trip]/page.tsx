@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  bookingLabelOf,
   assignStateOf,
   assignTripsOf,
   durationLabel,
@@ -147,7 +148,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
           <>
             <QuickViewButton
               bookingId={booking.id}
-              reference={booking.reference}
+              reference={bookingLabelOf(booking)}
               href={bookingHref(scope.slug, booking.id)}
             />
             {" · "}

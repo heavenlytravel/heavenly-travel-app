@@ -1,4 +1,5 @@
 import {
+  bookingLabelOf,
   ADVANCE_PERMISSIONS,
   customerEmailOf,
   formatLocalDateTime,
@@ -106,7 +107,12 @@ function bookedLine(
   const where = bookingLocations(booking)
     .map((location) => location.name)
     .join(", ");
-  return [`${by}, ${formatLocalDateTime(booking.createdAt)}`, where]
+  return [
+    `${by}, ${formatLocalDateTime(booking.createdAt)}`,
+    where,
+    // The customer's reference, which they look the booking up by.
+    booking.number !== null ? `Ref ${booking.reference}` : null,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -166,7 +172,7 @@ export async function bookingScreen({
   return (
     <>
       <PageHeader
-        title={booking.reference}
+        title={bookingLabelOf(booking)}
         badge={<BookingStatusBadge status={booking.status} />}
         meta={bookedLine(booking, entries)}
         action={
@@ -175,7 +181,7 @@ export async function bookingScreen({
             {open && permissions.includes("bookings.manage") ? (
               <CancelBookingControl
                 bookingId={booking.id}
-                reference={booking.reference}
+                reference={bookingLabelOf(booking)}
               />
             ) : null}
           </>
@@ -202,7 +208,7 @@ export async function bookingScreen({
               <TripCard
                 key={item.id}
                 item={item}
-                reference={booking.reference}
+                reference={bookingLabelOf(booking)}
                 permissions={permissions}
                 scope={scope.slug}
               />

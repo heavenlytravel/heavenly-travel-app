@@ -1,3 +1,4 @@
+import { bookingLabelOf } from "./booking-number";
 import { pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
@@ -29,6 +30,9 @@ const tripInclude = {
     select: {
       id: true,
       reference: true,
+      numberYear: true,
+      number: true,
+      confirmedAt: true,
       contactName: true,
       items: { select: { status: true } },
     },
@@ -100,7 +104,8 @@ export type AssignPart = {
 export type AssignRow = {
   itemId: string;
   bookingId: string;
-  reference: string;
+  /** The booking's number, or its reference before numbers (`bookingLabelOf`). */
+  label: string;
   /** The booking's customer, as booked. */
   customer: string;
   position: number;
@@ -173,7 +178,7 @@ async function listAssignTrips(
     return {
       itemId: item.id,
       bookingId: item.booking.id,
-      reference: item.booking.reference,
+      label: bookingLabelOf(item.booking),
       customer: item.booking.contactName,
       position: item.position,
       tripCount: item.booking.items.filter((i) => i.status !== "cancelled")

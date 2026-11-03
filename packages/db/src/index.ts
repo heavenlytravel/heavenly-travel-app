@@ -27,6 +27,7 @@ export * from "./rates-input";
 export * from "./hourly-input";
 export * from "./guide-rates-input";
 export * from "./bank-input";
+export * from "./booking-number";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";

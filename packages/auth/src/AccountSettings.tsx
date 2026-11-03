@@ -11,6 +11,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Checkbox } from "@repo/ui/field";
+import { MaskedText } from "@repo/ui/secret";
 import { toast } from "@repo/ui/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -255,7 +256,8 @@ function NameSection() {
 }
 
 /**
- * The email the account signs in with, shown, not changed here: it is who
+ * The email the account signs in with, shown blurred until clicked (it is
+ * read over a shoulder or on a shared screen), not changed here: it is who
  * the person is to us, their bookings and their Connect access. Our team
  * changes it on request, in the console's All Users.
  */
@@ -267,9 +269,11 @@ function EmailSection() {
       title="Email"
       description="Where your codes and booking emails go, and how you sign in. To change it, contact us."
     >
-      <span className="text-sm font-medium text-body">
-        {user.primaryEmailAddress?.emailAddress ?? ""}
-      </span>
+      <MaskedText
+        value={user.primaryEmailAddress?.emailAddress ?? ""}
+        label="email"
+        className="text-sm font-medium text-body"
+      />
     </Section>
   );
 }

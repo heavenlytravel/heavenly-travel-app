@@ -51,6 +51,7 @@ const KIND_ICONS: Record<RecordKind, MenuIcon> = {
   bookings: "bookings",
   vehicles: "vehicles",
   drivers: "drivers",
+  guides: "guides",
   users: "user",
   "vehicle-classes": "classes",
   zones: "coverage",
@@ -97,7 +98,7 @@ type EntryGroup = { key: string; heading: string; entries: RecentEntry[] };
  * it (`useRecent`) and what the admin may add; the pages are the
  * sidebar's. As they type it finds, in groups, the pages (across
  * locations and each location's), the actions, the locations, and, asked
- * of the server, the bookings, vehicles, drivers, users, classes and
+ * of the server, the bookings, vehicles, drivers, tour guides, users, classes and
  * zones that match, every location whatever the picker is on. Only what
  * the admin may open is offered. Enter or a click opens it. See
  * docs/261029-manage-signature-overhaul.md.

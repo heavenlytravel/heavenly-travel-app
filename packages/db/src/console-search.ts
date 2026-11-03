@@ -1,5 +1,6 @@
 import { db } from "./client";
 import { driverSearchWhere } from "./drivers";
+import { guideSearchWhere } from "./guides";
 import { userSearchWhere } from "./users";
 import { vehicleSearchWhere } from "./vehicles";
 
@@ -39,6 +40,23 @@ export function findDriverMatches(search: string, take: number) {
       id: true,
       name: true,
       phone: true,
+      isActive: true,
+      location: where,
+    },
+  });
+}
+
+/** Tour guides by name, phone or a language they speak, the active first. */
+export function findGuideMatches(search: string, take: number) {
+  return db.guide.findMany({
+    where: { OR: [{ id: search }, guideSearchWhere(search)] },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    take,
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      languages: true,
       isActive: true,
       location: where,
     },

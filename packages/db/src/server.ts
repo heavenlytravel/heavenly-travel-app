@@ -432,6 +432,7 @@ export * from "./cache-tags";
 export {
   findVehicleMatches,
   findDriverMatches,
+  findGuideMatches,
   findUserMatches,
   findVehicleClassMatches,
   findZoneMatches,

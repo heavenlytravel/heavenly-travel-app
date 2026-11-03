@@ -7,6 +7,7 @@ import {
 import {
   findBookingMatches,
   findDriverMatches,
+  findGuideMatches,
   findUserMatches,
   findVehicleClassMatches,
   findVehicleMatches,
@@ -31,6 +32,7 @@ import {
   coverageHref,
   userHref,
   driverHref,
+  guideHref,
   vehicleHref,
   zoneHref,
 } from "../../_lib/routes";
@@ -85,6 +87,21 @@ const FINDERS: Record<
         detail: `${driver.phone}${driver.isActive ? "" : " · Inactive"}`,
         meta: driver.location.name,
         href: driverHref(driver.location.slug, driver.id),
+      })),
+  },
+  guides: {
+    find: async (search) =>
+      (await findGuideMatches(search, SEARCH_LIMIT)).map((guide) => ({
+        title: guide.name,
+        detail: [
+          guide.phone,
+          guide.languages.join(", "),
+          guide.isActive ? null : "Inactive",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        meta: guide.location.name,
+        href: guideHref(guide.location.slug, guide.id),
       })),
   },
   users: {

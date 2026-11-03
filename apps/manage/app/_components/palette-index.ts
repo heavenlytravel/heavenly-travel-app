@@ -10,6 +10,7 @@ import {
   newBookingHref,
   newClassHref,
   newDriverHref,
+  newGuideHref,
   newVehicleHref,
   newZoneHref,
   savedAddressesHref,
@@ -104,6 +105,11 @@ export function paletteIndex({
       ? [
           { href: newVehicleHref(null), title: "Add Vehicle", words: "new" },
           { href: newDriverHref(null), title: "Add Driver", words: "new" },
+          {
+            href: newGuideHref(null),
+            title: "Add Tour Guide",
+            words: "new guide",
+          },
         ]
       : []),
     ...(may("coverage.manage")

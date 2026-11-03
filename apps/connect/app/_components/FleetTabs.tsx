@@ -2,17 +2,20 @@ import { cx } from "@repo/ui/cx";
 import Link from "next/link";
 
 /**
- * Fleet's two lists as a switch on the band, in its glass: Vehicles and Drivers, each
- * with its count.
+ * Fleet's lists as a switch on the band, in its glass: Vehicles, Drivers
+ * and, for a vendor with tour guides, Guides, each with its count.
  */
 export function FleetTabs({
   current,
   vehicles,
   drivers,
+  guides,
 }: {
-  current: "vehicles" | "drivers";
+  current: "vehicles" | "drivers" | "guides";
   vehicles: number;
   drivers: number;
+  /** Null for a vendor that neither offers tour guides nor has any: no tab. */
+  guides: number | null;
 }) {
   const tabs = [
     {
@@ -22,11 +25,19 @@ export function FleetTabs({
       count: vehicles,
     },
     { key: "drivers", href: "/~/drivers", label: "Drivers", count: drivers },
-  ] as const;
+    ...(guides === null
+      ? []
+      : [{ key: "guides", href: "/~/guides", label: "Guides", count: guides }]),
+  ];
   return (
     <nav
       aria-label="Fleet"
-      className="grid grid-cols-2 gap-1 rounded-xl border border-white/15 bg-white/6 p-1 lg:max-w-sm"
+      className={cx(
+        "grid gap-1 rounded-xl border border-white/15 bg-white/6 p-1",
+        tabs.length === 3
+          ? "grid-cols-3 lg:max-w-md"
+          : "grid-cols-2 lg:max-w-sm",
+      )}
     >
       {tabs.map((tab) => {
         const active = tab.key === current;

@@ -45,7 +45,7 @@ export function navItems(member?: { owner: boolean }): NavItem[] {
             href: "/~/vehicles",
             label: "Fleet",
             icon: CarFront,
-            match: ["/~/vehicles", "/~/drivers"],
+            match: ["/~/vehicles", "/~/drivers", "/~/guides"],
           },
         ]
       : []),

@@ -248,6 +248,15 @@ export default async function JobPage({
               <span className="text-sm text-muted">Driver not yours</span>
             )}
           </div>
+          {vendorJob.guide ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+              <span className="text-sm text-muted">Tour guide</span>
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Avatar name={vendorJob.guide} size="sm" />
+                {vendorJob.guide}
+              </span>
+            </div>
+          ) : null}
         </Panel>
       ) : null}
     </Screen>

@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
   UsersIcon,
 } from "@repo/ui/icons";
+import { Languages } from "lucide-react";
 import Link from "next/link";
 import { tripStateOf } from "../_lib/trip-state";
 import { byDay, dayLabel } from "../_lib/when";
@@ -145,9 +146,15 @@ export function TripRow({
                     <Avatar name={vendor.driver} size="sm" />
                     {vendor.driver.split(" ")[0]}
                   </span>
-                ) : (
+                ) : vendor.guide && !vendor.vehicle ? null : (
                   <span className="font-medium text-warning">No driver</span>
                 )}
+                {vendor.guide ? (
+                  <span className="inline-flex items-center gap-1 font-medium text-body">
+                    <Languages aria-hidden className="size-3" />
+                    {vendor.guide.split(" ")[0]}
+                  </span>
+                ) : null}
               </>
             ) : null}
           </span>

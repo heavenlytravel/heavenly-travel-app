@@ -209,6 +209,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   part={part}
                   partIds={siblings.map((s) => s.id)}
                   positions={siblings.map((s) => s.position)}
+                  itemIds={siblings.map((s) => s.itemId)}
                   candidates={candidates.filter(
                     (c) => c.vendor.id === part.offer.vendor.id,
                   )}
@@ -276,7 +277,7 @@ function siblingsOf(
           (p.vendorAcceptedAt === null) === (part.vendorAcceptedAt === null) &&
           (p.driverAcceptedAt === null) === (part.driverAcceptedAt === null),
       )
-      .map((p) => ({ id: p.id, position: t.position })),
+      .map((p) => ({ id: p.id, itemId: t.id, position: t.position })),
   );
 }
 

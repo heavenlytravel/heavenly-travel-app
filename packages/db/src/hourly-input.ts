@@ -112,6 +112,14 @@ export function hourlyChoiceOfHours(hours: number): HourlyChoice {
   };
 }
 
+/** A trip's duration and extra hours: as booked, or worked out of its hours when booked before packages. */
+export function hourlyChoiceOf(trip: {
+  hourly: HourlyChoice | null;
+  hours: number | null;
+}): HourlyChoice {
+  return trip.hourly ?? hourlyChoiceOfHours(trip.hours ?? 0);
+}
+
 // ---------------------------------------------------------------------------
 // The price list, as quoting reads it.
 // ---------------------------------------------------------------------------

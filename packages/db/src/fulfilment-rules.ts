@@ -354,12 +354,14 @@ export function assignStateOf(trip: {
 /**
  * When an offer is answered by, unless Operation says otherwise: two hours
  * from now, but never later than an hour before the first pickup, and
- * never before now.
+ * never sooner than half an hour from now, so a trip close to its pickup,
+ * or started, still gets an answer.
  */
 export function defaultRespondBy(firstPickup: Date, now: Date = new Date()) {
   const twoHours = now.getTime() + 2 * HOUR_MS;
   const hourBefore = firstPickup.getTime() - HOUR_MS;
-  return new Date(Math.max(now.getTime(), Math.min(twoHours, hourBefore)));
+  const soonest = now.getTime() + 30 * MINUTE_MS;
+  return new Date(Math.max(soonest, Math.min(twoHours, hourBefore)));
 }
 
 /** The roles a trip still needs asked for: none until it is confirmed, then each it has no part for. */

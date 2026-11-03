@@ -178,14 +178,14 @@ describe("defaultRespondBy", () => {
     );
   });
 
-  it("never later than an hour before the pickup, nor before now", () => {
+  it("never later than an hour before the pickup, nor sooner than half an hour", () => {
     assert.equal(
       defaultRespondBy(at("2026-11-01T02:30:00Z"), now).toISOString(),
       "2026-11-01T01:30:00.000Z",
     );
     assert.equal(
       defaultRespondBy(at("2026-11-01T00:30:00Z"), now).getTime(),
-      now.getTime(),
+      now.getTime() + HOUR / 2,
     );
   });
 });

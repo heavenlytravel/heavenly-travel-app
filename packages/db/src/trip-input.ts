@@ -6,6 +6,7 @@ import {
   type TripMode,
 } from "./booking-status";
 import {
+  hourlyChoiceOf,
   hourlyChoiceOfHours,
   HOURLY_LIMITS,
   isHourlyPackage,
@@ -134,6 +135,12 @@ const intIn = (raw: string | null, min: number, max: number) => {
  */
 export function parseHourlyChoice(input: QueryInput): HourlyChoice | null {
   const params = toParams(input);
+  // A link from before durations names its hours alone: `hours=6` reads
+  // as the biggest duration it fills and the rest as extra hours.
+  if (params.get(TRIP_PARAM.packageHours) === null) {
+    const hours = intIn(params.get("hours"), 1, 24);
+    return hours === null ? null : hourlyChoiceOfHours(hours);
+  }
   const packageHours = intIn(params.get(TRIP_PARAM.packageHours), 1, 99);
   const rawExtra = params.get(TRIP_PARAM.extraHours);
   const extraHours =
@@ -244,10 +251,7 @@ export function tripSearchOf(trip: TripView): TripSearch {
     dropoffId: trip.mode === "oneway" ? (trip.dropoff?.placeId ?? null) : null,
     date,
     time,
-    hourly:
-      trip.mode === "hourly"
-        ? (trip.hourly ?? hourlyChoiceOfHours(trip.hours ?? 0))
-        : null,
+    hourly: trip.mode === "hourly" ? hourlyChoiceOf(trip) : null,
   };
 }
 

@@ -13,7 +13,7 @@ import {
   RATE_LIMITED_MESSAGE,
   textOf,
   itemTiming,
-  tripClashes,
+  firstClashSentence,
   tripItemIndexes,
   tripItemParams,
   type Actor,
@@ -173,17 +173,11 @@ export async function createTripsBookingAction(
   }
   // One vehicle does one trip at a time: an hourly hire runs the hours its
   // duration covers from its pickup's zone, known once it is priced.
-  const clashes = tripClashes(
+  const clash = firstClashSentence(
     prepared.flatMap((result) => (result.ok ? [itemTiming(result.item)] : [])),
   );
-  const clashing = clashes.findIndex((found) => found !== null);
-  if (clashing >= 0) {
-    const clash = clashes[clashing]!;
-    return {
-      error: `Trip ${clashing + 1} starts ${
-        clash.kind === "same-time" ? "at the same time as" : "during"
-      } trip ${clash.with + 1}, and one vehicle cannot do both. Edit your trips to change one of them.`,
-    };
+  if (clash) {
+    return { error: `${clash} Edit your trips to change one of them.` };
   }
   if (changed.length > 0) {
     return {

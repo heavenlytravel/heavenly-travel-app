@@ -566,6 +566,15 @@ export async function assignBooking(
       );
     }
     const userId = "userId" in actor ? actor.userId : null;
+    // Each vendor answers once, before the first pickup it is asked for
+    // across all its asks.
+    const firstOf = new Map<string, (typeof trips)[number]>();
+    for (const [, ask] of asks) {
+      for (const t of trips.filter((t) => ask.itemIds.includes(t.id))) {
+        const first = firstOf.get(ask.vendorId);
+        if (!first || t.startsAt < first.startsAt) firstOf.set(ask.vendorId, t);
+      }
+    }
 
     for (const [role, ask] of asks) {
       const its = trips.filter((t) => ask.itemIds.includes(t.id));
@@ -586,8 +595,7 @@ export async function assignBooking(
           role,
         );
       }
-      // Its vendor answers before the first pickup it is asked for.
-      const first = its.reduce((a, b) => (b.startsAt < a.startsAt ? b : a));
+      const first = firstOf.get(vendor.id)!;
       const given = input.respondBy[vendor.id];
       if (given && given.getTime() >= first.startsAt.getTime()) {
         return refuse(

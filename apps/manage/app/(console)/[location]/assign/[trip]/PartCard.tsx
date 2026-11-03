@@ -52,6 +52,7 @@ export function PartCard({
   part,
   partIds,
   positions,
+  itemIds,
   candidates,
 }: {
   bookingId: string;
@@ -61,6 +62,8 @@ export function PartCard({
   partIds: string[];
   /** The trips they are on, this one included. */
   positions: number[];
+  /** Their trips, by item id, for each candidate's fit on them alone. */
+  itemIds: string[];
   /** The vendor's own vehicles or drivers, to name the one it chose. */
   candidates: Candidate[];
 }) {
@@ -114,6 +117,7 @@ export function PartCard({
             role={role}
             partIds={partIds}
             candidates={candidates}
+            itemIds={itemIds}
             onWhat={others}
           />
         ) : null}
@@ -270,12 +274,15 @@ function NameControl({
   role,
   partIds,
   candidates,
+  itemIds,
   onWhat,
 }: {
   bookingId: string;
   role: PartRole;
   partIds: string[];
   candidates: Candidate[];
+  /** The trips it names for: a candidate is greyed only for why it cannot do these. */
+  itemIds: string[];
   /** "trips 1, 2" when it names the same on several trips. */
   onWhat: string | null;
 }) {
@@ -313,12 +320,16 @@ function NameControl({
         <Select
           name="recordId"
           required
-          options={candidates.map((c) => ({
-            value: c.id,
-            label:
-              c.reasons.length > 0 ? `${c.name} · ${c.reasons[0]}` : c.name,
-            disabled: c.reasons.length > 0,
-          }))}
+          options={candidates.map((c) => {
+            const reason = itemIds
+              .map((id) => c.trips[id]?.reasons[0])
+              .find((r) => r !== undefined);
+            return {
+              value: c.id,
+              label: reason ? `${c.name} · ${reason}` : c.name,
+              disabled: reason !== undefined,
+            };
+          })}
         />
       </Field>
       <div className="flex items-center gap-2">

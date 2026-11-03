@@ -15,7 +15,7 @@ import {
   surchargeLabel,
   textOf,
   itemTiming,
-  tripClashes,
+  firstClashSentence,
   tripItemIndexes,
   tripItemParams,
   WEEKEND_REASON_LABELS,
@@ -255,15 +255,11 @@ export async function prepareFormItems(
 
   // One vehicle does one trip at a time: an hourly hire runs the hours its
   // duration covers from its pickup's zone, known once it is priced.
-  const clashes = tripClashes(items.map(itemTiming));
-  const clashing = clashes.findIndex((found) => found !== null);
-  if (clashing >= 0) {
-    const clash = clashes[clashing]!;
+  const clash = firstClashSentence(items.map(itemTiming));
+  if (clash) {
     return {
       ok: false,
-      error: `Trip ${clashing + 1} starts ${
-        clash.kind === "same-time" ? "at the same time as" : "during"
-      } trip ${clash.with + 1}, and one vehicle cannot do both. Change the time of one of them.`,
+      error: `${clash} Change the time of one of them.`,
     };
   }
   return { ok: true, items };

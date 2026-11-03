@@ -41,6 +41,23 @@ export type TripClash = {
 };
 
 /**
+ * The first trip of a list that cannot share the vehicle, said: "Trip 2
+ * starts during trip 1, and one vehicle cannot do both."; null when none.
+ * Each side adds what to do about it.
+ */
+export function firstClashSentence(
+  trips: readonly TripTiming[],
+): string | null {
+  const clashes = tripClashes(trips);
+  const index = clashes.findIndex((found) => found !== null);
+  if (index < 0) return null;
+  const clash = clashes[index]!;
+  return `Trip ${index + 1} starts ${
+    clash.kind === "same-time" ? "at the same time as" : "during"
+  } trip ${clash.with + 1}, and one vehicle cannot do both.`;
+}
+
+/**
  * For each trip of a list, the trip it cannot share the vehicle with, or
  * null. One vehicle does one trip at a time: a trip may not start at the
  * same moment as another, or while an hourly hire is still going (a hire

@@ -267,3 +267,17 @@ describe("several items in one form", () => {
     assert.equal(tripItemParams(form, 1).size, 0);
   });
 });
+
+describe("parseHourlyChoice on a link from before durations", () => {
+  it("reads hours alone as the biggest duration it fills and the rest", () => {
+    assert.deepEqual(parseHourlyChoice("hours=6"), {
+      packageHours: 4,
+      extraHours: 2,
+    });
+    assert.deepEqual(parseHourlyChoice("hours=8"), {
+      packageHours: 8,
+      extraHours: 0,
+    });
+    assert.equal(parseHourlyChoice("hours=abc"), null);
+  });
+});

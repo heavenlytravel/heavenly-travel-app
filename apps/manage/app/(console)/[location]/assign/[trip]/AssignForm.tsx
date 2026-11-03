@@ -89,7 +89,8 @@ export function AssignForm({
   return (
     <form {...formProps} className="grid gap-4">
       <input type="hidden" name="bookingId" value={bookingId} />
-      {vendor ? (
+      {/* Untouched, the server works it out when it is sent. */}
+      {vendor && respondByEdit ? (
         <input
           type="hidden"
           name={`respondBy:${vendor.id}`}

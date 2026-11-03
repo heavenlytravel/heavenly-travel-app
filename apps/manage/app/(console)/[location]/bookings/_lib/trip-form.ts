@@ -6,7 +6,7 @@ import {
   fitsPassengers,
   formatMyr,
   hireEndOf,
-  hourlyChoiceOfHours,
+  hourlyChoiceOf,
   HOURLY_PACKAGES,
   isTripCategory,
   localDateTimeInputs,
@@ -232,7 +232,7 @@ export function amendDraftOf(
     return null;
   }
   const { date, time } = localDateTimeInputs(trip.startsAt);
-  const hourly = trip.hourly ?? hourlyChoiceOfHours(trip.hours ?? 0);
+  const hourly = hourlyChoiceOf(trip);
   const priced = quote.ok ? quote : null;
   const vehicleClass = priced?.classes.find(
     (c) => c.id === details.vehicleClassId,

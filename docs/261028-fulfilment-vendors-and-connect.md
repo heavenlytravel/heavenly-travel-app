@@ -59,20 +59,22 @@ received ──► confirmed ──► assigned ──► completed
   under `~`), which replaced the Board on 2026-11-02: a table of every trip from today
   on by pickup, figure tiles for To assign (the default), Waiting to accept, Assigned,
   On the road, Done and All. Each row says how soon it picks up, red within the day
-  while not yet assigned, and who does each role or whose answer it waits for. Chips
-  narrow it to the vehicles or the drivers (the tour guide later), the tiles then
-  counting where that role stands. The reference opens a quick view of the booking;
-  Assign or Open opens the trip's page. A trip is on the road once its driver taps On
-  the way or a later step; its page then shows the driver's reports first. No dragging.
-- **Each trip has its own page** at `/[location]/assign/[trip]` (2026-11-03): the
-  Assign form for the roles still open, a card per role already asked with what to do
-  next, the day's reports, and beside them the trip, the customer and the booking's
-  other trips. The form picks the vendor first (ours first, only those serving the
-  trip's location, or not now), then one of that vendor's vehicles or drivers (one that
-  cannot do the trip greyed with why) or Any, said plainly as "the vendor will assign
-  it"; "Pay vendor (RM)" for a vendor not ours; when each vendor answers by, before the
-  pickup; and "Also give the same to" the booking's other open trips. A trip five days
-  away can wait until nearer the day. The tour guide joins as a third choice later.
+  while not yet assigned, and who does each role or whose answer it waits for. The
+  reference opens a quick view of the booking; Assign or Open opens the trip's page. A
+  trip is on the road once its driver taps On the way or a later step. No dragging.
+- **Each trip has its own page** at `/[location]/assign/[trip]` (2026-11-03): a card
+  per role (Vehicle, then Driver; the tour guide later), the day's reports, and beside
+  them the trip, the customer and the booking's other trips. A role to assign has its
+  own form and Assign button: the vendor first (ours first, only those serving the
+  trip's location), then one of that vendor's vehicles or drivers (one that cannot do
+  the trip greyed with why) or Any, said plainly as "the vendor will assign it"; "Pay
+  vendor (RM)" for a vendor not ours; when the vendor answers by, before the pickup; and
+  "Also give the same to" the booking's other trips still needing it. A role asked shows
+  where it stands and what to do next. A trip five days away can wait until nearer the
+  day.
+- **On the day,** once a trip is on the road or done, its reports come first on its
+  page: the four steps in a line with their times. Operation can report for the driver
+  in Connect's order: the next step only, or a no-show, or a problem.
 - **Undo is per trip:** Withdraw before the vendor's yes, Release after it; the role goes
   back to To assign.
 - **Elsewhere in manage:** vendors under Fleet at `/[location]/fleet/vendors`, those

@@ -1,14 +1,28 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { languagesOf, parseGuideFields } from "./guide-input";
+import {
+  guideLanguagesOf,
+  languagesMissing,
+  parseGuideFields,
+} from "./guide-input";
 
-describe("languagesOf", () => {
-  it("splits on commas, trims, and keeps each once whatever its case", () => {
+describe("guideLanguagesOf", () => {
+  it("keeps the known languages once, in the list's order", () => {
     assert.deepEqual(
-      languagesOf(" English, mandarin ,English,, Bahasa  Melayu"),
-      ["English", "mandarin", "Bahasa Melayu"],
+      guideLanguagesOf(["Mandarin", "Klingon", "English", "Mandarin", 3]),
+      ["English", "Mandarin"],
     );
-    assert.deepEqual(languagesOf(""), []);
+    assert.deepEqual(guideLanguagesOf([]), []);
+  });
+});
+
+describe("languagesMissing", () => {
+  it("lists what the trip asked that the guide does not speak", () => {
+    assert.deepEqual(
+      languagesMissing(["English", "Japanese"], ["English", "Mandarin"]),
+      ["Japanese"],
+    );
+    assert.deepEqual(languagesMissing([], ["English"]), []);
   });
 });
 
@@ -18,14 +32,13 @@ describe("parseGuideFields", () => {
     name: "Siti",
     phone: "012-345 6789",
     locationId: "l1",
-    languages: "English, Mandarin",
     isActive: "on",
     notes: "",
     motacExpiresOn: "2027-01-31",
   };
 
   it("reads a guide", () => {
-    const parsed = parseGuideFields(values);
+    const parsed = parseGuideFields(values, ["Mandarin", "English"]);
     assert.equal(parsed.ok, true);
     if (!parsed.ok) return;
     assert.deepEqual(parsed.value.languages, ["English", "Mandarin"]);
@@ -34,7 +47,7 @@ describe("parseGuideFields", () => {
   });
 
   it("asks for a language", () => {
-    const parsed = parseGuideFields({ ...values, languages: " , " });
+    const parsed = parseGuideFields(values, []);
     assert.equal(parsed.ok, false);
     if (parsed.ok) return;
     assert.equal(parsed.field, "languages");

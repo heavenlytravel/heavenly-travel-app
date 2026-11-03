@@ -47,8 +47,10 @@ export default async function VehiclesPage() {
           title: modelName(v.vehicleModel),
           detail: `${v.vehicleModel.vehicleClass.name} · ${v.location.name}`,
           isActive: v.isActive,
-          due: vehicleDocumentsDue(v),
-          anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
+          documents: {
+            due: vehicleDocumentsDue(v),
+            anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
+          },
         }))}
         hrefOf={(id) => `/~/vehicles/${id}`}
         empty={{

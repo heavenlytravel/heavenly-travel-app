@@ -54,8 +54,10 @@ export default async function DriversPage() {
               : "Not signed in to Connect yet"
             : "No email, so cannot sign in",
           isActive: d.isActive,
-          due: driverDocumentsDue(d),
-          anyEntered: DRIVER_DOCUMENTS.some((key) => d[key]),
+          documents: {
+            due: driverDocumentsDue(d),
+            anyEntered: DRIVER_DOCUMENTS.some((key) => d[key]),
+          },
         }))}
         hrefOf={(id) => `/~/drivers/${id}`}
         empty={{

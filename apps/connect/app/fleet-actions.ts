@@ -13,6 +13,7 @@ import {
   getVehicle,
   parseDriverFields,
   parseDriverSignIn,
+  GUIDE_LANGUAGES_FIELD,
   parseGuideFields,
   parseVehicleFields,
   textOf,
@@ -180,7 +181,10 @@ export async function saveGuideAction(
   const member = await getMemberAccess();
   if (!member) return NOT_A_MEMBER;
   formData.set("vendorId", member.vendor.id);
-  const parsed = parseGuideFields(Object.fromEntries(formData));
+  const parsed = parseGuideFields(
+    Object.fromEntries(formData),
+    formData.getAll(GUIDE_LANGUAGES_FIELD),
+  );
   if (!parsed.ok) return refusalOf(parsed);
   const fields = parsed.value;
   const id = textOf(formData.get("id"));

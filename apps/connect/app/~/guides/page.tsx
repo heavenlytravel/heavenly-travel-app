@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { GUIDE_DOCUMENTS, guideDocumentsDue } from "@repo/db";
 import { PlusIcon } from "@repo/ui/icons";
 import { Languages } from "lucide-react";
 import { FleetList } from "../../_components/FleetList";
@@ -50,8 +49,6 @@ export default async function GuidesPage() {
           title: g.name,
           detail: `${g.languages.join(", ") || "No language yet"} · ${g.location.name}`,
           isActive: g.isActive,
-          due: guideDocumentsDue(g),
-          anyEntered: GUIDE_DOCUMENTS.some((key) => g[key]),
         }))}
         hrefOf={(id) => `/~/guides/${id}`}
         empty={{

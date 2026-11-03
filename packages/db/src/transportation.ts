@@ -8,7 +8,7 @@ import {
   type ClassAvailability,
 } from "./booking-rules";
 import {
-  includesGuide,
+  guideOf,
   offersChildSeats,
   type TripCategory,
   type TripMode,
@@ -94,6 +94,10 @@ export type TripItemRequest = TripRequest & {
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
+  /** A car's guide when added; a coach goes with one whatever this says. */
+  withGuide: boolean;
+  /** The languages the guide should speak, from GUIDE_LANGUAGES. */
+  guideLanguages: string[];
 };
 
 export type TripQuoteErrorCode =
@@ -723,7 +727,7 @@ function itemOf(
         driveMinutes: basis.mode === "oneway" ? quote.driveMinutes : null,
         passengers: request.passengers,
         childSeats: offersChildSeats(category) ? request.childSeats : 0,
-        withGuide: includesGuide(category),
+        ...guideOf(category, request),
         flightNumber: request.flightNumber,
         notes: request.notes,
       },

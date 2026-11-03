@@ -1,6 +1,6 @@
 import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
-import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
+import { dayOf, parseDay } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
 import { isValidPhone, normalizePhone } from "./phone";
 
@@ -14,9 +14,44 @@ import { isValidPhone, normalizePhone } from "./phone";
 export const GUIDE_LIMITS = {
   name: 80,
   notes: 500,
-  language: 30,
-  languages: 8,
 } as const;
+
+/**
+ * The languages a guide may guide in and a customer may ask for, in the
+ * order the boxes show: one list for both, so a trip's languages and a
+ * guide's match word for word. A new one is added here.
+ */
+export const GUIDE_LANGUAGES = [
+  "English",
+  "Malay",
+  "Mandarin",
+  "Cantonese",
+  "Tamil",
+  "Hindi",
+  "Indonesian",
+  "Thai",
+  "Arabic",
+  "Japanese",
+  "Korean",
+  "French",
+  "German",
+  "Russian",
+] as const;
+
+/** The known languages among posted values, each once, in the list's order. */
+export function guideLanguagesOf(values: readonly unknown[]): string[] {
+  const posted = new Set(values.map(textOf));
+  return GUIDE_LANGUAGES.filter((language) => posted.has(language));
+}
+
+/** The languages a trip asked for that a guide does not speak, in the trip's order. */
+export function languagesMissing(
+  wanted: readonly string[],
+  spoken: readonly string[],
+): string[] {
+  const speaks = new Set(spoken);
+  return wanted.filter((language) => !speaks.has(language));
+}
 
 /** The licences a guide keeps valid, in the form's order. */
 export const GUIDE_DOCUMENTS = ["motacExpiresOn"] as const;
@@ -26,7 +61,7 @@ export const GUIDE_DOCUMENT_LABELS: Record<GuideDocument, string> = {
   motacExpiresOn: "MOTAC licence",
 };
 
-/** The form's field that carries the languages, as one line: "English, Mandarin". */
+/** The form's boxes that carry the languages, one value each. */
 export const GUIDE_LANGUAGES_FIELD = "languages";
 
 /** Every editable field of a guide. */
@@ -37,7 +72,7 @@ export type GuideFields = {
   /** As ./phone keeps it. */
   phone: string;
   locationId: string;
-  /** The languages they guide in, each once, in the order typed. */
+  /** The languages they guide in, from `GUIDE_LANGUAGES`, in its order. */
   languages: string[];
   isActive: boolean;
   notes: string;
@@ -81,30 +116,6 @@ export function guideFieldsOf(
   };
 }
 
-/** The guide's licences due within the warning or expired, soonest first. */
-export function guideDocumentsDue(
-  guide: Record<GuideDocument, Date | null>,
-  now: Date = new Date(),
-): DocumentDue[] {
-  const days = Object.fromEntries(
-    GUIDE_DOCUMENTS.map((key) => [key, dayOf(guide[key])]),
-  ) as Record<GuideDocument, string | null>;
-  return documentsDue(days, GUIDE_DOCUMENT_LABELS, now);
-}
-
-/** "English, mandarin ,English" as ["English", "mandarin"]: trimmed, each once, case aside. */
-export function languagesOf(line: string): string[] {
-  const seen = new Set<string>();
-  const languages: string[] = [];
-  for (const part of line.split(",")) {
-    const language = part.trim().replace(/\s+/g, " ");
-    if (!language || seen.has(language.toLowerCase())) continue;
-    seen.add(language.toLowerCase());
-    languages.push(language);
-  }
-  return languages;
-}
-
 /** The rules on a guide's fields; a field left out is not checked. */
 export function checkGuideFields(fields: Partial<GuideFields>): Change {
   if (fields.vendorId !== undefined && !fields.vendorId) {
@@ -125,25 +136,8 @@ export function checkGuideFields(fields: Partial<GuideFields>): Change {
   if (fields.locationId !== undefined && !fields.locationId) {
     return refuse("Choose where they are based.", "locationId");
   }
-  if (fields.languages !== undefined) {
-    if (fields.languages.length === 0) {
-      return refuse(
-        "Enter the languages they guide in, such as English, Mandarin.",
-        GUIDE_LANGUAGES_FIELD,
-      );
-    }
-    if (fields.languages.length > GUIDE_LIMITS.languages) {
-      return refuse(
-        `At most ${GUIDE_LIMITS.languages} languages.`,
-        GUIDE_LANGUAGES_FIELD,
-      );
-    }
-    if (fields.languages.some((l) => l.length > GUIDE_LIMITS.language)) {
-      return refuse(
-        `A language is at most ${GUIDE_LIMITS.language} characters. Separate them with commas.`,
-        GUIDE_LANGUAGES_FIELD,
-      );
-    }
+  if (fields.languages !== undefined && fields.languages.length === 0) {
+    return refuse("Tick the languages they guide in.", GUIDE_LANGUAGES_FIELD);
   }
   if (fields.notes !== undefined && fields.notes.length > GUIDE_LIMITS.notes) {
     return refuse(
@@ -155,12 +149,13 @@ export function checkGuideFields(fields: Partial<GuideFields>): Change {
 }
 
 /**
- * The guide form's values, read and checked. The languages come as one
- * line, separated by commas; `isActive` is a checkbox; an empty date is
- * none.
+ * The guide form's values, read and checked. The languages come as the
+ * ticked boxes' values, `formData.getAll(GUIDE_LANGUAGES_FIELD)`;
+ * `isActive` is a checkbox; an empty date is none.
  */
 export function parseGuideFields(
   values: Record<string, unknown>,
+  languages: readonly unknown[],
 ): Parsed<GuideFields> {
   const documents = {} as Record<GuideDocument, string | null>;
   for (const key of GUIDE_DOCUMENTS) {
@@ -173,7 +168,7 @@ export function parseGuideFields(
     name: textOf(values.name),
     phone: normalizePhone(textOf(values.phone)),
     locationId: textOf(values.locationId),
-    languages: languagesOf(textOf(values[GUIDE_LANGUAGES_FIELD])),
+    languages: guideLanguagesOf(languages),
     isActive: flagOf(values.isActive),
     notes: textOf(values.notes),
     ...documents,

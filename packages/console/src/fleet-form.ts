@@ -19,7 +19,6 @@ export const SCOPE_FIELD = "scope";
 export const DATES_CARDS = {
   vehicles: { id: "documents", name: "Documents" },
   drivers: { id: "licences", name: "Licences" },
-  guides: { id: "licence", name: "Licence" },
 } as const;
 
 /** The classes under their category, car with driver first; a class off in the catalogue says so. */

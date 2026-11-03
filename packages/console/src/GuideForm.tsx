@@ -4,6 +4,7 @@ import {
   GUIDE_DOCUMENTS,
   GUIDE_DOCUMENT_LABELS,
   GUIDE_FIELD_LABELS,
+  GUIDE_LANGUAGES,
   GUIDE_LANGUAGES_FIELD,
   GUIDE_LIMITS,
   guideFieldsOf,
@@ -15,13 +16,13 @@ import type {
   VendorOption,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
+import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import type { ActionState } from "./action-state";
 import { Card, CardTitle } from "./Card";
 import { ExpiryDateField } from "./ExpiryDateField";
-import { DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
+import { SCOPE_FIELD } from "./fleet-form";
 import { FormFoot } from "./FormFoot";
 import { DetailColumns } from "./PageColumn";
 import { useActionForm } from "./use-action-form";
@@ -31,9 +32,10 @@ import { VendorField } from "./VendorField";
 /**
  * The form for a vendor's tour guide, new or existing, across the
  * record's page: whose guide they are, who they are and how to reach
- * them, the languages they guide in, where they are based, notes and
- * whether they are active, and beside them the expiry of their MOTAC
- * licence. A guide has no account: their vendor accepts for them. One
+ * them, where they are based, notes and whether they are active, the
+ * languages they guide in, ticked from the list customers choose from,
+ * and beside them the expiry of their MOTAC licence, kept, not watched.
+ * A guide has no account: their vendor accepts for them. One
  * copy for both apps: the admin chooses the vendor from every one, and
  * Connect fixes it to the member's vendor, with only the locations it
  * serves. See docs/261103-tour-guide.md.
@@ -83,6 +85,8 @@ export function GuideForm({
   });
   const fields = guide ? guideFieldsOf(guide) : null;
   const vendor = fields?.vendorId || vendorId || "";
+  // A new guide starts with English ticked.
+  const speaks = new Set(fields?.languages ?? ["English"]);
 
   return (
     <form {...formProps} className="grid gap-5">
@@ -127,18 +131,6 @@ export function GuideForm({
                   />
                 </Field>
                 <Field
-                  label={GUIDE_FIELD_LABELS.languages}
-                  hint="Separated by commas."
-                >
-                  <Input
-                    name={GUIDE_LANGUAGES_FIELD}
-                    required
-                    autoComplete="off"
-                    placeholder="English, Mandarin"
-                    defaultValue={fields?.languages.join(", ")}
-                  />
-                </Field>
-                <Field
                   label={GUIDE_FIELD_LABELS.locationId}
                   tip="To move a tour guide to another location, change where they are based."
                 >
@@ -175,30 +167,55 @@ export function GuideForm({
                   />
                   {GUIDE_FIELD_LABELS.isActive}
                 </label>
-                <InfoTip text="Inactive, the tour guide keeps their history and their licence is not checked." />
+                <InfoTip text="Inactive, the tour guide keeps their history and is not offered for trips." />
               </span>
             </div>
           </Card>
         }
         side={
-          <Card id={DATES_CARDS.guides.id}>
-            <CardTitle>
-              <span className="inline-flex items-center gap-1.5">
-                {DATES_CARDS.guides.name}
-                <InfoTip text="The expiry date of their tourist guide licence from MOTAC. A date within 30 days shows as due." />
-              </span>
-            </CardTitle>
-            <div className="grid gap-4">
-              {GUIDE_DOCUMENTS.map((key) => (
-                <ExpiryDateField
-                  key={key}
-                  name={key}
-                  label={GUIDE_DOCUMENT_LABELS[key]}
-                  defaultValue={fields?.[key] ?? null}
-                />
-              ))}
-            </div>
-          </Card>
+          <>
+            <Card>
+              <CardTitle>
+                <span className="inline-flex items-center gap-1.5">
+                  {GUIDE_FIELD_LABELS.languages}
+                  <InfoTip text="Customers choose their guide's languages from this same list. Assign warns when a guide does not speak a trip's language." />
+                </span>
+              </CardTitle>
+              <FieldGroup className="grid grid-cols-2 gap-2">
+                {GUIDE_LANGUAGES.map((language) => (
+                  <label
+                    key={language}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      name={GUIDE_LANGUAGES_FIELD}
+                      value={language}
+                      defaultChecked={speaks.has(language)}
+                    />
+                    {language}
+                  </label>
+                ))}
+              </FieldGroup>
+            </Card>
+            <Card>
+              <CardTitle>
+                <span className="inline-flex items-center gap-1.5">
+                  Licence
+                  <InfoTip text="The expiry date of their tourist guide licence from MOTAC, kept for the record." />
+                </span>
+              </CardTitle>
+              <div className="grid gap-4">
+                {GUIDE_DOCUMENTS.map((key) => (
+                  <ExpiryDateField
+                    key={key}
+                    name={key}
+                    label={GUIDE_DOCUMENT_LABELS[key]}
+                    defaultValue={fields?.[key] ?? null}
+                  />
+                ))}
+              </div>
+            </Card>
+          </>
         }
       />
 

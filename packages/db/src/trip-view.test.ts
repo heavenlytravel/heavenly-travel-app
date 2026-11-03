@@ -62,6 +62,32 @@ describe("tripDetailRows", () => {
       ],
     );
   });
+
+  it("says whether the guide is included or added, and their languages", () => {
+    const details = {
+      vehicleClassName: "Coach",
+      passengers: 30,
+      childSeats: 0,
+      flightNumber: null,
+      notes: null,
+      withGuide: true,
+      guideLanguages: ["English", "Japanese"],
+    };
+    assert.deepEqual(
+      tripDetailRows({ ...details, vehicleClassCategory: "coach-charter" }).at(
+        -1,
+      ),
+      ["Tour guide", "Included · English, Japanese"],
+    );
+    assert.deepEqual(
+      tripDetailRows({
+        ...details,
+        vehicleClassCategory: "car-with-driver",
+        guideLanguages: [],
+      }).at(-1),
+      ["Tour guide", "Added"],
+    );
+  });
 });
 
 describe("priceRows", () => {

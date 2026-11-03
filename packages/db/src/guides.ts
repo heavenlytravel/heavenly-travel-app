@@ -3,13 +3,14 @@ import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
-import { dateOfDay, dueByDate } from "./expiry";
+import { dateOfDay } from "./expiry";
 import { releaseHeldWork } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
 import {
   checkGuideFields,
   GUIDE_DELETE_IMPACT,
   GUIDE_DOCUMENTS,
+  GUIDE_LANGUAGES,
   guideFieldsOf,
   type GuideDocument,
   type GuideFields,
@@ -42,25 +43,31 @@ const NOT_FOUND = refuse(
   "This tour guide was deleted meanwhile. Go back to the list.",
 );
 
-/** Where a guide matches a search: their name or their phone. */
+/** Where a guide matches a search: their name, their phone or a language they speak. */
 export function guideSearchWhere(search: string): Prisma.GuideWhereInput {
   const phone = phoneDigitsOf(search);
+  const term = search.toLowerCase();
+  const languages = GUIDE_LANGUAGES.filter((language) =>
+    language.toLowerCase().includes(term),
+  );
   return {
     OR: [
       { name: { contains: search, mode: "insensitive" } },
       ...(phone ? [{ phone: { contains: phone } }] : []),
+      ...(languages.length > 0
+        ? [{ languages: { hasSome: [...languages] } }]
+        : []),
     ],
   };
 }
 
-/** Every guide, or those the filter leaves, active first, by name. */
+/** Every guide, or those the filter leaves, active first, by name. A guide's licence is not watched: `due` is not read. */
 export function listGuides(
   filter: FleetFilter = {},
 ): Promise<GuideWithVendor[]> {
   const where: Prisma.GuideWhereInput[] = [];
   if (filter.locationId) where.push({ locationId: filter.locationId });
   if (filter.vendorId) where.push({ vendorId: filter.vendorId });
-  if (filter.due) where.push(guidesDueWhere());
   if (filter.search) where.push(guideSearchWhere(filter.search));
   return db.guide.findMany({
     where: { AND: where },
@@ -71,15 +78,6 @@ export function listGuides(
 
 export function getGuide(id: string): Promise<GuideWithVendor | null> {
   return db.guide.findUnique({ where: { id }, ...withVendor });
-}
-
-/** Where a guide filter matches the active ones with a licence due by the warning, or expired. */
-export function guidesDueWhere(now: Date = new Date()) {
-  const dueBy = dueByDate(now);
-  return {
-    isActive: true,
-    OR: GUIDE_DOCUMENTS.map((key) => ({ [key]: { lte: dueBy } })),
-  } satisfies Prisma.GuideWhereInput;
 }
 
 /** The days among the fields as the row stores them: dates. */

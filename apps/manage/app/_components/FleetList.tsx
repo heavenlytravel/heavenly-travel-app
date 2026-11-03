@@ -1,9 +1,4 @@
-import {
-  driverDocumentsDue,
-  guideDocumentsDue,
-  plural,
-  vehicleDocumentsDue,
-} from "@repo/db";
+import { driverDocumentsDue, plural, vehicleDocumentsDue } from "@repo/db";
 import {
   listDrivers,
   listGuides,
@@ -34,7 +29,8 @@ import { ListToolbar } from "./ListToolbar";
 /**
  * How each list names its records, their standing and the documents it
  * watches, how many columns its table has under a location (`~` adds the
- * location's), and its address.
+ * location's), and its address. Tour guides' licences are kept, not
+ * watched: their list has no due figures or filter.
  */
 const KINDS = {
   vehicles: {
@@ -63,11 +59,11 @@ const KINDS = {
     one: "tour guide",
     active: "Active",
     inactive: "Inactive",
-    due: "Licences due",
-    expired: "Licence expired",
-    dueEmpty: "has a licence due",
-    search: "Name or phone",
-    columns: 4,
+    due: null,
+    expired: null,
+    dueEmpty: null,
+    search: "Name, phone or language",
+    columns: 3,
     href: guidesHref,
   },
 } as const;
@@ -94,7 +90,7 @@ async function read(kind: FleetKind, filter: FleetFilter): Promise<Listed> {
 /**
  * How many of a list are in service and out, and of those in service how
  * many have a document due and how many one expired, each counted once,
- * by its worst.
+ * by its worst; none due for tour guides.
  */
 type Counts = {
   active: number;
@@ -115,10 +111,7 @@ function countsOf(listed: Listed): Counts {
             isActive: d.isActive,
             due: driverDocumentsDue(d),
           }))
-        : listed.rows.map((g) => ({
-            isActive: g.isActive,
-            due: guideDocumentsDue(g),
-          }));
+        : listed.rows.map((g) => ({ isActive: g.isActive, due: [] }));
   const active = rows.filter((row) => row.isActive);
   const expired = active.filter((row) =>
     row.due.some((document) => document.state === "expired"),
@@ -135,7 +128,7 @@ function countsOf(listed: Listed): Counts {
 function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
   const names = KINDS[kind];
   const value = (n: number | undefined) => n ?? <Bone className="h-7 w-8" />;
-  return [
+  const standing: Figure[] = [
     {
       key: "active",
       label: names.active,
@@ -148,6 +141,10 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
       value: value(counts?.inactive),
       tone: "neutral",
     },
+  ];
+  if (names.due === null || names.expired === null) return standing;
+  return [
+    ...standing,
     {
       key: "due",
       label: names.due,
@@ -181,7 +178,8 @@ export function FleetList({
   filter: FleetListFilter;
 }) {
   const names = KINDS[kind];
-  const { due = false, q } = filter;
+  const { q } = filter;
+  const due = names.due !== null && (filter.due ?? false);
   const across = scope.slug === null;
   const locationId = scope.location?.id;
   const hrefOf = (next: FleetListFilter) => names.href(scope.slug, next);
@@ -191,7 +189,7 @@ export function FleetList({
     due || q ? read(kind, { locationId, due, search: q }) : everyOne;
   const empty = q
     ? `No ${names.one} matches “${q}”.`
-    : due
+    : due && names.dueEmpty
       ? `No ${names.one}${across ? "" : " here"} ${names.dueEmpty}.`
       : across
         ? `No ${names.one} yet.`
@@ -223,11 +221,13 @@ export function FleetList({
             label={`Search ${kind}`}
             placeholder={names.search}
           />
-          <DueFilter
-            label={names.due}
-            due={due}
-            href={hrefOf({ due: !due, q })}
-          />
+          {names.due ? (
+            <DueFilter
+              label={names.due}
+              due={due}
+              href={hrefOf({ due: !due, q })}
+            />
+          ) : null}
         </ListToolbar>
         <Streamed
           key={`${due}:${q ?? ""}`}

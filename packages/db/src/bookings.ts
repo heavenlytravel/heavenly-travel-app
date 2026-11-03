@@ -729,8 +729,10 @@ export function amendItem(
             ...next.tripDetails,
             // No model preferred now: the one preferred before goes.
             vehicleModel: next.tripDetails.vehicleModel ?? { disconnect: true },
-            // The guide stays as booked: amending never adds a role to assign.
+            // The guide stays as booked, and its languages: amending never
+            // adds or drops a role to assign.
             withGuide: item.tripDetails.withGuide,
+            guideLanguages: item.tripDetails.guideLanguages,
           },
         },
       },

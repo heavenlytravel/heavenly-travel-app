@@ -4,7 +4,11 @@ import { bookingStatusOf, isLive } from "./booking-status";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
-import { GUIDE_DOCUMENTS, GUIDE_DOCUMENT_LABELS } from "./guide-input";
+import {
+  GUIDE_DOCUMENTS,
+  GUIDE_DOCUMENT_LABELS,
+  languagesMissing,
+} from "./guide-input";
 import { dayOf, todayInMalaysia } from "./expiry";
 import {
   clashSentence,
@@ -53,6 +57,7 @@ export const tripInclude = {
       passengers: true,
       mode: true,
       withGuide: true,
+      guideLanguages: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -158,6 +163,8 @@ export type FulfilmentTrip = {
   vehicleClassId: string | null;
   /** A tour guide goes on it, a third role to assign. */
   withGuide: boolean;
+  /** The languages the customer asked the guide to speak. */
+  guideLanguages: string[];
   job: Job;
   parts: TripPartView[];
   assigned: boolean;
@@ -183,6 +190,7 @@ export async function getBookingFulfilment(
     cancellationCutoffHours: item.cancellationCutoffHours,
     vehicleClassId: item.tripDetails?.vehicleClassId ?? null,
     withGuide: item.tripDetails?.withGuide ?? false,
+    guideLanguages: item.tripDetails?.guideLanguages ?? [],
     job: jobOf(item),
     parts: item.parts,
     assigned: tripAssigned(item.parts, item.tripDetails?.withGuide ?? false),
@@ -315,6 +323,7 @@ export async function listCandidates(
           // A guide goes with any class.
           mayDo: () => true,
           notClass: "",
+          speaks: g.languages,
           expired: (on: ReadonlySet<string>) =>
             expiredOn(
               g as unknown as Record<string, Date | null>,
@@ -357,6 +366,7 @@ export async function listCandidates(
                 on,
               ),
             held: { vehicleId: v.id } as const,
+            speaks: null,
           }))
         : (
             await db.driver.findMany({
@@ -385,6 +395,7 @@ export async function listCandidates(
                   on,
                 ),
               held: { driverId: d.id } as const,
+              speaks: null,
             };
           });
 
@@ -397,10 +408,21 @@ export async function listCandidates(
       const suspended =
         row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
       const who = role === "vehicle" ? "It" : row.name.split(" ")[0];
+      // A guide who does not speak a language asked is listed, warned:
+      // Operation may have no one better.
+      const unspoken = (languages: readonly string[]) => {
+        const missing = row.speaks
+          ? languagesMissing(languages, row.speaks)
+          : [];
+        return missing.length > 0
+          ? [`Does not speak ${missing.join(" or ")}`]
+          : [];
+      };
       // The fit for a set of trips: one, or all of them at once.
       const fitFor = (
         asked: readonly Job[],
         classes: readonly (string | null)[],
+        languages: readonly string[],
       ): TripFit => {
         const reasons = [
           ...(classes.every(row.mayDo) ? [] : [row.notClass]),
@@ -409,12 +431,14 @@ export async function listCandidates(
         ];
         const clash = firstClash(asked, held);
         if (clash) reasons.push(clashSentence(clash));
-        const warnings = clash
-          ? []
-          : timingWarnings(asked, held, { bufferMinutes, who });
+        const warnings = [
+          ...unspoken(languages),
+          ...(clash ? [] : timingWarnings(asked, held, { bufferMinutes, who })),
+        ];
         return { reasons, warnings };
       };
-      const all = fitFor(jobs, [...classIds]);
+      const asked = [...new Set(trips.flatMap((t) => t.guideLanguages))];
+      const all = fitFor(jobs, [...classIds], asked);
       return {
         id: row.id,
         name: row.name,
@@ -427,14 +451,18 @@ export async function listCandidates(
         reasons: all.reasons,
         warnings: all.warnings,
         trips: Object.fromEntries(
-          trips.map((t) => [t.id, fitFor([t.job], [t.vehicleClassId])]),
+          trips.map((t) => [
+            t.id,
+            fitFor([t.job], [t.vehicleClassId], t.guideLanguages),
+          ]),
         ),
         day: held
           .filter((job) => days.has(todayInMalaysia(job.startsAt)))
           .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
           .map(dayLine),
         rank:
-          (all.reasons.length > 0 ? 4 : 0) +
+          (all.reasons.length > 0 ? 8 : 0) +
+          (unspoken(asked).length > 0 ? 4 : 0) +
           (row.vendor.isOurs ? 0 : 2) +
           (row.location.id === here ? 0 : 1),
       };

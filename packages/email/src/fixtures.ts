@@ -104,6 +104,7 @@ export function sampleItem(
       passengers: 2,
       childSeats: 1,
       withGuide: false,
+      guideLanguages: [],
       flightNumber: "MH123",
       notes: null,
     },

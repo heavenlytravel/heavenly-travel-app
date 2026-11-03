@@ -1,4 +1,4 @@
-import { GUIDE_DELETE_IMPACT, guideDocumentsDue } from "@repo/db";
+import { GUIDE_DELETE_IMPACT } from "@repo/db";
 import { getGuide, heldBookingsOf, listVendorOptions } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@repo/console/PageHeader";
@@ -11,10 +11,8 @@ import {
 } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import { DeleteButton } from "@repo/console/DeleteButton";
-import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../_lib/access";
-import { DATES_CARDS } from "@repo/console/fleet-form";
 import {
   ALL,
   guideHref,
@@ -32,8 +30,8 @@ import { GuideForm } from "@repo/console/GuideForm";
 /**
  * Route: /[location]/fleet/guides/[guideId]. A tour guide, ours or
  * another vendor's: their name, whether they are active, their
- * languages, their vendor when not ours and their location over a banner
- * while their licence is due or expired, then their form, the way to
+ * languages, their vendor when not ours and their location, then their
+ * form (their licence's expiry kept there, not watched), the way to
  * their history and the delete for one entered by mistake. Under `~` any
  * guide opens; under a location, one based elsewhere is not found.
  */
@@ -104,12 +102,6 @@ async function guideScreen(scope: ConsoleScope, guideId: string) {
           </>
         }
       />
-      {guide.isActive ? (
-        <DocumentBanner
-          due={guideDocumentsDue(guide)}
-          card={DATES_CARDS.guides}
-        />
-      ) : null}
       <GuideForm
         key={guide.id}
         scope={scope.slug ?? ALL}

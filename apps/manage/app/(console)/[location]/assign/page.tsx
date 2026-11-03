@@ -250,6 +250,11 @@ function TripRow({
           ) : (
             <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
           )}
+          {role === "guide" && row.guideLanguages.length > 0 ? (
+            <span className="block text-xs text-muted">
+              Speaks {row.guideLanguages.join(", ")}
+            </span>
+          ) : null}
         </Td>
       ))}
       <Td className="whitespace-nowrap">

@@ -44,6 +44,7 @@ const tripInclude = {
       mode: true,
       hours: true,
       withGuide: true,
+      guideLanguages: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -109,6 +110,8 @@ export type AssignRow = {
   roles: PartRole[];
   /** A tour guide goes on it, a third role to assign. */
   withGuide: boolean;
+  /** The languages asked of the guide. */
+  guideLanguages: string[];
   job: Job;
   className: string;
   passengers: number;
@@ -175,6 +178,7 @@ async function listAssignTrips(
       state,
       roles: rolesToAsk({ ...item, withGuide }),
       withGuide,
+      guideLanguages: item.tripDetails?.guideLanguages ?? [],
       job,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,

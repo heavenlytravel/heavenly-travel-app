@@ -1,5 +1,6 @@
 import { formatLocalDateTime } from "./booking-rules";
 import {
+  includesGuide,
   isTripCategory,
   TRIP_CATEGORY_LABELS,
   TRIP_MODE_LABELS,
@@ -156,8 +157,11 @@ export function tripDetailRows(details: {
   vehicleModelName?: string | null;
   passengers: number;
   childSeats: number;
-  /** A tour guide goes with it, included: a coach's. */
+  /** A tour guide goes with it: a coach's, included, or a car's, added. */
   withGuide?: boolean;
+  /** The languages asked of the guide. */
+  guideLanguages?: readonly string[];
+  vehicleClassCategory?: string;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
@@ -167,7 +171,18 @@ export function tripDetailRows(details: {
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
   }
-  if (details.withGuide) rows.push(["Tour guide", "Included"]);
+  if (details.withGuide) {
+    const category = details.vehicleClassCategory;
+    const how =
+      isTripCategory(category) && includesGuide(category)
+        ? "Included"
+        : "Added";
+    const languages = details.guideLanguages ?? [];
+    rows.push([
+      "Tour guide",
+      languages.length > 0 ? `${how} · ${languages.join(", ")}` : how,
+    ]);
+  }
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
   return rows;

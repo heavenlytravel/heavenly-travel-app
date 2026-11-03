@@ -906,9 +906,12 @@ model TripItemDetails {
   /// Never asked for a coach.
   childSeats           Int           @default(0)
   /// A tour guide goes on the trip, assigned beside the vehicle and the
-  /// driver: always on a coach, included in its price. False on trips
-  /// booked before guides.
+  /// driver: always on a coach, included in its price; on a car when the
+  /// customer adds one. False on trips booked before guides.
   withGuide            Boolean       @default(false)
+  /// The languages the customer asked the guide to speak, from
+  /// GUIDE_LANGUAGES; empty without a guide.
+  guideLanguages       String[]      @default([])
   flightNumber         String?
   notes                String?
 

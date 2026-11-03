@@ -5,6 +5,7 @@ import {
   deleteConfirmationOf,
   deleteGuide,
   getGuide,
+  GUIDE_LANGUAGES_FIELD,
   parseGuideFields,
   textOf,
   updateGuide,
@@ -35,7 +36,10 @@ export async function createGuideAction(
 ): Promise<ActionState> {
   const admin = await getAdmin("fleet.manage");
   if (!admin) return FORBIDDEN;
-  const fields = parseGuideFields(Object.fromEntries(formData));
+  const fields = parseGuideFields(
+    Object.fromEntries(formData),
+    formData.getAll(GUIDE_LANGUAGES_FIELD),
+  );
   if (!fields.ok) return refusalOf(fields);
   const result = await createGuide(actorOf(admin), fields.value);
   if (!result.ok) return stateOf(result);
@@ -55,7 +59,10 @@ export async function updateGuideAction(
   const id = textOf(formData.get("id"));
   const guide = id ? await getGuide(id) : null;
   if (!guide) return STALE;
-  const fields = parseGuideFields(Object.fromEntries(formData));
+  const fields = parseGuideFields(
+    Object.fromEntries(formData),
+    formData.getAll(GUIDE_LANGUAGES_FIELD),
+  );
   if (!fields.ok) return refusalOf(fields);
   const result = await updateGuide(actorOf(admin), id, fields.value);
   if (!result.ok) return stateOf(result);

@@ -1,5 +1,6 @@
 import { localDateTimeInputs } from "./booking-rules";
 import {
+  guideOf,
   isTripMode,
   offersChildSeats,
   type TripCategory,
@@ -12,6 +13,7 @@ import {
   isHourlyPackage,
   type HourlyChoice,
 } from "./hourly-input";
+import { guideLanguagesOf } from "./guide-input";
 import type { TripView } from "./trip-view";
 
 /**
@@ -58,7 +60,15 @@ export type TripOptions = {
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
+  /** A tour guide goes on it: always on a coach, on a car when added. */
+  withGuide: boolean;
+  /** The languages the guide should speak; empty without a guide. */
+  guideLanguages: string[];
 };
+
+/** Why a trip with a guide cannot be booked yet, at the languages' boxes. */
+export const GUIDE_LANGUAGES_REQUIRED =
+  "Choose at least one language for your tour guide.";
 
 /** The parameter and input names, the same in a URL and in a form. */
 export const TRIP_PARAM = {
@@ -75,6 +85,10 @@ export const TRIP_PARAM = {
   childSeats: "childSeats",
   flightNumber: "flight",
   notes: "notes",
+  /** "1" adds a car's tour guide; a coach has one whatever it says. */
+  guide: "guide",
+  /** One per language, repeated. */
+  guideLanguage: "guideLanguage",
 } as const;
 
 /** The input names an options form posts, so they match what is parsed. */
@@ -94,22 +108,21 @@ export type QueryInput =
   | string
   | Record<string, string | string[] | undefined>;
 
-/** The first value of each key; files and repeats are dropped. */
+/** Every value of each key, in order, so `get` reads the first and `getAll` the repeats (a guide's languages); files are dropped. */
 export function toParams(input: QueryInput): URLSearchParams {
   if (input instanceof URLSearchParams) return input;
   if (typeof input === "string") return new URLSearchParams(input);
   const params = new URLSearchParams();
   if (input instanceof FormData) {
     for (const [key, value] of input.entries()) {
-      if (typeof value === "string" && !params.has(key)) {
-        params.set(key, value);
-      }
+      if (typeof value === "string") params.append(key, value);
     }
     return params;
   }
   for (const [key, value] of Object.entries(input)) {
-    const first = Array.isArray(value) ? value[0] : value;
-    if (first !== undefined) params.set(key, first);
+    for (const one of Array.isArray(value) ? value : [value]) {
+      if (one !== undefined) params.append(key, one);
+    }
   }
   return params;
 }
@@ -198,7 +211,10 @@ export function parseFlightNumber(raw: string | null): string | null {
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
  * A model is optional; whether the class lets the customer choose it is
- * the pricing's to check.
+ * the pricing's to check. A coach always goes with a guide; a car when
+ * "guide" is "1". The guide's languages are the known ones posted, none
+ * without a guide; that one is chosen is the booking's to check
+ * (`GUIDE_LANGUAGES_REQUIRED`), so a link opens the page to choose them.
  */
 export function parseTripOptions(
   category: TripCategory,
@@ -221,6 +237,10 @@ export function parseTripOptions(
     childSeats: childSeats ?? 0,
     flightNumber: parseFlightNumber(params.get(TRIP_PARAM.flightNumber)),
     notes: text(params.get(TRIP_PARAM.notes), TRIP_MAX_NOTES_LENGTH),
+    ...guideOf(category, {
+      withGuide: params.get(TRIP_PARAM.guide) === "1",
+      guideLanguages: guideLanguagesOf(params.getAll(TRIP_PARAM.guideLanguage)),
+    }),
   };
 }
 
@@ -286,7 +306,7 @@ export function tripItemParams(
   const prefix = `item${index}.`;
   const params = new URLSearchParams();
   for (const [key, value] of toParams(input).entries()) {
-    if (key.startsWith(prefix)) params.set(key.slice(prefix.length), value);
+    if (key.startsWith(prefix)) params.append(key.slice(prefix.length), value);
   }
   return params;
 }

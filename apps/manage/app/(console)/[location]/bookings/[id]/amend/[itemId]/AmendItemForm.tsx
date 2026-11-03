@@ -12,7 +12,6 @@ import { HiddenFields } from "../../../_components/HiddenFields";
 import { TripStep, VehicleStep } from "../../../_components/ItemSteps";
 import {
   agreedPriceIssue,
-  bookingGuideOffers,
   bookingTotalSen,
   chosenVehicle,
   detailsFields,
@@ -21,7 +20,7 @@ import {
   tripQuotedSen,
   vehicleFields,
   vehicleLine,
-  type AmendDraft,
+  type ItemDraft,
   type ItemDetails,
   type TripDraft,
   type VehicleDraft,
@@ -51,7 +50,7 @@ export function AmendItemForm({
   /** The booking in the scope the form was opened in. */
   bookingHref: string;
   scope: ScopeSlug;
-  draft: AmendDraft;
+  draft: ItemDraft;
   hasGoogle: boolean;
   canPrice: boolean;
   priceNote?: string;
@@ -67,7 +66,7 @@ export function AmendItemForm({
   const trips = [trip];
   const chosen = chosenVehicle(trips, vehicle);
   const priceIssue = canPrice ? agreedPriceIssue(trip) : null;
-  const guideOffers = bookingGuideOffers(trips);
+  const guideOffers = trip.quote?.guides ?? [];
   const guideIssue = trip.quote
     ? guideOfferIssue(details.guide.language, guideOffers)
     : null;
@@ -77,10 +76,9 @@ export function AmendItemForm({
       ? "Choose a vehicle."
       : (priceIssue ?? guideIssue);
   const totalSen = bookingTotalSen(
-    trips,
-    chosen,
+    [{ trip, vehicle, details }],
+    null,
     canPrice,
-    details.guide.language,
   );
 
   return (

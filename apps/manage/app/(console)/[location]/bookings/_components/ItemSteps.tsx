@@ -124,7 +124,7 @@ export function TripStep({
   );
 }
 
-function TripFields({
+export function TripFields({
   draft,
   onChange,
   hasGoogle,
@@ -334,7 +334,7 @@ export function VehicleStep({
   );
 }
 
-function VehicleFields({
+export function VehicleFields({
   trips,
   vehicle,
   chosen,

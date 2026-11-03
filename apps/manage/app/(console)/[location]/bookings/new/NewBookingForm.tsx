@@ -4,42 +4,42 @@ import {
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
   formatMyr,
-  guideOfferIssue,
   parseContact,
-  TRIP_CATEGORY_LABELS,
   type BBox,
+  type TripCategory,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
+import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { ALL, bookingsHref, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
 import { BookingSummary } from "../_components/BookingSummary";
-import { DetailsStep } from "../_components/DetailsStep";
+import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
 import { HiddenFields } from "../_components/HiddenFields";
-import { TripStep, VehicleStep } from "../_components/ItemSteps";
 import { Step, StepFoot } from "../_components/Step";
+import { quoteTripAction } from "../_lib/quote-action";
 import {
   agreedPriceIssue,
-  bookingGuideOffers,
   bookingTotalSen,
-  chosenVehicle,
   clashNotes,
   CONTACT_FIELDS,
-  detailsFields,
-  EMPTY_BOOKING_DETAILS,
-  EMPTY_VEHICLE,
-  newTripDraft,
+  itemFields,
+  itemsByStart,
+  itemVehicle,
+  newItemDraft,
   placesLine,
-  tripFields,
+  SAME_VEHICLE_FIELD,
+  tripInput,
+  tripIssue,
   tripQuotedSen,
-  tripsByStart,
-  vehicleFields,
   vehicleLine,
-  type BookingDetails,
+  type ItemDetails,
+  type ItemDraft,
   type TripDraft,
   type VehicleDraft,
 } from "../_lib/trip-form";
@@ -47,26 +47,28 @@ import { createManualBookingAction } from "./actions";
 
 type Contact = { name: string; phone: string; email: string };
 
-/** The step open: the customer, a trip (`trip:` and its id), the vehicle or the details; null when every step is folded. */
-type OpenStep = "customer" | "vehicle" | "details" | `trip:${string}` | null;
+/** The step open: the customer or a trip (`trip:` and its id); null when every step is folded. */
+type OpenStep = "customer" | `trip:${string}` | null;
 
 const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
 
 /**
- * The manual booking, in numbered steps on one page: the customer, each
- * trip, the vehicle and the details. "Add another trip" adds a trip to
- * the booking, as the website's trip list does, with its rules: one
- * vehicle does every trip, so it is chosen once for them all, in one
- * category, and no trip may start while another is going; the trips are
- * numbered and booked by start, at most `maxTripsPerBooking`. The flights,
- * child seats and the note are asked once. One step is open at a time; a
- * finished one folds to a line with "Edit", so a detail that changes
- * mid-call is one click away and nothing entered is lost. The summary
- * beside the steps keeps what was entered, each trip's price, the total
- * and the button in view; an agreed price is set there, per trip. The
- * server prices every trip again and applies the agreed prices itself.
- * Opened in a location, its place fields suggest that location's places
- * first, and the booking opens there once made. See
+ * The manual booking, in numbered steps on one page: the customer, then
+ * each trip, a step with everything it takes: the trip, its vehicle and
+ * group, its flight, child seats, note and tour guide. "Add another trip"
+ * adds one, starting from the choices of the one before it; the trips are
+ * numbered and booked by start, at most `maxTripsPerBooking`. With several
+ * trips, "Same vehicle for every trip" (on to start with) has one vehicle
+ * do them all: trip 1 chooses it for every trip, every trip takes its
+ * category, and no trip may start while another is going. Off, each trip
+ * chooses its own: a car, then a coach, at the same time if need be. One
+ * step is open at a time; a finished one folds to a line with "Edit", so a
+ * detail that changes mid-call is one click away and nothing entered is
+ * lost. The summary beside the steps keeps what was entered, each trip's
+ * price, the total and the button in view; an agreed price is set there,
+ * per trip. The server prices every trip again and applies the agreed
+ * prices itself. Opened in a location, its place fields suggest that
+ * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
  */
 export function NewBookingForm({
@@ -83,75 +85,129 @@ export function NewBookingForm({
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [confirmDialog, confirm] = useConfirm();
-  const [trips, setTrips] = useState<TripDraft[]>(() => [newTripDraft()]);
-  const [vehicle, setVehicle] = useState<VehicleDraft>(EMPTY_VEHICLE);
-  const [details, setDetails] = useState<BookingDetails>(EMPTY_BOOKING_DETAILS);
+  const [items, setItems] = useState<ItemDraft[]>(() => [newItemDraft()]);
+  const [sameVehicle, setSameVehicle] = useState(true);
+  // The vehicle every trip shares while they do; each item keeps its own for when they do not.
+  const [sharedVehicle, setSharedVehicle] = useState<VehicleDraft>(
+    () => items[0]!.vehicle,
+  );
   const [open, setOpen] = useState<OpenStep>("customer");
   const create = useActionForm(createManualBookingAction, {
     done: "Booking created. The customer gets the received email.",
   });
 
+  const shared = sameVehicle ? sharedVehicle : null;
+  const several = items.length > 1;
+  const trips = items.map((item) => item.trip);
+
   /** Opens a step, putting the trips in order by start, now that the one typed in is folded. */
   function openStep(next: OpenStep) {
-    setTrips((current) => tripsByStart(current));
+    setItems((current) => itemsByStart(current));
     setOpen(next);
   }
-  const patchTrip = (id: string, patch: Partial<TripDraft>) =>
-    setTrips((current) =>
-      current.map((draft) =>
-        draft.id === id ? { ...draft, ...patch } : draft,
-      ),
+  const patchItem = (id: string, patch: (item: ItemDraft) => ItemDraft) =>
+    setItems((current) =>
+      current.map((item) => (item.trip.id === id ? patch(item) : item)),
     );
+  function patchTrip(id: string, patch: Partial<TripDraft>) {
+    patchItem(id, (item) => ({ ...item, trip: { ...item.trip, ...patch } }));
+    const category = patch.trip?.category;
+    if (sameVehicle && category && id === items[0]!.trip.id) {
+      followCategory(category, items.slice(1));
+    }
+  }
+  /**
+   * Puts trips in the category the vehicle they share is of, each priced
+   * again: their prices were for the other. An answer for a trip changed
+   * meanwhile is dropped.
+   */
+  function followCategory(category: TripCategory, others: ItemDraft[]) {
+    for (const other of others) {
+      if (other.trip.trip.category === category) continue;
+      const trip = { ...other.trip.trip, category };
+      const id = other.trip.id;
+      patchItem(id, (item) => ({
+        ...item,
+        trip: { ...item.trip, trip, quote: null, quoteError: null },
+      }));
+      if (tripIssue(trip)) continue;
+      void answerOf(quoteTripAction(tripInput(trip))).then((result) =>
+        patchItem(id, (item) =>
+          JSON.stringify(item.trip.trip) !== JSON.stringify(trip)
+            ? item
+            : {
+                ...item,
+                trip: {
+                  ...item.trip,
+                  ...("error" in result
+                    ? { quote: null, quoteError: result.error }
+                    : { quote: result, quoteError: null }),
+                },
+              },
+        ),
+      );
+    }
+  }
+  function changeSameVehicle(on: boolean) {
+    setSameVehicle(on);
+    if (on) {
+      // Trip 1's vehicle does them all, and every trip takes its category.
+      setSharedVehicle(items[0]!.vehicle);
+      followCategory(items[0]!.trip.trip.category, items.slice(1));
+    } else {
+      // Each trip starts from the vehicle they shared.
+      setItems((current) =>
+        current.map((item) => ({ ...item, vehicle: { ...sharedVehicle } })),
+      );
+    }
+  }
   function addTrip() {
-    const added = newTripDraft(trips[0]?.trip.category);
-    setTrips((current) => [...tripsByStart(current), added]);
-    setOpen(`trip:${added.id}`);
+    const sorted = itemsByStart(items);
+    const last = sorted.at(-1)!;
+    const added = newItemDraft(
+      shared ? { ...last, vehicle: sharedVehicle } : last,
+    );
+    setItems([...sorted, added]);
+    setOpen(`trip:${added.trip.id}`);
   }
   async function removeTrip(id: string, label: string) {
     const yes = await confirm({
       title: `Remove ${label}?`,
-      description: "Its places, day and time are lost.",
+      description: "Its places, day and time, vehicle and details are lost.",
       action: "Remove trip",
       danger: true,
     });
     if (!yes) return;
-    setTrips((current) => current.filter((draft) => draft.id !== id));
+    setItems((current) => current.filter((item) => item.trip.id !== id));
     setOpen(null);
   }
 
   const customer = parseContact(contact);
-  const several = trips.length > 1;
-  const category = trips[0]!.trip.category;
-  const clashes = clashNotes(trips);
-  const chosen = chosenVehicle(trips, vehicle);
-  const unpriced = trips.findIndex((draft) => draft.quote === null);
-  const clashing = trips.findIndex((draft) => clashes.has(draft.id));
-  const priceIssue = trips
-    .map((draft, index) => {
-      const issue = agreedPriceIssue(draft);
+  // One vehicle does one trip at a time; trips on their own vehicles may meet.
+  const clashes = shared && several ? clashNotes(trips) : new Map();
+  const vehicles = items.map((_, index) => itemVehicle(items, index, shared));
+  const issues = items.map((item, index) =>
+    itemIssue(item, vehicles[index]!.chosen, clashes.get(item.trip.id) ?? null),
+  );
+  const unfinished = issues.findIndex((issue) => issue !== null);
+  const priceIssue = items
+    .map((item, index) => {
+      const issue = agreedPriceIssue(item.trip);
       return issue && several ? `Trip ${index + 1}: ${issue}` : issue;
     })
     .find((issue) => issue !== null);
-  const guideOffers = bookingGuideOffers(trips);
-  const guideIssue =
-    unpriced < 0 ? guideOfferIssue(details.guide.language, guideOffers) : null;
   const missing = !customer.ok
     ? "Fill in the customer."
-    : unpriced >= 0
+    : unfinished >= 0
       ? several
-        ? `Fill in trip ${unpriced + 1}.`
-        : "Fill in the trip."
-      : clashing >= 0
-        ? `Change the time of trip ${clashing + 1}: ${clashes
-            .get(trips[clashing]!.id)!
-            .label.toLowerCase()}.`
-        : !chosen
-          ? "Choose a vehicle."
-          : (priceIssue ?? guideIssue);
-  const totalSen = bookingTotalSen(trips, chosen, true, details.guide.language);
+        ? `Trip ${unfinished + 1}: ${issues[unfinished]}`
+        : issues[unfinished]!
+      : (priceIssue ?? null);
+  const totalSen = bookingTotalSen(items, shared, true);
   const locations = [
-    ...new Set(trips.flatMap((draft) => draft.quote?.location ?? [])),
+    ...new Set(items.flatMap((item) => item.trip.quote?.location ?? [])),
   ];
+  const sorted = itemsByStart(items);
 
   return (
     <form
@@ -159,7 +215,7 @@ export function NewBookingForm({
       // The trips post by start; the list takes that order too, so a
       // refusal's "Trip 2" is the trip shown as 2.
       onSubmit={(event) => {
-        setTrips((current) => tripsByStart(current));
+        setItems((current) => itemsByStart(current));
         return create.formProps.onSubmit(event);
       }}
       // Enter in a field does not create the booking: the button does.
@@ -174,14 +230,15 @@ export function NewBookingForm({
       <input type="hidden" name={CONTACT_FIELDS.name} value={contact.name} />
       <input type="hidden" name={CONTACT_FIELDS.phone} value={contact.phone} />
       <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
-      {tripsByStart(trips).map((draft, index) => (
+      {shared ? (
+        <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
+      ) : null}
+      {sorted.map((item, number) => (
         <HiddenFields
-          key={draft.id}
-          fields={tripFields(index + 1, draft, true)}
+          key={item.trip.id}
+          fields={itemFields(number + 1, items, items.indexOf(item), shared)}
         />
       ))}
-      <HiddenFields fields={vehicleFields(chosen, vehicle)} />
-      <HiddenFields fields={detailsFields(details, category)} />
 
       <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_22rem] @3xl:items-start">
         <div className="grid min-w-0 gap-3">
@@ -203,32 +260,71 @@ export function NewBookingForm({
               missing={
                 customer.ok || contact === EMPTY_CONTACT ? null : customer.error
               }
-              onNext={() => openStep(`trip:${trips[0]!.id}`)}
+              onNext={() => openStep(`trip:${items[0]!.trip.id}`)}
             />
           </Step>
 
-          {trips.map((draft, index) => {
-            const after = trips[index + 1];
+          {several ? (
+            <label className="flex items-center gap-3 rounded-card bg-white px-5 py-3.5 shadow-card">
+              <Switch
+                checked={sameVehicle}
+                onCheckedChange={changeSameVehicle}
+                label="Same vehicle for every trip"
+              />
+              <span className="grid gap-0.5">
+                <span className="text-sm font-semibold text-ink">
+                  Same vehicle for every trip
+                </span>
+                <span className="text-caption text-muted">
+                  {sameVehicle
+                    ? "Trip 1 chooses it for them all, so no trip may start while another is going."
+                    : "Each trip chooses its own category, vehicle and group, and may run at the same time as another."}
+                </span>
+              </span>
+            </label>
+          ) : null}
+
+          {items.map((item, index) => {
+            const after = items[index + 1];
+            const { vehicle, chosen } = vehicles[index]!;
+            const id = item.trip.id;
             return (
-              <TripStep
-                key={draft.id}
-                number={2}
-                title={`Trip ${index + 1} · ${TRIP_CATEGORY_LABELS[draft.trip.category]}`}
-                draft={draft}
-                onChange={(patch) => patchTrip(draft.id, patch)}
-                open={open === `trip:${draft.id}`}
-                onOpen={() => openStep(`trip:${draft.id}`)}
-                onNext={() => openStep(after ? `trip:${after.id}` : "vehicle")}
+              <BookingTripStep
+                key={id}
+                number={index + 2}
+                index={index}
+                item={item}
+                trips={trips}
+                shared={shared !== null && several}
+                vehicle={vehicle}
+                chosen={chosen}
+                clash={clashes.get(id) ?? null}
+                onTrip={(patch) => patchTrip(id, patch)}
+                onVehicle={(patch) =>
+                  shared
+                    ? setSharedVehicle((current) => ({ ...current, ...patch }))
+                    : patchItem(id, (current) => ({
+                        ...current,
+                        vehicle: { ...current.vehicle, ...patch },
+                      }))
+                }
+                onDetails={(patch: Partial<ItemDetails>) =>
+                  patchItem(id, (current) => ({
+                    ...current,
+                    details: { ...current.details, ...patch },
+                  }))
+                }
+                open={open === `trip:${id}`}
+                onOpen={() => openStep(`trip:${id}`)}
+                onNext={() => openStep(after ? `trip:${after.trip.id}` : null)}
                 hasGoogle={hasGoogle}
-                categoryLocked={several}
                 near={near}
-                clash={clashes.get(draft.id) ?? null}
                 aside={
                   several ? (
                     <Button
                       variant="ghost-danger"
                       size="sm"
-                      onClick={() => removeTrip(draft.id, `trip ${index + 1}`)}
+                      onClick={() => removeTrip(id, `trip ${index + 1}`)}
                     >
                       Remove trip
                     </Button>
@@ -237,7 +333,7 @@ export function NewBookingForm({
               />
             );
           })}
-          {trips.length < BOOKING_RULES.maxTripsPerBooking ? (
+          {items.length < BOOKING_RULES.maxTripsPerBooking ? (
             <button
               type="button"
               onClick={addTrip}
@@ -252,36 +348,6 @@ export function NewBookingForm({
               Enter the rest as a booking of their own.
             </p>
           )}
-
-          <VehicleStep
-            number={3}
-            trips={trips}
-            vehicle={vehicle}
-            onChange={(patch) =>
-              setVehicle((current) => ({ ...current, ...patch }))
-            }
-            open={open === "vehicle"}
-            onOpen={() => openStep("vehicle")}
-            onNext={() => openStep("details")}
-          />
-          <DetailsStep
-            number={4}
-            details={details}
-            onChange={(patch) =>
-              setDetails((current) => ({ ...current, ...patch }))
-            }
-            category={category}
-            guideOffers={guideOffers}
-            guideIssue={guideIssue}
-            airports={{
-              arriving: trips.some((draft) => draft.quote?.pickupAirport),
-              departing: trips.some((draft) => draft.quote?.dropoffAirport),
-            }}
-            done={chosen !== null}
-            open={open === "details"}
-            onOpen={() => openStep("details")}
-            onDone={() => openStep(null)}
-          />
         </div>
 
         <aside className="@3xl:sticky @3xl:top-20">
@@ -299,34 +365,42 @@ export function NewBookingForm({
                   "—"
                 ),
               },
-              ...trips.map((draft, index) => ({
-                label: several ? `Trip ${index + 1}` : "Trip",
-                value: draft.quote ? (
-                  <>
-                    {placesLine(draft.quote)}
-                    <span className="block text-xs text-muted">
-                      {draft.quote.startsAt}
-                    </span>
-                  </>
-                ) : (
-                  "—"
-                ),
-              })),
-              {
-                label: "Vehicle",
-                value: chosen
-                  ? vehicleLine(trips, vehicle, { price: false })
-                  : "—",
-              },
+              ...items.map((item, index) => {
+                const { vehicle, chosen } = vehicles[index]!;
+                return {
+                  label: several ? `Trip ${index + 1}` : "Trip",
+                  value: item.trip.quote ? (
+                    <>
+                      {placesLine(item.trip.quote)}
+                      <span className="block text-xs text-muted">
+                        {item.trip.quote.startsAt}
+                      </span>
+                      <span className="block text-xs text-muted">
+                        {chosen
+                          ? vehicleLine(shared ? trips : [item.trip], vehicle, {
+                              price: false,
+                            })
+                          : "No vehicle yet"}
+                      </span>
+                    </>
+                  ) : (
+                    "—"
+                  ),
+                };
+              }),
             ]}
-            trips={trips.map((draft, index) => ({
-              id: draft.id,
+            trips={items.map((item, index) => ({
+              id: item.trip.id,
               label: several ? `Trip ${index + 1}` : null,
-              quotedSen: tripQuotedSen(draft, chosen, details.guide.language),
-              agreedPrice: draft.agreedPrice,
-              priceReason: draft.priceReason,
+              quotedSen: tripQuotedSen(
+                item.trip,
+                vehicles[index]!.chosen,
+                item.details.guide.language,
+              ),
+              agreedPrice: item.trip.agreedPrice,
+              priceReason: item.trip.priceReason,
             }))}
-            onPriceChange={patchTrip}
+            onPriceChange={(id, patch) => patchTrip(id, patch)}
             canPrice
             submit={
               <Button

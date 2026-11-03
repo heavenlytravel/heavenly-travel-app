@@ -82,6 +82,14 @@ Decided with the user on 2026-11-03.
   them, as an app blurs an account's email. The activity log keeps them masked
   (`maskedForLog`). Paying out (a payout run, statements) is not built yet.
 
+## Booking changes
+
+- **Staff correct the customer's details** (user, 2026-11-03): Edit on a booking's
+  Customer card, for Reservation (`bookings.manage`), changes the name, the phone and
+  the email the booking's emails go to (`updateBookingContact`), checked as a new
+  booking's are. The history says what changed, from and to; the customer is not
+  emailed, and the account the booking shows under stays.
+
 ## To confirm
 
 | #   | Question                                | Who | Holds up                       |

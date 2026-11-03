@@ -130,6 +130,11 @@ const ACTIONS = {
   "booking.item.priced": { entityType: "booking", customerVisible: false },
   /** The note's id only; the text stays in `BookingNote`. */
   "booking.note.added": { entityType: "booking", customerVisible: false },
+  /** The contact fields changed, before and after: name, phone, email. */
+  "booking.contact.updated": {
+    entityType: "booking",
+    customerVisible: false,
+  },
   /**
    * An account staff created: its email, names and phone in `after`;
    * `existing` when Clerk held it already and it was only mirrored here.
@@ -849,6 +854,28 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.note.added":
       return "Added a note";
+    case "booking.contact.updated": {
+      const changes = (
+        [
+          ["contactName", "name"],
+          ["contactPhone", "phone"],
+          ["contactEmail", "email"],
+        ] as const
+      ).flatMap(([key, word]) => {
+        const was = field(entry.before, key);
+        const now = field(entry.after, key);
+        return typeof now === "string"
+          ? [
+              typeof was === "string"
+                ? `${word} from ${was} to ${now}`
+                : `${word} to ${now}`,
+            ]
+          : [];
+      });
+      return changes.length > 0
+        ? `Changed the customer's ${changes.join(", ")}`
+        : "Changed the customer's details";
+    }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;
     case "booking.item.assigned":

@@ -64,6 +64,7 @@ import { CancelBookingControl, ItemActions } from "./BookingControls";
 import { Notes } from "./Notes";
 import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
+import { EditContactControl } from "./EditContact";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -214,7 +215,10 @@ export async function bookingScreen({
               <CardTitle>Booking</CardTitle>
               <Rows rows={summary} className="text-sm" />
             </Card>
-            <CustomerCard booking={booking} />
+            <CustomerCard
+              booking={booking}
+              editable={permissions.includes("bookings.manage")}
+            />
             {permissions.includes("bookings.notes") ? (
               <Card>
                 <CardTitle meta="Staff only">Notes</CardTitle>
@@ -229,8 +233,15 @@ export async function bookingScreen({
   );
 }
 
-/** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email. */
-export function CustomerCard({ booking }: { booking: BookingWithItems }) {
+/** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email; "Edit" for Reservation. */
+export function CustomerCard({
+  booking,
+  editable = false,
+}: {
+  booking: BookingWithItems;
+  /** Reservation's (`bookings.manage`): the details may be corrected here. */
+  editable?: boolean;
+}) {
   const email = customerEmailOf(booking);
   const phone = booking.contactPhone;
   const call = phoneHrefOf(phone) ?? `tel:${phone}`;
@@ -294,6 +305,16 @@ export function CustomerCard({ booking }: { booking: BookingWithItems }) {
               WhatsApp
             </a>
           </Button>
+        ) : null}
+        {editable ? (
+          <EditContactControl
+            bookingId={booking.id}
+            contact={{
+              name: booking.contactName,
+              phone: booking.contactPhone,
+              email: booking.contactEmail ?? email ?? "",
+            }}
+          />
         ) : null}
       </div>
     </Card>

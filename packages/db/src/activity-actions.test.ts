@@ -48,6 +48,17 @@ describe("describeActivity", () => {
     );
   });
 
+  it("names each contact field staff changed, from and to", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.contact.updated",
+        before: { contactPhone: "+60123456789" },
+        after: { contactPhone: "+60198765432" },
+      }),
+      "Changed the customer's phone from +60123456789 to +60198765432",
+    );
+  });
+
   it("reads a price override and its removal from after", () => {
     assert.equal(
       describeActivity({
@@ -353,6 +364,7 @@ describe("activityActionMeta", () => {
     "booking.part.cost.changed",
     "booking.trip.reported",
     "booking.contact.viewed",
+    "booking.contact.updated",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

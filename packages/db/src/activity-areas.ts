@@ -87,6 +87,7 @@ const AREA_OF = {
   "booking.part.cost.changed": "bookings",
   "booking.item.priced": "bookings",
   "booking.note.added": "bookings",
+  "booking.contact.updated": "bookings",
   "user.created": "team",
   "user.updated": "team",
   "user.email.changed": "team",

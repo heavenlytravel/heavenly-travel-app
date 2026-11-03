@@ -2,6 +2,7 @@
 
 import {
   flagOf,
+  parseContact,
   parsePriceOverride,
   PRICE_OVERRIDE_FIELDS,
   textOf,
@@ -16,6 +17,7 @@ import {
   cancelItem,
   isNextItemStatus,
   overrideItemPrice,
+  updateBookingContact,
   type BookingChange,
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
@@ -78,6 +80,30 @@ export async function cancelBookingAction(
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) return STALE;
   return finish(await cancelBookingAsAdmin(actorOf(admin), bookingId));
+}
+
+/** Who the booking is for, as staff correct it: name, phone and email. Nothing is emailed. */
+export async function updateContactAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return STALE;
+  const contact = parseContact({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    email: formData.get("email"),
+  });
+  if (!contact.ok) return refusalOf(contact);
+  const result = await updateBookingContact(
+    actorOf(admin),
+    bookingId,
+    contact.value,
+  );
+  if (result.ok) revalidateLocation();
+  return stateOf(result);
 }
 
 /** An internal note; every team may add one. Nothing is emailed. */

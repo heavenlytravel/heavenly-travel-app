@@ -5,6 +5,7 @@ import {
   type AmendedFields,
   type CustomerActor,
 } from "./activity-actions";
+import type { ContactFields } from "./booking-contact";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import { localDayRange } from "./booking-rules";
@@ -19,6 +20,7 @@ import {
   type ItemStatus,
   type Product,
 } from "./booking-status";
+import { refuse, type Change } from "./change";
 import { db } from "./client";
 import { releaseParts, settleCancelledTrips } from "./fulfilment";
 import { Prisma } from "./generated/prisma/client";
@@ -898,5 +900,41 @@ export function cancelTripAsCustomer(
       ok: true,
       ...(await refreshBooking(tx, item.bookingId, "customer", now)),
     };
+  });
+}
+
+/**
+ * Changes who a booking is for, as staff correct it: the name, the phone
+ * and the email the booking's emails go to, checked by `parseContact`.
+ * The account a booking shows under is left as it is. Logged with the
+ * fields changed, before and after; saving what is already there logs
+ * nothing. See docs/261103-tour-guide.md, "Booking changes".
+ */
+export function updateBookingContact(
+  actor: Actor,
+  bookingId: string,
+  contact: ContactFields,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: { contactName: true, contactPhone: true, contactEmail: true },
+    });
+    if (!booking) {
+      return refuse("This booking was deleted meanwhile. Go back to Bookings.");
+    }
+    const changed = changedFields<ContactFields>(
+      { ...booking, contactEmail: booking.contactEmail ?? "" },
+      contact,
+    );
+    if (!changed) return { ok: true };
+    await tx.booking.update({ where: { id: bookingId }, data: changed.after });
+    await logActivity(tx, actor, {
+      action: "booking.contact.updated",
+      entityId: bookingId,
+      before: changed.before,
+      after: changed.after,
+    });
+    return { ok: true };
   });
 }

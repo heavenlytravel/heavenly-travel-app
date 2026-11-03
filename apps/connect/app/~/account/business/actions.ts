@@ -9,7 +9,7 @@ import {
 } from "@repo/db/server";
 import { type ActionState, refusalOf } from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
-import { actorOf, getMemberAccess, NOT_A_MEMBER } from "../../_lib/access";
+import { actorOf, getMemberAccess, NOT_A_MEMBER } from "../../../_lib/access";
 
 const NOT_THE_OWNER: ActionState = {
   error: "Only the vendor's owner changes its details.",
@@ -37,6 +37,6 @@ export async function saveBusinessAction(
     ...readBankFields(values),
   });
   if (!result.ok) return refusalOf(result);
-  revalidatePath("/~/business");
-  return { href: "/~/business" };
+  revalidatePath("/~/account/business");
+  return { href: "/~/account/business" };
 }

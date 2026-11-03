@@ -2,15 +2,16 @@ import { getVendor } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { VendorDetails } from "../../_components/VendorDetails";
-import { requireMember, shellMember } from "../../_lib/access";
-import { Panel } from "../../_ui/parts";
-import { BandHeading, Screen } from "../../_ui/Screen";
+import { VendorDetails } from "../../../_components/VendorDetails";
+import { requireMember, shellMember } from "../../../_lib/access";
+import { ACCOUNT_PATH } from "../../../_ui/nav";
+import { Panel } from "../../../_ui/parts";
+import { BandHeading, Screen } from "../../../_ui/Screen";
 
 /**
- * Route: /business. The vendor's details for its people, every sensitive
+ * Route: /account/business. The vendor's details for its people, every sensitive
  * one blurred until clicked. Its owner edits the contact, the address and
- * the bank (/business/edit); what was checked at approval, the team
+ * the bank (/account/business/edit); what was checked at approval, the team
  * changes. See docs/261103-tour-guide.md, "Pay and bank details".
  */
 export default async function BusinessPage() {
@@ -22,6 +23,7 @@ export default async function BusinessPage() {
     <Screen
       member={shellMember(member)}
       width="narrow"
+      back={{ href: ACCOUNT_PATH, label: "Account" }}
       band={
         <BandHeading eyebrow={vendor.name} title="Business">
           {owner
@@ -35,7 +37,7 @@ export default async function BusinessPage() {
         {owner ? (
           <div className="grid gap-2">
             <Button asChild className="justify-self-start">
-              <Link href="/~/business/edit">Edit details</Link>
+              <Link href="/~/account/business/edit">Edit details</Link>
             </Button>
             <p className="text-xs text-muted">
               The name, the SSM or IC number, the services and the locations

@@ -68,7 +68,7 @@ export function BusinessForm({ vendor }: { vendor: VendorWithLocations }) {
           {pending ? "Saving…" : "Save"}
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/~/business">Cancel</Link>
+          <Link href="/~/account/business">Cancel</Link>
         </Button>
       </div>
       <FormError error={error} />

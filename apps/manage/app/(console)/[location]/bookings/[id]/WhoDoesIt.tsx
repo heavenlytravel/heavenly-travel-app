@@ -2,542 +2,143 @@
 
 import {
   assignStateOf,
-  assignTripsOf,
-  DECLINE_NOTE_MAX_LENGTH,
-  DECLINE_REASONS,
-  DECLINE_REASON_LABELS,
   formatLocalDateTime,
   formatMyr,
   isLive,
   modelName,
   PART_ROLE_LABELS,
+  PART_ROLES,
+  partWaitingLabel,
+  partWaitingOf,
   ringgitInputValue,
-  rolesToAsk,
   type PartRole,
 } from "@repo/db";
-import type { Candidate, FulfilmentTrip, TripPartView } from "@repo/db/server";
-import { useConfirm } from "@repo/ui/alert-dialog";
-import { Badge } from "@repo/ui/badge";
+import type { FulfilmentTrip, TripPartView } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
-import { Select } from "@repo/ui/select";
-import { useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
+import { useState, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { AssignStateBadge } from "@repo/console/StatusBadges";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AssignTripButton } from "../_components/AssignTripDialog";
-import {
-  answerPartsAction,
-  loadAssignChoices,
-  namePartsAction,
-  releaseFulfilAction,
-  setPartCostAction,
-} from "./fulfil-actions";
+import { assignTripHref, type ScopeSlug } from "../../../../_lib/routes";
+import { setPartCostAction } from "../../assign/actions";
 
-/**
- * One role asked of one vendor across the booking's live trips: the parts
- * of one offer, acted on together.
- */
-type PartGroup = {
-  role: PartRole;
-  parts: TripPartView[];
-  positions: number[];
-};
-
-/** The live trips' parts by offer and role, vehicle first. */
-function groupsOf(trips: readonly FulfilmentTrip[]): PartGroup[] {
-  const groups = new Map<string, PartGroup>();
-  for (const trip of trips) {
-    for (const part of trip.parts) {
-      const key = `${part.role}:${part.offerId}`;
-      const group = groups.get(key) ?? {
-        role: part.role as PartRole,
-        parts: [],
-        positions: [],
-      };
-      group.parts.push(part);
-      group.positions.push(trip.position);
-      groups.set(key, group);
-    }
-  }
-  return [...groups.values()].sort((a, b) =>
-    a.role === b.role ? 0 : a.role === "vehicle" ? -1 : 1,
-  );
-}
-
-/** "VLE1234, Toyota Alphard, Black", "Ali bin Abu, +60…", or null when the vendor is to choose. */
+/** "VLE1234 · Toyota Alphard", "Ali bin Abu", or "Any" while not named. */
 function namedOf(part: TripPartView) {
   if (part.vehicle) {
-    return `${part.vehicle.plate}, ${modelName(part.vehicle.vehicleModel)}, ${part.vehicle.colour}`;
+    return `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`;
   }
-  if (part.driver) return `${part.driver.name}, ${part.driver.phone}`;
-  return null;
+  return part.driver?.name ?? "Any";
 }
-
-/** Where a group stands: its vendor's answer, then a driver's own. */
-function stateOf(group: PartGroup): { label: string; tone: "amber" | "green" } {
-  const first = group.parts[0]!;
-  if (group.parts.some((p) => !p.vendorAcceptedAt)) {
-    return {
-      label: `Waiting for ${first.offer.vendor.name}, by ${formatLocalDateTime(first.offer.respondBy)}`,
-      tone: "amber",
-    };
-  }
-  if (group.role === "driver" && group.parts.some((p) => !p.driverAcceptedAt)) {
-    return {
-      label: `Waiting for ${first.driver?.name ?? "the driver"}`,
-      tone: "amber",
-    };
-  }
-  return { label: "Accepted", tone: "green" };
-}
-
-const tripsName = (positions: readonly number[]) =>
-  positions.length === 1
-    ? `trip ${positions[0]}`
-    : `trips ${positions.join(", ")}`;
 
 /**
- * "Who does it" on a booking: each trip assigned or not, and each vehicle
- * and driver asked for, with its vendor, whom it names, what we owe and
- * whose answer it waits for. For Operation, Assign on each trip still to
- * assign (the same dialog as the Assign page's), to record
- * an answer given by phone, to name what a vendor chose and to release a
- * part; every other team reads it. See
- * docs/261028-fulfilment-vendors-and-connect.md.
+ * "Who does it" on a booking, to read: each live trip with where it
+ * stands, its vehicle and driver, their vendor and whose answer they
+ * wait for. Assigning is Operation's, on the trip's page under Assign,
+ * which "Open in Assign" leads to. A trip cancelled after its vendor
+ * accepted shows what we pay that vendor, which Operation can change.
+ * See docs/261028-fulfilment-vendors-and-connect.md.
  */
 export function WhoDoesIt({
   bookingId,
   trips,
   canFulfil,
+  scope,
 }: {
   bookingId: string;
   trips: FulfilmentTrip[];
   canFulfil: boolean;
+  scope: ScopeSlug;
 }) {
   const live = trips.filter((t) => isLive(t) && t.status !== "completed");
-  const groups = groupsOf(live);
-  const toAssign = assignTripsOf(
-    live.map((t) => ({ ...t, roles: rolesToAsk(t) })),
-  );
   const owed = trips.filter(
     (t) =>
       t.status === "cancelled" &&
       t.parts.some((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt),
   );
-  const received = live.some((t) => t.status === "received");
   if (live.length === 0 && owed.length === 0) return null;
 
   return (
     <Card>
-      <CardTitle>Who does it</CardTitle>
-      <div className="grid gap-4">
-        {received ? (
-          <p className="text-sm text-muted">
-            A trip is assigned once it is confirmed.
-          </p>
-        ) : null}
-        <ul className="grid gap-1 text-sm">
-          {live.map((trip) => {
-            const open = toAssign.find((t) => t.id === trip.id);
-            return (
-              <li key={trip.id} className="flex flex-wrap items-center gap-2">
-                <span>
-                  Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
-                </span>
+      <CardTitle description="Operation assigns each trip under Assign.">
+        Who does it
+      </CardTitle>
+      <ul className="grid gap-4">
+        {live.map((trip) => (
+          <li key={trip.id} className="grid gap-1.5">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium text-ink">
+                Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
+              </span>
+              {trip.status === "received" ? (
+                <span className="text-muted">Assigned once confirmed</span>
+              ) : (
                 <AssignStateBadge
                   state={assignStateOf({ ...trip, reported: false })}
                 />
-                {canFulfil && open ? (
-                  <span className="ml-auto">
-                    <AssignTripButton
-                      bookingId={bookingId}
-                      trip={open}
-                      others={toAssign.filter((t) => t.id !== trip.id)}
-                      label="Assign trip"
-                      variant={trip.parts.length > 0 ? "secondary" : "primary"}
-                    />
-                  </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-        {groups.map((group) => (
-          <GroupRow
-            key={`${group.role}:${group.parts[0]!.offerId}`}
-            bookingId={bookingId}
-            group={group}
-            canFulfil={canFulfil}
-          />
+              )}
+              {canFulfil && trip.status !== "received" ? (
+                <Link
+                  href={assignTripHref(scope, trip.id)}
+                  className="ml-auto text-sm font-medium text-brand underline-offset-4 hover:underline focus-ring"
+                >
+                  Open in Assign
+                </Link>
+              ) : null}
+            </div>
+            {trip.parts.length > 0 ? (
+              <dl className="grid gap-0.5 text-caption">
+                {PART_ROLES.map((role) => {
+                  const part = trip.parts.find((p) => p.role === role);
+                  const waiting = part
+                    ? partWaitingOf(part, part.offer.vendor.isOurs)
+                    : null;
+                  return (
+                    <div key={role} className="flex flex-wrap gap-x-1.5">
+                      <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
+                      <dd className={part ? "text-body" : "text-muted"}>
+                        {part
+                          ? `${namedOf(part)} · ${part.offer.vendor.name}`
+                          : "Not asked yet"}
+                        {part && waiting ? (
+                          <span className="text-warning">
+                            {" "}
+                            ·{" "}
+                            {partWaitingLabel(waiting, part.offer.vendor.name)}
+                          </span>
+                        ) : null}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            ) : null}
+          </li>
         ))}
-        {canFulfil && groups.length > 0 ? (
-          <ReleaseAll bookingId={bookingId} />
-        ) : null}
-        {owed.map((trip) => (
-          <div
-            key={trip.id}
-            className="grid gap-2 border-t border-hairline pt-3"
-          >
-            <p className="text-sm font-medium">
-              Trip {trip.position}, cancelled: pay vendor
-            </p>
-            {trip.parts
-              .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
-              .map((part) => (
-                <CostRow
-                  key={part.id}
-                  bookingId={bookingId}
-                  part={part}
-                  canFulfil={canFulfil}
-                />
-              ))}
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function GroupRow({
-  bookingId,
-  group,
-  canFulfil,
-}: {
-  bookingId: string;
-  group: PartGroup;
-  canFulfil: boolean;
-}) {
-  const first = group.parts[0]!;
-  const vendor = first.offer.vendor;
-  const named = namedOf(first);
-  const state = stateOf(group);
-  const cost = group.parts.reduce((sum, p) => sum + p.costSen, 0);
-  const partIds = group.parts.map((p) => p.id);
-  const vendorWaits = group.parts.some((p) => !p.vendorAcceptedAt);
-  const driverWaits =
-    group.role === "driver" &&
-    !vendorWaits &&
-    group.parts.some((p) => !p.driverAcceptedAt);
-
-  return (
-    <div className="grid gap-2 border-t border-hairline pt-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium">
-          {PART_ROLE_LABELS[group.role]}, {tripsName(group.positions)}
-        </span>
-        <span>{vendor.name}</span>
-        {vendor.isOurs ? <Badge tone="brand">Ours</Badge> : null}
-        <Badge dot tone={state.tone}>
-          {state.label}
-        </Badge>
-      </div>
-      <p className="text-sm text-muted">
-        {named ?? "Vendor to choose"}
-        {!vendor.isOurs ? ` · Pay vendor ${formatMyr(cost)}` : null}
-      </p>
-      {canFulfil ? (
-        <div className="flex flex-wrap items-start gap-2">
-          {!named ? (
-            <NameControl
-              bookingId={bookingId}
-              role={group.role}
-              vendorId={vendor.id}
-              partIds={partIds}
-            />
-          ) : null}
-          {named && vendorWaits ? (
-            <AnswerButton
-              bookingId={bookingId}
-              partIds={partIds}
-              as="vendor"
-              recorded={!vendor.isOurs}
-              label={vendor.isOurs ? "Accept" : "Record acceptance"}
-              done={
-                vendor.isOurs
-                  ? "Accepted for us."
-                  : `Recorded ${vendor.name}'s acceptance.`
-              }
-            />
-          ) : null}
-          {named && driverWaits ? (
-            <AnswerButton
-              bookingId={bookingId}
-              partIds={partIds}
-              as="driver"
-              recorded
-              label="Record driver's acceptance"
-              done="Recorded the driver's acceptance."
-            />
-          ) : null}
-          {vendorWaits && !vendor.isOurs ? (
-            <DeclineControl
-              bookingId={bookingId}
-              partIds={partIds}
-              as="vendor"
-            />
-          ) : null}
-          {driverWaits ? (
-            <DeclineControl
-              bookingId={bookingId}
-              partIds={partIds}
-              as="driver"
-            />
-          ) : null}
-          <ReleaseButton
-            bookingId={bookingId}
-            partIds={partIds}
-            what={`the ${group.role} of ${tripsName(group.positions)}`}
-          />
+      </ul>
+      {owed.map((trip) => (
+        <div
+          key={trip.id}
+          className="mt-4 grid gap-2 border-t border-hairline pt-3"
+        >
+          <p className="text-sm font-medium">
+            Trip {trip.position}, cancelled: pay vendor
+          </p>
+          {trip.parts
+            .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
+            .map((part) => (
+              <CostRow
+                key={part.id}
+                bookingId={bookingId}
+                part={part}
+                canFulfil={canFulfil}
+              />
+            ))}
         </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** A yes for the vendor or the driver: Operation's own for ours, recorded for anyone else. */
-function AnswerButton({
-  bookingId,
-  partIds,
-  as,
-  recorded,
-  label,
-  done,
-}: {
-  bookingId: string;
-  partIds: string[];
-  as: "vendor" | "driver";
-  recorded: boolean;
-  label: string;
-  done: string;
-}) {
-  const { pending, error, formProps } = useActionForm(answerPartsAction, {
-    done,
-  });
-  return (
-    <form {...formProps} className="grid gap-1">
-      <PartFields bookingId={bookingId} partIds={partIds} />
-      <input type="hidden" name="as" value={as} />
-      <input type="hidden" name="accept" value="true" />
-      <input type="hidden" name="recorded" value={String(recorded)} />
-      <Button type="submit" size="sm" pending={pending}>
-        {label}
-      </Button>
-      <FormError error={error} size="xs" />
-    </form>
-  );
-}
-
-/** A no, given by phone, with why: the part reopens. */
-function DeclineControl({
-  bookingId,
-  partIds,
-  as,
-}: {
-  bookingId: string;
-  partIds: string[];
-  as: "vendor" | "driver";
-}) {
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const { pending, error, formProps } = useActionForm(answerPartsAction, {
-    done: "Recorded the decline. The part is open again.",
-    onDone: () => setOpen(false),
-  });
-  if (!open) {
-    return (
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        onClick={() => setOpen(true)}
-      >
-        Record decline
-      </Button>
-    );
-  }
-  return (
-    <form
-      {...formProps}
-      className="grid w-full gap-2 rounded-control border border-card-edge bg-shade p-3"
-    >
-      <PartFields bookingId={bookingId} partIds={partIds} />
-      <input type="hidden" name="as" value={as} />
-      <input type="hidden" name="accept" value="false" />
-      <input type="hidden" name="recorded" value="true" />
-      <Field label="Why">
-        <Select
-          name="reason"
-          required
-          value={reason}
-          onValueChange={setReason}
-          options={DECLINE_REASONS.map((value) => ({
-            value,
-            label: DECLINE_REASON_LABELS[value],
-          }))}
-        />
-      </Field>
-      {reason === "other" ? (
-        <Field label="In a few words">
-          <Input name="note" required maxLength={DECLINE_NOTE_MAX_LENGTH} />
-        </Field>
-      ) : null}
-      <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" variant="caution" pending={pending}>
-          Record decline
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => setOpen(false)}
-        >
-          Cancel
-        </Button>
-      </div>
-      <FormError error={error} size="xs" />
-    </form>
-  );
-}
-
-/** The vehicle or driver a vendor chose, picked from its own in the picker. */
-function NameControl({
-  bookingId,
-  role,
-  vendorId,
-  partIds,
-}: {
-  bookingId: string;
-  role: PartRole;
-  vendorId: string;
-  partIds: string[];
-}) {
-  const [options, setOptions] = useState<Candidate[] | null>(null);
-  const [loading, startLoading] = useTransition();
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const { pending, error, formProps } = useActionForm(namePartsAction, {
-    done: `${PART_ROLE_LABELS[role]} named. Its vendor still accepts.`,
-    onDone: () => setOptions(null),
-  });
-
-  function open() {
-    startLoading(async () => {
-      const choices = await loadAssignChoices(bookingId);
-      if (!choices) {
-        setLoadError("Your teams cannot assign. Ask a SUPER admin.");
-        return;
-      }
-      const all = role === "vehicle" ? choices.vehicles : choices.drivers;
-      setOptions(all.filter((c) => c.vendor.id === vendorId));
-    });
-  }
-
-  if (!options) {
-    return (
-      <div className="grid gap-1">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={loading}
-          onClick={open}
-        >
-          Name {role}
-        </Button>
-        <FormError error={loadError} size="xs" />
-      </div>
-    );
-  }
-  return (
-    <form
-      {...formProps}
-      className="grid w-full gap-2 rounded-control border border-card-edge bg-shade p-3"
-    >
-      <PartFields bookingId={bookingId} partIds={partIds} />
-      <Field label={`The ${role} the vendor chose`}>
-        <Select
-          name="recordId"
-          required
-          options={options.map((c) => ({
-            value: c.id,
-            label: c.reasons.length > 0 ? `${c.name}: ${c.reasons[0]}` : c.name,
-            disabled: c.reasons.length > 0,
-          }))}
-        />
-      </Field>
-      <div className="flex items-center gap-2">
-        <Button type="submit" size="sm" pending={pending}>
-          Name {role}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => setOptions(null)}
-        >
-          Cancel
-        </Button>
-      </div>
-      <FormError error={error} size="xs" />
-    </form>
-  );
-}
-
-function ReleaseButton({
-  bookingId,
-  partIds,
-  what,
-}: {
-  bookingId: string;
-  partIds: string[];
-  what: string;
-}) {
-  const [dialog, confirm] = useConfirm();
-  const { pending, error, formProps } = useActionForm(releaseFulfilAction, {
-    ask: () =>
-      confirm({
-        title: `Release ${what}?`,
-        description: "Its trips go back to To assign for this part.",
-        action: "Release",
-      }),
-    done: "Released.",
-  });
-  return (
-    <form {...formProps} className="grid gap-1">
-      <PartFields bookingId={bookingId} partIds={partIds} />
-      <Button type="submit" size="sm" variant="ghost" pending={pending}>
-        Release
-      </Button>
-      <FormError error={error} size="xs" />
-      {dialog}
-    </form>
-  );
-}
-
-/** Lets every vehicle and driver of the booking go, to start again. */
-function ReleaseAll({ bookingId }: { bookingId: string }) {
-  const [dialog, confirm] = useConfirm();
-  const { pending, error, formProps } = useActionForm(releaseFulfilAction, {
-    ask: () =>
-      confirm({
-        title: "Release everything?",
-        description:
-          "Every vehicle and driver asked for or accepted on this booking is let go, and its trips go back to To assign.",
-        action: "Release all",
-        danger: true,
-      }),
-    done: "Released. The trips are to assign again.",
-  });
-  return (
-    <form {...formProps} className="grid justify-items-start gap-1">
-      <input type="hidden" name="bookingId" value={bookingId} />
-      <Button type="submit" size="sm" variant="secondary" pending={pending}>
-        Release all
-      </Button>
-      <FormError error={error} size="xs" />
-      {dialog}
-    </form>
+      ))}
+    </Card>
   );
 }
 
@@ -615,22 +216,5 @@ function CostRow({
       </div>
       <FormError error={error} size="xs" />
     </form>
-  );
-}
-
-function PartFields({
-  bookingId,
-  partIds,
-}: {
-  bookingId: string;
-  partIds: string[];
-}) {
-  return (
-    <>
-      <input type="hidden" name="bookingId" value={bookingId} />
-      {partIds.map((id) => (
-        <input key={id} type="hidden" name="partId" value={id} />
-      ))}
-    </>
   );
 }

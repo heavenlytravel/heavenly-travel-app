@@ -9,136 +9,51 @@ import {
   type AssignTrip,
   type PartRole,
 } from "@repo/db";
-import type { Candidate } from "@repo/db/server";
+import type { Candidate, VendorOption } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { DateTimeField } from "@repo/ui/date-field";
-import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
-import { Loading } from "@repo/ui/skeleton";
-import { FieldsSkeleton } from "@repo/console/Skeleton";
 import { Select } from "@repo/ui/select";
-import { useRef, useState, useTransition } from "react";
+import { useState } from "react";
 import { useActionForm } from "@repo/console/use-action-form";
-import {
-  assignAction,
-  loadAssignChoices,
-  type AssignChoices,
-} from "../[id]/fulfil-actions";
+import { assignAction } from "../actions";
 
-/** A role's choice as its picker holds it: "" for not now, `vendor:<id>`, or a vehicle's or driver's id. */
+/** A role's choice as the form posts it: "" for not now, `vendor:<id>`, or a vehicle's or driver's id. */
 type RoleChoice = string;
 
 const NOT_NOW = "";
 /** A role's vehicle or driver left to its vendor to assign. */
 const ANY = "";
 
+type Moment = { date: string; time: string };
+
 /**
- * "Assign" on one trip, on the booking and on the Assign page alike: a
- * small dialog with the vehicle and the driver it still needs, each by its
- * vendor first (ours first, or not now), then one of that vendor's (one
- * that cannot do the trip greyed with why) or Any, which the vendor
- * assigns, said plainly under it; what we pay a vendor that is not ours;
- * when they answer by; and the booking's other trips still open, to give
- * the same. A trip ticked that a choice cannot do cannot be ticked, with
- * why. Sent, each one asked accepts before the trip is assigned. See
+ * A trip's Assign form, for the vehicle and the driver it still needs:
+ * each by its vendor first (ours first, or not now), then one of that
+ * vendor's (one that cannot do the trip greyed with why) or Any, which
+ * the vendor assigns, said plainly under it; what we pay a vendor that is
+ * not ours; when each vendor asked answers by, before the pickup; and the
+ * booking's other trips still open, to give the same. Sent, each one
+ * asked accepts before the trip is assigned. See
  * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
-export function AssignTripButton({
+export function AssignForm({
   bookingId,
   trip,
   others,
-  label = "Assign",
-  size = "sm",
-  variant = "primary",
+  vehicles,
+  drivers,
+  vendors,
 }: {
   bookingId: string;
   trip: AssignTrip;
   /** The booking's other trips still to assign, in order. */
   others: AssignTrip[];
-  label?: string;
-  size?: "sm" | "md";
-  variant?: "primary" | "secondary";
-}) {
-  const [open, setOpen] = useState(false);
-  const [choices, setChoices] = useState<AssignChoices | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [, startLoading] = useTransition();
-  // Each opening starts a fresh form and reads who is free now; an answer
-  // to an earlier opening that comes late is dropped.
-  const [opening, setOpening] = useState(0);
-  const latest = useRef(0);
-
-  function openDialog() {
-    const ask = latest.current + 1;
-    latest.current = ask;
-    setOpen(true);
-    setFailed(false);
-    setChoices(null);
-    setOpening(ask);
-    startLoading(async () => {
-      try {
-        const loaded = await loadAssignChoices(bookingId);
-        if (latest.current !== ask) return;
-        if (loaded) setChoices(loaded);
-        else setFailed(true);
-      } catch {
-        if (latest.current === ask) setFailed(true);
-      }
-    });
-  }
-
-  return (
-    <>
-      <Button size={size} variant={variant} onClick={openDialog}>
-        {label}
-      </Button>
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-        title={`Assign trip ${trip.position}`}
-        description={`${formatLocalDateTime(trip.startsAt)} · ${trip.route}`}
-        width="md"
-      >
-        {failed ? (
-          <p className="text-sm text-danger">
-            Who is free could not be read, or your teams cannot assign. Close
-            and try again, or ask a SUPER admin.
-          </p>
-        ) : !choices ? (
-          <Loading label="Loading who is free">
-            <FieldsSkeleton />
-          </Loading>
-        ) : (
-          <AssignTripForm
-            key={opening}
-            bookingId={bookingId}
-            trip={trip}
-            others={others}
-            choices={choices}
-            onDone={() => setOpen(false)}
-            onCancel={() => setOpen(false)}
-          />
-        )}
-      </Dialog>
-    </>
-  );
-}
-
-function AssignTripForm({
-  bookingId,
-  trip,
-  others,
-  choices,
-  onDone,
-  onCancel,
-}: {
-  bookingId: string;
-  trip: AssignTrip;
-  others: AssignTrip[];
-  choices: AssignChoices;
-  onDone: () => void;
-  onCancel: () => void;
+  vehicles: Candidate[];
+  drivers: Candidate[];
+  /** The active vendors serving the trip's location, ours first. */
+  vendors: VendorOption[];
 }) {
   // Each role: its vendor first ("" not now), then one of that vendor's
   // vehicles or drivers, or "" for any, which the vendor assigns.
@@ -164,37 +79,28 @@ function AssignTripForm({
     driver: "",
   });
   const [also, setAlso] = useState<ReadonlySet<string>>(new Set());
-  // Untouched, Answer by follows the earliest trip being assigned.
-  const [respondByEdit, setRespondByEdit] = useState<{
-    date: string;
-    time: string;
-  } | null>(null);
+  // Untouched, a vendor's Answer by follows the earliest trip posted.
+  const [respondByEdits, setRespondByEdits] = useState<Record<string, Moment>>(
+    {},
+  );
   const { pending, error, formProps } = useActionForm(assignAction, {
     done: `Sent. Trip ${trip.position} is assigned once each one accepts.`,
-    onDone,
   });
 
   const candidatesOf = (role: PartRole) =>
-    role === "vehicle" ? choices.vehicles : choices.drivers;
+    role === "vehicle" ? vehicles : drivers;
   const candidateOf = (role: PartRole): Candidate | null =>
     candidatesOf(role).find((c) => c.id === picks[role]) ?? null;
-  const vendorOf = (role: PartRole) => {
-    const pick = picks[role];
-    if (pick.startsWith("vendor:")) {
-      return choices.vendors.find((v) => `vendor:${v.id}` === pick) ?? null;
-    }
-    return candidateOf(role)?.vendor ?? null;
-  };
+  const vendorOf = (role: PartRole) =>
+    vendors.find((v) => v.id === vendorIds[role]) ?? null;
   const chosen = trip.roles.filter((role) => picks[role] !== NOT_NOW);
   const ourVehicle =
-    picks.vehicle !== NOT_NOW && candidateOf("vehicle")?.vendor.isOurs === true;
+    chosen.includes("vehicle") && vendorOf("vehicle")?.isOurs === true;
 
   /** Why another trip cannot take the same, or null when it can. */
   function blockOf(other: AssignTrip): string | null {
     const shared = chosen.filter((role) => other.roles.includes(role));
-    if (shared.length === 0) {
-      return "Already has what is chosen here";
-    }
+    if (shared.length === 0) return "Already has what is chosen here";
     for (const role of shared) {
       const reason = candidateOf(role)?.trips[other.id]?.reasons[0];
       if (reason) return reason;
@@ -210,21 +116,34 @@ function AssignTripForm({
   const firstPickup = new Date(
     Math.min(...posted.map((t) => t.startsAt.getTime())),
   );
-  const respondBy =
-    respondByEdit ?? localDateTimeInputs(defaultRespondBy(firstPickup));
+  // Each vendor asked answers once, by its own time, before the first pickup.
+  const asked = [
+    ...new Map(
+      chosen.flatMap((role) => {
+        const vendor = vendorOf(role);
+        return vendor ? [[vendor.id, vendor] as const] : [];
+      }),
+    ).values(),
+  ];
+  const respondByOf = (vendorId: string) =>
+    respondByEdits[vendorId] ??
+    localDateTimeInputs(defaultRespondBy(firstPickup));
+  const lastDay = localDateTimeInputs(firstPickup).date;
 
   return (
-    <form {...formProps} className="grid gap-4">
+    <form {...formProps} className="grid gap-5">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <input
-        type="hidden"
-        name="respondBy"
-        value={
-          respondBy.date && respondBy.time
-            ? `${respondBy.date}T${respondBy.time}`
-            : ""
-        }
-      />
+      {asked.map((vendor) => {
+        const at = respondByOf(vendor.id);
+        return (
+          <input
+            key={vendor.id}
+            type="hidden"
+            name={`respondBy:${vendor.id}`}
+            value={at.date && at.time ? `${at.date}T${at.time}` : ""}
+          />
+        );
+      })}
       {posted.map((t) => (
         <input key={t.id} type="hidden" name="itemId" value={t.id} />
       ))}
@@ -260,8 +179,8 @@ function AssignTripForm({
         const candidate = candidateOf(role);
         const vendor = vendorOf(role);
         const fit = candidate?.trips[trip.id];
-        const own = vendorIds[role]
-          ? candidatesOf(role).filter((c) => c.vendor.id === vendorIds[role])
+        const own = vendor
+          ? candidatesOf(role).filter((c) => c.vendor.id === vendor.id)
           : [];
         const any = vendor !== null && records[role] === ANY;
         return (
@@ -284,7 +203,7 @@ function AssignTripForm({
                   }}
                   options={[
                     { value: NOT_NOW, label: "Not now" },
-                    ...choices.vendors.map((v) => ({
+                    ...vendors.map((v) => ({
                       value: v.id,
                       label: v.isOurs ? `${v.name} (ours)` : v.name,
                     })),
@@ -294,7 +213,7 @@ function AssignTripForm({
               <Field label={PART_ROLE_LABELS[role]}>
                 <Select
                   value={records[role]}
-                  disabled={!vendorIds[role]}
+                  disabled={!vendor}
                   onValueChange={(record) =>
                     setRecords((current) => ({ ...current, [role]: record }))
                   }
@@ -302,8 +221,8 @@ function AssignTripForm({
                     {
                       value: ANY,
                       label: vendor?.isOurs
-                        ? `Any, we name it later`
-                        : `Any, the vendor assigns`,
+                        ? "Any, we name it later"
+                        : "Any, the vendor assigns",
                     },
                     ...own.map((c) => {
                       const reason = c.trips[trip.id]?.reasons[0];
@@ -320,7 +239,7 @@ function AssignTripForm({
             {any ? (
               <p className="rounded-control bg-shade px-3 py-2 text-sm text-body">
                 {vendor.isOurs
-                  ? `No ${role} named yet: name it on the booking once you know.`
+                  ? `No ${role} named yet: name it here once you know.`
                   : `${vendor.name} will assign the ${role}. You see who once they do.`}
               </p>
             ) : null}
@@ -341,6 +260,7 @@ function AssignTripForm({
                     ? `Pay ${vendor.name} per trip (RM)`
                     : `Pay ${vendor.name} (RM)`
                 }
+                className="sm:max-w-[calc(50%-0.375rem)]"
               >
                 <Input
                   name={`${role}Cost:${trip.id}`}
@@ -361,18 +281,31 @@ function AssignTripForm({
         );
       })}
 
-      {chosen.length > 0 ? (
-        <Field
-          label="Answer by"
-          hint="Unanswered by then, the trip opens again."
-        >
-          <DateTimeField
-            title="Answer by"
-            value={respondBy}
-            onChange={setRespondByEdit}
-            timeZone={BOOKING_RULES.timeZone}
-          />
-        </Field>
+      {asked.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {asked.map((vendor) => (
+            <Field
+              key={vendor.id}
+              label={
+                asked.length > 1 ? `${vendor.name} answers by` : "Answer by"
+              }
+              hint="Before the pickup. Unanswered by then, the trip opens again."
+            >
+              <DateTimeField
+                title="Answer by"
+                value={respondByOf(vendor.id)}
+                onChange={(at) =>
+                  setRespondByEdits((current) => ({
+                    ...current,
+                    [vendor.id]: at,
+                  }))
+                }
+                max={lastDay}
+                timeZone={BOOKING_RULES.timeZone}
+              />
+            </Field>
+          ))}
+        </div>
       ) : null}
 
       {ourVehicle ? (
@@ -421,14 +354,11 @@ function AssignTripForm({
       ) : null}
 
       <FormError error={error} />
-      <DialogActions>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex justify-end">
         <Button type="submit" pending={pending} disabled={chosen.length === 0}>
           {posted.length > 1 ? `Assign ${posted.length} trips` : "Assign"}
         </Button>
-      </DialogActions>
+      </div>
     </form>
   );
 }

@@ -1,54 +1,54 @@
 import Link from "next/link";
 import {
-  assignTripsOf,
   ASSIGN_STATES,
   ASSIGN_STATE_LABELS,
   durationLabel,
   formatLocalDate,
+  formatLocalDateTime,
   formatLocalTime,
   isTripEventKind,
-  PART_ROLE_LABELS,
-  plural,
+  partWaitingLabel,
   TRIP_EVENT_LABELS,
+  untilPickup,
   type AssignState,
-  type AssignTrip,
-  type PartRole,
 } from "@repo/db";
 import {
   getAssignPage,
   type AssignPart,
   type AssignRow,
 } from "@repo/db/server";
+import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { Card, CardTitle } from "@repo/console/Card";
-import { EmptyState } from "@repo/console/EmptyState";
-import { AssignStateBadge } from "@repo/console/StatusBadges";
+import { Bone } from "@repo/ui/skeleton";
+import { Card } from "@repo/console/Card";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
-import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
-import { FilterLinks } from "../../../_components/FilterLinks";
+import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
+import { ASSIGN_TONES, AssignStateBadge } from "@repo/console/StatusBadges";
+import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { requireAdmin } from "../../../_lib/access";
 import {
   assignHref,
+  assignTripHref,
   bookingHref,
-  type AssignFilter,
   type ScopeSlug,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
-import { AssignTripButton } from "../bookings/_components/AssignTripDialog";
-import { QuickViewButton } from "./QuickView";
 
 const isState = (value: unknown): value is AssignState =>
   ASSIGN_STATES.includes(value as AssignState);
 
+type Shown = AssignState | "all";
+
 /**
- * Route: /[location]/assign?state=…&view=booking. Operation's page: every
- * trip from today on, at every location under `~` or at the one under its
- * slug, those to assign first; the chips show those waiting to accept,
- * assigned, on the road or done today, or all. Listed by day, or by
- * booking. Each trip still to assign has Assign, the same dialog as on
- * the booking, and each booking a quick view. Over them, our vehicles
- * waiting for Operation's own yes. See
- * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
+ * Route: /[location]/assign?state=…. Operation's page: every trip from
+ * today on, at every location under `~` or at the one under its slug, in
+ * a table by pickup, those to assign first. Figure tiles count where the
+ * trips stand and narrow the list to one. Each row says how soon it picks
+ * up, red within the day while not yet assigned, and who does it or whose
+ * answer it waits for; its reference opens the booking, Assign or Open
+ * the trip's own page. See docs/261028-fulfilment-vendors-and-connect.md,
+ * "Assigning a booking".
  */
 export default async function AssignPage({
   params,
@@ -56,282 +56,168 @@ export default async function AssignPage({
 }: PageProps<"/[location]/assign">) {
   await requireAdmin("bookings.fulfil");
   const [scope, query] = await Promise.all([scopeOf(params), searchParams]);
-  const state: AssignState | "all" =
+  const state: Shown =
     query.state === "all"
       ? "all"
       : isState(query.state)
         ? query.state
         : "to-assign";
-  const view = query.view === "booking" ? "booking" : undefined;
 
   return (
     <>
       <PageHeader title="Assign" />
-      <Streamed fallback={<CardSkeleton rows={6} />}>
-        {() => assignList(scope.slug, scope.location?.id, state, view)}
+      <Streamed
+        key={`${scope.slug ?? "~"}:${state}`}
+        fallback={
+          <>
+            <FigureTiles
+              label="Trips by where they stand"
+              figures={stateFigures(scope.slug, state, null)}
+            />
+            <Card flush>
+              <TableSkeleton bare columns={6} />
+            </Card>
+          </>
+        }
+      >
+        {() => assignList(scope.slug, scope.location?.id, state)}
       </Streamed>
     </>
   );
 }
 
+/** The tiles: each state, then All, with its count; the one on screen ringed. Without counts, bones. */
+function stateFigures(
+  scope: ScopeSlug,
+  shown: Shown,
+  counts: Record<Shown, number> | null,
+): Figure[] {
+  const valueOf = (key: Shown) =>
+    counts ? counts[key] : <Bone className="h-7 w-10" />;
+  return [
+    ...ASSIGN_STATES.map((state) => ({
+      key: state,
+      label: ASSIGN_STATE_LABELS[state],
+      value: valueOf(state),
+      tone: ASSIGN_TONES[state],
+      href: assignHref(scope, {
+        state: state === "to-assign" ? undefined : state,
+      }),
+      current: shown === state,
+    })),
+    {
+      key: "all",
+      label: "All",
+      value: valueOf("all"),
+      tone: "neutral" as const,
+      href: assignHref(scope, { state: "all" }),
+      current: shown === "all",
+    },
+  ];
+}
+
+const EMPTY: Record<Shown, string> = {
+  "to-assign":
+    "Nothing to assign: every trip from today on has its vehicle and driver asked for.",
+  waiting: "No trip is waiting for an answer.",
+  assigned: "No trip from today on is assigned and not yet on the road.",
+  "on-the-road": "No trip is on the road.",
+  done: "No trip is done today yet.",
+  all: "No trip from today on.",
+};
+
 async function assignList(
   scope: ScopeSlug,
   locationId: string | undefined,
-  state: AssignState | "all",
-  view: AssignFilter["view"],
+  state: Shown,
 ) {
-  const { rows, ours } = await getAssignPage(locationId);
+  const rows = await getAssignPage(locationId);
+  const counts = Object.fromEntries([
+    ...ASSIGN_STATES.map((s) => [s, rows.filter((r) => r.state === s).length]),
+    ["all", rows.length],
+  ]) as Record<Shown, number>;
   const shown = rows.filter((row) => state === "all" || row.state === state);
-  const count = (s: AssignState) => rows.filter((r) => r.state === s).length;
-  const filter = { state: state === "to-assign" ? undefined : state, view };
-  // The trips of each booking still to assign, for "Also give the same to".
-  const open: Open = new Map();
-  for (const row of rows) {
-    const trips = open.get(row.bookingId) ?? [];
-    trips.push(...assignTripsOf([{ ...row, id: row.itemId }]));
-    open.set(row.bookingId, trips);
-  }
+  const now = new Date();
 
   return (
-    <div className="grid gap-5">
-      {ours.length > 0 ? (
-        <Card>
-          <CardTitle description="Our vehicles asked for and not yet checked. Open the booking to accept for us.">
-            Waiting for Operation
-          </CardTitle>
-          <ul className="divide-y divide-hairline text-sm">
-            {ours.map((part) => (
-              <li
-                key={`${part.reference}-${part.position}-${part.role}`}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2"
-              >
-                <Link
-                  href={bookingHref(scope, part.bookingId)}
-                  className="font-medium tabular-nums underline-offset-4 hover:underline"
-                >
-                  {part.reference}
-                </Link>
-                <span className="text-muted">
-                  Trip {part.position}, {formatLocalDate(part.startsAt)}{" "}
-                  {formatLocalTime(part.startsAt)}
-                </span>
-                <span className="text-muted">
-                  {PART_ROLE_LABELS[part.role as PartRole] ?? part.role}
-                  {part.name ? ` ${part.name}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <FilterLinks
-          label="Trips by where they stand"
-          options={ASSIGN_STATES.map((value) => ({
-            value,
-            label: `${ASSIGN_STATE_LABELS[value]} (${count(value)})`,
-          }))}
-          active={state === "all" ? undefined : state}
-          hrefOf={(value) =>
-            assignHref(scope, {
-              state:
-                value === undefined
-                  ? "all"
-                  : value === "to-assign"
-                    ? undefined
-                    : value,
-              view,
-            })
-          }
-        />
-        <div className="sm:ml-auto">
-          <FilterLinks
-            label="List by"
-            all={false}
-            options={[
-              { value: "trip", label: "By trip" },
-              { value: "booking", label: "By booking" },
-            ]}
-            active={view ?? "trip"}
-            hrefOf={(value) =>
-              assignHref(scope, {
-                ...filter,
-                view: value === "booking" ? "booking" : undefined,
-              })
-            }
-          />
-        </div>
-      </div>
-
-      {shown.length === 0 ? (
-        <Card>
-          <EmptyState>
-            {state === "to-assign"
-              ? "Nothing to assign: every trip from today on has its vehicle and driver asked for."
-              : "No trip from today on stands here."}
-          </EmptyState>
-        </Card>
-      ) : view === "booking" ? (
-        <ByBooking rows={shown} scope={scope} open={open} />
-      ) : (
-        <ByDay rows={shown} scope={scope} open={open} />
-      )}
-    </div>
+    <>
+      <FigureTiles
+        label="Trips by where they stand"
+        figures={stateFigures(scope, state, counts)}
+      />
+      <Card flush>
+        <Table bare>
+          <THead>
+            <Th>Pick-up</Th>
+            <Th>Booking</Th>
+            <Th>Trip</Th>
+            <Th>Vehicle</Th>
+            <Th>Driver</Th>
+            <Th>Status</Th>
+            <Th />
+          </THead>
+          <TBody>
+            {shown.length === 0 ? (
+              <EmptyRow colSpan={7}>{EMPTY[state]}</EmptyRow>
+            ) : (
+              shown.map((row) => (
+                <TripRow key={row.itemId} row={row} scope={scope} now={now} />
+              ))
+            )}
+          </TBody>
+        </Table>
+      </Card>
+    </>
   );
 }
 
-/** The trips of each booking still to assign, by the booking's id. */
-type Open = Map<string, AssignTrip[]>;
-
-/** The trips under their day, soonest first. */
-function ByDay({
-  rows,
-  scope,
-  open,
-}: {
-  rows: AssignRow[];
-  scope: ScopeSlug;
-  open: Open;
-}) {
-  const days = new Map<string, AssignRow[]>();
-  for (const row of rows) {
-    const day = formatLocalDate(row.startsAt);
-    days.set(day, [...(days.get(day) ?? []), row]);
-  }
-  return (
-    <div className="grid gap-5">
-      {[...days].map(([day, dayRows]) => (
-        <Card key={day} flush>
-          <CardTitle inset meta={plural(dayRows.length, "trip")}>
-            {day}
-          </CardTitle>
-          <ul className="divide-y divide-hairline">
-            {dayRows.map((row) => (
-              <TripRow key={row.itemId} row={row} scope={scope} open={open} />
-            ))}
-          </ul>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-/** The trips under their booking, the booking of the soonest trip first. */
-function ByBooking({
-  rows,
-  scope,
-  open,
-}: {
-  rows: AssignRow[];
-  scope: ScopeSlug;
-  open: Open;
-}) {
-  const bookings = new Map<string, AssignRow[]>();
-  for (const row of rows) {
-    bookings.set(row.bookingId, [...(bookings.get(row.bookingId) ?? []), row]);
-  }
-  return (
-    <div className="grid gap-5">
-      {[...bookings].map(([bookingId, bookingRows]) => {
-        const first = bookingRows[0]!;
-        return (
-          <Card key={bookingId} flush>
-            <CardTitle
-              inset
-              meta={`${first.customer} · ${plural(first.tripCount, "trip")}`}
-              action={
-                <QuickViewButton
-                  bookingId={bookingId}
-                  reference={first.reference}
-                  href={bookingHref(scope, bookingId)}
-                />
-              }
-            >
-              {first.reference}
-            </CardTitle>
-            <ul className="divide-y divide-hairline">
-              {bookingRows.map((row) => (
-                <TripRow
-                  key={row.itemId}
-                  row={row}
-                  scope={scope}
-                  open={open}
-                  inBooking
-                />
-              ))}
-            </ul>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-/** What a part still waits for, in a few words. */
-function waitingLabel(part: AssignPart) {
-  switch (part.waiting) {
-    case "name":
-      return "vendor to choose";
-    case "vendor":
-      return part.vendorName
-        ? "waiting for the vendor"
-        : "waiting for Operation";
-    case "driver":
-      return "waiting for the driver";
-    case null:
-      return null;
-  }
-}
-
-/**
- * One trip: when, where, what, who does it and where it stands; Assign
- * while a vehicle or a driver is still to ask for, and the booking's
- * quick view.
- */
+/** One trip: when and how soon, its booking, where and what, who does it, where it stands, and its page. */
 function TripRow({
   row,
   scope,
-  open,
-  inBooking = false,
+  now,
 }: {
   row: AssignRow;
   scope: ScopeSlug;
-  open: Open;
-  inBooking?: boolean;
+  now: Date;
 }) {
   const { job } = row;
-  const trips = open.get(row.bookingId) ?? [];
-  const trip = trips.find((t) => t.id === row.itemId);
+  const until = untilPickup(row.startsAt, now);
+  const toDo = row.state === "to-assign" || row.state === "waiting";
+  const urgent = until.soon && toDo;
   return (
-    <li
-      className={cx(
-        "grid gap-3 px-5 py-4 md:grid-cols-[6rem_minmax(0,1fr)_minmax(0,16rem)_auto] md:items-center",
-        row.overdue && "bg-warning-tint",
-      )}
-    >
-      <div className="grid gap-0.5">
-        <span className="font-semibold text-ink tabular-nums">
+    <tr className={cx(row.overdue && "bg-warning-tint")}>
+      <Td className="whitespace-nowrap tabular-nums">
+        <span className="block font-medium text-ink">
+          {formatLocalDate(row.startsAt)}
+        </span>
+        <span className="block text-xs text-muted">
           {formatLocalTime(row.startsAt)}
-        </span>
-        {inBooking ? (
-          <span className="text-caption text-muted">
-            {formatLocalDate(row.startsAt)}
+          {" · "}
+          <span className={cx(urgent && "font-semibold text-danger")}>
+            {until.label}
           </span>
-        ) : null}
-      </div>
-      <div className="grid min-w-0 gap-0.5">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <span className="truncate font-medium text-ink">
-            {job.dropoff
-              ? `${job.pickup.label} → ${job.dropoff.label}`
-              : job.pickup.label}
-          </span>
-          <AssignStateBadge state={row.state} />
         </span>
-        <span className="text-caption text-muted">
+      </Td>
+      <Td className="whitespace-nowrap">
+        <Link
+          href={bookingHref(scope, row.bookingId)}
+          className="font-medium tabular-nums underline-offset-4 hover:underline"
+        >
+          {row.reference}
+        </Link>
+        <span className="block max-w-40 truncate text-xs text-muted">
+          {row.customer}
+        </span>
+      </Td>
+      <Td className="min-w-56 text-body">
+        <span className="block">
+          {job.dropoff
+            ? `${job.pickup.label} → ${job.dropoff.label}`
+            : job.pickup.label}
+        </span>
+        <span className="block text-xs text-muted">
           {[
-            inBooking ? null : row.reference,
             `Trip ${row.position}`,
             row.hours ? durationLabel(row.hours) : "One-way",
             row.className,
@@ -342,7 +228,7 @@ function TripRow({
             .join(" · ")}
         </span>
         {row.lastEvent ? (
-          <span className="text-caption text-muted">
+          <span className="block text-xs text-muted">
             {isTripEventKind(row.lastEvent.kind)
               ? TRIP_EVENT_LABELS[row.lastEvent.kind]
               : row.lastEvent.kind}{" "}
@@ -350,48 +236,45 @@ function TripRow({
             {row.overdue ? " · past its estimated end" : ""}
           </span>
         ) : null}
-      </div>
-      <dl className="grid gap-0.5 text-caption">
-        {(["vehicle", "driver"] as const).map((role) => {
-          const part = row.parts.find((p) => p.role === role);
-          const waiting = part ? waitingLabel(part) : null;
-          return (
-            <div key={role} className="flex gap-1.5">
-              <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
-              <dd
-                className={cx(
-                  "min-w-0 truncate",
-                  part ? "text-body" : "text-muted",
-                )}
-              >
-                {part
-                  ? `${part.name ?? "not named yet"}${part.vendorName ? ` · ${part.vendorName}` : ""}`
-                  : "not yet"}
-                {waiting ? (
-                  <span className="text-warning"> · {waiting}</span>
-                ) : null}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-      <div className="flex items-center gap-2 md:justify-end">
-        {inBooking ? null : (
-          <QuickViewButton
-            bookingId={row.bookingId}
-            reference={row.reference}
-            href={bookingHref(scope, row.bookingId)}
-          />
-        )}
-        {trip ? (
-          <AssignTripButton
-            bookingId={row.bookingId}
-            trip={trip}
-            others={trips.filter((t) => t.id !== trip.id)}
-            variant={row.parts.length > 0 ? "secondary" : "primary"}
-          />
-        ) : null}
-      </div>
-    </li>
+      </Td>
+      {(["vehicle", "driver"] as const).map((role) => (
+        <Td key={role} className="min-w-40">
+          <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+        </Td>
+      ))}
+      <Td className="whitespace-nowrap">
+        <AssignStateBadge state={row.state} />
+      </Td>
+      <Td className="text-right whitespace-nowrap">
+        <Button
+          asChild
+          size="sm"
+          variant={row.state === "to-assign" ? "primary" : "secondary"}
+        >
+          <Link href={assignTripHref(scope, row.itemId)}>
+            {row.state === "to-assign" ? "Assign" : "Open"}
+          </Link>
+        </Button>
+      </Td>
+    </tr>
+  );
+}
+
+/** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
+function PartCell({ part }: { part: AssignPart | null }) {
+  if (!part) return <span className="text-muted">Not asked</span>;
+  return (
+    <>
+      <span className="block text-body">
+        {part.name ?? (part.isOurs ? "Any, we name it" : "Any")}
+      </span>
+      <span className="block text-xs text-muted">{part.vendorName}</span>
+      {part.waiting ? (
+        <span className="block text-xs text-warning">
+          {partWaitingLabel(part.waiting, part.vendorName)}
+          {part.respondBy ? `, by ${formatLocalDateTime(part.respondBy)}` : ""}
+        </span>
+      ) : null}
+    </>
   );
 }

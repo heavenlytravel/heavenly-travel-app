@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
- * A row of chips that narrow a list, "All" first (unless `all` is false,
- * for a choice between ways that has no "all") and the one in force
+ * A row of chips that narrow a list, "All" first and the one in force
  * filled in navy. `hrefOf` names the list with the value in its address, so the
  * filter survives a reload and a shared link. Activity filters by the type
  * of record with it, a location's by the part of the location.
@@ -13,22 +12,18 @@ export function FilterLinks<Value extends string>({
   options,
   active,
   hrefOf,
-  all = true,
 }: {
   /** What the row filters by, for screen readers: "Filter by status". */
   label: string;
   options: readonly { value: Value; label: string }[];
   active: Value | undefined;
   hrefOf: (value: Value | undefined) => string;
-  all?: boolean;
 }) {
   return (
     <nav aria-label={label} className="flex flex-wrap gap-1.5">
-      {all ? (
-        <FilterLink href={hrefOf(undefined)} active={active === undefined}>
-          All
-        </FilterLink>
-      ) : null}
+      <FilterLink href={hrefOf(undefined)} active={active === undefined}>
+        All
+      </FilterLink>
       {options.map((option) => (
         <FilterLink
           key={option.value}

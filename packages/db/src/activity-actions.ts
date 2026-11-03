@@ -371,6 +371,8 @@ export type AmendedFields = {
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
+  /** "English, Japanese" with a guide, "" with one and no language; null without. */
+  tourGuide: string | null;
   priceTotalSen: number;
 };
 
@@ -386,6 +388,7 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
   passengers: "the passengers",
   childSeats: "the child seats",
   flightNumber: "the flight",
+  tourGuide: "the tour guide",
   priceTotalSen: "the price",
 };
 

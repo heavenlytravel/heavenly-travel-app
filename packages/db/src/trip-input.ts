@@ -70,6 +70,64 @@ export type TripOptions = {
 export const GUIDE_LANGUAGES_REQUIRED =
   "Choose at least one language for your tour guide.";
 
+/** Why the trip's guide cannot be booked as chosen: no language for them; null when it can. */
+export function guideIssue(choice: {
+  withGuide: boolean;
+  guideLanguages: readonly string[];
+}): string | null {
+  return choice.withGuide && choice.guideLanguages.length === 0
+    ? GUIDE_LANGUAGES_REQUIRED
+    : null;
+}
+
+/**
+ * The tour guide as a booking form holds it before posting: a car's when
+ * added (a coach has one whatever `added` says) and the languages ticked.
+ * The website's confirm page and the console's booking forms keep it so.
+ */
+export type GuideChoice = { added: boolean; languages: string[] };
+
+/** No guide added; English ticked for when one is. */
+export const NO_GUIDE: GuideChoice = { added: false, languages: ["English"] };
+
+/** A form's guide as the trip goes with it: always on a coach, and no languages without one. */
+export function guideOfChoice(category: TripCategory, guide: GuideChoice) {
+  return guideOf(category, {
+    withGuide: guide.added,
+    guideLanguages: guide.languages,
+  });
+}
+
+/** A stored trip's guide as a form starts from it: English ticked when none was asked. */
+export function guideChoiceOf(details: {
+  withGuide: boolean;
+  guideLanguages: readonly string[];
+}): GuideChoice {
+  return {
+    added: details.withGuide,
+    languages:
+      details.guideLanguages.length > 0
+        ? [...details.guideLanguages]
+        : NO_GUIDE.languages,
+  };
+}
+
+/** The guide as a form posts it, `TRIP_PARAM.guide` and each `guideLanguage`; nothing without one. */
+export function guideEntries(
+  category: TripCategory,
+  guide: GuideChoice,
+): [string, string][] {
+  const { withGuide, guideLanguages } = guideOfChoice(category, guide);
+  if (!withGuide) return [];
+  return [
+    [TRIP_PARAM.guide, "1"],
+    ...guideLanguages.map((language): [string, string] => [
+      TRIP_PARAM.guideLanguage,
+      language,
+    ]),
+  ];
+}
+
 /** The parameter and input names, the same in a URL and in a form. */
 export const TRIP_PARAM = {
   mode: "mode",

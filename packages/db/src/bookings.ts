@@ -624,6 +624,9 @@ function amendedFieldsOf(
     passengers: number;
     childSeats?: number;
     flightNumber?: string | null;
+    withGuide?: boolean;
+    /** A list, stored or prepared. */
+    guideLanguages?: unknown;
   },
 ): AmendedFields {
   return {
@@ -637,6 +640,12 @@ function amendedFieldsOf(
     passengers: details.passengers,
     childSeats: details.childSeats ?? 0,
     flightNumber: details.flightNumber ?? null,
+    tourGuide: details.withGuide
+      ? (Array.isArray(details.guideLanguages)
+          ? details.guideLanguages
+          : []
+        ).join(", ")
+      : null,
     priceTotalSen: item.priceTotalSen,
   };
 }
@@ -729,10 +738,6 @@ export function amendItem(
             ...next.tripDetails,
             // No model preferred now: the one preferred before goes.
             vehicleModel: next.tripDetails.vehicleModel ?? { disconnect: true },
-            // The guide stays as booked, and its languages: amending never
-            // adds or drops a role to assign.
-            withGuide: item.tripDetails.withGuide,
-            guideLanguages: item.tripDetails.guideLanguages,
           },
         },
       },

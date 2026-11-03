@@ -27,8 +27,7 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
   trip of theirs refuses, and the drive between trips warns, as for a driver.
 - **A coach always goes with a guide, included in its price** (user, 2026-11-03), on every
   coach trip, one-way too (G6, to verify with the team). Every coach trip booked from
-  now on has `withGuide`. Trips booked before keep none, and amending a trip never adds
-  or removes its guide, or changes its languages.
+  now on has `withGuide`. Trips booked before keep none until amended.
 - **A car's guide is an add-on the customer ticks** (user, 2026-11-03), for every trip of
   the booking. It adds no charge until Ops settles how it is priced (G1).
 - **Add-ons sit under "Your vehicle" on the Confirm page** (user, 2026-11-03, replacing
@@ -40,9 +39,15 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
   with "Tour guide: Included · English" on the trip's details and on Assign. Assign lists
   guides who speak them first, and warns "Does not speak Japanese" on one who does not,
   without refusing: Operation may have no one better.
+- **The console books and amends as the website does** (user, 2026-11-03): its Details
+  step has the same Add-ons, the tour guide and its languages, for New booking and for
+  Amend. An amend may add or drop a car's guide or change the languages; like any amend,
+  it asks every role of the trip again. A coach trip from before guides gets one when
+  amended.
 - **One person may be the driver and the guide** (G4, user, 2026-11-03), and the vendor's
   owner too: they are entered in both places, as a driver and as a guide, and named on
-  both cards. Nothing checks that the two records are one person, so a clash between
+  both cards. Their Connect job does not show them their own name as the guide (same
+  phone). Nothing checks that the two records are one person, so a clash between
   their driving one trip and guiding another is not caught.
 - **A vendor is asked for a guide only when it offers tour guides,** or is ours.
 
@@ -64,8 +69,6 @@ ours or a vendor's, before the first one.
 
 ## Not yet
 
-- The console's own booking form (New booking, Amend) has no guide box or languages: a
-  coach booked there gets its guide with no language asked.
 - Connect's getting-started list and the vendor's home count vehicles and drivers only.
 - The menu: Vehicles, Drivers, Tour Guides and Vendors are all a vendor's, and the user
   asked for the menu to be rethought as a whole, not only for guides.

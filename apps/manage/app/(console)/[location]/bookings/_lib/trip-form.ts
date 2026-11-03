@@ -5,11 +5,15 @@ import {
   clashesOf,
   fitsPassengers,
   formatMyr,
+  guideChoiceOf,
+  guideEntries,
+  guideOfChoice,
   hireEndOf,
   hourlyChoiceOf,
   HOURLY_PACKAGES,
   isTripCategory,
   localDateTimeInputs,
+  NO_GUIDE,
   namedHours,
   offersChildSeats,
   parsePriceOverride,
@@ -25,6 +29,7 @@ import {
   type BookingSide,
   type ClassAvailability,
   type ClassFit,
+  type GuideChoice,
   type TripCategory,
   type TripMode,
 } from "@repo/db";
@@ -155,19 +160,21 @@ export type VehicleDraft = {
   passengers: string;
 };
 
-/** What the driver needs on one item, as the amend form edits it. */
+/** What the driver needs on one item, and its tour guide, as the amend form edits it. */
 export type ItemDetails = {
   flightNumber: string;
   childSeats: string;
   notes: string;
+  guide: GuideChoice;
 };
 
-/** What the drivers need, asked once for a new booking and copied onto the trips it is for. */
+/** What the drivers need, asked once for a new booking and copied onto the trips it is for, with the tour guide for every trip. */
 export type BookingDetails = {
   arrivingFlight: string;
   departingFlight: string;
   childSeats: string;
   notes: string;
+  guide: GuideChoice;
 };
 
 let lastTripId = 0;
@@ -207,6 +214,7 @@ export const EMPTY_BOOKING_DETAILS: BookingDetails = {
   departingFlight: "",
   childSeats: "0",
   notes: "",
+  guide: NO_GUIDE,
 };
 
 /** One item of a booking as the amend form starts from it. */
@@ -273,6 +281,7 @@ export function amendDraftOf(
       flightNumber: details.flightNumber ?? "",
       childSeats: String(details.childSeats),
       notes: details.notes ?? "",
+      guide: guideChoiceOf(details),
     },
   };
 }
@@ -587,8 +596,11 @@ export function vehicleLine(
     .join(" · ");
 }
 
-/** The details as a folded step reads: "Arriving MH 1234 · 1 child seat · notes for the driver". */
-export function detailsLine(details: ItemDetails | BookingDetails): string {
+/** The details as a folded step reads: "Arriving MH 1234 · 1 child seat · tour guide (English) · notes for the driver". */
+export function detailsLine(
+  details: ItemDetails | BookingDetails,
+  category: TripCategory,
+): string {
   const parts: string[] = [];
   const flight = (label: string, value: string) => {
     if (value.trim()) parts.push(`${label} ${value.trim().toUpperCase()}`);
@@ -601,10 +613,18 @@ export function detailsLine(details: ItemDetails | BookingDetails): string {
   }
   const seats = Number(details.childSeats);
   if (seats > 0) parts.push(plural(seats, "child seat"));
+  const guide = guideOfChoice(category, details.guide);
+  if (guide.withGuide) {
+    parts.push(
+      guide.guideLanguages.length > 0
+        ? `tour guide (${guide.guideLanguages.join(", ")})`
+        : "tour guide",
+    );
+  }
   if (details.notes.trim()) parts.push("notes for the driver");
   return parts.length > 0
     ? parts.join(" · ")
-    : "No flight, child seats or notes";
+    : "No flight, child seats, tour guide or notes";
 }
 
 /** Why the agreed price cannot be saved as entered; null when it can, or when there is none. */
@@ -656,11 +676,11 @@ export function vehicleFields(
   };
 }
 
-/** The details, once: an amended item's flight, or a new booking's two flights, then child seats where the category has them, and the note. */
+/** The details, once: an amended item's flight, or a new booking's two flights, then child seats where the category has them, the note, and the tour guide with each of its languages. */
 export function detailsFields(
   details: ItemDetails | BookingDetails,
   category: TripCategory,
-): Record<string, string> {
+): [string, string][] {
   const fields: Record<string, string> =
     "flightNumber" in details
       ? { [TRIP_OPTION_FIELDS.flightNumber]: details.flightNumber }
@@ -672,5 +692,5 @@ export function detailsFields(
     fields[TRIP_OPTION_FIELDS.childSeats] = details.childSeats;
   }
   fields[TRIP_OPTION_FIELDS.notes] = details.notes;
-  return fields;
+  return [...Object.entries(fields), ...guideEntries(category, details.guide)];
 }

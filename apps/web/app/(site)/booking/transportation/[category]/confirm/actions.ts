@@ -5,7 +5,7 @@ import {
   flightOfTrip,
   formatMyr,
   GUEST_ACTOR,
-  GUIDE_LANGUAGES_REQUIRED,
+  guideIssue,
   maskEmail,
   parseContact,
   parseFlightNumber,
@@ -99,9 +99,8 @@ export async function createTripsBookingAction(
   ) {
     return INCOMPLETE;
   }
-  if (options.withGuide && options.guideLanguages.length === 0) {
-    return { error: GUIDE_LANGUAGES_REQUIRED };
-  }
+  const noLanguage = guideIssue(options);
+  if (noLanguage) return { error: noLanguage };
   const several = indexes.length > 1;
   const tripLabel = (index: number) => (several ? `Trip ${index + 1}: ` : "");
 

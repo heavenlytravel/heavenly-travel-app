@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   clashesOf,
   formatMyr,
-  guideOf,
-  GUIDE_LANGUAGES_REQUIRED,
+  guideEntries,
+  guideIssue,
+  guideOfChoice,
+  NO_GUIDE,
   modelsLine,
   isAirportPlace,
   plural,
@@ -31,8 +33,6 @@ import { useLinkSeed } from "../../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../../_components/trips/useNewBooking";
 import {
   classOnTrip,
-  guideEntries,
-  NO_GUIDE,
   planPrices,
   quoteOf,
   shortDayOf,
@@ -230,10 +230,8 @@ export function ConfirmStep({
         ? `all ${trips.length} trips`
         : "the trip";
   const card = chosen?.card ?? null;
-  const { withGuide, guideLanguages } = guideOf(category, {
-    withGuide: guide.added,
-    guideLanguages: guide.languages,
-  });
+  const chosenGuide = guideOfChoice(category, guide);
+  const { withGuide } = chosenGuide;
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
@@ -308,9 +306,7 @@ export function ConfirmStep({
       ? `Change or remove ${red.join(", ")} first: ${
           red.length === 1 ? "it is" : "they are"
         } marked in red.`
-      : withGuide && guideLanguages.length === 0
-        ? GUIDE_LANGUAGES_REQUIRED
-        : null;
+      : guideIssue(chosenGuide);
 
   const arrivingAt = trips.filter((t) => isAirportPlace(t.pickup));
   const departingAt = trips.filter(

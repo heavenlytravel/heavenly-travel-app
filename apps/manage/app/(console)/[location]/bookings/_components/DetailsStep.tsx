@@ -1,13 +1,18 @@
 "use client";
 
 import {
+  GUIDE_LANGUAGES,
+  guideIssue,
+  guideOfChoice,
+  includesGuide,
   offersChildSeats,
   TRIP_MAX_CHILD_SEATS,
   TRIP_MAX_FLIGHT_NUMBER_LENGTH,
   TRIP_MAX_NOTES_LENGTH,
   type TripCategory,
 } from "@repo/db";
-import { Field, Input, Textarea } from "@repo/ui/field";
+import { Badge } from "@repo/ui/badge";
+import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import {
   detailsLine,
@@ -21,7 +26,10 @@ import { Step, StepFoot } from "./Step";
  * form edits one item's own flight; a new booking asks the arriving and
  * the departing flight once, each only when a trip picks up or drops off
  * at an airport, and copies them onto the trips they are for. Child seats,
- * where the category has them, and the note go on every trip.
+ * where the category has them, and the note go on every trip. Its
+ * add-ons are the website's: the tour guide, ticked and included for a
+ * coach, the admin's to tick for a car, with the languages they should
+ * speak, one or more (docs/261103-tour-guide.md).
  */
 export function DetailsStep({
   number,
@@ -47,13 +55,29 @@ export function DetailsStep({
   onOpen: () => void;
   onDone: () => void;
 }) {
+  const included = includesGuide(category);
+  const guide = guideOfChoice(category, details.guide);
+  const issue = guideIssue(guide);
+
+  function toggle(language: string, ticked: boolean) {
+    const chosen = new Set(details.guide.languages);
+    if (ticked) chosen.add(language);
+    else chosen.delete(language);
+    onChange({
+      guide: {
+        ...details.guide,
+        languages: GUIDE_LANGUAGES.filter((l) => chosen.has(l)),
+      },
+    });
+  }
+
   return (
     <Step
       number={number}
       title="Details"
       optional
       done={done}
-      summary={detailsLine(details)}
+      summary={detailsLine(details, category)}
       open={open}
       onOpen={onOpen}
     >
@@ -110,8 +134,55 @@ export function DetailsStep({
             onChange={(e) => onChange({ notes: e.target.value })}
           />
         </Field>
+        <FieldGroup className="grid gap-3 sm:col-span-2">
+          <p className="text-sm font-semibold text-ink">Add-ons</p>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={guide.withGuide}
+              disabled={included}
+              onChange={(event) =>
+                onChange({
+                  guide: {
+                    ...details.guide,
+                    added: event.currentTarget.checked,
+                  },
+                })
+              }
+            />
+            Tour guide
+            {included ? <Badge tone="green">Included</Badge> : null}
+          </label>
+          {guide.withGuide ? (
+            <fieldset className="grid gap-2 pl-6">
+              <legend className="mb-2 text-sm text-body">
+                Languages the guide should speak
+              </legend>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                {GUIDE_LANGUAGES.map((language) => (
+                  <label
+                    key={language}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={details.guide.languages.includes(language)}
+                      onChange={(event) =>
+                        toggle(language, event.currentTarget.checked)
+                      }
+                    />
+                    {language}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+        </FieldGroup>
       </div>
-      <StepFoot label="Done" disabled={false} missing={null} onNext={onDone} />
+      <StepFoot
+        label="Done"
+        disabled={issue !== null}
+        missing={issue}
+        onNext={onDone}
+      />
     </Step>
   );
 }

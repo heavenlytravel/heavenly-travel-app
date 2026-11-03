@@ -4,12 +4,12 @@ import {
   GUIDE_LANGUAGES,
   GUIDE_LANGUAGES_REQUIRED,
   includesGuide,
+  type GuideChoice,
   type TripCategory,
 } from "@repo/db";
 import { Badge } from "@repo/ui/badge";
 import { Checkbox } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
-import type { GuideChoice } from "../../../../../_lib/trip-plan";
 
 /**
  * "Add-ons", under the vehicle on the confirm page, for every trip: the

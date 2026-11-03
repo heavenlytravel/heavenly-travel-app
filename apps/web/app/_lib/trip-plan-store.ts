@@ -1,12 +1,16 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { byStart, isTripCategory, type TripCategory } from "@repo/db";
+import {
+  byStart,
+  isTripCategory,
+  NO_GUIDE,
+  type GuideChoice,
+  type TripCategory,
+} from "@repo/db";
 import {
   NO_FLIGHTS,
-  NO_GUIDE,
   type ForDriver,
-  type GuideChoice,
   type PlannedTrip,
   type PricedTrips,
 } from "./trip-plan";

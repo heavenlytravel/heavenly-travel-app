@@ -12,6 +12,7 @@ import {
   guideOffersOnAll,
   modelsLine,
   isAirportPlace,
+  needsGuide,
   plural,
   tripItemField,
   type TripCategory,
@@ -189,7 +190,7 @@ export function ConfirmStep({
     );
   }
 
-  const { trips, priced, passengers, classId, forDriver, guide } = plan;
+  const { trips, priced, passengers, classId, forDriver } = plan;
   const vehiclePage = tripBookingPath(category);
   const { quotes, failed, complete, choices } = planPrices(
     trips,
@@ -234,6 +235,12 @@ export function ConfirmStep({
     complete && views.every((view) => view?.ok)
       ? guideOffersOnAll(views.map((view) => (view?.ok ? view.guides : [])))
       : [];
+  // A coach takes a guide: the first language on sale until one is chosen.
+  const guideRequired = needsGuide(category) && guideOffers.length > 0;
+  const guide =
+    guideRequired && plan.guide.language === null
+      ? { ...plan.guide, language: guideOffers[0]!.language }
+      : plan.guide;
   const guideIssue = complete
     ? guideOfferIssue(guide.language, guideOffers)
     : null;
@@ -423,6 +430,7 @@ export function ConfirmStep({
       <AddOns
         offers={guideOffers}
         guide={guide}
+        required={guideRequired}
         forWhich={`for ${forWhich}`}
         onGuide={(change) =>
           updatePlan((now) => ({

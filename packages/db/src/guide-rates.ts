@@ -24,13 +24,14 @@ const ROW_SELECT = {
   extraHourSen: true,
 } as const;
 
-/** Several locations' guide rates by location id, in one query. A location with none has an empty list. */
+/** Several locations' guide rates by location id, in one query, each in its list's order. A location with none has an empty list. */
 export async function listGuideRates(
   locationIds: readonly string[],
   client: Client = db,
 ): Promise<Map<string, GuideRateRow[]>> {
   const rows = await client.guideRate.findMany({
     where: { locationId: { in: [...locationIds] } },
+    orderBy: [{ position: "asc" }, { language: "asc" }],
     select: ROW_SELECT,
   });
   return new Map(
@@ -58,19 +59,17 @@ export async function getGuideRates(
   return (await listGuideRates([locationId])).get(locationId)!;
 }
 
-/** The rows in the order the log compares them. */
+/** The rows as the log keeps them, in their order: a move is a change. */
 const summaryOf = (rows: readonly GuideRateRow[]) =>
-  [...rows]
-    .sort((a, b) => a.language.localeCompare(b.language))
-    .map((row) => ({
-      language: row.language,
-      isActive: row.isActive,
-      ...Object.fromEntries(GUIDE_RATE_PRICES.map((key) => [key, row[key]])),
-    }));
+  rows.map((row) => ({
+    language: row.language,
+    isActive: row.isActive,
+    ...Object.fromEntries(GUIDE_RATE_PRICES.map((key) => [key, row[key]])),
+  }));
 
 /**
- * Saves a location's whole guide rate list as the page posts it, in place
- * of the one stored. A booking keeps its own receipt, so nothing booked
+ * Saves a location's whole guide rate list as the page posts it, in its
+ * order, in place of the one stored. A booking keeps its own receipt, so nothing booked
  * changes. Saving what is already there logs nothing.
  */
 export async function setGuideRates(
@@ -96,7 +95,7 @@ export async function setGuideRates(
     await tx.guideRate.deleteMany({ where: { locationId } });
     if (rows.length > 0) {
       await tx.guideRate.createMany({
-        data: rows.map((row) => ({ locationId, ...row })),
+        data: rows.map((row, position) => ({ locationId, position, ...row })),
       });
     }
     await logActivity(tx, actor, {

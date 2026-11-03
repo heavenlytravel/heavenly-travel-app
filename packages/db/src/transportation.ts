@@ -8,6 +8,7 @@ import {
   type ClassAvailability,
 } from "./booking-rules";
 import {
+  needsGuide,
   offersChildSeats,
   type TripCategory,
   type TripMode,
@@ -116,7 +117,8 @@ export type TripQuoteErrorCode =
   | "too-soon"
   | "passengers"
   | "model-unavailable"
-  | "guide-unavailable";
+  | "guide-unavailable"
+  | "guide-required";
 
 export type TripQuoteError = {
   code: TripQuoteErrorCode;
@@ -731,6 +733,15 @@ function itemOf(
       );
     }
     price = withGuideCharge(price, guide);
+  } else if (
+    side === "customer" &&
+    needsGuide(category) &&
+    quote.guides.length > 0
+  ) {
+    return fail(
+      "guide-required",
+      "A coach comes with a tour guide. Choose the language your guide speaks.",
+    );
   }
 
   return {

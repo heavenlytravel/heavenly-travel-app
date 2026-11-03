@@ -27,9 +27,15 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
   between trips warns, as for a driver.
 - **A paid add-on, for car and coach, one-way and hourly** (user, 2026-11-03, replacing
   "included on a coach" and "free on a car"). Nothing is included any more.
+- **A coach must take a guide** (`needsGuide`, user, 2026-11-04): on the website the
+  guide stays ticked on a coach and the customer only chooses its language, the first
+  on sale until they do; the booking is refused without one. Only while a language is
+  on sale for the trip: with none, a coach books without. They may still ask for
+  another language. The console may leave it off.
 - **Guide rates, per location** (user, 2026-11-03; G1 answered): Rates > Tour Guide Rates,
   one row per language with an "On the website" switch and five prices: One-way, 4
-  hours, 8 hours, 12 hours and Extra hour (`GuideRate`). The first sheet from Ops:
+  hours, 8 hours, 12 hours and Extra hour (`GuideRate`). The arrows set the order
+  customers see the languages in (`GuideRate.position`, user, 2026-11-04), as on Pages. The first sheet from Ops:
   Malay RM80 / 150 / 200, English 120 / 200 / 250, Mandarin 150 / 300 / 350, Arabic
   200 / 360 / 450 (one-way, half day = 4 hours, full day = 8 hours); 12 hours and the
   extra hour are Ops' to fill.

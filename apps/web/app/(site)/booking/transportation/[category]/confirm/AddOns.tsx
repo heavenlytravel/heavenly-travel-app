@@ -15,7 +15,8 @@ import { FormError } from "@repo/ui/form-error";
  * car or a coach, one-way or hourly. Only the languages on sale for every
  * trip show, each at its price for them all (the location's guide rates);
  * with none on sale, nothing shows. One language is chosen, ticking the
- * guide chooses the first. Any other language may be asked for, free:
+ * guide chooses the first. A coach must take one (`required`): the guide
+ * stays ticked, only its language is chosen. Any other language may be asked for, free:
  * Operation looks for a guide and, when one is found, amends the booking.
  * The choice is the plan's, posted with the trips. See
  * docs/261103-tour-guide.md.
@@ -24,6 +25,7 @@ export function AddOns({
   offers,
   guide,
   forWhich,
+  required,
   onGuide,
 }: {
   /** On sale for every trip, at the sum of their prices. */
@@ -31,6 +33,8 @@ export function AddOns({
   guide: GuideChoice;
   /** "for the trip", "for both trips". */
   forWhich: string;
+  /** A coach's: the guide cannot be left off. */
+  required: boolean;
   onGuide: (change: Partial<GuideChoice>) => void;
 }) {
   if (offers.length === 0) return null;
@@ -45,6 +49,7 @@ export function AddOns({
         <Checkbox
           className="mt-1"
           checked={guide.language !== null}
+          disabled={required}
           onChange={(event) =>
             onGuide({
               language: event.currentTarget.checked
@@ -56,8 +61,9 @@ export function AddOns({
         <span className="grid gap-0.5">
           <span className="text-ink">Tour guide</span>
           <span className="text-copy text-body">
-            A licensed tour guide joins you, {forWhich}. From{" "}
-            {formatMyr(cheapest)}.
+            {required
+              ? `Every coach comes with a licensed tour guide, ${forWhich}. Choose the language they speak, from ${formatMyr(cheapest)}.`
+              : `A licensed tour guide joins you, ${forWhich}. From ${formatMyr(cheapest)}.`}
           </span>
         </span>
       </label>

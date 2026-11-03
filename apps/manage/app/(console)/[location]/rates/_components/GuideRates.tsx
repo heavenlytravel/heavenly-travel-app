@@ -16,6 +16,7 @@ import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { useState, useTransition } from "react";
+import { movedRow, RowControls } from "../../../../_components/RowControls";
 import { setGuideRatesAction } from "./actions";
 import {
   CELL_BAD,
@@ -55,9 +56,18 @@ function valuesOf(rows: readonly GuideRateRow[]): Values {
   );
 }
 
-/** The rows as the action reads them (`parseGuideRates`). */
-const postedOf = (values: Values) =>
-  GUIDE_LANGUAGES.map((language) => ({ language, ...values[language]! }));
+/** The languages in the location's order: those it keeps, in theirs, then the rest. */
+function orderOf(rows: readonly GuideRateRow[]): string[] {
+  const kept = rows.map((row) => row.language);
+  return [
+    ...kept,
+    ...GUIDE_LANGUAGES.filter((language) => !kept.includes(language)),
+  ];
+}
+
+/** The rows as the action reads them (`parseGuideRates`), in their order. */
+const postedOf = (values: Values, order: readonly string[]) =>
+  order.map((language) => ({ language, ...values[language]! }));
 
 /** A price as it is compared with the save: sen, or null for empty or not a price. */
 function senOf(text: string | undefined) {
@@ -73,7 +83,8 @@ const HEADING =
  * language, switched on to sell it on the website, and its price one-way,
  * for a 4, 8 or 12-hour hire, and per hour past the hire. A language is
  * offered on a trip only while it is on and the trip's prices are set: an
- * empty cell is not sold. The languages on are listed first. Saved whole.
+ * empty cell is not sold. Customers see the languages in the order set
+ * here, with the arrows. Saved whole.
  * Read only for the teams that read the rates. See
  * docs/261103-tour-guide.md, "Guide rates".
  */
@@ -90,14 +101,11 @@ export function GuideRates({
   const [values, setValues] = useState<Values>(saved);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  // In the order of the save, on first, so a switch does not move its row.
-  const [order] = useState(() => [
-    ...GUIDE_LANGUAGES.filter((l) => saved[l]!.isActive),
-    ...GUIDE_LANGUAGES.filter((l) => !saved[l]!.isActive),
-  ]);
+  const [savedOrder, setSavedOrder] = useState(() => orderOf(rows));
+  const [order, setOrder] = useState(savedOrder);
 
   const invalid = new Set<string>();
-  let changes = 0;
+  let changes = order.join() === savedOrder.join() ? 0 : 1;
   for (const language of GUIDE_LANGUAGES) {
     const now = values[language]!;
     const was = saved[language]!;
@@ -125,13 +133,16 @@ export function GuideRates({
     if (invalid.size > 0) return;
     startTransition(async () => {
       const refused = errorOf(
-        await answerOf(setGuideRatesAction(locationId, postedOf(values))),
+        await answerOf(
+          setGuideRatesAction(locationId, postedOf(values, order)),
+        ),
       );
       if (refused) {
         setError(refused);
         return;
       }
       setSaved(values);
+      setSavedOrder(order);
       setError(null);
       toast.success("Tour guide rates saved.");
     });
@@ -161,7 +172,15 @@ export function GuideRates({
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-(--layer-raised) bg-shade text-2xs text-muted">
             <tr>
-              <th scope="col" className={cx(HEADING, "pl-5 text-left")}>
+              {readOnly ? null : (
+                <th scope="col" className={cx(HEADING, "pl-3 text-left")}>
+                  <span className="sr-only">Order</span>
+                </th>
+              )}
+              <th
+                scope="col"
+                className={cx(HEADING, readOnly ? "pl-5" : "pl-0", "text-left")}
+              >
                 Language
               </th>
               <th scope="col" className={cx(HEADING, "text-left")}>
@@ -175,13 +194,30 @@ export function GuideRates({
             </tr>
           </thead>
           <tbody>
-            {order.map((language) => {
+            {order.map((language, index) => {
               const row = values[language]!;
               return (
                 <tr key={language}>
+                  {readOnly ? null : (
+                    <td className="border-b border-hairline pr-1 pl-3">
+                      <RowControls
+                        name={language}
+                        isFirst={index === 0}
+                        isLast={index === order.length - 1}
+                        disabled={pending}
+                        onMove={(by) => {
+                          setError(null);
+                          setOrder(movedRow(order, index, by));
+                        }}
+                      />
+                    </td>
+                  )}
                   <th
                     scope="row"
-                    className="border-b border-hairline py-0 pr-3 pl-5 text-left align-middle font-medium whitespace-nowrap text-ink"
+                    className={cx(
+                      "border-b border-hairline py-0 pr-3 text-left align-middle font-medium whitespace-nowrap text-ink",
+                      readOnly ? "pl-5" : "pl-0",
+                    )}
                   >
                     {language}
                   </th>
@@ -272,8 +308,10 @@ export function GuideRates({
           A customer sees a language only while it is on the website and the
           trip&apos;s price is set: One-way for a one-way trip, the hire&apos;s
           duration for an hourly one, and Extra hour too when they add hours.
-          Any other language they may ask for, free; Operation amends the trip
-          once a guide is found. A guide&apos;s price has no surcharge.
+          They see the languages in this order. Any other language they may ask
+          for, free; Operation amends the trip once a guide is found. A
+          guide&apos;s price has no surcharge. A coach must take a guide while a
+          language is on sale for it.
         </p>
       </div>
 
@@ -286,6 +324,7 @@ export function GuideRates({
             canSave={invalid.size === 0}
             onDiscard={() => {
               setValues(saved);
+              setOrder(savedOrder);
               setError(null);
             }}
             onSave={save}

@@ -68,17 +68,15 @@ export function guidePriceSen(
 /** A language on sale for a trip, at its price there. */
 export type GuideOffer = { language: string; amountSen: number };
 
-/** The languages a trip may be booked with a guide in, in the list's order: active and priced. */
+/** The languages a trip may be booked with a guide in, in the order Ops set (the rows'): active and priced. */
 export function guideOffers(
   rows: readonly GuideRateRow[],
   shape: GuideTripShape,
 ): GuideOffer[] {
-  const byLanguage = new Map(rows.map((row) => [row.language, row]));
-  return GUIDE_LANGUAGES.flatMap((language) => {
-    const row = byLanguage.get(language);
-    if (!row?.isActive) return [];
+  return rows.flatMap((row) => {
+    if (!row.isActive) return [];
     const amountSen = guidePriceSen(row, shape);
-    return amountSen === null ? [] : [{ language, amountSen }];
+    return amountSen === null ? [] : [{ language: row.language, amountSen }];
   });
 }
 
@@ -111,8 +109,8 @@ const UNREADABLE = {
 /**
  * The list as Guide Rates posts it: `[{ language, isActive, oneWay,
  * hours4, hours8, hours12, extraHour }]`, prices in ringgit as typed or ""
- * for none. Each language once, from `GUIDE_LANGUAGES`. A row with nothing
- * set and switched off is dropped.
+ * for none, in the order the page lists them. Each language once, from
+ * `GUIDE_LANGUAGES`. A row with nothing set and switched off is dropped.
  */
 export function parseGuideRates(value: unknown): Parsed<GuideRateRow[]> {
   if (!Array.isArray(value)) return UNREADABLE;
@@ -147,12 +145,7 @@ export function parseGuideRates(value: unknown): Parsed<GuideRateRow[]> {
       rows.push(row);
     }
   }
-  return {
-    ok: true,
-    value: GUIDE_LANGUAGES.flatMap(
-      (language) => rows.find((row) => row.language === language) ?? [],
-    ),
-  };
+  return { ok: true, value: rows };
 }
 
 /** The languages a customer may ask for: every one not on sale for the trips. */

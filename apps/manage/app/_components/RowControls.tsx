@@ -3,7 +3,8 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
 
 /**
- * The buttons of one row of a list Marketing orders by hand: up and down
+ * The buttons of one row of a list ordered by hand (pages, footer links,
+ * saved addresses, tour guide languages): up and down
  * as arrows, and remove in red where a row can be removed here, all quiet
  * so a long list does not fill up with boxes. `name` is what a screen
  * reader hears the row called. `disabled` holds the arrows while a move is

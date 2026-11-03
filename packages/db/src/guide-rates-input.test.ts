@@ -47,7 +47,7 @@ describe("guidePriceSen", () => {
 });
 
 describe("guideOffers", () => {
-  it("sells the active, priced languages, in the list's order", () => {
+  it("sells the active, priced languages, in the order Ops set", () => {
     const rows = [
       row({ language: "Mandarin", oneWaySen: 15000 }),
       row({ language: "Arabic", oneWaySen: null }),
@@ -55,8 +55,8 @@ describe("guideOffers", () => {
       row({ language: "English" }),
     ];
     assert.deepEqual(guideOffers(rows, { mode: "oneway" }), [
-      { language: "English", amountSen: 12000 },
       { language: "Mandarin", amountSen: 15000 },
+      { language: "English", amountSen: 12000 },
     ]);
   });
 

@@ -33,6 +33,14 @@ export const offersChildSeats = (category: TripCategory) =>
  */
 export const tipsDriver = (category: string) => category === "coach-charter";
 
+/**
+ * A coach goes with a tour guide (user, 2026-11-04): the customer chooses
+ * its language and cannot book without one, while a language is on sale
+ * for the trip. A paid add-on all the same. The console may leave it off.
+ * See docs/261103-tour-guide.md.
+ */
+export const needsGuide = (category: string) => category === "coach-charter";
+
 export const TRIP_MODES = ["oneway", "hourly"] as const;
 export type TripMode = (typeof TRIP_MODES)[number];
 export const isTripMode = guardFor(TRIP_MODES);

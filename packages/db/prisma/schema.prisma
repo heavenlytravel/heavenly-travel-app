@@ -493,6 +493,9 @@ model GuideRate {
   location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   /// From GUIDE_LANGUAGES.
   language     String
+  /// Where the language comes in the location's list, from 0: the order
+  /// customers see the languages on sale in. Ops sets it on Guide Rates.
+  position     Int      @default(0)
   isActive     Boolean  @default(false)
   oneWaySen    Int?
   hours4Sen    Int?

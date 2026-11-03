@@ -5,8 +5,8 @@ import { textOf } from "./fields";
  * Where we pay someone: a vendor company for its vehicles, a driver or a
  * tour guide for their own work. The bank, the account number and the
  * name on the account, all three or none. Kept on Vendor, Driver and
- * Guide alike, entered on their forms, and shown masked everywhere
- * (`maskTail`), the activity log included. Pure and
+ * Guide alike, entered on their forms, and shown blurred until clicked
+ * (@repo/ui/secret); the activity log keeps only their end (`maskTail`). Pure and
  * browser-safe. See docs/261103-tour-guide.md, "Pay and bank details".
  */
 
@@ -119,10 +119,10 @@ export function checkBankFields(fields: Partial<BankFields>): Change {
   return { ok: true };
 }
 
-/** "•••• 4821": an account number or an IC by its last four only; empty for none. */
+/** "ending 4821": an account number or an IC by its last four only, as the log keeps it; empty for none. */
 export function maskTail(number: string): string {
   if (number === "") return "";
-  return `•••• ${number.slice(-4)}`;
+  return `ending ${number.slice(-4)}`;
 }
 
 /** The fields kept whole in the database and masked everywhere they show: an account number, and a vendor's SSM or IC number. */

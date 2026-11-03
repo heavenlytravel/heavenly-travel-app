@@ -12,13 +12,23 @@ import {
   AuthInput,
   CodeInput,
   EmailChip,
+  ConfirmPasswordField,
   PasswordInput,
+  passwordConfirmed,
+  PASSWORDS_DIFFER,
   ResendCode,
   TextButton,
 } from "./AuthParts";
 import { openSignedIn, REDIRECT_PARAM, safeRedirect } from "./redirect";
 
-type Where = "firstName" | "lastName" | "email" | "password" | "code" | "form";
+type Where =
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "password"
+  | "confirmPassword"
+  | "code"
+  | "form";
 
 /** The sign-up form's fields, kept while the code is asked for, so "Change" brings them back. */
 type Details = {
@@ -117,6 +127,10 @@ export function SignUpFlow({
         .toLowerCase(),
     };
     setDetails(typed);
+    if (!passwordConfirmed(data, "password")) {
+      setError({ at: "confirmPassword", text: PASSWORDS_DIFFER });
+      return;
+    }
     const { error: refusal } = await signUp.password({
       emailAddress: typed.email,
       password: String(data.get("password")),
@@ -249,6 +263,7 @@ export function SignUpFlow({
             />
           )}
         </AuthField>
+        <ConfirmPasswordField error={errorAt("confirmPassword")} />
         {/* Clerk's bot check draws itself here when it needs to ask. */}
         <div id="clerk-captcha" />
         <AuthAlert>{errorAt("form")}</AuthAlert>

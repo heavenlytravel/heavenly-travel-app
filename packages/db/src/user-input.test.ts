@@ -54,11 +54,20 @@ describe("parseNewUser", () => {
     assert.equal(fieldOf({ confirmEmail: "aina@example.co" }), "confirmEmail");
   });
 
-  it("takes a password of at least 8 characters, or none", () => {
-    const set = parseNewUser({ ...FORM, password: "long enough" });
+  it("takes a password of at least 8 characters, typed twice, or none", () => {
+    const set = parseNewUser({
+      ...FORM,
+      password: "long enough",
+      confirmPassword: "long enough",
+    });
     assert.ok(set.ok);
     assert.equal(set.value.password, "long enough");
     assert.equal(fieldOf({ password: "short" }), "password");
+    assert.equal(fieldOf({ password: "long enough" }), "confirmPassword");
+    assert.equal(
+      fieldOf({ password: "long enough", confirmPassword: "long enuogh" }),
+      "confirmPassword",
+    );
   });
 });
 

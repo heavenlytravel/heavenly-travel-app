@@ -29,7 +29,10 @@ import {
   AuthField,
   AuthInput,
   CodeInput,
+  ConfirmPasswordField,
   PasswordInput,
+  passwordConfirmed,
+  PASSWORDS_DIFFER,
   ResendCode,
   TextButton,
 } from "./AuthParts";
@@ -275,7 +278,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
   const { user } = useUser();
   const router = useRouter();
   const [error, setError] = useState<{
-    at: "current" | "new" | "form";
+    at: "current" | "new" | "again" | "form";
     text: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -300,6 +303,10 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
     const form = event.currentTarget;
     const data = new FormData(form);
     setError(null);
+    if (!passwordConfirmed(data, "newPassword")) {
+      setError({ at: "again", text: PASSWORDS_DIFFER });
+      return;
+    }
     setSaving(true);
     try {
       await savePassword({
@@ -386,6 +393,9 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
               />
             )}
           </AuthField>
+          <ConfirmPasswordField
+            error={error?.at === "again" ? error.text : null}
+          />
           <label className="flex items-center gap-2.5 text-sm text-body">
             <Checkbox name="signOutOthers" defaultChecked={has} />
             Sign out of my other devices

@@ -77,10 +77,12 @@ Decided with the user on 2026-11-03.
   number in digits and the name on the account, all three or none, on every vendor,
   driver and tour guide. A vendor gives its own at registration in Connect; a driver's
   and a guide's are entered on their forms, in Manage or by their vendor in Connect.
-- **Masked everywhere** (`maskTail`, `MaskedText`, `SecretInput`): an account number
-  and a vendor's SSM or IC number show as "•••• 4821", with an eye button to show
-  them, as an app blurs an account's email. The activity log keeps them masked
-  (`maskedForLog`). Paying out (a payout run, statements) is not built yet.
+- **Blurred until clicked** (`MaskedText`, `SecretInput`, @repo/ui/secret; user,
+  2026-11-04, replacing "•••• 4821"): an account number and a vendor's SSM or IC number
+  show as a made-up value of the same shape, blurred; a click, or the eye in a form,
+  shows them whole. A box being typed in shows what is typed. The activity log keeps
+  only their end, "ending 4821" (`maskTail`, `maskedForLog`). Paying out (a payout
+  run, statements) is not built yet.
 
 ## Booking changes
 

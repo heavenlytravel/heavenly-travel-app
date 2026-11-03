@@ -2,6 +2,7 @@
 
 import { cx } from "@repo/ui/cx";
 import { inputClassName } from "@repo/ui/field";
+import { PasswordInput as EyedPasswordInput } from "@repo/ui/secret";
 import { useFieldError } from "@repo/ui/validation";
 import {
   useEffect,
@@ -14,7 +15,7 @@ import {
 /**
  * The parts every sign-in, sign-up and account screen is made of, in the
  * three apps alike: the card with the portal it signs in to, a field with
- * its error under it, the password with Show, the code of six digits, and
+ * its error under it, the password with its eye and typed again, the code of six digits, and
  * the quiet link-like button. Plain Tailwind on the shared tokens; each app
  * scans this folder (`@source` in its `globals.css`).
  */
@@ -137,28 +138,44 @@ export function AuthInput({ className, ...props }: ComponentProps<"input">) {
   );
 }
 
-/** A password with Show and Hide at its end. */
+/** A password with an eye at its end to show it, in the kit's size. */
 export function PasswordInput({
   className,
   ...props
 }: Omit<ComponentProps<"input">, "type">) {
-  const [shown, setShown] = useState(false);
   return (
-    <div className="relative">
-      <AuthInput
-        type={shown ? "text" : "password"}
-        className={cx("pr-16", className)}
-        {...props}
-      />
-      <button
-        type="button"
-        onClick={() => setShown(!shown)}
-        aria-pressed={shown}
-        className="absolute inset-y-1 right-1 rounded-control px-3 text-xs font-semibold text-brand hover:bg-hairline focus-ring"
-      >
-        {shown ? "Hide" : "Show"}
-      </button>
-    </div>
+    <EyedPasswordInput className={cx("h-11 text-base", className)} {...props} />
+  );
+}
+
+/**
+ * The new password typed again, on every form that sets one, so a typo is
+ * caught before it locks them out. Checked here before the form goes to
+ * Clerk (`passwordConfirmed`); a paste is let through, for the password
+ * managers that make one up.
+ */
+export const CONFIRM_PASSWORD_FIELD = "confirmPassword";
+
+export const PASSWORDS_DIFFER =
+  "The two passwords differ. Type the same password in both.";
+
+/** The form's password, `field`, and the one typed again are the same. */
+export function passwordConfirmed(data: FormData, field: string): boolean {
+  return data.get(field) === data.get(CONFIRM_PASSWORD_FIELD);
+}
+
+export function ConfirmPasswordField({ error }: { error?: ReactNode }) {
+  return (
+    <AuthField label="Confirm password" error={error}>
+      {(control) => (
+        <PasswordInput
+          {...control}
+          name={CONFIRM_PASSWORD_FIELD}
+          autoComplete="new-password"
+          required
+        />
+      )}
+    </AuthField>
   );
 }
 

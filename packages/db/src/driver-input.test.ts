@@ -106,7 +106,11 @@ describe("parseDriverSignIn", () => {
     assert.equal(typo.ok ? null : typo.field, "confirmEmail");
     assert.deepEqual(
       parseDriverSignIn(
-        { confirmEmail: "ali@example.com", password: "long enough" },
+        {
+          confirmEmail: "ali@example.com",
+          password: "long enough",
+          confirmPassword: "long enough",
+        },
         "ali@example.com",
         null,
       ),

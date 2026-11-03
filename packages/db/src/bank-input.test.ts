@@ -30,18 +30,18 @@ describe("bank details", () => {
     );
   });
 
-  it("masks the number on screens and in the log", () => {
-    assert.equal(maskTail("162201234567"), "•••• 4567");
+  it("keeps only the end of a number in the log", () => {
+    assert.equal(maskTail("162201234567"), "ending 4567");
     assert.equal(maskTail(""), "");
     assert.deepEqual(
       maskedForLog({ name: "Ali", bankAccountNumber: "162201234567" }),
       {
         name: "Ali",
-        bankAccountNumber: "•••• 4567",
+        bankAccountNumber: "ending 4567",
       },
     );
     assert.deepEqual(maskedForLog({ registrationNo: "900101145678" }), {
-      registrationNo: "•••• 5678",
+      registrationNo: "ending 5678",
     });
     assert.equal(maskedForLog(null), null);
   });

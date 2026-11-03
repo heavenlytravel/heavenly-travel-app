@@ -2,7 +2,9 @@
 
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
+import { CONFIRM_PASSWORD_FIELD } from "@repo/db";
 import { FormError } from "@repo/ui/form-error";
+import { PasswordInput } from "@repo/ui/secret";
 import { Card, CardTitle } from "@repo/console/Card";
 import { useActionForm } from "@repo/console/use-action-form";
 import {
@@ -126,11 +128,17 @@ export function PasswordForm({
           label="New password"
           hint={`At least ${minLength} characters. Clerk refuses one found in a data leak.`}
         >
-          <Input
+          <PasswordInput
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={minLength}
+            required
+          />
+        </Field>
+        <Field label="Confirm password">
+          <PasswordInput
+            name={CONFIRM_PASSWORD_FIELD}
+            autoComplete="new-password"
             required
           />
         </Field>

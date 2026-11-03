@@ -54,17 +54,41 @@ export function checkEmailConfirmed(
   );
 }
 
+/**
+ * The second password box of every form that sets one, typed again so a
+ * typo is caught before it locks them out. Checked here, on the server, as
+ * the email typed again is.
+ */
+export const CONFIRM_PASSWORD_FIELD = "confirmPassword";
+
+/** A new password, long enough and typed the same twice. */
+export function parseConfirmedPassword(
+  values: Record<string, unknown>,
+): Parsed<string> {
+  const password = parseNewPassword(values.password);
+  if (!password.ok) return password;
+  if (values[CONFIRM_PASSWORD_FIELD] === password.value) return password;
+  return refuse(
+    values[CONFIRM_PASSWORD_FIELD]
+      ? "The two passwords differ. Type the same password in both."
+      : "Type the password again to confirm it.",
+    CONFIRM_PASSWORD_FIELD,
+  );
+}
+
 /** The password a form may set on a new account: none when left empty. */
-export function parseOptionalPassword(value: unknown): Parsed<string | null> {
-  if (typeof value !== "string" || value === "") {
+function parseOptionalPassword(
+  values: Record<string, unknown>,
+): Parsed<string | null> {
+  if (typeof values.password !== "string" || values.password === "") {
     return { ok: true, value: null };
   }
-  return parseNewPassword(value);
+  return parseConfirmedPassword(values);
 }
 
 /**
  * What a form that gives someone an account asks besides the email: the
- * email again, and a password if one is set. Left empty, they sign in
+ * email again, and a password if one is set, typed twice. Left empty, they sign in
  * with a code sent to the email.
  */
 export function parseSignInCheck(
@@ -73,7 +97,7 @@ export function parseSignInCheck(
 ): Parsed<string | null> {
   const confirmed = checkEmailConfirmed(values, email);
   if (!confirmed.ok) return confirmed;
-  return parseOptionalPassword(values.password);
+  return parseOptionalPassword(values);
 }
 
 /** The create form's values, read and checked. The email and first name are required. */

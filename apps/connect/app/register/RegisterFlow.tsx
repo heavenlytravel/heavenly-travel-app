@@ -9,7 +9,10 @@ import {
 import {
   AuthField,
   CodeInput,
+  CONFIRM_PASSWORD_FIELD,
   PasswordInput,
+  passwordConfirmed,
+  PASSWORDS_DIFFER,
   ResendCode,
   TextButton,
 } from "@repo/auth/AuthParts";
@@ -38,8 +41,8 @@ import { checkRegistrationAction, registerVendorAction } from "./actions";
 /** Where the form is kept while the tab is open, so a reload loses nothing. */
 const STORAGE_KEY = "connect-registration";
 
-/** The fields never kept: the password, and a signed-in account's own email. */
-const NOT_KEPT = new Set(["password"]);
+/** The fields never kept: the password, typed twice. */
+const NOT_KEPT = new Set(["password", CONFIRM_PASSWORD_FIELD]);
 
 /** The step the dialog over the form asks for. */
 type Step =
@@ -131,7 +134,7 @@ export function RegisterFlow({
       .filter(Boolean)
       .join(" ");
     data.set("contactName", name);
-    data.delete("password");
+    for (const name of NOT_KEPT) data.delete(name);
     return data;
   }
 
@@ -245,6 +248,9 @@ export function RegisterFlow({
     setError(null);
     setSending(true);
     try {
+      if (!signedIn && !passwordConfirmed(typed, "password")) {
+        return refuse(PASSWORDS_DIFFER, CONFIRM_PASSWORD_FIELD);
+      }
       const data = registration();
       const checked = await checkRegistrationAction(data);
       if (checked && "error" in checked)
@@ -437,6 +443,13 @@ export function RegisterFlow({
                   name="password"
                   autoComplete="new-password"
                   minLength={8}
+                  required
+                />
+              </Field>
+              <Field label="Confirm password">
+                <PasswordInput
+                  name={CONFIRM_PASSWORD_FIELD}
+                  autoComplete="new-password"
                   required
                 />
               </Field>

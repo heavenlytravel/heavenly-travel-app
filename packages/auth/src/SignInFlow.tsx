@@ -18,8 +18,11 @@ import {
   AuthField,
   AuthInput,
   CodeInput,
+  ConfirmPasswordField,
   EmailChip,
   PasswordInput,
+  passwordConfirmed,
+  PASSWORDS_DIFFER,
   ResendCode,
   TextButton,
 } from "./AuthParts";
@@ -37,7 +40,7 @@ type Step =
   | "second-factor";
 
 /** Where a refusal shows: under a field, or over the button for one no field is about. */
-type Where = "email" | "password" | "code" | "form";
+type Where = "email" | "password" | "confirmPassword" | "code" | "form";
 
 type SecondFactor = "email_code" | "phone_code" | "totp";
 
@@ -253,6 +256,10 @@ export function SignInFlow({
     event.preventDefault();
     setError(null);
     const data = new FormData(event.currentTarget);
+    if (!passwordConfirmed(data, "password")) {
+      setError({ at: "confirmPassword", text: PASSWORDS_DIFFER });
+      return;
+    }
     const { error: refusal } =
       await signIn.resetPasswordEmailCode.submitPassword({
         password: String(data.get("password")),
@@ -435,6 +442,7 @@ export function SignInFlow({
               />
             )}
           </AuthField>
+          <ConfirmPasswordField error={errorAt("confirmPassword")} />
           <label className="flex items-center gap-2.5 text-sm text-body">
             <Checkbox name="signOutOthers" defaultChecked />
             Sign out of my other devices

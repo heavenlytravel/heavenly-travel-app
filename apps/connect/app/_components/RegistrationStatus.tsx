@@ -6,7 +6,6 @@ import {
   VENDOR_SERVICE_LABELS,
   formatLocalDate,
   isVendorKind,
-  maskTail,
   vendorServicesOf,
 } from "@repo/db";
 import { getVendor } from "@repo/db/server";
@@ -130,7 +129,6 @@ export async function RegistrationStatus({
                       <MaskedText
                         key="registrationNo"
                         value={vendor.registrationNo}
-                        masked={maskTail(vendor.registrationNo)}
                         label="number"
                       />,
                     ] as [string, ReactNode],
@@ -147,7 +145,6 @@ export async function RegistrationStatus({
                         {vendor.bankName}
                         <MaskedText
                           value={vendor.bankAccountNumber}
-                          masked={maskTail(vendor.bankAccountNumber)}
                           label="account number"
                         />
                       </span>,

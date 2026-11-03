@@ -30,6 +30,17 @@ describe("parseGuideFields", () => {
     assert.deepEqual(parsed.value.languages, ["English", "Mandarin"]);
     assert.equal(parsed.value.motacExpiresOn, "2027-01-31");
     assert.equal(parsed.value.isActive, true);
+    assert.equal(parsed.value.email, null);
+  });
+
+  it("keeps the Connect email lowercase, and refuses one that is not", () => {
+    const parsed = parseGuideFields(
+      { ...values, email: " Siti@Example.com " },
+      ["English"],
+    );
+    assert.equal(parsed.ok && parsed.value.email, "siti@example.com");
+    const wrong = parseGuideFields({ ...values, email: "siti" }, ["English"]);
+    assert.equal(!wrong.ok && wrong.field, "email");
   });
 
   it("asks for a language", () => {

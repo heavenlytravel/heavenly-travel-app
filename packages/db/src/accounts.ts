@@ -534,6 +534,11 @@ export async function changeUserEmail(
     // Their driver row keeps the email they sign in with: it is locked
     // on the driver's form, and changes here.
     await tx.driver.updateMany({ where: { userId: user.id }, data: { email } });
+    // And a guide profile it sees as its own follows the account.
+    await tx.guide.updateMany({
+      where: { email: user.email },
+      data: { email },
+    });
     await logActivity(tx, actor, {
       action: "user.email.changed",
       entityId: user.id,

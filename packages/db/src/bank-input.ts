@@ -1,5 +1,5 @@
 import { refuse, type Change } from "./change";
-import { textOf } from "./fields";
+import { flagOf, textOf } from "./fields";
 
 /**
  * Where we pay someone: a vendor company for its vehicles, a driver or a
@@ -80,6 +80,40 @@ export function readBankFields(values: Record<string, unknown>): BankFields {
     bankName: textOf(values.bankName),
     bankAccountNumber: textOf(values.bankAccountNumber).replace(/[\s-]/g, ""),
     bankAccountName: textOf(values.bankAccountName),
+  };
+}
+
+/**
+ * Whom a driver's or a guide's pay goes to: their own account, the bank
+ * details given, or their vendor's, with none of their own. Each record
+ * chooses for itself, so one person who drives and guides may be paid to
+ * two accounts, or one, or to the business for either.
+ */
+export type PayeeFields = BankFields & { paidToVendor: boolean };
+
+export const PAID_TO_FIELD = "paidToVendor";
+
+export const PAID_TO_LABELS = {
+  own: "Their own account",
+  vendor: "The vendor's account",
+} as const;
+
+export const PAYEE_FIELD_LABELS: Record<keyof PayeeFields, string> = {
+  paidToVendor: "Paid to the vendor",
+  ...BANK_FIELD_LABELS,
+};
+
+/** A stored driver's or guide's payee, as the forms and the log read it. */
+export function payeeFieldsOf(record: PayeeFields): PayeeFields {
+  return { paidToVendor: record.paidToVendor, ...bankFieldsOf(record) };
+}
+
+/** A form's payee: paid to the vendor keeps no bank details of its own. */
+export function readPayeeFields(values: Record<string, unknown>): PayeeFields {
+  const paidToVendor = flagOf(values[PAID_TO_FIELD]);
+  return {
+    paidToVendor,
+    ...(paidToVendor ? NO_BANK : readBankFields(values)),
   };
 }
 

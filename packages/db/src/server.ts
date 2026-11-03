@@ -95,6 +95,7 @@ export type { DriverWithClasses } from "./drivers";
 export {
   listGuides,
   getGuide,
+  getGuideByEmail,
   createGuide,
   updateGuide,
   deleteGuide,

@@ -40,6 +40,7 @@ describe("parseDriverFields", () => {
         notes: "",
         licenceExpiresOn: "2028-01-31",
         psvExpiresOn: null,
+        paidToVendor: false,
         ...NO_BANK,
       },
     });
@@ -80,6 +81,7 @@ describe("driverFieldsOf", () => {
       notes: "",
       licenceExpiresOn: new Date("2028-01-31T00:00:00Z"),
       psvExpiresOn: null,
+      paidToVendor: false,
       ...NO_BANK,
     });
     assert.deepEqual(fields.vehicleClassIds, ["vc1", "vc2"]);

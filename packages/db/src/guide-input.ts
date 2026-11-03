@@ -1,10 +1,11 @@
 import {
-  BANK_FIELD_LABELS,
-  bankFieldsOf,
   checkBankFields,
-  readBankFields,
-  type BankFields,
+  PAYEE_FIELD_LABELS,
+  payeeFieldsOf,
+  readPayeeFields,
+  type PayeeFields,
 } from "./bank-input";
+import { isValidEmail, normalizeEmail } from "./booking-contact";
 import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
 import { dayOf, parseDay } from "./expiry";
@@ -15,7 +16,9 @@ import { isValidPhone, normalizePhone } from "./phone";
  * What the Guides tab edits of a vendor's tour guide and the rules it
  * checks, pure and browser-safe: the form shows the messages, the writers
  * in ./guides apply the same checks before they write. A guide has no
- * account: their vendor accepts for them. See docs/261103-tour-guide.md.
+ * account: their vendor accepts for them. One who has a Connect account
+ * anyway, as an owner or a driver, is known by its email, which shows them
+ * this as their own guide profile. See docs/261103-tour-guide.md.
  */
 
 export const GUIDE_LIMITS = {
@@ -69,13 +72,15 @@ export type GuideFields = {
   name: string;
   /** As ./phone keeps it. */
   phone: string;
+  /** Lowercase: the Connect account that sees them as its own; null when none. */
+  email: string | null;
   locationId: string;
   /** The languages they guide in, from `GUIDE_LANGUAGES`, in its order. */
   languages: string[];
   isActive: boolean;
   notes: string;
 } & Record<GuideDocument, string | null> &
-  BankFields;
+  PayeeFields;
 
 export type GuideField = keyof GuideFields;
 
@@ -84,12 +89,13 @@ export const GUIDE_FIELD_LABELS: Record<GuideField, string> = {
   vendorId: "Vendor",
   name: "Name",
   phone: "Phone",
+  email: "Connect email",
   locationId: "Based at",
   languages: "Languages",
   isActive: "Active",
   notes: "Notes",
   ...GUIDE_DOCUMENT_LABELS,
-  ...BANK_FIELD_LABELS,
+  ...PAYEE_FIELD_LABELS,
 };
 
 /** A stored guide's fields as the form and the log read them: their dates as days. */
@@ -98,23 +104,25 @@ export function guideFieldsOf(
     vendorId: string;
     name: string;
     phone: string;
+    email: string | null;
     locationId: string;
     languages: readonly string[];
     isActive: boolean;
     notes: string;
   } & Record<GuideDocument, Date | null> &
-    BankFields,
+    PayeeFields,
 ): GuideFields {
   return {
     vendorId: guide.vendorId,
     name: guide.name,
     phone: guide.phone,
+    email: guide.email,
     locationId: guide.locationId,
     languages: [...guide.languages],
     isActive: guide.isActive,
     notes: guide.notes,
     motacExpiresOn: dayOf(guide.motacExpiresOn),
-    ...bankFieldsOf(guide),
+    ...payeeFieldsOf(guide),
   };
 }
 
@@ -134,6 +142,16 @@ export function checkGuideFields(fields: Partial<GuideFields>): Change {
   }
   if (fields.phone !== undefined && !isValidPhone(fields.phone)) {
     return refuse("Enter a phone number the team can call.", "phone");
+  }
+  if (
+    fields.email !== undefined &&
+    fields.email !== null &&
+    !isValidEmail(fields.email)
+  ) {
+    return refuse(
+      "Enter the email of their Connect account, such as ali@example.com, or leave it empty.",
+      "email",
+    );
   }
   if (fields.locationId !== undefined && !fields.locationId) {
     return refuse("Choose where they are based.", "locationId");
@@ -165,16 +183,18 @@ export function parseGuideFields(
     if (!day.ok) return day;
     documents[key] = day.value;
   }
+  const email = normalizeEmail(textOf(values.email));
   const fields: GuideFields = {
     vendorId: textOf(values.vendorId),
     name: textOf(values.name),
     phone: normalizePhone(textOf(values.phone)),
+    email: email === "" ? null : email,
     locationId: textOf(values.locationId),
     languages: guideLanguagesOf(languages),
     isActive: flagOf(values.isActive),
     notes: textOf(values.notes),
     ...documents,
-    ...readBankFields(values),
+    ...readPayeeFields(values),
   };
   const check = checkGuideFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

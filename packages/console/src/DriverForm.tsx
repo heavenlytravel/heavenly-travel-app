@@ -277,7 +277,7 @@ export function DriverForm({
                 ))}
               </div>
             </Card>
-            <BankCard fields={fields ?? undefined} whose="the driver" />
+            <BankCard fields={fields ?? undefined} whose="the driver" payee />
           </>
         }
       />

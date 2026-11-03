@@ -36,7 +36,8 @@ import { VendorField } from "./VendorField";
  * them, where they are based, notes and whether they are active, the
  * languages they guide in, ticked from the list customers choose from,
  * and beside them the expiry of their MOTAC licence, kept, not watched.
- * A guide has no account: their vendor accepts for them. One
+ * A guide has no account: their vendor accepts for them; one who has a
+ * Connect account anyway is known by its email. One
  * copy for both apps: the admin chooses the vendor from every one, and
  * Connect fixes it to the member's vendor, with only the locations it
  * serves. See docs/261103-tour-guide.md.
@@ -132,6 +133,17 @@ export function GuideForm({
                   />
                 </Field>
                 <Field
+                  label={GUIDE_FIELD_LABELS.email}
+                  hint="Optional. Only for one with a Connect account, as the owner or a driver: it shows them this as their own guide profile."
+                >
+                  <Input
+                    name="email"
+                    type="email"
+                    autoComplete="off"
+                    defaultValue={fields?.email ?? ""}
+                  />
+                </Field>
+                <Field
                   label={GUIDE_FIELD_LABELS.locationId}
                   tip="To move a tour guide to another location, change where they are based."
                 >
@@ -216,7 +228,7 @@ export function GuideForm({
                 ))}
               </div>
             </Card>
-            <BankCard fields={fields ?? undefined} whose="the guide" />
+            <BankCard fields={fields ?? undefined} whose="the guide" payee />
           </>
         }
       />

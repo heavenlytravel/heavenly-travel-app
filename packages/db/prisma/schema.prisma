@@ -727,6 +727,9 @@ model Driver {
   psvExpiresOn      DateTime?      @db.Date
   isActive          Boolean        @default(true)
   notes             String         @default("")
+  /// Their pay goes to their vendor's account, not one of their own: the
+  /// bank fields below stay empty. See src/bank-input.ts.
+  paidToVendor      Boolean        @default(false)
   /// Where we pay them: a bank from MALAYSIAN_BANKS, the account number in
   /// digits and the name on it; all empty until given. Screens show the
   /// number masked. See src/bank-input.ts.
@@ -757,12 +760,19 @@ model Guide {
   name              String
   /// Their WhatsApp, as src/phone.ts keeps it.
   phone             String
+  /// Lowercase; the Connect account that sees this as its own guide
+  /// profile, a vendor's owner or driver who guides too. Gives no account
+  /// and no access. Null when they have none.
+  email             String?   @unique
   /// The languages they guide in, as typed: "English", "Mandarin".
   languages         String[]  @default([])
   /// The tourist guide licence from MOTAC.
   motacExpiresOn    DateTime? @db.Date
   isActive          Boolean   @default(true)
   notes             String    @default("")
+  /// Their pay goes to their vendor's account, not one of their own: the
+  /// bank fields below stay empty. See src/bank-input.ts.
+  paidToVendor      Boolean   @default(false)
   /// Where we pay them: a bank from MALAYSIAN_BANKS, the account number in
   /// digits and the name on it; all empty until given. Screens show the
   /// number masked. See src/bank-input.ts.

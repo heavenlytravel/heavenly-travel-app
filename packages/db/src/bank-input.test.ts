@@ -4,7 +4,9 @@ import {
   checkBankFields,
   maskTail,
   maskedForLog,
+  NO_BANK,
   readBankFields,
+  readPayeeFields,
 } from "./bank-input";
 
 describe("bank details", () => {
@@ -44,5 +46,29 @@ describe("bank details", () => {
       registrationNo: "ending 5678",
     });
     assert.equal(maskedForLog(null), null);
+  });
+});
+
+describe("readPayeeFields", () => {
+  const bank = {
+    bankName: "Maybank",
+    bankAccountNumber: "1140 1234 5678",
+    bankAccountName: "Ali",
+  };
+
+  it("keeps their own account's details", () => {
+    assert.deepEqual(readPayeeFields(bank), {
+      paidToVendor: false,
+      bankName: "Maybank",
+      bankAccountNumber: "114012345678",
+      bankAccountName: "Ali",
+    });
+  });
+
+  it("keeps none paid to the vendor, whatever was typed", () => {
+    assert.deepEqual(readPayeeFields({ ...bank, paidToVendor: "true" }), {
+      paidToVendor: true,
+      ...NO_BANK,
+    });
   });
 });

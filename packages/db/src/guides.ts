@@ -15,6 +15,7 @@ import {
   type GuideDocument,
   type GuideFields,
 } from "./guide-input";
+import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
 import type { FleetFilter } from "./vehicles";
 import { checkVendorServes } from "./vendors";
@@ -76,6 +77,16 @@ export function listGuides(
   });
 }
 
+/** The guide profile a Connect account sees as its own, by its email; null when none. */
+export function getGuideByEmail(
+  email: string,
+): Promise<GuideWithVendor | null> {
+  return db.guide.findUnique({
+    where: { email: email.toLowerCase() },
+    ...withVendor,
+  });
+}
+
 export function getGuide(id: string): Promise<GuideWithVendor | null> {
   return db.guide.findUnique({ where: { id }, ...withVendor });
 }
@@ -99,18 +110,32 @@ async function locationNameOf(tx: Prisma.TransactionClient, id: string) {
   return location?.name ?? null;
 }
 
+const EMAIL_TAKEN = refuse(
+  "Another guide has this email. Each account has one guide profile.",
+  "email",
+);
+
 const LOCATION_GONE = refuse(
   "That location was just deleted. Choose where they are based again.",
   "locationId",
 );
 
 /** A new guide, of a vendor that serves the location they are based at. */
-export function createGuide(
+export async function createGuide(
   actor: Actor,
   fields: GuideFields,
 ): Promise<Created> {
   const check = checkGuideFields(fields);
-  if (!check.ok) return Promise.resolve(check);
+  if (!check.ok) return check;
+  try {
+    return await createGuideIn(actor, fields);
+  } catch (error) {
+    if (isUniqueViolation(error, "email")) return EMAIL_TAKEN;
+    throw error;
+  }
+}
+
+function createGuideIn(actor: Actor, fields: GuideFields): Promise<Created> {
   return db.$transaction(async (tx) => {
     const locationName = await locationNameOf(tx, fields.locationId);
     if (!locationName) return LOCATION_GONE;
@@ -138,13 +163,26 @@ export function createGuide(
  * Made inactive, they leave the trips they were accepted for, which the
  * form listed before the save.
  */
-export function updateGuide(
+export async function updateGuide(
   actor: Actor,
   id: string,
   patch: Partial<GuideFields>,
 ): Promise<Change> {
   const check = checkGuideFields(patch);
-  if (!check.ok) return Promise.resolve(check);
+  if (!check.ok) return check;
+  try {
+    return await updateGuideIn(actor, id, patch);
+  } catch (error) {
+    if (isUniqueViolation(error, "email")) return EMAIL_TAKEN;
+    throw error;
+  }
+}
+
+function updateGuideIn(
+  actor: Actor,
+  id: string,
+  patch: Partial<GuideFields>,
+): Promise<Change> {
   return db.$transaction(async (tx) => {
     const guide = await tx.guide.findUnique({ where: { id } });
     if (!guide) return NOT_FOUND;

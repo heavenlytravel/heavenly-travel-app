@@ -63,7 +63,7 @@ export type VendorFilter = {
 };
 
 /** Where a vendor matches a search. */
-function vendorSearchWhere(search: string): Prisma.VendorWhereInput {
+export function vendorSearchWhere(search: string): Prisma.VendorWhereInput {
   const phone = phoneDigitsOf(search);
   return {
     OR: [

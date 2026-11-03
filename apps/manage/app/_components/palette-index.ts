@@ -12,6 +12,7 @@ import {
   newDriverHref,
   newGuideHref,
   newVehicleHref,
+  newVendorHref,
   newZoneHref,
   savedAddressesHref,
 } from "../_lib/routes";
@@ -109,6 +110,11 @@ export function paletteIndex({
             href: newGuideHref(null),
             title: "Add Tour Guide",
             words: "new guide",
+          },
+          {
+            href: newVendorHref(null),
+            title: "Add Vendor",
+            words: "new partner supplier transport company",
           },
         ]
       : []),

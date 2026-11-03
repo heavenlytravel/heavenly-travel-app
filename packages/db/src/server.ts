@@ -433,6 +433,7 @@ export {
   findVehicleMatches,
   findDriverMatches,
   findGuideMatches,
+  findVendorMatches,
   findUserMatches,
   findVehicleClassMatches,
   findZoneMatches,

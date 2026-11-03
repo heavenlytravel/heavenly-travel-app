@@ -1,7 +1,9 @@
 import {
   formatLocalDate,
   formatLocalTime,
+  isVendorStatus,
   searchTermOf,
+  VENDOR_STATUS_LABELS,
   type Permission,
 } from "@repo/db";
 import {
@@ -11,6 +13,7 @@ import {
   findUserMatches,
   findVehicleClassMatches,
   findVehicleMatches,
+  findVendorMatches,
   findZoneMatches,
 } from "@repo/db/server";
 import { getPermissions } from "../../_lib/access";
@@ -34,6 +37,7 @@ import {
   driverHref,
   guideHref,
   vehicleHref,
+  vendorHref,
   zoneHref,
 } from "../../_lib/routes";
 
@@ -102,6 +106,25 @@ const FINDERS: Record<
           .join(" · "),
         meta: guide.location.name,
         href: guideHref(guide.location.slug, guide.id),
+      })),
+  },
+  vendors: {
+    // Every location's: a vendor's page is the console's, under `~`.
+    find: async (search) =>
+      (await findVendorMatches(search, SEARCH_LIMIT)).map((vendor) => ({
+        title: vendor.name,
+        detail: [
+          vendor.isOurs ? "Ours" : null,
+          vendor.contactName,
+          vendor.contactPhone,
+          vendor.status !== "active" && isVendorStatus(vendor.status)
+            ? VENDOR_STATUS_LABELS[vendor.status]
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        meta: vendor.locations.map((location) => location.name).join(", "),
+        href: vendorHref(null, vendor.id),
       })),
   },
   users: {

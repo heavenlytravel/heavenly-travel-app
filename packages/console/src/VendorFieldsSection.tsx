@@ -21,7 +21,6 @@ import {
   Textarea,
 } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
-import { SecretInput } from "@repo/ui/secret";
 import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
 
@@ -90,9 +89,9 @@ export function VendorFieldsSection({
               label={VENDOR_FIELD_LABELS.registrationNo}
               hint="The SSM number of a company, the IC of an individual."
             >
-              <SecretInput
+              <Input
                 name="registrationNo"
-                label="number"
+                autoComplete="off"
                 maxLength={VENDOR_LIMITS.registrationNo}
                 defaultValue={fields?.registrationNo}
               />

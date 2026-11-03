@@ -8,7 +8,6 @@ import {
 } from "@repo/db";
 import { Field, Input } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
-import { SecretInput } from "@repo/ui/secret";
 import { Select } from "@repo/ui/select";
 import { Card, CardTitle } from "./Card";
 
@@ -51,9 +50,9 @@ export function BankCard({
           />
         </Field>
         <Field label={BANK_FIELD_LABELS.bankAccountNumber}>
-          <SecretInput
+          <Input
             name="bankAccountNumber"
-            label="account number"
+            autoComplete="off"
             inputMode="numeric"
             maxLength={BANK_LIMITS.accountDigits.max + 6}
             defaultValue={fields?.bankAccountNumber}

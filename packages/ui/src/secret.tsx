@@ -8,11 +8,11 @@ import { Tooltip } from "./tooltip.js";
 
 /**
  * Sensitive details, a bank account number or an IC, kept out of sight
- * until asked for: in their place a made-up value of the same shape,
+ * where a record is viewed, until asked for: in their place a made-up value of the same shape,
  * blurred, so the eye sees there is one, and how long, but nothing of it.
  * A click shows it whole and hides it again. Nothing is remembered: a page
- * opened again starts hidden. A password keeps the browser's own box
- * (`PasswordInput`), for the password managers.
+ * opened again starts hidden. Forms show what is typed, but for a
+ * password: the browser's own box, its dots and an eye (`PasswordInput`).
  */
 
 const LETTERS = "abcdefghjkmnpqrstuvwxyz";
@@ -77,84 +77,6 @@ export function MaskedText({
         {shown ? value : redactedLike(value)}
       </button>
     </Tooltip>
-  );
-}
-
-/**
- * A text box for a sensitive detail: blurred, as `MaskedText`, while it
- * is not being typed in, and shown while it is, or after its eye is
- * pressed. Not a password box, so no password manager offers to save it.
- */
-export function SecretInput({
-  className,
-  label,
-  defaultValue,
-  onChange,
-  onFocus,
-  onBlur,
-  ...props
-}: Omit<ComponentProps<"input">, "type" | "value" | "defaultValue"> & {
-  defaultValue?: string;
-  /** What it is, for the button: "account number". */
-  label: string;
-}) {
-  const [shown, setShown] = useState(false);
-  const [typing, setTyping] = useState(false);
-  const [value, setValue] = useState(defaultValue ?? "");
-  const field = useFieldControl(props);
-  const hidden = !shown && !typing && value !== "";
-  return (
-    <span className="ui:relative ui:block">
-      <input
-        type="text"
-        autoComplete="off"
-        spellCheck={false}
-        className={cx(
-          inputClassName,
-          "ui:pr-10",
-          hidden && "ui:text-transparent",
-          className,
-        )}
-        {...props}
-        {...field}
-        defaultValue={defaultValue}
-        onChange={(event) => {
-          setValue(event.target.value);
-          onChange?.(event);
-        }}
-        onFocus={(event) => {
-          setTyping(true);
-          onFocus?.(event);
-        }}
-        onBlur={(event) => {
-          setTyping(false);
-          onBlur?.(event);
-        }}
-      />
-      {hidden ? (
-        <span
-          aria-hidden
-          className={cx(
-            "ui:pointer-events-none ui:absolute ui:inset-y-0 ui:left-3 ui:right-10 ui:flex ui:items-center ui:overflow-hidden ui:text-sm ui:whitespace-pre ui:text-body ui:pointer-coarse:text-base",
-            BLURRED,
-          )}
-        >
-          {redactedLike(value)}
-        </span>
-      ) : null}
-      <button
-        type="button"
-        className={cx(
-          EYE_BUTTON,
-          "ui:absolute ui:top-1/2 ui:right-1.5 ui:-translate-y-1/2",
-        )}
-        aria-label={shown ? `Hide the ${label}` : `Show the ${label}`}
-        aria-pressed={shown}
-        onClick={() => setShown(!shown)}
-      >
-        {shown ? <EyeOffIcon /> : <EyeIcon />}
-      </button>
-    </span>
   );
 }
 

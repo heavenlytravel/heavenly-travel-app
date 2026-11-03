@@ -128,7 +128,8 @@ export function AssignForm({
   const respondByOf = (vendorId: string) =>
     respondByEdits[vendorId] ??
     localDateTimeInputs(defaultRespondBy(firstPickup));
-  const lastDay = localDateTimeInputs(firstPickup).date;
+  // The last moment it can be: a minute before the first pickup.
+  const last = localDateTimeInputs(new Date(firstPickup.getTime() - 60_000));
 
   return (
     <form {...formProps} className="grid gap-5">
@@ -300,7 +301,8 @@ export function AssignForm({
                     [vendor.id]: at,
                   }))
                 }
-                max={lastDay}
+                max={last.date}
+                maxTime={last.time}
                 timeZone={BOOKING_RULES.timeZone}
               />
             </Field>

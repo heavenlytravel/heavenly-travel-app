@@ -3,6 +3,7 @@ import {
   byStart,
   classFit,
   formatLocalTime,
+  guideOf,
   hireEndOf,
   hourlyChoiceLabel,
   namedHours,
@@ -10,9 +11,11 @@ import {
   startOfTrip,
   tripItemField,
   tripSearchParams,
+  TRIP_PARAM,
   type ClassFit,
   type HourlyChoice,
   type TripClash,
+  type TripCategory,
   type TripClassPrice,
   type TripMode,
   type TripSearch,
@@ -69,6 +72,35 @@ export const NO_FLIGHTS: ForDriver = {
   departingFlight: "",
   notes: "",
 };
+
+/**
+ * The tour guide for every trip of the plan: a car's when added, a
+ * coach's always, and the languages they should speak. See
+ * docs/261103-tour-guide.md.
+ */
+export type GuideChoice = { added: boolean; languages: string[] };
+
+/** No guide added; English ticked for when one is. */
+export const NO_GUIDE: GuideChoice = { added: false, languages: ["English"] };
+
+/** The guide as the booking form posts it: "guide" and each "guideLanguage", or nothing without one. */
+export function guideEntries(
+  category: TripCategory,
+  guide: GuideChoice,
+): [string, string][] {
+  const { withGuide, guideLanguages } = guideOf(category, {
+    withGuide: guide.added,
+    guideLanguages: guide.languages,
+  });
+  if (!withGuide) return [];
+  return [
+    [TRIP_PARAM.guide, "1"],
+    ...guideLanguages.map((language): [string, string] => [
+      TRIP_PARAM.guideLanguage,
+      language,
+    ]),
+  ];
+}
 
 /** One class as a trip's quote prices it, with what the pages say about it. */
 export type TripClassQuote = TripClassPrice & {

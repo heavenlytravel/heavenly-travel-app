@@ -4,15 +4,17 @@ import { useSyncExternalStore } from "react";
 import { byStart, isTripCategory, type TripCategory } from "@repo/db";
 import {
   NO_FLIGHTS,
+  NO_GUIDE,
   type ForDriver,
+  type GuideChoice,
   type PlannedTrip,
   type PricedTrips,
 } from "./trip-plan";
 
 /**
  * The trip plan in the browser's local storage: the trips, the group's
- * size, the one vehicle chosen for them all, what the drivers need, and
- * the last pricing. A list of trips does not fit a URL; the browser keeps
+ * size, the one vehicle chosen for them all, the tour guide, what the
+ * drivers need, and the last pricing. A list of trips does not fit a URL; the browser keeps
  * it across reloads and the sign-in round trip, and nothing is stored on
  * the server until the booking is made. Every tab of the site shares it.
  * See docs/261027-multi-trip-booking.md, "Where the trips live before
@@ -27,6 +29,8 @@ export type TripPlan = {
   passengers: number;
   /** The one vehicle class for every trip; null until chosen. */
   classId: string | null;
+  /** A plan saved before guides has none: read as `NO_GUIDE`. */
+  guide: GuideChoice;
   forDriver: ForDriver;
   priced: PricedTrips | null;
 };
@@ -36,6 +40,7 @@ export const EMPTY_PLAN: TripPlan = {
   trips: [],
   passengers: 1,
   classId: null,
+  guide: NO_GUIDE,
   forDriver: NO_FLIGHTS,
   priced: null,
 };
@@ -59,7 +64,7 @@ function read(): TripPlan {
       saved.plan &&
       isTripCategory(saved.plan.category) &&
       Array.isArray(saved.plan.trips)
-        ? saved.plan
+        ? { ...EMPTY_PLAN, ...saved.plan }
         : EMPTY_PLAN;
   } catch {
     cache = EMPTY_PLAN;

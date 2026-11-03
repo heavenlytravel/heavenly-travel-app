@@ -6,7 +6,6 @@ import {
   TRIP_PARAM,
   type TripCategory,
 } from "@repo/db";
-import { addOnsOf } from "./booking-add-ons";
 import { PRODUCTS, type SearchValues } from "./search";
 
 /**
@@ -35,18 +34,6 @@ export function tripBookingPath(category: TripCategory) {
 
 export function tripConfirmPath(category: TripCategory) {
   return `${tripBookingPath(category)}/confirm`;
-}
-
-/** The Add-ons step, between the vehicle and Confirm, for a category with any (./booking-add-ons). */
-export function tripAddOnsPath(category: TripCategory) {
-  return `${tripBookingPath(category)}/add-ons`;
-}
-
-/** Where choosing the vehicle goes: the Add-ons step when the category has any, else Confirm. */
-export function tripAfterVehiclePath(category: TripCategory) {
-  return addOnsOf(category).length > 0
-    ? tripAddOnsPath(category)
-    : tripConfirmPath(category);
 }
 
 /** One message per field the search card cannot send yet. */

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   clashesOf,
   formatMyr,
+  guideOf,
+  GUIDE_LANGUAGES_REQUIRED,
   modelsLine,
   isAirportPlace,
   plural,
@@ -29,6 +31,8 @@ import { useLinkSeed } from "../../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../../_components/trips/useNewBooking";
 import {
   classOnTrip,
+  guideEntries,
+  NO_GUIDE,
   planPrices,
   quoteOf,
   shortDayOf,
@@ -42,9 +46,7 @@ import {
   updatePlan,
   useTripPlan,
 } from "../../../../../_lib/trip-plan-store";
-import { addOnsOf } from "../../../../../_lib/booking-add-ons";
 import {
-  tripAddOnsPath,
   tripBookingPath,
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
@@ -57,6 +59,7 @@ import {
 } from "../../../../_components/Page";
 import { BookingStepTitle, FoldedTripsBones } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
+import { AddOns } from "./AddOns";
 import { ConfirmForm } from "./ConfirmForm";
 import { CONFIRM_FIELDS } from "./fields";
 
@@ -92,9 +95,9 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
  * it, or it cannot be priced; so does a price changed since the trip was
  * added. "Your vehicle" has the class for all the trips, pictured and
  * with its models as on the vehicle page (any of them is sent, whichever
- * is free on the day: choosing a model is not offered for now), and the
- * group, and what comes with it, linking back to the Add-ons step. The
- * details ask the contact, the flights for the trips at an
+ * is free on the day: choosing a model is not offered for now), the
+ * group, and under it the add-ons: the tour guide, a coach's included, a
+ * car's to tick, with the languages they should speak (./AddOns). The details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
  * the total and the cancellation terms; it says which trip to fix while
  * any is red. A link with today's one-trip confirm address still opens
@@ -136,6 +139,13 @@ export function ConfirmStep({
       updatePlan((now) => ({
         ...now,
         classId: options.vehicleClassId,
+        guide: {
+          added: options.withGuide,
+          languages:
+            options.guideLanguages.length > 0
+              ? options.guideLanguages
+              : NO_GUIDE.languages,
+        },
         forDriver: {
           // The flight goes on the trip it is for once its places are known.
           arrivingFlight: options.flightNumber ?? "",
@@ -181,7 +191,7 @@ export function ConfirmStep({
     );
   }
 
-  const { trips, priced, passengers, classId, forDriver } = plan;
+  const { trips, priced, passengers, classId, forDriver, guide } = plan;
   const vehiclePage = tripBookingPath(category);
   const { quotes, failed, complete, choices } = planPrices(
     trips,
@@ -213,8 +223,17 @@ export function ConfirmStep({
   }
 
   const several = trips.length > 1;
+  const forWhich =
+    trips.length === 2
+      ? "both trips"
+      : several
+        ? `all ${trips.length} trips`
+        : "the trip";
   const card = chosen?.card ?? null;
-  const included = addOnsOf(category).filter((addOn) => addOn.included);
+  const { withGuide, guideLanguages } = guideOf(category, {
+    withGuide: guide.added,
+    guideLanguages: guide.languages,
+  });
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
@@ -289,7 +308,9 @@ export function ConfirmStep({
       ? `Change or remove ${red.join(", ")} first: ${
           red.length === 1 ? "it is" : "they are"
         } marked in red.`
-      : null;
+      : withGuide && guideLanguages.length === 0
+        ? GUIDE_LANGUAGES_REQUIRED
+        : null;
 
   const arrivingAt = trips.filter((t) => isAirportPlace(t.pickup));
   const departingAt = trips.filter(
@@ -305,6 +326,7 @@ export function ConfirmStep({
       ? [[CONFIRM_FIELDS.vehicleClass, card.id] as [string, string]]
       : []),
     [CONFIRM_FIELDS.passengers, String(passengers)],
+    ...guideEntries(category, guide),
   ];
 
   const timeline = (
@@ -384,25 +406,21 @@ export function ConfirmStep({
             </div>
           ) : null}
           <p className="mt-3 text-copy text-muted">
-            For{" "}
-            {trips.length === 2
-              ? "both trips"
-              : several
-                ? `all ${trips.length} trips`
-                : "the trip"}{" "}
-            · {plural(passengers, "passenger")}
+            For {forWhich} · {plural(passengers, "passenger")}
           </p>
-          {included.length > 0 ? (
-            <p className="mt-1.5 text-copy text-body">
-              {included.map((addOn) => `${addOn.name} included`).join(" · ")}
-              {" · "}
-              <Link href={tripAddOnsPath(category)} className="text-link">
-                Add-ons
-              </Link>
-            </p>
-          ) : null}
         </div>
       </div>
+      <AddOns
+        category={category}
+        guide={guide}
+        forWhich={`for ${forWhich}`}
+        onGuide={(change) =>
+          updatePlan((now) => ({
+            ...now,
+            guide: { ...now.guide, ...change },
+          }))
+        }
+      />
     </section>
   ) : null;
 
@@ -417,7 +435,13 @@ export function ConfirmStep({
           <TripsFold
             trips={trips}
             summary={
-              card ? `${card.name} · ${plural(passengers, "passenger")}` : null
+              card
+                ? [
+                    card.name,
+                    plural(passengers, "passenger"),
+                    ...(withGuide ? ["Tour guide"] : []),
+                  ].join(" · ")
+                : null
             }
             attention={red.length > 0 || error !== null}
             label="Your trips and vehicle"

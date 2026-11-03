@@ -1,5 +1,6 @@
 import {
   BriefcaseBusiness,
+  Building2,
   CarFront,
   Users,
   type LucideIcon,
@@ -28,8 +29,8 @@ export type NavItem = {
 
 /**
  * Connect's places, as the phone's tab bar and the large screen's sidebar
- * list them: Jobs for everyone; Fleet for a vendor's member; Team for its
- * owner.
+ * list them: Jobs for everyone; Fleet and Business for a vendor's member;
+ * Team for its owner.
  */
 export function navItems(member?: { owner: boolean }): NavItem[] {
   return [
@@ -46,6 +47,12 @@ export function navItems(member?: { owner: boolean }): NavItem[] {
             label: "Fleet",
             icon: CarFront,
             match: ["/~/vehicles", "/~/drivers", "/~/guides"],
+          },
+          {
+            href: "/~/business",
+            label: "Business",
+            icon: Building2,
+            match: ["/~/business"],
           },
         ]
       : []),

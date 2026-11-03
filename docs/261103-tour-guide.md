@@ -81,7 +81,9 @@ Decided with the user on 2026-11-03.
   vendor's offer in Connect.
 - **Bank details** (`src/bank-input.ts`): the bank, from `MALAYSIAN_BANKS`, the account
   number in digits and the name on the account, all three or none, on every vendor,
-  driver and tour guide. A vendor gives its own at registration in Connect; a driver's
+  driver and tour guide. A vendor's owner adds its own after approval, on Connect's Business page (not at
+  registration, user 2026-11-04), which also edits the contact and the address; the
+  name, kind, SSM/IC, services and locations stay the team's to change. A driver's
   and a guide's are entered on their forms, in Manage or by their vendor in Connect.
 - **Blurred where a record is viewed** (`MaskedText`, @repo/ui/secret; user, 2026-11-04,
   replacing "•••• 4821"): an account number and a vendor's SSM or IC number show as a

@@ -1,22 +1,11 @@
-import {
-  CONTACT,
-  EMAILS_ON,
-  VENDOR_FIELD_LABELS,
-  VENDOR_KIND_LABELS,
-  VENDOR_SERVICE_LABELS,
-  formatLocalDate,
-  isVendorKind,
-  vendorServicesOf,
-} from "@repo/db";
+import { CONTACT, EMAILS_ON, formatLocalDate } from "@repo/db";
 import { getVendor } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { Rows } from "@repo/ui/rows";
-import { MaskedText } from "@repo/ui/secret";
-import type { ReactNode } from "react";
 import { cx } from "@repo/ui/cx";
 import { Check, Hourglass, Mail, MessageCircle, Sparkles } from "lucide-react";
 import { Panel } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
+import { VendorDetails } from "./VendorDetails";
 
 /**
  * The status page of a registration waiting for approval (S1): where it
@@ -112,60 +101,7 @@ export async function RegistrationStatus({
       {vendor ? (
         <Panel className="p-6">
           <h2 className="text-base font-semibold text-ink">What you sent</h2>
-          <Rows
-            className="mt-4"
-            rows={[
-              [VENDOR_FIELD_LABELS.name, vendor.name],
-              [
-                VENDOR_FIELD_LABELS.kind,
-                isVendorKind(vendor.kind)
-                  ? VENDOR_KIND_LABELS[vendor.kind]
-                  : vendor.kind,
-              ],
-              ...(vendor.registrationNo
-                ? [
-                    [
-                      VENDOR_FIELD_LABELS.registrationNo,
-                      <MaskedText
-                        key="registrationNo"
-                        value={vendor.registrationNo}
-                        label="number"
-                      />,
-                    ] as [string, ReactNode],
-                  ]
-                : []),
-              ...(vendor.bankAccountNumber
-                ? [
-                    [
-                      "Bank",
-                      <span
-                        key="bank"
-                        className="inline-flex flex-wrap gap-x-1.5"
-                      >
-                        {vendor.bankName}
-                        <MaskedText
-                          value={vendor.bankAccountNumber}
-                          label="account number"
-                        />
-                      </span>,
-                    ] as [string, ReactNode],
-                  ]
-                : []),
-              [VENDOR_FIELD_LABELS.contactName, vendor.contactName],
-              [VENDOR_FIELD_LABELS.contactPhone, vendor.contactPhone],
-              [
-                VENDOR_FIELD_LABELS.services,
-                vendorServicesOf(vendor.services)
-                  .map((service) => VENDOR_SERVICE_LABELS[service])
-                  .join(", ") || "None yet",
-              ],
-              [
-                VENDOR_FIELD_LABELS.locationIds,
-                vendor.locations.map((location) => location.name).join(", ") ||
-                  "None yet",
-              ],
-            ]}
-          />
+          <VendorDetails vendor={vendor} className="mt-4" />
           <p className="mt-4 text-xs text-muted">
             Something to change? Tell the team; they update it as they check.
           </p>

@@ -14,8 +14,9 @@ import { Card, CardTitle } from "./Card";
 /**
  * The bank details of whoever we pay, as a card of a record's form: a
  * vendor for its vehicles, a driver or a tour guide for their own work.
- * The bank, the account number, hidden until its eye is pressed, and the
- * name on the account; all three or none. One copy for every form that
+ * The bank, the account number, as typed, and the name on the account;
+ * all three or none. Where the record is viewed, the number is blurred
+ * until clicked. One copy for every form that
  * keeps them (`BankFields` in @repo/db).
  */
 export function BankCard({
@@ -33,7 +34,7 @@ export function BankCard({
         <span className="inline-flex items-center gap-1.5">
           Bank Details
           <InfoTip
-            text={`Where we pay ${whose}. Shown masked on every screen; leave all three empty until known.`}
+            text={`Where we pay ${whose}. Blurred where it is viewed, until clicked. Leave all three empty until known.`}
           />
         </span>
       </CardTitle>

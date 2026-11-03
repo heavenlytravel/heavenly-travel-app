@@ -188,10 +188,13 @@ export function VendorFieldsSection({
         </FieldGroup>
       </Card>
 
-      <BankCard
-        fields={fields ?? undefined}
-        whose="the vendor for its vehicles"
-      />
+      {/* Not asked at registration: the owner adds them under Business once approved. */}
+      {applicant ? null : (
+        <BankCard
+          fields={fields ?? undefined}
+          whose="the vendor for its vehicles"
+        />
+      )}
     </>
   );
 }

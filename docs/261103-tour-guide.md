@@ -97,6 +97,9 @@ Decided with the user on 2026-11-03.
   the email the booking's emails go to (`updateBookingContact`), checked as a new
   booking's are. The history says what changed, from and to; the customer is not
   emailed, and the account the booking shows under stays.
+- **To watch** (user, 2026-11-04): editing the details of a confirmed booking may
+  confuse, the customer holding emails and an invoice under the old ones. Kept as it is
+  for now; revisit with the Finance flow (lock after the invoice, or reissue it).
 
 ## To confirm
 

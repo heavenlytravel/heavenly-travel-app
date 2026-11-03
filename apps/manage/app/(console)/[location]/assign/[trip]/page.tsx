@@ -7,6 +7,7 @@ import {
   formatLocalDateTime,
   isLive,
   isOnTheRoad,
+  PART_ROLE_LABELS,
   PART_ROLES,
   rolesToAsk,
   tripDetailRows,
@@ -165,31 +166,40 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
         main={
           <>
             {reporting ? reports : null}
-            {thisOpen ? (
-              <Card>
-                <CardTitle description="Pick the vendor first, then their vehicle or driver, or Any to let them assign it.">
-                  Assign
-                </CardTitle>
-                <AssignForm
-                  key={thisOpen.roles.join()}
-                  bookingId={booking.id}
-                  trip={thisOpen}
-                  others={open.filter((t) => t.id !== trip.id)}
-                  vehicles={vehicles}
-                  drivers={drivers}
-                  vendors={serving}
-                />
-              </Card>
-            ) : trip.status === "received" ? (
+            {trip.status === "received" ? (
               <Card>
                 <p className="text-sm text-muted">
                   This trip is assigned once Reservation confirms it.
                 </p>
               </Card>
             ) : null}
+            {/* One card per role, in order: to assign, or asked and where it stands. */}
             {PART_ROLES.map((role) => {
               const part = trip.parts.find((p) => p.role === role);
-              if (!part) return null;
+              const candidates = role === "vehicle" ? vehicles : drivers;
+              if (!part) {
+                if (!thisOpen?.roles.includes(role)) return null;
+                return (
+                  <Card key={role}>
+                    <CardTitle
+                      action={<AssignStateBadge state="to-assign" />}
+                      description={`Choose the vendor, then their ${role} or Any to let them assign it.`}
+                    >
+                      {PART_ROLE_LABELS[role]}
+                    </CardTitle>
+                    <AssignForm
+                      bookingId={booking.id}
+                      role={role}
+                      trip={thisOpen}
+                      others={open.filter(
+                        (t) => t.id !== trip.id && t.roles.includes(role),
+                      )}
+                      candidates={candidates}
+                      vendors={serving}
+                    />
+                  </Card>
+                );
+              }
               const siblings = siblingsOf(live, part);
               return (
                 <PartCard
@@ -199,7 +209,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   part={part}
                   partIds={siblings.map((s) => s.id)}
                   positions={siblings.map((s) => s.position)}
-                  candidates={(role === "vehicle" ? vehicles : drivers).filter(
+                  candidates={candidates.filter(
                     (c) => c.vendor.id === part.offer.vendor.id,
                   )}
                 />

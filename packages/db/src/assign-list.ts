@@ -7,7 +7,9 @@ import {
   tripWindow,
   type AssignState,
   type Job,
+  partWaitingOf,
   type PartRole,
+  type PartWaiting,
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
@@ -16,8 +18,7 @@ import { modelName } from "./vehicle-model-input";
 /**
  * Operation's Assign page: every trip from today on, where it stands (to
  * assign, waiting to accept, assigned, on the road, done today), worked
- * out from its status and its parts, never stored; and the parts of ours
- * waiting for Operation's own yes. See
+ * out from its status and its parts, never stored, and who does it. See
  * docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
 
@@ -51,7 +52,12 @@ const tripInclude = {
       driverId: true,
       vendorAcceptedAt: true,
       driverAcceptedAt: true,
-      offer: { select: { vendor: { select: { name: true, isOurs: true } } } },
+      offer: {
+        select: {
+          respondBy: true,
+          vendor: { select: { name: true, isOurs: true } },
+        },
+      },
       vehicle: {
         select: {
           plate: true,
@@ -71,12 +77,17 @@ const tripInclude = {
 /** One part of a trip: who, from whom, and what it waits for. */
 export type AssignPart = {
   role: string;
-  /** "VLE1234 · Toyota Alphard", "Ali bin Abu"; null while the vendor is to choose. */
+  /** "VLE1234 · Toyota Alphard", "Ali bin Abu"; null while not named. */
   name: string | null;
-  /** The vendor's name when it is not ours. */
-  vendorName: string | null;
-  /** What it waits for; null once settled. */
-  waiting: "vendor" | "driver" | "name" | null;
+  vendorName: string;
+  isOurs: boolean;
+  /**
+   * What it waits for, null once settled: its vendor's yes, Operation's
+   * own for ours, the driver's, or the vehicle or driver named.
+   */
+  waiting: PartWaiting | null;
+  /** When its vendor answers by, while it waits for that answer. */
+  respondBy: Date | null;
 };
 
 /** A trip as the Assign page lists it. */
@@ -107,20 +118,15 @@ export type AssignRow = {
 };
 
 /**
- * What the Assign page shows, at one location (its id) or every one: its
- * trips and our parts waiting for Operation's yes. Offers past their time
- * are expired once, first, so neither list shows one still offered.
+ * What the Assign page lists, at one location (its id) or every one.
+ * Offers past their time are expired first, so none shows still offered.
  */
 export async function getAssignPage(
   locationId?: string,
   now: Date = new Date(),
-): Promise<{ rows: AssignRow[]; ours: OursToAccept[] }> {
+): Promise<AssignRow[]> {
   await expireOffers(now);
-  const [rows, ours] = await Promise.all([
-    listAssignTrips(locationId, now),
-    listOursToAccept(locationId),
-  ]);
-  return { rows, ours };
+  return listAssignTrips(locationId, now);
 }
 
 /**
@@ -169,72 +175,24 @@ async function listAssignTrips(
           ? (item.tripDetails.hours ?? null)
           : null,
       locationName: item.location?.name ?? null,
-      parts: item.parts.map((part): AssignPart => ({
-        role: part.role,
-        name: part.vehicle
-          ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
-          : (part.driver?.name ?? null),
-        vendorName: part.offer.vendor.isOurs ? null : part.offer.vendor.name,
-        waiting: (part.role === "vehicle" ? !part.vehicleId : !part.driverId)
-          ? "name"
-          : !part.vendorAcceptedAt
-            ? "vendor"
-            : part.role === "driver" && !part.driverAcceptedAt
-              ? "driver"
-              : null,
-      })),
+      parts: item.parts.map((part): AssignPart => {
+        const vendorWaits = !part.vendorAcceptedAt;
+        const { vendor } = part.offer;
+        return {
+          role: part.role,
+          name: part.vehicle
+            ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
+            : (part.driver?.name ?? null),
+          vendorName: vendor.name,
+          isOurs: vendor.isOurs,
+          waiting: partWaitingOf(part, vendor.isOurs),
+          respondBy: vendorWaits ? part.offer.respondBy : null,
+        };
+      }),
       overdue:
         (state === "assigned" || state === "on-the-road") &&
         tripWindow(job).end.getTime() < now.getTime(),
       lastEvent,
     };
   });
-}
-
-/** A part of ours waiting for Operation's yes: our vehicle not yet accepted. */
-export type OursToAccept = {
-  bookingId: string;
-  reference: string;
-  position: number;
-  startsAt: Date;
-  role: string;
-  /** The vehicle's plate, or the driver's name; null while not named. */
-  name: string | null;
-};
-
-/** Our parts not yet accepted for ours, soonest first. */
-async function listOursToAccept(
-  locationId: string | undefined,
-): Promise<OursToAccept[]> {
-  const parts = await db.tripPart.findMany({
-    where: {
-      vendorAcceptedAt: null,
-      offer: { vendor: { isOurs: true } },
-      item: {
-        status: { in: ["confirmed", "assigned"] },
-        ...(locationId ? { locationId } : {}),
-      },
-    },
-    orderBy: { item: { startsAt: "asc" } },
-    select: {
-      role: true,
-      vehicle: { select: { plate: true } },
-      driver: { select: { name: true } },
-      item: {
-        select: {
-          position: true,
-          startsAt: true,
-          booking: { select: { id: true, reference: true } },
-        },
-      },
-    },
-  });
-  return parts.map((part) => ({
-    bookingId: part.item.booking.id,
-    reference: part.item.booking.reference,
-    position: part.item.position,
-    startsAt: part.item.startsAt,
-    role: part.role,
-    name: part.vehicle?.plate ?? part.driver?.name ?? null,
-  }));
 }

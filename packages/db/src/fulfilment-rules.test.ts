@@ -8,9 +8,11 @@ import {
   rolesToAsk,
   jobsClash,
   owesAfterCancel,
+  partWaitingOf,
   timingWarnings,
   tripAssigned,
   tripWindow,
+  untilPickup,
   type Job,
 } from "./fulfilment-rules";
 
@@ -221,5 +223,78 @@ describe("rolesToAsk", () => {
       }),
       [],
     );
+  });
+});
+
+describe("partWaitingOf", () => {
+  const part = {
+    role: "driver",
+    vehicleId: null,
+    driverId: null,
+    vendorAcceptedAt: null,
+    driverAcceptedAt: null,
+  };
+  const now = at("2026-11-03T00:00:00Z");
+
+  it("waits for the vendor first, Operation when it is ours", () => {
+    assert.equal(partWaitingOf(part, false), "vendor");
+    assert.equal(partWaitingOf(part, true), "ours");
+  });
+
+  it("then for the record named, then the driver's own yes", () => {
+    const accepted = { ...part, vendorAcceptedAt: now };
+    assert.equal(partWaitingOf(accepted, false), "name");
+    assert.equal(
+      partWaitingOf({ ...accepted, driverId: "d" }, false),
+      "driver",
+    );
+    assert.equal(
+      partWaitingOf(
+        { ...accepted, driverId: "d", driverAcceptedAt: now },
+        false,
+      ),
+      null,
+    );
+  });
+
+  it("asks no driver's yes of a vehicle", () => {
+    const vehicle = {
+      ...part,
+      role: "vehicle",
+      vehicleId: "v",
+      vendorAcceptedAt: now,
+    };
+    assert.equal(partWaitingOf(vehicle, false), null);
+  });
+});
+
+describe("untilPickup", () => {
+  const now = at("2026-11-03T00:00:00Z");
+  const later = (ms: number) => new Date(now.getTime() + ms);
+
+  it("says minutes, hours, then days, soon within the day", () => {
+    assert.deepEqual(untilPickup(later(40 * 60 * 1000), now), {
+      label: "in 40 min",
+      soon: true,
+    });
+    assert.deepEqual(untilPickup(later(3 * HOUR), now), {
+      label: "in 3 h",
+      soon: true,
+    });
+    assert.deepEqual(untilPickup(later(30 * HOUR), now), {
+      label: "in 1 day",
+      soon: false,
+    });
+    assert.deepEqual(untilPickup(later(72 * HOUR), now), {
+      label: "in 3 days",
+      soon: false,
+    });
+  });
+
+  it("says Started once the pickup is past", () => {
+    assert.deepEqual(untilPickup(later(-60 * 1000), now), {
+      label: "Started",
+      soon: true,
+    });
   });
 });

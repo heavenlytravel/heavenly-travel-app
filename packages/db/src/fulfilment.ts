@@ -166,6 +166,15 @@ export async function getBookingFulfilment(
   }));
 }
 
+/** The booking a trip belongs to, by the trip's id; null when there is none. */
+export async function bookingIdOfTrip(itemId: string): Promise<string | null> {
+  const item = await db.bookingItem.findUnique({
+    where: { id: itemId },
+    select: { bookingId: true },
+  });
+  return item?.bookingId ?? null;
+}
+
 /** A vehicle or a driver the picker lists, and why it cannot be used, if so. */
 export type Candidate = {
   id: string;
@@ -226,8 +235,9 @@ function expiredOn(
 }
 
 /**
- * The picker: every vehicle or driver in service, ours first, each with
- * the reasons it cannot do the booking's live trips, greyed in the list,
+ * The picker: every vehicle or driver in service that may do a class the
+ * booking's live trips are of, ours first, each with the reasons it
+ * cannot do them, greyed in the list,
  * and the timing warnings that only warn. A clash with another job, a
  * class it is not of or may not drive, a document expired on a trip's
  * day, its vendor suspended. The same again for each trip on its own, for
@@ -322,8 +332,11 @@ export async function listCandidates(
           };
         });
 
+  // One of a class no trip is of is not listed at all: a class changes by
+  // amending the booking, not here.
+  const fitting = rows.filter((row) => [...classIds].some(row.mayDo));
   const candidates = await Promise.all(
-    rows.map(async (row): Promise<Candidate & { rank: number }> => {
+    fitting.map(async (row): Promise<Candidate & { rank: number }> => {
       const held = await heldJobs(db, row.held, bookingId);
       const suspended =
         row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
@@ -412,8 +425,12 @@ export type AssignInput = {
    */
   vehicle: PartAsk[];
   driver: PartAsk[];
-  /** Unanswered by then, the offer's parts reopen; default by `defaultRespondBy`. */
-  respondBy: Date | null;
+  /**
+   * When each vendor answers by, by vendor id: unanswered by then, its
+   * parts reopen. A vendor not in it gets `defaultRespondBy`. Never at or
+   * after the first pickup it is asked for.
+   */
+  respondBy: Record<string, Date>;
   /** Operation accepts our vehicle in the same step, having checked it. */
   acceptOurs: boolean;
 };
@@ -548,8 +565,6 @@ export async function assignBooking(
         "A trip asked for can no longer be assigned: it is not confirmed, or was cancelled. Reload.",
       );
     }
-    const respondBy =
-      input.respondBy ?? defaultRespondBy(trips[0]!.startsAt, now);
     const userId = "userId" in actor ? actor.userId : null;
 
     for (const [role, ask] of asks) {
@@ -571,6 +586,16 @@ export async function assignBooking(
           role,
         );
       }
+      // Its vendor answers before the first pickup it is asked for.
+      const first = its.reduce((a, b) => (b.startsAt < a.startsAt ? b : a));
+      const given = input.respondBy[vendor.id];
+      if (given && given.getTime() >= first.startsAt.getTime()) {
+        return refuse(
+          `Answer by must be before trip ${first.position}'s pickup.`,
+          `respondBy:${vendor.id}`,
+        );
+      }
+      const respondBy = given ?? defaultRespondBy(first.startsAt, now);
       const named = await namedRecord(tx, role, ask);
       if (!named.ok) return named;
       if (ask.recordId && named.name) {

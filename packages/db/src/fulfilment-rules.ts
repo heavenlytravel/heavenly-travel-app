@@ -257,6 +257,61 @@ export function partAccepted(part: PartAcceptance) {
   return part.driverId !== null && part.driverAcceptedAt !== null;
 }
 
+/**
+ * What a part still waits for, null once settled: its vendor's yes
+ * ("ours" when the vendor is ours, Operation's own), then the vehicle or
+ * driver named, then a driver's own yes.
+ */
+export type PartWaiting = "vendor" | "ours" | "name" | "driver";
+
+export function partWaitingOf(
+  part: PartAcceptance,
+  isOurs: boolean,
+): PartWaiting | null {
+  if (!part.vendorAcceptedAt) return isOurs ? "ours" : "vendor";
+  if (part.role === "vehicle" ? !part.vehicleId : !part.driverId) {
+    return "name";
+  }
+  if (part.role === "driver" && !part.driverAcceptedAt) return "driver";
+  return null;
+}
+
+/** "Waiting for Ali Transport", "Waiting for us to accept", "Not named yet", "Waiting for the driver". */
+export function partWaitingLabel(waiting: PartWaiting, vendorName: string) {
+  switch (waiting) {
+    case "vendor":
+      return `Waiting for ${vendorName}`;
+    case "ours":
+      return "Waiting for us to accept";
+    case "name":
+      return "Not named yet";
+    case "driver":
+      return "Waiting for the driver";
+  }
+}
+
+const DAY_MS = 24 * HOUR_MS;
+
+/**
+ * How long until a pickup, in a few words: "Started", "in 40 min",
+ * "in 3 h", "in 2 days"; and whether it is within the day, soon enough
+ * that a trip not yet assigned needs Operation now.
+ */
+export function untilPickup(
+  startsAt: Date,
+  now: Date = new Date(),
+): { label: string; soon: boolean } {
+  const ms = startsAt.getTime() - now.getTime();
+  if (ms <= 0) return { label: "Started", soon: true };
+  const soon = ms < DAY_MS;
+  if (ms < HOUR_MS) {
+    return { label: `in ${Math.max(1, Math.round(ms / MINUTE_MS))} min`, soon };
+  }
+  if (ms < DAY_MS) return { label: `in ${Math.round(ms / HOUR_MS)} h`, soon };
+  const days = Math.round(ms / DAY_MS);
+  return { label: days === 1 ? "in 1 day" : `in ${days} days`, soon };
+}
+
 /** Whether a trip is assigned: it has a vehicle and a driver, both accepted. */
 export function tripAssigned(parts: readonly PartAcceptance[]) {
   return PART_ROLES.every((role) => {

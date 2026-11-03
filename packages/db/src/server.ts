@@ -93,6 +93,7 @@ export {
 } from "./drivers";
 export type { DriverWithClasses } from "./drivers";
 export {
+  bookingIdOfTrip,
   getBookingFulfilment,
   listCandidates,
   assignBooking,
@@ -115,7 +116,7 @@ export type {
   HeldBooking,
 } from "./fulfilment";
 export { getAssignPage } from "./assign-list";
-export type { AssignPart, AssignRow, OursToAccept } from "./assign-list";
+export type { AssignPart, AssignRow } from "./assign-list";
 export {
   listDriverJobs,
   getDriverJob,

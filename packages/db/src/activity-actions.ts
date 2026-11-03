@@ -272,6 +272,11 @@ const ACTIONS = {
   "location.rates.updated": { entityType: "location", customerVisible: false },
   /** The whole hourly list, before and after: areas, packages, prices, extra hour rates. */
   "location.hourly.updated": { entityType: "location", customerVisible: false },
+  /** Each language's row of the tour guide rates, before and after. */
+  "location.guide-rates.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /** The window and percentage, before and after; null for none. */
   "location.surcharge.updated": {
     entityType: "location",
@@ -1061,6 +1066,8 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "location.hourly.updated":
       return "Changed the hourly prices";
+    case "location.guide-rates.updated":
+      return "Changed the tour guide rates";
     case "location.surcharge.updated": {
       const window = oddHoursIn(entry.after);
       return window

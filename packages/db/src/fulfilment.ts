@@ -4,11 +4,7 @@ import { bookingStatusOf, isLive } from "./booking-status";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
-import {
-  GUIDE_DOCUMENTS,
-  GUIDE_DOCUMENT_LABELS,
-  languagesMissing,
-} from "./guide-input";
+import { GUIDE_DOCUMENTS, GUIDE_DOCUMENT_LABELS } from "./guide-input";
 import { dayOf, todayInMalaysia } from "./expiry";
 import {
   clashSentence,
@@ -21,6 +17,7 @@ import {
   owesAfterCancel,
   PART_ROLES,
   timingWarnings,
+  hasGuide,
   tripAssigned,
   type DeclineReason,
   type Job,
@@ -56,8 +53,8 @@ export const tripInclude = {
       distanceKm: true,
       passengers: true,
       mode: true,
-      withGuide: true,
-      guideLanguages: true,
+      guideLanguage: true,
+      guideRequest: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -163,8 +160,10 @@ export type FulfilmentTrip = {
   vehicleClassId: string | null;
   /** A tour guide goes on it, a third role to assign. */
   withGuide: boolean;
-  /** The languages the customer asked the guide to speak. */
-  guideLanguages: string[];
+  /** The language the customer paid for the guide to speak; null without one. */
+  guideLanguage: string | null;
+  /** Another language asked for, on request; null when none. */
+  guideRequest: string | null;
   job: Job;
   parts: TripPartView[];
   assigned: boolean;
@@ -189,11 +188,12 @@ export async function getBookingFulfilment(
     cancelledAt: item.cancelledAt,
     cancellationCutoffHours: item.cancellationCutoffHours,
     vehicleClassId: item.tripDetails?.vehicleClassId ?? null,
-    withGuide: item.tripDetails?.withGuide ?? false,
-    guideLanguages: item.tripDetails?.guideLanguages ?? [],
+    withGuide: hasGuide(item.tripDetails),
+    guideLanguage: item.tripDetails?.guideLanguage ?? null,
+    guideRequest: item.tripDetails?.guideRequest ?? null,
     job: jobOf(item),
     parts: item.parts,
-    assigned: tripAssigned(item.parts, item.tripDetails?.withGuide ?? false),
+    assigned: tripAssigned(item.parts, hasGuide(item.tripDetails)),
   }));
 }
 
@@ -408,11 +408,11 @@ export async function listCandidates(
       const suspended =
         row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
       const who = role === "vehicle" ? "It" : row.name.split(" ")[0];
-      // A guide who does not speak a language asked is listed, warned:
-      // Operation may have no one better.
+      // A guide who does not speak the language paid for cannot be
+      // chosen: the customer paid for that language.
       const unspoken = (languages: readonly string[]) => {
         const missing = row.speaks
-          ? languagesMissing(languages, row.speaks)
+          ? languages.filter((language) => !row.speaks.includes(language))
           : [];
         return missing.length > 0
           ? [`Does not speak ${missing.join(" or ")}`]
@@ -426,18 +426,20 @@ export async function listCandidates(
       ): TripFit => {
         const reasons = [
           ...(classes.every(row.mayDo) ? [] : [row.notClass]),
+          ...unspoken(languages),
           ...row.expired(daysOf(asked)),
           ...suspended,
         ];
         const clash = firstClash(asked, held);
         if (clash) reasons.push(clashSentence(clash));
-        const warnings = [
-          ...unspoken(languages),
-          ...(clash ? [] : timingWarnings(asked, held, { bufferMinutes, who })),
-        ];
+        const warnings = clash
+          ? []
+          : timingWarnings(asked, held, { bufferMinutes, who });
         return { reasons, warnings };
       };
-      const asked = [...new Set(trips.flatMap((t) => t.guideLanguages))];
+      const languagesOf = (t: (typeof trips)[number]) =>
+        t.guideLanguage ? [t.guideLanguage] : [];
+      const asked = [...new Set(trips.flatMap(languagesOf))];
       const all = fitFor(jobs, [...classIds], asked);
       return {
         id: row.id,
@@ -453,7 +455,7 @@ export async function listCandidates(
         trips: Object.fromEntries(
           trips.map((t) => [
             t.id,
-            fitFor([t.job], [t.vehicleClassId], t.guideLanguages),
+            fitFor([t.job], [t.vehicleClassId], languagesOf(t)),
           ]),
         ),
         day: held
@@ -461,8 +463,7 @@ export async function listCandidates(
           .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
           .map(dayLine),
         rank:
-          (all.reasons.length > 0 ? 8 : 0) +
-          (unspoken(asked).length > 0 ? 4 : 0) +
+          (all.reasons.length > 0 ? 4 : 0) +
           (row.vendor.isOurs ? 0 : 2) +
           (row.location.id === here ? 0 : 1),
       };
@@ -546,6 +547,8 @@ async function namedRecord(
   tx: Prisma.TransactionClient,
   role: PartRole,
   ask: Pick<PartAsk, "vendorId" | "recordId">,
+  /** The trips it is named for: a guide must speak each one's language. */
+  trips: readonly TripRow[],
 ) {
   if (!ask.recordId) return { ok: true as const, name: null };
   const what = role === "guide" ? "tour guide" : role;
@@ -558,6 +561,7 @@ async function namedRecord(
             isActive: true,
             vendorId: true,
             vendor: { select: { status: true } },
+            languages: true,
           },
         })
       : role === "vehicle"
@@ -591,6 +595,18 @@ async function namedRecord(
       `${name}'s vendor cannot take jobs now. Choose another ${what}.`,
       role,
     );
+  }
+  if ("languages" in record && Array.isArray(record.languages)) {
+    const speaks: readonly unknown[] = record.languages;
+    const unspoken = [
+      ...new Set(trips.flatMap((t) => t.tripDetails?.guideLanguage ?? [])),
+    ].filter((language) => !speaks.includes(language));
+    if (unspoken.length > 0) {
+      return refuse(
+        `${name} does not speak ${unspoken.join(" or ")}, the language paid for. Choose another tour guide.`,
+        role,
+      );
+    }
   }
   return { ok: true as const, name };
 }
@@ -661,7 +677,7 @@ export async function assignBooking(
     }
     const noGuide = trips.find(
       (t) =>
-        !t.tripDetails?.withGuide &&
+        !hasGuide(t.tripDetails) &&
         asks.some(([r, ask]) => r === "guide" && ask.itemIds.includes(t.id)),
     );
     if (noGuide) {
@@ -709,7 +725,7 @@ export async function assignBooking(
         );
       }
       const respondBy = given ?? defaultRespondBy(first.startsAt, now);
-      const named = await namedRecord(tx, role, ask);
+      const named = await namedRecord(tx, role, ask, its);
       if (!named.ok) return named;
       if (ask.recordId && named.name) {
         const clash = await clashRefusal(
@@ -1015,10 +1031,12 @@ export async function nameParts(
       return refuse("Name one vehicle, driver or tour guide at a time.");
     }
     const bookingId = parts[0]!.item.bookingId;
-    const named = await namedRecord(tx, role, {
-      vendorId: parts[0]!.offer.vendorId,
-      recordId,
-    });
+    const named = await namedRecord(
+      tx,
+      role,
+      { vendorId: parts[0]!.offer.vendorId, recordId },
+      parts.map((p) => p.item),
+    );
     if (!named.ok) return named;
     const clash = await clashRefusal(
       tx,
@@ -1211,15 +1229,12 @@ export async function settleTrips(
 ): Promise<string[]> {
   const items = await tx.bookingItem.findMany({
     where: { id: { in: [...itemIds] } },
-    include: { parts: true, tripDetails: { select: { withGuide: true } } },
+    include: { parts: true, tripDetails: { select: { guideLanguage: true } } },
   });
   const newlyAssigned = new Set<string>();
   const touched = new Set<string>();
   for (const item of items) {
-    const assigned = tripAssigned(
-      item.parts,
-      item.tripDetails?.withGuide ?? false,
-    );
+    const assigned = tripAssigned(item.parts, hasGuide(item.tripDetails));
     const next =
       item.status === "confirmed" && assigned
         ? "assigned"

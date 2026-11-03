@@ -1,0 +1,299 @@
+"use client";
+
+import {
+  GUIDE_LANGUAGES,
+  GUIDE_RATE_PRICE_LABELS,
+  GUIDE_RATE_PRICES,
+  plural,
+  ringgitInputValue,
+  type GuideRatePrice,
+  type GuideRateRow,
+} from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
+import { cx } from "@repo/ui/cx";
+import { Switch } from "@repo/ui/switch";
+import { toast } from "@repo/ui/toast";
+import { errorOf } from "@repo/console/action-state";
+import { useLeaveGuard } from "@repo/console/use-leave-guard";
+import { useState, useTransition } from "react";
+import { setGuideRatesAction } from "./actions";
+import {
+  CELL_BAD,
+  CELL_CHANGED,
+  CELL_INPUT,
+  CELL_PAD,
+  CELL_PLAIN,
+  CellKey,
+  EMPTY_CELL,
+  readCell,
+  tidy,
+} from "./cells";
+import { SaveBar, type SaveStatus } from "./SaveBar";
+
+/** One language's row as the page holds it: on sale or not, and each price as typed. */
+type Row = { isActive: boolean } & Record<GuideRatePrice, string>;
+type Values = Record<string, Row>;
+
+function valuesOf(rows: readonly GuideRateRow[]): Values {
+  const stored = new Map(rows.map((row) => [row.language, row]));
+  return Object.fromEntries(
+    GUIDE_LANGUAGES.map((language) => {
+      const row = stored.get(language);
+      return [
+        language,
+        {
+          isActive: row?.isActive ?? false,
+          ...(Object.fromEntries(
+            GUIDE_RATE_PRICES.map((key) => [
+              key,
+              row?.[key] != null ? ringgitInputValue(row[key]) : "",
+            ]),
+          ) as Record<GuideRatePrice, string>),
+        },
+      ];
+    }),
+  );
+}
+
+/** The rows as the action reads them (`parseGuideRates`). */
+const postedOf = (values: Values) =>
+  GUIDE_LANGUAGES.map((language) => ({ language, ...values[language]! }));
+
+/** A price as it is compared with the save: sen, or null for empty or not a price. */
+function senOf(text: string | undefined) {
+  const reading = readCell(text);
+  return reading.ok ? reading.sen : null;
+}
+
+const HEADING =
+  "border-b border-hairline px-3 py-2.5 align-bottom font-semibold text-body";
+
+/**
+ * A location's tour guide price list, in the rate grid's look: a row per
+ * language, switched on to sell it on the website, and its price one-way,
+ * for a 4, 8 or 12-hour hire, and per hour past the hire. A language is
+ * offered on a trip only while it is on and the trip's prices are set: an
+ * empty cell is not sold. The languages on are listed first. Saved whole.
+ * Read only for the teams that read the rates. See
+ * docs/261103-tour-guide.md, "Guide rates".
+ */
+export function GuideRates({
+  locationId,
+  rows,
+  readOnly = false,
+}: {
+  locationId: string;
+  rows: GuideRateRow[];
+  readOnly?: boolean;
+}) {
+  const [saved, setSaved] = useState<Values>(() => valuesOf(rows));
+  const [values, setValues] = useState<Values>(saved);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  // In the order of the save, on first, so a switch does not move its row.
+  const [order] = useState(() => [
+    ...GUIDE_LANGUAGES.filter((l) => saved[l]!.isActive),
+    ...GUIDE_LANGUAGES.filter((l) => !saved[l]!.isActive),
+  ]);
+
+  const invalid = new Set<string>();
+  let changes = 0;
+  for (const language of GUIDE_LANGUAGES) {
+    const now = values[language]!;
+    const was = saved[language]!;
+    if (now.isActive !== was.isActive) changes += 1;
+    for (const key of GUIDE_RATE_PRICES) {
+      if (!readCell(now[key]).ok) invalid.add(`${language}|${key}`);
+      else if (senOf(now[key]) !== senOf(was[key])) changes += 1;
+    }
+  }
+  const dirty = changes + invalid.size > 0;
+  const leaveDialog = useLeaveGuard(
+    dirty,
+    "The tour guide rates changed since the last save are lost.",
+  );
+
+  function edit(language: string, patch: Partial<Row>) {
+    setError(null);
+    setValues((current) => ({
+      ...current,
+      [language]: { ...current[language]!, ...patch },
+    }));
+  }
+
+  function save() {
+    if (invalid.size > 0) return;
+    startTransition(async () => {
+      const refused = errorOf(
+        await answerOf(setGuideRatesAction(locationId, postedOf(values))),
+      );
+      if (refused) {
+        setError(refused);
+        return;
+      }
+      setSaved(values);
+      setError(null);
+      toast.success("Tour guide rates saved.");
+    });
+  }
+
+  let status: SaveStatus;
+  if (pending) status = { tone: "idle", text: "Saving…" };
+  else if (error) status = { tone: "error", text: error };
+  else if (invalid.size > 0) {
+    status = {
+      tone: "error",
+      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not a price: enter RM with at most two decimals, or leave it empty.`,
+    };
+  } else if (dirty) {
+    status = { tone: "dirty", text: `${plural(changes, "unsaved change")}.` };
+  } else status = { tone: "idle", text: "No unsaved changes." };
+
+  const onSale = GUIDE_LANGUAGES.filter(
+    (language) =>
+      saved[language]!.isActive &&
+      GUIDE_RATE_PRICES.some((key) => senOf(saved[language]![key]) !== null),
+  ).length;
+
+  return (
+    <>
+      <div className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline">
+        <table className="w-full border-separate border-spacing-0 text-sm">
+          <thead className="sticky top-0 z-(--layer-raised) bg-shade text-2xs text-muted">
+            <tr>
+              <th scope="col" className={cx(HEADING, "pl-5 text-left")}>
+                Language
+              </th>
+              <th scope="col" className={cx(HEADING, "text-left")}>
+                On the website
+              </th>
+              {GUIDE_RATE_PRICES.map((key) => (
+                <th key={key} scope="col" className={cx(HEADING, "text-right")}>
+                  {GUIDE_RATE_PRICE_LABELS[key]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {order.map((language) => {
+              const row = values[language]!;
+              return (
+                <tr key={language}>
+                  <th
+                    scope="row"
+                    className="border-b border-hairline py-0 pr-3 pl-5 text-left align-middle font-medium whitespace-nowrap text-ink"
+                  >
+                    {language}
+                  </th>
+                  <td className="border-b border-hairline px-3">
+                    <Switch
+                      checked={row.isActive}
+                      disabled={readOnly || pending}
+                      label={`Sell a ${language} guide on the website`}
+                      onCheckedChange={(isActive) =>
+                        edit(language, { isActive })
+                      }
+                    />
+                  </td>
+                  {GUIDE_RATE_PRICES.map((key) => {
+                    const id = `${language}|${key}`;
+                    const text = row[key];
+                    const empty = text.trim() === "";
+                    const label = `${language}, ${GUIDE_RATE_PRICE_LABELS[key]}`;
+                    return (
+                      <td
+                        key={key}
+                        className={cx(CELL_PAD, "border-b border-hairline")}
+                      >
+                        {readOnly ? (
+                          <span
+                            className={cx(
+                              "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
+                              empty && EMPTY_CELL,
+                            )}
+                          >
+                            <span className="sr-only">{`${label}, ${empty ? "not sold" : "price in RM"} `}</span>
+                            {text}
+                          </span>
+                        ) : (
+                          <input
+                            aria-label={`${label}, price in RM`}
+                            aria-invalid={invalid.has(id) || undefined}
+                            inputMode="decimal"
+                            autoComplete="off"
+                            spellCheck={false}
+                            readOnly={pending}
+                            value={text}
+                            onChange={(event) =>
+                              edit(language, { [key]: event.target.value })
+                            }
+                            onFocus={(event) => event.target.select()}
+                            onBlur={(event) => {
+                              const tidied = tidy(event.target.value);
+                              if (tidied !== event.target.value) {
+                                edit(language, { [key]: tidied });
+                              }
+                            }}
+                            className={cx(
+                              CELL_INPUT,
+                              invalid.has(id)
+                                ? CELL_BAD
+                                : senOf(text) !== senOf(saved[language]![key])
+                                  ? CELL_CHANGED
+                                  : cx(CELL_PLAIN, empty && EMPTY_CELL),
+                            )}
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid gap-2 px-5 py-4 text-xs text-muted">
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <CellKey swatch={cx("border-edge", EMPTY_CELL)}>
+            Empty: not sold for that trip
+          </CellKey>
+          {readOnly ? null : (
+            <CellKey swatch="border-brand bg-brand-tint">
+              Changed, not saved
+            </CellKey>
+          )}
+          <span className="tabular-nums">
+            {plural(onSale, "language")} on the website
+          </span>
+        </p>
+        <p className="leading-relaxed">
+          A customer sees a language only while it is on the website and the
+          trip&apos;s price is set: One-way for a one-way trip, the hire&apos;s
+          duration for an hourly one, and Extra hour too when they add hours.
+          Any other language they may ask for, free; Operation amends the trip
+          once a guide is found. A guide&apos;s price has no surcharge.
+        </p>
+      </div>
+
+      {readOnly ? null : (
+        <>
+          <SaveBar
+            dirty={dirty}
+            pending={pending}
+            status={status}
+            canSave={invalid.size === 0}
+            onDiscard={() => {
+              setValues(saved);
+              setError(null);
+            }}
+            onSave={save}
+            label="Save tour guide rates"
+          />
+          {leaveDialog}
+        </>
+      )}
+    </>
+  );
+}

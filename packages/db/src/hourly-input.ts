@@ -321,7 +321,8 @@ const isId = (value: unknown): value is string =>
   typeof value === "string" && value !== "" && value.length <= 200;
 
 /** A price as typed in ringgit: sen, null for empty, or the refusal. */
-function priceOf(raw: unknown): Parsed<number | null> {
+/** A price cell as posted: ringgit as typed, or "" for none. */
+export function priceOf(raw: unknown): Parsed<number | null> {
   const text = textOf(raw);
   if (text === "") return { ok: true, value: null };
   const sen = parseRinggit(text);

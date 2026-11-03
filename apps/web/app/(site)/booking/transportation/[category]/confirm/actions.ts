@@ -5,7 +5,6 @@ import {
   flightOfTrip,
   formatMyr,
   GUEST_ACTOR,
-  guideIssue,
   maskEmail,
   parseContact,
   parseFlightNumber,
@@ -63,8 +62,8 @@ async function requestIp(): Promise<string | null> {
  * vehicle, the group and what the drivers need once for them all, so the
  * same parsing, resolving and pricing run again here: nothing the browser
  * priced is trusted. No two trips may start together or during a hire,
- * and the class must take every trip. A trip with a tour guide (every
- * coach, a car's when added) needs a language for them. The arriving flight goes on each
+ * and the class must take every trip. A tour guide's language must be on
+ * sale for every trip, priced into each. The arriving flight goes on each
  * pick-up at an airport, the departing one on each drop-off at one, the
  * note on every trip. A price that changed since the page showed it stops
  * the booking and says so. A filled honeypot and a contact or address
@@ -99,8 +98,6 @@ export async function createTripsBookingAction(
   ) {
     return INCOMPLETE;
   }
-  const noLanguage = guideIssue(options);
-  if (noLanguage) return { error: noLanguage };
   const several = indexes.length > 1;
   const tripLabel = (index: number) => (several ? `Trip ${index + 1}: ` : "");
 

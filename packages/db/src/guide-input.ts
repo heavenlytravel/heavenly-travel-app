@@ -44,15 +44,6 @@ export function guideLanguagesOf(values: readonly unknown[]): string[] {
   return GUIDE_LANGUAGES.filter((language) => posted.has(language));
 }
 
-/** The languages a trip asked for that a guide does not speak, in the trip's order. */
-export function languagesMissing(
-  wanted: readonly string[],
-  spoken: readonly string[],
-): string[] {
-  const speaks = new Set(spoken);
-  return wanted.filter((language) => !speaks.has(language));
-}
-
 /** The licences a guide keeps valid, in the form's order. */
 export const GUIDE_DOCUMENTS = ["motacExpiresOn"] as const;
 export type GuideDocument = (typeof GUIDE_DOCUMENTS)[number];

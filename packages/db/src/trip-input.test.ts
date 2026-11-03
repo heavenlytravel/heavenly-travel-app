@@ -108,8 +108,8 @@ describe("parseTripOptions", () => {
         childSeats: 1,
         flightNumber: "MH 123",
         notes: "Two bags",
-        withGuide: false,
-        guideLanguages: [],
+        guideLanguage: null,
+        guideRequest: null,
       },
     );
   });
@@ -122,25 +122,24 @@ describe("parseTripOptions", () => {
     assert.equal(options?.childSeats, 0);
   });
 
-  it("always gives a coach a guide, and a car one when added", () => {
-    const coach = parseTripOptions(
+  it("reads the guide's language and a request, dropping unknown and repeated ones", () => {
+    const both = parseTripOptions(
       "coach-charter",
-      "class=vc4&passengers=20&guideLanguage=Japanese&guideLanguage=English",
+      "class=vc4&passengers=20&guide=English&guideRequest=Korean",
     );
-    assert.equal(coach?.withGuide, true);
-    assert.deepEqual(coach?.guideLanguages, ["English", "Japanese"]);
-    const car = parseTripOptions(
+    assert.equal(both?.guideLanguage, "English");
+    assert.equal(both?.guideRequest, "Korean");
+    const same = parseTripOptions(
       "car-with-driver",
-      "class=vc1&passengers=2&guideLanguage=English",
+      "class=vc1&passengers=2&guide=Malay&guideRequest=Malay",
     );
-    assert.equal(car?.withGuide, false);
-    assert.deepEqual(car?.guideLanguages, []);
-    const added = parseTripOptions(
+    assert.equal(same?.guideLanguage, "Malay");
+    assert.equal(same?.guideRequest, null);
+    const unknown = parseTripOptions(
       "car-with-driver",
-      "class=vc1&passengers=2&guide=1&guideLanguage=Malay&guideLanguage=Elvish",
+      "class=vc1&passengers=2&guide=Elvish",
     );
-    assert.equal(added?.withGuide, true);
-    assert.deepEqual(added?.guideLanguages, ["Malay"]);
+    assert.equal(unknown?.guideLanguage, null);
   });
 
   it("reads the model chosen, and none for an empty one", () => {
@@ -187,10 +186,9 @@ describe("isTripId", () => {
 });
 
 describe("toParams and parsePassengers", () => {
-  it("takes the first of a repeated search param, and keeps the rest", () => {
+  it("takes the first of a repeated search param", () => {
     const params = toParams({ passengers: ["4", "9"], mode: undefined });
     assert.equal(params.get("passengers"), "4");
-    assert.deepEqual(params.getAll("passengers"), ["4", "9"]);
     assert.equal(params.has("mode"), false);
     assert.equal(parsePassengers(params), 4);
   });

@@ -5,9 +5,9 @@ import {
   clashesOf,
   fitsPassengers,
   formatMyr,
-  guideChoiceOf,
   guideEntries,
-  guideOfChoice,
+  guideOffersOnAll,
+  storedGuideChoice,
   hireEndOf,
   hourlyChoiceOf,
   HOURLY_PACKAGES,
@@ -30,6 +30,7 @@ import {
   type ClassAvailability,
   type ClassFit,
   type GuideChoice,
+  type GuideOffer,
   type TripCategory,
   type TripMode,
 } from "@repo/db";
@@ -119,6 +120,8 @@ export type TripQuoteView =
       /** The weekend and holiday surcharge that applies, "weekend +20%"; null for none. */
       weekend: string | null;
       classes: ClassQuoteView[];
+      /** The tour guide languages on sale for the trip, at their price there. */
+      guides: GuideOffer[];
     }
   | { ok: false; error: string };
 
@@ -281,7 +284,7 @@ export function amendDraftOf(
       flightNumber: details.flightNumber ?? "",
       childSeats: String(details.childSeats),
       notes: details.notes ?? "",
-      guide: guideChoiceOf(details),
+      guide: storedGuideChoice(details),
     },
   };
 }
@@ -519,18 +522,34 @@ export function chosenVehicle(
   };
 }
 
-/** What one trip costs in the vehicle chosen: the class's price on it, and its charge for the model chosen; null before a vehicle is. */
+/** The tour guide languages on sale for every trip, at their price for them all; none until each is priced. */
+export function bookingGuideOffers(trips: readonly TripDraft[]): GuideOffer[] {
+  if (!trips.every((draft) => draft.quote)) return [];
+  return guideOffersOnAll(trips.map((draft) => draft.quote!.guides));
+}
+
+/**
+ * What one trip costs in the vehicle chosen: the class's price on it, its
+ * charge for the model chosen, and the tour guide in the language chosen,
+ * when it is on sale for the trip; null before a vehicle is.
+ */
 export function tripQuotedSen(
   draft: TripDraft,
   chosen: ChosenVehicle | null,
+  guideLanguage: string | null,
 ): number | null {
   const priced = chosen
     ? draft.quote?.classes.find((c) => c.id === chosen.option.id)
     : null;
   if (!priced || priced.totalSen === null) return null;
-  return chosen?.model
-    ? priced.totalSen + (priced.modelChoiceSen ?? 0)
-    : priced.totalSen;
+  const guideSen =
+    draft.quote?.guides.find((offer) => offer.language === guideLanguage)
+      ?.amountSen ?? 0;
+  return (
+    priced.totalSen +
+    (chosen?.model ? (priced.modelChoiceSen ?? 0) : 0) +
+    guideSen
+  );
 }
 
 /** What a trip is charged: its agreed price once one is typed, else the quote; null before a vehicle is chosen. */
@@ -538,8 +557,9 @@ export function tripTotalSen(
   draft: TripDraft,
   chosen: ChosenVehicle | null,
   canPrice: boolean,
+  guideLanguage: string | null,
 ): number | null {
-  const quoted = tripQuotedSen(draft, chosen);
+  const quoted = tripQuotedSen(draft, chosen, guideLanguage);
   if (quoted === null) return null;
   return (canPrice ? parseRinggit(draft.agreedPrice) : null) ?? quoted;
 }
@@ -549,8 +569,11 @@ export function bookingTotalSen(
   trips: readonly TripDraft[],
   chosen: ChosenVehicle | null,
   canPrice: boolean,
+  guideLanguage: string | null,
 ): number | null {
-  return sumOf(trips.map((draft) => tripTotalSen(draft, chosen, canPrice)));
+  return sumOf(
+    trips.map((draft) => tripTotalSen(draft, chosen, canPrice, guideLanguage)),
+  );
 }
 
 /** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 2:30 PM". */
@@ -585,7 +608,9 @@ export function vehicleLine(
     if (trips.every((draft) => draft.quote)) return "Not chosen yet";
     return trips.length > 1 ? "Price every trip first" : "Price the trip first";
   }
-  const quoted = sumOf(trips.map((draft) => tripQuotedSen(draft, chosen)));
+  const quoted = sumOf(
+    trips.map((draft) => tripQuotedSen(draft, chosen, null)),
+  );
   return [
     chosen.option.name,
     chosen.model ? `${chosen.model.name} chosen` : null,
@@ -596,11 +621,8 @@ export function vehicleLine(
     .join(" · ");
 }
 
-/** The details as a folded step reads: "Arriving MH 1234 · 1 child seat · tour guide (English) · notes for the driver". */
-export function detailsLine(
-  details: ItemDetails | BookingDetails,
-  category: TripCategory,
-): string {
+/** The details as a folded step reads: "Arriving MH 1234 · 1 child seat · English tour guide · Korean asked · notes for the driver". */
+export function detailsLine(details: ItemDetails | BookingDetails): string {
   const parts: string[] = [];
   const flight = (label: string, value: string) => {
     if (value.trim()) parts.push(`${label} ${value.trim().toUpperCase()}`);
@@ -613,14 +635,9 @@ export function detailsLine(
   }
   const seats = Number(details.childSeats);
   if (seats > 0) parts.push(plural(seats, "child seat"));
-  const guide = guideOfChoice(category, details.guide);
-  if (guide.withGuide) {
-    parts.push(
-      guide.guideLanguages.length > 0
-        ? `tour guide (${guide.guideLanguages.join(", ")})`
-        : "tour guide",
-    );
-  }
+  const { language, request } = details.guide;
+  if (language) parts.push(`${language} tour guide`);
+  if (request) parts.push(`${request} guide asked`);
   if (details.notes.trim()) parts.push("notes for the driver");
   return parts.length > 0
     ? parts.join(" · ")
@@ -676,7 +693,7 @@ export function vehicleFields(
   };
 }
 
-/** The details, once: an amended item's flight, or a new booking's two flights, then child seats where the category has them, the note, and the tour guide with each of its languages. */
+/** The details, once: an amended item's flight, or a new booking's two flights, then child seats where the category has them, the note, and the tour guide's language and one asked for. */
 export function detailsFields(
   details: ItemDetails | BookingDetails,
   category: TripCategory,
@@ -692,5 +709,5 @@ export function detailsFields(
     fields[TRIP_OPTION_FIELDS.childSeats] = details.childSeats;
   }
   fields[TRIP_OPTION_FIELDS.notes] = details.notes;
-  return [...Object.entries(fields), ...guideEntries(category, details.guide)];
+  return [...Object.entries(fields), ...guideEntries(details.guide)];
 }

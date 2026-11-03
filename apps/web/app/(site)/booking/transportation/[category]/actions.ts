@@ -82,6 +82,7 @@ export async function quoteTripsAction(
         oddHoursSen: c.price?.surcharge?.amountSen ?? 0,
         cancellationCutoffHours: c.offering.cancellationCutoffHours,
       })),
+      guides: quote.guides,
     };
   });
   return { ok: true, trips, classes: [...classes.values()] };

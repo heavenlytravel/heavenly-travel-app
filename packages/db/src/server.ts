@@ -219,6 +219,7 @@ export {
   routesIntoLocation,
 } from "./zones";
 export { getHourlyList, listHourlyLists, setHourlyList } from "./hourly-rates";
+export { getGuideRates, listGuideRates, setGuideRates } from "./guide-rates";
 export type {
   Zone,
   ZoneRate,
@@ -403,6 +404,7 @@ export * from "./zone-trip";
 export * from "./zone-quote";
 export * from "./price-check";
 export * from "./rates-input";
+export * from "./guide-rates-input";
 export * from "./hourly-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";

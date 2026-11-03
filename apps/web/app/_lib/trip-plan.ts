@@ -11,6 +11,7 @@ import {
   tripItemField,
   tripSearchParams,
   type ClassFit,
+  type GuideOffer,
   type HourlyChoice,
   type TripClash,
   type TripClassPrice,
@@ -85,6 +86,8 @@ export type TripQuoteView =
       pickup: string;
       dropoff: string | null;
       classes: TripClassQuote[];
+      /** The tour guide languages on sale for the trip, at their price there. */
+      guides: GuideOffer[];
     }
   | { ok: false; error: string };
 

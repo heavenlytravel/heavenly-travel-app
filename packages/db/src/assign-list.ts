@@ -3,6 +3,7 @@ import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
 import {
   assignStateOf,
+  hasGuide,
   rolesToAsk,
   tripWindow,
   type AssignState,
@@ -43,8 +44,8 @@ const tripInclude = {
       passengers: true,
       mode: true,
       hours: true,
-      withGuide: true,
-      guideLanguages: true,
+      guideLanguage: true,
+      guideRequest: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -110,8 +111,10 @@ export type AssignRow = {
   roles: PartRole[];
   /** A tour guide goes on it, a third role to assign. */
   withGuide: boolean;
-  /** The languages asked of the guide. */
-  guideLanguages: string[];
+  /** The language paid for the guide to speak; null without one. */
+  guideLanguage: string | null;
+  /** Another language asked for, on request; null when none. */
+  guideRequest: string | null;
   job: Job;
   className: string;
   passengers: number;
@@ -159,7 +162,7 @@ async function listAssignTrips(
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
-    const withGuide = item.tripDetails?.withGuide ?? false;
+    const withGuide = hasGuide(item.tripDetails);
     const state = assignStateOf({
       status: item.status,
       parts: item.parts,
@@ -178,7 +181,8 @@ async function listAssignTrips(
       state,
       roles: rolesToAsk({ ...item, withGuide }),
       withGuide,
-      guideLanguages: item.tripDetails?.guideLanguages ?? [],
+      guideLanguage: item.tripDetails?.guideLanguage ?? null,
+      guideRequest: item.tripDetails?.guideRequest ?? null,
       job,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,

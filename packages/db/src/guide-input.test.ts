@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  guideLanguagesOf,
-  languagesMissing,
-  parseGuideFields,
-} from "./guide-input";
+import { guideLanguagesOf, parseGuideFields } from "./guide-input";
 
 describe("guideLanguagesOf", () => {
   it("keeps the known languages once, in the list's order", () => {
@@ -13,16 +9,6 @@ describe("guideLanguagesOf", () => {
       ["English", "Mandarin"],
     );
     assert.deepEqual(guideLanguagesOf([]), []);
-  });
-});
-
-describe("languagesMissing", () => {
-  it("lists what the trip asked that the guide does not speak", () => {
-    assert.deepEqual(
-      languagesMissing(["English", "Japanese"], ["English", "Mandarin"]),
-      ["Japanese"],
-    );
-    assert.deepEqual(languagesMissing([], ["English"]), []);
   });
 });
 

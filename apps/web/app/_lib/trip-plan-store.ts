@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   byStart,
+  guideChoiceOf,
   isTripCategory,
   NO_GUIDE,
   type GuideChoice,
@@ -33,7 +34,7 @@ export type TripPlan = {
   passengers: number;
   /** The one vehicle class for every trip; null until chosen. */
   classId: string | null;
-  /** A plan saved before guides has none: read as `NO_GUIDE`. */
+  /** A plan saved before guides, or before one language, has none: read as `NO_GUIDE`. */
   guide: GuideChoice;
   forDriver: ForDriver;
   priced: PricedTrips | null;
@@ -68,7 +69,14 @@ function read(): TripPlan {
       saved.plan &&
       isTripCategory(saved.plan.category) &&
       Array.isArray(saved.plan.trips)
-        ? { ...EMPTY_PLAN, ...saved.plan }
+        ? {
+            ...EMPTY_PLAN,
+            ...saved.plan,
+            guide: guideChoiceOf({
+              language: saved.plan.guide?.language,
+              request: saved.plan.guide?.request,
+            }),
+          }
         : EMPTY_PLAN;
   } catch {
     cache = EMPTY_PLAN;

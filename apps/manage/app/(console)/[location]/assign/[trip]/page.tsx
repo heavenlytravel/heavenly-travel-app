@@ -187,7 +187,11 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   <Card key={role}>
                     <CardTitle
                       action={<AssignStateBadge state="to-assign" />}
-                      description={`Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`}
+                      description={
+                        role === "guide" && trip.guideLanguage
+                          ? `Choose the vendor, then a guide who speaks ${trip.guideLanguage}, or Any to let them assign one.${trip.guideRequest ? ` ${trip.guideRequest} was asked for too: amend the trip if a guide is found.` : ""}`
+                          : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`
+                      }
                     >
                       {PART_ROLE_LABELS[role]}
                     </CardTitle>

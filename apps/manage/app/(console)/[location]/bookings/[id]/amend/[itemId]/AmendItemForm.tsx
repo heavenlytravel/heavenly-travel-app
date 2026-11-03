@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMyr } from "@repo/db";
+import { formatMyr, guideOfferIssue } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
@@ -12,6 +12,7 @@ import { HiddenFields } from "../../../_components/HiddenFields";
 import { TripStep, VehicleStep } from "../../../_components/ItemSteps";
 import {
   agreedPriceIssue,
+  bookingGuideOffers,
   bookingTotalSen,
   chosenVehicle,
   detailsFields,
@@ -66,12 +67,21 @@ export function AmendItemForm({
   const trips = [trip];
   const chosen = chosenVehicle(trips, vehicle);
   const priceIssue = canPrice ? agreedPriceIssue(trip) : null;
+  const guideOffers = bookingGuideOffers(trips);
+  const guideIssue = trip.quote
+    ? guideOfferIssue(details.guide.language, guideOffers)
+    : null;
   const missing = !trip.quote
     ? "Fill in the trip."
     : !chosen
       ? "Choose a vehicle."
-      : priceIssue;
-  const totalSen = bookingTotalSen(trips, chosen, canPrice);
+      : (priceIssue ?? guideIssue);
+  const totalSen = bookingTotalSen(
+    trips,
+    chosen,
+    canPrice,
+    details.guide.language,
+  );
 
   return (
     <form
@@ -123,6 +133,8 @@ export function AmendItemForm({
               setDetails((current) => ({ ...current, ...patch }))
             }
             category={trip.trip.category}
+            guideOffers={guideOffers}
+            guideIssue={guideIssue}
             done={chosen !== null}
             open={open === "details"}
             onOpen={() => setOpen("details")}
@@ -145,7 +157,7 @@ export function AmendItemForm({
               {
                 id: trip.id,
                 label: null,
-                quotedSen: tripQuotedSen(trip, chosen),
+                quotedSen: tripQuotedSen(trip, chosen, details.guide.language),
                 agreedPrice: trip.agreedPrice,
                 priceReason: trip.priceReason,
               },

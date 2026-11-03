@@ -322,6 +322,8 @@ model Location {
   zoneRates        ZoneRate[]
   /// The rate per extra hour of its hourly price list; the packages are its zones'.
   hourlyExtraRates HourlyExtraRate[]
+  /// The tour guide's price list, a row per language.
+  guideRates       GuideRate[]
   items            BookingItem[]
   vehicles         Vehicle[]
   drivers          Driver[]
@@ -469,6 +471,27 @@ model HourlyExtraRate {
 
   @@unique([locationId, packageHours, vehicleClassId])
   @@index([vehicleClassId])
+}
+
+/// A location's tour guide price for one language, per trip: one-way, a
+/// 4, 8 or 12-hour hire, and each hour past it. The website sells the
+/// language on a trip only while `isActive` and the trip's price is set.
+/// See docs/261103-tour-guide.md, "Guide rates".
+model GuideRate {
+  id           String   @id @default(cuid())
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// From GUIDE_LANGUAGES.
+  language     String
+  isActive     Boolean  @default(false)
+  oneWaySen    Int?
+  hours4Sen    Int?
+  hours8Sen    Int?
+  hours12Sen   Int?
+  extraHourSen Int?
+  updatedAt    DateTime @updatedAt
+
+  @@unique([locationId, language])
 }
 
 /// One page of a location in one locale: its main page, a section's own
@@ -905,13 +928,14 @@ model TripItemDetails {
   passengers           Int
   /// Never asked for a coach.
   childSeats           Int           @default(0)
-  /// A tour guide goes on the trip, assigned beside the vehicle and the
-  /// driver: always on a coach, included in its price; on a car when the
-  /// customer adds one. False on trips booked before guides.
-  withGuide            Boolean       @default(false)
-  /// The languages the customer asked the guide to speak, from
-  /// GUIDE_LANGUAGES; empty without a guide.
-  guideLanguages       String[]      @default([])
+  /// The tour guide's language the customer paid for, from GUIDE_LANGUAGES:
+  /// a guide speaking it is assigned beside the vehicle and the driver, and
+  /// the receipt charges the location's guide rate. Null without a guide.
+  guideLanguage        String?
+  /// A language the customer asked for that is not on sale, free: Operation
+  /// looks for a guide and, when one is found, amends the trip. Null when
+  /// none was asked.
+  guideRequest         String?
   flightNumber         String?
   notes                String?
 

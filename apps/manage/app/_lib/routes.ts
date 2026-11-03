@@ -322,6 +322,7 @@ export const RATES_PAGES = [
   "classes",
   "grid",
   "hourly",
+  "guides",
   "rules",
   "try",
 ] as const;
@@ -332,6 +333,7 @@ export const RATES_PAGE_LABELS: Record<RatesPage, string> = {
   classes: "Classes",
   grid: "Rate Grid",
   hourly: "Hourly Rates",
+  guides: "Tour Guide Rates",
   rules: "Trip Rules",
   try: "Try a Trip",
 };

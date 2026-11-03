@@ -3,7 +3,6 @@ import {
   BOOKING_RULES,
   chargedKmOf,
   flightOfTrip,
-  guideIssue,
   formatLocalDateTime,
   hourlyChoiceLabel,
   isAirportPlace,
@@ -120,6 +119,7 @@ export async function quoteTripView(
       modelChoiceSen: c.modelChoice?.amountSen ?? null,
       availability: c.availability,
     })),
+    guides: quote.guides,
   };
 }
 
@@ -172,8 +172,6 @@ export async function prepareFormItem(
   const { category, search, override } = parsed.trip;
   const options = parseTripOptions(category, formData);
   if (!options) return NO_VEHICLE;
-  const noLanguage = guideIssue(options);
-  if (noLanguage) return { ok: false, error: noLanguage };
 
   const trip = await resolveTrip(search);
   if (!trip.ok) return { ok: false, error: trip.message };
@@ -224,8 +222,6 @@ export async function prepareFormItems(
   }
   const options = parseTripOptions(category, formData);
   if (!options) return NO_VEHICLE;
-  const noLanguage = guideIssue(options);
-  if (noLanguage) return { ok: false, error: noLanguage };
 
   const resolved = await Promise.all(
     trips.map((trip) => resolveTrip(trip.search)),

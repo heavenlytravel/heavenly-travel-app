@@ -1,6 +1,5 @@
 import { formatLocalDateTime } from "./booking-rules";
 import {
-  includesGuide,
   isTripCategory,
   TRIP_CATEGORY_LABELS,
   TRIP_MODE_LABELS,
@@ -157,11 +156,10 @@ export function tripDetailRows(details: {
   vehicleModelName?: string | null;
   passengers: number;
   childSeats: number;
-  /** A tour guide goes with it: a coach's, included, or a car's, added. */
-  withGuide?: boolean;
-  /** The languages asked of the guide. */
-  guideLanguages?: readonly string[];
-  vehicleClassCategory?: string;
+  /** The tour guide's language, paid for; null or left out without one. */
+  guideLanguage?: string | null;
+  /** A language asked for, not on sale. */
+  guideRequest?: string | null;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
@@ -171,17 +169,9 @@ export function tripDetailRows(details: {
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
   }
-  if (details.withGuide) {
-    const category = details.vehicleClassCategory;
-    const how =
-      isTripCategory(category) && includesGuide(category)
-        ? "Included"
-        : "Added";
-    const languages = details.guideLanguages ?? [];
-    rows.push([
-      "Tour guide",
-      languages.length > 0 ? `${how} · ${languages.join(", ")}` : how,
-    ]);
+  if (details.guideLanguage) rows.push(["Tour guide", details.guideLanguage]);
+  if (details.guideRequest) {
+    rows.push(["Guide asked for", `${details.guideRequest}, on request`]);
   }
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
@@ -282,6 +272,12 @@ export function priceRows(
         ? `${price.model.name}, chosen, +${price.model.percent}%`
         : `${price.model.name}, chosen`,
       formatMyr(price.model.amountSen),
+    ]);
+  }
+  if (price.guide) {
+    rows.push([
+      `Tour guide, ${price.guide.language}`,
+      formatMyr(price.guide.amountSen),
     ]);
   }
   return rows;

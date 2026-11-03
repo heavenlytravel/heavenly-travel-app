@@ -4,6 +4,7 @@ import {
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
   formatMyr,
+  guideOfferIssue,
   parseContact,
   TRIP_CATEGORY_LABELS,
   type BBox,
@@ -22,6 +23,7 @@ import { TripStep, VehicleStep } from "../_components/ItemSteps";
 import { Step, StepFoot } from "../_components/Step";
 import {
   agreedPriceIssue,
+  bookingGuideOffers,
   bookingTotalSen,
   chosenVehicle,
   clashNotes,
@@ -121,6 +123,9 @@ export function NewBookingForm({
       return issue && several ? `Trip ${index + 1}: ${issue}` : issue;
     })
     .find((issue) => issue !== null);
+  const guideOffers = bookingGuideOffers(trips);
+  const guideIssue =
+    unpriced < 0 ? guideOfferIssue(details.guide.language, guideOffers) : null;
   const missing = !customer.ok
     ? "Fill in the customer."
     : unpriced >= 0
@@ -133,8 +138,8 @@ export function NewBookingForm({
             .label.toLowerCase()}.`
         : !chosen
           ? "Choose a vehicle."
-          : (priceIssue ?? null);
-  const totalSen = bookingTotalSen(trips, chosen, true);
+          : (priceIssue ?? guideIssue);
+  const totalSen = bookingTotalSen(trips, chosen, true, details.guide.language);
   const locations = [
     ...new Set(trips.flatMap((draft) => draft.quote?.location ?? [])),
   ];
@@ -257,6 +262,8 @@ export function NewBookingForm({
               setDetails((current) => ({ ...current, ...patch }))
             }
             category={category}
+            guideOffers={guideOffers}
+            guideIssue={guideIssue}
             airports={{
               arriving: trips.some((draft) => draft.quote?.pickupAirport),
               departing: trips.some((draft) => draft.quote?.dropoffAirport),
@@ -306,7 +313,7 @@ export function NewBookingForm({
             trips={trips.map((draft, index) => ({
               id: draft.id,
               label: several ? `Trip ${index + 1}` : null,
-              quotedSen: tripQuotedSen(draft, chosen),
+              quotedSen: tripQuotedSen(draft, chosen, details.guide.language),
               agreedPrice: draft.agreedPrice,
               priceReason: draft.priceReason,
             }))}

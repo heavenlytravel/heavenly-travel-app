@@ -1,18 +1,25 @@
 "use client";
 
 import {
-  GUIDE_LANGUAGES,
-  guideIssue,
-  guideOfChoice,
-  includesGuide,
+  formatMyr,
   offersChildSeats,
+  requestableLanguages,
   TRIP_MAX_CHILD_SEATS,
   TRIP_MAX_FLIGHT_NUMBER_LENGTH,
   TRIP_MAX_NOTES_LENGTH,
+  type GuideChoice,
+  type GuideOffer,
   type TripCategory,
 } from "@repo/db";
-import { Badge } from "@repo/ui/badge";
-import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
+import {
+  Checkbox,
+  Field,
+  FieldGroup,
+  Input,
+  Radio,
+  Textarea,
+} from "@repo/ui/field";
+import { FormError } from "@repo/ui/form-error";
 import { Select } from "@repo/ui/select";
 import {
   detailsLine,
@@ -27,15 +34,17 @@ import { Step, StepFoot } from "./Step";
  * the departing flight once, each only when a trip picks up or drops off
  * at an airport, and copies them onto the trips they are for. Child seats,
  * where the category has them, and the note go on every trip. Its
- * add-ons are the website's: the tour guide, ticked and included for a
- * coach, the admin's to tick for a car, with the languages they should
- * speak, one or more (docs/261103-tour-guide.md).
+ * add-ons are the website's: the tour guide in one language on sale for
+ * every trip (Rates' Tour Guide Rates), priced into each, and another
+ * language asked for, free (docs/261103-tour-guide.md).
  */
 export function DetailsStep({
   number,
   details,
   onChange,
   category,
+  guideOffers,
+  guideIssue,
   airports,
   done,
   open,
@@ -47,6 +56,10 @@ export function DetailsStep({
   /** Names only fields of the shape given. */
   onChange: (patch: Partial<ItemDetails & BookingDetails>) => void;
   category: TripCategory;
+  /** The guide languages on sale for every trip, at their price for them all. */
+  guideOffers: readonly GuideOffer[];
+  /** Why the guide chosen cannot be booked; null when it can. */
+  guideIssue: string | null;
   /** A new booking's: whether a trip picks up at an airport, and whether one drops off at one. */
   airports?: { arriving: boolean; departing: boolean };
   /** The vehicle is chosen, so nothing before it waits. */
@@ -55,21 +68,10 @@ export function DetailsStep({
   onOpen: () => void;
   onDone: () => void;
 }) {
-  const included = includesGuide(category);
-  const guide = guideOfChoice(category, details.guide);
-  const issue = guideIssue(guide);
-
-  function toggle(language: string, ticked: boolean) {
-    const chosen = new Set(details.guide.languages);
-    if (ticked) chosen.add(language);
-    else chosen.delete(language);
-    onChange({
-      guide: {
-        ...details.guide,
-        languages: GUIDE_LANGUAGES.filter((l) => chosen.has(l)),
-      },
-    });
-  }
+  const guide = details.guide;
+  const others = requestableLanguages(guideOffers);
+  const setGuide = (change: Partial<GuideChoice>) =>
+    onChange({ guide: { ...guide, ...change } });
 
   return (
     <Step
@@ -77,7 +79,7 @@ export function DetailsStep({
       title="Details"
       optional
       done={done}
-      summary={detailsLine(details, category)}
+      summary={detailsLine(details)}
       open={open}
       onOpen={onOpen}
     >
@@ -136,38 +138,81 @@ export function DetailsStep({
         </Field>
         <FieldGroup className="grid gap-3 sm:col-span-2">
           <p className="text-sm font-semibold text-ink">Add-ons</p>
+          {guideOffers.length > 0 ? (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={guide.language !== null}
+                onChange={(event) =>
+                  setGuide({
+                    language: event.currentTarget.checked
+                      ? guideOffers[0]!.language
+                      : null,
+                  })
+                }
+              />
+              Tour guide
+            </label>
+          ) : (
+            <p className="text-sm text-muted">
+              No tour guide is on sale for{" "}
+              {"flightNumber" in details ? "this trip" : "these trips"}: its
+              location has no guide rate for it.
+            </p>
+          )}
+          {guide.language !== null ? (
+            <fieldset className="grid gap-2 pl-6">
+              <legend className="mb-2 text-sm text-body">
+                The language the guide speaks
+              </legend>
+              <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                {guideOffers.map((offer) => (
+                  <label
+                    key={offer.language}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <Radio
+                      name="guideLanguage"
+                      checked={guide.language === offer.language}
+                      onChange={() => setGuide({ language: offer.language })}
+                    />
+                    <span className="flex-1">{offer.language}</span>
+                    <span className="tabular-nums">
+                      {formatMyr(offer.amountSen)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {guideIssue ? <FormError error={guideIssue} /> : null}
+            </fieldset>
+          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
-              checked={guide.withGuide}
-              disabled={included}
+              checked={guide.request !== null}
               onChange={(event) =>
-                onChange({
-                  guide: {
-                    ...details.guide,
-                    added: event.currentTarget.checked,
-                  },
+                setGuide({
+                  request: event.currentTarget.checked
+                    ? (others.find((l) => l !== guide.language) ?? null)
+                    : null,
                 })
               }
             />
-            Tour guide
-            {included ? <Badge tone="green">Included</Badge> : null}
+            A guide in another language, asked for
           </label>
-          {guide.withGuide ? (
+          {guide.request !== null ? (
             <fieldset className="grid gap-2 pl-6">
               <legend className="mb-2 text-sm text-body">
-                Languages the guide should speak
+                Free to ask. Once a guide is found, amend the trip to add them.
               </legend>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-                {GUIDE_LANGUAGES.map((language) => (
+                {others.map((language) => (
                   <label
                     key={language}
                     className="flex items-center gap-2 text-sm"
                   >
-                    <Checkbox
-                      checked={details.guide.languages.includes(language)}
-                      onChange={(event) =>
-                        toggle(language, event.currentTarget.checked)
-                      }
+                    <Radio
+                      name="guideRequest"
+                      checked={guide.request === language}
+                      onChange={() => setGuide({ request: language })}
                     />
                     {language}
                   </label>
@@ -179,8 +224,8 @@ export function DetailsStep({
       </div>
       <StepFoot
         label="Done"
-        disabled={issue !== null}
-        missing={issue}
+        disabled={guideIssue !== null}
+        missing={guideIssue}
         onNext={onDone}
       />
     </Step>

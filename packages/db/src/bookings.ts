@@ -624,9 +624,8 @@ function amendedFieldsOf(
     passengers: number;
     childSeats?: number;
     flightNumber?: string | null;
-    withGuide?: boolean;
-    /** A list, stored or prepared. */
-    guideLanguages?: unknown;
+    guideLanguage?: string | null;
+    guideRequest?: string | null;
   },
 ): AmendedFields {
   return {
@@ -640,12 +639,13 @@ function amendedFieldsOf(
     passengers: details.passengers,
     childSeats: details.childSeats ?? 0,
     flightNumber: details.flightNumber ?? null,
-    tourGuide: details.withGuide
-      ? (Array.isArray(details.guideLanguages)
-          ? details.guideLanguages
-          : []
-        ).join(", ")
-      : null,
+    tourGuide:
+      [
+        details.guideLanguage,
+        details.guideRequest ? `${details.guideRequest} on request` : null,
+      ]
+        .filter(Boolean)
+        .join(", ") || null,
     priceTotalSen: item.priceTotalSen,
   };
 }

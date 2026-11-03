@@ -20,30 +20,41 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
   accepted for, as a driver does. One who has been on a trip cannot be deleted.
 - **The vendor accepts and names the guide,** as for a vehicle: there is no guide's own
   yes, and on the day the driver reports the trip. Ours is accepted by Operation.
-- **Per trip.** `TripItemDetails.withGuide` says a trip goes with a guide; a trip with one
-  needs three roles assigned (`rolesOf`), vehicle, driver and guide, each its own
-  `TripPart` (role "guide", `guideId`), its own vendor and its own "Pay vendor". A guide
-  goes with any class, so any of them may be picked for any trip; a clash with another
-  trip of theirs refuses, and the drive between trips warns, as for a driver.
-- **A coach always goes with a guide, included in its price** (user, 2026-11-03), on every
-  coach trip, one-way too (G6, to verify with the team). Every coach trip booked from
-  now on has `withGuide`. Trips booked before keep none until amended.
-- **A car's guide is an add-on the customer ticks** (user, 2026-11-03), for every trip of
-  the booking. It adds no charge until Ops settles how it is priced (G1).
+- **Per trip.** `TripItemDetails.guideLanguage` is the language paid for; a trip with
+  one (`hasGuide`) needs three roles assigned (`rolesOf`), vehicle, driver and guide,
+  each its own `TripPart` (role "guide", `guideId`), its own vendor and its own pay. A
+  guide goes with any class; a clash with another trip of theirs refuses, and the drive
+  between trips warns, as for a driver.
+- **A paid add-on, for car and coach, one-way and hourly** (user, 2026-11-03, replacing
+  "included on a coach" and "free on a car"). Nothing is included any more.
+- **Guide rates, per location** (user, 2026-11-03; G1 answered): Rates > Tour Guide Rates,
+  one row per language with an "On the website" switch and five prices: One-way, 4
+  hours, 8 hours, 12 hours and Extra hour (`GuideRate`). The first sheet from Ops:
+  Malay RM80 / 150 / 200, English 120 / 200 / 250, Mandarin 150 / 300 / 350, Arabic
+  200 / 360 / 450 (one-way, half day = 4 hours, full day = 8 hours); 12 hours and the
+  extra hour are Ops' to fill.
+- **A language is sold on a trip only when it is switched on and the trip's price is
+  set** (`guideOffers`): One-way for a one-way trip, the hire's duration for an hourly
+  one, plus Extra hour when hours are added. Missing anything, it is not shown at all.
+  With no language on sale, the Add-ons do not show. A booking of several trips shows
+  the languages on sale for every trip, at their sum (`guideOffersOnAll`).
+- **The customer chooses one language** (user, 2026-11-03, replacing "one or more"),
+  since the price is the language's. The receipt carries it as its own line, "Tour
+  guide, English", with no surcharge (`withGuideCharge`); the quote is checked again
+  when booking.
+- **Any other language may be asked for, free** (`guideRequest`): "Ask for a guide in
+  another language". It is shown on the trip and on Assign. If Operation finds a guide,
+  it amends the trip to that language; the extra payment waits for the Finance flow
+  (additional invoice).
+- **Assign: the guide must speak the language paid for.** One who does not is greyed,
+  "Does not speak Arabic", and refused by the writer, for Operation and for a vendor
+  naming one in Connect.
 - **Add-ons sit under "Your vehicle" on the Confirm page** (user, 2026-11-03, replacing
-  the separate Add-ons step): the tour guide's box, ticked and greyed with "Included" for
-  a coach, the customer's to tick for a car. Room for more add-ons later.
-- **The customer chooses the guide's languages, one or more** (G3, user, 2026-11-03),
-  English ticked to start; the booking refuses a guide with none
-  (`GUIDE_LANGUAGES_REQUIRED`). They are kept on the trip (`guideLanguages`), shown
-  with "Tour guide: Included · English" on the trip's details and on Assign. Assign lists
-  guides who speak them first, and warns "Does not speak Japanese" on one who does not,
-  without refusing: Operation may have no one better.
+  the separate Add-ons step). Room for more add-ons later.
 - **The console books and amends as the website does** (user, 2026-11-03): its Details
-  step has the same Add-ons, the tour guide and its languages, for New booking and for
-  Amend. An amend may add or drop a car's guide or change the languages; like any amend,
-  it asks every role of the trip again. A coach trip from before guides gets one when
-  amended.
+  step has the same Add-ons for New booking and for Amend, at the same prices. An amend
+  re-prices the guide like the rest of the trip, and, like any amend, asks every role
+  again.
 - **One person may be the driver and the guide** (G4, user, 2026-11-03), and the vendor's
   owner too: they are entered in both places, as a driver and as a guide, and named on
   both cards. Their Connect job does not show them their own name as the guide (same
@@ -53,19 +64,21 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
 
 ## To confirm
 
-| #   | Question                                                                                | Who  | Holds up                               |
-| --- | --------------------------------------------------------------------------------------- | ---- | -------------------------------------- |
-| G1  | A car's guide: flat per trip, per Duration (4/8/12h) or per hour? On one-way trips too? | Team | The car guide's price; free until then |
-| G6  | A coach's guide on a one-way coach transfer too, or hourly coach hire only?             | Team | Nothing; built as every coach trip     |
-| G7  | Is `GUIDE_LANGUAGES` the right list?                                                    | Ops  | Nothing                                |
+| #   | Question                                | Who | Holds up                       |
+| --- | --------------------------------------- | --- | ------------------------------ |
+| G7  | Is `GUIDE_LANGUAGES` the right list?    | Ops | Nothing                        |
+| G8  | The 12-hour and extra hour guide prices | Ops | Selling a guide on those hires |
+
+G1 (how a guide is priced) and G6 (coach one-way) were answered on 2026-11-03: per
+location, by language and trip shape, on every trip, paid.
 
 ## Production order
 
-The push adds a table (`Guide`), nullable `TripPart.guideId` and
-`TripItemDetails.withGuide` and `guideLanguages` with defaults, so today's code runs on it unchanged. Push before
-the merge (`pnpm db:push`, then `pnpm db:push:prod`). After the merge, coach trips booked
-from then on wait for a guide before they are assigned: Operation needs a guide entered,
-ours or a vendor's, before the first one.
+The push adds two tables (`Guide`, `GuideRate`), nullable `TripPart.guideId` and
+nullable `TripItemDetails.guideLanguage` and `guideRequest`, so today's code runs on it
+unchanged. Push before the merge (`pnpm db:push`, then `pnpm db:push:prod`). Nothing is
+sold until Ops fills Tour Guide Rates and switches a language on; enter a guide who speaks
+it, ours or a vendor's, before then.
 
 ## Not yet
 

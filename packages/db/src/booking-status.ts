@@ -27,26 +27,6 @@ export const TRIP_CATEGORY_LABELS: Record<TripCategory, string> = {
 export const offersChildSeats = (category: TripCategory) =>
   category === "car-with-driver";
 
-/**
- * A coach goes with a tour guide, included in its price; a car's guide is
- * an add-on the customer ticks, with no charge until Ops settles how it
- * is priced (G1 in docs/261103-tour-guide.md).
- */
-export const includesGuide = (category: TripCategory) =>
-  category === "coach-charter";
-
-/** Whether a trip goes with a guide, and in which languages: none without one. */
-export function guideOf(
-  category: TripCategory,
-  choice: { withGuide: boolean; guideLanguages: readonly string[] },
-) {
-  const withGuide = includesGuide(category) || choice.withGuide;
-  return {
-    withGuide,
-    guideLanguages: withGuide ? [...choice.guideLanguages] : [],
-  };
-}
-
 export const TRIP_MODES = ["oneway", "hourly"] as const;
 export type TripMode = (typeof TRIP_MODES)[number];
 export const isTripMode = guardFor(TRIP_MODES);

@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   clashesOf,
   formatMyr,
+  guideChoiceOf,
   guideEntries,
-  guideIssue,
-  guideOfChoice,
-  NO_GUIDE,
+  guideOfferIssue,
+  guideOffersOnAll,
   modelsLine,
   isAirportPlace,
   plural,
@@ -96,8 +96,9 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
  * added. "Your vehicle" has the class for all the trips, pictured and
  * with its models as on the vehicle page (any of them is sent, whichever
  * is free on the day: choosing a model is not offered for now), the
- * group, and under it the add-ons: the tour guide, a coach's included, a
- * car's to tick, with the languages they should speak (./AddOns). The details ask the contact, the flights for the trips at an
+ * group, and under it the add-ons: the tour guide in a language on sale
+ * for every trip, priced into each, and another asked for (./AddOns). The
+ * details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
  * the total and the cancellation terms; it says which trip to fix while
  * any is red. A link with today's one-trip confirm address still opens
@@ -139,13 +140,10 @@ export function ConfirmStep({
       updatePlan((now) => ({
         ...now,
         classId: options.vehicleClassId,
-        guide: {
-          added: options.withGuide,
-          languages:
-            options.guideLanguages.length > 0
-              ? options.guideLanguages
-              : NO_GUIDE.languages,
-        },
+        guide: guideChoiceOf({
+          language: options.guideLanguage,
+          request: options.guideRequest,
+        }),
         forDriver: {
           // The flight goes on the trip it is for once its places are known.
           arrivingFlight: options.flightNumber ?? "",
@@ -230,18 +228,34 @@ export function ConfirmStep({
         ? `all ${trips.length} trips`
         : "the trip";
   const card = chosen?.card ?? null;
-  const chosenGuide = guideOfChoice(category, guide);
-  const { withGuide } = chosenGuide;
+  // The guide languages every trip sells, once every trip is priced.
+  const views = trips.map((trip) => quoteOf(priced, trip)?.view);
+  const guideOffers =
+    complete && views.every((view) => view?.ok)
+      ? guideOffersOnAll(views.map((view) => (view?.ok ? view.guides : [])))
+      : [];
+  const guideIssue = complete
+    ? guideOfferIssue(guide.language, guideOffers)
+    : null;
+  /** What the guide adds to a trip; 0 without one. */
+  const guideOn = (index: number) => {
+    const view = views[index];
+    if (!guide.language || !view?.ok) return 0;
+    return (
+      view.guides.find((offer) => offer.language === guide.language)
+        ?.amountSen ?? 0
+    );
+  };
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
-  /** A trip's price in the chosen vehicle, any of its models. */
+  /** A trip's price in the chosen vehicle, any of its models, with the guide. */
   const priceOn = (index: number) => {
     const here = onTrip[index];
     if (!here || here.totalSen === null || !here.availability.ok) {
       return null;
     }
-    return here.totalSen;
+    return here.totalSen + guideOn(index);
   };
   const totalSen = trips.reduce(
     (sum, _, index) => sum + (priceOn(index) ?? 0),
@@ -306,7 +320,7 @@ export function ConfirmStep({
       ? `Change or remove ${red.join(", ")} first: ${
           red.length === 1 ? "it is" : "they are"
         } marked in red.`
-      : guideIssue(chosenGuide);
+      : guideIssue;
 
   const arrivingAt = trips.filter((t) => isAirportPlace(t.pickup));
   const departingAt = trips.filter(
@@ -322,7 +336,7 @@ export function ConfirmStep({
       ? [[CONFIRM_FIELDS.vehicleClass, card.id] as [string, string]]
       : []),
     [CONFIRM_FIELDS.passengers, String(passengers)],
-    ...guideEntries(category, guide),
+    ...guideEntries(guide),
   ];
 
   const timeline = (
@@ -407,7 +421,7 @@ export function ConfirmStep({
         </div>
       </div>
       <AddOns
-        category={category}
+        offers={guideOffers}
         guide={guide}
         forWhich={`for ${forWhich}`}
         onGuide={(change) =>
@@ -435,7 +449,7 @@ export function ConfirmStep({
                 ? [
                     card.name,
                     plural(passengers, "passenger"),
-                    ...(withGuide ? ["Tour guide"] : []),
+                    ...(guide.language ? ["Tour guide"] : []),
                   ].join(" · ")
                 : null
             }

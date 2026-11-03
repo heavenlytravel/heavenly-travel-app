@@ -117,7 +117,13 @@ export type TripPriceBreakdown = {
   } | null;
   /** The model the customer chose, by name, and what choosing it added; null when any model would do. */
   model: { name: string; percent: number | null; amountSen: number } | null;
-  /** Before the surcharges and the model. */
+  /**
+   * The tour guide paid for, in their language, at the location's guide
+   * rate for the trip, with no surcharge; null without one, and on
+   * receipts from before guides were priced.
+   */
+  guide: { language: string; amountSen: number } | null;
+  /** Before the surcharges, the model and the guide. */
   subtotalSen: number;
   totalSen: number;
   /**
@@ -211,6 +217,7 @@ export function priceTrip(input: TripPriceInput): TripPriceBreakdown {
     surcharge,
     weekend,
     model: null,
+    guide: null,
     subtotalSen,
     totalSen:
       subtotalSen + (surcharge?.amountSen ?? 0) + (weekend?.amountSen ?? 0),
@@ -243,6 +250,25 @@ export function withModelChoice(
     ...price,
     model: { name: modelName, percent: charge.percent, amountSen },
     totalSen: price.totalSen - (price.model?.amountSen ?? 0) + amountSen,
+  };
+}
+
+/**
+ * The receipt with the tour guide: their language and price, added to the
+ * total as it is, or none. A guide already on the receipt is replaced.
+ */
+export function withGuideCharge(
+  price: TripPriceBreakdown,
+  guide: { language: string; amountSen: number } | null,
+): TripPriceBreakdown {
+  if (guide && !(guide.amountSen >= 0)) {
+    throw new RangeError("the guide's price must be zero or more");
+  }
+  return {
+    ...price,
+    guide,
+    totalSen:
+      price.totalSen - (price.guide?.amountSen ?? 0) + (guide?.amountSen ?? 0),
   };
 }
 
@@ -317,10 +343,18 @@ function isModelCharge(
   );
 }
 
+function isGuideCharge(
+  value: unknown,
+): value is NonNullable<TripPriceBreakdown["guide"]> {
+  if (typeof value !== "object" || value === null) return false;
+  const g = value as Record<string, unknown>;
+  return typeof g.language === "string" && typeof g.amountSen === "number";
+}
+
 /**
  * Reads a stored `priceBreakdown` back from JSON, in the shape above or one
  * before it (a multiplier, no route, no surcharge, no model, no zone trip,
- * a base fare and a minimum fare, no weekend surcharge, an hourly rate in
+ * no guide, a base fare and a minimum fare, no weekend surcharge, an hourly rate in
  * place of a package). Null when the value is not a receipt.
  */
 export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
@@ -349,6 +383,7 @@ export function priceBreakdownOf(value: unknown): TripPriceBreakdown | null {
     surcharge: isSurcharge(p.surcharge) ? p.surcharge : null,
     weekend: isWeekendCharge(p.weekend) ? p.weekend : null,
     model: isModelCharge(p.model) ? p.model : null,
+    guide: isGuideCharge(p.guide) ? p.guide : null,
     subtotalSen: p.subtotalSen,
     totalSen: p.totalSen,
     multiplier: typeof p.multiplier === "number" ? p.multiplier : 1,

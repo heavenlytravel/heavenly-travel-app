@@ -51,6 +51,7 @@ export const MENU_ICONS = {
   "rate-classes": TagIcon,
   "rate-grid": Grid3x3Icon,
   "rate-hourly": ClockIcon,
+  "rate-guides": FlagIcon,
   "rate-rules": SlidersHorizontalIcon,
   "rate-try": RouteIcon,
   website: HouseIcon,

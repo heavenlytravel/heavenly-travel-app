@@ -1,6 +1,5 @@
 import { localDateTimeInputs } from "./booking-rules";
 import {
-  guideOf,
   isTripMode,
   offersChildSeats,
   type TripCategory,
@@ -13,7 +12,7 @@ import {
   isHourlyPackage,
   type HourlyChoice,
 } from "./hourly-input";
-import { guideLanguagesOf } from "./guide-input";
+import { GUIDE_LANGUAGES } from "./guide-input";
 import type { TripView } from "./trip-view";
 
 /**
@@ -60,71 +59,59 @@ export type TripOptions = {
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
-  /** A tour guide goes on it: always on a coach, on a car when added. */
-  withGuide: boolean;
-  /** The languages the guide should speak; empty without a guide. */
-  guideLanguages: string[];
+  /** The tour guide's language, paid for; null without a guide. */
+  guideLanguage: string | null;
+  /** Another language asked for, free, not on sale; null when none. */
+  guideRequest: string | null;
 };
 
-/** Why a trip with a guide cannot be booked yet, at the languages' boxes. */
-export const GUIDE_LANGUAGES_REQUIRED =
-  "Choose at least one language for your tour guide.";
+/**
+ * The tour guide as a booking form holds it and a trip keeps it: the
+ * language paid for, one on sale for every trip (./guide-rates-input),
+ * and another the customer asks Operation to look for. Either may be
+ * null; the two are never the same. The website's confirm page and the
+ * console's booking forms keep it so. See docs/261103-tour-guide.md.
+ */
+export type GuideChoice = { language: string | null; request: string | null };
 
-/** Why the trip's guide cannot be booked as chosen: no language for them; null when it can. */
-export function guideIssue(choice: {
-  withGuide: boolean;
-  guideLanguages: readonly string[];
-}): string | null {
-  return choice.withGuide && choice.guideLanguages.length === 0
-    ? GUIDE_LANGUAGES_REQUIRED
+export const NO_GUIDE: GuideChoice = { language: null, request: null };
+
+const knownLanguage = (value: unknown) =>
+  typeof value === "string" &&
+  (GUIDE_LANGUAGES as readonly string[]).includes(value)
+    ? value
     : null;
+
+/** A choice made of any two values: unknown languages dropped, and a request the same as the language. */
+export function guideChoiceOf(values: {
+  language: unknown;
+  request: unknown;
+}): GuideChoice {
+  const language = knownLanguage(values.language);
+  const request = knownLanguage(values.request);
+  return { language, request: request === language ? null : request };
 }
 
-/**
- * The tour guide as a booking form holds it before posting: a car's when
- * added (a coach has one whatever `added` says) and the languages ticked.
- * The website's confirm page and the console's booking forms keep it so.
- */
-export type GuideChoice = { added: boolean; languages: string[] };
-
-/** No guide added; English ticked for when one is. */
-export const NO_GUIDE: GuideChoice = { added: false, languages: ["English"] };
-
-/** A form's guide as the trip goes with it: always on a coach, and no languages without one. */
-export function guideOfChoice(category: TripCategory, guide: GuideChoice) {
-  return guideOf(category, {
-    withGuide: guide.added,
-    guideLanguages: guide.languages,
+/** A stored trip's guide as a form starts from it. */
+export function storedGuideChoice(details: {
+  guideLanguage: string | null;
+  guideRequest: string | null;
+}): GuideChoice {
+  return guideChoiceOf({
+    language: details.guideLanguage,
+    request: details.guideRequest,
   });
 }
 
-/** A stored trip's guide as a form starts from it: English ticked when none was asked. */
-export function guideChoiceOf(details: {
-  withGuide: boolean;
-  guideLanguages: readonly string[];
-}): GuideChoice {
-  return {
-    added: details.withGuide,
-    languages:
-      details.guideLanguages.length > 0
-        ? [...details.guideLanguages]
-        : NO_GUIDE.languages,
-  };
-}
-
-/** The guide as a form posts it, `TRIP_PARAM.guide` and each `guideLanguage`; nothing without one. */
-export function guideEntries(
-  category: TripCategory,
-  guide: GuideChoice,
-): [string, string][] {
-  const { withGuide, guideLanguages } = guideOfChoice(category, guide);
-  if (!withGuide) return [];
+/** The guide as a form posts it, `TRIP_PARAM.guide` and `guideRequest`; nothing for none. */
+export function guideEntries(guide: GuideChoice): [string, string][] {
   return [
-    [TRIP_PARAM.guide, "1"],
-    ...guideLanguages.map((language): [string, string] => [
-      TRIP_PARAM.guideLanguage,
-      language,
-    ]),
+    ...(guide.language
+      ? [[TRIP_PARAM.guide, guide.language] as [string, string]]
+      : []),
+    ...(guide.request
+      ? [[TRIP_PARAM.guideRequest, guide.request] as [string, string]]
+      : []),
   ];
 }
 
@@ -143,10 +130,10 @@ export const TRIP_PARAM = {
   childSeats: "childSeats",
   flightNumber: "flight",
   notes: "notes",
-  /** "1" adds a car's tour guide; a coach has one whatever it says. */
+  /** The tour guide's language, paid for. */
   guide: "guide",
-  /** One per language, repeated. */
-  guideLanguage: "guideLanguage",
+  /** A language asked for, not on sale. */
+  guideRequest: "guideRequest",
 } as const;
 
 /** The input names an options form posts, so they match what is parsed. */
@@ -166,21 +153,22 @@ export type QueryInput =
   | string
   | Record<string, string | string[] | undefined>;
 
-/** Every value of each key, in order, so `get` reads the first and `getAll` the repeats (a guide's languages); files are dropped. */
+/** The first value of each key; files and repeats are dropped. */
 export function toParams(input: QueryInput): URLSearchParams {
   if (input instanceof URLSearchParams) return input;
   if (typeof input === "string") return new URLSearchParams(input);
   const params = new URLSearchParams();
   if (input instanceof FormData) {
     for (const [key, value] of input.entries()) {
-      if (typeof value === "string") params.append(key, value);
+      if (typeof value === "string" && !params.has(key)) {
+        params.set(key, value);
+      }
     }
     return params;
   }
   for (const [key, value] of Object.entries(input)) {
-    for (const one of Array.isArray(value) ? value : [value]) {
-      if (one !== undefined) params.append(key, one);
-    }
+    const first = Array.isArray(value) ? value[0] : value;
+    if (first !== undefined) params.set(key, first);
   }
   return params;
 }
@@ -269,10 +257,8 @@ export function parseFlightNumber(raw: string | null): string | null {
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
  * A model is optional; whether the class lets the customer choose it is
- * the pricing's to check. A coach always goes with a guide; a car when
- * "guide" is "1". The guide's languages are the known ones posted, none
- * without a guide; that one is chosen is the booking's to check
- * (`GUIDE_LANGUAGES_REQUIRED`), so a link opens the page to choose them.
+ * the pricing's to check, as is whether the guide's language is on sale.
+ * An unknown language is dropped.
  */
 export function parseTripOptions(
   category: TripCategory,
@@ -295,11 +281,18 @@ export function parseTripOptions(
     childSeats: childSeats ?? 0,
     flightNumber: parseFlightNumber(params.get(TRIP_PARAM.flightNumber)),
     notes: text(params.get(TRIP_PARAM.notes), TRIP_MAX_NOTES_LENGTH),
-    ...guideOf(category, {
-      withGuide: params.get(TRIP_PARAM.guide) === "1",
-      guideLanguages: guideLanguagesOf(params.getAll(TRIP_PARAM.guideLanguage)),
-    }),
+    ...tripGuideFields(
+      guideChoiceOf({
+        language: params.get(TRIP_PARAM.guide),
+        request: params.get(TRIP_PARAM.guideRequest),
+      }),
+    ),
   };
+}
+
+/** A choice as a trip's fields: `guideLanguage` and `guideRequest`. */
+export function tripGuideFields(guide: GuideChoice) {
+  return { guideLanguage: guide.language, guideRequest: guide.request };
 }
 
 /** The search alone as parameters, for links back to the options page. */
@@ -364,7 +357,7 @@ export function tripItemParams(
   const prefix = `item${index}.`;
   const params = new URLSearchParams();
   for (const [key, value] of toParams(input).entries()) {
-    if (key.startsWith(prefix)) params.append(key.slice(prefix.length), value);
+    if (key.startsWith(prefix)) params.set(key.slice(prefix.length), value);
   }
   return params;
 }

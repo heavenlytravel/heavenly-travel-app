@@ -6,6 +6,7 @@ import {
   durationLabel,
   formatLocalDateTime,
   isLive,
+  isOnTheRoad,
   PART_ROLES,
   rolesToAsk,
   tripDetailRows,
@@ -41,6 +42,7 @@ import {
   Stop,
 } from "../../bookings/[id]/BookingScreen";
 import { scopedBooking } from "../../bookings/_lib/scoped-booking";
+import { QuickViewButton } from "../QuickView";
 import { TripReports } from "../TripReports";
 import { AssignForm } from "./AssignForm";
 import { PartCard } from "./PartCard";
@@ -50,8 +52,9 @@ import { PartCard } from "./PartCard";
  * vehicle and the driver it still needs, picked vendor first; each one
  * already asked, with whose answer it waits for and what to do next
  * (name, accept, record a decline, withdraw or release); what its driver
- * reported on the day. Beside them the trip, the customer and the
- * booking's other trips. Opened from the Assign list and the booking's
+ * reported on the day, first once the trip is on the road or done. Beside
+ * them the trip, the customer and the booking's other trips; its
+ * reference opens a quick view of the booking. Opened from the Assign list and the booking's
  * "Who does it". See docs/261028-fulfilment-vendors-and-connect.md.
  */
 export default async function AssignTripPage({
@@ -102,7 +105,9 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
   const thisOpen = open.find((t) => t.id === trip.id);
   const view = tripViewOfItem(item);
   const details = item.tripDetails;
-  const state = assignStateOf({ ...trip, reported: events.length > 0 });
+  const state = assignStateOf({ ...trip, reported: isOnTheRoad(events) });
+  // On the road or done, what the driver reports comes first.
+  const reporting = state === "on-the-road" || state === "done";
   const until = untilPickup(trip.startsAt);
   const toDo = state === "to-assign" || state === "waiting";
 
@@ -119,6 +124,15 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
     facts.push(["Location", item.location.name]);
   }
 
+  const reports = (
+    <TripReports
+      bookingId={booking.id}
+      trips={[trip]}
+      events={events}
+      canFulfil
+    />
+  );
+
   return (
     <>
       <PageHeader
@@ -126,12 +140,11 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
         badge={<AssignStateBadge state={state} />}
         meta={
           <>
-            <Link
+            <QuickViewButton
+              bookingId={booking.id}
+              reference={booking.reference}
               href={bookingHref(scope.slug, booking.id)}
-              className="font-medium text-ink tabular-nums underline-offset-4 hover:underline"
-            >
-              {booking.reference}
-            </Link>
+            />
             {" · "}
             {formatLocalDateTime(trip.startsAt)}
             {" · "}
@@ -151,6 +164,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
       <DetailColumns
         main={
           <>
+            {reporting ? reports : null}
             {thisOpen ? (
               <Card>
                 <CardTitle description="Pick the vendor first, then their vehicle or driver, or Any to let them assign it.">
@@ -191,12 +205,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                 />
               );
             })}
-            <TripReports
-              bookingId={booking.id}
-              trips={[trip]}
-              events={events}
-              canFulfil
-            />
+            {reporting ? null : reports}
           </>
         }
         side={

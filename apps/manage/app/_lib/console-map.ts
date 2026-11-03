@@ -63,13 +63,15 @@ export type ConsoleSection = {
 const RATES_ICONS = {
   classes: "rate-classes",
   grid: "rate-grid",
+  hourly: "rate-hourly",
   rules: "rate-rules",
   try: "rate-try",
 } as const satisfies Record<(typeof RATES_PAGES)[number], MenuIcon>;
 
 const RATES_WORDS: Record<(typeof RATES_PAGES)[number], string> = {
-  classes: "prices hourly class rates",
+  classes: "prices class rates per km",
   grid: "prices routes zone to zone",
+  hourly: "prices hourly packages extra hours",
   rules: "surcharge odd hours weekend holiday extra km cross-location",
   try: "quote price check",
 };
@@ -110,19 +112,19 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     ],
   },
   {
-    key: "board",
-    label: "Board",
-    icon: "board",
+    key: "assign",
+    label: "Assign",
+    icon: "assign",
     group: "operations",
     pages: [
       {
-        key: "board",
-        label: "Board",
-        path: "board",
-        icon: "board",
+        key: "assign",
+        label: "Assign",
+        path: "assign",
+        icon: "assign",
         permission: "bookings.fulfil",
         live: true,
-        words: "dispatch assign trips today drivers vendors",
+        words: "dispatch board trips drivers vehicles vendors pay vendor",
       },
     ],
   },

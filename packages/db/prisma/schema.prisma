@@ -45,7 +45,7 @@ model AdminProfile {
 
 /// App-wide settings, one row with the id "app". See src/settings.ts.
 model AppSetting {
-  id         String   @id
+  id          String   @id
   /// Off, every admin reaches every team screen and action. See
   /// src/permissions.ts.
   wallActive  Boolean  @default(false)
@@ -306,19 +306,21 @@ model Location {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  pages     LocationPage[]
-  addresses LocationAddress[]
+  pages            LocationPage[]
+  addresses        LocationAddress[]
   /// The states it lies in. Its saved addresses are in them, and its zones
   /// are drawn within them.
-  states    State[]
-  offerings LocationVehicleClass[]
-  zones     Zone[]
-  zoneRates ZoneRate[]
-  items     BookingItem[]
-  vehicles  Vehicle[]
-  drivers   Driver[]
+  states           State[]
+  offerings        LocationVehicleClass[]
+  zones            Zone[]
+  zoneRates        ZoneRate[]
+  /// The rate per extra hour of its hourly price list; the packages are its zones'.
+  hourlyExtraRates HourlyExtraRate[]
+  items            BookingItem[]
+  vehicles         Vehicle[]
+  drivers          Driver[]
   /// The vendors that serve it.
-  vendors   Vendor[]
+  vendors          Vendor[]
 
   @@index([state])
 }
@@ -339,12 +341,14 @@ model LocationVehicleClass {
   isActive                Boolean      @default(true)
   /// The rate per extra km: the road past a zone's edge.
   perKmSen                Int
-  hourlyRateSen           Int
+  /// Unused since the hourly grid (docs/261102-booking-ops.md); dropped
+  /// with `minHourlyHours` once no deployed code reads them.
+  hourlyRateSen           Int          @default(0)
   /// A pickup must be at least this far in the future.
   minLeadHours            Int          @default(0)
   /// Customers may cancel until this long before pickup.
   cancellationCutoffHours Int          @default(0)
-  /// Shortest hourly hire; never below the hourly floor in src/booking-rules.ts.
+  /// Unused since the hourly grid; see `hourlyRateSen`.
   minHourlyHours          Int          @default(0)
   /// What a customer pays to choose the model they ride in, among the
   /// class's models with a vehicle in service here: a percentage of the
@@ -377,8 +381,10 @@ model Zone {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  ratesFrom ZoneRate[] @relation("from")
-  ratesTo   ZoneRate[] @relation("to")
+  /// The hourly packages a pickup in it is sold, with their prices.
+  hourlyPackages HourlyPackage[]
+  ratesFrom      ZoneRate[]      @relation("from")
+  ratesTo        ZoneRate[]      @relation("to")
 
   @@index([locationId, sortOrder])
 }
@@ -405,6 +411,57 @@ model ZoneRate {
   @@index([vehicleClassId])
   @@index([fromZoneId])
   @@index([toZoneId])
+}
+
+/// A package a pickup in a zone is sold: 4, 8 or 12 hours
+/// (HOURLY_PACKAGES), the hours it covers from there, and its price per
+/// class. A package with no price for a class is not sold in that class.
+/// See docs/261102-booking-ops.md, "Hourly rate grid".
+model HourlyPackage {
+  id            String   @id @default(cuid())
+  zoneId        String
+  zone          Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  /// 4, 8 or 12: what the package is called.
+  hours         Int
+  /// The hours it covers from this zone, the sheet's "max hour usage":
+  /// usually `hours`, 5 for Langkawi's port cruise 4-hour package.
+  includedHours Int
+  updatedAt     DateTime @updatedAt
+
+  rates HourlyRate[]
+
+  @@unique([zoneId, hours])
+}
+
+/// One cell of the hourly price list: a package's price in one class.
+model HourlyRate {
+  id             String        @id @default(cuid())
+  packageId      String
+  package        HourlyPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  vehicleClassId String
+  vehicleClass   VehicleClass  @relation(fields: [vehicleClassId], references: [id])
+  priceSen       Int
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([packageId, vehicleClassId])
+  @@index([vehicleClassId])
+}
+
+/// What an hour past a package costs at a location, in one class: one rate
+/// per package size, the same from every zone.
+model HourlyExtraRate {
+  id             String       @id @default(cuid())
+  locationId     String
+  location       Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// 4, 8 or 12.
+  packageHours   Int
+  vehicleClassId String
+  vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
+  priceSen       Int
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([locationId, packageHours, vehicleClassId])
+  @@index([vehicleClassId])
 }
 
 /// One page of a location in one locale: its main page, a section's own
@@ -514,12 +571,14 @@ model VehicleClass {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tripItems TripItemDetails[]
-  offerings LocationVehicleClass[]
-  zoneRates ZoneRate[]
-  models    VehicleModel[]
+  tripItems        TripItemDetails[]
+  offerings        LocationVehicleClass[]
+  zoneRates        ZoneRate[]
+  hourlyRates      HourlyRate[]
+  hourlyExtraRates HourlyExtraRate[]
+  models           VehicleModel[]
   /// The drivers who may drive it.
-  drivers   Driver[]
+  drivers          Driver[]
 
   @@index([category, isActive])
 }

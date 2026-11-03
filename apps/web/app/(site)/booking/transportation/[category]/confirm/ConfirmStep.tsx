@@ -61,7 +61,7 @@ import { CONFIRM_FIELDS } from "./fields";
 /** What a link brought: today's one-trip confirm address, read as a plan of one. */
 export type ConfirmSeed = { search: TripSearch; options: TripOptions };
 
-/** The two sides from `lg`: the trips and the vehicle, then "Your details". */
+/** The two sides from `lg`: the trips and the vehicle, then "Customer Info". */
 const columns =
   "grid grid-cols-[minmax(0,1fr)] gap-7 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start";
 
@@ -78,7 +78,7 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
 
 /**
  * The confirm step, laid out as B: the trips and the vehicle on the left,
- * which stay in view while "Your details" on the right scroll with the
+ * which stay in view while "Customer Info" on the right scroll with the
  * page. On a phone the trips and the vehicle fold into one line above the
  * details, which come first; it pins under the header as the page
  * scrolls, and unfolds by itself when a trip turns red. The trips are
@@ -254,11 +254,6 @@ export function ConfirmStep({
             tone: "red",
             text: `Too soon to book online: ${card.name} needs ${here.availability.minLeadHours} hours notice. Choose a later time, or WhatsApp us.`,
           };
-        case "too-few-hours":
-          return {
-            tone: "red",
-            text: `${card.name} is hired for at least ${here.availability.minHourlyHours} hours. Make this hire longer.`,
-          };
         case "not-on-route":
           return {
             tone: "red",
@@ -432,7 +427,7 @@ export function ConfirmStep({
         <div>
           <section aria-labelledby="details" className={panel}>
             <h2 id="details" className="mb-4 font-serif text-2xl">
-              Your details
+              Customer Info
             </h2>
             <ConfirmForm
               category={category}

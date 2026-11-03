@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BOOKING_RULES,
   CATEGORY_RULE_DEFAULTS,
   MODEL_CHOICE_FIELDS,
   modelChoiceOf,
@@ -48,7 +47,6 @@ const TIPS: Partial<Record<OfferingField, string>> = {
   minLeadHours: "Hours before pickup a booking must be made.",
   cancellationCutoffHours:
     "Hours before pickup a customer may still cancel. A booking keeps the cutoff it was made with.",
-  minHourlyHours: `The shortest hourly hire, ${BOOKING_RULES.hourlyFloorHours} to ${BOOKING_RULES.maxHourlyHours} hours.`,
 };
 
 type RuleField = (typeof OFFERING_RULE_FIELDS)[number];
@@ -59,7 +57,6 @@ type RuleTexts = Record<RuleField, string>;
 const ruleTexts = (rules: OfferingRules): RuleTexts => ({
   minLeadHours: String(rules.minLeadHours),
   cancellationCutoffHours: String(rules.cancellationCutoffHours),
-  minHourlyHours: String(rules.minHourlyHours),
 });
 
 /** A field's label with its unit, and its tip when it has one, as `Field` takes them. */
@@ -293,10 +290,6 @@ export function OfferingForm({
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <MoneyInput field="perKmSen" defaultSen={offering?.perKmSen} />
-              <MoneyInput
-                field="hourlyRateSen"
-                defaultSen={offering?.hourlyRateSen}
-              />
             </div>
             <ModelChoiceField offering={offering} />
             {/* The tip beside the label, not in it: its button would join the box's name. */}
@@ -315,22 +308,13 @@ export function OfferingForm({
 
         <Card>
           <CardTitle>Rules at this location</CardTitle>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {OFFERING_RULE_FIELDS.map((field) => (
               <Field key={field} {...offeringField(field, "hours")}>
                 <NumberField
                   name={field}
                   step={1}
-                  min={
-                    field === "minHourlyHours"
-                      ? BOOKING_RULES.hourlyFloorHours
-                      : 0
-                  }
-                  max={
-                    field === "minHourlyHours"
-                      ? BOOKING_RULES.maxHourlyHours
-                      : undefined
-                  }
+                  min={0}
                   required
                   value={rules[field]}
                   onChange={(e) =>

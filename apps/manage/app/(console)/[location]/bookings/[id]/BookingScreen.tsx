@@ -62,7 +62,7 @@ import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
 import { CancelBookingControl, ItemActions } from "./BookingControls";
 import { Notes } from "./Notes";
-import { TripReports } from "./TripReports";
+import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
@@ -188,12 +188,14 @@ export async function bookingScreen({
               bookingId={booking.id}
               trips={fulfilment}
               canFulfil={canFulfil}
+              scope={scope.slug}
             />
+            {/* To read here: Operation reports for a driver under Assign. */}
             <TripReports
               bookingId={booking.id}
               trips={fulfilment}
               events={events}
-              canFulfil={canFulfil}
+              canFulfil={false}
             />
             {booking.items.map((item) => (
               <TripCard
@@ -228,7 +230,7 @@ export async function bookingScreen({
 }
 
 /** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email. */
-function CustomerCard({ booking }: { booking: BookingWithItems }) {
+export function CustomerCard({ booking }: { booking: BookingWithItems }) {
   const email = customerEmailOf(booking);
   const phone = booking.contactPhone;
   const call = phoneHrefOf(phone) ?? `tel:${phone}`;
@@ -448,7 +450,7 @@ function TripCard({
 }
 
 /** A trip's stop, on the line from the pick-up to the drop-off: the place, its address, then the time or the distance. */
-function Stop({
+export function Stop({
   place,
   first,
   last,

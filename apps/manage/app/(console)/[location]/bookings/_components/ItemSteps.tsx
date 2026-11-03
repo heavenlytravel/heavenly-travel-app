@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  ADMIN_HOURLY_OPTIONS,
   BOOKING_RULES,
+  EXTRA_HOUR_CHOICES,
   formatMyr,
   largestGroup,
-  plural,
+  DURATION_CHOICES,
   seatsLabel,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
@@ -215,16 +215,22 @@ function TripFields({
             />
           </div>
         ) : (
-          <Field label="Hours">
-            <Select
-              value={trip.hours}
-              onValueChange={(hours) => changeTrip({ hours })}
-              options={ADMIN_HOURLY_OPTIONS.map((h) => ({
-                value: String(h),
-                label: plural(h, "hour"),
-              }))}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Duration">
+              <Select
+                value={trip.packageHours}
+                onValueChange={(packageHours) => changeTrip({ packageHours })}
+                options={DURATION_CHOICES}
+              />
+            </Field>
+            <Field label="Extra hours">
+              <Select
+                value={trip.extraHours}
+                onValueChange={(extraHours) => changeTrip({ extraHours })}
+                options={EXTRA_HOUR_CHOICES}
+              />
+            </Field>
+          </div>
         )}
         <div className="grid gap-1.5">
           <Field label="Pick-up date and time">

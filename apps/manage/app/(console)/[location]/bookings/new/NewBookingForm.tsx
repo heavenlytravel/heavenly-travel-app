@@ -173,7 +173,7 @@ export function NewBookingForm({
         <div className="grid min-w-0 gap-3">
           <Step
             number={1}
-            title="Customer"
+            title="Customer Info"
             done={customer.ok}
             summary={
               customer.ok
@@ -346,7 +346,7 @@ function CustomerFields({
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Name for the driver" className="sm:col-span-2">
+      <Field label="Customer name" className="sm:col-span-2">
         <Input
           maxLength={CONTACT_NAME_MAX_LENGTH}
           autoComplete="off"

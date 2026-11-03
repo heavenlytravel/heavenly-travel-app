@@ -3,11 +3,11 @@
 import { isTripCategory, parseTripSearch, textOf } from "@repo/db";
 import { getAdmin } from "../../../../_lib/access";
 import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
-import { ADMIN_SIDE, CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
+import { CATEGORY_FIELD, type TripQuoteView } from "./trip-form";
 import { quoteTripView } from "./trip-server";
 
 const INCOMPLETE_TRIP =
-  "Fill in the trip first: pick-up, drop-off or hours, date and time.";
+  "Fill in the trip first: pick-up, drop-off or duration, date and time.";
 
 /**
  * The item editor's prices, asked for once the trip is filled in: every
@@ -25,7 +25,7 @@ export async function quoteTripAction(
     return { ok: false, error: INCOMPLETE_TRIP };
   }
   const category = textOf(input[CATEGORY_FIELD]);
-  const search = parseTripSearch(input, ADMIN_SIDE);
+  const search = parseTripSearch(input);
   if (!isTripCategory(category) || !search) {
     return { ok: false, error: INCOMPLETE_TRIP };
   }

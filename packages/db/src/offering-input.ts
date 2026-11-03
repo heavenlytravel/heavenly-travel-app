@@ -1,4 +1,4 @@
-import { BOOKING_RULES, type OfferingRules } from "./booking-rules";
+import type { OfferingRules } from "./booking-rules";
 import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { parseRinggit } from "./money";
@@ -39,10 +39,8 @@ export type OfferingField = keyof OfferingFields;
 /** How the screen and the activity log name each field. */
 export const OFFERING_FIELD_LABELS: Record<OfferingField, string> = {
   perKmSen: "Rate per extra km",
-  hourlyRateSen: "Per hour",
   minLeadHours: "Notice needed",
   cancellationCutoffHours: "Cancel up to",
-  minHourlyHours: "Minimum hours",
   modelChoicePercent: "Charge to choose a model",
   modelChoiceFlatSen: "Charge to choose a model",
   isActive: "On sale",
@@ -71,20 +69,18 @@ export function modelChoiceOf(
 /** The money fields, entered in ringgit under these form names. */
 export const OFFERING_MONEY_FIELDS = {
   perKmSen: "perKm",
-  hourlyRateSen: "hourlyRate",
 } as const satisfies Record<keyof TripRates, string>;
 
-/** The three rules, in the order the form shows them; entered in hours under their own names. */
+/** The two rules, in the order the form shows them; entered in hours under their own names. */
 export const OFFERING_RULE_FIELDS = [
   "minLeadHours",
   "cancellationCutoffHours",
-  "minHourlyHours",
 ] as const satisfies readonly (keyof OfferingRules)[];
 
 const MONEY_FIELDS = Object.keys(OFFERING_MONEY_FIELDS) as (keyof TripRates)[];
 
-/** The rules counted from 0; the minimum hours has its own range. */
-const HOUR_FIELDS = ["minLeadHours", "cancellationCutoffHours"] as const;
+/** The rules, each whole hours from 0. */
+const HOUR_FIELDS = OFFERING_RULE_FIELDS;
 
 const lowerLabel = (key: OfferingField) =>
   OFFERING_FIELD_LABELS[key].toLowerCase();
@@ -108,16 +104,6 @@ export function checkOfferingFields(fields: Partial<OfferingFields>): Change {
       return refuse(
         `${OFFERING_FIELD_LABELS[key]} is a whole number of hours, 0 or more.`,
         key,
-      );
-    }
-  }
-  if (fields.minHourlyHours !== undefined) {
-    const { hourlyFloorHours, maxHourlyHours } = BOOKING_RULES;
-    const value = fields.minHourlyHours;
-    if (!isWhole(value) || value < hourlyFloorHours || value > maxHourlyHours) {
-      return refuse(
-        `Minimum hours is a whole number between ${hourlyFloorHours} and ${maxHourlyHours}.`,
-        "minHourlyHours",
       );
     }
   }
@@ -193,7 +179,6 @@ export function parseOfferingFields(
     ...money,
     minLeadHours: numberOf(values.minLeadHours),
     cancellationCutoffHours: numberOf(values.cancellationCutoffHours),
-    minHourlyHours: numberOf(values.minHourlyHours),
     ...modelChoice.value,
     isActive: flagOf(values.isActive),
   };

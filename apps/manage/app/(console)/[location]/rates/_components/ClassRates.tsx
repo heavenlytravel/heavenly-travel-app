@@ -27,10 +27,11 @@ const hours = (n: number) => `${n} h`;
 /**
  * A location's classes at their rates and under their rules, a row each,
  * on sale or not: the rate per extra km a one-way trip pays for the road
- * past a zone's edge, the hourly rate, and what every booking of the
- * class must keep to. A one-way trip is otherwise its cell on the grid.
+ * past a zone's edge, and what every booking of the class must keep to.
+ * A one-way trip is otherwise its cell on the grid, an hourly hire its
+ * package on the hourly list.
  * With `editHref` each row links to its class's editor at the location.
- * Rates' Classes and hourly, in a location and, read only, across
+ * Rates' Classes, in a location and, read only, across
  * locations.
  */
 export function ClassRates({
@@ -41,7 +42,7 @@ export function ClassRates({
   /** The editor of an offering, for the admins who change the rates. */
   editHref?: (offeringId: string) => string;
 }) {
-  const columns = editHref ? 8 : 7;
+  const columns = editHref ? 6 : 5;
 
   return (
     <Table bare>
@@ -54,7 +55,6 @@ export function ClassRates({
               <InfoTip text="A one-way trip costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge." />
             </span>
           </ThGroup>
-          <ThGroup span={2}>Hourly hire</ThGroup>
           <ThGroup />
           <ThGroup span={2}>Every booking</ThGroup>
           {editHref ? <ThGroup /> : null}
@@ -62,8 +62,6 @@ export function ClassRates({
         <tr>
           <Th>Class</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.perKmSen}</Th>
-          <Th align="right">{OFFERING_FIELD_LABELS.hourlyRateSen}</Th>
-          <Th align="right">{OFFERING_FIELD_LABELS.minHourlyHours}</Th>
           <Th align="right">To choose a model</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.minLeadHours}</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.cancellationCutoffHours}</Th>
@@ -109,10 +107,6 @@ export function ClassRates({
                   </span>
                 </Td>
                 {money(offering.perKmSen)}
-                {money(offering.hourlyRateSen)}
-                <Td className="text-right whitespace-nowrap tabular-nums">
-                  {hours(offering.minHourlyHours)}
-                </Td>
                 <Td className="text-right whitespace-nowrap tabular-nums">
                   {modelChoice ? (
                     surchargeLabel(modelChoice)

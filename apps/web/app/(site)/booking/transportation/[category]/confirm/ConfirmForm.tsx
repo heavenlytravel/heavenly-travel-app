@@ -27,7 +27,7 @@ const refused = "mt-1.5 block text-caption text-danger";
 const inView = `${clearOfFold} scroll-mb-8`;
 
 /**
- * "Your details": name, phone and email, the flights when a trip picks up
+ * "Customer Info": name, phone and email, the flights when a trip picks up
  * or drops off at an airport, one note for the drivers, then the booking
  * is made. The trips, the vehicle and the prices shown travel in hidden
  * fields (`entries`), so the action prices every trip again from scratch.
@@ -174,7 +174,7 @@ export function ConfirmForm({
           </Link>
         </p>
       )}
-      <Field label="Name for the driver" line={nameLine.line}>
+      <Field label="Customer name" line={nameLine.line}>
         <input
           name={CONFIRM_FIELDS.name}
           required

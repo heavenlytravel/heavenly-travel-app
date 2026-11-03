@@ -142,12 +142,17 @@ export function amendItemHref(
   return `${bookingHref(scope, bookingId)}/amend/${itemId}`;
 }
 
-/**
- * Operation's board: a day's trips in their columns, in the scope. No day
- * is today in Malaysia.
- */
-export function boardHref(scope: ScopeSlug, day?: string) {
-  return listHref(consolePath(scope, "board"), { day });
+/** What narrows the Assign page: where the trips stand, and listed by trip or by booking. */
+export type AssignFilter = { state?: string };
+
+/** Operation's Assign page, in the scope: every trip from today on, to assign first. */
+export function assignHref(scope: ScopeSlug, filter: AssignFilter = {}) {
+  return listHref(consolePath(scope, "assign"), filter);
+}
+
+/** One trip's page under Assign, by the trip's id: who does it and what to do next. */
+export function assignTripHref(scope: ScopeSlug, itemId: string) {
+  return consolePath(scope, "assign", itemId);
 }
 
 /* Fleet */
@@ -293,13 +298,20 @@ export function newZoneHref(slug: string) {
 }
 
 /** Rates' pages, in their reading order, each its own address. */
-export const RATES_PAGES = ["classes", "grid", "rules", "try"] as const;
+export const RATES_PAGES = [
+  "classes",
+  "grid",
+  "hourly",
+  "rules",
+  "try",
+] as const;
 export type RatesPage = (typeof RATES_PAGES)[number];
 
 /** Each of Rates' pages by its name: in the menu, its title, the search. */
 export const RATES_PAGE_LABELS: Record<RatesPage, string> = {
-  classes: "Classes and Hourly",
+  classes: "Classes",
   grid: "Rate Grid",
+  hourly: "Hourly Rates",
   rules: "Trip Rules",
   try: "Try a Trip",
 };

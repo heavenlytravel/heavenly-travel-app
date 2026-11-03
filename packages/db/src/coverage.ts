@@ -3,6 +3,7 @@ import { districtCodeAt } from "./district-index";
 import type { District, Prisma, State, Zone } from "./generated/prisma/client";
 import { pointOnSurface } from "./geo";
 import { isPublicState, LOCATION_STATES } from "./location-input";
+import { listHourlyLists } from "./hourly-rates";
 import { oddHoursOf, weekendOf } from "./rates-input";
 import type { QuoteLocation, QuoteZone } from "./zone-quote";
 import {
@@ -100,6 +101,7 @@ export async function listQuoteLocations(
     },
     include: { ...withZones.include, zoneRates: true },
   });
+  const hourlyRead = listHourlyLists(locations.map((l) => l.id));
   const own = new Set(locations.flatMap((l) => l.zones.map((z) => z.id)));
   const outIds = [
     ...new Set(
@@ -114,17 +116,21 @@ export async function listQuoteLocations(
   // It is named with its location, as the rate grid shows it, so a trip
   // to another location's Airport never reads as within this one's.
   const missing = outIds.filter((id) => !own.has(id));
+  const [hourly, farZones] = await Promise.all([
+    hourlyRead,
+    missing.length > 0
+      ? db.zone.findMany({
+          where: { id: { in: missing } },
+          include: { location: { select: { name: true } } },
+        })
+      : [],
+  ]);
   const far = new Map(
     [
       ...locations.flatMap((l) =>
         l.zones.map((zone) => ({ ...zone, location: { name: l.name } })),
       ),
-      ...(missing.length > 0
-        ? await db.zone.findMany({
-            where: { id: { in: missing } },
-            include: { location: { select: { name: true } } },
-          })
-        : []),
+      ...farZones,
     ].map((zone) => [
       zone.id,
       { ...zone, name: `${zone.name} · ${zone.location.name}` },
@@ -151,6 +157,7 @@ export async function listQuoteLocations(
       zones: zonesOf(location.zones),
       zonesOut: zonesOf(outs),
       zoneRates: location.zoneRates,
+      hourly: hourly.get(location.id)!,
       oddHours: oddHoursOf(location),
       weekend: weekendOf(location),
     };

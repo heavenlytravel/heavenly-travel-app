@@ -12,7 +12,8 @@ import {
   parseTripSearch,
   RATE_LIMITED_MESSAGE,
   textOf,
-  tripClashes,
+  itemTiming,
+  firstClashSentence,
   tripItemIndexes,
   tripItemParams,
   type Actor,
@@ -112,11 +113,15 @@ export async function createTripsBookingAction(
       : { error: contact.error };
   }
 
+  // Staff signed in on the website book for customers all day: the limit
+  // is for strangers, so it skips them.
   const createdIp = await requestIp();
-  const limited = await isBookingRateLimited({
-    contactEmail: contact.value.contactEmail,
-    createdIp,
-  });
+  const limited =
+    !user?.adminProfile &&
+    (await isBookingRateLimited({
+      contactEmail: contact.value.contactEmail,
+      createdIp,
+    }));
   if (limited) return { error: RATE_LIMITED_MESSAGE };
 
   const resolved = await Promise.all(
@@ -126,23 +131,6 @@ export async function createTripsBookingAction(
   for (const [index, trip] of resolved.entries()) {
     if (!trip.ok) return { error: `${tripLabel(index)}${trip.message}` };
     requests.push(trip.request);
-  }
-
-  // One vehicle does one trip at a time.
-  const clashes = tripClashes(
-    requests.map((request) => ({
-      startsAt: request.startsAt,
-      hours: request.mode === "hourly" ? request.hours : null,
-    })),
-  );
-  const clashing = clashes.findIndex((found) => found !== null);
-  if (clashing >= 0) {
-    const clash = clashes[clashing]!;
-    return {
-      error: `Trip ${clashing + 1} starts ${
-        clash.kind === "same-time" ? "at the same time as" : "during"
-      } trip ${clash.with + 1}, and one vehicle cannot do both. Edit your trips to change one of them.`,
-    };
   }
 
   const flights = {
@@ -182,6 +170,14 @@ export async function createTripsBookingAction(
         } from ${formatMyr(shown)}`,
       );
     }
+  }
+  // One vehicle does one trip at a time: an hourly hire runs the hours its
+  // duration covers from its pickup's zone, known once it is priced.
+  const clash = firstClashSentence(
+    prepared.flatMap((result) => (result.ok ? [itemTiming(result.item)] : [])),
+  );
+  if (clash) {
+    return { error: `${clash} Edit your trips to change one of them.` };
   }
   if (changed.length > 0) {
     return {

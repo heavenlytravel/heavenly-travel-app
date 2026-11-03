@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { BOOKING_RULES, byStart, clashesOf } from "@repo/db";
+import { BOOKING_RULES, byStart, clashesOf, namedHours } from "@repo/db";
 import {
   EMPTY_SEARCH,
   withValue,
@@ -92,7 +92,13 @@ export function usePlanner({
             dropoff: null,
             date: form.values.date,
             time: form.values.time,
-            hours: hourly ? Number(form.values.hours) || null : null,
+            hourly: null,
+            hours: hourly
+              ? namedHours({
+                  packageHours: Number(form.values.duration),
+                  extraHours: Number(form.values.extra || "0"),
+                }) || null
+              : null,
           };
     const together = byStart([...others, draft]);
     for (const [id, clash] of clashesOf(together)) {

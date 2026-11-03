@@ -1,8 +1,17 @@
 "use client";
 
 import {
+  EXTRA_HOUR_CHOICES,
+  HOURLY_PACKAGES,
+  DURATION_CHOICES,
+  TRIP_MODE_LABELS,
+  TRIP_MODES,
   formatMyr,
+  hourlyChoiceLabel,
+  isHourlyPackage,
   localDateTimeInputs,
+  type HourlyPackageHours,
+  type TripMode,
   type LngLat,
   type PriceCheck,
   type PriceCheckEnd,
@@ -46,6 +55,12 @@ const PLACINGS = [
   { value: "A", label: "Pick-up A" },
   { value: "B", label: "Drop-off B" },
 ] as const;
+
+/** One-way or Hourly, as the website names them. */
+const MODES = TRIP_MODES.map((mode) => ({
+  value: mode,
+  label: TRIP_MODE_LABELS[mode],
+}));
 
 /** The two ways the breakdown shows the price. */
 const VIEWS = [
@@ -115,9 +130,10 @@ const firstClass = (classes: ClassChoice[]) =>
   )?.id ?? "";
 
 /**
- * Try a trip itself: a pickup and a drop-off, each a place from the
- * search or a pin on the map, a class (the sedan first), a pickup day and
- * time, priced by the website's own quote with the pickup kept to this
+ * Try a trip itself: one-way or an hourly hire; a pickup and, one-way, a
+ * drop-off, each a place from the search or a pin on the map, or, hourly,
+ * the package and the extra hours; a class (the sedan first), a pickup
+ * day and time, priced by the website's own quote with the pickup kept to this
  * location and none of a booking's limits: any day, and an end as far
  * past its zone as any location may serve. What a customer would meet
  * instead is said over the price. The answer shows as the calculation, a
@@ -139,6 +155,11 @@ function Workspace({
   examples,
 }: TryTripProps) {
   const ids = useId();
+  const [mode, setMode] = useState<TripMode>("oneway");
+  const [packageHours, setPackageHours] = useState<HourlyPackageHours>(
+    HOURLY_PACKAGES[0],
+  );
+  const [extraHours, setExtraHours] = useState(0);
   const { ref: screen, full, toggle } = useFullScreen<HTMLDivElement>();
   const mapBox = useRef<HTMLDivElement>(null);
   const [pickup, setPickup] = useState<EndState>(EMPTY);
@@ -161,14 +182,30 @@ function Workspace({
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const current = { pickup, dropoff, classId, date, time };
+  const current = {
+    mode,
+    pickup,
+    dropoff,
+    packageHours,
+    extraHours,
+    classId,
+    date,
+    time,
+  };
   type Current = typeof current;
+  const hourly = mode === "hourly";
 
   function run(next: Current) {
-    if (!next.pickup.end || !next.dropoff.end || !next.classId) return;
+    if (!next.pickup.end || !next.classId) return;
+    if (next.mode === "oneway" && !next.dropoff.end) return;
     const input = {
+      mode: next.mode,
       pickup: next.pickup.end,
-      dropoff: next.dropoff.end,
+      dropoff: next.mode === "oneway" ? next.dropoff.end : null,
+      hourly:
+        next.mode === "hourly"
+          ? { packageHours: next.packageHours, extraHours: next.extraHours }
+          : null,
       vehicleClassId: next.classId,
       date: next.date,
       time: next.time,
@@ -187,6 +224,9 @@ function Workspace({
 
   function change(patch: Partial<Current>) {
     const next = { ...current, ...patch };
+    if (patch.mode) setMode(patch.mode);
+    if (patch.packageHours !== undefined) setPackageHours(patch.packageHours);
+    if (patch.extraHours !== undefined) setExtraHours(patch.extraHours);
     if (patch.pickup) setPickup(patch.pickup);
     if (patch.dropoff) setDropoff(patch.dropoff);
     if (patch.classId !== undefined) setClassId(patch.classId);
@@ -202,7 +242,7 @@ function Workspace({
     };
     if (letter === "A") {
       change({ pickup: end });
-      setPlacing("B");
+      if (!hourly) setPlacing("B");
     } else {
       change({ dropoff: end });
     }
@@ -210,7 +250,9 @@ function Workspace({
 
   function example(check: PriceCheck) {
     const chosen = classes.find((c) => c.slug === check.class);
+    // The examples are one-way trips.
     change({
+      mode: "oneway",
       pickup: endOfCheck(check.pickup),
       dropoff: endOfCheck(check.dropoff),
       ...(chosen ? { classId: chosen.id } : {}),
@@ -235,7 +277,14 @@ function Workspace({
       : fromAnswer;
   const pins: TripPin[] = [
     { letter: "A" as const, at: pinAt(pickup, answered?.pickup.at) },
-    { letter: "B" as const, at: pinAt(dropoff, answered?.dropoff.at) },
+    ...(hourly
+      ? []
+      : [
+          {
+            letter: "B" as const,
+            at: pinAt(dropoff, answered?.dropoff?.at),
+          },
+        ]),
   ].flatMap((p) => (p.at ? [{ letter: p.letter, at: p.at }] : []));
   const calls = answered?.trace.calls ?? 0;
   const className = classes.find((c) => c.id === classId)?.name ?? "";
@@ -331,8 +380,21 @@ function Workspace({
             Try a Trip in {locationName}
           </h2>
         ) : null}
-        {/* The two ends, then the class, the day and the time, which move
-            under the ends as a group when a row cannot hold them all. */}
+        <div>
+          <Choices
+            label="Trip"
+            size="sm"
+            value={mode}
+            options={MODES}
+            onChange={(next) => {
+              if (next === "hourly") setPlacing("A");
+              change({ mode: next });
+            }}
+          />
+        </div>
+        {/* The ends, or the pickup and the package, then the class, the
+            day and the time, which move under them as a group when a row
+            cannot hold them all. */}
         <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
           {/* On a phone, A over B with the swap beside both. */}
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2 gap-y-3 sm:flex sm:min-w-0 sm:flex-[1_1_28rem] sm:gap-3">
@@ -343,23 +405,53 @@ function Workspace({
               (end) => change({ pickup: end }),
               (text) => setPickup({ text, end: null }),
             )}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
-              aria-label="Swap the pick-up and the drop-off"
-              title="Swap A and B"
-              disabled={!pickup.end && !dropoff.end}
-              onClick={() => change({ pickup: dropoff, dropoff: pickup })}
-            >
-              <ArrowLeftRightIcon />
-            </Button>
-            {endField(
-              "B",
-              "Drop-off",
-              dropoff,
-              (end) => change({ dropoff: end }),
-              (text) => setDropoff({ text, end: null }),
+            {hourly ? null : (
+              <Button
+                variant="secondary"
+                size="icon"
+                className="max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1 max-sm:self-center max-sm:[&_svg]:rotate-90"
+                aria-label="Swap the pick-up and the drop-off"
+                title="Swap A and B"
+                disabled={!pickup.end && !dropoff.end}
+                onClick={() => change({ pickup: dropoff, dropoff: pickup })}
+              >
+                <ArrowLeftRightIcon />
+              </Button>
+            )}
+            {hourly ? (
+              <>
+                <div className="grid min-w-0 gap-1.5 sm:w-32">
+                  <span className={LABEL}>Duration</span>
+                  <Select
+                    aria-label="Duration"
+                    value={String(packageHours)}
+                    onValueChange={(next) => {
+                      const size = Number(next);
+                      if (isHourlyPackage(size)) change({ packageHours: size });
+                    }}
+                    options={DURATION_CHOICES}
+                  />
+                </div>
+                <div className="grid min-w-0 gap-1.5 sm:w-32">
+                  <span className={LABEL}>Extra hours</span>
+                  <Select
+                    aria-label="Extra hours"
+                    value={String(extraHours)}
+                    onValueChange={(next) =>
+                      change({ extraHours: Number(next) })
+                    }
+                    options={EXTRA_HOUR_CHOICES}
+                  />
+                </div>
+              </>
+            ) : (
+              endField(
+                "B",
+                "Drop-off",
+                dropoff,
+                (end) => change({ dropoff: end }),
+                (text) => setDropoff({ text, end: null }),
+              )
             )}
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-3 sm:flex sm:flex-wrap sm:items-end">
@@ -433,13 +525,19 @@ function Workspace({
                     >
                       A click places
                     </span>
-                    <Choices
-                      label="A click on the map places"
-                      size="sm"
-                      value={placing}
-                      options={PLACINGS}
-                      onChange={setPlacing}
-                    />
+                    {hourly ? (
+                      <span className="px-1.5 font-medium text-body">
+                        Pick-up A
+                      </span>
+                    ) : (
+                      <Choices
+                        label="A click on the map places"
+                        size="sm"
+                        value={placing}
+                        options={PLACINGS}
+                        onChange={setPlacing}
+                      />
+                    )}
                   </div>
                   <FullScreenButton full={full} onToggle={toggle} />
                 </div>
@@ -603,11 +701,15 @@ function Workspace({
             ) : (
               <div className="grid gap-2 text-sm text-muted">
                 <p className="font-semibold text-ink">
-                  Pick a pick-up and a drop-off.
+                  {hourly
+                    ? "Pick a pick-up and a duration."
+                    : "Pick a pick-up and a drop-off."}
                 </p>
                 <p>
-                  Search for a place, click the map (A first, then B), or open
-                  an example. The price is worked out again on every change.
+                  {hourly
+                    ? "Search for a place or click the map. A pick-up outside every zone is priced from its nearest zone that sells hourly hire, plus its road past the free km. "
+                    : "Search for a place, click the map (A first, then B), or open an example. "}
+                  The price is worked out again on every change.
                 </p>
               </div>
             )}
@@ -661,17 +763,27 @@ function Fare({
       ) : (
         <>
           <span className="text-lg font-semibold text-ink">
-            Not on the grid
+            {quote?.hire ? "Not on the hourly list" : "Not on the grid"}
           </span>
-          <span className="text-sm text-muted">
-            {quote
-              ? `${quote.pickup.zone === quote.dropoff.zone ? `Within ${quote.pickup.zone}` : `${quote.pickup.zone} to ${quote.dropoff.zone}`} has no price for this class yet.`
-              : "No price."}
-          </span>
+          <span className="text-sm text-muted">{noPrice(quote)}</span>
         </>
       )}
     </div>
   );
+}
+
+/** Why a class has no price for the trip, by its cell or its package. */
+function noPrice(quote: Extract<TryTripAnswer, { ok: true }>["quote"]) {
+  if (!quote) return "No price.";
+  if (quote.hire) {
+    return `${hourlyChoiceLabel(quote.hire)} from ${quote.hire.zone} has no price for this class yet.`;
+  }
+  const { pickup, dropoff } = quote;
+  const cell =
+    !dropoff || pickup.zone === dropoff.zone
+      ? `Within ${pickup.zone}`
+      : `${pickup.zone} to ${dropoff.zone}`;
+  return `${cell} has no price for this class yet.`;
 }
 
 /** What the map's colours mean: in a corner over it, under it on a phone. */

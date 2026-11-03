@@ -20,12 +20,42 @@ const HOUR_MS = 60 * 60 * 1000;
 /** When a trip takes the vehicle: its start, and the hours of an hourly hire (null for one-way). */
 export type TripTiming = { startsAt: Date; hours: number | null };
 
+/** A priced trip's timing: an hourly hire runs to its end, which its package set. */
+export function itemTiming(item: {
+  startsAt: Date;
+  endsAt: Date | null;
+}): TripTiming {
+  return {
+    startsAt: item.startsAt,
+    hours: item.endsAt
+      ? (item.endsAt.getTime() - item.startsAt.getTime()) / HOUR_MS
+      : null,
+  };
+}
+
 /** The trip a trip cannot share the vehicle with, by its index in the list, and why. */
 export type TripClash = {
   with: number;
   /** "same-time": both start at the same moment; "during-hire": it starts while an hourly hire is going. */
   kind: "same-time" | "during-hire";
 };
+
+/**
+ * The first trip of a list that cannot share the vehicle, said: "Trip 2
+ * starts during trip 1, and one vehicle cannot do both."; null when none.
+ * Each side adds what to do about it.
+ */
+export function firstClashSentence(
+  trips: readonly TripTiming[],
+): string | null {
+  const clashes = tripClashes(trips);
+  const index = clashes.findIndex((found) => found !== null);
+  if (index < 0) return null;
+  const clash = clashes[index]!;
+  return `Trip ${index + 1} starts ${
+    clash.kind === "same-time" ? "at the same time as" : "during"
+  } trip ${clash.with + 1}, and one vehicle cannot do both.`;
+}
 
 /**
  * For each trip of a list, the trip it cannot share the vehicle with, or
@@ -211,8 +241,6 @@ export function classFitNote(
   switch (fit.availability.reason) {
     case "too-soon":
       return `which needs ${fit.availability.minLeadHours} hours notice for ${trip}`;
-    case "too-few-hours":
-      return `which needs at least ${fit.availability.minHourlyHours} hours for ${trip}`;
     case "not-on-route":
       return `which is not offered for ${trip}`;
   }

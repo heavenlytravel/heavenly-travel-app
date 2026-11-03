@@ -124,6 +124,21 @@ export function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
+/** Labelled fields one under the other and a button, as a small dialog's form lays them out. */
+export function FieldsSkeleton({ fields = 2 }: { fields?: number }) {
+  return (
+    <div className="grid gap-4">
+      {Array.from({ length: fields }, (_, field) => (
+        <div key={field} className="grid gap-1.5">
+          <Bone className="h-4 w-20" />
+          <Bone className="h-10 w-full" />
+        </div>
+      ))}
+      <Bone className="ml-auto h-10 w-28" />
+    </div>
+  );
+}
+
 /** A card with a title and lines. */
 export function CardSkeleton({ rows = 4 }: { rows?: number }) {
   return (

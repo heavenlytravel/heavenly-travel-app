@@ -5,6 +5,12 @@ import {
   TRIP_MODE_LABELS,
   type TripMode,
 } from "./booking-status";
+import {
+  hourlyChoiceLabel,
+  hourlyReceiptOf,
+  durationLabel,
+  type HourlyChoice,
+} from "./hourly-input";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
 import { WEEKEND_REASON_LABELS, type TripPriceBreakdown } from "./pricing";
@@ -20,13 +26,18 @@ export type TripView = {
   pickup: Place;
   dropoff: Place | null;
   startsAt: Date;
+  /** Hourly: the hours it runs, the package's plus the extra. */
   hours: number | null;
+  /** Hourly: the package and extra hours chosen; null for one-way, and on trips booked before packages. */
+  hourly: HourlyChoice | null;
   distanceKm: number | null;
 };
 
 /** The shape of a booking item this module reads; both apps' queries satisfy it. */
 export type TripItemLike = {
   startsAt: Date;
+  /** The receipt, which names an hourly trip's package. */
+  priceBreakdown?: unknown;
   tripDetails: {
     mode: string;
     pickupPlace: unknown;
@@ -41,12 +52,20 @@ export function tripViewOfItem(item: TripItemLike): TripView | null {
   const details = item.tripDetails;
   if (!details || !isPlace(details.pickupPlace)) return null;
   const mode = details.mode === "hourly" ? "hourly" : "oneway";
+  const receipt =
+    typeof item.priceBreakdown === "object" && item.priceBreakdown !== null
+      ? hourlyReceiptOf((item.priceBreakdown as { hourly?: unknown }).hourly)
+      : null;
   return {
     mode,
     pickup: details.pickupPlace,
     dropoff: isPlace(details.dropoffPlace) ? details.dropoffPlace : null,
     startsAt: item.startsAt,
     hours: details.hours,
+    hourly:
+      mode === "hourly" && receipt
+        ? { packageHours: receipt.packageHours, extraHours: receipt.extraHours }
+        : null,
     distanceKm: details.distanceKm,
   };
 }
@@ -113,7 +132,14 @@ export function tripRows(trip: TripView): DetailRow[] {
   ];
   if (trip.dropoff) rows.push(["Drop-off", trip.dropoff]);
   rows.push(["Pick-up time", formatLocalDateTime(trip.startsAt)]);
-  if (trip.hours !== null) rows.push(["Duration", `${trip.hours} hours`]);
+  if (trip.hours !== null) {
+    rows.push([
+      "Duration",
+      trip.hourly
+        ? `${trip.hours} hours, ${hourlyChoiceLabel(trip.hourly)}`
+        : `${trip.hours} hours`,
+    ]);
+  }
   if (trip.distanceKm !== null) {
     rows.push(["Road distance", `${trip.distanceKm.toFixed(1)} km`]);
   }
@@ -150,7 +176,8 @@ const kmLabel = (km: number) =>
 
 /**
  * The receipt behind a price, without the total: the grid's cell and the
- * extra road past a zone's edge, or the hourly rate with the hours, then
+ * extra road past a zone's edge, or the hourly package and the extra
+ * hours (the hourly rate with the hours on older receipts), then
  * the surcharges, then the model chosen. Receipts from before nearest-zone
  * pricing that were metered show their base fare and distance. The app
  * adds the total in its own emphasis.
@@ -184,9 +211,29 @@ export function priceRows(
     if (metered < minimumFareSen) {
       rows.push(["Minimum fare applies", formatMyr(price.subtotalSen)]);
     }
+  } else if (price.hourly) {
+    const { hourly } = price;
+    rows.push([
+      hourly.includedHours === hourly.packageHours
+        ? `${durationLabel(hourly.packageHours)} from ${hourly.zone}`
+        : `${durationLabel(hourly.packageHours)} from ${hourly.zone}, covers ${durationLabel(hourly.includedHours)}`,
+      formatMyr(hourly.packageSen),
+    ]);
+    if (hourly.extraHours > 0) {
+      rows.push([
+        `Extra hours, ${hourly.extraHours} × ${formatMyr(hourly.extraHourSen)}`,
+        formatMyr(hourly.extraSen),
+      ]);
+    }
+    if (hourly.road && hourly.road.extraSen > 0) {
+      rows.push([
+        `Extra road, ${kmLabel(hourly.road.chargedKm)} × ${formatMyr(hourly.road.perKmSen)}`,
+        formatMyr(hourly.road.extraSen),
+      ]);
+    }
   } else if (price.hours !== null) {
     rows.push([
-      `${formatMyr(price.rates.hourlyRateSen)} per hour × ${price.hours} hours`,
+      `${formatMyr(price.rates.hourlyRateSen ?? 0)} per hour × ${price.hours} hours`,
       formatMyr(price.subtotalSen),
     ]);
   }

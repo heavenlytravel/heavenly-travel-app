@@ -53,17 +53,34 @@ received ──► confirmed ──► assigned ──► completed
 - **Assigned is no longer a button.** A trip is assigned once its vehicle and its driver
   are named and every acceptance is in (see "Acceptance").
 - **Completed** comes from the driver's "Dropped off", or from Operation on their behalf.
-- **The board's columns are worked out, not stored:** To assign, Waiting to accept,
+- **Where a trip stands is worked out, not stored:** To assign, Waiting to accept,
   Assigned, On the road, Done. The item status stays one of today's five.
-- **The board is for watching; cards are not dragged.** A card moves when someone acts:
-  a vendor or driver accepts, a driver taps. Clicking a card opens it, and a card in To
-  assign opens the assign panel with the picker. Dragging trips onto a driver's day is
-  in "Later".
-- **Where it lives in manage** (the Signature console's addresses, see
-  `docs/261029-manage-signature-overhaul.md`): the board at `/[location]/board`, every
-  location's under `~`; vendors under Fleet at `/[location]/fleet/vendors`, those serving
-  a location under its slug; who does a trip and what its driver reported on the
-  booking's page; the safety buffer on the location's Settings.
+- **Operation works on the Assign page** at `/[location]/assign` (every location's
+  under `~`), which replaced the Board on 2026-11-02: a table of every trip from today
+  on by pickup, figure tiles for To assign (the default), Waiting to accept, Assigned,
+  On the road, Done and All. Each row says how soon it picks up, red within the day
+  while not yet assigned, and who does each role or whose answer it waits for. The
+  reference opens a quick view of the booking; Assign or Open opens the trip's page. A
+  trip is on the road once its driver taps On the way or a later step. No dragging.
+- **Each trip has its own page** at `/[location]/assign/[trip]` (2026-11-03): a card
+  per role (Vehicle, then Driver; the tour guide later), the day's reports, and beside
+  them the trip, the customer and the booking's other trips. A role to assign has its
+  own form and Assign button: the vendor first (ours first, only those serving the
+  trip's location), then one of that vendor's vehicles or drivers (one that cannot do
+  the trip greyed with why) or Any, said plainly as "the vendor will assign it"; "Pay
+  vendor (RM)" for a vendor not ours; when the vendor answers by, before the pickup; and
+  "Also give the same to" the booking's other trips still needing it. A role asked shows
+  where it stands and what to do next. A trip five days away can wait until nearer the
+  day.
+- **On the day,** once a trip is on the road or done, its reports come first on its
+  page: the four steps in a line with their times. Operation can report for the driver
+  in Connect's order: the next step only, or a no-show, or a problem.
+- **Undo is per trip:** Withdraw before the vendor's yes, Release after it; the role goes
+  back to To assign.
+- **Elsewhere in manage:** vendors under Fleet at `/[location]/fleet/vendors`, those
+  serving a location under its slug; the booking's page shows who does each trip and
+  what its driver reported, to read, with "Open in Assign"; what we pay for a cancelled
+  trip stays there; the safety buffer on the location's Settings.
 
 ### Vendors
 
@@ -166,10 +183,14 @@ by email (see "Accounts").
 
 Assigning is Operation's work (`bookings.fulfil`).
 
-- **One vehicle and one driver for the whole booking.** That is how Operation works, and
-  a booking is one vehicle since PR #56. It is saved against each trip, so a change on one
-  day works without a redesign. The screen assigns the booking; changing one trip is the
-  exception.
+- **Per trip, or the same for every trip.** One vehicle and one driver for the whole
+  booking is how Operation usually works, and a booking is one vehicle since PR #56; it
+  is saved against each trip. Since 2026-11-02 (docs/261102-booking-ops.md) each trip is
+  assigned on its own page under Assign (a dialog until 2026-11-03), with "Also give the
+  same to" the booking's other open trips. The picker greys a vehicle or
+  driver for that trip, with why, and a trip ticked that the choice cannot do cannot be
+  ticked. The trips with the same choice make one ask, and offers stay one per vendor, a
+  part per trip.
 - **Any vehicle with any driver:**
 
 | Driver     | Vehicle    | Vehicle accepted by | Driver accepted by        | Cost to us     |
@@ -180,8 +201,9 @@ Assigning is Operation's work (`bookings.fulfil`).
 | Vendor A's | Vendor A's | Vendor A            | Vendor A, then its driver | A, one offer   |
 | Vendor A's | Vendor B's | Vendor B            | Vendor A, then its driver | A and B        |
 
-- **The picker** lists vehicles and drivers, ours first. One that cannot be used is shown
-  greyed with the reason: not allowed on this class, a licence, PSV, road tax,
+- **The picker** lists vehicles and drivers, ours first, only those of a class the
+  booking's trips are of: a class changes by amending the booking. One that cannot be
+  used is shown greyed with the reason: not allowed on this class, a licence, PSV, road tax,
   insurance, inspection or permit expired on the trip's date, out of service, its vendor
   suspended, or another job at that time. It shows each driver's day ("Ali: 8:00
   Airport → Datai, ends about 8:45").

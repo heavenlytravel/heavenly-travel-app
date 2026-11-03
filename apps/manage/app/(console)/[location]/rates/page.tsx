@@ -3,7 +3,7 @@ import { ratesHref, scopeSlugOf } from "../../../_lib/routes";
 
 /**
  * Route: /[location]/rates. Rates is four pages, each its own address;
- * the section itself opens on the first, Classes and hourly, in the same
+ * the section itself opens on the first, Classes, in the same
  * scope. That page checks access.
  */
 export default async function RatesPage({

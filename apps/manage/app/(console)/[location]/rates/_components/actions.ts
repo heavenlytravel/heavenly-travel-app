@@ -1,8 +1,10 @@
 "use server";
 
 import {
+  parseHourlyList,
   parseRateCells,
   parseTripRulesFields,
+  setHourlyList,
   setTripRules,
   setZoneRates,
   textOf,
@@ -19,7 +21,7 @@ import { refreshLocationAfter } from "../../../../_lib/site";
 import { revalidateLocation } from "../../../../_lib/revalidate";
 
 /**
- * Rates' actions: the grid and the trip rules. Each checks
+ * Rates' actions: the grid, the hourly list and the trip rules. Each checks
  * `coverage.manage` again, passes the admin as the actor and lets the
  * writer in @repo/db check the rest. Arguments passed directly, not
  * through a form, are checked for their type here: an action is
@@ -41,6 +43,24 @@ export async function setZoneRatesAction(
   const parsed = parseRateCells(rows);
   if (!parsed.ok) return refusalOf(parsed);
   const result = await setZoneRates(actorOf(admin), locationId, parsed.value);
+  if (result.ok) {
+    revalidateLocation();
+    refreshLocationAfter(locationId);
+  }
+  return stateOf(result);
+}
+
+/** The whole hourly list as Hourly Rates holds it: each zone's durations and prices, and the extra hour rates. */
+export async function setHourlyListAction(
+  locationId: string,
+  list: unknown,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  if (typeof locationId !== "string") return STALE;
+  const parsed = parseHourlyList(list);
+  if (!parsed.ok) return refusalOf(parsed);
+  const result = await setHourlyList(actorOf(admin), locationId, parsed.value);
   if (result.ok) {
     revalidateLocation();
     refreshLocationAfter(locationId);

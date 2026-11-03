@@ -125,7 +125,7 @@ export function SidebarProvider({
 }
 
 /**
- * The sidebar itself. From `md` up it is a sticky column that is 16rem
+ * The sidebar itself. From `md` up it is a column fixed to the screen, 16rem
  * wide open and 3rem collapsed. Below that it is a panel that fills the
  * screen but for a narrow margin, always drawn open, with `dock`, the bar
  * that opened it, floating over its foot where it was: its menu button is
@@ -150,16 +150,30 @@ export function Sidebar({
   const ref = useModal(openMobile);
   const navy = tone === "navy";
 
+  const width = cx(
+    "ui:transition-[width] ui:duration-200 ui:ease-linear ui:motion-reduce:transition-none",
+    open ? "ui:w-64" : "ui:w-15",
+  );
+
   return (
     <ToneContext.Provider value={tone}>
+      {/*
+       * Fixed, with a gap in the row holding its place, not sticky: a sticky
+       * column moves with a scroll that stops between pixels, and its icons
+       * then round to a different pixel than its text, a jump of one.
+       */}
+      <div
+        aria-hidden="true"
+        className={cx("ui:hidden ui:shrink-0 ui:md:block", width)}
+      />
       <aside
         data-state={open ? "expanded" : "collapsed"}
         className={cx(
-          "ui:sticky ui:top-0 ui:hidden ui:h-svh ui:shrink-0 ui:flex-col ui:transition-[width] ui:duration-200 ui:ease-linear ui:motion-reduce:transition-none ui:md:flex",
+          "ui:fixed ui:inset-y-0 ui:left-0 ui:z-(--layer-float) ui:hidden ui:flex-col ui:md:flex",
+          width,
           navy
             ? "ui:bg-linear-to-b ui:from-navy ui:to-ink ui:text-white/80"
             : "ui:border-r ui:border-card-edge ui:bg-white ui:text-body",
-          open ? "ui:w-64" : "ui:w-15",
         )}
       >
         <CollapsedContext.Provider value={!open}>

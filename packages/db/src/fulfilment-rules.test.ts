@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  boardColumnOf,
+  assignStateOf,
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
+  rolesToAsk,
   jobsClash,
   owesAfterCancel,
+  partWaitingOf,
   timingWarnings,
   tripAssigned,
   tripWindow,
+  untilPickup,
   type Job,
 } from "./fulfilment-rules";
 
@@ -115,7 +118,7 @@ describe("timingWarnings", () => {
   });
 });
 
-describe("tripAssigned and boardColumnOf", () => {
+describe("tripAssigned and assignStateOf", () => {
   const accepted = at("2026-11-01T00:00:00Z");
   const vehicle = {
     role: "vehicle",
@@ -147,18 +150,18 @@ describe("tripAssigned and boardColumnOf", () => {
 
   it("puts a trip in its column", () => {
     const base = { status: "confirmed", reported: false };
-    assert.equal(boardColumnOf({ ...base, parts: [] }), "to-assign");
-    assert.equal(boardColumnOf({ ...base, parts: [vehicle] }), "waiting");
+    assert.equal(assignStateOf({ ...base, parts: [] }), "to-assign");
+    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "waiting");
     assert.equal(
-      boardColumnOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
+      assignStateOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
       "assigned",
     );
     assert.equal(
-      boardColumnOf({ status: "assigned", reported: true, parts: [] }),
+      assignStateOf({ status: "assigned", reported: true, parts: [] }),
       "on-the-road",
     );
     assert.equal(
-      boardColumnOf({ status: "completed", reported: true, parts: [] }),
+      assignStateOf({ status: "completed", reported: true, parts: [] }),
       "done",
     );
   });
@@ -175,14 +178,14 @@ describe("defaultRespondBy", () => {
     );
   });
 
-  it("never later than an hour before the pickup, nor before now", () => {
+  it("never later than an hour before the pickup, nor sooner than half an hour", () => {
     assert.equal(
       defaultRespondBy(at("2026-11-01T02:30:00Z"), now).toISOString(),
       "2026-11-01T01:30:00.000Z",
     );
     assert.equal(
       defaultRespondBy(at("2026-11-01T00:30:00Z"), now).getTime(),
-      now.getTime(),
+      now.getTime() + HOUR / 2,
     );
   });
 });
@@ -196,5 +199,102 @@ describe("owesAfterCancel", () => {
   it("owes nothing before the free-cancellation deadline, and the cost after", () => {
     assert.equal(owesAfterCancel(trip, at("2026-11-01T23:00:00Z")), false);
     assert.equal(owesAfterCancel(trip, at("2026-11-02T00:00:00Z")), true);
+  });
+});
+
+describe("rolesToAsk", () => {
+  it("asks nothing of a trip not yet confirmed", () => {
+    assert.deepEqual(rolesToAsk({ status: "received", parts: [] }), []);
+  });
+
+  it("asks each role the trip has no part for", () => {
+    assert.deepEqual(rolesToAsk({ status: "confirmed", parts: [] }), [
+      "vehicle",
+      "driver",
+    ]);
+    assert.deepEqual(
+      rolesToAsk({ status: "confirmed", parts: [{ role: "vehicle" }] }),
+      ["driver"],
+    );
+    assert.deepEqual(
+      rolesToAsk({
+        status: "assigned",
+        parts: [{ role: "vehicle" }, { role: "driver" }],
+      }),
+      [],
+    );
+  });
+});
+
+describe("partWaitingOf", () => {
+  const part = {
+    role: "driver",
+    vehicleId: null,
+    driverId: null,
+    vendorAcceptedAt: null,
+    driverAcceptedAt: null,
+  };
+  const now = at("2026-11-03T00:00:00Z");
+
+  it("waits for the vendor first, Operation when it is ours", () => {
+    assert.equal(partWaitingOf(part, false), "vendor");
+    assert.equal(partWaitingOf(part, true), "ours");
+  });
+
+  it("then for the record named, then the driver's own yes", () => {
+    const accepted = { ...part, vendorAcceptedAt: now };
+    assert.equal(partWaitingOf(accepted, false), "name");
+    assert.equal(
+      partWaitingOf({ ...accepted, driverId: "d" }, false),
+      "driver",
+    );
+    assert.equal(
+      partWaitingOf(
+        { ...accepted, driverId: "d", driverAcceptedAt: now },
+        false,
+      ),
+      null,
+    );
+  });
+
+  it("asks no driver's yes of a vehicle", () => {
+    const vehicle = {
+      ...part,
+      role: "vehicle",
+      vehicleId: "v",
+      vendorAcceptedAt: now,
+    };
+    assert.equal(partWaitingOf(vehicle, false), null);
+  });
+});
+
+describe("untilPickup", () => {
+  const now = at("2026-11-03T00:00:00Z");
+  const later = (ms: number) => new Date(now.getTime() + ms);
+
+  it("says minutes, hours, then days, soon within the day", () => {
+    assert.deepEqual(untilPickup(later(40 * 60 * 1000), now), {
+      label: "in 40 min",
+      soon: true,
+    });
+    assert.deepEqual(untilPickup(later(3 * HOUR), now), {
+      label: "in 3 h",
+      soon: true,
+    });
+    assert.deepEqual(untilPickup(later(30 * HOUR), now), {
+      label: "in 1 day",
+      soon: false,
+    });
+    assert.deepEqual(untilPickup(later(72 * HOUR), now), {
+      label: "in 3 days",
+      soon: false,
+    });
+  });
+
+  it("says Started once the pickup is past", () => {
+    assert.deepEqual(untilPickup(later(-60 * 1000), now), {
+      label: "Started",
+      soon: true,
+    });
   });
 });

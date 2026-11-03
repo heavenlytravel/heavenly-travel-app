@@ -3,26 +3,25 @@
 import {
   isDeclineReason,
   isTripEventKind,
+  nextTripStep,
   parseRinggit,
   pickupInstant,
   textOf,
+  TRIP_EVENT_LABELS,
   type PartRole,
 } from "@repo/db";
 import {
   answerParts,
   assignBooking,
-  listCandidates,
-  listVendorOptions,
+  listTripEvents,
   nameParts,
   releaseAction,
   reportTripEvent,
   setPartCost,
-  type Candidate,
   type PartAsk,
-  type VendorOption,
 } from "@repo/db/server";
-import { actorOf, getAdmin } from "../../../../_lib/access";
-import { revalidateLocation } from "../../../../_lib/revalidate";
+import { actorOf, getAdmin } from "../../../_lib/access";
+import { revalidateLocation } from "../../../_lib/revalidate";
 import {
   type ActionState,
   FORBIDDEN,
@@ -32,9 +31,10 @@ import {
 } from "@repo/console/action-state";
 
 /**
- * The booking's fulfilment: asking vendors for a vehicle and a driver,
- * recording their answers, naming what a vendor chose, releasing a part,
- * and what we owe for a cancelled trip. Operation's (`bookings.fulfil`),
+ * Assign's writes: asking vendors for a vehicle and a driver, recording
+ * their answers, naming what a vendor chose, releasing a part, reporting
+ * for a driver on the day, and what we owe for a cancelled trip.
+ * Operation's (`bookings.fulfil`),
  * checked again in each. The writers in @repo/db check the rest. No
  * email goes out from here, not even the customer's driver email: the
  * console's own emails wait for their settings. See
@@ -56,66 +56,52 @@ function finish(result: FulfilResult): ActionState {
 const idsOf = (formData: FormData, name: string) =>
   formData.getAll(name).map(textOf).filter(Boolean);
 
-/** What the assign panel picks from, read when it opens. */
-export type AssignChoices = {
-  vehicles: Candidate[];
-  drivers: Candidate[];
-  vendors: VendorOption[];
-};
-
-export async function loadAssignChoices(
-  bookingId: string,
-): Promise<AssignChoices | null> {
-  const admin = await getAdmin("bookings.fulfil");
-  if (!admin || typeof bookingId !== "string" || !bookingId) return null;
-  const [vehicles, drivers, vendors] = await Promise.all([
-    listCandidates(bookingId, "vehicle"),
-    listCandidates(bookingId, "driver"),
-    listVendorOptions(),
-  ]);
-  return {
-    vehicles,
-    drivers,
-    vendors: vendors.filter((v) => v.status === "active"),
-  };
-}
-
 /**
- * One role of the panel: "" left out, `vendor:<id>` asks that vendor to
- * choose, or the id of a vehicle or driver named, its vendor posted beside
- * it. Its cost per trip is posted under `<role>Cost:<itemId>` in ringgit.
+ * One role of a trip's Assign form, posted for each trip under
+ * `<role>:<itemId>`: "" left for later, `vendor:<id>` asks that vendor to
+ * choose, or the id of a vehicle or driver named, its vendor beside it
+ * under `<role>Vendor:<itemId>`. The cost of each trip is under
+ * `<role>Cost:<itemId>`, in ringgit. Trips with the same choice make one
+ * ask, so the same vehicle for every trip is one ask of them all.
  */
-function askOf(
+function asksOf(
   formData: FormData,
   role: PartRole,
   itemIds: readonly string[],
-): PartAsk | null | { error: string; field: string } {
-  const choice = textOf(formData.get(role));
-  if (!choice) return null;
-  const vendorId = choice.startsWith("vendor:")
-    ? choice.slice("vendor:".length)
-    : textOf(formData.get(`${role}Vendor`));
-  if (!vendorId) {
-    return { error: `Choose the ${role} again.`, field: role };
-  }
-  const costSen: Record<string, number> = {};
+): PartAsk[] | { error: string; field: string } {
+  const asks = new Map<string, PartAsk>();
   for (const itemId of itemIds) {
-    const text = textOf(formData.get(`${role}Cost:${itemId}`));
-    if (text === "") continue;
-    const sen = parseRinggit(text);
-    if (sen === null) {
-      return {
-        error: "Enter each amount in RM, such as 120 or 120.50.",
-        field: `${role}Cost`,
-      };
+    const choice = textOf(formData.get(`${role}:${itemId}`));
+    if (!choice) continue;
+    const vendorId = choice.startsWith("vendor:")
+      ? choice.slice("vendor:".length)
+      : textOf(formData.get(`${role}Vendor:${itemId}`));
+    if (!vendorId) {
+      return { error: `Choose the ${role} again.`, field: `${role}:${itemId}` };
     }
-    costSen[itemId] = sen;
+    const recordId = choice.startsWith("vendor:") ? null : choice;
+    const key = `${vendorId}:${recordId ?? ""}`;
+    const ask = asks.get(key) ?? {
+      vendorId,
+      recordId,
+      itemIds: [],
+      costSen: {},
+    };
+    ask.itemIds.push(itemId);
+    const text = textOf(formData.get(`${role}Cost:${itemId}`));
+    if (text !== "") {
+      const sen = parseRinggit(text);
+      if (sen === null) {
+        return {
+          error: "Enter the amount in RM, such as 120 or 120.50.",
+          field: `${role}Cost:${itemId}`,
+        };
+      }
+      ask.costSen[itemId] = sen;
+    }
+    asks.set(key, ask);
   }
-  return {
-    vendorId,
-    recordId: choice.startsWith("vendor:") ? null : choice,
-    costSen,
-  };
+  return [...asks.values()];
 }
 
 export async function assignAction(
@@ -127,28 +113,33 @@ export async function assignAction(
   const bookingId = textOf(formData.get("bookingId"));
   const itemIds = idsOf(formData, "itemId");
   if (!bookingId) return STALE;
-  const vehicle = askOf(formData, "vehicle", itemIds);
-  if (vehicle && "error" in vehicle) return vehicle;
-  const driver = askOf(formData, "driver", itemIds);
-  if (driver && "error" in driver) return driver;
-  const [date, time] = textOf(formData.get("respondBy")).split("T");
-  const respondBy = date && time ? pickupInstant(date, time.slice(0, 5)) : null;
-  if (textOf(formData.get("respondBy")) && !respondBy) {
-    return {
-      error: "Enter when they answer by, as a date and time.",
-      field: "respondBy",
-    };
-  }
-  if (respondBy && respondBy.getTime() < Date.now()) {
-    return {
-      error: "Answer by is past. Give them time to answer.",
-      field: "respondBy",
-    };
+  const vehicle = asksOf(formData, "vehicle", itemIds);
+  if ("error" in vehicle) return vehicle;
+  const driver = asksOf(formData, "driver", itemIds);
+  if ("error" in driver) return driver;
+  // Each vendor asked answers by its own time, under `respondBy:<vendorId>`.
+  const respondBy: Record<string, Date> = {};
+  for (const [name, value] of formData) {
+    if (!name.startsWith("respondBy:") || typeof value !== "string") continue;
+    const [date, time] = value.split("T");
+    const at = date && time ? pickupInstant(date, time.slice(0, 5)) : null;
+    if (!at) {
+      return {
+        error: "Enter when they answer by, as a date and time.",
+        field: name,
+      };
+    }
+    if (at.getTime() < Date.now()) {
+      return {
+        error: "Answer by is past. Give them time to answer.",
+        field: name,
+      };
+    }
+    respondBy[name.slice("respondBy:".length)] = at;
   }
   return finish(
     await assignBooking(actorOf(admin), {
       bookingId,
-      itemIds,
       vehicle,
       driver,
       respondBy,
@@ -253,8 +244,9 @@ export async function setPartCostAction(
 }
 
 /**
- * Operation taps for a driver who cannot: the same kinds as Connect's,
- * at the time it is entered. Dropped off and no-show complete the trip.
+ * Operation taps for a driver who cannot, at the time it is entered, in
+ * Connect's order: the next step only, or a no-show, or a problem.
+ * Dropped off and no-show complete the trip.
  */
 export async function reportForDriverAction(
   _previous: ActionState,
@@ -266,6 +258,13 @@ export async function reportForDriverAction(
   const itemId = textOf(formData.get("itemId"));
   const kind = textOf(formData.get("kind"));
   if (!bookingId || !itemId || !isTripEventKind(kind)) return STALE;
+  const next = nextTripStep(await listTripEvents([itemId]));
+  if (next === null) return { error: "This trip has ended." };
+  if (kind !== next && kind !== "no-show" && kind !== "problem") {
+    return {
+      error: `The next step is ${TRIP_EVENT_LABELS[next]}. Reload to see the latest report.`,
+    };
+  }
   const note = textOf(formData.get("note"));
   return finish(
     await reportTripEvent(

@@ -296,6 +296,7 @@ export function DateTimeField({
   onChange,
   min,
   max,
+  maxTime,
   allowPast = false,
   disabled,
   required,
@@ -315,6 +316,8 @@ export function DateTimeField({
   onChange?: (value: Moment) => void;
   min?: string;
   max?: string;
+  /** The last time that can be picked on the `max` day, "17:45": for a moment that must come before another. */
+  maxTime?: string;
   allowPast?: boolean;
   placeholder?: string;
   /** The sheet's heading on a phone. */
@@ -360,6 +363,7 @@ export function DateTimeField({
           value={current}
           min={min}
           max={max}
+          maxTime={maxTime}
           allowPast={allowPast}
           timeZone={timeZone}
           onChange={change}
@@ -389,6 +393,7 @@ function MomentPanel({
   value,
   min,
   max,
+  maxTime,
   allowPast,
   timeZone,
   onChange,
@@ -397,6 +402,7 @@ function MomentPanel({
   value: Moment;
   min?: string;
   max?: string;
+  maxTime?: string;
   allowPast: boolean;
   timeZone?: string;
   onChange: (value: Moment) => void;
@@ -407,6 +413,9 @@ function MomentPanel({
   const earliestOn = (date: string) =>
     !allowPast && date === now.today ? start : null;
   const earliest = earliestOn(value.date);
+  const latestOn = (date: string) =>
+    maxTime && date === max ? minuteOf(maxTime) : null;
+  const latest = latestOn(value.date);
   const summary = [dayLabel(value.date), timeLabel(value.time)]
     .filter(Boolean)
     .join(" at ");
@@ -423,8 +432,12 @@ function MomentPanel({
           onPick={(date) => {
             // A time already past on the new day is dropped, not kept wrong.
             const first = earliestOn(date);
+            const last = latestOn(date);
             const minute = minuteOf(value.time);
-            const keeps = first === null || minute === null || minute >= first;
+            const keeps =
+              minute === null ||
+              ((first === null || minute >= first) &&
+                (last === null || minute <= last));
             onChange({ date, time: keeps ? value.time : "" });
           }}
         />
@@ -435,6 +448,7 @@ function MomentPanel({
           value={value.time}
           start={start}
           earliest={earliest}
+          latest={latest}
           onPick={(time) => {
             onChange({ ...value, time });
             if (value.date) onClose();

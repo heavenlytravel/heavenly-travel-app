@@ -8,7 +8,7 @@ import { kmBetween } from "./zone-trip";
 /**
  * Fulfilment's vocabulary and rules, pure and browser-safe: who does a
  * trip, when a vehicle or a driver is busy, what refuses a job and what
- * only warns, when a trip is assigned, and which column of the board it
+ * only warns, when a trip is assigned, and where on the Assign page it
  * stands in. The writers in ./fulfilment apply them inside their
  * transactions. See docs/261028-fulfilment-vendors-and-connect.md.
  */
@@ -257,6 +257,61 @@ export function partAccepted(part: PartAcceptance) {
   return part.driverId !== null && part.driverAcceptedAt !== null;
 }
 
+/**
+ * What a part still waits for, null once settled: its vendor's yes
+ * ("ours" when the vendor is ours, Operation's own), then the vehicle or
+ * driver named, then a driver's own yes.
+ */
+export type PartWaiting = "vendor" | "ours" | "name" | "driver";
+
+export function partWaitingOf(
+  part: PartAcceptance,
+  isOurs: boolean,
+): PartWaiting | null {
+  if (!part.vendorAcceptedAt) return isOurs ? "ours" : "vendor";
+  if (part.role === "vehicle" ? !part.vehicleId : !part.driverId) {
+    return "name";
+  }
+  if (part.role === "driver" && !part.driverAcceptedAt) return "driver";
+  return null;
+}
+
+/** "Waiting for Ali Transport", "Waiting for us to accept", "Not named yet", "Waiting for the driver". */
+export function partWaitingLabel(waiting: PartWaiting, vendorName: string) {
+  switch (waiting) {
+    case "vendor":
+      return `Waiting for ${vendorName}`;
+    case "ours":
+      return "Waiting for us to accept";
+    case "name":
+      return "Not named yet";
+    case "driver":
+      return "Waiting for the driver";
+  }
+}
+
+const DAY_MS = 24 * HOUR_MS;
+
+/**
+ * How long until a pickup, in a few words: "Started", "in 40 min",
+ * "in 3 h", "in 2 days"; and whether it is within the day, soon enough
+ * that a trip not yet assigned needs Operation now.
+ */
+export function untilPickup(
+  startsAt: Date,
+  now: Date = new Date(),
+): { label: string; soon: boolean } {
+  const ms = startsAt.getTime() - now.getTime();
+  if (ms <= 0) return { label: "Started", soon: true };
+  const soon = ms < DAY_MS;
+  if (ms < HOUR_MS) {
+    return { label: `in ${Math.max(1, Math.round(ms / MINUTE_MS))} min`, soon };
+  }
+  if (ms < DAY_MS) return { label: `in ${Math.round(ms / HOUR_MS)} h`, soon };
+  const days = Math.round(ms / DAY_MS);
+  return { label: days === 1 ? "in 1 day" : `in ${days} days`, soon };
+}
+
 /** Whether a trip is assigned: it has a vehicle and a driver, both accepted. */
 export function tripAssigned(parts: readonly PartAcceptance[]) {
   return PART_ROLES.every((role) => {
@@ -265,16 +320,16 @@ export function tripAssigned(parts: readonly PartAcceptance[]) {
   });
 }
 
-/** The board's columns, worked out, never stored. */
-export const BOARD_COLUMNS = [
+/** Where a trip stands on the Assign page, worked out, never stored. */
+export const ASSIGN_STATES = [
   "to-assign",
   "waiting",
   "assigned",
   "on-the-road",
   "done",
 ] as const;
-export type BoardColumn = (typeof BOARD_COLUMNS)[number];
-export const BOARD_COLUMN_LABELS: Record<BoardColumn, string> = {
+export type AssignState = (typeof ASSIGN_STATES)[number];
+export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
   "to-assign": "To assign",
   waiting: "Waiting to accept",
   assigned: "Assigned",
@@ -282,13 +337,13 @@ export const BOARD_COLUMN_LABELS: Record<BoardColumn, string> = {
   done: "Done",
 };
 
-/** The board's column for a trip: by its status, its parts and whether its driver has reported. */
-export function boardColumnOf(trip: {
+/** Where a trip stands: by its status, its parts and whether its driver has reported. */
+export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
-  /** Its driver has tapped "On the way" or later. */
+  /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
   reported: boolean;
-}): BoardColumn {
+}): AssignState {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
   if (tripAssigned(trip.parts)) return "assigned";
@@ -299,13 +354,65 @@ export function boardColumnOf(trip: {
 /**
  * When an offer is answered by, unless Operation says otherwise: two hours
  * from now, but never later than an hour before the first pickup, and
- * never before now.
+ * never sooner than half an hour from now, so a trip close to its pickup,
+ * or started, still gets an answer.
  */
 export function defaultRespondBy(firstPickup: Date, now: Date = new Date()) {
   const twoHours = now.getTime() + 2 * HOUR_MS;
   const hourBefore = firstPickup.getTime() - HOUR_MS;
-  return new Date(Math.max(now.getTime(), Math.min(twoHours, hourBefore)));
+  const soonest = now.getTime() + 30 * MINUTE_MS;
+  return new Date(Math.max(soonest, Math.min(twoHours, hourBefore)));
 }
+
+/** The roles a trip still needs asked for: none until it is confirmed, then each it has no part for. */
+export function rolesToAsk(trip: {
+  status: string;
+  parts: readonly { role: string }[];
+}): PartRole[] {
+  if (trip.status !== "confirmed" && trip.status !== "assigned") return [];
+  return PART_ROLES.filter((role) => !trip.parts.some((p) => p.role === role));
+}
+
+/** A trip still to assign, as the Assign dialog names it. */
+export type AssignTrip = {
+  id: string;
+  position: number;
+  startsAt: Date;
+  /** "Airport → Datai", or the pickup of an hourly hire. */
+  route: string;
+  /** The roles it still needs asked for. */
+  roles: PartRole[];
+};
+
+/** The trips of a booking still to assign, from its trips with their roles and places. */
+export function assignTripsOf(
+  trips: readonly {
+    id: string;
+    position: number;
+    startsAt: Date;
+    roles: PartRole[];
+    job: { pickup: { label: string }; dropoff: { label: string } | null };
+  }[],
+): AssignTrip[] {
+  return trips.flatMap((trip) =>
+    trip.roles.length === 0
+      ? []
+      : [
+          {
+            id: trip.id,
+            position: trip.position,
+            startsAt: trip.startsAt,
+            route: trip.job.dropoff
+              ? `${trip.job.pickup.label} → ${trip.job.dropoff.label}`
+              : trip.job.pickup.label,
+            roles: trip.roles,
+          },
+        ],
+  );
+}
+
+/** Why a vehicle or a driver cannot do one trip, and what only warns; both empty when it fits. */
+export type TripFit = { reasons: string[]; warnings: string[] };
 
 /**
  * Whether a cancelled trip still owes its vendors: cancelled at or after

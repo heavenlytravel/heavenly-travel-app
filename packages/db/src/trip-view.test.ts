@@ -67,13 +67,22 @@ describe("tripDetailRows", () => {
 describe("priceRows", () => {
   const hourly = priceTrip({
     trip: { mode: "hourly", hours: 4 },
-    rates: { perKmSen: 0, hourlyRateSen: 5000 },
+    rates: { perKmSen: 0 },
+    hourly: {
+      zone: "Kuah Town",
+      packageHours: 4,
+      includedHours: 4,
+      packageSen: 20_000,
+      extraHours: 0,
+      extraHourSen: 0,
+      extraSen: 0,
+    },
   });
 
   it("shows the cell and the extra road past a zone's edge", () => {
     const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 10.65 },
-      rates: { perKmSen: 250, hourlyRateSen: 5000 },
+      rates: { perKmSen: 250 },
       route: { fromZone: "Airport", toZone: "Pantai Kok", rateSen: 5000 },
       zoneTrip: {
         pickup: { zone: "Airport", nearest: false, extraKm: 0 },
@@ -91,7 +100,7 @@ describe("priceRows", () => {
   it("shows a receipt from before whole km as it was charged", () => {
     const old = priceBreakdownOf({
       mode: "oneway",
-      rates: { perKmSen: 250, hourlyRateSen: 5000 },
+      rates: { perKmSen: 250 },
       distanceKm: 10.65,
       hours: null,
       route: { fromZone: "Airport", toZone: "Pantai Kok", rateSen: 5000 },
@@ -118,7 +127,16 @@ describe("priceRows", () => {
   it("names the weekend surcharge by why it applied", () => {
     const price = priceTrip({
       trip: { mode: "hourly", hours: 4 },
-      rates: { perKmSen: 0, hourlyRateSen: 5000 },
+      rates: { perKmSen: 0 },
+      hourly: {
+        zone: "Kuah Town",
+        packageHours: 4,
+        includedHours: 4,
+        packageSen: 20_000,
+        extraHours: 0,
+        extraHourSen: 0,
+        extraSen: 0,
+      },
       weekend: { charge: { percent: 20, flatSen: null }, reason: "holiday" },
     });
     assert.deepEqual(priceRows(price).at(-1), [
@@ -130,7 +148,7 @@ describe("priceRows", () => {
   it("names a cell within one zone, and shows no extra road when the trip was not longer", () => {
     const price = priceTrip({
       trip: { mode: "oneway", distanceKm: 3 },
-      rates: { perKmSen: 250, hourlyRateSen: 5000 },
+      rates: { perKmSen: 250 },
       route: { fromZone: "Kuah Town", toZone: "Kuah Town", rateSen: 2500 },
     });
     assert.deepEqual(priceRows(price), [["Within Kuah Town", "RM 25.00"]]);
@@ -142,6 +160,7 @@ describe("priceRows", () => {
         ...hourly,
         mode: "oneway",
         hours: null,
+        hourly: null,
         distanceKm: 10,
         rates: {
           baseFareSen: 3000,
@@ -178,6 +197,62 @@ describe("priceRows", () => {
         }),
       ).at(-1),
       ["Toyota Alphard, chosen", "RM 30.00"],
+    );
+  });
+
+  it("shows the package from its area, then the extra hours", () => {
+    assert.deepEqual(priceRows(hourly), [
+      ["4 hours from Kuah Town", "RM 200.00"],
+    ]);
+    const longer = priceTrip({
+      trip: { mode: "hourly", hours: 7 },
+      rates: { perKmSen: 0 },
+      hourly: {
+        zone: "Port cruise",
+        packageHours: 4,
+        includedHours: 5,
+        packageSen: 23_000,
+        extraHours: 2,
+        extraHourSen: 3_500,
+        extraSen: 7_000,
+      },
+    });
+    assert.deepEqual(priceRows(longer), [
+      ["4 hours from Port cruise, covers 5 hours", "RM 230.00"],
+      ["Extra hours, 2 × RM 35.00", "RM 70.00"],
+    ]);
+  });
+
+  it("shows the road to the nearest zone when it was charged", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates: { perKmSen: 250 },
+      hourly: {
+        zone: "Kuah Town",
+        packageHours: 4,
+        includedHours: 4,
+        packageSen: 20_000,
+        extraHours: 0,
+        extraHourSen: 0,
+        extraSen: 0,
+      },
+      hourlyRoadKm: 4.4,
+    });
+    assert.deepEqual(priceRows(price), [
+      ["4 hours from Kuah Town", "RM 200.00"],
+      ["Extra road, 5 km × RM 2.50", "RM 12.50"],
+    ]);
+  });
+
+  it("shows an hourly receipt from before packages by its rate", () => {
+    assert.deepEqual(
+      priceRows({
+        ...hourly,
+        hourly: null,
+        rates: { perKmSen: 0, hourlyRateSen: 5000 },
+        subtotalSen: 20_000,
+      }),
+      [["RM 50.00 per hour × 4 hours", "RM 200.00"]],
     );
   });
 

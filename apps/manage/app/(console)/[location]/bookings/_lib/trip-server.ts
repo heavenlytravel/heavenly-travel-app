@@ -4,6 +4,7 @@ import {
   chargedKmOf,
   flightOfTrip,
   formatLocalDateTime,
+  hourlyChoiceLabel,
   isAirportPlace,
   isTripCategory,
   parseFlightNumber,
@@ -13,7 +14,8 @@ import {
   PRICE_OVERRIDE_FIELDS,
   surchargeLabel,
   textOf,
-  tripClashes,
+  itemTiming,
+  firstClashSentence,
   tripItemIndexes,
   tripItemParams,
   WEEKEND_REASON_LABELS,
@@ -87,6 +89,9 @@ export async function quoteTripView(
     dropoffAirport: request.dropoff ? isAirportPlace(request.dropoff) : false,
     startsAt: formatLocalDateTime(request.startsAt),
     hours: quote.basis.mode === "hourly" ? quote.basis.hours : null,
+    hire: quote.hire
+      ? `${hourlyChoiceLabel(quote.hire)} from ${quote.hire.zone}`
+      : null,
     distanceKm: quote.basis.mode === "oneway" ? quote.basis.distanceKm : null,
     district: quote.district
       ? `${quote.district.name}, ${quote.district.state.name}`
@@ -137,7 +142,7 @@ function parseFormTrip(
   params: URLSearchParams,
 ): { ok: true; trip: FormTrip } | Refused {
   const category = textOf(params.get(CATEGORY_FIELD));
-  const search = parseTripSearch(params, ADMIN_SIDE);
+  const search = parseTripSearch(params);
   if (!isTripCategory(category) || !search) return NO_TRIP;
   const override = parsePriceOverride({
     amount: params.get(PRICE_OVERRIDE_FIELDS.amount),
@@ -226,24 +231,6 @@ export async function prepareFormItems(
     requests.push(trip.request);
   }
 
-  // One vehicle does one trip at a time.
-  const clashes = tripClashes(
-    requests.map((request) => ({
-      startsAt: request.startsAt,
-      hours: request.mode === "hourly" ? request.hours : null,
-    })),
-  );
-  const clashing = clashes.findIndex((found) => found !== null);
-  if (clashing >= 0) {
-    const clash = clashes[clashing]!;
-    return {
-      ok: false,
-      error: `Trip ${clashing + 1} starts ${
-        clash.kind === "same-time" ? "at the same time as" : "during"
-      } trip ${clash.with + 1}, and one vehicle cannot do both. Change the time of one of them.`,
-    };
-  }
-
   const flights = {
     arriving: parseFlightNumber(textOf(formData.get(FLIGHT_FIELDS.arriving))),
     departing: parseFlightNumber(textOf(formData.get(FLIGHT_FIELDS.departing))),
@@ -264,6 +251,16 @@ export async function prepareFormItems(
       return { ok: false, error: `${label(n)}${result.error.message}` };
     }
     items.push({ ...result.item, override: trips[n]!.override });
+  }
+
+  // One vehicle does one trip at a time: an hourly hire runs the hours its
+  // duration covers from its pickup's zone, known once it is priced.
+  const clash = firstClashSentence(items.map(itemTiming));
+  if (clash) {
+    return {
+      ok: false,
+      error: `${clash} Change the time of one of them.`,
+    };
   }
   return { ok: true, items };
 }

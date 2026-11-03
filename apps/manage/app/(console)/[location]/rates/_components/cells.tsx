@@ -1,3 +1,4 @@
+import { parseRinggit, ringgitInputValue } from "@repo/db";
 import { cx } from "@repo/ui/cx";
 
 /**
@@ -9,7 +10,7 @@ import { cx } from "@repo/ui/cx";
  * it says), changed since the save, not a price, or deleted on the save.
  */
 export const CELL_INPUT =
-  "block h-9 w-full min-w-24 rounded-lg border px-2.5 text-right text-sm tabular-nums outline-hidden transition-colors focus:border-brand focus:bg-white focus:bg-none focus:ring-2 focus:ring-brand/25 read-only:cursor-wait";
+  "block h-9 w-full min-w-24 rounded-lg border px-2.5 text-right text-sm tabular-nums outline-hidden transition-colors focus:border-brand focus:bg-white focus:bg-none focus:ring-2 focus:ring-brand/25 read-only:cursor-wait disabled:cursor-not-allowed disabled:bg-shade disabled:text-muted disabled:shadow-none";
 
 /** The room round a cell's box in its table cell. */
 export const CELL_PAD = "px-1.5 py-1.5";
@@ -53,3 +54,40 @@ export function CellKey({
     </span>
   );
 }
+
+/** A column of a price list: a class on sale here, with the category it is sold under. */
+export type ClassColumn = { id: string; name: string; category: string };
+
+/** What a cell holds: a price in sen, nothing, or text that is not a price. */
+export type Reading = { ok: true; sen: number | null } | { ok: false };
+
+export function readCell(text: string | undefined): Reading {
+  const trimmed = (text ?? "").trim();
+  if (trimmed === "") return { ok: true, sen: null };
+  const sen = parseRinggit(trimmed);
+  return sen === null ? { ok: false } : { ok: true, sen };
+}
+
+/** A value as the cell keeps it: "80" as "80.00", a lone dash as empty, anything else as typed. */
+export function tidy(text: string): string {
+  const trimmed = text.trim();
+  if (/^[-–—]$/.test(trimmed)) return "";
+  const reading = readCell(trimmed);
+  return reading.ok && reading.sen !== null
+    ? ringgitInputValue(reading.sen)
+    : trimmed;
+}
+
+/** Neighbouring columns of one category, for the heading row above the class names. */
+export function groupsOf(classes: readonly ClassColumn[]) {
+  const groups: { label: string; span: number }[] = [];
+  for (const column of classes) {
+    const last = groups.at(-1);
+    if (last && last.label === column.category) last.span += 1;
+    else groups.push({ label: column.category, span: 1 });
+  }
+  return groups;
+}
+
+/** A zone's name cut to the column's width, whole in its tooltip. */
+export const ZONE_NAME = "block max-w-44 truncate font-medium text-ink";

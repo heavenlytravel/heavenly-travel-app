@@ -41,17 +41,26 @@ const at = new Date("2026-10-03T01:30:00Z");
 const sedanPrice = withModelChoice(
   priceTrip({
     trip: { mode: "oneway", distanceKm: 55.2 },
-    rates: { perKmSen: 250, hourlyRateSen: 8000 },
+    rates: { perKmSen: 250 },
     route: { fromZone: "KLIA", toZone: "Kuala Lumpur", rateSen: 16800 },
   }),
   "Toyota Camry",
   { percent: 10, flatSen: null },
 );
 
-/** The coach's receipt: 8 hours, any coach of the class. */
+/** The coach's receipt: 8 hours from Kuala Lumpur, any coach of the class. */
 const coachPrice = priceTrip({
   trip: { mode: "hourly", hours: 8 },
-  rates: { perKmSen: 0, hourlyRateSen: 18000 },
+  rates: { perKmSen: 0 },
+  hourly: {
+    zone: "Kuala Lumpur",
+    packageHours: 8,
+    includedHours: 8,
+    packageSen: 144000,
+    extraHours: 0,
+    extraHourSen: 0,
+    extraSen: 0,
+  },
 });
 
 export function sampleItem(

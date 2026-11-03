@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { parseRinggit, plural, ringgitInputValue } from "@repo/db";
+import { plural, ringgitInputValue } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -37,7 +37,13 @@ import {
   type ZoneElsewhere,
 } from "./AddRouteDialog";
 import { errorOf } from "@repo/console/action-state";
+import { SaveBar, type SaveStatus } from "./SaveBar";
 import {
+  ZONE_NAME,
+  groupsOf,
+  readCell,
+  tidy,
+  type ClassColumn,
   CELL_BAD,
   CELL_CHANGED,
   CELL_DOOMED,
@@ -50,8 +56,6 @@ import {
 } from "./cells";
 
 type Zone = { id: string; name: string };
-/** A column of the grid: a class on sale here, with the category it is sold under. */
-type ClassColumn = { id: string; name: string; category: string };
 type Cell = {
   fromZoneId: string;
   toZoneId: string;
@@ -71,26 +75,6 @@ const cellKey = (route: Route, classId: string) =>
   `${routeKey(route)}|${classId}`;
 /** The route a cell's key names. */
 const routeKeyOfCell = (key: string) => key.split("|").slice(0, 2).join("|");
-
-/** What a cell holds: a price in sen, nothing, or text that is not a price. */
-type Reading = { ok: true; sen: number | null } | { ok: false };
-
-function readCell(text: string | undefined): Reading {
-  const trimmed = (text ?? "").trim();
-  if (trimmed === "") return { ok: true, sen: null };
-  const sen = parseRinggit(trimmed);
-  return sen === null ? { ok: false } : { ok: true, sen };
-}
-
-/** A value as the cell keeps it: "80" as "80.00", a lone dash as empty, anything else as typed. */
-function tidy(text: string): string {
-  const trimmed = text.trim();
-  if (/^[-–—]$/.test(trimmed)) return "";
-  const reading = readCell(trimmed);
-  return reading.ok && reading.sen !== null
-    ? ringgitInputValue(reading.sen)
-    : trimmed;
-}
 
 /** The stored cells as the grid's rows and prices, the rows in the zones' order. */
 function savedOf(cells: readonly Cell[], zones: readonly Zone[]): Saved {
@@ -123,20 +107,6 @@ function valuesOf(saved: Saved): Record<string, string> {
     ]),
   );
 }
-
-/** Neighbouring columns of one category, for the heading row above the class names. */
-function groupsOf(classes: readonly ClassColumn[]) {
-  const groups: { label: string; span: number }[] = [];
-  for (const column of classes) {
-    const last = groups.at(-1);
-    if (last && last.label === column.category) last.span += 1;
-    else groups.push({ label: column.category, span: 1 });
-  }
-  return groups;
-}
-
-/** A zone's name cut to the column's width, whole in its tooltip. */
-const ZONE_NAME = "block max-w-44 truncate font-medium text-ink";
 
 /** A link in a line of the grid's text: to Coverage, to the classes. */
 const byName = (a: string, b: string) =>
@@ -738,7 +708,7 @@ export function RateGrid({
     }).length;
   const gaps = kept.filter(hasGap).length;
 
-  let status: { tone: Notice["tone"] | "dirty" | "idle"; text: string };
+  let status: SaveStatus;
   if (pending) status = { tone: "idle", text: "Saving…" };
   else if (notice?.tone === "error") status = notice;
   else if (invalid.size > 0) {
@@ -1135,56 +1105,15 @@ export function RateGrid({
 
       {readOnly ? null : (
         <>
-          {/* Held at the screen's foot on a computer while the grid is in
-              view; on a phone it ends the grid, as a form's button does. */}
-          <div
-            className={cx(
-              "z-(--layer-sticky) flex flex-wrap items-center gap-x-4 gap-y-2 rounded-b-card px-5 py-3 md:sticky md:bottom-0",
-              dirty
-                ? "bg-navy text-white shadow-band"
-                : "border-t border-hairline bg-white",
-            )}
-          >
-            <p
-              aria-live="polite"
-              className={cx(
-                "min-w-0 text-sm",
-                status.tone === "error"
-                  ? dirty
-                    ? "font-semibold text-danger-edge"
-                    : "text-danger"
-                  : dirty
-                    ? "font-semibold"
-                    : status.tone === "done"
-                      ? "text-success"
-                      : status.tone === "idle"
-                        ? "text-muted"
-                        : "text-body",
-              )}
-            >
-              {status.text}
-            </p>
-            <div className="ml-auto flex items-center gap-2">
-              {dirty ? (
-                <Button
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={discard}
-                  className="text-white hover:bg-white/10 hover:text-white"
-                >
-                  Discard
-                </Button>
-              ) : null}
-              <Button
-                variant={dirty ? "secondary" : "primary"}
-                disabled={!dirty || invalid.size > 0}
-                pending={pending}
-                onClick={save}
-              >
-                {pending ? "Saving…" : "Save rates"}
-              </Button>
-            </div>
-          </div>
+          <SaveBar
+            dirty={dirty}
+            pending={pending}
+            status={status}
+            canSave={invalid.size === 0}
+            onDiscard={discard}
+            onSave={save}
+            label="Save rates"
+          />
           {leaveDialog}
           <AddRouteDialog
             open={adding}

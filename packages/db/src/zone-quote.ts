@@ -1,3 +1,4 @@
+import type { HourlyList } from "./hourly-input";
 import { nearestPointOnShape, type LngLat } from "./geo";
 import {
   reachableZones,
@@ -49,6 +50,8 @@ export type QuoteLocation = {
   /** The other locations' zones its routes out end at. */
   zonesOut: QuoteZone[];
   zoneRates: (RateCellLike & { id?: string })[];
+  /** Its hourly price list. */
+  hourly: HourlyList;
   /** The odd-hours surcharge; null when it has none. */
   oddHours: OddHours | null;
   /** The weekend and holiday surcharge; null when it has none. */
@@ -304,7 +307,15 @@ const traced = (
   km: roundKm(part.km),
 });
 
-type PlaceOptions = { pinned?: QuoteLocation | null; trace?: TripTrace };
+type PlaceOptions = {
+  pinned?: QuoteLocation | null;
+  trace?: TripTrace;
+  /**
+   * The zones a pickup outside every zone may be priced from, when not
+   * all: an hourly hire's are those that sell it.
+   */
+  pickupSells?: (location: QuoteLocation, zoneId: string) => boolean;
+};
 
 /**
  * Both ends of a trip placed, and the trip measured when an end is
@@ -338,7 +349,7 @@ async function placeBoth(
   locations: readonly QuoteLocation[],
   trip: { pickup: RoutePoint; dropoff: RoutePoint | null },
   routing: TripRouting,
-  { pinned, trace }: PlaceOptions,
+  { pinned, trace, pickupSells }: PlaceOptions,
 ): Promise<TripPlacing> {
   const route = counted(routing.route, trace);
   const fail = (
@@ -375,7 +386,13 @@ async function placeBoth(
       );
     }
     const candidates = pool
-      .flatMap((l) => zoneCandidates(trip.pickup, l.zones, l.maxExtraKm))
+      .flatMap((l) =>
+        zoneCandidates(
+          trip.pickup,
+          pickupSells ? l.zones.filter((z) => pickupSells(l, z.id)) : l.zones,
+          l.maxExtraKm,
+        ),
+      )
       .sort((x, y) => x.straightKm - y.straightKm);
     const found = await nearestFor(
       "pickup",

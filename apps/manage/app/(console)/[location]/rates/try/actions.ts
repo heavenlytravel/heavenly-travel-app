@@ -2,18 +2,28 @@
 
 import {
   emptyTrace,
+  isExtraHours,
+  isHourlyPackage,
   isTripCategory,
+  isTripMode,
   isWithinHorizon,
   pickupInstant,
   pinPlace,
   priceRows,
   unavailableReason,
+  type HourlyChoice,
   type LngLat,
+  type TripMode,
   type TripPriceBreakdown,
   type TripTrace,
   type ZoneTripMeasure,
 } from "@repo/db";
-import { listOfferings, quoteTrip, type QuotedEnd } from "@repo/db/server";
+import {
+  listOfferings,
+  quoteTrip,
+  type QuotedEnd,
+  type TripQuote,
+} from "@repo/db/server";
 import { resolvePlace, tripRouting } from "@repo/places/server";
 import { getAdmin } from "../../../../_lib/access";
 import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
@@ -24,8 +34,12 @@ export type TryEnd =
   | { lat: number; lng: number; label: string };
 
 export type TryTripInput = {
+  mode: TripMode;
   pickup: TryEnd;
-  dropoff: TryEnd;
+  /** One-way only; null for hourly. */
+  dropoff: TryEnd | null;
+  /** Hourly only: the package and the extra hours; null for one-way. */
+  hourly: HourlyChoice | null;
   vehicleClassId: string;
   /** The pickup's day, "2026-10-25", for the weekend and holiday surcharge. */
   date: string;
@@ -38,8 +52,10 @@ export type TryTripAnswer =
   | { ok: false; error: string }
   | {
       ok: true;
+      mode: TripMode;
       pickup: { label: string; at: LngLat };
-      dropoff: { label: string; at: LngLat };
+      /** Null for hourly hire. */
+      dropoff: { label: string; at: LngLat } | null;
       /** Every step of the quote, with its geometry. */
       trace: TripTrace;
       /** Why it cannot be priced, for the customer and in Ops' words; null when it was. */
@@ -55,7 +71,10 @@ export type TryTripAnswer =
         /** The location's extra road settings: its own, though the try was not held to them. */
         reach: { freeExtraKm: number; maxExtraKm: number };
         pickup: QuotedEnd;
-        dropoff: QuotedEnd;
+        /** Null for hourly hire. */
+        dropoff: QuotedEnd | null;
+        /** Hourly: the zone the hire is priced from, the package, the hours it covers there and the extra hours; null for one-way. */
+        hire: TripQuote["hire"];
         zoneTrip: ZoneTripMeasure | null;
         /** The class's price; null when the grid has none for it on this trip. */
         price: TripPriceBreakdown | null;
@@ -65,6 +84,12 @@ export type TryTripAnswer =
     };
 
 const END_NAMES = { pickup: "pickup", dropoff: "drop-off" } as const;
+
+function isHourlyChoice(value: unknown): value is HourlyChoice {
+  if (typeof value !== "object" || value === null) return false;
+  const c = value as Record<string, unknown>;
+  return isHourlyPackage(c.packageHours) && isExtraHours(c.extraHours);
+}
 
 function isEnd(value: unknown): value is TryEnd {
   if (typeof value !== "object" || value === null) return false;
@@ -83,8 +108,8 @@ const placeOf = async (end: TryEnd) =>
   "placeId" in end ? resolvePlace(end.placeId) : pinPlace(end);
 
 /**
- * Prices a trip on a location's Try a trip with the website's own
- * `quoteTrip`, the pickup's location pinned to that location and its
+ * Prices a trip on a location's Try a trip, one-way or an hourly hire,
+ * with the website's own `quoteTrip`, the pickup's location pinned to that location and its
  * limits lifted (any day, any extra road a location may set), and answers
  * the price, the quote's trace and what a customer would have met
  * instead. Nothing is booked or stored; the routes are real Google calls,
@@ -103,13 +128,20 @@ export async function tryTripAction(
   if (
     typeof locationId !== "string" ||
     !given ||
+    !isTripMode(given.mode) ||
     !isEnd(given.pickup) ||
-    !isEnd(given.dropoff) ||
     typeof given.vehicleClassId !== "string" ||
     typeof given.date !== "string" ||
     typeof given.time !== "string"
   ) {
-    return { ok: false, error: "Pick the pickup, the drop-off and a class." };
+    return { ok: false, error: "Pick the pickup and a class." };
+  }
+  const mode = given.mode;
+  if (mode === "oneway" && !isEnd(given.dropoff)) {
+    return { ok: false, error: "Pick the drop-off." };
+  }
+  if (mode === "hourly" && !isHourlyChoice(given.hourly)) {
+    return { ok: false, error: "Pick the duration and the extra hours." };
   }
   const startsAt = pickupInstant(given.date, given.time);
   if (!startsAt) {
@@ -118,10 +150,10 @@ export async function tryTripAction(
 
   const [pickup, dropoff, offerings] = await Promise.all([
     placeOf(given.pickup),
-    placeOf(given.dropoff),
+    mode === "oneway" ? placeOf(given.dropoff!) : null,
     listOfferings(locationId),
   ]);
-  if (!pickup || !dropoff) {
+  if (!pickup || (mode === "oneway" && !dropoff)) {
     return {
       ok: false,
       error: "Google did not return that place. Pick it again.",
@@ -138,16 +170,18 @@ export async function tryTripAction(
   const trace = emptyTrace();
   const quoted = await quoteTrip(
     category,
-    { mode: "oneway", pickup, dropoff, startsAt, hours: null },
+    mode === "oneway"
+      ? { mode, pickup, dropoff, startsAt, hourly: null }
+      : { mode, pickup, dropoff: null, startsAt, hourly: given.hourly! },
     tripRouting,
     { locationId, trace, unlimited: true },
   );
   const ends = {
+    mode,
     pickup: { label: pickup.label, at: [pickup.lng, pickup.lat] as LngLat },
-    dropoff: {
-      label: dropoff.label,
-      at: [dropoff.lng, dropoff.lat] as LngLat,
-    },
+    dropoff: dropoff
+      ? { label: dropoff.label, at: [dropoff.lng, dropoff.lat] as LngLat }
+      : null,
   };
   const customer = isWithinHorizon(startsAt)
     ? []
@@ -194,7 +228,8 @@ export async function tryTripAction(
       location: quote.location.name,
       reach: { freeExtraKm, maxExtraKm },
       pickup: quote.pickup,
-      dropoff: quote.dropoff!,
+      dropoff: quote.dropoff,
+      hire: quote.hire,
       zoneTrip: quote.zoneTrip,
       price: chosen?.price ?? null,
       rows: chosen?.price ? priceRows(chosen.price) : [],

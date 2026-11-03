@@ -126,6 +126,8 @@ action, no new service:
 
   Over the limit the action returns "Too many requests. Call us and we will book it
   for you." Signed-in customers are counted too; the limits are generous for a person.
+  Staff signed in on the website skip it, and bookings entered in manage are not
+  counted.
 
 Cloudflare Turnstile and a Vercel firewall rule are follow-ups if spam appears.
 

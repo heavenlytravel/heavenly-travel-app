@@ -65,7 +65,8 @@ const halfOf = (minute: number): Half => (minute < HALF_DAY ? "AM" : "PM");
  * The times of half a day in quarter hours, under an AM and PM switch, so
  * the list is 48 rows and not 96. It opens on the chosen time, or on
  * `start` when there is none, near the top. Times before
- * `earliest` are grey and cannot be picked: the ones already past today.
+ * `earliest` are grey and cannot be picked: the ones already past today;
+ * so are those after `latest`, on a last day that ends early.
  * A chosen time off the quarters, such as 10:05 on an older booking, keeps
  * a row of its own. Arrows move, Enter picks, and a digit jumps to its hour.
  */
@@ -74,6 +75,7 @@ export function TimeList({
   onPick,
   start,
   earliest = null,
+  latest = null,
   autoFocus = false,
   className,
   "aria-label": ariaLabel = "Time",
@@ -83,6 +85,7 @@ export function TimeList({
   /** The minute the list opens on when nothing is chosen. */
   start: number;
   earliest?: number | null;
+  latest?: number | null;
   /** Focus the row it opens on, for a picker that is only a list. */
   autoFocus?: boolean;
   className?: string;
@@ -100,7 +103,9 @@ export function TimeList({
     minutes.push(chosen);
     minutes.sort((a, b) => a - b);
   }
-  const allowed = (minute: number) => earliest === null || minute >= earliest;
+  const allowed = (minute: number) =>
+    (earliest === null || minute >= earliest) &&
+    (latest === null || minute <= latest);
   // The row the list centres on: the chosen time, else the same clock time
   // in this half, else the first that can be picked.
   const anchor = (() => {

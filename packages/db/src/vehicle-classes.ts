@@ -41,7 +41,6 @@ const withOfferings = {
         id: true,
         isActive: true,
         perKmSen: true,
-        hourlyRateSen: true,
         location: {
           select: { id: true, name: true, slug: true, state: true },
         },

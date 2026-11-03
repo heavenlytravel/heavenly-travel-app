@@ -7,10 +7,19 @@ import {
   withModelChoice,
   type TripRates,
 } from "./pricing";
+import type { HourlyCharge } from "./hourly-input";
 
-const rates: TripRates = {
-  perKmSen: 250,
-  hourlyRateSen: 6_000,
+const rates: TripRates = { perKmSen: 250 };
+
+/** A 4-hour package from Kuah Town, no extra hours. */
+const kuah4: HourlyCharge = {
+  zone: "Kuah Town",
+  packageHours: 4,
+  includedHours: 4,
+  packageSen: 18_000,
+  extraHours: 0,
+  extraHourSen: 0,
+  extraSen: 0,
 };
 
 const route = {
@@ -81,11 +90,74 @@ describe("priceTrip", () => {
     assert.equal(price.subtotalSen, 4_500);
   });
 
-  it("prices an hourly hire as rate times hours, with no minimum fare", () => {
-    const price = priceTrip({ trip: { mode: "hourly", hours: 4 }, rates });
-    assert.equal(price.totalSen, 24_000);
-    assert.equal(price.hours, 4);
+  it("prices an hourly hire as its package plus the extra hours", () => {
+    const hourly: HourlyCharge = {
+      zone: "Port cruise",
+      packageHours: 4,
+      includedHours: 5,
+      packageSen: 23_000,
+      extraHours: 2,
+      extraHourSen: 3_500,
+      extraSen: 7_000,
+    };
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 7 },
+      rates,
+      hourly,
+    });
+    assert.equal(price.subtotalSen, 30_000);
+    assert.equal(price.totalSen, 30_000);
+    assert.equal(price.hours, 7);
+    assert.deepEqual(price.hourly, { ...hourly, road: null });
     assert.equal(price.distanceKm, null);
+    assert.deepEqual(
+      priceBreakdownOf(JSON.parse(JSON.stringify(price))),
+      price,
+    );
+  });
+
+  it("adds a pickup's road to its nearest zone past the free km, rounded up", () => {
+    const price = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates,
+      hourly: kuah4,
+      hourlyRoadKm: 5.2,
+      freeExtraKm: 3,
+    });
+    // 2.2 km past the free 3, rounded up to 3 km at RM 2.50.
+    assert.deepEqual(price.hourly?.road, {
+      extraKm: 5.2,
+      freeKm: 3,
+      chargedKm: 3,
+      perKmSen: 250,
+      extraSen: 750,
+    });
+    assert.equal(price.subtotalSen, 18_000 + 750);
+    const within = priceTrip({
+      trip: { mode: "hourly", hours: 4 },
+      rates,
+      hourly: kuah4,
+      hourlyRoadKm: 2,
+      freeExtraKm: 3,
+    });
+    assert.equal(within.hourly?.road?.extraSen, 0);
+    assert.equal(within.subtotalSen, 18_000);
+  });
+
+  it("refuses an hourly hire whose hours are not the package's plus the extra", () => {
+    assert.throws(
+      () =>
+        priceTrip({
+          trip: { mode: "hourly", hours: 5 },
+          rates,
+          hourly: kuah4,
+        }),
+      RangeError,
+    );
+    assert.throws(
+      () => priceTrip({ trip: { mode: "hourly", hours: 4 }, rates }),
+      RangeError,
+    );
   });
 
   it("prices a one-way trip on a route at the route's rate, whatever the distance", () => {
@@ -103,8 +175,9 @@ describe("priceTrip", () => {
 
   it("adds the odd-hours surcharge after the subtotal and rounds to sen", () => {
     const price = priceTrip({
-      trip: { mode: "hourly", hours: 3 },
+      trip: { mode: "hourly", hours: 4 },
       rates,
+      hourly: kuah4,
       surcharge: { percent: 50, flatSen: null },
     });
     assert.equal(price.subtotalSen, 18_000);
@@ -114,8 +187,9 @@ describe("priceTrip", () => {
 
   it("adds the weekend surcharge beside the odd-hours one, each on the subtotal", () => {
     const price = priceTrip({
-      trip: { mode: "hourly", hours: 3 },
+      trip: { mode: "hourly", hours: 4 },
       rates,
+      hourly: kuah4,
       surcharge: { percent: 50, flatSen: null },
       weekend: { charge: { percent: 20, flatSen: null }, reason: "holiday" },
     });
@@ -158,8 +232,9 @@ describe("priceTrip", () => {
 
   it("records no surcharge at zero percent", () => {
     const price = priceTrip({
-      trip: { mode: "hourly", hours: 3 },
+      trip: { mode: "hourly", hours: 4 },
       rates,
+      hourly: kuah4,
       surcharge: { percent: 0, flatSen: null },
     });
     assert.equal(price.surcharge, null);
@@ -168,8 +243,9 @@ describe("priceTrip", () => {
 
   it("copies the rates it used into the breakdown", () => {
     const price = priceTrip({
-      trip: { mode: "hourly", hours: 3 },
+      trip: { mode: "hourly", hours: 4 },
       rates: { ...rates, extra: true } as TripRates,
+      hourly: kuah4,
     });
     assert.deepEqual(price.rates, rates);
   });
@@ -182,7 +258,12 @@ describe("priceTrip", () => {
       priceTrip({ trip: { mode: "hourly", hours: 0 }, rates }),
     );
     assert.throws(() =>
-      priceTrip({ trip: { mode: "hourly", hours: 3 }, rates, route }),
+      priceTrip({
+        trip: { mode: "hourly", hours: 4 },
+        rates,
+        route,
+        hourly: kuah4,
+      }),
     );
     assert.throws(() =>
       priceTrip({
@@ -266,7 +347,12 @@ describe("priceBreakdownOf", () => {
   it("reads a receipt from before routes and surcharges, keeping its multiplier and its metered rates", () => {
     const old = {
       mode: "hourly",
-      rates: { ...rates, baseFareSen: 3_000, minimumFareSen: 6_000 },
+      rates: {
+        ...rates,
+        hourlyRateSen: 6_000,
+        baseFareSen: 3_000,
+        minimumFareSen: 6_000,
+      },
       multiplier: 1.2,
       distanceKm: null,
       hours: 3,
@@ -276,6 +362,7 @@ describe("priceBreakdownOf", () => {
     assert.deepEqual(priceBreakdownOf(old), {
       ...old,
       route: null,
+      hourly: null,
       zoneTrip: null,
       surcharge: null,
       weekend: null,
@@ -290,21 +377,14 @@ describe("priceBreakdownOf", () => {
 });
 
 describe("startingPriceSen", () => {
-  it("is the cheapest cell on the grid when the shortest hire costs more", () => {
-    assert.equal(
-      startingPriceSen({ ...rates, minHourlyHours: 4 }, 4_500),
-      4_500,
-    );
+  it("is the cheaper of the grid's cheapest cell and the cheapest package", () => {
+    assert.equal(startingPriceSen(4_500, 14_000), 4_500);
+    assert.equal(startingPriceSen(30_000, 14_000), 14_000);
   });
 
-  it("is the shortest hourly hire when that costs less, or when the grid prices nothing", () => {
-    assert.equal(
-      startingPriceSen({ ...rates, minHourlyHours: 4 }, 30_000),
-      24_000,
-    );
-    assert.equal(
-      startingPriceSen({ ...rates, minHourlyHours: 4 }, null),
-      24_000,
-    );
+  it("is whichever is priced, or null when neither is", () => {
+    assert.equal(startingPriceSen(null, 14_000), 14_000);
+    assert.equal(startingPriceSen(4_500, null), 4_500);
+    assert.equal(startingPriceSen(null, null), null);
   });
 });

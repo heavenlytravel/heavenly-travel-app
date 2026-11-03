@@ -50,11 +50,6 @@ function FigureTile({ figure }: { figure: Figure }) {
       <span className="flex items-center gap-2 text-caption font-medium text-muted">
         {figure.tone ? <StatusDot tone={figure.tone} /> : null}
         <span className="truncate">{figure.label}</span>
-        {figure.current ? (
-          <span className="ml-auto text-caps font-bold text-brand max-sm:hidden">
-            Showing
-          </span>
-        ) : null}
       </span>
       <span className="mt-2 block font-serif text-figure leading-none text-ink tabular-nums">
         {figure.value}

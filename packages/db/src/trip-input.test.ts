@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  parseHourlyChoice,
   isTripId,
   tripItemField,
   tripItemIndexes,
@@ -14,17 +15,18 @@ import {
 } from "./trip-input";
 
 const oneway = "mode=oneway&pickup=p1&dropoff=p2&date=2026-10-03&time=09:30";
-const hourly = "mode=hourly&pickup=p1&hours=4&date=2026-10-03&time=09:30";
+const hourly =
+  "mode=hourly&pickup=p1&duration=4&extra=3&date=2026-10-03&time=09:30";
 
 describe("parseTripSearch", () => {
-  it("reads a one-way search and drops the hours", () => {
-    assert.deepEqual(parseTripSearch(`${oneway}&hours=4`), {
+  it("reads a one-way search and drops the duration", () => {
+    assert.deepEqual(parseTripSearch(`${oneway}&duration=4`), {
       mode: "oneway",
       pickupId: "p1",
       dropoffId: "p2",
       date: "2026-10-03",
       time: "09:30",
-      hours: null,
+      hourly: null,
     });
   });
 
@@ -35,7 +37,7 @@ describe("parseTripSearch", () => {
       dropoffId: null,
       date: "2026-10-03",
       time: "09:30",
-      hours: 4,
+      hourly: { packageHours: 4, extraHours: 3 },
     });
   });
 
@@ -44,26 +46,32 @@ describe("parseTripSearch", () => {
       parseTripSearch("mode=oneway&pickup=p1&date=2026-10-03"),
       null,
     );
-    assert.equal(parseTripSearch(hourly.replace("hours=4", "hours=2")), null);
-    assert.equal(parseTripSearch(hourly.replace("hours=4", "hours=13")), null);
+    assert.equal(
+      parseTripSearch(hourly.replace("duration=4", "duration=5")),
+      null,
+    );
+    assert.equal(parseTripSearch(hourly.replace("extra=3", "extra=13")), null);
+    assert.equal(parseTripSearch(hourly.replace("extra=3", "extra=-1")), null);
     assert.equal(parseTripSearch(oneway.replace("09:30", "9:30")), null);
     assert.equal(parseTripSearch(oneway.replace("oneway", "return")), null);
   });
 
-  it("takes an admin's hours from one to a whole day", () => {
-    const hoursOf = (h: string) =>
-      parseTripSearch(hourly.replace("hours=4", `hours=${h}`), "admin")?.hours;
-    assert.equal(hoursOf("1"), 1);
-    assert.equal(hoursOf("24"), 24);
-    assert.equal(hoursOf("0"), undefined);
-    assert.equal(hoursOf("25"), undefined);
+  it("takes no extra hours when they are left out", () => {
+    assert.deepEqual(parseTripSearch(hourly.replace("&extra=3", ""))?.hourly, {
+      packageHours: 4,
+      extraHours: 0,
+    });
+    assert.deepEqual(parseHourlyChoice("duration=12&extra=12"), {
+      packageHours: 12,
+      extraHours: 12,
+    });
   });
 
   it("reads the same names from a posted form", () => {
     const form = new FormData();
     form.set("mode", "hourly");
     form.set("pickup", "local:petaling");
-    form.set("hours", "5");
+    form.set("duration", "8");
     form.set("date", "2026-10-03");
     form.set("time", "08:00");
     assert.deepEqual(parseTripSearch(form), {
@@ -72,7 +80,7 @@ describe("parseTripSearch", () => {
       dropoffId: null,
       date: "2026-10-03",
       time: "08:00",
-      hours: 5,
+      hourly: { packageHours: 8, extraHours: 0 },
     });
   });
 
@@ -81,7 +89,7 @@ describe("parseTripSearch", () => {
     assert.deepEqual(parseTripSearch(tripSearchParams(search)), search);
     assert.deepEqual(
       [...tripSearchParams(search).keys()],
-      ["mode", "pickup", "date", "time", "hours"],
+      ["mode", "pickup", "date", "time", "duration", "extra"],
     );
   });
 });
@@ -191,6 +199,7 @@ describe("tripSearchOf", () => {
         dropoff: { ...klia, placeId: "p2" },
         startsAt,
         hours: null,
+        hourly: null,
         distanceKm: 55.2,
       }),
       {
@@ -199,21 +208,35 @@ describe("tripSearchOf", () => {
         dropoffId: "p2",
         date: "2026-10-03",
         time: "09:30",
-        hours: null,
+        hourly: null,
       },
     );
   });
 
-  it("keeps the hours of an hourly trip and drops the drop-off", () => {
+  it("reads a trip booked before packages as the biggest package it fills", () => {
     const search = tripSearchOf({
       mode: "hourly",
       pickup: klia,
       dropoff: null,
       startsAt,
-      hours: 4,
+      hours: 10,
+      hourly: null,
       distanceKm: null,
     });
-    assert.equal(search.hours, 4);
+    assert.deepEqual(search.hourly, { packageHours: 8, extraHours: 2 });
+  });
+
+  it("keeps the package of an hourly trip and drops the drop-off", () => {
+    const search = tripSearchOf({
+      mode: "hourly",
+      pickup: klia,
+      dropoff: null,
+      startsAt,
+      hours: 7,
+      hourly: { packageHours: 4, extraHours: 2 },
+      distanceKm: null,
+    });
+    assert.deepEqual(search.hourly, { packageHours: 4, extraHours: 2 });
     assert.equal(search.dropoffId, null);
     assert.notEqual(parseTripSearch(tripSearchParams(search)), null);
   });
@@ -242,5 +265,19 @@ describe("several items in one form", () => {
     assert.equal(item.get("pickup"), "p3");
     assert.equal(item.get("name"), null);
     assert.equal(tripItemParams(form, 1).size, 0);
+  });
+});
+
+describe("parseHourlyChoice on a link from before durations", () => {
+  it("reads hours alone as the biggest duration it fills and the rest", () => {
+    assert.deepEqual(parseHourlyChoice("hours=6"), {
+      packageHours: 4,
+      extraHours: 2,
+    });
+    assert.deepEqual(parseHourlyChoice("hours=8"), {
+      packageHours: 8,
+      extraHours: 0,
+    });
+    assert.equal(parseHourlyChoice("hours=abc"), null);
   });
 });

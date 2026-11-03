@@ -6,9 +6,11 @@ import {
   fitsPassengers,
   formatMyr,
   hireEndOf,
-  HOURLY_OPTIONS,
+  hourlyChoiceOf,
+  HOURLY_PACKAGES,
   isTripCategory,
   localDateTimeInputs,
+  namedHours,
   offersChildSeats,
   parsePriceOverride,
   parseRinggit,
@@ -44,8 +46,8 @@ import type { BookingItemWithDetails } from "@repo/db/server";
 
 /**
  * An admin enters what was already agreed, often by phone and sometimes
- * after the trip: the website's notice, minimum hire, horizon, hours and
- * group limits do not refuse it, and the pickup may be past.
+ * after the trip: the website's notice, horizon and group limits do not
+ * refuse it, and the pickup may be past.
  */
 export const ADMIN_SIDE = "admin" satisfies BookingSide;
 
@@ -94,7 +96,10 @@ export type TripQuoteView =
       dropoffAirport: boolean;
       /** As people read it: "Sat, 3 Oct 2026, 9:30 AM". */
       startsAt: string;
+      /** Hourly: the hours the hire runs, the duration's from its zone plus the extra; null for one-way. */
       hours: number | null;
+      /** Hourly: "4 hours + 3 extra hours from Kuah Town"; null for one-way. */
+      hire: string | null;
       distanceKm: number | null;
       /** "Petaling, Selangor", for the record; null at sea. */
       district: string | null;
@@ -124,7 +129,10 @@ export type TripValues = {
   dropoff: PlaceValue;
   date: string;
   time: string;
-  hours: string;
+  /** Hourly: the package, "4", "8" or "12". */
+  packageHours: string;
+  /** Hourly: the hours past the package, "0" for none. */
+  extraHours: string;
 };
 
 /** One trip of a booking form, each value as its input shows it: the trip, its prices and the price agreed for it. */
@@ -178,7 +186,8 @@ export function newTripDraft(
       dropoff: { text: "" },
       date: "",
       time: "",
-      hours: String(HOURLY_OPTIONS[0]),
+      packageHours: String(HOURLY_PACKAGES[0]),
+      extraHours: "0",
     },
     quote: null,
     quoteError: null,
@@ -223,6 +232,7 @@ export function amendDraftOf(
     return null;
   }
   const { date, time } = localDateTimeInputs(trip.startsAt);
+  const hourly = hourlyChoiceOf(trip);
   const priced = quote.ok ? quote : null;
   const vehicleClass = priced?.classes.find(
     (c) => c.id === details.vehicleClassId,
@@ -246,7 +256,8 @@ export function amendDraftOf(
           : { text: "" },
         date,
         time,
-        hours: String(trip.hours ?? HOURLY_OPTIONS[0]),
+        packageHours: String(hourly.packageHours),
+        extraHours: String(hourly.extraHours),
       },
       quote: priced,
       quoteError: quote.ok ? null : quote.error,
@@ -293,11 +304,14 @@ export function tripInput(trip: TripValues): Record<string, string> {
     [TRIP_PARAM.time]: trip.time,
   };
   if (trip.mode === "oneway") input[TRIP_PARAM.dropoff] = trip.dropoff.id ?? "";
-  else input[TRIP_PARAM.hours] = trip.hours;
+  else {
+    input[TRIP_PARAM.packageHours] = trip.packageHours;
+    input[TRIP_PARAM.extraHours] = trip.extraHours;
+  }
   return input;
 }
 
-/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · extra road 1 km · 55.2 km by road · odd hours +50% · weekend +20%" */
+/** "Klang Valley rates · Petaling, Selangor · grid KLIA to Cenang · 4 hours from Kuah Town · extra road 1 km · 55.2 km by road · odd hours +50% · weekend +20%" */
 export function quoteSummary(quote: PricedTrip) {
   const parts = [`${quote.location} rates`];
   if (quote.district) parts.push(quote.district);
@@ -308,6 +322,7 @@ export function quoteSummary(quote: PricedTrip) {
   if (quote.distanceKm !== null) {
     parts.push(`${quote.distanceKm.toFixed(1)} km by road`);
   }
+  if (quote.hire !== null) parts.push(quote.hire);
   if (quote.hours !== null) parts.push(`${quote.hours} hours`);
   if (quote.surcharge !== null) parts.push(`odd hours ${quote.surcharge}`);
   if (quote.weekend !== null) parts.push(quote.weekend);
@@ -341,7 +356,15 @@ export function clashNotes(
     mode: draft.trip.mode,
     date: draft.trip.date,
     time: draft.trip.time,
-    hours: draft.trip.mode === "hourly" ? Number(draft.trip.hours) : null,
+    // Priced, the hours its duration covers from its zone; until then, by name.
+    hours:
+      draft.trip.mode !== "hourly"
+        ? null
+        : (draft.quote?.hours ??
+          namedHours({
+            packageHours: Number(draft.trip.packageHours),
+            extraHours: Number(draft.trip.extraHours),
+          })),
   }));
   const notes = new Map<string, TripClashNote>();
   for (const [id, clash] of clashesOf(typed)) {

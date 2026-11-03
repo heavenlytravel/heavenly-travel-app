@@ -18,6 +18,7 @@ import {
   type DeclineReason,
   type Job,
   type PartRole,
+  type TripFit,
 } from "./fulfilment-rules";
 import type { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
@@ -165,6 +166,15 @@ export async function getBookingFulfilment(
   }));
 }
 
+/** The booking a trip belongs to, by the trip's id; null when there is none. */
+export async function bookingIdOfTrip(itemId: string): Promise<string | null> {
+  const item = await db.bookingItem.findUnique({
+    where: { id: itemId },
+    select: { bookingId: true },
+  });
+  return item?.bookingId ?? null;
+}
+
 /** A vehicle or a driver the picker lists, and why it cannot be used, if so. */
 export type Candidate = {
   id: string;
@@ -172,10 +182,15 @@ export type Candidate = {
   name: string;
   vendor: { id: string; name: string; isOurs: boolean };
   locationName: string;
-  /** Why it cannot be used, a few words each; empty when it can. */
+  /** Why it cannot do every live trip, a few words each; empty when it can. */
   reasons: string[];
   /** Estimates that do not refuse it: the drive between jobs. */
   warnings: string[];
+  /**
+   * Its fit for each live trip on its own, by item id: for a choice made
+   * per trip, so a clash on trip 3 greys it on trip 3 alone.
+   */
+  trips: Record<string, TripFit>;
   /** Its other jobs on the trips' days: "8:00 HT-7K3QZM Airport → Datai, ends about 8:45". */
   day: string[];
 };
@@ -220,12 +235,14 @@ function expiredOn(
 }
 
 /**
- * The picker: every vehicle or driver in service, ours first, each with
- * the reasons it cannot do the booking's live trips, greyed in the list,
+ * The picker: every vehicle or driver in service that may do a class the
+ * booking's live trips are of, ours first, each with the reasons it
+ * cannot do them, greyed in the list,
  * and the timing warnings that only warn. A clash with another job, a
  * class it is not of or may not drive, a document expired on a trip's
- * day, its vendor suspended. The drive between jobs is the straight
- * line's estimate here.
+ * day, its vendor suspended. The same again for each trip on its own, for
+ * a choice made per trip. The drive between jobs is the straight line's
+ * estimate here.
  */
 export async function listCandidates(
   bookingId: string,
@@ -248,6 +265,8 @@ export async function listCandidates(
     select: { id: true, name: true, isOurs: true, status: true },
   } as const;
 
+  // Each row says whether it may do a class and which of its documents
+  // expire on some days, so its fit is worked for all trips and each.
   const rows =
     role === "vehicle"
       ? (
@@ -266,32 +285,23 @@ export async function listCandidates(
               },
             },
           })
-        ).map((v) => {
-          const reasons: string[] = [];
-          if (
-            ![...classIds].every((c) => c === v.vehicleModel.vehicleClassId)
-          ) {
-            reasons.push(
-              `A ${v.vehicleModel.vehicleClass.name}, not the class booked`,
-            );
-          }
-          reasons.push(
-            ...expiredOn(
+        ).map((v) => ({
+          id: v.id,
+          name: `${v.plate} · ${modelName(v.vehicleModel)}`,
+          vendor: v.vendor,
+          location: v.location,
+          mayDo: (classId: string | null) =>
+            classId === v.vehicleModel.vehicleClassId,
+          notClass: `A ${v.vehicleModel.vehicleClass.name}, not the class booked`,
+          expired: (on: ReadonlySet<string>) =>
+            expiredOn(
               v as unknown as Record<string, Date | null>,
               VEHICLE_DOCUMENTS,
               VEHICLE_DOCUMENT_LABELS,
-              days,
+              on,
             ),
-          );
-          return {
-            id: v.id,
-            name: `${v.plate} · ${modelName(v.vehicleModel)}`,
-            vendor: v.vendor,
-            location: v.location,
-            reasons,
-            held: { vehicleId: v.id } as const,
-          };
-        })
+          held: { vehicleId: v.id } as const,
+        }))
       : (
           await db.driver.findMany({
             where: { isActive: true },
@@ -302,44 +312,53 @@ export async function listCandidates(
             },
           })
         ).map((d) => {
-          const reasons: string[] = [];
           const may = new Set(d.vehicleClasses.map((c) => c.id));
-          if (![...classIds].every((c) => c !== null && may.has(c))) {
-            reasons.push("Not allowed on this class");
-          }
-          reasons.push(
-            ...expiredOn(
-              d as unknown as Record<string, Date | null>,
-              DRIVER_DOCUMENTS,
-              DRIVER_DOCUMENT_LABELS,
-              days,
-            ),
-          );
           return {
             id: d.id,
             name: d.name,
             vendor: d.vendor,
             location: d.location,
-            reasons,
+            mayDo: (classId: string | null) =>
+              classId !== null && may.has(classId),
+            notClass: "Not allowed on this class",
+            expired: (on: ReadonlySet<string>) =>
+              expiredOn(
+                d as unknown as Record<string, Date | null>,
+                DRIVER_DOCUMENTS,
+                DRIVER_DOCUMENT_LABELS,
+                on,
+              ),
             held: { driverId: d.id } as const,
           };
         });
 
+  // One of a class no trip is of is not listed at all: a class changes by
+  // amending the booking, not here.
+  const fitting = rows.filter((row) => [...classIds].some(row.mayDo));
   const candidates = await Promise.all(
-    rows.map(async (row): Promise<Candidate & { rank: number }> => {
-      const reasons = [...row.reasons];
-      if (row.vendor.status !== "active") {
-        reasons.push("Its vendor is suspended");
-      }
+    fitting.map(async (row): Promise<Candidate & { rank: number }> => {
       const held = await heldJobs(db, row.held, bookingId);
-      const clash = firstClash(jobs, held);
-      if (clash) reasons.push(clashSentence(clash));
-      const warnings = clash
-        ? []
-        : timingWarnings(jobs, held, {
-            bufferMinutes,
-            who: role === "driver" ? row.name.split(" ")[0] : "It",
-          });
+      const suspended =
+        row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
+      const who = role === "driver" ? row.name.split(" ")[0] : "It";
+      // The fit for a set of trips: one, or all of them at once.
+      const fitFor = (
+        asked: readonly Job[],
+        classes: readonly (string | null)[],
+      ): TripFit => {
+        const reasons = [
+          ...(classes.every(row.mayDo) ? [] : [row.notClass]),
+          ...row.expired(daysOf(asked)),
+          ...suspended,
+        ];
+        const clash = firstClash(asked, held);
+        if (clash) reasons.push(clashSentence(clash));
+        const warnings = clash
+          ? []
+          : timingWarnings(asked, held, { bufferMinutes, who });
+        return { reasons, warnings };
+      };
+      const all = fitFor(jobs, [...classIds]);
       return {
         id: row.id,
         name: row.name,
@@ -349,14 +368,17 @@ export async function listCandidates(
           isOurs: row.vendor.isOurs,
         },
         locationName: row.location.name,
-        reasons,
-        warnings,
+        reasons: all.reasons,
+        warnings: all.warnings,
+        trips: Object.fromEntries(
+          trips.map((t) => [t.id, fitFor([t.job], [t.vehicleClassId])]),
+        ),
         day: held
           .filter((job) => days.has(todayInMalaysia(job.startsAt)))
           .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
           .map(dayLine),
         rank:
-          (reasons.length > 0 ? 4 : 0) +
+          (all.reasons.length > 0 ? 4 : 0) +
           (row.vendor.isOurs ? 0 : 2) +
           (row.location.id === here ? 0 : 1),
       };
@@ -380,29 +402,41 @@ function usableVendor(vendor: { status: string }) {
 // Writing
 // ---------------------------------------------------------------------------
 
-/** One role asked of one vendor for the booking: named, or left to the vendor to choose. */
+/**
+ * One role asked of one vendor for some of the booking's trips: a vehicle
+ * or a driver named, or left to the vendor to choose.
+ */
 export type PartAsk = {
   vendorId: string;
   /** The vehicle or the driver Operation names; null asks the vendor to choose. */
   recordId: string | null;
+  /** The trips it is asked for, by item id. */
+  itemIds: string[];
   /** What we owe the vendor for each trip, by item id; ours is always 0. */
   costSen: Record<string, number>;
 };
 
 export type AssignInput = {
   bookingId: string;
-  /** The trips asked for; empty means every live trip not yet assigned. */
-  itemIds: string[];
-  vehicle: PartAsk | null;
-  driver: PartAsk | null;
-  /** Unanswered by then, the offer's parts reopen; default by `defaultRespondBy`. */
-  respondBy: Date | null;
+  /**
+   * Each role's asks: one for every trip when the same vehicle or driver
+   * does them all, or one per choice when trips differ. A trip is in at
+   * most one ask of a role; empty leaves the role for later.
+   */
+  vehicle: PartAsk[];
+  driver: PartAsk[];
+  /**
+   * When each vendor answers by, by vendor id: unanswered by then, its
+   * parts reopen. A vendor not in it gets `defaultRespondBy`. Never at or
+   * after the first pickup it is asked for.
+   */
+  respondBy: Record<string, Date>;
   /** Operation accepts our vehicle in the same step, having checked it. */
   acceptOurs: boolean;
 };
 
 const NO_BOOKING = refuse(
-  "This booking was deleted meanwhile. Go back to the board.",
+  "This booking was deleted meanwhile. Go back to Assign.",
 );
 
 /** The time a trip's part is taken: refused when it clashes with another job of the record. */
@@ -429,7 +463,7 @@ async function clashRefusal(
 async function namedRecord(
   tx: Prisma.TransactionClient,
   role: PartRole,
-  ask: PartAsk,
+  ask: Pick<PartAsk, "vendorId" | "recordId">,
 ) {
   if (!ask.recordId) return { ok: true as const, name: null };
   const record =
@@ -469,13 +503,15 @@ async function namedRecord(
 }
 
 /**
- * Asks vendors for the booking's trips: a vehicle and a driver, from any
- * vendor, named or left to the vendor. One offer per vendor, one part per
- * trip and role, each with what we owe that vendor for it. A role a trip
- * has already is refused: release it first. A named vehicle or driver that
- * clashes with another job is refused. Our driver needs no vendor
- * acceptance, only their own; our vehicle is accepted here when Operation
- * says it checked it. Then the trips' status follows their parts.
+ * Asks vendors for the booking's trips: a vehicle and a driver for each,
+ * from any vendor, named or left to the vendor, the same for every trip
+ * or different ones. One offer per vendor, one part per trip and role,
+ * each with what we owe that vendor for it. A role a trip has already is
+ * refused: release it first. A named vehicle or driver that clashes with
+ * another job on a trip it is asked for is refused. Our driver needs no
+ * vendor acceptance, only their own; our vehicle is accepted here when
+ * Operation says it checked it. Then the trips' status follows their
+ * parts.
  */
 export async function assignBooking(
   actor: Actor,
@@ -484,10 +520,10 @@ export async function assignBooking(
 ): Promise<Change & { assigned?: string[] }> {
   const asks = (
     [
-      ["vehicle", input.vehicle],
-      ["driver", input.driver],
-    ] as const
-  ).filter((pair): pair is readonly [PartRole, PartAsk] => pair[1] !== null);
+      ...input.vehicle.map((ask) => ["vehicle", ask] as const),
+      ...input.driver.map((ask) => ["driver", ask] as const),
+    ] satisfies (readonly [PartRole, PartAsk])[]
+  ).filter(([, ask]) => ask.itemIds.length > 0);
   if (asks.length === 0) {
     return refuse("Choose a vehicle or a driver to ask for.");
   }
@@ -499,6 +535,13 @@ export async function assignBooking(
           `${role}Cost`,
         );
       }
+    }
+  }
+  // A trip has one vehicle and one driver: in one ask of each role at most.
+  for (const role of ["vehicle", "driver"] as const) {
+    const ids = asks.flatMap(([r, ask]) => (r === role ? ask.itemIds : []));
+    if (new Set(ids).size !== ids.length) {
+      return refuse(`Choose one ${role} for each trip.`, role);
     }
   }
   return db.$transaction(async (tx) => {
@@ -515,21 +558,27 @@ export async function assignBooking(
       },
     });
     if (!booking) return NO_BOOKING;
-    const trips = booking.items.filter(
-      (item) => input.itemIds.length === 0 || input.itemIds.includes(item.id),
-    );
-    if (trips.length === 0) {
+    const asked = new Set(asks.flatMap(([, ask]) => ask.itemIds));
+    const trips = booking.items.filter((item) => asked.has(item.id));
+    if (trips.length !== asked.size) {
       return refuse(
-        "No trip of this booking can be assigned: confirm it first, or reload.",
+        "A trip asked for can no longer be assigned: it is not confirmed, or was cancelled. Reload.",
       );
     }
-    const jobs = trips.map(jobOf);
-    const respondBy =
-      input.respondBy ?? defaultRespondBy(trips[0]!.startsAt, now);
     const userId = "userId" in actor ? actor.userId : null;
+    // Each vendor answers once, before the first pickup it is asked for
+    // across all its asks.
+    const firstOf = new Map<string, (typeof trips)[number]>();
+    for (const [, ask] of asks) {
+      for (const t of trips.filter((t) => ask.itemIds.includes(t.id))) {
+        const first = firstOf.get(ask.vendorId);
+        if (!first || t.startsAt < first.startsAt) firstOf.set(ask.vendorId, t);
+      }
+    }
 
     for (const [role, ask] of asks) {
-      const taken = trips.find((t) => t.parts.some((p) => p.role === role));
+      const its = trips.filter((t) => ask.itemIds.includes(t.id));
+      const taken = its.find((t) => t.parts.some((p) => p.role === role));
       if (taken) {
         return refuse(
           `Trip ${taken.position} has a ${role} already. Release it first to ask again.`,
@@ -546,6 +595,15 @@ export async function assignBooking(
           role,
         );
       }
+      const first = firstOf.get(vendor.id)!;
+      const given = input.respondBy[vendor.id];
+      if (given && given.getTime() >= first.startsAt.getTime()) {
+        return refuse(
+          `Answer by must be before trip ${first.position}'s pickup.`,
+          `respondBy:${vendor.id}`,
+        );
+      }
+      const respondBy = given ?? defaultRespondBy(first.startsAt, now);
       const named = await namedRecord(tx, role, ask);
       if (!named.ok) return named;
       if (ask.recordId && named.name) {
@@ -554,7 +612,7 @@ export async function assignBooking(
           role,
           ask.recordId,
           booking.id,
-          jobs,
+          its.map(jobOf),
           named.name,
         );
         if (clash) return clash;
@@ -590,7 +648,7 @@ export async function assignBooking(
       // vehicle is accepted now when Operation checked it.
       const vendorAccepted =
         vendor.isOurs && (role === "driver" || input.acceptOurs) ? now : null;
-      for (const trip of trips) {
+      for (const trip of its) {
         await tx.tripPart.create({
           data: {
             itemId: trip.id,
@@ -610,10 +668,10 @@ export async function assignBooking(
           role,
           vendorName: vendor.name,
           named: named.name,
-          positions: trips.map((t) => t.position),
+          positions: its.map((t) => t.position),
           costSen: vendor.isOurs
             ? 0
-            : trips.reduce((sum, t) => sum + (ask.costSen[t.id] ?? 0), 0),
+            : its.reduce((sum, t) => sum + (ask.costSen[t.id] ?? 0), 0),
           respondBy: respondBy.toISOString(),
           ...(vendorAccepted && role === "vehicle"
             ? { acceptedNow: true }
@@ -851,7 +909,6 @@ export async function nameParts(
     const named = await namedRecord(tx, role, {
       vendorId: parts[0]!.offer.vendorId,
       recordId,
-      costSen: {},
     });
     if (!named.ok) return named;
     const clash = await clashRefusal(

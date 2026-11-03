@@ -42,7 +42,7 @@ export const EMPTY_PLAN: TripPlan = {
 
 const KEY = "heavenly-trip-plan";
 /** Bumped when the stored shape changes, so an old plan is dropped, not misread. */
-const VERSION = 1;
+const VERSION = 2;
 
 let cache: TripPlan | null = null;
 const listeners = new Set<() => void>();

@@ -8,6 +8,7 @@ import {
   type ClassAvailability,
 } from "./booking-rules";
 import {
+  includesGuide,
   offersChildSeats,
   type TripCategory,
   type TripMode,
@@ -722,6 +723,7 @@ function itemOf(
         driveMinutes: basis.mode === "oneway" ? quote.driveMinutes : null,
         passengers: request.passengers,
         childSeats: offersChildSeats(category) ? request.childSeats : 0,
+        withGuide: includesGuide(category),
         flightNumber: request.flightNumber,
         notes: request.notes,
       },

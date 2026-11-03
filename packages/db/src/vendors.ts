@@ -108,6 +108,8 @@ export type VendorOption = {
   isOurs: boolean;
   status: string;
   locationIds: string[];
+  /** What it supplies, `VENDOR_SERVICES`: a guide is asked of one that offers tour guides. */
+  services: string[];
 };
 
 /**
@@ -124,6 +126,7 @@ export async function listVendorOptions(): Promise<VendorOption[]> {
       name: true,
       isOurs: true,
       status: true,
+      services: true,
       locations: { select: { id: true } },
     },
   });

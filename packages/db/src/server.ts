@@ -93,6 +93,14 @@ export {
 } from "./drivers";
 export type { DriverWithClasses } from "./drivers";
 export {
+  listGuides,
+  getGuide,
+  createGuide,
+  updateGuide,
+  deleteGuide,
+} from "./guides";
+export type { GuideWithVendor } from "./guides";
+export {
   bookingIdOfTrip,
   getBookingFulfilment,
   listCandidates,
@@ -401,6 +409,7 @@ export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./guide-input";
 export * from "./vendor-input";
 export * from "./fulfilment-rules";
 export * from "./trip-events-input";

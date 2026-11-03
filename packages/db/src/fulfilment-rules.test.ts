@@ -124,6 +124,7 @@ describe("tripAssigned and assignStateOf", () => {
     role: "vehicle",
     vehicleId: "v1",
     driverId: null,
+    guideId: null,
     vendorAcceptedAt: accepted,
     driverAcceptedAt: null,
   };
@@ -131,25 +132,50 @@ describe("tripAssigned and assignStateOf", () => {
     role: "driver",
     vehicleId: null,
     driverId: "d1",
+    guideId: null,
     vendorAcceptedAt: accepted,
     driverAcceptedAt: accepted,
   };
+  const guide = {
+    role: "guide",
+    vehicleId: null,
+    driverId: null,
+    guideId: "g1",
+    vendorAcceptedAt: accepted,
+    driverAcceptedAt: null,
+  };
 
   it("needs a vehicle and a driver, each accepted, the driver by themself too", () => {
-    assert.equal(tripAssigned([vehicle, driver]), true);
-    assert.equal(tripAssigned([vehicle]), false);
+    assert.equal(tripAssigned([vehicle, driver], false), true);
+    assert.equal(tripAssigned([vehicle], false), false);
     assert.equal(
-      tripAssigned([vehicle, { ...driver, driverAcceptedAt: null }]),
+      tripAssigned([vehicle, { ...driver, driverAcceptedAt: null }], false),
       false,
     );
     assert.equal(
-      tripAssigned([{ ...vehicle, vehicleId: null }, driver]),
+      tripAssigned([{ ...vehicle, vehicleId: null }, driver], false),
+      false,
+    );
+  });
+
+  it("needs a guide too on a trip with one, named and accepted by the vendor alone", () => {
+    assert.equal(tripAssigned([vehicle, driver], true), false);
+    assert.equal(tripAssigned([vehicle, driver, guide], true), true);
+    assert.equal(
+      tripAssigned([vehicle, driver, { ...guide, guideId: null }], true),
+      false,
+    );
+    assert.equal(
+      tripAssigned(
+        [vehicle, driver, { ...guide, vendorAcceptedAt: null }],
+        true,
+      ),
       false,
     );
   });
 
   it("puts a trip in its column", () => {
-    const base = { status: "confirmed", reported: false };
+    const base = { status: "confirmed", reported: false, withGuide: false };
     assert.equal(assignStateOf({ ...base, parts: [] }), "to-assign");
     assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "waiting");
     assert.equal(
@@ -157,11 +183,21 @@ describe("tripAssigned and assignStateOf", () => {
       "assigned",
     );
     assert.equal(
-      assignStateOf({ status: "assigned", reported: true, parts: [] }),
+      assignStateOf({
+        status: "assigned",
+        reported: true,
+        parts: [],
+        withGuide: false,
+      }),
       "on-the-road",
     );
     assert.equal(
-      assignStateOf({ status: "completed", reported: true, parts: [] }),
+      assignStateOf({
+        status: "completed",
+        reported: true,
+        parts: [],
+        withGuide: false,
+      }),
       "done",
     );
   });
@@ -204,24 +240,43 @@ describe("owesAfterCancel", () => {
 
 describe("rolesToAsk", () => {
   it("asks nothing of a trip not yet confirmed", () => {
-    assert.deepEqual(rolesToAsk({ status: "received", parts: [] }), []);
+    assert.deepEqual(
+      rolesToAsk({ status: "received", parts: [], withGuide: true }),
+      [],
+    );
   });
 
   it("asks each role the trip has no part for", () => {
-    assert.deepEqual(rolesToAsk({ status: "confirmed", parts: [] }), [
-      "vehicle",
-      "driver",
-    ]);
     assert.deepEqual(
-      rolesToAsk({ status: "confirmed", parts: [{ role: "vehicle" }] }),
+      rolesToAsk({ status: "confirmed", parts: [], withGuide: false }),
+      ["vehicle", "driver"],
+    );
+    assert.deepEqual(
+      rolesToAsk({
+        status: "confirmed",
+        parts: [{ role: "vehicle" }],
+        withGuide: false,
+      }),
       ["driver"],
     );
     assert.deepEqual(
       rolesToAsk({
         status: "assigned",
         parts: [{ role: "vehicle" }, { role: "driver" }],
+        withGuide: false,
       }),
       [],
+    );
+  });
+
+  it("asks a guide only of a trip that goes with one", () => {
+    assert.deepEqual(
+      rolesToAsk({
+        status: "assigned",
+        parts: [{ role: "vehicle" }, { role: "driver" }],
+        withGuide: true,
+      }),
+      ["guide"],
     );
   });
 });
@@ -231,6 +286,7 @@ describe("partWaitingOf", () => {
     role: "driver",
     vehicleId: null,
     driverId: null,
+    guideId: null,
     vendorAcceptedAt: null,
     driverAcceptedAt: null,
   };
@@ -265,6 +321,12 @@ describe("partWaitingOf", () => {
       vendorAcceptedAt: now,
     };
     assert.equal(partWaitingOf(vehicle, false), null);
+  });
+
+  it("asks a guide named, and no one's yes but the vendor's", () => {
+    const guide = { ...part, role: "guide", vendorAcceptedAt: now };
+    assert.equal(partWaitingOf(guide, false), "name");
+    assert.equal(partWaitingOf({ ...guide, guideId: "g" }, false), null);
   });
 });
 

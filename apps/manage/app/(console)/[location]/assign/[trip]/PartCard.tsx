@@ -29,12 +29,17 @@ import {
   releaseFulfilAction,
 } from "../actions";
 
-/** "VLE1234 · Toyota Alphard · Black", "Ali bin Abu · +60…", or null while not named. */
+/** "VLE1234 · Toyota Alphard · Black", "Ali bin Abu · +60…", "Siti · +60… · English, Mandarin", or null while not named. */
 function namedOf(part: TripPartView) {
   if (part.vehicle) {
     return `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)} · ${part.vehicle.colour}`;
   }
   if (part.driver) return `${part.driver.name} · ${part.driver.phone}`;
+  if (part.guide) {
+    return [part.guide.name, part.guide.phone, part.guide.languages.join(", ")]
+      .filter(Boolean)
+      .join(" · ");
+  }
   return null;
 }
 
@@ -64,7 +69,7 @@ export function PartCard({
   positions: number[];
   /** Their trips, by item id, for each candidate's fit on them alone. */
   itemIds: string[];
-  /** The vendor's own vehicles or drivers, to name the one it chose. */
+  /** The vendor's own vehicles, drivers or guides, to name the one it chose. */
   candidates: Candidate[];
 }) {
   const vendor = part.offer.vendor;
@@ -268,7 +273,7 @@ function DeclineControl({
   );
 }
 
-/** The vehicle or driver the vendor chose, picked from its own. */
+/** The vehicle, driver or guide the vendor chose, picked from its own. */
 function NameControl({
   bookingId,
   role,
@@ -287,6 +292,7 @@ function NameControl({
   onWhat: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const noun = PART_ROLE_LABELS[role].toLowerCase();
   const { pending, error, formProps } = useActionForm(namePartsAction, {
     done: `${PART_ROLE_LABELS[role]} named.`,
     onDone: () => setOpen(false),
@@ -299,7 +305,7 @@ function NameControl({
         variant="secondary"
         onClick={() => setOpen(true)}
       >
-        Name {role}
+        Name {noun}
       </Button>
     );
   }
@@ -310,10 +316,10 @@ function NameControl({
     >
       <PartFields bookingId={bookingId} partIds={partIds} />
       <Field
-        label={`The ${role}${onWhat ? ` for ${onWhat}` : ""}`}
+        label={`The ${noun}${onWhat ? ` for ${onWhat}` : ""}`}
         hint={
           candidates.length === 0
-            ? `This vendor has no ${role} for this class.`
+            ? `This vendor has no ${noun} for this trip.`
             : undefined
         }
       >
@@ -334,7 +340,7 @@ function NameControl({
       </Field>
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" pending={pending}>
-          Name {role}
+          Name {noun}
         </Button>
         <Button
           type="button"
@@ -366,13 +372,14 @@ function ReleaseButton({
 }) {
   const [dialog, confirm] = useConfirm();
   const verb = withdraw ? "Withdraw" : "Release";
+  const noun = PART_ROLE_LABELS[role].toLowerCase();
   const { pending, error, formProps } = useActionForm(releaseFulfilAction, {
     ask: () =>
       confirm({
         title: withdraw
-          ? `Withdraw the ${role} asked of ${vendorName}?`
-          : `Release the ${role}?`,
-        description: `This trip's ${role} goes back to To assign, to ask again.`,
+          ? `Withdraw the ${noun} asked of ${vendorName}?`
+          : `Release the ${noun}?`,
+        description: `This trip's ${noun} goes back to To assign, to ask again.`,
         action: verb,
       }),
     done: withdraw

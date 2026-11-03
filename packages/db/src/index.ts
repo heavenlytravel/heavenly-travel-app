@@ -31,6 +31,7 @@ export * from "./vehicle-model-input";
 export * from "./photos-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./guide-input";
 export * from "./vendor-input";
 export * from "./fulfilment-rules";
 export * from "./trip-events-input";

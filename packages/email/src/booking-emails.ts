@@ -421,7 +421,7 @@ function amended(
   );
 }
 
-/** Who does one trip, as the customer is told: the driver, their phone and the vehicle. */
+/** Who does one trip, as the customer is told: the driver, their phone and the vehicle, and the tour guide when the trip goes with one. */
 export type TripCrew = {
   position: number;
   startsAt: Date;
@@ -431,11 +431,14 @@ export type TripCrew = {
   /** "Toyota Alphard". */
   model: string;
   colour: string;
+  /** Null when the trip goes without a guide. */
+  guideName?: string | null;
+  guidePhone?: string | null;
 };
 
 /**
  * The customer's email once trips are assigned, and again when the
- * driver or the vehicle changes: who picks them up for each trip. Its key
+ * driver, the vehicle or the guide changes: who picks them up for each trip. Its key
  * is the crews, so the same crews never send twice.
  */
 export function driverEmails(
@@ -445,7 +448,10 @@ export function driverEmails(
 ): BookingEmail[] {
   if (crews.length === 0) return [];
   const key = `${booking.id}:assigned:${crews
-    .map((c) => `${c.position}-${c.plate}-${c.driverPhone}`)
+    .map(
+      (c) =>
+        `${c.position}-${c.plate}-${c.driverPhone}${c.guidePhone ? `-${c.guidePhone}` : ""}`,
+    )
     .join(",")}`;
   const several = crews.length > 1;
   return toCustomer(booking, key, settings, {
@@ -466,6 +472,12 @@ export function driverEmails(
           ["Driver's phone", crew.driverPhone],
           ["Vehicle", `${crew.model}, ${crew.colour}`],
           ["Plate", crew.plate],
+          ...(crew.guideName
+            ? ([
+                ["Tour guide", crew.guideName],
+                ["Guide's phone", crew.guidePhone ?? ""],
+              ] as [string, string][])
+            : []),
         ],
       })),
       ...bookingButton(booking, settings),

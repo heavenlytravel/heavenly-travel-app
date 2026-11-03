@@ -13,14 +13,23 @@ import { kmBetween } from "./zone-trip";
  * transactions. See docs/261028-fulfilment-vendors-and-connect.md.
  */
 
-/** A trip is done by a vehicle and a driver, each a part of it. */
-export const PART_ROLES = ["vehicle", "driver"] as const;
+/**
+ * A trip is done by a vehicle and a driver, each a part of it, and a tour
+ * guide when it goes with one (`rolesOf`). See docs/261103-tour-guide.md.
+ */
+export const PART_ROLES = ["vehicle", "driver", "guide"] as const;
 export type PartRole = (typeof PART_ROLES)[number];
 export const isPartRole = guardFor(PART_ROLES);
 export const PART_ROLE_LABELS: Record<PartRole, string> = {
   vehicle: "Vehicle",
   driver: "Driver",
+  guide: "Tour guide",
 };
+
+/** The roles a trip needs: a vehicle and a driver, and a guide when it goes with one. */
+export function rolesOf(withGuide: boolean): PartRole[] {
+  return withGuide ? [...PART_ROLES] : ["vehicle", "driver"];
+}
 
 export const OFFER_STATUSES = [
   "offered",
@@ -246,15 +255,29 @@ export type PartAcceptance = {
   role: string;
   vehicleId: string | null;
   driverId: string | null;
+  guideId: string | null;
   vendorAcceptedAt: Date | null;
   driverAcceptedAt: Date | null;
 };
 
+/** The vehicle, driver or guide a part names; null until named. */
+export function namedIdOf(
+  part: Pick<PartAcceptance, "role" | "vehicleId" | "driverId" | "guideId">,
+) {
+  switch (part.role) {
+    case "vehicle":
+      return part.vehicleId;
+    case "guide":
+      return part.guideId;
+    default:
+      return part.driverId;
+  }
+}
+
 /** Whether a part is settled: named, its vendor accepted, and, a driver, the driver too. */
 export function partAccepted(part: PartAcceptance) {
-  if (!part.vendorAcceptedAt) return false;
-  if (part.role === "vehicle") return part.vehicleId !== null;
-  return part.driverId !== null && part.driverAcceptedAt !== null;
+  if (!part.vendorAcceptedAt || namedIdOf(part) === null) return false;
+  return part.role !== "driver" || part.driverAcceptedAt !== null;
 }
 
 /**
@@ -269,9 +292,7 @@ export function partWaitingOf(
   isOurs: boolean,
 ): PartWaiting | null {
   if (!part.vendorAcceptedAt) return isOurs ? "ours" : "vendor";
-  if (part.role === "vehicle" ? !part.vehicleId : !part.driverId) {
-    return "name";
-  }
+  if (namedIdOf(part) === null) return "name";
   if (part.role === "driver" && !part.driverAcceptedAt) return "driver";
   return null;
 }
@@ -312,9 +333,12 @@ export function untilPickup(
   return { label: days === 1 ? "in 1 day" : `in ${days} days`, soon };
 }
 
-/** Whether a trip is assigned: it has a vehicle and a driver, both accepted. */
-export function tripAssigned(parts: readonly PartAcceptance[]) {
-  return PART_ROLES.every((role) => {
+/** Whether a trip is assigned: every role it needs (`rolesOf`) named and accepted. */
+export function tripAssigned(
+  parts: readonly PartAcceptance[],
+  withGuide: boolean,
+) {
+  return rolesOf(withGuide).every((role) => {
     const part = parts.find((p) => p.role === role);
     return part !== undefined && partAccepted(part);
   });
@@ -341,12 +365,13 @@ export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
 export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
+  withGuide: boolean;
   /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
   reported: boolean;
 }): AssignState {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
-  if (tripAssigned(trip.parts)) return "assigned";
+  if (tripAssigned(trip.parts, trip.withGuide)) return "assigned";
   if (trip.parts.length > 0) return "waiting";
   return "to-assign";
 }
@@ -364,13 +389,16 @@ export function defaultRespondBy(firstPickup: Date, now: Date = new Date()) {
   return new Date(Math.max(soonest, Math.min(twoHours, hourBefore)));
 }
 
-/** The roles a trip still needs asked for: none until it is confirmed, then each it has no part for. */
+/** The roles a trip still needs asked for: none until it is confirmed, then each it needs and has no part for. */
 export function rolesToAsk(trip: {
   status: string;
   parts: readonly { role: string }[];
+  withGuide: boolean;
 }): PartRole[] {
   if (trip.status !== "confirmed" && trip.status !== "assigned") return [];
-  return PART_ROLES.filter((role) => !trip.parts.some((p) => p.role === role));
+  return rolesOf(trip.withGuide).filter(
+    (role) => !trip.parts.some((p) => p.role === role),
+  );
 }
 
 /** A trip still to assign, as the Assign dialog names it. */

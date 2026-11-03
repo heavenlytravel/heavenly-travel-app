@@ -43,6 +43,7 @@ const tripInclude = {
       passengers: true,
       mode: true,
       hours: true,
+      withGuide: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -51,6 +52,7 @@ const tripInclude = {
       role: true,
       vehicleId: true,
       driverId: true,
+      guideId: true,
       vendorAcceptedAt: true,
       driverAcceptedAt: true,
       offer: {
@@ -66,6 +68,7 @@ const tripInclude = {
         },
       },
       driver: { select: { name: true } },
+      guide: { select: { name: true } },
     },
   },
   events: {
@@ -77,13 +80,13 @@ const tripInclude = {
 /** One part of a trip: who, from whom, and what it waits for. */
 export type AssignPart = {
   role: string;
-  /** "VLE1234 · Toyota Alphard", "Ali bin Abu"; null while not named. */
+  /** "VLE1234 · Toyota Alphard", "Ali bin Abu", a guide's name; null while not named. */
   name: string | null;
   vendorName: string;
   isOurs: boolean;
   /**
    * What it waits for, null once settled: its vendor's yes, Operation's
-   * own for ours, the driver's, or the vehicle or driver named.
+   * own for ours, the driver's, or the vehicle, driver or guide named.
    */
   waiting: PartWaiting | null;
   /** When its vendor answers by, while it waits for that answer. */
@@ -104,6 +107,8 @@ export type AssignRow = {
   state: AssignState;
   /** The roles it still needs asked for. */
   roles: PartRole[];
+  /** A tour guide goes on it, a third role to assign. */
+  withGuide: boolean;
   job: Job;
   className: string;
   passengers: number;
@@ -151,9 +156,11 @@ async function listAssignTrips(
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
+    const withGuide = item.tripDetails?.withGuide ?? false;
     const state = assignStateOf({
       status: item.status,
       parts: item.parts,
+      withGuide,
       reported: isOnTheRoad(item.events),
     });
     return {
@@ -166,7 +173,8 @@ async function listAssignTrips(
         .length,
       startsAt: item.startsAt,
       state,
-      roles: rolesToAsk(item),
+      roles: rolesToAsk({ ...item, withGuide }),
+      withGuide,
       job,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,
@@ -182,7 +190,7 @@ async function listAssignTrips(
           role: part.role,
           name: part.vehicle
             ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
-            : (part.driver?.name ?? null),
+            : (part.driver?.name ?? part.guide?.name ?? null),
           vendorName: vendor.name,
           isOurs: vendor.isOurs,
           waiting: partWaitingOf(part, vendor.isOurs),

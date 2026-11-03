@@ -25,12 +25,12 @@ const ANY = "";
 type Moment = { date: string; time: string };
 
 /**
- * One role of a trip still to assign, the vehicle or the driver, in its
- * own card: its vendor first (ours first), then one of that vendor's (one
+ * One role of a trip still to assign, the vehicle, the driver or the tour
+ * guide, in its own card: its vendor first (ours first), then one of that vendor's (one
  * that cannot do the trip greyed with why) or Any, which the vendor
  * assigns, said plainly under it; what we pay a vendor that is not ours;
- * when the vendor answers by, before the pickup; for our vehicle, the
- * acceptance now; and the booking's other trips still needing this role,
+ * when the vendor answers by, before the pickup; for our vehicle or guide,
+ * the acceptance now; and the booking's other trips still needing this role,
  * to give the same. Sent, the vendor accepts before the role is settled.
  * See docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
@@ -47,7 +47,7 @@ export function AssignForm({
   trip: AssignTrip;
   /** The booking's other trips still needing this role, in order. */
   others: AssignTrip[];
-  /** This role's vehicles or drivers. */
+  /** This role's vehicles, drivers or guides. */
   candidates: Candidate[];
   /** The active vendors serving the trip's location, ours first. */
   vendors: VendorOption[];
@@ -59,6 +59,7 @@ export function AssignForm({
   // Untouched, Answer by follows the earliest trip posted.
   const [respondByEdit, setRespondByEdit] = useState<Moment | null>(null);
   const label = PART_ROLE_LABELS[role];
+  const noun = label.toLowerCase();
   const { pending, error, formProps } = useActionForm(assignAction, {
     done: `${label} asked for. Trip ${trip.position} is assigned once each one accepts.`,
   });
@@ -164,8 +165,8 @@ export function AssignForm({
       {vendor && record === ANY ? (
         <p className="rounded-control bg-shade px-3 py-2 text-sm text-body">
           {vendor.isOurs
-            ? `No ${role} named yet: name it here once you know.`
-            : `${vendor.name} will assign the ${role}. You see who once they do.`}
+            ? `No ${noun} named yet: name it here once you know.`
+            : `${vendor.name} will assign the ${noun}. You see who once they do.`}
         </p>
       ) : null}
       {fit?.warnings.map((warning) => (
@@ -215,9 +216,9 @@ export function AssignForm({
         </div>
       ) : null}
 
-      {vendor?.isOurs && role === "vehicle" ? (
+      {vendor?.isOurs && role !== "driver" ? (
         <label className="flex items-center gap-2 text-sm text-body">
-          <Checkbox name="acceptOurs" />I checked our vehicle: accept it now
+          <Checkbox name="acceptOurs" />I checked our {noun}: accept it now
         </label>
       ) : null}
 
@@ -264,8 +265,8 @@ export function AssignForm({
       <div className="flex justify-end">
         <Button type="submit" pending={pending} disabled={!vendor}>
           {posted.length > 1
-            ? `Assign ${role} to ${posted.length} trips`
-            : `Assign ${role}`}
+            ? `Assign ${noun} to ${posted.length} trips`
+            : `Assign ${noun}`}
         </Button>
       </div>
     </form>

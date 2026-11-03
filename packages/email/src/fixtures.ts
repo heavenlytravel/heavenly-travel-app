@@ -103,6 +103,7 @@ export function sampleItem(
       distanceKm: 55.2,
       passengers: 2,
       childSeats: 1,
+      withGuide: false,
       flightNumber: "MH123",
       notes: null,
     },

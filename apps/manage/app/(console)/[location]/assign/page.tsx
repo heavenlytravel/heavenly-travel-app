@@ -245,7 +245,11 @@ function TripRow({
       </Td>
       {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
-          <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+          {role === "guide" && !row.withGuide ? (
+            <span className="text-muted">No guide</span>
+          ) : (
+            <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+          )}
         </Td>
       ))}
       <Td className="whitespace-nowrap">

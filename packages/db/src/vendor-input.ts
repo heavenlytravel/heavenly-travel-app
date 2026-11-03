@@ -38,14 +38,15 @@ export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
 };
 
 /**
- * What a vendor may supply, asked of every kind at sign-up. Only transport
- * is worked in Connect for now; the rest is a supplier list for
+ * What a vendor may supply, asked of every kind at sign-up. Transport and
+ * tour guides are worked in Connect; the rest is a supplier list for
  * Reservation.
  */
 export const VENDOR_SERVICES = [
   "car-with-driver",
   "coach-charter",
   "driver",
+  "tour-guide",
   "self-drive",
   "accommodation",
   "attraction",
@@ -56,6 +57,7 @@ export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
   "car-with-driver": "Car with driver",
   "coach-charter": "Coach charter",
   driver: "Driver only",
+  "tour-guide": "Tour guide",
   "self-drive": "Self-drive rental",
   accommodation: "Accommodation",
   attraction: "Attraction",

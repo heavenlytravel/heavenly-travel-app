@@ -7,7 +7,7 @@ import {
   isLive,
   modelName,
   PART_ROLE_LABELS,
-  PART_ROLES,
+  rolesOf,
   partWaitingLabel,
   partWaitingOf,
   ringgitInputValue,
@@ -30,12 +30,13 @@ function namedOf(part: TripPartView) {
   if (part.vehicle) {
     return `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`;
   }
-  return part.driver?.name ?? "Any";
+  return part.driver?.name ?? part.guide?.name ?? "Any";
 }
 
 /**
  * "Who does it" on a booking, to read: each live trip with where it
- * stands, its vehicle and driver, their vendor and whose answer they
+ * stands, its vehicle and driver, and its tour guide when it goes with
+ * one, their vendor and whose answer they
  * wait for. Assigning is Operation's, on the trip's page under Assign,
  * which "Open in Assign" leads to. A trip cancelled after its vendor
  * accepted shows what we pay that vendor, which Operation can change.
@@ -90,7 +91,7 @@ export function WhoDoesIt({
             </div>
             {trip.parts.length > 0 ? (
               <dl className="grid gap-0.5 text-caption">
-                {PART_ROLES.map((role) => {
+                {rolesOf(trip.withGuide).map((role) => {
                   const part = trip.parts.find((p) => p.role === role);
                   const waiting = part
                     ? partWaitingOf(part, part.offer.vendor.isOurs)

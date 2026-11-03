@@ -117,6 +117,8 @@ export async function assignAction(
   if ("error" in vehicle) return vehicle;
   const driver = asksOf(formData, "driver", itemIds);
   if ("error" in driver) return driver;
+  const guide = asksOf(formData, "guide", itemIds);
+  if ("error" in guide) return guide;
   // Each vendor asked answers by its own time, under `respondBy:<vendorId>`.
   const respondBy: Record<string, Date> = {};
   for (const [name, value] of formData) {
@@ -142,6 +144,7 @@ export async function assignAction(
       bookingId,
       vehicle,
       driver,
+      guide,
       respondBy,
       acceptOurs: formData.get("acceptOurs") === "on",
     }),
@@ -183,7 +186,7 @@ export async function answerPartsAction(
   );
 }
 
-/** The vehicle or the driver a vendor chose, entered for it. */
+/** The vehicle, the driver or the guide a vendor chose, entered for it. */
 export async function namePartsAction(
   _previous: ActionState,
   formData: FormData,

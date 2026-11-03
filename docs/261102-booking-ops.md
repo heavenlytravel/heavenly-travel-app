@@ -113,7 +113,7 @@ On the sheet: Bus only, RM30 for 4 hours, RM50 for 8. Already BL-59. Proposal: a
 per location, class and package, a line of its own on the price ("Driver tip"), left out
 of the surcharge percentages, recorded as owed to the driver on top of the vendor's cost.
 
-## 4. Tour guide add-on (waits)
+## 4. Tour guide add-on (built for coaches, see docs/261103-tour-guide.md)
 
 Proposal, agreed in principle by the user:
 

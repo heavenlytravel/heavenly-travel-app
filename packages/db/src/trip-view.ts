@@ -156,6 +156,8 @@ export function tripDetailRows(details: {
   vehicleModelName?: string | null;
   passengers: number;
   childSeats: number;
+  /** A tour guide goes with it, included: a coach's. */
+  withGuide?: boolean;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
@@ -165,6 +167,7 @@ export function tripDetailRows(details: {
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
   }
+  if (details.withGuide) rows.push(["Tour guide", "Included"]);
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
   return rows;

@@ -96,8 +96,8 @@ model ActivityLog {
 // src/vendor-input.ts.
 // ---------------------------------------------------------------------------
 
-/// Whoever supplies a vehicle, a driver or both: a company, or an individual
-/// whose only driver may be themself. Ours when SUPER switches `isOurs` on;
+/// Whoever supplies a vehicle, a driver, a tour guide or more: a company, or
+/// an individual whose only driver may be themself. Ours when SUPER switches `isOurs` on;
 /// the code finds ours by it, never by the name.
 model Vendor {
   id             String    @id @default(cuid())
@@ -126,11 +126,13 @@ model Vendor {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  /// The locations it serves; each of its vehicles and drivers is based at one.
+  /// The locations it serves; each of its vehicles, drivers and guides is
+  /// based at one.
   locations Location[]
   members   VendorMember[]
   vehicles  Vehicle[]
   drivers   Driver[]
+  guides    Guide[]
   offers    VendorOffer[]
 
   @@index([status])
@@ -169,22 +171,25 @@ model VendorOffer {
   @@index([vendorId, status])
 }
 
-/// The vehicle or the driver of one trip, from one vendor's offer, with
-/// what we owe that vendor for it. Accepted once its vendor has, and, for
-/// a driver, once the driver has too.
+/// The vehicle, the driver or the tour guide of one trip, from one vendor's
+/// offer, with what we owe that vendor for it. Accepted once its vendor
+/// has, and, for a driver, once the driver has too. A guide has no account:
+/// its vendor accepts for them, as for a vehicle.
 model TripPart {
   id               String      @id @default(cuid())
   itemId           String
   item             BookingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   offerId          String
   offer            VendorOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  /// "vehicle" | "driver"
+  /// "vehicle" | "driver" | "guide"
   role             String
   /// Named by Operation, or by the vendor when asked for one; null until then.
   vehicleId        String?
   vehicle          Vehicle?    @relation(fields: [vehicleId], references: [id])
   driverId         String?
   driver           Driver?     @relation(fields: [driverId], references: [id])
+  guideId          String?
+  guide            Guide?      @relation(fields: [guideId], references: [id])
   /// What we owe the vendor for this part of this trip; 0 for ours.
   costSen          Int         @default(0)
   vendorAcceptedAt DateTime?
@@ -196,6 +201,7 @@ model TripPart {
   @@index([offerId])
   @@index([vehicleId])
   @@index([driverId])
+  @@index([guideId])
 }
 
 /// An account that works for a vendor in Connect, its owner or its staff.
@@ -319,6 +325,7 @@ model Location {
   items            BookingItem[]
   vehicles         Vehicle[]
   drivers          Driver[]
+  guides           Guide[]
   /// The vendors that serve it.
   vendors          Vendor[]
 
@@ -694,6 +701,36 @@ model Driver {
   @@index([vendorId])
 }
 
+/// A vendor's tour guide, ours or another's, based at a location. No
+/// account: the vendor accepts a trip for them and names them, as for a
+/// vehicle, and the driver reports the day. Out of service, they keep their
+/// history. See docs/261103-tour-guide.md.
+model Guide {
+  id             String    @id @default(cuid())
+  /// Whose guide they are.
+  vendorId       String
+  vendor         Vendor    @relation(fields: [vendorId], references: [id])
+  locationId     String
+  location       Location  @relation(fields: [locationId], references: [id])
+  name           String
+  /// Their WhatsApp, as src/phone.ts keeps it.
+  phone          String
+  /// The languages they guide in, as typed: "English", "Mandarin".
+  languages      String[]  @default([])
+  /// The tourist guide licence from MOTAC.
+  motacExpiresOn DateTime? @db.Date
+  isActive       Boolean   @default(true)
+  notes          String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  /// The trips they were named for.
+  parts TripPart[]
+
+  @@index([locationId, isActive])
+  @@index([vendorId])
+}
+
 /// One tap of a trip's driver on the day, or Operation's on their
 /// behalf: on the way, arrived, passenger on board, dropped off, no-show,
 /// a problem. Never edited or deleted. Dropped off and no-show complete the
@@ -868,6 +905,10 @@ model TripItemDetails {
   passengers           Int
   /// Never asked for a coach.
   childSeats           Int           @default(0)
+  /// A tour guide goes on the trip, assigned beside the vehicle and the
+  /// driver: always on a coach, included in its price. False on trips
+  /// booked before guides.
+  withGuide            Boolean       @default(false)
   flightNumber         String?
   notes                String?
 

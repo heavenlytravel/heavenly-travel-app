@@ -19,6 +19,8 @@ import {
   type Candidate,
 } from "./fulfilment";
 import {
+  namedIdOf,
+  PART_ROLE_LABELS,
   PART_ROLES,
   timingWarnings,
   type DeclineReason,
@@ -29,8 +31,8 @@ import { contactVisible } from "./trip-events-input";
 
 /**
  * A vendor's work in Connect, for its owner and staff: the offers waiting
- * for the vendor's yes, with what we pay for each trip's vehicle and
- * driver, and the jobs it accepted. An offer shows only the trip; a job
+ * for the vendor's yes, with what we pay for each trip's vehicle, driver
+ * and tour guide, and the jobs it accepted. An offer shows only the trip; a job
  * accepted, what it needs, the customer's details until a few days after
  * the trip, each view logged. Never the customer's price. See
  * docs/261028-fulfilment-vendors-and-connect.md, "What people see in
@@ -49,6 +51,7 @@ const vendorPartInclude = {
     },
   },
   driver: { select: { id: true, name: true, userId: true } },
+  guide: { select: { id: true, name: true } },
 } satisfies Prisma.TripPartInclude;
 
 type VendorPart = Prisma.TripPartGetPayload<{
@@ -59,12 +62,12 @@ type VendorPart = Prisma.TripPartGetPayload<{
 export type OfferRole = {
   role: PartRole;
   partIds: string[];
-  /** The plate or the driver's name, once named; null while the vendor is to choose. */
+  /** The plate, the driver's or the guide's name, once named; null while the vendor is to choose. */
   named: string | null;
   recordId: string | null;
   /** What we pay for it on each trip, by the trip's position. */
   costs: { position: number; costSen: number }[];
-  /** The vendor's own vehicles or drivers to choose from, when not named; greyed ones say why. */
+  /** The vendor's own vehicles, drivers or guides to choose from, when not named; greyed ones say why. */
   choices: Candidate[];
 };
 
@@ -83,7 +86,7 @@ export type VendorOfferView = {
 
 /** "VLE1234" or "Ali bin Abu", once named. */
 function namedOf(part: VendorPart) {
-  return part.vehicle?.plate ?? part.driver?.name ?? null;
+  return part.vehicle?.plate ?? part.driver?.name ?? part.guide?.name ?? null;
 }
 
 /** The timing warnings of the records named on these parts, against their other jobs. */
@@ -97,6 +100,7 @@ async function warningsOf(parts: readonly VendorPart[]) {
   const warnings: string[] = [];
   const vehicle = parts.find((p) => p.vehicle)?.vehicle;
   const driver = parts.find((p) => p.driver)?.driver;
+  const guide = parts.find((p) => p.guide)?.guide;
   if (vehicle) {
     const held = await heldJobs(db, { vehicleId: vehicle.id }, bookingId);
     warnings.push(
@@ -112,6 +116,15 @@ async function warningsOf(parts: readonly VendorPart[]) {
       ...timingWarnings(asked, held, {
         bufferMinutes: buffer,
         who: driver.name.split(" ")[0] ?? driver.name,
+      }),
+    );
+  }
+  if (guide) {
+    const held = await heldJobs(db, { guideId: guide.id }, bookingId);
+    warnings.push(
+      ...timingWarnings(asked, held, {
+        bufferMinutes: buffer,
+        who: guide.name.split(" ")[0] ?? guide.name,
       }),
     );
   }
@@ -166,7 +179,7 @@ export async function listVendorOffers(
         role,
         partIds: ofRole.map((p) => p.id),
         named: named ? namedOf(named) : null,
-        recordId: named?.vehicleId ?? named?.driverId ?? null,
+        recordId: named ? namedIdOf(named) : null,
         costs: ofRole.map((p) => ({
           position: p.item.position,
           costSen: p.costSen,
@@ -194,7 +207,7 @@ export async function listVendorOffers(
 }
 
 /**
- * The vendor names its vehicle or driver for a role an offer left to it.
+ * The vendor names its vehicle, driver or guide for a role an offer left to it.
  * The writer checks the record is the vendor's, in service, and free.
  */
 export async function nameForVendor(
@@ -236,7 +249,8 @@ export async function answerAsVendor(
   if (answer.accept) {
     const unnamed = parts.find((p) => !namedOf(p));
     if (unnamed) {
-      return refuse(`Choose the ${unnamed.role} first, then accept.`);
+      const role = PART_ROLE_LABELS[unnamed.role as PartRole] ?? unnamed.role;
+      return refuse(`Choose the ${role.toLowerCase()} first, then accept.`);
     }
   }
   return answerParts(actor, {
@@ -259,6 +273,8 @@ export async function answerAsVendor(
 export type VendorTrip = DriverTrip & {
   vehicle: string | null;
   driver: string | null;
+  /** The guide's name, when the vendor holds the trip's guide. */
+  guide: string | null;
   /** The driver has accepted it. */
   driverAccepted: boolean;
 };
@@ -266,7 +282,7 @@ export type VendorTrip = DriverTrip & {
 /** The vendor's jobs: today's and those to come, and those done lately. */
 export type VendorJobs = { coming: VendorTrip[]; done: VendorTrip[] };
 
-/** The accepted trips of a vendor's offers, one per trip with its vehicle and driver when the vendor holds them. */
+/** The accepted trips of a vendor's offers, one per trip with its vehicle, driver and guide when the vendor holds them. */
 export async function listVendorJobs(
   vendorId: string,
   now: Date = new Date(),
@@ -294,9 +310,11 @@ export async function listVendorJobs(
       ...tripOf(part),
       vehicle: null,
       driver: null,
+      guide: null,
       driverAccepted: false,
     };
     if (part.role === "vehicle") trip.vehicle = part.vehicle?.plate ?? null;
+    if (part.role === "guide") trip.guide = part.guide?.name ?? null;
     if (part.role === "driver") {
       trip.driver = part.driver?.name ?? null;
       trip.driverAccepted = part.driverAcceptedAt !== null;
@@ -315,6 +333,7 @@ export async function listVendorJobs(
 export type VendorJob = DriverJob & {
   vehicle: string | null;
   driver: string | null;
+  guide: string | null;
 };
 
 /**
@@ -362,10 +381,16 @@ export async function getVendorJob(
   if (!first) return null;
   const vehicle = parts.find((p) => p.role === "vehicle")?.vehicle?.plate;
   const driver = parts.find((p) => p.role === "driver")?.driver?.name;
+  const guide = parts.find((p) => p.role === "guide")?.guide?.name;
   const trip = { ...tripOf(first), accepted: true };
   const shows =
     first.item.status !== "cancelled" && contactVisible(jobOf(first.item), now);
-  const base = { ...trip, vehicle: vehicle ?? null, driver: driver ?? null };
+  const base = {
+    ...trip,
+    vehicle: vehicle ?? null,
+    driver: driver ?? null,
+    guide: guide ?? null,
+  };
   if (!shows) return { ...base, customer: null };
   const details = first.item.tripDetails;
   await db.$transaction((tx) =>

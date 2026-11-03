@@ -13,6 +13,7 @@ import {
   type WeekendSurcharge,
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
+import { GUIDE_FIELD_LABELS } from "./guide-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import { PERMISSION_LABELS, PERMISSIONS } from "./permissions";
 import { USER_PROFILE_FIELDS, USER_PROFILE_LABELS } from "./user-input";
@@ -73,6 +74,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "location",
   "vehicle",
   "driver",
+  "guide",
   "media",
   "site-page",
   "vendor",
@@ -182,6 +184,12 @@ const ACTIONS = {
   "driver.updated": { entityType: "driver", customerVisible: false },
   /** The name in `before`: the row is gone. */
   "driver.deleted": { entityType: "driver", customerVisible: false },
+  /** Its fields, the location's name. */
+  "guide.created": { entityType: "guide", customerVisible: false },
+  /** The changed fields; a new location with its name. */
+  "guide.updated": { entityType: "guide", customerVisible: false },
+  /** The name in `before`: the row is gone. */
+  "guide.deleted": { entityType: "guide", customerVisible: false },
   "location.created": { entityType: "location", customerVisible: false },
   /**
    * The states are logged by their codes. Entries from before
@@ -568,7 +576,9 @@ const RELEASE_CAUSES: Record<string, string> = {
 
 /** "the vehicle of trips 1 and 2 (VLE1234, Pulau Coach)". */
 function partsOf(json: unknown) {
-  const role = field(json, "role") === "driver" ? "driver" : "vehicle";
+  const kind = field(json, "role");
+  const role =
+    kind === "driver" ? "driver" : kind === "guide" ? "tour guide" : "vehicle";
   const positions = field(json, "positions");
   const trips = Array.isArray(positions)
     ? positions.length === 1
@@ -967,6 +977,17 @@ export function describeActivity(entry: DescribableActivity): string {
       );
     case "driver.deleted":
       return "Deleted the driver";
+    case "guide.created":
+      return "Added the tour guide";
+    case "guide.updated":
+      return recordChanges(
+        entry.after,
+        GUIDE_FIELD_LABELS,
+        ["Made the tour guide active", "Made the tour guide inactive"],
+        "Changed the tour guide",
+      );
+    case "guide.deleted":
+      return "Deleted the tour guide";
     case "location.created":
       return "Created the location";
     case "location.updated":

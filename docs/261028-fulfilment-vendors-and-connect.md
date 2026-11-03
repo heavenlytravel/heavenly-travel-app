@@ -59,8 +59,11 @@ received ──► confirmed ──► assigned ──► completed
   under `~`), which replaced the Board on 2026-11-02: a table of every trip from today
   on by pickup, figure tiles for To assign (the default), Waiting to accept, Assigned,
   On the road, Done and All. Each row says how soon it picks up, red within the day
-  while not yet assigned, and who does each role or whose answer it waits for. The
-  reference opens the booking; Assign or Open opens the trip's page. No dragging.
+  while not yet assigned, and who does each role or whose answer it waits for. Chips
+  narrow it to the vehicles or the drivers (the tour guide later), the tiles then
+  counting where that role stands. The reference opens a quick view of the booking;
+  Assign or Open opens the trip's page. A trip is on the road once its driver taps On
+  the way or a later step; its page then shows the driver's reports first. No dragging.
 - **Each trip has its own page** at `/[location]/assign/[trip]` (2026-11-03): the
   Assign form for the roles still open, a card per role already asked with what to do
   next, the day's reports, and beside them the trip, the customer and the booking's

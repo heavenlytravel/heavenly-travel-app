@@ -220,18 +220,28 @@ export async function createBooking(
   }
 }
 
-/** How many bookings one email, or one address, has made since an instant. */
+/**
+ * How many website bookings one email, or one address, has made since an
+ * instant. Bookings staff enter carry no address and are not counted, so
+ * a customer the team booked for can still book online.
+ */
 export function countRecentBookings(
   key: { contactEmail: string } | { createdIp: string },
   since: Date,
 ): Promise<number> {
-  return db.booking.count({ where: { ...key, createdAt: { gte: since } } });
+  return db.booking.count({
+    where: {
+      createdIp: { not: null },
+      ...key,
+      createdAt: { gte: since },
+    },
+  });
 }
 
 /**
  * Whether the website may take one more booking from this contact email
- * and this address. Counted from the bookings themselves, so no other
- * store is needed; signed-in customers count too.
+ * and this address. Counted from the website's own bookings, so no other
+ * store is needed; signed-in customers count too, staff bookings do not.
  */
 export async function isBookingRateLimited(
   key: { contactEmail: string; createdIp: string | null },

@@ -268,6 +268,25 @@ export function ConfirmStep({
     (sum, _, index) => sum + (priceOn(index) ?? 0),
     0,
   );
+  // What the total is made of, over every trip priced.
+  const sumOf = (part: (index: number) => number) =>
+    trips.reduce(
+      (sum, _, index) => sum + (priceOn(index) === null ? 0 : part(index)),
+      0,
+    );
+  const oddHoursSen = sumOf((index) => onTrip[index]?.oddHoursSen ?? 0);
+  const guideSen = sumOf(guideOn);
+  const breakdown = card
+    ? [
+        { label: card.name, amountSen: totalSen - oddHoursSen - guideSen },
+        ...(oddHoursSen > 0
+          ? [{ label: "Odd-hours surcharge", amountSen: oddHoursSen }]
+          : []),
+        ...(guideSen > 0 && guide.language
+          ? [{ label: `Tour guide, ${guide.language}`, amountSen: guideSen }]
+          : []),
+      ]
+    : [];
   const cutoffs = new Set(onTrip.map((p) => p?.cancellationCutoffHours));
   const cutoff = cutoffs.size === 1 ? [...cutoffs][0] : undefined;
   const cancellation = !card
@@ -488,6 +507,7 @@ export function ConfirmStep({
               category={category}
               entries={entries}
               totalSen={totalSen}
+              breakdown={breakdown}
               cancellation={cancellation}
               blocked={blocked}
               forDriver={forDriver}

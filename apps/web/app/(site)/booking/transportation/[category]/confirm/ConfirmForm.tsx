@@ -19,7 +19,6 @@ import { control } from "../../../../_components/Page";
 import { createTripsBookingAction, type ConfirmState } from "./actions";
 import { CONFIRM_FIELDS } from "./fields";
 
-const listFormat = new Intl.ListFormat("en-GB", { type: "conjunction" });
 const label = "mb-1.5 block text-copy font-semibold text-body";
 const hint = "mt-1.5 block text-caption text-muted";
 const refused = "mt-1.5 block text-caption text-danger";
@@ -39,14 +38,15 @@ const inView = `${clearOfFold} scroll-mb-8`;
  * that is an error must not wipe what the customer typed. A field refused,
  * by the browser on submit or by the server, says why under itself; any
  * other refusal shows above the button. It is the page's one button,
- * under the details with the total on it. It waits while a trip is marked
- * in red, `blocked` saying which to fix, and while the name, the phone or
- * the email is empty, a line saying which to fill in.
+ * under the details and what the total is made of, with the total on it.
+ * It waits while a trip is marked in red, `blocked` saying which to fix;
+ * a field left empty says so at itself when it is pressed.
  */
 export function ConfirmForm({
   category,
   entries,
   totalSen,
+  breakdown,
   cancellation,
   blocked,
   forDriver,
@@ -64,6 +64,8 @@ export function ConfirmForm({
   /** The trips, the vehicle and the prices shown, as hidden fields. */
   entries: [name: string, value: string][];
   totalSen: number;
+  /** What the total is made of, a line each: the vehicle, the odd-hours surcharge, the guide. Empty while no vehicle is chosen. */
+  breakdown: readonly { label: string; amountSen: number }[];
   /** The cancellation terms under the button; null while no vehicle is chosen. */
   cancellation: string | null;
   /** What to fix before booking; null when nothing stops it. */
@@ -153,11 +155,6 @@ export function ConfirmForm({
     "Every driver on this booking sees it.",
   );
   const error = state && "error" in state ? state.error : null;
-  const missing = [
-    name.trim() === "" ? "name" : null,
-    phone.trim() === "" ? "phone number" : null,
-    email.trim() === "" ? "email" : null,
-  ].filter((field) => field !== null);
   const alert = blocked ?? error;
 
   return (
@@ -272,18 +269,24 @@ export function ConfirmForm({
         </label>
       </div>
       <div className="grid gap-3">
-        {alert ? (
-          <FormError size="copy" error={alert} />
-        ) : missing.length > 0 ? (
-          <p className="text-copy text-muted">
-            Fill in your {listFormat.format(missing)} to confirm.
-          </p>
+        {breakdown.length > 0 ? (
+          <dl className="grid gap-1.5 text-copy">
+            {breakdown.map((line) => (
+              <div key={line.label} className="flex justify-between gap-4">
+                <dt className="text-body">{line.label}</dt>
+                <dd className="text-ink tabular-nums">
+                  {formatMyr(line.amountSen)}
+                </dd>
+              </div>
+            ))}
+          </dl>
         ) : null}
+        {alert ? <FormError size="copy" error={alert} /> : null}
         <Button
           type="submit"
           size="lg"
           pending={pending}
-          disabled={blocked !== null || missing.length > 0}
+          disabled={blocked !== null}
           className="w-full"
         >
           {pending ? (

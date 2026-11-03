@@ -32,6 +32,14 @@ export const TRIP_EVENT_LABELS: Record<TripEventKind, string> = {
   problem: "Report a problem",
 };
 
+/**
+ * Whether a trip is on the road: its driver has tapped On the way or any
+ * step after it. A problem reported alone, before setting off, is not.
+ */
+export function isOnTheRoad(events: readonly { kind: string }[]) {
+  return events.some((e) => e.kind !== "problem" && isTripEventKind(e.kind));
+}
+
 /** The steps of a trip, in order: suggested, never enforced. */
 export const TRIP_STEPS = [
   "on-the-way",

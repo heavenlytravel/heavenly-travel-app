@@ -13,6 +13,7 @@ import {
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
+import { isOnTheRoad } from "./trip-events-input";
 import { modelName } from "./vehicle-model-input";
 
 /**
@@ -69,7 +70,6 @@ const tripInclude = {
   },
   events: {
     orderBy: { at: "desc" },
-    take: 1,
     select: { kind: true, at: true },
   },
 } satisfies Prisma.BookingItemInclude;
@@ -102,6 +102,8 @@ export type AssignRow = {
   tripCount: number;
   startsAt: Date;
   state: AssignState;
+  /** Where each role stands on its own, for the list by role. */
+  roleStates: Record<PartRole, AssignState>;
   /** The roles it still needs asked for. */
   roles: PartRole[];
   job: Job;
@@ -151,11 +153,12 @@ async function listAssignTrips(
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
-    const state = assignStateOf({
+    const standing = {
       status: item.status,
       parts: item.parts,
-      reported: lastEvent !== null,
-    });
+      reported: isOnTheRoad(item.events),
+    };
+    const state = assignStateOf(standing);
     return {
       itemId: item.id,
       bookingId: item.booking.id,
@@ -166,6 +169,10 @@ async function listAssignTrips(
         .length,
       startsAt: item.startsAt,
       state,
+      roleStates: {
+        vehicle: assignStateOf(standing, "vehicle"),
+        driver: assignStateOf(standing, "driver"),
+      },
       roles: rolesToAsk(item),
       job,
       className: item.tripDetails?.vehicleClassName ?? "",

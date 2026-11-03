@@ -8,6 +8,7 @@ import {
   placeArea,
   waitingMinutes,
   type TripEventInput,
+  isOnTheRoad,
 } from "./trip-events-input";
 
 const NOW = new Date("2026-11-03T02:00:00Z");
@@ -112,5 +113,21 @@ describe("placeArea", () => {
     };
     assert.equal(placeArea(place), "Teluk Datai");
     assert.equal(placeArea({ ...place, locality: null }), "Langkawi");
+  });
+});
+
+describe("isOnTheRoad", () => {
+  it("is on the road from On the way, or any step after it", () => {
+    assert.equal(isOnTheRoad([]), false);
+    assert.equal(isOnTheRoad([{ kind: "on-the-way" }]), true);
+    assert.equal(isOnTheRoad([{ kind: "arrived" }]), true);
+  });
+
+  it("is not on the road for a problem reported alone", () => {
+    assert.equal(isOnTheRoad([{ kind: "problem" }]), false);
+    assert.equal(
+      isOnTheRoad([{ kind: "problem" }, { kind: "on-the-way" }]),
+      true,
+    );
   });
 });

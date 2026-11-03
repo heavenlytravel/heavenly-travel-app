@@ -42,7 +42,9 @@ import {
   updatePlan,
   useTripPlan,
 } from "../../../../../_lib/trip-plan-store";
+import { addOnsOf } from "../../../../../_lib/booking-add-ons";
 import {
+  tripAddOnsPath,
   tripBookingPath,
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
@@ -91,7 +93,8 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
  * added. "Your vehicle" has the class for all the trips, pictured and
  * with its models as on the vehicle page (any of them is sent, whichever
  * is free on the day: choosing a model is not offered for now), and the
- * group. The details ask the contact, the flights for the trips at an
+ * group, and what comes with it, linking back to the Add-ons step. The
+ * details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
  * the total and the cancellation terms; it says which trip to fix while
  * any is red. A link with today's one-trip confirm address still opens
@@ -211,6 +214,7 @@ export function ConfirmStep({
 
   const several = trips.length > 1;
   const card = chosen?.card ?? null;
+  const included = addOnsOf(category).filter((addOn) => addOn.included);
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
@@ -388,6 +392,15 @@ export function ConfirmStep({
                 : "the trip"}{" "}
             · {plural(passengers, "passenger")}
           </p>
+          {included.length > 0 ? (
+            <p className="mt-1.5 text-copy text-body">
+              {included.map((addOn) => `${addOn.name} included`).join(" · ")}
+              {" · "}
+              <Link href={tripAddOnsPath(category)} className="text-link">
+                Add-ons
+              </Link>
+            </p>
+          ) : null}
         </div>
       </div>
     </section>

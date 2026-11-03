@@ -40,8 +40,8 @@ import {
   useTripPlan,
 } from "../../../../_lib/trip-plan-store";
 import {
+  tripAfterVehiclePath,
   tripBookingPath,
-  tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
 import { useNavigate } from "../../../../_lib/useNavigate";
 import { surface, panel, Pending, Stop } from "../../../_components/Page";
@@ -183,7 +183,7 @@ export function VehicleStep({
   function choose(id: string) {
     if (continuing) return;
     updatePlan((now) => ({ ...now, classId: id }));
-    go(tripConfirmPath(category));
+    go(tripAfterVehiclePath(category));
   }
 
   function toCoaches() {

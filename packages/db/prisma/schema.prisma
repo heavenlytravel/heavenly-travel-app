@@ -811,13 +811,18 @@ model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
   reference     String    @unique
-  /// The running number staff know it by, counted per year in Malaysia
-  /// (`numberYear`, 26 for 2026): shown as HTQ-26-00042, a quotation,
-  /// until the booking is first confirmed (`confirmedAt`), then as
-  /// HTI-26-00042, its invoice. Null on bookings from before numbers until
-  /// `db:number-bookings` gives them one. See src/booking-number.ts.
-  numberYear    Int?
-  number        Int?
+  /// The numbers staff and Finance know it by, each counted per year in
+  /// Malaysia (26 for 2026) by `BookingNumberCounter`. A quotation number,
+  /// HTQ-26-00042, when staff make the booking; an invoice number,
+  /// HTI-26-00017, when it is first confirmed, kept beside the quotation's
+  /// so a quotation never confirmed shows as a lead lost. A website booking
+  /// has an invoice number only. Null until given; bookings from before
+  /// numbers get theirs from `db:number-bookings`. See
+  /// src/booking-number.ts.
+  quoteYear     Int?
+  quoteNumber   Int?
+  invoiceYear   Int?
+  invoiceNumber Int?
   /// The account the booking shows under; null for a guest.
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -848,12 +853,26 @@ model Booking {
   notes  BookingNote[]
   offers VendorOffer[]
 
-  @@unique([numberYear, number])
+  @@unique([quoteYear, quoteNumber])
+  @@unique([invoiceYear, invoiceNumber])
   @@index([userId, createdAt])
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])
   @@index([createdIp, createdAt])
   @@index([createdAt])
+}
+
+/// The last booking number given, per kind ("quote" or "invoice") and
+/// year (26 for 2026). Taken one at a time inside the booking's
+/// transaction (`nextBookingNumber`), so two bookings never share one and a
+/// rolled-back booking leaves no gap. `db:number-bookings` sets it to the
+/// old system's last number when we switch over.
+model BookingNumberCounter {
+  kind String
+  year Int
+  last Int
+
+  @@id([kind, year])
 }
 
 /// A note staff keep on a booking. Never shown to the customer, never

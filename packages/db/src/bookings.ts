@@ -6,7 +6,8 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
-import { bookingNumberYear, parseBookingNumber } from "./booking-number";
+import { nextBookingNumber } from "./booking-counter";
+import { BOOKING_NUMBER_SELECT, parseBookingNumber } from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import { localDayRange } from "./booking-rules";
@@ -129,10 +130,10 @@ const CREATE_ATTEMPTS = 5;
  * to an account, remembers the phone number on it for next time. The actor
  * is the customer or the guest on the website, or the admin entering a
  * booking for them. An item with an agreed price is charged that price and
- * logged as priced, so it is never a special case later. The reference is
- * random, and the running number the year's highest + 1 (./booking-number),
- * so a collision of either, two bookings at once, is retried. Emails are the caller's job, after
- * this returns.
+ * logged as priced, so it is never a special case later. One entered by
+ * staff takes the year's next quotation number (./booking-counter); the
+ * invoice number comes when it is confirmed. The reference is random, so
+ * a collision is retried. Emails are the caller's job, after this returns.
  */
 export async function createBooking(
   actor: Actor,
@@ -184,17 +185,16 @@ export async function createBooking(
             data: { phone: input.contactPhone },
           });
         }
-        const numberYear = bookingNumberYear(new Date());
-        const last = await tx.booking.aggregate({
-          where: { numberYear },
-          _max: { number: true },
-        });
+        const quote =
+          actor.kind === "admin"
+            ? await nextBookingNumber(tx, "quote", new Date())
+            : null;
         const booking = await tx.booking.create({
           data: {
             ...data,
             reference: generateReference(),
-            numberYear,
-            number: (last._max.number ?? 0) + 1,
+            quoteYear: quote?.year ?? null,
+            quoteNumber: quote?.number ?? null,
           },
           ...withItems,
         });
@@ -226,10 +226,7 @@ export async function createBooking(
     } catch (error) {
       if (
         attempt >= CREATE_ATTEMPTS ||
-        !(
-          isUniqueViolation(error, "reference") ||
-          isUniqueViolation(error, "number")
-        )
+        !isUniqueViolation(error, "reference")
       ) {
         throw error;
       }
@@ -323,8 +320,14 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
     const phone = phoneDigitsOf(filter.search);
     const number = parseBookingNumber(filter.search);
     where.OR = [
-      // "HTQ-26-00042" or "26-42": the booking with that number.
-      ...(number ? [number] : []),
+      // "HTQ-26-00042" or "26-42": the booking with that number, either
+      // kind unless the prefix says which.
+      ...(number && number.kind !== "invoice"
+        ? [{ quoteYear: number.year, quoteNumber: number.number }]
+        : []),
+      ...(number && number.kind !== "quote"
+        ? [{ invoiceYear: number.year, invoiceNumber: number.number }]
+        : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
       { reference: { contains: filter.search.toUpperCase() } },
@@ -377,10 +380,7 @@ export function findBookingMatches(search: string, take: number) {
     take,
     select: {
       id: true,
-      reference: true,
-      numberYear: true,
-      number: true,
-      confirmedAt: true,
+      ...BOOKING_NUMBER_SELECT,
       status: true,
       contactName: true,
       startsAt: true,
@@ -442,9 +442,20 @@ async function refreshBooking(
   const live = booking.items.filter(isLive);
   const status = bookingStatusOf(booking.items);
 
+  // Confirmed for the first time: the booking is sold, and invoiced. One
+  // cancelled before that keeps only its quotation number, a lead lost.
+  const invoice =
+    status !== "received" &&
+    status !== "cancelled" &&
+    booking.invoiceNumber === null
+      ? await nextBookingNumber(tx, "invoice", now)
+      : null;
   const updated = await tx.booking.update({
     where: { id: bookingId },
     data: {
+      ...(invoice
+        ? { invoiceYear: invoice.year, invoiceNumber: invoice.number }
+        : {}),
       status,
       // The total is what is owed for the live items. A fully cancelled
       // booking keeps its last total, so the record still says what it was.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   bookingLabelOf,
+  bookingNumbersOf,
   customerEmailOf,
   formatLocalDate,
   formatLocalTime,
@@ -59,6 +60,7 @@ export function BookingsTable({
               const trip = tripViewOfItem(item);
               return trip ? [{ item, trip }] : [];
             });
+            const numbers = bookingNumbersOf(booking);
             return (
               <tr key={booking.id}>
                 <Td className="font-medium whitespace-nowrap tabular-nums">
@@ -68,9 +70,15 @@ export function BookingsTable({
                   >
                     {bookingLabelOf(booking)}
                   </Link>
-                  {booking.number !== null ? (
+                  {bookingLabelOf(booking) !== booking.reference ? (
                     <span className="block text-xs text-muted">
-                      {booking.reference}
+                      {/* An invoice's quotation, and the customer's reference. */}
+                      {[
+                        numbers.invoice ? numbers.quote : null,
+                        booking.reference,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   ) : null}
                   <span className="mt-1 block">

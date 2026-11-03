@@ -124,30 +124,36 @@ Proposal, agreed in principle by the user:
 - Connect's sign-up gets "Tour guide" as a service.
 - When a booking has a guide, Assign shows a Guide column.
 
-## 5. Quotation and invoice numbers (built 2026-11-03, `feat/tour-guide`)
+## 5. Quotation and invoice numbers (built 2026-11-04, `feat/tour-guide`)
 
-- **The format** (user, 2026-11-03): one running number per booking, counted per year in
-  Malaysia, shown as **HTQ-YY-NNNNN**, the quotation, until the booking is first
-  confirmed, then as **HTI-YY-NNNNN**, its invoice: the same digits, so a quotation and
-  its invoice match at a glance (`src/booking-number.ts`). It replaces the old
-  system's HT-YYMMDD-XXX quotations and HT-XXX invoices. This replaces the two
-  counters planned before: a booking never confirmed keeps its HTQ number, so the
-  invoice numbers have gaps, which MyInvois allows (numbers unique, not gapless).
+- **Two numbers, two counters** (user, 2026-11-04, replacing one number for both):
+  **HTQ-YY-NNNNN**, the quotation, and **HTI-YY-NNNNN**, the invoice, each counted per
+  year in Malaysia on its own (`BookingNumberCounter`, `src/booking-number.ts`). They
+  replace the old system's HT-YYMMDD-XXX quotations and HT-XXX invoices.
+- **A booking staff enter gets a quotation number when it is made**, and an invoice
+  number when it is first confirmed, kept beside the quotation's. A quotation never
+  confirmed (cancelled, or left) keeps only its HTQ number: the leads lost are the
+  quotations with no invoice.
+- **A website booking gets an invoice number only.** With the payment gateway it arrives
+  paid and confirmed, so it is invoiced at once. Until then it is invoiced when
+  Reservation confirms it, and shows by its reference before that.
+- **No gaps:** a number is taken inside the booking's transaction, from a counter row
+  locked until it commits, so two bookings at once never share one and a rolled-back
+  booking gives its number back.
 - **`reference` stays** (HT-7K3QZM, random): the booking's id in links and emails, the
   customer's way to look a guest booking up, and what Connect shows vendors and
   drivers. A running number in a link lets anyone guess other bookings.
-- **Manage shows the number first:** the bookings list (the reference under it), the
-  booking's title (the reference in its line), Assign, the dashboard, the history and
-  Ctrl+K, which finds "HTQ-26-00042", "HTI-26-42" or "26-42".
-- **Taken when the booking is made:** the year's highest + 1, in the same database
-  step; a unique index refuses a duplicate and two bookings at once retry.
-- **Bookings from before** get theirs from `pnpm --filter @repo/db db:number-bookings`
-  (and `:prod`), oldest first, in the year each was made. Run after the schema push.
-- **Continuing the old numbers** waits on N2: once Sales and Finance give the last
-  numbers issued, the year's first is set from them.
-- Other formats, if the team prefers: `HTQ2600042` (no dashes, easier to type),
-  `HT-Q-2611-0042` (month too, restarting monthly), `Q26-00042` / `INV26-00042`
-  (shorter, without the brand).
+- **Manage shows the number first:** the invoice number once there is one, else the
+  quotation number, else the reference. The bookings list has the quotation and the
+  reference under it, the booking's summary both numbers, its line the reference. Ctrl+K
+  finds "HTQ-26-00042", "HTI-26-42", or "26-42" of either kind.
+- **Switching over:** `pnpm --filter @repo/db db:number-bookings -- --quote-last 1234
+--invoice-last 567` (and `:prod`), after the schema push. The two are the old
+  system's last numbers this year (N2); ours carry on after them. Then the bookings
+  from before get theirs: a quotation number for those staff entered, in the order made,
+  an invoice number for those ever confirmed, in the order confirmed.
+- Other formats considered: `HTQ2600042` (no dashes), `HT-Q-2611-0042` (monthly),
+  `Q26-00042` / `INV26-00042`. The user kept HTQ-YY-NNNNN / HTI-YY-NNNNN (2026-11-04).
 
 ## 6. Return trips and discounts (decided: no rule)
 

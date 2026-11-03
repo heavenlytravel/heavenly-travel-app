@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  bookingNumberOf,
+  bookingLabelOf,
+  bookingNumbersOf,
   bookingNumberYear,
   parseBookingNumber,
 } from "./booking-number";
+
+const NONE = {
+  quoteYear: null,
+  quoteNumber: null,
+  invoiceYear: null,
+  invoiceNumber: null,
+};
 
 describe("booking numbers", () => {
   it("counts the year in Malaysia", () => {
@@ -13,24 +21,51 @@ describe("booking numbers", () => {
     assert.equal(bookingNumberYear(new Date("2026-11-03T02:00:00Z")), 26);
   });
 
-  it("reads as a quotation, then the invoice once confirmed", () => {
-    const booking = { numberYear: 26, number: 42, confirmedAt: null };
-    assert.equal(bookingNumberOf(booking), "HTQ-26-00042");
+  it("keeps the quotation's number beside the invoice's", () => {
+    const quoted = { ...NONE, quoteYear: 26, quoteNumber: 42 };
+    assert.deepEqual(bookingNumbersOf(quoted), {
+      quote: "HTQ-26-00042",
+      invoice: null,
+    });
+    const sold = { ...quoted, invoiceYear: 26, invoiceNumber: 17 };
+    assert.deepEqual(bookingNumbersOf(sold), {
+      quote: "HTQ-26-00042",
+      invoice: "HTI-26-00017",
+    });
+  });
+
+  it("is called by its invoice, else its quotation, else its reference", () => {
+    const reference = "HT-7K3QZM";
+    assert.equal(bookingLabelOf({ ...NONE, reference }), reference);
+    const quoted = { ...NONE, reference, quoteYear: 26, quoteNumber: 42 };
+    assert.equal(bookingLabelOf(quoted), "HTQ-26-00042");
     assert.equal(
-      bookingNumberOf({ ...booking, confirmedAt: new Date() }),
-      "HTI-26-00042",
+      bookingLabelOf({ ...quoted, invoiceYear: 26, invoiceNumber: 17 }),
+      "HTI-26-00017",
     );
+    // A website booking: an invoice number only.
     assert.equal(
-      bookingNumberOf({ numberYear: null, number: null, confirmedAt: null }),
-      null,
+      bookingLabelOf({ ...NONE, reference, invoiceYear: 26, invoiceNumber: 3 }),
+      "HTI-26-00003",
     );
   });
 
   it("finds a number however it is typed", () => {
-    const n = { numberYear: 26, number: 42 };
-    assert.deepEqual(parseBookingNumber("HTQ-26-00042"), n);
-    assert.deepEqual(parseBookingNumber("hti-26-42"), n);
-    assert.deepEqual(parseBookingNumber("26-42"), n);
+    assert.deepEqual(parseBookingNumber("HTQ-26-00042"), {
+      kind: "quote",
+      year: 26,
+      number: 42,
+    });
+    assert.deepEqual(parseBookingNumber("hti-26-42"), {
+      kind: "invoice",
+      year: 26,
+      number: 42,
+    });
+    assert.deepEqual(parseBookingNumber("26/00042"), {
+      kind: null,
+      year: 26,
+      number: 42,
+    });
     assert.equal(parseBookingNumber("HT-7K3QZM"), null);
     assert.equal(parseBookingNumber("26-0"), null);
   });

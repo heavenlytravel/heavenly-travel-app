@@ -1,3 +1,4 @@
+import { BOOKING_NUMBER_SELECT } from "./booking-number";
 import { bookingLabelOf } from "./booking-number";
 import { pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
@@ -29,10 +30,7 @@ const tripInclude = {
   booking: {
     select: {
       id: true,
-      reference: true,
-      numberYear: true,
-      number: true,
-      confirmedAt: true,
+      ...BOOKING_NUMBER_SELECT,
       contactName: true,
       items: { select: { status: true } },
     },

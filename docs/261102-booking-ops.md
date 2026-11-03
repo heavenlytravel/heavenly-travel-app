@@ -92,18 +92,20 @@ Decided with the user on 2026-11-02, after three rounds of layouts (a table, two
 steps, then cards to drag): keep it simple, per trip, no dragging.
 
 - **The Board becomes Assign,** `/[location]/assign`, Operation's page: every trip from
-  today on, To assign first; chips for Waiting to accept, Assigned, On the road, Done
-  (today) and All; listed by day or by booking. Our vehicles waiting for Operation's yes
-  stay at the top. A Trello-like board can come later if it is wanted.
-- **Each open trip has Assign,** on that page and as "Assign trip" on the booking: one
-  small dialog with the vehicle and the driver the trip still needs, "Pay vendor (RM)"
-  for a vendor not ours, Answer by, and "Also give the same to" the booking's other open
-  trips. One vehicle and driver for the whole booking is one dialog; a trip five days
-  away can wait.
-- **View** opens a quick view of the booking (customer, trips, total) without leaving
-  the page; "Open booking" goes to it.
+  today on in a table like Bookings, with figure tiles for To assign (the default),
+  Waiting to accept, Assigned, On the road, Done (today) and All. Each row says how soon
+  it picks up (red within the day while not assigned) and who does each role or whose
+  answer it waits for. The reference opens the booking.
+- **Each trip has its own page** (2026-11-03, replacing the dialog), `/[location]/assign/[trip]`:
+  the vendor first, then their vehicle or driver or Any ("the vendor will assign it"),
+  "Pay vendor (RM)" for a vendor not ours, Answer by per vendor and before the pickup,
+  and "Also give the same to" the booking's other open trips. A card per role already
+  asked: name, accept, record a decline, Withdraw or Release (undo). The day's reports
+  are there too. Vehicles and drivers of another class are not listed.
+- **Assigning is Operation's alone:** the booking shows who does each trip, to read, with
+  "Open in Assign".
 - **"Pay vendor"** replaces "what we owe" on the screens.
-- The tour guide joins as a third choice in the same dialog when item 4 is confirmed.
+- The tour guide joins as a third choice on the trip's page when item 4 is confirmed.
 
 ## 3. Driver tipping (waits)
 

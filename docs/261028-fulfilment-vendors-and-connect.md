@@ -56,20 +56,26 @@ received ──► confirmed ──► assigned ──► completed
 - **Where a trip stands is worked out, not stored:** To assign, Waiting to accept,
   Assigned, On the road, Done. The item status stays one of today's five.
 - **Operation works on the Assign page** at `/[location]/assign` (every location's
-  under `~`), which replaced the Board on 2026-11-02: every trip from today on, To
-  assign first, chips for the other states, listed by day or by booking, with a quick
-  view of each booking. Our vehicles waiting for Operation's own yes are listed over
-  them. No dragging; a Trello-like board can come later if it is wanted.
-- **Assigning is per trip, in one small dialog,** the same from the Assign page and from
-  "Assign trip" on the booking: the vehicle and the driver the trip still needs (ours
-  first; one that cannot do the trip greyed with why; or a vendor to choose; or not
-  now), "Pay vendor (RM)" for a vendor not ours, Answer by, and "Also give the same to"
-  the booking's other open trips, so one vehicle and driver for every trip is one
-  dialog. A trip five days away can wait until nearer the day. The tour guide joins as a
-  third choice later.
+  under `~`), which replaced the Board on 2026-11-02: a table of every trip from today
+  on by pickup, figure tiles for To assign (the default), Waiting to accept, Assigned,
+  On the road, Done and All. Each row says how soon it picks up, red within the day
+  while not yet assigned, and who does each role or whose answer it waits for. The
+  reference opens the booking; Assign or Open opens the trip's page. No dragging.
+- **Each trip has its own page** at `/[location]/assign/[trip]` (2026-11-03): the
+  Assign form for the roles still open, a card per role already asked with what to do
+  next, the day's reports, and beside them the trip, the customer and the booking's
+  other trips. The form picks the vendor first (ours first, only those serving the
+  trip's location, or not now), then one of that vendor's vehicles or drivers (one that
+  cannot do the trip greyed with why) or Any, said plainly as "the vendor will assign
+  it"; "Pay vendor (RM)" for a vendor not ours; when each vendor answers by, before the
+  pickup; and "Also give the same to" the booking's other open trips. A trip five days
+  away can wait until nearer the day. The tour guide joins as a third choice later.
+- **Undo is per trip:** Withdraw before the vendor's yes, Release after it; the role goes
+  back to To assign.
 - **Elsewhere in manage:** vendors under Fleet at `/[location]/fleet/vendors`, those
-  serving a location under its slug; who does a trip and what its driver reported on the
-  booking's page; the safety buffer on the location's Settings.
+  serving a location under its slug; the booking's page shows who does each trip and
+  what its driver reported, to read, with "Open in Assign"; what we pay for a cancelled
+  trip stays there; the safety buffer on the location's Settings.
 
 ### Vendors
 
@@ -175,8 +181,8 @@ Assigning is Operation's work (`bookings.fulfil`).
 - **Per trip, or the same for every trip.** One vehicle and one driver for the whole
   booking is how Operation usually works, and a booking is one vehicle since PR #56; it
   is saved against each trip. Since 2026-11-02 (docs/261102-booking-ops.md) each trip is
-  assigned in a small dialog, from the Assign page or "Assign trip" on the booking, with
-  "Also give the same to" the booking's other open trips. The picker greys a vehicle or
+  assigned on its own page under Assign (a dialog until 2026-11-03), with "Also give the
+  same to" the booking's other open trips. The picker greys a vehicle or
   driver for that trip, with why, and a trip ticked that the choice cannot do cannot be
   ticked. The trips with the same choice make one ask, and offers stay one per vendor, a
   part per trip.
@@ -190,8 +196,9 @@ Assigning is Operation's work (`bookings.fulfil`).
 | Vendor A's | Vendor A's | Vendor A            | Vendor A, then its driver | A, one offer   |
 | Vendor A's | Vendor B's | Vendor B            | Vendor A, then its driver | A and B        |
 
-- **The picker** lists vehicles and drivers, ours first. One that cannot be used is shown
-  greyed with the reason: not allowed on this class, a licence, PSV, road tax,
+- **The picker** lists vehicles and drivers, ours first, only those of a class the
+  booking's trips are of: a class changes by amending the booking. One that cannot be
+  used is shown greyed with the reason: not allowed on this class, a licence, PSV, road tax,
   insurance, inspection or permit expired on the trip's date, out of service, its vendor
   suspended, or another job at that time. It shows each driver's day ("Ali: 8:00
   Airport → Datai, ends about 8:45").

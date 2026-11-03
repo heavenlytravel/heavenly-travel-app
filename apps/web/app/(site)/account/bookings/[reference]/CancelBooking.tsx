@@ -73,7 +73,7 @@ function CancelControl({
       <>
         <Button
           ref={openButton}
-          variant="outline"
+          variant="danger"
           size="lg"
           disabled={blocked}
           onClick={() => arm(true)}

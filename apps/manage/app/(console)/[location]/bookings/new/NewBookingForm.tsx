@@ -9,6 +9,7 @@ import {
   TRIP_CATEGORY_LABELS,
   type BBox,
 } from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
@@ -81,6 +82,7 @@ export function NewBookingForm({
   near?: BBox;
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
+  const [confirmDialog, confirm] = useConfirm();
   const [trips, setTrips] = useState<TripDraft[]>(() => [newTripDraft()]);
   const [vehicle, setVehicle] = useState<VehicleDraft>(EMPTY_VEHICLE);
   const [details, setDetails] = useState<BookingDetails>(EMPTY_BOOKING_DETAILS);
@@ -105,7 +107,14 @@ export function NewBookingForm({
     setTrips((current) => [...tripsByStart(current), added]);
     setOpen(`trip:${added.id}`);
   }
-  function removeTrip(id: string) {
+  async function removeTrip(id: string, label: string) {
+    const yes = await confirm({
+      title: `Remove ${label}?`,
+      description: "Its places, day and time are lost.",
+      action: "Remove trip",
+      danger: true,
+    });
+    if (!yes) return;
     setTrips((current) => current.filter((draft) => draft.id !== id));
     setOpen(null);
   }
@@ -217,9 +226,9 @@ export function NewBookingForm({
                 aside={
                   several ? (
                     <Button
-                      variant="ghost"
+                      variant="ghost-danger"
                       size="sm"
-                      onClick={() => removeTrip(draft.id)}
+                      onClick={() => removeTrip(draft.id, `trip ${index + 1}`)}
                     >
                       Remove trip
                     </Button>
@@ -339,6 +348,7 @@ export function NewBookingForm({
           />
         </aside>
       </div>
+      {confirmDialog}
     </form>
   );
 }

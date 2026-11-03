@@ -6,6 +6,7 @@ import {
   ringgitInputValue,
   type PriceOverride,
 } from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { useState } from "react";
@@ -32,7 +33,15 @@ export function PriceOverrideControl({
     done: "Agreed price saved.",
     onDone: () => setOpen(false),
   });
+  const [dialog, confirm] = useConfirm();
   const remove = useActionForm(overrideItemPriceAction, {
+    ask: () =>
+      confirm({
+        title: "Remove the agreed price?",
+        description: "The trip is charged the rates' price again.",
+        action: "Remove",
+        danger: true,
+      }),
     done: "Agreed price removed. The rates' price stands.",
   });
 
@@ -53,7 +62,7 @@ export function PriceOverrideControl({
             <input type="hidden" name="remove" value="true" />
             <Button
               type="submit"
-              variant="ghost"
+              variant="ghost-danger"
               size="sm"
               pending={remove.pending}
             >
@@ -62,6 +71,7 @@ export function PriceOverrideControl({
           </form>
         ) : null}
         <FormError error={remove.error} size="xs" />
+        {dialog}
       </>
     );
   }

@@ -751,7 +751,7 @@ export function RateGrid({
                 content={ticks === 0 ? "Tick the routes to delete." : null}
               >
                 <Button
-                  variant="secondary"
+                  variant="danger"
                   disabled={pending || ticks === 0}
                   onClick={deleteTicked}
                 >

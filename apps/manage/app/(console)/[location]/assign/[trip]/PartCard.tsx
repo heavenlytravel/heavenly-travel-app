@@ -390,6 +390,7 @@ function ReleaseButton({
           : `Release the ${noun}?`,
         description: `This trip's ${noun} goes back to To assign, to ask again.`,
         action: verb,
+        danger: true,
       }),
     done: withdraw
       ? "Withdrawn. Assign it again."
@@ -398,7 +399,7 @@ function ReleaseButton({
   return (
     <form {...formProps} className="grid gap-1">
       <PartFields bookingId={bookingId} partIds={[partId]} />
-      <Button type="submit" size="sm" variant="ghost" pending={pending}>
+      <Button type="submit" size="sm" variant="ghost-danger" pending={pending}>
         {verb}
       </Button>
       <FormError error={error} size="xs" />

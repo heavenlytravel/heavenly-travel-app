@@ -128,6 +128,7 @@ export function SavedAddresses({
               } no button once it is removed.`
             : "Customers no longer see it in the drop-off's list.",
         action: "Remove",
+        danger: true,
       }))
     ) {
       return;

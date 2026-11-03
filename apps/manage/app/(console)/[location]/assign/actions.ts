@@ -3,14 +3,17 @@
 import {
   isDeclineReason,
   isTripEventKind,
+  nextTripStep,
   parseRinggit,
   pickupInstant,
   textOf,
+  TRIP_EVENT_LABELS,
   type PartRole,
 } from "@repo/db";
 import {
   answerParts,
   assignBooking,
+  listTripEvents,
   nameParts,
   releaseAction,
   reportTripEvent,
@@ -241,8 +244,9 @@ export async function setPartCostAction(
 }
 
 /**
- * Operation taps for a driver who cannot: the same kinds as Connect's,
- * at the time it is entered. Dropped off and no-show complete the trip.
+ * Operation taps for a driver who cannot, at the time it is entered, in
+ * Connect's order: the next step only, or a no-show, or a problem.
+ * Dropped off and no-show complete the trip.
  */
 export async function reportForDriverAction(
   _previous: ActionState,
@@ -254,6 +258,13 @@ export async function reportForDriverAction(
   const itemId = textOf(formData.get("itemId"));
   const kind = textOf(formData.get("kind"));
   if (!bookingId || !itemId || !isTripEventKind(kind)) return STALE;
+  const next = nextTripStep(await listTripEvents([itemId]));
+  if (next === null) return { error: "This trip has ended." };
+  if (kind !== next && kind !== "no-show" && kind !== "problem") {
+    return {
+      error: `The next step is ${TRIP_EVENT_LABELS[next]}. Reload to see the latest report.`,
+    };
+  }
   const note = textOf(formData.get("note"));
   return finish(
     await reportTripEvent(

@@ -228,10 +228,22 @@ export type DriverJob = DriverTrip & {
 /** The trip's tour guide as its driver sees them, to meet them at the pickup. */
 export type JobGuide = { name: string; phone: string; languages: string[] };
 
+/** The guide to show the driver: none when it is the driver themself, by their phone (both kept as ./phone keeps it). */
+export function otherGuide(
+  guide: JobGuide | null,
+  driverPhone: string | null,
+): JobGuide | null {
+  return guide && driverPhone !== null && guide.phone === driverPhone
+    ? null
+    : guide;
+}
+
 /**
  * One job of the driver's, or null when it is not theirs. Showing the
  * customer's details logs the view, as PDPA asks. The trip's tour guide,
- * once their vendor accepted, shows while the customer's details do.
+ * once their vendor accepted, shows while the customer's details do,
+ * unless the guide is the driver themself, entered in both lists: the
+ * same phone.
  */
 export async function getDriverJob(
   actor: Actor,
@@ -242,6 +254,7 @@ export async function getDriverJob(
   const part = await db.tripPart.findFirst({
     where: { itemId, driverId: driver.id, vendorAcceptedAt: { not: null } },
     include: {
+      driver: { select: { phone: true } },
       item: {
         include: {
           ...jobInclude.item.include,
@@ -288,7 +301,10 @@ export async function getDriverJob(
   );
   return {
     ...trip,
-    guide: part.item.parts.find((p) => p.guide)?.guide ?? null,
+    guide: otherGuide(
+      part.item.parts.find((p) => p.guide)?.guide ?? null,
+      part.driver?.phone ?? null,
+    ),
     customer: {
       name: part.item.booking.contactName,
       phone: part.item.booking.contactPhone,

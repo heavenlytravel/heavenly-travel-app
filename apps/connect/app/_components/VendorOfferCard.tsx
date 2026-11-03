@@ -44,6 +44,10 @@ export function VendorOfferCard({
     (sum, role) => sum + role.costs.reduce((s, c) => s + c.costSen, 0),
     0,
   );
+  const tips = offer.roles.reduce(
+    (sum, role) => sum + role.costs.reduce((s, c) => s + c.tipSen, 0),
+    0,
+  );
   return (
     <OfferPanel
       head={
@@ -68,6 +72,11 @@ export function VendorOfferCard({
           <span className="font-serif text-4xl leading-none text-ink tabular-nums">
             {formatMyr(total)}
           </span>
+          {tips > 0 ? (
+            <span className="text-sm text-body tabular-nums">
+              Plus {formatMyr(tips)} tip for the driver
+            </span>
+          ) : null}
         </div>
         <span className="pb-1 text-xs font-semibold text-muted tabular-nums">
           {offer.reference}

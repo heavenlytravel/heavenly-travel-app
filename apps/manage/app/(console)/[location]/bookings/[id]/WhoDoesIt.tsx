@@ -162,6 +162,7 @@ function CostRow({
     <span>
       {PART_ROLE_LABELS[part.role as PartRole]}, {part.offer.vendor.name}:{" "}
       {formatMyr(part.costSen)}
+      {part.tipSen > 0 ? ` + ${formatMyr(part.tipSen)} tip` : null}
     </span>
   );
   if (!open) {

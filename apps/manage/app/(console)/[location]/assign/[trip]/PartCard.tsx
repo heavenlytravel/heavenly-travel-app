@@ -97,7 +97,16 @@ export function PartCard({
       ),
     ],
   ];
-  if (!vendor.isOurs) rows.push(["Pay vendor", formatMyr(part.costSen)]);
+  // The vehicle's pay goes to its vendor; a driver's or guide's to them.
+  if (!vendor.isOurs) {
+    rows.push([
+      role === "vehicle"
+        ? "Pay vendor"
+        : `Pay ${PART_ROLE_LABELS[role].toLowerCase()}`,
+      formatMyr(part.costSen),
+    ]);
+  }
+  if (part.tipSen > 0) rows.push(["Driver tip", formatMyr(part.tipSen)]);
   if (vendorWaits) {
     rows.push(["Answer by", formatLocalDateTime(part.offer.respondBy)]);
   }

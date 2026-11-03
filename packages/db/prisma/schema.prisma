@@ -100,31 +100,37 @@ model ActivityLog {
 /// an individual whose only driver may be themself. Ours when SUPER switches `isOurs` on;
 /// the code finds ours by it, never by the name.
 model Vendor {
-  id             String    @id @default(cuid())
-  name           String
+  id                String    @id @default(cuid())
+  name              String
   /// "company" | "individual"
-  kind           String
+  kind              String
   /// Ours: no cost, no members, accepted for by Operation, and its vehicles
   /// reach the website. Only SUPER switches it.
-  isOurs         Boolean   @default(false)
+  isOurs            Boolean   @default(false)
   /// "pending" | "active" | "refused" | "suspended"
-  status         String
+  status            String
   /// The SSM number, or an individual's IC; empty when not given.
-  registrationNo String    @default("")
-  contactName    String
+  registrationNo    String    @default("")
+  contactName       String
   /// As src/phone.ts keeps it.
-  contactPhone   String
-  contactEmail   String
-  address        String    @default("")
+  contactPhone      String
+  contactEmail      String
+  address           String    @default("")
+  /// Where we pay them: a bank from MALAYSIAN_BANKS, the account number in
+  /// digits and the name on it; all empty until given. Screens show the
+  /// number masked. See src/bank-input.ts.
+  bankName          String    @default("")
+  bankAccountNumber String    @default("")
+  bankAccountName   String    @default("")
   /// What it supplies, VENDOR_SERVICES: asked of every kind at sign-up.
-  services       String[]  @default([])
+  services          String[]  @default([])
   /// Why it was refused or suspended. Staff only.
-  reviewNote     String?
-  reviewedAt     DateTime?
+  reviewNote        String?
+  reviewedAt        DateTime?
   /// No relation, so the record outlives the reviewer.
-  reviewedById   String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  reviewedById      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   /// The locations it serves; each of its vehicles, drivers and guides is
   /// based at one.
@@ -190,8 +196,12 @@ model TripPart {
   driver           Driver?     @relation(fields: [driverId], references: [id])
   guideId          String?
   guide            Guide?      @relation(fields: [guideId], references: [id])
-  /// What we owe the vendor for this part of this trip; 0 for ours.
+  /// What we pay for this part of this trip: the vendor for a vehicle,
+  /// the driver or the guide themselves for theirs; 0 for ours.
   costSen          Int         @default(0)
+  /// A coach trip's driver only: the tip, out of the customer's total,
+  /// that Operation sets for the driver; 0 otherwise.
+  tipSen           Int         @default(0)
   vendorAcceptedAt DateTime?
   /// The driver's own acceptance; for a vehicle, unused.
   driverAcceptedAt DateTime?
@@ -694,28 +704,34 @@ model VehiclePhoto {
 /// docs/261019-vehicles-and-drivers.md and
 /// docs/261028-fulfilment-vendors-and-connect.md.
 model Driver {
-  id               String         @id @default(cuid())
+  id                String         @id @default(cuid())
   /// Whose driver they are.
-  vendorId         String
-  vendor           Vendor         @relation(fields: [vendorId], references: [id])
-  userId           String?        @unique
-  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  vendorId          String
+  vendor            Vendor         @relation(fields: [vendorId], references: [id])
+  userId            String?        @unique
+  user              User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Lowercase; what links their account. Null until known.
-  email            String?        @unique
-  locationId       String
-  location         Location       @relation(fields: [locationId], references: [id])
-  name             String
+  email             String?        @unique
+  locationId        String
+  location          Location       @relation(fields: [locationId], references: [id])
+  name              String
   /// Their WhatsApp, as src/phone.ts keeps it.
-  phone            String
+  phone             String
   /// The classes they may drive: a coach driver is not a sedan driver.
-  vehicleClasses   VehicleClass[]
-  licenceExpiresOn DateTime?      @db.Date
+  vehicleClasses    VehicleClass[]
+  licenceExpiresOn  DateTime?      @db.Date
   /// The PSV vocational licence, to drive paying passengers.
-  psvExpiresOn     DateTime?      @db.Date
-  isActive         Boolean        @default(true)
-  notes            String         @default("")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  psvExpiresOn      DateTime?      @db.Date
+  isActive          Boolean        @default(true)
+  notes             String         @default("")
+  /// Where we pay them: a bank from MALAYSIAN_BANKS, the account number in
+  /// digits and the name on it; all empty until given. Screens show the
+  /// number masked. See src/bank-input.ts.
+  bankName          String         @default("")
+  bankAccountNumber String         @default("")
+  bankAccountName   String         @default("")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   /// The trips they were named for.
   parts TripPart[]
@@ -729,23 +745,29 @@ model Driver {
 /// vehicle, and the driver reports the day. Out of service, they keep their
 /// history. See docs/261103-tour-guide.md.
 model Guide {
-  id             String    @id @default(cuid())
+  id                String    @id @default(cuid())
   /// Whose guide they are.
-  vendorId       String
-  vendor         Vendor    @relation(fields: [vendorId], references: [id])
-  locationId     String
-  location       Location  @relation(fields: [locationId], references: [id])
-  name           String
+  vendorId          String
+  vendor            Vendor    @relation(fields: [vendorId], references: [id])
+  locationId        String
+  location          Location  @relation(fields: [locationId], references: [id])
+  name              String
   /// Their WhatsApp, as src/phone.ts keeps it.
-  phone          String
+  phone             String
   /// The languages they guide in, as typed: "English", "Mandarin".
-  languages      String[]  @default([])
+  languages         String[]  @default([])
   /// The tourist guide licence from MOTAC.
-  motacExpiresOn DateTime? @db.Date
-  isActive       Boolean   @default(true)
-  notes          String    @default("")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  motacExpiresOn    DateTime? @db.Date
+  isActive          Boolean   @default(true)
+  notes             String    @default("")
+  /// Where we pay them: a bank from MALAYSIAN_BANKS, the account number in
+  /// digits and the name on it; all empty until given. Screens show the
+  /// number masked. See src/bank-input.ts.
+  bankName          String    @default("")
+  bankAccountNumber String    @default("")
+  bankAccountName   String    @default("")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   /// The trips they were named for.
   parts TripPart[]

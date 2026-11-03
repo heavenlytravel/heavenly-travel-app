@@ -1,3 +1,4 @@
+import { maskedForLog } from "./bank-input";
 import {
   activityActionMeta,
   ANONYMOUS_ACTOR_NAMES,
@@ -50,8 +51,8 @@ export function logActivity(
       action: entry.action,
       entityType: meta.entityType,
       entityId: entry.entityId,
-      before: entry.before,
-      after: entry.after,
+      before: maskedForLog(entry.before),
+      after: maskedForLog(entry.after),
       customerVisible: meta.customerVisible,
       locationIds: [...new Set(entry.locationIds ?? [])],
     },

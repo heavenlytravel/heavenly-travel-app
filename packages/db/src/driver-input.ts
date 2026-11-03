@@ -1,3 +1,10 @@
+import {
+  BANK_FIELD_LABELS,
+  bankFieldsOf,
+  checkBankFields,
+  readBankFields,
+  type BankFields,
+} from "./bank-input";
 import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
 import { dayOf, documentsDue, parseDay, type DocumentDue } from "./expiry";
@@ -42,7 +49,8 @@ export type DriverFields = {
   vehicleClassIds: string[];
   isActive: boolean;
   notes: string;
-} & Record<DriverDocument, string | null>;
+} & Record<DriverDocument, string | null> &
+  BankFields;
 
 export type DriverField = keyof DriverFields;
 
@@ -57,6 +65,7 @@ export const DRIVER_FIELD_LABELS: Record<DriverField, string> = {
   isActive: "Active",
   notes: "Notes",
   ...DRIVER_DOCUMENT_LABELS,
+  ...BANK_FIELD_LABELS,
 };
 
 /** A stored driver's fields as the form and the log read them: its dates as days, its classes by id. */
@@ -70,7 +79,8 @@ export function driverFieldsOf(
     vehicleClasses: readonly { id: string }[];
     isActive: boolean;
     notes: string;
-  } & Record<DriverDocument, Date | null>,
+  } & Record<DriverDocument, Date | null> &
+    BankFields,
 ): DriverFields {
   return {
     vendorId: driver.vendorId,
@@ -83,6 +93,7 @@ export function driverFieldsOf(
     notes: driver.notes,
     licenceExpiresOn: dayOf(driver.licenceExpiresOn),
     psvExpiresOn: dayOf(driver.psvExpiresOn),
+    ...bankFieldsOf(driver),
   };
 }
 
@@ -142,7 +153,7 @@ export function checkDriverFields(fields: Partial<DriverFields>): Change {
       "notes",
     );
   }
-  return { ok: true };
+  return checkBankFields(fields);
 }
 
 /**
@@ -173,6 +184,7 @@ export function parseDriverFields(
     isActive: flagOf(values.isActive),
     notes: textOf(values.notes),
     ...documents,
+    ...readBankFields(values),
   };
   const check = checkDriverFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

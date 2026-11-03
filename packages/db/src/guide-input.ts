@@ -1,3 +1,10 @@
+import {
+  BANK_FIELD_LABELS,
+  bankFieldsOf,
+  checkBankFields,
+  readBankFields,
+  type BankFields,
+} from "./bank-input";
 import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
 import { dayOf, parseDay } from "./expiry";
@@ -67,7 +74,8 @@ export type GuideFields = {
   languages: string[];
   isActive: boolean;
   notes: string;
-} & Record<GuideDocument, string | null>;
+} & Record<GuideDocument, string | null> &
+  BankFields;
 
 export type GuideField = keyof GuideFields;
 
@@ -81,6 +89,7 @@ export const GUIDE_FIELD_LABELS: Record<GuideField, string> = {
   isActive: "Active",
   notes: "Notes",
   ...GUIDE_DOCUMENT_LABELS,
+  ...BANK_FIELD_LABELS,
 };
 
 /** A stored guide's fields as the form and the log read them: their dates as days. */
@@ -93,7 +102,8 @@ export function guideFieldsOf(
     languages: readonly string[];
     isActive: boolean;
     notes: string;
-  } & Record<GuideDocument, Date | null>,
+  } & Record<GuideDocument, Date | null> &
+    BankFields,
 ): GuideFields {
   return {
     vendorId: guide.vendorId,
@@ -104,6 +114,7 @@ export function guideFieldsOf(
     isActive: guide.isActive,
     notes: guide.notes,
     motacExpiresOn: dayOf(guide.motacExpiresOn),
+    ...bankFieldsOf(guide),
   };
 }
 
@@ -136,7 +147,7 @@ export function checkGuideFields(fields: Partial<GuideFields>): Change {
       "notes",
     );
   }
-  return { ok: true };
+  return checkBankFields(fields);
 }
 
 /**
@@ -163,6 +174,7 @@ export function parseGuideFields(
     isActive: flagOf(values.isActive),
     notes: textOf(values.notes),
     ...documents,
+    ...readBankFields(values),
   };
   const check = checkGuideFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

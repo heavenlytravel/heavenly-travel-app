@@ -61,7 +61,8 @@ const idsOf = (formData: FormData, name: string) =>
  * `<role>:<itemId>`: "" left for later, `vendor:<id>` asks that vendor to
  * choose, or the id of a vehicle or driver named, its vendor beside it
  * under `<role>Vendor:<itemId>`. The cost of each trip is under
- * `<role>Cost:<itemId>`, in ringgit. Trips with the same choice make one
+ * `<role>Cost:<itemId>`, in ringgit, and a coach driver's tip under
+ * `<role>Tip:<itemId>`. Trips with the same choice make one
  * ask, so the same vehicle for every trip is one ask of them all.
  */
 function asksOf(
@@ -86,6 +87,7 @@ function asksOf(
       recordId,
       itemIds: [],
       costSen: {},
+      tipSen: {},
     };
     ask.itemIds.push(itemId);
     const text = textOf(formData.get(`${role}Cost:${itemId}`));
@@ -98,6 +100,17 @@ function asksOf(
         };
       }
       ask.costSen[itemId] = sen;
+    }
+    const tip = textOf(formData.get(`${role}Tip:${itemId}`));
+    if (tip !== "") {
+      const sen = parseRinggit(tip);
+      if (sen === null) {
+        return {
+          error: "Enter the tip in RM, such as 50.",
+          field: `${role}Tip:${itemId}`,
+        };
+      }
+      ask.tipSen[itemId] = sen;
     }
     asks.set(key, ask);
   }

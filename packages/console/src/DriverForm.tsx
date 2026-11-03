@@ -22,6 +22,7 @@ import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import type { ActionState } from "./action-state";
+import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
 import { ExpiryDateField } from "./ExpiryDateField";
 import { DATES_CARDS, SCOPE_FIELD } from "./fleet-form";
@@ -257,24 +258,27 @@ export function DriverForm({
           </>
         }
         side={
-          <Card id={DATES_CARDS.drivers.id}>
-            <CardTitle>
-              <span className="inline-flex items-center gap-1.5">
-                {DATES_CARDS.drivers.name}
-                <InfoTip text="The expiry dates of their driving licence and of the PSV licence that lets them drive paying passengers. A date within 30 days shows as due." />
-              </span>
-            </CardTitle>
-            <div className="grid gap-4">
-              {DRIVER_DOCUMENTS.map((key) => (
-                <ExpiryDateField
-                  key={key}
-                  name={key}
-                  label={DRIVER_DOCUMENT_LABELS[key]}
-                  defaultValue={fields?.[key] ?? null}
-                />
-              ))}
-            </div>
-          </Card>
+          <>
+            <Card id={DATES_CARDS.drivers.id}>
+              <CardTitle>
+                <span className="inline-flex items-center gap-1.5">
+                  {DATES_CARDS.drivers.name}
+                  <InfoTip text="The expiry dates of their driving licence and of the PSV licence that lets them drive paying passengers. A date within 30 days shows as due." />
+                </span>
+              </CardTitle>
+              <div className="grid gap-4">
+                {DRIVER_DOCUMENTS.map((key) => (
+                  <ExpiryDateField
+                    key={key}
+                    name={key}
+                    label={DRIVER_DOCUMENT_LABELS[key]}
+                    defaultValue={fields?.[key] ?? null}
+                  />
+                ))}
+              </div>
+            </Card>
+            <BankCard fields={fields ?? undefined} whose="the driver" />
+          </>
         }
       />
 

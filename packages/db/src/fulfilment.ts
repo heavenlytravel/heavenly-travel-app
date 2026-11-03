@@ -1,6 +1,6 @@
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
-import { bookingStatusOf, isLive } from "./booking-status";
+import { bookingStatusOf, isLive, tipsDriver } from "./booking-status";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
@@ -47,6 +47,7 @@ export const tripInclude = {
     select: {
       vehicleClassId: true,
       vehicleClassName: true,
+      vehicleClassCategory: true,
       pickupPlace: true,
       dropoffPlace: true,
       driveMinutes: true,
@@ -162,6 +163,8 @@ export type FulfilmentTrip = {
   withGuide: boolean;
   /** The language the customer paid for the guide to speak; null without one. */
   guideLanguage: string | null;
+  /** A coach trip: its driver is given a tip (`tipsDriver`). */
+  tipped: boolean;
   /** Another language asked for, on request; null when none. */
   guideRequest: string | null;
   job: Job;
@@ -191,6 +194,7 @@ export async function getBookingFulfilment(
     withGuide: hasGuide(item.tripDetails),
     guideLanguage: item.tripDetails?.guideLanguage ?? null,
     guideRequest: item.tripDetails?.guideRequest ?? null,
+    tipped: tipsDriver(item.tripDetails?.vehicleClassCategory ?? ""),
     job: jobOf(item),
     parts: item.parts,
     assigned: tripAssigned(item.parts, hasGuide(item.tripDetails)),
@@ -497,8 +501,10 @@ export type PartAsk = {
   recordId: string | null;
   /** The trips it is asked for, by item id. */
   itemIds: string[];
-  /** What we owe the vendor for each trip, by item id; ours is always 0. */
+  /** What we pay for each trip, by item id: the vendor, or the driver or guide themselves; ours is always 0. */
   costSen: Record<string, number>;
+  /** A coach trip's driver's tip, by item id; any vendor, ours too. */
+  tipSen: Record<string, number>;
 };
 
 export type AssignInput = {
@@ -646,6 +652,14 @@ export async function assignBooking(
         );
       }
     }
+    for (const tip of Object.values(ask.tipSen)) {
+      if (role !== "driver" && tip !== 0) {
+        return refuse("Only a driver is given a tip.", `${role}Tip`);
+      }
+      if (!Number.isInteger(tip) || tip < 0 || tip > 10_000_000) {
+        return refuse("Enter the driver's tip in RM.", `${role}Tip`);
+      }
+    }
   }
   // A trip has one of each role: in one ask of each role at most.
   for (const role of PART_ROLES) {
@@ -779,6 +793,9 @@ export async function assignBooking(
             driverId: role === "driver" ? ask.recordId : null,
             guideId: role === "guide" ? ask.recordId : null,
             costSen: vendor.isOurs ? 0 : (ask.costSen[trip.id] ?? 0),
+            tipSen: tipsDriver(trip.tripDetails?.vehicleClassCategory ?? "")
+              ? (ask.tipSen[trip.id] ?? 0)
+              : 0,
             vendorAcceptedAt: vendorAccepted,
           },
         });
@@ -794,6 +811,14 @@ export async function assignBooking(
           costSen: vendor.isOurs
             ? 0
             : its.reduce((sum, t) => sum + (ask.costSen[t.id] ?? 0), 0),
+          ...(role === "driver"
+            ? {
+                tipSen: its.reduce(
+                  (sum, t) => sum + (ask.tipSen[t.id] ?? 0),
+                  0,
+                ),
+              }
+            : {}),
           respondBy: respondBy.toISOString(),
           ...(vendorAccepted && role !== "driver" ? { acceptedNow: true } : {}),
         },

@@ -6,11 +6,14 @@ import {
   VENDOR_SERVICE_LABELS,
   formatLocalDate,
   isVendorKind,
+  maskTail,
   vendorServicesOf,
 } from "@repo/db";
 import { getVendor } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Rows } from "@repo/ui/rows";
+import { MaskedText } from "@repo/ui/secret";
+import type { ReactNode } from "react";
 import { cx } from "@repo/ui/cx";
 import { Check, Hourglass, Mail, MessageCircle, Sparkles } from "lucide-react";
 import { Panel } from "../_ui/parts";
@@ -124,8 +127,31 @@ export async function RegistrationStatus({
                 ? [
                     [
                       VENDOR_FIELD_LABELS.registrationNo,
-                      vendor.registrationNo,
-                    ] as [string, string],
+                      <MaskedText
+                        key="registrationNo"
+                        value={vendor.registrationNo}
+                        masked={maskTail(vendor.registrationNo)}
+                        label="number"
+                      />,
+                    ] as [string, ReactNode],
+                  ]
+                : []),
+              ...(vendor.bankAccountNumber
+                ? [
+                    [
+                      "Bank",
+                      <span
+                        key="bank"
+                        className="inline-flex flex-wrap gap-x-1.5"
+                      >
+                        {vendor.bankName}
+                        <MaskedText
+                          value={vendor.bankAccountNumber}
+                          masked={maskTail(vendor.bankAccountNumber)}
+                          label="account number"
+                        />
+                      </span>,
+                    ] as [string, ReactNode],
                   ]
                 : []),
               [VENDOR_FIELD_LABELS.contactName, vendor.contactName],

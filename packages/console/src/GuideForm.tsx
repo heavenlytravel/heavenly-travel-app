@@ -20,6 +20,7 @@ import { Checkbox, Field, FieldGroup, Input, Textarea } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
 import { Select } from "@repo/ui/select";
 import type { ActionState } from "./action-state";
+import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
 import { ExpiryDateField } from "./ExpiryDateField";
 import { SCOPE_FIELD } from "./fleet-form";
@@ -178,7 +179,7 @@ export function GuideForm({
               <CardTitle>
                 <span className="inline-flex items-center gap-1.5">
                   {GUIDE_FIELD_LABELS.languages}
-                  <InfoTip text="Customers choose their guide's languages from this same list. Assign warns when a guide does not speak a trip's language." />
+                  <InfoTip text="Customers choose their guide's language from this same list, and only a guide who speaks the one paid for can be assigned." />
                 </span>
               </CardTitle>
               <FieldGroup className="grid grid-cols-2 gap-2">
@@ -215,6 +216,7 @@ export function GuideForm({
                 ))}
               </div>
             </Card>
+            <BankCard fields={fields ?? undefined} whose="the guide" />
           </>
         }
       />

@@ -62,6 +62,26 @@ supply drivers, and Operation assigns a guide on the trip's page under Assign.
   their driving one trip and guiding another is not caught.
 - **A vendor is asked for a guide only when it offers tour guides,** or is ours.
 
+## Pay and bank details
+
+Decided with the user on 2026-11-03.
+
+- **Who is paid.** A vehicle's pay goes to its vendor, the company. A driver's pay, a
+  coach driver's tip and a guide's pay go to the person themselves. `TripPart.costSen`
+  is what we pay for that part; ours stays 0.
+- **Driver tip, coach only** (`tipsDriver`). Operation enters it on Assign beside the
+  pay, for our drivers too. It comes out of what the customer already paid: nothing is
+  added at Confirm. It shows on the trip's driver card, the booking page and the
+  vendor's offer in Connect.
+- **Bank details** (`src/bank-input.ts`): the bank, from `MALAYSIAN_BANKS`, the account
+  number in digits and the name on the account, all three or none, on every vendor,
+  driver and tour guide. A vendor gives its own at registration in Connect; a driver's
+  and a guide's are entered on their forms, in Manage or by their vendor in Connect.
+- **Masked everywhere** (`maskTail`, `MaskedText`, `SecretInput`): an account number
+  and a vendor's SSM or IC number show as "•••• 4821", with an eye button to show
+  them, as an app blurs an account's email. The activity log keeps them masked
+  (`maskedForLog`). Paying out (a payout run, statements) is not built yet.
+
 ## To confirm
 
 | #   | Question                                | Who | Holds up                       |
@@ -74,7 +94,8 @@ location, by language and trip shape, on every trip, paid.
 
 ## Production order
 
-The push adds two tables (`Guide`, `GuideRate`), nullable `TripPart.guideId` and
+The push adds two tables (`Guide`, `GuideRate`), the bank fields on `Vendor`, `Driver` and
+`Guide` and `TripPart.tipSen`, all with defaults, nullable `TripPart.guideId` and
 nullable `TripItemDetails.guideLanguage` and `guideRequest`, so today's code runs on it
 unchanged. Push before the merge (`pnpm db:push`, then `pnpm db:push:prod`). Nothing is
 sold until Ops fills Tour Guide Rates and switches a language on; enter a guide who speaks

@@ -37,6 +37,7 @@ const tripInclude = {
     select: {
       vehicleClassId: true,
       vehicleClassName: true,
+      vehicleClassCategory: true,
       pickupPlace: true,
       dropoffPlace: true,
       driveMinutes: true,

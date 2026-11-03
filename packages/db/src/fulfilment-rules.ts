@@ -417,6 +417,8 @@ export type AssignTrip = {
   route: string;
   /** The roles it still needs asked for. */
   roles: PartRole[];
+  /** A coach trip: its driver is given a tip with their pay. */
+  tipped: boolean;
 };
 
 /** The trips of a booking still to assign, from its trips with their roles and places. */
@@ -426,6 +428,7 @@ export function assignTripsOf(
     position: number;
     startsAt: Date;
     roles: PartRole[];
+    tipped: boolean;
     job: { pickup: { label: string }; dropoff: { label: string } | null };
   }[],
 ): AssignTrip[] {
@@ -441,6 +444,7 @@ export function assignTripsOf(
               ? `${trip.job.pickup.label} → ${trip.job.dropoff.label}`
               : trip.job.pickup.label,
             roles: trip.roles,
+            tipped: trip.tipped,
           },
         ],
   );

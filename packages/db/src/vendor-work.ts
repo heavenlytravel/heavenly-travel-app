@@ -65,8 +65,8 @@ export type OfferRole = {
   /** The plate, the driver's or the guide's name, once named; null while the vendor is to choose. */
   named: string | null;
   recordId: string | null;
-  /** What we pay for it on each trip, by the trip's position. */
-  costs: { position: number; costSen: number }[];
+  /** What we pay for it on each trip, by the trip's position, and a coach driver's tip. */
+  costs: { position: number; costSen: number; tipSen: number }[];
   /** The vendor's own vehicles, drivers or guides to choose from, when not named; greyed ones say why. */
   choices: Candidate[];
 };
@@ -183,6 +183,7 @@ export async function listVendorOffers(
         costs: ofRole.map((p) => ({
           position: p.item.position,
           costSen: p.costSen,
+          tipSen: p.tipSen,
         })),
         choices: named
           ? []

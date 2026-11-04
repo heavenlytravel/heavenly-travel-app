@@ -17,7 +17,8 @@ import { invoiceBookingAction, setPaymentAction } from "./actions";
 /**
  * Where the invoice's payment stands, set freely for now: pending,
  * partially paid, fully paid or pay later, saved as it is chosen. On an
- * agent's invoice it sets every booking on it, which the hint says.
+ * agent's invoice it sets every booking on it, which the hint says. A
+ * status no longer in the list shows none chosen, for staff to pick one.
  */
 export function PaymentControl({
   bookingId,
@@ -25,11 +26,11 @@ export function PaymentControl({
   shared,
 }: {
   bookingId: string;
-  status: PaymentStatus;
+  status: PaymentStatus | null;
   /** The agent's invoice number, when the booking is a line of one. */
   shared: string | null;
 }) {
-  const [chosen, setChosen] = useState<string>(status);
+  const [chosen, setChosen] = useState<string>(status ?? "");
   const { error, formProps } = useActionForm(setPaymentAction, {
     done: "Payment status saved.",
   });

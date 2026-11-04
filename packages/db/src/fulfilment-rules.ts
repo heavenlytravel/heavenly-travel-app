@@ -191,7 +191,7 @@ export function firstClash(
   return null;
 }
 
-/** A sentence for a clash, naming the other job: "Has HT-7K3QZM at 9:00, an hourly hire until 13:00". */
+/** A sentence for a clash, naming the other job: "Has HT-7K3QZM from 09:00, an hourly hire until 13:00". */
 export function clashSentence(clash: JobClash) {
   const at = formatLocalTime(clash.job.startsAt);
   return clash.kind === "same-time"
@@ -216,8 +216,8 @@ export const ESTIMATED_DRIVE: DriveBetween = (from, to) => ({
  * the drive to the next one's pickup and the location's buffer reach past
  * that pickup. They rest on estimates, so they never refuse; whoever
  * accepts sees them and owns the timing. "Ali finishes HT-7K3QZM at Datai
- * about 8:45. Cenang is about 60 min away, so he arrives about 9:45 for
- * a 9:00 pickup."
+ * about 08:45. Cenang is about 60 min away, so he arrives about 09:45 for
+ * a 09:00 pickup."
  */
 export function timingWarnings(
   asked: readonly Job[],

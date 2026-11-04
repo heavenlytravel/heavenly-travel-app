@@ -243,7 +243,7 @@ export function shortDayOf(trip: Pick<PlannedTrip, "date" | "time">) {
   return start ? shortDayFormat.format(start) : trip.date;
 }
 
-/** When a trip starts, as the list says it: "Tue, 3 Nov · 9:30 AM". */
+/** When a trip starts, as the list says it: "Tue, 3 Nov · 09:30". */
 export function whenOf(trip: Pick<PlannedTrip, "date" | "time">) {
   const start = startOfTrip(trip);
   return start ? `${dayFormat.format(start)} · ${formatLocalTime(start)}` : "";

@@ -206,7 +206,7 @@ export function TripTaps({
                 maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
                 autoComplete="off"
                 autoFocus
-                placeholder="The customer came at 8:15"
+                placeholder="The customer came at 08:15"
               />
             </label>
           ) : (

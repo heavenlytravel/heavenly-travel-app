@@ -146,7 +146,7 @@ export function clashesOf<Trip extends TypedTrip>(
 }
 
 /**
- * When an hourly hire ends: "5:00 PM", or "3:00 AM the next day" when it
+ * When an hourly hire ends: "17:00", or "03:00 the next day" when it
  * runs past midnight; "" for a trip that is not an hourly hire with a real
  * day and time.
  */

@@ -116,11 +116,7 @@ export function TripRow({
         className="group flex items-center gap-4 px-4 py-4 transition-colors hover:bg-hover active:bg-hairline focus-ring-inset sm:px-5"
       >
         <span className="grid w-16 shrink-0 justify-items-start gap-0.5">
-          <BigTime
-            at={trip.startsAt}
-            className="text-xl text-ink"
-            periodClassName="text-muted"
-          />
+          <BigTime at={trip.startsAt} className="text-xl text-ink" />
           {showDay ? (
             <span className="text-2xs font-semibold text-muted">
               {dayLabel(trip.startsAt, now)}

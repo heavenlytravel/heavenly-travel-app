@@ -42,7 +42,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
                 Airport → Pantai Cenang
               </p>
               <p className="text-[0.65rem] text-muted">
-                Sat 7 Nov · 9:30 AM · MPV · 5 pax
+                Sat 7 Nov · 09:30 · MPV · 5 pax
               </p>
               <div className="mt-2.5 flex items-end justify-between">
                 <span className="grid">
@@ -63,7 +63,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
                   Hafiz · KV 5891 E
                 </span>
                 <span className="text-[0.6rem] text-muted">
-                  Today 2:00 PM · Kuah Jetty
+                  Today 14:00 · Kuah Jetty
                 </span>
               </span>
               <span className="rounded-full bg-navy/10 px-2 py-0.5 text-[0.6rem] font-semibold text-navy">
@@ -78,9 +78,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
                 <span className="text-xs font-semibold text-ink">
                   Datai → Airport
                 </span>
-                <span className="text-[0.6rem] text-muted">
-                  Done · 11:05 AM
-                </span>
+                <span className="text-[0.6rem] text-muted">Done · 11:05</span>
               </span>
             </div>
           </div>

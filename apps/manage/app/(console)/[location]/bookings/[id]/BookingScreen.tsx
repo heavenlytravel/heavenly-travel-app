@@ -94,7 +94,7 @@ export function BookingSkeleton() {
 
 /**
  * Who made the booking and when, and where its trips pick up: "Booked on
- * the website by Aznan Medina, Sat, 3 Oct 2026, 11:42 AM · Langkawi". The
+ * the website by Aznan Medina, Sat, 3 Oct 2026, 11:42 · Langkawi". The
  * log's first entry says who; a booking older than the log says when
  * alone.
  */

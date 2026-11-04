@@ -424,13 +424,6 @@ export function minuteOfDay(time: string): number | null {
   return hours * 60 + minutes;
 }
 
-/** 1380 -> "23:00", the value of the form's time fields. */
-export function timeOfMinute(minute: number): string {
-  const hours = Math.floor(minute / 60);
-  const minutes = minute % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-}
-
 /** "+50%" or "+RM 30.00" */
 export function surchargeLabel(charge: SurchargeCharge) {
   return charge.percent !== null
@@ -438,7 +431,7 @@ export function surchargeLabel(charge: SurchargeCharge) {
     : `+${formatMyr(charge.flatSen)}`;
 }
 
-/** "11:00 PM to 7:00 AM, +50%" or "11:00 PM to 7:00 AM, +RM 30.00" */
+/** "23:00 to 07:00, +50%" or "23:00 to 07:00, +RM 30.00" */
 export function oddHoursLabel(window: OddHours) {
   return `${formatClock(window.fromMinute)} to ${formatClock(window.toMinute)}, ${surchargeLabel(window)}`;
 }
@@ -460,7 +453,7 @@ export function checkOddHours(window: OddHours): Change {
   for (const minute of [window.fromMinute, window.toMinute]) {
     if (!Number.isInteger(minute) || minute < 0 || minute >= MINUTES_PER_DAY) {
       return refuse(
-        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+        "Pick the times the window starts and ends, such as 23:00 to 07:00.",
         minute === window.fromMinute ? "from" : "to",
       );
     }
@@ -493,7 +486,7 @@ export function parseOddHoursFields(
   const toMinute = minuteOfDay(to);
   if (fromMinute === null || toMinute === null) {
     return refuse(
-      "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+      "Pick the times the window starts and ends, such as 23:00 to 07:00.",
       fromMinute === null ? "from" : "to",
     );
   }
@@ -815,7 +808,7 @@ export function parseTripRulesFields(
     // Switched on, an empty window is not "none".
     if (oddHours.ok && oddHours.value === null) {
       oddHours = refuse(
-        "Pick the times the window starts and ends, such as 11:00 PM to 7:00 AM.",
+        "Pick the times the window starts and ends, such as 23:00 to 07:00.",
         "from",
       );
     }

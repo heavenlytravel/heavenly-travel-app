@@ -105,7 +105,7 @@ export type TripQuoteView =
       /** Whether the pick-up, or the drop-off, is an airport: where a flight helps the driver. */
       pickupAirport: boolean;
       dropoffAirport: boolean;
-      /** As people read it: "Sat, 3 Oct 2026, 9:30 AM". */
+      /** As people read it: "Sat, 3 Oct 2026, 09:30". */
       startsAt: string;
       /** Hourly: the hours the hire runs, the duration's from its zone plus the extra; null for one-way. */
       hours: number | null;
@@ -663,7 +663,7 @@ export function bookingTotalSen(
   );
 }
 
-/** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 2:30 PM". */
+/** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 14:30". */
 export function tripLine(draft: TripDraft): string {
   const { quote, trip } = draft;
   if (!quote) return tripIssue(trip) ?? "Not priced yet";

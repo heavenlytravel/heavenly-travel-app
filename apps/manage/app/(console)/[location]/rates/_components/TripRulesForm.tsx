@@ -9,9 +9,9 @@ import {
   WEEKDAY_NAMES,
   WEEKDAYS_FROM_MONDAY,
   WEEKEND_FIELDS,
+  formatClock,
   formatDay,
   ringgitInputValue,
-  timeOfMinute,
   todayInMalaysia,
   type OddHours,
   type SurchargeCharge,
@@ -56,8 +56,8 @@ function valuesOf(
     max: String(reach.maxExtraKm),
     cross: reach.crossLocation,
     oddOn: oddHours !== null,
-    from: oddHours ? timeOfMinute(oddHours.fromMinute) : "",
-    to: oddHours ? timeOfMinute(oddHours.toMinute) : "",
+    from: oddHours ? formatClock(oddHours.fromMinute) : "",
+    to: oddHours ? formatClock(oddHours.toMinute) : "",
     oddKind: kindOf(oddHours),
     oddAmount: amountOf(oddHours),
     weekendOn: weekend !== null,
@@ -423,8 +423,8 @@ export function TripRulesForm({
                 <span>more.</span>
               </div>
               <p className="text-xs text-muted">
-                A window that ends before it starts runs past midnight: 11:00 PM
-                to 7:00 AM holds 11:30 PM and 6:00 AM.
+                A window that ends before it starts runs past midnight: 23:00 to
+                07:00 holds 23:30 and 06:00.
               </p>
             </>
           ) : null}

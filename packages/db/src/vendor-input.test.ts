@@ -53,6 +53,23 @@ describe("parseVendorFields", () => {
     });
   });
 
+  it("takes no agent from a vendor signing up, which our team adds", () => {
+    const values = { ...FORM, invoicePeriod: "half-month" };
+    const staff = parseVendorFields(values, ["agent"], ["loc1"]);
+    assert.ok(staff.ok);
+    assert.deepEqual(staff.value.services, ["agent"]);
+    assert.equal(staff.value.invoicePeriod, "half-month");
+    const applicant = parseVendorFields(
+      values,
+      ["agent", "coach-charter"],
+      ["loc1"],
+      { applicant: true },
+    );
+    assert.ok(applicant.ok);
+    assert.deepEqual(applicant.value.services, ["coach-charter"]);
+    assert.equal(applicant.value.invoicePeriod, "month");
+  });
+
   it("needs a name, a kind, a contact who can be called and written to, a service and a location", () => {
     assert.match(errorOf({ name: "" }) ?? "", /name/);
     assert.match(errorOf({ kind: "partner" }) ?? "", /company or individual/);

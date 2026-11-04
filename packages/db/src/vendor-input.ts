@@ -320,6 +320,8 @@ export function parseVendorFields(
   values: Record<string, unknown>,
   services: readonly unknown[],
   locationIds: readonly unknown[],
+  /** A vendor signing up in Connect: never an agent, which our team adds. */
+  { applicant = false }: { applicant?: boolean } = {},
 ): Parsed<VendorFields> {
   const kind = textOf(values.kind);
   const fields: VendorFields = {
@@ -330,12 +332,15 @@ export function parseVendorFields(
     contactPhone: normalizePhone(textOf(values.contactPhone)),
     contactEmail: normalizeEmail(textOf(values.contactEmail)),
     address: textOf(values.address),
-    services: vendorServicesOf(services.map(textOf)),
+    services: vendorServicesOf(services.map(textOf)).filter(
+      (service) => !applicant || service !== "agent",
+    ),
     locationIds: [...new Set(locationIds.map(textOf).filter(Boolean))].sort(),
     // Asked of an agent on the admin's form only; monthly otherwise.
-    invoicePeriod: isInvoicePeriod(textOf(values.invoicePeriod))
-      ? (textOf(values.invoicePeriod) as InvoicePeriod)
-      : "month",
+    invoicePeriod:
+      !applicant && isInvoicePeriod(textOf(values.invoicePeriod))
+        ? (textOf(values.invoicePeriod) as InvoicePeriod)
+        : "month",
     ...readBankFields(values),
   };
   const check = checkVendorFields(fields);

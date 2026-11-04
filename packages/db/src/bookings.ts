@@ -471,7 +471,9 @@ function earliestStart(items: readonly { startsAt: Date }[]) {
 /**
  * Recomputes the booking's stored summary from its items. Called after every
  * item change, inside the same transaction. Returns the booking-level event
- * the change caused, if any.
+ * the change caused, if any. The booking's row is held first: two trips
+ * changed at once refresh one after the other, the second reading the
+ * first's trips, so the status is right and the invoice number taken once.
  */
 async function refreshBooking(
   tx: Prisma.TransactionClient,
@@ -479,6 +481,7 @@ async function refreshBooking(
   cancelledBy: Canceller | null,
   now: Date,
 ): Promise<{ booking: BookingWithItems; event: BookingEvent | null }> {
+  await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
   await settleCancelledTrips(tx, bookingId, now);
   const booking = await tx.booking.findUniqueOrThrow({
     where: { id: bookingId },

@@ -13,18 +13,19 @@ import {
 } from "./quick-view-actions";
 
 /**
- * A booking's reference under Assign, as a link that opens the booking at
+ * A booking's number under Assign (`bookingLabelOf`), as a link that opens the booking at
  * a glance in a dialog, at once, its lines drawn while it is read (the
  * customer, each trip, the total), without leaving the page; "Open
  * booking" goes to its page.
  */
 export function QuickViewButton({
   bookingId,
-  reference,
+  label,
   href,
 }: {
   bookingId: string;
-  reference: string;
+  /** How the booking is named: its number, else its reference. */
+  label: string;
   /** The booking's page, in the scope the Assign page is in. */
   href: string;
 }) {
@@ -60,12 +61,12 @@ export function QuickViewButton({
         aria-haspopup="dialog"
         className="rounded-sm font-medium text-ink tabular-nums underline decoration-edge underline-offset-4 hover:decoration-ink focus-ring"
       >
-        {reference}
+        {label}
       </button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
-        title={reference}
+        title={label}
         description={
           view
             ? `${view.status} · ${view.customer.name} · ${view.total}`

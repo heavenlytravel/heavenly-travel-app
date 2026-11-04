@@ -148,7 +148,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
           <>
             <QuickViewButton
               bookingId={booking.id}
-              reference={bookingLabelOf(booking)}
+              label={bookingLabelOf(booking)}
               href={bookingHref(scope.slug, booking.id)}
             />
             {" · "}

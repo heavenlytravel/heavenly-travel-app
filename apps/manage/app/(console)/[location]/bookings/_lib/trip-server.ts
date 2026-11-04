@@ -244,7 +244,7 @@ export async function prepareFormItems(
     return {
       ok: false,
       error:
-        "One vehicle does every trip, so every trip takes its category, class and group. Reload the page.",
+        'One vehicle does every trip, so every trip takes trip 1\'s category, class and group. To give a trip its own, turn off "Same vehicle for every trip", then try again.',
     };
   }
 

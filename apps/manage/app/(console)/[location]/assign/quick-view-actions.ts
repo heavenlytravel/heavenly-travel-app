@@ -1,7 +1,6 @@
 "use server";
 
 import {
-  bookingLabelOf,
   BOOKING_STATUS_LABELS,
   formatMyr,
   isBookingStatus,
@@ -18,7 +17,6 @@ import { getAdmin } from "../../../_lib/access";
 /** A booking at a glance, as Assign's quick view shows it. Plain data. */
 export type BookingQuickView = {
   id: string;
-  reference: string;
   status: string;
   customer: { name: string; phone: string; email: string | null };
   total: string;
@@ -46,7 +44,6 @@ export async function loadBookingQuickView(
   if (!booking) return null;
   return {
     id: booking.id,
-    reference: bookingLabelOf(booking),
     status: isBookingStatus(booking.status)
       ? BOOKING_STATUS_LABELS[booking.status]
       : booking.status,

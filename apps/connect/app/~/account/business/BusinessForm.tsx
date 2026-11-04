@@ -4,11 +4,10 @@ import { VENDOR_FIELD_LABELS, VENDOR_LIMITS } from "@repo/db";
 import type { VendorWithLocations } from "@repo/db/server";
 import { BankCard } from "@repo/console/BankCard";
 import { Card, CardTitle } from "@repo/console/Card";
+import { FormFoot } from "@repo/console/FormFoot";
 import { useActionForm } from "@repo/console/use-action-form";
 import { Button } from "@repo/ui/button";
 import { Field, Input, Textarea } from "@repo/ui/field";
-import { FormError } from "@repo/ui/form-error";
-import Link from "next/link";
 import { saveBusinessAction } from "./actions";
 
 /**
@@ -17,10 +16,13 @@ import { saveBusinessAction } from "./actions";
  * approved and stays the team's to change.
  */
 export function BusinessForm({ vendor }: { vendor: VendorWithLocations }) {
-  const { pending, error, formProps } = useActionForm(saveBusinessAction, {
-    done: "Business details saved.",
-    leave: "Your changes to the business are not saved.",
-  });
+  const { pending, error, formProps, leaveDialog } = useActionForm(
+    saveBusinessAction,
+    {
+      done: "Business details saved.",
+      leave: "Your changes to the business are not saved.",
+    },
+  );
   return (
     <form {...formProps} className="grid gap-5">
       <Card>
@@ -63,15 +65,16 @@ export function BusinessForm({ vendor }: { vendor: VendorWithLocations }) {
         </div>
       </Card>
       <BankCard fields={vendor} whose="your business for its vehicles" />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" pending={pending}>
-          {pending ? "Saving…" : "Save"}
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href="/~/account/business">Cancel</Link>
-        </Button>
-      </div>
-      <FormError error={error} />
+      <FormFoot
+        submit={
+          <Button type="submit" pending={pending}>
+            {pending ? "Saving…" : "Save"}
+          </Button>
+        }
+        cancelHref="/~/account/business"
+        error={error}
+      />
+      {leaveDialog}
     </form>
   );
 }

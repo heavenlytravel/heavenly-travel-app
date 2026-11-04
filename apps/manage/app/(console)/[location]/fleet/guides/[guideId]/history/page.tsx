@@ -1,10 +1,5 @@
-import { getGuide, listActivityFor } from "@repo/db/server";
-import { notFound } from "next/navigation";
-import { Streamed } from "@repo/console/Skeleton";
-import {
-  RecordHistory,
-  RecordHistorySkeleton,
-} from "../../../../../../_components/RecordHistory";
+import { getGuide } from "@repo/db/server";
+import { FleetRecordHistory } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
 import { guideHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
@@ -22,27 +17,16 @@ export default async function GuideHistoryPage({
   const { guideId } = await params;
 
   return (
-    <Streamed fallback={<RecordHistorySkeleton />}>
-      {async () => {
-        const [guide, entries] = await Promise.all([
-          getGuide(guideId),
-          listActivityFor("guide", guideId),
-        ]);
-        if (!guide) notFound();
-        if (scope.location && guide.locationId !== scope.location.id) {
-          notFound();
-        }
-        return (
-          <RecordHistory
-            record={{
-              href: guideHref(scope.slug, guide.id),
-              label: guide.name,
-            }}
-            entries={entries}
-            emptyMessage="No changes recorded for this tour guide."
-          />
-        );
+    <FleetRecordHistory
+      scope={scope}
+      entityType="guide"
+      id={guideId}
+      load={async (id) => {
+        const record = await getGuide(id);
+        return record ? { ...record, label: record.name } : null;
       }}
-    </Streamed>
+      hrefOf={guideHref}
+      noun="tour guide"
+    />
   );
 }

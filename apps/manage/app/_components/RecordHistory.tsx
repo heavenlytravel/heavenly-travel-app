@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { describeActivity, formatLocalDate, formatLocalTime } from "@repo/db";
-import type { ActivityEntry } from "@repo/db/server";
+import { listActivityFor, type ActivityEntry } from "@repo/db/server";
+import { notFound } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { HistoryIcon } from "@repo/ui/icons";
 import {
@@ -11,7 +12,9 @@ import {
   CardTitle,
 } from "@repo/console/Card";
 import { PageHeader, RecordLink } from "@repo/console/PageHeader";
-import { CardSkeleton, HeaderSkeleton } from "@repo/console/Skeleton";
+import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
+import type { ScopeSlug } from "../_lib/routes";
+import type { ConsoleScope } from "../_lib/scope";
 import { HistoryTimeline } from "./HistoryTimeline";
 
 /** "History" in a record's header: the way to the record's history page, as a quiet button. */
@@ -115,5 +118,55 @@ export function RecordHistorySkeleton() {
       <HeaderSkeleton />
       <CardSkeleton rows={5} />
     </>
+  );
+}
+
+/**
+ * A vehicle's, a driver's or a tour guide's history page, once the page
+ * has checked access: the record read with its log, not found when it is
+ * gone, or based outside the location the console is scoped to.
+ */
+export function FleetRecordHistory({
+  scope,
+  entityType,
+  id,
+  load,
+  hrefOf,
+  noun,
+}: {
+  scope: ConsoleScope;
+  entityType: "vehicle" | "driver" | "guide";
+  id: string;
+  /** The record by its id, named as its page names it: a plate, a name. */
+  load: (
+    id: string,
+  ) => Promise<{ id: string; locationId: string; label: string } | null>;
+  hrefOf: (scope: ScopeSlug, id: string) => string;
+  /** "driver", "tour guide": in the empty log's line. */
+  noun: string;
+}) {
+  return (
+    <Streamed fallback={<RecordHistorySkeleton />}>
+      {async () => {
+        const [record, entries] = await Promise.all([
+          load(id),
+          listActivityFor(entityType, id),
+        ]);
+        if (!record) notFound();
+        if (scope.location && record.locationId !== scope.location.id) {
+          notFound();
+        }
+        return (
+          <RecordHistory
+            record={{
+              href: hrefOf(scope.slug, record.id),
+              label: record.label,
+            }}
+            entries={entries}
+            emptyMessage={`No changes recorded for this ${noun}.`}
+          />
+        );
+      }}
+    </Streamed>
   );
 }

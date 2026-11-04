@@ -43,21 +43,19 @@ export default async function GuidePage({
   const { guideId } = await params;
 
   return (
-    <>
-      <Streamed
-        fallback={
-          <>
-            <HeaderSkeleton />
-            <DetailSkeleton
-              main={<FormSkeleton sections={1} fields={4} />}
-              side={<CardSkeleton rows={1} />}
-            />
-          </>
-        }
-      >
-        {() => guideScreen(scope, guideId)}
-      </Streamed>
-    </>
+    <Streamed
+      fallback={
+        <>
+          <HeaderSkeleton />
+          <DetailSkeleton
+            main={<FormSkeleton sections={1} fields={4} />}
+            side={<CardSkeleton rows={1} />}
+          />
+        </>
+      }
+    >
+      {() => guideScreen(scope, guideId)}
+    </Streamed>
   );
 }
 

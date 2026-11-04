@@ -1,10 +1,5 @@
-import { getVehicle, listActivityFor } from "@repo/db/server";
-import { notFound } from "next/navigation";
-import { Streamed } from "@repo/console/Skeleton";
-import {
-  RecordHistory,
-  RecordHistorySkeleton,
-} from "../../../../../../_components/RecordHistory";
+import { getVehicle } from "@repo/db/server";
+import { FleetRecordHistory } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
 import { vehicleHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
@@ -22,27 +17,16 @@ export default async function VehicleHistoryPage({
   const { vehicleId } = await params;
 
   return (
-    <Streamed fallback={<RecordHistorySkeleton />}>
-      {async () => {
-        const [vehicle, entries] = await Promise.all([
-          getVehicle(vehicleId),
-          listActivityFor("vehicle", vehicleId),
-        ]);
-        if (!vehicle) notFound();
-        if (scope.location && vehicle.locationId !== scope.location.id) {
-          notFound();
-        }
-        return (
-          <RecordHistory
-            record={{
-              href: vehicleHref(scope.slug, vehicle.id),
-              label: vehicle.plate,
-            }}
-            entries={entries}
-            emptyMessage="No changes recorded for this vehicle."
-          />
-        );
+    <FleetRecordHistory
+      scope={scope}
+      entityType="vehicle"
+      id={vehicleId}
+      load={async (id) => {
+        const record = await getVehicle(id);
+        return record ? { ...record, label: record.plate } : null;
       }}
-    </Streamed>
+      hrefOf={vehicleHref}
+      noun="vehicle"
+    />
   );
 }

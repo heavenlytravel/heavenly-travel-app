@@ -1,18 +1,13 @@
-import { getDriver, listActivityFor } from "@repo/db/server";
-import { notFound } from "next/navigation";
-import { Streamed } from "@repo/console/Skeleton";
-import {
-  RecordHistory,
-  RecordHistorySkeleton,
-} from "../../../../../../_components/RecordHistory";
+import { getDriver } from "@repo/db/server";
+import { FleetRecordHistory } from "../../../../../../_components/RecordHistory";
 import { requireAdmin } from "../../../../../../_lib/access";
 import { driverHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 
 /**
  * Route: /[location]/fleet/drivers/[driverId]/history. Every change to one
- * driver's record, newest first, from the "History" in their header.
- * Under a location, a driver based elsewhere is not found.
+ * driver's record, newest first, from the "History" in their header. Under
+ * a location, a driver based elsewhere is not found.
  */
 export default async function DriverHistoryPage({
   params,
@@ -22,27 +17,16 @@ export default async function DriverHistoryPage({
   const { driverId } = await params;
 
   return (
-    <Streamed fallback={<RecordHistorySkeleton />}>
-      {async () => {
-        const [driver, entries] = await Promise.all([
-          getDriver(driverId),
-          listActivityFor("driver", driverId),
-        ]);
-        if (!driver) notFound();
-        if (scope.location && driver.locationId !== scope.location.id) {
-          notFound();
-        }
-        return (
-          <RecordHistory
-            record={{
-              href: driverHref(scope.slug, driver.id),
-              label: driver.name,
-            }}
-            entries={entries}
-            emptyMessage="No changes recorded for this driver."
-          />
-        );
+    <FleetRecordHistory
+      scope={scope}
+      entityType="driver"
+      id={driverId}
+      load={async (id) => {
+        const record = await getDriver(id);
+        return record ? { ...record, label: record.name } : null;
       }}
-    </Streamed>
+      hrefOf={driverHref}
+      noun="driver"
+    />
   );
 }

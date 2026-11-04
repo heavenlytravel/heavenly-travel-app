@@ -4,16 +4,19 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
   VENDOR_STATUS_LABELS,
   isBookingStatus,
   isItemStatus,
   isLocationState,
+  isPaymentStatus,
   isVendorStatus,
   type AssignState,
   type BookingStatus,
   type ItemStatus,
   type LocationState,
   type PageStatus,
+  type PaymentStatus,
   type VendorStatus,
 } from "@repo/db";
 import { Badge, type BadgeTone } from "@repo/ui/badge";
@@ -80,6 +83,22 @@ export function ItemStatusBadge({ status }: { status: string }) {
   return (
     <Badge dot tone={ITEM_TONES[status]}>
       {ITEM_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+/** Whether an invoice is paid: unpaid waits (amber), paid is done (green). */
+export const PAYMENT_TONES: Record<PaymentStatus, BadgeTone> = {
+  unpaid: "amber",
+  paid: "green",
+};
+
+/** A booking's invoice, paid or not. */
+export function PaymentStatusBadge({ status }: { status: string }) {
+  if (!isPaymentStatus(status)) return <Badge>{status}</Badge>;
+  return (
+    <Badge dot tone={PAYMENT_TONES[status]}>
+      {PAYMENT_STATUS_LABELS[status]}
     </Badge>
   );
 }

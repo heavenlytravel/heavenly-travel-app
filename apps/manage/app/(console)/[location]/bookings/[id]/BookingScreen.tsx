@@ -3,8 +3,10 @@ import {
   bookingNumberRows,
   ADVANCE_PERMISSIONS,
   customerEmailOf,
+  formatInvoiceNumber,
   formatLocalDateTime,
   formatMyr,
+  isPaymentStatus,
   fullName,
   itemHeading,
   ITEM_STATUS_LABELS,
@@ -25,6 +27,7 @@ import {
   listActivityFor,
   listBookingNotes,
   listTripEvents,
+  nextInvoiceNumber,
   type ActivityEntry,
   type BookingItemWithDetails,
   type BookingWithItems,
@@ -47,6 +50,7 @@ import {
 import {
   BookingStatusBadge,
   ItemStatusBadge,
+  PaymentStatusBadge,
 } from "@repo/console/StatusBadges";
 import {
   HistoryCard,
@@ -67,6 +71,7 @@ import { Notes } from "./Notes";
 import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
 import { EditContactControl } from "./EditContact";
+import { GiveInvoiceForm, PaymentControl } from "./InvoiceControls";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -154,6 +159,7 @@ export async function bookingScreen({
     ["Trips", String(booking.items.length)],
     ["Booked", formatLocalDateTime(booking.createdAt)],
   ];
+  if (booking.agent) summary.push(["Agent", booking.agent.name]);
   summary.push(...bookingNumberRows(booking));
   if (booking.confirmedAt) {
     summary.push(["Confirmed", formatLocalDateTime(booking.confirmedAt)]);
@@ -225,6 +231,10 @@ export async function bookingScreen({
               <CardTitle>Booking</CardTitle>
               <Rows rows={summary} className="text-sm" />
             </Card>
+            <InvoiceCard
+              booking={booking}
+              editable={permissions.includes("bookings.payment")}
+            />
             <CustomerCard
               booking={booking}
               editable={permissions.includes("bookings.manage")}
@@ -244,6 +254,63 @@ export async function bookingScreen({
 }
 
 /** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email; "Edit" for Reservation. */
+/**
+ * The booking's invoice: its number, the agent's it is a line of, and
+ * whether it is paid, switched by Reservation, Sales or Finance. A
+ * confirmed booking from before invoice numbers is given one here; one
+ * not confirmed yet shows nothing.
+ */
+async function InvoiceCard({
+  booking,
+  editable,
+}: {
+  booking: BookingWithItems;
+  editable: boolean;
+}) {
+  const { invoice } = booking;
+  if (!invoice) {
+    const invoiceable =
+      booking.status === "confirmed" || booking.status === "completed";
+    if (!invoiceable || !editable) return null;
+    return (
+      <Card>
+        <CardTitle meta="Not invoiced yet">Invoice</CardTitle>
+        <GiveInvoiceForm
+          bookingId={booking.id}
+          nextInvoice={await nextInvoiceNumber()}
+          agentName={booking.agent?.name ?? null}
+        />
+      </Card>
+    );
+  }
+  const number = formatInvoiceNumber(invoice.number, null);
+  const shared = booking.invoiceLine !== null;
+  const rows: [string, ReactNode][] = [
+    ["Number", number],
+    ...(shared
+      ? [["Line", String(booking.invoiceLine)] as [string, ReactNode]]
+      : []),
+    ["Payment", <PaymentStatusBadge key="p" status={invoice.paymentStatus} />],
+  ];
+  return (
+    <Card>
+      <CardTitle meta={shared && booking.agent ? booking.agent.name : null}>
+        Invoice
+      </CardTitle>
+      <Rows rows={rows} className="text-sm" />
+      {editable && isPaymentStatus(invoice.paymentStatus) ? (
+        <div className="mt-4">
+          <PaymentControl
+            bookingId={booking.id}
+            status={invoice.paymentStatus}
+            shared={shared ? number : null}
+          />
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
 export function CustomerCard({
   booking,
   editable = false,

@@ -15,6 +15,7 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
+import { Select } from "@repo/ui/select";
 import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
@@ -26,6 +27,7 @@ import { HiddenFields } from "../_components/HiddenFields";
 import { Step, StepFoot } from "../_components/Step";
 import { quoteTripAction } from "../_lib/quote-action";
 import {
+  AGENT_FIELD,
   agreedPriceIssue,
   bookingTotalSen,
   clashNotes,
@@ -83,6 +85,7 @@ export function NewBookingForm({
   scope,
   near,
   nextInvoice,
+  agents,
 }: {
   /** False when the server runs without a Google key and offers the districts themselves. */
   hasGoogle: boolean;
@@ -92,8 +95,12 @@ export function NewBookingForm({
   near?: BBox;
   /** The invoice number the next booking would take: "HTI-1308". */
   nextInvoice: string;
+  /** The agents a booking may come through, by name. */
+  agents: readonly Agent[];
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
+  const [agentId, setAgentId] = useState("");
+  const agent = agents.find((a) => a.id === agentId) ?? null;
   const [confirmDialog, confirm] = useConfirm();
   const [items, setItems] = useState<ItemDraft[]>(() => [newItemDraft()]);
   const [sameVehicle, setSameVehicle] = useState(true);
@@ -266,6 +273,7 @@ export function NewBookingForm({
       <input type="hidden" name={CONTACT_FIELDS.name} value={contact.name} />
       <input type="hidden" name={CONTACT_FIELDS.phone} value={contact.phone} />
       <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
+      <input type="hidden" name={AGENT_FIELD} value={agentId} />
       {shared ? (
         <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
       ) : null}
@@ -284,12 +292,19 @@ export function NewBookingForm({
             done={customer.ok}
             summary={
               customer.ok
-                ? [contact.name, contact.phone, contact.email].join(" · ")
+                ? [agent?.name, contact.name, contact.phone, contact.email]
+                    .filter(Boolean)
+                    .join(" · ")
                 : "Who the booking is for"
             }
             open={open === "customer"}
             onOpen={() => openStep("customer")}
           >
+            <AgentField
+              agents={agents}
+              agentId={agentId}
+              onChange={setAgentId}
+            />
             <CustomerFields contact={contact} onChange={setContact} />
             <StepFoot
               disabled={!customer.ok}
@@ -436,7 +451,10 @@ export function NewBookingForm({
             canPrice
             submit={
               <>
-                <InvoiceNumberField nextInvoice={nextInvoice} />
+                <InvoiceNumberField
+                  nextInvoice={nextInvoice}
+                  agentName={agent?.name ?? null}
+                />
                 <Button
                   type="submit"
                   disabled={missing !== null}
@@ -468,14 +486,25 @@ export function NewBookingForm({
 /**
  * The booking's invoice number, above its button: empty for the next one,
  * shown as a guess, since a booking made first takes it; or an old
- * invoice's, for a booking the old system invoiced already. A number not
- * given yet, or another booking's, is refused here.
+ * invoice's, for a booking the old system invoiced already. An agent's
+ * booking joins the agent's invoice for its period, or opens it. A number
+ * not given yet, or another invoice's, is refused when the form is sent.
  */
-function InvoiceNumberField({ nextInvoice }: { nextInvoice: string }) {
+function InvoiceNumberField({
+  nextInvoice,
+  agentName,
+}: {
+  nextInvoice: string;
+  agentName: string | null;
+}) {
   return (
     <Field
       label="Invoice number"
-      hint={`Leave empty for ${nextInvoice}, unless another booking is made first. Invoiced already? Type its number, such as HT1223.`}
+      hint={
+        agentName
+          ? `Leave empty to add it to ${agentName}'s invoice for the period of its first trip, or to open that invoice with ${nextInvoice}. Opening one invoiced already? Type its number, such as HT1295.`
+          : `Leave empty for ${nextInvoice}, unless another booking is made first. Invoiced already? Type its number, such as HT1223.`
+      }
       className="mb-1"
     >
       <Input
@@ -483,6 +512,37 @@ function InvoiceNumberField({ nextInvoice }: { nextInvoice: string }) {
         placeholder={nextInvoice}
         autoComplete="off"
         spellCheck={false}
+      />
+    </Field>
+  );
+}
+
+/** An agent a booking may come through. */
+type Agent = { id: string; name: string };
+
+/** The agent the booking came through, if any: its invoice is the agent's. */
+function AgentField({
+  agents,
+  agentId,
+  onChange,
+}: {
+  agents: readonly Agent[];
+  agentId: string;
+  onChange: (agentId: string) => void;
+}) {
+  return (
+    <Field
+      label="Agent"
+      hint="Choose the agent when the booking came through one. The customer below is the agent's guest."
+      className="mb-4"
+    >
+      <Select
+        value={agentId}
+        onValueChange={onChange}
+        options={[
+          { value: "", label: "None: our own customer" },
+          ...agents.map((a) => ({ value: a.id, label: a.name })),
+        ]}
       />
     </Field>
   );

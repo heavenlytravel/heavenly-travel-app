@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { NO_BANK } from "./bank-input";
 import {
+  supplyRefusalOf,
+  suppliesIt,
   checkReviewNote,
   parseVendorFields,
   vendorFieldsOf,
@@ -45,6 +47,7 @@ describe("parseVendorFields", () => {
         address: "Kuah, Langkawi",
         services: ["car-with-driver", "coach-charter"],
         locationIds: ["loc1", "loc2"],
+        invoicePeriod: "month",
         ...NO_BANK,
       },
     });
@@ -68,9 +71,39 @@ describe("vendorFieldsOf", () => {
       ...NO_BANK,
       services: ["driver", "spa"],
       locations: [{ id: "loc2" }, { id: "loc1" }],
+      invoicePeriod: "fortnight",
     });
     assert.deepEqual(fields.locationIds, ["loc1", "loc2"]);
     assert.deepEqual(fields.services, ["driver"]);
+    assert.equal(fields.invoicePeriod, "month");
+  });
+});
+
+describe("suppliesIt", () => {
+  const vendor = (services: string[], isOurs = false) => ({ isOurs, services });
+
+  it("lets a vendor add only what it ticked", () => {
+    const coach = { kind: "vehicle", category: "coach-charter" } as const;
+    assert.equal(suppliesIt(vendor(["car-with-driver"]), coach), false);
+    assert.equal(suppliesIt(vendor(["coach-charter"]), coach), true);
+    assert.equal(suppliesIt(vendor(["driver"]), { kind: "driver" }), true);
+    assert.equal(
+      suppliesIt(vendor(["coach-charter"]), { kind: "driver" }),
+      true,
+    );
+    assert.equal(suppliesIt(vendor(["driver"]), { kind: "guide" }), false);
+    assert.equal(suppliesIt(vendor(["agent"]), { kind: "driver" }), false);
+  });
+
+  it("lets ours add anything", () => {
+    assert.equal(suppliesIt(vendor([], true), { kind: "guide" }), true);
+  });
+
+  it("names the services to tick", () => {
+    assert.match(
+      supplyRefusalOf("Lim Transport", { kind: "guide" }),
+      /Lim Transport does not offer tour guides. Tick Tour guide/,
+    );
   });
 });
 

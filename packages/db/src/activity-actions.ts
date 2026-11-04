@@ -1,3 +1,4 @@
+import { isPaymentStatus, PAYMENT_STATUS_LABELS } from "./booking-number";
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { LOCATION_FIELD_LABELS } from "./location-input";
@@ -132,6 +133,20 @@ const ACTIONS = {
   "booking.note.added": { entityType: "booking", customerVisible: false },
   /** The contact fields changed, before and after: name, phone, email. */
   "booking.contact.updated": {
+    entityType: "booking",
+    customerVisible: false,
+  },
+  /**
+   * Staff gave a booking from before invoice numbers its invoice: `invoice`,
+   * its number as read ("HTI-1295-03"), and `oldInvoiceNumber` when typed.
+   */
+  "booking.invoiced": { entityType: "booking", customerVisible: false },
+  /**
+   * Staff marked the booking's invoice paid or unpaid: `paymentStatus`
+   * before and after, and `invoice`, its number, in `after`; an agent's
+   * invoice is every booking on it's.
+   */
+  "booking.payment.updated": {
     entityType: "booking",
     customerVisible: false,
   },
@@ -875,6 +890,22 @@ export function describeActivity(entry: DescribableActivity): string {
       return changes.length > 0
         ? `Changed the customer's ${changes.join(", ")}`
         : "Changed the customer's details";
+    }
+    case "booking.invoiced": {
+      const invoice = field(entry.after, "invoice");
+      return typeof invoice === "string"
+        ? `Gave the booking invoice ${invoice}`
+        : "Gave the booking its invoice";
+    }
+    case "booking.payment.updated": {
+      const status = field(entry.after, "paymentStatus");
+      const invoice = field(entry.after, "invoice");
+      const label = isPaymentStatus(status)
+        ? PAYMENT_STATUS_LABELS[status].toLowerCase()
+        : "changed";
+      return typeof invoice === "string"
+        ? `Marked invoice ${invoice} ${label}`
+        : `Marked the invoice ${label}`;
     }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;

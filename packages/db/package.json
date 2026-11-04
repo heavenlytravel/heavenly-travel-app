@@ -26,6 +26,8 @@
     "db:migrate-vendors:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/migrate-vendors.ts",
     "db:set-booking-numbers": "node --env-file=.env --import tsx scripts/set-booking-numbers.ts",
     "db:set-booking-numbers:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-booking-numbers.ts",
+    "db:set-agents": "node --env-file=.env --import tsx scripts/set-agents.ts",
+    "db:set-agents:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-agents.ts",
     "db:set-class-list": "node --env-file=.env --import tsx scripts/set-class-list.ts",
     "db:set-class-list:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-class-list.ts",
     "db:export-zones": "node --env-file=.env --import tsx scripts/export-zones.ts",

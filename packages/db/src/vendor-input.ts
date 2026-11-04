@@ -6,6 +6,7 @@ import {
   type BankFields,
 } from "./bank-input";
 import { isValidEmail, normalizeEmail } from "./booking-contact";
+import { isInvoicePeriod, type InvoicePeriod } from "./booking-number";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
@@ -47,7 +48,8 @@ export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
 /**
  * What a vendor may supply, asked of every kind at sign-up. Transport and
  * tour guides are worked in Connect; the rest is a supplier list for
- * Reservation.
+ * Reservation. An agent sells our trips to its own customers: its bookings
+ * share its invoice for the period, and it is never offered work.
  */
 export const VENDOR_SERVICES = [
   "car-with-driver",
@@ -57,6 +59,7 @@ export const VENDOR_SERVICES = [
   "self-drive",
   "accommodation",
   "attraction",
+  "agent",
 ] as const;
 export type VendorService = (typeof VENDOR_SERVICES)[number];
 export const isVendorService = guardFor(VENDOR_SERVICES);
@@ -68,7 +71,55 @@ export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
   "self-drive": "Self-drive rental",
   accommodation: "Accommodation",
   attraction: "Attraction",
+  agent: "Agent",
 };
+
+/**
+ * What a vendor adds and is offered work for, and the services that allow
+ * it: a vehicle of a class needs the class's category, car with driver or
+ * coach charter; a driver any of those or "driver only"; a guide "tour
+ * guide". Ours supplies anything.
+ */
+export type VendorSupply =
+  | { kind: "vehicle"; category: string }
+  | { kind: "driver" }
+  | { kind: "guide" };
+
+function servicesFor(supply: VendorSupply): readonly string[] {
+  switch (supply.kind) {
+    case "vehicle":
+      return [supply.category];
+    case "driver":
+      return ["car-with-driver", "coach-charter", "driver"];
+    case "guide":
+      return ["tour-guide"];
+  }
+}
+
+/** Whether a vendor supplies it, by the services it ticked. */
+export function suppliesIt(
+  vendor: { isOurs: boolean; services: readonly string[] },
+  supply: VendorSupply,
+): boolean {
+  return (
+    vendor.isOurs ||
+    servicesFor(supply).some((service) => vendor.services.includes(service))
+  );
+}
+
+/** Why a vendor cannot have it, naming the services to tick. */
+export function supplyRefusalOf(vendorName: string, supply: VendorSupply) {
+  const what =
+    supply.kind === "vehicle"
+      ? "vehicles of this class"
+      : supply.kind === "driver"
+        ? "drivers"
+        : "tour guides";
+  const services = servicesFor(supply).map((service) =>
+    isVendorService(service) ? VENDOR_SERVICE_LABELS[service] : service,
+  );
+  return `${vendorName} does not offer ${what}. Tick ${services.join(" or ")} in its services first.`;
+}
 
 /** The form's field that carries each service; one value per service. */
 export const VENDOR_SERVICES_FIELD = "services";
@@ -108,6 +159,8 @@ export type VendorFields = {
   services: VendorService[];
   /** The locations it serves, each once, sorted. */
   locationIds: string[];
+  /** How often it is invoiced as an agent; "month" for any other vendor. */
+  invoicePeriod: InvoicePeriod;
 } & BankFields;
 
 export type VendorField = keyof VendorFields;
@@ -123,6 +176,7 @@ export const VENDOR_FIELD_LABELS: Record<VendorField, string> = {
   address: "Address",
   services: "What it offers",
   locationIds: "Locations served",
+  invoicePeriod: "Agent invoices",
   ...BANK_FIELD_LABELS,
 };
 
@@ -143,6 +197,7 @@ export function vendorFieldsOf(
     address: string;
     services: readonly string[];
     locations: readonly { id: string }[];
+    invoicePeriod: string;
   } & BankFields,
 ): VendorFields {
   return {
@@ -155,6 +210,9 @@ export function vendorFieldsOf(
     address: vendor.address,
     services: vendorServicesOf(vendor.services),
     locationIds: vendor.locations.map((l) => l.id).sort(),
+    invoicePeriod: isInvoicePeriod(vendor.invoicePeriod)
+      ? vendor.invoicePeriod
+      : "month",
     ...bankFieldsOf(vendor),
   };
 }
@@ -220,6 +278,12 @@ export function checkVendorFields(fields: Partial<VendorFields>): Change {
       VENDOR_LOCATIONS_FIELD,
     );
   }
+  if (
+    fields.invoicePeriod !== undefined &&
+    !isInvoicePeriod(fields.invoicePeriod)
+  ) {
+    return refuse("Choose how often the agent is invoiced.", "invoicePeriod");
+  }
   return checkBankFields(fields);
 }
 
@@ -243,6 +307,10 @@ export function parseVendorFields(
     address: textOf(values.address),
     services: vendorServicesOf(services.map(textOf)),
     locationIds: [...new Set(locationIds.map(textOf).filter(Boolean))].sort(),
+    // Asked of an agent on the admin's form only; monthly otherwise.
+    invoicePeriod: isInvoicePeriod(textOf(values.invoicePeriod))
+      ? (textOf(values.invoicePeriod) as InvoicePeriod)
+      : "month",
     ...readBankFields(values),
   };
   const check = checkVendorFields(fields);

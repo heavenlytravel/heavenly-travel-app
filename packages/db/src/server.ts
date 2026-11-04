@@ -147,6 +147,7 @@ export {
   countPendingVendors,
   getVendor,
   listVendorOptions,
+  listAgents,
   createVendor,
   createVendorWithOwner,
   setVendorOwner,
@@ -358,8 +359,10 @@ export {
   cancelTripAsCustomer,
   updateBookingContact,
   nextInvoiceNumber,
-  checkOldInvoiceNumber,
+  invoiceBooking,
+  setInvoicePayment,
 } from "./bookings";
+export { InvoiceRefusal } from "./booking-counter";
 export type {
   BookingFilter,
   BookingOrder,

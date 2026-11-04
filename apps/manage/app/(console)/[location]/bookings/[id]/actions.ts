@@ -2,7 +2,9 @@
 
 import {
   flagOf,
+  isPaymentStatus,
   parseContact,
+  parseOldInvoiceNumber,
   parsePriceOverride,
   PRICE_OVERRIDE_FIELDS,
   textOf,
@@ -15,8 +17,10 @@ import {
   amendItem,
   cancelBookingAsAdmin,
   cancelItem,
+  invoiceBooking,
   isNextItemStatus,
   overrideItemPrice,
+  setInvoicePayment,
   updateBookingContact,
   type BookingChange,
 } from "@repo/db/server";
@@ -29,6 +33,7 @@ import {
   stateOf,
 } from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../_lib/revalidate";
+import { OLD_INVOICE_FIELD } from "../_lib/trip-form";
 import { prepareFormItem, savedBookingHref } from "../_lib/trip-server";
 
 /**
@@ -179,4 +184,39 @@ export async function amendItemAction(
   const refused = await finish(result);
   if (refused || !result.ok) return refused;
   return { href: savedBookingHref(formData, result.booking) };
+}
+
+/**
+ * Gives a confirmed booking from before invoice numbers its invoice: the
+ * next number, an old one typed (HT1223), or its line on its agent's
+ * invoice for the period.
+ */
+export async function invoiceBookingAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.payment");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return STALE;
+  const typed = parseOldInvoiceNumber(textOf(formData.get(OLD_INVOICE_FIELD)));
+  if (!typed.ok) return { error: typed.error, field: OLD_INVOICE_FIELD };
+  const result = await invoiceBooking(actorOf(admin), bookingId, typed.number);
+  if (result.ok) revalidateLocation();
+  return stateOf(result);
+}
+
+/** Marks the booking's invoice paid or unpaid; an agent's, for every booking on it. */
+export async function setPaymentAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.payment");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  const status = textOf(formData.get("paymentStatus"));
+  if (!bookingId || !isPaymentStatus(status)) return STALE;
+  const result = await setInvoicePayment(actorOf(admin), bookingId, status);
+  if (result.ok) revalidateLocation();
+  return stateOf(result);
 }

@@ -69,6 +69,8 @@ export const SAME_VEHICLE_FIELD = "sameVehicle";
 
 /** A new booking's old invoice number, when the old system invoiced it already (HT1223); empty for the next. */
 export const OLD_INVOICE_FIELD = "oldInvoiceNumber";
+/** The agent the booking came through; empty for a customer of ours. */
+export const AGENT_FIELD = "agentId";
 
 export const CONTACT_FIELDS = {
   name: "name",

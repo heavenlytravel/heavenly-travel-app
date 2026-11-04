@@ -7,14 +7,17 @@ import {
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
 import {
+  invoiceFor,
+  InvoiceRefusal,
   lastBookingNumber,
-  nextBookingNumber,
-  oldInvoiceNumberIssue,
 } from "./booking-counter";
 import {
   BOOKING_NUMBER_SELECT,
+  bookingNumbersOf,
   formatBookingNumber,
+  formatInvoiceNumber,
   parseBookingNumber,
+  type PaymentStatus,
 } from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
@@ -54,6 +57,10 @@ const withItems = {
   include: {
     user: {
       select: { id: true, email: true, firstName: true, lastName: true },
+    },
+    agent: { select: { id: true, name: true, contactEmail: true } },
+    invoice: {
+      select: { id: true, number: true, paymentStatus: true, agentId: true },
     },
     items: {
       orderBy: { position: "asc" },
@@ -129,9 +136,13 @@ export type CreateBookingInput = {
   /** The website visitor's address, for the rate limit; null from the console. */
   createdIp: string | null;
   items: PreparedItem[];
+  /** Staff only: the agent it came through, a vendor offering "agent". */
+  agentId?: string | null;
   /**
    * Staff only: the booking was invoiced in the old system already, and
-   * keeps that invoice's number (HT1223) instead of taking the next.
+   * keeps that invoice's number (HT1223) instead of taking the next; for
+   * an agent, the number of its invoice for the period, when this booking
+   * opens it.
    */
   oldInvoiceNumber?: number;
 };
@@ -148,15 +159,6 @@ export async function nextInvoiceNumber(): Promise<string> {
     "invoice",
     (await lastBookingNumber(db, "invoice")) + 1,
   );
-}
-
-/**
- * Why an old invoice's number, typed on New booking, cannot be the
- * booking's; null when it can (`oldInvoiceNumberIssue`). Checked again
- * inside the booking's transaction.
- */
-export function checkOldInvoiceNumber(number: number): Promise<string | null> {
-  return oldInvoiceNumberIssue(db, number);
 }
 
 /**
@@ -180,8 +182,11 @@ export async function createBooking(
   }
   const confirmed = actor.kind === "admin";
   const oldInvoice = input.oldInvoiceNumber ?? null;
-  if (oldInvoice !== null && !confirmed) {
-    throw new Error("Only staff may give a booking an old invoice number.");
+  const agentId = input.agentId ?? null;
+  if ((oldInvoice !== null || agentId !== null) && !confirmed) {
+    throw new Error(
+      "Only staff may give a booking an agent or an old invoice number.",
+    );
   }
   const now = new Date();
   const status = confirmed ? "confirmed" : "received";
@@ -193,6 +198,7 @@ export async function createBooking(
   const startsAt = earliestStart(input.items) ?? input.items[0]!.startsAt;
   const data = {
     userId: input.userId,
+    agentId,
     status: status satisfies BookingStatus,
     confirmedAt: confirmed ? now : null,
     contactName: input.contactName,
@@ -230,17 +236,12 @@ export async function createBooking(
             data: { phone: input.contactPhone },
           });
         }
-        if (oldInvoice !== null) {
-          const issue = await oldInvoiceNumberIssue(tx, oldInvoice, {
-            lock: true,
-          });
-          if (issue) throw new Error(issue);
-        }
-        const invoiceNumber = !confirmed
-          ? null
-          : (oldInvoice ?? (await nextBookingNumber(tx, "invoice")));
+        if (agentId !== null) await checkAgent(tx, agentId);
+        const invoice = confirmed
+          ? await invoiceFor(tx, { agentId, startsAt }, oldInvoice)
+          : null;
         const booking = await tx.booking.create({
-          data: { ...data, reference: generateReference(), invoiceNumber },
+          data: { ...data, reference: generateReference(), ...invoice },
           ...withItems,
         });
         await logActivity(tx, actor, {
@@ -372,7 +373,12 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
         ? [{ quoteNumber: number.number }]
         : []),
       ...(number && number.kind !== "quote"
-        ? [{ invoiceNumber: number.number }]
+        ? [
+            {
+              invoice: { number: number.number },
+              ...(number.line !== null ? { invoiceLine: number.line } : {}),
+            },
+          ]
         : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
@@ -493,16 +499,19 @@ async function refreshBooking(
 
   // Confirmed for the first time: the booking is sold, and invoiced. One
   // cancelled before that gets no invoice number.
-  const invoiceNumber =
+  const invoice =
     status !== "received" &&
     status !== "cancelled" &&
-    booking.invoiceNumber === null
-      ? await nextBookingNumber(tx, "invoice")
+    booking.invoiceId === null
+      ? await invoiceFor(tx, {
+          agentId: booking.agentId,
+          startsAt: earliestStart(live) ?? booking.startsAt,
+        })
       : null;
   const updated = await tx.booking.update({
     where: { id: bookingId },
     data: {
-      ...(invoiceNumber !== null ? { invoiceNumber } : {}),
+      ...invoice,
       status,
       // The total is what is owed for the live items. A fully cancelled
       // booking keeps its last total, so the record still says what it was.
@@ -1013,6 +1022,120 @@ export function updateBookingContact(
       entityId: bookingId,
       before: changed.before,
       after: changed.after,
+    });
+    return { ok: true };
+  });
+}
+
+/** Refuses an agent that is not one: a vendor offering "agent", active. */
+async function checkAgent(tx: Prisma.TransactionClient, agentId: string) {
+  const agent = await tx.vendor.findUnique({
+    where: { id: agentId },
+    select: { services: true, status: true },
+  });
+  if (
+    !agent ||
+    !agent.services.includes("agent") ||
+    agent.status !== "active"
+  ) {
+    throw new InvoiceRefusal(
+      "That agent was just removed or suspended. Choose the agent again.",
+    );
+  }
+}
+
+/**
+ * Gives a confirmed booking from before invoice numbers its invoice
+ * (`invoiceFor`): the next number, an old invoice's typed by staff, or,
+ * for an agent's, its line on the agent's invoice for the period.
+ */
+export async function invoiceBooking(
+  actor: Actor,
+  bookingId: string,
+  oldNumber: number | null,
+): Promise<Change> {
+  try {
+    return await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        select: {
+          agentId: true,
+          startsAt: true,
+          status: true,
+          invoiceId: true,
+        },
+      });
+      if (!booking) {
+        return refuse(
+          "This booking was deleted meanwhile. Go back to Bookings.",
+        );
+      }
+      if (booking.invoiceId !== null) {
+        return refuse("This booking has its invoice already. Reload the page.");
+      }
+      if (booking.status === "received" || booking.status === "cancelled") {
+        return refuse("Only a confirmed booking is invoiced.");
+      }
+      const place = await invoiceFor(tx, booking, oldNumber);
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: place,
+        select: BOOKING_NUMBER_SELECT,
+      });
+      await logActivity(tx, actor, {
+        action: "booking.invoiced",
+        entityId: bookingId,
+        after: {
+          invoice: bookingNumbersOf(updated).invoice,
+          ...(oldNumber !== null ? { oldInvoiceNumber: oldNumber } : {}),
+        },
+      });
+      return { ok: true };
+    });
+  } catch (error) {
+    if (error instanceof InvoiceRefusal) return refuse(error.message);
+    throw error;
+  }
+}
+
+/**
+ * Marks the booking's invoice paid or unpaid, freely for now: payments
+ * as their own records come with Finance's work. An agent's invoice is
+ * every booking on it's, so all of them change.
+ */
+export function setInvoicePayment(
+  actor: Actor,
+  bookingId: string,
+  paymentStatus: PaymentStatus,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        ...BOOKING_NUMBER_SELECT,
+        invoice: { select: { id: true, number: true, paymentStatus: true } },
+      },
+    });
+    if (!booking) {
+      return refuse("This booking was deleted meanwhile. Go back to Bookings.");
+    }
+    if (!booking.invoice) {
+      return refuse("This booking has no invoice yet.");
+    }
+    if (booking.invoice.paymentStatus === paymentStatus) return { ok: true };
+    await tx.invoice.update({
+      where: { id: booking.invoice.id },
+      data: { paymentStatus },
+    });
+    await logActivity(tx, actor, {
+      action: "booking.payment.updated",
+      entityId: bookingId,
+      before: { paymentStatus: booking.invoice.paymentStatus },
+      after: {
+        paymentStatus,
+        invoice: formatInvoiceNumber(booking.invoice.number, null),
+      },
     });
     return { ok: true };
   });

@@ -365,6 +365,8 @@ describe("activityActionMeta", () => {
     "booking.trip.reported",
     "booking.contact.viewed",
     "booking.contact.updated",
+    "booking.invoiced",
+    "booking.payment.updated",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

@@ -151,11 +151,10 @@ Proposal, agreed in principle by the user:
   quotation number, else the reference. The bookings list has the quotation and the
   reference under it, the booking's summary both numbers, its line the reference. Ctrl+K
   finds "HTQ-26-00042", "HTI-26-42", or "26-42" of either kind.
-- **Switching over:** `pnpm --filter @repo/db db:number-bookings -- --quote-last 1234
---invoice-last 567` (and `:prod`), after the schema push. The two are the old
-  system's last numbers this year (N2); ours carry on after them. Then the bookings
-  from before get theirs: a quotation number for those staff entered, in the order made,
-  an invoice number for those ever confirmed, in the order confirmed.
+- **Switching over:** by hand in SQL, after the schema push: a `BookingNumberCounter`
+  row per kind (`quote`, `invoice`) for year 26 with `last` at the old system's last
+  number this year (N2), so ours carry on after it; and the bookings from before their
+  numbers. No script: production has live data, and the developer sets them directly.
 - Other formats considered: `HTQ2600042` (no dashes), `HT-Q-2611-0042` (monthly),
   `Q26-00042` / `INV26-00042`. The user kept HTQ-YY-NNNNN / HTI-YY-NNNNN (2026-11-04).
 

@@ -120,8 +120,9 @@ received ──► confirmed ──► assigned ──► completed
   to its customers and shares an invoice per period (docs/261102-booking-ops.md, "5.").
   It is never offered work. Booking through Connect as an agent comes later.
 - **Vendors' vehicles never reach the website.** We sell our classes; vendors add
-  capacity behind them. The class pictures and the models shown "or similar" read only
-  our vendors' vehicles (`modelsShownAt` in `packages/db/src/vehicle-models.ts`).
+  capacity behind them. A class's models at a location, which the admin's booking form
+  and the hidden model choice read, are only our vendors' vehicles' (`modelsShownAt` in
+  `packages/db/src/vehicle-models.ts`). Class pictures are the catalogue's.
 - **Suspending a vendor first shows its accepted bookings still to come** in a dialog:
   "Vendor A has 2 accepted bookings: HT-… Fri 8:00, HT-… Sat 9:00. Suspending takes its
   vehicle and driver off them." Confirming suspends it and puts those bookings back in

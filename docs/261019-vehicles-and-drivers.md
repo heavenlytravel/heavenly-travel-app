@@ -102,19 +102,19 @@ model only once a vehicle of it is in service at their location.
 Revised on 2026-10-20: the photos were the model's, one set for every location, so a
 Penang customer would see a Langkawi plate. They are each vehicle's now.
 
+Revised on 2026-11-04 (owner's call): the photos are for our team only. The website no
+longer reads them: a class's picture is the catalogue's, the same at every location,
+and the class cards no longer list the models "or similar" with "See photos".
+
 - A vehicle has up to 12 photos, in order, each with an optional caption ("Interior"):
   its alt text is "Toyota Alphard, Interior", or the model's name alone. The first is
   the vehicle's cover. They are uploaded on the vehicle's form, through
   `/api/uploads/vehicle-image` (`fleet.manage`), several at once, and are moved,
   captioned and removed there. The upload is one hook, `use-image-upload.ts`, that the
   class picture uses too. `src/photos-input.ts` reads and checks the list.
-- A location's customers see a model in the photos of its vehicles in service there, one
-  vehicle's after another, the first entered first, at most 12.
-- The class's picture at a location is the first photo of its first vehicle entered of
-  those in service there with a photo (`classCoverOf`). Until a vehicle there has one,
-  it is the catalogue's picture, which is meant to be neutral: a cut-out with no plate.
-  Nothing more to upload: a location's cover follows its own vehicles. The location's
-  Vehicle classes tab shows the same picture, as customers see it.
+- A class's picture is the catalogue's (`VehicleClass.imageUrl`), the same at every
+  location, which is meant to be neutral: a cut-out with no plate. The location's
+  Vehicle classes tab and the admin's booking form show the same picture.
 
 ### The customer's choice of model
 
@@ -130,8 +130,8 @@ Penang customer would see a Langkawi plate. They are each vehicle's now.
   percentage and the amount follow the odd-hours surcharge's rules and limits, and its
   input: `ChargeInput` in the console, `checkCharge` and `parseCharge` in
   `src/rates-input.ts`.
-- On the options page, a class's card shows its picture at the location and names its
-  models ("Toyota Vellfire or Toyota Alphard, or similar"). Chosen, the card opens on its
+- On the options page, a class's card shows its picture and, until 2026-11-04, named its
+  models ("Toyota Vellfire or Toyota Alphard, or similar"). Chosen, the card opened on its
   models, a tile each, two side by side and one on a phone, wide enough to see the
   vehicle: the first four, then "Show all 6 models" for the rest, so a long list does
   not push the next class far down. A tile's photos are swiped through in place
@@ -367,8 +367,6 @@ Later:
 - The drivers' languages and photo, for the customer's message.
 - Features on a model (captain seats, Wi-Fi), shown with its photos.
 - A charge per model, should a location want the Alphard dearer than the Vellfire.
-- A cover picked for each class at each location, should the first photo of its
-  vehicles there not be the best picture of the class.
 - A vehicle's cover beside its plate in the console's lists.
 - Removing an unused photo's file from UploadThing by itself: a removed photo stays
   stored until SUPER deletes it on the Media screen (2026-10-22), as a

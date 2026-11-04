@@ -1,6 +1,7 @@
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
 import { bookingStatusOf, isLive, tipsDriver } from "./booking-status";
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
@@ -783,6 +784,11 @@ export async function assignBooking(
       // vehicle or guide is accepted now when Operation checked it.
       const vendorAccepted =
         vendor.isOurs && (role === "driver" || input.acceptOurs) ? now : null;
+      // A tip is a coach driver's only; asked on any other trip it is none.
+      const tipOf = (trip: (typeof its)[number]) =>
+        tipsDriver(trip.tripDetails?.vehicleClassCategory ?? "")
+          ? (ask.tipSen[trip.id] ?? 0)
+          : 0;
       for (const trip of its) {
         await tx.tripPart.create({
           data: {
@@ -793,9 +799,7 @@ export async function assignBooking(
             driverId: role === "driver" ? ask.recordId : null,
             guideId: role === "guide" ? ask.recordId : null,
             costSen: vendor.isOurs ? 0 : (ask.costSen[trip.id] ?? 0),
-            tipSen: tipsDriver(trip.tripDetails?.vehicleClassCategory ?? "")
-              ? (ask.tipSen[trip.id] ?? 0)
-              : 0,
+            tipSen: tipOf(trip),
             vendorAcceptedAt: vendorAccepted,
           },
         });
@@ -813,10 +817,7 @@ export async function assignBooking(
             : its.reduce((sum, t) => sum + (ask.costSen[t.id] ?? 0), 0),
           ...(role === "driver"
             ? {
-                tipSen: its.reduce(
-                  (sum, t) => sum + (ask.tipSen[t.id] ?? 0),
-                  0,
-                ),
+                tipSen: its.reduce((sum, t) => sum + tipOf(t), 0),
               }
             : {}),
           respondBy: respondBy.toISOString(),
@@ -1366,12 +1367,17 @@ export function setPartCost(
   });
 }
 
-/** A booking a vendor, a vehicle, a driver or a guide has accepted and that is still to come: what suspending it or taking it out of service releases. */
-export type HeldBooking = { reference: string; startsAt: Date };
+/** A booking a vendor, a vehicle, a driver or a guide has accepted and that is still to come: what suspending it or taking it out of service releases. `label` is how the screen names it. */
+export type HeldBooking = { label: string; startsAt: Date };
 
-/** The accepted, coming bookings a vendor or a record holds, soonest first. */
+/**
+ * The accepted, coming bookings a vendor or a record holds, soonest first,
+ * each named by its number (manage) or its reference (Connect, which
+ * names a booking as the customer does).
+ */
 export async function heldBookingsOf(
   where: { vendorId: string } | NamedWhere,
+  named: "number" | "reference",
 ): Promise<HeldBooking[]> {
   const parts = await db.tripPart.findMany({
     where: {
@@ -1383,16 +1389,22 @@ export async function heldBookingsOf(
     },
     select: {
       item: {
-        select: { startsAt: true, booking: { select: { reference: true } } },
+        select: {
+          startsAt: true,
+          booking: { select: { id: true, ...BOOKING_NUMBER_SELECT } },
+        },
       },
     },
     orderBy: { item: { startsAt: "asc" } },
   });
   const seen = new Map<string, HeldBooking>();
   for (const { item } of parts) {
-    if (!seen.has(item.booking.reference)) {
-      seen.set(item.booking.reference, {
-        reference: item.booking.reference,
+    if (!seen.has(item.booking.id)) {
+      seen.set(item.booking.id, {
+        label:
+          named === "number"
+            ? bookingLabelOf(item.booking)
+            : item.booking.reference,
         startsAt: item.startsAt,
       });
     }

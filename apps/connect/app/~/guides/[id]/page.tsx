@@ -23,7 +23,7 @@ export default async function GuidePage({
   const [guide, choices, held] = await Promise.all([
     isNew ? null : getGuide(id),
     vendorFleetChoices(member.vendor.id),
-    isNew ? [] : heldBookingsOf({ guideId: id }),
+    isNew ? [] : heldBookingsOf({ guideId: id }, "reference"),
   ]);
   if (!isNew && guide?.vendorId !== member.vendor.id) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];

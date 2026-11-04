@@ -72,7 +72,7 @@ export default async function DriverPage({
 async function driverScreen(scope: ConsoleScope, driverId: string) {
   const [driver, held, classes, locations, vendors] = await Promise.all([
     getDriver(driverId),
-    heldBookingsOf({ driverId }),
+    heldBookingsOf({ driverId }, "number"),
     listClassOptions(),
     locationsVisible(),
     listVendorOptions(),

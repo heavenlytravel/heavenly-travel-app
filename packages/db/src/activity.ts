@@ -8,6 +8,7 @@ import {
   type Actor,
 } from "./activity-actions";
 import { activityActionsIn, type ActivityArea } from "./activity-areas";
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
 import type { LocationPageRef } from "./location-page-input";
@@ -153,7 +154,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     read(ids.booking, () =>
       db.booking.findMany({
         where: { id: { in: ids.booking } },
-        select: { id: true, reference: true },
+        select: { id: true, ...BOOKING_NUMBER_SELECT },
       }),
     ),
     read(ids.state, () =>
@@ -267,7 +268,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     user: deletedUsers,
   };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
-    booking: new Map(bookings.map((b) => [b.id, b.reference])),
+    booking: new Map(bookings.map((b) => [b.id, bookingLabelOf(b)])),
     state: new Map(states.map((s) => [s.code, s.name])),
     district: new Map(districts.map((d) => [d.code, d.name])),
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),

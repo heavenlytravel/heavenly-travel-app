@@ -14,7 +14,7 @@ import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { setHourlyListAction } from "./actions";
 import {
   CELL_BAD,
@@ -179,13 +179,22 @@ export function HourlyRates({
     "The hourly prices changed since the last save are lost.",
   );
 
-  function edit(part: keyof Values, key: string, text: string) {
+  // Stable, as it only sets state, so a price cell redraws alone.
+  const edit = useCallback((part: keyof Values, key: string, text: string) => {
     setError(null);
     setValues((current) => ({
       ...current,
       [part]: { ...current[part], [key]: text },
     }));
-  }
+  }, []);
+  /** A price cell, `part:key`, as typed. */
+  const editCell = useCallback(
+    (cell: string, text: string) => {
+      const at = cell.indexOf(":");
+      edit(cell.slice(0, at) as keyof Values, cell.slice(at + 1), text);
+    },
+    [edit],
+  );
 
   function save() {
     if (invalid.size > 0) return;
@@ -257,7 +266,8 @@ export function HourlyRates({
         invalid={invalid.has(key)}
         readOnly={readOnly}
         pending={pending}
-        onChange={(text) => edit(part, key, text)}
+        cell={`${part}:${key}`}
+        onEdit={editCell}
         className={line}
       />
     );

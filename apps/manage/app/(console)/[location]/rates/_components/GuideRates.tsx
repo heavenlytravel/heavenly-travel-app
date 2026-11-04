@@ -15,7 +15,7 @@ import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { movedRow, RowControls } from "../../../../_components/RowControls";
 import { setGuideRatesAction } from "./actions";
 import { CellKey, EMPTY_CELL, PriceCell, readCell, senOf } from "./cells";
@@ -112,13 +112,22 @@ export function GuideRates({
     "The tour guide rates changed since the last save are lost.",
   );
 
-  function edit(language: string, patch: Partial<Row>) {
+  // Stable, as it only sets state, so a price cell redraws alone.
+  const edit = useCallback((language: string, patch: Partial<Row>) => {
     setError(null);
     setValues((current) => ({
       ...current,
       [language]: { ...current[language]!, ...patch },
     }));
-  }
+  }, []);
+  /** A price cell, `language|price`, as typed. */
+  const editCell = useCallback(
+    (cell: string, text: string) => {
+      const [language = "", key = ""] = cell.split("|");
+      edit(language, { [key]: text });
+    },
+    [edit],
+  );
 
   function save() {
     if (invalid.size > 0) return;
@@ -234,7 +243,8 @@ export function GuideRates({
                         invalid={invalid.has(id)}
                         readOnly={readOnly}
                         pending={pending}
-                        onChange={(next) => edit(language, { [key]: next })}
+                        cell={id}
+                        onEdit={editCell}
                         className="border-b border-hairline"
                       />
                     );

@@ -1,5 +1,6 @@
 import { parseRinggit, ringgitInputValue } from "@repo/db";
 import { cx } from "@repo/ui/cx";
+import { memo } from "react";
 
 /**
  * How a price cell looks wherever routes are priced, the rate grid and
@@ -102,17 +103,22 @@ export function senOf(text: string | undefined): number | null {
  * A price cell of a price list (hourly, tour guides): a box coloured by its
  * state against the save, tidied on leaving it; plain text when the list
  * is read-only. `className` is the table cell's, a line under it say.
+ * Memoised: given a stable `onEdit`, typing redraws the cell typed in,
+ * not every cell of the list.
  */
-export function PriceCell({
+export const PriceCell = memo(function PriceCell({
+  cell,
   label,
   text,
   saved,
   invalid,
   readOnly,
   pending,
-  onChange,
+  onEdit,
   className,
 }: {
+  /** Which cell it is, handed back to `onEdit`. */
+  cell: string;
   /** What the cell prices, read out before it: "English, 4 hours". */
   label: string;
   text: string;
@@ -120,7 +126,7 @@ export function PriceCell({
   invalid: boolean;
   readOnly: boolean;
   pending: boolean;
-  onChange: (text: string) => void;
+  onEdit: (cell: string, text: string) => void;
   className?: string | false;
 }) {
   const empty = text.trim() === "";
@@ -146,11 +152,11 @@ export function PriceCell({
           spellCheck={false}
           readOnly={pending}
           value={text}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onEdit(cell, event.target.value)}
           onFocus={(event) => event.target.select()}
           onBlur={(event) => {
             const tidied = tidy(event.target.value);
-            if (tidied !== event.target.value) onChange(tidied);
+            if (tidied !== event.target.value) onEdit(cell, tidied);
           }}
           className={cx(
             CELL_INPUT,
@@ -164,4 +170,4 @@ export function PriceCell({
       )}
     </td>
   );
-}
+});

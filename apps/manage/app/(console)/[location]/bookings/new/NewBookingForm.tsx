@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  andList,
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
   formatMyr,
   parseContact,
+  TRIP_CATEGORY_LABELS,
   type BBox,
   type TripCategory,
 } from "@repo/db";
@@ -61,7 +63,9 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * trips, "Same vehicle for every trip" (on to start with) has one vehicle
  * do them all: trip 1 chooses it for every trip, every trip takes its
  * category, and no trip may start while another is going. Off, each trip
- * chooses its own: a car, then a coach, at the same time if need be. One
+ * chooses its own: a car, then a coach, at the same time if need be.
+ * Turning it back on asks first when a trip would lose a vehicle or a
+ * category of its own to trip 1's. One
  * step is open at a time; a finished one folds to a line with "Edit", so a
  * detail that changes mid-call is one click away and nothing entered is
  * lost. The summary beside the steps keeps the customer, each trip with
@@ -148,7 +152,8 @@ export function NewBookingForm({
       );
     }
   }
-  function changeSameVehicle(on: boolean) {
+  async function changeSameVehicle(on: boolean) {
+    if (on && !(await confirmSameVehicle())) return;
     setSameVehicle(on);
     if (on) {
       // Trip 1's vehicle does them all, and every trip takes its category.
@@ -160,6 +165,31 @@ export function NewBookingForm({
         current.map((item) => ({ ...item, vehicle: { ...sharedVehicle } })),
       );
     }
+  }
+  /**
+   * Whether trip 1's vehicle may take over every trip: asked only when a
+   * trip has a category or vehicle of its own, which turning the switch
+   * on loses.
+   */
+  async function confirmSameVehicle(): Promise<boolean> {
+    const first = items[0]!;
+    const own = items.flatMap((item, index) =>
+      index > 0 &&
+      (item.trip.trip.category !== first.trip.trip.category ||
+        JSON.stringify(item.vehicle) !== JSON.stringify(first.vehicle))
+        ? [String(index + 1)]
+        : [],
+    );
+    if (own.length === 0) return true;
+    const vehicle = itemVehicle(items, 0, null).chosen
+      ? vehicleLine([first.trip], first.vehicle, { price: false })
+      : null;
+    return confirm({
+      title: "Use trip 1's vehicle for every trip?",
+      description: `${own.length === 1 ? "Trip" : "Trips"} ${andList(own)} lose their own vehicle and group and take trip 1's: ${[TRIP_CATEGORY_LABELS[first.trip.trip.category], vehicle].filter(Boolean).join(", ")}. A trip in another category is priced again, and trips at the same time must then be moved.`,
+      action: "Use trip 1's vehicle",
+      danger: true,
+    });
   }
   function addTrip() {
     const sorted = itemsByStart(items);
@@ -268,7 +298,7 @@ export function NewBookingForm({
             <label className="flex items-center gap-3 rounded-card bg-white px-5 py-3.5 shadow-card">
               <Switch
                 checked={sameVehicle}
-                onCheckedChange={changeSameVehicle}
+                onCheckedChange={(on) => void changeSameVehicle(on)}
                 label="Same vehicle for every trip"
               />
               <span className="grid gap-0.5">

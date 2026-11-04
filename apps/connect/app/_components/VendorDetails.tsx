@@ -7,7 +7,7 @@ import {
 } from "@repo/db";
 import type { VendorWithLocations } from "@repo/db/server";
 import { Rows } from "@repo/ui/rows";
-import { bankCell, masked } from "./ProfileDetails";
+import { bankCell, masked } from "@repo/console/masked";
 
 /**
  * A vendor's details as its own people read them, on the registration's

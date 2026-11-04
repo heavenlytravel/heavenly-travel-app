@@ -1100,7 +1100,7 @@ export async function invoiceBooking(
 }
 
 /**
- * Marks the booking's invoice paid or unpaid, freely for now: payments
+ * Sets where the booking's invoice's payment stands, freely for now: payments
  * as their own records come with Finance's work. An agent's invoice is
  * every booking on it's, so all of them change.
  */

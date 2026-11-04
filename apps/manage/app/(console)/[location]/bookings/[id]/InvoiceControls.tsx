@@ -1,6 +1,12 @@
 "use client";
 
-import { PAYMENT_STATUS_LABELS, type PaymentStatus } from "@repo/db";
+import {
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUSES,
+  type PaymentStatus,
+} from "@repo/db";
+import { Select } from "@repo/ui/select";
+import { useState } from "react";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
@@ -9,8 +15,9 @@ import { OLD_INVOICE_FIELD } from "../_lib/trip-form";
 import { invoiceBookingAction, setPaymentAction } from "./actions";
 
 /**
- * Paid or unpaid, switched freely for now: one button to the other. On an
- * agent's invoice it changes every booking on it, which the button says.
+ * Where the invoice's payment stands, set freely for now: pending,
+ * partially paid, fully paid or pay later, saved as it is chosen. On an
+ * agent's invoice it sets every booking on it, which the hint says.
  */
 export function PaymentControl({
   bookingId,
@@ -22,20 +29,31 @@ export function PaymentControl({
   /** The agent's invoice number, when the booking is a line of one. */
   shared: string | null;
 }) {
-  const next: PaymentStatus = status === "paid" ? "unpaid" : "paid";
-  const { pending, error, formProps } = useActionForm(setPaymentAction, {
-    done: `Invoice marked ${PAYMENT_STATUS_LABELS[next].toLowerCase()}.`,
+  const [chosen, setChosen] = useState<string>(status);
+  const { error, formProps } = useActionForm(setPaymentAction, {
+    done: "Payment status saved.",
   });
   return (
     <form {...formProps} className="grid gap-2">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <input type="hidden" name="paymentStatus" value={next} />
-      <Button type="submit" variant="secondary" size="sm" pending={pending}>
-        Mark {PAYMENT_STATUS_LABELS[next].toLowerCase()}
-      </Button>
-      {shared ? (
-        <p className="text-xs text-muted">For every booking on {shared}.</p>
-      ) : null}
+      <input type="hidden" name="paymentStatus" value={chosen} />
+      <Field
+        label="Payment status"
+        hint={shared ? `For every booking on ${shared}.` : undefined}
+      >
+        <Select
+          value={chosen}
+          onValueChange={(value) => {
+            setChosen(value);
+            // Saved as it is chosen, once the hidden field holds it.
+            requestAnimationFrame(() => formProps.ref.current?.requestSubmit());
+          }}
+          options={PAYMENT_STATUSES.map((value) => ({
+            value,
+            label: PAYMENT_STATUS_LABELS[value],
+          }))}
+        />
+      </Field>
       <FormError error={error} />
     </form>
   );

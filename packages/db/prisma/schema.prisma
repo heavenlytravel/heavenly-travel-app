@@ -900,9 +900,10 @@ model Invoice {
   agentId       String?
   agent         Vendor?   @relation(fields: [agentId], references: [id])
   periodStart   DateTime? @db.Date
-  /// PAYMENT_STATUSES: "unpaid" | "paid". Set by staff for now; payments
+  /// PAYMENT_STATUSES: "pending" | "partial" | "paid" | "pay-later". Set by
+  /// staff for now, freely; payments
   /// as their own records come with Finance's work.
-  paymentStatus String    @default("unpaid")
+  paymentStatus String    @default("pending")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

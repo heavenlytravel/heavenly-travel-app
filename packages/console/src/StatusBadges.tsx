@@ -87,10 +87,16 @@ export function ItemStatusBadge({ status }: { status: string }) {
   );
 }
 
-/** Whether an invoice is paid: unpaid waits (amber), paid is done (green). */
+/**
+ * Where an invoice's payment stands: pending waits (amber), partly paid is
+ * under way (brand blue), fully paid is done (green), pay later is agreed
+ * (navy).
+ */
 export const PAYMENT_TONES: Record<PaymentStatus, BadgeTone> = {
-  unpaid: "amber",
+  pending: "amber",
+  partial: "brand",
   paid: "green",
+  "pay-later": "navy",
 };
 
 /** A booking's invoice, paid or not. */

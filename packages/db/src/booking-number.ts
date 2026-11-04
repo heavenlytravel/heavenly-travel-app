@@ -199,11 +199,22 @@ export function invoicePeriodLabel(start: string, period: InvoicePeriod) {
   return `16–${last} ${month}`;
 }
 
-/** Whether an invoice is paid: set by staff until payments are their own records. */
-export const PAYMENT_STATUSES = ["unpaid", "paid"] as const;
+/**
+ * Where an invoice's payment stands, set by staff until payments are their
+ * own records: waiting for it, part of it in, all of it in, or agreed to
+ * come later (an agent on credit).
+ */
+export const PAYMENT_STATUSES = [
+  "pending",
+  "partial",
+  "paid",
+  "pay-later",
+] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const isPaymentStatus = guardFor(PAYMENT_STATUSES);
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  unpaid: "Unpaid",
-  paid: "Paid",
+  pending: "Pending",
+  partial: "Partially paid",
+  paid: "Fully paid",
+  "pay-later": "Pay later",
 };

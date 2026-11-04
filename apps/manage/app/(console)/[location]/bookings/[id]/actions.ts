@@ -206,7 +206,7 @@ export async function invoiceBookingAction(
   return stateOf(result);
 }
 
-/** Marks the booking's invoice paid or unpaid; an agent's, for every booking on it. */
+/** Sets where the booking's invoice's payment stands; an agent's, for every booking on it. */
 export async function setPaymentAction(
   _previous: ActionState,
   formData: FormData,

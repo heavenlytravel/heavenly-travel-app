@@ -142,7 +142,7 @@ const ACTIONS = {
    */
   "booking.invoiced": { entityType: "booking", customerVisible: false },
   /**
-   * Staff marked the booking's invoice paid or unpaid: `paymentStatus`
+   * Staff changed where the invoice's payment stands: `paymentStatus`
    * before and after, and `invoice`, its number, in `after`; an agent's
    * invoice is every booking on it's.
    */
@@ -901,11 +901,11 @@ export function describeActivity(entry: DescribableActivity): string {
       const status = field(entry.after, "paymentStatus");
       const invoice = field(entry.after, "invoice");
       const label = isPaymentStatus(status)
-        ? PAYMENT_STATUS_LABELS[status].toLowerCase()
-        : "changed";
+        ? PAYMENT_STATUS_LABELS[status]
+        : "another status";
       return typeof invoice === "string"
-        ? `Marked invoice ${invoice} ${label}`
-        : `Marked the invoice ${label}`;
+        ? `Set invoice ${invoice} to ${label}`
+        : `Set the invoice to ${label}`;
     }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;

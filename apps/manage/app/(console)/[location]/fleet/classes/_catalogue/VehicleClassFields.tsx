@@ -28,7 +28,7 @@ const TIPS: Partial<Record<VehicleClassField, string>> = {
   minPassengers: 'Information only, shown as "from".',
   maxPassengers: "A larger group is refused this class.",
   imageUrl:
-    "A neutral picture, with no number plate: each location shows the first photo of its own vehicles of the class instead, and this one until they have photos. The whole vehicle stays in view: a cut-out on a plain background works best.",
+    "A neutral picture, with no number plate, the class's picture at every location. The whole vehicle stays in view: a cut-out on a plain background works best.",
   isActive:
     "Off hides the class from every location's options page and search card.",
 };

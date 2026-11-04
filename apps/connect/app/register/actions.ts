@@ -27,6 +27,7 @@ function fieldsOf(formData: FormData, email: string) {
     Object.fromEntries(formData),
     formData.getAll(VENDOR_SERVICES_FIELD),
     formData.getAll(VENDOR_LOCATIONS_FIELD),
+    { applicant: true },
   );
 }
 

@@ -47,14 +47,13 @@ export type MediaPickerProps = {
 export type MediaPicker = ComponentType<MediaPickerProps>;
 
 /**
- * A vehicle's photos, in the order the customer swipes through them: each
- * with its caption, viewed full screen, moved left or right, or taken
- * out. The first is the vehicle's cover. "Add photos", the dashed slot
- * after the last, stores each file as soon as it is chosen, several at
- * once, each shown in its place until it lands; files past the limit are
- * left out, and the list says so. In the admin, "Choose from Media" adds
- * files already stored. The form keeps them once it is saved, and waits
- * for the uploads.
+ * A vehicle's photos, in order: each with its caption, viewed full
+ * screen, moved left or right, or taken out. The first is the vehicle's
+ * cover. "Add photos", the dashed slot after the last, stores each file
+ * as soon as it is chosen, several at once, each shown in its place until
+ * it lands; files past the limit are left out, and the list says so. In
+ * the admin, "Choose from Media" adds files already stored. The form
+ * keeps them once it is saved, and waits for the uploads.
  */
 export function PhotoList({
   name,

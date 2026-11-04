@@ -5,6 +5,7 @@ import {
   isVendorStatus,
   VENDOR_ROLE_LABELS,
   VENDOR_SERVICE_LABELS,
+  vendorAddsOf,
   vendorServicesOf,
 } from "@repo/db";
 import {
@@ -129,11 +130,10 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   const owner = members.find((m) => m.role === "owner") ?? null;
   const reviews = permissions.includes("vendors.review");
   const takesFleet = status === "active" || status === "suspended";
+  // It adds only what it ticked: an agent-only vendor adds nothing.
+  const adds = vendorAddsOf(vendor);
   // Guides show for ours and a vendor offering them, or one that has some.
-  const showsGuides =
-    vendor.isOurs ||
-    vendor.services.includes("tour-guide") ||
-    guides.length > 0;
+  const showsGuides = adds.guides || guides.length > 0;
   // What suspending takes it off, read for SUPER while it can be suspended.
   const held =
     reviews && status === "active"
@@ -168,7 +168,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                 inset
                 meta={vehicles.length > 0 ? vehicles.length : undefined}
                 action={
-                  takesFleet ? (
+                  takesFleet && adds.vehicles ? (
                     <Button asChild variant="secondary" size="sm">
                       <Link href={newVendorVehicleHref(scope.slug, id)}>
                         <PlusIcon />
@@ -192,7 +192,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                 inset
                 meta={drivers.length > 0 ? drivers.length : undefined}
                 action={
-                  takesFleet ? (
+                  takesFleet && adds.drivers ? (
                     <Button asChild variant="secondary" size="sm">
                       <Link href={newVendorDriverHref(scope.slug, id)}>
                         <PlusIcon />
@@ -217,7 +217,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                   inset
                   meta={guides.length > 0 ? guides.length : undefined}
                   action={
-                    takesFleet ? (
+                    takesFleet && adds.guides ? (
                       <Button asChild variant="secondary" size="sm">
                         <Link href={newVendorGuideHref(scope.slug, id)}>
                           <PlusIcon />

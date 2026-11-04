@@ -224,6 +224,7 @@ function createDriverIn(
       tx,
       fields.vendorId,
       fields.locationId,
+      { kind: "driver" },
     );
     if (!vendor.ok) return vendor;
     const { vehicleClassIds, ...rest } = fields;
@@ -351,6 +352,7 @@ function updateDriverIn(
         tx,
         after.vendorId ?? current.vendorId,
         after.locationId ?? current.locationId,
+        { kind: "driver" },
       );
       if (!vendor.ok) return vendor;
       if (after.vendorId !== undefined) vendorName = vendor.name;

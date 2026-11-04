@@ -1,7 +1,11 @@
 "use client";
 
 import { BOOKING_RULES, type BBox } from "@repo/db";
-import { DateField, DateTimeField } from "@repo/ui/date-field";
+import {
+  DateField,
+  DateTimeField,
+  type OddHoursMark,
+} from "@repo/ui/date-field";
 import {
   ArrowRightIcon,
   BedIcon,
@@ -23,6 +27,17 @@ import {
 
 const MAX_COUNT = 99;
 const { timeZone } = BOOKING_RULES;
+
+/**
+ * The night hours the pickers tag "Odd hours": a fixed guide, the same in
+ * every location, since a search does not know its location's window yet.
+ * The price, read from the location's rules, is what holds.
+ */
+const ODD_HOURS: OddHoursMark = {
+  from: 23 * 60,
+  to: 7 * 60,
+  note: "Odd hours are usually 23:00–07:00. Times can differ by location, and your price shows any surcharge before you book.",
+};
 
 /**
  * The right input for a field. Each search box styles it its own way, but
@@ -97,6 +112,7 @@ export function FieldInput({
         }}
         min={min}
         timeZone={timeZone}
+        oddHours={ODD_HOURS}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         className={className}

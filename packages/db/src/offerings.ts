@@ -14,7 +14,7 @@ import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
-import { classCoverOf, shownModel, type ShownModel } from "./models-shown";
+import { shownModel, type ShownModel } from "./models-shown";
 import { modelsShownAt } from "./vehicle-models";
 
 export type { LocationVehicleClass };
@@ -48,16 +48,12 @@ type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
   ReturnType<typeof withModelsAt>
 >;
 
-/** An offering with its class's picture at the location, as `classCoverOf` finds it. */
-export type PicturedOffering = Offering & { coverUrl: string | null };
-
-/** An offering on sale, pictured, its class with the models the location's customers see. */
+/** An offering on sale, its class with the models of the location's vehicles in service. */
 export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
   vehicleClass: VehicleClass & { models: ShownModel[] };
-  coverUrl: string | null;
 };
 
-/** Offerings as they are read, named, pictured and in the class's order. */
+/** Offerings as they are read, their models named, in the class's order. */
 function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
   return rows
     .map(
@@ -67,7 +63,6 @@ function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
       }) => ({
         ...offering,
         vehicleClass: { ...vehicleClass, models: modelRows.map(shownModel) },
-        coverUrl: classCoverOf(modelRows, vehicleClass.imageUrl),
       }),
     )
     .sort(byClassOrder);
@@ -97,26 +92,6 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
     ...withClass,
   });
   return rows.sort(byClassOrder);
-}
-
-/**
- * Every offering of the location, as `listOfferings`, each with its
- * class's picture there: the Vehicle classes tab shows what customers see.
- */
-export async function listPicturedOfferings(
-  locationId: string,
-): Promise<PicturedOffering[]> {
-  const rows = await db.locationVehicleClass.findMany({
-    where: { locationId },
-    ...withModelsAt({ id: locationId }),
-  });
-  return rows
-    .map(({ vehicleClass: { models, ...vehicleClass }, ...offering }) => ({
-      ...offering,
-      vehicleClass,
-      coverUrl: classCoverOf(models, vehicleClass.imageUrl),
-    }))
-    .sort(byClassOrder);
 }
 
 /**

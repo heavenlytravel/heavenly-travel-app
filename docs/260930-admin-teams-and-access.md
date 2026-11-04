@@ -349,9 +349,15 @@ differ.
 
 ### Step 10: Amend a booking (PR F)
 
-- Permission `bookings.manage`. "Amend" on an item card, while the item is received or
-  confirmed, opens the item in the manual booking's trip and details form, filled in.
-  The category cannot change; the class can.
+- Permission `bookings.manage`. "Amend" on an item card, until the item is completed or
+  cancelled, opens the item in the manual booking's trip and details form, filled in.
+  The category may change too (2026-11-04). Amending a trip asked of vendors, or
+  assigned, lets them go: an assigned trip asks first, then goes back to To assign.
+- "Add trip" on the booking (2026-11-04), until it is cancelled or holds the most trips:
+  the same form, blank, priced as New booking prices. The trip is confirmed at once
+  (received while the booking waits for Reservation), the total follows, and the
+  booking keeps its invoice or agent line. Logged as `booking.item.added`, with the
+  trip's fields and price, and as `booking.item.priced` with an agreed price.
 - Saving prices the trip again through `prepareTripItem` and replaces the item's trip
   details, dates, district and receipt in one transaction. An override is cleared by
   an amend, because the quoted price changed; the form offers to set a new one.

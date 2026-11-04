@@ -117,8 +117,9 @@ together, one vehicle chosen once, confirmed once.
   online, or it is at the same time as another trip or during a hire. So do a trip we
   quote by email, a driver's night away, and a price changed since the trip was added.
 - **"Your vehicle":** the class pictured at the vehicle cards' size, its blurb,
-  its models as on the vehicle cards ("Honda City, Nissan Almeera or Toyota Vios, or
-  similar", with their photos), passengers and "Change" (to the vehicle page). No model
+  passengers and "Change" (to the vehicle page). The models are not named (since
+  2026-11-04: they were "Honda City, Nissan Almeera or Toyota Vios, or similar", with
+  their photos). No model
   is chosen: any of them is sent, whichever is free on the day (see Future work).
 - **"Your details":** name, phone, email, the flights when they apply, the note for the
   driver, then the page's one button, "Confirm booking · RM 950", with free cancellation
@@ -316,12 +317,13 @@ PR brings main the real flow and this plan, never the example.
     long a quote stays good, and whether route lookups should be cached by place pair
     across customers.
 - **Choosing a model** (hidden on 2026-10-27, user's call). The website books any model
-  of the class, whichever is free on the day, and shows the models as "or similar".
+  of the class, whichever is free on the day, and no longer names the models (2026-11-04).
   Everything under it stays: the schema, the model charge in pricing, `itemN.model` in
   the booking action and the console's choice. To bring it back, restore from git what
   the hiding removed: `ModelChoice.tsx` (the confirm page's panel), `PhotoCarousel.tsx`,
   `bookingModelChoices` in `packages/db/src/trip-plan.ts` with its tests, the plan's
-  `modelId`, and the quote's `modelChoiceSen`, `modelChoicePercent` and `modelIds`.
+  `modelId`, and the quote's `modelChoiceSen`, `modelChoicePercent` and `modelIds`. Its
+  tiles showed the vehicles' photos, which the website no longer reads (2026-11-04).
 - **A trip we quote by email.** Book the priced trips and send an unpriced one to the
   team to quote. Needs an item without a price (`BookingItem.priceTotalSen` is
   required today) and console work to price it later.

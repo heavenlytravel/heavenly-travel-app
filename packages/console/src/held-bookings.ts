@@ -4,7 +4,7 @@ import type { HeldBooking } from "@repo/db/server";
 /**
  * What suspending a vendor, or taking a vehicle or a driver out of
  * service, takes it off, said before it is done: "Pulau Coach has 2
- * accepted bookings: HTI-1308 Fri, 6 Nov 2026, 8:00 AM and …". Those
+ * accepted bookings: HTI-1308 Fri, 6 Nov 2026, 08:00 and …". Those
  * trips go back to To assign. Browser-safe. See
  * docs/261028-fulfilment-vendors-and-connect.md, "Vendors".
  */

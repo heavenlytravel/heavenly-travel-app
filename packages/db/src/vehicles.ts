@@ -210,6 +210,7 @@ export async function createVehicle(
         tx,
         fields.vendorId,
         fields.locationId,
+        { kind: "vehicle", vehicleClassId: fields.vehicleClassId },
       );
       if (!vendor.ok) return vendor;
       const gone = await deletedMediaRefusal(
@@ -320,11 +321,19 @@ export async function updateVehicle(
         : null;
       if (after.locationId && !locationName) return NO_LOCATION;
       let vendorName: string | null = null;
-      if (after.vendorId !== undefined || after.locationId !== undefined) {
+      if (
+        after.vendorId !== undefined ||
+        after.locationId !== undefined ||
+        after.vehicleClassId !== undefined
+      ) {
         const vendor = await checkVendorServes(
           tx,
           after.vendorId ?? current.vendorId,
           after.locationId ?? current.locationId,
+          {
+            kind: "vehicle",
+            vehicleClassId: after.vehicleClassId ?? current.vehicleClassId,
+          },
         );
         if (!vendor.ok) return vendor;
         if (after.vendorId !== undefined) vendorName = vendor.name;
@@ -387,9 +396,8 @@ export async function updateVehicle(
  * What deleting the vehicle takes as it stands (`vehicleDeleteImpact`),
  * read as the customer site reads its class at the vehicle's location:
  * the vehicles in service there, the models they make choosable where the
- * location charges for a choice, and the class's picture, the first photo
- * of the first of them with one (`classCoverOf`). Null for a vehicle gone.
- * `client` is the delete's transaction when it checks.
+ * location charges for a choice. Null for a vehicle gone. `client` is the
+ * delete's transaction when it checks.
  */
 export async function vehicleDeleteImpactOf(
   id: string,
@@ -410,9 +418,7 @@ export async function vehicleDeleteImpactOf(
           brand: true,
           name: true,
           vehicleClassId: true,
-          vehicleClass: {
-            select: { name: true, isActive: true, imageUrl: true },
-          },
+          vehicleClass: { select: { name: true, isActive: true } },
         },
       },
     },
@@ -446,12 +452,7 @@ export async function vehicleDeleteImpactOf(
         vehicleModel: { vehicleClassId: vehicleModel.vehicleClassId },
         vendor: { isOurs: true },
       },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        vehicleModelId: true,
-        _count: { select: { photos: true } },
-      },
+      select: { id: true, vehicleModelId: true },
     }),
   ]);
   // What the vehicle shows customers: ours, in service, of a class on sale
@@ -471,15 +472,6 @@ export async function vehicleDeleteImpactOf(
       (other) =>
         other.id !== id && other.vehicleModelId === vehicle.vehicleModelId,
     );
-  const withPhotos = shown.filter((other) => other._count.photos > 0);
-  const cover =
-    shows && withPhotos[0]?.id === id
-      ? withPhotos.length > 1
-        ? "photo"
-        : vehicleModel.vehicleClass.imageUrl
-          ? "catalogue"
-          : "none"
-      : null;
   return vehicleDeleteImpact({
     plate: vehicle.plate,
     photos: vehicle._count.photos,
@@ -487,7 +479,6 @@ export async function vehicleDeleteImpactOf(
     className: vehicleModel.vehicleClass.name,
     locationName: vehicle.location.name,
     choice: lost ? { lost, endsChoice: models.size === 2 } : null,
-    cover,
   });
 }
 

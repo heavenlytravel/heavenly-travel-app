@@ -19,7 +19,7 @@ import {
 const at = (iso: string) => new Date(iso);
 const HOUR = 60 * 60 * 1000;
 
-/** A one-way job: 8:00 local is 00:00Z. */
+/** A one-way job: 08:00 local is 00:00Z. */
 function job(over: Partial<Job> = {}): Job {
   return {
     reference: "HT-AAAAAA",

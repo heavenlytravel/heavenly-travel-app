@@ -29,8 +29,8 @@ const LISTS: Record<FleetKind, (scope: ScopeSlug) => string> = {
 /**
  * What a vehicle or driver change drops from the console's cache: every
  * console page, whose lists, counts and menu read the fleet. A vehicle
- * can add a model to its class and changes the models a location's
- * customers see, so the customer site's class cards refresh too.
+ * can add a model to its class and changes the models a location
+ * sells, so the customer site's classes refresh too.
  */
 export function revalidateFleet(kind: FleetKind) {
   revalidateLocation();

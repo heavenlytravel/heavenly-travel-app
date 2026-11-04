@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { formatClock } from "./booking-rules";
 import {
   checkOddHours,
   closedRing,
@@ -15,7 +16,6 @@ import {
   parseZoneFields,
   reachableZones,
   reshapedFromDistrict,
-  timeOfMinute,
   tripReachLabel,
   weekendLabel,
   weekendOf,
@@ -430,8 +430,8 @@ describe("odd hours", () => {
     assert.equal(minuteOfDay("7:05"), 425);
     assert.equal(minuteOfDay("24:00"), null);
     assert.equal(minuteOfDay("noon"), null);
-    assert.equal(timeOfMinute(1380), "23:00");
-    assert.equal(timeOfMinute(425), "07:05");
+    assert.equal(formatClock(1380), "23:00");
+    assert.equal(formatClock(425), "07:05");
   });
 
   it("spans midnight when the window ends before it starts", () => {

@@ -1,15 +1,17 @@
 "use client";
 
 import { formatMyr, guideOfferIssue } from "@repo/db";
+import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
-import { ALL, type ScopeSlug } from "../../../../../../_lib/routes";
+import type { ActionState } from "@repo/console/action-state";
+import { ALL, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
-import { BookingSummary } from "../../../_components/BookingSummary";
-import { DetailsStep } from "../../../_components/DetailsStep";
-import { HiddenFields } from "../../../_components/HiddenFields";
-import { TripStep, VehicleStep } from "../../../_components/ItemSteps";
+import { BookingSummary } from "./BookingSummary";
+import { DetailsStep } from "./DetailsStep";
+import { HiddenFields } from "./HiddenFields";
+import { TripStep, VehicleStep } from "./ItemSteps";
 import {
   agreedPriceIssue,
   bookingTotalSen,
@@ -24,33 +26,45 @@ import {
   type ItemDetails,
   type TripDraft,
   type VehicleDraft,
-} from "../../../_lib/trip-form";
-import { amendItemAction } from "../../actions";
+} from "../_lib/trip-form";
 
-type AmendStep = "trip" | "vehicle" | "details";
+type TripItemStep = "trip" | "vehicle" | "details";
 
 /**
- * One trip of a booking in the manual booking's steps, filled in from
- * what is stored and priced again: the trip, the vehicle and its details,
- * each folded to a line with "Edit", the category fixed. Saving replaces
- * the item's trip, class and details on the server and sends the customer
- * a "Booking updated" email, then goes back to the booking where it was
- * opened.
+ * One trip of a booking in the manual booking's steps: the trip, the
+ * vehicle and its details, each folded to a line with "Edit". Amending,
+ * it starts from what is stored, priced again, and saving replaces the
+ * item's trip, class and details on the server; adding, it starts blank
+ * and saving adds the trip to the booking. Either way the customer gets a
+ * "Booking updated" email and the admin goes back to the booking where it
+ * was opened. With `ask`, saving asks first: a trip with a vendor
+ * assigned, let go by the amend.
  */
-export function AmendItemForm({
-  itemId,
+export function TripItemForm({
+  action,
+  target,
+  done,
+  ask,
   bookingHref,
   scope,
   draft: initial,
+  startOpen = false,
   hasGoogle,
   canPrice,
   priceNote,
 }: {
-  itemId: string;
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /** The record saved: the item amended, or the booking a trip is added to. */
+  target: { name: "itemId" | "bookingId"; value: string };
+  /** The toast once saved. */
+  done: string;
+  ask?: { title: string; description: string; action: string };
   /** The booking in the scope the form was opened in. */
   bookingHref: string;
   scope: ScopeSlug;
   draft: ItemDraft;
+  /** A blank trip opens on its first step. */
+  startOpen?: boolean;
   hasGoogle: boolean;
   canPrice: boolean;
   priceNote?: string;
@@ -58,9 +72,13 @@ export function AmendItemForm({
   const [trip, setTrip] = useState<TripDraft>(initial.trip);
   const [vehicle, setVehicle] = useState<VehicleDraft>(initial.vehicle);
   const [details, setDetails] = useState<ItemDetails>(initial.details);
-  const [open, setOpen] = useState<AmendStep | null>(null);
-  const { pending, error, formProps } = useActionForm(amendItemAction, {
-    done: "Trip amended. The customer gets a “Booking updated” email.",
+  const [open, setOpen] = useState<TripItemStep | null>(
+    startOpen ? "trip" : null,
+  );
+  const [dialog, confirm] = useConfirm();
+  const { pending, error, formProps } = useActionForm(action, {
+    ask: ask ? () => confirm(ask) : undefined,
+    done,
   });
 
   const trips = [trip];
@@ -92,7 +110,7 @@ export function AmendItemForm({
       }}
       className="@container"
     >
-      <input type="hidden" name="itemId" value={itemId} />
+      <input type="hidden" name={target.name} value={target.value} />
       <input type="hidden" name={SCOPE_FIELD} value={scope ?? ALL} />
       <HiddenFields fields={tripFields(1, trip, canPrice)} />
       <HiddenFields fields={vehicleFields(chosen, vehicle)} />
@@ -111,7 +129,6 @@ export function AmendItemForm({
             onOpen={() => setOpen("trip")}
             onNext={() => setOpen("vehicle")}
             hasGoogle={hasGoogle}
-            categoryLocked
           />
           <VehicleStep
             number={2}
@@ -187,6 +204,7 @@ export function AmendItemForm({
           />
         </aside>
       </div>
+      {dialog}
     </form>
   );
 }

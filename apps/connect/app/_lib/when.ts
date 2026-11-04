@@ -1,10 +1,7 @@
-import { formatLocalTime } from "@repo/db";
-
 /**
  * How Connect says when: the day as a driver says it ("Today",
- * "Tomorrow", "Fri, 31 Oct"), the time split for a large clock, and how
- * long until. Always in Malaysia, wherever the phone or the server is.
- * Browser-safe.
+ * "Tomorrow", "Fri, 31 Oct") and how long until. Always in Malaysia,
+ * wherever the phone or the server is. Browser-safe.
  */
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -47,12 +44,6 @@ export function dayLabel(instant: Date, now: Date) {
 /** "Wednesday, 29 October": the day at the top of the screen. */
 export function longDayLabel(instant: Date) {
   return longDay.format(instant);
-}
-
-/** "9:30 AM" as its clock and its half of the day, for a large time. */
-export function clockOf(instant: Date) {
-  const [clock = "", period = ""] = formatLocalTime(instant).split(" ");
-  return { clock, period };
 }
 
 /** "Good morning" by the hour in Malaysia. */

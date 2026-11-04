@@ -1,10 +1,10 @@
 import { SURFACE } from "@repo/console/Card";
+import { formatLocalTime } from "@repo/db";
 import { SectionHeader } from "@repo/console/SectionHeader";
 import { Badge } from "@repo/ui/badge";
 import { cx } from "@repo/ui/cx";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import type { Tone } from "../_lib/trip-state";
-import { clockOf } from "../_lib/when";
 
 /**
  * Connect's own small parts, on the console's surfaces and chips: the
@@ -160,29 +160,12 @@ export function Avatar({
 
 /**
  * A time to read from arm's length, as the console's figures are set:
- * "9:30" large in the serif, "AM" small beside it.
+ * "09:30" large in the serif.
  */
-export function BigTime({
-  at,
-  className,
-  periodClassName,
-}: {
-  at: Date;
-  className?: string;
-  periodClassName?: string;
-}) {
-  const { clock, period } = clockOf(at);
+export function BigTime({ at, className }: { at: Date; className?: string }) {
   return (
     <span className={cx("font-serif leading-none tabular-nums", className)}>
-      {clock}
-      <span
-        className={cx(
-          "ml-1 align-baseline font-sans text-[0.38em] font-bold",
-          periodClassName,
-        )}
-      >
-        {period}
-      </span>
+      {formatLocalTime(at)}
     </span>
   );
 }

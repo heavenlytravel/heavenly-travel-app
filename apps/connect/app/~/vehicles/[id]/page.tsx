@@ -1,3 +1,4 @@
+import { vendorAddsOf } from "@repo/db";
 import { notFound } from "next/navigation";
 import {
   getVehicle,
@@ -28,11 +29,13 @@ export default async function VehiclePage({
   const isNew = id === "new";
   const [vehicle, choices, suggestions, held] = await Promise.all([
     isNew ? null : getVehicle(id),
-    vendorFleetChoices(member.vendor.id),
+    vendorFleetChoices(member.vendor.id, { forVehicles: true }),
     listModelSuggestions(),
     isNew ? [] : heldBookingsOf({ vehicleId: id }, "reference"),
   ]);
   if (!isNew && vehicle?.vendorId !== member.vendor.id) notFound();
+  // A new one only of what it offers, by the services it ticked.
+  if (isNew && !vendorAddsOf(member.vendor).vehicles) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (
@@ -62,7 +65,6 @@ export default async function VehiclePage({
           locations={choices.locations}
           action={saveVehicleAction}
           uploadPath={UPLOAD_PATH}
-          photosNote="Optional, for our team: they never show on the website. The first is its cover."
           cancelHref="/~/vehicles"
           held={held}
         />

@@ -2,6 +2,7 @@ import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
 import { bookingStatusOf, isLive, tipsDriver } from "./booking-status";
 import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
+import { formatLocalTime } from "./booking-rules";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
@@ -227,7 +228,7 @@ export type Candidate = {
    * per trip, so a clash on trip 3 greys it on trip 3 alone.
    */
   trips: Record<string, TripFit>;
-  /** Its other jobs on the trips' days: "8:00 HT-7K3QZM Airport → Datai, ends about 8:45". */
+  /** Its other jobs on the trips' days: "08:00 HT-7K3QZM Airport → Datai, until 08:45". */
   day: string[];
 };
 
@@ -236,19 +237,13 @@ function daysOf(jobs: readonly Job[]) {
   return new Set(jobs.map((job) => todayInMalaysia(job.startsAt)));
 }
 
-/** "8:00 HT-7K3QZM Airport → Datai, ends about 8:45". */
+/** "08:00 HT-7K3QZM Airport → Datai, until 08:45". */
 function dayLine(job: Job) {
-  const time = (d: Date) =>
-    d.toLocaleTimeString("en-MY", {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "Asia/Kuala_Lumpur",
-    });
   const where = job.dropoff
     ? `${job.pickup.label} → ${job.dropoff.label}`
     : job.pickup.label;
-  const ends = job.endsAt ? `until ${time(job.endsAt)}` : "one-way";
-  return `${time(job.startsAt)} ${job.reference} ${where}, ${ends}`;
+  const ends = job.endsAt ? `until ${formatLocalTime(job.endsAt)}` : "one-way";
+  return `${formatLocalTime(job.startsAt)} ${job.reference} ${where}, ${ends}`;
 }
 
 /** A document expired on any of the days: "Road tax expired". */

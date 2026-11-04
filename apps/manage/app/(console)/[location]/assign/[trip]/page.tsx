@@ -12,9 +12,12 @@ import {
   PART_ROLE_LABELS,
   PART_ROLES,
   rolesToAsk,
+  suppliesIt,
   tripDetailRows,
   tripViewOfItem,
   untilPickup,
+  type PartRole,
+  type VendorSupply,
 } from "@repo/db";
 import {
   bookingIdOfTrip,
@@ -105,6 +108,16 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
       (v.isOurs ||
         (item.locationId !== null && v.locationIds.includes(item.locationId))),
   );
+  // Each role is offered to the vendors that ticked it: an agent-only
+  // vendor never shows here.
+  const supplyOf: Record<PartRole, VendorSupply> = {
+    vehicle: {
+      kind: "vehicle",
+      category: item.tripDetails?.vehicleClassCategory ?? "",
+    },
+    driver: { kind: "driver" },
+    guide: { kind: "guide" },
+  };
 
   const live = trips.filter((t) => isLive(t) && t.status !== "completed");
   const open = assignTripsOf(live.map((t) => ({ ...t, roles: rolesToAsk(t) })));
@@ -204,14 +217,9 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                         (t) => t.id !== trip.id && t.roles.includes(role),
                       )}
                       candidates={candidates}
-                      vendors={
-                        role === "guide"
-                          ? serving.filter(
-                              (v) =>
-                                v.isOurs || v.services.includes("tour-guide"),
-                            )
-                          : serving
-                      }
+                      vendors={serving.filter((v) =>
+                        suppliesIt(v, supplyOf[role]),
+                      )}
                     />
                   </Card>
                 );

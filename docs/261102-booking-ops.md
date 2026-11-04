@@ -158,12 +158,29 @@ Proposal, agreed in principle by the user:
   `pnpm --filter @repo/db db:set-booking-numbers -- --invoice-last 1307` (and `:prod`)
   sets the last invoice number given by hand, so ours carry on after it. With no option it only says
   where the counters are. It refuses a number below one a booking holds already.
-- **Later** (user, 2026-11-04): an agent's bookings share one invoice per trip month,
-  each a line of it (HT1307-01, HT1307-02), opened by the month's first booking in
-  whatever order (Wahdah's December HT1271 came before October's HT1290). Agents book in
-  Connect as a vendor service "Agent", never offered work on Assign. The invoice becomes
-  its own record with a status and due date, and payments their own: one paying several
-  invoices, or several paying one.
+- **Agents and their invoices** (built 2026-11-04, `feat/agents-invoices-24h`): an
+  agent is a vendor with the service "Agent" (`VENDOR_SERVICES`), added by staff, never
+  offered work on Assign. New booking picks the agent; the guest stays the customer.
+  The invoice is its own record (`Invoice`): a customer of ours' booking has one of its
+  own (HTI-1307, its Booking ID too), an agent's bookings share the agent's for the
+  period their first trip is in, each a line of it (HTI-1295-01, HTI-1295-02), opened by
+  the period's first booking in whatever order (Wahdah's December HT1271 came before
+  October's HT1290). A period is a month, or half of one for an agent invoiced twice a
+  month (Embassy Alliance: 1st to 15th, 16th to the end), set on the vendor. A trip from
+  30 October to 3 November joins October's. A booking is given its line when first
+  confirmed, and keeps it, cancelled or amended. Staff type an agent's number when
+  Finance opened the period's invoice already. `db:set-agents` added the first seven
+  agents, linked the bookings entered as "AGENT - Customer", reset the counter to
+  HT1306 and gave November's bookings their lines on Finance's opened invoices.
+- **Payment status** (2026-11-04): the invoice's `paymentStatus`, Pending, Partially
+  paid, Fully paid or Pay later, switched freely on the booking by Reservation, Sales and
+  Finance (`bookings.payment`), with no rules yet; an agent's switches for every booking
+  on it. The bookings table shows it. A trip added or amended keeps the booking's
+  invoice and its status: what a change to a booking paid in full owes, a new invoice
+  or the balance, waits for Finance's payment work.
+- **Later**: agents booking for themselves in Connect; payments as their own records,
+  one paying several invoices or several paying one, with due dates and the rules
+  Finance works by, alongside the payment gateway.
 - Other formats considered: `HT1308` / `HTQ0001` (exactly as the old sheet), and
   earlier `HTQ2600042`, `HT-Q-2611-0042` (monthly), `Q26-00042` / `INV26-00042`.
 

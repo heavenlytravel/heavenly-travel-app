@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  checkModelName,
-  modelName,
-  modelsLine,
-  sameName,
-} from "./vehicle-model-input";
+import { checkModelName, modelName, sameName } from "./vehicle-model-input";
 
 describe("the words around a model", () => {
   it("names a model by its brand and name", () => {
@@ -24,15 +19,6 @@ describe("the words around a model", () => {
     assert.equal(sameName(" toyota ", "Toyota"), true);
     assert.equal(sameName("Land  Cruiser", "land cruiser"), true);
     assert.equal(sameName("Vios", "City"), false);
-  });
-
-  it("lists a class's models as a card names them", () => {
-    assert.equal(modelsLine([]), "");
-    assert.equal(modelsLine(["Toyota Vios"]), "Toyota Vios");
-    assert.equal(
-      modelsLine(["Toyota Vellfire", "Toyota Alphard", "Lexus LM"]),
-      "Toyota Vellfire, Toyota Alphard or Lexus LM",
-    );
   });
 });
 

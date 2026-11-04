@@ -1,3 +1,4 @@
+import { isPaymentStatus, PAYMENT_STATUS_LABELS } from "./booking-number";
 import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { LOCATION_FIELD_LABELS } from "./location-input";
@@ -98,6 +99,8 @@ const ACTIONS = {
   "booking.cancelled": { entityType: "booking", customerVisible: true },
   /** The `AMENDED_FIELDS` that changed; the driver notes and the reason are not in it. */
   "booking.item.amended": { entityType: "booking", customerVisible: true },
+  /** A trip staff added to the booking: its position, status and `AMENDED_FIELDS`, priced. */
+  "booking.item.added": { entityType: "booking", customerVisible: true },
   /** An assigned trip that lost its vehicle or driver, back to confirmed. */
   "booking.item.reopened": { entityType: "booking", customerVisible: false },
   /**
@@ -132,6 +135,20 @@ const ACTIONS = {
   "booking.note.added": { entityType: "booking", customerVisible: false },
   /** The contact fields changed, before and after: name, phone, email. */
   "booking.contact.updated": {
+    entityType: "booking",
+    customerVisible: false,
+  },
+  /**
+   * Staff gave a booking from before invoice numbers its invoice: `invoice`,
+   * its number as read ("HTI-1295-03"), and `oldInvoiceNumber` when typed.
+   */
+  "booking.invoiced": { entityType: "booking", customerVisible: false },
+  /**
+   * Staff changed where the invoice's payment stands: `paymentStatus`
+   * before and after, and `invoice`, its number, in `after`; an agent's
+   * invoice is every booking on it's.
+   */
+  "booking.payment.updated": {
     entityType: "booking",
     customerVisible: false,
   },
@@ -876,6 +893,22 @@ export function describeActivity(entry: DescribableActivity): string {
         ? `Changed the customer's ${changes.join(", ")}`
         : "Changed the customer's details";
     }
+    case "booking.invoiced": {
+      const invoice = field(entry.after, "invoice");
+      return typeof invoice === "string"
+        ? `Gave the booking invoice ${invoice}`
+        : "Gave the booking its invoice";
+    }
+    case "booking.payment.updated": {
+      const status = field(entry.after, "paymentStatus");
+      const invoice = field(entry.after, "invoice");
+      const label = isPaymentStatus(status)
+        ? PAYMENT_STATUS_LABELS[status]
+        : "another status";
+      return typeof invoice === "string"
+        ? `Set invoice ${invoice} to ${label}`
+        : `Set the invoice to ${label}`;
+    }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;
     case "booking.item.assigned":
@@ -928,6 +961,13 @@ export function describeActivity(entry: DescribableActivity): string {
       return changed.length > 0
         ? `Changed ${andList(changed)} of ${name}`
         : `Amended ${name}`;
+    }
+    case "booking.item.added": {
+      const price = field(entry.after, "priceTotalSen");
+      const name = itemName(entry.after);
+      return typeof price === "number"
+        ? `Added ${name} at ${formatMyr(price)}`
+        : `Added ${name}`;
     }
     case "booking.cancelled":
       return "Cancelled the booking";

@@ -251,10 +251,10 @@ describe("clashesOf", () => {
 
 describe("hireEndOf", () => {
   it("says when a hire ends, and the next day past midnight", () => {
-    assert.equal(hireEndOf(typed("a", "2026-11-03", "09:00", 8)), "5:00 PM");
+    assert.equal(hireEndOf(typed("a", "2026-11-03", "09:00", 8)), "17:00");
     assert.equal(
       hireEndOf(typed("b", "2026-11-03", "20:00", 6)),
-      "2:00 AM the next day",
+      "02:00 the next day",
     );
   });
 

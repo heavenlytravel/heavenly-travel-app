@@ -659,8 +659,8 @@ function EntryCards({
 }
 
 /**
- * The classes the location sells in a product, each with its picture, its
- * models and their photos, seats, luggage and starting price there, and a
+ * The classes the location sells in a product, each with its picture,
+ * seats, luggage and starting price there, and a
  * link to its own page while that is public. `only` narrows them to one
  * class, on that class's page.
  */

@@ -123,11 +123,7 @@ export default async function JobPage({
             </Pill>
           </div>
           <div className="flex items-end gap-3">
-            <BigTime
-              at={job.startsAt}
-              className="text-6xl text-white"
-              periodClassName="text-azure-light"
-            />
+            <BigTime at={job.startsAt} className="text-6xl text-white" />
             {job.endsAt ? (
               <span className="pb-1.5 text-sm text-white/80">
                 until{" "}

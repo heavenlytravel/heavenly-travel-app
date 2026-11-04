@@ -560,6 +560,7 @@ function formatWhen(date: Date) {
   const time = date.toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
   });
   if (sameDay) return `today, ${time}`;
   return `${date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, ${time}`;

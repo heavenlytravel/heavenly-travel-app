@@ -1,3 +1,4 @@
+import { plural } from "./names";
 import { formatLocalDateTime } from "./booking-rules";
 import {
   isTripCategory,
@@ -180,6 +181,24 @@ export function tripDetailRows(details: {
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
   return rows;
+}
+
+/**
+ * What a trip adds to its vehicle, for a list: "Tour guide (English)",
+ * "2 child seats", the model chosen. Empty for none.
+ */
+export function tripAddOns(details: {
+  vehicleModelName?: string | null;
+  childSeats: number;
+  guideLanguage?: string | null;
+}): string[] {
+  return [
+    ...(details.guideLanguage ? [`Tour guide (${details.guideLanguage})`] : []),
+    ...(details.childSeats > 0
+      ? [plural(details.childSeats, "child seat")]
+      : []),
+    ...(details.vehicleModelName ? [details.vehicleModelName] : []),
+  ];
 }
 
 /** "2 km", or "0.78 km" to ten metres on receipts from before whole km. */

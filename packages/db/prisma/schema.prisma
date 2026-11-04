@@ -123,7 +123,13 @@ model Vendor {
   bankAccountNumber String    @default("")
   bankAccountName   String    @default("")
   /// What it supplies, VENDOR_SERVICES: asked of every kind at sign-up.
+  /// It adds and is offered only what it ticked; "agent" sells our trips
+  /// to its own customers and is never offered work.
   services          String[]  @default([])
+  /// An agent's invoice period, INVOICE_PERIODS: "month", one invoice a
+  /// month, or "half-month", one for the 1st to the 15th and one for the
+  /// rest. See src/booking-counter.ts.
+  invoicePeriod     String    @default("month")
   /// Why it was refused or suspended. Staff only.
   reviewNote        String?
   reviewedAt        DateTime?
@@ -134,12 +140,15 @@ model Vendor {
 
   /// The locations it serves; each of its vehicles, drivers and guides is
   /// based at one.
-  locations Location[]
-  members   VendorMember[]
-  vehicles  Vehicle[]
-  drivers   Driver[]
-  guides    Guide[]
-  offers    VendorOffer[]
+  locations     Location[]
+  members       VendorMember[]
+  vehicles      Vehicle[]
+  drivers       Driver[]
+  guides        Guide[]
+  offers        VendorOffer[]
+  /// As an agent: the bookings it brought, and its invoices.
+  agentBookings Booking[]
+  agentInvoices Invoice[]
 
   @@index([status])
 }
@@ -607,9 +616,8 @@ model VehicleClass {
   minPassengers Int
   maxPassengers Int
   luggage       String
-  /// Its neutral picture, a file on UploadThing (src/images.ts); null for
-  /// none. A location shows the first photo of its vehicles of the class in
-  /// its place, once one has a photo.
+  /// Its neutral picture, a file on UploadThing (src/images.ts), the same
+  /// at every location; null for none.
   imageUrl      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -629,9 +637,9 @@ model VehicleClass {
 /// A model of a class, the Toyota Alphard in MPV VIP: what a vehicle is,
 /// by brand and name, one catalogue for every location. The vehicle form
 /// adds one the first time a vehicle of it is entered, and suggests the
-/// ones there are. A location's customers see the models of its vehicles
-/// in service, in those vehicles' photos, and may choose one at the charge
-/// on the class's offering. See docs/261019-vehicles-and-drivers.md.
+/// ones there are. A location's class has the models of its vehicles in
+/// service, and a customer may choose one at the charge on the class's
+/// offering. See docs/261019-vehicles-and-drivers.md.
 model VehicleModel {
   id             String       @id @default(cuid())
   vehicleClassId String
@@ -651,8 +659,8 @@ model VehicleModel {
 }
 
 /// One of our vehicles, based at a location. The expiry dates of its documents
-/// are dates, null where one does not apply. Its photos are what its
-/// location's customers see of its model. Out of service, it keeps its
+/// are dates, null where one does not apply. Its photos are for our team;
+/// the website does not show them. Out of service, it keeps its
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())
@@ -824,15 +832,26 @@ model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
   reference     String    @unique
-  /// The numbers staff and Finance know it by, each one running count by
-  /// `BookingNumberCounter`, never started again: no year, since an
-  /// invoice is often made long before its trip. An invoice number,
-  /// HTI-1308, carrying on the old system's HT1307, when the booking is
-  /// first confirmed, or an old invoice's own, typed by staff. A quotation
-  /// number, HTQ-0001, for the quotations to come; none given yet. Null
-  /// until given. See src/booking-number.ts.
+  /// The quotation number, HTQ-0001, one running count by
+  /// `BookingNumberCounter`, for the quotations to come; none given yet.
+  /// See src/booking-number.ts.
   quoteNumber   Int?      @unique
-  invoiceNumber Int?      @unique
+  /// Its invoice, from when it is first confirmed: its own (HTI-1308), or
+  /// its agent's for the period its first trip is in, where it is a line
+  /// (HTI-1295-03). Null until given. See src/booking-counter.ts.
+  invoiceId     String?
+  invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
+  /// Its line on its agent's invoice, from 1; null on its own invoice.
+  invoiceLine   Int?
+  /// The agent it came through: a vendor offering "agent". Null for a
+  /// customer of ours.
+  agentId       String?
+  agent         Vendor?   @relation(fields: [agentId], references: [id])
+  /// Old: the invoice number before `invoiceId`, read by nothing now. Kept
+  /// one release, without its unique index, so the code still live while
+  /// the schema is pushed ahead of the merge goes on working; dropped by
+  /// the next schema change. db:set-agents numbers again from 1307.
+  invoiceNumber Int?
   /// The account the booking shows under; null for a guest.
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -863,11 +882,39 @@ model Booking {
   notes  BookingNote[]
   offers VendorOffer[]
 
+  @@unique([invoiceId, invoiceLine])
+  @@index([agentId, startsAt])
   @@index([userId, createdAt])
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])
   @@index([createdIp, createdAt])
   @@index([createdAt])
+}
+
+/// An invoice: one booking's own, or an agent's for a period, holding
+/// each of its bookings in the period as a line. Its number is one running
+/// count by `BookingNumberCounter`, never started again: no year, since an
+/// invoice is often made long before its trip. HTI-1308 carries on the old
+/// system's HT1307; an old invoice keeps its number, typed by staff. See
+/// src/booking-counter.ts and docs/261102-booking-ops.md.
+model Invoice {
+  id            String    @id @default(cuid())
+  number        Int       @unique
+  /// The agent and the first day of its period ("2026-11-01"), both null
+  /// on a booking's own invoice.
+  agentId       String?
+  agent         Vendor?   @relation(fields: [agentId], references: [id])
+  periodStart   DateTime? @db.Date
+  /// PAYMENT_STATUSES: "pending" | "partial" | "paid" | "pay-later". Set by
+  /// staff for now, freely; payments
+  /// as their own records come with Finance's work.
+  paymentStatus String    @default("pending")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bookings Booking[]
+
+  @@unique([agentId, periodStart])
 }
 
 /// The last booking number given, per kind ("quote" or "invoice"), one

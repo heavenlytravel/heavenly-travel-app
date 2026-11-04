@@ -14,14 +14,26 @@ const withProfiles = {
     driver: {
       include: {
         vendor: {
-          select: { id: true, name: true, isOurs: true, status: true },
+          select: {
+            id: true,
+            name: true,
+            isOurs: true,
+            status: true,
+            services: true,
+          },
         },
       },
     },
     vendorMembers: {
       include: {
         vendor: {
-          select: { id: true, name: true, isOurs: true, status: true },
+          select: {
+            id: true,
+            name: true,
+            isOurs: true,
+            status: true,
+            services: true,
+          },
         },
       },
     },
@@ -121,6 +133,8 @@ export type ConnectVendor = {
   name: string;
   isOurs: boolean;
   status: string;
+  /** What it ticked, `VENDOR_SERVICES`: what it may add (`suppliesIt`). */
+  services: string[];
 };
 
 export type ConnectAccess =

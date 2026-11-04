@@ -107,6 +107,17 @@ describe("describeActivity", () => {
     );
   });
 
+  it("reads an added trip with its price", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.item.added",
+        before: null,
+        after: { position: 3, status: "confirmed", priceTotalSen: 12000 },
+      }),
+      "Added item 3 at RM 120.00",
+    );
+  });
+
   it("spells a level with its team labels", () => {
     assert.equal(
       describeActivity({
@@ -365,6 +376,8 @@ describe("activityActionMeta", () => {
     "booking.trip.reported",
     "booking.contact.viewed",
     "booking.contact.updated",
+    "booking.invoiced",
+    "booking.payment.updated",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

@@ -69,6 +69,8 @@ export const SAME_VEHICLE_FIELD = "sameVehicle";
 
 /** A new booking's old invoice number, when the old system invoiced it already (HT1223); empty for the next. */
 export const OLD_INVOICE_FIELD = "oldInvoiceNumber";
+/** The agent the booking came through; empty for a customer of ours. */
+export const AGENT_FIELD = "agentId";
 
 export const CONTACT_FIELDS = {
   name: "name",
@@ -83,7 +85,7 @@ export type ClassQuoteView = ClassCharges & {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
-  /** Its picture at the location: a photo of a vehicle there, or the catalogue's; null for none. */
+  /** The catalogue's picture of it; null for none. */
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];
@@ -103,7 +105,7 @@ export type TripQuoteView =
       /** Whether the pick-up, or the drop-off, is an airport: where a flight helps the driver. */
       pickupAirport: boolean;
       dropoffAirport: boolean;
-      /** As people read it: "Sat, 3 Oct 2026, 9:30 AM". */
+      /** As people read it: "Sat, 3 Oct 2026, 09:30". */
       startsAt: string;
       /** Hourly: the hours the hire runs, the duration's from its zone plus the extra; null for one-way. */
       hours: number | null;
@@ -661,7 +663,7 @@ export function bookingTotalSen(
   );
 }
 
-/** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 2:30 PM". */
+/** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 14:30". */
 export function tripLine(draft: TripDraft): string {
   const { quote, trip } = draft;
   if (!quote) return tripIssue(trip) ?? "Not priced yet";

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DRIVER_DELETE_IMPACT } from "@repo/db";
+import { DRIVER_DELETE_IMPACT, vendorAddsOf } from "@repo/db";
 import { getDriver, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DeleteButton } from "@repo/console/DeleteButton";
@@ -27,6 +27,8 @@ export default async function DriverPage({
     isNew ? [] : heldBookingsOf({ driverId: id }, "reference"),
   ]);
   if (!isNew && driver?.vendorId !== member.vendor.id) notFound();
+  // A new one only of what it offers, by the services it ticked.
+  if (isNew && !vendorAddsOf(member.vendor).drivers) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

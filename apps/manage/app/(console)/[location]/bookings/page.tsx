@@ -121,7 +121,7 @@ export default async function BookingsPage({
             the rows of the one before. */}
         <Streamed
           key={`${narrowed}:${status ?? "all"}:${filter.page ?? 1}`}
-          fallback={<TableSkeleton bare columns={scope.slug ? 5 : 6} />}
+          fallback={<TableSkeleton bare columns={scope.slug ? 9 : 10} />}
         >
           {() => bookingsPage(scope.slug, filter, where)}
         </Streamed>

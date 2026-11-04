@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  INVOICE_PERIODS,
+  INVOICE_PERIOD_LABELS,
   VENDOR_FIELD_LABELS,
   VENDOR_KINDS,
   VENDOR_KIND_LABELS,
@@ -27,8 +29,8 @@ import { Card, CardTitle } from "./Card";
 /**
  * A vendor's fields, one copy for the admin's vendor form and Connect's
  * registration: company or individual, its name and registration, who
- * the team speaks to, what it offers, and the locations it serves, where
- * its vehicles and drivers are based. In Connect's registration
+ * the team speaks to, what it offers, how often an agent is invoiced, and
+ * the locations it serves, where its vehicles and drivers are based. In Connect's registration
  * (`applicant`) the person is asked for apart, as the account's owner,
  * so the contact's fields are left out, and only live locations are
  * offered. See docs/261030-sign-in-connect-onboarding-and-media.md,
@@ -151,7 +153,10 @@ export function VendorFieldsSection({
           </span>
         </CardTitle>
         <FieldGroup className="grid gap-2 sm:grid-cols-3">
-          {VENDOR_SERVICES.map((service) => (
+          {/* Agents are added by the team; they book through Connect later. */}
+          {VENDOR_SERVICES.filter(
+            (service) => !applicant || service !== "agent",
+          ).map((service) => (
             <label key={service} className="flex items-center gap-2 text-sm">
               <Checkbox
                 name={VENDOR_SERVICES_FIELD}
@@ -162,6 +167,28 @@ export function VendorFieldsSection({
             </label>
           ))}
         </FieldGroup>
+        {applicant ? null : (
+          <fieldset className="mt-5 grid gap-2">
+            <legend className="mb-1 inline-flex items-center gap-1.5 text-sm font-semibold text-ink">
+              {VENDOR_FIELD_LABELS.invoicePeriod}
+              <InfoTip text="For an agent: its bookings share one invoice for each period, by the day of their first trip." />
+            </legend>
+            <div className="flex flex-wrap gap-4">
+              {INVOICE_PERIODS.map((period) => (
+                <label key={period} className="flex items-center gap-2 text-sm">
+                  <Radio
+                    name="invoicePeriod"
+                    value={period}
+                    defaultChecked={
+                      (fields?.invoicePeriod ?? "month") === period
+                    }
+                  />
+                  {INVOICE_PERIOD_LABELS[period]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
       </Card>
 
       <Card>

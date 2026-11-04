@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { GUIDE_DELETE_IMPACT } from "@repo/db";
+import { GUIDE_DELETE_IMPACT, vendorAddsOf } from "@repo/db";
 import { getGuide, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DeleteButton } from "@repo/console/DeleteButton";
@@ -26,6 +26,8 @@ export default async function GuidePage({
     isNew ? [] : heldBookingsOf({ guideId: id }, "reference"),
   ]);
   if (!isNew && guide?.vendorId !== member.vendor.id) notFound();
+  // A new one only of what it offers, by the services it ticked.
+  if (isNew && !vendorAddsOf(member.vendor).guides) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

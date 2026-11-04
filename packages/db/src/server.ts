@@ -147,6 +147,7 @@ export {
   countPendingVendors,
   getVendor,
   listVendorOptions,
+  listAgents,
   createVendor,
   createVendorWithOwner,
   setVendorOwner,
@@ -184,7 +185,6 @@ export type {
 } from "./vendors";
 export {
   listOfferings,
-  listPicturedOfferings,
   listActiveOfferings,
   listActiveOfferingsAt,
   cheapestCellsAt,
@@ -197,7 +197,6 @@ export {
 export type {
   Offering,
   OfferingOnSale,
-  PicturedOffering,
   LocationVehicleClass,
   OfferingClassChoice,
 } from "./offerings";
@@ -353,13 +352,17 @@ export {
   cancelItem,
   overrideItemPrice,
   amendItem,
+  addItem,
+  isAmendable,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
   cancelTripAsCustomer,
   updateBookingContact,
   nextInvoiceNumber,
-  checkOldInvoiceNumber,
+  invoiceBooking,
+  setInvoicePayment,
 } from "./bookings";
+export { InvoiceRefusal } from "./booking-counter";
 export type {
   BookingFilter,
   BookingOrder,

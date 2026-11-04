@@ -28,14 +28,14 @@ for (const [kind, text] of [
     throw new Error(`--${kind}-last takes a whole number, not "${text}".`);
   }
   const last = Number(text);
-  const { _max } = await db.booking.aggregate({
-    _max: { invoiceNumber: true, quoteNumber: true },
-  });
   const held =
-    (kind === "invoice" ? _max.invoiceNumber : _max.quoteNumber) ?? 0;
+    (kind === "invoice"
+      ? (await db.invoice.aggregate({ _max: { number: true } }))._max.number
+      : (await db.booking.aggregate({ _max: { quoteNumber: true } }))._max
+          .quoteNumber) ?? 0;
   if (held > last) {
     throw new Error(
-      `${formatBookingNumber(kind, held)} is a booking's already, so the last ${kind} number given cannot be ${last}.`,
+      `${formatBookingNumber(kind, held)} is given already, so the last ${kind} number given cannot be ${last}.`,
     );
   }
   await db.bookingNumberCounter.upsert({

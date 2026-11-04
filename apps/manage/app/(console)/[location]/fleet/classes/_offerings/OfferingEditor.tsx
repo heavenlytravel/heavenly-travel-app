@@ -132,7 +132,7 @@ async function existingOffering(
           >
             <span className="inline-flex items-center gap-1.5">
               Vehicles
-              <InfoTip text="Customers here see the models of those in service, in their photos." />
+              <InfoTip text="The vehicles of this class based here." />
             </span>
           </CardTitle>
           <VehiclesTable

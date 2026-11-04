@@ -1,10 +1,10 @@
 "use server";
 
-import { parseBookingNumber, parseContact } from "@repo/db";
+import { parseContact, parseOldInvoiceNumber } from "@repo/db";
 import {
-  checkOldInvoiceNumber,
   createBooking,
   findUserByEmail,
+  InvoiceRefusal,
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
@@ -13,7 +13,11 @@ import {
   refusalOf,
 } from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../_lib/revalidate";
-import { CONTACT_FIELDS, OLD_INVOICE_FIELD } from "../_lib/trip-form";
+import {
+  AGENT_FIELD,
+  CONTACT_FIELDS,
+  OLD_INVOICE_FIELD,
+} from "../_lib/trip-form";
 import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
 
 /**
@@ -22,7 +26,8 @@ import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
  * customer is linked to an account when the email belongs to one, and an
  * agreed price is stored per trip with its reason. It takes the next
  * invoice number, or the old system's when one is typed: one already
- * given and on no other booking. No email goes out: the console's own
+ * given and on no other invoice. An agent's joins the agent's invoice for
+ * the period its first trip is in. No email goes out: the console's own
  * emails wait for their settings. The booking opens in the location the
  * form was opened in when a trip picks up there, else across every
  * location. Checks `bookings.create` again, because actions are reachable
@@ -42,32 +47,36 @@ export async function createManualBookingAction(
   });
   if (!contact.ok) return refusalOf(contact);
 
-  const typed = String(formData.get(OLD_INVOICE_FIELD) ?? "").trim();
-  let oldInvoiceNumber: number | undefined;
-  if (typed) {
-    const parsed = parseBookingNumber(typed);
-    if (!parsed || parsed.kind === "quote") {
-      return {
-        error: `"${typed}" is not an invoice number. Type it as HT1223, HTI-1223 or 1223.`,
-        field: OLD_INVOICE_FIELD,
-      };
-    }
-    const issue = await checkOldInvoiceNumber(parsed.number);
-    if (issue) return { error: issue, field: OLD_INVOICE_FIELD };
-    oldInvoiceNumber = parsed.number;
+  const oldInvoice = parseOldInvoiceNumber(
+    String(formData.get(OLD_INVOICE_FIELD) ?? ""),
+  );
+  if (!oldInvoice.ok) {
+    return { error: oldInvoice.error, field: OLD_INVOICE_FIELD };
   }
+  const agentId = String(formData.get(AGENT_FIELD) ?? "") || null;
 
   const prepared = await prepareFormItems(formData);
   if (!prepared.ok) return { error: prepared.error };
 
   const account = await findUserByEmail(contact.value.contactEmail);
-  const booking = await createBooking(actorOf(admin), {
-    userId: account?.id ?? null,
-    ...contact.value,
-    createdIp: null,
-    items: prepared.items,
-    oldInvoiceNumber,
-  });
+  let booking;
+  try {
+    booking = await createBooking(actorOf(admin), {
+      userId: account?.id ?? null,
+      ...contact.value,
+      createdIp: null,
+      items: prepared.items,
+      agentId,
+      oldInvoiceNumber: oldInvoice.number ?? undefined,
+    });
+  } catch (error) {
+    // The invoice asked for cannot be given: a number taken, or the
+    // agent's invoice for the period has another.
+    if (error instanceof InvoiceRefusal) {
+      return { error: error.message, field: OLD_INVOICE_FIELD };
+    }
+    throw error;
+  }
   revalidateLocation();
   return { href: savedBookingHref(formData, booking) };
 }

@@ -143,7 +143,7 @@ const localClock = new Intl.DateTimeFormat("en-GB", {
   timeZone: BOOKING_RULES.timeZone,
   hour: "2-digit",
   minute: "2-digit",
-  hour12: false,
+  hourCycle: "h23",
 });
 
 /** The minute of the Malaysian day an instant falls in: 23:30 is 1410. */
@@ -156,16 +156,15 @@ export function localMinuteOfDay(instant: Date) {
 }
 
 /**
- * A minute of the day as every page, email and picker shows a time:
- * 570 is "9:30 AM", 0 is "12:00 AM", 1410 is "11:30 PM".
+ * A minute of the day as every page, email and picker shows a time, on
+ * the 24-hour clock: 570 is "09:30", 0 is "00:00", 1410 is "23:30".
  */
 export function formatClock(minute: number) {
-  const hours = Math.floor(minute / 60);
-  const minutes = String(minute % 60).padStart(2, "0");
-  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(Math.floor(minute / 60))}:${two(minute % 60)}`;
 }
 
-/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 9:30 AM" in Malaysia. */
+/** An instant as customers and ops read it: "Sat, 3 Oct 2026, 09:30" in Malaysia. */
 export function formatLocalDateTime(instant: Date) {
   return `${formatLocalDate(instant)}, ${formatLocalTime(instant)}`;
 }
@@ -183,7 +182,7 @@ export function formatLocalDate(instant: Date) {
   return localDate.format(instant);
 }
 
-/** The time alone, "9:30 AM" in Malaysia, from the same minute the rules read. */
+/** The time alone, "09:30" in Malaysia, from the same minute the rules read. */
 export function formatLocalTime(instant: Date) {
   return formatClock(localMinuteOfDay(instant));
 }

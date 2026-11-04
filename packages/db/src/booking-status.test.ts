@@ -85,7 +85,7 @@ describe("checkCustomerCancel", () => {
         {
           ok: true,
           deadline: hours(1),
-          message: "Free cancellation until Thu, 1 Oct 2026, 9:00 AM.",
+          message: "Free cancellation until Thu, 1 Oct 2026, 09:00.",
         },
       );
     }
@@ -97,7 +97,7 @@ describe("checkCustomerCancel", () => {
     assert.equal(!check.ok && check.reason, "cutoff");
     assert.equal(
       !check.ok && check.message,
-      "Free cancellation ended on Thu, 1 Oct 2026, 8:00 AM.",
+      "Free cancellation ended on Thu, 1 Oct 2026, 08:00.",
     );
   });
 
@@ -141,7 +141,7 @@ describe("checkCustomerTripCancel", () => {
     assert.deepEqual(checkCustomerTripCancel(trip(25, 24), now), {
       ok: true,
       deadline: hours(1),
-      message: "Free cancellation until Thu, 1 Oct 2026, 9:00 AM.",
+      message: "Free cancellation until Thu, 1 Oct 2026, 09:00.",
     });
     assert.equal(
       checkCustomerTripCancel(trip(25, 24, "assigned"), now).ok,
@@ -154,7 +154,7 @@ describe("checkCustomerTripCancel", () => {
     assert.equal(!check.ok && check.reason, "cutoff");
     assert.equal(
       !check.ok && check.message,
-      "Free cancellation ended on Thu, 1 Oct 2026, 8:00 AM.",
+      "Free cancellation ended on Thu, 1 Oct 2026, 08:00.",
     );
   });
 

@@ -151,7 +151,12 @@ export function sampleBooking(
     id: "b1",
     reference: "HT-7K3QZM",
     quoteNumber: null,
+    invoiceId: null,
     invoiceNumber: null,
+    invoiceLine: null,
+    invoice: null,
+    agentId: null,
+    agent: null,
     userId: "u1",
     user: {
       id: "u1",

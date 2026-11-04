@@ -134,6 +134,11 @@ export function newBookingHref(scope: ScopeSlug) {
 }
 
 /** The form that amends one item of a booking: its trip, vehicle and details. */
+/** The form adding a trip to a booking. */
+export function addTripHref(scope: ScopeSlug, bookingId: string) {
+  return `${bookingHref(scope, bookingId)}/add-trip`;
+}
+
 export function amendItemHref(
   scope: ScopeSlug,
   bookingId: string,

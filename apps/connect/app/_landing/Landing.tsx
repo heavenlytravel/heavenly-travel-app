@@ -308,7 +308,7 @@ const STEPS: { title: string; text: string; shows: ReactNode }[] = [
           <span aria-hidden className="size-1.5 rounded-full bg-success-dot" />
           Done
         </span>
-        <span className="text-[0.7rem] text-muted">Dropped off 11:05 AM</span>
+        <span className="text-[0.7rem] text-muted">Dropped off 11:05</span>
       </div>
     ),
   },

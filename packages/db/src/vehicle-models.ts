@@ -2,7 +2,6 @@ import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
-import { PHOTO_LIMITS } from "./photos-input";
 import { checkModelName, modelName, sameName } from "./vehicle-model-input";
 
 /**
@@ -10,10 +9,9 @@ import { checkModelName, modelName, sameName } from "./vehicle-model-input";
  * MPV VIP: one catalogue for every location, named by brand and name. The
  * vehicle form adds a model the first time a vehicle of it is entered, and
  * suggests the ones there are; a model no vehicle and no booking is of any
- * more goes. A location's customers see the models of its vehicles in
- * service, in those vehicles' photos. Changes are logged against the class,
- * inside the vehicle writer's transaction. See
- * docs/261019-vehicles-and-drivers.md.
+ * more goes. A location's class has the models of its vehicles in
+ * service. Changes are logged against the class, inside the vehicle
+ * writer's transaction. See docs/261019-vehicles-and-drivers.md.
  */
 
 const byName = [
@@ -21,19 +19,10 @@ const byName = [
   { name: "asc" },
 ] satisfies Prisma.VehicleModelOrderByWithRelationInput[];
 
-/** A vehicle's photos in order, no more than a model shows. */
-const photosInOrder = {
-  orderBy: { sortOrder: "asc" },
-  select: { url: true, caption: true },
-  take: PHOTO_LIMITS.photos,
-} satisfies Prisma.Vehicle$photosArgs;
-
 /**
- * A class's models as one location's customers see them: those with one
- * of our vehicles in service based there, by name, each with those vehicles, the
- * first entered first, with when each was entered and its photos. The
- * offerings read it, then `shownModel` names each and `classCoverOf`
- * finds the class's picture (./models-shown).
+ * A class's models at one location: those with one of our vehicles in
+ * service based there, by name. The offerings read it, then `shownModel`
+ * (./models-shown) names each.
  */
 export function modelsShownAt(location: Prisma.LocationWhereInput) {
   // Other vendors' vehicles add capacity behind our classes; only ours
@@ -46,16 +35,7 @@ export function modelsShownAt(location: Prisma.LocationWhereInput) {
   return {
     where: { vehicles: { some: there } },
     orderBy: byName,
-    select: {
-      id: true,
-      brand: true,
-      name: true,
-      vehicles: {
-        where: there,
-        orderBy: { createdAt: "asc" },
-        select: { createdAt: true, photos: photosInOrder },
-      },
-    },
+    select: { id: true, brand: true, name: true },
   } satisfies Prisma.VehicleClass$modelsArgs;
 }
 

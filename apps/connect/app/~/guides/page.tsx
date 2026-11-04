@@ -21,14 +21,15 @@ export default async function GuidesPage() {
   const fleet = await vendorFleet(member.vendor.id);
   const { guides } = fleet;
   if (!guides) notFound();
-  const add = (
+  // Only what the vendor offers, by the services it ticked.
+  const add = fleet.adds.guides ? (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/guides/new">
         <PlusIcon />
         Add
       </Link>
     </Button>
-  );
+  ) : null;
   return (
     <Screen
       member={shellMember(member)}
@@ -54,15 +55,17 @@ export default async function GuidesPage() {
         empty={{
           icon: Languages,
           title: "No tour guide yet",
-          text: "Add one to be offered trips with a tour guide.",
-          action: (
+          text: fleet.adds.guides
+            ? "Add one to be offered trips with a tour guide."
+            : "Your services do not include Tour guide. Ask our team to add it to your business.",
+          action: fleet.adds.guides ? (
             <Button asChild>
               <Link href="/~/guides/new">
                 <PlusIcon />
                 Add a tour guide
               </Link>
             </Button>
-          ),
+          ) : null,
         }}
       />
     </Screen>

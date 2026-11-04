@@ -123,6 +123,7 @@ function createGuideIn(actor: Actor, fields: GuideFields): Promise<Created> {
       tx,
       fields.vendorId,
       fields.locationId,
+      { kind: "guide" },
     );
     if (!vendor.ok) return vendor;
     const guide = await tx.guide.create({
@@ -185,6 +186,7 @@ function updateGuideIn(
         tx,
         after.vendorId ?? current.vendorId,
         after.locationId ?? current.locationId,
+        { kind: "guide" },
       );
       if (!vendor.ok) return vendor;
       if (after.vendorId !== undefined) vendorName = vendor.name;

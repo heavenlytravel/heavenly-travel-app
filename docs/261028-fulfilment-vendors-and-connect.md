@@ -111,9 +111,18 @@ received ──► confirmed ──► assigned ──► completed
 - **What a vendor offers is asked at sign-up for every kind:** car with driver, coach
   charter, driver only, self-drive rental, accommodation, attraction. Only transport
   works in Connect for now; the rest is a supplier list for Reservation until we sell it.
+- **A vendor adds and is offered only what it ticked** (2026-11-04, `suppliesIt`): a
+  vehicle of a class needs the class's category, car with driver or coach charter; a
+  driver one of those or driver only; a tour guide "tour guide". Manage and Connect
+  refuse the rest when saved, Connect hides its Add, and Assign lists only the vendors
+  that offer the role. Ours offers everything.
+- **"Agent" is a service staff tick, never asked at sign-up:** an agent sells our trips
+  to its customers and shares an invoice per period (docs/261102-booking-ops.md, "5.").
+  It is never offered work. Booking through Connect as an agent comes later.
 - **Vendors' vehicles never reach the website.** We sell our classes; vendors add
-  capacity behind them. The class pictures and the models shown "or similar" read only
-  our vendors' vehicles (`modelsShownAt` in `packages/db/src/vehicle-models.ts`).
+  capacity behind them. A class's models at a location, which the admin's booking form
+  and the hidden model choice read, are only our vendors' vehicles' (`modelsShownAt` in
+  `packages/db/src/vehicle-models.ts`). Class pictures are the catalogue's.
 - **Suspending a vendor first shows its accepted bookings still to come** in a dialog:
   "Vendor A has 2 accepted bookings: HT-… Fri 8:00, HT-… Sat 9:00. Suspending takes its
   vehicle and driver off them." Confirming suspends it and puts those bookings back in

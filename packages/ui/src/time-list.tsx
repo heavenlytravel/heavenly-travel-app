@@ -1,11 +1,10 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { cx } from "./cx.js";
 import { CheckIcon } from "./icons.js";
 
 const QUARTER = 15;
-const HALF_DAY = 12 * 60;
 const LAST_QUARTER = 24 * 60 - QUARTER;
 
 /** "09:30" as the minute of the day it names, 570; null for anything else. */
@@ -24,14 +23,28 @@ export function valueOf(minute: number) {
 }
 
 /**
- * 570 as "9:30 AM", as the pickers show a time. The same words as
- * `formatClock` in @repo/db, which the pages and emails use; the package
- * cannot import it, because @repo/ui is built before the database client.
+ * 570 as "09:30", as the pickers show a time: the 24-hour clock, the same
+ * words as the value and as `formatClock` in @repo/db, which the pages and
+ * emails use; the package cannot import it, because @repo/ui is built
+ * before the database client.
  */
 export function clockOf(minute: number) {
-  const hours = Math.floor(minute / 60);
-  const minutes = String(minute % 60).padStart(2, "0");
-  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+  return valueOf(minute);
+}
+
+/**
+ * A window of the day the list marks, in minutes: 1380 to 420 is 23:00 to
+ * 07:00. One that ends before it starts runs past midnight, and its end is
+ * not in it, so 07:00 itself is outside.
+ */
+export type MinuteWindow = { from: number; to: number };
+
+/** Whether a minute of the day falls in a window, as `isInOddHours` in @repo/db reads one. */
+export function inWindow({ from, to }: MinuteWindow, minute: number) {
+  if (from === to) return false;
+  return from < to
+    ? minute >= from && minute < to
+    : minute >= from || minute < to;
 }
 
 /** Today and the minute of the day now, in a time zone: what "earlier" means. */
@@ -58,17 +71,15 @@ export function nextQuarter(minute: number) {
   return Math.min(Math.ceil(minute / QUARTER) * QUARTER, LAST_QUARTER);
 }
 
-type Half = "AM" | "PM";
-const halfOf = (minute: number): Half => (minute < HALF_DAY ? "AM" : "PM");
-
 /**
- * The times of half a day in quarter hours, under an AM and PM switch, so
- * the list is 48 rows and not 96. It opens on the chosen time, or on
- * `start` when there is none, near the top. Times before
- * `earliest` are grey and cannot be picked: the ones already past today;
- * so are those after `latest`, on a last day that ends early.
- * A chosen time off the quarters, such as 10:05 on an older booking, keeps
- * a row of its own. Arrows move, Enter picks, and a digit jumps to its hour.
+ * The times of the day in quarter hours, 00:00 to 23:45, in one list. It
+ * opens on the chosen time, or on `start` when there is none, near the
+ * top. Times before `earliest` are grey and cannot be picked: the ones
+ * already past today; so are those after `latest`, on a last day that ends
+ * early. Times in `marked` carry `markLabel` beside them, "Odd hours". A
+ * chosen time off the quarters, such as 10:05 on an older booking, keeps a
+ * row of its own. Arrows move, Enter picks, and digits jump to their hour:
+ * "1" then "8" within a moment is 18:00.
  */
 export function TimeList({
   value,
@@ -77,6 +88,8 @@ export function TimeList({
   earliest = null,
   latest = null,
   autoFocus = false,
+  marked,
+  markLabel = "Odd hours",
   className,
   "aria-label": ariaLabel = "Time",
 }: {
@@ -88,28 +101,29 @@ export function TimeList({
   latest?: number | null;
   /** Focus the row it opens on, for a picker that is only a list. */
   autoFocus?: boolean;
+  /** The times to tag, such as the night hours a surcharge may fall on. */
+  marked?: MinuteWindow;
+  markLabel?: string;
   className?: string;
   "aria-label"?: string;
 }) {
   const chosen = minuteOf(value);
-  const [half, setHalf] = useState<Half>(halfOf(chosen ?? start));
   const listRef = useRef<HTMLDivElement>(null);
   const typed = useRef({ digits: "", at: 0 });
   const focused = useRef(false);
 
-  const base = half === "AM" ? 0 : HALF_DAY;
-  const minutes = Array.from({ length: 48 }, (_, i) => base + i * QUARTER);
-  if (chosen !== null && chosen % QUARTER !== 0 && halfOf(chosen) === half) {
+  const minutes = Array.from({ length: 96 }, (_, i) => i * QUARTER);
+  if (chosen !== null && chosen % QUARTER !== 0) {
     minutes.push(chosen);
     minutes.sort((a, b) => a - b);
   }
   const allowed = (minute: number) =>
     (earliest === null || minute >= earliest) &&
     (latest === null || minute <= latest);
-  // The row the list centres on: the chosen time, else the same clock time
-  // in this half, else the first that can be picked.
+  // The row the list opens on: the chosen time, else the first from
+  // `start` that can be picked.
   const anchor = (() => {
-    const wanted = base + ((chosen ?? start) % HALF_DAY);
+    const wanted = chosen ?? start;
     const exact = minutes.find((m) => m >= wanted && allowed(m));
     return exact ?? minutes.find(allowed) ?? minutes[0]!;
   })();
@@ -130,7 +144,7 @@ export function TimeList({
     if (listRef.current?.clientHeight) return place();
     const frame = requestAnimationFrame(place);
     return () => cancelAnimationFrame(frame);
-  }, [half, anchor, autoFocus]);
+  }, [anchor, autoFocus]);
 
   const rows = () => [
     ...(listRef.current?.querySelectorAll<HTMLButtonElement>(
@@ -150,7 +164,7 @@ export function TimeList({
     else if (event.key === "Home") focus(0);
     else if (event.key === "End") focus(all.length - 1);
     else if (/^\d$/.test(event.key)) {
-      // "1" then "1" within a moment is 11 o'clock; "1" alone is 1 o'clock.
+      // "1" then "8" within a moment is 18:00; "1" alone is 01:00.
       const now = Date.now();
       const digits =
         now - typed.current.at < 800
@@ -158,41 +172,15 @@ export function TimeList({
           : event.key;
       typed.current = { digits, at: now };
       let hour = Number(digits.slice(-2));
-      if (hour < 1 || hour > 12) hour = Number(event.key);
-      if (hour < 1) return;
-      const minute = base + (hour % 12) * 60;
+      if (hour > 23) hour = Number(event.key);
+      const minute = hour * 60;
       all.find((row) => Number(row.dataset.minute) >= minute)?.focus();
     } else return;
     event.preventDefault();
   }
 
-  const toggle =
-    "ui:flex-1 ui:rounded-md ui:py-1.5 ui:text-sm ui:font-semibold ui:transition-colors ui:focus-ring";
-
   return (
-    <div className={cx("ui:flex ui:min-h-0 ui:flex-col ui:gap-2", className)}>
-      <div
-        role="group"
-        aria-label="Morning or afternoon"
-        className="ui:flex ui:gap-1 ui:rounded-lg ui:bg-accent ui:p-1"
-      >
-        {(["AM", "PM"] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={half === option}
-            onClick={() => setHalf(option)}
-            className={cx(
-              toggle,
-              half === option
-                ? "ui:bg-popover ui:text-accent-foreground ui:shadow-sm"
-                : "ui:text-muted ui:hover:text-accent-foreground",
-            )}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
+    <div className={cx("ui:flex ui:min-h-0 ui:flex-col", className)}>
       <div
         ref={listRef}
         role="listbox"
@@ -203,6 +191,7 @@ export function TimeList({
         {minutes.map((minute) => {
           const on = minute === chosen;
           const ok = allowed(minute);
+          const tagged = marked ? inWindow(marked, minute) : false;
           return (
             <button
               key={minute}
@@ -210,6 +199,9 @@ export function TimeList({
               role="option"
               aria-selected={on}
               data-minute={minute}
+              aria-label={
+                tagged ? `${clockOf(minute)}, ${markLabel}` : undefined
+              }
               disabled={!ok}
               tabIndex={minute === anchor ? 0 : -1}
               onClick={() => onPick(valueOf(minute))}
@@ -223,7 +215,19 @@ export function TimeList({
               )}
             >
               {clockOf(minute)}
-              {on ? <CheckIcon className="ui:size-4" /> : null}
+              <span className="ui:flex ui:items-center ui:gap-1.5">
+                {tagged ? (
+                  <span
+                    className={cx(
+                      "ui:text-2xs ui:font-medium",
+                      on ? "ui:text-accent-foreground/70" : "ui:text-muted",
+                    )}
+                  >
+                    {markLabel}
+                  </span>
+                ) : null}
+                {on ? <CheckIcon className="ui:size-4" /> : null}
+              </span>
             </button>
           );
         })}

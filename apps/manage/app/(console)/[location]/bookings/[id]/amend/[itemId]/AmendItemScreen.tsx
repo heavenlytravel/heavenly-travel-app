@@ -9,6 +9,7 @@ import {
   tripSearchOf,
   tripViewOfItem,
 } from "@repo/db";
+import { isAmendable } from "@repo/db/server";
 import { hasGooglePlaces } from "@repo/places/server";
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
@@ -23,7 +24,8 @@ import type { ConsoleScope } from "../../../../../../_lib/scope";
 import { scopedBooking } from "../../../_lib/scoped-booking";
 import { amendDraftOf } from "../../../_lib/trip-form";
 import { quoteTripView } from "../../../_lib/trip-server";
-import { AmendItemForm } from "./AmendItemForm";
+import { TripItemForm } from "../../../_components/TripItemForm";
+import { amendItemAction } from "../../actions";
 
 /** What stands where the item is loading: the header and the form. */
 export function AmendItemSkeleton() {
@@ -37,8 +39,9 @@ export function AmendItemSkeleton() {
 
 /**
  * One trip of a booking in the manual booking's steps, filled in and
- * priced again, while it is received or confirmed; or why it cannot be
- * amended. A model chosen at booking that can no longer be chosen is
+ * priced again, its category too, until it is completed or cancelled; or
+ * why it cannot be amended. An assigned trip asks before saving, since
+ * the amend lets its vendors go for Operation to assign again. A model chosen at booking that can no longer be chosen is
  * named above the form, since saving drops it and its charge. In a
  * location, a booking with no trip picking up there is not found.
  */
@@ -69,7 +72,7 @@ export async function amendItemScreen({
     </RecordLink>
   );
 
-  if (item.status !== "received" && item.status !== "confirmed") {
+  if (!isAmendable(item)) {
     const status = isItemStatus(item.status)
       ? ITEM_STATUS_LABELS[item.status].toLowerCase()
       : item.status;
@@ -123,8 +126,20 @@ export async function amendItemScreen({
           <Notice>{droppedModel}</Notice>
         </div>
       ) : null}
-      <AmendItemForm
-        itemId={item.id}
+      <TripItemForm
+        action={amendItemAction}
+        target={{ name: "itemId", value: item.id }}
+        done="Trip amended. The customer gets a “Booking updated” email."
+        ask={
+          item.status === "assigned"
+            ? {
+                title: `Amend Trip ${item.position}, assigned already?`,
+                description:
+                  "Its vehicle, driver and guide are let go, and the trip goes back to To assign, for Operation to assign again.",
+                action: "Amend",
+              }
+            : undefined
+        }
         bookingHref={bookingHref(scope.slug, booking.id)}
         scope={scope.slug}
         draft={draft}

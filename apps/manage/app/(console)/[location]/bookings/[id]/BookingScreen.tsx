@@ -1,10 +1,13 @@
 import {
+  BOOKING_RULES,
   bookingLabelOf,
   bookingNumberRows,
   ADVANCE_PERMISSIONS,
   customerEmailOf,
+  formatInvoiceNumber,
   formatLocalDateTime,
   formatMyr,
+  isPaymentStatus,
   fullName,
   itemHeading,
   ITEM_STATUS_LABELS,
@@ -22,9 +25,11 @@ import {
 } from "@repo/db";
 import {
   getBookingFulfilment,
+  isAmendable,
   listActivityFor,
   listBookingNotes,
   listTripEvents,
+  nextInvoiceNumber,
   type ActivityEntry,
   type BookingItemWithDetails,
   type BookingWithItems,
@@ -47,6 +52,7 @@ import {
 import {
   BookingStatusBadge,
   ItemStatusBadge,
+  PaymentStatusBadge,
 } from "@repo/console/StatusBadges";
 import {
   HistoryCard,
@@ -55,6 +61,7 @@ import {
 import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
+  addTripHref,
   amendItemHref,
   bookingHref,
   recordHistoryHref,
@@ -67,6 +74,7 @@ import { Notes } from "./Notes";
 import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
 import { EditContactControl } from "./EditContact";
+import { GiveInvoiceForm, PaymentControl } from "./InvoiceControls";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -89,7 +97,7 @@ export function BookingSkeleton() {
 
 /**
  * Who made the booking and when, and where its trips pick up: "Booked on
- * the website by Aznan Medina, Sat, 3 Oct 2026, 11:42 AM · Langkawi". The
+ * the website by Aznan Medina, Sat, 3 Oct 2026, 11:42 · Langkawi". The
  * log's first entry says who; a booking older than the log says when
  * alone.
  */
@@ -154,6 +162,7 @@ export async function bookingScreen({
     ["Trips", String(booking.items.length)],
     ["Booked", formatLocalDateTime(booking.createdAt)],
   ];
+  if (booking.agent) summary.push(["Agent", booking.agent.name]);
   summary.push(...bookingNumberRows(booking));
   if (booking.confirmedAt) {
     summary.push(["Confirmed", formatLocalDateTime(booking.confirmedAt)]);
@@ -182,6 +191,13 @@ export async function bookingScreen({
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
+            {booking.status !== "cancelled" &&
+            booking.items.length < BOOKING_RULES.maxTripsPerBooking &&
+            permissions.includes("bookings.manage") ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={addTripHref(scope.slug, booking.id)}>Add trip</Link>
+              </Button>
+            ) : null}
             {open && permissions.includes("bookings.manage") ? (
               <CancelBookingControl
                 bookingId={booking.id}
@@ -225,6 +241,10 @@ export async function bookingScreen({
               <CardTitle>Booking</CardTitle>
               <Rows rows={summary} className="text-sm" />
             </Card>
+            <InvoiceCard
+              booking={booking}
+              editable={permissions.includes("bookings.payment")}
+            />
             <CustomerCard
               booking={booking}
               editable={permissions.includes("bookings.manage")}
@@ -244,6 +264,67 @@ export async function bookingScreen({
 }
 
 /** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email; "Edit" for Reservation. */
+/**
+ * The booking's invoice: its number, the agent's it is a line of, and
+ * whether it is paid, switched by Reservation, Sales or Finance. A
+ * confirmed booking from before invoice numbers is given one here; one
+ * not confirmed yet shows nothing.
+ */
+async function InvoiceCard({
+  booking,
+  editable,
+}: {
+  booking: BookingWithItems;
+  editable: boolean;
+}) {
+  const { invoice } = booking;
+  if (!invoice) {
+    const invoiceable =
+      booking.status === "confirmed" || booking.status === "completed";
+    if (!invoiceable || !editable) return null;
+    return (
+      <Card>
+        <CardTitle meta="Not invoiced yet">Invoice</CardTitle>
+        <GiveInvoiceForm
+          bookingId={booking.id}
+          nextInvoice={await nextInvoiceNumber()}
+          agentName={booking.agent?.name ?? null}
+        />
+      </Card>
+    );
+  }
+  const number = formatInvoiceNumber(invoice.number, null);
+  const shared = booking.invoiceLine !== null;
+  const rows: [string, ReactNode][] = [
+    ["Number", number],
+    ...(shared
+      ? [["Line", String(booking.invoiceLine)] as [string, ReactNode]]
+      : []),
+    ["Payment", <PaymentStatusBadge key="p" status={invoice.paymentStatus} />],
+  ];
+  return (
+    <Card>
+      <CardTitle meta={shared && booking.agent ? booking.agent.name : null}>
+        Invoice
+      </CardTitle>
+      <Rows rows={rows} className="text-sm" />
+      {editable ? (
+        <div className="mt-4">
+          <PaymentControl
+            bookingId={booking.id}
+            status={
+              isPaymentStatus(invoice.paymentStatus)
+                ? invoice.paymentStatus
+                : null
+            }
+            shared={shared ? number : null}
+          />
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
 export function CustomerCard({
   booking,
   editable = false,
@@ -405,12 +486,13 @@ function TripCard({
     permissions.includes("bookings.create") &&
     item.status !== "cancelled" &&
     item.status !== "completed";
-  // A trip can be amended until it is assigned; amending a trip with a
-  // vehicle or driver asked for lets them go, to ask again.
+  // A trip can be amended until it is done or cancelled; amending one
+  // with a vehicle or driver asked for, or assigned, lets them go, to ask
+  // again.
   const canAmend =
     permissions.includes("bookings.manage") &&
     trip !== null &&
-    (item.status === "received" || item.status === "confirmed");
+    isAmendable(item);
 
   return (
     <Card flush>

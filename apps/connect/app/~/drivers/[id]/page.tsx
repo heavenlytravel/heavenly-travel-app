@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DRIVER_DELETE_IMPACT } from "@repo/db";
+import { DRIVER_DELETE_IMPACT, vendorAddsOf } from "@repo/db";
 import { getDriver, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DeleteButton } from "@repo/console/DeleteButton";
@@ -7,7 +7,6 @@ import { DriverForm } from "@repo/console/DriverForm";
 import { FormFrame } from "../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 import { requireMember, shellMember } from "../../../_lib/access";
-import { addsOf } from "../../../_lib/fleet";
 import { deleteDriverAction, saveDriverAction } from "../../../fleet-actions";
 
 /**
@@ -29,7 +28,7 @@ export default async function DriverPage({
   ]);
   if (!isNew && driver?.vendorId !== member.vendor.id) notFound();
   // A new one only of what it offers, by the services it ticked.
-  if (isNew && !addsOf(member.vendor).drivers) notFound();
+  if (isNew && !vendorAddsOf(member.vendor).drivers) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

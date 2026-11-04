@@ -107,6 +107,31 @@ export function suppliesIt(
   );
 }
 
+/** What a vendor adds: vehicles, drivers and tour guides. */
+export type VendorAdds = {
+  vehicles: boolean;
+  drivers: boolean;
+  guides: boolean;
+};
+
+/**
+ * What a vendor may add, by the services it ticked (`suppliesIt`): a
+ * vehicle with car with driver or coach charter, a driver with those or
+ * driver only, a guide with tour guide. An agent-only vendor adds none.
+ */
+export function vendorAddsOf(vendor: {
+  isOurs: boolean;
+  services: readonly string[];
+}): VendorAdds {
+  return {
+    vehicles:
+      suppliesIt(vendor, { kind: "vehicle", category: "car-with-driver" }) ||
+      suppliesIt(vendor, { kind: "vehicle", category: "coach-charter" }),
+    drivers: suppliesIt(vendor, { kind: "driver" }),
+    guides: suppliesIt(vendor, { kind: "guide" }),
+  };
+}
+
 /** Why a vendor cannot have it, naming the services to tick. */
 export function supplyRefusalOf(vendorName: string, supply: VendorSupply) {
   const what =

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { GUIDE_DELETE_IMPACT } from "@repo/db";
+import { GUIDE_DELETE_IMPACT, vendorAddsOf } from "@repo/db";
 import { getGuide, heldBookingsOf, vendorFleetChoices } from "@repo/db/server";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DeleteButton } from "@repo/console/DeleteButton";
@@ -7,7 +7,6 @@ import { GuideForm } from "@repo/console/GuideForm";
 import { FormFrame } from "../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 import { requireMember, shellMember } from "../../../_lib/access";
-import { addsOf } from "../../../_lib/fleet";
 import { deleteGuideAction, saveGuideAction } from "../../../fleet-actions";
 
 /**
@@ -28,7 +27,7 @@ export default async function GuidePage({
   ]);
   if (!isNew && guide?.vendorId !== member.vendor.id) notFound();
   // A new one only of what it offers, by the services it ticked.
-  if (isNew && !addsOf(member.vendor).guides) notFound();
+  if (isNew && !vendorAddsOf(member.vendor).guides) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

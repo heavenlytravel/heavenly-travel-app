@@ -1,3 +1,4 @@
+import { vendorAddsOf } from "@repo/db";
 import { notFound } from "next/navigation";
 import {
   getVehicle,
@@ -9,7 +10,6 @@ import { VehicleForm } from "@repo/console/VehicleForm";
 import { FormFrame } from "../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 import { requireMember, shellMember } from "../../../_lib/access";
-import { addsOf } from "../../../_lib/fleet";
 import { saveVehicleAction } from "../../../fleet-actions";
 
 /** Where Connect's vehicle form stores a photo. */
@@ -35,7 +35,7 @@ export default async function VehiclePage({
   ]);
   if (!isNew && vehicle?.vendorId !== member.vendor.id) notFound();
   // A new one only of what it offers, by the services it ticked.
-  if (isNew && !addsOf(member.vendor).vehicles) notFound();
+  if (isNew && !vendorAddsOf(member.vendor).vehicles) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

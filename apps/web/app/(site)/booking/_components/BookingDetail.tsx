@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  bookingNumberRows,
   formatLocalDateTime,
   formatMyr,
   itemHeading,
@@ -48,6 +49,7 @@ export function BookingDetail({
 
   const rows: [string, ReactNode][] = [
     ["Reference", <strong key="ref">{booking.reference}</strong>],
+    ...bookingNumberRows(booking),
     ["Status", <BookingStatusBadge key="status" status={booking.status} />],
     ["Name", booking.contactName],
     ["Phone", booking.contactPhone],

@@ -1,7 +1,9 @@
 import { db } from "./client";
 import { driverSearchWhere } from "./drivers";
+import { guideSearchWhere } from "./guides";
 import { userSearchWhere } from "./users";
 import { vehicleSearchWhere } from "./vehicles";
+import { vendorSearchWhere } from "./vendors";
 
 /**
  * The records the console's search finds as the admin types, beside the
@@ -41,6 +43,41 @@ export function findDriverMatches(search: string, take: number) {
       phone: true,
       isActive: true,
       location: where,
+    },
+  });
+}
+
+/** Tour guides by name, phone or a language they speak, the active first. */
+export function findGuideMatches(search: string, take: number) {
+  return db.guide.findMany({
+    where: { OR: [{ id: search }, guideSearchWhere(search)] },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    take,
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      languages: true,
+      isActive: true,
+      location: where,
+    },
+  });
+}
+
+/** Vendors by name, contact, phone or registration, ours first. */
+export function findVendorMatches(search: string, take: number) {
+  return db.vendor.findMany({
+    where: { OR: [{ id: search }, vendorSearchWhere(search)] },
+    orderBy: [{ isOurs: "desc" }, { name: "asc" }],
+    take,
+    select: {
+      id: true,
+      name: true,
+      isOurs: true,
+      status: true,
+      contactName: true,
+      contactPhone: true,
+      locations: { select: { name: true }, orderBy: { name: "asc" } },
     },
   });
 }

@@ -4,6 +4,7 @@ import {
   priceBreakdownOf,
   priceTrip,
   startingPriceSen,
+  withGuideCharge,
   withModelChoice,
   type TripRates,
 } from "./pricing";
@@ -275,6 +276,28 @@ describe("priceTrip", () => {
   });
 });
 
+describe("withGuideCharge", () => {
+  it("adds the guide to the total, replacing one already on it", () => {
+    const price = priceTrip({
+      trip: { mode: "oneway", distanceKm: 10 },
+      rates,
+      route,
+      surcharge: { percent: 50, flatSen: null },
+    });
+    const once = withGuideCharge(price, {
+      language: "English",
+      amountSen: 20000,
+    });
+    assert.equal(once.totalSen, price.totalSen + 20000);
+    const again = withGuideCharge(once, {
+      language: "Malay",
+      amountSen: 15000,
+    });
+    assert.equal(again.totalSen, price.totalSen + 15000);
+    assert.equal(withGuideCharge(again, null).totalSen, price.totalSen);
+  });
+});
+
 describe("withModelChoice", () => {
   const surcharged = priceTrip({
     trip: { mode: "oneway", distanceKm: 10 },
@@ -367,6 +390,7 @@ describe("priceBreakdownOf", () => {
       surcharge: null,
       weekend: null,
       model: null,
+      guide: null,
     });
   });
 

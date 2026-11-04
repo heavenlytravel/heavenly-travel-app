@@ -1,8 +1,10 @@
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
 import {
   assignStateOf,
+  hasGuide,
   rolesToAsk,
   tripWindow,
   type AssignState,
@@ -27,7 +29,7 @@ const tripInclude = {
   booking: {
     select: {
       id: true,
-      reference: true,
+      ...BOOKING_NUMBER_SELECT,
       contactName: true,
       items: { select: { status: true } },
     },
@@ -36,6 +38,7 @@ const tripInclude = {
     select: {
       vehicleClassId: true,
       vehicleClassName: true,
+      vehicleClassCategory: true,
       pickupPlace: true,
       dropoffPlace: true,
       driveMinutes: true,
@@ -43,6 +46,8 @@ const tripInclude = {
       passengers: true,
       mode: true,
       hours: true,
+      guideLanguage: true,
+      guideRequest: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -51,6 +56,7 @@ const tripInclude = {
       role: true,
       vehicleId: true,
       driverId: true,
+      guideId: true,
       vendorAcceptedAt: true,
       driverAcceptedAt: true,
       offer: {
@@ -66,6 +72,7 @@ const tripInclude = {
         },
       },
       driver: { select: { name: true } },
+      guide: { select: { name: true } },
     },
   },
   events: {
@@ -77,13 +84,13 @@ const tripInclude = {
 /** One part of a trip: who, from whom, and what it waits for. */
 export type AssignPart = {
   role: string;
-  /** "VLE1234 · Toyota Alphard", "Ali bin Abu"; null while not named. */
+  /** "VLE1234 · Toyota Alphard", "Ali bin Abu", a guide's name; null while not named. */
   name: string | null;
   vendorName: string;
   isOurs: boolean;
   /**
    * What it waits for, null once settled: its vendor's yes, Operation's
-   * own for ours, the driver's, or the vehicle or driver named.
+   * own for ours, the driver's, or the vehicle, driver or guide named.
    */
   waiting: PartWaiting | null;
   /** When its vendor answers by, while it waits for that answer. */
@@ -94,7 +101,8 @@ export type AssignPart = {
 export type AssignRow = {
   itemId: string;
   bookingId: string;
-  reference: string;
+  /** The booking's number, or its reference before numbers (`bookingLabelOf`). */
+  label: string;
   /** The booking's customer, as booked. */
   customer: string;
   position: number;
@@ -104,6 +112,12 @@ export type AssignRow = {
   state: AssignState;
   /** The roles it still needs asked for. */
   roles: PartRole[];
+  /** A tour guide goes on it, a third role to assign. */
+  withGuide: boolean;
+  /** The language paid for the guide to speak; null without one. */
+  guideLanguage: string | null;
+  /** Another language asked for, on request; null when none. */
+  guideRequest: string | null;
   job: Job;
   className: string;
   passengers: number;
@@ -151,22 +165,27 @@ async function listAssignTrips(
   return items.map((item) => {
     const job = jobOf(item);
     const lastEvent = item.events[0] ?? null;
+    const withGuide = hasGuide(item.tripDetails);
     const state = assignStateOf({
       status: item.status,
       parts: item.parts,
+      withGuide,
       reported: isOnTheRoad(item.events),
     });
     return {
       itemId: item.id,
       bookingId: item.booking.id,
-      reference: item.booking.reference,
+      label: bookingLabelOf(item.booking),
       customer: item.booking.contactName,
       position: item.position,
       tripCount: item.booking.items.filter((i) => i.status !== "cancelled")
         .length,
       startsAt: item.startsAt,
       state,
-      roles: rolesToAsk(item),
+      roles: rolesToAsk({ ...item, withGuide }),
+      withGuide,
+      guideLanguage: item.tripDetails?.guideLanguage ?? null,
+      guideRequest: item.tripDetails?.guideRequest ?? null,
       job,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,
@@ -182,7 +201,7 @@ async function listAssignTrips(
           role: part.role,
           name: part.vehicle
             ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
-            : (part.driver?.name ?? null),
+            : (part.driver?.name ?? part.guide?.name ?? null),
           vendorName: vendor.name,
           isOurs: vendor.isOurs,
           waiting: partWaitingOf(part, vendor.isOurs),

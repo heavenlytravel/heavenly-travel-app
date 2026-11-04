@@ -1,15 +1,20 @@
 import {
+  bookingLabelOf,
   formatLocalDate,
   formatLocalTime,
+  isVendorStatus,
   searchTermOf,
+  VENDOR_STATUS_LABELS,
   type Permission,
 } from "@repo/db";
 import {
   findBookingMatches,
   findDriverMatches,
+  findGuideMatches,
   findUserMatches,
   findVehicleClassMatches,
   findVehicleMatches,
+  findVendorMatches,
   findZoneMatches,
 } from "@repo/db/server";
 import { getPermissions } from "../../_lib/access";
@@ -31,7 +36,9 @@ import {
   coverageHref,
   userHref,
   driverHref,
+  guideHref,
   vehicleHref,
+  vendorHref,
   zoneHref,
 } from "../../_lib/routes";
 
@@ -57,7 +64,7 @@ const FINDERS: Record<
       (await findBookingMatches(search, SEARCH_LIMIT)).map((booking) => {
         const locations = bookingLocations(booking);
         return {
-          title: booking.reference,
+          title: bookingLabelOf(booking),
           status: booking.status,
           detail: `${booking.contactName} · ${formatLocalDate(booking.startsAt)}, ${formatLocalTime(booking.startsAt)}`,
           meta: locations.map((location) => location.name).join(", "),
@@ -85,6 +92,40 @@ const FINDERS: Record<
         detail: `${driver.phone}${driver.isActive ? "" : " · Inactive"}`,
         meta: driver.location.name,
         href: driverHref(driver.location.slug, driver.id),
+      })),
+  },
+  guides: {
+    find: async (search) =>
+      (await findGuideMatches(search, SEARCH_LIMIT)).map((guide) => ({
+        title: guide.name,
+        detail: [
+          guide.phone,
+          guide.languages.join(", "),
+          guide.isActive ? null : "Inactive",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        meta: guide.location.name,
+        href: guideHref(guide.location.slug, guide.id),
+      })),
+  },
+  vendors: {
+    // Every location's: a vendor's page is the console's, under `~`.
+    find: async (search) =>
+      (await findVendorMatches(search, SEARCH_LIMIT)).map((vendor) => ({
+        title: vendor.name,
+        detail: [
+          vendor.isOurs ? "Ours" : null,
+          vendor.contactName,
+          vendor.contactPhone,
+          vendor.status !== "active" && isVendorStatus(vendor.status)
+            ? VENDOR_STATUS_LABELS[vendor.status]
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        meta: vendor.locations.map((location) => location.name).join(", "),
+        href: vendorHref(null, vendor.id),
       })),
   },
   users: {

@@ -62,6 +62,24 @@ describe("tripDetailRows", () => {
       ],
     );
   });
+
+  it("names the guide's language, and one asked for", () => {
+    assert.deepEqual(
+      tripDetailRows({
+        vehicleClassName: "Coach",
+        passengers: 30,
+        childSeats: 0,
+        flightNumber: null,
+        notes: null,
+        guideLanguage: "English",
+        guideRequest: "Korean",
+      }).slice(-2),
+      [
+        ["Tour guide", "English"],
+        ["Guide asked for", "Korean, on request"],
+      ],
+    );
+  });
 });
 
 describe("priceRows", () => {

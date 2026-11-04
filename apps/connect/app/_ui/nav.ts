@@ -15,7 +15,7 @@ export const HOME_PATH = "/~";
 /** The status page of a registration waiting for approval. */
 export const STATUS_PATH = "/status";
 
-/** The signed-in person's own page: their name, email, password and devices. */
+/** The signed-in person's own page: their profiles, the business's details, their name, email, password and devices. */
 export const ACCOUNT_PATH = "/~/account";
 
 export type NavItem = {
@@ -29,7 +29,8 @@ export type NavItem = {
 /**
  * Connect's places, as the phone's tab bar and the large screen's sidebar
  * list them: Jobs for everyone; Fleet for a vendor's member; Team for its
- * owner.
+ * owner. The business's details and one's own profiles are under the
+ * account (`ACCOUNT_PATH`).
  */
 export function navItems(member?: { owner: boolean }): NavItem[] {
   return [
@@ -45,7 +46,7 @@ export function navItems(member?: { owner: boolean }): NavItem[] {
             href: "/~/vehicles",
             label: "Fleet",
             icon: CarFront,
-            match: ["/~/vehicles", "/~/drivers"],
+            match: ["/~/vehicles", "/~/drivers", "/~/guides"],
           },
         ]
       : []),

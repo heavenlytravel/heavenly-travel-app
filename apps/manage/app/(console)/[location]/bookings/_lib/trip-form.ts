@@ -5,11 +5,14 @@ import {
   clashesOf,
   fitsPassengers,
   formatMyr,
+  guideEntries,
+  storedGuideChoice,
   hireEndOf,
   hourlyChoiceOf,
   HOURLY_PACKAGES,
   isTripCategory,
   localDateTimeInputs,
+  NO_GUIDE,
   namedHours,
   offersChildSeats,
   parsePriceOverride,
@@ -25,23 +28,31 @@ import {
   type BookingSide,
   type ClassAvailability,
   type ClassFit,
+  type GuideChoice,
+  type GuideOffer,
   type TripCategory,
   type TripMode,
+  CHARGE_LABELS,
+  fareSenOf,
+  type ClassCharges,
 } from "@repo/db";
 import type { BookingItemWithDetails } from "@repo/db/server";
 
 /**
- * What the booking forms and their actions agree on. A new booking holds
- * any number of trips, done by one vehicle chosen once for them all, with
- * the flights, child seats and a note asked once; the amend form holds one
- * item: its trip, its vehicle and its own details. The rules a list of
- * trips is checked by are the website's (`tripClashes`, `classFit` in
- * @repo/db), without its limits (`ADMIN_SIDE`). The trip's input names are `TRIP_PARAM` and
- * `TRIP_OPTION_FIELDS` in @repo/db, the same names the website's URLs
- * carry: each trip under `tripItemField` with its number, the vehicle and
- * the details once; the agreed price's are `PRICE_OVERRIDE_FIELDS`. Only
- * the category, the flights and the customer block are these forms' own.
- * Browser-safe. See docs/261027-multi-trip-booking.md.
+ * What the booking forms and their actions agree on. Both hold items, each
+ * a trip with its own vehicle, group and details (`ItemDraft`): a new
+ * booking any number, the amend form one. A new booking's trips may share
+ * one vehicle (`SAME_VEHICLE_FIELD`, on to start with): then trip 1's
+ * category, class, model and group are every trip's, judged for them all
+ * (`classFit`), and no trip may start while another is going
+ * (`clashesOf`); off, each trip is its own, a sedan, then a coach, at
+ * once if need be. The website's checks apply, without its limits
+ * (`ADMIN_SIDE`). The input names are `TRIP_PARAM` and `TRIP_OPTION_FIELDS`
+ * in @repo/db, the same names the website's URLs carry; a new booking
+ * posts each item's under `tripItemField` with its number, the amend form
+ * its vehicle and details once. The agreed price's are
+ * `PRICE_OVERRIDE_FIELDS`. Browser-safe. See
+ * docs/261027-multi-trip-booking.md.
  */
 
 /**
@@ -53,20 +64,20 @@ export const ADMIN_SIDE = "admin" satisfies BookingSide;
 
 export const CATEGORY_FIELD = "category";
 
+/** A new booking's switch: one vehicle does every trip. Posted "on" when it does. */
+export const SAME_VEHICLE_FIELD = "sameVehicle";
+
+/** A new booking's old invoice number, when the old system invoiced it already (HT1223); empty for the next. */
+export const OLD_INVOICE_FIELD = "oldInvoiceNumber";
+
 export const CONTACT_FIELDS = {
   name: "name",
   phone: "phone",
   email: "email",
 } as const;
 
-/** The flights a new booking asks once, for its trips at an airport. */
-export const FLIGHT_FIELDS = {
-  arriving: "arrivingFlight",
-  departing: "departingFlight",
-} as const;
-
-/** One class as priced for the trip. Plain data, sent to the browser. */
-export type ClassQuoteView = {
+/** One class as priced for the trip, its total `ClassCharges`, with any model. Plain data, sent to the browser. */
+export type ClassQuoteView = ClassCharges & {
   id: string;
   name: string;
   luggage: string;
@@ -76,8 +87,6 @@ export type ClassQuoteView = {
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];
-  /** With any model of the class; null when it is not offered on this trip. */
-  totalSen: number | null;
   /** What choosing one of the models adds to this trip; null when the customer cannot choose one here. */
   modelChoiceSen: number | null;
   /** Whether the class's rules take the trip, and why not. */
@@ -114,6 +123,8 @@ export type TripQuoteView =
       /** The weekend and holiday surcharge that applies, "weekend +20%"; null for none. */
       weekend: string | null;
       classes: ClassQuoteView[];
+      /** The tour guide languages on sale for the trip, at their price there. */
+      guides: GuideOffer[];
     }
   | { ok: false; error: string };
 
@@ -147,7 +158,7 @@ export type TripDraft = {
   priceReason: string;
 };
 
-/** The vehicle that does every trip: its class, the model chosen, and the group. */
+/** An item's vehicle: its class, the model chosen, and the group. */
 export type VehicleDraft = {
   vehicleClassId: string | null;
   /** The model the customer chose, at the class's charge; null when any will do. */
@@ -155,19 +166,12 @@ export type VehicleDraft = {
   passengers: string;
 };
 
-/** What the driver needs on one item, as the amend form edits it. */
+/** What the driver needs on one item, and its tour guide. */
 export type ItemDetails = {
   flightNumber: string;
   childSeats: string;
   notes: string;
-};
-
-/** What the drivers need, asked once for a new booking and copied onto the trips it is for. */
-export type BookingDetails = {
-  arrivingFlight: string;
-  departingFlight: string;
-  childSeats: string;
-  notes: string;
+  guide: GuideChoice;
 };
 
 let lastTripId = 0;
@@ -202,19 +206,38 @@ export const EMPTY_VEHICLE: VehicleDraft = {
   passengers: "1",
 };
 
-export const EMPTY_BOOKING_DETAILS: BookingDetails = {
-  arrivingFlight: "",
-  departingFlight: "",
+export const EMPTY_DETAILS: ItemDetails = {
+  flightNumber: "",
   childSeats: "0",
   notes: "",
+  guide: NO_GUIDE,
 };
 
-/** One item of a booking as the amend form starts from it. */
-export type AmendDraft = {
+/** One item of a booking form: its trip, its vehicle and its details. */
+export type ItemDraft = {
   trip: TripDraft;
   vehicle: VehicleDraft;
   details: ItemDetails;
 };
+
+/**
+ * A new booking's next item, blank but for what the one before it chose
+ * and the next trip most likely keeps: the category, the vehicle and the
+ * group, the child seats and the guide. The first item starts blank.
+ */
+export function newItemDraft(after?: ItemDraft): ItemDraft {
+  return {
+    trip: newTripDraft(after?.trip.trip.category),
+    vehicle: after ? { ...after.vehicle } : EMPTY_VEHICLE,
+    details: after
+      ? {
+          ...EMPTY_DETAILS,
+          childSeats: after.details.childSeats,
+          guide: after.details.guide,
+        }
+      : EMPTY_DETAILS,
+  };
+}
 
 /**
  * A stored item as the amend form starts from it, with its trip priced
@@ -225,7 +248,7 @@ export type AmendDraft = {
 export function amendDraftOf(
   item: BookingItemWithDetails,
   quote: TripQuoteView,
-): AmendDraft | null {
+): ItemDraft | null {
   const trip = tripViewOfItem(item);
   const details = item.tripDetails;
   if (!trip || !details || !isTripCategory(details.vehicleClassCategory)) {
@@ -273,6 +296,7 @@ export function amendDraftOf(
       flightNumber: details.flightNumber ?? "",
       childSeats: String(details.childSeats),
       notes: details.notes ?? "",
+      guide: storedGuideChoice(details),
     },
   };
 }
@@ -329,24 +353,24 @@ export function quoteSummary(quote: PricedTrip) {
   return parts.join(" · ");
 }
 
-/** The trips in the order they are numbered and booked in: by start. */
-export function tripsByStart(trips: readonly TripDraft[]): TripDraft[] {
+/** The items in the order they are numbered and booked in: by their trip's start. */
+export function itemsByStart(items: readonly ItemDraft[]): ItemDraft[] {
   return byStart(
-    trips.map((draft) => ({
-      date: draft.trip.date,
-      time: draft.trip.time,
-      draft,
+    items.map((item) => ({
+      date: item.trip.trip.date,
+      time: item.trip.trip.time,
+      item,
     })),
-  ).map((entry) => entry.draft);
+  ).map((entry) => entry.item);
 }
 
 /** A trip that starts while another of the booking is going: a few words for its folded line, and what to do, at its day and time. */
 export type TripClashNote = { label: string; note: string };
 
 /**
- * Each trip that starts while another of the booking is going, by its id:
- * one vehicle does one trip at a time (`clashesOf`). The trips are
- * numbered as the list stands.
+ * Each trip that starts while another of the booking is going, by its id,
+ * for trips one vehicle does: it does one at a time (`clashesOf`). The
+ * trips are numbered as the list stands.
  */
 export function clashNotes(
   trips: readonly TripDraft[],
@@ -375,11 +399,11 @@ export function clashNotes(
       clash.kind === "during-hire"
         ? {
             label: `Starts during trip ${number}`,
-            note: `Trip ${number} is a ${other.hours}-hour hire until ${hireEndOf(other)}, and this trip starts during it. One vehicle cannot do both: start this trip after the hire, or leave it to the hire's driver.`,
+            note: `Trip ${number} is a ${other.hours}-hour hire until ${hireEndOf(other)}, and this trip starts during it. One vehicle cannot do both: start this trip after the hire, or turn off "Same vehicle for every trip" and give each its own.`,
           }
         : {
             label: `Same time as trip ${number}`,
-            note: `Trip ${number} starts at the same time. One vehicle cannot do both: change the time, or enter the second vehicle as a booking of its own.`,
+            note: `Trip ${number} starts at the same time. One vehicle cannot do both: change the time, or turn off "Same vehicle for every trip" and give each its own.`,
           },
     );
   }
@@ -510,18 +534,101 @@ export function chosenVehicle(
   };
 }
 
-/** What one trip costs in the vehicle chosen: the class's price on it, and its charge for the model chosen; null before a vehicle is. */
+/**
+ * The vehicle an item is done by, while it can: the one every trip shares,
+ * when they do (`shared`), which must do them all for its group; else the
+ * item's own, for its own trip.
+ */
+export function itemVehicle(
+  items: readonly ItemDraft[],
+  index: number,
+  shared: VehicleDraft | null,
+): { vehicle: VehicleDraft; chosen: ChosenVehicle | null } {
+  const vehicle = shared ?? items[index]!.vehicle;
+  const trips = shared ? items.map((item) => item.trip) : [items[index]!.trip];
+  return { vehicle, chosen: chosenVehicle(trips, vehicle) };
+}
+
+/** One charge of a trip's quote: what it is, a word on it, and its amount. */
+export type PriceLine = {
+  label: string;
+  note: string | null;
+  amountSen: number;
+};
+
+/**
+ * What one trip's quote in the vehicle chosen is made of, a line each:
+ * the class's fare, with the grid's cell or the hire and any road past a
+ * zone's edge; the model chosen; the odd-hours, weekend and public holiday
+ * surcharges; and the tour guide in the language chosen, when on sale for
+ * the trip. Empty before a vehicle is chosen, or while the class has no
+ * price for the trip.
+ */
+export function tripPriceLines(
+  draft: TripDraft,
+  chosen: ChosenVehicle | null,
+  guideLanguage: string | null,
+): PriceLine[] {
+  const quote = draft.quote;
+  const priced = chosen
+    ? quote?.classes.find((c) => c.id === chosen.option.id)
+    : null;
+  if (!quote || !chosen || !priced || priced.totalSen === null) return [];
+  const guide = quote.guides.find((offer) => offer.language === guideLanguage);
+  const fareNote = [
+    quote.route ?? quote.hire,
+    quote.extraKm ? `${quote.extraKm} km past the zone` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const lines: (PriceLine | null)[] = [
+    {
+      label: chosen.option.name,
+      note: fareNote || null,
+      amountSen: fareSenOf({ ...priced, totalSen: priced.totalSen }),
+    },
+    chosen.model && priced.modelChoiceSen !== null
+      ? {
+          label: `${chosen.model.name} chosen`,
+          note: null,
+          amountSen: priced.modelChoiceSen,
+        }
+      : null,
+    priced.oddHoursSen > 0
+      ? {
+          label: CHARGE_LABELS.oddHours,
+          note: quote.surcharge,
+          amountSen: priced.oddHoursSen,
+        }
+      : null,
+    priced.weekend
+      ? {
+          label: CHARGE_LABELS.weekend(priced.weekend.reason),
+          note: null,
+          amountSen: priced.weekend.amountSen,
+        }
+      : null,
+    guide
+      ? {
+          label: CHARGE_LABELS.guide(guide.language),
+          note: null,
+          amountSen: guide.amountSen,
+        }
+      : null,
+  ];
+  return lines.filter((line) => line !== null);
+}
+
+/** What one trip costs in the vehicle chosen, its lines together (`tripPriceLines`); null before a vehicle is. */
 export function tripQuotedSen(
   draft: TripDraft,
   chosen: ChosenVehicle | null,
+  guideLanguage: string | null,
 ): number | null {
-  const priced = chosen
-    ? draft.quote?.classes.find((c) => c.id === chosen.option.id)
+  const lines = tripPriceLines(draft, chosen, guideLanguage);
+  return lines.length > 0
+    ? lines.reduce((sum, line) => sum + line.amountSen, 0)
     : null;
-  if (!priced || priced.totalSen === null) return null;
-  return chosen?.model
-    ? priced.totalSen + (priced.modelChoiceSen ?? 0)
-    : priced.totalSen;
 }
 
 /** What a trip is charged: its agreed price once one is typed, else the quote; null before a vehicle is chosen. */
@@ -529,19 +636,29 @@ export function tripTotalSen(
   draft: TripDraft,
   chosen: ChosenVehicle | null,
   canPrice: boolean,
+  guideLanguage: string | null,
 ): number | null {
-  const quoted = tripQuotedSen(draft, chosen);
+  const quoted = tripQuotedSen(draft, chosen, guideLanguage);
   if (quoted === null) return null;
   return (canPrice ? parseRinggit(draft.agreedPrice) : null) ?? quoted;
 }
 
-/** What every trip comes to together; null while one has no price. */
+/** What every item comes to together, each in its own vehicle; null while one has no price. */
 export function bookingTotalSen(
-  trips: readonly TripDraft[],
-  chosen: ChosenVehicle | null,
+  items: readonly ItemDraft[],
+  shared: VehicleDraft | null,
   canPrice: boolean,
 ): number | null {
-  return sumOf(trips.map((draft) => tripTotalSen(draft, chosen, canPrice)));
+  return sumOf(
+    items.map((item, index) =>
+      tripTotalSen(
+        item.trip,
+        itemVehicle(items, index, shared).chosen,
+        canPrice,
+        item.details.guide.language,
+      ),
+    ),
+  );
 }
 
 /** The trip as a folded step reads: "Car with driver · KLIA to Pavilion · Sat, 24 Oct 2026, 2:30 PM". */
@@ -564,7 +681,8 @@ export function placesLine(quote: PricedTrip): string {
 
 /**
  * The vehicle as a folded step reads: "MPV VIP · Toyota Alphard chosen · 4
- * passengers · RM 140.00"; without the price beside a total that shows it.
+ * passengers · RM 140.00", for the trips it does; without the price beside
+ * a total that shows it.
  */
 export function vehicleLine(
   trips: readonly TripDraft[],
@@ -576,7 +694,9 @@ export function vehicleLine(
     if (trips.every((draft) => draft.quote)) return "Not chosen yet";
     return trips.length > 1 ? "Price every trip first" : "Price the trip first";
   }
-  const quoted = sumOf(trips.map((draft) => tripQuotedSen(draft, chosen)));
+  const quoted = sumOf(
+    trips.map((draft) => tripQuotedSen(draft, chosen, null)),
+  );
   return [
     chosen.option.name,
     chosen.model ? `${chosen.model.name} chosen` : null,
@@ -587,24 +707,32 @@ export function vehicleLine(
     .join(" · ");
 }
 
-/** The details as a folded step reads: "Arriving MH 1234 · 1 child seat · notes for the driver". */
-export function detailsLine(details: ItemDetails | BookingDetails): string {
+/**
+ * Which flight a new booking's trip asks for, as its field says it: the
+ * arriving one at an airport pick-up, the departing one at an airport
+ * drop-off; null, and none is kept, for a trip at no airport.
+ */
+export function flightLabelOf(quote: PricedTrip | null): string | null {
+  if (quote?.pickupAirport) return "Arriving flight";
+  if (quote?.dropoffAirport) return "Departing flight";
+  return null;
+}
+
+/** The details as a folded step reads: "Flight MH 1234 · 1 child seat · English tour guide · Korean asked · notes for the driver". */
+export function detailsLine(details: ItemDetails): string {
   const parts: string[] = [];
-  const flight = (label: string, value: string) => {
-    if (value.trim()) parts.push(`${label} ${value.trim().toUpperCase()}`);
-  };
-  if ("flightNumber" in details) {
-    flight("Flight", details.flightNumber);
-  } else {
-    flight("Arriving", details.arrivingFlight);
-    flight("Departing", details.departingFlight);
+  if (details.flightNumber.trim()) {
+    parts.push(`Flight ${details.flightNumber.trim().toUpperCase()}`);
   }
   const seats = Number(details.childSeats);
   if (seats > 0) parts.push(plural(seats, "child seat"));
+  const { language, request } = details.guide;
+  if (language) parts.push(`${language} tour guide`);
+  if (request) parts.push(`${request} guide asked`);
   if (details.notes.trim()) parts.push("notes for the driver");
   return parts.length > 0
     ? parts.join(" · ")
-    : "No flight, child seats or notes";
+    : "No flight, child seats, tour guide or notes";
 }
 
 /** Why the agreed price cannot be saved as entered; null when it can, or when there is none. */
@@ -621,6 +749,15 @@ export function agreedPriceIssue(draft: {
 
 /* What the forms post, as the actions read it. */
 
+/** Fields under `tripItemField` with the item's number. */
+function underItem(
+  number: number,
+  fields: Record<string, string> | readonly [string, string][],
+): [string, string][] {
+  const pairs = Array.isArray(fields) ? fields : Object.entries(fields);
+  return pairs.map(([name, value]) => [tripItemField(number, name), value]);
+}
+
 /**
  * One trip under `tripItemField` with its number: its category and
  * search, and the agreed price for an admin who may set one
@@ -630,21 +767,40 @@ export function tripFields(
   number: number,
   draft: TripDraft,
   canPrice: boolean,
-): Record<string, string> {
+): [string, string][] {
   const fields = tripInput(draft.trip);
   if (canPrice) {
     fields[PRICE_OVERRIDE_FIELDS.amount] = draft.agreedPrice;
     fields[PRICE_OVERRIDE_FIELDS.reason] = draft.priceReason;
   }
-  return Object.fromEntries(
-    Object.entries(fields).map(([name, value]) => [
-      tripItemField(number, name),
-      value,
-    ]),
-  );
+  return underItem(number, fields);
 }
 
-/** The vehicle, once for every trip: the class and the model while they can be chosen, and the group. */
+/**
+ * A new booking's item under `tripItemField` with its number: its trip,
+ * the vehicle it is done by (`itemVehicle`), and its details, its flight
+ * only at an airport.
+ */
+export function itemFields(
+  number: number,
+  items: readonly ItemDraft[],
+  index: number,
+  shared: VehicleDraft | null,
+): [string, string][] {
+  const item = items[index]!;
+  const { vehicle, chosen } = itemVehicle(items, index, shared);
+  const details =
+    flightLabelOf(item.trip.quote) === null
+      ? { ...item.details, flightNumber: "" }
+      : item.details;
+  return [
+    ...tripFields(number, item.trip, true),
+    ...underItem(number, vehicleFields(chosen, vehicle)),
+    ...underItem(number, detailsFields(details, item.trip.trip.category)),
+  ];
+}
+
+/** An item's vehicle: the class and the model while they can be chosen, and the group. */
 export function vehicleFields(
   chosen: ChosenVehicle | null,
   vehicle: VehicleDraft,
@@ -656,21 +812,17 @@ export function vehicleFields(
   };
 }
 
-/** The details, once: an amended item's flight, or a new booking's two flights, then child seats where the category has them, and the note. */
+/** An item's details: its flight, child seats where the category has them, the note, and the tour guide's language and one asked for. */
 export function detailsFields(
-  details: ItemDetails | BookingDetails,
+  details: ItemDetails,
   category: TripCategory,
-): Record<string, string> {
-  const fields: Record<string, string> =
-    "flightNumber" in details
-      ? { [TRIP_OPTION_FIELDS.flightNumber]: details.flightNumber }
-      : {
-          [FLIGHT_FIELDS.arriving]: details.arrivingFlight,
-          [FLIGHT_FIELDS.departing]: details.departingFlight,
-        };
+): [string, string][] {
+  const fields: Record<string, string> = {
+    [TRIP_OPTION_FIELDS.flightNumber]: details.flightNumber,
+  };
   if (offersChildSeats(category)) {
     fields[TRIP_OPTION_FIELDS.childSeats] = details.childSeats;
   }
   fields[TRIP_OPTION_FIELDS.notes] = details.notes;
-  return fields;
+  return [...Object.entries(fields), ...guideEntries(details.guide)];
 }

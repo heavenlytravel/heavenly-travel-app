@@ -10,6 +10,7 @@ import {
 } from "@repo/db";
 import { getUserDetails, listActivityForMany } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
+import { MaskedText } from "@repo/ui/secret";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
@@ -78,7 +79,12 @@ async function userScreen(id: string) {
     <>
       <PageHeader
         title={fullName(user) || user.email}
-        meta={`${user.email} · joined ${formatLocalDate(user.createdAt)}`}
+        meta={
+          <>
+            <MaskedText value={user.email} label="email" /> · joined{" "}
+            {formatLocalDate(user.createdAt)}
+          </>
+        }
       />
       <DetailColumns
         main={

@@ -11,6 +11,7 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Checkbox } from "@repo/ui/field";
+import { MaskedText } from "@repo/ui/secret";
 import { toast } from "@repo/ui/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,10 @@ import {
   AuthField,
   AuthInput,
   CodeInput,
+  ConfirmPasswordField,
   PasswordInput,
+  passwordConfirmed,
+  PASSWORDS_DIFFER,
   ResendCode,
   TextButton,
 } from "./AuthParts";
@@ -252,7 +256,8 @@ function NameSection() {
 }
 
 /**
- * The email the account signs in with, shown, not changed here: it is who
+ * The email the account signs in with, shown blurred until clicked (it is
+ * read over a shoulder or on a shared screen), not changed here: it is who
  * the person is to us, their bookings and their Connect access. Our team
  * changes it on request, in the console's All Users.
  */
@@ -264,9 +269,11 @@ function EmailSection() {
       title="Email"
       description="Where your codes and booking emails go, and how you sign in. To change it, contact us."
     >
-      <span className="text-sm font-medium text-body">
-        {user.primaryEmailAddress?.emailAddress ?? ""}
-      </span>
+      <MaskedText
+        value={user.primaryEmailAddress?.emailAddress ?? ""}
+        label="email"
+        className="text-sm font-medium text-body"
+      />
     </Section>
   );
 }
@@ -275,7 +282,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
   const { user } = useUser();
   const router = useRouter();
   const [error, setError] = useState<{
-    at: "current" | "new" | "form";
+    at: "current" | "new" | "again" | "form";
     text: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -300,6 +307,10 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
     const form = event.currentTarget;
     const data = new FormData(form);
     setError(null);
+    if (!passwordConfirmed(data, "newPassword")) {
+      setError({ at: "again", text: PASSWORDS_DIFFER });
+      return;
+    }
     setSaving(true);
     try {
       await savePassword({
@@ -386,6 +397,9 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
               />
             )}
           </AuthField>
+          <ConfirmPasswordField
+            error={error?.at === "again" ? error.text : null}
+          />
           <label className="flex items-center gap-2.5 text-sm text-body">
             <Checkbox name="signOutOthers" defaultChecked={has} />
             Sign out of my other devices

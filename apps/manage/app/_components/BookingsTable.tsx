@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {
+  bookingLabelOf,
+  bookingNumbersOf,
   customerEmailOf,
   formatLocalDate,
   formatLocalTime,
@@ -58,6 +60,7 @@ export function BookingsTable({
               const trip = tripViewOfItem(item);
               return trip ? [{ item, trip }] : [];
             });
+            const numbers = bookingNumbersOf(booking);
             return (
               <tr key={booking.id}>
                 <Td className="font-medium whitespace-nowrap tabular-nums">
@@ -65,8 +68,19 @@ export function BookingsTable({
                     href={bookingHref(scope, booking.id)}
                     className="underline-offset-4 hover:underline"
                   >
-                    {booking.reference}
+                    {bookingLabelOf(booking)}
                   </Link>
+                  {bookingLabelOf(booking) !== booking.reference ? (
+                    <span className="block text-xs text-muted">
+                      {/* An invoice's quotation, and the customer's reference. */}
+                      {[
+                        numbers.invoice ? numbers.quote : null,
+                        booking.reference,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  ) : null}
                   <span className="mt-1 block">
                     <BookingStatusBadge status={booking.status} />
                   </span>

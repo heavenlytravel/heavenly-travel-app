@@ -1,9 +1,11 @@
 import { driverDocumentsDue, plural, vehicleDocumentsDue } from "@repo/db";
 import {
   listDrivers,
+  listGuides,
   listVehicles,
   type DriverWithClasses,
   type FleetFilter,
+  type GuideWithVendor,
   type ListedVehicle,
 } from "@repo/db/server";
 import { Card } from "@repo/console/Card";
@@ -12,12 +14,14 @@ import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import {
   driversHref,
+  guidesHref,
   vehiclesHref,
   type FleetListFilter,
 } from "../_lib/routes";
 import type { ConsoleScope } from "../_lib/scope";
 import { DriversTable } from "./DriversTable";
 import { DueFilter } from "./DueFilter";
+import { GuidesTable } from "./GuidesTable";
 import { SearchBox } from "./SearchBox";
 import { VehiclesTable } from "./VehiclesTable";
 import { ListToolbar } from "./ListToolbar";
@@ -25,7 +29,8 @@ import { ListToolbar } from "./ListToolbar";
 /**
  * How each list names its records, their standing and the documents it
  * watches, how many columns its table has under a location (`~` adds the
- * location's), and its address.
+ * location's), and its address. Tour guides' licences are kept, not
+ * watched: their list has no due figures or filter.
  */
 const KINDS = {
   vehicles: {
@@ -50,6 +55,17 @@ const KINDS = {
     columns: 4,
     href: driversHref,
   },
+  guides: {
+    one: "tour guide",
+    active: "Active",
+    inactive: "Inactive",
+    due: null,
+    expired: null,
+    dueEmpty: null,
+    search: "Name, phone or language",
+    columns: 3,
+    href: guidesHref,
+  },
 } as const;
 
 type FleetKind = keyof typeof KINDS;
@@ -57,18 +73,24 @@ type FleetKind = keyof typeof KINDS;
 /** The rows of one list, by its kind. */
 type Listed =
   | { kind: "vehicles"; rows: ListedVehicle[] }
-  | { kind: "drivers"; rows: DriverWithClasses[] };
+  | { kind: "drivers"; rows: DriverWithClasses[] }
+  | { kind: "guides"; rows: GuideWithVendor[] };
 
 async function read(kind: FleetKind, filter: FleetFilter): Promise<Listed> {
-  return kind === "vehicles"
-    ? { kind, rows: await listVehicles(filter) }
-    : { kind, rows: await listDrivers(filter) };
+  switch (kind) {
+    case "vehicles":
+      return { kind, rows: await listVehicles(filter) };
+    case "drivers":
+      return { kind, rows: await listDrivers(filter) };
+    case "guides":
+      return { kind, rows: await listGuides(filter) };
+  }
 }
 
 /**
  * How many of a list are in service and out, and of those in service how
  * many have a document due and how many one expired, each counted once,
- * by its worst.
+ * by its worst; none due for tour guides.
  */
 type Counts = {
   active: number;
@@ -84,10 +106,12 @@ function countsOf(listed: Listed): Counts {
           isActive: v.isActive,
           due: vehicleDocumentsDue(v),
         }))
-      : listed.rows.map((d) => ({
-          isActive: d.isActive,
-          due: driverDocumentsDue(d),
-        }));
+      : listed.kind === "drivers"
+        ? listed.rows.map((d) => ({
+            isActive: d.isActive,
+            due: driverDocumentsDue(d),
+          }))
+        : listed.rows.map((g) => ({ isActive: g.isActive, due: [] }));
   const active = rows.filter((row) => row.isActive);
   const expired = active.filter((row) =>
     row.due.some((document) => document.state === "expired"),
@@ -104,7 +128,7 @@ function countsOf(listed: Listed): Counts {
 function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
   const names = KINDS[kind];
   const value = (n: number | undefined) => n ?? <Bone className="h-7 w-8" />;
-  return [
+  const standing: Figure[] = [
     {
       key: "active",
       label: names.active,
@@ -117,6 +141,10 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
       value: value(counts?.inactive),
       tone: "neutral",
     },
+  ];
+  if (names.due === null || names.expired === null) return standing;
+  return [
+    ...standing,
     {
       key: "due",
       label: names.due,
@@ -133,7 +161,7 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
 }
 
 /**
- * Our vehicles or our drivers in the scope: every location's under `~`,
+ * Our vehicles, our drivers or the tour guides in the scope: every location's under `~`,
  * with a column of locations, or those based at one location. A strip of
  * figures sums up the scope; under it, in one card, the search, the
  * filter to those with a document due, and the table, with how many it
@@ -150,7 +178,8 @@ export function FleetList({
   filter: FleetListFilter;
 }) {
   const names = KINDS[kind];
-  const { due = false, q } = filter;
+  const { q } = filter;
+  const due = names.due !== null && (filter.due ?? false);
   const across = scope.slug === null;
   const locationId = scope.location?.id;
   const hrefOf = (next: FleetListFilter) => names.href(scope.slug, next);
@@ -160,7 +189,7 @@ export function FleetList({
     due || q ? read(kind, { locationId, due, search: q }) : everyOne;
   const empty = q
     ? `No ${names.one} matches “${q}”.`
-    : due
+    : due && names.dueEmpty
       ? `No ${names.one}${across ? "" : " here"} ${names.dueEmpty}.`
       : across
         ? `No ${names.one} yet.`
@@ -192,11 +221,13 @@ export function FleetList({
             label={`Search ${kind}`}
             placeholder={names.search}
           />
-          <DueFilter
-            label={names.due}
-            due={due}
-            href={hrefOf({ due: !due, q })}
-          />
+          {names.due ? (
+            <DueFilter
+              label={names.due}
+              due={due}
+              href={hrefOf({ due: !due, q })}
+            />
+          ) : null}
         </ListToolbar>
         <Streamed
           key={`${due}:${q ?? ""}`}
@@ -216,9 +247,16 @@ export function FleetList({
                     bare
                     emptyMessage={empty}
                   />
-                ) : (
+                ) : listed.kind === "drivers" ? (
                   <DriversTable
                     drivers={listed.rows}
+                    scope={scope.slug}
+                    bare
+                    emptyMessage={empty}
+                  />
+                ) : (
+                  <GuidesTable
+                    guides={listed.rows}
                     scope={scope.slug}
                     bare
                     emptyMessage={empty}

@@ -13,7 +13,11 @@ import {
 } from "./hourly-input";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
-import { WEEKEND_REASON_LABELS, type TripPriceBreakdown } from "./pricing";
+import {
+  CHARGE_LABELS,
+  WEEKEND_REASON_LABELS,
+  type TripPriceBreakdown,
+} from "./pricing";
 
 /**
  * A trip as every screen describes it, before and after booking: the
@@ -156,6 +160,10 @@ export function tripDetailRows(details: {
   vehicleModelName?: string | null;
   passengers: number;
   childSeats: number;
+  /** The tour guide's language, paid for; null or left out without one. */
+  guideLanguage?: string | null;
+  /** A language asked for, not on sale. */
+  guideRequest?: string | null;
   flightNumber: string | null;
   notes: string | null;
 }): [label: string, value: string][] {
@@ -164,6 +172,10 @@ export function tripDetailRows(details: {
   rows.push(["Passengers", String(details.passengers)]);
   if (details.childSeats > 0) {
     rows.push(["Child seats", String(details.childSeats)]);
+  }
+  if (details.guideLanguage) rows.push(["Tour guide", details.guideLanguage]);
+  if (details.guideRequest) {
+    rows.push(["Guide asked for", `${details.guideRequest}, on request`]);
   }
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
@@ -264,6 +276,12 @@ export function priceRows(
         ? `${price.model.name}, chosen, +${price.model.percent}%`
         : `${price.model.name}, chosen`,
       formatMyr(price.model.amountSen),
+    ]);
+  }
+  if (price.guide) {
+    rows.push([
+      CHARGE_LABELS.guide(price.guide.language),
+      formatMyr(price.guide.amountSen),
     ]);
   }
   return rows;

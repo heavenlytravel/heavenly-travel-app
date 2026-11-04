@@ -13,6 +13,7 @@ import {
   type WeekendSurcharge,
 } from "./rates-input";
 import { DRIVER_FIELD_LABELS } from "./driver-input";
+import { GUIDE_FIELD_LABELS } from "./guide-input";
 import { ADMIN_TEAM_LABELS, adminTeamsOf } from "./roles";
 import { PERMISSION_LABELS, PERMISSIONS } from "./permissions";
 import { USER_PROFILE_FIELDS, USER_PROFILE_LABELS } from "./user-input";
@@ -73,6 +74,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "location",
   "vehicle",
   "driver",
+  "guide",
   "media",
   "site-page",
   "vendor",
@@ -128,6 +130,11 @@ const ACTIONS = {
   "booking.item.priced": { entityType: "booking", customerVisible: false },
   /** The note's id only; the text stays in `BookingNote`. */
   "booking.note.added": { entityType: "booking", customerVisible: false },
+  /** The contact fields changed, before and after: name, phone, email. */
+  "booking.contact.updated": {
+    entityType: "booking",
+    customerVisible: false,
+  },
   /**
    * An account staff created: its email, names and phone in `after`;
    * `existing` when Clerk held it already and it was only mirrored here.
@@ -182,6 +189,12 @@ const ACTIONS = {
   "driver.updated": { entityType: "driver", customerVisible: false },
   /** The name in `before`: the row is gone. */
   "driver.deleted": { entityType: "driver", customerVisible: false },
+  /** Its fields, the location's name. */
+  "guide.created": { entityType: "guide", customerVisible: false },
+  /** The changed fields; a new location with its name. */
+  "guide.updated": { entityType: "guide", customerVisible: false },
+  /** The name in `before`: the row is gone. */
+  "guide.deleted": { entityType: "guide", customerVisible: false },
   "location.created": { entityType: "location", customerVisible: false },
   /**
    * The states are logged by their codes. Entries from before
@@ -264,6 +277,11 @@ const ACTIONS = {
   "location.rates.updated": { entityType: "location", customerVisible: false },
   /** The whole hourly list, before and after: areas, packages, prices, extra hour rates. */
   "location.hourly.updated": { entityType: "location", customerVisible: false },
+  /** Each language's row of the tour guide rates, before and after. */
+  "location.guide-rates.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /** The window and percentage, before and after; null for none. */
   "location.surcharge.updated": {
     entityType: "location",
@@ -363,6 +381,8 @@ export type AmendedFields = {
   passengers: number;
   childSeats: number;
   flightNumber: string | null;
+  /** "English, Japanese" with a guide, "" with one and no language; null without. */
+  tourGuide: string | null;
   priceTotalSen: number;
 };
 
@@ -378,6 +398,7 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
   passengers: "the passengers",
   childSeats: "the child seats",
   flightNumber: "the flight",
+  tourGuide: "the tour guide",
   priceTotalSen: "the price",
 };
 
@@ -568,7 +589,9 @@ const RELEASE_CAUSES: Record<string, string> = {
 
 /** "the vehicle of trips 1 and 2 (VLE1234, Pulau Coach)". */
 function partsOf(json: unknown) {
-  const role = field(json, "role") === "driver" ? "driver" : "vehicle";
+  const kind = field(json, "role");
+  const role =
+    kind === "driver" ? "driver" : kind === "guide" ? "tour guide" : "vehicle";
   const positions = field(json, "positions");
   const trips = Array.isArray(positions)
     ? positions.length === 1
@@ -831,6 +854,28 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.note.added":
       return "Added a note";
+    case "booking.contact.updated": {
+      const changes = (
+        [
+          ["contactName", "name"],
+          ["contactPhone", "phone"],
+          ["contactEmail", "email"],
+        ] as const
+      ).flatMap(([key, word]) => {
+        const was = field(entry.before, key);
+        const now = field(entry.after, key);
+        return typeof now === "string"
+          ? [
+              typeof was === "string"
+                ? `${word} from ${was} to ${now}`
+                : `${word} to ${now}`,
+            ]
+          : [];
+      });
+      return changes.length > 0
+        ? `Changed the customer's ${changes.join(", ")}`
+        : "Changed the customer's details";
+    }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;
     case "booking.item.assigned":
@@ -967,6 +1012,17 @@ export function describeActivity(entry: DescribableActivity): string {
       );
     case "driver.deleted":
       return "Deleted the driver";
+    case "guide.created":
+      return "Added the tour guide";
+    case "guide.updated":
+      return recordChanges(
+        entry.after,
+        GUIDE_FIELD_LABELS,
+        ["Made the tour guide active", "Made the tour guide inactive"],
+        "Changed the tour guide",
+      );
+    case "guide.deleted":
+      return "Deleted the tour guide";
     case "location.created":
       return "Created the location";
     case "location.updated":
@@ -1037,6 +1093,8 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "location.hourly.updated":
       return "Changed the hourly prices";
+    case "location.guide-rates.updated":
+      return "Changed the tour guide rates";
     case "location.surcharge.updated": {
       const window = oddHoursIn(entry.after);
       return window

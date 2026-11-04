@@ -190,6 +190,14 @@ Mapped on 2026-10-27.
   - Since 2026-10-29 the console's New booking has the same trip list ("Add another
     trip"), with the same rules from `packages/db/src/trip-plan.ts` and
     `maxTripsPerBooking`: one vehicle for every trip, no two trips at once, at most 20.
+  - Since 2026-11-04 (user) each trip of the console's New booking is a step with its own
+    category, vehicle, group, flight, child seats, note and tour guide. "Same vehicle for
+    every trip", on to start with, keeps the old rules: trip 1 chooses the vehicle for
+    them all, every trip takes its category, no two trips at once. Off, each trip chooses
+    its own, a car and a coach in one booking, at the same time if need be; Assign still
+    keeps one vehicle or driver from two jobs at once. The website keeps one vehicle for
+    every trip. The full list of rules on both sides is in the docs repo,
+    `plan/261104-booking-rules.md`.
 - **Still written for one trip:**
   - The received page says "the trip".
   - The account list shows one "Pick-up" time.

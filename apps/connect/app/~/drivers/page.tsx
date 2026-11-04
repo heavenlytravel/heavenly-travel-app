@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
-import { listDrivers, listVehicles } from "@repo/db/server";
 import { PlusIcon, UserRoundIcon } from "@repo/ui/icons";
 import { FleetList } from "../../_components/FleetList";
 import { FleetTabs } from "../../_components/FleetTabs";
 import { requireMember, shellMember } from "../../_lib/access";
+import { fleetCounts, vendorFleet } from "../../_lib/fleet";
 import { Button } from "@repo/ui/button";
 import { Avatar } from "../../_ui/parts";
 import { BandHeading, Screen } from "../../_ui/Screen";
@@ -19,10 +19,8 @@ import { BandHeading, Screen } from "../../_ui/Screen";
  */
 export default async function DriversPage() {
   const member = await requireMember();
-  const [vehicles, drivers] = await Promise.all([
-    listVehicles({ vendorId: member.vendor.id }),
-    listDrivers({ vendorId: member.vendor.id }),
-  ]);
+  const fleet = await vendorFleet(member.vendor.id);
+  const { drivers } = fleet;
   const add = (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/drivers/new">
@@ -40,11 +38,7 @@ export default async function DriversPage() {
             Each signs in with the email you enter, to take and report their
             jobs.
           </BandHeading>
-          <FleetTabs
-            current="drivers"
-            vehicles={vehicles.length}
-            drivers={drivers.length}
-          />
+          <FleetTabs current="drivers" {...fleetCounts(fleet)} />
         </div>
       }
     >
@@ -60,8 +54,10 @@ export default async function DriversPage() {
               : "Not signed in to Connect yet"
             : "No email, so cannot sign in",
           isActive: d.isActive,
-          due: driverDocumentsDue(d),
-          anyEntered: DRIVER_DOCUMENTS.some((key) => d[key]),
+          documents: {
+            due: driverDocumentsDue(d),
+            anyEntered: DRIVER_DOCUMENTS.some((key) => d[key]),
+          },
         }))}
         hrefOf={(id) => `/~/drivers/${id}`}
         empty={{

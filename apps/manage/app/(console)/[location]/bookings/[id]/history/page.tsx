@@ -1,3 +1,4 @@
+import { bookingLabelOf } from "@repo/db";
 import { listActivityFor } from "@repo/db/server";
 import { Streamed } from "@repo/console/Skeleton";
 import {
@@ -38,7 +39,7 @@ async function bookingHistory(id: string, scope: ConsoleScope) {
     <RecordHistory
       record={{
         href: bookingHref(scope.slug, booking.id),
-        label: booking.reference,
+        label: bookingLabelOf(booking),
       }}
       entries={entries}
       emptyMessage="No activity recorded. This booking predates the log."

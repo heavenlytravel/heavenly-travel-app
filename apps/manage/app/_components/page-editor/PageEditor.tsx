@@ -39,7 +39,7 @@ import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
 import {
   RowControls,
   movedRow,
-} from "../../(console)/[location]/pages/_components/RowControls";
+} from "../RowControls";
 import {
   publishPageAction,
   savePageDraftAction,

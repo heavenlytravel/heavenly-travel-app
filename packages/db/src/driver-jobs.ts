@@ -225,19 +225,36 @@ export type DriverJob = DriverTrip & {
   } | null;
 };
 
+/** The trip's tour guide as its driver sees them, to meet them at the pickup. */
+export type JobGuide = { name: string; phone: string; languages: string[] };
+
+/** The guide to show the driver: none when it is the driver themself, by their phone (both kept as ./phone keeps it). */
+export function otherGuide(
+  guide: JobGuide | null,
+  driverPhone: string | null,
+): JobGuide | null {
+  return guide && driverPhone !== null && guide.phone === driverPhone
+    ? null
+    : guide;
+}
+
 /**
  * One job of the driver's, or null when it is not theirs. Showing the
- * customer's details logs the view, as PDPA asks.
+ * customer's details logs the view, as PDPA asks. The trip's tour guide,
+ * once their vendor accepted, shows while the customer's details do,
+ * unless the guide is the driver themself, entered in both lists: the
+ * same phone.
  */
 export async function getDriverJob(
   actor: Actor,
   driver: { id: string; name: string },
   itemId: string,
   now: Date = new Date(),
-): Promise<DriverJob | null> {
+): Promise<(DriverJob & { guide: JobGuide | null }) | null> {
   const part = await db.tripPart.findFirst({
     where: { itemId, driverId: driver.id, vendorAcceptedAt: { not: null } },
     include: {
+      driver: { select: { phone: true } },
       item: {
         include: {
           ...jobInclude.item.include,
@@ -256,6 +273,12 @@ export async function getDriverJob(
               notes: true,
             },
           },
+          parts: {
+            where: { role: "guide", vendorAcceptedAt: { not: null } },
+            select: {
+              guide: { select: { name: true, phone: true, languages: true } },
+            },
+          },
         },
       },
     },
@@ -267,7 +290,7 @@ export async function getDriverJob(
     trip.accepted &&
     part.item.status !== "cancelled" &&
     contactVisible(job, now);
-  if (!shows) return { ...trip, customer: null };
+  if (!shows) return { ...trip, customer: null, guide: null };
   const details = part.item.tripDetails;
   await db.$transaction((tx) =>
     logActivity(tx, actor, {
@@ -278,6 +301,10 @@ export async function getDriverJob(
   );
   return {
     ...trip,
+    guide: otherGuide(
+      part.item.parts.find((p) => p.guide)?.guide ?? null,
+      part.driver?.phone ?? null,
+    ),
     customer: {
       name: part.item.booking.contactName,
       phone: part.item.booking.contactPhone,

@@ -103,6 +103,8 @@ export function sampleItem(
       distanceKm: 55.2,
       passengers: 2,
       childSeats: 1,
+      guideLanguage: null,
+      guideRequest: null,
       flightNumber: "MH123",
       notes: null,
     },
@@ -148,6 +150,8 @@ export function sampleBooking(
   return {
     id: "b1",
     reference: "HT-7K3QZM",
+    quoteNumber: null,
+    invoiceNumber: null,
     userId: "u1",
     user: {
       id: "u1",

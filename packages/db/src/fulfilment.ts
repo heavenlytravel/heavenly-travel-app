@@ -1,9 +1,11 @@
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
-import { bookingStatusOf, isLive } from "./booking-status";
+import { bookingStatusOf, isLive, tipsDriver } from "./booking-status";
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
+import { GUIDE_DOCUMENTS, GUIDE_DOCUMENT_LABELS } from "./guide-input";
 import { dayOf, todayInMalaysia } from "./expiry";
 import {
   clashSentence,
@@ -12,8 +14,11 @@ import {
   defaultRespondBy,
   firstClash,
   isDeclineReason,
+  namedIdOf,
   owesAfterCancel,
+  PART_ROLES,
   timingWarnings,
+  hasGuide,
   tripAssigned,
   type DeclineReason,
   type Job,
@@ -26,10 +31,10 @@ import { VEHICLE_DOCUMENTS, VEHICLE_DOCUMENT_LABELS } from "./vehicle-input";
 import { modelName } from "./vehicle-model-input";
 
 /**
- * Who does each trip: Operation asks a vendor for a vehicle, a driver or
- * both for a booking (`VendorOffer`), one part per trip and role
- * (`TripPart`), and each one's owner accepts. A trip is assigned once its
- * vehicle and its driver are named and accepted; a decline, no answer in
+ * Who does each trip: Operation asks a vendor for a vehicle, a driver, a
+ * tour guide or more for a booking (`VendorOffer`), one part per trip and
+ * role (`TripPart`), and each one's owner accepts. A trip is assigned once
+ * every role it needs (`rolesOf`) is named and accepted; a decline, no answer in
  * time, a back-out or a release reopens that part alone. The writers take
  * the actor and log against the booking inside their transaction, and set
  * the trips' status from their parts (`settleTrips`). See
@@ -43,12 +48,15 @@ export const tripInclude = {
     select: {
       vehicleClassId: true,
       vehicleClassName: true,
+      vehicleClassCategory: true,
       pickupPlace: true,
       dropoffPlace: true,
       driveMinutes: true,
       distanceKm: true,
       passengers: true,
       mode: true,
+      guideLanguage: true,
+      guideRequest: true,
     },
   },
   location: { select: { id: true, name: true, safetyBufferMinutes: true } },
@@ -76,10 +84,23 @@ export function jobOf(trip: TripRow): Job {
   };
 }
 
-/** The trips a vehicle or a driver holds besides `exceptBookingId`'s: live, not done. */
+/** Whom a part names, as a filter on parts: a vehicle, a driver or a guide. */
+export type NamedWhere =
+  { vehicleId: string } | { driverId: string } | { guideId: string };
+
+/** The filter on parts naming this record in this role. */
+function namedWhere(role: PartRole, id: string): NamedWhere {
+  return role === "vehicle"
+    ? { vehicleId: id }
+    : role === "guide"
+      ? { guideId: id }
+      : { driverId: id };
+}
+
+/** The trips a vehicle, a driver or a guide holds besides `exceptBookingId`'s: live, not done. */
 export async function heldJobs(
   client: Prisma.TransactionClient,
-  where: { vehicleId: string } | { driverId: string },
+  where: NamedWhere,
   exceptBookingId: string,
 ): Promise<Job[]> {
   const parts = await client.tripPart.findMany({
@@ -119,6 +140,9 @@ const partInclude = {
   driver: {
     select: { id: true, name: true, phone: true, userId: true },
   },
+  guide: {
+    select: { id: true, name: true, phone: true, languages: true },
+  },
 } satisfies Prisma.TripPartInclude;
 
 /** A part with its offer, its vendor and whom it names. */
@@ -136,6 +160,14 @@ export type FulfilmentTrip = {
   cancelledAt: Date | null;
   cancellationCutoffHours: number;
   vehicleClassId: string | null;
+  /** A tour guide goes on it, a third role to assign. */
+  withGuide: boolean;
+  /** The language the customer paid for the guide to speak; null without one. */
+  guideLanguage: string | null;
+  /** A coach trip: its driver is given a tip (`tipsDriver`). */
+  tipped: boolean;
+  /** Another language asked for, on request; null when none. */
+  guideRequest: string | null;
   job: Job;
   parts: TripPartView[];
   assigned: boolean;
@@ -160,9 +192,13 @@ export async function getBookingFulfilment(
     cancelledAt: item.cancelledAt,
     cancellationCutoffHours: item.cancellationCutoffHours,
     vehicleClassId: item.tripDetails?.vehicleClassId ?? null,
+    withGuide: hasGuide(item.tripDetails),
+    guideLanguage: item.tripDetails?.guideLanguage ?? null,
+    guideRequest: item.tripDetails?.guideRequest ?? null,
+    tipped: tipsDriver(item.tripDetails?.vehicleClassCategory ?? ""),
     job: jobOf(item),
     parts: item.parts,
-    assigned: tripAssigned(item.parts),
+    assigned: tripAssigned(item.parts, hasGuide(item.tripDetails)),
   }));
 }
 
@@ -175,7 +211,7 @@ export async function bookingIdOfTrip(itemId: string): Promise<string | null> {
   return item?.bookingId ?? null;
 }
 
-/** A vehicle or a driver the picker lists, and why it cannot be used, if so. */
+/** A vehicle, a driver or a guide the picker lists, and why it cannot be used, if so. */
 export type Candidate = {
   id: string;
   /** "VLE1234 · Toyota Alphard", "Ali bin Abu". */
@@ -248,8 +284,12 @@ export async function listCandidates(
   bookingId: string,
   role: PartRole,
 ): Promise<Candidate[]> {
+  // A guide is listed for the trips that go with one.
   const trips = (await getBookingFulfilment(bookingId)).filter(
-    (t) => isLive(t) && t.status !== "completed",
+    (t) =>
+      isLive(t) &&
+      t.status !== "completed" &&
+      (role !== "guide" || t.withGuide),
   );
   if (trips.length === 0) return [];
   const jobs = trips.map((t) => t.job);
@@ -268,69 +308,101 @@ export async function listCandidates(
   // Each row says whether it may do a class and which of its documents
   // expire on some days, so its fit is worked for all trips and each.
   const rows =
-    role === "vehicle"
+    role === "guide"
       ? (
-          await db.vehicle.findMany({
+          await db.guide.findMany({
             where: { isActive: true },
             include: {
               vendor: vendorSelect,
               location: { select: { id: true, name: true } },
-              vehicleModel: {
-                select: {
-                  brand: true,
-                  name: true,
-                  vehicleClassId: true,
-                  vehicleClass: { select: { name: true } },
-                },
-              },
             },
           })
-        ).map((v) => ({
-          id: v.id,
-          name: `${v.plate} · ${modelName(v.vehicleModel)}`,
-          vendor: v.vendor,
-          location: v.location,
-          mayDo: (classId: string | null) =>
-            classId === v.vehicleModel.vehicleClassId,
-          notClass: `A ${v.vehicleModel.vehicleClass.name}, not the class booked`,
+        ).map((g) => ({
+          id: g.id,
+          name:
+            g.languages.length > 0
+              ? `${g.name} · ${g.languages.join(", ")}`
+              : g.name,
+          vendor: g.vendor,
+          location: g.location,
+          // A guide goes with any class.
+          mayDo: () => true,
+          notClass: "",
+          speaks: g.languages,
           expired: (on: ReadonlySet<string>) =>
             expiredOn(
-              v as unknown as Record<string, Date | null>,
-              VEHICLE_DOCUMENTS,
-              VEHICLE_DOCUMENT_LABELS,
+              g as unknown as Record<string, Date | null>,
+              GUIDE_DOCUMENTS,
+              GUIDE_DOCUMENT_LABELS,
               on,
             ),
-          held: { vehicleId: v.id } as const,
+          held: { guideId: g.id } as const,
         }))
-      : (
-          await db.driver.findMany({
-            where: { isActive: true },
-            include: {
-              vendor: vendorSelect,
-              location: { select: { id: true, name: true } },
-              vehicleClasses: { select: { id: true } },
-            },
-          })
-        ).map((d) => {
-          const may = new Set(d.vehicleClasses.map((c) => c.id));
-          return {
-            id: d.id,
-            name: d.name,
-            vendor: d.vendor,
-            location: d.location,
+      : role === "vehicle"
+        ? (
+            await db.vehicle.findMany({
+              where: { isActive: true },
+              include: {
+                vendor: vendorSelect,
+                location: { select: { id: true, name: true } },
+                vehicleModel: {
+                  select: {
+                    brand: true,
+                    name: true,
+                    vehicleClassId: true,
+                    vehicleClass: { select: { name: true } },
+                  },
+                },
+              },
+            })
+          ).map((v) => ({
+            id: v.id,
+            name: `${v.plate} · ${modelName(v.vehicleModel)}`,
+            vendor: v.vendor,
+            location: v.location,
             mayDo: (classId: string | null) =>
-              classId !== null && may.has(classId),
-            notClass: "Not allowed on this class",
+              classId === v.vehicleModel.vehicleClassId,
+            notClass: `A ${v.vehicleModel.vehicleClass.name}, not the class booked`,
             expired: (on: ReadonlySet<string>) =>
               expiredOn(
-                d as unknown as Record<string, Date | null>,
-                DRIVER_DOCUMENTS,
-                DRIVER_DOCUMENT_LABELS,
+                v as unknown as Record<string, Date | null>,
+                VEHICLE_DOCUMENTS,
+                VEHICLE_DOCUMENT_LABELS,
                 on,
               ),
-            held: { driverId: d.id } as const,
-          };
-        });
+            held: { vehicleId: v.id } as const,
+            speaks: null,
+          }))
+        : (
+            await db.driver.findMany({
+              where: { isActive: true },
+              include: {
+                vendor: vendorSelect,
+                location: { select: { id: true, name: true } },
+                vehicleClasses: { select: { id: true } },
+              },
+            })
+          ).map((d) => {
+            const may = new Set(d.vehicleClasses.map((c) => c.id));
+            return {
+              id: d.id,
+              name: d.name,
+              vendor: d.vendor,
+              location: d.location,
+              mayDo: (classId: string | null) =>
+                classId !== null && may.has(classId),
+              notClass: "Not allowed on this class",
+              expired: (on: ReadonlySet<string>) =>
+                expiredOn(
+                  d as unknown as Record<string, Date | null>,
+                  DRIVER_DOCUMENTS,
+                  DRIVER_DOCUMENT_LABELS,
+                  on,
+                ),
+              held: { driverId: d.id } as const,
+              speaks: null,
+            };
+          });
 
   // One of a class no trip is of is not listed at all: a class changes by
   // amending the booking, not here.
@@ -340,14 +412,26 @@ export async function listCandidates(
       const held = await heldJobs(db, row.held, bookingId);
       const suspended =
         row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
-      const who = role === "driver" ? row.name.split(" ")[0] : "It";
+      const who = role === "vehicle" ? "It" : row.name.split(" ")[0];
+      // A guide who does not speak the language paid for cannot be
+      // chosen: the customer paid for that language.
+      const unspoken = (languages: readonly string[]) => {
+        const missing = row.speaks
+          ? languages.filter((language) => !row.speaks.includes(language))
+          : [];
+        return missing.length > 0
+          ? [`Does not speak ${missing.join(" or ")}`]
+          : [];
+      };
       // The fit for a set of trips: one, or all of them at once.
       const fitFor = (
         asked: readonly Job[],
         classes: readonly (string | null)[],
+        languages: readonly string[],
       ): TripFit => {
         const reasons = [
           ...(classes.every(row.mayDo) ? [] : [row.notClass]),
+          ...unspoken(languages),
           ...row.expired(daysOf(asked)),
           ...suspended,
         ];
@@ -358,7 +442,10 @@ export async function listCandidates(
           : timingWarnings(asked, held, { bufferMinutes, who });
         return { reasons, warnings };
       };
-      const all = fitFor(jobs, [...classIds]);
+      const languagesOf = (t: (typeof trips)[number]) =>
+        t.guideLanguage ? [t.guideLanguage] : [];
+      const asked = [...new Set(trips.flatMap(languagesOf))];
+      const all = fitFor(jobs, [...classIds], asked);
       return {
         id: row.id,
         name: row.name,
@@ -371,7 +458,10 @@ export async function listCandidates(
         reasons: all.reasons,
         warnings: all.warnings,
         trips: Object.fromEntries(
-          trips.map((t) => [t.id, fitFor([t.job], [t.vehicleClassId])]),
+          trips.map((t) => [
+            t.id,
+            fitFor([t.job], [t.vehicleClassId], languagesOf(t)),
+          ]),
         ),
         day: held
           .filter((job) => days.has(todayInMalaysia(job.startsAt)))
@@ -393,7 +483,7 @@ export async function listCandidates(
     });
 }
 
-/** Whether a vehicle's or a driver's vendor is active and serves for us. */
+/** Whether a vehicle's, a driver's or a guide's vendor is active and serves for us. */
 function usableVendor(vendor: { status: string }) {
   return vendor.status === "active";
 }
@@ -403,17 +493,19 @@ function usableVendor(vendor: { status: string }) {
 // ---------------------------------------------------------------------------
 
 /**
- * One role asked of one vendor for some of the booking's trips: a vehicle
- * or a driver named, or left to the vendor to choose.
+ * One role asked of one vendor for some of the booking's trips: a vehicle,
+ * a driver or a guide named, or left to the vendor to choose.
  */
 export type PartAsk = {
   vendorId: string;
-  /** The vehicle or the driver Operation names; null asks the vendor to choose. */
+  /** The vehicle, the driver or the guide Operation names; null asks the vendor to choose. */
   recordId: string | null;
   /** The trips it is asked for, by item id. */
   itemIds: string[];
-  /** What we owe the vendor for each trip, by item id; ours is always 0. */
+  /** What we pay for each trip, by item id: the vendor, or the driver or guide themselves; ours is always 0. */
   costSen: Record<string, number>;
+  /** A coach trip's driver's tip, by item id; any vendor, ours too. */
+  tipSen: Record<string, number>;
 };
 
 export type AssignInput = {
@@ -425,13 +517,15 @@ export type AssignInput = {
    */
   vehicle: PartAsk[];
   driver: PartAsk[];
+  /** Only for trips that go with a guide. */
+  guide: PartAsk[];
   /**
    * When each vendor answers by, by vendor id: unanswered by then, its
    * parts reopen. A vendor not in it gets `defaultRespondBy`. Never at or
    * after the first pickup it is asked for.
    */
   respondBy: Record<string, Date>;
-  /** Operation accepts our vehicle in the same step, having checked it. */
+  /** Operation accepts our vehicle or guide in the same step, having checked it. */
   acceptOurs: boolean;
 };
 
@@ -448,11 +542,7 @@ async function clashRefusal(
   jobs: readonly Job[],
   name: string,
 ): Promise<Refusal | null> {
-  const held = await heldJobs(
-    tx,
-    role === "vehicle" ? { vehicleId: recordId } : { driverId: recordId },
-    bookingId,
-  );
+  const held = await heldJobs(tx, namedWhere(role, recordId), bookingId);
   const clash = firstClash(jobs, held);
   return clash
     ? refuse(`${name} cannot take this booking. ${clashSentence(clash)}.`, role)
@@ -464,53 +554,79 @@ async function namedRecord(
   tx: Prisma.TransactionClient,
   role: PartRole,
   ask: Pick<PartAsk, "vendorId" | "recordId">,
+  /** The trips it is named for: a guide must speak each one's language. */
+  trips: readonly TripRow[],
 ) {
   if (!ask.recordId) return { ok: true as const, name: null };
+  const what = role === "guide" ? "tour guide" : role;
   const record =
-    role === "vehicle"
-      ? await tx.vehicle.findUnique({
-          where: { id: ask.recordId },
-          select: {
-            plate: true,
-            isActive: true,
-            vendorId: true,
-            vendor: { select: { status: true } },
-          },
-        })
-      : await tx.driver.findUnique({
+    role === "guide"
+      ? await tx.guide.findUnique({
           where: { id: ask.recordId },
           select: {
             name: true,
             isActive: true,
             vendorId: true,
             vendor: { select: { status: true } },
+            languages: true,
           },
-        });
+        })
+      : role === "vehicle"
+        ? await tx.vehicle.findUnique({
+            where: { id: ask.recordId },
+            select: {
+              plate: true,
+              isActive: true,
+              vendorId: true,
+              vendor: { select: { status: true } },
+            },
+          })
+        : await tx.driver.findUnique({
+            where: { id: ask.recordId },
+            select: {
+              name: true,
+              isActive: true,
+              vendorId: true,
+              vendor: { select: { status: true } },
+            },
+          });
   if (!record) {
-    return refuse(`That ${role} was just deleted. Choose again.`, role);
+    return refuse(`That ${what} was just deleted. Choose again.`, role);
   }
   const name = "plate" in record ? record.plate : record.name;
   if (!record.isActive) {
-    return refuse(`${name} is out of service. Choose another ${role}.`, role);
+    return refuse(`${name} is out of service. Choose another ${what}.`, role);
   }
   if (record.vendorId !== ask.vendorId || !usableVendor(record.vendor)) {
     return refuse(
-      `${name}'s vendor cannot take jobs now. Choose another ${role}.`,
+      `${name}'s vendor cannot take jobs now. Choose another ${what}.`,
       role,
     );
+  }
+  if ("languages" in record && Array.isArray(record.languages)) {
+    const speaks: readonly unknown[] = record.languages;
+    const unspoken = [
+      ...new Set(trips.flatMap((t) => t.tripDetails?.guideLanguage ?? [])),
+    ].filter((language) => !speaks.includes(language));
+    if (unspoken.length > 0) {
+      return refuse(
+        `${name} does not speak ${unspoken.join(" or ")}, the language paid for. Choose another tour guide.`,
+        role,
+      );
+    }
   }
   return { ok: true as const, name };
 }
 
 /**
  * Asks vendors for the booking's trips: a vehicle and a driver for each,
- * from any vendor, named or left to the vendor, the same for every trip
+ * and a guide for one that goes with one, from any vendor, named or left to the vendor, the same for every trip
  * or different ones. One offer per vendor, one part per trip and role,
  * each with what we owe that vendor for it. A role a trip has already is
  * refused: release it first. A named vehicle or driver that clashes with
  * another job on a trip it is asked for is refused. Our driver needs no
- * vendor acceptance, only their own; our vehicle is accepted here when
- * Operation says it checked it. Then the trips' status follows their
+ * vendor acceptance, only their own; our vehicle or guide is accepted here
+ * when Operation says it checked it. Then the trips' status follows their
  * parts.
  */
 export async function assignBooking(
@@ -522,10 +638,11 @@ export async function assignBooking(
     [
       ...input.vehicle.map((ask) => ["vehicle", ask] as const),
       ...input.driver.map((ask) => ["driver", ask] as const),
+      ...input.guide.map((ask) => ["guide", ask] as const),
     ] satisfies (readonly [PartRole, PartAsk])[]
   ).filter(([, ask]) => ask.itemIds.length > 0);
   if (asks.length === 0) {
-    return refuse("Choose a vehicle or a driver to ask for.");
+    return refuse("Choose a vehicle, a driver or a tour guide to ask for.");
   }
   for (const [role, ask] of asks) {
     for (const cost of Object.values(ask.costSen)) {
@@ -536,9 +653,17 @@ export async function assignBooking(
         );
       }
     }
+    for (const tip of Object.values(ask.tipSen)) {
+      if (role !== "driver" && tip !== 0) {
+        return refuse("Only a driver is given a tip.", `${role}Tip`);
+      }
+      if (!Number.isInteger(tip) || tip < 0 || tip > 10_000_000) {
+        return refuse("Enter the driver's tip in RM.", `${role}Tip`);
+      }
+    }
   }
-  // A trip has one vehicle and one driver: in one ask of each role at most.
-  for (const role of ["vehicle", "driver"] as const) {
+  // A trip has one of each role: in one ask of each role at most.
+  for (const role of PART_ROLES) {
     const ids = asks.flatMap(([r, ask]) => (r === role ? ask.itemIds : []));
     if (new Set(ids).size !== ids.length) {
       return refuse(`Choose one ${role} for each trip.`, role);
@@ -563,6 +688,17 @@ export async function assignBooking(
     if (trips.length !== asked.size) {
       return refuse(
         "A trip asked for can no longer be assigned: it is not confirmed, or was cancelled. Reload.",
+      );
+    }
+    const noGuide = trips.find(
+      (t) =>
+        !hasGuide(t.tripDetails) &&
+        asks.some(([r, ask]) => r === "guide" && ask.itemIds.includes(t.id)),
+    );
+    if (noGuide) {
+      return refuse(
+        `Trip ${noGuide.position} goes without a tour guide. Reload.`,
+        "guide",
       );
     }
     const userId = "userId" in actor ? actor.userId : null;
@@ -604,7 +740,7 @@ export async function assignBooking(
         );
       }
       const respondBy = given ?? defaultRespondBy(first.startsAt, now);
-      const named = await namedRecord(tx, role, ask);
+      const named = await namedRecord(tx, role, ask, its);
       if (!named.ok) return named;
       if (ask.recordId && named.name) {
         const clash = await clashRefusal(
@@ -645,9 +781,14 @@ export async function assignBooking(
         });
       }
       // Ours costs nothing. Our driver needs only their own yes; our
-      // vehicle is accepted now when Operation checked it.
+      // vehicle or guide is accepted now when Operation checked it.
       const vendorAccepted =
         vendor.isOurs && (role === "driver" || input.acceptOurs) ? now : null;
+      // A tip is a coach driver's only; asked on any other trip it is none.
+      const tipOf = (trip: (typeof its)[number]) =>
+        tipsDriver(trip.tripDetails?.vehicleClassCategory ?? "")
+          ? (ask.tipSen[trip.id] ?? 0)
+          : 0;
       for (const trip of its) {
         await tx.tripPart.create({
           data: {
@@ -656,7 +797,9 @@ export async function assignBooking(
             role,
             vehicleId: role === "vehicle" ? ask.recordId : null,
             driverId: role === "driver" ? ask.recordId : null,
+            guideId: role === "guide" ? ask.recordId : null,
             costSen: vendor.isOurs ? 0 : (ask.costSen[trip.id] ?? 0),
+            tipSen: tipOf(trip),
             vendorAcceptedAt: vendorAccepted,
           },
         });
@@ -672,10 +815,13 @@ export async function assignBooking(
           costSen: vendor.isOurs
             ? 0
             : its.reduce((sum, t) => sum + (ask.costSen[t.id] ?? 0), 0),
-          respondBy: respondBy.toISOString(),
-          ...(vendorAccepted && role === "vehicle"
-            ? { acceptedNow: true }
+          ...(role === "driver"
+            ? {
+                tipSen: its.reduce((sum, t) => sum + tipOf(t), 0),
+              }
             : {}),
+          respondBy: respondBy.toISOString(),
+          ...(vendorAccepted && role !== "driver" ? { acceptedNow: true } : {}),
         },
       });
       await settleOffer(tx, offer.id, now);
@@ -716,6 +862,7 @@ const answerInclude = {
   },
   vehicle: { select: { plate: true } },
   driver: { select: { name: true, userId: true } },
+  guide: { select: { name: true } },
 } satisfies Prisma.TripPartInclude;
 
 /**
@@ -760,8 +907,10 @@ export async function answerParts(
     const what = describeParts(parts);
     if (answer.accept) {
       for (const part of parts) {
-        if (part.role === "vehicle" ? !part.vehicleId : !part.driverId) {
-          return refuse(`Name the ${part.role} first, then accept.`);
+        if (namedIdOf(part) === null) {
+          return refuse(
+            `Name the ${part.role === "guide" ? "tour guide" : part.role} first, then accept.`,
+          );
         }
         if (answer.as === "driver" && !part.vendorAcceptedAt) {
           return refuse("The vendor has not accepted this job yet.");
@@ -857,13 +1006,15 @@ function describeParts(
     offer: { vendor: { name: string } };
     vehicle: { plate: string } | null;
     driver: { name: string } | null;
+    guide: { name: string } | null;
   }[],
 ) {
   const first = parts[0]!;
   return {
     role: first.role,
     vendorName: first.offer.vendor.name,
-    named: first.vehicle?.plate ?? first.driver?.name ?? null,
+    named:
+      first.vehicle?.plate ?? first.driver?.name ?? first.guide?.name ?? null,
     positions: [...new Set(parts.map((p) => p.item.position))].sort(
       (a, b) => a - b,
     ),
@@ -871,8 +1022,8 @@ function describeParts(
 }
 
 /**
- * The vendor names the vehicle or the driver Operation left to it, for
- * every one of the parts. Refused when it clashes with another job, is
+ * The vendor names the vehicle, the driver or the guide Operation left to
+ * it, for every one of the parts. Refused when it clashes with another job, is
  * not the vendor's, or is out of service. Naming does not accept.
  */
 export async function nameParts(
@@ -903,13 +1054,15 @@ export async function nameParts(
         (p) => p.role !== role || p.offer.vendorId !== parts[0]!.offer.vendorId,
       )
     ) {
-      return refuse("Name one vehicle or one driver at a time.");
+      return refuse("Name one vehicle, driver or tour guide at a time.");
     }
     const bookingId = parts[0]!.item.bookingId;
-    const named = await namedRecord(tx, role, {
-      vendorId: parts[0]!.offer.vendorId,
-      recordId,
-    });
+    const named = await namedRecord(
+      tx,
+      role,
+      { vendorId: parts[0]!.offer.vendorId, recordId },
+      parts.map((p) => p.item),
+    );
     if (!named.ok) return named;
     const clash = await clashRefusal(
       tx,
@@ -925,7 +1078,9 @@ export async function nameParts(
       data:
         role === "vehicle"
           ? { vehicleId: recordId }
-          : { driverId: recordId, driverAcceptedAt: null },
+          : role === "guide"
+            ? { guideId: recordId }
+            : { driverId: recordId, driverAcceptedAt: null },
     });
     await logActivity(tx, actor, {
       action: "booking.part.named",
@@ -974,7 +1129,7 @@ export async function releaseParts(
   const references: string[] = [];
   for (const [bookingId, list] of byBooking) {
     references.push(list[0]!.item.booking.reference);
-    for (const role of ["vehicle", "driver"]) {
+    for (const role of PART_ROLES) {
       const ofRole = list.filter((p) => p.role === role);
       if (ofRole.length === 0) continue;
       await logActivity(tx, actor, {
@@ -1100,12 +1255,12 @@ export async function settleTrips(
 ): Promise<string[]> {
   const items = await tx.bookingItem.findMany({
     where: { id: { in: [...itemIds] } },
-    include: { parts: true },
+    include: { parts: true, tripDetails: { select: { guideLanguage: true } } },
   });
   const newlyAssigned = new Set<string>();
   const touched = new Set<string>();
   for (const item of items) {
-    const assigned = tripAssigned(item.parts);
+    const assigned = tripAssigned(item.parts, hasGuide(item.tripDetails));
     const next =
       item.status === "confirmed" && assigned
         ? "assigned"
@@ -1212,12 +1367,17 @@ export function setPartCost(
   });
 }
 
-/** A booking a vendor, a vehicle or a driver has accepted and that is still to come: what suspending it or taking it out of service releases. */
-export type HeldBooking = { reference: string; startsAt: Date };
+/** A booking a vendor, a vehicle, a driver or a guide has accepted and that is still to come: what suspending it or taking it out of service releases. `label` is how the screen names it. */
+export type HeldBooking = { label: string; startsAt: Date };
 
-/** The accepted, coming bookings a vendor or a record holds, soonest first. */
+/**
+ * The accepted, coming bookings a vendor or a record holds, soonest first,
+ * each named by its number (manage) or its reference (Connect, which
+ * names a booking as the customer does).
+ */
 export async function heldBookingsOf(
-  where: { vendorId: string } | { vehicleId: string } | { driverId: string },
+  where: { vendorId: string } | NamedWhere,
+  named: "number" | "reference",
 ): Promise<HeldBooking[]> {
   const parts = await db.tripPart.findMany({
     where: {
@@ -1229,16 +1389,22 @@ export async function heldBookingsOf(
     },
     select: {
       item: {
-        select: { startsAt: true, booking: { select: { reference: true } } },
+        select: {
+          startsAt: true,
+          booking: { select: { id: true, ...BOOKING_NUMBER_SELECT } },
+        },
       },
     },
     orderBy: { item: { startsAt: "asc" } },
   });
   const seen = new Map<string, HeldBooking>();
   for (const { item } of parts) {
-    if (!seen.has(item.booking.reference)) {
-      seen.set(item.booking.reference, {
-        reference: item.booking.reference,
+    if (!seen.has(item.booking.id)) {
+      seen.set(item.booking.id, {
+        label:
+          named === "number"
+            ? bookingLabelOf(item.booking)
+            : item.booking.reference,
         startsAt: item.startsAt,
       });
     }
@@ -1250,7 +1416,7 @@ export async function heldBookingsOf(
 export function releaseHeldWork(
   tx: Prisma.TransactionClient,
   actor: Actor,
-  where: { vendorId: string } | { vehicleId: string } | { driverId: string },
+  where: { vendorId: string } | NamedWhere,
   cause: "suspended" | "out-of-service",
   now: Date,
 ) {
@@ -1282,6 +1448,7 @@ export async function tripCrewsOf(bookingId: string) {
   return items.flatMap((item) => {
     const vehicle = item.parts.find((p) => p.role === "vehicle")?.vehicle;
     const driver = item.parts.find((p) => p.role === "driver")?.driver;
+    const guide = item.parts.find((p) => p.role === "guide")?.guide;
     if (!vehicle || !driver) return [];
     return [
       {
@@ -1292,6 +1459,8 @@ export async function tripCrewsOf(bookingId: string) {
         plate: vehicle.plate,
         model: modelName(vehicle.vehicleModel),
         colour: vehicle.colour,
+        guideName: guide?.name ?? null,
+        guidePhone: guide?.phone ?? null,
       },
     ];
   });

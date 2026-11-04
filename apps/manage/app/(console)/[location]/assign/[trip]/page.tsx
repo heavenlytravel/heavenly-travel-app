@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  bookingLabelOf,
   assignStateOf,
   assignTripsOf,
   durationLabel,
   formatLocalDateTime,
   isLive,
   isOnTheRoad,
+  namedIdOf,
   PART_ROLE_LABELS,
   PART_ROLES,
   rolesToAsk,
@@ -50,7 +52,8 @@ import { PartCard } from "./PartCard";
 
 /**
  * Route: /[location]/assign/[trip]. One trip, Operation's workspace: the
- * vehicle and the driver it still needs, picked vendor first; each one
+ * vehicle and the driver it still needs, and its tour guide when it goes
+ * with one, picked vendor first; each one
  * already asked, with whose answer it waits for and what to do next
  * (name, accept, record a decline, withdraw or release); what its driver
  * reported on the day, first once the trip is on the road or done. Beside
@@ -84,16 +87,18 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
   if (!trip || !item) notFound();
 
   const roles = rolesToAsk(trip);
-  const unnamed = trip.parts.some((p) => !p.vehicleId && !p.driverId);
+  const unnamed = trip.parts.some((p) => namedIdOf(p) === null);
   // Who is free is read only when something is to pick.
   const picking = roles.length > 0 || unnamed;
-  const [vehicles, drivers, vendors] = picking
+  const [vehicles, drivers, guides, vendors] = picking
     ? await Promise.all([
         listCandidates(bookingId, "vehicle"),
         listCandidates(bookingId, "driver"),
+        trip.withGuide ? listCandidates(bookingId, "guide") : [],
         listVendorOptions(),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
+  const candidatesOf = { vehicle: vehicles, driver: drivers, guide: guides };
   const serving = vendors.filter(
     (v) =>
       v.status === "active" &&
@@ -143,7 +148,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
           <>
             <QuickViewButton
               bookingId={booking.id}
-              reference={booking.reference}
+              label={bookingLabelOf(booking)}
               href={bookingHref(scope.slug, booking.id)}
             />
             {" · "}
@@ -176,14 +181,18 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
             {/* One card per role, in order: to assign, or asked and where it stands. */}
             {PART_ROLES.map((role) => {
               const part = trip.parts.find((p) => p.role === role);
-              const candidates = role === "vehicle" ? vehicles : drivers;
+              const candidates = candidatesOf[role];
               if (!part) {
                 if (!thisOpen?.roles.includes(role)) return null;
                 return (
                   <Card key={role}>
                     <CardTitle
                       action={<AssignStateBadge state="to-assign" />}
-                      description={`Choose the vendor, then their ${role} or Any to let them assign it.`}
+                      description={
+                        role === "guide" && trip.guideLanguage
+                          ? `Choose the vendor, then a guide who speaks ${trip.guideLanguage}, or Any to let them assign one.${trip.guideRequest ? ` ${trip.guideRequest} was asked for too: amend the trip if a guide is found.` : ""}`
+                          : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`
+                      }
                     >
                       {PART_ROLE_LABELS[role]}
                     </CardTitle>
@@ -195,7 +204,14 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                         (t) => t.id !== trip.id && t.roles.includes(role),
                       )}
                       candidates={candidates}
-                      vendors={serving}
+                      vendors={
+                        role === "guide"
+                          ? serving.filter(
+                              (v) =>
+                                v.isOurs || v.services.includes("tour-guide"),
+                            )
+                          : serving
+                      }
                     />
                   </Card>
                 );
@@ -274,6 +290,7 @@ function siblingsOf(
           p.role === part.role &&
           p.vehicleId === part.vehicleId &&
           p.driverId === part.driverId &&
+          p.guideId === part.guideId &&
           (p.vendorAcceptedAt === null) === (part.vendorAcceptedAt === null) &&
           (p.driverAcceptedAt === null) === (part.driverAcceptedAt === null),
       )

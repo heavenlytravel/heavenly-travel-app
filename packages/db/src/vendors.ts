@@ -63,7 +63,7 @@ export type VendorFilter = {
 };
 
 /** Where a vendor matches a search. */
-function vendorSearchWhere(search: string): Prisma.VendorWhereInput {
+export function vendorSearchWhere(search: string): Prisma.VendorWhereInput {
   const phone = phoneDigitsOf(search);
   return {
     OR: [
@@ -108,6 +108,8 @@ export type VendorOption = {
   isOurs: boolean;
   status: string;
   locationIds: string[];
+  /** What it supplies, `VENDOR_SERVICES`: a guide is asked of one that offers tour guides. */
+  services: string[];
 };
 
 /**
@@ -124,6 +126,7 @@ export async function listVendorOptions(): Promise<VendorOption[]> {
       name: true,
       isOurs: true,
       status: true,
+      services: true,
       locations: { select: { id: true } },
     },
   });
@@ -168,6 +171,18 @@ export async function checkVendorServes(
     );
   }
   return { ok: true, name: vendor.name, isOurs: vendor.isOurs };
+}
+
+/** The name of the location a record is based at, for the log; null when it was just deleted. */
+export async function locationNameOf(
+  tx: Prisma.TransactionClient,
+  locationId: string,
+): Promise<string | null> {
+  const location = await tx.location.findUnique({
+    where: { id: locationId },
+    select: { name: true },
+  });
+  return location?.name ?? null;
 }
 
 /** Checks that every location ticked exists, and answers their names in order for the log. */
@@ -346,7 +361,7 @@ export async function setVendorOwner(
 
 /**
  * Changes any of the fields. A location the vendor stops serving is
- * refused while one of its vehicles or drivers is based there. Saving what
+ * refused while one of its vehicles, drivers or guides is based there. Saving what
  * is already there logs nothing.
  */
 export async function updateVendor(
@@ -388,13 +403,14 @@ export async function updateVendor(
             OR: [
               { vehicles: { some: { vendorId: id } } },
               { drivers: { some: { vendorId: id } } },
+              { guides: { some: { vendorId: id } } },
             ],
           },
           select: { name: true },
         });
         if (based) {
           return refuse(
-            `${vendor.name} has vehicles or drivers based in ${based.name}. Move them first, or keep ${based.name} ticked.`,
+            `${vendor.name} has vehicles, drivers or tour guides based in ${based.name}. Move them first, or keep ${based.name} ticked.`,
             VENDOR_LOCATIONS_FIELD,
           );
         }

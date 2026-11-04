@@ -64,6 +64,7 @@ const RATES_ICONS = {
   classes: "rate-classes",
   grid: "rate-grid",
   hourly: "rate-hourly",
+  guides: "rate-guides",
   rules: "rate-rules",
   try: "rate-try",
 } as const satisfies Record<(typeof RATES_PAGES)[number], MenuIcon>;
@@ -72,6 +73,7 @@ const RATES_WORDS: Record<(typeof RATES_PAGES)[number], string> = {
   classes: "prices class rates per km",
   grid: "prices routes zone to zone",
   hourly: "prices hourly packages extra hours",
+  guides: "prices tour guide languages one-way hourly",
   rules: "surcharge odd hours weekend holiday extra km cross-location",
   try: "quote price check",
 };
@@ -151,6 +153,15 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         permission: "fleet.manage",
         shared: true,
         words: "fleet licence",
+      },
+      {
+        key: "guides",
+        label: "Tour Guides",
+        path: "fleet/guides",
+        icon: "guides",
+        permission: "fleet.manage",
+        shared: true,
+        words: "fleet tour guide motac languages",
       },
       {
         key: "vendors",

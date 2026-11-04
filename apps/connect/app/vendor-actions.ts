@@ -5,6 +5,7 @@ import {
   isDeclineReason,
   isPartRole,
   nameForVendor,
+  PART_ROLE_LABELS,
   textOf,
 } from "@repo/db/server";
 import { sendDriverEmailFor } from "@repo/email";
@@ -14,13 +15,13 @@ import { after } from "next/server";
 import { actorOf, getMemberAccess, NOT_A_MEMBER } from "./_lib/access";
 
 /**
- * A vendor's answers in Connect, by its owner or staff: naming the vehicle
- * or driver an offer left to it, and accepting or declining the offer.
+ * A vendor's answers in Connect, by its owner or staff: naming the vehicle,
+ * driver or tour guide an offer left to it, and accepting or declining the offer.
  * Each asks who is signed in again, since actions are reachable by direct
  * POST; the writers in @repo/db check the offer is this vendor's.
  */
 
-/** Names the vendor's vehicle or driver for a role of an offer. */
+/** Names the vendor's vehicle, driver or tour guide for a role of an offer. */
 export async function nameRecordAction(
   _previous: ActionState,
   formData: FormData,
@@ -32,7 +33,10 @@ export async function nameRecordAction(
   const recordId = textOf(formData.get("recordId"));
   if (!offerId || !isPartRole(role)) return STALE;
   if (!recordId) {
-    return { error: `Choose the ${role}.`, field: "recordId" };
+    return {
+      error: `Choose the ${PART_ROLE_LABELS[role].toLowerCase()}.`,
+      field: "recordId",
+    };
   }
   const result = await nameForVendor(
     actorOf(member.user),

@@ -5,6 +5,17 @@ import {
   type AmendedFields,
   type CustomerActor,
 } from "./activity-actions";
+import type { ContactFields } from "./booking-contact";
+import {
+  lastBookingNumber,
+  nextBookingNumber,
+  oldInvoiceNumberIssue,
+} from "./booking-counter";
+import {
+  BOOKING_NUMBER_SELECT,
+  formatBookingNumber,
+  parseBookingNumber,
+} from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import { localDayRange } from "./booking-rules";
@@ -19,6 +30,7 @@ import {
   type ItemStatus,
   type Product,
 } from "./booking-status";
+import { refuse, type Change } from "./change";
 import { db } from "./client";
 import { releaseParts, settleCancelledTrips } from "./fulfilment";
 import { Prisma } from "./generated/prisma/client";
@@ -117,18 +129,47 @@ export type CreateBookingInput = {
   /** The website visitor's address, for the rate limit; null from the console. */
   createdIp: string | null;
   items: PreparedItem[];
+  /**
+   * Staff only: the booking was invoiced in the old system already, and
+   * keeps that invoice's number (HT1223) instead of taking the next.
+   */
+  oldInvoiceNumber?: number;
 };
 
-const REFERENCE_ATTEMPTS = 5;
+const CREATE_ATTEMPTS = 5;
+
+/**
+ * The invoice number the next booking confirmed would take, as a form
+ * shows it before it is sent: "HTI-1308". A guess, not a hold: a booking
+ * confirmed first takes it, and the next one moves on.
+ */
+export async function nextInvoiceNumber(): Promise<string> {
+  return formatBookingNumber(
+    "invoice",
+    (await lastBookingNumber(db, "invoice")) + 1,
+  );
+}
+
+/**
+ * Why an old invoice's number, typed on New booking, cannot be the
+ * booking's; null when it can (`oldInvoiceNumberIssue`). Checked again
+ * inside the booking's transaction.
+ */
+export function checkOldInvoiceNumber(number: number): Promise<string | null> {
+  return oldInvoiceNumberIssue(db, number);
+}
 
 /**
  * Creates a booking with its items in one transaction and, when it belongs
  * to an account, remembers the phone number on it for next time. The actor
  * is the customer or the guest on the website, or the admin entering a
  * booking for them. An item with an agreed price is charged that price and
- * logged as priced, so it is never a special case later. The reference is
- * random, so a collision is retried. Emails are the caller's job, after
- * this returns.
+ * logged as priced, so it is never a special case later. One from the
+ * website is received, for Reservation to confirm, and takes its invoice
+ * number then. One staff enter is confirmed at once, every trip with it,
+ * and takes the next invoice number (./booking-counter), or keeps the old
+ * system's (`oldInvoiceNumber`). The reference is random, so a collision
+ * is retried. Emails are the caller's job, after this returns.
  */
 export async function createBooking(
   actor: Actor,
@@ -137,6 +178,13 @@ export async function createBooking(
   if (input.items.length === 0) {
     throw new Error("A booking needs at least one item.");
   }
+  const confirmed = actor.kind === "admin";
+  const oldInvoice = input.oldInvoiceNumber ?? null;
+  if (oldInvoice !== null && !confirmed) {
+    throw new Error("Only staff may give a booking an old invoice number.");
+  }
+  const now = new Date();
+  const status = confirmed ? "confirmed" : "received";
   for (const item of input.items) {
     if (!item.override) continue;
     const check = checkPriceOverride(item.override);
@@ -145,7 +193,8 @@ export async function createBooking(
   const startsAt = earliestStart(input.items) ?? input.items[0]!.startsAt;
   const data = {
     userId: input.userId,
-    status: "received" satisfies BookingStatus,
+    status: status satisfies BookingStatus,
+    confirmedAt: confirmed ? now : null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail,
@@ -156,7 +205,8 @@ export async function createBooking(
       create: input.items.map((item, index) => ({
         position: index + 1,
         product: item.product satisfies Product,
-        status: "received" satisfies ItemStatus,
+        status: status satisfies ItemStatus,
+        confirmedAt: confirmed ? now : null,
         startsAt: item.startsAt,
         endsAt: item.endsAt,
         cancellationCutoffHours: item.cancellationCutoffHours,
@@ -180,8 +230,17 @@ export async function createBooking(
             data: { phone: input.contactPhone },
           });
         }
+        if (oldInvoice !== null) {
+          const issue = await oldInvoiceNumberIssue(tx, oldInvoice, {
+            lock: true,
+          });
+          if (issue) throw new Error(issue);
+        }
+        const invoiceNumber = !confirmed
+          ? null
+          : (oldInvoice ?? (await nextBookingNumber(tx, "invoice")));
         const booking = await tx.booking.create({
-          data: { ...data, reference: generateReference() },
+          data: { ...data, reference: generateReference(), invoiceNumber },
           ...withItems,
         });
         await logActivity(tx, actor, {
@@ -192,6 +251,7 @@ export async function createBooking(
             priceTotalSen: booking.priceTotalSen,
             items: booking.items.length,
             via: actor.kind === "admin" ? "console" : "website",
+            ...(oldInvoice !== null ? { oldInvoiceNumber: oldInvoice } : {}),
           },
         });
         for (const [index, item] of input.items.entries()) {
@@ -211,7 +271,7 @@ export async function createBooking(
       });
     } catch (error) {
       if (
-        attempt >= REFERENCE_ATTEMPTS ||
+        attempt >= CREATE_ATTEMPTS ||
         !isUniqueViolation(error, "reference")
       ) {
         throw error;
@@ -284,7 +344,7 @@ export type BookingFilter = {
   status?: BookingStatus;
   locationId?: string;
   pickupOn?: Date;
-  /** As `searchTermOf` reads it: the id, part of the reference, or of the customer's name, phone or email. */
+  /** As `searchTermOf` reads it: the id, the number, part of the reference, or of the customer's name, phone or email. */
   search?: string;
 };
 
@@ -304,7 +364,16 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   if (Object.keys(item).length > 0) where.items = { some: item };
   if (filter.search) {
     const phone = phoneDigitsOf(filter.search);
+    const number = parseBookingNumber(filter.search);
     where.OR = [
+      // "HTI-1308", "HT1223" or "1308": the booking with that number,
+      // either kind unless the prefix says which.
+      ...(number && number.kind !== "invoice"
+        ? [{ quoteNumber: number.number }]
+        : []),
+      ...(number && number.kind !== "quote"
+        ? [{ invoiceNumber: number.number }]
+        : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
       { reference: { contains: filter.search.toUpperCase() } },
@@ -357,7 +426,7 @@ export function findBookingMatches(search: string, take: number) {
     take,
     select: {
       id: true,
-      reference: true,
+      ...BOOKING_NUMBER_SELECT,
       status: true,
       contactName: true,
       startsAt: true,
@@ -403,7 +472,9 @@ function earliestStart(items: readonly { startsAt: Date }[]) {
 /**
  * Recomputes the booking's stored summary from its items. Called after every
  * item change, inside the same transaction. Returns the booking-level event
- * the change caused, if any.
+ * the change caused, if any. The booking's row is held first: two trips
+ * changed at once refresh one after the other, the second reading the
+ * first's trips, so the status is right and the invoice number taken once.
  */
 async function refreshBooking(
   tx: Prisma.TransactionClient,
@@ -411,6 +482,7 @@ async function refreshBooking(
   cancelledBy: Canceller | null,
   now: Date,
 ): Promise<{ booking: BookingWithItems; event: BookingEvent | null }> {
+  await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${bookingId} FOR UPDATE`;
   await settleCancelledTrips(tx, bookingId, now);
   const booking = await tx.booking.findUniqueOrThrow({
     where: { id: bookingId },
@@ -419,9 +491,18 @@ async function refreshBooking(
   const live = booking.items.filter(isLive);
   const status = bookingStatusOf(booking.items);
 
+  // Confirmed for the first time: the booking is sold, and invoiced. One
+  // cancelled before that gets no invoice number.
+  const invoiceNumber =
+    status !== "received" &&
+    status !== "cancelled" &&
+    booking.invoiceNumber === null
+      ? await nextBookingNumber(tx, "invoice")
+      : null;
   const updated = await tx.booking.update({
     where: { id: bookingId },
     data: {
+      ...(invoiceNumber !== null ? { invoiceNumber } : {}),
       status,
       // The total is what is owed for the live items. A fully cancelled
       // booking keeps its last total, so the record still says what it was.
@@ -624,6 +705,8 @@ function amendedFieldsOf(
     passengers: number;
     childSeats?: number;
     flightNumber?: string | null;
+    guideLanguage?: string | null;
+    guideRequest?: string | null;
   },
 ): AmendedFields {
   return {
@@ -637,6 +720,13 @@ function amendedFieldsOf(
     passengers: details.passengers,
     childSeats: details.childSeats ?? 0,
     flightNumber: details.flightNumber ?? null,
+    tourGuide:
+      [
+        details.guideLanguage,
+        details.guideRequest ? `${details.guideRequest} on request` : null,
+      ]
+        .filter(Boolean)
+        .join(", ") || null,
     priceTotalSen: item.priceTotalSen,
   };
 }
@@ -889,5 +979,41 @@ export function cancelTripAsCustomer(
       ok: true,
       ...(await refreshBooking(tx, item.bookingId, "customer", now)),
     };
+  });
+}
+
+/**
+ * Changes who a booking is for, as staff correct it: the name, the phone
+ * and the email the booking's emails go to, checked by `parseContact`.
+ * The account a booking shows under is left as it is. Logged with the
+ * fields changed, before and after; saving what is already there logs
+ * nothing. See docs/261103-tour-guide.md, "Booking changes".
+ */
+export function updateBookingContact(
+  actor: Actor,
+  bookingId: string,
+  contact: ContactFields,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: { contactName: true, contactPhone: true, contactEmail: true },
+    });
+    if (!booking) {
+      return refuse("This booking was deleted meanwhile. Go back to Bookings.");
+    }
+    const changed = changedFields<ContactFields>(
+      { ...booking, contactEmail: booking.contactEmail ?? "" },
+      contact,
+    );
+    if (!changed) return { ok: true };
+    await tx.booking.update({ where: { id: bookingId }, data: changed.after });
+    await logActivity(tx, actor, {
+      action: "booking.contact.updated",
+      entityId: bookingId,
+      before: changed.before,
+      after: changed.after,
+    });
+    return { ok: true };
   });
 }

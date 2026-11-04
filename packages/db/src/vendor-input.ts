@@ -1,3 +1,10 @@
+import {
+  BANK_FIELD_LABELS,
+  bankFieldsOf,
+  checkBankFields,
+  readBankFields,
+  type BankFields,
+} from "./bank-input";
 import { isValidEmail, normalizeEmail } from "./booking-contact";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
@@ -38,14 +45,15 @@ export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
 };
 
 /**
- * What a vendor may supply, asked of every kind at sign-up. Only transport
- * is worked in Connect for now; the rest is a supplier list for
+ * What a vendor may supply, asked of every kind at sign-up. Transport and
+ * tour guides are worked in Connect; the rest is a supplier list for
  * Reservation.
  */
 export const VENDOR_SERVICES = [
   "car-with-driver",
   "coach-charter",
   "driver",
+  "tour-guide",
   "self-drive",
   "accommodation",
   "attraction",
@@ -56,6 +64,7 @@ export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
   "car-with-driver": "Car with driver",
   "coach-charter": "Coach charter",
   driver: "Driver only",
+  "tour-guide": "Tour guide",
   "self-drive": "Self-drive rental",
   accommodation: "Accommodation",
   attraction: "Attraction",
@@ -99,7 +108,7 @@ export type VendorFields = {
   services: VendorService[];
   /** The locations it serves, each once, sorted. */
   locationIds: string[];
-};
+} & BankFields;
 
 export type VendorField = keyof VendorFields;
 
@@ -114,6 +123,7 @@ export const VENDOR_FIELD_LABELS: Record<VendorField, string> = {
   address: "Address",
   services: "What it offers",
   locationIds: "Locations served",
+  ...BANK_FIELD_LABELS,
 };
 
 /** The services among the values, once each, in `VENDOR_SERVICES` order. */
@@ -122,17 +132,19 @@ export function vendorServicesOf(values: readonly unknown[]): VendorService[] {
 }
 
 /** A stored vendor's fields as the forms and the log read them. */
-export function vendorFieldsOf(vendor: {
-  name: string;
-  kind: string;
-  registrationNo: string;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
-  address: string;
-  services: readonly string[];
-  locations: readonly { id: string }[];
-}): VendorFields {
+export function vendorFieldsOf(
+  vendor: {
+    name: string;
+    kind: string;
+    registrationNo: string;
+    contactName: string;
+    contactPhone: string;
+    contactEmail: string;
+    address: string;
+    services: readonly string[];
+    locations: readonly { id: string }[];
+  } & BankFields,
+): VendorFields {
   return {
     name: vendor.name,
     kind: isVendorKind(vendor.kind) ? vendor.kind : "company",
@@ -143,6 +155,7 @@ export function vendorFieldsOf(vendor: {
     address: vendor.address,
     services: vendorServicesOf(vendor.services),
     locationIds: vendor.locations.map((l) => l.id).sort(),
+    ...bankFieldsOf(vendor),
   };
 }
 
@@ -207,7 +220,7 @@ export function checkVendorFields(fields: Partial<VendorFields>): Change {
       VENDOR_LOCATIONS_FIELD,
     );
   }
-  return { ok: true };
+  return checkBankFields(fields);
 }
 
 /**
@@ -230,6 +243,7 @@ export function parseVendorFields(
     address: textOf(values.address),
     services: vendorServicesOf(services.map(textOf)),
     locationIds: [...new Set(locationIds.map(textOf).filter(Boolean))].sort(),
+    ...readBankFields(values),
   };
   const check = checkVendorFields(fields);
   return check.ok ? { ok: true, value: fields } : check;

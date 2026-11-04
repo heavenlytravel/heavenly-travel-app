@@ -108,6 +108,8 @@ describe("parseTripOptions", () => {
         childSeats: 1,
         flightNumber: "MH 123",
         notes: "Two bags",
+        guideLanguage: null,
+        guideRequest: null,
       },
     );
   });
@@ -118,6 +120,26 @@ describe("parseTripOptions", () => {
       "class=vc4&passengers=20&childSeats=2",
     );
     assert.equal(options?.childSeats, 0);
+  });
+
+  it("reads the guide's language and a request, dropping unknown and repeated ones", () => {
+    const both = parseTripOptions(
+      "coach-charter",
+      "class=vc4&passengers=20&guide=English&guideRequest=Korean",
+    );
+    assert.equal(both?.guideLanguage, "English");
+    assert.equal(both?.guideRequest, "Korean");
+    const same = parseTripOptions(
+      "car-with-driver",
+      "class=vc1&passengers=2&guide=Malay&guideRequest=Malay",
+    );
+    assert.equal(same?.guideLanguage, "Malay");
+    assert.equal(same?.guideRequest, null);
+    const unknown = parseTripOptions(
+      "car-with-driver",
+      "class=vc1&passengers=2&guide=Elvish",
+    );
+    assert.equal(unknown?.guideLanguage, null);
   });
 
   it("reads the model chosen, and none for an empty one", () => {

@@ -4,7 +4,7 @@ import {
   changeUserEmail,
   createUser,
   flagOf,
-  parseNewPassword,
+  parseConfirmedPassword,
   parseNewUser,
   parseStaffAccess,
   parseUserEmail,
@@ -104,7 +104,7 @@ export async function setUserPasswordAction(
   if (!actor) return FORBIDDEN;
   const userId = userIdOf(formData);
   if (!userId) return STALE;
-  const parsed = parseNewPassword(formData.get("password"));
+  const parsed = parseConfirmedPassword(Object.fromEntries(formData));
   if (!parsed.ok) return refusalOf(parsed);
   const result = await setUserPassword(actorOf(actor), userId, parsed.value);
   if (result.ok) revalidateLocation();

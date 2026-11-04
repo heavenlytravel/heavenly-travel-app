@@ -111,7 +111,7 @@ export function ItemActions({
             <input type="hidden" name="itemId" value={itemId} />
             <Button
               type="submit"
-              variant="ghost"
+              variant="ghost-danger"
               size="sm"
               disabled={advance.pending}
               pending={cancel.pending}
@@ -156,7 +156,7 @@ export function CancelBookingControl({
   return (
     <form {...formProps} className="grid justify-items-end gap-1.5">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Button type="submit" variant="secondary" pending={pending}>
+      <Button type="submit" variant="danger" pending={pending}>
         <XIcon className="size-4" />
         {pending ? "Cancelling…" : "Cancel booking"}
       </Button>

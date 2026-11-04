@@ -55,7 +55,7 @@ import {
 } from "@repo/console/use-image-upload";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import { RowControls, movedRow } from "../RowControls";
+import { RowControls, movedRow } from "../../../../../_components/RowControls";
 import { publishFooterAction, saveFooterDraftAction } from "./actions";
 import { FooterContentView } from "./FooterContentView";
 import { logoSrc } from "./logo-src";

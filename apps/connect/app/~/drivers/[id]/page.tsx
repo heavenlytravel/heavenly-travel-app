@@ -24,7 +24,7 @@ export default async function DriverPage({
   const [driver, choices, held] = await Promise.all([
     isNew ? null : getDriver(id),
     vendorFleetChoices(member.vendor.id),
-    isNew ? [] : heldBookingsOf({ driverId: id }),
+    isNew ? [] : heldBookingsOf({ driverId: id }, "reference"),
   ]);
   if (!isNew && driver?.vendorId !== member.vendor.id) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];

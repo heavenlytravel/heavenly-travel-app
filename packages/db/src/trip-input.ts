@@ -12,6 +12,7 @@ import {
   isHourlyPackage,
   type HourlyChoice,
 } from "./hourly-input";
+import { GUIDE_LANGUAGES } from "./guide-input";
 import type { TripView } from "./trip-view";
 
 /**
@@ -58,7 +59,61 @@ export type TripOptions = {
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
+  /** The tour guide's language, paid for; null without a guide. */
+  guideLanguage: string | null;
+  /** Another language asked for, free, not on sale; null when none. */
+  guideRequest: string | null;
 };
+
+/**
+ * The tour guide as a booking form holds it and a trip keeps it: the
+ * language paid for, one on sale for every trip (./guide-rates-input),
+ * and another the customer asks Operation to look for. Either may be
+ * null; the two are never the same. The website's confirm page and the
+ * console's booking forms keep it so. See docs/261103-tour-guide.md.
+ */
+export type GuideChoice = { language: string | null; request: string | null };
+
+export const NO_GUIDE: GuideChoice = { language: null, request: null };
+
+const knownLanguage = (value: unknown) =>
+  typeof value === "string" &&
+  (GUIDE_LANGUAGES as readonly string[]).includes(value)
+    ? value
+    : null;
+
+/** A choice made of any two values: unknown languages dropped, and a request the same as the language. */
+export function guideChoiceOf(values: {
+  language: unknown;
+  request: unknown;
+}): GuideChoice {
+  const language = knownLanguage(values.language);
+  const request = knownLanguage(values.request);
+  return { language, request: request === language ? null : request };
+}
+
+/** A stored trip's guide as a form starts from it. */
+export function storedGuideChoice(details: {
+  guideLanguage: string | null;
+  guideRequest: string | null;
+}): GuideChoice {
+  return guideChoiceOf({
+    language: details.guideLanguage,
+    request: details.guideRequest,
+  });
+}
+
+/** The guide as a form posts it, `TRIP_PARAM.guide` and `guideRequest`; nothing for none. */
+export function guideEntries(guide: GuideChoice): [string, string][] {
+  return [
+    ...(guide.language
+      ? [[TRIP_PARAM.guide, guide.language] as [string, string]]
+      : []),
+    ...(guide.request
+      ? [[TRIP_PARAM.guideRequest, guide.request] as [string, string]]
+      : []),
+  ];
+}
 
 /** The parameter and input names, the same in a URL and in a form. */
 export const TRIP_PARAM = {
@@ -75,6 +130,10 @@ export const TRIP_PARAM = {
   childSeats: "childSeats",
   flightNumber: "flight",
   notes: "notes",
+  /** The tour guide's language, paid for. */
+  guide: "guide",
+  /** A language asked for, not on sale. */
+  guideRequest: "guideRequest",
 } as const;
 
 /** The input names an options form posts, so they match what is parsed. */
@@ -198,7 +257,8 @@ export function parseFlightNumber(raw: string | null): string | null {
  * The choices made once the trip is priced, or null when a required one is
  * missing. Child seats for a category that does not offer them are dropped.
  * A model is optional; whether the class lets the customer choose it is
- * the pricing's to check.
+ * the pricing's to check, as is whether the guide's language is on sale.
+ * An unknown language is dropped.
  */
 export function parseTripOptions(
   category: TripCategory,
@@ -221,7 +281,18 @@ export function parseTripOptions(
     childSeats: childSeats ?? 0,
     flightNumber: parseFlightNumber(params.get(TRIP_PARAM.flightNumber)),
     notes: text(params.get(TRIP_PARAM.notes), TRIP_MAX_NOTES_LENGTH),
+    ...tripGuideFields(
+      guideChoiceOf({
+        language: params.get(TRIP_PARAM.guide),
+        request: params.get(TRIP_PARAM.guideRequest),
+      }),
+    ),
   };
+}
+
+/** A choice as a trip's fields: `guideLanguage` and `guideRequest`. */
+function tripGuideFields(guide: GuideChoice) {
+  return { guideLanguage: guide.language, guideRequest: guide.request };
 }
 
 /** The search alone as parameters, for links back to the options page. */

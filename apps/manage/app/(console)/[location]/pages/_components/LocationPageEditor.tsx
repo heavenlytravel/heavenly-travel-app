@@ -55,6 +55,7 @@ export function LocationPageEditor({
         ? "The public sees it now: its address stops working at once. Its draft and its published copy go; its publishes stay in the location's history."
         : "Its draft goes, and its address is free again. Its publishes stay in the location's history.",
       action: "Delete",
+      danger: true,
     });
     if (!goAhead) return null;
     const answer = await answerOf(

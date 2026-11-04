@@ -20,7 +20,10 @@ import {
 import { toast } from "@repo/ui/toast";
 import { EmptyRow } from "@repo/console/Table";
 import {
+  memo,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -226,6 +229,19 @@ export function RateGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   // What the focused cell held when it took the focus, for Escape.
   const valueAtFocus = useRef("");
+  const handlers = useRef<RowActions | null>(null);
+  const actions = useMemo<RowActions>(
+    () => ({
+      edit: (key, text) => handlers.current?.edit(key, text),
+      keyDown: (event, row, col, key) =>
+        handlers.current?.keyDown(event, row, col, key),
+      paste: (event, row, col) => handlers.current?.paste(event, row, col),
+      tick: (route, on) => handlers.current?.tick(route, on),
+      keep: (route) => handlers.current?.keep(route),
+      focused: (value) => handlers.current?.focused(value),
+    }),
+    [],
+  );
   // Whether classes are scrolled out of view on the right, for the fade.
   const [moreRight, setMoreRight] = useState(false);
 
@@ -377,32 +393,6 @@ export function RateGrid({
   const freeOut = crossLocation
     ? zones.length * elsewhere.length - routesOut
     : 0;
-
-  if (zones.length === 0) {
-    return (
-      <p className="px-5 py-5 text-sm text-muted">
-        A route runs between two zones, or within one. Draw the zones on{" "}
-        <Link href={coverageHref(locationSlug)} className="text-link">
-          Coverage
-        </Link>{" "}
-        to put a route on the grid.
-      </p>
-    );
-  }
-  if (classes.length === 0) {
-    return (
-      <p className="px-5 py-5 text-sm text-muted">
-        {category
-          ? `No ${category.toLowerCase()} class is on sale here. `
-          : "Each class on sale is a column of the grid. "}
-        Put a class on sale in{" "}
-        <Link href={classesHref(locationSlug)} className="text-link">
-          Classes
-        </Link>{" "}
-        to price a route for it.
-      </p>
-    );
-  }
 
   function edit(key: string, text: string) {
     setNotice(null);
@@ -652,6 +642,48 @@ export function RateGrid({
     });
   }
 
+  // The row handlers as they are now, for the rows' stable `actions`: a
+  // row redraws only when its own cells or state change, not on every
+  // keystroke elsewhere in the grid.
+  useLayoutEffect(() => {
+    handlers.current = {
+      edit,
+      keyDown: onCellKeyDown,
+      paste: onCellPaste,
+      tick,
+      keep,
+      focused: (value) => {
+        valueAtFocus.current = value;
+      },
+    };
+  });
+
+  if (zones.length === 0) {
+    return (
+      <p className="px-5 py-5 text-sm text-muted">
+        A route runs between two zones, or within one. Draw the zones on{" "}
+        <Link href={coverageHref(locationSlug)} className="text-link">
+          Coverage
+        </Link>{" "}
+        to put a route on the grid.
+      </p>
+    );
+  }
+  if (classes.length === 0) {
+    return (
+      <p className="px-5 py-5 text-sm text-muted">
+        {category
+          ? `No ${category.toLowerCase()} class is on sale here. `
+          : "Each class on sale is a column of the grid. "}
+        Put a class on sale in{" "}
+        <Link href={classesHref(locationSlug)} className="text-link">
+          Classes
+        </Link>{" "}
+        to price a route for it.
+      </p>
+    );
+  }
+
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
   const emptyMeans = EMPTY_CELL_MEANING;
@@ -751,7 +783,7 @@ export function RateGrid({
                 content={ticks === 0 ? "Tick the routes to delete." : null}
               >
                 <Button
-                  variant="secondary"
+                  variant="danger"
                   disabled={pending || ticks === 0}
                   onClick={deleteTicked}
                 >
@@ -863,193 +895,38 @@ export function RateGrid({
                 shown.map((route, row) => {
                   const [a, b] = shownEndsOf(route);
                   const out = isOut(route);
-                  const within = isWithin(route);
-                  const label = within
-                    ? `within ${nameOf(a)}`
-                    : `${nameOf(a)} ${out ? "to" : "and"} ${nameOf(b)}`;
-                  const whole = within
-                    ? `Within ${nameOf(a)}: a trip that starts and ends in it, or maps to it at both ends.`
-                    : out
-                      ? `${nameOf(a)} → ${nameOf(b)}: trips from here only; a trip back is priced where it starts.`
-                      : `${nameOf(a)} ↔ ${nameOf(b)}, the same price both ways.`;
-                  const isTicked = ticked.has(routeKey(route));
-                  const isDoomed = doomed.has(routeKey(route));
-                  // The row's shade, the same in every cell of it.
-                  const shade = isDoomed
-                    ? "bg-danger-tint/70"
-                    : isTicked
-                      ? "bg-shade"
-                      : "group-hover:bg-hover";
-                  const line =
-                    row < shown.length - 1 && "border-b border-hairline";
-                  const lead = cx(
-                    "py-0 text-left align-middle font-normal",
-                    shade,
-                    isDoomed && "text-muted line-through",
-                    line,
+                  const keys = classes.map((column) =>
+                    cellKey(route, column.id),
                   );
                   return (
-                    <tr key={routeKey(route)} className="group">
-                      {readOnly ? null : (
-                        <td className={cx(lead, "w-px pr-1 pl-5")}>
-                          {isDoomed ? (
-                            <Tooltip content="Keep this route">
-                              <button
-                                type="button"
-                                disabled={pending}
-                                onClick={() => keep(route)}
-                                aria-label={`Keep the route between ${label}`}
-                                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-muted hover:bg-danger-edge/50 hover:text-ink focus-ring"
-                              >
-                                <UndoIcon className="size-3.5" />
-                              </button>
-                            </Tooltip>
-                          ) : (
-                            <Checkbox
-                              aria-label={`Tick the route between ${label}`}
-                              checked={isTicked}
-                              onChange={(event) =>
-                                tick(route, event.target.checked)
-                              }
-                            />
-                          )}
-                        </td>
-                      )}
-                      <th
-                        scope="row"
-                        className={cx(lead, readOnly ? "pr-3 pl-5" : "px-3")}
-                      >
-                        <Tooltip content={whole} openOnClick>
-                          <span
-                            className={cx(
-                              ZONE_NAME,
-                              isDoomed && "text-muted line-through",
-                            )}
-                          >
-                            {zoneNameOf(a)}
-                          </span>
-                        </Tooltip>
-                      </th>
-                      <td className={cx(lead, "pr-3")}>
-                        <span className="flex items-center gap-2">
-                          <span
-                            aria-hidden="true"
-                            className="w-4 shrink-0 text-center text-muted"
-                          >
-                            {within ? "↺" : out ? "→" : "↔"}
-                          </span>
-                          {within ? (
-                            <span
-                              className={cx(
-                                "text-muted italic",
-                                isDoomed && "line-through",
-                              )}
-                            >
-                              Within the zone
-                            </span>
-                          ) : (
-                            <>
-                              <span className="sr-only">
-                                {out ? "to" : "and"}
-                              </span>
-                              <Tooltip
-                                content={whole}
-                                openOnClick
-                                className="min-w-0"
-                              >
-                                <span
-                                  className={cx(
-                                    ZONE_NAME,
-                                    isDoomed && "text-muted line-through",
-                                  )}
-                                >
-                                  {zoneNameOf(b)}
-                                </span>
-                              </Tooltip>
-                            </>
-                          )}
-                          {out ? (
-                            <Badge>
-                              {awayOf(route.toZoneId)?.location ??
-                                "Another location"}
-                            </Badge>
-                          ) : null}
-                          {out && !crossLocation ? (
-                            <Tooltip content="Trips stay in this location, so this route is not sold. Turn on trips across locations, on Trip rules, to sell it again.">
-                              <Badge tone="amber">
-                                Not sold while trips stay in this location
-                              </Badge>
-                            </Tooltip>
-                          ) : null}
-                        </span>
-                      </td>
-                      {classes.map((column, col) => {
-                        const key = cellKey(route, column.id);
-                        const bad = invalid.has(key);
-                        const empty = !(values[key] ?? "").trim();
-                        return (
-                          <td
-                            key={column.id}
-                            className={cx(CELL_PAD, shade, line)}
-                          >
-                            {readOnly ? (
-                              <span
-                                className={cx(
-                                  "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
-                                  empty && EMPTY_CELL,
-                                )}
-                              >
-                                {/* Read out before the price: a label on a plain span is not. */}
-                                <span className="sr-only">
-                                  {`${label}, ${column.name}, ${empty ? emptyMeans.toLowerCase() : "price in RM"} `}
-                                </span>
-                                {values[key]}
-                              </span>
-                            ) : (
-                              <input
-                                data-cell={`${row}:${col}`}
-                                aria-label={`${label}, ${column.name}, price in RM`}
-                                aria-invalid={bad || undefined}
-                                inputMode="decimal"
-                                autoComplete="off"
-                                spellCheck={false}
-                                readOnly={pending || isDoomed}
-                                tabIndex={isDoomed ? -1 : undefined}
-                                value={values[key] ?? ""}
-                                onChange={(event) =>
-                                  edit(key, event.target.value)
-                                }
-                                onFocus={(event) => {
-                                  valueAtFocus.current = event.target.value;
-                                  event.target.select();
-                                }}
-                                onBlur={(event) => {
-                                  const text = tidy(event.target.value);
-                                  if (text !== event.target.value)
-                                    edit(key, text);
-                                }}
-                                onKeyDown={(event) =>
-                                  onCellKeyDown(event, row, col, key)
-                                }
-                                onPaste={(event) =>
-                                  onCellPaste(event, row, col)
-                                }
-                                className={cx(
-                                  CELL_INPUT,
-                                  isDoomed
-                                    ? CELL_DOOMED
-                                    : bad
-                                      ? CELL_BAD
-                                      : changed.has(key)
-                                        ? CELL_CHANGED
-                                        : cx(CELL_PLAIN, empty && EMPTY_CELL),
-                                )}
-                              />
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
+                    <RouteRow
+                      key={routeKey(route)}
+                      route={route}
+                      row={row}
+                      last={row === shown.length - 1}
+                      fromName={zoneNameOf(a)}
+                      toName={zoneNameOf(b)}
+                      fromFull={nameOf(a)}
+                      toFull={nameOf(b)}
+                      out={out}
+                      within={isWithin(route)}
+                      awayLocation={
+                        out
+                          ? (awayOf(route.toZoneId)?.location ??
+                            "Another location")
+                          : null
+                      }
+                      crossLocation={crossLocation}
+                      classes={classes}
+                      values={keys.map((key) => values[key] ?? "")}
+                      bad={keys.map((key) => invalid.has(key))}
+                      changed={keys.map((key) => changed.has(key))}
+                      isTicked={ticked.has(routeKey(route))}
+                      isDoomed={doomed.has(routeKey(route))}
+                      readOnly={Boolean(readOnly)}
+                      pending={pending}
+                      actions={actions}
+                    />
                   );
                 })
               )}
@@ -1129,3 +1006,243 @@ export function RateGrid({
     </>
   );
 }
+
+/** What a row does, through the grid: stable, so the rows stay memoised. */
+type RowActions = {
+  edit: (key: string, text: string) => void;
+  keyDown: (
+    event: KeyboardEvent<HTMLInputElement>,
+    row: number,
+    col: number,
+    key: string,
+  ) => void;
+  paste: (
+    event: ClipboardEvent<HTMLInputElement>,
+    row: number,
+    col: number,
+  ) => void;
+  tick: (route: Route, on: boolean) => void;
+  keep: (route: Route) => void;
+  /** A cell took the focus holding this, which Escape puts back. */
+  focused: (value: string) => void;
+};
+
+type RouteRowProps = {
+  route: Route;
+  row: number;
+  last: boolean;
+  /** The zones' names as the row shows them, and in full for the labels. */
+  fromName: string;
+  toName: string;
+  fromFull: string;
+  toFull: string;
+  out: boolean;
+  within: boolean;
+  /** The other location's name, on a route out. */
+  awayLocation: string | null;
+  crossLocation: boolean;
+  classes: readonly ClassColumn[];
+  /** Each class's cell as typed, whether it is not a price, and whether it changed since the save. */
+  values: readonly string[];
+  bad: readonly boolean[];
+  changed: readonly boolean[];
+  isTicked: boolean;
+  isDoomed: boolean;
+  readOnly: boolean;
+  pending: boolean;
+  actions: RowActions;
+};
+
+/** The same row: every prop the same, the cells' lists cell by cell. */
+function sameRow(was: RouteRowProps, now: RouteRowProps) {
+  for (const key of Object.keys(now) as (keyof RouteRowProps)[]) {
+    const a = was[key];
+    const b = now[key];
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length || a.some((x, i) => x !== b[i])) return false;
+    } else if (a !== b) return false;
+  }
+  return true;
+}
+
+/**
+ * One route of the grid: its tick (or its undo once marked for deletion),
+ * its zones, and a price cell per class. Memoised: typing in a cell
+ * redraws its row alone.
+ */
+const RouteRow = memo(function RouteRow({
+  route,
+  row,
+  last,
+  fromName,
+  toName,
+  fromFull,
+  toFull,
+  out,
+  within,
+  awayLocation,
+  crossLocation,
+  classes,
+  values,
+  bad: badAt,
+  changed: changedAt,
+  isTicked,
+  isDoomed,
+  readOnly,
+  pending,
+  actions,
+}: RouteRowProps) {
+  const label = within
+    ? `within ${fromFull}`
+    : `${fromFull} ${out ? "to" : "and"} ${toFull}`;
+  const whole = within
+    ? `Within ${fromFull}: a trip that starts and ends in it, or maps to it at both ends.`
+    : out
+      ? `${fromFull} → ${toFull}: trips from here only; a trip back is priced where it starts.`
+      : `${fromFull} ↔ ${toFull}, the same price both ways.`;
+  // The row's shade, the same in every cell of it.
+  const shade = isDoomed
+    ? "bg-danger-tint/70"
+    : isTicked
+      ? "bg-shade"
+      : "group-hover:bg-hover";
+  const line = !last && "border-b border-hairline";
+  const lead = cx(
+    "py-0 text-left align-middle font-normal",
+    shade,
+    isDoomed && "text-muted line-through",
+    line,
+  );
+  return (
+    <tr className="group">
+      {readOnly ? null : (
+        <td className={cx(lead, "w-px pr-1 pl-5")}>
+          {isDoomed ? (
+            <Tooltip content="Keep this route">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => actions.keep(route)}
+                aria-label={`Keep the route between ${label}`}
+                className="-m-1 inline-flex size-6 items-center justify-center rounded-md text-muted hover:bg-danger-edge/50 hover:text-ink focus-ring"
+              >
+                <UndoIcon className="size-3.5" />
+              </button>
+            </Tooltip>
+          ) : (
+            <Checkbox
+              aria-label={`Tick the route between ${label}`}
+              checked={isTicked}
+              onChange={(event) => actions.tick(route, event.target.checked)}
+            />
+          )}
+        </td>
+      )}
+      <th scope="row" className={cx(lead, readOnly ? "pr-3 pl-5" : "px-3")}>
+        <Tooltip content={whole} openOnClick>
+          <span
+            className={cx(ZONE_NAME, isDoomed && "text-muted line-through")}
+          >
+            {fromName}
+          </span>
+        </Tooltip>
+      </th>
+      <td className={cx(lead, "pr-3")}>
+        <span className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="w-4 shrink-0 text-center text-muted"
+          >
+            {within ? "↺" : out ? "→" : "↔"}
+          </span>
+          {within ? (
+            <span
+              className={cx("text-muted italic", isDoomed && "line-through")}
+            >
+              Within the zone
+            </span>
+          ) : (
+            <>
+              <span className="sr-only">{out ? "to" : "and"}</span>
+              <Tooltip content={whole} openOnClick className="min-w-0">
+                <span
+                  className={cx(
+                    ZONE_NAME,
+                    isDoomed && "text-muted line-through",
+                  )}
+                >
+                  {toName}
+                </span>
+              </Tooltip>
+            </>
+          )}
+          {out ? <Badge>{awayLocation}</Badge> : null}
+          {out && !crossLocation ? (
+            <Tooltip content="Trips stay in this location, so this route is not sold. Turn on trips across locations, on Trip rules, to sell it again.">
+              <Badge tone="amber">
+                Not sold while trips stay in this location
+              </Badge>
+            </Tooltip>
+          ) : null}
+        </span>
+      </td>
+      {classes.map((column, col) => {
+        const key = cellKey(route, column.id);
+        const value = values[col] ?? "";
+        const bad = badAt[col];
+        const empty = !value.trim();
+        return (
+          <td key={column.id} className={cx(CELL_PAD, shade, line)}>
+            {readOnly ? (
+              <span
+                className={cx(
+                  "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
+                  empty && EMPTY_CELL,
+                )}
+              >
+                {/* Read out before the price: a label on a plain span is not. */}
+                <span className="sr-only">
+                  {`${label}, ${column.name}, ${empty ? EMPTY_CELL_MEANING.toLowerCase() : "price in RM"} `}
+                </span>
+                {value}
+              </span>
+            ) : (
+              <input
+                data-cell={`${row}:${col}`}
+                aria-label={`${label}, ${column.name}, price in RM`}
+                aria-invalid={bad || undefined}
+                inputMode="decimal"
+                autoComplete="off"
+                spellCheck={false}
+                readOnly={pending || isDoomed}
+                tabIndex={isDoomed ? -1 : undefined}
+                value={value}
+                onChange={(event) => actions.edit(key, event.target.value)}
+                onFocus={(event) => {
+                  actions.focused(event.target.value);
+                  event.target.select();
+                }}
+                onBlur={(event) => {
+                  const text = tidy(event.target.value);
+                  if (text !== event.target.value) actions.edit(key, text);
+                }}
+                onKeyDown={(event) => actions.keyDown(event, row, col, key)}
+                onPaste={(event) => actions.paste(event, row, col)}
+                className={cx(
+                  CELL_INPUT,
+                  isDoomed
+                    ? CELL_DOOMED
+                    : bad
+                      ? CELL_BAD
+                      : changedAt[col]
+                        ? CELL_CHANGED
+                        : cx(CELL_PLAIN, empty && EMPTY_CELL),
+                )}
+              />
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}, sameRow);

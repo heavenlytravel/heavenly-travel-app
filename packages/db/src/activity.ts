@@ -1,3 +1,4 @@
+import { maskedForLog } from "./bank-input";
 import {
   activityActionMeta,
   ANONYMOUS_ACTOR_NAMES,
@@ -7,6 +8,7 @@ import {
   type Actor,
 } from "./activity-actions";
 import { activityActionsIn, type ActivityArea } from "./activity-areas";
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
 import type { LocationPageRef } from "./location-page-input";
@@ -50,8 +52,8 @@ export function logActivity(
       action: entry.action,
       entityType: meta.entityType,
       entityId: entry.entityId,
-      before: entry.before,
-      after: entry.after,
+      before: maskedForLog(entry.before),
+      after: maskedForLog(entry.after),
       customerVisible: meta.customerVisible,
       locationIds: [...new Set(entry.locationIds ?? [])],
     },
@@ -127,6 +129,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     location: idsOf(rows, "location"),
     vehicle: idsOf(rows, "vehicle"),
     driver: idsOf(rows, "driver"),
+    guide: idsOf(rows, "guide"),
     vendor: idsOf(rows, "vendor"),
   };
 
@@ -139,6 +142,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     locations,
     vehicles,
     drivers,
+    guides,
     vendors,
   ] = await Promise.all([
     read([...userIds], () =>
@@ -150,7 +154,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     read(ids.booking, () =>
       db.booking.findMany({
         where: { id: { in: ids.booking } },
-        select: { id: true, reference: true },
+        select: { id: true, ...BOOKING_NUMBER_SELECT },
       }),
     ),
     read(ids.state, () =>
@@ -189,6 +193,12 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
         select: { id: true, name: true, locationId: true },
       }),
     ),
+    read(ids.guide, () =>
+      db.guide.findMany({
+        where: { id: { in: ids.guide } },
+        select: { id: true, name: true, locationId: true },
+      }),
+    ),
     read(ids.vendor, () =>
       db.vendor.findMany({
         where: { id: { in: ids.vendor } },
@@ -197,37 +207,51 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     ),
   ]);
   const basedAt = new Map(
-    [...vehicles, ...drivers].map((record) => [record.id, record.locationId]),
+    [...vehicles, ...drivers, ...guides].map((record) => [
+      record.id,
+      record.locationId,
+    ]),
   );
   const userById = new Map(users.map((u) => [u.id, u]));
   const emails = new Map(users.map((u) => [u.id, u.email]));
-  const [deleted, deletedVehicles, deletedDrivers, deletedUsers] =
-    await Promise.all([
-      deletedNames(
-        "location.deleted",
-        "name",
-        ids.location,
-        new Set(locations.map((l) => l.id)),
-      ),
-      deletedNames(
-        "vehicle.deleted",
-        "plate",
-        ids.vehicle,
-        new Set(vehicles.map((v) => v.id)),
-      ),
-      deletedNames(
-        "driver.deleted",
-        "name",
-        ids.driver,
-        new Set(drivers.map((d) => d.id)),
-      ),
-      deletedNames(
-        "user.deleted",
-        "email",
-        idsOf(rows, "user"),
-        new Set(emails.keys()),
-      ),
-    ]);
+  const [
+    deleted,
+    deletedVehicles,
+    deletedDrivers,
+    deletedGuides,
+    deletedUsers,
+  ] = await Promise.all([
+    deletedNames(
+      "location.deleted",
+      "name",
+      ids.location,
+      new Set(locations.map((l) => l.id)),
+    ),
+    deletedNames(
+      "vehicle.deleted",
+      "plate",
+      ids.vehicle,
+      new Set(vehicles.map((v) => v.id)),
+    ),
+    deletedNames(
+      "driver.deleted",
+      "name",
+      ids.driver,
+      new Set(drivers.map((d) => d.id)),
+    ),
+    deletedNames(
+      "guide.deleted",
+      "name",
+      ids.guide,
+      new Set(guides.map((g) => g.id)),
+    ),
+    deletedNames(
+      "user.deleted",
+      "email",
+      idsOf(rows, "user"),
+      new Set(emails.keys()),
+    ),
+  ]);
   const withDeleted = (
     live: readonly (readonly [string, string])[],
     gone: Map<string, string>,
@@ -240,10 +264,11 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     location: deleted,
     vehicle: deletedVehicles,
     driver: deletedDrivers,
+    guide: deletedGuides,
     user: deletedUsers,
   };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
-    booking: new Map(bookings.map((b) => [b.id, b.reference])),
+    booking: new Map(bookings.map((b) => [b.id, bookingLabelOf(b)])),
     state: new Map(states.map((s) => [s.code, s.name])),
     district: new Map(districts.map((d) => [d.code, d.name])),
     "vehicle-class": new Map(vehicleClasses.map((v) => [v.id, v.name])),
@@ -267,6 +292,10 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       drivers.map((d) => [d.id, d.name] as const),
       deletedDrivers,
     ),
+    guide: withDeleted(
+      guides.map((g) => [g.id, g.name] as const),
+      deletedGuides,
+    ),
     vendor: new Map(vendors.map((v) => [v.id, v.name] as const)),
   };
 
@@ -281,7 +310,9 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       isDeleted:
         gone[row.entityType as ActivityEntityType]?.has(row.entityId) ?? false,
       recordLocationId:
-        row.entityType === "vehicle" || row.entityType === "driver"
+        row.entityType === "vehicle" ||
+        row.entityType === "driver" ||
+        row.entityType === "guide"
           ? (basedAt.get(row.entityId) ?? null)
           : null,
     };
@@ -339,6 +370,7 @@ function entityLabelOf(
     case "location":
     case "vehicle":
     case "driver":
+    case "guide":
     case "vendor":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     default:

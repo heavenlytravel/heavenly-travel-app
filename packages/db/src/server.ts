@@ -93,6 +93,15 @@ export {
 } from "./drivers";
 export type { DriverWithClasses } from "./drivers";
 export {
+  listGuides,
+  getGuide,
+  getGuideByEmail,
+  createGuide,
+  updateGuide,
+  deleteGuide,
+} from "./guides";
+export type { GuideWithVendor } from "./guides";
+export {
   bookingIdOfTrip,
   getBookingFulfilment,
   listCandidates,
@@ -211,6 +220,7 @@ export {
   routesIntoLocation,
 } from "./zones";
 export { getHourlyList, listHourlyLists, setHourlyList } from "./hourly-rates";
+export { getGuideRates, listGuideRates, setGuideRates } from "./guide-rates";
 export type {
   Zone,
   ZoneRate,
@@ -346,6 +356,9 @@ export {
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
   cancelTripAsCustomer,
+  updateBookingContact,
+  nextInvoiceNumber,
+  checkOldInvoiceNumber,
 } from "./bookings";
 export type {
   BookingFilter,
@@ -395,12 +408,16 @@ export * from "./zone-trip";
 export * from "./zone-quote";
 export * from "./price-check";
 export * from "./rates-input";
+export * from "./guide-rates-input";
+export * from "./bank-input";
+export * from "./booking-number";
 export * from "./hourly-input";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";
 export * from "./vehicle-input";
 export * from "./driver-input";
+export * from "./guide-input";
 export * from "./vendor-input";
 export * from "./fulfilment-rules";
 export * from "./trip-events-input";
@@ -423,6 +440,8 @@ export * from "./cache-tags";
 export {
   findVehicleMatches,
   findDriverMatches,
+  findGuideMatches,
+  findVendorMatches,
   findUserMatches,
   findVehicleClassMatches,
   findZoneMatches,

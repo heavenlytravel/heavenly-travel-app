@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
-import { listDrivers, listVehicles } from "@repo/db/server";
 import { CarFrontIcon, PlusIcon } from "@repo/ui/icons";
 import { FleetList } from "../../_components/FleetList";
 import { FleetTabs } from "../../_components/FleetTabs";
 import { requireMember, shellMember } from "../../_lib/access";
+import { fleetCounts, vendorFleet } from "../../_lib/fleet";
 import { Button } from "@repo/ui/button";
 import { Plate } from "../../_ui/parts";
 import { BandHeading, Screen } from "../../_ui/Screen";
@@ -18,10 +18,8 @@ import { BandHeading, Screen } from "../../_ui/Screen";
  */
 export default async function VehiclesPage() {
   const member = await requireMember();
-  const [vehicles, drivers] = await Promise.all([
-    listVehicles({ vendorId: member.vendor.id }),
-    listDrivers({ vendorId: member.vendor.id }),
-  ]);
+  const fleet = await vendorFleet(member.vendor.id);
+  const { vehicles } = fleet;
   const add = (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/vehicles/new">
@@ -38,11 +36,7 @@ export default async function VehiclesPage() {
           <BandHeading eyebrow={member.vendor.name} title="Fleet" action={add}>
             We offer you jobs for each vehicle&apos;s class, where it is based.
           </BandHeading>
-          <FleetTabs
-            current="vehicles"
-            vehicles={vehicles.length}
-            drivers={drivers.length}
-          />
+          <FleetTabs current="vehicles" {...fleetCounts(fleet)} />
         </div>
       }
     >
@@ -53,8 +47,10 @@ export default async function VehiclesPage() {
           title: modelName(v.vehicleModel),
           detail: `${v.vehicleModel.vehicleClass.name} · ${v.location.name}`,
           isActive: v.isActive,
-          due: vehicleDocumentsDue(v),
-          anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
+          documents: {
+            due: vehicleDocumentsDue(v),
+            anyEntered: VEHICLE_DOCUMENTS.some((key) => v[key]),
+          },
         }))}
         hrefOf={(id) => `/~/vehicles/${id}`}
         empty={{

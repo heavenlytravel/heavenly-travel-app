@@ -8,6 +8,7 @@ import {
   type ClassAvailability,
 } from "./booking-rules";
 import {
+  needsGuide,
   offersChildSeats,
   type TripCategory,
   type TripMode,
@@ -19,6 +20,8 @@ import {
   type DistrictWithState,
 } from "./coverage";
 import { Prisma } from "./generated/prisma/client";
+import { listGuideRates } from "./guide-rates";
+import { guideOffers, type GuideOffer } from "./guide-rates-input";
 import {
   hourlyChargeOf,
   HOURLY_LIMITS,
@@ -34,6 +37,7 @@ import { listActiveOfferings, type OfferingOnSale } from "./offerings";
 import type { Place } from "./place";
 import {
   priceTrip,
+  withGuideCharge,
   withModelChoice,
   type PricingBasis,
   type TripPriceBreakdown,
@@ -93,6 +97,10 @@ export type TripItemRequest = TripRequest & {
   childSeats: number;
   flightNumber: string | null;
   notes: string | null;
+  /** The tour guide's language, one the quote's `guides` sells; null without a guide. */
+  guideLanguage: string | null;
+  /** Another language asked for, free, from GUIDE_LANGUAGES; null when none. */
+  guideRequest: string | null;
 };
 
 export type TripQuoteErrorCode =
@@ -108,7 +116,9 @@ export type TripQuoteErrorCode =
   | "class-unavailable"
   | "too-soon"
   | "passengers"
-  | "model-unavailable";
+  | "model-unavailable"
+  | "guide-unavailable"
+  | "guide-required";
 
 export type TripQuoteError = {
   code: TripQuoteErrorCode;
@@ -177,6 +187,8 @@ export type TripQuote = {
   /** The weekend and holiday surcharge that applies to this pickup's day, and why; null when none. */
   weekend: { charge: SurchargeCharge; reason: WeekendReason } | null;
   classes: ClassQuote[];
+  /** The tour guide languages on sale for this trip, at their price; empty when none. */
+  guides: GuideOffer[];
 };
 
 export type TripQuoteResult =
@@ -255,6 +267,13 @@ type QuoteReads = {
   pinned: QuoteLocation | null;
   /** A location's offerings of the category, read once per location. */
   offeringsAt: (locationId: string) => Promise<OfferingOnSale[]>;
+  guideRatesAt: (
+    locationId: string,
+  ) => Promise<
+    Awaited<ReturnType<typeof listGuideRates>> extends Map<string, infer R>
+      ? R
+      : never
+  >;
 };
 
 async function readForQuotes(
@@ -270,6 +289,7 @@ async function readForQuotes(
       }))
     : loaded;
   const offerings = new Map<string, Promise<OfferingOnSale[]>>();
+  const guideRates = new Map<string, ReturnType<QuoteReads["guideRatesAt"]>>();
   return {
     loaded,
     locations,
@@ -281,6 +301,14 @@ async function readForQuotes(
       if (!read) {
         read = listActiveOfferings(id, category);
         offerings.set(id, read);
+      }
+      return read;
+    },
+    guideRatesAt(id) {
+      let read = guideRates.get(id);
+      if (!read) {
+        read = listGuideRates([id]).then((lists) => lists.get(id) ?? []);
+        guideRates.set(id, read);
       }
       return read;
     },
@@ -424,7 +452,10 @@ async function quoteOne(
     ? { mode: "hourly", hours: hire.includedHours + hire.extraHours }
     : { mode: "oneway", distanceKm: placed.distanceKm ?? 0 };
 
-  const offerings = await reads.offeringsAt(location.id);
+  const [offerings, guideRates] = await Promise.all([
+    reads.offeringsAt(location.id),
+    reads.guideRatesAt(location.id),
+  ]);
   const hourlyOf = (vehicleClassId: string) =>
     choice
       ? hourlyChargeOf(location.hourly, pickup.zone, choice, vehicleClassId)
@@ -566,6 +597,10 @@ async function quoteOne(
       surcharge,
       weekend,
       classes,
+      guides: guideOffers(
+        guideRates,
+        choice ? { mode: "hourly", ...choice } : { mode: "oneway" },
+      ),
     },
   };
 }
@@ -687,6 +722,27 @@ function itemOf(
     model = { id: found.id, name: found.name };
     price = withModelChoice(price, found.name, modelChoice.charge);
   }
+  if (request.guideLanguage) {
+    const guide = quote.guides.find(
+      (offer) => offer.language === request.guideLanguage,
+    );
+    if (!guide) {
+      return fail(
+        "guide-unavailable",
+        `A tour guide speaking ${request.guideLanguage} is not offered on this trip. Choose another language.`,
+      );
+    }
+    price = withGuideCharge(price, guide);
+  } else if (
+    side === "customer" &&
+    needsGuide(category) &&
+    quote.guides.length > 0
+  ) {
+    return fail(
+      "guide-required",
+      "A coach comes with a tour guide. Choose the language your guide speaks.",
+    );
+  }
 
   return {
     ok: true,
@@ -722,6 +778,11 @@ function itemOf(
         driveMinutes: basis.mode === "oneway" ? quote.driveMinutes : null,
         passengers: request.passengers,
         childSeats: offersChildSeats(category) ? request.childSeats : 0,
+        guideLanguage: request.guideLanguage,
+        guideRequest:
+          request.guideRequest === request.guideLanguage
+            ? null
+            : request.guideRequest,
         flightNumber: request.flightNumber,
         notes: request.notes,
       },

@@ -78,7 +78,7 @@ async function vehicleScreen(scope: ConsoleScope, vehicleId: string) {
     await Promise.all([
       getVehicle(vehicleId),
       vehicleDeleteImpactOf(vehicleId),
-      heldBookingsOf({ vehicleId }),
+      heldBookingsOf({ vehicleId }, "number"),
       listClassOptions(),
       listModelSuggestions(),
       locationsVisible(),

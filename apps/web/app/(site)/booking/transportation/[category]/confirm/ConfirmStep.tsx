@@ -4,15 +4,25 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  andList,
   clashesOf,
   formatMyr,
+  guideChoiceOf,
+  guideEntries,
+  guideOfferIssue,
+  guideOffersOnAll,
   modelsLine,
   isAirportPlace,
+  needsGuide,
   plural,
   tripItemField,
+  CHARGE_LABELS,
+  fareSenOf,
+  WEEKEND_REASONS,
   type TripCategory,
   type TripOptions,
   type TripSearch,
+  type WeekendReason,
 } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { FormError } from "@repo/ui/form-error";
@@ -55,6 +65,7 @@ import {
 } from "../../../../_components/Page";
 import { BookingStepTitle, FoldedTripsBones } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
+import { AddOns } from "./AddOns";
 import { ConfirmForm } from "./ConfirmForm";
 import { CONFIRM_FIELDS } from "./fields";
 
@@ -77,6 +88,17 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
 }
 
 /**
+ * Which trips a line of the price is on: "3 trips" when every one of
+ * several, "Trip 2" or "Trips 1 and 3" when some; null for a single trip.
+ */
+function tripsNote(on: readonly number[], count: number): string | null {
+  if (count === 1) return null;
+  if (on.length === count) return plural(count, "trip");
+  const numbers = on.map((index) => String(index + 1));
+  return `${on.length === 1 ? "Trip" : "Trips"} ${andList(numbers)}`;
+}
+
+/**
  * The confirm step, laid out as B: the trips and the vehicle on the left,
  * which stay in view while "Customer Info" on the right scroll with the
  * page. On a phone the trips and the vehicle fold into one line above the
@@ -90,8 +112,10 @@ function placesLine(trips: PlannedTrip[], at: (trip: PlannedTrip) => string) {
  * it, or it cannot be priced; so does a price changed since the trip was
  * added. "Your vehicle" has the class for all the trips, pictured and
  * with its models as on the vehicle page (any of them is sent, whichever
- * is free on the day: choosing a model is not offered for now), and the
- * group. The details ask the contact, the flights for the trips at an
+ * is free on the day: choosing a model is not offered for now), the
+ * group, and under it the add-ons: the tour guide in a language on sale
+ * for every trip, priced into each, and another asked for (./AddOns). The
+ * details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
  * the total and the cancellation terms; it says which trip to fix while
  * any is red. A link with today's one-trip confirm address still opens
@@ -133,6 +157,10 @@ export function ConfirmStep({
       updatePlan((now) => ({
         ...now,
         classId: options.vehicleClassId,
+        guide: guideChoiceOf({
+          language: options.guideLanguage,
+          request: options.guideRequest,
+        }),
         forDriver: {
           // The flight goes on the trip it is for once its places are known.
           arrivingFlight: options.flightNumber ?? "",
@@ -210,22 +238,86 @@ export function ConfirmStep({
   }
 
   const several = trips.length > 1;
+  const forWhich =
+    trips.length === 2
+      ? "both trips"
+      : several
+        ? `all ${trips.length} trips`
+        : "the trip";
   const card = chosen?.card ?? null;
+  // The guide languages every trip sells, once every trip is priced.
+  const views = trips.map((trip) => quoteOf(priced, trip)?.view);
+  const guideOffers =
+    complete && views.every((view) => view?.ok)
+      ? guideOffersOnAll(views.map((view) => (view?.ok ? view.guides : [])))
+      : [];
+  // A coach takes a guide: the first language on sale until one is chosen.
+  const guideRequired = needsGuide(category) && guideOffers.length > 0;
+  const guide =
+    guideRequired && plan.guide.language === null
+      ? { ...plan.guide, language: guideOffers[0]!.language }
+      : plan.guide;
+  const guideIssue = complete
+    ? guideOfferIssue(guide.language, guideOffers)
+    : null;
+  /** What the guide adds to a trip; 0 without one. */
+  const guideOn = (index: number) => {
+    const view = views[index];
+    if (!guide.language || !view?.ok) return 0;
+    return (
+      view.guides.find((offer) => offer.language === guide.language)
+        ?.amountSen ?? 0
+    );
+  };
   const onTrip = trips.map((_, index) =>
     card ? classOnTrip(quotes[index] ?? null, card.id) : null,
   );
-  /** A trip's price in the chosen vehicle, any of its models. */
+  /** A trip's price in the chosen vehicle, any of its models, with the guide. */
   const priceOn = (index: number) => {
     const here = onTrip[index];
     if (!here || here.totalSen === null || !here.availability.ok) {
       return null;
     }
-    return here.totalSen;
+    return here.totalSen + guideOn(index);
   };
   const totalSen = trips.reduce(
     (sum, _, index) => sum + (priceOn(index) ?? 0),
     0,
   );
+  // What the total is made of, over every trip priced: a line for each
+  // part, saying which trips it is on when not every one.
+  const pricedTrips = trips.flatMap((_, index) =>
+    priceOn(index) === null ? [] : [index],
+  );
+  const lineOf = (label: string, part: (index: number) => number) => {
+    const on = pricedTrips.filter((index) => part(index) > 0);
+    const amountSen = on.reduce((sum, index) => sum + part(index), 0);
+    return amountSen > 0
+      ? [{ label, note: tripsNote(on, trips.length), amountSen }]
+      : [];
+  };
+  const oddHoursOn = (index: number) => onTrip[index]?.oddHoursSen ?? 0;
+  const weekendOn = (reason: WeekendReason) => (index: number) => {
+    const weekend = onTrip[index]?.weekend;
+    return weekend?.reason === reason ? weekend.amountSen : 0;
+  };
+  const breakdown = card
+    ? [
+        ...lineOf(card.name, (index) => {
+          const here = onTrip[index];
+          return priceOn(index) !== null && here && here.totalSen !== null
+            ? fareSenOf({ ...here, totalSen: here.totalSen })
+            : 0;
+        }),
+        ...lineOf(CHARGE_LABELS.oddHours, oddHoursOn),
+        ...WEEKEND_REASONS.flatMap((reason) =>
+          lineOf(CHARGE_LABELS.weekend(reason), weekendOn(reason)),
+        ),
+        ...(guide.language
+          ? lineOf(CHARGE_LABELS.guide(guide.language), guideOn)
+          : []),
+      ]
+    : [];
   const cutoffs = new Set(onTrip.map((p) => p?.cancellationCutoffHours));
   const cutoff = cutoffs.size === 1 ? [...cutoffs][0] : undefined;
   const cancellation = !card
@@ -285,7 +377,7 @@ export function ConfirmStep({
       ? `Change or remove ${red.join(", ")} first: ${
           red.length === 1 ? "it is" : "they are"
         } marked in red.`
-      : null;
+      : guideIssue;
 
   const arrivingAt = trips.filter((t) => isAirportPlace(t.pickup));
   const departingAt = trips.filter(
@@ -301,6 +393,7 @@ export function ConfirmStep({
       ? [[CONFIRM_FIELDS.vehicleClass, card.id] as [string, string]]
       : []),
     [CONFIRM_FIELDS.passengers, String(passengers)],
+    ...guideEntries(guide),
   ];
 
   const timeline = (
@@ -380,16 +473,22 @@ export function ConfirmStep({
             </div>
           ) : null}
           <p className="mt-3 text-copy text-muted">
-            For{" "}
-            {trips.length === 2
-              ? "both trips"
-              : several
-                ? `all ${trips.length} trips`
-                : "the trip"}{" "}
-            · {plural(passengers, "passenger")}
+            For {forWhich} · {plural(passengers, "passenger")}
           </p>
         </div>
       </div>
+      <AddOns
+        offers={guideOffers}
+        guide={guide}
+        required={guideRequired}
+        forWhich={`for ${forWhich}`}
+        onGuide={(change) =>
+          updatePlan((now) => ({
+            ...now,
+            guide: { ...now.guide, ...change },
+          }))
+        }
+      />
     </section>
   ) : null;
 
@@ -404,7 +503,13 @@ export function ConfirmStep({
           <TripsFold
             trips={trips}
             summary={
-              card ? `${card.name} · ${plural(passengers, "passenger")}` : null
+              card
+                ? [
+                    card.name,
+                    plural(passengers, "passenger"),
+                    ...(guide.language ? ["Tour guide"] : []),
+                  ].join(" · ")
+                : null
             }
             attention={red.length > 0 || error !== null}
             label="Your trips and vehicle"
@@ -433,6 +538,7 @@ export function ConfirmStep({
               category={category}
               entries={entries}
               totalSen={totalSen}
+              breakdown={breakdown}
               cancellation={cancellation}
               blocked={blocked}
               forDriver={forDriver}

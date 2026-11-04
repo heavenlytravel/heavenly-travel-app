@@ -1,4 +1,5 @@
 import {
+  bookingLabelOf,
   describePriceOverride,
   formatMyr,
   isItemStatus,
@@ -64,7 +65,7 @@ export async function amendItemScreen({
   // The booking it is a trip of, the way back to it.
   const meta = (
     <RecordLink href={bookingHref(scope.slug, booking.id)}>
-      {booking.reference}
+      {bookingLabelOf(booking)}
     </RecordLink>
   );
 

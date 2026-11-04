@@ -45,7 +45,8 @@ import { TripTaps } from "./TripTaps";
  * for its owner and staff, who see its reports but do not make them: the
  * time large on the band, the customer with a call, a WhatsApp and the
  * way to each stop in Waze or Google Maps once accepted, until a few days
- * after it, and the trip's steps to report on the day. Opening the
+ * after it, with the trip's tour guide to call for the driver, and the
+ * trip's steps to report on the day. Opening the
  * customer's details is logged. See
  * docs/261028-fulfilment-vendors-and-connect.md, "On the day".
  */
@@ -230,6 +231,44 @@ export default async function JobPage({
         </Panel>
       )}
 
+      {driverJob?.guide ? (
+        <Panel className="grid gap-4 p-5">
+          <h2 className="text-caps font-semibold text-muted">Tour guide</h2>
+          <div className="flex items-center gap-3">
+            <Avatar name={driverJob.guide.name} size="sm" />
+            <div className="grid min-w-0 gap-0.5">
+              <span className="truncate font-semibold text-ink">
+                {driverJob.guide.name}
+              </span>
+              <span className="text-sm text-muted">
+                <span className="tabular-nums">{driverJob.guide.phone}</span>
+                {driverJob.guide.languages.length > 0
+                  ? ` · ${driverJob.guide.languages.join(", ")}`
+                  : null}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button asChild variant="outline">
+              <a href={`tel:${driverJob.guide.phone}`}>
+                <PhoneIcon className="size-4" />
+                Call
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <a
+                href={whatsappHref(driverJob.guide.phone)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircleIcon className="size-4" />
+                WhatsApp
+              </a>
+            </Button>
+          </div>
+        </Panel>
+      ) : null}
+
       {vendorJob ? (
         <Panel className="grid gap-4 p-5">
           <h2 className="text-caps font-semibold text-muted">Who does it</h2>
@@ -248,6 +287,15 @@ export default async function JobPage({
               <span className="text-sm text-muted">Driver not yours</span>
             )}
           </div>
+          {vendorJob.guide ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+              <span className="text-sm text-muted">Tour guide</span>
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Avatar name={vendorJob.guide} size="sm" />
+                {vendorJob.guide}
+              </span>
+            </div>
+          ) : null}
         </Panel>
       ) : null}
     </Screen>

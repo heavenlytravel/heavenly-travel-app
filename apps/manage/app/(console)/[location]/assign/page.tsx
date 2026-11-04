@@ -209,7 +209,7 @@ function TripRow({
       <Td className="whitespace-nowrap">
         <QuickViewButton
           bookingId={row.bookingId}
-          reference={row.reference}
+          label={row.label}
           href={bookingHref(scope, row.bookingId)}
         />
         <span className="block max-w-40 truncate text-xs text-muted">
@@ -245,7 +245,21 @@ function TripRow({
       </Td>
       {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
-          <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+          {role === "guide" && !row.withGuide ? (
+            <span className="text-muted">No guide</span>
+          ) : (
+            <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+          )}
+          {role === "guide" && row.guideLanguage ? (
+            <span className="block text-xs text-muted">
+              Speaks {row.guideLanguage}
+            </span>
+          ) : null}
+          {role === "guide" && row.guideRequest ? (
+            <span className="block text-xs text-muted">
+              {row.guideRequest} asked for
+            </span>
+          ) : null}
         </Td>
       ))}
       <Td className="whitespace-nowrap">

@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { EmptyState, Panel, Pill, type IconComponent } from "../_ui/parts";
 
-/** One vehicle or driver on a vendor's list. */
+/** One vehicle, driver or tour guide on a vendor's list. */
 export type FleetItem = {
   id: string;
   /** The plate, or the driver's initials. */
@@ -16,12 +16,12 @@ export type FleetItem = {
   /** A short line under, in amber: "No email, so cannot sign in". */
   flag?: string;
   isActive: boolean;
-  due: DocumentDue[];
-  anyEntered: boolean;
+  /** Its documents due, and whether any date is entered; absent when they are not watched: a tour guide's. */
+  documents?: { due: DocumentDue[]; anyEntered: boolean };
 };
 
 /**
- * A vendor's vehicles or drivers as a list for a phone: each opens its
+ * A vendor's vehicles, drivers or tour guides as a list for a phone: each opens its
  * form, with where it is based, whether it is in service, and its
  * documents due, in amber or red, the one thing worth a look.
  */
@@ -85,8 +85,8 @@ export function FleetList({
                     {item.flag}
                   </span>
                 ) : null}
-                {item.isActive ? (
-                  <Documents due={item.due} anyEntered={item.anyEntered} />
+                {item.isActive && item.documents ? (
+                  <Documents {...item.documents} />
                 ) : null}
               </span>
               <span className="flex shrink-0 items-center gap-1">

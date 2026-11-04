@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { NO_BANK } from "./bank-input";
 import {
   checkReviewNote,
   parseVendorFields,
@@ -44,6 +45,7 @@ describe("parseVendorFields", () => {
         address: "Kuah, Langkawi",
         services: ["car-with-driver", "coach-charter"],
         locationIds: ["loc1", "loc2"],
+        ...NO_BANK,
       },
     });
   });
@@ -63,6 +65,7 @@ describe("vendorFieldsOf", () => {
   it("reads a stored vendor's locations by id, sorted, and drops services it does not know", () => {
     const fields = vendorFieldsOf({
       ...FORM,
+      ...NO_BANK,
       services: ["driver", "spa"],
       locations: [{ id: "loc2" }, { id: "loc1" }],
     });

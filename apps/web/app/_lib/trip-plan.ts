@@ -11,11 +11,13 @@ import {
   tripItemField,
   tripSearchParams,
   type ClassFit,
+  type GuideOffer,
   type HourlyChoice,
   type TripClash,
   type TripClassPrice,
   type TripMode,
   type TripSearch,
+  type ClassCharges,
 } from "@repo/db";
 import type { GalleryModel } from "../_components/ModelGallery";
 import { EMPTY_SEARCH, type SearchValues } from "./search";
@@ -71,12 +73,11 @@ export const NO_FLIGHTS: ForDriver = {
 };
 
 /** One class as a trip's quote prices it, with what the pages say about it. */
-export type TripClassQuote = TripClassPrice & {
-  /** What the odd-hours surcharge adds to this trip; 0 when none. */
-  oddHoursSen: number;
-  /** The customer may cancel this trip free until this long before it starts. */
-  cancellationCutoffHours: number;
-};
+export type TripClassQuote = TripClassPrice &
+  ClassCharges & {
+    /** The customer may cancel this trip free until this long before it starts. */
+    cancellationCutoffHours: number;
+  };
 
 /** A trip as the server priced it: its places' names and every class, or why it cannot be booked. */
 export type TripQuoteView =
@@ -85,6 +86,8 @@ export type TripQuoteView =
       pickup: string;
       dropoff: string | null;
       classes: TripClassQuote[];
+      /** The tour guide languages on sale for the trip, at their price there. */
+      guides: GuideOffer[];
     }
   | { ok: false; error: string };
 

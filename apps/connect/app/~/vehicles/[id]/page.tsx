@@ -30,7 +30,7 @@ export default async function VehiclePage({
     isNew ? null : getVehicle(id),
     vendorFleetChoices(member.vendor.id),
     listModelSuggestions(),
-    isNew ? [] : heldBookingsOf({ vehicleId: id }),
+    isNew ? [] : heldBookingsOf({ vehicleId: id }, "reference"),
   ]);
   if (!isNew && vehicle?.vendorId !== member.vendor.id) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];

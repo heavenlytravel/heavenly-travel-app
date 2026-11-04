@@ -2,12 +2,12 @@ import "server-only";
 import {
   BOOKING_RULES,
   chargedKmOf,
-  flightOfTrip,
+  classChargesOf,
+  flagOf,
   formatLocalDateTime,
   hourlyChoiceLabel,
   isAirportPlace,
   isTripCategory,
-  parseFlightNumber,
   parsePriceOverride,
   parseTripOptions,
   parseTripSearch,
@@ -21,23 +21,22 @@ import {
   WEEKEND_REASON_LABELS,
   type PriceOverride,
   type TripCategory,
+  type TripOptions,
   type TripSearch,
 } from "@repo/db";
 import {
   prepareTripItem,
-  prepareTripItems,
   quoteTrip,
   type BookingWithItems,
   type PreparedItem,
-  type TripRequest,
 } from "@repo/db/server";
-import { resolveTrip, tripRouting } from "@repo/places/server";
+import { resolveTrip } from "@repo/places/server";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { bookingHref } from "../../../../_lib/routes";
 import {
   ADMIN_SIDE,
   CATEGORY_FIELD,
-  FLIGHT_FIELDS,
+  SAME_VEHICLE_FIELD,
   type TripQuoteView,
 } from "./trip-form";
 
@@ -115,10 +114,11 @@ export async function quoteTripView(
       maxPassengers: c.vehicleClass.maxPassengers,
       imageUrl: c.offering.coverUrl,
       models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
-      totalSen: c.price?.totalSen ?? null,
+      ...classChargesOf(c.price),
       modelChoiceSen: c.modelChoice?.amountSen ?? null,
       availability: c.availability,
     })),
+    guides: quote.guides,
   };
 }
 
@@ -184,13 +184,31 @@ export async function prepareFormItem(
   return { ok: true, item: prepared.item, override };
 }
 
+/** The vehicle one vehicle doing every trip takes, the same on each: refused when a trip's differs. */
+function sameVehicleOf(
+  categories: readonly TripCategory[],
+  options: readonly TripOptions[],
+): boolean {
+  const [first] = options;
+  return (
+    categories.every((category) => category === categories[0]) &&
+    options.every(
+      (option) =>
+        option.vehicleClassId === first!.vehicleClassId &&
+        option.vehicleModelId === first!.vehicleModelId &&
+        option.passengers === first!.passengers,
+    )
+  );
+}
+
 /**
- * A new booking's trips, in the order posted (by start), parsed and then
+ * A new booking's items, in the order posted (by start), parsed and then
  * resolved and priced again on the server, as the website's booking
- * action does: one vehicle and the details once for them all, no two
- * trips at once, the arriving flight on each pick-up at an airport and the
- * departing one on each drop-off at one, the note on every trip. Each
- * item carries its own agreed price.
+ * action does: each trip with its own category, vehicle, group, flight,
+ * child seats, note and tour guide, and its own agreed price. With one
+ * vehicle for every trip (`SAME_VEHICLE_FIELD`), every item must name the
+ * same, and no two trips may run at once; without, trips on their own
+ * vehicles may.
  */
 export async function prepareFormItems(
   formData: FormData,
@@ -206,60 +224,59 @@ export async function prepareFormItems(
   const several = indexes.length > 1;
   const label = (n: number) => (several ? `Trip ${n + 1}: ` : "");
 
-  const trips: FormTrip[] = [];
+  const trips: (FormTrip & { options: TripOptions })[] = [];
   for (const [n, index] of indexes.entries()) {
-    const parsed = parseFormTrip(tripItemParams(formData, index));
+    const params = tripItemParams(formData, index);
+    const parsed = parseFormTrip(params);
     if (!parsed.ok) return { ok: false, error: `${label(n)}${parsed.error}` };
-    trips.push(parsed.trip);
+    const options = parseTripOptions(parsed.trip.category, params);
+    if (!options) return { ok: false, error: `${label(n)}${NO_VEHICLE.error}` };
+    trips.push({ ...parsed.trip, options });
   }
-  const category = trips[0]!.category;
-  if (trips.some((trip) => trip.category !== category)) {
+  const shared = flagOf(formData.get(SAME_VEHICLE_FIELD));
+  if (
+    shared &&
+    !sameVehicleOf(
+      trips.map((trip) => trip.category),
+      trips.map((trip) => trip.options),
+    )
+  ) {
     return {
       ok: false,
-      error: "One vehicle does every trip, so every trip takes its category.",
+      error:
+        'One vehicle does every trip, so every trip takes trip 1\'s category, class and group. To give a trip its own, turn off "Same vehicle for every trip", then try again.',
     };
   }
-  const options = parseTripOptions(category, formData);
-  if (!options) return NO_VEHICLE;
 
-  const resolved = await Promise.all(
-    trips.map((trip) => resolveTrip(trip.search)),
-  );
-  const requests: TripRequest[] = [];
-  for (const [n, trip] of resolved.entries()) {
-    if (!trip.ok) return { ok: false, error: `${label(n)}${trip.message}` };
-    requests.push(trip.request);
-  }
-
-  const flights = {
-    arriving: parseFlightNumber(textOf(formData.get(FLIGHT_FIELDS.arriving))),
-    departing: parseFlightNumber(textOf(formData.get(FLIGHT_FIELDS.departing))),
-  };
-  const prepared = await prepareTripItems(
-    category,
-    requests.map((request) => ({
-      ...request,
-      ...options,
-      flightNumber: flightOfTrip(request, flights),
-    })),
-    tripRouting,
-    { side: ADMIN_SIDE },
+  const prepared = await Promise.all(
+    trips.map(async (trip) => {
+      const resolved = await resolveTrip(trip.search);
+      if (!resolved.ok) return { ok: false as const, error: resolved.message };
+      const result = await prepareTripItem(
+        trip.category,
+        { ...resolved.request, ...trip.options },
+        resolved.routing,
+        { side: ADMIN_SIDE },
+      );
+      return result.ok
+        ? { ok: true as const, item: result.item }
+        : { ok: false as const, error: result.error.message };
+    }),
   );
   const items: PreparedItem[] = [];
   for (const [n, result] of prepared.entries()) {
-    if (!result.ok) {
-      return { ok: false, error: `${label(n)}${result.error.message}` };
-    }
+    if (!result.ok) return { ok: false, error: `${label(n)}${result.error}` };
     items.push({ ...result.item, override: trips[n]!.override });
   }
 
   // One vehicle does one trip at a time: an hourly hire runs the hours its
-  // duration covers from its pickup's zone, known once it is priced.
-  const clash = firstClashSentence(items.map(itemTiming));
+  // duration covers from its pickup's zone, known once it is priced. Trips
+  // on vehicles of their own may run together.
+  const clash = shared ? firstClashSentence(items.map(itemTiming)) : null;
   if (clash) {
     return {
       ok: false,
-      error: `${clash} Change the time of one of them.`,
+      error: `${clash} Change the time of one of them, or give each its own vehicle.`,
     };
   }
   return { ok: true, items };

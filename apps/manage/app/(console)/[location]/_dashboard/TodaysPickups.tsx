@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  bookingLabelOf,
   formatLocalTime,
   isLive,
   itemSummary,
@@ -137,7 +138,7 @@ function PickupsCard({
                           href={bookingHref(scope, booking.id)}
                           className="font-semibold text-brand tabular-nums underline-offset-4 hover:underline"
                         >
-                          {booking.reference}
+                          {bookingLabelOf(booking)}
                         </Link>
                       }
                       bottom={

@@ -2,17 +2,23 @@
 
 import {
   createDriver,
+  createGuide,
   createVehicle,
   deleteConfirmationOf,
   deleteDriver,
+  deleteGuide,
   DRIVER_CLASSES_FIELD,
   getDriver,
+  getGuide,
   getVehicle,
   parseDriverFields,
   parseDriverSignIn,
+  GUIDE_LANGUAGES_FIELD,
+  parseGuideFields,
   parseVehicleFields,
   textOf,
   updateDriver,
+  updateGuide,
   updateVehicle,
   vendorFleetChoices,
 } from "@repo/db/server";
@@ -28,7 +34,7 @@ import { revalidatePath } from "next/cache";
 import { actorOf, getMemberAccess, NOT_A_MEMBER } from "./_lib/access";
 
 /**
- * A vendor's own vehicles and drivers, saved from Connect on the forms the
+ * A vendor's own vehicles, drivers and tour guides, saved from Connect on the forms the
  * admin uses. The vendor is always the member's, whatever the form sent;
  * a record of another vendor's is not theirs to change. A vehicle is of a
  * class on sale where it is based, and a driver may drive only classes on
@@ -159,6 +165,58 @@ export async function deleteDriverAction(
   const result = await deleteDriver(actorOf(member.user), id, confirmation);
   if (!result.ok) return stateOf(result);
   revalidatePath("/~/drivers");
+  revalidatePath("/~");
+  return null;
+}
+
+/**
+ * Saves one of the vendor's tour guides, new or existing, based at a
+ * location the vendor serves; then the list opens. A guide has no
+ * account, so nothing is sent. See docs/261103-tour-guide.md.
+ */
+export async function saveGuideAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const member = await getMemberAccess();
+  if (!member) return NOT_A_MEMBER;
+  formData.set("vendorId", member.vendor.id);
+  const id = textOf(formData.get("id"));
+  const existing = id ? await getGuide(id) : null;
+  if (id && existing?.vendorId !== member.vendor.id) return STALE;
+  // Once saved, a guide's email is ours to change, in Manage.
+  const parsed = parseGuideFields(
+    Object.fromEntries(formData),
+    formData.getAll(GUIDE_LANGUAGES_FIELD),
+    { saved: existing?.email ?? null, locked: true },
+  );
+  if (!parsed.ok) return refusalOf(parsed);
+  const fields = parsed.value;
+  const actor = actorOf(member.user);
+  const result = existing
+    ? await updateGuide(actor, existing.id, fields)
+    : await createGuide(actor, fields);
+  if (!result.ok) return stateOf(result);
+  revalidatePath("/~/guides");
+  revalidatePath("/~");
+  return { href: "/~/guides" };
+}
+
+/** Deletes one of the vendor's tour guides entered by mistake; then the list opens. */
+export async function deleteGuideAction(
+  id: string,
+  seen: string[],
+  typed: string | null,
+): Promise<ActionState> {
+  const member = await getMemberAccess();
+  if (!member) return NOT_A_MEMBER;
+  const confirmation = deleteConfirmationOf(seen, typed);
+  if (typeof id !== "string" || !id || !confirmation) return STALE;
+  const guide = await getGuide(id);
+  if (guide?.vendorId !== member.vendor.id) return STALE;
+  const result = await deleteGuide(actorOf(member.user), id, confirmation);
+  if (!result.ok) return stateOf(result);
+  revalidatePath("/~/guides");
   revalidatePath("/~");
   return null;
 }

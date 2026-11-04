@@ -25,12 +25,14 @@ const ANY = "";
 type Moment = { date: string; time: string };
 
 /**
- * One role of a trip still to assign, the vehicle or the driver, in its
- * own card: its vendor first (ours first), then one of that vendor's (one
+ * One role of a trip still to assign, the vehicle, the driver or the tour
+ * guide, in its own card: its vendor first (ours first), then one of that vendor's (one
  * that cannot do the trip greyed with why) or Any, which the vendor
- * assigns, said plainly under it; what we pay a vendor that is not ours;
- * when the vendor answers by, before the pickup; for our vehicle, the
- * acceptance now; and the booking's other trips still needing this role,
+ * assigns, said plainly under it; what we pay, a vendor that is not ours
+ * for a vehicle, the driver or guide themselves for theirs, and a coach
+ * driver's tip;
+ * when the vendor answers by, before the pickup; for our vehicle or guide,
+ * the acceptance now; and the booking's other trips still needing this role,
  * to give the same. Sent, the vendor accepts before the role is settled.
  * See docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
@@ -47,7 +49,7 @@ export function AssignForm({
   trip: AssignTrip;
   /** The booking's other trips still needing this role, in order. */
   others: AssignTrip[];
-  /** This role's vehicles or drivers. */
+  /** This role's vehicles, drivers or guides. */
   candidates: Candidate[];
   /** The active vendors serving the trip's location, ours first. */
   vendors: VendorOption[];
@@ -55,10 +57,12 @@ export function AssignForm({
   const [vendorId, setVendorId] = useState(ANY);
   const [record, setRecord] = useState(ANY);
   const [cost, setCost] = useState("");
+  const [tip, setTip] = useState("");
   const [also, setAlso] = useState<ReadonlySet<string>>(new Set());
   // Untouched, Answer by follows the earliest trip posted.
   const [respondByEdit, setRespondByEdit] = useState<Moment | null>(null);
   const label = PART_ROLE_LABELS[role];
+  const noun = label.toLowerCase();
   const { pending, error, formProps } = useActionForm(assignAction, {
     done: `${label} asked for. Trip ${trip.position} is assigned once each one accepts.`,
   });
@@ -68,6 +72,14 @@ export function AssignForm({
   const own = vendor ? candidates.filter((c) => c.vendor.id === vendor.id) : [];
   const fit = candidate?.trips[trip.id];
   const pick = !vendor ? "" : record === ANY ? `vendor:${vendor.id}` : record;
+
+  // Who the pay goes to: the vendor for a vehicle, the person for the rest.
+  const payee =
+    role === "vehicle"
+      ? `Pay ${vendor?.name ?? "the vendor"}`
+      : `Pay the ${noun}`;
+  // A coach trip's driver is given a tip, ours too.
+  const tipped = role === "driver" && trip.tipped;
 
   /** Why another trip cannot take the same, or null when it can. */
   const blockOf = (other: AssignTrip) =>
@@ -117,6 +129,9 @@ export function AssignForm({
           {vendor && !vendor.isOurs && t.id !== trip.id ? (
             <input type="hidden" name={`${role}Cost:${t.id}`} value={cost} />
           ) : null}
+          {vendor && tipped && t.tipped && t.id !== trip.id ? (
+            <input type="hidden" name={`${role}Tip:${t.id}`} value={tip} />
+          ) : null}
         </span>
       ))}
 
@@ -164,8 +179,8 @@ export function AssignForm({
       {vendor && record === ANY ? (
         <p className="rounded-control bg-shade px-3 py-2 text-sm text-body">
           {vendor.isOurs
-            ? `No ${role} named yet: name it here once you know.`
-            : `${vendor.name} will assign the ${role}. You see who once they do.`}
+            ? `No ${noun} named yet: name it here once you know.`
+            : `${vendor.name} will assign the ${noun}. You see who once they do.`}
         </p>
       ) : null}
       {fit?.warnings.map((warning) => (
@@ -183,11 +198,7 @@ export function AssignForm({
         <div className="grid gap-3 sm:grid-cols-2">
           {!vendor.isOurs ? (
             <Field
-              label={
-                posted.length > 1
-                  ? `Pay ${vendor.name} per trip (RM)`
-                  : `Pay ${vendor.name} (RM)`
-              }
+              label={`${payee} ${posted.length > 1 ? "per trip " : ""}(RM)`}
             >
               <Input
                 name={`${role}Cost:${trip.id}`}
@@ -196,6 +207,20 @@ export function AssignForm({
                 value={cost}
                 onChange={(event) => setCost(event.target.value)}
                 placeholder="120.00"
+              />
+            </Field>
+          ) : null}
+          {tipped ? (
+            <Field
+              label={`Driver tip ${posted.length > 1 ? "per trip " : ""}(RM)`}
+              hint="Out of what the customer paid, to the driver themselves."
+            >
+              <Input
+                name={`${role}Tip:${trip.id}`}
+                inputMode="decimal"
+                value={tip}
+                onChange={(event) => setTip(event.target.value)}
+                placeholder="0.00"
               />
             </Field>
           ) : null}
@@ -215,9 +240,9 @@ export function AssignForm({
         </div>
       ) : null}
 
-      {vendor?.isOurs && role === "vehicle" ? (
+      {vendor?.isOurs && role !== "driver" ? (
         <label className="flex items-center gap-2 text-sm text-body">
-          <Checkbox name="acceptOurs" />I checked our vehicle: accept it now
+          <Checkbox name="acceptOurs" />I checked our {noun}: accept it now
         </label>
       ) : null}
 
@@ -264,8 +289,8 @@ export function AssignForm({
       <div className="flex justify-end">
         <Button type="submit" pending={pending} disabled={!vendor}>
           {posted.length > 1
-            ? `Assign ${role} to ${posted.length} trips`
-            : `Assign ${role}`}
+            ? `Assign ${noun} to ${posted.length} trips`
+            : `Assign ${noun}`}
         </Button>
       </div>
     </form>

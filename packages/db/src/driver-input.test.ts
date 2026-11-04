@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { NO_BANK } from "./bank-input";
 import {
   driverFieldsOf,
   parseDriverFields,
@@ -39,6 +40,8 @@ describe("parseDriverFields", () => {
         notes: "",
         licenceExpiresOn: "2028-01-31",
         psvExpiresOn: null,
+        paidToVendor: false,
+        ...NO_BANK,
       },
     });
   });
@@ -78,6 +81,8 @@ describe("driverFieldsOf", () => {
       notes: "",
       licenceExpiresOn: new Date("2028-01-31T00:00:00Z"),
       psvExpiresOn: null,
+      paidToVendor: false,
+      ...NO_BANK,
     });
     assert.deepEqual(fields.vehicleClassIds, ["vc1", "vc2"]);
     assert.equal(fields.licenceExpiresOn, "2028-01-31");
@@ -103,7 +108,11 @@ describe("parseDriverSignIn", () => {
     assert.equal(typo.ok ? null : typo.field, "confirmEmail");
     assert.deepEqual(
       parseDriverSignIn(
-        { confirmEmail: "ali@example.com", password: "long enough" },
+        {
+          confirmEmail: "ali@example.com",
+          password: "long enough",
+          confirmPassword: "long enough",
+        },
         "ali@example.com",
         null,
       ),

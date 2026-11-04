@@ -3,7 +3,7 @@ import type { ClassOption } from "@repo/db/server";
 import type { SelectGroup } from "@repo/ui/select";
 
 /**
- * What the vehicle and driver forms share with each other and with their
+ * What the vehicle, driver and guide forms share with each other and with their
  * actions: the catalogue's classes as they pick them, a vehicle's class
  * and a driver's classes, and the scope a form was opened in.
  * Browser-safe.

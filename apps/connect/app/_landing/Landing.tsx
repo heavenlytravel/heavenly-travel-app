@@ -195,8 +195,9 @@ function OpenNow({ openings }: { openings: VendorOpening[] }) {
           </h2>
         </div>
         <p className="text-sm text-muted md:pb-1">
-          We offer jobs by class, where your vehicles are based. More places and
-          services are coming: register now and tell us what you run.
+          We offer jobs by class, where your vehicles are based, and trips with
+          a tour guide where your guides are. More places and services are
+          coming: register now and tell us what you run.
         </p>
       </div>
       <div className="mt-8 overflow-hidden rounded-card border border-card-edge bg-white shadow-card">

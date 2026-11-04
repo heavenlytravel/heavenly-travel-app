@@ -21,6 +21,7 @@ import {
   Textarea,
 } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
+import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
 
 /**
@@ -186,6 +187,14 @@ export function VendorFieldsSection({
           ))}
         </FieldGroup>
       </Card>
+
+      {/* Not asked at registration: the owner adds them under Business once approved. */}
+      {applicant ? null : (
+        <BankCard
+          fields={fields ?? undefined}
+          whose="the vendor for its vehicles"
+        />
+      )}
     </>
   );
 }

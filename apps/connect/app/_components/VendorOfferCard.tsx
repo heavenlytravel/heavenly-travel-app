@@ -1,6 +1,11 @@
 "use client";
 
-import { formatLocalDateTime, formatMyr, PART_ROLE_LABELS } from "@repo/db";
+import {
+  formatLocalDateTime,
+  formatMyr,
+  PART_ROLE_LABELS,
+  type PartRole,
+} from "@repo/db";
 import type { OfferRole, VendorOfferView } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import { FormError } from "@repo/ui/form-error";
@@ -8,6 +13,7 @@ import { useActionForm } from "@repo/console/use-action-form";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CarFrontIcon, ClockIcon, UserRoundIcon } from "@repo/ui/icons";
+import { Languages } from "lucide-react";
 import { Countdown } from "../_ui/Countdown";
 import { Avatar, Pill, Plate } from "../_ui/parts";
 import { answerVendorOfferAction, nameRecordAction } from "../vendor-actions";
@@ -21,7 +27,7 @@ import {
 /**
  * An offer to the vendor: what we pay first, large, then the trips by
  * area with each one's amounts, never the customer's price. Where the
- * vendor is to choose, its own vehicles or drivers to tap, those that
+ * vendor is to choose, its own vehicles, drivers or tour guides to tap, those that
  * cannot do it greyed with why. Accepting needs each named; the timing
  * warnings of what is named stand above the buttons. A member who is the
  * driver named accepts their own driving with it.
@@ -36,6 +42,10 @@ export function VendorOfferCard({
   const unnamed = offer.roles.find((r) => r.named === null);
   const total = offer.roles.reduce(
     (sum, role) => sum + role.costs.reduce((s, c) => s + c.costSen, 0),
+    0,
+  );
+  const tips = offer.roles.reduce(
+    (sum, role) => sum + role.costs.reduce((s, c) => s + c.tipSen, 0),
     0,
   );
   return (
@@ -62,6 +72,11 @@ export function VendorOfferCard({
           <span className="font-serif text-4xl leading-none text-ink tabular-nums">
             {formatMyr(total)}
           </span>
+          {tips > 0 ? (
+            <span className="text-sm text-body tabular-nums">
+              Plus {formatMyr(tips)} tip for the driver
+            </span>
+          ) : null}
         </div>
         <span className="pb-1 text-xs font-semibold text-muted tabular-nums">
           {offer.reference}
@@ -98,16 +113,29 @@ export function VendorOfferCard({
         action={answerVendorOfferAction}
         offerId={offer.offerId}
         blocked={
-          unnamed ? `Choose the ${unnamed.role} above, then accept.` : undefined
+          unnamed
+            ? `Choose the ${roleWord(unnamed.role)} above, then accept.`
+            : undefined
         }
       />
     </OfferPanel>
   );
 }
 
+/** A role in a sentence: "vehicle", "driver", "tour guide". */
+function roleWord(role: PartRole) {
+  return PART_ROLE_LABELS[role].toLowerCase();
+}
+
+const ROLE_ICONS = {
+  vehicle: CarFrontIcon,
+  driver: UserRoundIcon,
+  guide: Languages,
+} as const;
+
 /** What the offer asks of the vendor for one role: named already, or theirs to choose. */
 function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
-  const Icon = role.role === "vehicle" ? CarFrontIcon : UserRoundIcon;
+  const Icon = ROLE_ICONS[role.role];
   return (
     <div className="grid gap-3 rounded-card border border-card-edge bg-shade p-4">
       <div className="flex items-center justify-between gap-3">
@@ -133,7 +161,7 @@ function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
   );
 }
 
-/** Picks the vendor's own vehicle or driver for a role it was left to choose, by tapping one. */
+/** Picks the vendor's own vehicle, driver or tour guide for a role it was left to choose, by tapping one. */
 function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
   const { pending, error, formProps } = useActionForm(nameRecordAction, {
     done: `${PART_ROLE_LABELS[role.role]} chosen.`,
@@ -141,7 +169,8 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
   if (role.choices.length === 0) {
     return (
       <p className="text-sm text-muted">
-        You have no {role.role} in service yet. Add one in Fleet, or decline.
+        You have no {roleWord(role.role)} in service yet. Add one in Fleet, or
+        decline.
       </p>
     );
   }
@@ -150,7 +179,7 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
       <input type="hidden" name="offerId" value={offerId} />
       <input type="hidden" name="role" value={role.role} />
       <fieldset className="grid gap-2">
-        <legend className="sr-only">Your {role.role}</legend>
+        <legend className="sr-only">Your {roleWord(role.role)}</legend>
         {role.choices.map((choice) => {
           const blocked = choice.reasons.length > 0;
           return (
@@ -187,7 +216,7 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
         })}
       </fieldset>
       <Button type="submit" variant="secondary" pending={pending}>
-        {pending ? "Saving…" : `Choose this ${role.role}`}
+        {pending ? "Saving…" : `Choose this ${roleWord(role.role)}`}
       </Button>
       <FormError error={error} />
     </form>

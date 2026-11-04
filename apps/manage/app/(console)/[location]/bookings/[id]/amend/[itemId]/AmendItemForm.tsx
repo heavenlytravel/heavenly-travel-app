@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMyr } from "@repo/db";
+import { formatMyr, guideOfferIssue } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
@@ -17,10 +17,10 @@ import {
   detailsFields,
   tripFields,
   tripLine,
-  tripQuotedSen,
+  tripPriceLines,
   vehicleFields,
   vehicleLine,
-  type AmendDraft,
+  type ItemDraft,
   type ItemDetails,
   type TripDraft,
   type VehicleDraft,
@@ -50,7 +50,7 @@ export function AmendItemForm({
   /** The booking in the scope the form was opened in. */
   bookingHref: string;
   scope: ScopeSlug;
-  draft: AmendDraft;
+  draft: ItemDraft;
   hasGoogle: boolean;
   canPrice: boolean;
   priceNote?: string;
@@ -66,12 +66,20 @@ export function AmendItemForm({
   const trips = [trip];
   const chosen = chosenVehicle(trips, vehicle);
   const priceIssue = canPrice ? agreedPriceIssue(trip) : null;
+  const guideOffers = trip.quote?.guides ?? [];
+  const guideIssue = trip.quote
+    ? guideOfferIssue(details.guide.language, guideOffers)
+    : null;
   const missing = !trip.quote
     ? "Fill in the trip."
     : !chosen
       ? "Choose a vehicle."
-      : priceIssue;
-  const totalSen = bookingTotalSen(trips, chosen, canPrice);
+      : (priceIssue ?? guideIssue);
+  const totalSen = bookingTotalSen(
+    [{ trip, vehicle, details }],
+    null,
+    canPrice,
+  );
 
   return (
     <form
@@ -123,6 +131,8 @@ export function AmendItemForm({
               setDetails((current) => ({ ...current, ...patch }))
             }
             category={trip.trip.category}
+            guideOffers={guideOffers}
+            guideIssue={guideIssue}
             done={chosen !== null}
             open={open === "details"}
             onOpen={() => setOpen("details")}
@@ -132,20 +142,23 @@ export function AmendItemForm({
         <aside className="@3xl:sticky @3xl:top-20">
           <BookingSummary
             meta={trip.quote?.location}
-            rows={[
-              { label: "Trip", value: trip.quote ? tripLine(trip) : "—" },
-              {
-                label: "Vehicle",
-                value: chosen
-                  ? vehicleLine(trips, vehicle, { price: false })
-                  : "—",
-              },
-            ]}
             trips={[
               {
                 id: trip.id,
                 label: null,
-                quotedSen: tripQuotedSen(trip, chosen),
+                detail: trip.quote ? (
+                  <>
+                    {tripLine(trip)}
+                    <span className="block">
+                      {chosen
+                        ? vehicleLine(trips, vehicle, { price: false })
+                        : "No vehicle yet"}
+                    </span>
+                  </>
+                ) : (
+                  "Not priced yet"
+                ),
+                lines: tripPriceLines(trip, chosen, details.guide.language),
                 agreedPrice: trip.agreedPrice,
                 priceReason: trip.priceReason,
               },

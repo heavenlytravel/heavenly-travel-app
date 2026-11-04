@@ -205,7 +205,22 @@ export function newDriverHref(scope: ScopeSlug) {
   return consolePath(scope, "fleet", "drivers", "new");
 }
 
-/** The parameter of a vehicle's or a driver's add page naming the vendor it starts with. */
+/** Every vendor's tour guides in the scope, narrowed by the filter. */
+export function guidesHref(scope: ScopeSlug, filter: FleetListFilter = {}) {
+  return fleetListHref(consolePath(scope, "fleet", "guides"), filter);
+}
+
+/** One tour guide, by id. */
+export function guideHref(scope: ScopeSlug, id: string) {
+  return consolePath(scope, "fleet", "guides", id);
+}
+
+/** A new tour guide; under a slug, based there. */
+export function newGuideHref(scope: ScopeSlug) {
+  return consolePath(scope, "fleet", "guides", "new");
+}
+
+/** The parameter of a vehicle's, a driver's or a guide's add page naming the vendor it starts with. */
 export const VENDOR_PARAM = "vendor";
 
 /**
@@ -238,6 +253,11 @@ export function newVendorVehicleHref(scope: ScopeSlug, vendorId: string) {
 }
 export function newVendorDriverHref(scope: ScopeSlug, vendorId: string) {
   return listHref(consolePath(scope, "fleet", "drivers", "new"), {
+    [VENDOR_PARAM]: vendorId,
+  });
+}
+export function newVendorGuideHref(scope: ScopeSlug, vendorId: string) {
+  return listHref(consolePath(scope, "fleet", "guides", "new"), {
     [VENDOR_PARAM]: vendorId,
   });
 }
@@ -302,6 +322,7 @@ export const RATES_PAGES = [
   "classes",
   "grid",
   "hourly",
+  "guides",
   "rules",
   "try",
 ] as const;
@@ -312,6 +333,7 @@ export const RATES_PAGE_LABELS: Record<RatesPage, string> = {
   classes: "Classes",
   grid: "Rate Grid",
   hourly: "Hourly Rates",
+  guides: "Tour Guide Rates",
   rules: "Trip Rules",
   try: "Try a Trip",
 };

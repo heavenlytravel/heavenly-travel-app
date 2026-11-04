@@ -14,7 +14,7 @@ import { Card, CardTitle } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
 import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "@repo/console/action-state";
-import { RowControls, movedRow } from "./RowControls";
+import { RowControls, movedRow } from "../../../../_components/RowControls";
 import type { AddressArea } from "./SavedAddressPicker";
 import {
   addLocationAddressAction,
@@ -128,6 +128,7 @@ export function SavedAddresses({
               } no button once it is removed.`
             : "Customers no longer see it in the drop-off's list.",
         action: "Remove",
+        danger: true,
       }))
     ) {
       return;

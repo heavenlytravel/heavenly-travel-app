@@ -153,14 +153,16 @@ export function DetailsFields({
       </Field>
       <FieldGroup className="grid gap-3 sm:col-span-2">
         <p className="text-sm font-semibold text-ink">Add-ons</p>
-        {guideOffers.length > 0 ? (
+        {/* A guide chosen stays untickable after its language goes off
+            sale (a trip copied from the one before, a rate cleared since). */}
+        {guideOffers.length > 0 || guide.language !== null ? (
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={guide.language !== null}
               onChange={(event) =>
                 setGuide({
                   language: event.currentTarget.checked
-                    ? guideOffers[0]!.language
+                    ? (guideOffers[0]?.language ?? null)
                     : null,
                 })
               }

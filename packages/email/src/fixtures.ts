@@ -152,6 +152,7 @@ export function sampleBooking(
     reference: "HT-7K3QZM",
     quoteNumber: null,
     invoiceId: null,
+    invoiceNumber: null,
     invoiceLine: null,
     invoice: null,
     agentId: null,

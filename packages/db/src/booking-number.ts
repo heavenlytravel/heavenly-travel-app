@@ -12,7 +12,7 @@ import { guardFor } from "./const-enum";
  * invoice's own number instead. A quotation number, HTQ-0001, for the
  * quotations to come; none is given yet. The random reference (HT-7K3QZM)
  * stays the booking's id in links and emails, so a guest cannot guess
- * another's. Pure and browser-safe; ./invoices gives the numbers. See
+ * another's. Pure and browser-safe; ./booking-counter gives the numbers. See
  * docs/261102-booking-ops.md, "5. Quotation and invoice numbers".
  */
 

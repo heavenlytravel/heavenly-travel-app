@@ -128,7 +128,7 @@ model Vendor {
   services          String[]  @default([])
   /// An agent's invoice period, INVOICE_PERIODS: "month", one invoice a
   /// month, or "half-month", one for the 1st to the 15th and one for the
-  /// rest. See src/invoices.ts.
+  /// rest. See src/booking-counter.ts.
   invoicePeriod     String    @default("month")
   /// Why it was refused or suspended. Staff only.
   reviewNote        String?
@@ -838,7 +838,7 @@ model Booking {
   quoteNumber   Int?      @unique
   /// Its invoice, from when it is first confirmed: its own (HTI-1308), or
   /// its agent's for the period its first trip is in, where it is a line
-  /// (HTI-1295-03). Null until given. See src/invoices.ts.
+  /// (HTI-1295-03). Null until given. See src/booking-counter.ts.
   invoiceId     String?
   invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
   /// Its line on its agent's invoice, from 1; null on its own invoice.
@@ -847,6 +847,11 @@ model Booking {
   /// customer of ours.
   agentId       String?
   agent         Vendor?   @relation(fields: [agentId], references: [id])
+  /// Old: the invoice number before `invoiceId`, read by nothing now. Kept
+  /// one release, without its unique index, so the code still live while
+  /// the schema is pushed ahead of the merge goes on working; dropped by
+  /// the next schema change. db:set-agents numbers again from 1307.
+  invoiceNumber Int?
   /// The account the booking shows under; null for a guest.
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -891,7 +896,7 @@ model Booking {
 /// count by `BookingNumberCounter`, never started again: no year, since an
 /// invoice is often made long before its trip. HTI-1308 carries on the old
 /// system's HT1307; an old invoice keeps its number, typed by staff. See
-/// src/invoices.ts and docs/261102-booking-ops.md.
+/// src/booking-counter.ts and docs/261102-booking-ops.md.
 model Invoice {
   id            String    @id @default(cuid())
   number        Int       @unique

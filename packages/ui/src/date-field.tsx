@@ -15,7 +15,9 @@ import {
   nextQuarter,
   TimeList,
   zonedNow,
+  type MinuteWindow,
 } from "./time-list.js";
+import { useNarrow } from "./use-media-query.js";
 
 const BOX = cx(
   inputClassName,
@@ -46,7 +48,7 @@ function dayLabel(value: string, short = false) {
     : longDay.format(day);
 }
 
-/** "9:30 AM" for "09:30"; null for no time. */
+/** "09:30" for "09:30"; null for no time. */
 function timeLabel(value: string) {
   const minute = minuteOf(value);
   return minute === null ? null : clockOf(minute);
@@ -197,7 +199,7 @@ export function DateField({
 }
 
 /**
- * A time of day from a list in quarter hours under an AM and PM switch, in
+ * A time of day from a list in quarter hours on the 24-hour clock, in
  * place of the browser's time field. It opens near the time now, read in
  * `timeZone`, when nothing is chosen, and a pick closes it. The value is
  * "09:30", as the browser's field gave it.
@@ -252,7 +254,7 @@ export function TimeField({
       >
         <TimeList
           autoFocus
-          className="ui:h-80 ui:p-3 ui:sm:w-48 ui:max-sm:p-0"
+          className="ui:h-80 ui:p-2 ui:sm:w-32 ui:max-sm:p-0"
           aria-label={ariaLabel}
           value={current}
           start={nextQuarter(zonedNow(timeZone).minute)}
@@ -277,9 +279,17 @@ export function TimeField({
 type Moment = { date: string; time: string };
 
 /**
- * A day and a time in one field, the calendar and the time list side by
- * side, as a car rental site asks for a pick-up. The button reads
- * "Wed, 28 Oct · 9:30 AM". The list opens near the time now and greys the
+ * Night hours to tag in a time list, "Odd hours", in minutes of the day
+ * (1380 to 420 is 23:00 to 07:00, past midnight), and the line under the
+ * list that says what they mean.
+ */
+export type OddHoursMark = MinuteWindow & { note: string };
+
+/**
+ * A day and a time in one field, as a car rental site asks for a pick-up:
+ * the calendar and the time list side by side, or on a phone one at a
+ * time under a Date and Time switch, the day first. The button reads
+ * "Wed, 28 Oct · 09:30". The list opens near the time now and greys the
  * times already past when the day is today, both read in `timeZone`; a day
  * before today cannot be picked unless `min` says so. `allowPast` lets any
  * moment be picked, past ones too, down to `min` when given: for a record
@@ -298,6 +308,7 @@ export function DateTimeField({
   max,
   maxTime,
   allowPast = false,
+  oddHours,
   disabled,
   required,
   bare,
@@ -319,6 +330,8 @@ export function DateTimeField({
   /** The last time that can be picked on the `max` day, "17:45": for a moment that must come before another. */
   maxTime?: string;
   allowPast?: boolean;
+  /** Times to tag "Odd hours" in the list, and the line under it saying why. */
+  oddHours?: OddHoursMark;
   placeholder?: string;
   /** The sheet's heading on a phone. */
   title?: string;
@@ -365,6 +378,7 @@ export function DateTimeField({
           max={max}
           maxTime={maxTime}
           allowPast={allowPast}
+          oddHours={oddHours}
           timeZone={timeZone}
           onChange={change}
           onClose={() => setOpen(false)}
@@ -388,13 +402,25 @@ export function DateTimeField({
   );
 }
 
-/** The calendar and the time list of a `DateTimeField`, read once it opens. */
+/** Which half of a `DateTimeField` a phone shows. */
+type Panel = "date" | "time";
+const PANELS: { panel: Panel; label: string }[] = [
+  { panel: "date", label: "Date" },
+  { panel: "time", label: "Time" },
+];
+
+/**
+ * The calendar and the time list of a `DateTimeField`, read once it opens.
+ * On a phone they take turns, so neither is squeezed: it opens on the
+ * calendar, a day picked moves to the times, and the switch goes back.
+ */
 function MomentPanel({
   value,
   min,
   max,
   maxTime,
   allowPast,
+  oddHours,
   timeZone,
   onChange,
   onClose,
@@ -404,10 +430,13 @@ function MomentPanel({
   max?: string;
   maxTime?: string;
   allowPast: boolean;
+  oddHours?: OddHoursMark;
   timeZone?: string;
   onChange: (value: Moment) => void;
   onClose: () => void;
 }) {
+  const narrow = useNarrow();
+  const [panel, setPanel] = useState<Panel>("date");
   const now = zonedNow(timeZone);
   const start = nextQuarter(now.minute);
   const earliestOn = (date: string) =>
@@ -419,42 +448,82 @@ function MomentPanel({
   const summary = [dayLabel(value.date), timeLabel(value.time)]
     .filter(Boolean)
     .join(" at ");
+  const showDate = !narrow || panel === "date";
+  const showTime = !narrow || panel === "time";
 
   return (
     <div className="ui:flex ui:flex-col">
-      <div className="ui:flex ui:flex-col ui:gap-4 ui:sm:flex-row ui:sm:gap-0">
-        <Calendar
-          autoFocus={!value.date || !value.time}
-          className="ui:max-sm:mx-auto ui:sm:border-r ui:sm:border-popover-line ui:sm:p-3"
-          value={value.date}
-          min={allowPast ? min : (min ?? now.today)}
-          max={max}
-          onPick={(date) => {
-            // A time already past on the new day is dropped, not kept wrong.
-            const first = earliestOn(date);
-            const last = latestOn(date);
-            const minute = minuteOf(value.time);
-            const keeps =
-              minute === null ||
-              ((first === null || minute >= first) &&
-                (last === null || minute <= last));
-            onChange({ date, time: keeps ? value.time : "" });
-          }}
-        />
-        <TimeList
-          autoFocus={Boolean(value.date && value.time)}
-          className="ui:h-56 ui:sm:h-[20.5rem] ui:sm:w-44 ui:sm:p-3"
-          aria-label="Time"
-          value={value.time}
-          start={start}
-          earliest={earliest}
-          latest={latest}
-          onPick={(time) => {
-            onChange({ ...value, time });
-            if (value.date) onClose();
-          }}
-        />
+      {narrow ? (
+        <div
+          role="group"
+          aria-label="Date or time"
+          className="ui:mb-4 ui:flex ui:gap-1 ui:rounded-lg ui:bg-accent ui:p-1"
+        >
+          {PANELS.map((option) => (
+            <button
+              key={option.panel}
+              type="button"
+              aria-pressed={panel === option.panel}
+              onClick={() => setPanel(option.panel)}
+              className={cx(
+                "ui:flex-1 ui:rounded-md ui:py-1.5 ui:text-sm ui:font-semibold ui:transition-colors ui:focus-ring",
+                panel === option.panel
+                  ? "ui:bg-popover ui:text-accent-foreground ui:shadow-sm"
+                  : "ui:text-muted ui:hover:text-accent-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="ui:flex ui:flex-col ui:sm:flex-row">
+        {showDate ? (
+          <Calendar
+            autoFocus={narrow || !value.date || !value.time}
+            className="ui:max-sm:mx-auto ui:sm:border-r ui:sm:border-popover-line ui:sm:p-3"
+            value={value.date}
+            min={allowPast ? min : (min ?? now.today)}
+            max={max}
+            onPick={(date) => {
+              // A time already past on the new day is dropped, not kept wrong.
+              const first = earliestOn(date);
+              const last = latestOn(date);
+              const minute = minuteOf(value.time);
+              const keeps =
+                minute === null ||
+                ((first === null || minute >= first) &&
+                  (last === null || minute <= last));
+              onChange({ date, time: keeps ? value.time : "" });
+              setPanel("time");
+            }}
+          />
+        ) : null}
+        {showTime ? (
+          <TimeList
+            autoFocus={narrow || Boolean(value.date && value.time)}
+            className={cx(
+              "ui:h-[18.5rem] ui:sm:h-[20.5rem] ui:sm:p-2",
+              oddHours ? "ui:sm:w-40" : "ui:sm:w-28",
+            )}
+            aria-label="Time"
+            value={value.time}
+            start={start}
+            earliest={earliest}
+            latest={latest}
+            marked={oddHours}
+            onPick={(time) => {
+              onChange({ ...value, time });
+              if (value.date) onClose();
+            }}
+          />
+        ) : null}
       </div>
+      {oddHours && showTime ? (
+        <p className="ui:mt-3 ui:text-xs ui:text-muted ui:sm:mt-0 ui:sm:max-w-0 ui:sm:min-w-full ui:sm:border-t ui:sm:border-popover-line ui:sm:px-3 ui:sm:py-2.5">
+          {oddHours.note}
+        </p>
+      ) : null}
       <div className="ui:mt-4 ui:flex ui:items-center ui:justify-between ui:gap-3 ui:text-sm ui:sm:mt-0 ui:sm:border-t ui:sm:border-popover-line ui:sm:px-3 ui:sm:py-2.5">
         <span className="ui:min-w-0 ui:truncate ui:text-muted">
           {summary || "Pick a day and a time"}

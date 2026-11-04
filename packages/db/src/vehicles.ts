@@ -8,7 +8,7 @@ import {
   type DeleteConfirmation,
   type DeleteImpact,
 } from "./delete-impact";
-import { dateOfDay, dueByDate } from "./expiry";
+import { documentDates, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
 import { deletedMediaRefusal } from "./media";
 import {
@@ -31,7 +31,7 @@ import {
 import { modelName } from "./vehicle-model-input";
 import { dropModelIfUnused, modelFor } from "./vehicle-models";
 import { plateTermOf } from "./search";
-import { checkVendorServes } from "./vendors";
+import { checkVendorServes, locationNameOf } from "./vendors";
 import { releaseHeldWork } from "./fulfilment";
 
 /**
@@ -164,10 +164,7 @@ function vehicleRow<F extends Partial<VehicleFields>>(
   Partial<Record<VehicleDocument, Date | null>> {
   const row: Record<string, unknown> = { ...fields };
   for (const key of MODEL_KEYS) delete row[key];
-  for (const key of VEHICLE_DOCUMENTS) {
-    const day = fields[key];
-    if (day !== undefined) row[key] = dateOfDay(day);
-  }
+  Object.assign(row, documentDates(VEHICLE_DOCUMENTS, fields));
   return row as Omit<F, ModelKey | VehicleDocument> &
     Partial<Record<VehicleDocument, Date | null>>;
 }
@@ -188,18 +185,6 @@ async function plateTaken(plate: string): Promise<Refusal> {
       : `${plate} is already in the list. Check the plate.`,
     "plate",
   );
-}
-
-/** The name of the location a vehicle is based at, which must exist. */
-async function locationNameOf(
-  tx: Prisma.TransactionClient,
-  locationId: string,
-) {
-  const location = await tx.location.findUnique({
-    where: { id: locationId },
-    select: { name: true },
-  });
-  return location?.name ?? null;
 }
 
 const NO_LOCATION = refuse(

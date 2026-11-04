@@ -38,6 +38,19 @@ export function dateOfDay(day: string | null): Date | null {
   return day ? new Date(`${day}T00:00:00Z`) : null;
 }
 
+/** The document days among the fields as the row stores them: dates. */
+export function documentDates<K extends string>(
+  keys: readonly K[],
+  fields: Partial<Record<K, string | null>>,
+): Partial<Record<K, Date | null>> {
+  const dates: Partial<Record<K, Date | null>> = {};
+  for (const key of keys) {
+    const day = fields[key];
+    if (day !== undefined) dates[key] = dateOfDay(day);
+  }
+  return dates;
+}
+
 /** Whether the text is a real calendar day: "2027-02-31" is not. */
 export function isDay(text: string): boolean {
   if (!DATE_RE.test(text)) return false;

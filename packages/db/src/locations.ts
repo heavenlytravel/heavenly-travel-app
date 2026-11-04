@@ -634,7 +634,7 @@ export type LocationDeleted =
  * and its earlier entries stay in the log under the name it had. The
  * images its pages uploaded stay in storage until the Media screen
  * deletes them; its bookings keep their receipts and lose the pointer.
- * One with vehicles or drivers based at it is refused until they move.
+ * One with vehicles, drivers or guides based at it is refused until they move.
  */
 export async function deleteLocation(
   actor: Actor,
@@ -646,7 +646,7 @@ export async function deleteLocation(
       where: { id },
       include: {
         states: { select: { code: true } },
-        _count: { select: { vehicles: true, drivers: true } },
+        _count: { select: { vehicles: true, drivers: true, guides: true } },
       },
     });
     if (!location) return NOT_FOUND;
@@ -654,17 +654,15 @@ export async function deleteLocation(
     // waits, then finds it gone, rather than going unannounced.
     await tx.$executeRaw`SELECT id FROM "Zone" WHERE "locationId" = ${id} FOR UPDATE`;
     const routesIn = await routesIntoLocation(id, tx);
-    // Our vehicles and drivers are not the location's to take with it.
+    // Our vehicles, drivers and guides are not the location's to take with it.
+    const { vehicles, drivers, guides } = location._count;
     const based = [
-      location._count.vehicles > 0
-        ? plural(location._count.vehicles, "vehicle")
-        : null,
-      location._count.drivers > 0
-        ? plural(location._count.drivers, "driver")
-        : null,
+      vehicles > 0 ? plural(vehicles, "vehicle") : null,
+      drivers > 0 ? plural(drivers, "driver") : null,
+      guides > 0 ? plural(guides, "tour guide") : null,
     ].filter((part) => part !== null);
     if (based.length > 0) {
-      const one = location._count.vehicles + location._count.drivers === 1;
+      const one = vehicles + drivers + guides === 1;
       return {
         ok: false,
         error: `${andList(based)} ${one ? "is" : "are"} based here. Move ${one ? "it" : "them"} to another location first.`,

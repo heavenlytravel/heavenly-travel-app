@@ -15,10 +15,9 @@ import {
   DRIVER_DELETE_IMPACT,
   DRIVER_DOCUMENTS,
   driverFieldsOf,
-  type DriverDocument,
   type DriverFields,
 } from "./driver-input";
-import { dateOfDay, dueByDate } from "./expiry";
+import { documentDates, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
 import type { FleetFilter } from "./vehicles";
 import { isUniqueViolation } from "./prisma-errors";
@@ -93,16 +92,6 @@ export function driversDueWhere(now: Date = new Date()) {
     isActive: true,
     OR: DRIVER_DOCUMENTS.map((key) => ({ [key]: { lte: dueBy } })),
   } satisfies Prisma.DriverWhereInput;
-}
-
-/** The days among the fields as the row stores them: dates. */
-function documentDates(fields: Partial<DriverFields>) {
-  const dates: Partial<Record<DriverDocument, Date | null>> = {};
-  for (const key of DRIVER_DOCUMENTS) {
-    const day = fields[key];
-    if (day !== undefined) dates[key] = dateOfDay(day);
-  }
-  return dates;
 }
 
 /**
@@ -241,7 +230,7 @@ function createDriverIn(
     const driver = await tx.driver.create({
       data: {
         ...rest,
-        ...documentDates(fields),
+        ...documentDates(DRIVER_DOCUMENTS, fields),
         userId: account?.userId ?? null,
         vehicleClasses: { connect: vehicleClassIds.map((id) => ({ id })) },
       },
@@ -371,7 +360,7 @@ function updateDriverIn(
       data: {
         ...(account ? { userId: account.userId } : {}),
         ...changed?.after,
-        ...(changed ? documentDates(changed.after) : {}),
+        ...(changed ? documentDates(DRIVER_DOCUMENTS, changed.after) : {}),
         ...(classesChanged
           ? {
               vehicleClasses: {

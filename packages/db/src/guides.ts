@@ -3,7 +3,7 @@ import type { Actor } from "./activity-actions";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import { checkDeleteConfirmed, type DeleteConfirmation } from "./delete-impact";
-import { dateOfDay } from "./expiry";
+import { documentDates } from "./expiry";
 import { releaseHeldWork } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
 import {
@@ -12,13 +12,12 @@ import {
   GUIDE_DOCUMENTS,
   GUIDE_LANGUAGES,
   guideFieldsOf,
-  type GuideDocument,
   type GuideFields,
 } from "./guide-input";
 import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
 import type { FleetFilter } from "./vehicles";
-import { checkVendorServes } from "./vendors";
+import { checkVendorServes, locationNameOf } from "./vendors";
 
 /**
  * Every vendor's tour guides, ours and others', each based at one location
@@ -91,25 +90,6 @@ export function getGuide(id: string): Promise<GuideWithVendor | null> {
   return db.guide.findUnique({ where: { id }, ...withVendor });
 }
 
-/** The days among the fields as the row stores them: dates. */
-function documentDates(fields: Partial<GuideFields>) {
-  const dates: Partial<Record<GuideDocument, Date | null>> = {};
-  for (const key of GUIDE_DOCUMENTS) {
-    const day = fields[key];
-    if (day !== undefined) dates[key] = dateOfDay(day);
-  }
-  return dates;
-}
-
-/** The location's name for the log, checking it still exists. */
-async function locationNameOf(tx: Prisma.TransactionClient, id: string) {
-  const location = await tx.location.findUnique({
-    where: { id },
-    select: { name: true },
-  });
-  return location?.name ?? null;
-}
-
 const EMAIL_TAKEN = refuse(
   "Another guide has this email. Each account has one guide profile.",
   "email",
@@ -146,7 +126,7 @@ function createGuideIn(actor: Actor, fields: GuideFields): Promise<Created> {
     );
     if (!vendor.ok) return vendor;
     const guide = await tx.guide.create({
-      data: { ...fields, ...documentDates(fields) },
+      data: { ...fields, ...documentDates(GUIDE_DOCUMENTS, fields) },
     });
     await logActivity(tx, actor, {
       action: "guide.created",
@@ -213,7 +193,7 @@ function updateGuideIn(
       where: { id },
       data: {
         ...after,
-        ...documentDates(after),
+        ...documentDates(GUIDE_DOCUMENTS, after),
         ...(languagesChanged ? { languages } : {}),
       },
     });

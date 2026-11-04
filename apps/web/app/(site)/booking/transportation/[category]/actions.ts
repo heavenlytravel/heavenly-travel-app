@@ -58,7 +58,7 @@ export async function quoteTripsAction(
     const result = quoted[next++]!;
     if (!result.ok) return { ok: false, error: result.error.message };
     const { quote } = result;
-    for (const { vehicleClass, offering } of quote.classes) {
+    for (const { vehicleClass } of quote.classes) {
       if (classes.has(vehicleClass.id)) continue;
       classes.set(vehicleClass.id, {
         id: vehicleClass.id,
@@ -67,8 +67,7 @@ export async function quoteTripsAction(
         luggage: vehicleClass.luggage,
         minPassengers: vehicleClass.minPassengers,
         maxPassengers: vehicleClass.maxPassengers,
-        imageUrl: offering.coverUrl,
-        models: vehicleClass.models,
+        imageUrl: vehicleClass.imageUrl,
       });
     }
     return {

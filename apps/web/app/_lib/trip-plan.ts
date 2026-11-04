@@ -19,7 +19,6 @@ import {
   type TripSearch,
   type ClassCharges,
 } from "@repo/db";
-import type { GalleryModel } from "../_components/ModelGallery";
 import { EMPTY_SEARCH, type SearchValues } from "./search";
 import {
   tripSearchFromCard,
@@ -100,7 +99,6 @@ export type ClassCard = {
   minPassengers: number;
   maxPassengers: number;
   imageUrl: string | null;
-  models: GalleryModel[];
 };
 
 /** What pricing a list answers: each trip in the list's order, and the classes they offer. */

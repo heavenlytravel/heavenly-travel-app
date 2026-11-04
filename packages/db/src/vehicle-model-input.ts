@@ -25,12 +25,6 @@ export function sameName(a: string, b: string) {
   return squashName(a).toLowerCase() === squashName(b).toLowerCase();
 }
 
-/** "Toyota Vellfire or Toyota Alphard": the models a class card names, by their names. */
-export function modelsLine(names: readonly string[]) {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
-}
-
 /**
  * The rules on a model's brand and name, as the vehicle form types them,
  * its fields `brand` and `model`; a field left out is not checked.

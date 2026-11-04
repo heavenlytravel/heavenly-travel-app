@@ -616,9 +616,8 @@ model VehicleClass {
   minPassengers Int
   maxPassengers Int
   luggage       String
-  /// Its neutral picture, a file on UploadThing (src/images.ts); null for
-  /// none. A location shows the first photo of its vehicles of the class in
-  /// its place, once one has a photo.
+  /// Its neutral picture, a file on UploadThing (src/images.ts), the same
+  /// at every location; null for none.
   imageUrl      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -638,9 +637,9 @@ model VehicleClass {
 /// A model of a class, the Toyota Alphard in MPV VIP: what a vehicle is,
 /// by brand and name, one catalogue for every location. The vehicle form
 /// adds one the first time a vehicle of it is entered, and suggests the
-/// ones there are. A location's customers see the models of its vehicles
-/// in service, in those vehicles' photos, and may choose one at the charge
-/// on the class's offering. See docs/261019-vehicles-and-drivers.md.
+/// ones there are. A location's class has the models of its vehicles in
+/// service, and a customer may choose one at the charge on the class's
+/// offering. See docs/261019-vehicles-and-drivers.md.
 model VehicleModel {
   id             String       @id @default(cuid())
   vehicleClassId String
@@ -660,8 +659,8 @@ model VehicleModel {
 }
 
 /// One of our vehicles, based at a location. The expiry dates of its documents
-/// are dates, null where one does not apply. Its photos are what its
-/// location's customers see of its model. Out of service, it keeps its
+/// are dates, null where one does not apply. Its photos are for our team;
+/// the website does not show them. Out of service, it keeps its
 /// history. See docs/261019-vehicles-and-drivers.md.
 model Vehicle {
   id                  String       @id @default(cuid())

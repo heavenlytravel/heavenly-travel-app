@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { TRIP_CATEGORIES } from "@repo/db";
 import {
-  listPicturedOfferings,
+  listOfferings,
   type LocationName,
-  type PicturedOffering,
+  type Offering,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { BusIcon } from "@repo/ui/icons";
@@ -26,8 +26,8 @@ import { OfferingActiveSwitch } from "./OfferingControls";
 
 /**
  * A location's classes, the classes under its slug and the setup's step
- * of them: what it sells, by category, a card each with its picture
- * here, the catalogue's seats and luggage, its switch and its editor.
+ * of them: what it sells, by category, a card each with the catalogue's
+ * picture, seats and luggage, its switch and its editor.
  * Their rates here are read on Rates; the rest of each class is the
  * catalogue's. Operation changes them (`manages`, `coverage.manage`);
  * Reservation and Sales read them, without the switch or the editor.
@@ -43,7 +43,7 @@ export function Offerings({
     <>
       <Streamed fallback={<ClassCategoriesSkeleton />}>
         {async () => {
-          const offerings = await listPicturedOfferings(location.id);
+          const offerings = await listOfferings(location.id);
           return (
             <div className="grid gap-8">
               {TRIP_CATEGORIES.map((category) => {
@@ -101,8 +101,8 @@ export function Offerings({
 }
 
 /**
- * One class at this location: its picture here, as customers see it, then
- * its name over the catalogue's seats and luggage, the switch that puts it
+ * One class at this location: the catalogue's picture, then its name
+ * over the catalogue's seats and luggage, the switch that puts it
  * on sale here, and its editor. The whole card opens the editor; off, it
  * is in grey. Read only, the switch is a chip and there is no editor.
  */
@@ -113,7 +113,7 @@ function OfferingCard({
   lastOnSale,
 }: {
   slug: string;
-  offering: PicturedOffering;
+  offering: Offering;
   manages: boolean;
   /** It is the last of its category on sale here, so turning it off asks first. */
   lastOnSale: boolean;
@@ -124,7 +124,7 @@ function OfferingCard({
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
       <CardImage
-        src={offering.coverUrl}
+        src={vehicleClass.imageUrl}
         fit="contain"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={<BusIcon className="size-7 text-muted" />}

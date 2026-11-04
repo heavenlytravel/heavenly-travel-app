@@ -156,21 +156,15 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** Its picture at the location: a photo of a vehicle there, or the catalogue's; null for none. */
+  /** The catalogue's picture of it; null for none. */
   imageUrl: string | null;
-  /** The models of the location's vehicles in service, by name, with their photos. */
-  models: {
-    id: string;
-    name: string;
-    photos: { url: string; caption: string }[];
-  }[];
   /** The least it can cost there, in sen; null when nothing is priced in it yet. */
   fromSen: number | null;
 };
 
 /**
  * The classes a location sells in a product, in their order, at the
- * location's rates, each with its models. Tagged with the location, which the admin refreshes
+ * location's rates. Tagged with the location, which the admin refreshes
  * after a change to what it sells, and with the catalogue, which it
  * refreshes after a change to a class.
  */
@@ -183,7 +177,7 @@ export const vehicleClassCards = cache(
           cheapestCellsAt(slug),
           cheapestPackagesAt(slug),
         ]);
-        return offerings.map(({ vehicleClass, ...offering }) => ({
+        return offerings.map(({ vehicleClass }) => ({
           id: vehicleClass.id,
           slug: vehicleClass.slug,
           name: vehicleClass.name,
@@ -191,15 +185,14 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
-          imageUrl: offering.coverUrl,
-          models: vehicleClass.models,
+          imageUrl: vehicleClass.imageUrl,
           fromSen: startingPriceSen(
             cheapest.get(vehicleClass.id) ?? null,
             packages.get(vehicleClass.id) ?? null,
           ),
         }));
       },
-      ["vehicle-class-cards", "3", slug, category],
+      ["vehicle-class-cards", "4", slug, category],
       {
         tags: [locationTag(slug), VEHICLE_CLASSES_TAG],
         revalidate: REFRESH_SECONDS,

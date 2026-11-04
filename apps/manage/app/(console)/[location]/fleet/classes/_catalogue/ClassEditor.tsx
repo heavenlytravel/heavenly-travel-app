@@ -120,7 +120,7 @@ function VehicleClassScreen({
               >
                 <span className="inline-flex items-center gap-1.5">
                   Vehicles
-                  <InfoTip text="Our vehicles of this class, by where they are based. A location's customers see the models of its vehicles in service, in their photos." />
+                  <InfoTip text="Our vehicles of this class, by where they are based." />
                 </span>
               </CardTitle>
               <ClassVehicles vehicles={vehicles} />

@@ -65,7 +65,6 @@ export default async function VehiclePage({
           locations={choices.locations}
           action={saveVehicleAction}
           uploadPath={UPLOAD_PATH}
-          photosNote="Optional, for our team: they never show on the website. The first is its cover."
           cancelHref="/~/vehicles"
           held={held}
         />

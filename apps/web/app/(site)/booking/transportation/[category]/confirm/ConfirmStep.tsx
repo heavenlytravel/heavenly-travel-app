@@ -11,7 +11,6 @@ import {
   guideEntries,
   guideOfferIssue,
   guideOffersOnAll,
-  modelsLine,
   isAirportPlace,
   needsGuide,
   plural,
@@ -29,7 +28,6 @@ import { FormError } from "@repo/ui/form-error";
 import { Bone, Loading } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import { ClassPicture } from "../../../../../_components/ClassPicture";
-import { ModelPhotosButton } from "../../../../../_components/ModelGallery";
 import { TripsFold } from "../../../../../_components/trips/TripsBar";
 import {
   TripTimeline,
@@ -110,10 +108,10 @@ function tripsNote(on: readonly number[], count: number): string | null {
  * trip that cannot be booked as it is says so under it: it starts with
  * another or during a hire, the vehicle needs more notice or hours for
  * it, or it cannot be priced; so does a price changed since the trip was
- * added. "Your vehicle" has the class for all the trips, pictured and
- * with its models as on the vehicle page (any of them is sent, whichever
- * is free on the day: choosing a model is not offered for now), the
- * group, and under it the add-ons: the tour guide in a language on sale
+ * added. "Your vehicle" has the class for all the trips, pictured as
+ * on the vehicle page (any of its models is sent, whichever is free on
+ * the day: choosing a model is not offered for now), the group, and
+ * under it the add-ons: the tour guide in a language on sale
  * for every trip, priced into each, and another asked for (./AddOns). The
  * details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
@@ -465,13 +463,6 @@ export function ConfirmStep({
             {card.name}
           </p>
           <p className="mt-1.5 text-body">{card.description}</p>
-          {card.models.length > 0 ? (
-            // A div, not a p: the gallery's dialog is not phrasing content.
-            <div className="mt-2 text-copy text-body">
-              {modelsLine(card.models.map((m) => m.name))}, or similar.{" "}
-              <ModelPhotosButton title={card.name} models={card.models} />
-            </div>
-          ) : null}
           <p className="mt-3 text-copy text-muted">
             For {forWhich} · {plural(passengers, "passenger")}
           </p>

@@ -185,7 +185,6 @@ export type {
 } from "./vendors";
 export {
   listOfferings,
-  listPicturedOfferings,
   listActiveOfferings,
   listActiveOfferingsAt,
   cheapestCellsAt,
@@ -198,7 +197,6 @@ export {
 export type {
   Offering,
   OfferingOnSale,
-  PicturedOffering,
   LocationVehicleClass,
   OfferingClassChoice,
 } from "./offerings";

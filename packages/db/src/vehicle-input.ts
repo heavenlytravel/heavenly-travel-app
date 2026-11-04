@@ -241,18 +241,16 @@ export type VehicleDeleteFacts = {
    * then shows one model only, so no choice is offered at all.
    */
   choice: { lost: boolean; endsChoice: boolean } | null;
-  /** What the class's picture there becomes when this vehicle supplied it; null when it did not. */
-  cover: "photo" | "catalogue" | "none" | null;
 };
 
 /**
  * What deleting a vehicle takes (./delete-impact): its photos, its model
  * when nothing else is of it, and what customers at its location see of
- * its class: the model to choose and the class's picture. Those reach the
- * customer site, so the plate is typed to confirm.
+ * its class: the model to choose. That reaches the customer site, so the
+ * plate is typed to confirm.
  */
 export function vehicleDeleteImpact(facts: VehicleDeleteFacts): DeleteImpact {
-  const { model, className, locationName, choice, cover } = facts;
+  const { model, className, locationName, choice } = facts;
   const lines: string[] = [];
   if (facts.photos > 0) {
     lines.push(
@@ -274,21 +272,8 @@ export function vehicleDeleteImpact(facts: VehicleDeleteFacts): DeleteImpact {
       `${className} then shows one model in ${locationName}, so customers there no longer choose a model.`,
     );
   }
-  if (cover === "photo") {
-    lines.push(
-      `${className}'s picture in ${locationName} changes to another vehicle's photo.`,
-    );
-  } else if (cover === "catalogue") {
-    lines.push(
-      `${className}'s picture in ${locationName} changes to the catalogue's picture.`,
-    );
-  } else if (cover === "none") {
-    lines.push(
-      `${className} has no picture in ${locationName} until a vehicle there has a photo.`,
-    );
-  }
   return {
     lines,
-    confirmWith: choice?.lost || cover !== null ? facts.plate : null,
+    confirmWith: choice?.lost ? facts.plate : null,
   };
 }

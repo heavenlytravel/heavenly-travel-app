@@ -126,7 +126,6 @@ export function VehicleForm({
   cancelHref,
   uploadPath,
   mediaPicker,
-  photosNote = "What the customers of the location it is based at see of its model, plate and all, and swipe through when they choose one. The first cover of the class there is the class's picture at the location.",
   held = [],
 }: {
   /** Absent on the "new" page. */
@@ -149,8 +148,6 @@ export function VehicleForm({
   uploadPath: string;
   /** The admin's "Choose from Media" for the photos; absent in Connect. */
   mediaPicker?: MediaPicker;
-  /** What the photos are for, in the tip beside their title. */
-  photosNote?: string;
   /** The accepted bookings still to come it is on, which taking it out of service takes it off. */
   held?: readonly HeldBooking[];
   /** The class a new vehicle starts in, when it is added from the class's page. */
@@ -217,7 +214,7 @@ export function VehicleForm({
                 <CardTitle meta="The first is the cover">
                   <span className="inline-flex items-center gap-1.5">
                     {VEHICLE_FIELD_LABELS.photos}
-                    <InfoTip text={photosNote} />
+                    <InfoTip text="Optional, for our team: they never show on the website. The first is its cover." />
                   </span>
                 </CardTitle>
                 <PhotoList
@@ -358,7 +355,7 @@ export function VehicleForm({
                       />
                       {VEHICLE_FIELD_LABELS.isActive}
                     </label>
-                    <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and customers no longer see its model at the location." />
+                    <InfoTip text="Out of service, the vehicle keeps its history, its documents are not checked, and its model is no longer offered at the location." />
                   </span>
                 </div>
               </Card>

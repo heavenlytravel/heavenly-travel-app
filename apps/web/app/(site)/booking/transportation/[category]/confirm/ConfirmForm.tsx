@@ -301,12 +301,6 @@ export function ConfirmForm({
                   </dd>
                 </div>
               ))}
-              <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-hairline pt-3">
-                <dt className="font-semibold text-ink">Total</dt>
-                <dd className="font-serif text-2xl leading-none text-ink tabular-nums">
-                  {formatMyr(totalSen)}
-                </dd>
-              </div>
             </dl>
           </section>
         ) : null}

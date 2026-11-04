@@ -33,7 +33,9 @@ export function PageHeader({ title, badge, meta, action }: HeaderProps) {
             {badge}
           </div>
           {/* A div, not a p: a fact may be a button with its dialog (a booking's quick view), which a p cannot hold. */}
-          {meta ? <div className="mt-1.5 text-sm text-muted">{meta}</div> : null}
+          {meta ? (
+            <div className="mt-1.5 text-sm text-muted">{meta}</div>
+          ) : null}
         </div>
         {action ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">

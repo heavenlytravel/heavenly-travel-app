@@ -99,6 +99,8 @@ const ACTIONS = {
   "booking.cancelled": { entityType: "booking", customerVisible: true },
   /** The `AMENDED_FIELDS` that changed; the driver notes and the reason are not in it. */
   "booking.item.amended": { entityType: "booking", customerVisible: true },
+  /** A trip staff added to the booking: its position, status and `AMENDED_FIELDS`, priced. */
+  "booking.item.added": { entityType: "booking", customerVisible: true },
   /** An assigned trip that lost its vehicle or driver, back to confirmed. */
   "booking.item.reopened": { entityType: "booking", customerVisible: false },
   /**
@@ -959,6 +961,13 @@ export function describeActivity(entry: DescribableActivity): string {
       return changed.length > 0
         ? `Changed ${andList(changed)} of ${name}`
         : `Amended ${name}`;
+    }
+    case "booking.item.added": {
+      const price = field(entry.after, "priceTotalSen");
+      const name = itemName(entry.after);
+      return typeof price === "number"
+        ? `Added ${name} at ${formatMyr(price)}`
+        : `Added ${name}`;
     }
     case "booking.cancelled":
       return "Cancelled the booking";

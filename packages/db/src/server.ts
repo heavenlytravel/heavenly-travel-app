@@ -352,6 +352,8 @@ export {
   cancelItem,
   overrideItemPrice,
   amendItem,
+  addItem,
+  isAmendable,
   cancelBookingAsAdmin,
   cancelBookingAsCustomer,
   cancelTripAsCustomer,

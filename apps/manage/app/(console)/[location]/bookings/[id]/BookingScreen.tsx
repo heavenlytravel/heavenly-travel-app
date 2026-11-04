@@ -1,4 +1,5 @@
 import {
+  BOOKING_RULES,
   bookingLabelOf,
   bookingNumberRows,
   ADVANCE_PERMISSIONS,
@@ -24,6 +25,7 @@ import {
 } from "@repo/db";
 import {
   getBookingFulfilment,
+  isAmendable,
   listActivityFor,
   listBookingNotes,
   listTripEvents,
@@ -59,6 +61,7 @@ import {
 import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
+  addTripHref,
   amendItemHref,
   bookingHref,
   recordHistoryHref,
@@ -188,6 +191,13 @@ export async function bookingScreen({
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
+            {booking.status !== "cancelled" &&
+            booking.items.length < BOOKING_RULES.maxTripsPerBooking &&
+            permissions.includes("bookings.manage") ? (
+              <Button asChild variant="secondary" size="sm">
+                <Link href={addTripHref(scope.slug, booking.id)}>Add trip</Link>
+              </Button>
+            ) : null}
             {open && permissions.includes("bookings.manage") ? (
               <CancelBookingControl
                 bookingId={booking.id}
@@ -298,11 +308,15 @@ async function InvoiceCard({
         Invoice
       </CardTitle>
       <Rows rows={rows} className="text-sm" />
-      {editable && isPaymentStatus(invoice.paymentStatus) ? (
+      {editable ? (
         <div className="mt-4">
           <PaymentControl
             bookingId={booking.id}
-            status={invoice.paymentStatus}
+            status={
+              isPaymentStatus(invoice.paymentStatus)
+                ? invoice.paymentStatus
+                : null
+            }
             shared={shared ? number : null}
           />
         </div>
@@ -472,12 +486,13 @@ function TripCard({
     permissions.includes("bookings.create") &&
     item.status !== "cancelled" &&
     item.status !== "completed";
-  // A trip can be amended until it is assigned; amending a trip with a
-  // vehicle or driver asked for lets them go, to ask again.
+  // A trip can be amended until it is done or cancelled; amending one
+  // with a vehicle or driver asked for, or assigned, lets them go, to ask
+  // again.
   const canAmend =
     permissions.includes("bookings.manage") &&
     trip !== null &&
-    (item.status === "received" || item.status === "confirmed");
+    isAmendable(item);
 
   return (
     <Card flush>

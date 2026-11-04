@@ -14,6 +14,7 @@ import {
   addBookingNote,
   ADVANCE_PERMISSIONS,
   advanceItem,
+  addItem,
   amendItem,
   cancelBookingAsAdmin,
   cancelItem,
@@ -181,6 +182,32 @@ export async function amendItemAction(
     return FORBIDDEN;
   }
   const result = await amendItem(actorOf(admin), itemId, prepared);
+  const refused = await finish(result);
+  if (refused || !result.ok) return refused;
+  return { href: savedBookingHref(formData, result.booking) };
+}
+
+/**
+ * Adds a trip to a booking, priced on the server as New booking's trips
+ * are. Reservation and Sales; an agreed price with it needs
+ * `bookings.create`, as on the amend. The "Booking updated" email goes out
+ * through `finish`, and the admin lands back on the booking.
+ */
+export async function addTripAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return STALE;
+
+  const prepared = await prepareFormItem(formData);
+  if (!prepared.ok) return refusalOf(prepared);
+  if (prepared.override && !(await getAdmin("bookings.create"))) {
+    return FORBIDDEN;
+  }
+  const result = await addItem(actorOf(admin), bookingId, prepared);
   const refused = await finish(result);
   if (refused || !result.ok) return refused;
   return { href: savedBookingHref(formData, result.booking) };

@@ -172,9 +172,12 @@ Proposal, agreed in principle by the user:
   Finance opened the period's invoice already. `db:set-agents` added the first seven
   agents, linked the bookings entered as "AGENT - Customer", reset the counter to
   HT1306 and gave November's bookings their lines on Finance's opened invoices.
-- **Paid or unpaid** (2026-11-04): the invoice's `paymentStatus`, switched freely on the
-  booking by Reservation, Sales and Finance (`bookings.payment`); an agent's switches for
-  every booking on it. The bookings table shows it.
+- **Payment status** (2026-11-04): the invoice's `paymentStatus`, Pending, Partially
+  paid, Fully paid or Pay later, switched freely on the booking by Reservation, Sales and
+  Finance (`bookings.payment`), with no rules yet; an agent's switches for every booking
+  on it. The bookings table shows it. A trip added or amended keeps the booking's
+  invoice and its status: what a change to a booking paid in full owes, a new invoice
+  or the balance, waits for Finance's payment work.
 - **Later**: agents booking for themselves in Connect; payments as their own records,
   one paying several invoices or several paying one, with due dates and the rules
   Finance works by, alongside the payment gateway.

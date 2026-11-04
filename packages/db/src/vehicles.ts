@@ -210,6 +210,7 @@ export async function createVehicle(
         tx,
         fields.vendorId,
         fields.locationId,
+        { kind: "vehicle", vehicleClassId: fields.vehicleClassId },
       );
       if (!vendor.ok) return vendor;
       const gone = await deletedMediaRefusal(
@@ -320,11 +321,19 @@ export async function updateVehicle(
         : null;
       if (after.locationId && !locationName) return NO_LOCATION;
       let vendorName: string | null = null;
-      if (after.vendorId !== undefined || after.locationId !== undefined) {
+      if (
+        after.vendorId !== undefined ||
+        after.locationId !== undefined ||
+        after.vehicleClassId !== undefined
+      ) {
         const vendor = await checkVendorServes(
           tx,
           after.vendorId ?? current.vendorId,
           after.locationId ?? current.locationId,
+          {
+            kind: "vehicle",
+            vehicleClassId: after.vehicleClassId ?? current.vehicleClassId,
+          },
         );
         if (!vendor.ok) return vendor;
         if (after.vendorId !== undefined) vendorName = vendor.name;

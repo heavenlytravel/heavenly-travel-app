@@ -15,6 +15,8 @@ import type { NewUserFields } from "./user-input";
 import {
   checkReviewNote,
   checkVendorFields,
+  suppliesIt,
+  supplyRefusalOf,
   VENDOR_LOCATIONS_FIELD,
   vendorFieldsOf,
   type VendorFields,
@@ -136,21 +138,39 @@ export async function listVendorOptions(): Promise<VendorOption[]> {
   }));
 }
 
+/** The agents a booking may come through, by name: active vendors offering "agent". */
+export function listAgents(): Promise<{ id: string; name: string }[]> {
+  return db.vendor.findMany({
+    where: { status: "active", services: { has: "agent" } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
+/** What a writer adds to a vendor: a vehicle of a class, a driver or a tour guide. */
+export type SuppliedRecord =
+  | { kind: "vehicle"; vehicleClassId: string }
+  | { kind: "driver" }
+  | { kind: "guide" };
+
 /**
- * Checks that a vendor exists and serves the location a vehicle or a driver
- * is based at, inside the writer's transaction; answers the vendor's name
- * for the log. `field` is the form's field the refusal is about.
+ * Checks that a vendor exists, offers what is added (`suppliesIt`: a
+ * vehicle of a coach class needs coach charter ticked, and so on) and
+ * serves the location it is based at, inside the writer's transaction;
+ * answers the vendor's name for the log.
  */
 export async function checkVendorServes(
   tx: Prisma.TransactionClient,
   vendorId: string,
   locationId: string,
+  record: SuppliedRecord,
 ): Promise<{ ok: true; name: string; isOurs: boolean } | Refusal> {
   const vendor = await tx.vendor.findUnique({
     where: { id: vendorId },
     select: {
       name: true,
       isOurs: true,
+      services: true,
       locations: { where: { id: locationId }, select: { id: true } },
     },
   });
@@ -159,6 +179,22 @@ export async function checkVendorServes(
       "That vendor was just deleted. Choose whose it is again.",
       "vendorId",
     );
+  }
+  const supply =
+    record.kind === "vehicle"
+      ? {
+          kind: "vehicle" as const,
+          category:
+            (
+              await tx.vehicleClass.findUnique({
+                where: { id: record.vehicleClassId },
+                select: { category: true },
+              })
+            )?.category ?? "",
+        }
+      : record;
+  if (!suppliesIt(vendor, supply)) {
+    return refuse(supplyRefusalOf(vendor.name, supply), "vendorId");
   }
   if (vendor.locations.length === 0) {
     const location = await tx.location.findUnique({
@@ -738,9 +774,13 @@ export function listRegistrationLocations(): Promise<
 /**
  * What a vendor's own vehicle and driver forms offer in Connect: the
  * locations it serves, and at each the classes on sale there (an offering
- * on, of a class on), so a vendor adds capacity behind what we sell.
+ * on, of a class on), so a vendor adds capacity behind what we sell. For
+ * a vehicle (`forVehicles`), only the classes of the categories it ticked.
  */
-export async function vendorFleetChoices(vendorId: string): Promise<{
+export async function vendorFleetChoices(
+  vendorId: string,
+  { forVehicles = false }: { forVehicles?: boolean } = {},
+): Promise<{
   locations: { id: string; name: string; slug: string; state: string }[];
   /** The classes on sale at each location, by the location's id. */
   classesAt: Record<string, string[]>;
@@ -751,6 +791,10 @@ export async function vendorFleetChoices(vendorId: string): Promise<{
     where: { vendors: { some: { id: vendorId } } },
     orderBy: { name: "asc" },
     select: { id: true, name: true, slug: true, state: true },
+  });
+  const vendor = await db.vendor.findUnique({
+    where: { id: vendorId },
+    select: { isOurs: true, services: true },
   });
   const offerings = await db.locationVehicleClass.findMany({
     where: {
@@ -774,6 +818,11 @@ export async function vendorFleetChoices(vendorId: string): Promise<{
   const classesAt: Record<string, string[]> = {};
   const classes = new Map<string, (typeof offerings)[number]["vehicleClass"]>();
   for (const { locationId, vehicleClass } of offerings) {
+    const supply = {
+      kind: "vehicle",
+      category: vehicleClass.category,
+    } as const;
+    if (forVehicles && !(vendor && suppliesIt(vendor, supply))) continue;
     (classesAt[locationId] ??= []).push(vehicleClass.id);
     classes.set(vehicleClass.id, vehicleClass);
   }

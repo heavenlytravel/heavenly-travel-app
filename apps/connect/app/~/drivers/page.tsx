@@ -21,14 +21,15 @@ export default async function DriversPage() {
   const member = await requireMember();
   const fleet = await vendorFleet(member.vendor.id);
   const { drivers } = fleet;
-  const add = (
+  // Only what the vendor offers, by the services it ticked.
+  const add = fleet.adds.drivers ? (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/drivers/new">
         <PlusIcon />
         Add
       </Link>
     </Button>
-  );
+  ) : null;
   return (
     <Screen
       member={shellMember(member)}
@@ -63,15 +64,17 @@ export default async function DriversPage() {
         empty={{
           icon: UserRoundIcon,
           title: "No driver yet",
-          text: "Add one to be offered jobs for them. Driving yourself? Add yourself, with your own email.",
-          action: (
+          text: fleet.adds.drivers
+            ? "Add one to be offered jobs for them. Driving yourself? Add yourself, with your own email."
+            : "Your services do not include Car with driver, Coach charter or Driver only. Ask our team to add it to your business.",
+          action: fleet.adds.drivers ? (
             <Button asChild>
               <Link href="/~/drivers/new">
                 <PlusIcon />
                 Add a driver
               </Link>
             </Button>
-          ),
+          ) : null,
         }}
       />
     </Screen>

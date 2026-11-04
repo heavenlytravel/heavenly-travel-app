@@ -7,6 +7,7 @@ import { GuideForm } from "@repo/console/GuideForm";
 import { FormFrame } from "../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 import { requireMember, shellMember } from "../../../_lib/access";
+import { addsOf } from "../../../_lib/fleet";
 import { deleteGuideAction, saveGuideAction } from "../../../fleet-actions";
 
 /**
@@ -26,6 +27,8 @@ export default async function GuidePage({
     isNew ? [] : heldBookingsOf({ guideId: id }, "reference"),
   ]);
   if (!isNew && guide?.vendorId !== member.vendor.id) notFound();
+  // A new one only of what it offers, by the services it ticked.
+  if (isNew && !addsOf(member.vendor).guides) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 
   return (

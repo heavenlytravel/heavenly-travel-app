@@ -19,14 +19,21 @@
 //   invoice from OPENINGS when Finance opened it already, else the next
 //   number. Logged as the system's, on each booking's history.
 //
-// A booking of a customer of ours from before invoice numbers is left for
-// staff to give its old number on its page. With --dry-run it prints what
-// it would do and writes nothing. Running it again changes nothing.
+// - Gives the bookings of DIRECT, customers of ours, their old invoice
+//   numbers.
+//
+// The schema push drops the invoice numbers given before it: every one is
+// given again here, Finance's own and the next numbers from LAST_INVOICE.
+// It ends listing the confirmed bookings still without an invoice, for
+// staff to give theirs on the booking's page. With --dry-run it prints
+// what it would do and writes nothing. Running it again changes nothing.
 import { SYSTEM_ACTOR } from "../src/activity-actions";
 import {
+  BOOKING_NUMBER_SELECT,
+  bookingLabelOf,
   formatBookingNumber,
+  formatInvoiceNumber,
   invoicePeriodStart,
-  isInvoicePeriod,
   type InvoicePeriod,
 } from "../src/booking-number";
 import { invoiceBooking, updateBookingContact } from "../src/bookings";
@@ -44,6 +51,7 @@ const AGENTS: { name: string; invoicePeriod: InvoicePeriod }[] = [
   { name: "Wahdah", invoicePeriod: "month" },
   { name: "Trevabook", invoicePeriod: "month" },
   { name: "Lotus Asia", invoicePeriod: "month" },
+  { name: "Asian Overland", invoicePeriod: "month" },
 ];
 
 /** The invoices Finance opened already, by agent and period: November 2026's. */
@@ -53,6 +61,13 @@ const OPENINGS: { agent: string; periodStart: string; number: number }[] = [
   { agent: "Lotus Asia", periodStart: "2026-11-01", number: 1297 },
   { agent: "World Express", periodStart: "2026-11-01", number: 1306 },
   { agent: "Asia Experience", periodStart: "2026-11-01", number: 1259 },
+  { agent: "Asian Overland", periodStart: "2026-11-01", number: 1282 },
+];
+
+/** Bookings of customers of ours that Finance invoiced already, by reference. */
+const DIRECT: { reference: string; number: number }[] = [
+  // Mr Jan Werner.
+  { reference: "HT-AYST7B", number: 1149 },
 ];
 
 /** The last invoice number Finance gave: the next is HTI-1307. */
@@ -150,7 +165,15 @@ async function setAgents(): Promise<Map<string, string>> {
 }
 
 /** Links "ASIAN TRAILS - Gary Coe" to Asian Trails, keeping "Gary Coe". */
-async function linkBookings(agents: Map<string, string>) {
+/**
+ * Links each "AGENT - Customer" booking to its agent; answers each one
+ * linked, by booking id, with its agent's name, so a dry run can say what
+ * invoice each would join.
+ */
+async function linkBookings(
+  agents: Map<string, string>,
+): Promise<Map<string, string>> {
+  const linked = new Map<string, string>();
   const bookings = await db.booking.findMany({
     where: { agentId: null, contactName: { contains: " - " } },
     select: {
@@ -165,6 +188,10 @@ async function linkBookings(agents: Map<string, string>) {
     const cut = booking.contactName.indexOf(" - ");
     const agentId = agents.get(key(booking.contactName.slice(0, cut)));
     if (!agentId) continue;
+    const agent = AGENTS.find(
+      (a) => key(a.name) === key(booking.contactName.slice(0, cut)),
+    )!;
+    linked.set(booking.id, agent.name);
     const name = booking.contactName.slice(cut + 3).trim();
     console.log(
       `${booking.reference}: ${booking.contactName} -> agent, "${name}".`,
@@ -178,6 +205,7 @@ async function linkBookings(agents: Map<string, string>) {
     });
     if (!saved.ok) throw new Error(`${booking.reference}: ${saved.error}`);
   }
+  return linked;
 }
 
 async function setCounter() {
@@ -199,10 +227,15 @@ async function setCounter() {
   });
 }
 
-async function invoiceAgentBookings() {
+/**
+ * Each agent booking's line, first pick-up first. A dry run works the
+ * numbers out here, as `invoiceFor` would give them; a real run gives
+ * them through it and prints what it gave.
+ */
+async function invoiceAgentBookings(linked: Map<string, string>) {
   const bookings = await db.booking.findMany({
     where: {
-      agentId: { not: null },
+      OR: [{ agentId: { not: null } }, { id: { in: [...linked.keys()] } }],
       invoiceId: null,
       status: { in: ["confirmed", "completed"] },
     },
@@ -211,39 +244,87 @@ async function invoiceAgentBookings() {
       id: true,
       reference: true,
       startsAt: true,
-      agent: { select: { name: true, invoicePeriod: true } },
+      agent: { select: { name: true } },
     },
   });
+  // A dry run's invoices: by agent and period, their number and last line.
+  const planned = new Map<string, { number: number; line: number }>();
+  let next = LAST_INVOICE;
   for (const booking of bookings) {
-    const agent = booking.agent!;
-    const period = isInvoicePeriod(agent.invoicePeriod)
-      ? agent.invoicePeriod
-      : "month";
+    const name = booking.agent?.name ?? linked.get(booking.id)!;
+    const agent = AGENTS.find((a) => key(a.name) === key(name));
+    const period = agent?.invoicePeriod ?? "month";
     const periodStart = invoicePeriodStart(booking.startsAt, period);
     const opening = OPENINGS.find(
-      (o) => key(o.agent) === key(agent.name) && o.periodStart === periodStart,
+      (o) => key(o.agent) === key(name) && o.periodStart === periodStart,
     );
-    // The opening number is given with the period's first booking only.
     const open = await db.invoice.findFirst({
       where: {
-        agent: { name: agent.name },
+        agent: { name },
         periodStart: new Date(`${periodStart}T00:00:00Z`),
       },
       select: { id: true },
     });
-    const number = open ? null : (opening?.number ?? null);
-    console.log(
-      `${booking.reference}: ${agent.name}, period from ${periodStart}${number ? `, opens ${formatBookingNumber("invoice", number)}` : ""}.`,
-    );
-    if (DRY_RUN) continue;
+    const planKey = `${key(name)}:${periodStart}`;
+    // The opening number goes with the period's first booking only.
+    const number =
+      open || planned.has(planKey) ? null : (opening?.number ?? null);
+    if (DRY_RUN) {
+      const invoice = planned.get(planKey) ?? {
+        number: number ?? ++next,
+        line: 0,
+      };
+      invoice.line += 1;
+      planned.set(planKey, invoice);
+      console.log(
+        `${booking.reference}: ${name}, ${formatInvoiceNumber(invoice.number, invoice.line)}.`,
+      );
+      continue;
+    }
     const given = await invoiceBooking(SYSTEM_ACTOR, booking.id, number);
     if (!given.ok) throw new Error(`${booking.reference}: ${given.error}`);
+    planned.set(planKey, { number: 0, line: 0 });
+    const label = await db.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+      select: BOOKING_NUMBER_SELECT,
+    });
+    console.log(`${booking.reference}: ${name}, ${bookingLabelOf(label)}.`);
+  }
+}
+
+/** The old numbers of DIRECT's bookings. */
+async function invoiceDirectBookings() {
+  for (const { reference, number } of DIRECT) {
+    const booking = await db.booking.findUnique({
+      where: { reference },
+      select: { id: true, invoiceId: true, agentId: true },
+    });
+    if (!booking || booking.invoiceId || booking.agentId) continue;
+    console.log(`${reference}: ${formatBookingNumber("invoice", number)}.`);
+    if (DRY_RUN) continue;
+    const given = await invoiceBooking(SYSTEM_ACTOR, booking.id, number);
+    if (!given.ok) throw new Error(`${reference}: ${given.error}`);
+  }
+}
+
+/** The confirmed bookings left without an invoice, for staff. */
+async function listLeft() {
+  const left = await db.booking.findMany({
+    where: { invoiceId: null, status: { in: ["confirmed", "completed"] } },
+    select: { reference: true, contactName: true },
+  });
+  for (const booking of left) {
+    console.log(
+      `Still to invoice: ${booking.reference}, ${booking.contactName}.`,
+    );
   }
 }
 
 const agents = await setAgents();
-await linkBookings(agents);
+const linked = await linkBookings(agents);
 await setCounter();
-await invoiceAgentBookings();
+await invoiceAgentBookings(linked);
+await invoiceDirectBookings();
+await listLeft();
 console.log(DRY_RUN ? "Dry run: nothing written." : "Done.");
 await db.$disconnect();

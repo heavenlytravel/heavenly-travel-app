@@ -91,3 +91,77 @@ export function groupsOf(classes: readonly ClassColumn[]) {
 
 /** A zone's name cut to the column's width, whole in its tooltip. */
 export const ZONE_NAME = "block max-w-44 truncate font-medium text-ink";
+
+/** A price as it is compared with the save: sen, or null for empty or not a price. */
+export function senOf(text: string | undefined): number | null {
+  const reading = readCell(text);
+  return reading.ok ? reading.sen : null;
+}
+
+/**
+ * A price cell of a price list (hourly, tour guides): a box coloured by its
+ * state against the save, tidied on leaving it; plain text when the list
+ * is read-only. `className` is the table cell's, a line under it say.
+ */
+export function PriceCell({
+  label,
+  text,
+  saved,
+  invalid,
+  readOnly,
+  pending,
+  onChange,
+  className,
+}: {
+  /** What the cell prices, read out before it: "English, 4 hours". */
+  label: string;
+  text: string;
+  saved: string | undefined;
+  invalid: boolean;
+  readOnly: boolean;
+  pending: boolean;
+  onChange: (text: string) => void;
+  className?: string | false;
+}) {
+  const empty = text.trim() === "";
+  return (
+    <td className={cx(CELL_PAD, className)}>
+      {readOnly ? (
+        <span
+          className={cx(
+            "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
+            empty && EMPTY_CELL,
+          )}
+        >
+          {/* Read out before the price: a label on a plain span is not. */}
+          <span className="sr-only">{`${label}, ${empty ? "not sold" : "price in RM"} `}</span>
+          {text}
+        </span>
+      ) : (
+        <input
+          aria-label={`${label}, price in RM`}
+          aria-invalid={invalid || undefined}
+          inputMode="decimal"
+          autoComplete="off"
+          spellCheck={false}
+          readOnly={pending}
+          value={text}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={(event) => event.target.select()}
+          onBlur={(event) => {
+            const tidied = tidy(event.target.value);
+            if (tidied !== event.target.value) onChange(tidied);
+          }}
+          className={cx(
+            CELL_INPUT,
+            invalid
+              ? CELL_BAD
+              : senOf(text) !== senOf(saved)
+                ? CELL_CHANGED
+                : cx(CELL_PLAIN, empty && EMPTY_CELL),
+          )}
+        />
+      )}
+    </td>
+  );
+}

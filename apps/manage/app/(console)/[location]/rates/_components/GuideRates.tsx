@@ -18,17 +18,7 @@ import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { useState, useTransition } from "react";
 import { movedRow, RowControls } from "../../../../_components/RowControls";
 import { setGuideRatesAction } from "./actions";
-import {
-  CELL_BAD,
-  CELL_CHANGED,
-  CELL_INPUT,
-  CELL_PAD,
-  CELL_PLAIN,
-  CellKey,
-  EMPTY_CELL,
-  readCell,
-  tidy,
-} from "./cells";
+import { CellKey, EMPTY_CELL, PriceCell, readCell, senOf } from "./cells";
 import { SaveBar, type SaveStatus } from "./SaveBar";
 
 /** One language's row as the page holds it: on sale or not, and each price as typed. */
@@ -56,9 +46,16 @@ function valuesOf(rows: readonly GuideRateRow[]): Values {
   );
 }
 
-/** The languages in the location's order: those it keeps, in theirs, then the rest. */
+/**
+ * The languages in the location's order: those it keeps, in theirs, then
+ * the rest. One stored but no longer on the list is left out, as the grid
+ * has no row for it.
+ */
 function orderOf(rows: readonly GuideRateRow[]): string[] {
-  const kept = rows.map((row) => row.language);
+  const listed: readonly string[] = GUIDE_LANGUAGES;
+  const kept = rows
+    .map((row) => row.language)
+    .filter((language) => listed.includes(language));
   return [
     ...kept,
     ...GUIDE_LANGUAGES.filter((language) => !kept.includes(language)),
@@ -68,12 +65,6 @@ function orderOf(rows: readonly GuideRateRow[]): string[] {
 /** The rows as the action reads them (`parseGuideRates`), in their order. */
 const postedOf = (values: Values, order: readonly string[]) =>
   order.map((language) => ({ language, ...values[language]! }));
-
-/** A price as it is compared with the save: sen, or null for empty or not a price. */
-function senOf(text: string | undefined) {
-  const reading = readCell(text);
-  return reading.ok ? reading.sen : null;
-}
 
 const HEADING =
   "border-b border-hairline px-3 py-2.5 align-bottom font-semibold text-body";
@@ -234,53 +225,18 @@ export function GuideRates({
                   {GUIDE_RATE_PRICES.map((key) => {
                     const id = `${language}|${key}`;
                     const text = row[key];
-                    const empty = text.trim() === "";
-                    const label = `${language}, ${GUIDE_RATE_PRICE_LABELS[key]}`;
                     return (
-                      <td
+                      <PriceCell
                         key={key}
-                        className={cx(CELL_PAD, "border-b border-hairline")}
-                      >
-                        {readOnly ? (
-                          <span
-                            className={cx(
-                              "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
-                              empty && EMPTY_CELL,
-                            )}
-                          >
-                            <span className="sr-only">{`${label}, ${empty ? "not sold" : "price in RM"} `}</span>
-                            {text}
-                          </span>
-                        ) : (
-                          <input
-                            aria-label={`${label}, price in RM`}
-                            aria-invalid={invalid.has(id) || undefined}
-                            inputMode="decimal"
-                            autoComplete="off"
-                            spellCheck={false}
-                            readOnly={pending}
-                            value={text}
-                            onChange={(event) =>
-                              edit(language, { [key]: event.target.value })
-                            }
-                            onFocus={(event) => event.target.select()}
-                            onBlur={(event) => {
-                              const tidied = tidy(event.target.value);
-                              if (tidied !== event.target.value) {
-                                edit(language, { [key]: tidied });
-                              }
-                            }}
-                            className={cx(
-                              CELL_INPUT,
-                              invalid.has(id)
-                                ? CELL_BAD
-                                : senOf(text) !== senOf(saved[language]![key])
-                                  ? CELL_CHANGED
-                                  : cx(CELL_PLAIN, empty && EMPTY_CELL),
-                            )}
-                          />
-                        )}
-                      </td>
+                        label={`${language}, ${GUIDE_RATE_PRICE_LABELS[key]}`}
+                        text={text}
+                        saved={saved[language]![key]}
+                        invalid={invalid.has(id)}
+                        readOnly={readOnly}
+                        pending={pending}
+                        onChange={(next) => edit(language, { [key]: next })}
+                        className="border-b border-hairline"
+                      />
                     );
                   })}
                 </tr>

@@ -26,8 +26,9 @@ import {
   EMPTY_CELL,
   ZONE_NAME,
   groupsOf,
+  PriceCell,
   readCell,
-  tidy,
+  senOf,
   type ClassColumn,
 } from "./cells";
 import { SaveBar, type SaveStatus } from "./SaveBar";
@@ -109,12 +110,6 @@ function coversOk(text: string | undefined) {
   return (
     /^\d+$/.test(trimmed) && Number(trimmed) >= min && Number(trimmed) <= max
   );
-}
-
-/** A price as it is compared with the save: sen, or null for empty or not a price. */
-function senOf(text: string | undefined) {
-  const reading = readCell(text);
-  return reading.ok ? reading.sen : null;
 }
 
 /** A heading of the lead columns, over both heading rows when the classes are grouped. */
@@ -246,54 +241,25 @@ export function HourlyRates({
       ),
   ).length;
 
-  /** A price cell in the grid's look: a box, coloured by its state against the save. */
+  /** A price cell in the grid's look. */
   function priceCell(
     part: "prices" | "extras",
     key: string,
     label: string,
     line: string | false,
   ) {
-    const text = values[part][key] ?? "";
-    const empty = text.trim() === "";
     return (
-      <td key={key} className={cx(CELL_PAD, line)}>
-        {readOnly ? (
-          <span
-            className={cx(
-              "block h-9 min-w-24 rounded-lg px-2.5 text-right text-sm leading-9 text-ink tabular-nums",
-              empty && EMPTY_CELL,
-            )}
-          >
-            {/* Read out before the price: a label on a plain span is not. */}
-            <span className="sr-only">{`${label}, ${empty ? "not sold" : "price in RM"} `}</span>
-            {text}
-          </span>
-        ) : (
-          <input
-            aria-label={`${label}, price in RM`}
-            aria-invalid={invalid.has(key) || undefined}
-            inputMode="decimal"
-            autoComplete="off"
-            spellCheck={false}
-            readOnly={pending}
-            value={text}
-            onChange={(event) => edit(part, key, event.target.value)}
-            onFocus={(event) => event.target.select()}
-            onBlur={(event) => {
-              const tidied = tidy(event.target.value);
-              if (tidied !== event.target.value) edit(part, key, tidied);
-            }}
-            className={cx(
-              CELL_INPUT,
-              invalid.has(key)
-                ? CELL_BAD
-                : senOf(text) !== senOf(saved[part][key])
-                  ? CELL_CHANGED
-                  : cx(CELL_PLAIN, empty && EMPTY_CELL),
-            )}
-          />
-        )}
-      </td>
+      <PriceCell
+        key={key}
+        label={label}
+        text={values[part][key] ?? ""}
+        saved={saved[part][key]}
+        invalid={invalid.has(key)}
+        readOnly={readOnly}
+        pending={pending}
+        onChange={(text) => edit(part, key, text)}
+        className={line}
+      />
     );
   }
 

@@ -156,9 +156,6 @@ Proposal, agreed in principle by the user:
   system's last numbers this year (N2); ours carry on after them. Then the bookings
   from before get theirs: a quotation number for those staff entered, in the order made,
   an invoice number for those ever confirmed, in the order confirmed.
-  To keep numbers the old system already gave, pass `--set HT-AYST7B=HTQ-26-00012`
-  per number first: each is checked before any is written, the counters move on to
-  the highest given, and only the bookings left over are numbered by order.
 - Other formats considered: `HTQ2600042` (no dashes), `HT-Q-2611-0042` (monthly),
   `Q26-00042` / `INV26-00042`. The user kept HTQ-YY-NNNNN / HTI-YY-NNNNN (2026-11-04).
 

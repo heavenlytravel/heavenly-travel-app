@@ -291,7 +291,7 @@ export function parseTripOptions(
 }
 
 /** A choice as a trip's fields: `guideLanguage` and `guideRequest`. */
-export function tripGuideFields(guide: GuideChoice) {
+function tripGuideFields(guide: GuideChoice) {
   return { guideLanguage: guide.language, guideRequest: guide.request };
 }
 

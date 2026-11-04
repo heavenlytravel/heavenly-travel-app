@@ -13,10 +13,9 @@ import { localDateTimeInputs } from "./booking-rules";
  * docs/261102-booking-ops.md, "5. Quotation and invoice numbers".
  */
 
-export const BOOKING_NUMBER_DIGITS = 5;
+const BOOKING_NUMBER_DIGITS = 5;
 
-export const BOOKING_NUMBER_KINDS = ["quote", "invoice"] as const;
-export type BookingNumberKind = (typeof BOOKING_NUMBER_KINDS)[number];
+export type BookingNumberKind = "quote" | "invoice";
 
 const PREFIX: Record<BookingNumberKind, string> = {
   quote: "HTQ",

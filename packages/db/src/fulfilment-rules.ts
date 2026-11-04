@@ -26,7 +26,6 @@ export const PART_ROLE_LABELS: Record<PartRole, string> = {
   guide: "Tour guide",
 };
 
-/** The roles a trip needs: a vehicle and a driver, and a guide when it goes with one. */
 /** Whether a trip goes with a tour guide: one whose language was paid for. */
 export function hasGuide(
   details: { guideLanguage: string | null } | null | undefined,
@@ -34,6 +33,7 @@ export function hasGuide(
   return Boolean(details?.guideLanguage);
 }
 
+/** The roles a trip needs: a vehicle and a driver, and a guide when it goes with one. */
 export function rolesOf(withGuide: boolean): PartRole[] {
   return withGuide ? [...PART_ROLES] : ["vehicle", "driver"];
 }

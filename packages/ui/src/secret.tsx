@@ -24,7 +24,7 @@ const DIGITS = "0123456789";
  * not from the value, so it gives nothing of it away, and the server and
  * the browser draw the same.
  */
-export function redactedLike(value: string): string {
+function redactedLike(value: string): string {
   let state = 0x2545f491;
   const next = (alphabet: string) => {
     state ^= state << 13;

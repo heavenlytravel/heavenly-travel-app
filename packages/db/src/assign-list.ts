@@ -1,5 +1,4 @@
-import { BOOKING_NUMBER_SELECT } from "./booking-number";
-import { bookingLabelOf } from "./booking-number";
+import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
 import { db } from "./client";

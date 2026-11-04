@@ -164,20 +164,21 @@ async function setAgents(): Promise<Map<string, string>> {
   return ids;
 }
 
-/** Links "ASIAN TRAILS - Gary Coe" to Asian Trails, keeping "Gary Coe". */
 /**
- * Links each "AGENT - Customer" booking to its agent; answers each one
- * linked, by booking id, with its agent's name, so a dry run can say what
- * invoice each would join.
+ * Links each "ASIAN TRAILS - Gary Coe" booking to Asian Trails, keeping
+ * "Gary Coe"; answers each one linked, by booking id, with its agent's
+ * name, so a dry run can say what invoice each would join. A booking
+ * linked by a run that stopped before its name was cut is finished here.
  */
 async function linkBookings(
   agents: Map<string, string>,
 ): Promise<Map<string, string>> {
   const linked = new Map<string, string>();
   const bookings = await db.booking.findMany({
-    where: { agentId: null, contactName: { contains: " - " } },
+    where: { contactName: { contains: " - " } },
     select: {
       id: true,
+      agentId: true,
       reference: true,
       contactName: true,
       contactPhone: true,
@@ -197,7 +198,9 @@ async function linkBookings(
       `${booking.reference}: ${booking.contactName} -> agent, "${name}".`,
     );
     if (DRY_RUN) continue;
-    await db.booking.update({ where: { id: booking.id }, data: { agentId } });
+    if (booking.agentId !== agentId) {
+      await db.booking.update({ where: { id: booking.id }, data: { agentId } });
+    }
     const saved = await updateBookingContact(SYSTEM_ACTOR, booking.id, {
       contactName: name,
       contactPhone: booking.contactPhone,

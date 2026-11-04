@@ -17,7 +17,7 @@ import {
   type TripClassPrice,
   type TripMode,
   type TripSearch,
-  type WeekendReason,
+  type ClassCharges,
 } from "@repo/db";
 import type { GalleryModel } from "../_components/ModelGallery";
 import { EMPTY_SEARCH, type SearchValues } from "./search";
@@ -73,14 +73,11 @@ export const NO_FLIGHTS: ForDriver = {
 };
 
 /** One class as a trip's quote prices it, with what the pages say about it. */
-export type TripClassQuote = TripClassPrice & {
-  /** What the odd-hours surcharge adds to this trip; 0 when none. */
-  oddHoursSen: number;
-  /** What the weekend or public holiday surcharge adds to this trip, and which; null when neither. */
-  weekend: { reason: WeekendReason; amountSen: number } | null;
-  /** The customer may cancel this trip free until this long before it starts. */
-  cancellationCutoffHours: number;
-};
+export type TripClassQuote = TripClassPrice &
+  ClassCharges & {
+    /** The customer may cancel this trip free until this long before it starts. */
+    cancellationCutoffHours: number;
+  };
 
 /** A trip as the server priced it: its places' names and every class, or why it cannot be booked. */
 export type TripQuoteView =

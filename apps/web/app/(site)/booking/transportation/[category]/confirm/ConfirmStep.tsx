@@ -16,7 +16,8 @@ import {
   needsGuide,
   plural,
   tripItemField,
-  WEEKEND_REASON_LABELS,
+  CHARGE_LABELS,
+  fareSenOf,
   WEEKEND_REASONS,
   type TripCategory,
   type TripOptions,
@@ -302,23 +303,18 @@ export function ConfirmStep({
   };
   const breakdown = card
     ? [
-        ...lineOf(
-          card.name,
-          (index) =>
-            (priceOn(index) ?? 0) -
-            oddHoursOn(index) -
-            (onTrip[index]?.weekend?.amountSen ?? 0) -
-            guideOn(index),
-        ),
-        ...lineOf("Odd-hours surcharge", oddHoursOn),
+        ...lineOf(card.name, (index) => {
+          const here = onTrip[index];
+          return priceOn(index) !== null && here && here.totalSen !== null
+            ? fareSenOf({ ...here, totalSen: here.totalSen })
+            : 0;
+        }),
+        ...lineOf(CHARGE_LABELS.oddHours, oddHoursOn),
         ...WEEKEND_REASONS.flatMap((reason) =>
-          lineOf(
-            `${WEEKEND_REASON_LABELS[reason]} surcharge`,
-            weekendOn(reason),
-          ),
+          lineOf(CHARGE_LABELS.weekend(reason), weekendOn(reason)),
         ),
         ...(guide.language
-          ? lineOf(`Tour guide, ${guide.language}`, guideOn)
+          ? lineOf(CHARGE_LABELS.guide(guide.language), guideOn)
           : []),
       ]
     : [];

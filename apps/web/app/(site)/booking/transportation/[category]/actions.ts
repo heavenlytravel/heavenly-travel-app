@@ -1,6 +1,6 @@
 "use server";
 
-import { BOOKING_RULES, parseTripSearch } from "@repo/db";
+import { BOOKING_RULES, classChargesOf, parseTripSearch } from "@repo/db";
 import { quoteTrips, type TripRequest } from "@repo/db/server";
 import { resolveTrip, tripRouting } from "@repo/places/server";
 import type {
@@ -77,15 +77,8 @@ export async function quoteTripsAction(
       dropoff: trip.request.dropoff?.label ?? null,
       classes: quote.classes.map((c) => ({
         id: c.vehicleClass.id,
-        totalSen: c.price?.totalSen ?? null,
+        ...classChargesOf(c.price),
         availability: c.availability,
-        oddHoursSen: c.price?.surcharge?.amountSen ?? 0,
-        weekend: c.price?.weekend
-          ? {
-              reason: c.price.weekend.reason,
-              amountSen: c.price.weekend.amountSen,
-            }
-          : null,
         cancellationCutoffHours: c.offering.cancellationCutoffHours,
       })),
       guides: quote.guides,

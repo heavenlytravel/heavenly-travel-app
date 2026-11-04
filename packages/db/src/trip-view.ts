@@ -13,7 +13,11 @@ import {
 } from "./hourly-input";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
-import { WEEKEND_REASON_LABELS, type TripPriceBreakdown } from "./pricing";
+import {
+  CHARGE_LABELS,
+  WEEKEND_REASON_LABELS,
+  type TripPriceBreakdown,
+} from "./pricing";
 
 /**
  * A trip as every screen describes it, before and after booking: the
@@ -276,7 +280,7 @@ export function priceRows(
   }
   if (price.guide) {
     rows.push([
-      `Tour guide, ${price.guide.language}`,
+      CHARGE_LABELS.guide(price.guide.language),
       formatMyr(price.guide.amountSen),
     ]);
   }

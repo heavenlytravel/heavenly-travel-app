@@ -32,8 +32,9 @@ import {
   type GuideOffer,
   type TripCategory,
   type TripMode,
-  type WeekendReason,
-  WEEKEND_REASON_LABELS,
+  CHARGE_LABELS,
+  fareSenOf,
+  type ClassCharges,
 } from "@repo/db";
 import type { BookingItemWithDetails } from "@repo/db/server";
 
@@ -75,8 +76,8 @@ export const CONTACT_FIELDS = {
   email: "email",
 } as const;
 
-/** One class as priced for the trip. Plain data, sent to the browser. */
-export type ClassQuoteView = {
+/** One class as priced for the trip, its total `ClassCharges`, with any model. Plain data, sent to the browser. */
+export type ClassQuoteView = ClassCharges & {
   id: string;
   name: string;
   luggage: string;
@@ -86,14 +87,8 @@ export type ClassQuoteView = {
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];
-  /** With any model of the class; null when it is not offered on this trip. */
-  totalSen: number | null;
   /** What choosing one of the models adds to this trip; null when the customer cannot choose one here. */
   modelChoiceSen: number | null;
-  /** What the odd-hours surcharge adds to this trip, in `totalSen`; 0 when none. */
-  oddHoursSen: number;
-  /** What the weekend or public holiday surcharge adds to this trip, in `totalSen`, and which; null when neither. */
-  weekend: { reason: WeekendReason; amountSen: number } | null;
   /** Whether the class's rules take the trip, and why not. */
   availability: ClassAvailability;
 };
@@ -579,7 +574,6 @@ export function tripPriceLines(
     ? quote?.classes.find((c) => c.id === chosen.option.id)
     : null;
   if (!quote || !chosen || !priced || priced.totalSen === null) return [];
-  const weekendSen = priced.weekend?.amountSen ?? 0;
   const guide = quote.guides.find((offer) => offer.language === guideLanguage);
   const fareNote = [
     quote.route ?? quote.hire,
@@ -591,7 +585,7 @@ export function tripPriceLines(
     {
       label: chosen.option.name,
       note: fareNote || null,
-      amountSen: priced.totalSen - priced.oddHoursSen - weekendSen,
+      amountSen: fareSenOf({ ...priced, totalSen: priced.totalSen }),
     },
     chosen.model && priced.modelChoiceSen !== null
       ? {
@@ -602,21 +596,21 @@ export function tripPriceLines(
       : null,
     priced.oddHoursSen > 0
       ? {
-          label: "Odd-hours surcharge",
+          label: CHARGE_LABELS.oddHours,
           note: quote.surcharge,
           amountSen: priced.oddHoursSen,
         }
       : null,
     priced.weekend
       ? {
-          label: `${WEEKEND_REASON_LABELS[priced.weekend.reason]} surcharge`,
+          label: CHARGE_LABELS.weekend(priced.weekend.reason),
           note: null,
           amountSen: priced.weekend.amountSen,
         }
       : null,
     guide
       ? {
-          label: `Tour guide, ${guide.language}`,
+          label: CHARGE_LABELS.guide(guide.language),
           note: null,
           amountSen: guide.amountSen,
         }

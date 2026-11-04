@@ -274,6 +274,48 @@ export function withGuideCharge(
 }
 
 /**
+ * A class's price for a trip as the booking screens break it down: the
+ * total (with any model, before a guide), and the two surcharges inside
+ * it. Plain data, sent to the browser by the website's and the console's
+ * quotes alike.
+ */
+export type ClassCharges = {
+  /** Null when the class is not offered on the trip. */
+  totalSen: number | null;
+  /** What the odd-hours surcharge adds, in `totalSen`; 0 when none. */
+  oddHoursSen: number;
+  /** What the weekend or public holiday surcharge adds, in `totalSen`, and which; null when neither. */
+  weekend: { reason: WeekendReason; amountSen: number } | null;
+};
+
+export function classChargesOf(price: TripPriceBreakdown | null): ClassCharges {
+  return {
+    totalSen: price?.totalSen ?? null,
+    oddHoursSen: price?.surcharge?.amountSen ?? 0,
+    weekend: price?.weekend
+      ? { reason: price.weekend.reason, amountSen: price.weekend.amountSen }
+      : null,
+  };
+}
+
+/** The vehicle's fare in a class's total: the total less the surcharges in it. */
+export function fareSenOf(
+  charges: ClassCharges & { totalSen: number },
+): number {
+  return (
+    charges.totalSen - charges.oddHoursSen - (charges.weekend?.amountSen ?? 0)
+  );
+}
+
+/** How a price breakdown names each charge besides the vehicle's fare. */
+export const CHARGE_LABELS = {
+  oddHours: "Odd-hours surcharge",
+  weekend: (reason: WeekendReason) =>
+    `${WEEKEND_REASON_LABELS[reason]} surcharge`,
+  guide: (language: string) => `Tour guide, ${language}`,
+};
+
+/**
  * The least a class can cost at a location: its cheapest cell on the
  * location's grid, or its cheapest hourly package when that is less. For
  * "from RM 80" where no trip is known yet. Each is null when the location

@@ -66,6 +66,9 @@ export const CATEGORY_FIELD = "category";
 /** A new booking's switch: one vehicle does every trip. Posted "on" when it does. */
 export const SAME_VEHICLE_FIELD = "sameVehicle";
 
+/** A new booking's status as made: "confirmed" when the customer has paid already, else received. */
+export const CREATE_STATUS_FIELD = "createAs";
+
 export const CONTACT_FIELDS = {
   name: "name",
   phone: "phone",

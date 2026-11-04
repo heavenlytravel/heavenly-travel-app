@@ -134,6 +134,10 @@ Proposal, agreed in principle by the user:
   number when it is first confirmed, kept beside the quotation's. A quotation never
   confirmed (cancelled, or left) keeps only its HTQ number: the leads lost are the
   quotations with no invoice.
+- **Paid already (2026-11-04):** staff who may confirm can make a booking "Confirmed,
+  paid" above New booking's button. It and every trip are confirmed at once, ready for
+  Assign, with an invoice number and no quotation's. The form shows the number the
+  booking would take, a guess until it is made.
 - **A website booking gets an invoice number only.** With the payment gateway it arrives
   paid and confirmed, so it is invoiced at once. Until then it is invoiced when
   Reservation confirms it, and shows by its reference before that.

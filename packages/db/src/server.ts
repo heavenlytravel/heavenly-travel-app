@@ -357,6 +357,7 @@ export {
   cancelBookingAsCustomer,
   cancelTripAsCustomer,
   updateBookingContact,
+  nextBookingNumbers,
 } from "./bookings";
 export type {
   BookingFilter,

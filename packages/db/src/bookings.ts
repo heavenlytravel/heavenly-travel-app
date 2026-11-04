@@ -7,7 +7,12 @@ import {
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
 import { nextBookingNumber } from "./booking-counter";
-import { BOOKING_NUMBER_SELECT, parseBookingNumber } from "./booking-number";
+import {
+  BOOKING_NUMBER_SELECT,
+  bookingNumberYear,
+  formatBookingNumber,
+  parseBookingNumber,
+} from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import { localDayRange } from "./booking-rules";
@@ -121,9 +126,34 @@ export type CreateBookingInput = {
   /** The website visitor's address, for the rate limit; null from the console. */
   createdIp: string | null;
   items: PreparedItem[];
+  /**
+   * Staff only: the customer has paid already, so the booking and every
+   * trip are confirmed as they are made, with an invoice number and no
+   * quotation's.
+   */
+  confirmed?: boolean;
 };
 
 const CREATE_ATTEMPTS = 5;
+
+/**
+ * The numbers the next booking made would take, quotation and invoice, as
+ * a form shows them before it is sent: "HTQ-26-00013". A guess, not a
+ * hold: a booking made first takes it, and the next one moves on.
+ */
+export async function nextBookingNumbers(
+  now: Date = new Date(),
+): Promise<{ quote: string; invoice: string }> {
+  const year = bookingNumberYear(now);
+  const counters = await db.bookingNumberCounter.findMany({ where: { year } });
+  const next = (kind: "quote" | "invoice") =>
+    formatBookingNumber(
+      kind,
+      year,
+      (counters.find((row) => row.kind === kind)?.last ?? 0) + 1,
+    );
+  return { quote: next("quote"), invoice: next("invoice") };
+}
 
 /**
  * Creates a booking with its items in one transaction and, when it belongs
@@ -132,7 +162,9 @@ const CREATE_ATTEMPTS = 5;
  * booking for them. An item with an agreed price is charged that price and
  * logged as priced, so it is never a special case later. One entered by
  * staff takes the year's next quotation number (./booking-counter); the
- * invoice number comes when it is confirmed. The reference is random, so
+ * invoice number comes when it is confirmed. One staff enter as paid
+ * already (`confirmed`) is confirmed at once, every trip with it, and
+ * takes the invoice number instead. The reference is random, so
  * a collision is retried. Emails are the caller's job, after this returns.
  */
 export async function createBooking(
@@ -142,6 +174,12 @@ export async function createBooking(
   if (input.items.length === 0) {
     throw new Error("A booking needs at least one item.");
   }
+  const confirmed = input.confirmed === true;
+  if (confirmed && actor.kind !== "admin") {
+    throw new Error("Only staff may make a booking confirmed.");
+  }
+  const now = new Date();
+  const status = confirmed ? "confirmed" : "received";
   for (const item of input.items) {
     if (!item.override) continue;
     const check = checkPriceOverride(item.override);
@@ -150,7 +188,8 @@ export async function createBooking(
   const startsAt = earliestStart(input.items) ?? input.items[0]!.startsAt;
   const data = {
     userId: input.userId,
-    status: "received" satisfies BookingStatus,
+    status: status satisfies BookingStatus,
+    confirmedAt: confirmed ? now : null,
     contactName: input.contactName,
     contactPhone: input.contactPhone,
     contactEmail: input.contactEmail,
@@ -161,7 +200,8 @@ export async function createBooking(
       create: input.items.map((item, index) => ({
         position: index + 1,
         product: item.product satisfies Product,
-        status: "received" satisfies ItemStatus,
+        status: status satisfies ItemStatus,
+        confirmedAt: confirmed ? now : null,
         startsAt: item.startsAt,
         endsAt: item.endsAt,
         cancellationCutoffHours: item.cancellationCutoffHours,
@@ -186,15 +226,20 @@ export async function createBooking(
           });
         }
         const quote =
-          actor.kind === "admin"
-            ? await nextBookingNumber(tx, "quote", new Date())
+          actor.kind === "admin" && !confirmed
+            ? await nextBookingNumber(tx, "quote", now)
             : null;
+        const invoice = confirmed
+          ? await nextBookingNumber(tx, "invoice", now)
+          : null;
         const booking = await tx.booking.create({
           data: {
             ...data,
             reference: generateReference(),
             quoteYear: quote?.year ?? null,
             quoteNumber: quote?.number ?? null,
+            invoiceYear: invoice?.year ?? null,
+            invoiceNumber: invoice?.number ?? null,
           },
           ...withItems,
         });

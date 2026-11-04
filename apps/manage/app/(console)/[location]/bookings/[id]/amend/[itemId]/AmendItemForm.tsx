@@ -17,7 +17,7 @@ import {
   detailsFields,
   tripFields,
   tripLine,
-  tripQuotedSen,
+  tripPriceLines,
   vehicleFields,
   vehicleLine,
   type ItemDraft,
@@ -142,20 +142,23 @@ export function AmendItemForm({
         <aside className="@3xl:sticky @3xl:top-20">
           <BookingSummary
             meta={trip.quote?.location}
-            rows={[
-              { label: "Trip", value: trip.quote ? tripLine(trip) : "—" },
-              {
-                label: "Vehicle",
-                value: chosen
-                  ? vehicleLine(trips, vehicle, { price: false })
-                  : "—",
-              },
-            ]}
             trips={[
               {
                 id: trip.id,
                 label: null,
-                quotedSen: tripQuotedSen(trip, chosen, details.guide.language),
+                detail: trip.quote ? (
+                  <>
+                    {tripLine(trip)}
+                    <span className="block">
+                      {chosen
+                        ? vehicleLine(trips, vehicle, { price: false })
+                        : "No vehicle yet"}
+                    </span>
+                  </>
+                ) : (
+                  "Not priced yet"
+                ),
+                lines: tripPriceLines(trip, chosen, details.guide.language),
                 agreedPrice: trip.agreedPrice,
                 priceReason: trip.priceReason,
               },

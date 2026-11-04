@@ -13,6 +13,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/field";
 import { Fragment, useId, useState, type ReactNode } from "react";
 import { Choices } from "../../../../_components/Choices";
+import type { PriceLine } from "../_lib/trip-form";
 
 /** The reasons staff give most, one tap each; anything else is typed. */
 const REASONS = ["Agreed on the phone", "Goodwill", "Repeat customer"] as const;
@@ -26,21 +27,24 @@ export type SummaryTrip = AgreedValues & {
   id: string;
   /** "Trip 2"; null for a booking's only trip. */
   label: string | null;
-  /** The quote in the vehicle chosen; null before one is. */
-  quotedSen: number | null;
+  /** Under its name: where it goes, when, and in what. */
+  detail?: ReactNode;
+  /** What its quote in the vehicle chosen is made of (`tripPriceLines`); empty before one is. */
+  lines: readonly PriceLine[];
 };
 
 /**
  * The column beside a booking form's steps: what has been entered so far,
- * each trip's price, the total and the form's button, in view on every
- * step. A trip's price is the quote for the vehicle chosen; "Agree a
- * different price" opens the agreed price under it, with its reason, and
- * the total follows it. The quote stays on the receipt next to the agreed
- * price.
+ * then each trip, its price and what the price is made of, the total and
+ * the form's button, in view on every step. A trip's price is the quote
+ * for the vehicle chosen, a line for each charge in it; "Agree a different
+ * price" opens the agreed price under it, with its reason, and the trip's
+ * price and the total follow it. The quote stays on the receipt next to
+ * the agreed price.
  */
 export function BookingSummary({
   meta,
-  rows,
+  rows = [],
   trips,
   onPriceChange,
   canPrice,
@@ -53,8 +57,8 @@ export function BookingSummary({
 }: {
   /** Beside the title: the locations whose rates price the trips. */
   meta?: string;
-  /** What was entered, a label and a line each: the customer, the trips, the vehicle. */
-  rows: readonly { label: string; value: ReactNode }[];
+  /** What was entered besides the trips, a label and a line each: the customer. */
+  rows?: readonly { label: string; value: ReactNode }[];
   trips: readonly SummaryTrip[];
   onPriceChange: (id: string, patch: Partial<AgreedValues>) => void;
   /** Whether an agreed price may be set (`bookings.create`). */
@@ -72,10 +76,15 @@ export function BookingSummary({
 }) {
   const charged = trips.map((trip) => {
     const agreed = canPrice ? parseRinggit(trip.agreedPrice) : null;
+    const quotedSen =
+      trip.lines.length > 0
+        ? trip.lines.reduce((sum, line) => sum + line.amountSen, 0)
+        : null;
     return {
       trip,
+      quotedSen,
       agreed,
-      total: trip.quotedSen === null ? null : (agreed ?? trip.quotedSen),
+      total: quotedSen === null ? null : (agreed ?? quotedSen),
     };
   });
   const total = charged.every((line) => line.total !== null)
@@ -88,48 +97,67 @@ export function BookingSummary({
         Summary
       </CardTitle>
       <div className="grid gap-5 p-5">
-        <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 gap-y-3 text-sm">
-          {rows.map((row) => (
-            <Fragment key={row.label}>
-              <dt className="text-muted">{row.label}</dt>
-              <dd className="text-body">{row.value}</dd>
-            </Fragment>
-          ))}
-        </dl>
-
-        <div className="grid gap-1.5 border-t border-hairline pt-4 text-sm">
-          {charged.map(({ trip, agreed }) => (
-            <Fragment key={trip.id}>
-              <div className="flex justify-between gap-4">
-                <span className="text-muted">
-                  {trip.label ?? "Quoted price"}
-                </span>
-                <span className="text-body tabular-nums">
-                  {trip.quotedSen !== null ? formatMyr(trip.quotedSen) : "—"}
-                </span>
-              </div>
-              {agreed !== null ? (
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted">
-                    {trip.label ? `${trip.label}, agreed` : "Agreed price"}
+        <div className="grid divide-y divide-hairline text-sm *:py-4 *:first:pt-0">
+          {rows.length > 0 ? (
+            <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 gap-y-3">
+              {rows.map((row) => (
+                <Fragment key={row.label}>
+                  <dt className="text-muted">{row.label}</dt>
+                  <dd className="text-body">{row.value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          ) : null}
+          {charged.map(({ trip, quotedSen, agreed, total: charge }) => (
+            <section
+              key={trip.id}
+              aria-label={trip.label ?? "Trip"}
+              className="grid gap-2.5"
+            >
+              <div className="grid gap-0.5">
+                <div className="flex items-baseline justify-between gap-4 font-semibold text-ink">
+                  <h3>{trip.label ?? "Trip"}</h3>
+                  <span className="tabular-nums">
+                    {charge !== null ? formatMyr(charge) : "—"}
                   </span>
-                  <span className="text-body tabular-nums">
+                </div>
+                {trip.detail ? (
+                  <div className="text-xs text-muted">{trip.detail}</div>
+                ) : null}
+              </div>
+              {trip.lines.length > 0 ? (
+                <PriceLines
+                  lines={trip.lines}
+                  quotedSen={agreed !== null ? quotedSen : null}
+                />
+              ) : null}
+              {agreed !== null ? (
+                <div className="flex items-baseline justify-between gap-4">
+                  <span className="min-w-0 text-body">
+                    Agreed price
+                    {trip.priceReason ? (
+                      <span className="block text-xs text-muted">
+                        {trip.priceReason}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-ink tabular-nums">
                     {formatMyr(agreed)}
                   </span>
                 </div>
               ) : null}
-              {canPrice && trip.quotedSen !== null ? (
+              {canPrice && quotedSen !== null ? (
                 <AgreedPrice
                   values={trip}
                   onChange={(patch) => onPriceChange(trip.id, patch)}
-                  quotedSen={trip.quotedSen}
+                  quotedSen={quotedSen}
                   name={trip.label}
                   note={priceNote}
                 />
               ) : null}
-            </Fragment>
+            </section>
           ))}
-          <div className="mt-2 flex justify-between gap-4 border-t border-hairline pt-3 text-base font-bold text-ink">
+          <div className="flex items-baseline justify-between gap-4 text-base font-bold text-ink">
             <span>Total</span>
             <span className="tabular-nums">
               {total !== null ? formatMyr(total) : "—"}
@@ -155,6 +183,46 @@ export function BookingSummary({
         </p>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * What a trip's quote is made of, on a tint: a line for each charge, with
+ * its word under it, then the quote, when an agreed price stands in for it
+ * (`quotedSen`).
+ */
+function PriceLines({
+  lines,
+  quotedSen,
+}: {
+  lines: readonly PriceLine[];
+  quotedSen: number | null;
+}) {
+  return (
+    <dl className="grid gap-1.5 rounded-control bg-mist px-3 py-2.5 text-xs">
+      {lines.map((line) => (
+        <div
+          key={line.label}
+          className="flex items-baseline justify-between gap-4"
+        >
+          <dt className="min-w-0 text-body">
+            {line.label}
+            {line.note ? (
+              <span className="block text-muted">{line.note}</span>
+            ) : null}
+          </dt>
+          <dd className="shrink-0 text-body tabular-nums">
+            {formatMyr(line.amountSen)}
+          </dd>
+        </div>
+      ))}
+      {quotedSen !== null ? (
+        <div className="mt-0.5 flex items-baseline justify-between gap-4 border-t border-hairline pt-1.5 font-semibold text-ink">
+          <dt>Quote</dt>
+          <dd className="tabular-nums">{formatMyr(quotedSen)}</dd>
+        </div>
+      ) : null}
+    </dl>
   );
 }
 

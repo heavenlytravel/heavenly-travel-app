@@ -32,6 +32,8 @@ import {
   type GuideOffer,
   type TripCategory,
   type TripMode,
+  type WeekendReason,
+  WEEKEND_REASON_LABELS,
 } from "@repo/db";
 import type { BookingItemWithDetails } from "@repo/db/server";
 
@@ -85,6 +87,10 @@ export type ClassQuoteView = {
   totalSen: number | null;
   /** What choosing one of the models adds to this trip; null when the customer cannot choose one here. */
   modelChoiceSen: number | null;
+  /** What the odd-hours surcharge adds to this trip, in `totalSen`; 0 when none. */
+  oddHoursSen: number;
+  /** What the weekend or public holiday surcharge adds to this trip, in `totalSen`, and which; null when neither. */
+  weekend: { reason: WeekendReason; amountSen: number } | null;
   /** Whether the class's rules take the trip, and why not. */
   availability: ClassAvailability;
 };
@@ -545,28 +551,87 @@ export function itemVehicle(
   return { vehicle, chosen: chosenVehicle(trips, vehicle) };
 }
 
+/** One charge of a trip's quote: what it is, a word on it, and its amount. */
+export type PriceLine = {
+  label: string;
+  note: string | null;
+  amountSen: number;
+};
+
 /**
- * What one trip costs in the vehicle chosen: the class's price on it, its
- * charge for the model chosen, and the tour guide in the language chosen,
- * when it is on sale for the trip; null before a vehicle is.
+ * What one trip's quote in the vehicle chosen is made of, a line each:
+ * the class's fare, with the grid's cell or the hire and any road past a
+ * zone's edge; the model chosen; the odd-hours, weekend and public holiday
+ * surcharges; and the tour guide in the language chosen, when on sale for
+ * the trip. Empty before a vehicle is chosen, or while the class has no
+ * price for the trip.
  */
+export function tripPriceLines(
+  draft: TripDraft,
+  chosen: ChosenVehicle | null,
+  guideLanguage: string | null,
+): PriceLine[] {
+  const quote = draft.quote;
+  const priced = chosen
+    ? quote?.classes.find((c) => c.id === chosen.option.id)
+    : null;
+  if (!quote || !chosen || !priced || priced.totalSen === null) return [];
+  const weekendSen = priced.weekend?.amountSen ?? 0;
+  const guide = quote.guides.find((offer) => offer.language === guideLanguage);
+  const fareNote = [
+    quote.route ?? quote.hire,
+    quote.extraKm ? `${quote.extraKm} km past the zone` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const lines: (PriceLine | null)[] = [
+    {
+      label: chosen.option.name,
+      note: fareNote || null,
+      amountSen: priced.totalSen - priced.oddHoursSen - weekendSen,
+    },
+    chosen.model && priced.modelChoiceSen !== null
+      ? {
+          label: `${chosen.model.name} chosen`,
+          note: null,
+          amountSen: priced.modelChoiceSen,
+        }
+      : null,
+    priced.oddHoursSen > 0
+      ? {
+          label: "Odd-hours surcharge",
+          note: quote.surcharge,
+          amountSen: priced.oddHoursSen,
+        }
+      : null,
+    priced.weekend
+      ? {
+          label: `${WEEKEND_REASON_LABELS[priced.weekend.reason]} surcharge`,
+          note: null,
+          amountSen: priced.weekend.amountSen,
+        }
+      : null,
+    guide
+      ? {
+          label: `Tour guide, ${guide.language}`,
+          note: null,
+          amountSen: guide.amountSen,
+        }
+      : null,
+  ];
+  return lines.filter((line) => line !== null);
+}
+
+/** What one trip costs in the vehicle chosen, its lines together (`tripPriceLines`); null before a vehicle is. */
 export function tripQuotedSen(
   draft: TripDraft,
   chosen: ChosenVehicle | null,
   guideLanguage: string | null,
 ): number | null {
-  const priced = chosen
-    ? draft.quote?.classes.find((c) => c.id === chosen.option.id)
+  const lines = tripPriceLines(draft, chosen, guideLanguage);
+  return lines.length > 0
+    ? lines.reduce((sum, line) => sum + line.amountSen, 0)
     : null;
-  if (!priced || priced.totalSen === null) return null;
-  const guideSen =
-    draft.quote?.guides.find((offer) => offer.language === guideLanguage)
-      ?.amountSen ?? 0;
-  return (
-    priced.totalSen +
-    (chosen?.model ? (priced.modelChoiceSen ?? 0) : 0) +
-    guideSen
-  );
 }
 
 /** What a trip is charged: its agreed price once one is typed, else the quote; null before a vehicle is chosen. */

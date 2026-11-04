@@ -115,6 +115,13 @@ export async function quoteTripView(
       models: c.vehicleClass.models.map(({ id, name }) => ({ id, name })),
       totalSen: c.price?.totalSen ?? null,
       modelChoiceSen: c.modelChoice?.amountSen ?? null,
+      oddHoursSen: c.price?.surcharge?.amountSen ?? 0,
+      weekend: c.price?.weekend
+        ? {
+            reason: c.price.weekend.reason,
+            amountSen: c.price.weekend.amountSen,
+          }
+        : null,
       availability: c.availability,
     })),
     guides: quote.guides,

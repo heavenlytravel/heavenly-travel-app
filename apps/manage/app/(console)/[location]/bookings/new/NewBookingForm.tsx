@@ -36,7 +36,7 @@ import {
   SAME_VEHICLE_FIELD,
   tripInput,
   tripIssue,
-  tripQuotedSen,
+  tripPriceLines,
   vehicleLine,
   type ItemDetails,
   type ItemDraft,
@@ -64,9 +64,9 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * chooses its own: a car, then a coach, at the same time if need be. One
  * step is open at a time; a finished one folds to a line with "Edit", so a
  * detail that changes mid-call is one click away and nothing entered is
- * lost. The summary beside the steps keeps what was entered, each trip's
- * price, the total and the button in view; an agreed price is set there,
- * per trip. The server prices every trip again and applies the agreed
+ * lost. The summary beside the steps keeps the customer, each trip with
+ * its price and what it is made of, the total and the button in view; an
+ * agreed price is set there, per trip. The server prices every trip again and applies the agreed
  * prices itself. Opened in a location, its place fields suggest that
  * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
@@ -365,41 +365,37 @@ export function NewBookingForm({
                   "—"
                 ),
               },
-              ...items.map((item, index) => {
-                const { vehicle, chosen } = vehicles[index]!;
-                return {
-                  label: several ? `Trip ${index + 1}` : "Trip",
-                  value: item.trip.quote ? (
-                    <>
-                      {placesLine(item.trip.quote)}
-                      <span className="block text-xs text-muted">
-                        {item.trip.quote.startsAt}
-                      </span>
-                      <span className="block text-xs text-muted">
-                        {chosen
-                          ? vehicleLine(shared ? trips : [item.trip], vehicle, {
-                              price: false,
-                            })
-                          : "No vehicle yet"}
-                      </span>
-                    </>
-                  ) : (
-                    "—"
-                  ),
-                };
-              }),
             ]}
-            trips={items.map((item, index) => ({
-              id: item.trip.id,
-              label: several ? `Trip ${index + 1}` : null,
-              quotedSen: tripQuotedSen(
-                item.trip,
-                vehicles[index]!.chosen,
-                item.details.guide.language,
-              ),
-              agreedPrice: item.trip.agreedPrice,
-              priceReason: item.trip.priceReason,
-            }))}
+            trips={items.map((item, index) => {
+              const { vehicle, chosen } = vehicles[index]!;
+              const quote = item.trip.quote;
+              return {
+                id: item.trip.id,
+                label: several ? `Trip ${index + 1}` : null,
+                detail: quote ? (
+                  <>
+                    {placesLine(quote)}
+                    <span className="block">{quote.startsAt}</span>
+                    <span className="block">
+                      {chosen
+                        ? vehicleLine(shared ? trips : [item.trip], vehicle, {
+                            price: false,
+                          })
+                        : "No vehicle yet"}
+                    </span>
+                  </>
+                ) : (
+                  "Not priced yet"
+                ),
+                lines: tripPriceLines(
+                  item.trip,
+                  chosen,
+                  item.details.guide.language,
+                ),
+                agreedPrice: item.trip.agreedPrice,
+                priceReason: item.trip.priceReason,
+              };
+            })}
             onPriceChange={(id, patch) => patchTrip(id, patch)}
             canPrice
             submit={

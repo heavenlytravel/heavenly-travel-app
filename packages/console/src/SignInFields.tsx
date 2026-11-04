@@ -8,6 +8,30 @@ import {
 import { Field, Input } from "@repo/ui/field";
 import { PasswordInput } from "@repo/ui/secret";
 
+/** The email typed again, not pasted, read as `confirmEmail` (@repo/db's `checkEmailConfirmed`). */
+export function ConfirmEmailField({
+  required,
+  placeholder,
+  hint,
+}: {
+  required: boolean;
+  placeholder?: string;
+  hint: string;
+}) {
+  return (
+    <Field label="Confirm email" hint={hint}>
+      <Input
+        name={CONFIRM_EMAIL_FIELD}
+        type="email"
+        required={required}
+        autoComplete="off"
+        placeholder={placeholder}
+        onPaste={(event) => event.preventDefault()}
+      />
+    </Field>
+  );
+}
+
 /**
  * What every form that gives someone an account asks beside the email:
  * the email typed again, not pasted, so a typo is caught before the
@@ -26,19 +50,11 @@ export function SignInFields({
 }) {
   return (
     <>
-      <Field
-        label="Confirm email"
+      <ConfirmEmailField
+        required={required}
+        placeholder={placeholder}
         hint="Type it again, to catch a typo before the account is made."
-      >
-        <Input
-          name={CONFIRM_EMAIL_FIELD}
-          type="email"
-          required={required}
-          autoComplete="off"
-          placeholder={placeholder}
-          onPaste={(event) => event.preventDefault()}
-        />
-      </Field>
+      />
       <Field
         label="Password"
         hint={`Optional, at least ${PASSWORD_MIN} characters. Left empty, they sign in with a code sent to the email, and can add one later.`}

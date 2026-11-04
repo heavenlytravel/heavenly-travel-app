@@ -10,6 +10,7 @@ import { refuse, type Change } from "./change";
 import type { DeleteImpact } from "./delete-impact";
 import { dayOf, parseDay } from "./expiry";
 import { flagOf, textOf, type Parsed } from "./fields";
+import { checkEmailConfirmed } from "./user-input";
 import { isValidPhone, normalizePhone } from "./phone";
 
 /**
@@ -176,6 +177,7 @@ export function checkGuideFields(fields: Partial<GuideFields>): Change {
 export function parseGuideFields(
   values: Record<string, unknown>,
   languages: readonly unknown[],
+  email: GuideEmailRule = NEW_GUIDE,
 ): Parsed<GuideFields> {
   const documents = {} as Record<GuideDocument, string | null>;
   for (const key of GUIDE_DOCUMENTS) {
@@ -183,12 +185,12 @@ export function parseGuideFields(
     if (!day.ok) return day;
     documents[key] = day.value;
   }
-  const email = normalizeEmail(textOf(values.email));
+  const typed = normalizeEmail(textOf(values.email));
   const fields: GuideFields = {
     vendorId: textOf(values.vendorId),
     name: textOf(values.name),
     phone: normalizePhone(textOf(values.phone)),
-    email: email === "" ? null : email,
+    email: typed === "" ? null : typed,
     locationId: textOf(values.locationId),
     languages: guideLanguagesOf(languages),
     isActive: flagOf(values.isActive),
@@ -197,8 +199,29 @@ export function parseGuideFields(
     ...readPayeeFields(values),
   };
   const check = checkGuideFields(fields);
-  return check.ok ? { ok: true, value: fields } : check;
+  if (!check.ok) return check;
+  if (fields.email !== email.saved) {
+    if (email.locked && email.saved !== null) {
+      return refuse(
+        "The email stays as saved. To change it, contact us.",
+        "email",
+      );
+    }
+    // Entered or changed: typed twice, as every email an account goes by.
+    const confirmed = checkEmailConfirmed(values, fields.email);
+    if (!confirmed.ok) return confirmed;
+  }
+  return { ok: true, value: fields };
 }
+
+/**
+ * What the guide's email may become on a save: `saved` is the email
+ * before it (null for a new guide or one with none). In Connect it is
+ * `locked` once saved, so only our team changes it, in Manage.
+ */
+export type GuideEmailRule = { saved: string | null; locked: boolean };
+
+const NEW_GUIDE: GuideEmailRule = { saved: null, locked: false };
 
 /** What deleting a guide takes (./delete-impact): them alone, since one who has been on a trip cannot be deleted. */
 export const GUIDE_DELETE_IMPACT: DeleteImpact = {

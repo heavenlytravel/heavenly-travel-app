@@ -145,7 +145,7 @@ const EMAIL_TAKEN = refuse(
 );
 
 const EMAIL_LOCKED = refuse(
-  "A driver's email stays as saved. Entered wrong? Delete the driver and add them again.",
+  "A driver's email stays as saved: it changes with their account's email, which our team changes.",
   "email",
 );
 

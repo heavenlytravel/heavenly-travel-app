@@ -483,8 +483,8 @@ export async function updateUserProfile(
  * Changes the email an account signs in with: Clerk takes the new one as
  * verified and primary, and drops the others, so the account keeps one
  * email, as it was made with; their driver row, if any, takes it too.
- * Nothing is sent to either address. An email another account or another
- * driver holds, here or in Clerk, is refused.
+ * Nothing is sent to either address. An email another account, another
+ * driver or another guide holds, here or in Clerk, is refused.
  */
 export async function changeUserEmail(
   actor: Actor,
@@ -505,6 +505,17 @@ export async function changeUserEmail(
   if (driver) {
     return refuse(
       `${email} is the driver ${driver.name}'s email. Each driver signs in with their own.`,
+      "email",
+    );
+  }
+  // A guide profile follows the account's email, so another guide's is taken.
+  const guide = await db.guide.findFirst({
+    where: { email, NOT: { email: user.email.toLowerCase() } },
+    select: { name: true },
+  });
+  if (guide) {
+    return refuse(
+      `${email} is the tour guide ${guide.name}'s email. Each account has one guide profile.`,
       "email",
     );
   }
@@ -536,7 +547,7 @@ export async function changeUserEmail(
     await tx.driver.updateMany({ where: { userId: user.id }, data: { email } });
     // And a guide profile it sees as its own follows the account.
     await tx.guide.updateMany({
-      where: { email: user.email },
+      where: { email: user.email.toLowerCase() },
       data: { email },
     });
     await logActivity(tx, actor, {

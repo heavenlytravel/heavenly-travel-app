@@ -181,15 +181,17 @@ export async function saveGuideAction(
   const member = await getMemberAccess();
   if (!member) return NOT_A_MEMBER;
   formData.set("vendorId", member.vendor.id);
-  const parsed = parseGuideFields(
-    Object.fromEntries(formData),
-    formData.getAll(GUIDE_LANGUAGES_FIELD),
-  );
-  if (!parsed.ok) return refusalOf(parsed);
-  const fields = parsed.value;
   const id = textOf(formData.get("id"));
   const existing = id ? await getGuide(id) : null;
   if (id && existing?.vendorId !== member.vendor.id) return STALE;
+  // Once saved, a guide's email is ours to change, in Manage.
+  const parsed = parseGuideFields(
+    Object.fromEntries(formData),
+    formData.getAll(GUIDE_LANGUAGES_FIELD),
+    { saved: existing?.email ?? null, locked: true },
+  );
+  if (!parsed.ok) return refusalOf(parsed);
+  const fields = parsed.value;
   const actor = actorOf(member.user);
   const result = existing
     ? await updateGuide(actor, existing.id, fields)

@@ -62,6 +62,7 @@ export async function updateGuideAction(
   const fields = parseGuideFields(
     Object.fromEntries(formData),
     formData.getAll(GUIDE_LANGUAGES_FIELD),
+    { saved: guide.email, locked: false },
   );
   if (!fields.ok) return refusalOf(fields);
   const result = await updateGuide(actorOf(admin), id, fields.value);

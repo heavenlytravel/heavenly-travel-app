@@ -35,12 +35,47 @@ describe("parseGuideFields", () => {
 
   it("keeps the Connect email lowercase, and refuses one that is not", () => {
     const parsed = parseGuideFields(
-      { ...values, email: " Siti@Example.com " },
+      {
+        ...values,
+        email: " Siti@Example.com ",
+        confirmEmail: "siti@example.com",
+      },
       ["English"],
     );
     assert.equal(parsed.ok && parsed.value.email, "siti@example.com");
     const wrong = parseGuideFields({ ...values, email: "siti" }, ["English"]);
     assert.equal(!wrong.ok && wrong.field, "email");
+  });
+
+  it("asks for an email entered or changed to be typed twice", () => {
+    const once = parseGuideFields({ ...values, email: "siti@example.com" }, [
+      "English",
+    ]);
+    assert.equal(!once.ok && once.field, "confirmEmail");
+    const kept = parseGuideFields(
+      { ...values, email: "siti@example.com" },
+      ["English"],
+      { saved: "siti@example.com", locked: false },
+    );
+    assert.equal(kept.ok, true);
+  });
+
+  it("keeps a saved email where it is locked, and lets one be entered", () => {
+    const locked = { saved: "siti@example.com", locked: true };
+    const changed = parseGuideFields(
+      { ...values, email: "ali@example.com", confirmEmail: "ali@example.com" },
+      ["English"],
+      locked,
+    );
+    assert.equal(!changed.ok && changed.field, "email");
+    const cleared = parseGuideFields(values, ["English"], locked);
+    assert.equal(!cleared.ok && cleared.field, "email");
+    const entered = parseGuideFields(
+      { ...values, email: "ali@example.com", confirmEmail: "ali@example.com" },
+      ["English"],
+      { saved: null, locked: true },
+    );
+    assert.equal(entered.ok, true);
   });
 
   it("asks for a language", () => {

@@ -76,6 +76,21 @@ export function bookingNumbersOf(booking: BookingNumberFields): {
 }
 
 /**
+ * The numbers as rows of a booking's summary, staff's and the
+ * customer's alike: "Quotation" and "Invoice", each once given. Both
+ * once confirmed: a quotation keeps its number beside the invoice's.
+ */
+export function bookingNumberRows(
+  booking: BookingNumberFields,
+): [label: string, value: string][] {
+  const { quote, invoice } = bookingNumbersOf(booking);
+  return [
+    ...(quote ? [["Quotation", quote] as [string, string]] : []),
+    ...(invoice ? [["Invoice", invoice] as [string, string]] : []),
+  ];
+}
+
+/**
  * What a booking is called on a screen: its invoice number once it has
  * one, else its quotation number, else its reference (a website booking
  * not yet confirmed, or one from before numbers).

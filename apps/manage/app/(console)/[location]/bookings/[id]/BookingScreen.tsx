@@ -1,6 +1,6 @@
 import {
   bookingLabelOf,
-  bookingNumbersOf,
+  bookingNumberRows,
   ADVANCE_PERMISSIONS,
   customerEmailOf,
   formatLocalDateTime,
@@ -149,15 +149,12 @@ export async function bookingScreen({
   const href = bookingHref(scope.slug, booking.id);
   const open = booking.status !== "cancelled" && booking.status !== "completed";
 
-  const numbers = bookingNumbersOf(booking);
   const summary: [string, ReactNode][] = [
     ["Status", <BookingStatusBadge key="s" status={booking.status} />],
     ["Trips", String(booking.items.length)],
     ["Booked", formatLocalDateTime(booking.createdAt)],
   ];
-  // Both, once confirmed: a quotation keeps its number beside the invoice's.
-  if (numbers.quote) summary.push(["Quotation", numbers.quote]);
-  if (numbers.invoice) summary.push(["Invoice", numbers.invoice]);
+  summary.push(...bookingNumberRows(booking));
   if (booking.confirmedAt) {
     summary.push(["Confirmed", formatLocalDateTime(booking.confirmedAt)]);
   }

@@ -1,5 +1,6 @@
 import {
   accountBookingPath,
+  bookingNumberRows,
   bookingPath,
   consoleBookingPath,
   customerEmailOf,
@@ -89,7 +90,10 @@ function totalBlock(booking: BookingWithItems): Block {
   return {
     type: "rows",
     title: null,
-    rows: [["Total", formatMyr(booking.priceTotalSen)]],
+    rows: [
+      ...bookingNumberRows(booking),
+      ["Total", formatMyr(booking.priceTotalSen)],
+    ],
   };
 }
 

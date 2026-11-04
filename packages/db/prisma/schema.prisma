@@ -824,17 +824,15 @@ model Booking {
   id            String    @id @default(cuid())
   /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
   reference     String    @unique
-  /// The numbers staff and Finance know it by, each counted per year in
-  /// Malaysia (26 for 2026) by `BookingNumberCounter`. A quotation number,
-  /// HTQ-26-00042, when staff make the booking; an invoice number,
-  /// HTI-26-00017, when it is first confirmed, kept beside the quotation's
-  /// so a quotation never confirmed shows as a lead lost. A website booking
-  /// has an invoice number only. Null until given; bookings from before
-  /// numbers were given theirs by hand. See src/booking-number.ts.
-  quoteYear     Int?
-  quoteNumber   Int?
-  invoiceYear   Int?
-  invoiceNumber Int?
+  /// The numbers staff and Finance know it by, each one running count by
+  /// `BookingNumberCounter`, never started again: no year, since an
+  /// invoice is often made long before its trip. An invoice number,
+  /// HTI-1308, carrying on the old system's HT1307, when the booking is
+  /// first confirmed, or an old invoice's own, typed by staff. A quotation
+  /// number, HTQ-0001, for the quotations to come; none given yet. Null
+  /// until given. See src/booking-number.ts.
+  quoteNumber   Int?      @unique
+  invoiceNumber Int?      @unique
   /// The account the booking shows under; null for a guest.
   userId        String?
   user          User?     @relation(fields: [userId], references: [id])
@@ -865,8 +863,6 @@ model Booking {
   notes  BookingNote[]
   offers VendorOffer[]
 
-  @@unique([quoteYear, quoteNumber])
-  @@unique([invoiceYear, invoiceNumber])
   @@index([userId, createdAt])
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])
@@ -874,17 +870,14 @@ model Booking {
   @@index([createdAt])
 }
 
-/// The last booking number given, per kind ("quote" or "invoice") and
-/// year (26 for 2026). Taken one at a time inside the booking's
-/// transaction (`nextBookingNumber`), so two bookings never share one and a
-/// rolled-back booking leaves no gap. Set by hand to the old system's last
-/// number when we switch over.
+/// The last booking number given, per kind ("quote" or "invoice"), one
+/// running count that never starts again. Taken one at a time inside the
+/// booking's transaction (`nextBookingNumber`), so two bookings never share
+/// one and a rolled-back booking leaves no gap. Set to the old system's
+/// last number when we switch over: `db:set-booking-numbers`.
 model BookingNumberCounter {
-  kind String
-  year Int
+  kind String @id
   last Int
-
-  @@id([kind, year])
 }
 
 /// A note staff keep on a booking. Never shown to the customer, never

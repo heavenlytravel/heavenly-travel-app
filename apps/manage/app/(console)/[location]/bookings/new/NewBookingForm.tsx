@@ -22,7 +22,6 @@ import { ALL, bookingsHref, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
 import { BookingSummary } from "../_components/BookingSummary";
 import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
-import { Choices } from "../../../../_components/Choices";
 import { HiddenFields } from "../_components/HiddenFields";
 import { Step, StepFoot } from "../_components/Step";
 import { quoteTripAction } from "../_lib/quote-action";
@@ -31,11 +30,11 @@ import {
   bookingTotalSen,
   clashNotes,
   CONTACT_FIELDS,
-  CREATE_STATUS_FIELD,
   itemFields,
   itemsByStart,
   itemVehicle,
   newItemDraft,
+  OLD_INVOICE_FIELD,
   placesLine,
   SAME_VEHICLE_FIELD,
   tripInput,
@@ -50,9 +49,6 @@ import {
 import { createManualBookingAction } from "./actions";
 
 type Contact = { name: string; phone: string; email: string };
-
-/** How the booking is made: received, for Reservation to confirm, or confirmed, paid already. */
-type CreateAs = "received" | "confirmed";
 
 /** The step open: the customer or a trip (`trip:` and its id); null when every step is folded. */
 type OpenStep = "customer" | `trip:${string}` | null;
@@ -75,10 +71,9 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * detail that changes mid-call is one click away and nothing entered is
  * lost. The summary beside the steps keeps the customer, each trip with
  * its price and what it is made of, the total and the button in view; an
- * agreed price is set there, per trip. Above the button, staff who may
- * confirm choose how it is made: received, with a quotation number, or
- * confirmed, the customer having paid, with an invoice number and no
- * quotation's; the number it would take shows with it. The server prices every trip again and applies the agreed
+ * agreed price is set there, per trip. The booking is made confirmed;
+ * above the button, the invoice number it would take, or an old
+ * invoice's typed instead. The server prices every trip again and applies the agreed
  * prices itself. Opened in a location, its place fields suggest that
  * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
@@ -87,8 +82,7 @@ export function NewBookingForm({
   hasGoogle,
   scope,
   near,
-  canConfirm,
-  numbers,
+  nextInvoice,
 }: {
   /** False when the server runs without a Google key and offers the districts themselves. */
   hasGoogle: boolean;
@@ -96,17 +90,13 @@ export function NewBookingForm({
   scope: ScopeSlug;
   /** In a location, the box whose places the place fields suggest first. */
   near?: BBox;
-  /** Whether the admin may confirm, and so make the booking confirmed. */
-  canConfirm: boolean;
-  /** The quotation and invoice numbers the next booking would take. */
-  numbers: { quote: string; invoice: string };
+  /** The invoice number the next booking would take: "HTI-1308". */
+  nextInvoice: string;
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [confirmDialog, confirm] = useConfirm();
   const [items, setItems] = useState<ItemDraft[]>(() => [newItemDraft()]);
   const [sameVehicle, setSameVehicle] = useState(true);
-  const [createAs, setCreateAs] = useState<CreateAs>("received");
-  const confirmed = canConfirm && createAs === "confirmed";
   // The vehicle every trip shares while they do; each item keeps its own for when they do not.
   const [sharedVehicle, setSharedVehicle] = useState<VehicleDraft>(
     () => items[0]!.vehicle,
@@ -279,9 +269,6 @@ export function NewBookingForm({
       {shared ? (
         <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
       ) : null}
-      {confirmed ? (
-        <input type="hidden" name={CREATE_STATUS_FIELD} value="confirmed" />
-      ) : null}
       {sorted.map((item, number) => (
         <HiddenFields
           key={item.trip.id}
@@ -449,12 +436,7 @@ export function NewBookingForm({
             canPrice
             submit={
               <>
-                <CreateAsField
-                  canConfirm={canConfirm}
-                  value={createAs}
-                  onChange={setCreateAs}
-                  numbers={numbers}
-                />
+                <InvoiceNumberField nextInvoice={nextInvoice} />
                 <Button
                   type="submit"
                   disabled={missing !== null}
@@ -463,9 +445,7 @@ export function NewBookingForm({
                   {create.pending
                     ? "Creating…"
                     : [
-                        confirmed
-                          ? "Create confirmed booking"
-                          : "Create booking",
+                        "Create booking",
                         totalSen !== null ? formatMyr(totalSen) : null,
                       ]
                         .filter(Boolean)
@@ -476,11 +456,7 @@ export function NewBookingForm({
             missing={missing}
             error={create.error}
             cancelHref={bookingsHref(scope)}
-            foot={
-              confirmed
-                ? "The booking and every trip are confirmed at once, ready for Assign. It gets an invoice number and no quotation number."
-                : "The booking is received until Reservation confirms it, as one from the website is, and gets its invoice number then."
-            }
+            foot="The booking and every trip are confirmed at once, ready for Assign."
           />
         </aside>
       </div>
@@ -490,48 +466,25 @@ export function NewBookingForm({
 }
 
 /**
- * How the booking is made, above its button: received, for Reservation to
- * confirm, or confirmed, the customer having paid already; only for staff
- * who may confirm. Under it, the number it would take: a guess, since a
- * booking made first takes it.
+ * The booking's invoice number, above its button: empty for the next one,
+ * shown as a guess, since a booking made first takes it; or an old
+ * invoice's, for a booking the old system invoiced already. A number not
+ * given yet, or another booking's, is refused here.
  */
-function CreateAsField({
-  canConfirm,
-  value,
-  onChange,
-  numbers,
-}: {
-  canConfirm: boolean;
-  value: CreateAs;
-  onChange: (value: CreateAs) => void;
-  numbers: { quote: string; invoice: string };
-}) {
-  const confirmed = canConfirm && value === "confirmed";
+function InvoiceNumberField({ nextInvoice }: { nextInvoice: string }) {
   return (
-    <div className="mb-1 grid gap-2">
-      {canConfirm ? (
-        <div className="grid gap-1.5">
-          <span className="text-xs font-semibold text-body">Create as</span>
-          <Choices
-            label="Create the booking as"
-            size="sm"
-            value={value}
-            options={[
-              { value: "received", label: "Received" },
-              { value: "confirmed", label: "Confirmed, paid" },
-            ]}
-            onChange={onChange}
-          />
-        </div>
-      ) : null}
-      <p className="text-xs text-muted">
-        {confirmed ? "Invoice number" : "Quotation number"}{" "}
-        <span className="font-semibold text-ink tabular-nums">
-          {confirmed ? numbers.invoice : numbers.quote}
-        </span>
-        , unless another booking is made first.
-      </p>
-    </div>
+    <Field
+      label="Invoice number"
+      hint={`Leave empty for ${nextInvoice}, unless another booking is made first. Invoiced already? Type its number, such as HT1223.`}
+      className="mb-1"
+    >
+      <Input
+        name={OLD_INVOICE_FIELD}
+        placeholder={nextInvoice}
+        autoComplete="off"
+        spellCheck={false}
+      />
+    </Field>
   );
 }
 

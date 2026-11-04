@@ -6,10 +6,13 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
-import { nextBookingNumber } from "./booking-counter";
+import {
+  lastBookingNumber,
+  nextBookingNumber,
+  oldInvoiceNumberIssue,
+} from "./booking-counter";
 import {
   BOOKING_NUMBER_SELECT,
-  bookingNumberYear,
   formatBookingNumber,
   parseBookingNumber,
 } from "./booking-number";
@@ -127,32 +130,33 @@ export type CreateBookingInput = {
   createdIp: string | null;
   items: PreparedItem[];
   /**
-   * Staff only: the customer has paid already, so the booking and every
-   * trip are confirmed as they are made, with an invoice number and no
-   * quotation's.
+   * Staff only: the booking was invoiced in the old system already, and
+   * keeps that invoice's number (HT1223) instead of taking the next.
    */
-  confirmed?: boolean;
+  oldInvoiceNumber?: number;
 };
 
 const CREATE_ATTEMPTS = 5;
 
 /**
- * The numbers the next booking made would take, quotation and invoice, as
- * a form shows them before it is sent: "HTQ-26-00013". A guess, not a
- * hold: a booking made first takes it, and the next one moves on.
+ * The invoice number the next booking confirmed would take, as a form
+ * shows it before it is sent: "HTI-1308". A guess, not a hold: a booking
+ * confirmed first takes it, and the next one moves on.
  */
-export async function nextBookingNumbers(
-  now: Date = new Date(),
-): Promise<{ quote: string; invoice: string }> {
-  const year = bookingNumberYear(now);
-  const counters = await db.bookingNumberCounter.findMany({ where: { year } });
-  const next = (kind: "quote" | "invoice") =>
-    formatBookingNumber(
-      kind,
-      year,
-      (counters.find((row) => row.kind === kind)?.last ?? 0) + 1,
-    );
-  return { quote: next("quote"), invoice: next("invoice") };
+export async function nextInvoiceNumber(): Promise<string> {
+  return formatBookingNumber(
+    "invoice",
+    (await lastBookingNumber(db, "invoice")) + 1,
+  );
+}
+
+/**
+ * Why an old invoice's number, typed on New booking, cannot be the
+ * booking's; null when it can (`oldInvoiceNumberIssue`). Checked again
+ * inside the booking's transaction.
+ */
+export function checkOldInvoiceNumber(number: number): Promise<string | null> {
+  return oldInvoiceNumberIssue(db, number);
 }
 
 /**
@@ -160,12 +164,12 @@ export async function nextBookingNumbers(
  * to an account, remembers the phone number on it for next time. The actor
  * is the customer or the guest on the website, or the admin entering a
  * booking for them. An item with an agreed price is charged that price and
- * logged as priced, so it is never a special case later. One entered by
- * staff takes the year's next quotation number (./booking-counter); the
- * invoice number comes when it is confirmed. One staff enter as paid
- * already (`confirmed`) is confirmed at once, every trip with it, and
- * takes the invoice number instead. The reference is random, so
- * a collision is retried. Emails are the caller's job, after this returns.
+ * logged as priced, so it is never a special case later. One from the
+ * website is received, for Reservation to confirm, and takes its invoice
+ * number then. One staff enter is confirmed at once, every trip with it,
+ * and takes the next invoice number (./booking-counter), or keeps the old
+ * system's (`oldInvoiceNumber`). The reference is random, so a collision
+ * is retried. Emails are the caller's job, after this returns.
  */
 export async function createBooking(
   actor: Actor,
@@ -174,9 +178,10 @@ export async function createBooking(
   if (input.items.length === 0) {
     throw new Error("A booking needs at least one item.");
   }
-  const confirmed = input.confirmed === true;
-  if (confirmed && actor.kind !== "admin") {
-    throw new Error("Only staff may make a booking confirmed.");
+  const confirmed = actor.kind === "admin";
+  const oldInvoice = input.oldInvoiceNumber ?? null;
+  if (oldInvoice !== null && !confirmed) {
+    throw new Error("Only staff may give a booking an old invoice number.");
   }
   const now = new Date();
   const status = confirmed ? "confirmed" : "received";
@@ -225,22 +230,17 @@ export async function createBooking(
             data: { phone: input.contactPhone },
           });
         }
-        const quote =
-          actor.kind === "admin" && !confirmed
-            ? await nextBookingNumber(tx, "quote", now)
-            : null;
-        const invoice = confirmed
-          ? await nextBookingNumber(tx, "invoice", now)
-          : null;
+        if (oldInvoice !== null) {
+          const issue = await oldInvoiceNumberIssue(tx, oldInvoice, {
+            lock: true,
+          });
+          if (issue) throw new Error(issue);
+        }
+        const invoiceNumber = !confirmed
+          ? null
+          : (oldInvoice ?? (await nextBookingNumber(tx, "invoice")));
         const booking = await tx.booking.create({
-          data: {
-            ...data,
-            reference: generateReference(),
-            quoteYear: quote?.year ?? null,
-            quoteNumber: quote?.number ?? null,
-            invoiceYear: invoice?.year ?? null,
-            invoiceNumber: invoice?.number ?? null,
-          },
+          data: { ...data, reference: generateReference(), invoiceNumber },
           ...withItems,
         });
         await logActivity(tx, actor, {
@@ -251,6 +251,7 @@ export async function createBooking(
             priceTotalSen: booking.priceTotalSen,
             items: booking.items.length,
             via: actor.kind === "admin" ? "console" : "website",
+            ...(oldInvoice !== null ? { oldInvoiceNumber: oldInvoice } : {}),
           },
         });
         for (const [index, item] of input.items.entries()) {
@@ -365,13 +366,13 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
     const phone = phoneDigitsOf(filter.search);
     const number = parseBookingNumber(filter.search);
     where.OR = [
-      // "HTQ-26-00042" or "26-42": the booking with that number, either
-      // kind unless the prefix says which.
+      // "HTI-1308", "HT1223" or "1308": the booking with that number,
+      // either kind unless the prefix says which.
       ...(number && number.kind !== "invoice"
-        ? [{ quoteYear: number.year, quoteNumber: number.number }]
+        ? [{ quoteNumber: number.number }]
         : []),
       ...(number && number.kind !== "quote"
-        ? [{ invoiceYear: number.year, invoiceNumber: number.number }]
+        ? [{ invoiceNumber: number.number }]
         : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
@@ -491,19 +492,17 @@ async function refreshBooking(
   const status = bookingStatusOf(booking.items);
 
   // Confirmed for the first time: the booking is sold, and invoiced. One
-  // cancelled before that keeps only its quotation number, a lead lost.
-  const invoice =
+  // cancelled before that gets no invoice number.
+  const invoiceNumber =
     status !== "received" &&
     status !== "cancelled" &&
     booking.invoiceNumber === null
-      ? await nextBookingNumber(tx, "invoice", now)
+      ? await nextBookingNumber(tx, "invoice")
       : null;
   const updated = await tx.booking.update({
     where: { id: bookingId },
     data: {
-      ...(invoice
-        ? { invoiceYear: invoice.year, invoiceNumber: invoice.number }
-        : {}),
+      ...(invoiceNumber !== null ? { invoiceNumber } : {}),
       status,
       // The total is what is owed for the live items. A fully cancelled
       // booking keeps its last total, so the record still says what it was.

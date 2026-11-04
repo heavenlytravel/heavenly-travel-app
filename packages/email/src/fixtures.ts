@@ -150,9 +150,7 @@ export function sampleBooking(
   return {
     id: "b1",
     reference: "HT-7K3QZM",
-    quoteYear: 26,
-    quoteNumber: 42,
-    invoiceYear: null,
+    quoteNumber: null,
     invoiceNumber: null,
     userId: "u1",
     user: {

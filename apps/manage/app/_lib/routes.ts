@@ -545,15 +545,16 @@ export function userHref(id: string) {
 /**
  * The activity: under `~` the log across the app, under a slug the
  * location's own history, either one narrowed to the entries of one
- * area, of one kind of actor (`who`) or of one person. At the page of it
- * older than the entry with the id `before`.
+ * area, of one kind of actor (`who`) or of the people a search by name
+ * finds (`q`). At the page of it older than the entry with the id
+ * `before`.
  */
 export function activityHref(
   scope: ScopeSlug,
   filter: {
     area?: ActivityArea;
     who?: string;
-    person?: string;
+    q?: string;
     before?: string;
   } = {},
 ) {

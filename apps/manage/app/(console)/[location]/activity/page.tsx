@@ -13,7 +13,6 @@ import {
 } from "@repo/db";
 import {
   listActivity,
-  listActivityActors,
   listLocationHistory,
   type ActivityPage as LogPage,
   type LocationName,
@@ -27,6 +26,7 @@ import {
   type FilterGroup,
 } from "../../../_components/ListFilters";
 import { ListToolbar } from "../../../_components/ListToolbar";
+import { SearchBox } from "../../../_components/SearchBox";
 import { HistoryPager } from "../../../_components/HistoryPager";
 import {
   HistoryTimeline,
@@ -63,16 +63,15 @@ type Log = {
  * action across the console, under a location the changes to it and to
  * the vehicles and drivers based there. Either is narrowed by the
  * Filters button to one area (`?area=`), of the areas held that the log
- * can hold, to one kind of actor (`?who=`) and to one member of staff
- * (`?person=`), of those who wrote in it. The fleet's changes are
- * Operation's, the team's SUPER's.
+ * can hold, and to one kind of actor (`?who=`), and by the search to the
+ * people whose name or email it finds (`?q=`), staff, customers or
+ * drivers alike. The fleet's changes are Operation's, the team's SUPER's.
  */
 function logOf(
   slug: ScopeSlug,
   location: LocationName | null,
-  query: { area?: unknown; who?: unknown; person?: unknown },
+  query: { area?: unknown; who?: unknown; q?: unknown },
   held: readonly ActivityArea[],
-  people: readonly { id: string; name: string }[],
 ): Log {
   const { area } = query;
   const offered = location
@@ -85,15 +84,11 @@ function logOf(
   const who: ActorKind | undefined = isActorKind(query.who)
     ? query.who
     : undefined;
-  // A person no longer in the log is no filter, as any unknown value is.
-  const personParam = textOf(query.person);
-  const person = people.some((p) => p.id === personParam)
-    ? personParam
-    : undefined;
+  const q = textOf(query.q) || undefined;
   // Asked by every area held, so SUPER's query asks nothing of the action.
   const areas = { held, area: filter };
-  const actors = { kind: who, id: person };
-  const listed = activityHref(slug, { area: filter, who, person });
+  const actors = { kind: who, search: q };
+  const listed = activityHref(slug, { area: filter, who, q });
   const groups: FilterGroup[] = [
     {
       param: "area",
@@ -113,25 +108,26 @@ function logOf(
         label: ACTOR_KIND_LABELS[kind],
       })),
     },
-    {
-      param: "person",
-      label: "Staff member",
-      value: person ?? "",
-      options: people.map((p) => ({ value: p.id, label: p.name })),
-    },
   ];
   return {
     key: listed,
     bar: (
       <>
         <ListToolbar>
+          <SearchBox
+            href={activityHref(slug, { area: filter, who })}
+            value={q ?? ""}
+            label="Search activity by person"
+            placeholder="Who did it: name or email"
+          />
           <ListFilters href={listed} groups={groups} />
         </ListToolbar>
         <FilterChips href={listed} groups={groups} />
       </>
     ),
-    emptyMessage:
-      who || person
+    emptyMessage: q
+      ? `No changes by anyone matching “${q}”.`
+      : who
         ? "No changes match these filters."
         : filter
           ? `No changes to ${ACTIVITY_AREA_LABELS[filter].toLowerCase()} recorded.`
@@ -148,19 +144,19 @@ function logOf(
             take: PAGE_SIZE,
           })
         : listActivity({ areas, actors, before, take: PAGE_SIZE }),
-    href: (before) => activityHref(slug, { area: filter, who, person, before }),
+    href: (before) => activityHref(slug, { area: filter, who, q, before }),
     here: location?.id,
   };
 }
 
 /**
- * Route: /[location]/activity?area=fleet&who=admin&person=<id>&before=<id>.
+ * Route: /[location]/activity?q=aina&area=fleet&who=admin&before=<id>.
  * What changed and who changed it, newest first, a page at a time,
  * grouped by the day it was made, for every admin: the entries of the
  * areas its teams hold (`activityAreasHeld`), all of them for SUPER. Under
  * `~` the console's whole log, under a location its own history; either
- * narrowed by the Filters button to one area, one kind of actor or one
- * person. Each line names its record under its sentence and opens it
+ * narrowed by the Filters button to one area or one kind of actor, and
+ * by the search to people by name or email. Each line names its record under its sentence and opens it
  * where it has a page: a booking, a location, a class, a vehicle or a
  * driver at the location it is based at, a publish as the page was
  * before and after (`_lib/activity-links`). One record's history is on
@@ -179,11 +175,7 @@ export default async function ActivityPage({
   const cursor = query.before;
   const before = typeof cursor === "string" && cursor ? cursor : undefined;
   const held = activityAreasHeld(permissions);
-  const people = await listActivityActors({
-    areas: { held },
-    locationId: scope.location?.id,
-  });
-  const log = logOf(scope.slug, scope.location, query, held, people);
+  const log = logOf(scope.slug, scope.location, query, held);
 
   return (
     <>

@@ -32,7 +32,6 @@ export {
   listSitePagePublishes,
   listFooterPublishes,
   listActivity,
-  listActivityActors,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
 export {

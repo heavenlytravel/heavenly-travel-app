@@ -417,17 +417,42 @@ export type ActivityAreas = {
   area?: ActivityArea;
 };
 
-/** Whose entries a reader asks for: one kind of actor, one person, or anyone's. */
+/** Whose entries a reader asks for: one kind of actor, people by name, or anyone's. */
 export type ActivityActors = {
   kind?: string;
-  /** A user's id. */
-  id?: string;
+  /** Words of a person's name or email, each in one of them: "aina", "nurul ai". */
+  search?: string;
 };
 
-function actorWhere(actors: ActivityActors = {}): Prisma.ActivityLogWhereInput {
+/**
+ * Where the actors asked for are. A search finds the people whose first
+ * name, last name or email holds every word of it; an entry outlives its
+ * user, so one deleted since is found by no search.
+ */
+async function actorWhere(
+  actors: ActivityActors = {},
+): Promise<Prisma.ActivityLogWhereInput> {
+  const words = (actors.search ?? "").trim().split(/s+/).filter(Boolean);
+  const ids =
+    words.length > 0
+      ? (
+          await db.user.findMany({
+            where: {
+              AND: words.map((word) => ({
+                OR: (["firstName", "lastName", "email"] as const).map(
+                  (field) => ({
+                    [field]: { contains: word, mode: "insensitive" as const },
+                  }),
+                ),
+              })),
+            },
+            select: { id: true },
+          })
+        ).map((user) => user.id)
+      : null;
   return {
     ...(actors.kind ? { actorKind: actors.kind } : {}),
-    ...(actors.id ? { actorId: actors.id } : {}),
+    ...(ids ? { actorId: { in: ids } } : {}),
   };
 }
 
@@ -438,40 +463,6 @@ const locationWhere = (locationId: string): Prisma.ActivityLogWhereInput => ({
     { locationIds: { has: locationId } },
   ],
 });
-
-/**
- * The staff who wrote in the log of the areas asked for, the console's or
- * a location's, by name: the people the Activity filter offers. Customers,
- * guests, vendors, drivers and the system are many or no one, and are
- * left to the filter by kind.
- */
-export async function listActivityActors({
-  areas,
-  locationId,
-}: {
-  areas: ActivityAreas;
-  locationId?: string;
-}): Promise<{ id: string; name: string }[]> {
-  const rows = await db.activityLog.groupBy({
-    by: ["actorId"],
-    where: {
-      AND: [
-        areaWhere(areas),
-        locationId ? locationWhere(locationId) : {},
-        { actorKind: "admin", actorId: { not: null } },
-      ],
-    },
-  });
-  const ids = rows.flatMap((row) => (row.actorId ? [row.actorId] : []));
-  if (ids.length === 0) return [];
-  const users = await db.user.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, email: true, firstName: true, lastName: true },
-  });
-  return users
-    .map((user) => ({ id: user.id, name: nameOf(user) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
 
 /**
  * The query's part that keeps the areas asked for: by action, so a page
@@ -512,7 +503,7 @@ async function pageOf(
  * each was made, of the areas asked for. `before` is the id of the last
  * entry of the previous page.
  */
-export function listLocationHistory({
+export async function listLocationHistory({
   locationId,
   areas,
   actors,
@@ -527,7 +518,11 @@ export function listLocationHistory({
 }): Promise<ActivityPage> {
   return pageOf(
     {
-      AND: [locationWhere(locationId), areaWhere(areas), actorWhere(actors)],
+      AND: [
+        locationWhere(locationId),
+        areaWhere(areas),
+        await actorWhere(actors),
+      ],
     },
     before,
     take,
@@ -604,7 +599,7 @@ export type ActivityPage = {
  * The log across the app, newest first, one page at a time, of the areas
  * asked for. `before` is the id of the last entry of the previous page.
  */
-export function listActivity({
+export async function listActivity({
   areas,
   actors,
   before,
@@ -615,5 +610,9 @@ export function listActivity({
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
-  return pageOf({ AND: [areaWhere(areas), actorWhere(actors)] }, before, take);
+  return pageOf(
+    { AND: [areaWhere(areas), await actorWhere(actors)] },
+    before,
+    take,
+  );
 }

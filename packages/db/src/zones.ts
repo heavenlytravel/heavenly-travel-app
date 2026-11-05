@@ -9,7 +9,7 @@ import {
 } from "./delete-impact";
 import { Prisma, type Zone, type ZoneRate } from "./generated/prisma/client";
 import { andList } from "./names";
-import { byClassOrder } from "./offerings";
+import { byClassOrder } from "./offering-input";
 import {
   ZONE_LIMITS,
   checkOddHours,

@@ -282,6 +282,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /** A category's classes by name in their order, before and after; `moved` the one moved. */
+  "location.offerings.ordered": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /**
    * The zone's name; its shape stays on the row. A removal's `routesFrom`
    * names the other locations whose routes to it went with it; the entry is
@@ -1108,6 +1113,12 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Started selling ${className(entry.after)}`;
     case "location.offering.updated":
       return offeringChanges(entry.after);
+    case "location.offerings.ordered": {
+      const moved = field(entry.after, "moved");
+      return typeof moved === "string"
+        ? `Moved ${moved} in the order of classes`
+        : "Changed the order of the classes";
+    }
     case "location.zone.created":
       return `Added ${zoneName(entry.after)}`;
     case "location.zone.updated": {

@@ -63,6 +63,7 @@ function row(
 
 const offering = (slug: string, name: string, isActive = true) => ({
   isActive,
+  sortOrder: 0,
   vehicleClass: {
     slug,
     name,

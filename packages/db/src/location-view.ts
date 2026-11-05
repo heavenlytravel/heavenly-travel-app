@@ -1,5 +1,6 @@
 import type { TripCategory } from "./booking-status";
 import { isTripCategory } from "./booking-status";
+import { byClassOrder } from "./offering-input";
 import {
   isPublicState,
   locationStateOf,
@@ -117,6 +118,7 @@ export type LocationRows = {
   pages: readonly LocationPageRow[];
   offerings: readonly {
     isActive: boolean;
+    sortOrder: number;
     vehicleClass: {
       slug: string;
       name: string;
@@ -135,16 +137,12 @@ function addressesOf(rows: LocationRows): LocationViewAddress[] {
   );
 }
 
-/** The classes offered in the products with class pages, in the catalogue's order, then by name. */
+/** The classes offered in the products with class pages, in the location's order (`byClassOrder`). */
 export function offeredClassesOf(
   offerings: LocationRows["offerings"],
 ): LocationViewClass[] {
   return [...offerings]
-    .sort(
-      (a, b) =>
-        a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||
-        a.vehicleClass.name.localeCompare(b.vehicleClass.name),
-    )
+    .sort(byClassOrder)
     .flatMap(({ isActive, vehicleClass }) =>
       isTripCategory(vehicleClass.category)
         ? [

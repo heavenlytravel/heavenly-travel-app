@@ -1,4 +1,5 @@
 import type { OfferingRules } from "./booking-rules";
+import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { parseRinggit } from "./money";
@@ -18,6 +19,32 @@ import {
  * docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
  * docs/261018-location-work-and-class-catalogue.md for the rules.
  */
+
+const categoryRank = (category: string) =>
+  TRIP_CATEGORIES.indexOf(category as TripCategory);
+
+/** What a location's class is ordered by: its own place, then its catalogue class's. */
+export type OrderedOffering = {
+  sortOrder: number;
+  vehicleClass: { category: string; sortOrder: number; name: string };
+};
+
+/**
+ * A location's classes in the order it shows them, the customer's too:
+ * car with driver first, then the location's own order, then the
+ * catalogue's and the name. A location that never ordered its list has 0
+ * for every class, so the catalogue's order stands.
+ */
+export const byClassOrder = (a: OrderedOffering, b: OrderedOffering) =>
+  categoryRank(a.vehicleClass.category) -
+    categoryRank(b.vehicleClass.category) ||
+  a.sortOrder - b.sortOrder ||
+  a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||
+  a.vehicleClass.name.localeCompare(b.vehicleClass.name);
+
+/** Catalogue classes by category, car with driver first, for a list of them. */
+export const byCategory = (a: { category: string }, b: { category: string }) =>
+  categoryRank(a.category) - categoryRank(b.category);
 
 /**
  * What choosing a model costs at the location, as the offering stores it:

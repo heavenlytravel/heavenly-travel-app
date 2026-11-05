@@ -133,6 +133,7 @@ const AREA_OF = {
   "location.deleted": "status",
   "location.offering.created": "coverage",
   "location.offering.updated": "coverage",
+  "location.offerings.ordered": "coverage",
   "location.zone.created": "coverage",
   "location.zone.updated": "coverage",
   "location.zone.deleted": "coverage",

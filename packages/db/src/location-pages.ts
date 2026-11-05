@@ -96,6 +96,7 @@ const pagesInLocale = { where: { locale: PAGE_LOCALE } };
 export const offeringsForPages = {
   select: {
     isActive: true,
+    sortOrder: true,
     vehicleClass: {
       select: {
         slug: true,

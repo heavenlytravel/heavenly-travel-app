@@ -1,8 +1,8 @@
 import { cx } from "@repo/ui/cx";
-import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Frame } from "./Card";
+import { SortArrow } from "./SortArrow";
 
 /**
  * The console's one table style: column names small and upper case on a
@@ -123,7 +123,6 @@ export function SortTh({
   direction: "ascending" | "descending" | null;
   align?: "right";
 }) {
-  const Arrow = direction === "descending" ? ArrowDownIcon : ArrowUpIcon;
   return (
     <th
       scope="col"
@@ -143,13 +142,7 @@ export function SortTh({
         )}
       >
         {children}
-        <Arrow
-          aria-hidden="true"
-          className={cx(
-            "size-3",
-            direction ? "" : "opacity-0 group-hover/sort:opacity-100",
-          )}
-        />
+        <SortArrow direction={direction} />
       </Link>
     </th>
   );

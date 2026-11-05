@@ -1,8 +1,9 @@
 import Image from "next/image";
 
 /**
- * A vehicle class's picture in its frame, the whole vehicle in view: a
- * photo or a cut-out alike. With no picture the frame stays empty, so a
+ * A vehicle class's picture in its 3:2 frame, the whole vehicle in view:
+ * a photo or a cut-out alike, on white, so a picture on white shows no
+ * band around it. The console uploads it at that shape (IMAGE_SIZES). With no picture the frame stays empty, so a
  * list where some classes have one still lines up. The class's name is
  * always written beside it, so the picture is decorative.
  */
@@ -19,7 +20,7 @@ export function ClassPicture({
 }) {
   return (
     <span
-      className={`relative block aspect-[3/2] overflow-hidden rounded-xl bg-mist ${className}`}
+      className={`relative block aspect-[3/2] overflow-hidden rounded-xl bg-white ${className}`}
     >
       {src ? (
         <Image src={src} alt="" fill sizes={sizes} className="object-contain" />

@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 
 /**
  * The picture on top of a card: a location's or a page's hero image,
- * cropped to fill, or a vehicle class's picture, the whole vehicle in view;
- * a quiet mist tile holding `fallback` while there is none. `children`
+ * cropped to fill a 16:9 frame, or a vehicle class's picture, the whole
+ * vehicle in view in the 3:2 frame the website shows it in, on white so a
+ * picture on white meets the card with no band around it (Media's images
+ * too); a quiet tile holding `fallback` while there is none. `children`
  * stand over the picture's corner: a badge.
  */
 export function CardImage({
@@ -17,7 +19,7 @@ export function CardImage({
 }: {
   /** The image's address; null for none. */
   src: string | null;
-  /** "cover" crops a photo to fill; "contain" keeps all of it, for a vehicle. */
+  /** "cover" crops a photo to fill; "contain" keeps all of it, for a vehicle class. */
   fit?: "cover" | "contain";
   fallback: ReactNode;
   /** How wide the card is drawn, for the image's `sizes`. */
@@ -25,7 +27,12 @@ export function CardImage({
   children?: ReactNode;
 }) {
   return (
-    <div className="relative aspect-[16/9] overflow-hidden bg-canvas">
+    <div
+      className={cx(
+        "relative overflow-hidden",
+        fit === "cover" ? "aspect-[16/9] bg-canvas" : "aspect-[3/2] bg-white",
+      )}
+    >
       {src ? (
         <Image
           src={src}

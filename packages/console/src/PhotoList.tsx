@@ -2,6 +2,8 @@
 
 import {
   IMAGE_MAX_MB,
+  IMAGE_SIZES,
+  imageSizeText,
   IMAGE_TYPES,
   PHOTO_LIMITS,
   photoAlt,
@@ -133,13 +135,14 @@ export function PhotoList({
             key={photo.url}
             className="grid gap-2 rounded-control border border-hairline p-2"
           >
+            {/* Cropped to fill, whatever the photo's shape; the full-screen view shows all of it. */}
             <div className="relative aspect-[3/2] overflow-hidden rounded-md bg-shade">
               <Image
                 src={photo.url}
                 alt={photoAlt(shown, photo)}
                 fill
                 sizes="12rem"
-                className="object-contain"
+                className="object-cover"
               />
               {i === 0 ? (
                 <span className="absolute top-2 left-2">
@@ -251,7 +254,7 @@ export function PhotoList({
         ) : null}
         <p className="text-xs text-muted">
           {room > 0
-            ? `JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
+            ? `${imageSizeText(IMAGE_SIZES.vehiclePhoto)} ${IMAGE_SIZES.vehiclePhoto.note} JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
             : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
         </p>
       </div>

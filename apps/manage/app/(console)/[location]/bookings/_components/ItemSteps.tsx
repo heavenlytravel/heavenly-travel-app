@@ -414,7 +414,7 @@ export function VehicleFields({
                   on ? "border-brand ring-1 ring-brand" : "border-edge",
                 )}
               >
-                <span className="relative block aspect-video bg-shade">
+                <span className="relative block aspect-[3/2] bg-white">
                   {option.imageUrl ? (
                     // The whole vehicle in view, as `CardImage fit="contain"` shows it.
                     <Image

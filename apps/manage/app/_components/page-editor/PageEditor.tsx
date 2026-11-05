@@ -19,6 +19,7 @@ import {
   type PageEditorTab,
   type PageFaq,
   type PageKind,
+  IMAGE_SIZES,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
@@ -36,10 +37,7 @@ import { Card, CardTitle } from "@repo/console/Card";
 import { Notice } from "@repo/ui/notice";
 import { MarkdownField } from "../MarkdownField";
 import { UploadsContext, useUploadCount } from "@repo/console/use-image-upload";
-import {
-  RowControls,
-  movedRow,
-} from "../RowControls";
+import { RowControls, movedRow } from "../RowControls";
 import {
   publishPageAction,
   savePageDraftAction,
@@ -532,6 +530,7 @@ export function PageEditor({
                   </p>
                   <ImageField
                     label={kind === "article" ? "Cover image" : "Hero image"}
+                    size={IMAGE_SIZES.hero}
                     image={content.heroImage}
                     onChange={(heroImage) => edit({ heroImage })}
                   />
@@ -777,6 +776,7 @@ export function PageEditor({
                   </p>
                   <ImageField
                     label="Share image"
+                    size={IMAGE_SIZES.share}
                     image={content.shareImage}
                     onChange={(shareImage) => edit({ shareImage })}
                   />

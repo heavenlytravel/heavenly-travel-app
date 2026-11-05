@@ -1,6 +1,6 @@
 "use client";
 
-import { PAGE_LIMITS, type PageImage } from "@repo/db";
+import { PAGE_LIMITS, type ImageSize, type PageImage } from "@repo/db";
 import { Input } from "@repo/ui/field";
 import { useId } from "react";
 import { ImageUpload } from "../ImageUpload";
@@ -16,9 +16,12 @@ export function ImageField({
   label,
   image,
   onChange,
+  size,
 }: {
   /** What the image is, as a screen reader hears the controls: "Hero image". */
   label: string;
+  /** The size the place wants it at, one of IMAGE_SIZES. */
+  size: ImageSize;
   image: PageImage | null;
   onChange: (image: PageImage | null) => void;
 }) {
@@ -31,6 +34,7 @@ export function ImageField({
         uploadPath={LOCATION_IMAGE_UPLOAD_PATH}
         src={image?.url ?? null}
         alt={image?.alt ?? ""}
+        size={size}
         onChange={(uploaded) =>
           onChange(uploaded ? { ...uploaded, alt: image?.alt ?? "" } : null)
         }

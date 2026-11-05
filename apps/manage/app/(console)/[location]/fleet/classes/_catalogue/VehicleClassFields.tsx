@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  IMAGE_SIZES,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   VEHICLE_CLASS_FIELD_LABELS,
@@ -174,6 +175,7 @@ export function VehicleClassFieldset({
           src={imageUrl}
           alt={vehicleClass?.name ?? ""}
           onChange={(image) => setImageUrl(image?.url ?? null)}
+          size={IMAGE_SIZES.classPicture}
         />
       </Card>
 

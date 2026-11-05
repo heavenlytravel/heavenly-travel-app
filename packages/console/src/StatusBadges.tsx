@@ -67,6 +67,23 @@ export function AssignStateBadge({ state }: { state: AssignState }) {
   );
 }
 
+/**
+ * A role of a trip with no vendor asked to do it: red, as the one thing
+ * Operation must still do for it, on the Assign page and the booking alike.
+ */
+export function NotAssignedBadge() {
+  return (
+    <Badge dot tone="red">
+      Not assigned
+    </Badge>
+  );
+}
+
+/** The guide's place on a trip booked without one: nothing to do, so grey. */
+export function NoGuideBadge() {
+  return <Badge>Not booked</Badge>;
+}
+
 /** A booking's summary status, as stored on the booking. */
 export function BookingStatusBadge({ status }: { status: string }) {
   if (!isBookingStatus(status)) return <Badge>{status}</Badge>;

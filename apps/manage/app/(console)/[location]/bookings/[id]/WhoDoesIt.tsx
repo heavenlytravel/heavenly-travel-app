@@ -11,7 +11,6 @@ import {
   partWaitingLabel,
   partWaitingOf,
   ringgitInputValue,
-  ROLE_NOT_ASKED_LABEL,
   type PartRole,
 } from "@repo/db";
 import type { FulfilmentTrip, TripPartView } from "@repo/db/server";
@@ -20,7 +19,7 @@ import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { AssignStateBadge } from "@repo/console/StatusBadges";
+import { AssignStateBadge, NotAssignedBadge } from "@repo/console/StatusBadges";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { assignTripHref, type ScopeSlug } from "../../../../_lib/routes";
@@ -98,12 +97,17 @@ export function WhoDoesIt({
                     ? partWaitingOf(part, part.offer.vendor.isOurs)
                     : null;
                   return (
-                    <div key={role} className="flex flex-wrap gap-x-1.5">
+                    <div
+                      key={role}
+                      className="flex flex-wrap items-center gap-x-1.5"
+                    >
                       <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
-                      <dd className={part ? "text-body" : "text-muted"}>
-                        {part
-                          ? `${namedOf(part)} · ${part.offer.vendor.name}`
-                          : ROLE_NOT_ASKED_LABEL}
+                      <dd className="text-body">
+                        {part ? (
+                          `${namedOf(part)} · ${part.offer.vendor.name}`
+                        ) : (
+                          <NotAssignedBadge />
+                        )}
                         {part && waiting ? (
                           <span className="text-warning">
                             {" "}

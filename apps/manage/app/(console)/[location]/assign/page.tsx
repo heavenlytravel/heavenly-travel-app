@@ -7,11 +7,9 @@ import {
   formatLocalDateTime,
   formatLocalTime,
   isTripEventKind,
-  NO_GUIDE_LABEL,
   PART_ROLE_LABELS,
   PART_ROLES,
   partWaitingLabel,
-  ROLE_NOT_ASKED_LABEL,
   todayInMalaysia,
   addDays,
   TRIP_EVENT_LABELS,
@@ -32,7 +30,12 @@ import { Card } from "@repo/console/Card";
 import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
 import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
-import { ASSIGN_TONES, AssignStateBadge } from "@repo/console/StatusBadges";
+import {
+  ASSIGN_TONES,
+  AssignStateBadge,
+  NoGuideBadge,
+  NotAssignedBadge,
+} from "@repo/console/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { PickupDateFilter } from "../../../_components/BookingFilters";
 import {
@@ -388,7 +391,7 @@ function TripRow({
       {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
           {role === "guide" && !row.withGuide ? (
-            <span className="text-muted">{NO_GUIDE_LABEL}</span>
+            <NoGuideBadge />
           ) : (
             <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
           )}
@@ -424,7 +427,7 @@ function TripRow({
 
 /** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
 function PartCell({ part }: { part: AssignPart | null }) {
-  if (!part) return <span className="text-muted">{ROLE_NOT_ASKED_LABEL}</span>;
+  if (!part) return <NotAssignedBadge />;
   return (
     <>
       <span className="block text-body">

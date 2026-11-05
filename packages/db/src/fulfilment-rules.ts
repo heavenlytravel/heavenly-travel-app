@@ -389,12 +389,6 @@ export function assignStateOf(trip: {
   return asked ? "waiting" : "to-assign";
 }
 
-/** What a role's cell says while no one is asked to do it. */
-export const ROLE_NOT_ASKED_LABEL = "No vendor asked yet";
-
-/** What the guide's cell says on a trip booked without one. */
-export const NO_GUIDE_LABEL = "Not booked";
-
 /**
  * When an offer is answered by, unless Operation says otherwise: two hours
  * from now, but never later than an hour before the first pickup, and

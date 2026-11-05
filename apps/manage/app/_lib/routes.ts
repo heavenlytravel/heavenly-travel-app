@@ -231,8 +231,24 @@ export function assignTripHref(scope: ScopeSlug, itemId: string) {
 
 /* Fleet */
 
-/** What a list of vehicles or drivers narrows to: the ones with a document due, a search, or both. */
-export type FleetListFilter = { due?: boolean; q?: string };
+/** A fleet list's choice of those in service or out of it. */
+export const FLEET_SERVICES = ["active", "inactive"] as const;
+export type FleetService = (typeof FLEET_SERVICES)[number];
+export const isFleetService = (value: unknown): value is FleetService =>
+  FLEET_SERVICES.some((service) => service === value);
+
+/**
+ * What a list of vehicles, drivers or tour guides narrows to, any of them
+ * together: in service or out, a document due or expired, one vendor's,
+ * one class's (vehicles), a search.
+ */
+export type FleetListFilter = {
+  due?: boolean;
+  service?: FleetService;
+  vendor?: string;
+  vehicleClass?: string;
+  q?: string;
+};
 
 /** The value of `due` in a list's address when it shows only the documents due. */
 export const DUE_PARAM = "1";
@@ -240,6 +256,9 @@ export const DUE_PARAM = "1";
 function fleetListHref(path: string, filter: FleetListFilter) {
   return listHref(path, {
     due: filter.due ? DUE_PARAM : undefined,
+    service: filter.service,
+    vendor: filter.vendor,
+    class: filter.vehicleClass,
     [SEARCH_PARAM]: filter.q,
   });
 }
@@ -299,14 +318,16 @@ export const VENDOR_PARAM = "vendor";
 
 /**
  * The vendors, ours first: every one under `~`, those serving the
- * location under a slug, narrowed to a status or a search.
+ * location under a slug, narrowed to a status, what they supply or a
+ * search.
  */
 export function vendorsHref(
   scope: ScopeSlug,
-  filter: { status?: string; q?: string } = {},
+  filter: { status?: string; service?: string; q?: string } = {},
 ) {
   return listHref(consolePath(scope, "fleet", "vendors"), {
     status: filter.status,
+    service: filter.service,
     [SEARCH_PARAM]: filter.q,
   });
 }
@@ -524,11 +545,18 @@ export function userHref(id: string) {
 /**
  * The activity: under `~` the log across the app, under a slug the
  * location's own history, either one narrowed to the entries of one
- * area. At the page of it older than the entry with the id `before`.
+ * area, of one kind of actor (`who`) or of the people a search by name
+ * finds (`q`). At the page of it older than the entry with the id
+ * `before`.
  */
 export function activityHref(
   scope: ScopeSlug,
-  filter: { area?: ActivityArea; before?: string } = {},
+  filter: {
+    area?: ActivityArea;
+    who?: string;
+    q?: string;
+    before?: string;
+  } = {},
 ) {
   return listHref(consolePath(scope, "activity"), filter);
 }

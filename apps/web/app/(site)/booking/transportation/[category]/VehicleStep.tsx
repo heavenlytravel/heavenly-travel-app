@@ -178,7 +178,6 @@ export function VehicleStep({
     ),
   ];
   const isCar = category === "car-with-driver";
-  const pictured = shown.some((c) => c.card.imageUrl !== null);
 
   function choose(id: string) {
     if (continuing) return;
@@ -349,7 +348,6 @@ export function VehicleStep({
                     <ClassCard
                       key={card.id}
                       vehicleClass={card}
-                      pictured={pictured}
                       badge={
                         isChosen ? (
                           <span className="mt-1 shrink-0 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-semibold text-brand">

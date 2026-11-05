@@ -46,13 +46,8 @@ export {
   getLocationOverview,
 } from "./location-overview";
 export type { LocationOverview } from "./location-overview";
-export {
-  listStates,
-  listDistricts,
-  resolveDistrict,
-  locationAt,
-} from "./coverage";
-export type { State, District, DistrictWithState, ServedAt } from "./coverage";
+export { listStates, listDistricts, resolveDistrict } from "./coverage";
+export type { State, District, DistrictWithState } from "./coverage";
 export { DISTRICT_DATA, districtCodeAt, districtShape } from "./district-index";
 export { statesBounds } from "./location-places";
 export { getLocationSearch } from "./search-areas";
@@ -193,6 +188,7 @@ export {
   listClassesNotOffered,
   createOffering,
   updateOffering,
+  moveOffering,
 } from "./offerings";
 export type {
   Offering,

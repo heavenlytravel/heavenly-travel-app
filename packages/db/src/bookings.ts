@@ -411,6 +411,7 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
 
 const ORDERS: Record<BookingOrder, Prisma.BookingOrderByWithRelationInput[]> = {
   newest: [{ createdAt: "desc" }],
+  oldest: [{ createdAt: "asc" }],
   soonest: [{ startsAt: "asc" }, { createdAt: "desc" }],
   latest: [{ startsAt: "desc" }, { createdAt: "desc" }],
 };

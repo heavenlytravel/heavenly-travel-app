@@ -4,7 +4,7 @@ import { FORBIDDEN_MESSAGE } from "@repo/console/action-state";
 
 /**
  * GET /api/places/search: the autocomplete behind the console's place
- * fields, the home's "Test an address", the zone maker and the saved
+ * fields, Try a trip, the zone maker and the saved
  * addresses. The handler is shared with the customer site, where it is
  * open to everyone (see packages/places/src/route.ts); here it answers a
  * signed-in admin only, whatever their team, so the console's copy of the

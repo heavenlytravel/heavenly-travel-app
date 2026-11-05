@@ -6,7 +6,7 @@ import {
   type Offering,
 } from "@repo/db/server";
 import { InfoTip } from "@repo/ui/info-tip";
-import { Card, CardTitle } from "@repo/console/Card";
+import { Card } from "@repo/console/Card";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
@@ -22,6 +22,15 @@ import { visiblePriceLists } from "../_components/price-lists";
 
 const HOURLY_TIP =
   "A row for each zone drawn on Coverage and each duration. A pickup pays its zone's price for the duration in the class, plus the extra hours at the rate after that duration.";
+
+/** The list's name in its title bar, and the note beside it. */
+const HOURLY_TITLE = (
+  <span className="inline-flex items-center gap-1.5">
+    Pickup Zones and Durations
+    <InfoTip text={HOURLY_TIP} />
+  </span>
+);
+const HOURLY_META = "RM for the whole vehicle";
 
 const NO_HOURLY = { zones: [], extras: [] };
 
@@ -82,13 +91,9 @@ async function locationHourly({
   ]);
   return (
     <Card flush>
-      <CardTitle inset meta="RM for the whole vehicle">
-        <span className="inline-flex items-center gap-1.5">
-          Pickup Zones and Durations
-          <InfoTip text={HOURLY_TIP} />
-        </span>
-      </CardTitle>
       <HourlyRates
+        title={HOURLY_TITLE}
+        meta={HOURLY_META}
         locationId={location.id}
         zones={zones}
         classes={columnsOf(offerings)}
@@ -110,13 +115,9 @@ async function everyLocationHourly({ manages }: { manages: boolean }) {
     >
       {(list) => (
         <Card flush>
-          <CardTitle inset meta="RM for the whole vehicle">
-            <span className="inline-flex items-center gap-1.5">
-              Pickup Zones and Durations
-              <InfoTip text={HOURLY_TIP} />
-            </span>
-          </CardTitle>
           <HourlyRates
+            title={HOURLY_TITLE}
+            meta={HOURLY_META}
             locationId={list.id}
             zones={list.zones.map((zone) => ({ id: zone.id, name: zone.name }))}
             classes={columnsOf(list.offerings)}

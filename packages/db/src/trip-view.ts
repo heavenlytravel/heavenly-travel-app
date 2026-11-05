@@ -105,12 +105,15 @@ export function itemSummary(item: {
     : heading;
 }
 
-/** The trip in one line, for lists: "KLIA to Kuala Lumpur" or "Penang, 4 hours". */
+/** The trip in one line, for lists: "KLIA to Kuala Lumpur", "Penang, 4 hours" or "Penang, 4 hours, to KLIA". */
 export function tripHeadline(trip: TripView) {
-  if (trip.dropoff) return `${trip.pickup.label} to ${trip.dropoff.label}`;
-  return trip.hours === null
-    ? trip.pickup.label
-    : `${trip.pickup.label}, ${trip.hours} hours`;
+  if (trip.hours === null || trip.mode === "oneway") {
+    return trip.dropoff
+      ? `${trip.pickup.label} to ${trip.dropoff.label}`
+      : trip.pickup.label;
+  }
+  const hire = `${trip.pickup.label}, ${trip.hours} hours`;
+  return trip.dropoff ? `${hire}, to ${trip.dropoff.label}` : hire;
 }
 
 /**

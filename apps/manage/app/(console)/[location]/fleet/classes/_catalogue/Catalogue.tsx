@@ -88,8 +88,8 @@ function ClassCard({
   return (
     <Tile dim={!vehicleClass.isActive}>
       <CardImage
-        src={vehicleClass.imageUrl}
-        fit="contain"
+        src={vehicleClass.imageUrls[0] ?? null}
+        frame="class"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={
           <span className="grid justify-items-center gap-1.5 text-xs text-muted">

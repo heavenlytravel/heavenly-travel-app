@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { describeActivity, formatLocalDate, formatLocalTime } from "@repo/db";
+import {
+  activityLinesOf,
+  describeActivity,
+  formatLocalDate,
+  formatLocalTime,
+  plural,
+} from "@repo/db";
 import { listActivityFor, type ActivityEntry } from "@repo/db/server";
 import { notFound } from "next/navigation";
 import { Button } from "@repo/ui/button";
@@ -31,7 +37,9 @@ export function HistoryLink({ href }: { href: string }) {
 
 /**
  * A record's last few changes, newest first, in a card beside the record,
- * with "All" leading to its history page (`recordHistoryHref`).
+ * with "All" leading to its history page (`recordHistoryHref`). Folded as
+ * the history page folds them (`activityLinesOf`): a save is its first
+ * change and how many more, the same thing again is one line, "3 times".
  */
 export function HistoryCard({
   href,
@@ -43,7 +51,10 @@ export function HistoryCard({
   entries: readonly ActivityEntry[];
   count?: number;
 }) {
-  const latest = entries.slice(-count).reverse();
+  const latest = activityLinesOf(
+    [...entries].reverse(),
+    describeActivity,
+  ).slice(0, count);
   return (
     <Card flush>
       <CardTitle
@@ -60,24 +71,31 @@ export function HistoryCard({
         <p className="px-5 py-4 text-sm text-muted">Nothing recorded yet.</p>
       ) : (
         <CardRows>
-          {latest.map((entry) => (
-            <CardRow
-              key={entry.id}
-              className="items-start justify-between text-sm"
-            >
-              <span className="min-w-0">
-                <span className="block font-medium text-body">
-                  {describeActivity(entry)}
-                </span>
-                <span className="block text-xs text-muted">
-                  {formatLocalDate(entry.createdAt)}
-                </span>
-              </span>
-              <span className="shrink-0 text-xs text-muted tabular-nums">
-                {formatLocalTime(entry.createdAt)}
-              </span>
-            </CardRow>
-          ))}
+          {latest.map(
+            ({ entries: [entry], sentences: [headline, ...rest] }) => {
+              const more = rest.reduce((sum, s) => sum + s.count, 0);
+              return (
+                <CardRow
+                  key={entry!.id}
+                  className="items-start justify-between text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium text-body">
+                      {headline!.text}
+                      {headline!.count > 1 ? ` (${headline!.count} times)` : ""}
+                    </span>
+                    <span className="block text-xs text-muted">
+                      {formatLocalDate(entry!.createdAt)}
+                      {more > 0 ? ` · and ${plural(more, "more change")}` : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted tabular-nums">
+                    {formatLocalTime(entry!.createdAt)}
+                  </span>
+                </CardRow>
+              );
+            },
+          )}
         </CardRows>
       )}
     </Card>

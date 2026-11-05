@@ -14,7 +14,7 @@ describe("describeActivity", () => {
         before: { position: 2, status: "received" },
         after: { position: 2, status: "confirmed" },
       }),
-      "Confirmed item 2",
+      "Confirmed trip 2",
     );
     assert.equal(
       describeActivity({
@@ -22,7 +22,7 @@ describe("describeActivity", () => {
         before: { position: 1, status: "confirmed" },
         after: { position: 1, status: "assigned" },
       }),
-      "Marked item 1 driver assigned",
+      "Assigned everyone to trip 1",
     );
   });
 
@@ -66,7 +66,7 @@ describe("describeActivity", () => {
         before: { position: 2, priceTotalSen: 25000 },
         after: { position: 2, priceTotalSen: 30000, reason: "Agreed by phone" },
       }),
-      "Set the price of item 2 to RM 300.00",
+      "Set the price of trip 2 to RM 300.00",
     );
     assert.equal(
       describeActivity({
@@ -74,7 +74,7 @@ describe("describeActivity", () => {
         before: { position: 2, priceTotalSen: 30000 },
         after: { position: 2, priceTotalSen: 25000, reason: null },
       }),
-      "Reset the price of item 2 to RM 250.00",
+      "Reset the price of trip 2 to RM 250.00",
     );
   });
 
@@ -95,7 +95,7 @@ describe("describeActivity", () => {
           vehicleClassName: "MPV",
         },
       }),
-      "Changed the pick-up, the pick-up time and the vehicle of item 2",
+      "Changed the pick-up, the pick-up time and the vehicle of trip 2",
     );
     assert.equal(
       describeActivity({
@@ -103,7 +103,7 @@ describe("describeActivity", () => {
         before: { position: 1 },
         after: { position: 1 },
       }),
-      "Amended item 1",
+      "Amended trip 1",
     );
   });
 
@@ -114,7 +114,7 @@ describe("describeActivity", () => {
         before: null,
         after: { position: 3, status: "confirmed", priceTotalSen: 12000 },
       }),
-      "Added item 3 at RM 120.00",
+      "Added trip 3 at RM 120.00",
     );
   });
 
@@ -125,7 +125,7 @@ describe("describeActivity", () => {
         before: { level: "SUPER", teams: [] },
         after: { level: "REGULAR", teams: ["SALES", "OPERATION"] },
       }),
-      "Changed from SUPER to REGULAR (Operation, Sales)",
+      "Changed from Super to Regular (Operation, Sales)",
     );
   });
 

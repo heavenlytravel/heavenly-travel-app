@@ -4,19 +4,19 @@ import {
   type PageFilter,
   type PageStatus,
 } from "@repo/db";
-import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PAGE_TONES } from "@repo/console/StatusBadges";
 import type { PageRow } from "./PageList";
 
-/** The strip's cells after "All pages", in the order the public meets them. */
-const STRIP: readonly PageFilter[] = [
+/** The tiles after "All pages", in the order the public meets them. */
+const TILES: readonly PageFilter[] = [
   "published",
   "changed",
   "unpublished",
   "paused",
 ];
 
-/** A page as the strip counts it. */
+/** A page as the tiles count it. */
 export type Counted = {
   name: string;
   path: string;
@@ -36,10 +36,10 @@ export const emptyOf = (q: string | undefined) =>
   q ? `No page matches “${q}”.` : "No page has this status.";
 
 /**
- * The strip over a list of pages: every page the search keeps, then each
- * status among them, each cell the list narrowed to it by `hrefOf`.
+ * The tiles over a list of pages: every page the search keeps, then each
+ * status among them, each tile the list narrowed to it by `hrefOf`.
  */
-export function PageStatusStrip({
+export function PageStatusTiles({
   pages,
   status,
   q,
@@ -61,14 +61,14 @@ export function PageStatusStrip({
       href: hrefOf(undefined),
       current: status === undefined,
     },
-    ...STRIP.map((cell): Figure => ({
-      key: cell,
-      label: PAGE_FILTER_LABELS[cell],
-      value: count(cell),
-      tone: cell === "paused" ? "neutral" : PAGE_TONES[cell],
-      href: hrefOf(cell),
-      current: status === cell,
+    ...TILES.map((tile): Figure => ({
+      key: tile,
+      label: PAGE_FILTER_LABELS[tile],
+      value: count(tile),
+      tone: tile === "paused" ? "neutral" : PAGE_TONES[tile],
+      href: hrefOf(tile),
+      current: status === tile,
     })),
   ];
-  return <FigureStrip label="Pages by status" figures={figures} />;
+  return <FigureTiles label="Pages by status" figures={figures} />;
 }

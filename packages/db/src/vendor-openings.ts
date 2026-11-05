@@ -35,6 +35,7 @@ export async function listVendorOpenings(): Promise<VendorOpening[]> {
     },
     orderBy: [
       { location: { name: "asc" } },
+      { sortOrder: "asc" },
       { vehicleClass: { sortOrder: "asc" } },
     ],
   });

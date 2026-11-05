@@ -3,6 +3,7 @@
 import {
   createOffering,
   getLocationSlug,
+  moveOffering,
   parseOfferingFields,
   parseVehicleClassFields,
   textOf,
@@ -131,6 +132,28 @@ export async function setOfferingActiveAction(
   )
     return STALE;
   const result = await updateOffering(actorOf(admin), id, { isActive });
+  if (result.ok) {
+    revalidateLocation();
+    refreshLocationAfter(locationId);
+  }
+  return stateOf(result);
+}
+
+/** Moves a class one place earlier or later in the location's order, the customer's too. */
+export async function moveOfferingAction(
+  locationId: string,
+  id: string,
+  by: -1 | 1,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  if (
+    typeof locationId !== "string" ||
+    typeof id !== "string" ||
+    (by !== -1 && by !== 1)
+  )
+    return STALE;
+  const result = await moveOffering(actorOf(admin), id, by);
   if (result.ok) {
     revalidateLocation();
     refreshLocationAfter(locationId);

@@ -12,7 +12,7 @@ import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import { sitePagesHref } from "../../../../_lib/routes";
 import { PageTree, footerRow, sitePageRow, type PageGroup } from "./PageList";
-import { PageStatusStrip, countedOfRow, emptyOf } from "./PageStatusStrip";
+import { PageStatusTiles, countedOfRow, emptyOf } from "./PageStatusTiles";
 
 const TITLES: Record<SitePageApp, string> = {
   website: "Website",
@@ -79,7 +79,7 @@ async function sitePageList({
 
   return (
     <>
-      <PageStatusStrip
+      <PageStatusTiles
         pages={rows.map(countedOfRow)}
         status={status}
         q={q}

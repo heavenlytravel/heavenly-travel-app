@@ -1,9 +1,14 @@
 import {
   ACTIVITY_AREA_LABELS,
+  ACTOR_KINDS,
+  ACTOR_KIND_LABELS,
   LOCATION_ACTIVITY_AREAS,
   activityAreasHeld,
   isActivityArea,
+  isActorKind,
+  textOf,
   type ActivityArea,
+  type ActorKind,
   type Permission,
 } from "@repo/db";
 import {
@@ -15,7 +20,13 @@ import {
 import type { ReactNode } from "react";
 import { PageHeader } from "@repo/console/PageHeader";
 import { Streamed } from "@repo/console/Skeleton";
-import { FilterLinks } from "../../../_components/FilterLinks";
+import {
+  FilterChips,
+  ListFilters,
+  type FilterGroup,
+} from "../../../_components/ListFilters";
+import { ListToolbar } from "../../../_components/ListToolbar";
+import { SearchBox } from "../../../_components/SearchBox";
 import { HistoryPager } from "../../../_components/HistoryPager";
 import {
   HistoryTimeline,
@@ -33,11 +44,11 @@ import { locationsVisible, scopeOf } from "../../../_lib/scope";
 /** How many changes a page of the log holds. */
 const PAGE_SIZE = 50;
 
-/** One log as the page reads it: its filter chips, its pages and where each is. */
+/** One log as the page reads it: its filters bar, its pages and where each is. */
 type Log = {
-  /** Names the log with its filter, so a change of filter shows the skeleton. */
+  /** Names the log with its filters, so a change of filter shows the skeleton. */
   key: string;
-  chips: ReactNode;
+  bar: ReactNode;
   emptyMessage: string;
   /** The log older than the entry `before`, newest first; from the newest without. */
   read: (before: string | undefined) => Promise<LogPage>;
@@ -50,16 +61,19 @@ type Log = {
 /**
  * The log of a scope, for an admin who holds `held`: under `~` every
  * action across the console, under a location the changes to it and to
- * the vehicles and drivers based there. Either is narrowed to one area
- * by the chips (`?area=`), which offer the areas held that the log can
- * hold. The fleet's changes are Operation's, the team's SUPER's.
+ * the vehicles and drivers based there. Either is narrowed by the
+ * Filters button to one area (`?area=`), of the areas held that the log
+ * can hold, and to one kind of actor (`?who=`), and by the search to the
+ * people whose name or email it finds (`?q=`), staff, customers or
+ * drivers alike. The fleet's changes are Operation's, the team's SUPER's.
  */
 function logOf(
   slug: ScopeSlug,
   location: LocationName | null,
-  area: unknown,
+  query: { area?: unknown; who?: unknown; q?: unknown },
   held: readonly ActivityArea[],
 ): Log {
+  const { area } = query;
   const offered = location
     ? held.filter((each) =>
         (LOCATION_ACTIVITY_AREAS as readonly ActivityArea[]).includes(each),
@@ -67,47 +81,82 @@ function logOf(
     : held;
   const filter =
     isActivityArea(area) && offered.includes(area) ? area : undefined;
+  const who: ActorKind | undefined = isActorKind(query.who)
+    ? query.who
+    : undefined;
+  const q = textOf(query.q) || undefined;
   // Asked by every area held, so SUPER's query asks nothing of the action.
   const areas = { held, area: filter };
+  const actors = { kind: who, search: q };
+  const listed = activityHref(slug, { area: filter, who, q });
+  const groups: FilterGroup[] = [
+    {
+      param: "area",
+      label: "Area",
+      value: filter ?? "",
+      options: offered.map((each) => ({
+        value: each,
+        label: ACTIVITY_AREA_LABELS[each],
+      })),
+    },
+    {
+      param: "who",
+      label: "Who",
+      value: who ?? "",
+      options: ACTOR_KINDS.map((kind) => ({
+        value: kind,
+        label: ACTOR_KIND_LABELS[kind],
+      })),
+    },
+  ];
   return {
-    key: filter ?? "all",
-    chips: (
-      <FilterLinks
-        label="Filter by area"
-        options={offered.map((each) => ({
-          value: each,
-          label: ACTIVITY_AREA_LABELS[each],
-        }))}
-        active={filter}
-        hrefOf={(value) => activityHref(slug, { area: value })}
-      />
+    key: listed,
+    bar: (
+      <>
+        <ListToolbar>
+          <SearchBox
+            href={activityHref(slug, { area: filter, who })}
+            value={q ?? ""}
+            label="Search activity by person"
+            placeholder="Who did it: name or email"
+          />
+          <ListFilters href={listed} groups={groups} />
+        </ListToolbar>
+        <FilterChips href={listed} groups={groups} />
+      </>
     ),
-    emptyMessage: filter
-      ? `No changes to ${ACTIVITY_AREA_LABELS[filter].toLowerCase()} recorded.`
-      : location
-        ? "No changes recorded for this location."
-        : "No activity yet.",
+    emptyMessage: q
+      ? `No changes by anyone matching “${q}”.`
+      : who
+        ? "No changes match these filters."
+        : filter
+          ? `No changes to ${ACTIVITY_AREA_LABELS[filter].toLowerCase()} recorded.`
+          : location
+            ? "No changes recorded for this location."
+            : "No activity yet.",
     read: (before) =>
       location
         ? listLocationHistory({
             locationId: location.id,
             areas,
+            actors,
             before,
             take: PAGE_SIZE,
           })
-        : listActivity({ areas, before, take: PAGE_SIZE }),
-    href: (before) => activityHref(slug, { area: filter, before }),
+        : listActivity({ areas, actors, before, take: PAGE_SIZE }),
+    href: (before) => activityHref(slug, { area: filter, who, q, before }),
     here: location?.id,
   };
 }
 
 /**
- * Route: /[location]/activity?area=fleet&before=<id>. What changed and
- * who changed it, newest first, a page at a time, grouped by the day it
- * was made, for every admin: the entries of the areas its teams hold
- * (`activityAreasHeld`), all of them for SUPER. Under `~` the console's
- * whole log, under a location its own history; either narrowed to one
- * area (`?area=`). Each line names its record at the right and opens it
+ * Route: /[location]/activity?q=aina&area=fleet&who=admin&before=<id>.
+ * What changed and who changed it, newest first, a page at a time,
+ * grouped by the day it was made, for every admin: the entries of the
+ * areas its teams hold (`activityAreasHeld`), all of them for SUPER. Under
+ * `~` the console's whole log, under a location its own history; either
+ * narrowed by the Filters button to one area or one kind of actor, and
+ * by the search to people by name or email. Each line names its record under its sentence and opens it
  * where it has a page: a booking, a location, a class, a vehicle or a
  * driver at the location it is based at, a publish as the page was
  * before and after (`_lib/activity-links`). One record's history is on
@@ -119,24 +168,21 @@ export default async function ActivityPage({
 }: PageProps<"/[location]/activity">) {
   await requireAdmin(consolePage("activity").permission);
   const scope = await scopeOf(params);
-  const [{ area, before: cursor }, permissions] = await Promise.all([
+  const [query, permissions] = await Promise.all([
     searchParams,
     getPermissions(),
   ]);
+  const cursor = query.before;
   const before = typeof cursor === "string" && cursor ? cursor : undefined;
-  const log = logOf(
-    scope.slug,
-    scope.location,
-    area,
-    activityAreasHeld(permissions),
-  );
+  const held = activityAreasHeld(permissions);
+  const log = logOf(scope.slug, scope.location, query, held);
 
   return (
     <>
       <PageHeader title="Activity" meta={scope.location?.name} />
       <Streamed
         key={`${log.key}:${before ?? "newest"}`}
-        fallback={<HistoryTimelineSkeleton head={log.chips} />}
+        fallback={<HistoryTimelineSkeleton head={log.bar} />}
       >
         {() => logPage({ log, before, permissions })}
       </Streamed>
@@ -162,7 +208,7 @@ async function logPage({
 
   return (
     <HistoryTimeline
-      head={log.chips}
+      head={log.bar}
       // The timeline reads entries oldest first.
       entries={[...entries].reverse()}
       emptyMessage={log.emptyMessage}

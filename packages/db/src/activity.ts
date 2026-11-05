@@ -417,6 +417,53 @@ export type ActivityAreas = {
   area?: ActivityArea;
 };
 
+/** Whose entries a reader asks for: one kind of actor, people by name, or anyone's. */
+export type ActivityActors = {
+  kind?: string;
+  /** Words of a person's name or email, each in one of them: "aina", "nurul ai". */
+  search?: string;
+};
+
+/**
+ * Where the actors asked for are. A search finds the people whose first
+ * name, last name or email holds every word of it; an entry outlives its
+ * user, so one deleted since is found by no search.
+ */
+async function actorWhere(
+  actors: ActivityActors = {},
+): Promise<Prisma.ActivityLogWhereInput> {
+  const words = (actors.search ?? "").trim().split(/\s+/).filter(Boolean);
+  const ids =
+    words.length > 0
+      ? (
+          await db.user.findMany({
+            where: {
+              AND: words.map((word) => ({
+                OR: (["firstName", "lastName", "email"] as const).map(
+                  (field) => ({
+                    [field]: { contains: word, mode: "insensitive" as const },
+                  }),
+                ),
+              })),
+            },
+            select: { id: true },
+          })
+        ).map((user) => user.id)
+      : null;
+  return {
+    ...(actors.kind ? { actorKind: actors.kind } : {}),
+    ...(ids ? { actorId: { in: ids } } : {}),
+  };
+}
+
+/** Where a location's own history is: its entries, and those of the vehicles and drivers based there. */
+const locationWhere = (locationId: string): Prisma.ActivityLogWhereInput => ({
+  OR: [
+    { entityType: "location", entityId: locationId },
+    { locationIds: { has: locationId } },
+  ],
+});
+
 /**
  * The query's part that keeps the areas asked for: by action, so a page
  * of the log is a page of what the admin may see. An area not held asks
@@ -456,27 +503,25 @@ async function pageOf(
  * each was made, of the areas asked for. `before` is the id of the last
  * entry of the previous page.
  */
-export function listLocationHistory({
+export async function listLocationHistory({
   locationId,
   areas,
+  actors,
   before,
   take,
 }: {
   locationId: string;
   areas: ActivityAreas;
+  actors?: ActivityActors;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
   return pageOf(
     {
       AND: [
-        {
-          OR: [
-            { entityType: "location", entityId: locationId },
-            { locationIds: { has: locationId } },
-          ],
-        },
+        locationWhere(locationId),
         areaWhere(areas),
+        await actorWhere(actors),
       ],
     },
     before,
@@ -554,14 +599,20 @@ export type ActivityPage = {
  * The log across the app, newest first, one page at a time, of the areas
  * asked for. `before` is the id of the last entry of the previous page.
  */
-export function listActivity({
+export async function listActivity({
   areas,
+  actors,
   before,
   take,
 }: {
   areas: ActivityAreas;
+  actors?: ActivityActors;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
-  return pageOf(areaWhere(areas), before, take);
+  return pageOf(
+    { AND: [areaWhere(areas), await actorWhere(actors)] },
+    before,
+    take,
+  );
 }

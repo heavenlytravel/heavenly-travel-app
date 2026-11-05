@@ -29,6 +29,7 @@ import {
   type PageImage,
   type WebsitePageKey,
   type UploadedImage,
+  IMAGE_SIZES,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
@@ -39,6 +40,7 @@ import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { Card, CardRows, CardTitle } from "@repo/console/Card";
+import { ImageSizeHint } from "@repo/console/ImageSizeHint";
 import { FormError } from "@repo/ui/form-error";
 import { ImageUpload } from "../../../../../_components/ImageUpload";
 import { Counted } from "../../../../../_components/page-editor/Count";
@@ -655,6 +657,7 @@ export function FooterEditor({
                             }
                             alt=""
                             look="logo"
+                            size={IMAGE_SIZES.logo}
                             onChange={(image) =>
                               update({
                                 image: image ? { ...image, alt: "" } : null,
@@ -1239,6 +1242,7 @@ function PaymentCard({
         Payment partners
       </CardTitle>
       <div className="grid gap-4">
+        <ImageSizeHint size={IMAGE_SIZES.logo} />
         <HeadingField
           value={content.paymentHeading}
           placeholder="Payment partners"

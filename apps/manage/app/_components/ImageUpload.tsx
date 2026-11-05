@@ -1,11 +1,13 @@
 "use client";
 
 import {
-  IMAGE_MAX_MB,
   IMAGE_TYPES,
+  imageSizeWarning,
   isUploadUrl,
+  type ImageSize,
   type UploadedImage,
 } from "@repo/db";
+import { ImageSizeHint } from "@repo/console/ImageSizeHint";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import Image from "next/image";
@@ -19,7 +21,10 @@ import { MediaPicker } from "./MediaPicker";
  * One image of a form: what is there now, and the buttons that upload or
  * replace it, choose one already stored from Media, view it full screen
  * or take it away. The file is stored as soon as it is chosen, at the
- * upload route given; the form keeps it once it is saved. A page's
+ * upload route given; the form keeps it once it is saved. Under the
+ * buttons, the size the place wants it at (`size`), and once an image is
+ * there, its own size and a warning when it is much smaller or another
+ * shape. A page's
  * image adds its alt text under it; a vehicle class's picture is the
  * class's name.
  */
@@ -30,6 +35,7 @@ export function ImageUpload({
   alt,
   onChange,
   look = "picture",
+  size: recommended,
 }: {
   /** What the image is, as a screen reader hears the controls: "Hero image". */
   label: string;
@@ -41,14 +47,23 @@ export function ImageUpload({
   onChange: (image: UploadedImage | null) => void;
   /** How the image shows: a picture, or a small logo on white. */
   look?: "picture" | "logo";
+  /** The size the place wants it at, one of IMAGE_SIZES. */
+  size: ImageSize;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const { upload, uploading, error } = useImageUpload(
     uploadPath,
     label.toLowerCase(),
   );
-  // Read off the file once it has loaded, for the line beside the buttons.
-  const [size, setSize] = useState<string | null>(null);
+  // Read off the file once it has loaded, for the lines under the buttons.
+  const [natural, setNatural] = useState<{
+    src: string;
+    width: number;
+    height: number;
+  } | null>(null);
+  // The size read off the image shown, not one replaced since.
+  const loaded = natural && natural.src === src ? natural : null;
+  const warning = loaded ? imageSizeWarning(recommended, loaded) : null;
 
   return (
     <div className="grid gap-3">
@@ -63,7 +78,7 @@ export function ImageUpload({
           unoptimized={!isUploadUrl(src)}
           onLoad={(event) => {
             const { naturalWidth, naturalHeight } = event.currentTarget;
-            setSize(`${naturalWidth} × ${naturalHeight}`);
+            setNatural({ src, width: naturalWidth, height: naturalHeight });
           }}
           // A box of its own size, whatever the image's shape, so nothing
           // moves as it loads: the image fits inside it.
@@ -118,15 +133,9 @@ export function ImageUpload({
               Remove
             </Button>
           </>
-        ) : (
-          <span className="text-xs text-muted">
-            JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
-          </span>
-        )}
-        {src && size ? (
-          <span className="text-xs text-muted tabular-nums">{size}</span>
         ) : null}
       </div>
+      <ImageSizeHint size={recommended} loaded={loaded} warning={warning} />
       <FormError error={error} size="xs" />
     </div>
   );

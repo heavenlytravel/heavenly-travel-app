@@ -1,6 +1,6 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
+import type { TripCategory } from "./booking-status";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type {
@@ -8,7 +8,12 @@ import type {
   Prisma,
   VehicleClass,
 } from "./generated/prisma/client";
-import { checkOfferingFields, type OfferingFields } from "./offering-input";
+import {
+  byCategory,
+  byClassOrder,
+  checkOfferingFields,
+  type OfferingFields,
+} from "./offering-input";
 import { slugify } from "./slug";
 import {
   checkVehicleClassFields,
@@ -53,7 +58,7 @@ export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
   vehicleClass: VehicleClass & { models: ShownModel[] };
 };
 
-/** Offerings as they are read, their models named, in the class's order. */
+/** Offerings as they are read, their models named, in the location's order. */
 function onSale(rows: OfferingWithModelRows[]): OfferingOnSale[] {
   return rows
     .map(
@@ -72,20 +77,7 @@ const NOT_FOUND: Change = refuse(
   "This class was taken off this location meanwhile. Go back to the list.",
 );
 
-const categoryRank = (category: string) =>
-  TRIP_CATEGORIES.indexOf(category as TripCategory);
-
-/** Car with driver first, then by the class's order and name. */
-export const byClassOrder = (
-  a: Pick<Offering, "vehicleClass">,
-  b: Pick<Offering, "vehicleClass">,
-) =>
-  categoryRank(a.vehicleClass.category) -
-    categoryRank(b.vehicleClass.category) ||
-  a.vehicleClass.sortOrder - b.vehicleClass.sortOrder ||
-  a.vehicleClass.name.localeCompare(b.vehicleClass.name);
-
-/** Every offering of the location, on sale or not: car with driver first, then by the class's order. */
+/** Every offering of the location, on sale or not, in its order (`byClassOrder`). */
 export async function listOfferings(locationId: string): Promise<Offering[]> {
   const rows = await db.locationVehicleClass.findMany({
     where: { locationId },
@@ -96,7 +88,7 @@ export async function listOfferings(locationId: string): Promise<Offering[]> {
 
 /**
  * The offerings the location sells in the category right now: on sale, of
- * an active class, in the class's order, each class with the models of
+ * an active class, in the location's order, each class with the models of
  * the location's vehicles in service. What the options page prices.
  */
 export async function listActiveOfferings(
@@ -193,9 +185,7 @@ export async function listClassesNotOffered(
     where: { offerings: { none: { locationId } } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-  return rows.sort(
-    (a, b) => categoryRank(a.category) - categoryRank(b.category),
-  );
+  return rows.sort(byCategory);
 }
 
 /** What "Add class" picks: a catalogue class by id, or a new one with its fields. */
@@ -204,7 +194,7 @@ export type OfferingClassChoice =
 
 /**
  * Starts selling a class at the location, at the rates and under the rules
- * given. A new
+ * given, last in its category's order once the location has one. A new
  * catalogue class is created first, with its slug from its name, and
  * logged against itself as the Vehicle classes screen would. A class the
  * location already offers is refused.
@@ -281,8 +271,20 @@ export async function createOffering(
         "vehicleClassId",
       );
     }
+    // Once the location has ordered its list, a new class goes last in it;
+    // before, it takes the catalogue's place like the rest.
+    const last = await tx.locationVehicleClass.aggregate({
+      where: { locationId, vehicleClass: { category: vehicleClass.category } },
+      _max: { sortOrder: true },
+    });
+    const ordered = last._max.sortOrder ?? 0;
     const offering = await tx.locationVehicleClass.create({
-      data: { locationId, vehicleClassId: vehicleClass.id, ...fields },
+      data: {
+        locationId,
+        vehicleClassId: vehicleClass.id,
+        ...fields,
+        sortOrder: ordered > 0 ? ordered + 1 : 0,
+      },
     });
     await logActivity(tx, actor, {
       action: "location.offering.created",
@@ -342,6 +344,59 @@ export async function updateOffering(
         ...changed.before,
       },
       after: { vehicleClassName: offering.vehicleClass.name, ...changed.after },
+    });
+    return { ok: true };
+  });
+}
+
+/**
+ * Moves a class one place earlier or later among its category's at the
+ * location, the order its customers meet them in. The category's places
+ * are written again as 1, 2, 3 with no gaps, from the order on screen,
+ * and the order logged.
+ */
+export async function moveOffering(
+  actor: Actor,
+  id: string,
+  by: -1 | 1,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const offering = await tx.locationVehicleClass.findUnique({
+      where: { id },
+      ...withClass,
+    });
+    if (!offering) return NOT_FOUND;
+    const rows = (
+      await tx.locationVehicleClass.findMany({
+        where: {
+          locationId: offering.locationId,
+          vehicleClass: { category: offering.vehicleClass.category },
+        },
+        ...withClass,
+      })
+    ).sort(byClassOrder);
+    const before = rows.map((row) => row.vehicleClass.name);
+    const index = rows.findIndex((row) => row.id === id);
+    const other = index + by;
+    if (other < 0 || other >= rows.length) return { ok: true };
+    const after = [...rows];
+    after.splice(index, 1);
+    after.splice(other, 0, offering);
+    for (const [place, row] of after.entries()) {
+      if (row.sortOrder === place + 1) continue;
+      await tx.locationVehicleClass.update({
+        where: { id: row.id },
+        data: { sortOrder: place + 1 },
+      });
+    }
+    await logActivity(tx, actor, {
+      action: "location.offerings.ordered",
+      entityId: offering.locationId,
+      before: { order: before },
+      after: {
+        order: after.map((row) => row.vehicleClass.name),
+        moved: offering.vehicleClass.name,
+      },
     });
     return { ok: true };
   });

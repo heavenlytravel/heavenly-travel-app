@@ -29,7 +29,7 @@ import { useDismiss } from "@repo/ui/use-dismiss";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { joinPiecesAction } from "../actions";
-import { FullScreenButton, useFullScreen } from "./full-screen";
+import { FullScreenButton } from "./full-screen";
 import {
   MAP_FAILURES,
   boundsOf,
@@ -159,9 +159,10 @@ const shapeOfPieces = (pieces: MultiPolygon): ZoneShape | null =>
  * its other zones in blue, other locations' zones in amber, and the zone
  * being made in green, each piece of land its own shape. The tools sit at
  * the bottom of the map. Its full-screen button, top right where Google
- * keeps its own, puts the map and the line under it on screen together:
- * Google's would show the map alone, and the line's notices with it
- * unseen. With the pencil every
+ * keeps its own, asks `onToggleFull` to put the whole zone maker on
+ * screen, its form beside the map as on Try a trip: Google's would show
+ * the map alone, and the line's notices with it unseen. With `full`, the
+ * map fills the height it is given. With the pencil every
  * edit is a plain click (./piece-editor): select a piece or a corner, or
  * several pieces with Shift+click, to delete or merge, drag it, grow or shrink a piece from the squares of its box, add a
  * corner with the "+" on an edge, take away what is selected with the
@@ -189,6 +190,8 @@ export function ZoneMap({
   mukims,
   trims,
   overlap,
+  full,
+  onToggleFull,
 }: {
   mapKey: string;
   districts: DistrictOutline[];
@@ -209,12 +212,13 @@ export function ZoneMap({
   trims?: readonly { id: string; shape: ZoneShape }[] | null;
   /** What the zone overlaps and the ways out, over the map above the tools; none while nothing is in its way. */
   overlap?: ReactNode;
+  /** The zone maker is in full screen: the map fills the height it is given. */
+  full: boolean;
+  onToggleFull: () => void;
 }) {
   const { host, map, library, failed } = useGoogleMap(mapKey, districts, {
     ownFullScreen: true,
   });
-  // The map and the line under it, which full screen shows together.
-  const { ref: wrapper, full, toggle } = useFullScreen<HTMLDivElement>();
   const editor = useRef<PieceEditor | null>(null);
   // The other zones as drawn, by id, to show a trim on them.
   const otherPolygons = useRef(new Map<string, google.maps.Polygon>());
@@ -450,10 +454,7 @@ export function ZoneMap({
   const keys = map ? shortcutsHere() : null;
 
   return (
-    <div
-      ref={wrapper}
-      className={cx("grid gap-2", full && "grid-rows-[1fr_auto] bg-white p-3")}
-    >
+    <div className={cx("grid gap-2", full && "h-full grid-rows-[1fr_auto]")}>
       {/* The map, and over it the tools, the full-screen button and the help:
           the zone maker's own, not Google's controls, so each stays where it
           is put however it grows, in full screen too. Isolated, so their
@@ -468,7 +469,7 @@ export function ZoneMap({
             full ? "h-full" : "h-[32rem]",
           )}
         />
-        {map ? <FullScreenButton full={full} onToggle={toggle} /> : null}
+        {map ? <FullScreenButton full={full} onToggle={onToggleFull} /> : null}
         {help && keys ? (
           <ZoneMapHelp keys={keys} onClose={() => setHelp(false)} />
         ) : null}

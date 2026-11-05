@@ -2,6 +2,7 @@ import { isTripCategory, type TripCategory } from "./booking-status";
 import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { isUploadUrl } from "./images";
+import { PHOTO_LIMITS } from "./photos-input";
 
 /**
  * What the Vehicle classes screen edits of a catalogue class and the rules
@@ -21,8 +22,8 @@ export type VehicleClassFields = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** Its picture on UploadThing; null for none. */
-  imageUrl: string | null;
+  /** Its pictures on UploadThing, in order, the first its cover; empty for none. */
+  imageUrls: string[];
   isActive: boolean;
 };
 
@@ -37,7 +38,7 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
-  imageUrl: "Picture",
+  imageUrls: "Pictures",
   isActive: "Active",
 };
 
@@ -91,22 +92,40 @@ export function checkVehicleClassFields(
       "maxPassengers",
     );
   }
-  if (
-    fields.imageUrl !== undefined &&
-    fields.imageUrl !== null &&
-    !isUploadUrl(fields.imageUrl)
-  ) {
-    return refuse(
-      "The picture did not finish uploading. Upload it again.",
-      "imageUrl",
-    );
+  if (fields.imageUrls !== undefined) {
+    if (fields.imageUrls.length > PHOTO_LIMITS.photos) {
+      return refuse(
+        `A class has at most ${PHOTO_LIMITS.photos} pictures. Remove some.`,
+        "imageUrls",
+      );
+    }
+    if (!fields.imageUrls.every(isUploadUrl)) {
+      return refuse(
+        "A picture did not finish uploading. Remove it and add it again.",
+        "imageUrls",
+      );
+    }
   }
   return { ok: true };
 }
 
+/** A JSON list of addresses as a form posts it; a value that is not one reads as an address nobody uploaded, which the check refuses. */
+function urlsOf(value: unknown): string[] {
+  try {
+    const list: unknown = JSON.parse(textOf(value) || "[]");
+    if (Array.isArray(list)) {
+      return list.map((url) => (typeof url === "string" ? url : ""));
+    }
+  } catch {
+    // Read below as one bad address.
+  }
+  return [""];
+}
+
 /**
  * The class form's values, read and checked. `isActive` is a checkbox;
- * `imageUrl` is the address the upload answered, empty for no picture.
+ * `imageUrls` is a JSON list of the addresses the uploads answered, in
+ * order, empty for no picture.
  */
 export function parseVehicleClassFields(
   values: Record<string, unknown>,
@@ -124,7 +143,7 @@ export function parseVehicleClassFields(
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),
-    imageUrl: textOf(values.imageUrl) || null,
+    imageUrls: urlsOf(values.imageUrls),
     isActive: flagOf(values.isActive),
   };
   const check = checkVehicleClassFields(fields);

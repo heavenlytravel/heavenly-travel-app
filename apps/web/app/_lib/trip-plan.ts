@@ -98,7 +98,9 @@ export type ClassCard = {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
-  imageUrl: string | null;
+  /** The catalogue's pictures of it, the first its cover; empty for none. */
+  imageUrls: string[];
+  category: string;
 };
 
 /** What pricing a list answers: each trip in the list's order, and the classes they offer. */
@@ -176,7 +178,7 @@ export function draftOf(trip: PlannedTrip): SearchValues {
     date: trip.date,
     time: trip.time,
     duration: String(trip.hourly?.packageHours ?? EMPTY_SEARCH.duration),
-    extra: String(trip.hourly?.extraHours ?? EMPTY_SEARCH.extra),
+    elsewhere: trip.mode === "hourly" && trip.dropoff ? "1" : "",
     placeIds: {
       from: trip.pickup.placeId,
       to: trip.dropoff?.placeId,
@@ -258,14 +260,15 @@ export function spanOf(trips: readonly PlannedTrip[]) {
     : `${shortDayOf(first)} to ${shortDayOf(last)}`;
 }
 
-/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", or "8 hours from Pelangi Beach Resort". */
+/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", "8 hours from Pelangi Beach Resort", or with "to Langkawi Airport" after it when the hire ends there. */
 export function routeOf(trip: PlannedTrip) {
   // A trip from a link has its places named once it is priced.
   const name = (place: PlanPlace | null) => place?.label || "…";
   if (trip.mode === "hourly") {
-    return trip.hourly
+    const hire = trip.hourly
       ? `${hourlyChoiceLabel(trip.hourly)} from ${name(trip.pickup)}`
       : `${trip.hours} hours from ${name(trip.pickup)}`;
+    return trip.dropoff ? `${hire}, to ${name(trip.dropoff)}` : hire;
   }
   return `${name(trip.pickup)} → ${name(trip.dropoff)}`;
 }

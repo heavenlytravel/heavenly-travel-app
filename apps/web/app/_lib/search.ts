@@ -1,5 +1,4 @@
 import {
-  EXTRA_HOUR_CHOICES,
   HOURLY_PACKAGES,
   DURATION_CHOICES,
   TRIP_CATEGORY_LABELS,
@@ -31,7 +30,7 @@ export type FieldKey =
   | "endTime"
   | "days"
   | "duration"
-  | "extra"
+  | "elsewhere"
   | "people"
   | "children"
   | "rooms";
@@ -51,6 +50,16 @@ export type FieldDef = {
   options?: { value: string; label: string }[];
   /** A field another field's value makes irrelevant: the duration on a one-way trip. */
   hidden?: (values: SearchValues) => boolean;
+  /**
+   * A tick box under the field, in its box, that sets `key` to "1" or "":
+   * the pick-up's "Drop off elsewhere" on a hire. Shown while
+   * `shown` says so.
+   */
+  tick?: {
+    key: FieldKey;
+    label: string;
+    shown: (values: SearchValues) => boolean;
+  };
 };
 
 export type Product = {
@@ -77,11 +86,16 @@ const dropOff: FieldDef = {
   placeholder: "Where are you going?",
 };
 
+/** Whether a hire ends away from its pickup: ticked under the pick-up, it asks the drop-off. */
+const endsElsewhere = (v: SearchValues) =>
+  v.mode === "hourly" && v.elsewhere === "1";
+
 /**
  * What a trip asks, on the search card and in the vehicle page's trip
- * planner alike: its kind first, as two radios. The group's size is asked
- * once for all the trips, beside the send button and with the vehicle
- * page's trips.
+ * planner alike: its kind first, as two radios. A hire asks its package,
+ * 4, 8 or 12 hours, and a drop-off only when it is ticked to end
+ * elsewhere. The group's size is asked once for all the trips, beside the
+ * send button and with the vehicle page's trips.
  */
 const TRIP_FIELDS: FieldDef[] = [
   {
@@ -93,20 +107,20 @@ const TRIP_FIELDS: FieldDef[] = [
       label: TRIP_MODE_LABELS[mode],
     })),
   },
-  pickUp,
-  { ...dropOff, hidden: (v) => v.mode === "hourly" },
+  {
+    ...pickUp,
+    tick: {
+      key: "elsewhere",
+      label: "Drop off elsewhere",
+      shown: (v) => v.mode === "hourly",
+    },
+  },
+  { ...dropOff, hidden: (v) => v.mode === "hourly" && !endsElsewhere(v) },
   {
     key: "duration",
     kind: "choice",
     label: "Duration",
     options: DURATION_CHOICES,
-    hidden: (v) => v.mode !== "hourly",
-  },
-  {
-    key: "extra",
-    kind: "choice",
-    label: "Extra hours",
-    options: EXTRA_HOUR_CHOICES,
     hidden: (v) => v.mode !== "hourly",
   },
   { key: "date", timeKey: "time", kind: "when", label: "When" },
@@ -264,7 +278,7 @@ export const EMPTY_SEARCH: SearchValues = {
   endTime: "",
   days: "3",
   duration: String(HOURLY_PACKAGES[0]),
-  extra: "0",
+  elsewhere: "",
   people: "2",
   children: "0",
   rooms: "1",

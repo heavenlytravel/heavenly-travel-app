@@ -1,18 +1,29 @@
-import { driverDocumentsDue, plural, vehicleDocumentsDue } from "@repo/db";
 import {
+  driverDocumentsDue,
+  plural,
+  searchTermOf,
+  textOf,
+  vehicleDocumentsDue,
+} from "@repo/db";
+import {
+  listClassOptions,
   listDrivers,
   listGuides,
   listVehicles,
+  listVendorOptions,
   type DriverWithClasses,
   type FleetFilter,
   type GuideWithVendor,
   type ListedVehicle,
 } from "@repo/db/server";
 import { Card } from "@repo/console/Card";
-import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import {
+  DUE_PARAM,
+  isFleetService,
+  SEARCH_PARAM,
   driversHref,
   guidesHref,
   vehiclesHref,
@@ -20,11 +31,11 @@ import {
 } from "../_lib/routes";
 import type { ConsoleScope } from "../_lib/scope";
 import { DriversTable } from "./DriversTable";
-import { DueFilter } from "./DueFilter";
 import { GuidesTable } from "./GuidesTable";
 import { SearchBox } from "./SearchBox";
 import { VehiclesTable } from "./VehiclesTable";
 import { ListToolbar } from "./ListToolbar";
+import { FilterChips, ListFilters, type FilterGroup } from "./ListFilters";
 
 /**
  * How each list names its records, their standing and the documents it
@@ -76,7 +87,26 @@ type Listed =
   | { kind: "drivers"; rows: DriverWithClasses[] }
   | { kind: "guides"; rows: GuideWithVendor[] };
 
-async function read(kind: FleetKind, filter: FleetFilter): Promise<Listed> {
+/**
+ * A fleet list's filter as its address holds it, every field checked: an
+ * unknown value is no filter. The three list pages read theirs with it.
+ */
+export function fleetListFilterOf(
+  query: Record<string, string | string[] | undefined>,
+): FleetListFilter {
+  return {
+    due: query.due === DUE_PARAM || undefined,
+    service: isFleetService(query.service) ? query.service : undefined,
+    vendor: textOf(query.vendor) || undefined,
+    vehicleClass: textOf(query.class) || undefined,
+    q: searchTermOf(query[SEARCH_PARAM]) ?? undefined,
+  };
+}
+
+async function read(
+  kind: FleetKind,
+  filter: FleetFilter & { vehicleClassId?: string },
+): Promise<Listed> {
   switch (kind) {
     case "vehicles":
       return { kind, rows: await listVehicles(filter) };
@@ -124,7 +154,7 @@ function countsOf(listed: Listed): Counts {
   };
 }
 
-/** The counts as the strip shows them, amber and red only when there are some; bones while they load. */
+/** The counts as the tiles show them, amber and red only when there are some; bones while they load. */
 function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
   const names = KINDS[kind];
   const value = (n: number | undefined) => n ?? <Bone className="h-7 w-8" />;
@@ -162,13 +192,14 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
 
 /**
  * Our vehicles, our drivers or the tour guides in the scope: every location's under `~`,
- * with a column of locations, or those based at one location. A strip of
- * figures sums up the scope; under it, in one card, the search, the
- * filter to those with a document due, and the table, with how many it
+ * with a column of locations, or those based at one location. Tiles of
+ * figures sum up the scope; under it, in one card, the search, the
+ * console's Filters button (in service or out, documents due, class,
+ * vendor) with a chip for each in force, and the table, with how many it
  * shows at its foot. The figures count the whole scope, whatever the
  * filters.
  */
-export function FleetList({
+export async function FleetList({
   kind,
   scope,
   filter,
@@ -178,36 +209,105 @@ export function FleetList({
   filter: FleetListFilter;
 }) {
   const names = KINDS[kind];
-  const { q } = filter;
+  const { q, service } = filter;
   const due = names.due !== null && (filter.due ?? false);
   const across = scope.slug === null;
   const locationId = scope.location?.id;
   const hrefOf = (next: FleetListFilter) => names.href(scope.slug, next);
+  const [vendors, classes] = await Promise.all([
+    listVendorOptions(),
+    kind === "vehicles" ? listClassOptions() : Promise.resolve([]),
+  ]);
+  // A vendor or class no longer listed is no filter, as any unknown value is.
+  const vendor = vendors.some((v) => v.id === filter.vendor)
+    ? filter.vendor
+    : undefined;
+  const vehicleClass = classes.some((c) => c.id === filter.vehicleClass)
+    ? filter.vehicleClass
+    : undefined;
+  const live: FleetListFilter = {
+    due: due || undefined,
+    service,
+    vendor,
+    vehicleClass,
+    q,
+  };
   // One read serves the figures and, unfiltered, the table.
   const everyOne = read(kind, { locationId });
-  const shown =
-    due || q ? read(kind, { locationId, due, search: q }) : everyOne;
+  const inDb = Boolean(due || q || vendor || vehicleClass);
+  const shown = (
+    inDb
+      ? read(kind, {
+          locationId,
+          due,
+          search: q,
+          vendorId: vendor,
+          vehicleClassId: vehicleClass,
+        })
+      : everyOne
+  ).then((listed) => inService(listed, service));
+  const narrowedBeyondDue = Boolean(vendor || vehicleClass || service);
   const empty = q
     ? `No ${names.one} matches “${q}”.`
-    : due && names.dueEmpty
-      ? `No ${names.one}${across ? "" : " here"} ${names.dueEmpty}.`
-      : across
-        ? `No ${names.one} yet.`
-        : `No ${names.one} based here yet.`;
+    : narrowedBeyondDue
+      ? `No ${names.one} matches these filters.`
+      : due && names.dueEmpty
+        ? `No ${names.one}${across ? "" : " here"} ${names.dueEmpty}.`
+        : across
+          ? `No ${names.one} yet.`
+          : `No ${names.one} based here yet.`;
+  const groups: FilterGroup[] = [
+    {
+      param: "service",
+      label: "Standing",
+      value: service ?? "",
+      options: [
+        { value: "active", label: names.active },
+        { value: "inactive", label: names.inactive },
+      ],
+    },
+    ...(names.due
+      ? [
+          {
+            param: "due",
+            label: names.due,
+            value: due ? DUE_PARAM : "",
+            options: [{ value: DUE_PARAM, label: "Due soon or expired" }],
+          },
+        ]
+      : []),
+    ...(kind === "vehicles"
+      ? [
+          {
+            param: "class",
+            label: "Class",
+            value: vehicleClass ?? "",
+            options: classes.map((c) => ({ value: c.id, label: c.name })),
+          },
+        ]
+      : []),
+    {
+      param: "vendor",
+      label: "Vendor",
+      value: vendor ?? "",
+      options: vendors.map((v) => ({ value: v.id, label: v.name })),
+    },
+  ];
+  const listed = hrefOf(live);
   const where = scope.location ? ` at ${scope.location.name}` : "";
 
   return (
     <>
       <Streamed
         fallback={
-          <FigureStrip
+          <FigureTiles
             label={`Our ${kind}${where}`}
             figures={figuresOf(kind, null)}
           />
         }
       >
         {async () => (
-          <FigureStrip
+          <FigureTiles
             label={`Our ${kind}${where}`}
             figures={figuresOf(kind, countsOf(await everyOne))}
           />
@@ -216,21 +316,16 @@ export function FleetList({
       <Card flush>
         <ListToolbar>
           <SearchBox
-            href={hrefOf({ due })}
+            href={hrefOf({ ...live, q: undefined })}
             value={q ?? ""}
             label={`Search ${kind}`}
             placeholder={names.search}
           />
-          {names.due ? (
-            <DueFilter
-              label={names.due}
-              due={due}
-              href={hrefOf({ due: !due, q })}
-            />
-          ) : null}
+          <ListFilters href={listed} groups={groups} />
         </ListToolbar>
+        <FilterChips href={listed} groups={groups} />
         <Streamed
-          key={`${due}:${q ?? ""}`}
+          key={listed}
           fallback={
             <TableSkeleton bare columns={names.columns + Number(across)} />
           }
@@ -277,4 +372,30 @@ export function FleetList({
       </Card>
     </>
   );
+}
+
+/** The rows in service, or out of it; all of them without `service`. */
+function inService(
+  listed: Listed,
+  service: FleetListFilter["service"],
+): Listed {
+  if (!service) return listed;
+  const keep = service === "active";
+  switch (listed.kind) {
+    case "vehicles":
+      return {
+        ...listed,
+        rows: listed.rows.filter((r) => r.isActive === keep),
+      };
+    case "drivers":
+      return {
+        ...listed,
+        rows: listed.rows.filter((r) => r.isActive === keep),
+      };
+    case "guides":
+      return {
+        ...listed,
+        rows: listed.rows.filter((r) => r.isActive === keep),
+      };
+  }
 }

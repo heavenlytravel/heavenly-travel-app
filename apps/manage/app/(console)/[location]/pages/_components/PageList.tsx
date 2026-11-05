@@ -147,7 +147,7 @@ export function footerRow(key: FooterKey, footer: FooterSummary): PageRow {
   };
 }
 
-/** What narrows a list of pages over it, all kept in its address; the status is the strip's. */
+/** What narrows a list of pages over it, all kept in its address; the status is the tiles'. */
 type PageTreeFilters = {
   /** The list's address as filtered, without the search. */
   searchHref: string;

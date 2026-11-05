@@ -225,7 +225,7 @@ function MediaTile({
       <div className="relative">
         <CardImage
           src={row.url}
-          fit="contain"
+          frame="file"
           sizes="(min-width: 1024px) 14rem, (min-width: 640px) 50vw, 100vw"
           fallback={<ImageIcon className="size-7 text-slot" />}
         >

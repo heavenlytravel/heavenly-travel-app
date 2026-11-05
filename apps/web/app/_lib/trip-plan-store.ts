@@ -57,6 +57,16 @@ const VERSION = 2;
 let cache: TripPlan | null = null;
 const listeners = new Set<() => void>();
 
+/**
+ * A stored pricing as this code reads it, or none: one kept before a
+ * class had a list of pictures is priced again rather than misread.
+ */
+function currentPricing(priced: PricedTrips | null | undefined) {
+  return priced?.classes.every((c) => Array.isArray(c.imageUrls))
+    ? priced
+    : null;
+}
+
 function read(): TripPlan {
   if (cache) return cache;
   try {
@@ -72,6 +82,7 @@ function read(): TripPlan {
         ? {
             ...EMPTY_PLAN,
             ...saved.plan,
+            priced: currentPricing(saved.plan.priced),
             guide: guideChoiceOf({
               language: saved.plan.guide?.language,
               request: saved.plan.guide?.request,

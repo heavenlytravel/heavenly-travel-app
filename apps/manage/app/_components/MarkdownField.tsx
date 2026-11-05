@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  IMAGE_MAX_MB,
+  IMAGE_SIZES,
   IMAGE_TYPES,
   imageSizeOf,
   isUploadUrl,
@@ -27,6 +27,7 @@ import { Count } from "./page-editor/Count";
 import { MediaPicker } from "./MediaPicker";
 import { LOCATION_IMAGE_UPLOAD_PATH } from "../_lib/routes";
 import { FormError } from "@repo/ui/form-error";
+import { ImageSizeHint } from "@repo/console/ImageSizeHint";
 import { useImageUpload } from "@repo/console/use-image-upload";
 
 /**
@@ -563,10 +564,8 @@ function AddImageDialog({
               setAlt("");
             }}
           />
-          <span className="text-xs text-muted">
-            JPEG, PNG or WebP, at most {IMAGE_MAX_MB} MB.
-          </span>
         </div>
+        <ImageSizeHint size={IMAGE_SIZES.inline} />
         <FormError error={error} size="xs" />
       </div>
     </Dialog>

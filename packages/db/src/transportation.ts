@@ -82,7 +82,10 @@ import {
 export type TripRequest = {
   mode: TripMode;
   pickup: Place;
-  /** Required for one-way, ignored for hourly. */
+  /**
+   * Required for one-way, where it is priced. An hourly hire's, when it
+   * ends away from its pickup, is kept for the driver and not priced.
+   */
   dropoff: Place | null;
   startsAt: Date;
   /** Hourly only: the package and the hours past it. */
@@ -377,6 +380,10 @@ async function quoteOne(
     !isExtraHours(choice.extraHours)
   ) {
     return fail("hours", "Choose how long you need the hourly hire.");
+  } else if (side === "customer" && choice.extraHours > 0) {
+    // The website sells the 4, 8 and 12-hour packages alone for now; the
+    // console may still add hours past one.
+    return fail("hours", "Choose 4, 8 or 12 hours.");
   }
 
   // The district is the record's: read alongside the locations.
@@ -769,10 +776,9 @@ function itemOf(
         vehicleModelName: model?.name ?? null,
         mode: basis.mode,
         pickupPlace: request.pickup,
-        dropoffPlace:
-          basis.mode === "oneway" && request.dropoff
-            ? request.dropoff
-            : Prisma.DbNull,
+        // An hourly hire's drop-off is where it ends, for the driver: it
+        // is not priced, the package is.
+        dropoffPlace: request.dropoff ?? Prisma.DbNull,
         hours: basis.mode === "hourly" ? basis.hours : null,
         distanceKm: basis.mode === "oneway" ? basis.distanceKm : null,
         driveMinutes: basis.mode === "oneway" ? quote.driveMinutes : null,

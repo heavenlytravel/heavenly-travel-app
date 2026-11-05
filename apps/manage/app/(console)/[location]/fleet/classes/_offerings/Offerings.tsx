@@ -22,12 +22,14 @@ import {
   ClassCategory,
 } from "../_catalogue/ClassCategory";
 import { seatsText } from "../_catalogue/class-text";
-import { OfferingActiveSwitch } from "./OfferingControls";
+import { OfferingActiveSwitch, OfferingMoveButtons } from "./OfferingControls";
 
 /**
  * A location's classes, the classes under its slug and the setup's step
  * of them: what it sells, by category, a card each with the catalogue's
- * picture, seats and luggage, its switch and its editor.
+ * picture, seats and luggage, its switch and its editor, in the order the
+ * location's customers meet them, which the cards' arrows change. A
+ * location that never moved one keeps the catalogue's order.
  * Their rates here are read on Rates; the rest of each class is the
  * catalogue's. Operation changes them (`manages`, `coverage.manage`);
  * Reservation and Sales read them, without the switch or the editor.
@@ -63,13 +65,15 @@ export function Offerings({
                         : null
                     }
                   >
-                    {ofCategory.map((offering) => (
+                    {ofCategory.map((offering, place) => (
                       <OfferingCard
                         key={offering.id}
                         slug={location.slug}
                         offering={offering}
                         manages={manages}
                         lastOnSale={offering.isActive && onSale === 1}
+                        first={place === 0}
+                        last={place === ofCategory.length - 1}
                       />
                     ))}
                   </ClassCategory>
@@ -104,19 +108,25 @@ export function Offerings({
  * One class at this location: the catalogue's picture, then its name
  * over the catalogue's seats and luggage, the switch that puts it
  * on sale here, and its editor. The whole card opens the editor; off, it
- * is in grey. Read only, the switch is a chip and there is no editor.
+ * is in grey. Its foot moves it earlier or later in the location's order.
+ * Read only, the switch is a chip and there is neither editor nor arrows.
  */
 function OfferingCard({
   slug,
   offering,
   manages,
   lastOnSale,
+  first,
+  last,
 }: {
   slug: string;
   offering: Offering;
   manages: boolean;
   /** It is the last of its category on sale here, so turning it off asks first. */
   lastOnSale: boolean;
+  /** Its place among its category's here, for the arrows. */
+  first: boolean;
+  last: boolean;
 }) {
   const { vehicleClass } = offering;
   const href = classHref(slug, offering.id);
@@ -124,8 +134,8 @@ function OfferingCard({
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
       <CardImage
-        src={vehicleClass.imageUrl}
-        fit="contain"
+        src={vehicleClass.imageUrls[0] ?? null}
+        frame="class"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={<BusIcon className="size-7 text-muted" />}
       />
@@ -172,6 +182,7 @@ function OfferingCard({
           <Button asChild variant="secondary" size="sm">
             <Link href={href}>Edit</Link>
           </Button>
+          <OfferingMoveButtons offering={offering} first={first} last={last} />
           <span className="ml-auto text-xs text-muted">
             {offering.isActive ? "On sale" : "Off sale"}
           </span>

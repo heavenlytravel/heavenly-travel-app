@@ -1,5 +1,4 @@
 import {
-  isExtraHours,
   isHourlyPackage,
   isTripCategory,
   isTripMode,
@@ -64,7 +63,10 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
         : "Enter a pick-up place.",
     });
   }
-  if (mode === "oneway" && !values.placeIds.to) {
+  // A hire's drop-off, when it is ticked to end elsewhere.
+  const dropoff =
+    mode === "oneway" || values.elsewhere === "1" ? values.placeIds.to : null;
+  if (dropoff !== null && !dropoff) {
     issues.push({
       field: "to",
       message: values.to
@@ -76,13 +78,10 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
   if (!values.time) {
     issues.push({ field: "time", message: "Choose a pick-up time." });
   }
+  // The website sells the packages alone: no hours past one.
   const packageHours = Number(values.duration);
-  const extraHours = Number(values.extra || "0");
   if (mode === "hourly" && !isHourlyPackage(packageHours)) {
     issues.push({ field: "duration", message: "Choose a duration." });
-  }
-  if (mode === "hourly" && !isExtraHours(extraHours)) {
-    issues.push({ field: "extra", message: "Choose the extra hours." });
   }
   if (issues.length > 0) return { ok: false, issues };
 
@@ -92,10 +91,9 @@ export function tripSearchFromCard(values: SearchValues): TripSearchFromCard {
     [TRIP_PARAM.date]: values.date,
     [TRIP_PARAM.time]: values.time,
   });
-  if (mode === "oneway") params.set(TRIP_PARAM.dropoff, values.placeIds.to!);
-  else {
+  if (dropoff) params.set(TRIP_PARAM.dropoff, dropoff);
+  if (mode === "hourly") {
     params.set(TRIP_PARAM.packageHours, String(packageHours));
-    if (extraHours > 0) params.set(TRIP_PARAM.extraHours, String(extraHours));
   }
   return { ok: true, params };
 }

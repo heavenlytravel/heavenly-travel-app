@@ -1,9 +1,12 @@
 import Link from "next/link";
 import {
   isVendorKind,
+  isVendorService,
   isVendorStatus,
   searchTermOf,
   VENDOR_KIND_LABELS,
+  VENDOR_SERVICES,
+  VENDOR_SERVICE_LABELS,
   VENDOR_STATUSES,
   VENDOR_STATUS_LABELS,
 } from "@repo/db";
@@ -23,7 +26,11 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
-import { FilterLinks } from "../../../../_components/FilterLinks";
+import {
+  FilterChips,
+  ListFilters,
+  type FilterGroup,
+} from "../../../../_components/ListFilters";
 import { ListToolbar } from "../../../../_components/ListToolbar";
 import { SearchBox } from "../../../../_components/SearchBox";
 import { requireAdmin } from "../../../../_lib/access";
@@ -37,7 +44,9 @@ import { scopeOf, type ConsoleScope } from "../../../../_lib/scope";
 import { VendorStatusBadge } from "@repo/console/StatusBadges";
 
 /**
- * Route: /[location]/fleet/vendors?status=…&q=…. The vendors, ours first:
+ * Route: /[location]/fleet/vendors?status=…&service=…&q=…. The vendors,
+ * ours first, narrowed by the Filters button to a status or what they
+ * supply, and by a search:
  * every one under `~`, with the locations each serves, or those serving
  * the location under its slug; how many vehicles and drivers each has in
  * service, and where it stands. Those waiting for approval are SUPER's to
@@ -51,6 +60,29 @@ export default async function VendorsPage({
   const [scope, query] = await Promise.all([scopeOf(params), searchParams]);
   const status = isVendorStatus(query.status) ? query.status : undefined;
   const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
+  const service = isVendorService(query.service) ? query.service : undefined;
+  const groups: FilterGroup[] = [
+    {
+      param: "status",
+      label: "Status",
+      value: status ?? "",
+      options: VENDOR_STATUSES.map((value) => ({
+        value,
+        label: VENDOR_STATUS_LABELS[value],
+      })),
+    },
+    {
+      param: "service",
+      label: "Supplies",
+      value: service ?? "",
+      options: VENDOR_SERVICES.map((value) => ({
+        value,
+        label: VENDOR_SERVICE_LABELS[value],
+      })),
+    },
+  ];
+  // The list as filtered: what each control changes a field of.
+  const listed = vendorsHref(scope.slug, { status, service, q });
 
   return (
     <>
@@ -68,27 +100,20 @@ export default async function VendorsPage({
       <Card flush>
         <ListToolbar>
           <SearchBox
-            href={vendorsHref(scope.slug, { status })}
+            href={vendorsHref(scope.slug, { status, service })}
             value={q ?? ""}
             label="Search vendors"
             placeholder="Name, contact, phone or SSM"
           />
-          <FilterLinks
-            label="Filter by status"
-            options={VENDOR_STATUSES.map((value) => ({
-              value,
-              label: VENDOR_STATUS_LABELS[value],
-            }))}
-            active={status}
-            hrefOf={(next) => vendorsHref(scope.slug, { status: next, q })}
-          />
+          <ListFilters href={listed} groups={groups} />
         </ListToolbar>
+        <FilterChips href={listed} groups={groups} />
         {/* Keyed by the filters, so another filter shows the skeleton, not the old rows. */}
         <Streamed
-          key={`${scope.slug ?? "~"}:${status ?? ""}:${q ?? ""}`}
+          key={listed}
           fallback={<TableSkeleton bare rows={4} columns={4} />}
         >
-          {() => vendorRows(scope, { status, q })}
+          {() => vendorRows(scope, { status, service, q })}
         </Streamed>
       </Card>
     </>
@@ -97,10 +122,15 @@ export default async function VendorsPage({
 
 async function vendorRows(
   scope: ConsoleScope,
-  filter: { status?: (typeof VENDOR_STATUSES)[number]; q?: string },
+  filter: {
+    status?: (typeof VENDOR_STATUSES)[number];
+    service?: (typeof VENDOR_SERVICES)[number];
+    q?: string;
+  },
 ) {
   const vendors = await listVendors({
     status: filter.status,
+    service: filter.service,
     search: filter.q,
     locationId: scope.location?.id,
   });
@@ -117,8 +147,8 @@ async function vendorRows(
       <TBody>
         {vendors.length === 0 ? (
           <EmptyRow colSpan={columns}>
-            {filter.q || filter.status
-              ? "No vendor matches. Clear the filter to see them all."
+            {filter.q || filter.status || filter.service
+              ? "No vendor matches. Clear the filters to see them all."
               : scope.location
                 ? `No vendor serves ${scope.location.name} yet.`
                 : "No vendor yet."}

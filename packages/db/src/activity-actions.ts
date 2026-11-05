@@ -1,5 +1,4 @@
 import { isPaymentStatus, PAYMENT_STATUS_LABELS } from "./booking-number";
-import { ITEM_STATUS_LABELS, isItemStatus } from "./booking-status";
 import { guardFor } from "./const-enum";
 import { LOCATION_FIELD_LABELS } from "./location-input";
 import { andList } from "./names";
@@ -41,6 +40,14 @@ export const ACTOR_KINDS = [
 ] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
 export const isActorKind = guardFor(ACTOR_KINDS);
+/** Who acted, as the Activity filter names each kind. */
+export const ACTOR_KIND_LABELS: Record<ActorKind, string> = {
+  admin: "Staff",
+  customer: "Customers",
+  guest: "Guests",
+  connect: "Vendors and drivers",
+  system: "System",
+};
 
 export type AdminActor = { kind: "admin"; userId: string };
 export type CustomerActor = { kind: "customer"; userId: string };
@@ -282,6 +289,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /** A category's classes by name in their order, before and after; `moved` the one moved. */
+  "location.offerings.ordered": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /**
    * The zone's name; its shape stays on the row. A removal's `routesFrom`
    * names the other locations whose routes to it went with it; the entry is
@@ -471,7 +483,7 @@ function routesGone(json: unknown, toWhat: string) {
 
 function itemName(json: unknown) {
   const position = field(json, "position");
-  return typeof position === "number" ? `item ${position}` : "an item";
+  return typeof position === "number" ? `trip ${position}` : "a trip";
 }
 
 function adminState(json: unknown) {
@@ -480,7 +492,11 @@ function adminState(json: unknown) {
   const names = adminTeamsOf(Array.isArray(teams) ? teams : []).map(
     (team) => ADMIN_TEAM_LABELS[team],
   );
-  const levelName = typeof level === "string" ? level : "admin";
+  // "REGULAR" as a word: "Regular".
+  const levelName =
+    typeof level === "string"
+      ? `${level.charAt(0)}${level.slice(1).toLowerCase()}`
+      : "admin";
   return names.length > 0 ? `${levelName} (${names.join(", ")})` : levelName;
 }
 
@@ -911,25 +927,27 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.item.confirmed":
       return `Confirmed ${itemName(entry.after)}`;
+    // Every part accepted: the trip has all it needs.
     case "booking.item.assigned":
-    case "booking.item.completed": {
-      const status = field(entry.after, "status");
-      const label = isItemStatus(status)
-        ? ITEM_STATUS_LABELS[status].toLowerCase()
-        : "changed";
-      return `Marked ${itemName(entry.after)} ${label}`;
-    }
+      return `Assigned everyone to ${itemName(entry.after)}`;
+    case "booking.item.completed":
+      return `Completed ${itemName(entry.after)}`;
     case "booking.item.cancelled":
       return `Cancelled ${itemName(entry.after)}`;
     case "booking.item.reopened":
       return `Reopened ${itemName(entry.after)}: it lost its vehicle or driver`;
     case "booking.trip.reported": {
       const kind = field(entry.after, "kind");
+      const note = field(entry.after, "note");
+      const said = typeof note === "string" && note ? `: ${note}` : "";
+      // The problem's button asks; the history says what happened.
+      if (kind === "problem") {
+        return `Reported a problem on ${itemName(entry.after)}${said}`;
+      }
       const label = isTripEventKind(kind)
         ? TRIP_EVENT_LABELS[kind]
         : "A report";
-      const note = field(entry.after, "note");
-      return `${label}, ${itemName(entry.after)}${typeof note === "string" && note ? `: ${note}` : ""}`;
+      return `${label}, ${itemName(entry.after)}${said}`;
     }
     case "booking.contact.viewed": {
       const driver = field(entry.after, "driverName");
@@ -1108,6 +1126,12 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Started selling ${className(entry.after)}`;
     case "location.offering.updated":
       return offeringChanges(entry.after);
+    case "location.offerings.ordered": {
+      const moved = field(entry.after, "moved");
+      return typeof moved === "string"
+        ? `Moved ${moved} in the order of classes`
+        : "Changed the order of the classes";
+    }
     case "location.zone.created":
       return `Added ${zoneName(entry.after)}`;
     case "location.zone.updated": {

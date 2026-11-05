@@ -110,7 +110,7 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
   } else {
     const created = await createVehicleClass(SYSTEM_ACTOR, {
       ...fields,
-      imageUrl: null,
+      imageUrls: [],
       isActive: true,
     });
     must(slug, created);

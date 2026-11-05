@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   IMAGE_MAX_BYTES,
+  IMAGE_SIZES,
   checkImageFile,
   formatBytes,
+  imageSizeWarning,
   isUploadUrl,
   uploadKeyOf,
 } from "./images";
@@ -70,5 +72,46 @@ describe("formatBytes", () => {
     assert.equal(formatBytes(555 * 1024), "555 KB");
     assert.equal(formatBytes(3.7 * 1024 * 1024), "3.7 MB");
     assert.equal(formatBytes(1.2 * 1024 * 1024 * 1024), "1.2 GB");
+  });
+});
+
+describe("imageSizeWarning", () => {
+  it("passes an image of the shape and size asked", () => {
+    assert.equal(
+      imageSizeWarning(IMAGE_SIZES.classPicture, { width: 1500, height: 1000 }),
+      null,
+    );
+    assert.equal(
+      imageSizeWarning(IMAGE_SIZES.hero, { width: 2400, height: 1350 }),
+      null,
+    );
+  });
+
+  it("says a portrait picture shows smaller where it is kept whole", () => {
+    assert.match(
+      imageSizeWarning(IMAGE_SIZES.logo, { width: 300, height: 600 })!,
+      /portrait, so it shows smaller/,
+    );
+  });
+
+  it("says another shape loses its edges where it is cropped", () => {
+    assert.match(
+      imageSizeWarning(IMAGE_SIZES.hero, { width: 1000, height: 1000 })!,
+      /square, so its edges are cut off/,
+    );
+  });
+
+  it("says a small image of the right shape may blur", () => {
+    assert.match(
+      imageSizeWarning(IMAGE_SIZES.classPicture, { width: 300, height: 200 })!,
+      /small/,
+    );
+  });
+
+  it("takes any height for a picture in the text", () => {
+    assert.equal(
+      imageSizeWarning(IMAGE_SIZES.inline, { width: 1600, height: 3000 }),
+      null,
+    );
   });
 });

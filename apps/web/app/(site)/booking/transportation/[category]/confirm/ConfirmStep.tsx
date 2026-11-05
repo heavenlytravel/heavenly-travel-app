@@ -452,12 +452,12 @@ export function ConfirmStep({
         </Link>
       </div>
       <div className="grid gap-4 sm:grid-cols-[minmax(0,300px)_minmax(0,1fr)] sm:items-center sm:gap-6">
-        {card.imageUrl ? (
-          <ClassPicture
-            src={card.imageUrl}
-            sizes="(min-width: 40rem) 300px, 100vw"
-          />
-        ) : null}
+        <ClassPicture
+          pictures={card.imageUrls}
+          category={card.category}
+          sizes="(min-width: 40rem) 300px, 100vw"
+          className="rounded-xl"
+        />
         <div className="min-w-0">
           <p className="font-serif text-2xl leading-tight text-ink">
             {card.name}

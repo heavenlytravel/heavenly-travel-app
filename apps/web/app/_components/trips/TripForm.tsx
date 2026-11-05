@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Radio } from "@repo/ui/field";
+import { Checkbox, Radio } from "@repo/ui/field";
 import { PlusIcon, TrashIcon, XIcon } from "@repo/ui/icons";
 import type { PlacePresets } from "@repo/ui/place-input";
 import {
@@ -180,10 +180,34 @@ export function TripForm({
                     : "@3xl:flex-1"
               }`}
             >
-              <label htmlFor={id(f.key)} className={fieldLabel}>
-                <FieldIcon def={f} className="size-[15px] text-muted" />
-                {f.label}
-              </label>
+              {f.tick?.shown(values) ? (
+                // Straight after the label, on its line: it stays where it
+                // is however wide the box grows or shrinks, and the box
+                // keeps its height.
+                <div className={`${fieldLabel} gap-4`}>
+                  <label
+                    htmlFor={id(f.key)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <FieldIcon def={f} className="size-[15px] text-muted" />
+                    {f.label}
+                  </label>
+                  <label className="pointer-events-auto flex cursor-pointer items-center gap-1.5 font-normal">
+                    <Checkbox
+                      checked={values[f.tick.key] === "1"}
+                      onChange={(e) =>
+                        planner.set(f.tick!.key, e.target.checked ? "1" : "")
+                      }
+                    />
+                    {f.tick.label}
+                  </label>
+                </div>
+              ) : (
+                <label htmlFor={id(f.key)} className={fieldLabel}>
+                  <FieldIcon def={f} className="size-[15px] text-muted" />
+                  {f.label}
+                </label>
+              )}
               <FieldInput
                 def={f}
                 id={id(f.key)}

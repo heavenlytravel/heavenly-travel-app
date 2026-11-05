@@ -121,8 +121,10 @@ async function readSources(client: Prisma.TransactionClient) {
         },
       }),
       client.vehicleClass.findMany({
-        where: { imageUrl: { not: null } },
-        select: { id: true, name: true, imageUrl: true },
+        where: {
+          OR: [{ imageUrls: { isEmpty: false } }, { imageUrl: { not: null } }],
+        },
+        select: { id: true, name: true, imageUrls: true, imageUrl: true },
       }),
       client.vehiclePhoto.findMany({
         select: {
@@ -244,11 +246,16 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
   }
 
   for (const vehicleClass of classes) {
-    if (!vehicleClass.imageUrl) continue;
-    add(uploadKeyOf(vehicleClass.imageUrl), {
-      kind: "class",
-      vehicleClass: { id: vehicleClass.id, name: vehicleClass.name },
-    });
+    // The old one picture too, until db:set-class-pictures has moved it
+    // into the list and the column goes: a file only it names is in use.
+    const urls = new Set(vehicleClass.imageUrls);
+    if (vehicleClass.imageUrl) urls.add(vehicleClass.imageUrl);
+    for (const url of urls) {
+      add(uploadKeyOf(url), {
+        kind: "class",
+        vehicleClass: { id: vehicleClass.id, name: vehicleClass.name },
+      });
+    }
   }
 
   for (const photo of photos) {

@@ -16,7 +16,7 @@ import {
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { DateTimeField } from "@repo/ui/date-field";
-import { Field, inputClassName } from "@repo/ui/field";
+import { Checkbox, Field, inputClassName } from "@repo/ui/field";
 import { CheckIcon } from "@repo/ui/icons";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput } from "@repo/ui/place-input";
@@ -26,6 +26,7 @@ import { useId, type ReactNode } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { radioKeys } from "../../../../_lib/radio-keys";
 import {
+  asksDropoff,
   chosenVehicle,
   quoteSummary,
   tripIssue,
@@ -195,9 +196,20 @@ export function TripFields({
             className={inputClassName}
             onChange={(text, id) => changeTrip({ pickup: { text, id } })}
           />
+          {trip.mode === "hourly" ? (
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-body">
+              <Checkbox
+                checked={trip.endsElsewhere}
+                onChange={(e) =>
+                  changeTrip({ endsElsewhere: e.target.checked })
+                }
+              />
+              Drop off elsewhere
+            </label>
+          ) : null}
         </div>
-        {trip.mode === "oneway" ? (
-          <div className="grid gap-1.5">
+        {asksDropoff(trip) ? (
+          <div className="grid content-start gap-1.5">
             <label
               htmlFor={`${ids}-dropoff`}
               className="text-sm font-medium text-body"
@@ -214,7 +226,8 @@ export function TripFields({
               onChange={(text, id) => changeTrip({ dropoff: { text, id } })}
             />
           </div>
-        ) : (
+        ) : null}
+        {trip.mode === "hourly" ? (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Duration">
               <Select
@@ -231,7 +244,7 @@ export function TripFields({
               />
             </Field>
           </div>
-        )}
+        ) : null}
         <div className="grid gap-1.5">
           <Field label="Pick-up date and time">
             <DateTimeField
@@ -414,15 +427,15 @@ export function VehicleFields({
                   on ? "border-brand ring-1 ring-brand" : "border-edge",
                 )}
               >
-                <span className="relative block aspect-video bg-shade">
+                <span className="relative block aspect-[3/2] bg-canvas">
                   {option.imageUrl ? (
-                    // The whole vehicle in view, as `CardImage fit="contain"` shows it.
+                    // Cropped to fill, as `CardImage frame="class"` shows it.
                     <Image
                       src={option.imageUrl}
                       alt=""
                       fill
                       sizes="(min-width: 64rem) 14rem, 50vw"
-                      className={cx("object-contain", !ok && "opacity-50")}
+                      className={cx("object-cover", !ok && "opacity-50")}
                     />
                   ) : (
                     <span className="absolute inset-0 grid place-items-center text-xs text-muted">

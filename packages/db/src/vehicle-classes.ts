@@ -1,10 +1,10 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type { Prisma, VehicleClass } from "./generated/prisma/client";
 import { slugify } from "./slug";
+import { byCategory } from "./offering-input";
 import {
   checkVehicleClassFields,
   type VehicleClassFields,
@@ -69,18 +69,13 @@ function catalogueClass({ models, ...row }: CatalogueRow): CatalogueClass {
   return { ...row, inServiceAt };
 }
 
-const categoryRank = (category: string) =>
-  TRIP_CATEGORIES.indexOf(category as TripCategory);
-
 /** Every class, active or not, with where it is sold: car with driver first, then by sort order and name. */
 export async function listVehicleClasses(): Promise<CatalogueClass[]> {
   const rows = await db.vehicleClass.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     ...withOfferings,
   });
-  return rows
-    .map(catalogueClass)
-    .sort((a, b) => categoryRank(a.category) - categoryRank(b.category));
+  return rows.map(catalogueClass).sort(byCategory);
 }
 
 /** A class as a form picks it: what it is called, its category and whether it is on. */
@@ -95,14 +90,15 @@ export async function listClassOptions(): Promise<ClassOption[]> {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true, category: true, isActive: true },
   });
-  return rows.sort(
-    (a, b) => categoryRank(a.category) - categoryRank(b.category),
-  );
+  return rows.sort(byCategory);
 }
 
 export function getVehicleClass(id: string): Promise<VehicleClass | null> {
   return db.vehicleClass.findUnique({ where: { id } });
 }
+
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((each, i) => each === b[i]);
 
 /** A new class, its slug from its name. */
 export async function createVehicleClass(
@@ -124,9 +120,9 @@ export async function createVehicleClass(
     }
     const gone = await deletedMediaRefusal(
       tx,
-      [fields.imageUrl],
-      "The picture",
-      "imageUrl",
+      fields.imageUrls,
+      "A picture",
+      "imageUrls",
     );
     if (gone) return gone;
     const vehicleClass = await tx.vehicleClass.create({
@@ -158,19 +154,37 @@ export async function updateVehicleClass(
     const vehicleClass = await tx.vehicleClass.findUnique({ where: { id } });
     if (!vehicleClass) return NOT_FOUND;
 
-    const changed = changedFields(vehicleClass, patch);
-    if (!changed) return { ok: true };
-    if (changed.after.imageUrl) {
+    // The pictures are a list, compared as one; the rest field by field.
+    const { imageUrls, ...fieldsPatch } = patch;
+    const pictures =
+      imageUrls !== undefined && !sameList(vehicleClass.imageUrls, imageUrls)
+        ? {
+            before: { imageUrls: vehicleClass.imageUrls },
+            after: { imageUrls },
+          }
+        : null;
+    const fieldsChanged = changedFields(vehicleClass, fieldsPatch);
+    if (!fieldsChanged && !pictures) return { ok: true };
+    const changed = {
+      before: { ...fieldsChanged?.before, ...pictures?.before },
+      after: { ...fieldsChanged?.after, ...pictures?.after },
+    };
+    if (pictures) {
       const gone = await deletedMediaRefusal(
         tx,
-        [changed.after.imageUrl],
-        "The picture",
-        "imageUrl",
+        pictures.after.imageUrls,
+        "A picture",
+        "imageUrls",
       );
       if (gone) return gone;
     }
 
-    await tx.vehicleClass.update({ where: { id }, data: changed.after });
+    await tx.vehicleClass.update({
+      where: { id },
+      // The list saved, the old one picture is spent: db:set-class-pictures
+      // never brings back a picture taken out of the list.
+      data: pictures ? { ...changed.after, imageUrl: null } : changed.after,
+    });
     await logActivity(tx, actor, {
       action: "vehicle-class.updated",
       entityId: id,

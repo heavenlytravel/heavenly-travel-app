@@ -385,6 +385,11 @@ model LocationVehicleClass {
   /// src/offering-input.ts.
   modelChoicePercent      Int?
   modelChoiceFlatSen      Int?
+  /// Where the class stands among its category's here, on the console and
+  /// to the customer: 1, 2, 3 once the location's list is first ordered, 0
+  /// for every one before, which leaves the catalogue's order. See
+  /// byClassOrder in src/offering-input.ts.
+  sortOrder               Int          @default(0)
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
@@ -616,8 +621,12 @@ model VehicleClass {
   minPassengers Int
   maxPassengers Int
   luggage       String
-  /// Its neutral picture, a file on UploadThing (src/images.ts), the same
-  /// at every location; null for none.
+  /// Its pictures, files on UploadThing (src/images.ts), in order, the
+  /// first its cover: the same at every location; none for none.
+  imageUrls     String[] @default([])
+  /// Its one picture before it had several: copied into `imageUrls` by
+  /// db:set-class-pictures and read by nothing since. Dropped at the next
+  /// schema change.
   imageUrl      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

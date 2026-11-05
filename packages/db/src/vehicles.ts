@@ -1,6 +1,5 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import {
@@ -17,7 +16,7 @@ import {
   samePhotos,
   type Photo,
 } from "./photos-input";
-import { modelChoiceOf } from "./offering-input";
+import { categoryRank, modelChoiceOf } from "./offering-input";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   checkVehicleFields,
@@ -83,9 +82,6 @@ export type VehicleWithModel = Prisma.VehicleGetPayload<typeof withPhotos>;
 const NOT_FOUND: Change = refuse(
   "This vehicle was deleted meanwhile. Go back to the list.",
 );
-
-const categoryRank = (category: string) =>
-  TRIP_CATEGORIES.indexOf(category as TripCategory);
 
 /** In service first, then car with driver first, in the classes' order, by model and plate. */
 function byClassAndPlate(a: ListedVehicle, b: ListedVehicle) {

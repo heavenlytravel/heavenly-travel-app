@@ -1,10 +1,10 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { TRIP_CATEGORIES, type TripCategory } from "./booking-status";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type { Prisma, VehicleClass } from "./generated/prisma/client";
 import { slugify } from "./slug";
+import { byCategory } from "./offering-input";
 import {
   checkVehicleClassFields,
   type VehicleClassFields,
@@ -69,9 +69,6 @@ function catalogueClass({ models, ...row }: CatalogueRow): CatalogueClass {
   return { ...row, inServiceAt };
 }
 
-const categoryRank = (category: string) =>
-  TRIP_CATEGORIES.indexOf(category as TripCategory);
-
 /** Every class, active or not, with where it is sold: car with driver first, then by sort order and name. */
 export async function listVehicleClasses(): Promise<CatalogueClass[]> {
   const rows = await db.vehicleClass.findMany({
@@ -80,7 +77,7 @@ export async function listVehicleClasses(): Promise<CatalogueClass[]> {
   });
   return rows
     .map(catalogueClass)
-    .sort((a, b) => categoryRank(a.category) - categoryRank(b.category));
+    .sort(byCategory);
 }
 
 /** A class as a form picks it: what it is called, its category and whether it is on. */
@@ -95,9 +92,7 @@ export async function listClassOptions(): Promise<ClassOption[]> {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true, category: true, isActive: true },
   });
-  return rows.sort(
-    (a, b) => categoryRank(a.category) - categoryRank(b.category),
-  );
+  return rows.sort(byCategory);
 }
 
 export function getVehicleClass(id: string): Promise<VehicleClass | null> {

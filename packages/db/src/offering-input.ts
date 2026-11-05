@@ -20,7 +20,8 @@ import {
  * docs/261018-location-work-and-class-catalogue.md for the rules.
  */
 
-const categoryRank = (category: string) =>
+/** Where a class's category stands: car with driver first. */
+export const categoryRank = (category: string) =>
   TRIP_CATEGORIES.indexOf(category as TripCategory);
 
 /** What a location's class is ordered by: its own place, then its catalogue class's. */

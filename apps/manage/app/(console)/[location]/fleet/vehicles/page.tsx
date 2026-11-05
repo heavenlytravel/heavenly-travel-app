@@ -1,23 +1,23 @@
 import Link from "next/link";
-import { searchTermOf } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { PlusIcon } from "@repo/ui/icons";
 import { PageHeader } from "@repo/console/PageHeader";
-import { FleetList } from "../../../../_components/FleetList";
-import { requireAdmin } from "../../../../_lib/access";
 import {
-  DUE_PARAM,
-  newVehicleHref,
-  SEARCH_PARAM,
-} from "../../../../_lib/routes";
+  FleetList,
+  fleetListFilterOf,
+} from "../../../../_components/FleetList";
+import { requireAdmin } from "../../../../_lib/access";
+import { newVehicleHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 
 /**
- * Route: /[location]/fleet/vehicles?due=1&q=…. Our vehicles: every
+ * Route: /[location]/fleet/vehicles?service=…&due=1&class=…&vendor=…&q=….
+ * Our vehicles: every
  * location's under `~`, with the location of each, or those based at one
  * location; in service first, by class. Figures sum them up; the list
- * narrows to those with a document due within 30 days or expired, to a
- * search by plate or model, or both. A vehicle opens here, and is added
+ * narrows, by the Filters button, to those in service or out, with a
+ * document due within 30 days or expired, of a class or of a vendor, and
+ * by a search by plate or model, any of them together. A vehicle opens here, and is added
  * here. See docs/261019-vehicles-and-drivers.md.
  */
 export default async function VehiclesPage({
@@ -26,9 +26,7 @@ export default async function VehiclesPage({
 }: PageProps<"/[location]/fleet/vehicles">) {
   await requireAdmin("fleet.manage");
   const scope = await scopeOf(params);
-  const query = await searchParams;
-  const due = query.due === DUE_PARAM;
-  const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
+  const filter = fleetListFilterOf(await searchParams);
 
   return (
     <>
@@ -43,7 +41,7 @@ export default async function VehiclesPage({
           </Button>
         }
       />
-      <FleetList kind="vehicles" scope={scope} filter={{ due, q }} />
+      <FleetList kind="vehicles" scope={scope} filter={filter} />
     </>
   );
 }

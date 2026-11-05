@@ -7,13 +7,16 @@ import { Picker } from "@repo/ui/picker";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { withParams } from "../_lib/routes";
 import { Choices } from "./Choices";
 
-/** One choice behind a list's Filters button, kept in a field of the list's address. */
+/**
+ * One choice behind a list's Filters button, kept in a field of the
+ * list's address, or in the list's own state where it holds edits.
+ */
 export type FilterGroup = {
-  /** The field of the address it fills: "agent". */
+  /** The field of the address it fills, or the state's key: "agent". */
   param: string;
   /** Its heading in the panel, and the start of its chip: "Agent". */
   label: string;
@@ -37,13 +40,18 @@ function activeOf(groups: readonly FilterGroup[]) {
 const clearedOf = (groups: readonly FilterGroup[]) =>
   Object.fromEntries(groups.map((group) => [group.param, undefined]));
 
+/** What a choice changes: a group's field to a value, or out for any. */
+type FilterChanges = Record<string, string | undefined>;
+
 /**
  * A list's Filters button: a panel of choices beside its search, a
  * popover, or a sheet from the bottom on a phone. Each choice narrows the
  * list as it is made, from its first page, its other filters kept, and
  * the button counts those in force. `href` is the list's address as
  * filtered, without a page; a server page cannot hand the button a
- * function. `FilterChips` shows under the bar what is in force.
+ * function. `FilterChips` shows under the bar what is in force. A list
+ * that keeps its filters in its own state, as one holding unsaved edits,
+ * takes `FiltersButton` and `StateFilterChips` instead.
  */
 export function ListFilters({
   href,
@@ -53,15 +61,33 @@ export function ListFilters({
   groups: readonly FilterGroup[];
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const count = activeOf(groups).length;
+  return (
+    <FiltersButton
+      groups={groups}
+      pending={pending}
+      onChange={(changes) =>
+        startTransition(() =>
+          router.replace(withParams(href, changes), { scroll: false }),
+        )
+      }
+    />
+  );
+}
 
-  function go(changes: Record<string, string | undefined>) {
-    startTransition(() =>
-      router.replace(withParams(href, changes), { scroll: false }),
-    );
-  }
+/** The Filters button and its panel, each choice handed to `onChange`. */
+export function FiltersButton({
+  groups,
+  onChange,
+  pending = false,
+}: {
+  groups: readonly FilterGroup[];
+  onChange: (changes: FilterChanges) => void;
+  /** The list is being narrowed: the button pulses. */
+  pending?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const count = activeOf(groups).length;
 
   return (
     <Picker
@@ -99,14 +125,18 @@ export function ListFilters({
                 size="sm"
                 value={group.value}
                 options={[{ value: "", label: "Any" }, ...group.options]}
-                onChange={(value) => go({ [group.param]: value })}
+                onChange={(value) =>
+                  onChange({ [group.param]: value || undefined })
+                }
               />
             ) : (
               <Select
                 aria-label={group.label}
                 value={group.value}
                 options={[{ value: "", label: "Any" }, ...group.options]}
-                onValueChange={(value) => go({ [group.param]: value })}
+                onValueChange={(value) =>
+                  onChange({ [group.param]: value || undefined })
+                }
               />
             )}
           </div>
@@ -116,7 +146,7 @@ export function ListFilters({
             variant="ghost"
             size="sm"
             className="self-start"
-            onClick={() => go(clearedOf(groups))}
+            onClick={() => onChange(clearedOf(groups))}
           >
             Clear all
           </Button>
@@ -126,46 +156,18 @@ export function ListFilters({
   );
 }
 
-/**
- * How a list is ordered, a list to choose from at the end of its bar, kept
- * in a field of its address: a choice orders it again from its first
- * page. The first option is the default and leaves the field out.
- */
-export function ListSort({
-  href,
-  param,
-  label,
-  value,
-  options,
-}: {
-  /** The list's address as filtered, without a page. */
-  href: string;
-  /** The field of the address it fills: "sort". */
-  param: string;
-  /** What it orders, for screen readers: "Sort bookings". */
-  label: string;
-  value: string;
-  options: readonly { value: string; label: string }[];
-}) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+/** The look of a chip under a list's bar, a link or a button alike. */
+const CHIP =
+  "inline-flex h-7 items-center gap-1 rounded-full bg-brand-tint px-3 text-xs font-semibold text-brand transition-colors focus-ring hover:bg-hairline";
+const CLEAR_ALL =
+  "rounded-sm px-1 text-xs font-medium text-muted underline-offset-4 focus-ring hover:text-ink hover:underline";
+
+/** The row the chips stand in, under a list's bar; nothing while none is. */
+function ChipRow({ children }: { children: ReactNode }) {
   return (
-    <Select
-      aria-label={label}
-      value={value}
-      options={options}
-      onValueChange={(next) =>
-        startTransition(() =>
-          router.replace(
-            withParams(href, {
-              [param]: next === options[0]?.value ? undefined : next,
-            }),
-            { scroll: false },
-          ),
-        )
-      }
-      className={cx("w-full sm:w-56", pending && "animate-pulse")}
-    />
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-hairline px-5 py-2.5">
+      {children}
+    </div>
   );
 }
 
@@ -184,14 +186,14 @@ export function FilterChips({
   const active = activeOf(groups);
   if (active.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-hairline px-5 py-2.5">
+    <ChipRow>
       {active.map(({ group, label }) => (
         <Link
           key={group.param}
           href={withParams(href, { [group.param]: undefined })}
           scroll={false}
           aria-label={`${group.label}: ${label}, take off`}
-          className="inline-flex h-7 items-center gap-1 rounded-full bg-brand-tint px-3 text-xs font-semibold text-brand transition-colors focus-ring hover:bg-hairline"
+          className={CHIP}
         >
           {group.label}: {label}
           <XIcon className="size-3.5" />
@@ -201,11 +203,48 @@ export function FilterChips({
         <Link
           href={withParams(href, clearedOf(groups))}
           scroll={false}
-          className="px-1 text-xs font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
+          className={CLEAR_ALL}
         >
           Clear all
         </Link>
       ) : null}
-    </div>
+    </ChipRow>
+  );
+}
+
+/** The same chips for a list that keeps its filters in its own state. */
+export function StateFilterChips({
+  groups,
+  onChange,
+}: {
+  groups: readonly FilterGroup[];
+  onChange: (changes: FilterChanges) => void;
+}) {
+  const active = activeOf(groups);
+  if (active.length === 0) return null;
+  return (
+    <ChipRow>
+      {active.map(({ group, label }) => (
+        <button
+          key={group.param}
+          type="button"
+          aria-label={`${group.label}: ${label}, take off`}
+          className={CHIP}
+          onClick={() => onChange({ [group.param]: undefined })}
+        >
+          {group.label}: {label}
+          <XIcon className="size-3.5" />
+        </button>
+      ))}
+      {active.length > 1 ? (
+        <button
+          type="button"
+          className={CLEAR_ALL}
+          onClick={() => onChange(clearedOf(groups))}
+        >
+          Clear all
+        </button>
+      ) : null}
+    </ChipRow>
   );
 }

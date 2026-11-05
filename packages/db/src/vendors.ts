@@ -58,6 +58,8 @@ const NOT_FOUND: Refusal = refuse(
 /** What the vendor list narrows to. */
 export type VendorFilter = {
   status?: VendorStatus;
+  /** What it supplies, one of `VENDOR_SERVICES`. */
+  service?: string;
   /** Part of its name, its contact's name or phone, or its registration. */
   search?: string;
   /** A location it serves, by id. */
@@ -83,6 +85,7 @@ export function listVendors(
 ): Promise<VendorWithLocations[]> {
   const where: Prisma.VendorWhereInput[] = [];
   if (filter.status) where.push({ status: filter.status });
+  if (filter.service) where.push({ services: { has: filter.service } });
   if (filter.search) where.push(vendorSearchWhere(filter.search));
   if (filter.locationId) {
     where.push({ locations: { some: { id: filter.locationId } } });

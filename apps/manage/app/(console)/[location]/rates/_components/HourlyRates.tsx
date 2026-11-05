@@ -10,9 +10,9 @@ import {
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { cx } from "@repo/ui/cx";
-import { Select } from "@repo/ui/select";
 import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
+import { EmptyRow } from "@repo/console/Table";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { useCallback, useState, useTransition } from "react";
 import { setHourlyListAction } from "./actions";
@@ -32,6 +32,11 @@ import {
   type ClassColumn,
 } from "./cells";
 import { SaveBar, type SaveStatus } from "./SaveBar";
+import {
+  FiltersButton,
+  StateFilterChips,
+  type FilterGroup,
+} from "../../../../_components/ListFilters";
 
 type Zone = { id: string; name: string };
 
@@ -143,6 +148,7 @@ export function HourlyRates({
   const [error, setError] = useState<string | null>(null);
   /** The zone whose rows alone are shown, or "" for every zone. */
   const [zoneShown, setZoneShown] = useState("");
+  const [unsoldOnly, setUnsoldOnly] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Against what is saved: the cells changed, and those that are not right.
@@ -237,18 +243,39 @@ export function HourlyRates({
 
   const groups = groupsOf(classes);
   const grouped = groups.length > 1;
-  const shownZones = zones.filter(
-    (zone) => zoneShown === "" || zone.id === zoneShown,
-  );
-  const unsold = zones.filter(
-    (zone) =>
-      !HOURLY_PACKAGES.some((size) =>
-        classes.some(
-          (column) =>
-            senOf(saved.prices[priceKey(zone.id, size, column.id)]) !== null,
-        ),
+  // A zone with no saved price is not sold hourly.
+  const isUnsold = (zone: (typeof zones)[number]) =>
+    !HOURLY_PACKAGES.some((size) =>
+      classes.some(
+        (column) =>
+          senOf(saved.prices[priceKey(zone.id, size, column.id)]) !== null,
       ),
-  ).length;
+    );
+  const shownZones = zones.filter(
+    (zone) =>
+      (zoneShown === "" || zone.id === zoneShown) &&
+      (!unsoldOnly || isUnsold(zone)),
+  );
+  const unsold = zones.filter(isUnsold).length;
+  // The list's filters, as the console's Filters button and chips take them.
+  const filters: FilterGroup[] = [
+    {
+      param: "zone",
+      label: "Zone",
+      options: zones.map((zone) => ({ value: zone.id, label: zone.name })),
+      value: zoneShown,
+    },
+    {
+      param: "unsold",
+      label: "Sold hourly",
+      options: [{ value: "1", label: `Not sold, no price (${unsold})` }],
+      value: unsoldOnly ? "1" : "",
+    },
+  ];
+  function filterBy(changes: Record<string, string | undefined>) {
+    if ("zone" in changes) setZoneShown(changes.zone ?? "");
+    if ("unsold" in changes) setUnsoldOnly(changes.unsold === "1");
+  }
 
   /** A price cell in the grid's look. */
   function priceCell(
@@ -305,16 +332,7 @@ export function HourlyRates({
     <>
       {zones.length > 1 ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-hairline px-5 py-3">
-          <Select
-            aria-label="Show the rates of one zone"
-            value={zoneShown}
-            onValueChange={setZoneShown}
-            options={[
-              { value: "", label: "Every zone" },
-              ...zones.map((zone) => ({ value: zone.id, label: zone.name })),
-            ]}
-            className="w-full sm:w-64"
-          />
+          <FiltersButton groups={filters} onChange={filterBy} />
           {unsold > 0 ? (
             <p className="text-sm text-muted tabular-nums sm:ml-auto">
               {plural(unsold, "zone")} with no price, not sold hourly
@@ -322,6 +340,7 @@ export function HourlyRates({
           ) : null}
         </div>
       ) : null}
+      <StateFilterChips groups={filters} onChange={filterBy} />
       <div className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline">
         <table className="w-full border-separate border-spacing-0 text-sm">
           {/* Raised in the list's own stacking (`isolate`), so it stays under the console's top bar. */}
@@ -357,6 +376,20 @@ export function HourlyRates({
             </tr>
           </thead>
           <tbody>
+            {shownZones.length === 0 && zones.length > 0 ? (
+              <EmptyRow colSpan={classes.length + 3}>
+                No zone matches.{" "}
+                <button
+                  type="button"
+                  onClick={() =>
+                    filterBy({ zone: undefined, unsold: undefined })
+                  }
+                  className="text-link"
+                >
+                  Show every zone
+                </button>
+              </EmptyRow>
+            ) : null}
             {shownZones.map((zone) =>
               HOURLY_PACKAGES.map((size, index) => {
                 const line =

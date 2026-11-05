@@ -18,21 +18,25 @@ export type Figure = {
 };
 
 /**
- * Figures a list is narrowed by, in place of tabs: a white tile each with
- * its name over its number, the one on screen ringed in brand blue. A
- * tile with `href` is a link to the list narrowed to it. Bookings' and
- * Media's statuses.
+ * Figures over a list, a white tile each with its name over its number:
+ * the ones a list is narrowed by, in place of tabs, the one on screen
+ * ringed in brand blue, and the ones that only sum it up. A tile with
+ * `href` is a link to the list narrowed to it. Bookings', Assign's,
+ * Media's and Pages' statuses, the fleet's service and documents, Rates'
+ * trip rules; the Dashboard keeps its own band.
  */
 export function FigureTiles({
   label,
   figures,
 }: {
-  /** What the tiles narrow, for assistive technology: "Bookings by status". */
+  /** What the tiles show, for assistive technology: "Bookings by status". */
   label: string;
   figures: readonly Figure[];
 }) {
+  // Links to the list narrowed are navigation; figures that only count are not.
+  const Wrapper = figures.some((figure) => figure.href) ? "nav" : "section";
   return (
-    <nav aria-label={label} className="mb-5">
+    <Wrapper aria-label={label} className="mb-5">
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] md:gap-4">
         {figures.map((figure) => (
           <li key={figure.key} className="min-w-0">
@@ -40,7 +44,7 @@ export function FigureTiles({
           </li>
         ))}
       </ul>
-    </nav>
+    </Wrapper>
   );
 }
 
@@ -75,61 +79,5 @@ function FigureTile({ figure }: { figure: Figure }) {
     </Link>
   ) : (
     <div className={classes}>{body}</div>
-  );
-}
-
-/**
- * Figures that sum up a list, in one card split by hairlines: its number
- * over its name. A cell with `href` is a link to the list narrowed to it;
- * the one on screen is tinted. Vehicles' service and documents, Pages'
- * statuses, Rates' trip rules.
- */
-export function FigureStrip({
-  label,
-  figures,
-}: {
-  label: string;
-  figures: readonly Figure[];
-}) {
-  return (
-    <section aria-label={label} className={cx("mb-5 overflow-hidden", SURFACE)}>
-      <ul className="grid grid-cols-2 divide-hairline max-md:[&>li:nth-child(n+3)]:border-t max-md:[&>li:nth-child(n+3)]:border-hairline max-md:[&>li:nth-child(even)]:border-l md:auto-cols-fr md:grid-flow-col md:divide-x">
-        {figures.map((figure) => {
-          const body = (
-            <>
-              <span className="block font-serif text-figure leading-none text-ink tabular-nums">
-                {figure.value}
-              </span>
-              <span className="mt-1.5 flex items-center gap-1.5 text-caption text-muted">
-                {figure.tone ? <StatusDot tone={figure.tone} /> : null}
-                {figure.label}
-              </span>
-            </>
-          );
-          const classes = cx(
-            "block h-full px-5 py-4",
-            figure.current && "bg-brand-tint",
-          );
-          return (
-            <li key={figure.key} className="min-w-0 border-hairline">
-              {figure.href ? (
-                <Link
-                  href={figure.href}
-                  aria-current={figure.current ? "page" : undefined}
-                  className={cx(
-                    classes,
-                    "transition-colors hover:bg-hover focus-ring-inset",
-                  )}
-                >
-                  {body}
-                </Link>
-              ) : (
-                <div className={classes}>{body}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }

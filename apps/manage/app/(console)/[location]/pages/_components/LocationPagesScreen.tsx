@@ -45,7 +45,7 @@ import {
   type TreeRow,
 } from "./PageList";
 import type { SectionOption } from "./PageSectionSelect";
-import { PageStatusStrip, emptyOf, type Counted } from "./PageStatusStrip";
+import { PageStatusTiles, emptyOf, type Counted } from "./PageStatusTiles";
 import { SavedAddresses, type SavedAddress } from "./SavedAddresses";
 
 /** What narrows the list, all kept in its address. */
@@ -76,7 +76,7 @@ export function locationPagesFilterOf(
  * list, where its row leads: its places in their order, which move here,
  * with their saved address; its posts with their first publish; its
  * classes with why there is none. A section's plus adds a page under it.
- * Over the list, a strip counts the pages by status and narrows the list
+ * Over the list, tiles count the pages by status and narrows the list
  * to one; the section and a search narrow it too. A location's page is
  * written and published in its editor, under the location's address. The
  * route checks `pages.manage` first. See docs/261025-marketing-pages.md,
@@ -124,8 +124,8 @@ const countedOfPage = (slug: string, page: PageSummary): Counted => ({
   paused: page.paused,
 });
 
-/** The strip over a list of a location's pages, or every location's, each cell the list narrowed to a status. */
-function StatusStrip({
+/** The tiles over a list of a location's pages, or every location's, each the list narrowed to a status. */
+function StatusTiles({
   scope,
   pages,
   filter,
@@ -135,7 +135,7 @@ function StatusStrip({
   filter: LocationPagesFilter;
 }) {
   return (
-    <PageStatusStrip
+    <PageStatusTiles
       pages={pages}
       status={filter.status}
       q={filter.q}
@@ -210,7 +210,7 @@ async function everyPage(filter: LocationPagesFilter) {
 
   return (
     <>
-      <StatusStrip scope={null} pages={counted} filter={filter} />
+      <StatusTiles scope={null} pages={counted} filter={filter} />
       <Card flush>
         <PageTree
           parts={parts}
@@ -354,7 +354,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
 
   return (
     <>
-      <StatusStrip
+      <StatusTiles
         scope={slug}
         pages={listed.map((page) => countedOfPage(slug, page))}
         filter={filter}

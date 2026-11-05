@@ -19,7 +19,7 @@ import {
 import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
 import { Card, CardTitle } from "@repo/console/Card";
-import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, Streamed } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
@@ -231,7 +231,7 @@ async function locationGrid({
 
   return (
     <>
-      <FigureStrip
+      <FigureTiles
         label={RATES_PAGE_LABELS.rules}
         figures={ruleFigures(tripRulesOf(details), ratesHref(slug, "rules"))}
       />

@@ -9,7 +9,7 @@ import {
   type ListedVehicle,
 } from "@repo/db/server";
 import { Card } from "@repo/console/Card";
-import { FigureStrip, type Figure } from "@repo/console/FigureTiles";
+import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { Bone } from "@repo/ui/skeleton";
 import {
@@ -124,7 +124,7 @@ function countsOf(listed: Listed): Counts {
   };
 }
 
-/** The counts as the strip shows them, amber and red only when there are some; bones while they load. */
+/** The counts as the tiles show them, amber and red only when there are some; bones while they load. */
 function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
   const names = KINDS[kind];
   const value = (n: number | undefined) => n ?? <Bone className="h-7 w-8" />;
@@ -162,8 +162,8 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
 
 /**
  * Our vehicles, our drivers or the tour guides in the scope: every location's under `~`,
- * with a column of locations, or those based at one location. A strip of
- * figures sums up the scope; under it, in one card, the search, the
+ * with a column of locations, or those based at one location. Tiles of
+ * figures sum up the scope; under it, in one card, the search, the
  * filter to those with a document due, and the table, with how many it
  * shows at its foot. The figures count the whole scope, whatever the
  * filters.
@@ -200,14 +200,14 @@ export function FleetList({
     <>
       <Streamed
         fallback={
-          <FigureStrip
+          <FigureTiles
             label={`Our ${kind}${where}`}
             figures={figuresOf(kind, null)}
           />
         }
       >
         {async () => (
-          <FigureStrip
+          <FigureTiles
             label={`Our ${kind}${where}`}
             figures={figuresOf(kind, countsOf(await everyOne))}
           />

@@ -13,8 +13,14 @@ import { cx } from "@repo/ui/cx";
 import { toast } from "@repo/ui/toast";
 import { errorOf } from "@repo/console/action-state";
 import { EmptyRow } from "@repo/console/Table";
+import { CardTitle } from "@repo/console/Card";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import { useCallback, useState, useTransition } from "react";
+import {
+  useCallback,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { setHourlyListAction } from "./actions";
 import {
   CELL_BAD,
@@ -126,16 +132,23 @@ const LEAD_HEADING =
  * "Pickup from" it, a row for each of the 4, 8 and 12-hour packages, the
  * hours the package covers from there, and its price per class; then the
  * rate per extra hour for each package size, the same from every zone. An
- * empty price is not sold. Saved whole. Read only for the teams that read
- * the rates. See docs/261102-booking-ops.md, "Hourly rate grid".
+ * empty price is not sold. Saved whole. The Filters button, at the right
+ * of the list's title, narrows the columns to one category and the rows
+ * to one zone or to the zones not sold; the prices hidden stay, and are
+ * saved with the rest. Read only for the teams that read the rates. See docs/261102-booking-ops.md, "Hourly rate grid".
  */
 export function HourlyRates({
+  title,
+  meta,
   locationId,
   zones,
-  classes,
+  classes: allClasses,
   list,
   readOnly = false,
 }: {
+  /** The list's name, in its title bar, and a note beside it. */
+  title: ReactNode;
+  meta?: ReactNode;
   locationId: string;
   /** The location's zones, in their order. */
   zones: Zone[];
@@ -149,19 +162,26 @@ export function HourlyRates({
   /** The zone whose rows alone are shown, or "" for every zone. */
   const [zoneShown, setZoneShown] = useState("");
   const [unsoldOnly, setUnsoldOnly] = useState(false);
+  /** The category whose classes alone are columns, by name, or "" for every class on sale. */
+  const [categoryShown, setCategoryShown] = useState("");
+  const classes = categoryShown
+    ? allClasses.filter((column) => column.category === categoryShown)
+    : allClasses;
   const [pending, startTransition] = useTransition();
 
   // Against what is saved: the cells changed, and those that are not right.
   const priceCells = [
     ...zones.flatMap((zone) =>
       HOURLY_PACKAGES.flatMap((size) =>
-        classes.map(
+        allClasses.map(
           (column) => ["prices", priceKey(zone.id, size, column.id)] as const,
         ),
       ),
     ),
     ...HOURLY_PACKAGES.flatMap((size) =>
-      classes.map((column) => ["extras", extraKey(size, column.id)] as const),
+      allClasses.map(
+        (column) => ["extras", extraKey(size, column.id)] as const,
+      ),
     ),
   ];
   const invalid = new Set<string>();
@@ -207,7 +227,7 @@ export function HourlyRates({
     startTransition(async () => {
       const refused = errorOf(
         await answerOf(
-          setHourlyListAction(locationId, postedOf(values, zones, classes)),
+          setHourlyListAction(locationId, postedOf(values, zones, allClasses)),
         ),
       );
       if (refused) {
@@ -232,12 +252,21 @@ export function HourlyRates({
     status = { tone: "dirty", text: `${plural(changes, "unsaved change")}.` };
   } else status = { tone: "idle", text: "No unsaved changes." };
 
+  const titleBar = (action?: ReactNode) => (
+    <CardTitle inset meta={meta} action={action}>
+      {title}
+    </CardTitle>
+  );
+
   if (zones.length === 0) {
     return (
-      <p className="px-5 py-6 text-sm text-muted">
-        Draw this location&apos;s zones on Coverage first: hourly hire is priced
-        by the zone the pickup is in.
-      </p>
+      <>
+        {titleBar()}
+        <p className="px-5 py-6 text-sm text-muted">
+          Draw this location&apos;s zones on Coverage first: hourly hire is
+          priced by the zone the pickup is in.
+        </p>
+      </>
     );
   }
 
@@ -246,7 +275,7 @@ export function HourlyRates({
   // A zone with no saved price is not sold hourly.
   const isUnsold = (zone: (typeof zones)[number]) =>
     !HOURLY_PACKAGES.some((size) =>
-      classes.some(
+      allClasses.some(
         (column) =>
           senOf(saved.prices[priceKey(zone.id, size, column.id)]) !== null,
       ),
@@ -257,8 +286,19 @@ export function HourlyRates({
       (!unsoldOnly || isUnsold(zone)),
   );
   const unsold = zones.filter(isUnsold).length;
+  const categories = groupsOf(allClasses).map((group) => group.label);
   // The list's filters, as the console's Filters button and chips take them.
   const filters: FilterGroup[] = [
+    ...(categories.length > 1
+      ? [
+          {
+            param: "category",
+            label: "Category",
+            options: categories.map((label) => ({ value: label, label })),
+            value: categoryShown,
+          },
+        ]
+      : []),
     {
       param: "zone",
       label: "Zone",
@@ -275,6 +315,7 @@ export function HourlyRates({
   function filterBy(changes: Record<string, string | undefined>) {
     if ("zone" in changes) setZoneShown(changes.zone ?? "");
     if ("unsold" in changes) setUnsoldOnly(changes.unsold === "1");
+    if ("category" in changes) setCategoryShown(changes.category ?? "");
   }
 
   /** A price cell in the grid's look. */
@@ -330,16 +371,18 @@ export function HourlyRates({
 
   return (
     <>
-      {zones.length > 1 ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-hairline px-5 py-3">
-          <FiltersButton groups={filters} onChange={filterBy} />
-          {unsold > 0 ? (
-            <p className="text-sm text-muted tabular-nums sm:ml-auto">
-              {plural(unsold, "zone")} with no price, not sold hourly
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      {titleBar(
+        zones.length > 1 || categories.length > 1 ? (
+          <>
+            {unsold > 0 ? (
+              <span className="text-caption text-muted tabular-nums">
+                {plural(unsold, "zone")} not sold hourly
+              </span>
+            ) : null}
+            <FiltersButton groups={filters} onChange={filterBy} />
+          </>
+        ) : null,
+      )}
       <StateFilterChips groups={filters} onChange={filterBy} />
       <div className="relative isolate max-h-[70vh] overflow-auto overscroll-x-contain border-b border-hairline">
         <table className="w-full border-separate border-spacing-0 text-sm">

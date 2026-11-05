@@ -11,6 +11,7 @@ import { cx } from "@repo/ui/cx";
 import { PlusIcon, TrashIcon, UndoIcon } from "@repo/ui/icons";
 import { toast } from "@repo/ui/toast";
 import { EmptyRow } from "@repo/console/Table";
+import { CardTitle } from "@repo/console/Card";
 import {
   memo,
   useEffect,
@@ -21,6 +22,7 @@ import {
   useTransition,
   type ClipboardEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
 import { classesHref, coverageHref } from "../../../../_lib/routes";
 import {
@@ -128,27 +130,31 @@ function valuesOf(saved: Saved): Record<string, string> {
  *
  * A route's zones are two columns, From and To, their names cut short and
  * whole in a tooltip on hover or click; the heading stays in view while
- * the routes scroll, in the zones' order. The console's Filters button
- * narrows them to the routes of one zone, that zone then read as From, or
- * to those with a class unpriced as saved, a chip under the bar for each
- * in force; the filters live in the grid, not the address, so its
- * unsaved prices stay. The keys and a paste follow the rows as shown. Ticked rows are
+ * the routes scroll, in the zones' order. The console's Filters button,
+ * at the right of the grid's title with "Add route" and "Delete",
+ * narrows the columns to one category, and the rows to the routes of one
+ * zone, that zone then read as From, or to those with a class shown
+ * unpriced as saved, a chip under the title for each in force; the
+ * filters live in the grid, not the address, so its unsaved prices stay. The keys and a paste follow the rows as shown. Ticked rows are
  * marked for deletion: struck through, their prices locked, until the save
  * deletes them or their undo or Discard keeps them. On a computer the save
  * bar stays in view at the foot of the screen while the grid is; on a
  * phone it ends the grid. Each class's heading counts its priced routes.
- * Narrowed to a category, the grid holds that category's classes and
- * their prices alone: a route deleted there loses those prices only.
+ * Narrowed to a category, "Delete" clears that category's prices of the
+ * ticked routes alone, for the save to delete; the other categories'
+ * prices stay.
  */
 export function RateGrid({
   locationId,
   locationSlug,
   zones,
   elsewhere,
-  classes,
+  classes: allClasses,
   cells,
   crossLocation,
-  category,
+  title,
+  meta,
+  category: firstCategory = "",
   readOnly = false,
 }: {
   locationId: string;
@@ -161,7 +167,10 @@ export function RateGrid({
   cells: Cell[];
   /** Whether cross-location is on: the routes out are sold, and more may be added. */
   crossLocation: boolean;
-  /** The category the columns are narrowed to, by name: "Coach charter"; none for every class on sale. */
+  /** The grid's name, in its title bar, and a note beside it. */
+  title: ReactNode;
+  meta?: ReactNode;
+  /** The category the columns start narrowed to, by name, as the address asked: "Coach charter"; none for every class on sale. */
   category?: string;
   /** For the teams that read the rates: the prices as text, nothing to change. */
   readOnly?: boolean;
@@ -175,6 +184,17 @@ export function RateGrid({
   /** The zone whose routes alone are shown, or "" for every route. */
   const [zoneShown, setZoneShown] = useState("");
   const [gapsOnly, setGapsOnly] = useState(false);
+  /** The category whose classes alone are columns, by name, or "" for every class on sale. */
+  const [categoryShown, setCategoryShown] = useState(() =>
+    allClasses.some((column) => column.category === firstCategory)
+      ? firstCategory
+      : "",
+  );
+  // The columns as shown. The prices of every class stay in the grid,
+  // so a change in a hidden one is kept and saved.
+  const classes = categoryShown
+    ? allClasses.filter((column) => column.category === categoryShown)
+    : allClasses;
   /** The ticked rows, by route key. */
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   /** The rows marked for deletion, by route key: deleted on the save. */
@@ -226,7 +246,7 @@ export function RateGrid({
   const changed = new Set<string>();
   const invalid = new Set<string>();
   for (const route of kept) {
-    for (const column of classes) {
+    for (const column of allClasses) {
       const key = cellKey(route, column.id);
       const reading = readCell(values[key]);
       if (!reading.ok) invalid.add(key);
@@ -419,7 +439,7 @@ export function RateGrid({
       await answerOf(
         setZoneRatesAction(
           locationId,
-          classes.map((column) => ({
+          allClasses.map((column) => ({
             ...route,
             vehicleClassId: column.id,
             price: added.prices[column.id] ?? "",
@@ -429,7 +449,7 @@ export function RateGrid({
     );
     if (refused) return refused;
     const stored: Record<string, number> = {};
-    for (const column of classes) {
+    for (const column of allClasses) {
       const reading = readCell(added.prices[column.id]);
       if (reading.ok && reading.sen !== null) {
         stored[cellKey(route, column.id)] = reading.sen;
@@ -437,7 +457,7 @@ export function RateGrid({
     }
     const withRoute = (prices: Record<string, number>) => {
       const next = { ...prices };
-      for (const column of classes) delete next[cellKey(route, column.id)];
+      for (const column of allClasses) delete next[cellKey(route, column.id)];
       return { ...next, ...stored };
     };
     setSaved((was) => ({
@@ -467,9 +487,10 @@ export function RateGrid({
     return null;
   }
 
-  function narrowTo(zone: string, gaps: boolean) {
+  function narrowTo(zone: string, gaps: boolean, category = categoryShown) {
     setZoneShown(zone);
     setGapsOnly(gaps);
+    setCategoryShown(category);
     setTicked(new Set());
   }
 
@@ -485,9 +506,23 @@ export function RateGrid({
   // Marked, not taken off: the row stays, struck through, until the save
   // deletes it; its undo or Discard keeps it.
   function deleteTicked() {
-    setDoomed(new Set([...doomed, ...tickedShown.map(routeKey)]));
     setTicked(new Set());
-    setNotice(null);
+    if (!categoryShown) {
+      setDoomed(new Set([...doomed, ...tickedShown.map(routeKey)]));
+      setNotice(null);
+      return;
+    }
+    // Narrowed to a category: its prices of the routes are cleared, as
+    // changes the save stores; the route keeps the other categories'.
+    const cleared: Record<string, string> = {};
+    for (const route of tickedShown) {
+      for (const column of classes) cleared[cellKey(route, column.id)] = "";
+    }
+    setValues((current) => ({ ...current, ...cleared }));
+    setNotice({
+      tone: "info",
+      text: `Cleared the ${categoryShown.toLowerCase()} prices of ${plural(tickedShown.length, "route")}.`,
+    });
   }
 
   function keep(route: Route) {
@@ -517,7 +552,7 @@ export function RateGrid({
       price: string;
     }[] = [];
     for (const route of kept) {
-      for (const column of classes) {
+      for (const column of allClasses) {
         rows.push({
           ...route,
           vehicleClassId: column.id,
@@ -546,7 +581,7 @@ export function RateGrid({
         if (onGrid.has(routeKeyOfCell(key))) prices[key] = sen;
       }
       for (const route of kept) {
-        for (const column of classes) {
+        for (const column of allClasses) {
           const key = cellKey(route, column.id);
           const reading = readCell(values[key]);
           if (reading.ok && reading.sen !== null) prices[key] = reading.sen;
@@ -580,29 +615,38 @@ export function RateGrid({
     };
   });
 
+  const titleBar = (action?: ReactNode) => (
+    <CardTitle inset meta={meta} action={action}>
+      {title}
+    </CardTitle>
+  );
+
   if (zones.length === 0) {
     return (
-      <p className="px-5 py-5 text-sm text-muted">
+      <>
+        {titleBar()}
+        <p className="px-5 py-5 text-sm text-muted">
         A route runs between two zones, or within one. Draw the zones on{" "}
         <Link href={coverageHref(locationSlug)} className="text-link">
           Coverage
         </Link>{" "}
         to put a route on the grid.
-      </p>
+        </p>
+      </>
     );
   }
-  if (classes.length === 0) {
+  if (allClasses.length === 0) {
     return (
-      <p className="px-5 py-5 text-sm text-muted">
-        {category
-          ? `No ${category.toLowerCase()} class is on sale here. `
-          : "Each class on sale is a column of the grid. "}
-        Put a class on sale in{" "}
-        <Link href={classesHref(locationSlug)} className="text-link">
-          Classes
-        </Link>{" "}
-        to price a route for it.
-      </p>
+      <>
+        {titleBar()}
+        <p className="px-5 py-5 text-sm text-muted">
+          Each class on sale is a column of the grid. Put a class on sale in{" "}
+          <Link href={classesHref(locationSlug)} className="text-link">
+            Classes
+          </Link>{" "}
+          to price a route for it.
+        </p>
+      </>
     );
   }
 
@@ -674,9 +718,20 @@ export function RateGrid({
   const canAdd = freePairs + freeOut > 0;
   const ticks = tickedShown.length;
 
-  const narrowing = routes.length > 1;
+  const categories = groupsOf(allClasses).map((group) => group.label);
+  const narrowing = routes.length > 1 || categories.length > 1;
   // The grid's filters, as the console's Filters button and chips take them.
   const filters: FilterGroup[] = [
+    ...(categories.length > 1
+      ? [
+          {
+            param: "category",
+            label: "Category",
+            options: categories.map((label) => ({ value: label, label })),
+            value: categoryShown,
+          },
+        ]
+      : []),
     {
       param: "zone",
       label: "Zone",
@@ -694,52 +749,59 @@ export function RateGrid({
     narrowTo(
       "zone" in changes ? (changes.zone ?? "") : zoneShown,
       "gaps" in changes ? changes.gaps === "1" : gapsOnly,
+      "category" in changes ? (changes.category ?? "") : categoryShown,
     );
   }
 
   return (
     <>
-      {readOnly && !narrowing ? null : (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-hairline px-5 py-3">
-          {readOnly ? null : (
-            <div className="flex items-center gap-2">
-              <Tooltip
-                content={canAdd ? null : "Every pair of zones has a row."}
-              >
-                <Button
-                  variant="secondary"
-                  disabled={pending || !canAdd}
-                  onClick={() => setAdding(true)}
+      {titleBar(
+        readOnly && !narrowing ? null : (
+          <>
+            {filtering ? (
+              <span className="text-caption text-muted tabular-nums">
+                {shown.length} of {plural(routes.length, "route")}
+              </span>
+            ) : null}
+            {readOnly ? null : (
+              <>
+                <Tooltip
+                  content={canAdd ? null : "Every pair of zones has a row."}
                 >
-                  <PlusIcon />
-                  Add route
-                </Button>
-              </Tooltip>
-              <Tooltip
-                content={ticks === 0 ? "Tick the routes to delete." : null}
-              >
-                <Button
-                  variant="danger"
-                  disabled={pending || ticks === 0}
-                  onClick={deleteTicked}
+                  <Button
+                    variant="secondary"
+                    disabled={pending || !canAdd}
+                    onClick={() => setAdding(true)}
+                  >
+                    <PlusIcon />
+                    Add route
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  content={
+                    ticks === 0
+                      ? "Tick the routes to delete."
+                      : categoryShown
+                        ? `Clears their ${categoryShown.toLowerCase()} prices only.`
+                        : null
+                  }
                 >
-                  <TrashIcon />
-                  {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
-                </Button>
-              </Tooltip>
-            </div>
-          )}
-          {narrowing ? (
-            <>
+                  <Button
+                    variant="danger"
+                    disabled={pending || ticks === 0}
+                    onClick={deleteTicked}
+                  >
+                    <TrashIcon />
+                    {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+            {narrowing ? (
               <FiltersButton groups={filters} onChange={filterBy} />
-              {filtering ? (
-                <p className="text-sm text-muted tabular-nums sm:ml-auto">
-                  {shown.length} of {plural(routes.length, "route")} shown
-                </p>
-              ) : null}
-            </>
-          ) : null}
-        </div>
+            ) : null}
+          </>
+        ),
       )}
       <StateFilterChips groups={filters} onChange={filterBy} />
       <div className="relative">
@@ -887,7 +949,7 @@ export function RateGrid({
           {routesOut > 0 || crossLocation
             ? "; one out to another location's zone (→) prices trips from here only."
             : "."}{" "}
-          Click a heading to sort by it, a cut-short name to read it whole.
+          Click a cut-short name to read it whole.
           {readOnly
             ? null
             : " Paste a block of prices copied from a spreadsheet into any cell; Enter moves down a row, Escape undoes the cell."}
@@ -911,7 +973,7 @@ export function RateGrid({
             onOpenChange={setAdding}
             zones={zones}
             elsewhere={crossLocation ? elsewhere : []}
-            classes={classes}
+            classes={allClasses}
             paired={paired}
             onAdd={addRoute}
           />

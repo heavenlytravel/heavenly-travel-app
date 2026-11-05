@@ -10,6 +10,10 @@ import {
   tripAddOns,
   tripHeadline,
   tripViewOfItem,
+  nextSortOf,
+  sortDirectionOf,
+  type BookingOrder,
+  type BookingSortColumn,
 } from "@repo/db";
 import type { BookingWithItems } from "@repo/db/server";
 import { bookingLocations } from "../_lib/booking-locations";
@@ -18,7 +22,15 @@ import {
   BookingStatusBadge,
   PaymentStatusBadge,
 } from "@repo/console/StatusBadges";
-import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
+import {
+  EmptyRow,
+  SortTh,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+} from "@repo/console/Table";
 
 /** "Langkawi", or "Langkawi, Penang" for a booking whose items pick up in two. */
 function locationsOf(booking: BookingWithItems) {
@@ -36,32 +48,48 @@ const none = <span className="text-muted">—</span>;
  * the agent and the customer, each trip with its add-ons, the pick-up,
  * the total and whether the invoice is paid. Under `~` it has the column
  * of locations, and a booking opens in the scope it was listed in.
- * `bare` is for the table inside a `flush` card.
+ * `bare` is for the table inside a `flush` card. With `sort`, the
+ * Booking ID heading sorts by when a booking was made and the Pick-up one
+ * by when it picks up, each a click the other way.
  */
 export function BookingsTable({
   bookings,
   scope,
   bare = false,
   emptyMessage,
+  sort,
 }: {
   bookings: BookingWithItems[];
   scope: ScopeSlug;
   bare?: boolean;
   emptyMessage: string;
+  /** The order in force and the list in another; none for a table that does not sort. */
+  sort?: { order: BookingOrder; hrefOf: (order: BookingOrder) => string };
 }) {
+  const heading = (column: BookingSortColumn, label: string) =>
+    sort ? (
+      <SortTh
+        href={sort.hrefOf(nextSortOf(column, sort.order))}
+        direction={sortDirectionOf(column, sort.order)}
+      >
+        {label}
+      </SortTh>
+    ) : (
+      <Th>{label}</Th>
+    );
   const showLocation = scope === null;
   const columns = showLocation ? 10 : 9;
   return (
     <Table bare={bare}>
       <THead>
-        <Th>Booking ID</Th>
+        {heading("made", "Booking ID")}
         <Th>Invoice No</Th>
         <Th>Agent Name</Th>
         <Th>Customer Name</Th>
         <Th>Trip</Th>
         {showLocation ? <Th>Location</Th> : null}
         <Th>Add On</Th>
-        <Th>Pick-up</Th>
+        {heading("pickup", "Pick-up")}
         <Th align="right">Total</Th>
         <Th>Payment Status</Th>
       </THead>

@@ -1,6 +1,4 @@
 import {
-  BOOKING_ORDER_LABELS,
-  BOOKING_ORDERS,
   BOOKING_STATUS_LABELS,
   BOOKING_STATUSES,
   formatLocalDate,
@@ -36,7 +34,6 @@ import { BookingsTable } from "../../../_components/BookingsTable";
 import {
   FilterChips,
   ListFilters,
-  ListSort,
   type FilterGroup,
 } from "../../../_components/ListFilters";
 import { Pager, pageOf } from "../../../_components/Pager";
@@ -205,18 +202,6 @@ export default async function BookingsPage({
           />
           <PickupDateFilter href={listed} value={date ?? ""} to={to ?? ""} />
           <ListFilters href={listed} groups={groups} />
-          <div className="sm:ml-auto">
-            <ListSort
-              href={listed}
-              param={SORT_PARAM}
-              label="Sort bookings"
-              value={sort ?? "newest"}
-              options={BOOKING_ORDERS.map((value) => ({
-                value,
-                label: BOOKING_ORDER_LABELS[value],
-              }))}
-            />
-          </div>
         </ListToolbar>
         <FilterChips href={listed} groups={groups} />
         {/* Keyed by the filters, so another filter shows the skeleton, not
@@ -327,6 +312,15 @@ async function bookingsPage(
         bookings={bookings}
         scope={scope}
         emptyMessage={emptyMessage(filter, where)}
+        sort={{
+          order: isBookingOrder(filter.sort) ? filter.sort : "newest",
+          hrefOf: (order) =>
+            bookingsHref(scope, {
+              ...filter,
+              sort: order === "newest" ? undefined : order,
+              page: undefined,
+            }),
+        }}
       />
       <Pager
         page={page}

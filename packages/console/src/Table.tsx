@@ -1,4 +1,6 @@
 import { cx } from "@repo/ui/cx";
+import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Frame } from "./Card";
 
@@ -99,6 +101,56 @@ export function Th({
   return (
     <th scope="col" className={classes}>
       {children}
+    </th>
+  );
+}
+
+/**
+ * A column's heading the list sorts by: a link to the list sorted by it,
+ * the other way while it already is. Its arrow shows the way in force,
+ * and shows on hover where it is not sorted by it.
+ */
+export function SortTh({
+  children,
+  href,
+  direction,
+  align,
+}: {
+  children: ReactNode;
+  /** The list sorted by this column, as a click turns it. */
+  href: string;
+  /** The way the list is sorted by it, or null while it is not. */
+  direction: "ascending" | "descending" | null;
+  align?: "right";
+}) {
+  const Arrow = direction === "descending" ? ArrowDownIcon : ArrowUpIcon;
+  return (
+    <th
+      scope="col"
+      aria-sort={direction ?? undefined}
+      className={cx(
+        "px-3.5 py-2.5 font-semibold whitespace-nowrap",
+        align === "right" && "text-right",
+      )}
+    >
+      <Link
+        href={href}
+        scroll={false}
+        className={cx(
+          "group/sort inline-flex items-center gap-1 rounded-sm hover:text-ink focus-ring",
+          align === "right" && "flex-row-reverse",
+          direction && "text-ink",
+        )}
+      >
+        {children}
+        <Arrow
+          aria-hidden="true"
+          className={cx(
+            "size-3",
+            direction ? "" : "opacity-0 group-hover/sort:opacity-100",
+          )}
+        />
+      </Link>
     </th>
   );
 }

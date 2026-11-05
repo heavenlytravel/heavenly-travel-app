@@ -5,6 +5,7 @@ import {
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
+  isUrgentTrip,
   rolesToAsk,
   jobsClash,
   owesAfterCancel,
@@ -177,7 +178,24 @@ describe("tripAssigned and assignStateOf", () => {
   it("puts a trip in its column", () => {
     const base = { status: "confirmed", reported: false, withGuide: false };
     assert.equal(assignStateOf({ ...base, parts: [] }), "to-assign");
-    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "waiting");
+    // Half asked is still to assign: the driver has no one asked.
+    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "to-assign");
+    assert.equal(
+      assignStateOf({
+        ...base,
+        parts: [vehicle, { ...driver, driverAcceptedAt: null }],
+      }),
+      "waiting",
+    );
+    // With a guide booked, the guide is asked too before it waits.
+    assert.equal(
+      assignStateOf({
+        ...base,
+        withGuide: true,
+        parts: [vehicle, { ...driver, driverAcceptedAt: null }],
+      }),
+      "to-assign",
+    );
     assert.equal(
       assignStateOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
       "assigned",
@@ -199,6 +217,35 @@ describe("tripAssigned and assignStateOf", () => {
         withGuide: false,
       }),
       "done",
+    );
+  });
+});
+
+describe("isUrgentTrip", () => {
+  const now = at("2026-11-05T00:00:00Z");
+  const soon = at("2026-11-05T02:00:00Z");
+  const later = at("2026-11-07T00:00:00Z");
+
+  it("is urgent within the day while still to assign or waiting", () => {
+    assert.equal(
+      isUrgentTrip({ startsAt: soon, state: "to-assign" }, now),
+      true,
+    );
+    assert.equal(isUrgentTrip({ startsAt: soon, state: "waiting" }, now), true);
+    assert.equal(
+      isUrgentTrip({ startsAt: now, state: "to-assign" }, now),
+      true,
+    );
+  });
+
+  it("is not once assigned, or with days to go", () => {
+    assert.equal(
+      isUrgentTrip({ startsAt: soon, state: "assigned" }, now),
+      false,
+    );
+    assert.equal(
+      isUrgentTrip({ startsAt: later, state: "to-assign" }, now),
+      false,
     );
   });
 });

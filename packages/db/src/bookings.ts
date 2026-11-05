@@ -21,6 +21,7 @@ import {
 } from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
+import type { BookingOrder } from "./booking-order";
 import { BOOKING_RULES, localDayRange } from "./booking-rules";
 import {
   bookingStatusOf,
@@ -32,6 +33,7 @@ import {
   type Canceller,
   type ItemStatus,
   type Product,
+  type TripMode,
 } from "./booking-status";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
@@ -337,14 +339,24 @@ export function getBookingForUser(
 }
 
 /**
- * What the admin lists are narrowed to: a status, a location, the day an
- * item picks up (Malaysian time, cancelled items aside), a search, or any
+ * What the admin lists are narrowed to: a status, a location, the days an
+ * item picks up in (Malaysian time, cancelled items aside), the kind of
+ * trip, the agent, where the invoice's payment stands, a search, or any
  * of them together.
  */
 export type BookingFilter = {
   status?: BookingStatus;
   locationId?: string;
+  /** The day an item picks up on, or the first of a run of days ending at `pickupTo`. */
   pickupOn?: Date;
+  /** The last day of the run from `pickupOn`, counted in. */
+  pickupTo?: Date;
+  /** A booking with a trip of this kind. */
+  tripMode?: TripMode;
+  /** The agent it came through, by id; null for the bookings that came direct. */
+  agentId?: string | null;
+  /** Where its invoice's payment stands; a booking with no invoice yet has none. */
+  paymentStatus?: PaymentStatus;
   /** As `searchTermOf` reads it: the id, the number, part of the reference, or of the customer's name, phone or email. */
   search?: string;
 };
@@ -352,16 +364,22 @@ export type BookingFilter = {
 function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   const where: Prisma.BookingWhereInput = {};
   if (filter.status) where.status = filter.status;
-  // A booking is the location's when one of its items picks up there, and
-  // the day's when one of its live items starts in it; both at once when
-  // the same item does.
+  if (filter.agentId !== undefined) where.agentId = filter.agentId;
+  if (filter.paymentStatus) {
+    where.invoice = { paymentStatus: filter.paymentStatus };
+  }
+  // A booking is the location's when one of its items picks up there, the
+  // days' when one of its live items starts in them, and the kind's when
+  // one of its trips is; all at once when the same item is.
   const item: Prisma.BookingItemWhereInput = {};
   if (filter.locationId) item.locationId = filter.locationId;
   if (filter.pickupOn) {
-    const day = localDayRange(filter.pickupOn);
-    item.startsAt = { gte: day.start, lt: day.end };
+    const first = localDayRange(filter.pickupOn);
+    const last = filter.pickupTo ? localDayRange(filter.pickupTo) : first;
+    item.startsAt = { gte: first.start, lt: last.end };
     item.status = { not: "cancelled" satisfies ItemStatus };
   }
+  if (filter.tripMode) item.tripDetails = { mode: filter.tripMode };
   if (Object.keys(item).length > 0) where.items = { some: item };
   if (filter.search) {
     const phone = phoneDigitsOf(filter.search);
@@ -391,12 +409,10 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   return Object.keys(where).length > 0 ? where : undefined;
 }
 
-/** How an admin list is ordered: by when it was made, or by when it picks up. */
-export type BookingOrder = "newest" | "soonest";
-
-const ORDERS: Record<BookingOrder, Prisma.BookingOrderByWithRelationInput> = {
-  newest: { createdAt: "desc" },
-  soonest: { startsAt: "asc" },
+const ORDERS: Record<BookingOrder, Prisma.BookingOrderByWithRelationInput[]> = {
+  newest: [{ createdAt: "desc" }],
+  soonest: [{ startsAt: "asc" }, { createdAt: "desc" }],
+  latest: [{ startsAt: "desc" }, { createdAt: "desc" }],
 };
 
 /**

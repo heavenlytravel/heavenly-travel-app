@@ -368,7 +368,11 @@ export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
   done: "Done",
 };
 
-/** Where a trip stands: by its status, its parts and whether its driver has reported. */
+/**
+ * Where a trip stands: by its status, its parts and whether its driver
+ * has reported. It is to assign while any role it needs has no one asked,
+ * though others are, and waits to accept once every role is asked.
+ */
 export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
@@ -379,8 +383,25 @@ export function assignStateOf(trip: {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
   if (tripAssigned(trip.parts, trip.withGuide)) return "assigned";
-  if (trip.parts.length > 0) return "waiting";
-  return "to-assign";
+  const asked = rolesOf(trip.withGuide).every((role) =>
+    trip.parts.some((part) => part.role === role),
+  );
+  return asked ? "waiting" : "to-assign";
+}
+
+/**
+ * Whether a trip needs Operation now: it picks up within the day, or has
+ * started, while still to assign or waiting to accept. Its time is red,
+ * and so is a role no one is asked to do.
+ */
+export function isUrgentTrip(
+  trip: { startsAt: Date; state: AssignState },
+  now: Date = new Date(),
+) {
+  return (
+    untilPickup(trip.startsAt, now).soon &&
+    (trip.state === "to-assign" || trip.state === "waiting")
+  );
 }
 
 /**

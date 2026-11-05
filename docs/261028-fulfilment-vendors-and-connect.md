@@ -54,7 +54,9 @@ received ──► confirmed ──► assigned ──► completed
   are named and every acceptance is in (see "Acceptance").
 - **Completed** comes from the driver's "Dropped off", or from Operation on their behalf.
 - **Where a trip stands is worked out, not stored:** To assign, Waiting to accept,
-  Assigned, On the road, Done. The item status stays one of today's five.
+  Assigned, On the road, Done. The item status stays one of today's five. A trip stays
+  To assign until a vendor is asked for every role it needs (vehicle, driver, and the
+  guide when one is booked); with every role asked, it is Waiting to accept.
 - **Operation works on the Assign page** at `/[location]/assign` (every location's
   under `~`), which replaced the Board on 2026-11-02: a table of every trip from today
   on by pickup, figure tiles for To assign (the default), Waiting to accept, Assigned,

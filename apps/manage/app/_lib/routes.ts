@@ -60,6 +60,25 @@ function listHref(path: string, filter: Record<string, string | undefined>) {
   return query ? `${path}?${query}` : path;
 }
 
+/**
+ * A list's address with some of its fields set, or taken out where the
+ * value is "" or undefined, the others kept. On the server or in the
+ * browser alike, so a chip's link and a field's change make the same one.
+ */
+export function withParams(
+  href: string,
+  changes: Record<string, string | undefined>,
+) {
+  const [path = "", query = ""] = href.split("?", 2);
+  const params = new URLSearchParams(query);
+  for (const [key, value] of Object.entries(changes)) {
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
+  const next = params.toString();
+  return next ? `${path}?${next}` : path;
+}
+
 /** The page as the address names it: none for the first. */
 const pageParam = (page?: number) =>
   page && page > 1 ? String(page) : undefined;
@@ -98,19 +117,42 @@ export function dashboardHref(scope: ScopeSlug) {
 
 /* Bookings */
 
-/** What a bookings list narrows to, and the page of it. */
+/**
+ * What a bookings list narrows to, how it is ordered, and the page of it.
+ * The Filters button's choices are each a field of the address, named by
+ * the key here.
+ */
 export type BookingsListFilter = {
   status?: BookingStatus;
   q?: string;
-  /** A pick-up day, "2026-10-29". */
+  /** A pick-up day, "2026-10-29", or the first of a run of them ending at `to`. */
   date?: string;
+  /** The last pick-up day of the run from `date`, counted in. */
+  to?: string;
+  /** An agent's id, or `DIRECT` for the bookings that came direct. */
+  agent?: string;
+  /** Where the invoice's payment stands: a `PaymentStatus`. */
+  payment?: string;
+  /** One-way or hourly: a `TripMode`. */
+  trip?: string;
+  /** A `BookingOrder`; newest made when left out. */
+  sort?: string;
   page?: number;
 };
 
-/** The field of a bookings list's address naming its pick-up day. */
+/** The field of a list's address naming its pick-up day, or the first of a run of days. */
 export const DATE_PARAM = "date";
 
-/** The bookings of the scope, newest first, narrowed by status, search and pick-up day, at a page. */
+/** The field of a bookings list's address naming the last day of its run. */
+export const DATE_TO_PARAM = "to";
+
+/** The field of a list's address naming its order. */
+export const SORT_PARAM = "sort";
+
+/** The agent filter's value for the bookings that came through no agent. */
+export const DIRECT = "direct";
+
+/** The bookings of the scope, narrowed by status, search, pick-up days and the Filters, in an order, at a page. */
 export function bookingsHref(
   scope: ScopeSlug,
   filter: BookingsListFilter = {},
@@ -119,6 +161,11 @@ export function bookingsHref(
     status: filter.status,
     [SEARCH_PARAM]: filter.q,
     [DATE_PARAM]: filter.date,
+    [DATE_TO_PARAM]: filter.date ? filter.to : undefined,
+    agent: filter.agent,
+    payment: filter.payment,
+    trip: filter.trip,
+    [SORT_PARAM]: filter.sort,
     [PAGE_PARAM]: pageParam(filter.page),
   });
 }
@@ -147,12 +194,34 @@ export function amendItemHref(
   return `${bookingHref(scope, bookingId)}/amend/${itemId}`;
 }
 
-/** What narrows the Assign page: where the trips stand, and listed by trip or by booking. */
-export type AssignFilter = { state?: string };
+/**
+ * What narrows the Assign page: where the trips stand, a search, the days
+ * they pick up on, and the Filters button's choices, each a field of the
+ * address named by its key.
+ */
+export type AssignFilter = {
+  state?: string;
+  q?: string;
+  /** A pick-up day, "2026-11-05". */
+  date?: string;
+  /** A vehicle class's id. */
+  class?: string;
+  /** One-way or hourly: a `TripMode`. */
+  trip?: string;
+  /** "urgent" or "overdue": the trips that need Operation first. */
+  only?: string;
+};
 
 /** Operation's Assign page, in the scope: every trip from today on, to assign first. */
 export function assignHref(scope: ScopeSlug, filter: AssignFilter = {}) {
-  return listHref(consolePath(scope, "assign"), filter);
+  return listHref(consolePath(scope, "assign"), {
+    state: filter.state,
+    [SEARCH_PARAM]: filter.q,
+    [DATE_PARAM]: filter.date,
+    class: filter.class,
+    trip: filter.trip,
+    only: filter.only,
+  });
 }
 
 /** One trip's page under Assign, by the trip's id: who does it and what to do next. */

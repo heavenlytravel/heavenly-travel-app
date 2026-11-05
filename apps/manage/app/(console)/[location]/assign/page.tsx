@@ -7,10 +7,15 @@ import {
   formatLocalDateTime,
   formatLocalTime,
   isTripEventKind,
+  isUrgentTrip,
   PART_ROLE_LABELS,
   PART_ROLES,
   partWaitingLabel,
+  todayInMalaysia,
+  addDays,
   TRIP_EVENT_LABELS,
+  TRIP_MODE_LABELS,
+  TRIP_MODES,
   untilPickup,
   type AssignState,
 } from "@repo/db";
@@ -26,16 +31,38 @@ import { Card } from "@repo/console/Card";
 import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PageHeader } from "@repo/console/PageHeader";
 import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
-import { ASSIGN_TONES, AssignStateBadge } from "@repo/console/StatusBadges";
+import {
+  ASSIGN_TONES,
+  AssignStateBadge,
+  NoGuideBadge,
+  NotAssignedBadge,
+} from "@repo/console/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
+import { PickupDateFilter } from "../../../_components/BookingFilters";
+import {
+  FilterChips,
+  ListFilters,
+  type FilterGroup,
+} from "../../../_components/ListFilters";
+import { ListToolbar } from "../../../_components/ListToolbar";
+import { SearchBox } from "../../../_components/SearchBox";
 import { requireAdmin } from "../../../_lib/access";
 import {
   assignHref,
   assignTripHref,
   bookingHref,
+  type AssignFilter,
   type ScopeSlug,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
+import {
+  ASSIGN_ONLY,
+  ASSIGN_ONLY_LABELS,
+  assignViewOf,
+  classesOf,
+  rowsInView,
+  type AssignView,
+} from "./assign-filter";
 import { QuickViewButton } from "./QuickView";
 
 const isState = (value: unknown): value is AssignState =>
@@ -43,14 +70,35 @@ const isState = (value: unknown): value is AssignState =>
 
 type Shown = AssignState | "all";
 
-/** The address of the list narrowed to a state; To assign is the default and left out. */
-const hrefOf = (scope: ScopeSlug, state: Shown) =>
-  assignHref(scope, { state: state === "to-assign" ? undefined : state });
+/** The table's columns: pick-up, booking, trip, a column per role, status, and the button. */
+const COLUMNS = 5 + PART_ROLES.length;
+
+/** The address's filters as the view names them, its state aside. */
+function filterOf(view: AssignView): AssignFilter {
+  return {
+    q: view.q,
+    date: view.date,
+    class: view.classId,
+    trip: view.trip,
+    only: view.only,
+  };
+}
+
+/** The address of the list narrowed to a state, its other filters kept; To assign is the default and left out. */
+const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
+  assignHref(scope, {
+    ...filter,
+    state: state === "to-assign" ? undefined : state,
+  });
 
 /**
- * Route: /[location]/assign?state=…. Operation's page: every trip from
- * today on, at every location under `~` or at the one under its slug, in
- * a table by pickup, those to assign first. Figure tiles count where the trips stand and narrow the list to one.
+ * Route: /[location]/assign?state=…&q=…&date=…&class=…&trip=…&only=….
+ * Operation's page: every trip from today on, at every
+ * location under `~` or at the one under its slug, in a table by pickup
+ * under a heading for each day, those to assign first. Figure tiles count
+ * where the trips stand and narrow the list to one; the search, the
+ * pick-up day and the Filters (class, kind of trip, urgent or overdue)
+ * narrow the counts and the list alike, from the trips loaded.
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
  * opens a quick view of the booking, Assign or Open the trip's own page.
@@ -68,25 +116,31 @@ export default async function AssignPage({
       : isState(query.state)
         ? query.state
         : "to-assign";
+  const view = assignViewOf(query);
 
   return (
     <>
       <PageHeader title="Assign" />
+      {/* Keyed by the scope and the state alone: a search or a filter keeps
+          the bar, and what is typed in it, while the rows come. */}
       <Streamed
         key={`${scope.slug ?? "~"}:${state}`}
         fallback={
           <>
             <FigureTiles
               label="Trips by where they stand"
-              figures={stateFigures(scope.slug, state, null)}
+              figures={stateFigures(scope.slug, state, filterOf(view), null)}
             />
             <Card flush>
-              <TableSkeleton bare columns={6} />
+              <ListToolbar>
+                <Bone className="h-10 w-full sm:w-80" />
+              </ListToolbar>
+              <TableSkeleton bare columns={COLUMNS} />
             </Card>
           </>
         }
       >
-        {() => assignList(scope.slug, scope.location?.id, state)}
+        {() => assignList(scope.slug, scope.location?.id, state, view)}
       </Streamed>
     </>
   );
@@ -96,6 +150,7 @@ export default async function AssignPage({
 function stateFigures(
   scope: ScopeSlug,
   shown: Shown,
+  filter: AssignFilter,
   counts: Record<Shown, number> | null,
 ): Figure[] {
   const valueOf = (key: Shown) =>
@@ -106,7 +161,7 @@ function stateFigures(
       label: ASSIGN_STATE_LABELS[state],
       value: valueOf(state),
       tone: ASSIGN_TONES[state],
-      href: hrefOf(scope, state),
+      href: hrefOf(scope, state, filter),
       current: shown === state,
     })),
     {
@@ -114,7 +169,7 @@ function stateFigures(
       label: "All",
       value: valueOf("all"),
       tone: "neutral" as const,
-      href: hrefOf(scope, "all"),
+      href: hrefOf(scope, "all", filter),
       current: shown === "all",
     },
   ];
@@ -122,7 +177,7 @@ function stateFigures(
 
 const EMPTY: Record<Shown, string> = {
   "to-assign":
-    "Nothing to assign: every trip from today on has its vehicle and driver asked for.",
+    "Nothing to assign: every trip from today on has a vendor asked for each role.",
   waiting: "No trip is waiting for an answer.",
   assigned: "No trip from today on is assigned and not yet on the road.",
   "on-the-road": "No trip is on the road.",
@@ -130,26 +185,95 @@ const EMPTY: Record<Shown, string> = {
   all: "No trip from today on.",
 };
 
+/** The Filters' choices: the classes the trips name, the kind of trip, and what needs Operation first. */
+function groupsOf(rows: readonly AssignRow[], view: AssignView) {
+  const classes = classesOf(rows);
+  const groups: FilterGroup[] = [
+    {
+      param: "class",
+      label: "Vehicle class",
+      value: view.classId ?? "",
+      options: classes,
+    },
+    {
+      param: "trip",
+      label: "Trip type",
+      value: view.trip ?? "",
+      options: TRIP_MODES.map((value) => ({
+        value,
+        label: TRIP_MODE_LABELS[value],
+      })),
+    },
+    {
+      param: "only",
+      label: "Needs attention",
+      value: view.only ?? "",
+      options: ASSIGN_ONLY.map((value) => ({
+        value,
+        label: ASSIGN_ONLY_LABELS[value],
+      })),
+    },
+  ];
+  // A class no trip names any more is no filter.
+  const live: AssignView = {
+    ...view,
+    classId: classes.some((option) => option.value === view.classId)
+      ? view.classId
+      : undefined,
+  };
+  return { groups, live };
+}
+
+/** "Today · Thu, 5 Nov", "Tomorrow · Fri, 6 Nov", or the day alone, for the heading over a day's trips. */
+function dayHeading(day: string, at: Date, today: string) {
+  const date = formatLocalDate(at);
+  if (day === today) return `Today · ${date}`;
+  if (day === addDays(today, 1)) return `Tomorrow · ${date}`;
+  return date;
+}
+
 async function assignList(
   scope: ScopeSlug,
   locationId: string | undefined,
   state: Shown,
+  asked: AssignView,
 ) {
   const rows = await getAssignPage(locationId);
-  const counts = Object.fromEntries([
-    ...ASSIGN_STATES.map((s) => [s, rows.filter((r) => r.state === s).length]),
-    ["all", rows.length],
-  ]) as Record<Shown, number>;
-  const shown = rows.filter((row) => state === "all" || row.state === state);
   const now = new Date();
+  const { groups, live: view } = groupsOf(rows, asked);
+  const inView = rowsInView(rows, view, now);
+  const counts = Object.fromEntries([
+    ...ASSIGN_STATES.map((s) => [
+      s,
+      inView.filter((r) => r.state === s).length,
+    ]),
+    ["all", inView.length],
+  ]) as Record<Shown, number>;
+  const shown = inView.filter((row) => state === "all" || row.state === state);
+  const filter = filterOf(view);
+  // The list as filtered, in its state: what each control changes a field of.
+  const listed = hrefOf(scope, state, filter);
+  const today = todayInMalaysia(now);
+  const filtered = Object.values(filter).some(Boolean);
 
   return (
     <>
       <FigureTiles
         label="Trips by where they stand"
-        figures={stateFigures(scope, state, counts)}
+        figures={stateFigures(scope, state, filter, counts)}
       />
       <Card flush>
+        <ListToolbar>
+          <SearchBox
+            href={hrefOf(scope, state, { ...filter, q: undefined })}
+            value={view.q ?? ""}
+            label="Search trips"
+            placeholder="Booking, customer, place, plate or driver"
+          />
+          <PickupDateFilter href={listed} value={view.date ?? ""} min={today} />
+          <ListFilters href={listed} groups={groups} />
+        </ListToolbar>
+        <FilterChips href={listed} groups={groups} />
         <Table bare>
           <THead>
             <Th>Pick-up</Th>
@@ -163,13 +287,35 @@ async function assignList(
           </THead>
           <TBody>
             {shown.length === 0 ? (
-              <EmptyRow colSpan={5 + PART_ROLES.length}>
-                {EMPTY[state]}
+              <EmptyRow colSpan={COLUMNS}>
+                {filtered ? "No trip matches these filters." : EMPTY[state]}
               </EmptyRow>
             ) : (
-              shown.map((row) => (
-                <TripRow key={row.itemId} row={row} scope={scope} now={now} />
-              ))
+              shown.map((row, index) => {
+                const day = todayInMalaysia(row.startsAt);
+                const before = shown[index - 1];
+                const opensDay =
+                  !before || todayInMalaysia(before.startsAt) !== day;
+                return [
+                  opensDay ? (
+                    <tr key={`day:${day}`}>
+                      <th
+                        scope="colgroup"
+                        colSpan={COLUMNS}
+                        className="bg-canvas px-5 py-2 text-left text-xs font-semibold text-ink"
+                      >
+                        {dayHeading(day, row.startsAt, today)}
+                      </th>
+                    </tr>
+                  ) : null,
+                  <TripRow
+                    key={row.itemId}
+                    row={row}
+                    scope={scope}
+                    now={now}
+                  />,
+                ];
+              })
             )}
           </TBody>
         </Table>
@@ -190,8 +336,7 @@ function TripRow({
 }) {
   const { job, state } = row;
   const until = untilPickup(row.startsAt, now);
-  const toDo = state === "to-assign" || state === "waiting";
-  const urgent = until.soon && toDo;
+  const urgent = isUrgentTrip(row, now);
   return (
     <tr className={cx(row.overdue && "bg-warning-tint")}>
       <Td className="whitespace-nowrap tabular-nums">
@@ -246,9 +391,12 @@ function TripRow({
       {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
           {role === "guide" && !row.withGuide ? (
-            <span className="text-muted">No guide</span>
+            <NoGuideBadge />
           ) : (
-            <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+            <PartCell
+              part={row.parts.find((p) => p.role === role) ?? null}
+              urgent={urgent}
+            />
           )}
           {role === "guide" && row.guideLanguage ? (
             <span className="block text-xs text-muted">
@@ -281,8 +429,15 @@ function TripRow({
 }
 
 /** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
-function PartCell({ part }: { part: AssignPart | null }) {
-  if (!part) return <span className="text-muted">Not asked</span>;
+function PartCell({
+  part,
+  urgent,
+}: {
+  part: AssignPart | null;
+  /** The trip is urgent: a role no one is asked to do is red. */
+  urgent: boolean;
+}) {
+  if (!part) return <NotAssignedBadge urgent={urgent} />;
   return (
     <>
       <span className="block text-body">

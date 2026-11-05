@@ -5,6 +5,7 @@ import {
   formatLocalDateTime,
   formatMyr,
   isLive,
+  isUrgentTrip,
   modelName,
   PART_ROLE_LABELS,
   rolesOf,
@@ -19,7 +20,7 @@ import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { AssignStateBadge } from "@repo/console/StatusBadges";
+import { AssignStateBadge, NotAssignedBadge } from "@repo/console/StatusBadges";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
 import { assignTripHref, type ScopeSlug } from "../../../../_lib/routes";
@@ -97,12 +98,25 @@ export function WhoDoesIt({
                     ? partWaitingOf(part, part.offer.vendor.isOurs)
                     : null;
                   return (
-                    <div key={role} className="flex flex-wrap gap-x-1.5">
+                    <div
+                      key={role}
+                      className="flex flex-wrap items-center gap-x-1.5"
+                    >
                       <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
-                      <dd className={part ? "text-body" : "text-muted"}>
-                        {part
-                          ? `${namedOf(part)} · ${part.offer.vendor.name}`
-                          : "Not asked yet"}
+                      <dd className="text-body">
+                        {part ? (
+                          `${namedOf(part)} · ${part.offer.vendor.name}`
+                        ) : (
+                          <NotAssignedBadge
+                            urgent={isUrgentTrip({
+                              startsAt: trip.startsAt,
+                              state: assignStateOf({
+                                ...trip,
+                                reported: false,
+                              }),
+                            })}
+                          />
+                        )}
                         {part && waiting ? (
                           <span className="text-warning">
                             {" "}

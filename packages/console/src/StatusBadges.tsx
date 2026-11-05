@@ -67,6 +67,24 @@ export function AssignStateBadge({ state }: { state: AssignState }) {
   );
 }
 
+/**
+ * A role of a trip with no vendor asked to do it, on the Assign page and
+ * the booking alike: grey while there is time, red once the trip is
+ * urgent (`isUrgentTrip`), as its time is.
+ */
+export function NotAssignedBadge({ urgent }: { urgent: boolean }) {
+  return (
+    <Badge dot tone={urgent ? "red" : "neutral"}>
+      Not assigned
+    </Badge>
+  );
+}
+
+/** The guide's place on a trip booked without one: nothing to do, so grey. */
+export function NoGuideBadge() {
+  return <Badge>Not booked</Badge>;
+}
+
 /** A booking's summary status, as stored on the booking. */
 export function BookingStatusBadge({ status }: { status: string }) {
   if (!isBookingStatus(status)) return <Badge>{status}</Badge>;

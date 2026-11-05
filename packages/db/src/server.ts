@@ -365,7 +365,6 @@ export {
 export { InvoiceRefusal } from "./booking-counter";
 export type {
   BookingFilter,
-  BookingOrder,
   BookingWithItems,
   BookingItemWithDetails,
   PreparedItem,

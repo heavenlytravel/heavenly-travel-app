@@ -6,8 +6,9 @@ import { Sheet } from "./sheet.js";
 import { useNarrow } from "./use-media-query.js";
 
 /**
- * Where a date or time field's picker opens: a popover under the field, or
- * on a phone a sheet from the bottom with room for a thumb. The sheet is put
+ * Where a date or time field's picker, or a list's Filters panel, opens: a
+ * popover under the field, or on a phone a sheet from the bottom with room
+ * for a thumb. The sheet is put
  * in the page's dialog or the body, out of any `<label>` around the field,
  * so a tap inside it is not taken for a tap on the label. Controlled: the
  * field owns `open`. `container` is the field's `usePortalContainer`.

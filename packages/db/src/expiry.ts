@@ -76,8 +76,8 @@ export function todayInMalaysia(now: Date = new Date()): string {
   return localDateTimeInputs(now).date;
 }
 
-/** The day `days` after this one. */
-function addDays(day: string, days: number): string {
+/** The day `days` after this one: "2026-10-20" a day after "2026-10-19". */
+export function addDays(day: string, days: number): string {
   return dayOf(new Date(dateOfDay(day)!.getTime() + days * DAY_MS))!;
 }
 

@@ -440,9 +440,10 @@ const locationWhere = (locationId: string): Prisma.ActivityLogWhereInput => ({
 });
 
 /**
- * Everyone who wrote in the log of the areas asked for, the console's or
- * a location's, by name: the people the Activity filter offers. A guest
- * and the system are no one and are left to the kind.
+ * The staff who wrote in the log of the areas asked for, the console's or
+ * a location's, by name: the people the Activity filter offers. Customers,
+ * guests, vendors, drivers and the system are many or no one, and are
+ * left to the filter by kind.
  */
 export async function listActivityActors({
   areas,
@@ -457,7 +458,7 @@ export async function listActivityActors({
       AND: [
         areaWhere(areas),
         locationId ? locationWhere(locationId) : {},
-        { actorId: { not: null } },
+        { actorKind: "admin", actorId: { not: null } },
       ],
     },
   });

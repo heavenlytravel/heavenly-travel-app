@@ -63,7 +63,7 @@ type Log = {
  * action across the console, under a location the changes to it and to
  * the vehicles and drivers based there. Either is narrowed by the
  * Filters button to one area (`?area=`), of the areas held that the log
- * can hold, to one kind of actor (`?who=`) and to one person
+ * can hold, to one kind of actor (`?who=`) and to one member of staff
  * (`?person=`), of those who wrote in it. The fleet's changes are
  * Operation's, the team's SUPER's.
  */
@@ -115,7 +115,7 @@ function logOf(
     },
     {
       param: "person",
-      label: "Person",
+      label: "Staff member",
       value: person ?? "",
       options: people.map((p) => ({ value: p.id, label: p.name })),
     },

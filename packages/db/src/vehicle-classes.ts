@@ -75,9 +75,7 @@ export async function listVehicleClasses(): Promise<CatalogueClass[]> {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     ...withOfferings,
   });
-  return rows
-    .map(catalogueClass)
-    .sort(byCategory);
+  return rows.map(catalogueClass).sort(byCategory);
 }
 
 /** A class as a form picks it: what it is called, its category and whether it is on. */
@@ -160,7 +158,10 @@ export async function updateVehicleClass(
     const { imageUrls, ...fieldsPatch } = patch;
     const pictures =
       imageUrls !== undefined && !sameList(vehicleClass.imageUrls, imageUrls)
-        ? { before: { imageUrls: vehicleClass.imageUrls }, after: { imageUrls } }
+        ? {
+            before: { imageUrls: vehicleClass.imageUrls },
+            after: { imageUrls },
+          }
         : null;
     const fieldsChanged = changedFields(vehicleClass, fieldsPatch);
     if (!fieldsChanged && !pictures) return { ok: true };
@@ -178,7 +179,12 @@ export async function updateVehicleClass(
       if (gone) return gone;
     }
 
-    await tx.vehicleClass.update({ where: { id }, data: changed.after });
+    await tx.vehicleClass.update({
+      where: { id },
+      // The list saved, the old one picture is spent: db:set-class-pictures
+      // never brings back a picture taken out of the list.
+      data: pictures ? { ...changed.after, imageUrl: null } : changed.after,
+    });
     await logActivity(tx, actor, {
       action: "vehicle-class.updated",
       entityId: id,

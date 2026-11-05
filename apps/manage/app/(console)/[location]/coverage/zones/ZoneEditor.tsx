@@ -16,7 +16,7 @@ import {
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
-import { toast } from "@repo/ui/toast";
+import { Toaster, toast } from "@repo/ui/toast";
 import { cx } from "@repo/ui/cx";
 import { Checkbox, Field, Input, Radio, inputClassName } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
@@ -681,6 +681,9 @@ export function ZoneEditor({
           : "grid gap-6"
       }
     >
+      {/* The browser shows only what is inside the full screen: the
+          console's toasts stand outside it, so they show here meanwhile. */}
+      {full ? <Toaster /> : null}
       {/* In full screen, the column beside the map; on the page, its parts
           stand in the page's own column. */}
       <div

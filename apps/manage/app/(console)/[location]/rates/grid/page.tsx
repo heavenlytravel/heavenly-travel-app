@@ -142,9 +142,7 @@ function gridOf(
 ) {
   return {
     classes: offerings
-      .filter(
-        (offering) => offering.isActive && offering.vehicleClass.isActive,
-      )
+      .filter((offering) => offering.isActive && offering.vehicleClass.isActive)
       .map((offering) => ({
         id: offering.vehicleClassId,
         name: offering.vehicleClass.name,
@@ -197,6 +195,8 @@ async function locationGrid({
       />
       <Card flush>
         <RateGrid
+          // A link to another category starts the grid from it.
+          key={category ?? "all"}
           title={
             <span className="inline-flex items-center gap-1.5">
               Routes
@@ -242,6 +242,7 @@ async function everyLocationGrid({
         return (
           <Card flush>
             <RateGrid
+              key={category ?? "all"}
               title="Routes"
               meta={GRID_META}
               locationId={list.id}

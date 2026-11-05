@@ -432,7 +432,7 @@ export type ActivityActors = {
 async function actorWhere(
   actors: ActivityActors = {},
 ): Promise<Prisma.ActivityLogWhereInput> {
-  const words = (actors.search ?? "").trim().split(/s+/).filter(Boolean);
+  const words = (actors.search ?? "").trim().split(/\s+/).filter(Boolean);
   const ids =
     words.length > 0
       ? (

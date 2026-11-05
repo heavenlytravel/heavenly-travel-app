@@ -15,12 +15,7 @@ import { errorOf } from "@repo/console/action-state";
 import { EmptyRow } from "@repo/console/Table";
 import { CardTitle } from "@repo/console/Card";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
-import {
-  useCallback,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { useCallback, useState, useTransition, type ReactNode } from "react";
 import { setHourlyListAction } from "./actions";
 import {
   CELL_BAD,
@@ -440,8 +435,9 @@ export function HourlyRates({
                   "border-b border-hairline";
                 const key = coversKey(zone.id, size);
                 // A duration with no price is not stored, nor how long it
-                // covers: its hours wait for a price.
-                const priced = classes.some(
+                // covers: its hours wait for a price, of any class, shown
+                // or not.
+                const priced = allClasses.some(
                   (column) =>
                     senOf(values.prices[priceKey(zone.id, size, column.id)]) !==
                     null,

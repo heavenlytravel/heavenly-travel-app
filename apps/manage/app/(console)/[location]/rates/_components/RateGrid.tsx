@@ -626,11 +626,11 @@ export function RateGrid({
       <>
         {titleBar()}
         <p className="px-5 py-5 text-sm text-muted">
-        A route runs between two zones, or within one. Draw the zones on{" "}
-        <Link href={coverageHref(locationSlug)} className="text-link">
-          Coverage
-        </Link>{" "}
-        to put a route on the grid.
+          A route runs between two zones, or within one. Draw the zones on{" "}
+          <Link href={coverageHref(locationSlug)} className="text-link">
+            Coverage
+          </Link>{" "}
+          to put a route on the grid.
         </p>
       </>
     );
@@ -703,9 +703,20 @@ export function RateGrid({
   if (pending) status = { tone: "idle", text: "Saving…" };
   else if (notice?.tone === "error") status = notice;
   else if (invalid.size > 0) {
+    // A bad cell in a category the filter hides still holds the save: say
+    // where it is.
+    const shownIds = new Set(classes.map((column) => column.id));
+    const hiddenIn = [
+      ...new Set(
+        [...invalid].flatMap((key) => {
+          const column = allClasses.find((c) => c.id === key.split("|")[2]);
+          return column && !shownIds.has(column.id) ? [column.category] : [];
+        }),
+      ),
+    ];
     status = {
       tone: "error",
-      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not a price. Enter RM with at most two decimals, or clear ${invalid.size === 1 ? "it" : "them"}.`,
+      text: `${invalid.size === 1 ? "One cell is" : `${invalid.size} cells are`} not a price. Enter RM with at most two decimals, or clear ${invalid.size === 1 ? "it" : "them"}.${hiddenIn.length > 0 ? ` Show ${hiddenIn.join(" and ")} in Filters to find ${invalid.size === 1 ? "it" : "them"}.` : ""}`,
     };
   } else if (dirty) {
     status = {

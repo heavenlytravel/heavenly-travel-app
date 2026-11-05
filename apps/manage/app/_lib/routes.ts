@@ -202,16 +202,12 @@ export function amendItemHref(
 export type AssignFilter = {
   state?: string;
   q?: string;
-  /** An `AssignDay`: "today", "tomorrow", "week", or a day, "2026-11-05". */
+  /** A pick-up day, "2026-11-05". */
   date?: string;
-  /** A vendor's id: the trips with a part offered to it. */
-  vendor?: string;
   /** A vehicle class's id. */
   class?: string;
   /** One-way or hourly: a `TripMode`. */
   trip?: string;
-  /** "with" or "without" a tour guide. */
-  guide?: string;
   /** "urgent" or "overdue": the trips that need Operation first. */
   only?: string;
 };
@@ -222,10 +218,8 @@ export function assignHref(scope: ScopeSlug, filter: AssignFilter = {}) {
     state: filter.state,
     [SEARCH_PARAM]: filter.q,
     [DATE_PARAM]: filter.date,
-    vendor: filter.vendor,
     class: filter.class,
     trip: filter.trip,
-    guide: filter.guide,
     only: filter.only,
   });
 }

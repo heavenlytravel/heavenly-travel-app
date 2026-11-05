@@ -62,7 +62,7 @@ const tripInclude = {
       offer: {
         select: {
           respondBy: true,
-          vendor: { select: { id: true, name: true, isOurs: true } },
+          vendor: { select: { name: true, isOurs: true } },
         },
       },
       vehicle: {
@@ -86,7 +86,6 @@ export type AssignPart = {
   role: string;
   /** "VLE1234 · Toyota Alphard", "Ali bin Abu", a guide's name; null while not named. */
   name: string | null;
-  vendorId: string;
   vendorName: string;
   isOurs: boolean;
   /**
@@ -206,7 +205,6 @@ async function listAssignTrips(
           name: part.vehicle
             ? `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)}`
             : (part.driver?.name ?? part.guide?.name ?? null),
-          vendorId: vendor.id,
           vendorName: vendor.name,
           isOurs: vendor.isOurs,
           waiting: partWaitingOf(part, vendor.isOurs),

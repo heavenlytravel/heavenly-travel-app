@@ -6,11 +6,12 @@ import {
   formatLocalDate,
   formatLocalDateTime,
   formatLocalTime,
-  isDay,
   isTripEventKind,
+  NO_GUIDE_LABEL,
   PART_ROLE_LABELS,
   PART_ROLES,
   partWaitingLabel,
+  ROLE_NOT_ASKED_LABEL,
   todayInMalaysia,
   addDays,
   TRIP_EVENT_LABELS,
@@ -34,7 +35,6 @@ import { Streamed, TableSkeleton } from "@repo/console/Skeleton";
 import { ASSIGN_TONES, AssignStateBadge } from "@repo/console/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { PickupDateFilter } from "../../../_components/BookingFilters";
-import { FilterLinks } from "../../../_components/FilterLinks";
 import {
   FilterChips,
   ListFilters,
@@ -52,14 +52,10 @@ import {
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
 import {
-  ASSIGN_DAY_LABELS,
-  ASSIGN_DAYS,
   ASSIGN_ONLY,
   ASSIGN_ONLY_LABELS,
   assignViewOf,
-  choicesOf,
-  GUIDE_CHOICE_LABELS,
-  GUIDE_CHOICES,
+  classesOf,
   isUrgent,
   rowsInView,
   type AssignView,
@@ -79,10 +75,8 @@ function filterOf(view: AssignView): AssignFilter {
   return {
     q: view.q,
     date: view.date,
-    vendor: view.vendor,
     class: view.classId,
     trip: view.trip,
-    guide: view.guide,
     only: view.only,
   };
 }
@@ -95,13 +89,13 @@ const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
   });
 
 /**
- * Route: /[location]/assign?state=…&q=…&date=…&vendor=…&class=…&trip=…
- * &guide=…&only=…. Operation's page: every trip from today on, at every
+ * Route: /[location]/assign?state=…&q=…&date=…&class=…&trip=…&only=….
+ * Operation's page: every trip from today on, at every
  * location under `~` or at the one under its slug, in a table by pickup
  * under a heading for each day, those to assign first. Figure tiles count
- * where the trips stand and narrow the list to one; the search, the day
- * chips and the Filters (vendor, class, kind of trip, guide, urgent or
- * overdue) narrow the counts and the list alike, from the trips loaded.
+ * where the trips stand and narrow the list to one; the search, the
+ * pick-up day and the Filters (class, kind of trip, urgent or overdue)
+ * narrow the counts and the list alike, from the trips loaded.
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
  * opens a quick view of the booking, Assign or Open the trip's own page.
@@ -180,7 +174,7 @@ function stateFigures(
 
 const EMPTY: Record<Shown, string> = {
   "to-assign":
-    "Nothing to assign: every trip from today on has its vehicle and driver asked for.",
+    "Nothing to assign: every trip from today on has a vendor asked for each role.",
   waiting: "No trip is waiting for an answer.",
   assigned: "No trip from today on is assigned and not yet on the road.",
   "on-the-road": "No trip is on the road.",
@@ -188,16 +182,10 @@ const EMPTY: Record<Shown, string> = {
   all: "No trip from today on.",
 };
 
-/** The Filters' choices: the vendors and classes the trips name, the kind of trip, the guide, and what needs Operation first. */
+/** The Filters' choices: the classes the trips name, the kind of trip, and what needs Operation first. */
 function groupsOf(rows: readonly AssignRow[], view: AssignView) {
-  const { vendors, classes } = choicesOf(rows);
+  const classes = classesOf(rows);
   const groups: FilterGroup[] = [
-    {
-      param: "vendor",
-      label: "Vendor",
-      value: view.vendor ?? "",
-      options: vendors,
-    },
     {
       param: "class",
       label: "Vehicle class",
@@ -214,15 +202,6 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
       })),
     },
     {
-      param: "guide",
-      label: "Tour guide",
-      value: view.guide ?? "",
-      options: GUIDE_CHOICES.map((value) => ({
-        value,
-        label: GUIDE_CHOICE_LABELS[value],
-      })),
-    },
-    {
       param: "only",
       label: "Needs attention",
       value: view.only ?? "",
@@ -232,13 +211,12 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
       })),
     },
   ];
-  // A vendor or class no trip names any more is no filter.
-  const known = (group: FilterGroup) =>
-    group.options.some((option) => option.value === group.value);
+  // A class no trip names any more is no filter.
   const live: AssignView = {
     ...view,
-    vendor: known(groups[0]!) ? view.vendor : undefined,
-    classId: known(groups[1]!) ? view.classId : undefined,
+    classId: classes.some((option) => option.value === view.classId)
+      ? view.classId
+      : undefined,
   };
   return { groups, live };
 }
@@ -287,22 +265,9 @@ async function assignList(
             href={hrefOf(scope, state, { ...filter, q: undefined })}
             value={view.q ?? ""}
             label="Search trips"
-            placeholder="Booking, customer, plate, driver or vendor"
+            placeholder="Booking, customer, place, plate or driver"
           />
-          <FilterLinks
-            label="Pick-up day"
-            options={ASSIGN_DAYS.map((value) => ({
-              value,
-              label: ASSIGN_DAY_LABELS[value],
-            }))}
-            active={view.date}
-            hrefOf={(date) => hrefOf(scope, state, { ...filter, date })}
-          />
-          <PickupDateFilter
-            href={listed}
-            value={view.date && isDay(view.date) ? view.date : ""}
-            min={today}
-          />
+          <PickupDateFilter href={listed} value={view.date ?? ""} min={today} />
           <ListFilters href={listed} groups={groups} />
         </ListToolbar>
         <FilterChips href={listed} groups={groups} />
@@ -423,7 +388,7 @@ function TripRow({
       {PART_ROLES.map((role) => (
         <Td key={role} className="min-w-40">
           {role === "guide" && !row.withGuide ? (
-            <span className="text-muted">No guide</span>
+            <span className="text-muted">{NO_GUIDE_LABEL}</span>
           ) : (
             <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
           )}
@@ -459,7 +424,7 @@ function TripRow({
 
 /** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
 function PartCell({ part }: { part: AssignPart | null }) {
-  if (!part) return <span className="text-muted">Not asked</span>;
+  if (!part) return <span className="text-muted">{ROLE_NOT_ASKED_LABEL}</span>;
   return (
     <>
       <span className="block text-body">

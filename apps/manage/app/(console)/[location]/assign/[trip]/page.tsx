@@ -16,6 +16,7 @@ import {
   tripDetailRows,
   tripViewOfItem,
   untilPickup,
+  isUrgentTrip,
   type PartRole,
   type VendorSupply,
 } from "@repo/db";
@@ -128,7 +129,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
   // On the road or done, what the driver reports comes first.
   const reporting = state === "on-the-road" || state === "done";
   const until = untilPickup(trip.startsAt);
-  const toDo = state === "to-assign" || state === "waiting";
+  const urgent = isUrgentTrip({ startsAt: trip.startsAt, state });
 
   const facts: [string, string][] = details
     ? tripDetailRows(details).map(([label, value]) =>
@@ -167,9 +168,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
             {" · "}
             {formatLocalDateTime(trip.startsAt)}
             {" · "}
-            <span
-              className={cx(until.soon && toDo && "font-semibold text-danger")}
-            >
+            <span className={cx(urgent && "font-semibold text-danger")}>
               {until.label}
             </span>
           </>

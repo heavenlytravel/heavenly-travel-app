@@ -5,6 +5,7 @@ import {
   formatLocalDateTime,
   formatMyr,
   isLive,
+  isUrgentTrip,
   modelName,
   PART_ROLE_LABELS,
   rolesOf,
@@ -106,7 +107,15 @@ export function WhoDoesIt({
                         {part ? (
                           `${namedOf(part)} · ${part.offer.vendor.name}`
                         ) : (
-                          <NotAssignedBadge />
+                          <NotAssignedBadge
+                            urgent={isUrgentTrip({
+                              startsAt: trip.startsAt,
+                              state: assignStateOf({
+                                ...trip,
+                                reported: false,
+                              }),
+                            })}
+                          />
                         )}
                         {part && waiting ? (
                           <span className="text-warning">

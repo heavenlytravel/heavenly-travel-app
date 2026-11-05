@@ -3,7 +3,7 @@ import {
   isTripMode,
   searchTermOf,
   todayInMalaysia,
-  untilPickup,
+  isUrgentTrip,
   type TripMode,
 } from "@repo/db";
 import type { AssignRow } from "@repo/db/server";
@@ -15,7 +15,7 @@ import type { AssignRow } from "@repo/db/server";
  * costs no query. See `assignHref` for the address.
  */
 
-/** The trips that need Operation first: the time in red (`isUrgent`), or the row past its end. */
+/** The trips that need Operation first: the time in red (`isUrgentTrip`), or the row past its end. */
 export const ASSIGN_ONLY = ["urgent", "overdue"] as const;
 export type AssignOnly = (typeof ASSIGN_ONLY)[number];
 export const ASSIGN_ONLY_LABELS: Record<AssignOnly, string> = {
@@ -48,14 +48,6 @@ export function assignViewOf(query: Record<string, unknown>): AssignView {
   };
 }
 
-/** Picking up within the day while it is still to assign or waits for an answer: its time in red. */
-export function isUrgent(row: AssignRow, now: Date) {
-  return (
-    untilPickup(row.startsAt, now).soon &&
-    (row.state === "to-assign" || row.state === "waiting")
-  );
-}
-
 /** Whether a trip holds the search: its booking, customer, places, class, and who does it, from which vendor. */
 function holds(row: AssignRow, term: string) {
   const needle = term.toLowerCase();
@@ -82,7 +74,7 @@ export function rowsInView(
     if (view.trip && (row.hours !== null) !== (view.trip === "hourly")) {
       return false;
     }
-    if (view.only === "urgent" && !isUrgent(row, now)) return false;
+    if (view.only === "urgent" && !isUrgentTrip(row, now)) return false;
     if (view.only === "overdue" && !row.overdue) return false;
     return !view.q || holds(row, view.q);
   });

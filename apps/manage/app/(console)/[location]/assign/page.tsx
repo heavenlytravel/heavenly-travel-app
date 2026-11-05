@@ -7,6 +7,7 @@ import {
   formatLocalDateTime,
   formatLocalTime,
   isTripEventKind,
+  isUrgentTrip,
   PART_ROLE_LABELS,
   PART_ROLES,
   partWaitingLabel,
@@ -59,7 +60,6 @@ import {
   ASSIGN_ONLY_LABELS,
   assignViewOf,
   classesOf,
-  isUrgent,
   rowsInView,
   type AssignView,
 } from "./assign-filter";
@@ -336,7 +336,7 @@ function TripRow({
 }) {
   const { job, state } = row;
   const until = untilPickup(row.startsAt, now);
-  const urgent = isUrgent(row, now);
+  const urgent = isUrgentTrip(row, now);
   return (
     <tr className={cx(row.overdue && "bg-warning-tint")}>
       <Td className="whitespace-nowrap tabular-nums">
@@ -393,7 +393,10 @@ function TripRow({
           {role === "guide" && !row.withGuide ? (
             <NoGuideBadge />
           ) : (
-            <PartCell part={row.parts.find((p) => p.role === role) ?? null} />
+            <PartCell
+              part={row.parts.find((p) => p.role === role) ?? null}
+              urgent={urgent}
+            />
           )}
           {role === "guide" && row.guideLanguage ? (
             <span className="block text-xs text-muted">
@@ -426,8 +429,15 @@ function TripRow({
 }
 
 /** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
-function PartCell({ part }: { part: AssignPart | null }) {
-  if (!part) return <NotAssignedBadge />;
+function PartCell({
+  part,
+  urgent,
+}: {
+  part: AssignPart | null;
+  /** The trip is urgent: a role no one is asked to do is red. */
+  urgent: boolean;
+}) {
+  if (!part) return <NotAssignedBadge urgent={urgent} />;
   return (
     <>
       <span className="block text-body">

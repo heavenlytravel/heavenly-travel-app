@@ -68,12 +68,13 @@ export function AssignStateBadge({ state }: { state: AssignState }) {
 }
 
 /**
- * A role of a trip with no vendor asked to do it: red, as the one thing
- * Operation must still do for it, on the Assign page and the booking alike.
+ * A role of a trip with no vendor asked to do it, on the Assign page and
+ * the booking alike: grey while there is time, red once the trip is
+ * urgent (`isUrgentTrip`), as its time is.
  */
-export function NotAssignedBadge() {
+export function NotAssignedBadge({ urgent }: { urgent: boolean }) {
   return (
-    <Badge dot tone="red">
+    <Badge dot tone={urgent ? "red" : "neutral"}>
       Not assigned
     </Badge>
   );

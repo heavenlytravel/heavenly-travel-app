@@ -390,6 +390,21 @@ export function assignStateOf(trip: {
 }
 
 /**
+ * Whether a trip needs Operation now: it picks up within the day, or has
+ * started, while still to assign or waiting to accept. Its time is red,
+ * and so is a role no one is asked to do.
+ */
+export function isUrgentTrip(
+  trip: { startsAt: Date; state: AssignState },
+  now: Date = new Date(),
+) {
+  return (
+    untilPickup(trip.startsAt, now).soon &&
+    (trip.state === "to-assign" || trip.state === "waiting")
+  );
+}
+
+/**
  * When an offer is answered by, unless Operation says otherwise: two hours
  * from now, but never later than an hour before the first pickup, and
  * never sooner than half an hour from now, so a trip close to its pickup,

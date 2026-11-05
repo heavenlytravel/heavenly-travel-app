@@ -196,7 +196,9 @@ export function TripForm({
                 className={fieldControl(clearable)}
               />
               {f.tick?.shown(values) ? (
-                <label className="-mt-1 flex cursor-pointer items-center gap-2 px-[18px] pb-2.5 text-caption text-body">
+                // On the label's line, at the box's right: the box keeps
+                // its height whichever kind of trip is chosen.
+                <label className="absolute top-2.5 right-[18px] z-(--layer-raised) flex cursor-pointer items-center gap-1.5 text-caption/5 text-body">
                   <Checkbox
                     checked={values[f.tick.key] === "1"}
                     onChange={(e) =>

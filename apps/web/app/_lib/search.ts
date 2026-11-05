@@ -52,7 +52,7 @@ export type FieldDef = {
   hidden?: (values: SearchValues) => boolean;
   /**
    * A tick box under the field, in its box, that sets `key` to "1" or "":
-   * the pick-up's "Drop off at other place" on a hire. Shown while
+   * the pick-up's "Drop off elsewhere" on a hire. Shown while
    * `shown` says so.
    */
   tick?: {
@@ -111,7 +111,7 @@ const TRIP_FIELDS: FieldDef[] = [
     ...pickUp,
     tick: {
       key: "elsewhere",
-      label: "Drop off at other place",
+      label: "Drop off elsewhere",
       shown: (v) => v.mode === "hourly",
     },
   },

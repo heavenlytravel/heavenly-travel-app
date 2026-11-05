@@ -204,7 +204,7 @@ export function TripFields({
                   changeTrip({ endsElsewhere: e.target.checked })
                 }
               />
-              Drop off at other place
+              Drop off elsewhere
             </label>
           ) : null}
         </div>

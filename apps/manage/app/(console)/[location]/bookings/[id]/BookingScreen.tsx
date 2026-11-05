@@ -22,6 +22,7 @@ import {
   type ItemStatus,
   type Permission,
   type Place,
+  entriesSeenBy,
 } from "@repo/db";
 import {
   getBookingFulfilment,
@@ -255,7 +256,10 @@ export async function bookingScreen({
                 <Notes bookingId={booking.id} notes={notes} />
               </Card>
             ) : null}
-            <HistoryCard href={recordHistoryHref(href)} entries={entries} />
+            <HistoryCard
+              href={recordHistoryHref(href)}
+              entries={entriesSeenBy(entries, permissions)}
+            />
           </>
         }
       />

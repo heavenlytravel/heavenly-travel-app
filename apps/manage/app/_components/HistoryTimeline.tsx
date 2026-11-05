@@ -1,11 +1,15 @@
 import Link from "next/link";
 import {
   ANONYMOUS_ACTOR_NAMES,
+  activityChangesOf,
+  activityLinesOf,
   describeActivity,
   formatLocalTime,
+  type ActivityLine,
 } from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
+import { ChevronRightIcon } from "@repo/ui/icons";
 import type { ReactNode } from "react";
 import { Card } from "@repo/console/Card";
 import { EmptyState } from "@repo/console/EmptyState";
@@ -40,10 +44,13 @@ function actorOf(entry: ActivityEntry) {
 
 /**
  * A history, newest first, in one card: the changes grouped under the
- * day each was made, each with its time, who made it, what happened and,
- * at the right, the part of the record it changed (`tagOf`). An entry
- * with more to show than its sentence links to the page `hrefOf` names
- * for it. `head` stands across the card's top, the filter chips, and
+ * day each was made, each line with its time, who made it and what
+ * happened, and under it the record it changed (`tagOf`) and who. One
+ * person's entries on one record within a few seconds are one line, the
+ * save they were, and the same thing done again and again is one line
+ * that counts it (`activityLinesOf`). A line with stored values its
+ * sentence does not say opens on them, field by field, old and new. An
+ * entry with a page of its own links to the page `hrefOf` names for it. `head` stands across the card's top, the filters bar, and
  * `foot` across its foot, the way to older changes. The Activity screen
  * and each record's history page read it.
  */
@@ -68,9 +75,7 @@ export function HistoryTimeline({
   const now = new Date();
   return (
     <Card flush className="overflow-hidden">
-      {head ? (
-        <div className="border-b border-hairline px-5 py-4">{head}</div>
-      ) : null}
+      {head}
       {entries.length === 0 ? (
         <EmptyState>{emptyMessage}</EmptyState>
       ) : (
@@ -83,12 +88,12 @@ export function HistoryTimeline({
               {dayHeadingOf(dayEntries[0]!.createdAt, now)}
             </h2>
             <ol className="divide-y divide-hairline text-sm">
-              {dayEntries.map((entry) => (
+              {activityLinesOf(dayEntries, describeActivity).map((line) => (
                 <HistoryLine
-                  key={entry.id}
-                  entry={entry}
-                  href={hrefOf?.(entry) ?? null}
-                  tag={tagOf?.(entry) ?? null}
+                  key={line.entries[0]!.id}
+                  line={line}
+                  hrefOf={hrefOf}
+                  tagOf={tagOf}
                 />
               ))}
             </ol>
@@ -100,55 +105,130 @@ export function HistoryTimeline({
   );
 }
 
-/** One change: its time, a disc with who made it, the sentence and who, and the part it changed. */
+/**
+ * One line: its time, a disc with who made it, what it says, and under
+ * it the record it changed and who; a run of the same thing says how many
+ * times and over what time, a save lists its other changes. The fields it
+ * changed open under "What changed".
+ */
 function HistoryLine({
-  entry,
-  href,
-  tag,
+  line,
+  hrefOf,
+  tagOf,
 }: {
-  entry: ActivityEntry;
-  href: string | null;
-  tag: string | null;
+  line: ActivityLine<ActivityEntry>;
+  hrefOf?: (entry: ActivityEntry) => string | null;
+  tagOf?: (entry: ActivityEntry) => string | null;
 }) {
-  const sentence = describeActivity(entry);
-  const actor = actorOf(entry);
+  const newest = line.entries[0]!;
+  const oldest = line.entries.at(-1)!;
+  const [headline, ...rest] = line.sentences;
+  const repeated = rest.length === 0 && headline!.count > 1;
+  const href =
+    line.entries.map((entry) => hrefOf?.(entry) ?? null).find(Boolean) ?? null;
+  const tag = tagOf?.(newest) ?? null;
+  const actor = actorOf(newest);
+  // "Ali Hassan saw the customer's details" names its actor already.
+  const named = headline!.text.startsWith(newest.actorName);
+  // What the entries changed, in the order made; a run of one thing shows it once.
+  const changes = (repeated ? [oldest] : [...line.entries].reverse()).flatMap(
+    (entry) => activityChangesOf(entry),
+  );
+  const span =
+    formatLocalTime(oldest.createdAt) === formatLocalTime(newest.createdAt)
+      ? null
+      : `${formatLocalTime(oldest.createdAt)} to ${formatLocalTime(newest.createdAt)}`;
+
   return (
-    <li className="grid grid-cols-[3.75rem_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 px-5 py-3 sm:grid-cols-[4.5rem_auto_minmax(0,1fr)_auto]">
-      <span className="text-caption text-muted tabular-nums">
-        {formatLocalTime(entry.createdAt)}
+    <li className="grid grid-cols-[3.75rem_auto_minmax(0,1fr)] items-start gap-x-3 px-5 py-3 sm:grid-cols-[4.5rem_auto_minmax(0,1fr)]">
+      <span className="pt-1.5 text-caption text-muted tabular-nums">
+        {formatLocalTime(newest.createdAt)}
       </span>
       <span
         aria-hidden="true"
         className={cx(
           "flex size-8 items-center justify-center rounded-full text-2xs font-bold",
-          entry.actorKind === "admin"
+          newest.actorKind === "admin"
             ? "bg-brand-tint text-brand-strong"
             : "bg-hairline text-muted",
         )}
       >
         {initialsOf(actor)}
       </span>
-      <span className="min-w-0">
-        <span className="block font-medium text-ink">
+      <div className="grid min-w-0 gap-1 pt-1">
+        <p className="font-medium text-ink">
           {href ? (
             <Link
               href={href}
               className="rounded-sm underline decoration-edge underline-offset-4 transition-colors hover:text-brand hover:decoration-brand focus-ring"
             >
-              {sentence}
+              {headline!.text}
             </Link>
           ) : (
-            sentence
+            headline!.text
           )}
-        </span>
-        <span className="block truncate text-caption text-muted">{actor}</span>
-      </span>
-      {tag ? (
-        <span className="col-start-3 justify-self-start rounded-md border border-hairline bg-shade px-2 py-0.5 text-xs text-muted sm:col-start-auto sm:justify-self-end">
-          {tag}
-        </span>
-      ) : null}
+          {repeated ? (
+            <span className="ml-2 inline-flex rounded-full bg-shade px-2 py-0.5 align-middle text-2xs font-semibold text-muted tabular-nums">
+              {headline!.count} times{span ? `, ${span}` : ""}
+            </span>
+          ) : null}
+        </p>
+        {rest.length > 0 ? (
+          <ul className="grid gap-0.5 text-body">
+            {rest.map((sentence) => (
+              <li key={sentence.text} className="flex gap-2">
+                <span aria-hidden="true" className="text-muted">
+                  ·
+                </span>
+                <span>
+                  {sentence.text}
+                  {sentence.count > 1 ? ` (${sentence.count} times)` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <p className="truncate text-caption text-muted">
+          {[tag, named ? null : actor].filter(Boolean).join(" · ")}
+        </p>
+        {changes.length > 0 ? <Changes changes={changes} /> : null}
+      </div>
     </li>
+  );
+}
+
+/** "What changed" under a line, closed until clicked: each field, what it was and what it became. */
+function Changes({
+  changes,
+}: {
+  changes: ReturnType<typeof activityChangesOf>;
+}) {
+  return (
+    <details className="group/changes">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-caption font-medium text-link focus-ring [&::-webkit-details-marker]:hidden">
+        <ChevronRightIcon className="size-3.5 transition-transform group-open/changes:rotate-90" />
+        What changed
+      </summary>
+      <dl className="mt-2 grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-x-4 gap-y-1 rounded-md bg-shade px-3 py-2 text-caption">
+        {changes.map((change, index) => (
+          <div key={`${change.label}-${index}`} className="contents">
+            <dt className="text-muted">{change.label}</dt>
+            <dd className="min-w-0 break-words text-body">
+              {change.before !== null && change.after !== null ? (
+                <>
+                  <span className="text-muted line-through">
+                    {change.before}
+                  </span>{" "}
+                  → {change.after}
+                </>
+              ) : (
+                (change.after ?? change.before)
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 
@@ -162,9 +242,7 @@ export function HistoryTimelineSkeleton({
 }) {
   return (
     <Card flush className="overflow-hidden">
-      {head ? (
-        <div className="border-b border-hairline px-5 py-4">{head}</div>
-      ) : null}
+      {head}
       <div className="border-b border-hairline bg-shade px-5 py-2.5">
         <Bone className="h-3 w-40" />
       </div>

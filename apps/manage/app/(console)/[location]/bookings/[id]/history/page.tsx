@@ -1,11 +1,11 @@
-import { bookingLabelOf } from "@repo/db";
+import { bookingLabelOf, entriesSeenBy } from "@repo/db";
 import { listActivityFor } from "@repo/db/server";
 import { Streamed } from "@repo/console/Skeleton";
 import {
   RecordHistory,
   RecordHistorySkeleton,
 } from "../../../../../_components/RecordHistory";
-import { requireAdmin } from "../../../../../_lib/access";
+import { getPermissions, requireAdmin } from "../../../../../_lib/access";
 import { bookingHref } from "../../../../../_lib/routes";
 import { scopeOf, type ConsoleScope } from "../../../../../_lib/scope";
 import { scopedBooking } from "../../_lib/scoped-booking";
@@ -13,8 +13,10 @@ import { scopedBooking } from "../../_lib/scoped-booking";
 /**
  * Route: /[location]/bookings/[id]/history. One booking's history, from
  * "History" in its header: every action on it, the customer's and the
- * system's too, newest first. Opens wherever the booking does; under a
- * location no trip picks up in, it is not found.
+ * system's too, newest first, of the areas the admin holds (a driver's
+ * look at the customer's details is SUPER's, as on Activity). Opens
+ * wherever the booking does; under a location no trip picks up in, it is
+ * not found.
  */
 export default async function BookingHistoryPage({
   params,
@@ -31,9 +33,10 @@ export default async function BookingHistoryPage({
 }
 
 async function bookingHistory(id: string, scope: ConsoleScope) {
-  const [booking, entries] = await Promise.all([
+  const [booking, entries, permissions] = await Promise.all([
     scopedBooking(id, scope),
     listActivityFor("booking", id),
+    getPermissions(),
   ]);
   return (
     <RecordHistory
@@ -41,7 +44,7 @@ async function bookingHistory(id: string, scope: ConsoleScope) {
         href: bookingHref(scope.slug, booking.id),
         label: bookingLabelOf(booking),
       }}
-      entries={entries}
+      entries={entriesSeenBy(entries, permissions)}
       emptyMessage="No activity recorded. This booking predates the log."
     />
   );

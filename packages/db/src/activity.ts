@@ -417,6 +417,61 @@ export type ActivityAreas = {
   area?: ActivityArea;
 };
 
+/** Whose entries a reader asks for: one kind of actor, one person, or anyone's. */
+export type ActivityActors = {
+  kind?: string;
+  /** A user's id. */
+  id?: string;
+};
+
+function actorWhere(actors: ActivityActors = {}): Prisma.ActivityLogWhereInput {
+  return {
+    ...(actors.kind ? { actorKind: actors.kind } : {}),
+    ...(actors.id ? { actorId: actors.id } : {}),
+  };
+}
+
+/** Where a location's own history is: its entries, and those of the vehicles and drivers based there. */
+const locationWhere = (locationId: string): Prisma.ActivityLogWhereInput => ({
+  OR: [
+    { entityType: "location", entityId: locationId },
+    { locationIds: { has: locationId } },
+  ],
+});
+
+/**
+ * Everyone who wrote in the log of the areas asked for, the console's or
+ * a location's, by name: the people the Activity filter offers. A guest
+ * and the system are no one and are left to the kind.
+ */
+export async function listActivityActors({
+  areas,
+  locationId,
+}: {
+  areas: ActivityAreas;
+  locationId?: string;
+}): Promise<{ id: string; name: string }[]> {
+  const rows = await db.activityLog.groupBy({
+    by: ["actorId"],
+    where: {
+      AND: [
+        areaWhere(areas),
+        locationId ? locationWhere(locationId) : {},
+        { actorId: { not: null } },
+      ],
+    },
+  });
+  const ids = rows.flatMap((row) => (row.actorId ? [row.actorId] : []));
+  if (ids.length === 0) return [];
+  const users = await db.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, email: true, firstName: true, lastName: true },
+  });
+  return users
+    .map((user) => ({ id: user.id, name: nameOf(user) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /**
  * The query's part that keeps the areas asked for: by action, so a page
  * of the log is a page of what the admin may see. An area not held asks
@@ -459,25 +514,19 @@ async function pageOf(
 export function listLocationHistory({
   locationId,
   areas,
+  actors,
   before,
   take,
 }: {
   locationId: string;
   areas: ActivityAreas;
+  actors?: ActivityActors;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
   return pageOf(
     {
-      AND: [
-        {
-          OR: [
-            { entityType: "location", entityId: locationId },
-            { locationIds: { has: locationId } },
-          ],
-        },
-        areaWhere(areas),
-      ],
+      AND: [locationWhere(locationId), areaWhere(areas), actorWhere(actors)],
     },
     before,
     take,
@@ -556,12 +605,14 @@ export type ActivityPage = {
  */
 export function listActivity({
   areas,
+  actors,
   before,
   take,
 }: {
   areas: ActivityAreas;
+  actors?: ActivityActors;
   before?: string;
   take: number;
 }): Promise<ActivityPage> {
-  return pageOf(areaWhere(areas), before, take);
+  return pageOf({ AND: [areaWhere(areas), actorWhere(actors)] }, before, take);
 }

@@ -197,3 +197,20 @@ export function activityActionsIn(
     areas.includes(AREA_OF[action]),
   );
 }
+
+/**
+ * The entries of a record's history that an admin with `permissions` may
+ * read: those of the areas held, as on Activity, so a booking's History
+ * shows a driver's look at the customer's details to SUPER alone, as the
+ * log does. An entry of an action no longer known is kept.
+ */
+export function entriesSeenBy<E extends { action: string }>(
+  entries: readonly E[],
+  permissions: readonly Permission[],
+): E[] {
+  const held = activityAreasHeld(permissions);
+  return entries.filter((entry) => {
+    const area = entryAreaOf(entry.action);
+    return area === null || held.includes(area);
+  });
+}

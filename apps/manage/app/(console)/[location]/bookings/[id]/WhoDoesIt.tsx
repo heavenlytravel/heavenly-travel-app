@@ -11,6 +11,7 @@ import {
   partWaitingLabel,
   partWaitingOf,
   ringgitInputValue,
+  ROLE_NOT_ASKED_LABEL,
   type PartRole,
 } from "@repo/db";
 import type { FulfilmentTrip, TripPartView } from "@repo/db/server";
@@ -102,7 +103,7 @@ export function WhoDoesIt({
                       <dd className={part ? "text-body" : "text-muted"}>
                         {part
                           ? `${namedOf(part)} · ${part.offer.vendor.name}`
-                          : "Not asked yet"}
+                          : ROLE_NOT_ASKED_LABEL}
                         {part && waiting ? (
                           <span className="text-warning">
                             {" "}

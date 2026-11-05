@@ -177,7 +177,24 @@ describe("tripAssigned and assignStateOf", () => {
   it("puts a trip in its column", () => {
     const base = { status: "confirmed", reported: false, withGuide: false };
     assert.equal(assignStateOf({ ...base, parts: [] }), "to-assign");
-    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "waiting");
+    // Half asked is still to assign: the driver has no one asked.
+    assert.equal(assignStateOf({ ...base, parts: [vehicle] }), "to-assign");
+    assert.equal(
+      assignStateOf({
+        ...base,
+        parts: [vehicle, { ...driver, driverAcceptedAt: null }],
+      }),
+      "waiting",
+    );
+    // With a guide booked, the guide is asked too before it waits.
+    assert.equal(
+      assignStateOf({
+        ...base,
+        withGuide: true,
+        parts: [vehicle, { ...driver, driverAcceptedAt: null }],
+      }),
+      "to-assign",
+    );
     assert.equal(
       assignStateOf({ ...base, status: "assigned", parts: [vehicle, driver] }),
       "assigned",

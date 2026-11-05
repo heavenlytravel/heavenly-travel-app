@@ -368,7 +368,11 @@ export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
   done: "Done",
 };
 
-/** Where a trip stands: by its status, its parts and whether its driver has reported. */
+/**
+ * Where a trip stands: by its status, its parts and whether its driver
+ * has reported. It is to assign while any role it needs has no one asked,
+ * though others are, and waits to accept once every role is asked.
+ */
 export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
@@ -379,9 +383,17 @@ export function assignStateOf(trip: {
   if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
   if (tripAssigned(trip.parts, trip.withGuide)) return "assigned";
-  if (trip.parts.length > 0) return "waiting";
-  return "to-assign";
+  const asked = rolesOf(trip.withGuide).every((role) =>
+    trip.parts.some((part) => part.role === role),
+  );
+  return asked ? "waiting" : "to-assign";
 }
+
+/** What a role's cell says while no one is asked to do it. */
+export const ROLE_NOT_ASKED_LABEL = "No vendor asked yet";
+
+/** What the guide's cell says on a trip booked without one. */
+export const NO_GUIDE_LABEL = "Not booked";
 
 /**
  * When an offer is answered by, unless Operation says otherwise: two hours

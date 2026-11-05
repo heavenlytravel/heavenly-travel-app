@@ -73,7 +73,10 @@ export function ClassPicture({
         className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {pictures.map((src, i) => (
-          <span key={src} className="relative h-full w-full shrink-0 snap-start">
+          <span
+            key={src}
+            className="relative h-full w-full shrink-0 snap-start"
+          >
             <Image
               src={src}
               alt=""

@@ -6,7 +6,7 @@ import {
   CommandPaletteTrigger,
   type CommandPaletteGroup,
 } from "@repo/ui/command-palette";
-import { CirclePlusIcon, SearchIcon, XIcon } from "@repo/ui/icons";
+import { CirclePlusIcon, ListIcon, SearchIcon, XIcon } from "@repo/ui/icons";
 import { SidebarDock, SidebarDockButton, useSidebar } from "@repo/ui/sidebar";
 import { useRouter } from "next/navigation";
 import {
@@ -25,7 +25,7 @@ import {
   type SearchHit,
   type SearchResponse,
 } from "../_lib/console-search";
-import { SEARCH_PARAM, SEARCH_PATH } from "../_lib/routes";
+import { bookingsHref, SEARCH_PARAM, SEARCH_PATH } from "../_lib/routes";
 import type { PickerLocation } from "./ScopePicker";
 import { LocationMark } from "@repo/console/LocationMark";
 import { MENU_ICONS, type MenuIcon } from "./menu";
@@ -231,15 +231,35 @@ export function ConsoleSearch({
       ...found.map((group) => ({
         key: group.kind,
         heading: RECORD_KIND_LABELS[group.kind],
-        items: group.hits.map(({ hit, entry }) => ({
-          key: `${group.kind}:${hit.href}`,
-          value: hit.href,
-          content: <HitRow hit={hit} icon={entry.icon} />,
-        })),
+        items: [
+          ...group.hits.map(({ hit, entry }) => ({
+            key: `${group.kind}:${hit.href}`,
+            value: hit.href,
+            content: <HitRow hit={hit} icon={entry.icon} />,
+          })),
+          // The bookings list, searched the same, for more than the few here
+          // and to narrow them further; under `~`, as the search is.
+          ...(group.kind === "bookings" && recordTerm
+            ? [
+                {
+                  key: "bookings:all",
+                  value: bookingsHref(null, { q: recordTerm }),
+                  content: (
+                    <>
+                      <ListIcon />
+                      <span className="min-w-0 flex-1 truncate text-brand">
+                        See all bookings for “{recordTerm}”
+                      </span>
+                    </>
+                  ),
+                },
+              ]
+            : []),
+        ],
       })),
     ];
     return { groups, entries };
-  }, [term, index, records, recent]);
+  }, [term, recordTerm, index, records, recent]);
 
   const status =
     !term || groups.length > 0 || pending

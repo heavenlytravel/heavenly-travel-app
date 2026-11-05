@@ -442,3 +442,78 @@ All are about how the log reads on screen. Each cites the code.
     booking on it, but only one entry is written, on the booking where staff
     clicked (`bookings.ts:1247`). The other bookings' History does not show it.
 26. `customerVisible` is set but no screen reads it yet.
+
+### 3.8 What this branch changed on screen
+
+The log writes the same as before; these are display changes only.
+
+| Finding | Now |
+|---|---|
+| 1, 2 Repeats and one save, several lines | Folded: the same sentence again and again is one line, "3 times, 10:36 to 16:40"; one person's entries on one record within 5 seconds are one line, the rest listed under it (`activity-lines.ts`). |
+| 4 Actor three times | The line under the sentence leaves the name out when the sentence starts with it. |
+| 7 Only publishes open | Every line with stored values opens "What changed", field by field, old and new, money in RM, files as a count ("2 images"). |
+| 10, 11 Wording | "Trip 2" everywhere; "Assigned everyone to trip 1", "Completed trip 1", "Reported a problem on trip 2: …", "Regular" not "REGULAR". |
+| 20 PDPA entries on booking History | Booking History reads only the areas the admin holds (`entriesSeenBy`), as Activity does: drivers' views are SUPER's. |
+| — Finding one person | Activity's Filters: area, who (staff, customers, guests, vendors and drivers, system) and staff member. |
+
+---
+
+## 4. What to log: gaps and excess
+
+To fine-tune later, with performance in mind. Nothing here is built yet.
+Each item says what happens today, what to change, and why.
+
+### 4.1 Not logged, and worth logging
+
+Found by reading every function in `packages/db/src` that writes without a
+`logActivity` call (`sync.ts`, `accounts.ts`, `fulfilment.ts`, `bookings.ts`).
+
+| # | What happens, unlogged | Where | Suggest | Why |
+|---|---|---|---|---|
+| G1 | A customer signs up: their `User` row is made from Clerk. | `sync.ts` `upsertUserFromClerk` | `user.signed-up` on the user, actor the customer. | A user's History starts at nothing; staff-made accounts log `user.created`, self-made ones do not. |
+| G2 | The sign-up claims the guest bookings made with that email. | `sync.ts` `claimGuestBookings` | `booking.claimed` on each booking, with the account's email. | The booking's History never says when it gained an account, so "who is this customer" has no trail. |
+| G3 | The sign-up links a driver row to the account. | `sync.ts` `linkDriver` | `driver.account.linked` on the driver. | The driver's History does not say when they could first open Connect. |
+| G4 | An account deleted in Clerk's dashboard removes the `User` row. | `sync.ts` `deleteUserFromClerk`, from `api/webhooks/clerk` | `user.deleted` with actor `system`, keeping the email. | Deleting in Manage is logged; the same delete from Clerk is not. |
+| G5 | A trip cancelled before its free-cancellation deadline sets the accepted parts' cost to RM 0. | `fulfilment.ts` `settleCancelledTrips` | `booking.part.cost.changed` with actor `system` and cause "cancelled in time". | Finance sees a cost drop to 0 on the booking with no line saying why; a manual change is logged. |
+| G6 | A vendor's offer turns accepted or gone as its parts settle. | `fulfilment.ts` `settleOffer` | Nothing new: the part lines already say it. Only add `booking.offer.accepted` if Assign needs one line per offer. | Listed so the gap is known, not because it is missing. |
+| G7 | A new vendor's applicant names and phone, kept on their account. | `accounts.ts` `keepApplicantProfile` | Leave unlogged, or fold into the `vendor.created` entry's `after`. | Small, and the registration itself is logged. |
+| G8 | Staff open a booking that shows the customer's phone and email. | Manage booking page | Leave unlogged. | Drivers' views are logged for PDPA because they are outside the company. Logging staff views would add an entry on every open, far more than all the rest. |
+| G9 | A file uploaded to Media. | `api/uploads` | Leave unlogged. | A file only matters once a page, class or vehicle uses it, and that save is logged. Deleting is logged. |
+| G10 | An agent's invoice paid or changed, on the other bookings on that invoice. | `bookings.ts:1247` | One entry per booking on the invoice, or have the History of each booking read the invoice's entry. | Today only the booking where staff clicked shows it (finding 25). |
+| G11 | Location Activity misses its vendors' and classes' changes. | `vendors.ts:286`, `vehicle-classes.ts:135`, `vehicle-models.ts:105` | Write `locationIds`: a vendor's locations, the locations that sell a class. | Finding 19: under a location, Fleet's own work is missing. |
+| G12 | Emails sent (when `EMAILS_ON` is turned on). | `@repo/email` | `booking.email.sent` with the template and recipient, once emails go out. | "Did the customer get the confirmation?" is a common question. Resend keeps its own log, so this is optional. |
+
+### 4.2 Logged, and worth logging less
+
+| # | Today | Suggest | Saves |
+|---|---|---|---|
+| E1 | `booking.contact.viewed` on every open of a job page (13% of all entries). | Log the first view per person per trip, or per person per trip per day. Folding on screen already hides the repeats. | Most of the biggest action. |
+| E2 | `updateZone` logs every save, even with nothing changed (finding 3). | Compare as other writers do (`changedFields`), and log nothing when nothing changed. | Lines that say "Redrew" for no change. |
+| E3 | `user.updated` stores all three name fields every time (finding 7). | Store only the fields that changed. | Clearer "What changed". |
+| E4 | Team access: one entry per permission changed in one save. | One `access.rule.changed` per save, the permissions added and removed in it. | Lines; the screen folds them now anyway. |
+| E5 | Class order and page order: one entry per arrow click. | Keep; the screen folds a run of clicks into one line. If they grow, log the order once per minute per location. | Little, so low priority. |
+| E6 | Rate rules save: up to three entries (`reach`, `surcharge`, `weekend`). | One `location.rules.updated` per save with the three parts. | Lines; folded on screen already. |
+| E7 | Three actions with no writer (`state.updated`, `district.updated`, `location.dropoff.updated`) and the cause "backed-out" (findings 23, 24). | Keep the read side so old entries still read; delete the vocabulary once prod holds none (check with a count). | Code, not rows. |
+
+### 4.3 Keep as it is: other code reads it
+
+Changing these changes behaviour, not just the log.
+
+- **Publishes store the whole page before and after.** They are the largest
+  rows, but Media reads them to know which files an earlier version still
+  uses (`media.ts`, "earlier"), and the publish link shows before and after.
+- **`user.created` keeps `madeFor`.** `deleteAccountIfUnused` reads it to
+  know whether an account was made for a driver or vendor and may go with
+  it (`accounts.ts`).
+- **Offer expiry is logged lazily.** `expireOffers` writes the release, with
+  actor `system`, when a screen next reads fulfilment, not at the deadline.
+  The time on the line is when it was noticed. Fine as long as the cause
+  says "expired".
+
+### 4.4 Size, if all of 4.1 and 4.2 were done
+
+E1 alone would cut the biggest action to about one entry per driver per
+trip. G1 to G5 add about one entry per sign-up and per cancellation, a few a
+week today. Net: smaller than now. At today's rate (section 1.6) the table
+stays under about 30 MB a year either way, so none of this is urgent for
+size; it is for reading.

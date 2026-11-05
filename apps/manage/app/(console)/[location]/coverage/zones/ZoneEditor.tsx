@@ -48,6 +48,7 @@ import type { DistrictOutline } from "./map-shapes";
 import { sameShape } from "./map-shapes";
 import { FormError } from "@repo/ui/form-error";
 import { pricedFromSentence } from "../zone-lines";
+import { useFullScreen } from "./full-screen";
 
 /** What the check after a change found in the way of a shape, with the shape it was asked for. */
 type Overlap = Extract<OverlapAnswer, { ok: true }> & { of: ZoneShape };
@@ -177,8 +178,9 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * checked on the map before anything is saved, and a choice to trim them
  * holds through further edits while the same zones are in the way. A
  * district as it is needs no map, and the bar shows under Save instead;
- * everything else is drawn on it. A saved zone goes back to the location's
- * Coverage.
+ * everything else is drawn on it. The map's full-screen button puts the
+ * whole maker on screen, as Try a trip does: the form and Save in a column
+ * beside the map. A saved zone goes back to the location's Coverage.
  */
 export function ZoneEditor({
   locationId,
@@ -221,6 +223,8 @@ export function ZoneEditor({
   const districtSelectId = useId();
   const origin = zone?.drawnFrom ?? null;
   const [name, setName] = useState(zone?.name ?? "");
+  // The whole maker, which the map's button puts in full screen.
+  const { ref: screen, full, toggle } = useFullScreen<HTMLDivElement>();
   const [source, setSource] = useState<Source>(
     zone ? sourceOf(origin) : mapKey ? "address" : "district",
   );
@@ -642,281 +646,318 @@ export function ZoneEditor({
       ? `${andList(madeOfNames)} in ${madeFrom.district.label}`
       : madeFrom?.district.label;
 
+  const actions = (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button onClick={save} pending={pending}>
+        {pending
+          ? "Saving…"
+          : trimming
+            ? `Save and trim ${trimLabels}`
+            : zone
+              ? "Save zone"
+              : "Add zone"}
+      </Button>
+      <Link
+        href={coverageHref(locationSlug)}
+        className="text-sm text-muted underline-offset-4 hover:underline"
+      >
+        Cancel
+      </Link>
+      {shape ? (
+        <span className="text-xs text-muted tabular-nums">
+          {corners} of {ZONE_LIMITS.corners} corners
+        </span>
+      ) : null}
+      <FormError error={error} />
+    </div>
+  );
+
   return (
-    <div className="grid gap-6">
-      <Card className="grid gap-5">
-        <Field label="Name" className="max-w-sm">
-          <Input
-            required
-            autoComplete="off"
-            maxLength={ZONE_LIMITS.name}
-            placeholder="Langkawi Airport"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
-
-        <fieldset className="grid gap-3">
-          <legend className="mb-2 text-sm font-medium text-body">
-            Start from
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {SOURCES.map((option) => {
-              const unavailable = option.key !== "district" && !mapKey;
-              const chosen = source === option.key;
-              return (
-                <label
-                  key={option.key}
-                  className={cx(
-                    "flex items-start gap-2.5 rounded-lg border p-3 text-sm transition-colors",
-                    chosen
-                      ? "border-brand bg-brand-tint ring-1 ring-brand"
-                      : "border-edge",
-                    unavailable
-                      ? "cursor-not-allowed opacity-60"
-                      : !chosen && "cursor-pointer",
-                  )}
-                >
-                  <Radio
-                    name="source"
-                    checked={chosen}
-                    disabled={unavailable}
-                    onChange={() => {
-                      setSource(option.key);
-                      setError(null);
-                    }}
-                    className="mt-0.5"
-                  />
-                  <span className="grid gap-0.5">
-                    <span className="font-medium text-ink">{option.label}</span>
-                    <span className="text-xs text-muted">
-                      {unavailable
-                        ? "Needs the browser key for Google Maps."
-                        : option.hint}
-                    </span>
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {source === "district" ? (
-          <div className="grid gap-4">
-            <div className="grid gap-1.5 sm:max-w-sm">
-              <label
-                htmlFor={districtSelectId}
-                className="text-sm font-medium text-body"
-              >
-                District
-              </label>
-              <Select
-                id={districtSelectId}
-                value={district?.code ?? ""}
-                onValueChange={pickDistrict}
-                placeholder="Pick a district"
-                options={choices.map((group) => ({
-                  label: group.state,
-                  options: group.districts.map((entry) => ({
-                    value: entry.code,
-                    label: entry.name,
-                  })),
-                }))}
-              />
-              <p className="text-xs text-muted">
-                The location&apos;s own states come first; any district may be a
-                zone, for an outstation destination.
-              </p>
-            </div>
-            {district && mukims.length > 0 ? (
-              <fieldset className="grid gap-1">
-                <legend className="mb-1.5 text-sm font-medium text-body">
-                  Area
-                </legend>
-                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-                  <Radio
-                    name="area"
-                    checked={area === "whole"}
-                    onChange={showWhole}
-                    className="mt-0.5"
-                  />
-                  <span className="grid gap-0.5">
-                    <span className="font-medium text-ink">
-                      The whole district
-                    </span>
-                    <span className="text-xs text-muted">
-                      {district.label} by its official boundary, islands
-                      included.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-                  <Radio
-                    name="area"
-                    checked={area === "some"}
-                    onChange={() => showMukims(picked)}
-                    className="mt-0.5"
-                  />
-                  <span className="grid gap-0.5">
-                    <span className="font-medium text-ink">
-                      Some of its mukims
-                    </span>
-                    <span className="text-xs text-muted">
-                      Tick one or more; together they make one zone.
-                    </span>
-                  </span>
-                </label>
-                {area === "some" ? (
-                  <div className="mt-1 ml-6 grid gap-x-5 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
-                    {mukims.map((mukim) => (
-                      <label
-                        key={mukim.code}
-                        className="flex cursor-pointer items-center gap-2 py-1 text-sm"
-                      >
-                        <Checkbox
-                          checked={picked.includes(mukim.code)}
-                          onChange={() => toggleMukim(mukim.code)}
-                        />
-                        <span className="min-w-0 flex-1 truncate text-ink">
-                          {mukim.name}
-                        </span>
-                        <span className="shrink-0 rounded bg-hairline px-1.5 py-px text-2xs text-muted">
-                          {mukim.kind}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-              </fieldset>
-            ) : district ? (
-              <p className="text-xs text-muted">
-                {district.label} has no mukims in the boundary data, so the zone
-                is the whole district.
-              </p>
-            ) : null}
-            {district && shape ? (
-              <p className="rounded-lg bg-shade px-3 py-2.5 text-sm text-body">
-                {asItIs
-                  ? `The official boundary of ${madeOf}, read again on every save while it is not changed on the map.`
-                  : `Changed on the map from ${madeOf}: the shape is yours now, ${corners} corners. Picking the district or its mukims again starts over from their boundaries.`}
-              </p>
-            ) : null}
-          </div>
+    <div
+      ref={screen}
+      className={
+        full
+          ? "flex h-full flex-col gap-4 overflow-y-auto bg-canvas p-4 lg:grid lg:grid-cols-[26rem_minmax(0,1fr)] lg:overflow-hidden"
+          : "grid gap-6"
+      }
+    >
+      {/* In full screen, the column beside the map; on the page, its parts
+          stand in the page's own column. */}
+      <div
+        className={
+          full
+            ? "grid content-start gap-4 lg:min-h-0 lg:overflow-y-auto"
+            : "contents"
+        }
+      >
+        {full ? (
+          <h2 className="font-serif text-2xl text-ink">
+            {zone ? zone.name : "Add Zone"}
+          </h2>
         ) : null}
+        <Card className="@container grid gap-5">
+          <Field label="Name" className="max-w-sm">
+            <Input
+              required
+              autoComplete="off"
+              maxLength={ZONE_LIMITS.name}
+              placeholder="Langkawi Airport"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </Field>
 
-        {source === "address" ? (
-          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-            <div className="grid gap-1.5">
-              <label
-                htmlFor={placeInputId}
-                className="text-sm font-medium text-body"
-              >
-                Address
-              </label>
-              <PlaceInput
-                id={placeInputId}
-                value={placeText}
-                placeId={placeId}
-                placeholder="Start typing an airport, a jetty, a hotel"
-                className={inputClassName}
-                onChange={pickPlace}
-              />
-              {!hasGoogle ? (
-                <p className="text-xs text-warning">
-                  Google is not set up on this server, so the list offers the
-                  districts themselves instead of real places.
-                </p>
-              ) : (
-                <p className="text-xs text-muted">
-                  A reference only: the zone is the shape on the map, which you
-                  can move and reshape.
-                </p>
-              )}
-            </div>
-            <Field
-              label="Radius (m)"
-              hint={
-                center && !circleUntouched ? (
-                  <button
-                    type="button"
-                    onClick={() => drawCircle(center, radiusM)}
-                    className="rounded-sm text-link"
+          <fieldset className="grid gap-3">
+            <legend className="mb-2 text-sm font-medium text-body">
+              Start from
+            </legend>
+            <div className="grid gap-2 @xl:grid-cols-3">
+              {SOURCES.map((option) => {
+                const unavailable = option.key !== "district" && !mapKey;
+                const chosen = source === option.key;
+                return (
+                  <label
+                    key={option.key}
+                    className={cx(
+                      "flex items-start gap-2.5 rounded-lg border p-3 text-sm transition-colors",
+                      chosen
+                        ? "border-brand bg-brand-tint ring-1 ring-brand"
+                        : "border-edge",
+                      unavailable
+                        ? "cursor-not-allowed opacity-60"
+                        : !chosen && "cursor-pointer",
+                    )}
                   >
-                    Redraw the circle
-                  </button>
-                ) : undefined
-              }
-            >
-              <NumberField
-                min={ZONE_LIMITS.radiusM.min}
-                max={ZONE_LIMITS.radiusM.max}
-                step={100}
-                value={radius}
-                onChange={(event) => {
-                  setRadius(event.target.value);
-                  if (circleUntouched) {
-                    drawCircle(center, Number(event.target.value));
-                  }
-                }}
-              />
-            </Field>
-          </div>
-        ) : null}
+                    <Radio
+                      name="source"
+                      checked={chosen}
+                      disabled={unavailable}
+                      onChange={() => {
+                        setSource(option.key);
+                        setError(null);
+                      }}
+                      className="mt-0.5"
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="font-medium text-ink">
+                        {option.label}
+                      </span>
+                      <span className="text-xs text-muted">
+                        {unavailable
+                          ? "Needs the browser key for Google Maps."
+                          : option.hint}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
-        {pricedFrom.length > 0 ? (
-          <p className="rounded-lg bg-shade px-3 py-2.5 text-sm text-body">
-            {pricedFromSentence(pricedFrom)}: a new shape moves where those
-            trips end, and removing the zone removes those routes.
-          </p>
-        ) : null}
-      </Card>
+          {source === "district" ? (
+            <div className="grid gap-4">
+              <div className="grid gap-1.5 sm:max-w-sm">
+                <label
+                  htmlFor={districtSelectId}
+                  className="text-sm font-medium text-body"
+                >
+                  District
+                </label>
+                <Select
+                  id={districtSelectId}
+                  value={district?.code ?? ""}
+                  onValueChange={pickDistrict}
+                  placeholder="Pick a district"
+                  options={choices.map((group) => ({
+                    label: group.state,
+                    options: group.districts.map((entry) => ({
+                      value: entry.code,
+                      label: entry.name,
+                    })),
+                  }))}
+                />
+                <p className="text-xs text-muted">
+                  The location&apos;s own states come first; any district may be
+                  a zone, for an outstation destination.
+                </p>
+              </div>
+              {district && mukims.length > 0 ? (
+                <fieldset className="grid gap-1">
+                  <legend className="mb-1.5 text-sm font-medium text-body">
+                    Area
+                  </legend>
+                  <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                    <Radio
+                      name="area"
+                      checked={area === "whole"}
+                      onChange={showWhole}
+                      className="mt-0.5"
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="font-medium text-ink">
+                        The whole district
+                      </span>
+                      <span className="text-xs text-muted">
+                        {district.label} by its official boundary, islands
+                        included.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                    <Radio
+                      name="area"
+                      checked={area === "some"}
+                      onChange={() => showMukims(picked)}
+                      className="mt-0.5"
+                    />
+                    <span className="grid gap-0.5">
+                      <span className="font-medium text-ink">
+                        Some of its mukims
+                      </span>
+                      <span className="text-xs text-muted">
+                        Tick one or more; together they make one zone.
+                      </span>
+                    </span>
+                  </label>
+                  {area === "some" ? (
+                    <div className="mt-1 ml-6 grid gap-x-5 gap-y-0.5 @md:grid-cols-2 @3xl:grid-cols-3">
+                      {mukims.map((mukim) => (
+                        <label
+                          key={mukim.code}
+                          className="flex cursor-pointer items-center gap-2 py-1 text-sm"
+                        >
+                          <Checkbox
+                            checked={picked.includes(mukim.code)}
+                            onChange={() => toggleMukim(mukim.code)}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-ink">
+                            {mukim.name}
+                          </span>
+                          <span className="shrink-0 rounded bg-hairline px-1.5 py-px text-2xs text-muted">
+                            {mukim.kind}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+                </fieldset>
+              ) : district ? (
+                <p className="text-xs text-muted">
+                  {district.label} has no mukims in the boundary data, so the
+                  zone is the whole district.
+                </p>
+              ) : null}
+              {district && shape ? (
+                <p className="rounded-lg bg-shade px-3 py-2.5 text-sm text-body">
+                  {asItIs
+                    ? `The official boundary of ${madeOf}, read again on every save while it is not changed on the map.`
+                    : `Changed on the map from ${madeOf}: the shape is yours now, ${corners} corners. Picking the district or its mukims again starts over from their boundaries.`}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {source === "address" ? (
+            <div className="grid gap-4 @md:grid-cols-[1fr_10rem]">
+              <div className="grid gap-1.5">
+                <label
+                  htmlFor={placeInputId}
+                  className="text-sm font-medium text-body"
+                >
+                  Address
+                </label>
+                <PlaceInput
+                  id={placeInputId}
+                  value={placeText}
+                  placeId={placeId}
+                  placeholder="Start typing an airport, a jetty, a hotel"
+                  className={inputClassName}
+                  onChange={pickPlace}
+                />
+                {!hasGoogle ? (
+                  <p className="text-xs text-warning">
+                    Google is not set up on this server, so the list offers the
+                    districts themselves instead of real places.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted">
+                    A reference only: the zone is the shape on the map, which
+                    you can move and reshape.
+                  </p>
+                )}
+              </div>
+              <Field
+                label="Radius (m)"
+                hint={
+                  center && !circleUntouched ? (
+                    <button
+                      type="button"
+                      onClick={() => drawCircle(center, radiusM)}
+                      className="rounded-sm text-link"
+                    >
+                      Redraw the circle
+                    </button>
+                  ) : undefined
+                }
+              >
+                <NumberField
+                  min={ZONE_LIMITS.radiusM.min}
+                  max={ZONE_LIMITS.radiusM.max}
+                  step={100}
+                  value={radius}
+                  onChange={(event) => {
+                    setRadius(event.target.value);
+                    if (circleUntouched) {
+                      drawCircle(center, Number(event.target.value));
+                    }
+                  }}
+                />
+              </Field>
+            </div>
+          ) : null}
+
+          {pricedFrom.length > 0 ? (
+            <p className="rounded-lg bg-shade px-3 py-2.5 text-sm text-body">
+              {pricedFromSentence(pricedFrom)}: a new shape moves where those
+              trips end, and removing the zone removes those routes.
+            </p>
+          ) : null}
+        </Card>
+        {full ? actions : null}
+      </div>
 
       {mapKey ? (
-        <ZoneMap
-          mapKey={mapKey}
-          districts={districts}
-          others={others}
-          shape={shape}
-          frame={frame}
-          starters={source === "draw"}
-          canUndo={history.length > 0}
-          onUndo={undo}
-          canRedo={future.length > 0}
-          onRedo={redo}
-          onShapeChange={changeShape}
-          mukims={
-            source === "district" && district && area === "some"
-              ? mukims
-              : undefined
+        <div
+          className={
+            full ? "h-[70dvh] shrink-0 lg:h-auto lg:min-h-0" : undefined
           }
-          trims={trimming}
-          overlap={overlapBar}
-        />
+        >
+          <ZoneMap
+            mapKey={mapKey}
+            districts={districts}
+            others={others}
+            shape={shape}
+            frame={frame}
+            starters={source === "draw"}
+            canUndo={history.length > 0}
+            onUndo={undo}
+            canRedo={future.length > 0}
+            onRedo={redo}
+            onShapeChange={changeShape}
+            mukims={
+              source === "district" && district && area === "some"
+                ? mukims
+                : undefined
+            }
+            trims={trimming}
+            overlap={overlapBar}
+            full={full}
+            onToggleFull={toggle}
+          />
+        </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={save} pending={pending}>
-          {pending
-            ? "Saving…"
-            : trimming
-              ? `Save and trim ${trimLabels}`
-              : zone
-                ? "Save zone"
-                : "Add zone"}
-        </Button>
-        <Link
-          href={coverageHref(locationSlug)}
-          className="text-sm text-muted underline-offset-4 hover:underline"
-        >
-          Cancel
-        </Link>
-        {shape ? (
-          <span className="text-xs text-muted tabular-nums">
-            {corners} of {ZONE_LIMITS.corners} corners
-          </span>
-        ) : null}
-        <FormError error={error} />
-      </div>
+      {full ? null : actions}
       {!mapKey ? overlapBar : null}
     </div>
   );

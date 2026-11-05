@@ -180,10 +180,34 @@ export function TripForm({
                     : "@3xl:flex-1"
               }`}
             >
-              <label htmlFor={id(f.key)} className={fieldLabel}>
-                <FieldIcon def={f} className="size-[15px] text-muted" />
-                {f.label}
-              </label>
+              {f.tick?.shown(values) ? (
+                // Straight after the label, on its line: it stays where it
+                // is however wide the box grows or shrinks, and the box
+                // keeps its height.
+                <div className={`${fieldLabel} gap-4`}>
+                  <label
+                    htmlFor={id(f.key)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <FieldIcon def={f} className="size-[15px] text-muted" />
+                    {f.label}
+                  </label>
+                  <label className="pointer-events-auto flex cursor-pointer items-center gap-1.5 font-normal">
+                    <Checkbox
+                      checked={values[f.tick.key] === "1"}
+                      onChange={(e) =>
+                        planner.set(f.tick!.key, e.target.checked ? "1" : "")
+                      }
+                    />
+                    {f.tick.label}
+                  </label>
+                </div>
+              ) : (
+                <label htmlFor={id(f.key)} className={fieldLabel}>
+                  <FieldIcon def={f} className="size-[15px] text-muted" />
+                  {f.label}
+                </label>
+              )}
               <FieldInput
                 def={f}
                 id={id(f.key)}
@@ -195,19 +219,6 @@ export function TripForm({
                 describedBy={invalid ? messagesId : undefined}
                 className={fieldControl(clearable)}
               />
-              {f.tick?.shown(values) ? (
-                // On the label's line, at the box's right: the box keeps
-                // its height whichever kind of trip is chosen.
-                <label className="absolute top-2.5 right-[18px] z-(--layer-raised) flex cursor-pointer items-center gap-1.5 text-caption/5 text-body">
-                  <Checkbox
-                    checked={values[f.tick.key] === "1"}
-                    onChange={(e) =>
-                      planner.set(f.tick!.key, e.target.checked ? "1" : "")
-                    }
-                  />
-                  {f.tick.label}
-                </label>
-              ) : null}
               {clearable && (
                 <button
                   type="button"

@@ -139,7 +139,10 @@ export type TripValues = {
   category: TripCategory;
   mode: TripMode;
   pickup: PlaceValue;
+  /** A one-way trip's end; a hire's while `endsElsewhere` is ticked. */
   dropoff: PlaceValue;
+  /** Hourly: the hire ends away from its pickup, at `dropoff`. */
+  endsElsewhere: boolean;
   date: string;
   time: string;
   /** Hourly: the package, "4", "8" or "12". */
@@ -190,6 +193,7 @@ export function newTripDraft(
       mode: "oneway",
       pickup: { text: "" },
       dropoff: { text: "" },
+      endsElsewhere: false,
       date: "",
       time: "",
       packageHours: String(HOURLY_PACKAGES[0]),
@@ -279,6 +283,7 @@ export function amendDraftOf(
         dropoff: trip.dropoff
           ? { text: trip.dropoff.label, id: trip.dropoff.placeId }
           : { text: "" },
+        endsElsewhere: trip.mode === "hourly" && trip.dropoff !== null,
         date,
         time,
         packageHours: String(hourly.packageHours),
@@ -303,6 +308,10 @@ export function amendDraftOf(
   };
 }
 
+/** Whether the trip asks its drop-off: a one-way trip, or a hire ticked to end elsewhere. */
+export const asksDropoff = (trip: TripValues) =>
+  trip.mode === "oneway" || trip.endsElsewhere;
+
 /** The first thing missing from the trip before it can be priced; null once it can be. */
 export function tripIssue(trip: TripValues): string | null {
   if (!trip.pickup.id) {
@@ -310,7 +319,7 @@ export function tripIssue(trip: TripValues): string | null {
       ? "Choose the pick-up from the list."
       : "Enter a pick-up place.";
   }
-  if (trip.mode === "oneway" && !trip.dropoff.id) {
+  if (asksDropoff(trip) && !trip.dropoff.id) {
     return trip.dropoff.text
       ? "Choose the drop-off from the list."
       : "Enter a drop-off place.";
@@ -329,8 +338,8 @@ export function tripInput(trip: TripValues): Record<string, string> {
     [TRIP_PARAM.date]: trip.date,
     [TRIP_PARAM.time]: trip.time,
   };
-  if (trip.mode === "oneway") input[TRIP_PARAM.dropoff] = trip.dropoff.id ?? "";
-  else {
+  if (asksDropoff(trip)) input[TRIP_PARAM.dropoff] = trip.dropoff.id ?? "";
+  if (trip.mode === "hourly") {
     input[TRIP_PARAM.packageHours] = trip.packageHours;
     input[TRIP_PARAM.extraHours] = trip.extraHours;
   }
@@ -674,11 +683,11 @@ export function tripLine(draft: TripDraft): string {
   ].join(" · ");
 }
 
-/** Where a priced trip goes: "KLIA to Pavilion", or "Pavilion, 4 hours". */
+/** Where a priced trip goes: "KLIA to Pavilion", "Pavilion, 4 hours", or "Pavilion, 4 hours, to KLIA". */
 export function placesLine(quote: PricedTrip): string {
-  return quote.dropoff
-    ? `${quote.pickup} to ${quote.dropoff}`
-    : `${quote.pickup}, ${quote.hours} hours`;
+  if (quote.hours === null) return `${quote.pickup} to ${quote.dropoff}`;
+  const hire = `${quote.pickup}, ${quote.hours} hours`;
+  return quote.dropoff ? `${hire}, to ${quote.dropoff}` : hire;
 }
 
 /**

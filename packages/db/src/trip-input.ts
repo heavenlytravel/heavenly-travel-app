@@ -40,7 +40,7 @@ const MAX_HEAD_COUNT = 999;
 export type TripSearch = {
   mode: TripMode;
   pickupId: string;
-  /** One-way only. */
+  /** A one-way trip's end; an hourly hire's, when it ends away from its pickup, or null. */
   dropoffId: string | null;
   /** "2026-10-03" */
   date: string;
@@ -227,11 +227,13 @@ export function parseTripSearch(input: QueryInput): TripSearch | null {
   if (!date || !DATE_RE.test(date) || !time || !TIME_RE.test(time)) return null;
   if (mode === "oneway" && (!dropoffId || !ID_RE.test(dropoffId))) return null;
   if (mode === "hourly" && hourly === null) return null;
+  // An hourly hire may end elsewhere; a drop-off that is not an id is none.
+  const hourlyDropoff = dropoffId && ID_RE.test(dropoffId) ? dropoffId : null;
 
   return {
     mode,
     pickupId,
-    dropoffId: mode === "oneway" ? dropoffId : null,
+    dropoffId: mode === "oneway" ? dropoffId : hourlyDropoff,
     date,
     time,
     hourly: mode === "hourly" ? hourly : null,
@@ -319,7 +321,7 @@ export function tripSearchOf(trip: TripView): TripSearch {
   return {
     mode: trip.mode,
     pickupId: trip.pickup.placeId,
-    dropoffId: trip.mode === "oneway" ? (trip.dropoff?.placeId ?? null) : null,
+    dropoffId: trip.dropoff?.placeId ?? null,
     date,
     time,
     hourly: trip.mode === "hourly" ? hourlyChoiceOf(trip) : null,

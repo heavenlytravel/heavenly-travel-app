@@ -72,7 +72,7 @@ export function tripResolver(provider: PlacesProvider, routing: TripRouting) {
       request: {
         mode: search.mode,
         pickup,
-        dropoff: search.mode === "oneway" ? dropoff : null,
+        dropoff,
         startsAt,
         hourly: search.hourly,
       },

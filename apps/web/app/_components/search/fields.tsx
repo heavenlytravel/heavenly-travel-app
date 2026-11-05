@@ -192,7 +192,7 @@ const FIELD_ICONS: Record<FieldKey, typeof MapPinIcon> = {
   endTime: ClockIcon,
   days: CalendarIcon,
   duration: ClockIcon,
-  extra: ClockIcon,
+  elsewhere: FlagIcon,
   people: UsersIcon,
   children: UsersIcon,
   rooms: BedIcon,

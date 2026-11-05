@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Radio } from "@repo/ui/field";
+import { Checkbox, Radio } from "@repo/ui/field";
 import { PlusIcon, TrashIcon, XIcon } from "@repo/ui/icons";
 import type { PlacePresets } from "@repo/ui/place-input";
 import {
@@ -195,6 +195,17 @@ export function TripForm({
                 describedBy={invalid ? messagesId : undefined}
                 className={fieldControl(clearable)}
               />
+              {f.tick?.shown(values) ? (
+                <label className="-mt-1 flex cursor-pointer items-center gap-2 px-[18px] pb-2.5 text-caption text-body">
+                  <Checkbox
+                    checked={values[f.tick.key] === "1"}
+                    onChange={(e) =>
+                      planner.set(f.tick!.key, e.target.checked ? "1" : "")
+                    }
+                  />
+                  {f.tick.label}
+                </label>
+              ) : null}
               {clearable && (
                 <button
                   type="button"

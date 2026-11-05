@@ -30,11 +30,13 @@ describe("parseTripSearch", () => {
     });
   });
 
-  it("reads an hourly search and drops the drop-off", () => {
+  it("reads an hourly search, with a drop-off elsewhere or none", () => {
+    assert.equal(parseTripSearch(hourly)?.dropoffId, null);
+    assert.equal(parseTripSearch(`${hourly}&dropoff=<p2>`)?.dropoffId, null);
     assert.deepEqual(parseTripSearch(`${hourly}&dropoff=p2`), {
       mode: "hourly",
       pickupId: "p1",
-      dropoffId: null,
+      dropoffId: "p2",
       date: "2026-10-03",
       time: "09:30",
       hourly: { packageHours: 4, extraHours: 3 },

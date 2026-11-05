@@ -13,7 +13,6 @@ import {
   listZones,
   type LocationName,
 } from "@repo/db/server";
-import { hasGooglePlaces } from "@repo/places/server";
 import { Button } from "@repo/ui/button";
 import { PlusIcon } from "@repo/ui/icons";
 import { InfoTip } from "@repo/ui/info-tip";
@@ -32,7 +31,6 @@ import {
   zoneHref,
 } from "../../../_lib/routes";
 import { locationsVisible, scopeOf } from "../../../_lib/scope";
-import { TestAddress } from "./AddressTester";
 import { CoverageZones, type CoverageGroup } from "./CoverageZones";
 import { drawnAs, pricedFromSentence } from "./zone-lines";
 import { zoneColor } from "./zones/zone-colors";
@@ -51,9 +49,8 @@ const ZONES_TIP =
  * Reservation and Sales read them (`coverage.view`). Under `~`, every
  * location's zones on one map, read only, by location; a zone opens its
  * editor for Operation and its location's Coverage for the teams that
- * read. "Test an address" places any address as a booking would, in
- * either. See docs/261015-locations-as-operation-areas.md, "Coverage is
- * the zones".
+ * read. Where an address falls is Rates' Try a trip. See
+ * docs/261015-locations-as-operation-areas.md, "Coverage is the zones".
  */
 export default async function CoveragePage({
   params,
@@ -67,17 +64,14 @@ export default async function CoveragePage({
       <PageHeader
         title="Coverage"
         action={
-          <>
-            <TestAddress hasGoogle={hasGooglePlaces} />
-            {location && manages ? (
-              <Button asChild>
-                <Link href={newZoneHref(location.slug)}>
-                  <PlusIcon />
-                  Add zone
-                </Link>
-              </Button>
-            ) : null}
-          </>
+          location && manages ? (
+            <Button asChild>
+              <Link href={newZoneHref(location.slug)}>
+                <PlusIcon />
+                Add zone
+              </Link>
+            </Button>
+          ) : null
         }
       />
       <Streamed

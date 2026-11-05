@@ -6,13 +6,7 @@ import { isPublicState, LOCATION_STATES } from "./location-input";
 import { listHourlyLists } from "./hourly-rates";
 import { oddHoursOf, weekendOf } from "./rates-input";
 import type { QuoteLocation, QuoteZone } from "./zone-quote";
-import {
-  isZoneShape,
-  polygonsOf,
-  zoneAt,
-  zoneShapeArea,
-  type ZoneShape,
-} from "./zone-match";
+import { isZoneShape, polygonsOf } from "./zone-match";
 
 export type { District, State };
 
@@ -162,40 +156,4 @@ export async function listQuoteLocations(
       weekend: weekendOf(location),
     };
   });
-}
-
-/** A pickup placed by its point: the zone it falls in and the location that zone is. */
-export type ServedAt = {
-  location: Prisma.LocationGetPayload<typeof withZones>;
-  zone: Zone;
-};
-
-/**
- * The location whose zone holds a point, among the locations that are
- * public. Zones never overlap; of two from before that rule, the smallest
- * wins. Null when no zone holds the point. A quote serves a pickup outside
- * every zone too, by its nearest zone by road; this is where the point
- * itself falls, for "Test an address".
- */
-export async function locationAt(place: {
-  lat: number;
-  lng: number;
-}): Promise<ServedAt | null> {
-  const locations = await db.location.findMany({
-    where: { state: { in: PUBLIC_STATES } },
-    ...withZones,
-  });
-  let best: {
-    location: ServedAt["location"];
-    zone: Zone;
-    area: number;
-  } | null = null;
-  for (const location of locations) {
-    const zone = zoneAt(location.zones, place);
-    if (!zone) continue;
-    // `zoneAt` answered the zone, so its shape is a shape.
-    const area = zoneShapeArea(zone.shape as ZoneShape);
-    if (!best || area < best.area) best = { location, zone, area };
-  }
-  return best ? { location: best.location, zone: best.zone } : null;
 }

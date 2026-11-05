@@ -89,7 +89,7 @@ describe("imageSizeWarning", () => {
 
   it("says a portrait picture shows smaller where it is kept whole", () => {
     assert.match(
-      imageSizeWarning(IMAGE_SIZES.classPicture, { width: 800, height: 1200 })!,
+      imageSizeWarning(IMAGE_SIZES.logo, { width: 300, height: 600 })!,
       /portrait, so it shows smaller/,
     );
   });

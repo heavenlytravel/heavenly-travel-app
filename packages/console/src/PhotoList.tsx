@@ -48,23 +48,47 @@ export type MediaPickerProps = {
 };
 export type MediaPicker = ComponentType<MediaPickerProps>;
 
+/** What a list is of, as its words and its recommended size differ. */
+const LISTS = {
+  vehicle: {
+    one: "photo",
+    many: "photos",
+    whose: "A vehicle",
+    size: IMAGE_SIZES.vehiclePhoto,
+    first: "The outside first: it is the vehicle's cover.",
+    captions: true,
+  },
+  class: {
+    one: "picture",
+    many: "pictures",
+    whose: "A class",
+    size: IMAGE_SIZES.classPicture,
+    first: "The whole vehicle first: it is the class's cover.",
+    // A class's pictures are decorative beside its name: no caption.
+    captions: false,
+  },
+} as const;
+
 /**
- * A vehicle's photos, in order: each with its caption, viewed full
- * screen, moved left or right, or taken out. The first is the vehicle's
- * cover. "Add photos", the dashed slot after the last, stores each file
+ * A vehicle's photos or a class's pictures (`of`), in order: each with
+ * its caption (a vehicle's), viewed full screen, moved left or right, or
+ * taken out. The first is the cover. "Add photos", the dashed slot after the last, stores each file
  * as soon as it is chosen, several at once, each shown in its place until
  * it lands; files past the limit are left out, and the list says so. In
  * the admin, "Choose from Media" adds files already stored. The form
  * keeps them once it is saved, and waits for the uploads.
  */
 export function PhotoList({
+  of = "vehicle",
   name,
   photos,
   setPhotos,
   uploadPath,
   mediaPicker: Picker,
 }: {
-  /** The app's upload route for a vehicle's photo. */
+  /** A vehicle's photos, or a class's pictures. */
+  of?: keyof typeof LISTS;
+  /** The app's upload route for one of them. */
   uploadPath: string;
   /** What the photos show as typed, "Toyota Alphard", for their alt text. */
   name: string;
@@ -75,9 +99,10 @@ export function PhotoList({
   mediaPicker?: MediaPicker;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const list = LISTS[of];
   const { upload, uploading, pending, error } = useImageUpload(
     uploadPath,
-    "photo",
+    list.one,
   );
   const [leftOut, setLeftOut] = useState<string | null>(null);
   const room = PHOTO_LIMITS.photos - photos.length;
@@ -85,7 +110,7 @@ export function PhotoList({
   function add(files: File[]) {
     setLeftOut(
       files.length > room
-        ? `A vehicle holds ${PHOTO_LIMITS.photos} photos: the first ${room} of the ${files.length} chosen are added.`
+        ? `${list.whose} holds ${PHOTO_LIMITS.photos} ${list.many}: the first ${room} of the ${files.length} chosen are added.`
         : null,
     );
     void upload(files.slice(0, room), (image) =>
@@ -124,7 +149,7 @@ export function PhotoList({
     );
   }
 
-  const shown = name || "the vehicle";
+  const shown = name || `the ${of}`;
   const empty = photos.length === 0 && pending.length === 0;
 
   return (
@@ -150,18 +175,20 @@ export function PhotoList({
                 </span>
               ) : null}
             </div>
-            <Input
-              aria-label={`Caption of photo ${i + 1}`}
-              placeholder="Caption, such as Interior"
-              maxLength={PHOTO_LIMITS.caption}
-              value={photo.caption}
-              onChange={(e) => setCaption(i, e.target.value)}
-            />
+            {list.captions ? (
+              <Input
+                aria-label={`Caption of photo ${i + 1}`}
+                placeholder="Caption, such as Interior"
+                maxLength={PHOTO_LIMITS.caption}
+                value={photo.caption}
+                onChange={(e) => setCaption(i, e.target.value)}
+              />
+            ) : null}
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label={`Move photo ${i + 1} earlier`}
+                aria-label={`Move ${list.one} ${i + 1} earlier`}
                 disabled={i === 0}
                 onClick={() => move(i, i - 1)}
               >
@@ -170,7 +197,7 @@ export function PhotoList({
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label={`Move photo ${i + 1} later`}
+                aria-label={`Move ${list.one} ${i + 1} later`}
                 disabled={i === photos.length - 1}
                 onClick={() => move(i, i + 1)}
               >
@@ -180,13 +207,13 @@ export function PhotoList({
                 look="icon"
                 src={photo.url}
                 alt={photoAlt(shown, photo)}
-                label={`Photo ${i + 1}`}
+                label={`${list.one === "photo" ? "Photo" : "Picture"} ${i + 1}`}
               />
               <Button
                 variant="ghost-danger"
                 size="sm"
                 className="ml-auto"
-                aria-label={`Remove photo ${i + 1}`}
+                aria-label={`Remove ${list.one} ${i + 1}`}
                 onClick={() =>
                   setPhotos((current) => current.filter((_, j) => j !== i))
                 }
@@ -217,12 +244,10 @@ export function PhotoList({
             >
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 {empty ? <ImageIcon /> : <PlusIcon />}
-                {uploading ? "Uploading…" : "Add photos"}
+                {uploading ? "Uploading…" : `Add ${list.many}`}
               </span>
               {empty ? (
-                <span className="text-xs text-muted">
-                  The outside first: it is the vehicle&apos;s cover.
-                </span>
+                <span className="text-xs text-muted">{list.first}</span>
               ) : null}
             </button>
           </li>
@@ -235,7 +260,7 @@ export function PhotoList({
         accept={IMAGE_TYPES.join(",")}
         className="sr-only"
         tabIndex={-1}
-        aria-label={`Photos of ${shown}: choose files`}
+        aria-label={`${list.many === "photos" ? "Photos" : "Pictures"} of ${shown}: choose files`}
         onChange={(event) => {
           const files = [...(event.target.files ?? [])];
           // Cleared, so choosing the same file again uploads it again.
@@ -246,7 +271,7 @@ export function PhotoList({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {Picker && room > 0 ? (
           <Picker
-            label={`Photos of ${shown}`}
+            label={`${list.many === "photos" ? "Photos" : "Pictures"} of ${shown}`}
             most={room}
             disabled={uploading}
             onPick={addPicked}
@@ -254,8 +279,8 @@ export function PhotoList({
         ) : null}
         <p className="text-xs text-muted">
           {room > 0
-            ? `${imageSizeText(IMAGE_SIZES.vehiclePhoto)} ${IMAGE_SIZES.vehiclePhoto.note} JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} photos.`
-            : `${PHOTO_LIMITS.photos} photos, the most a vehicle holds.`}
+            ? `${imageSizeText(list.size)} ${list.size.note} JPEG, PNG or WebP, at most ${IMAGE_MAX_MB} MB each. Up to ${PHOTO_LIMITS.photos} ${list.many}.`
+            : `${PHOTO_LIMITS.photos} ${list.many}, the most ${list.whose.toLowerCase()} holds.`}
         </p>
       </div>
       <FormError error={error ?? leftOut} size="xs" />

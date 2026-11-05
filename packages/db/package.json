@@ -30,6 +30,8 @@
     "db:set-agents:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-agents.ts",
     "db:set-class-list": "node --env-file=.env --import tsx scripts/set-class-list.ts",
     "db:set-class-list:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-class-list.ts",
+    "db:set-class-pictures": "node --env-file=.env --import tsx scripts/set-class-pictures.ts",
+    "db:set-class-pictures:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-class-pictures.ts",
     "db:export-zones": "node --env-file=.env --import tsx scripts/export-zones.ts",
     "db:import-zones": "node --env-file=.env --import tsx scripts/import-zones.ts",
     "db:import-zones:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/import-zones.ts",

@@ -134,8 +134,8 @@ function OfferingCard({
   return (
     <Tile dim={!offering.isActive || !vehicleClass.isActive}>
       <CardImage
-        src={vehicleClass.imageUrl}
-        fit="contain"
+        src={vehicleClass.imageUrls[0] ?? null}
+        frame="class"
         sizes="(min-width: 1024px) 16rem, (min-width: 640px) 50vw, 100vw"
         fallback={<BusIcon className="size-7 text-muted" />}
       />

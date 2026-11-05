@@ -14,7 +14,7 @@ const FORM: Record<string, string> = {
   minPassengers: "1",
   maxPassengers: "3",
   luggage: "2 large bags",
-  imageUrl: "https://abc123.ufs.sh/f/key-1",
+  imageUrls: '["https://abc123.ufs.sh/f/key-1"]',
   isActive: "on",
 };
 
@@ -37,7 +37,7 @@ describe("parseVehicleClassFields", () => {
       minPassengers: 1,
       maxPassengers: 3,
       luggage: "2 large bags",
-      imageUrl: "https://abc123.ufs.sh/f/key-1",
+      imageUrls: ["https://abc123.ufs.sh/f/key-1"],
       isActive: true,
     });
   });
@@ -66,13 +66,18 @@ describe("parseVehicleClassFields", () => {
     assert.equal(errorOf({ minPassengers: "3", maxPassengers: "3" }), null);
   });
 
-  it("reads no picture as null and takes a picture on UploadThing only", () => {
-    const result = parseVehicleClassFields({ ...FORM, imageUrl: "" });
-    assert.equal(result.ok && result.value.imageUrl, null);
+  it("reads no pictures as none and takes pictures on UploadThing only", () => {
+    const result = parseVehicleClassFields({ ...FORM, imageUrls: "" });
+    assert.deepEqual(result.ok && result.value.imageUrls, []);
     assert.match(
-      errorOf({ imageUrl: "https://example.com/sedan.jpg" }) ?? "",
+      errorOf({ imageUrls: '["https://example.com/sedan.jpg"]' }) ?? "",
       /picture/,
     );
+    assert.match(errorOf({ imageUrls: "not json" }) ?? "", /picture/);
+    const many = JSON.stringify(
+      Array.from({ length: 13 }, (_, i) => `https://abc123.ufs.sh/f/key-${i}`),
+    );
+    assert.match(errorOf({ imageUrls: many }) ?? "", /at most 12/);
   });
 });
 

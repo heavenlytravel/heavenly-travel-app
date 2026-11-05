@@ -85,7 +85,7 @@ export type ClassQuoteView = ClassCharges & {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
-  /** The catalogue's picture of it; null for none. */
+  /** The cover of the catalogue's pictures of it; null for none. */
   imageUrl: string | null;
   /** The models of the location's vehicles in service, in order. */
   models: { id: string; name: string }[];

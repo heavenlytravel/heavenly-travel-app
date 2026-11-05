@@ -98,7 +98,9 @@ export type ClassCard = {
   luggage: string;
   minPassengers: number;
   maxPassengers: number;
-  imageUrl: string | null;
+  /** The catalogue's pictures of it, the first its cover; empty for none. */
+  imageUrls: string[];
+  category: string;
 };
 
 /** What pricing a list answers: each trip in the list's order, and the classes they offer. */

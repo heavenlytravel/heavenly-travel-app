@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  IMAGE_SIZES,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   VEHICLE_CLASS_FIELD_LABELS,
   isTripCategory,
+  type Photo,
   type TripCategory,
   type VehicleClassField,
 } from "@repo/db";
@@ -16,7 +16,8 @@ import { Select } from "@repo/ui/select";
 import { InfoTip } from "@repo/ui/info-tip";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { ImageUpload } from "../../../../../_components/ImageUpload";
+import { PhotoList } from "@repo/console/PhotoList";
+import { MediaPicker } from "../../../../../_components/MediaPicker";
 import { VEHICLE_CLASS_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
 
 /** The category a new class starts in. */
@@ -28,8 +29,8 @@ const TIPS: Partial<Record<VehicleClassField, string>> = {
   sortOrder: "The position within the category, lowest first.",
   minPassengers: 'Information only, shown as "from".',
   maxPassengers: "A larger group is refused this class.",
-  imageUrl:
-    "A neutral picture, with no number plate, the class's picture at every location. The whole vehicle stays in view: a cut-out on a plain background works best.",
+  imageUrls:
+    "Neutral pictures, with no number plate, the class's at every location. The first is its cover; the website lets a customer swipe through the rest. Cards crop each to fill, so keep the vehicle in the middle.",
   isActive:
     "Off hides the class from every location's options page and search card.",
 };
@@ -83,7 +84,10 @@ export function VehicleClassFieldset({
       ? vehicleClass.category
       : DEFAULT_CATEGORY,
   );
-  const [imageUrl, setImageUrl] = useState(vehicleClass?.imageUrl ?? null);
+  // Kept as the list edits them; a class's pictures have no caption.
+  const [pictures, setPictures] = useState<Photo[]>(
+    vehicleClass?.imageUrls.map((url) => ({ url, caption: "" })) ?? [],
+  );
 
   function chooseCategory(next: string) {
     if (!isTripCategory(next)) return;
@@ -164,18 +168,22 @@ export function VehicleClassFieldset({
       <Card>
         <CardTitle>
           <span className="inline-flex items-center gap-1.5">
-            {VEHICLE_CLASS_FIELD_LABELS.imageUrl}
-            <InfoTip text={TIPS.imageUrl!} />
+            {VEHICLE_CLASS_FIELD_LABELS.imageUrls}
+            <InfoTip text={TIPS.imageUrls!} />
           </span>
         </CardTitle>
-        <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
-        <ImageUpload
-          label={`Picture of ${vehicleClass?.name ?? "the class"}`}
+        <input
+          type="hidden"
+          name="imageUrls"
+          value={JSON.stringify(pictures.map((picture) => picture.url))}
+        />
+        <PhotoList
+          of="class"
+          name={vehicleClass?.name ?? ""}
+          photos={pictures}
+          setPhotos={setPictures}
           uploadPath={VEHICLE_CLASS_IMAGE_UPLOAD_PATH}
-          src={imageUrl}
-          alt={vehicleClass?.name ?? ""}
-          onChange={(image) => setImageUrl(image?.url ?? null)}
-          size={IMAGE_SIZES.classPicture}
+          mediaPicker={MediaPicker}
         />
       </Card>
 

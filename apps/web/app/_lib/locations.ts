@@ -156,8 +156,9 @@ export type VehicleClassCard = {
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
-  /** The catalogue's picture of it; null for none. */
-  imageUrl: string | null;
+  /** The catalogue's pictures of it, the first its cover; empty for none. */
+  imageUrls: string[];
+  category: string;
   /** The least it can cost there, in sen; null when nothing is priced in it yet. */
   fromSen: number | null;
 };
@@ -185,14 +186,15 @@ export const vehicleClassCards = cache(
           minPassengers: vehicleClass.minPassengers,
           maxPassengers: vehicleClass.maxPassengers,
           luggage: vehicleClass.luggage,
-          imageUrl: vehicleClass.imageUrl,
+          imageUrls: vehicleClass.imageUrls,
+          category: vehicleClass.category,
           fromSen: startingPriceSen(
             cheapest.get(vehicleClass.id) ?? null,
             packages.get(vehicleClass.id) ?? null,
           ),
         }));
       },
-      ["vehicle-class-cards", "4", slug, category],
+      ["vehicle-class-cards", "5", slug, category],
       {
         tags: [locationTag(slug), VEHICLE_CLASSES_TAG],
         revalidate: REFRESH_SECONDS,

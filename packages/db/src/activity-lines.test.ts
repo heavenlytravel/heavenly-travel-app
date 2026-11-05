@@ -93,4 +93,16 @@ describe("activityChangesOf", () => {
       ],
     );
   });
+
+  it("counts stored images rather than show their addresses", () => {
+    assert.deepEqual(
+      activityChangesOf({
+        before: { imageUrls: ["https://abc123.ufs.sh/f/a"] },
+        after: {
+          imageUrls: ["https://abc123.ufs.sh/f/a", "https://abc123.ufs.sh/f/b"],
+        },
+      }),
+      [{ label: "Image urls", before: "1 image", after: "2 images" }],
+    );
+  });
 });

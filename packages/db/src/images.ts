@@ -61,8 +61,8 @@ export const IMAGE_SIZES = {
   classPicture: {
     width: 1500,
     height: 1000,
-    fit: "contain",
-    note: "Landscape 3:2, on a white background.",
+    fit: "cover",
+    note: "Landscape 3:2, the whole vehicle in the middle: cards crop the edges to fill.",
   },
   /** A vehicle's photos, on its page and to the customer. */
   vehiclePhoto: {

@@ -3,24 +3,23 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 
 /**
- * The picture on top of a card: a location's or a page's hero image,
- * cropped to fill a 16:9 frame, or a vehicle class's picture, the whole
- * vehicle in view in the 3:2 frame the website shows it in, on white so a
- * picture on white meets the card with no band around it (Media's images
- * too); a quiet tile holding `fallback` while there is none. `children`
+ * The picture on top of a card, cropped to fill its frame whatever its
+ * shape: a location's or a page's hero image at 16:9, or a vehicle
+ * class's picture at the 3:2 the website shows it in; or, in Media, a
+ * stored file all in view at 3:2 on white, as a logo must be; a quiet tile holding `fallback` while there is none. `children`
  * stand over the picture's corner: a badge.
  */
 export function CardImage({
   src,
-  fit = "cover",
+  frame = "wide",
   fallback,
   sizes,
   children,
 }: {
   /** The image's address; null for none. */
   src: string | null;
-  /** "cover" crops a photo to fill; "contain" keeps all of it, for a vehicle class. */
-  fit?: "cover" | "contain";
+  /** "wide" is a hero's 16:9, "class" a vehicle class's 3:2, both cropped to fill; "file" keeps all of it. */
+  frame?: "wide" | "class" | "file";
   fallback: ReactNode;
   /** How wide the card is drawn, for the image's `sizes`. */
   sizes: string;
@@ -30,7 +29,8 @@ export function CardImage({
     <div
       className={cx(
         "relative overflow-hidden",
-        fit === "cover" ? "aspect-[16/9] bg-canvas" : "aspect-[3/2] bg-white",
+        frame === "wide" ? "aspect-[16/9]" : "aspect-[3/2]",
+        frame === "file" ? "bg-white" : "bg-canvas",
       )}
     >
       {src ? (
@@ -39,7 +39,7 @@ export function CardImage({
           alt=""
           fill
           sizes={sizes}
-          className={cx(fit === "cover" ? "object-cover" : "object-contain")}
+          className={frame === "file" ? "object-contain" : "object-cover"}
         />
       ) : (
         <div className="flex h-full items-center justify-center text-slot">

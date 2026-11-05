@@ -67,7 +67,8 @@ export async function quoteTripsAction(
         luggage: vehicleClass.luggage,
         minPassengers: vehicleClass.minPassengers,
         maxPassengers: vehicleClass.maxPassengers,
-        imageUrl: vehicleClass.imageUrl,
+        imageUrls: vehicleClass.imageUrls,
+        category: vehicleClass.category,
       });
     }
     return {

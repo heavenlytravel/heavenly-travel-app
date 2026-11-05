@@ -99,6 +99,9 @@ export function getVehicleClass(id: string): Promise<VehicleClass | null> {
   return db.vehicleClass.findUnique({ where: { id } });
 }
 
+const sameList = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((each, i) => each === b[i]);
+
 /** A new class, its slug from its name. */
 export async function createVehicleClass(
   actor: Actor,
@@ -119,9 +122,9 @@ export async function createVehicleClass(
     }
     const gone = await deletedMediaRefusal(
       tx,
-      [fields.imageUrl],
-      "The picture",
-      "imageUrl",
+      fields.imageUrls,
+      "A picture",
+      "imageUrls",
     );
     if (gone) return gone;
     const vehicleClass = await tx.vehicleClass.create({
@@ -153,14 +156,24 @@ export async function updateVehicleClass(
     const vehicleClass = await tx.vehicleClass.findUnique({ where: { id } });
     if (!vehicleClass) return NOT_FOUND;
 
-    const changed = changedFields(vehicleClass, patch);
-    if (!changed) return { ok: true };
-    if (changed.after.imageUrl) {
+    // The pictures are a list, compared as one; the rest field by field.
+    const { imageUrls, ...fieldsPatch } = patch;
+    const pictures =
+      imageUrls !== undefined && !sameList(vehicleClass.imageUrls, imageUrls)
+        ? { before: { imageUrls: vehicleClass.imageUrls }, after: { imageUrls } }
+        : null;
+    const fieldsChanged = changedFields(vehicleClass, fieldsPatch);
+    if (!fieldsChanged && !pictures) return { ok: true };
+    const changed = {
+      before: { ...fieldsChanged?.before, ...pictures?.before },
+      after: { ...fieldsChanged?.after, ...pictures?.after },
+    };
+    if (pictures) {
       const gone = await deletedMediaRefusal(
         tx,
-        [changed.after.imageUrl],
-        "The picture",
-        "imageUrl",
+        pictures.after.imageUrls,
+        "A picture",
+        "imageUrls",
       );
       if (gone) return gone;
     }

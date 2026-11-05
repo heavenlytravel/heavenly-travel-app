@@ -1,4 +1,5 @@
 import { formatMyr } from "./money";
+import { isUploadUrl } from "./images";
 
 /**
  * How a history reads on screen, pure and browser-safe: entries folded
@@ -100,6 +101,11 @@ function valueOf(key: string, value: unknown): string | null {
     return key.endsWith("Sen") ? formatMyr(value) : String(value);
   }
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  // A stored file's address says nothing to a reader; how many does.
+  if (isUploadUrl(value)) return "1 image";
+  if (Array.isArray(value) && value.length > 0 && value.every(isUploadUrl)) {
+    return value.length === 1 ? "1 image" : `${value.length} images`;
+  }
   if (typeof value === "string") {
     return value.length > 120 ? `${value.slice(0, 117)}…` : value;
   }

@@ -121,8 +121,8 @@ async function readSources(client: Prisma.TransactionClient) {
         },
       }),
       client.vehicleClass.findMany({
-        where: { imageUrl: { not: null } },
-        select: { id: true, name: true, imageUrl: true },
+        where: { imageUrls: { isEmpty: false } },
+        select: { id: true, name: true, imageUrls: true },
       }),
       client.vehiclePhoto.findMany({
         select: {
@@ -244,11 +244,12 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
   }
 
   for (const vehicleClass of classes) {
-    if (!vehicleClass.imageUrl) continue;
-    add(uploadKeyOf(vehicleClass.imageUrl), {
-      kind: "class",
-      vehicleClass: { id: vehicleClass.id, name: vehicleClass.name },
-    });
+    for (const url of vehicleClass.imageUrls) {
+      add(uploadKeyOf(url), {
+        kind: "class",
+        vehicleClass: { id: vehicleClass.id, name: vehicleClass.name },
+      });
+    }
   }
 
   for (const photo of photos) {

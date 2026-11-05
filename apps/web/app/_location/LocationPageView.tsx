@@ -683,7 +683,6 @@ async function VehicleClasses({
   const all = await vehicleClassCards(location.slug, category);
   const classes = only ? all.filter((entry) => entry.slug === only) : all;
   if (classes.length === 0 && !empty) return null;
-  const pictured = classes.some((c) => c.imageUrl !== null);
   const linked = new Set(
     linkedChildrenOf(location, category).map((entry) => entry.slug),
   );
@@ -698,7 +697,6 @@ async function VehicleClasses({
               <LocationClassCard
                 key={vehicleClass.id}
                 vehicleClass={vehicleClass}
-                pictured={pictured}
                 href={
                   !only && linked.has(vehicleClass.slug)
                     ? pathOf({ page: category, slug: vehicleClass.slug })
@@ -721,16 +719,14 @@ async function VehicleClasses({
 
 function LocationClassCard({
   vehicleClass,
-  pictured,
   href,
 }: {
   vehicleClass: VehicleClassCard;
-  pictured: boolean;
   /** Its page, while that is public. */
   href?: string;
 }) {
   return (
-    <ClassCard vehicleClass={vehicleClass} pictured={pictured}>
+    <ClassCard vehicleClass={vehicleClass}>
       <p className="mt-auto flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 pt-5 text-muted">
         {vehicleClass.fromSen !== null ? (
           <span>

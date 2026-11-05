@@ -414,15 +414,15 @@ export function VehicleFields({
                   on ? "border-brand ring-1 ring-brand" : "border-edge",
                 )}
               >
-                <span className="relative block aspect-[3/2] bg-white">
+                <span className="relative block aspect-[3/2] bg-canvas">
                   {option.imageUrl ? (
-                    // The whole vehicle in view, as `CardImage fit="contain"` shows it.
+                    // Cropped to fill, as `CardImage frame="class"` shows it.
                     <Image
                       src={option.imageUrl}
                       alt=""
                       fill
                       sizes="(min-width: 64rem) 14rem, 50vw"
-                      className={cx("object-contain", !ok && "opacity-50")}
+                      className={cx("object-cover", !ok && "opacity-50")}
                     />
                   ) : (
                     <span className="absolute inset-0 grid place-items-center text-xs text-muted">

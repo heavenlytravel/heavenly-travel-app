@@ -99,7 +99,8 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   // Another tab's change: read it again.
   const onStorage = (e: StorageEvent) => {
-    if (e.key !== KEY) return;
+    // One of ours not yet written stands: it is the newer.
+    if (e.key !== KEY || pendingWrite) return;
     cache = null;
     listener();
   };
@@ -115,10 +116,17 @@ export function useTripPlan(): TripPlan | null {
   return useSyncExternalStore<TripPlan | null>(subscribe, read, () => null);
 }
 
-/** Changes the plan; the trips are kept by start. */
-export function updatePlan(change: (plan: TripPlan) => TripPlan) {
-  const next = change(read());
-  cache = { ...next, trips: byStart(next.trips) };
+/** How long the typing rests before the plan is written to storage. */
+const WRITE_AFTER_MS = 400;
+let pendingWrite: ReturnType<typeof setTimeout> | null = null;
+let writesOnLeave = false;
+
+/** Writes the plan waiting to be written, now; nothing when none waits. */
+function write() {
+  if (!pendingWrite) return;
+  clearTimeout(pendingWrite);
+  pendingWrite = null;
+  if (!cache) return;
   try {
     window.localStorage.setItem(
       KEY,
@@ -127,6 +135,27 @@ export function updatePlan(change: (plan: TripPlan) => TripPlan) {
   } catch {
     // Storage is full or off: the plan lasts until the page reloads.
   }
+}
+
+/**
+ * Changes the plan; the trips are kept by start. The page reads the change
+ * at once; storage, which takes the whole plan with its prices, a moment
+ * after the typing rests, so a key press in the notes stays quick. A page
+ * left before then writes it on the way out.
+ */
+export function updatePlan(change: (plan: TripPlan) => TripPlan) {
+  const next = change(read());
+  cache = { ...next, trips: byStart(next.trips) };
+  if (!writesOnLeave) {
+    writesOnLeave = true;
+    // A phone may close a tab it has hidden without a pagehide.
+    window.addEventListener("pagehide", write);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") write();
+    });
+  }
+  if (pendingWrite) clearTimeout(pendingWrite);
+  pendingWrite = setTimeout(write, WRITE_AFTER_MS);
   for (const listener of listeners) listener();
 }
 

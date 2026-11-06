@@ -221,7 +221,9 @@ Mapped on 2026-10-27.
 
 A list of trips does not fit a URL. Keep it in the browser (local storage), each trip with
 its quote, the chosen class and the passengers. Sign-in returns to the same browser, so
-nothing is lost. A table on the server is needed only if a list must follow the customer
+nothing is lost. Storage is written a moment after a change rests, or as the page is left
+or hidden, so typing in the confirm step stays quick (`docs/261106-interaction-speed.md`).
+A table on the server is needed only if a list must follow the customer
 to another device; not now.
 
 ### Pricing

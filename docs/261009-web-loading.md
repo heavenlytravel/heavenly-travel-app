@@ -27,10 +27,9 @@ styles in `styles.css`). It takes a `className` for where it sits and a `gradien
 colours. The admin keeps it inside its sticky header in navy and blue; the site mounts it
 once in the root layout, fixed to the top of the window, in the brand blue and azure.
 
-The rules are the admin's: it listens for link clicks at the document, shows only when
-the wait passes 400 ms, stops when the address changes, and gives up after 20 seconds.
-The site's location pages and home page are static, so a click between them never
-reaches 400 ms and shows nothing.
+The rules are the admin's: it listens for link clicks at the document, stops when the
+address changes, and gives up after 20 seconds. It starts with the click since 2026-11-06
+(`docs/261106-interaction-speed.md`); before, it showed only when the wait passed 400 ms.
 
 `@repo/ui` now lists `next` as a peer dependency, for the two router hooks the line reads.
 

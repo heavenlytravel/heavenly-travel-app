@@ -5,12 +5,14 @@ import { ChevronRightIcon } from "@repo/ui/icons";
 import { Tooltip } from "@repo/ui/tooltip";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   createContext,
   useContext,
   useState,
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { showNavigation } from "@repo/ui/navigation-progress";
 
 /**
  * What answers the admin in a list of pages drawn on the server: a
@@ -133,10 +135,14 @@ export function PageGroupToggle({ label }: { label: string }) {
   );
 }
 
-/** The pages under a section, while it is open. */
+/**
+ * The pages under a section, shown while it is open. Folded, they are
+ * hidden, not taken off the page, so folding and opening many at once
+ * stays quick and an open again shows them without drawing them anew.
+ */
 export function PageGroupChildren({ children }: { children: ReactNode }) {
   const group = useContext(GroupContext);
-  return group?.open === false ? null : children;
+  return <Folded open={group?.open !== false}>{children}</Folded>;
 }
 
 /** A part's rows under its heading: the website's pages, or a location's. */
@@ -166,10 +172,15 @@ export function PagePartToggle({ label }: { label: string }) {
   );
 }
 
-/** A part's sections, while it is open. */
+/** A part's sections, shown while it is open; hidden as a section's pages are. */
 export function PagePartChildren({ children }: { children: ReactNode }) {
   const part = useContext(PartContext);
-  return part?.open === false ? null : children;
+  return <Folded open={part?.open !== false}>{children}</Folded>;
+}
+
+/** Rows hidden while folded, kept on the page. */
+function Folded({ open, children }: { open: boolean; children: ReactNode }) {
+  return <Activity mode={open ? "visible" : "hidden"}>{children}</Activity>;
 }
 
 /** A fold's button: a chevron pointing right, turned down while open. */
@@ -230,6 +241,7 @@ export function PageRowLink({
       window.open(href, "_blank", "noopener");
       return;
     }
+    showNavigation(href);
     router.push(href);
   }
   return (

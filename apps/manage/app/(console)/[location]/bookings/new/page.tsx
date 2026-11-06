@@ -6,7 +6,7 @@ import {
 import { hasGooglePlaces } from "@repo/places/server";
 import { PageHeader } from "@repo/console/PageHeader";
 import { requireAdmin } from "../../../../_lib/access";
-import { scopeOf } from "../../../../_lib/scope";
+import { locationsVisible, scopeOf } from "../../../../_lib/scope";
 import { NewBookingForm } from "./NewBookingForm";
 
 /**
@@ -17,17 +17,19 @@ import { NewBookingForm } from "./NewBookingForm";
  * does, and the booking opens there once made; which location prices a
  * trip is still its pick-up's, as on the site. Reservation and Sales,
  * behind `bookings.create`. The form shows the invoice number it would
- * take, and offers the agents a booking may come through.
+ * take, and offers the agents a booking may come through, and a way to
+ * add one.
  */
 export default async function NewBookingPage({
   params,
 }: PageProps<"/[location]/bookings/new">) {
   await requireAdmin("bookings.create");
   const scope = await scopeOf(params);
-  const [search, nextInvoice, agents] = await Promise.all([
+  const [search, nextInvoice, agents, locations] = await Promise.all([
     scope.slug ? getLocationSearch(scope.slug) : null,
     nextInvoiceNumber(),
     listAgents(),
+    locationsVisible(),
   ]);
 
   return (
@@ -38,6 +40,8 @@ export default async function NewBookingPage({
         scope={scope.slug}
         near={search?.near ?? undefined}
         nextInvoice={nextInvoice}
+        agentLocations={locations}
+        locationId={scope.location?.id ?? null}
         agents={agents}
       />
     </>

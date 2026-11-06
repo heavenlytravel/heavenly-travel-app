@@ -14,8 +14,6 @@ import {
   todayInMalaysia,
   addDays,
   TRIP_EVENT_LABELS,
-  TRIP_MODE_LABELS,
-  TRIP_MODES,
   untilPickup,
   type AssignState,
 } from "@repo/db";
@@ -45,6 +43,7 @@ import {
   type FilterGroup,
 } from "../../../_components/ListFilters";
 import { ListToolbar } from "../../../_components/ListToolbar";
+import { classIn, tripFilterGroups } from "../../../_lib/trip-filters";
 import { SearchBox } from "../../../_components/SearchBox";
 import { requireAdmin } from "../../../_lib/access";
 import {
@@ -78,6 +77,7 @@ function filterOf(view: AssignView): AssignFilter {
   return {
     q: view.q,
     date: view.date,
+    service: view.service,
     class: view.classId,
     trip: view.trip,
     only: view.only,
@@ -97,7 +97,8 @@ const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
  * location under `~` or at the one under its slug, in a table by pickup
  * under a heading for each day, those to assign first. Figure tiles count
  * where the trips stand and narrow the list to one; the search, the
- * pick-up day and the Filters (class, kind of trip, urgent or overdue)
+ * pick-up day and the Filters (service, class, kind of trip, urgent or
+ * overdue)
  * narrow the counts and the list alike, from the trips loaded.
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
@@ -185,25 +186,21 @@ const EMPTY: Record<Shown, string> = {
   all: "No trip from today on.",
 };
 
-/** The Filters' choices: the classes the trips name, the kind of trip, and what needs Operation first. */
+/** The Filters' choices: the service, the classes the trips name, the kind of trip, and what needs Operation first. */
 function groupsOf(rows: readonly AssignRow[], view: AssignView) {
   const classes = classesOf(rows);
+  // A class no trip names any more, or of the other service, is no filter.
+  const live: AssignView = {
+    ...view,
+    classId: classIn(classes, view.classId, view.service),
+  };
   const groups: FilterGroup[] = [
-    {
-      param: "class",
-      label: "Vehicle class",
-      value: view.classId ?? "",
-      options: classes,
-    },
-    {
-      param: "trip",
-      label: "Trip type",
-      value: view.trip ?? "",
-      options: TRIP_MODES.map((value) => ({
-        value,
-        label: TRIP_MODE_LABELS[value],
-      })),
-    },
+    ...tripFilterGroups({
+      classes,
+      service: live.service,
+      classId: live.classId,
+      trip: live.trip,
+    }),
     {
       param: "only",
       label: "Needs attention",
@@ -214,13 +211,6 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
       })),
     },
   ];
-  // A class no trip names any more is no filter.
-  const live: AssignView = {
-    ...view,
-    classId: classes.some((option) => option.value === view.classId)
-      ? view.classId
-      : undefined,
-  };
   return { groups, live };
 }
 

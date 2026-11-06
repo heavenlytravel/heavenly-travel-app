@@ -35,7 +35,9 @@ of the console while the next page is on its way. The page on screen stays until
 
 - It listens for clicks on links at the document, so no link has to report anything and
   a new screen is covered without doing anything.
-- It shows only when the wait passes 400 ms. A fast page change shows nothing.
+- It starts with the click since 2026-11-06 (`docs/261106-interaction-speed.md`). Until
+  then it showed only when the wait passed 400 ms, so a shorter wait showed nothing and read
+  as a freeze.
 - It stops when the address changes, and gives up after 20 seconds.
 - A move made by a form after it saves is not a link click and shows no line; those
   forms show their own "Saving…" state.

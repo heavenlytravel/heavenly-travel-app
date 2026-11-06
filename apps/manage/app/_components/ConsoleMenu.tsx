@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { StepMark } from "@repo/console/StepMark";
@@ -121,8 +121,10 @@ function PageRow({
         active={current}
         size={sub ? "sm" : "default"}
         tooltip={tooltip ?? page.label}
+        className="relative"
       >
         <Link href={page.href}>
+          <Opening />
           {sub ? null : <Icon />}
           <SidebarLabel className="min-w-0 flex-1">{page.label}</SidebarLabel>
           {collapsed ? null : (
@@ -132,6 +134,21 @@ function PageRow({
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
+}
+
+/**
+ * A row's glow from the click until its page lands, so the click shows at
+ * once even while the page is still on its way from the server. First in
+ * the row, so the label stays the span that truncates.
+ */
+function Opening() {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 animate-pulse rounded-[inherit] bg-current/15"
+    />
+  ) : null;
 }
 
 /** A section of several pages: its row, which opens or closes it, and its pages under it while open. */

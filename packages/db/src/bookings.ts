@@ -33,6 +33,7 @@ import {
   type Canceller,
   type ItemStatus,
   type Product,
+  type TripCategory,
   type TripMode,
 } from "./booking-status";
 import { refuse, type Change } from "./change";
@@ -353,6 +354,10 @@ export type BookingFilter = {
   pickupTo?: Date;
   /** A booking with a trip of this kind. */
   tripMode?: TripMode;
+  /** A booking with a trip of this service: car with driver or coach charter. */
+  category?: TripCategory;
+  /** A booking with a trip of this vehicle class, by id. */
+  vehicleClassId?: string;
   /** The agent it came through, by id; null for the bookings that came direct. */
   agentId?: string | null;
   /** Where its invoice's payment stands; a booking with no invoice yet has none. */
@@ -370,7 +375,8 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
   }
   // A booking is the location's when one of its items picks up there, the
   // days' when one of its live items starts in them, and the kind's when
-  // one of its trips is; all at once when the same item is.
+  // one of its trips is (its service, its class); all at once when the same
+  // item is.
   const item: Prisma.BookingItemWhereInput = {};
   if (filter.locationId) item.locationId = filter.locationId;
   if (filter.pickupOn) {
@@ -379,7 +385,11 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
     item.startsAt = { gte: first.start, lt: last.end };
     item.status = { not: "cancelled" satisfies ItemStatus };
   }
-  if (filter.tripMode) item.tripDetails = { mode: filter.tripMode };
+  const trip: Prisma.TripItemDetailsWhereInput = {};
+  if (filter.tripMode) trip.mode = filter.tripMode;
+  if (filter.category) trip.vehicleClassCategory = filter.category;
+  if (filter.vehicleClassId) trip.vehicleClassId = filter.vehicleClassId;
+  if (Object.keys(trip).length > 0) item.tripDetails = trip;
   if (Object.keys(item).length > 0) where.items = { some: item };
   if (filter.search) {
     const phone = phoneDigitsOf(filter.search);

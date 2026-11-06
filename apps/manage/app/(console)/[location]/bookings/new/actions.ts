@@ -3,13 +3,17 @@
 import { parseContact, parseOldInvoiceNumber } from "@repo/db";
 import {
   createBooking,
+  createVendor,
   findUserByEmail,
   InvoiceRefusal,
+  parseVendorFields,
+  VENDOR_LOCATIONS_FIELD,
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   FORBIDDEN,
+  FORBIDDEN_MESSAGE,
   refusalOf,
 } from "@repo/console/action-state";
 import { revalidateLocation } from "../../../../_lib/revalidate";
@@ -79,4 +83,35 @@ export async function createManualBookingAction(
   }
   revalidateLocation();
   return { href: savedBookingHref(formData, booking) };
+}
+
+/** What adding an agent from the booking form answers: the agent, to choose at once, or why not. */
+export type AddAgentAnswer =
+  { id: string; name: string } | { error: string; field?: string };
+
+/**
+ * Adds an agent from the booking form, for a booking that comes through
+ * one not yet entered: a vendor offering "agent" alone, active at once,
+ * with no Connect owner. Whatever else is posted, it offers nothing but
+ * "agent": the rest of a vendor is entered on its page. Those who enter
+ * bookings may add one (`bookings.create`), not only Operation, who keeps
+ * the vendors. See docs/261106-filters-and-agents.md.
+ */
+export async function addAgentAction(
+  formData: FormData,
+): Promise<AddAgentAnswer> {
+  const admin = await getAdmin("bookings.create");
+  if (!admin) return { error: FORBIDDEN_MESSAGE };
+  const fields = parseVendorFields(
+    Object.fromEntries(formData),
+    ["agent"],
+    formData.getAll(VENDOR_LOCATIONS_FIELD),
+  );
+  if (!fields.ok) return refusalOf(fields);
+  const created = await createVendor(actorOf(admin), fields.value, {
+    status: "active",
+  });
+  if (!created.ok) return refusalOf(created);
+  revalidateLocation();
+  return { id: created.id, name: fields.value.name };
 }

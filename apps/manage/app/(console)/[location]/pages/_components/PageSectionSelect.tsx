@@ -3,6 +3,7 @@
 import { cx } from "@repo/ui/cx";
 import { Select } from "@repo/ui/select";
 import { useRouter } from "next/navigation";
+import { showNavigation } from "@repo/ui/navigation-progress";
 
 /** One choice of the section, "All sections" worth "", with the list's address narrowed to it. */
 export type SectionOption = { value: string; label: string; href: string };
@@ -29,7 +30,10 @@ export function PageSectionSelect({
       value={value}
       onValueChange={(next) => {
         const option = options.find((entry) => entry.value === next);
-        if (option) router.push(option.href);
+        if (option) {
+          showNavigation(option.href);
+          router.push(option.href);
+        }
       }}
       options={options.map(({ value, label }) => ({ value, label }))}
       className={cx(

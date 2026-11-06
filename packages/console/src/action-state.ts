@@ -23,7 +23,10 @@ export const STALE_MESSAGE =
 export const STALE: ActionState = { error: STALE_MESSAGE };
 
 /** A writer's refusal as the form's state, naming its field when it has one. */
-export function refusalOf(refusal: Refusal): ActionState {
+export function refusalOf(refusal: Refusal): {
+  error: string;
+  field?: string;
+} {
   return refusal.field
     ? { error: refusal.error, field: refusal.field }
     : { error: refusal.error };

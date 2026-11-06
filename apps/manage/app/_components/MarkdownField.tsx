@@ -21,7 +21,15 @@ import { Input, Textarea } from "@repo/ui/field";
 import { ImageIcon } from "@repo/ui/icons";
 import { Markdown } from "@repo/ui/markdown";
 import Image from "next/image";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Choices } from "./Choices";
 import { Count } from "./page-editor/Count";
 import { MediaPicker } from "./MediaPicker";
@@ -183,6 +191,9 @@ export function MarkdownField({
   const [adding, setAdding] = useState<Span | null>(null);
   const [confirmDialog, confirm] = useConfirm();
   const images = markdownImagesOf(value);
+  // The preview reads the whole text: it follows the typing a moment
+  // behind, so a key press shows in the text area at once.
+  const previewText = useDeferredValue(value);
 
   /**
    * Replaces a span of the text through the browser's typing, so the edit
@@ -380,13 +391,7 @@ export function MarkdownField({
             view === "write" && "hidden lg:block",
           )}
         >
-          {value.trim() === "" ? (
-            <p className="text-sm text-muted">
-              The text shows here as the page will read it.
-            </p>
-          ) : (
-            <Markdown text={value} sizeOf={imageSizeOf} className={PROSE} />
-          )}
+          <Preview text={previewText} />
         </div>
       </div>
 
@@ -702,3 +707,14 @@ function TextImage({
     </div>
   );
 }
+
+/** The text as the page will read it; drawn again only when the text changes. */
+const Preview = memo(function Preview({ text }: { text: string }) {
+  return text.trim() === "" ? (
+    <p className="text-sm text-muted">
+      The text shows here as the page will read it.
+    </p>
+  ) : (
+    <Markdown text={text} sizeOf={imageSizeOf} className={PROSE} />
+  );
+});

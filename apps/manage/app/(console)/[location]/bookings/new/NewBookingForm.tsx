@@ -15,12 +15,12 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
-import { Select } from "@repo/ui/select";
 import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { ALL, bookingsHref, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
+import { AgentPicker, type Agent } from "../_components/AgentPicker";
 import { BookingSummary } from "../_components/BookingSummary";
 import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
 import { HiddenFields } from "../_components/HiddenFields";
@@ -86,6 +86,8 @@ export function NewBookingForm({
   near,
   nextInvoice,
   agents,
+  agentLocations,
+  locationId,
 }: {
   /** False when the server runs without a Google key and offers the districts themselves. */
   hasGoogle: boolean;
@@ -97,10 +99,20 @@ export function NewBookingForm({
   nextInvoice: string;
   /** The agents a booking may come through, by name. */
   agents: readonly Agent[];
+  /** The locations an agent added here may serve. */
+  agentLocations: readonly { id: string; name: string }[];
+  /** The location the form is open in; null under every location. */
+  locationId: string | null;
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [agentId, setAgentId] = useState("");
-  const agent = agents.find((a) => a.id === agentId) ?? null;
+  // Added from the form and not yet in `agents`, until the refresh brings them.
+  const [added, setAdded] = useState<Agent[]>([]);
+  const allAgents = [
+    ...agents,
+    ...added.filter((one) => !agents.some((listed) => listed.id === one.id)),
+  ].sort((a, b) => a.name.localeCompare(b.name));
+  const agent = allAgents.find((a) => a.id === agentId) ?? null;
   const [confirmDialog, confirm] = useConfirm();
   const [items, setItems] = useState<ItemDraft[]>(() => [newItemDraft()]);
   const [sameVehicle, setSameVehicle] = useState(true);
@@ -300,10 +312,13 @@ export function NewBookingForm({
             open={open === "customer"}
             onOpen={() => openStep("customer")}
           >
-            <AgentField
-              agents={agents}
-              agentId={agentId}
+            <AgentPicker
+              agents={allAgents}
+              value={agentId}
               onChange={setAgentId}
+              onAdded={(one) => setAdded((list) => [...list, one])}
+              locations={agentLocations}
+              locationId={locationId}
             />
             <CustomerFields contact={contact} onChange={setContact} />
             <StepFoot
@@ -512,37 +527,6 @@ function InvoiceNumberField({
         placeholder={nextInvoice}
         autoComplete="off"
         spellCheck={false}
-      />
-    </Field>
-  );
-}
-
-/** An agent a booking may come through. */
-type Agent = { id: string; name: string };
-
-/** The agent the booking came through, if any: its invoice is the agent's. */
-function AgentField({
-  agents,
-  agentId,
-  onChange,
-}: {
-  agents: readonly Agent[];
-  agentId: string;
-  onChange: (agentId: string) => void;
-}) {
-  return (
-    <Field
-      label="Agent"
-      hint="Choose the agent when the booking came through one. The customer below is the agent's guest."
-      className="mb-4"
-    >
-      <Select
-        value={agentId}
-        onValueChange={onChange}
-        options={[
-          { value: "", label: "None: our own customer" },
-          ...agents.map((a) => ({ value: a.id, label: a.name })),
-        ]}
       />
     </Field>
   );

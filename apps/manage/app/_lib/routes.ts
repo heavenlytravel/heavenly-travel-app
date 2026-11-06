@@ -133,6 +133,10 @@ export type BookingsListFilter = {
   agent?: string;
   /** Where the invoice's payment stands: a `PaymentStatus`. */
   payment?: string;
+  /** Car with driver or coach charter: a `TripCategory`. */
+  service?: string;
+  /** A vehicle class's id. */
+  class?: string;
   /** One-way or hourly: a `TripMode`. */
   trip?: string;
   /** A `BookingOrder`; newest made when left out. */
@@ -164,6 +168,8 @@ export function bookingsHref(
     [DATE_TO_PARAM]: filter.date ? filter.to : undefined,
     agent: filter.agent,
     payment: filter.payment,
+    service: filter.service,
+    class: filter.class,
     trip: filter.trip,
     [SORT_PARAM]: filter.sort,
     [PAGE_PARAM]: pageParam(filter.page),
@@ -204,6 +210,8 @@ export type AssignFilter = {
   q?: string;
   /** A pick-up day, "2026-11-05". */
   date?: string;
+  /** Car with driver or coach charter: a `TripCategory`. */
+  service?: string;
   /** A vehicle class's id. */
   class?: string;
   /** One-way or hourly: a `TripMode`. */
@@ -218,6 +226,7 @@ export function assignHref(scope: ScopeSlug, filter: AssignFilter = {}) {
     state: filter.state,
     [SEARCH_PARAM]: filter.q,
     [DATE_PARAM]: filter.date,
+    service: filter.service,
     class: filter.class,
     trip: filter.trip,
     only: filter.only,

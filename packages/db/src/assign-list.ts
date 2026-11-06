@@ -121,6 +121,8 @@ export type AssignRow = {
   job: Job;
   /** The vehicle class booked, by id; null for a trip with none. */
   classId: string | null;
+  /** Its service, "car-with-driver" or "coach-charter"; null for a trip with none. */
+  category: string | null;
   className: string;
   passengers: number;
   /** Hourly: the hours it runs; null for one-way. */
@@ -190,6 +192,7 @@ async function listAssignTrips(
       guideRequest: item.tripDetails?.guideRequest ?? null,
       job,
       classId: item.tripDetails?.vehicleClassId ?? null,
+      category: item.tripDetails?.vehicleClassCategory ?? null,
       className: item.tripDetails?.vehicleClassName ?? "",
       passengers: item.tripDetails?.passengers ?? 0,
       hours:

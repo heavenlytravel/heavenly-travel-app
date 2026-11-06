@@ -4,9 +4,11 @@ import {
   searchTermOf,
   todayInMalaysia,
   isUrgentTrip,
+  type TripCategory,
   type TripMode,
 } from "@repo/db";
 import type { AssignRow } from "@repo/db/server";
+import { serviceOf, type FilterClass } from "../../../_lib/trip-filters";
 
 /**
  * What narrows the Assign page besides where the trips stand: a search,
@@ -27,6 +29,8 @@ export type AssignView = {
   q?: string;
   /** A pick-up day, "2026-11-05". */
   date?: string;
+  /** Car with driver or coach charter. */
+  service?: TripCategory;
   classId?: string;
   trip?: TripMode;
   only?: AssignOnly;
@@ -40,6 +44,7 @@ export function assignViewOf(query: Record<string, unknown>): AssignView {
   return {
     q: searchTermOf(query.q) ?? undefined,
     date: isDay(date) ? date : undefined,
+    service: serviceOf(query.service),
     classId: textOf(query.class) || undefined,
     trip: isTripMode(query.trip) ? query.trip : undefined,
     only: ASSIGN_ONLY.includes(query.only as AssignOnly)
@@ -70,6 +75,7 @@ export function rowsInView(
 ): AssignRow[] {
   return rows.filter((row) => {
     if (view.date && todayInMalaysia(row.startsAt) !== view.date) return false;
+    if (view.service && row.category !== view.service) return false;
     if (view.classId && row.classId !== view.classId) return false;
     if (view.trip && (row.hours !== null) !== (view.trip === "hourly")) {
       return false;
@@ -81,12 +87,16 @@ export function rowsInView(
 }
 
 /** The vehicle classes the trips name, by name: what the Filters offer. */
-export function classesOf(rows: readonly AssignRow[]) {
-  const classes = new Map<string, string>();
+export function classesOf(rows: readonly AssignRow[]): FilterClass[] {
+  const classes = new Map<string, FilterClass>();
   for (const row of rows) {
-    if (row.classId) classes.set(row.classId, row.className);
+    if (row.classId) {
+      classes.set(row.classId, {
+        id: row.classId,
+        name: row.className,
+        category: row.category ?? "",
+      });
+    }
   }
-  return [...classes]
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+  return [...classes.values()].sort((a, b) => a.name.localeCompare(b.name));
 }

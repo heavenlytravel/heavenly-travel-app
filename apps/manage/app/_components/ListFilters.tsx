@@ -113,7 +113,7 @@ export function FiltersButton({
         </Button>
       }
     >
-      <div className="flex flex-col gap-4 sm:w-72 sm:p-4">
+      <div className="flex flex-col gap-4 sm:w-80 sm:p-4">
         {groups.map((group) => (
           <div key={group.param} className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted">

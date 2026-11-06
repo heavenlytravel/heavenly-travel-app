@@ -10,14 +10,13 @@ import {
   PAYMENT_STATUSES,
   pickupInstant,
   searchTermOf,
-  TRIP_MODE_LABELS,
-  TRIP_MODES,
   type BookingStatus,
 } from "@repo/db";
 import {
   countBookings,
   listAgents,
   listBookings,
+  listClassOptions,
   type BookingFilter,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
@@ -53,6 +52,11 @@ import {
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
 import { ListToolbar } from "../../../_components/ListToolbar";
+import {
+  classIn,
+  serviceOf,
+  tripFilterGroups,
+} from "../../../_lib/trip-filters";
 
 /** How many bookings a page of the list holds. */
 const PAGE_SIZE = 50;
@@ -62,12 +66,13 @@ const textOf = (value: unknown) => (typeof value === "string" ? value : "");
 
 /**
  * Route: /[location]/bookings?status=received&q=…&date=2026-10-29&to=…
- * &agent=…&payment=…&trip=…&sort=…&page=2. The bookings of the scope,
+ * &agent=…&payment=…&service=…&class=…&trip=…&sort=…&page=2. The bookings of the scope,
  * newest made first unless sorted by pick-up: every location's under `~`,
  * with the column of locations, or those with a trip picking up in one
  * location under its slug. Figure tiles count each status and narrow the
  * list to it; the search, the pick-up days and the Filters (the agent,
- * the payment and the kind of trip) narrow the counts and the list alike.
+ * the payment, the service, the vehicle class and the kind of trip)
+ * narrow the counts and the list alike.
  * A draft location's opens too, though its menu has no row for it. Every
  * team that sees bookings opens it; "New booking" is Reservation's and
  * Sales'.
@@ -77,10 +82,11 @@ export default async function BookingsPage({
   searchParams,
 }: PageProps<"/[location]/bookings">) {
   await requireAdmin("bookings.view");
-  const [scope, query, agents, permissions] = await Promise.all([
+  const [scope, query, agents, classes, permissions] = await Promise.all([
     scopeOf(params),
     searchParams,
     listAgents(),
+    listClassOptions(),
     getPermissions(),
   ]);
   const status = isBookingStatus(query.status) ? query.status : undefined;
@@ -105,6 +111,8 @@ export default async function BookingsPage({
   const payment = isPaymentStatus(query.payment) ? query.payment : undefined;
   const sortParam = query[SORT_PARAM];
   const trip = isTripMode(query.trip) ? query.trip : undefined;
+  const service = serviceOf(query.service);
+  const classId = classIn(classes, textOf(query.class), service);
   const sort =
     isBookingOrder(sortParam) && sortParam !== "newest" ? sortParam : undefined;
   const filter: BookingsListFilter = {
@@ -114,6 +122,8 @@ export default async function BookingsPage({
     to,
     agent,
     payment,
+    service,
+    class: classId,
     trip,
     sort,
     page: pageOf(query[PAGE_PARAM]),
@@ -125,6 +135,8 @@ export default async function BookingsPage({
     pickupTo,
     agentId: agent === DIRECT ? null : agent,
     paymentStatus: payment,
+    category: service,
+    vehicleClassId: classId,
     tripMode: trip,
   };
   const groups: FilterGroup[] = [
@@ -146,19 +158,21 @@ export default async function BookingsPage({
         label: PAYMENT_STATUS_LABELS[value],
       })),
     },
-    {
-      param: "trip",
-      label: "Trip type",
-      value: trip ?? "",
-      options: TRIP_MODES.map((value) => ({
-        value,
-        label: TRIP_MODE_LABELS[value],
-      })),
-    },
+    ...tripFilterGroups({ classes, service, classId, trip }),
   ];
   // The list as filtered, on its first page: what each control changes a field of.
   const listed = bookingsHref(scope.slug, { ...filter, page: undefined });
-  const narrowed = [scope.slug ?? "~", q, date, to, agent, payment, trip]
+  const narrowed = [
+    scope.slug ?? "~",
+    q,
+    date,
+    to,
+    agent,
+    payment,
+    service,
+    classId,
+    trip,
+  ]
     .map((part) => part ?? "")
     .join(":");
 
@@ -277,7 +291,13 @@ function emptyMessage(filter: BookingsListFilter, where: BookingFilter) {
   const which = filter.status
     ? `${BOOKING_STATUS_LABELS[filter.status].toLowerCase()} bookings`
     : "bookings";
-  if (filter.agent || filter.payment || filter.trip) {
+  if (
+    filter.agent ||
+    filter.payment ||
+    filter.service ||
+    filter.class ||
+    filter.trip
+  ) {
     return `No ${which} match these filters.`;
   }
   if (where.pickupOn && where.pickupTo) {

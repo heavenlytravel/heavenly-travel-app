@@ -76,9 +76,13 @@ export function ThGroup({
   );
 }
 
+/**
+ * The rows, a hairline over each but the first. Over, not under: a row
+ * hidden in place (a folded section's pages) leaves no line at the foot.
+ */
 export function TBody({ children }: { children: ReactNode }) {
   return (
-    <tbody className="divide-y divide-hairline [&>tr]:transition-colors [&>tr:hover]:bg-hover">
+    <tbody className="[&>tr]:transition-colors [&>tr:hover]:bg-hover [&>tr+tr]:border-t [&>tr+tr]:border-hairline">
       {children}
     </tbody>
   );

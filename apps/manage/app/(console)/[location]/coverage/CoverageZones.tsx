@@ -15,6 +15,7 @@ import { CoverageMap, type MappedZone } from "./CoverageMap";
 import { RemoveZone } from "./RemoveZone";
 import { pricedFromSentence } from "./zone-lines";
 import type { DistrictOutline } from "./zones/map-shapes";
+import { showNavigation } from "@repo/ui/navigation-progress";
 
 /** A zone as Coverage lists it. */
 export type CoverageZone = MappedZone & {
@@ -90,7 +91,10 @@ export function CoverageZones({
           onHighlight={setHighlighted}
           onOpen={(id) => {
             const zone = zones.find((entry) => entry.id === id);
-            if (zone?.href) router.push(zone.href);
+            if (zone?.href) {
+              showNavigation(zone.href);
+              router.push(zone.href);
+            }
           }}
         />
       ) : (

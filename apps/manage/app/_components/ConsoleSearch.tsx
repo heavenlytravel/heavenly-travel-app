@@ -36,6 +36,7 @@ import {
 } from "./palette-index";
 import { useRecent, type RecentEntry } from "./palette-recent";
 import { BookingStatusBadge } from "@repo/console/StatusBadges";
+import { showNavigation } from "@repo/ui/navigation-progress";
 
 /** How long the typing rests before the records are asked for. */
 const PAUSE_MS = 200;
@@ -295,6 +296,7 @@ export function ConsoleSearch({
           const entry = entries.get(href);
           if (entry) remember(entry);
           setOpen(false);
+          showNavigation(href);
           router.push(href);
         }}
         dock={<ConsoleDock />}

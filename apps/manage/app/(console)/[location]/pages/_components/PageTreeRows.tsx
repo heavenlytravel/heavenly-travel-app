@@ -11,6 +11,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { showNavigation } from "@repo/ui/navigation-progress";
 
 /**
  * What answers the admin in a list of pages drawn on the server: a
@@ -230,6 +231,7 @@ export function PageRowLink({
       window.open(href, "_blank", "noopener");
       return;
     }
+    showNavigation(href);
     router.push(href);
   }
   return (

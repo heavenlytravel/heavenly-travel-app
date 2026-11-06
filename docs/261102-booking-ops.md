@@ -142,10 +142,10 @@ Proposal, agreed in principle by the user:
   for November 2026 as line 4" or "Opens …". It asks the server again only when the
   agent changes or the first trip moves out of that period (`previewInvoice`, the same
   rules as the save, nothing given). The next number is a guess until the booking is
-  made; the save checks again. Joining an invoice, its number is set and Change is
+  made; the save checks again. Joining an invoice, its number and line are set and the pencil is
   off. The booking page's Give invoice shows the same field.
 - **An old invoice's number:** a booking the old system invoiced already keeps that
-  invoice's number: Change, then its digits ("1223"), checked as the box is left. It must be
+  invoice's number: the pencil, its digits ("1223"), then the tick to check it. It must be
   one the counter has passed, and on no other booking; it never moves the counter. With
   the counter at 1307, the next booking takes HTI-1308, one typed as HT1223 keeps it,
   and the next after that takes HTI-1309.

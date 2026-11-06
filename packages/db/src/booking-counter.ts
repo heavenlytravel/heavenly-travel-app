@@ -127,20 +127,20 @@ async function typedNumberIssue(
   if (place && open) {
     return number === open.number
       ? null
-      : `${place.agent.name}'s invoice for ${invoicePeriodLabel(place.start, place.period)} is ${formatInvoiceNumber(open.number, null)} already, so this booking joins it. Cancel the change.`;
+      : `${place.agent.name}'s invoice for ${invoicePeriodLabel(place.start, place.period)} is ${formatInvoiceNumber(open.number, null)}. This booking joins it.`;
   }
   const last = await lastBookingNumber(client, "invoice");
   const typed = formatBookingNumber("invoice", number);
   if (number > last) {
     return last === 0
-      ? `The running invoice number is not set yet, so ${typed} cannot be an old one. Ask the developer to set it.`
-      : `${typed} is not given yet: the last given is ${formatBookingNumber("invoice", last)}. Cancel the change for the next one.`;
+      ? `The invoice counter is not set yet, so ${typed} cannot be used. Ask the developer to set it.`
+      : `Invoice ${typed} is not given yet. The latest is ${formatBookingNumber("invoice", last)}.`;
   }
   const taken = await client.invoice.findUnique({
     where: { number },
     select: { id: true },
   });
-  return taken ? `${typed} is another invoice's already.` : null;
+  return taken ? `Invoice ${typed} already exists.` : null;
 }
 
 /** Where a booking's invoice puts it: the invoice, and its line on an agent's. */

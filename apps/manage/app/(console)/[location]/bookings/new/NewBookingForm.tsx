@@ -474,7 +474,7 @@ export function NewBookingForm({
                   waiting={
                     invoice.error ??
                     (agent
-                      ? `Shown once the first trip has a day and time: the booking joins ${agent.name}'s invoice for its period, or opens it.`
+                      ? `Shown once the first trip's date and time are set. The booking joins ${agent.name}'s existing invoice or opens a new one.`
                       : "Checking…")
                   }
                   check={(digits) =>

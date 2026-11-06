@@ -30,7 +30,14 @@ import { Field, Input, Textarea } from "@repo/ui/field";
 import { Switch } from "@repo/ui/switch";
 import { toast } from "@repo/ui/toast";
 import { scrollBehavior } from "@repo/ui/motion";
-import { useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  useDeferredValue,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { errorOf } from "@repo/console/action-state";
 import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { Card, CardTitle } from "@repo/console/Card";
@@ -240,9 +247,13 @@ export function PageEditor({
 
   // The content in its one shape, as it would be stored: what every count,
   // check and comparison reads.
-  const normal = pageContentOf(kind, content);
+  const normal = useMemo(() => pageContentOf(kind, content), [kind, content]);
   const limits = checkPageLimits(normal);
-  const checks = pageChecks(kind, normal);
+  // The checks, the comparison with the save and the status walk the whole
+  // page; they follow the typing a moment behind, so a key press redraws
+  // the field at once and they catch up after.
+  const settled = useDeferredValue(normal);
+  const checks = useMemo(() => pageChecks(kind, settled), [kind, settled]);
   /** What a card still needs before a publish, beside its name; nothing once it is done. */
   const toDoIn = (card: PageEditorTab) => {
     const missing = checks
@@ -254,8 +265,14 @@ export function PageEditor({
       </span>
     ) : undefined;
   };
-  const dirty = !samePageContent(normal, saved);
-  const status = pageStatusOf(normal, published);
+  const dirty = useMemo(
+    () => !samePageContent(settled, saved),
+    [settled, saved],
+  );
+  const status = useMemo(
+    () => pageStatusOf(settled, published),
+    [settled, published],
+  );
   const publishedOn = publishedAt ? formatLocalDateTime(publishedAt) : "";
   // What the status means for the public, beside the badge.
   const standingNote =
@@ -374,7 +391,8 @@ export function PageEditor({
   }
 
   useSaveShortcut(() => {
-    if (dirty && limits.ok && !busy) write(false);
+    // Read now, not a moment behind: the last key may not have settled.
+    if (!samePageContent(normal, saved) && limits.ok && !busy) write(false);
   });
 
   const message = uploads.uploading ? (

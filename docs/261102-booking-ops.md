@@ -134,10 +134,18 @@ Proposal, agreed in principle by the user:
   year (HT1006, January 2026, for a trip on 20 January 2027), and the year read as the
   trip's. The first round, HTQ-YY-NNNNN counted per year, was dropped the same day.
 - **A booking staff enter is confirmed at once** (user, 2026-11-04), with every trip,
-  ready for Assign, and takes the next invoice number. The form shows that number, a
-  guess until the booking is made. Received is for the quotations to come.
+  ready for Assign, and takes the next invoice number. Received is for the quotations
+  to come.
+- **The form shows the invoice before the booking is made** (user, 2026-11-06), locked,
+  with "HTI-" outside the box: our own customer's next number, or, once the first trip
+  has a day and time, the agent's invoice for its period, "Joins Sri Travel's invoice
+  for November 2026 as line 4" or "Opens …". It asks the server again only when the
+  agent changes or the first trip moves out of that period (`previewInvoice`, the same
+  rules as the save, nothing given). The next number is a guess until the booking is
+  made; the save checks again. Joining an invoice, its number is set and Change is
+  off. The booking page's Give invoice shows the same field.
 - **An old invoice's number:** a booking the old system invoiced already keeps that
-  invoice's number, typed on New booking ("HT1223", "HTI-1223" or "1223"). It must be
+  invoice's number: Change, then its digits ("1223"), checked as the box is left. It must be
   one the counter has passed, and on no other booking; it never moves the counter. With
   the counter at 1307, the next booking takes HTI-1308, one typed as HT1223 keeps it,
   and the next after that takes HTI-1309.

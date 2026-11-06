@@ -16,6 +16,7 @@ import {
   advanceItem,
   addItem,
   amendItem,
+  bookingInvoicePreviewOf,
   cancelBookingAsAdmin,
   cancelItem,
   invoiceBooking,
@@ -29,6 +30,7 @@ import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
   type ActionState,
   FORBIDDEN,
+  FORBIDDEN_MESSAGE,
   refusalOf,
   STALE,
   stateOf,
@@ -36,6 +38,7 @@ import {
 import { revalidateLocation } from "../../../../_lib/revalidate";
 import { OLD_INVOICE_FIELD } from "../_lib/trip-form";
 import { prepareFormItem, savedBookingHref } from "../_lib/trip-server";
+import type { InvoiceCheck } from "../_components/InvoiceNumberField";
 
 /**
  * Every transition re-checks the session and the permission (actions are
@@ -231,6 +234,24 @@ export async function invoiceBookingAction(
   const result = await invoiceBooking(actorOf(admin), bookingId, typed.number);
   if (result.ok) revalidateLocation();
   return stateOf(result);
+}
+
+/**
+ * Checks an old invoice's digits typed for a booking not invoiced yet
+ * (`bookingInvoicePreviewOf`), as giving its invoice checks them: the
+ * invoice it would get with them, or why not. Nothing is given.
+ */
+export async function previewBookingInvoiceAction(
+  bookingId: string,
+  oldNumber: string,
+): Promise<InvoiceCheck> {
+  if (!(await getAdmin("bookings.payment"))) {
+    return { error: FORBIDDEN_MESSAGE };
+  }
+  const typed = parseOldInvoiceNumber(String(oldNumber ?? ""));
+  if (!typed.ok) return { error: typed.error };
+  const answer = await bookingInvoicePreviewOf(String(bookingId), typed.number);
+  return answer.ok ? answer.preview : { error: answer.error };
 }
 
 /** Sets where the booking's invoice's payment stands; an agent's, for every booking on it. */

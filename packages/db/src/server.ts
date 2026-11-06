@@ -354,7 +354,8 @@ export {
   cancelBookingAsCustomer,
   cancelTripAsCustomer,
   updateBookingContact,
-  nextInvoiceNumber,
+  invoicePreviewOf,
+  bookingInvoicePreviewOf,
   invoiceBooking,
   setInvoicePayment,
 } from "./bookings";

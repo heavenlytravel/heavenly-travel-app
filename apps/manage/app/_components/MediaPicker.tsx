@@ -11,12 +11,23 @@ import { CheckIcon, SearchIcon } from "@repo/ui/icons";
 import { Bone } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   chooseMediaAction,
   listMediaChoicesAction,
   type MediaChoice,
 } from "../_lib/media-actions";
+
+/** How many tiles show at first, and how many more each "Show more" adds. */
+const TILES = 48;
 
 /**
  * "Choose from Media", beside an image field's upload (BL-84): a dialog
@@ -37,6 +48,7 @@ export function MediaPicker({
   const [files, setFiles] = useState<MediaChoice[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [limit, setLimit] = useState(TILES);
   const [chosen, setChosen] = useState<readonly string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -49,6 +61,7 @@ export function MediaPicker({
     setFiles(null);
     setListError(null);
     setQuery("");
+    setLimit(TILES);
     setChosen([]);
     setError(null);
     void listMediaChoicesAction().then((answer) => {
@@ -58,17 +71,25 @@ export function MediaPicker({
     });
   }
 
-  function toggle(key: string) {
-    setError(null);
-    setChosen((was) =>
-      was.includes(key)
-        ? was.filter((other) => other !== key)
-        : most === 1
-          ? [key]
-          : was.length < most
-            ? [...was, key]
-            : was,
-    );
+  const toggle = useCallback(
+    (key: string) => {
+      setError(null);
+      setChosen((was) =>
+        was.includes(key)
+          ? was.filter((other) => other !== key)
+          : most === 1
+            ? [key]
+            : was.length < most
+              ? [...was, key]
+              : was,
+      );
+    },
+    [most],
+  );
+
+  function search(next: string) {
+    setQuery(next);
+    setLimit(TILES);
   }
 
   function use() {
@@ -88,8 +109,14 @@ export function MediaPicker({
     });
   }
 
-  const term = query.trim().toLowerCase();
-  const shown = files?.filter((file) => file.name.toLowerCase().includes(term));
+  // The list narrows a moment behind the typing, so a key press shows in
+  // the box at once however many files there are.
+  const term = useDeferredValue(query.trim().toLowerCase());
+  const shown = useMemo(
+    () => files?.filter((file) => file.name.toLowerCase().includes(term)),
+    [files, term],
+  );
+  const tiles = useMemo(() => shown?.slice(0, limit), [shown, limit]);
   const full = most > 1 && chosen.length >= most;
 
   return (
@@ -118,13 +145,13 @@ export function MediaPicker({
               aria-label="Search the images by name"
               placeholder="Name of the file"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => search(event.target.value)}
               onKeyDown={(event) => {
                 // Inside a form, Enter here would save it.
                 if (event.key === "Enter") event.preventDefault();
                 if (event.key === "Escape" && query) {
                   event.preventDefault();
-                  setQuery("");
+                  search("");
                 }
               }}
               className={`${inputClassName} pl-9`}
@@ -153,51 +180,25 @@ export function MediaPicker({
                   : "No images uploaded yet."}
               </p>
             ) : (
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3 p-0.5">
-                {shown.map((file) => {
-                  const on = chosen.includes(file.key);
-                  return (
-                    <li key={file.key} className="grid">
-                      <button
-                        type="button"
-                        aria-pressed={on}
-                        disabled={!on && full}
-                        onClick={() => toggle(file.key)}
-                        className={cx(
-                          "grid content-start gap-1.5 rounded-control p-1.5 text-left transition-colors focus-ring disabled:cursor-not-allowed disabled:opacity-50",
-                          on
-                            ? "bg-brand-tint ring-2 ring-brand"
-                            : "enabled:hover:bg-hover",
-                        )}
-                      >
-                        <span className="relative block aspect-[3/2] overflow-hidden rounded-md bg-canvas">
-                          <Image
-                            src={file.url}
-                            alt=""
-                            fill
-                            sizes="9rem"
-                            className="object-contain"
-                          />
-                          {on ? (
-                            <span className="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full bg-brand text-white [&_svg]:size-3.5">
-                              <CheckIcon />
-                            </span>
-                          ) : null}
-                        </span>
-                        <span
-                          className="truncate text-xs font-medium text-body"
-                          title={file.name}
-                        >
-                          {file.name}
-                        </span>
-                        <span className="-mt-1 text-2xs text-muted tabular-nums">
-                          {formatBytes(file.size)}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                <Tiles
+                  files={tiles ?? []}
+                  chosen={chosen}
+                  full={full}
+                  onToggle={toggle}
+                />
+                {shown.length > limit ? (
+                  <div className="mt-3 flex justify-center">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setLimit((was) => was + TILES)}
+                    >
+                      Show more
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
 
@@ -225,3 +226,65 @@ export function MediaPicker({
     </>
   );
 }
+
+/** The files as tiles, each pressed to choose it; drawn again only when what they show changes. */
+const Tiles = memo(function Tiles({
+  files,
+  chosen,
+  full,
+  onToggle,
+}: {
+  files: readonly MediaChoice[];
+  chosen: readonly string[];
+  /** As many chosen as may be: the others cannot be pressed. */
+  full: boolean;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3 p-0.5">
+      {files.map((file) => {
+        const on = chosen.includes(file.key);
+        return (
+          <li key={file.key} className="grid">
+            <button
+              type="button"
+              aria-pressed={on}
+              disabled={!on && full}
+              onClick={() => onToggle(file.key)}
+              className={cx(
+                "grid content-start gap-1.5 rounded-control p-1.5 text-left transition-colors focus-ring disabled:cursor-not-allowed disabled:opacity-50",
+                on
+                  ? "bg-brand-tint ring-2 ring-brand"
+                  : "enabled:hover:bg-hover",
+              )}
+            >
+              <span className="relative block aspect-[3/2] overflow-hidden rounded-md bg-canvas">
+                <Image
+                  src={file.url}
+                  alt=""
+                  fill
+                  sizes="9rem"
+                  className="object-contain"
+                />
+                {on ? (
+                  <span className="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full bg-brand text-white [&_svg]:size-3.5">
+                    <CheckIcon />
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className="truncate text-xs font-medium text-body"
+                title={file.name}
+              >
+                {file.name}
+              </span>
+              <span className="-mt-1 text-2xs text-muted tabular-nums">
+                {formatBytes(file.size)}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+});

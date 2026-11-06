@@ -64,6 +64,21 @@ html body[data-scroll-locked] {
 }
 
 /*
+ * The same list turns pointer events off on the body while it is open, so
+ * a press outside only closes it, and its lock sets the scroll bar's width
+ * on the body as a variable. Every element inherits both, and the browser
+ * works out every element's style again, on opening and on closing: the
+ * slowest part of a press on a select. Each child of the body keeps its
+ * own, so the change stops at the body. A press outside still closes the
+ * list, and goes on to what it was on, as on a menu; nothing here reads
+ * the variable. No weight, so any class on a child still wins.
+ */
+:where(body > *) {
+  pointer-events: auto;
+  --removed-body-scroll-bar-size: initial;
+}
+
+/*
  * Under a modal dialog the page holds still for the keyboard and the
  * scroll bar too, which the lock on the wheel and on touch does not stop:
  * Space or Page Down in the dialog no longer scrolls the page behind it.

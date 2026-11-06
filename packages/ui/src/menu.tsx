@@ -14,6 +14,11 @@ import { usePortalContainer } from "./portal-container.js";
  * `asChild`. In a dialog or full screen it opens in that layer, as a
  * select's list does. It is at least as wide as its button, as a
  * select's list is, and never narrower than 14rem.
+ *
+ * Not modal: a modal menu turns off pointer events on the whole body while
+ * it is open, and the browser then works out every element's style again,
+ * on opening and on closing, the slowest part of a click on it. A click
+ * outside still closes it, and goes on to what it was on.
  */
 export function Menu({
   trigger,
@@ -33,7 +38,7 @@ export function Menu({
 }) {
   const { ref, container } = usePortalContainer();
   return (
-    <Primitive.Root>
+    <Primitive.Root modal={false}>
       <Primitive.Trigger ref={ref} asChild>
         {trigger}
       </Primitive.Trigger>

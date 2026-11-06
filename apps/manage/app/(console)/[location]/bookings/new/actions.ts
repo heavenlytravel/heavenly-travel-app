@@ -101,14 +101,19 @@ export async function previewInvoiceAction(input: {
   oldNumber: string;
 }): Promise<InvoiceCheck> {
   if (!(await getAdmin("bookings.create"))) return { error: FORBIDDEN_MESSAGE };
+  if (typeof input !== "object" || input === null) {
+    return { error: "Reload the page and try again." };
+  }
   const oldNumber = parseOldInvoiceNumber(String(input.oldNumber ?? ""));
   if (!oldNumber.ok) return { error: oldNumber.error };
-  const startsAt = input.startsAt ? new Date(input.startsAt) : new Date();
+  const startsAt = input.startsAt
+    ? new Date(String(input.startsAt))
+    : new Date();
   if (Number.isNaN(startsAt.getTime())) {
     return { error: "Set the first trip's day and time first." };
   }
   const answer = await invoicePreviewOf(
-    { agentId: input.agentId || null, startsAt },
+    { agentId: String(input.agentId ?? "") || null, startsAt },
     oldNumber.number,
   );
   return answer.ok ? answer.preview : { error: answer.error };

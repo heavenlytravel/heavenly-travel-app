@@ -76,16 +76,19 @@ export function InvoiceNumberField({
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const box = useRef<HTMLInputElement>(null);
+  // The digits as typed, set as they change: an answer for others is dropped.
+  const latest = useRef("");
   const canChange = preview !== null && !preview.joins;
   const changing = editing && canChange;
   const typed = canChange && digits !== "" && (editing || taken !== null);
 
   function checkDigits(value: string) {
     setChecking(true);
-    void check(value).then(settle);
+    void check(value).then((answer) => settle(value, answer));
   }
   /** Takes the number checked, or shows why not, the box open to change it. */
-  function settle(answer: InvoiceCheck) {
+  function settle(value: string, answer: InvoiceCheck) {
+    if (value !== latest.current) return;
     setChecking(false);
     const refusal = "error" in answer ? answer.error : answer.refusal;
     if (refusal) {
@@ -102,7 +105,9 @@ export function InvoiceNumberField({
   // The agent or the first trip's period changed: an old number taken is
   // checked again for the invoice it now opens.
   useEffect(() => {
-    if (taken && canChange) void check(digits).then(settle);
+    if (taken && canChange) {
+      void check(digits).then((answer) => settle(digits, answer));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on a new preview only
   }, [preview]);
 
@@ -199,7 +204,10 @@ export function InvoiceNumberField({
               autoComplete="off"
               value={digits}
               onChange={(event) => {
-                setDigits(event.target.value.replace(/\D/g, ""));
+                const value = event.target.value.replace(/\D/g, "");
+                latest.current = value;
+                setDigits(value);
+                setChecking(false);
                 setError(null);
                 setTaken(null);
               }}

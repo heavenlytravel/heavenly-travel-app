@@ -16,8 +16,8 @@ import { NewBookingForm } from "./NewBookingForm";
  * place fields suggest its places first, as the search card on its pages
  * does, and the booking opens there once made; which location prices a
  * trip is still its pick-up's, as on the site. Reservation and Sales,
- * behind `bookings.create`. The form shows the invoice it would get, and offers the agents a booking may come through, and a way to
- * add one.
+ * behind `bookings.create`. The form shows the invoice it would get,
+ * and offers the agents a booking may come through, and a way to add one.
  */
 export default async function NewBookingPage({
   params,

@@ -2,10 +2,13 @@ import type { Prisma } from "./generated/prisma/client";
 import {
   formatBookingNumber,
   formatInvoiceNumber,
+  invoicePeriodEnd,
   invoicePeriodLabel,
   invoicePeriodStart,
   isInvoicePeriod,
   type BookingNumberKind,
+  type InvoicePeriod,
+  type InvoicePreview,
 } from "./booking-number";
 
 type Client = Prisma.TransactionClient;
@@ -46,32 +49,99 @@ async function lockInvoices(tx: Client) {
   await tx.$executeRaw`SELECT kind FROM "BookingNumberCounter" WHERE kind = 'invoice' FOR UPDATE`;
 }
 
-/**
- * Why an old invoice's number, typed by staff, cannot be a new invoice's;
- * null when it can. It must be one the counter has passed already, so the
- * counter never comes to give it again, and no invoice's yet. Called with
- * the counter's row locked, so two bookings cannot both take it.
- */
-async function oldInvoiceNumberIssue(
+/** Why a booking cannot take the invoice asked for: its message is for staff. */
+export class InvoiceRefusal extends Error {}
+
+/** What a booking is invoiced by: its agent, if any, and the day its first trip starts. */
+type Invoiced = { agentId: string | null; startsAt: Date };
+
+/** An agent's booking's invoice: the agent's for the period its first trip is in. */
+type AgentPeriod = {
+  agent: { id: string; name: string };
+  period: InvoicePeriod;
+  /** The period's first day, "2026-11-01". */
+  start: string;
+};
+
+/** The agent's period a booking is invoiced in; null for a customer of ours, who gets an invoice of their own. */
+async function agentPeriodOf(
   client: Client,
+  booking: Invoiced,
+): Promise<AgentPeriod | null> {
+  if (!booking.agentId) return null;
+  const agent = await client.vendor.findUnique({
+    where: { id: booking.agentId },
+    select: { id: true, name: true, invoicePeriod: true },
+  });
+  if (!agent) {
+    throw new InvoiceRefusal(
+      "This agent was deleted meanwhile. Choose another.",
+    );
+  }
+  const period = isInvoicePeriod(agent.invoicePeriod)
+    ? agent.invoicePeriod
+    : "month";
+  return {
+    agent: { id: agent.id, name: agent.name },
+    period,
+    start: invoicePeriodStart(booking.startsAt, period),
+  };
+}
+
+/** The agent's invoice for the period, once its first booking opened it. */
+function periodInvoiceOf(client: Client, place: AgentPeriod) {
+  return client.invoice.findUnique({
+    where: {
+      agentId_periodStart: {
+        agentId: place.agent.id,
+        periodStart: new Date(`${place.start}T00:00:00Z`),
+      },
+    },
+    select: { id: true, number: true },
+  });
+}
+
+/** The line a booking joining an invoice takes: after its last. */
+async function nextLineOf(client: Client, invoiceId: string) {
+  const { _max } = await client.booking.aggregate({
+    where: { invoiceId },
+    _max: { invoiceLine: true },
+  });
+  return (_max.invoiceLine ?? 0) + 1;
+}
+
+/**
+ * Why an old invoice's number, typed by staff, cannot be this booking's;
+ * null when it can. Joining the agent's invoice for the period, it must
+ * be that invoice's. Opening an invoice, it must be one the counter has
+ * passed already, so the counter never comes to give it again, and no
+ * invoice's yet. Called with the counter's row locked when giving the
+ * invoice, so two bookings cannot both take it.
+ */
+async function typedNumberIssue(
+  client: Client,
+  place: AgentPeriod | null,
+  open: { number: number } | null,
   number: number,
 ): Promise<string | null> {
+  if (place && open) {
+    return number === open.number
+      ? null
+      : `${place.agent.name}'s invoice for ${invoicePeriodLabel(place.start, place.period)} is ${formatInvoiceNumber(open.number, null)}. This booking joins it.`;
+  }
   const last = await lastBookingNumber(client, "invoice");
   const typed = formatBookingNumber("invoice", number);
   if (number > last) {
     return last === 0
-      ? `The running invoice number is not set yet, so ${typed} cannot be an old one. Ask the developer to set it.`
-      : `${typed} is not given yet: the last given is ${formatBookingNumber("invoice", last)}. Leave the box empty for the next one.`;
+      ? `The invoice counter is not set yet, so ${typed} cannot be used. Ask the developer to set it.`
+      : `Invoice ${typed} is not given yet. The latest is ${formatBookingNumber("invoice", last)}.`;
   }
   const taken = await client.invoice.findUnique({
     where: { number },
     select: { id: true },
   });
-  return taken ? `${typed} is another invoice's already.` : null;
+  return taken ? `Invoice ${typed} already exists.` : null;
 }
-
-/** Why a booking cannot take the invoice asked for: its message is for staff. */
-export class InvoiceRefusal extends Error {}
 
 /** Where a booking's invoice puts it: the invoice, and its line on an agent's. */
 export type InvoicePlace = { invoiceId: string; invoiceLine: number | null };
@@ -86,62 +156,63 @@ export type InvoicePlace = { invoiceId: string; invoiceLine: number | null };
  * period already invoiced must be that invoice's. The counter's row is
  * locked first, so two bookings at once never open the same period twice
  * or share a line. A refusal is thrown as an `InvoiceRefusal`.
+ * `previewInvoice` answers the same without giving anything.
  */
 export async function invoiceFor(
   tx: Client,
-  booking: { agentId: string | null; startsAt: Date },
+  booking: Invoiced,
   oldNumber: number | null = null,
 ): Promise<InvoicePlace> {
   await lockInvoices(tx);
-  const agent = booking.agentId
-    ? await tx.vendor.findUniqueOrThrow({
-        where: { id: booking.agentId },
-        select: { id: true, name: true, invoicePeriod: true },
-      })
-    : null;
-  const period =
-    agent && isInvoicePeriod(agent.invoicePeriod)
-      ? agent.invoicePeriod
-      : "month";
-  const periodStart = agent
-    ? invoicePeriodStart(booking.startsAt, period)
-    : null;
-
-  if (agent && periodStart) {
-    const open = await tx.invoice.findUnique({
-      where: {
-        agentId_periodStart: {
-          agentId: agent.id,
-          periodStart: new Date(`${periodStart}T00:00:00Z`),
-        },
-      },
-      select: { id: true, number: true },
-    });
-    if (open) {
-      if (oldNumber !== null && oldNumber !== open.number) {
-        throw new InvoiceRefusal(
-          `${agent.name}'s invoice for ${invoicePeriodLabel(periodStart, period)} is ${formatInvoiceNumber(open.number, null)} already. Leave the box empty to add this booking to it.`,
-        );
-      }
-      const { _max } = await tx.booking.aggregate({
-        where: { invoiceId: open.id },
-        _max: { invoiceLine: true },
-      });
-      return { invoiceId: open.id, invoiceLine: (_max.invoiceLine ?? 0) + 1 };
-    }
-  }
-
+  const place = await agentPeriodOf(tx, booking);
+  const open = place ? await periodInvoiceOf(tx, place) : null;
   if (oldNumber !== null) {
-    const issue = await oldInvoiceNumberIssue(tx, oldNumber);
+    const issue = await typedNumberIssue(tx, place, open, oldNumber);
     if (issue) throw new InvoiceRefusal(issue);
+  }
+  if (open) {
+    return { invoiceId: open.id, invoiceLine: await nextLineOf(tx, open.id) };
   }
   const invoice = await tx.invoice.create({
     data: {
       number: oldNumber ?? (await nextBookingNumber(tx, "invoice")),
-      agentId: agent?.id ?? null,
-      periodStart: periodStart ? new Date(`${periodStart}T00:00:00Z`) : null,
+      agentId: place?.agent.id ?? null,
+      periodStart: place ? new Date(`${place.start}T00:00:00Z`) : null,
     },
     select: { id: true },
   });
-  return { invoiceId: invoice.id, invoiceLine: agent ? 1 : null };
+  return { invoiceId: invoice.id, invoiceLine: place ? 1 : null };
+}
+
+/** The invoice a booking would get were it confirmed now (`InvoicePreview`), read without the counter's lock: a refusal is thrown as an `InvoiceRefusal`. */
+export async function previewInvoice(
+  client: Client,
+  booking: Invoiced,
+  oldNumber: number | null = null,
+): Promise<InvoicePreview> {
+  const place = await agentPeriodOf(client, booking);
+  const open = place ? await periodInvoiceOf(client, place) : null;
+  const refusal =
+    oldNumber === null
+      ? null
+      : await typedNumberIssue(client, place, open, oldNumber);
+  const number =
+    open?.number ??
+    (oldNumber !== null && refusal === null
+      ? oldNumber
+      : (await lastBookingNumber(client, "invoice")) + 1);
+  return {
+    number,
+    line: open ? await nextLineOf(client, open.id) : place ? 1 : null,
+    joins: open !== null,
+    agent: place?.agent.name ?? null,
+    period: place
+      ? {
+          label: invoicePeriodLabel(place.start, place.period),
+          from: place.start,
+          to: invoicePeriodEnd(place.start, place.period),
+        }
+      : null,
+    refusal,
+  };
 }

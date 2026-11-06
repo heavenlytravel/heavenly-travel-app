@@ -5,6 +5,7 @@ import {
   createBooking,
   createVendor,
   findUserByEmail,
+  invoicePreviewOf,
   InvoiceRefusal,
   parseVendorFields,
   VENDOR_LOCATIONS_FIELD,
@@ -23,6 +24,7 @@ import {
   OLD_INVOICE_FIELD,
 } from "../_lib/trip-form";
 import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
+import type { InvoiceCheck } from "../_components/InvoiceNumberField";
 
 /**
  * Creates the booking from the posted form, confirmed at once with every
@@ -83,6 +85,38 @@ export async function createManualBookingAction(
   }
   revalidateLocation();
   return { href: savedBookingHref(formData, booking) };
+}
+
+/**
+ * The invoice the booking being entered would get (`invoicePreviewOf`),
+ * for the form to show before it is made: the agent's for the period of
+ * its first trip, joined or opened, or one of its own; with `oldNumber`,
+ * an old invoice's digits typed, checked as the save checks it. Nothing
+ * is given. `startsAt` is the first trip's start; a customer of ours
+ * needs none.
+ */
+export async function previewInvoiceAction(input: {
+  agentId: string;
+  startsAt: string | null;
+  oldNumber: string;
+}): Promise<InvoiceCheck> {
+  if (!(await getAdmin("bookings.create"))) return { error: FORBIDDEN_MESSAGE };
+  if (typeof input !== "object" || input === null) {
+    return { error: "Reload the page and try again." };
+  }
+  const oldNumber = parseOldInvoiceNumber(String(input.oldNumber ?? ""));
+  if (!oldNumber.ok) return { error: oldNumber.error };
+  const startsAt = input.startsAt
+    ? new Date(String(input.startsAt))
+    : new Date();
+  if (Number.isNaN(startsAt.getTime())) {
+    return { error: "Set the first trip's day and time first." };
+  }
+  const answer = await invoicePreviewOf(
+    { agentId: String(input.agentId ?? "") || null, startsAt },
+    oldNumber.number,
+  );
+  return answer.ok ? answer.preview : { error: answer.error };
 }
 
 /** What adding an agent from the booking form answers: the agent, to choose at once, or why not. */

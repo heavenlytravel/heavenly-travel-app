@@ -6,17 +6,13 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import type { ContactFields } from "./booking-contact";
-import {
-  invoiceFor,
-  InvoiceRefusal,
-  lastBookingNumber,
-} from "./booking-counter";
+import { invoiceFor, InvoiceRefusal, previewInvoice } from "./booking-counter";
 import {
   BOOKING_NUMBER_SELECT,
   bookingNumbersOf,
-  formatBookingNumber,
   formatInvoiceNumber,
   parseBookingNumber,
+  type InvoicePreview,
   type PaymentStatus,
 } from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
@@ -36,7 +32,7 @@ import {
   type TripCategory,
   type TripMode,
 } from "./booking-status";
-import { refuse, type Change } from "./change";
+import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
 import { releaseParts, settleCancelledTrips } from "./fulfilment";
 import { Prisma } from "./generated/prisma/client";
@@ -153,15 +149,37 @@ export type CreateBookingInput = {
 const CREATE_ATTEMPTS = 5;
 
 /**
- * The invoice number the next booking confirmed would take, as a form
- * shows it before it is sent: "HTI-1308". A guess, not a hold: a booking
- * confirmed first takes it, and the next one moves on.
+ * The invoice a booking would get were it confirmed now (`previewInvoice`),
+ * as a form shows it before it is sent, with `oldNumber`, an old
+ * invoice's typed by staff, checked as the save checks it. A guess, not a
+ * hold: a booking confirmed first may take the next number, or the next
+ * line, and the save answers the real one. A refusal when the agent is gone.
  */
-export async function nextInvoiceNumber(): Promise<string> {
-  return formatBookingNumber(
-    "invoice",
-    (await lastBookingNumber(db, "invoice")) + 1,
-  );
+export async function invoicePreviewOf(
+  booking: { agentId: string | null; startsAt: Date },
+  oldNumber: number | null = null,
+): Promise<{ ok: true; preview: InvoicePreview } | Refusal> {
+  try {
+    return { ok: true, preview: await previewInvoice(db, booking, oldNumber) };
+  } catch (error) {
+    if (error instanceof InvoiceRefusal) return refuse(error.message);
+    throw error;
+  }
+}
+
+/** `invoicePreviewOf` for a booking made already and not invoiced yet, by its id. */
+export async function bookingInvoicePreviewOf(
+  bookingId: string,
+  oldNumber: number | null = null,
+): Promise<{ ok: true; preview: InvoicePreview } | Refusal> {
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    select: { agentId: true, startsAt: true },
+  });
+  if (!booking) {
+    return refuse("This booking was deleted meanwhile. Go back to Bookings.");
+  }
+  return invoicePreviewOf(booking, oldNumber);
 }
 
 /**

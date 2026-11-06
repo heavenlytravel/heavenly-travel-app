@@ -5,6 +5,7 @@ import {
   bookingNumbersOf,
   formatBookingNumber,
   formatInvoiceNumber,
+  invoicePeriodEnd,
   invoicePeriodLabel,
   invoicePeriodStart,
   parseBookingNumber,
@@ -116,6 +117,14 @@ describe("invoice periods", () => {
     assert.equal(invoicePeriodStart(at("15"), "half-month"), "2026-11-01");
     assert.equal(invoicePeriodStart(at("16"), "half-month"), "2026-11-16");
     assert.equal(invoicePeriodStart(at("30"), "half-month"), "2026-11-16");
+  });
+
+  it("ends a period on its last day", () => {
+    assert.equal(invoicePeriodEnd("2026-11-01", "month"), "2026-11-30");
+    assert.equal(invoicePeriodEnd("2026-12-01", "month"), "2026-12-31");
+    assert.equal(invoicePeriodEnd("2028-02-01", "month"), "2028-02-29");
+    assert.equal(invoicePeriodEnd("2026-11-01", "half-month"), "2026-11-15");
+    assert.equal(invoicePeriodEnd("2026-11-16", "half-month"), "2026-11-30");
   });
 
   it("names a period", () => {

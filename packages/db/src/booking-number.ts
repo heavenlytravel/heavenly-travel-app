@@ -187,17 +187,55 @@ const periodMonth = new Intl.DateTimeFormat("en-MY", {
   year: "numeric",
 });
 
+/**
+ * The last day of the period starting `start` ("2026-11-01"), as a day of
+ * the same form: "2026-11-30", or "2026-11-15" for the first half of a
+ * month. A booking whose first trip is on a day from `start` to this one
+ * joins the period's invoice.
+ */
+export function invoicePeriodEnd(start: string, period: InvoicePeriod) {
+  const day = new Date(`${start}T00:00:00Z`);
+  if (period === "half-month" && day.getUTCDate() === 1) {
+    return `${start.slice(0, 7)}-15`;
+  }
+  return new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+}
+
 /** "November 2026", or "1–15 November 2026" for half a month. */
 export function invoicePeriodLabel(start: string, period: InvoicePeriod) {
-  const day = new Date(`${start}T00:00:00Z`);
-  const month = periodMonth.format(day);
+  const month = periodMonth.format(new Date(`${start}T00:00:00Z`));
   if (period === "month") return month;
-  if (day.getUTCDate() === 1) return `1–15 ${month}`;
-  const last = new Date(
-    Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  return `16–${last} ${month}`;
+  const from = Number(start.slice(8, 10));
+  const to = Number(invoicePeriodEnd(start, period).slice(8, 10));
+  return `${from}–${to} ${month}`;
 }
+
+/**
+ * The invoice a booking would get were it confirmed now, for the form to
+ * show before it is: as `invoiceFor` would give it, and nothing given. The
+ * next number may still go to a booking confirmed first; the save checks
+ * again.
+ */
+export type InvoicePreview = {
+  /** The invoice's number: the agent's for the period, the number typed, or the next. */
+  number: number;
+  /** The booking's line on the agent's invoice; null on an invoice of its own. */
+  line: number | null;
+  /** The agent's invoice for the period exists already: the booking joins it, and its number cannot change. */
+  joins: boolean;
+  /** The agent's name; null for a customer of ours. */
+  agent: string | null;
+  /**
+   * The agent's period, its days from and to, inclusive ("2026-11-01" and
+   * "2026-11-30"): any first trip from one to the other has the same
+   * invoice. Null for a customer of ours, whose invoice no day changes.
+   */
+  period: { label: string; from: string; to: string } | null;
+  /** Why the number typed cannot be given, as the save would refuse it; null when it can, or none was typed. */
+  refusal: string | null;
+};
 
 /**
  * Where an invoice's payment stands, set by staff until payments are their

@@ -3,16 +3,22 @@
 import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUSES,
+  type InvoicePreview,
   type PaymentStatus,
 } from "@repo/db";
+import { answerOf } from "@repo/ui/action-answer";
 import { Select } from "@repo/ui/select";
 import { useState } from "react";
 import { Button } from "@repo/ui/button";
-import { Field, Input } from "@repo/ui/field";
+import { Field } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
-import { OLD_INVOICE_FIELD } from "../_lib/trip-form";
-import { invoiceBookingAction, setPaymentAction } from "./actions";
+import { InvoiceNumberField } from "../_components/InvoiceNumberField";
+import {
+  invoiceBookingAction,
+  previewBookingInvoiceAction,
+  setPaymentAction,
+} from "./actions";
 
 /**
  * Where the invoice's payment stands, set freely for now: pending,
@@ -61,18 +67,17 @@ export function PaymentControl({
 }
 
 /**
- * For a confirmed booking from before invoice numbers: the next number,
- * or an old invoice's typed, as on New booking. An agent's booking joins
- * the agent's invoice for its period, or opens it with the number typed.
+ * For a confirmed booking from before invoice numbers: the invoice it
+ * gets, shown before it is given (`InvoiceNumberField`): the next number
+ * or an old invoice's typed, as on New booking; an agent's booking joins
+ * the agent's invoice for its period, or opens it.
  */
 export function GiveInvoiceForm({
   bookingId,
-  nextInvoice,
-  agentName,
+  preview,
 }: {
   bookingId: string;
-  nextInvoice: string;
-  agentName: string | null;
+  preview: InvoicePreview;
 }) {
   const { pending, error, formProps } = useActionForm(invoiceBookingAction, {
     done: "Invoice given.",
@@ -80,21 +85,13 @@ export function GiveInvoiceForm({
   return (
     <form {...formProps} className="grid gap-3">
       <input type="hidden" name="bookingId" value={bookingId} />
-      <Field
-        label="Invoice number"
-        hint={
-          agentName
-            ? `Leave empty to add it to ${agentName}'s invoice for the period of its first trip, or to open that invoice with ${nextInvoice}. Opening one invoiced already? Type its number, such as HT1295.`
-            : `Leave empty for ${nextInvoice}. Invoiced already? Type its number, such as HT1223.`
+      <InvoiceNumberField
+        preview={preview}
+        waiting=""
+        check={(digits) =>
+          answerOf(previewBookingInvoiceAction(bookingId, digits))
         }
-      >
-        <Input
-          name={OLD_INVOICE_FIELD}
-          placeholder={nextInvoice}
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </Field>
+      />
       <FormError error={error} />
       <Button type="submit" size="sm" pending={pending}>
         {pending ? "Giving…" : "Give invoice"}

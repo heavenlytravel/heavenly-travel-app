@@ -30,7 +30,7 @@ import {
   listActivityFor,
   listBookingNotes,
   listTripEvents,
-  nextInvoiceNumber,
+  invoicePreviewOf,
   type ActivityEntry,
   type BookingItemWithDetails,
   type BookingWithItems,
@@ -286,14 +286,15 @@ async function InvoiceCard({
     const invoiceable =
       booking.status === "confirmed" || booking.status === "completed";
     if (!invoiceable || !editable) return null;
+    const preview = await invoicePreviewOf(booking);
     return (
       <Card>
         <CardTitle meta="Not invoiced yet">Invoice</CardTitle>
-        <GiveInvoiceForm
-          bookingId={booking.id}
-          nextInvoice={await nextInvoiceNumber()}
-          agentName={booking.agent?.name ?? null}
-        />
+        {preview.ok ? (
+          <GiveInvoiceForm bookingId={booking.id} preview={preview.preview} />
+        ) : (
+          <p className="text-sm text-muted">{preview.error}</p>
+        )}
       </Card>
     );
   }

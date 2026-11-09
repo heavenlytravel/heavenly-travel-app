@@ -24,7 +24,7 @@ export default async function DriverPage({
   const [driver, choices, held] = await Promise.all([
     isNew ? null : getDriver(id),
     vendorFleetChoices(member.vendor.id),
-    isNew ? [] : heldBookingsOf({ driverId: id }, "reference"),
+    isNew ? [] : heldBookingsOf({ driverId: id }),
   ]);
   if (!isNew && driver?.vendorId !== member.vendor.id) notFound();
   // A new one only of what it offers, by the services it ticked.

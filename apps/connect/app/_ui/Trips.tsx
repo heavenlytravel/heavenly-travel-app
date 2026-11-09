@@ -72,7 +72,7 @@ export function NextJobCard({ trip, now }: { trip: Trip; now: Date }) {
             </span>
           </div>
           <span className="pb-1 text-right text-xs font-semibold text-muted tabular-nums">
-            {trip.reference}
+            {trip.bookingLabel}
             {trip.position > 1 ? ` · trip ${trip.position}` : ""}
           </span>
         </div>

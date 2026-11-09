@@ -32,7 +32,7 @@ export function OfferCard({ offer, now }: { offer: DriverOffer; now: Date }) {
         <>
           <Pill tone="amber">New offer</Pill>
           <span className="text-xs font-semibold text-muted tabular-nums">
-            {offer.reference}
+            {offer.bookingLabel}
           </span>
         </>
       }

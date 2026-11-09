@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import {
   CONTACT,
   CONTACT_VISIBLE_DAYS,
+  formatMyr,
   nextTripStep,
   waitingMinutes,
   whatsappHref,
@@ -22,7 +23,11 @@ import {
   requireSignedIn,
   shellMember,
 } from "../../../_lib/access";
-import { googleMapsHref, wazeHref } from "../../../_lib/navigate";
+import {
+  directionsHref,
+  googleMapsHref,
+  wazeHref,
+} from "../../../_lib/navigate";
 import { tripStateOf } from "../../../_lib/trip-state";
 import { dayLabel } from "../../../_lib/when";
 import {
@@ -140,7 +145,7 @@ export default async function JobPage({
               {job.passengers}
             </span>
             <span className="ml-auto font-semibold text-white/75 tabular-nums">
-              {job.reference}
+              {job.bookingLabel}
             </span>
           </div>
         </div>
@@ -186,6 +191,9 @@ export default async function JobPage({
             <RouteLine
               stops={[
                 stopRow(job.customer.pickup, "Pick-up", job.pickupArea),
+                ...job.customer.stops.map((stop, index) =>
+                  stopRow(stop, `Stop ${index + 1}`, ""),
+                ),
                 ...(job.customer.dropoff
                   ? [
                       stopRow(
@@ -226,6 +234,48 @@ export default async function JobPage({
           </div>
         </Panel>
       )}
+
+      {job.customer && job.customer.stops.length > 0 && job.customer.pickup ? (
+        <RouteThrough
+          places={[
+            job.customer.pickup,
+            ...job.customer.stops,
+            ...(job.customer.dropoff ? [job.customer.dropoff] : []),
+          ]}
+        />
+      ) : null}
+
+      {job.pay.totalSen > 0 || job.pay.lines.length > 0 ? (
+        <Panel className="grid gap-3 p-5">
+          <h2 className="text-caps font-semibold text-muted">
+            {vendorJob ? "Your pay for this trip" : "Your pay"}
+          </h2>
+          {job.pay.lines.length > 0 ? (
+            <ul className="grid gap-1.5 text-sm">
+              <li className="flex justify-between gap-3">
+                <span className="text-muted">Base</span>
+                <span className="tabular-nums">
+                  {formatMyr(job.pay.baseSen)}
+                </span>
+              </li>
+              {job.pay.lines.map((line, index) => (
+                <li key={index} className="flex justify-between gap-3">
+                  <span className="text-muted">{line.reason}</span>
+                  <span className="tabular-nums">
+                    +{formatMyr(line.amountSen)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="flex items-baseline justify-between gap-3 border-t border-hairline pt-3">
+            <span className="font-semibold text-ink">Total</span>
+            <span className="text-xl font-bold text-ink tabular-nums">
+              {formatMyr(job.pay.totalSen)}
+            </span>
+          </p>
+        </Panel>
+      ) : null}
 
       {driverJob?.guide ? (
         <Panel className="grid gap-4 p-5">
@@ -299,6 +349,19 @@ export default async function JobPage({
 }
 
 /** An exact stop on the route, with the ways to drive there. */
+/** The whole route in one link, for a trip with stops: Google Maps through each in order. */
+function RouteThrough({ places }: { places: JobStop[] }) {
+  const href = directionsHref(places);
+  if (!href) return null;
+  return (
+    <Button asChild variant="outline" size="lg" className="w-full">
+      <a href={href} target="_blank" rel="noreferrer">
+        Open the whole route in Google Maps
+      </a>
+    </Button>
+  );
+}
+
 function stopRow(stop: JobStop | null, what: string, area: string): Stop {
   if (!stop) return { title: area, detail: what };
   return {

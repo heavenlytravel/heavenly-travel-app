@@ -1,5 +1,5 @@
 import "server-only";
-import { CONTACT, EMAILS_ON } from "@repo/db";
+import { bookingLabelOf, CONTACT, EMAILS_ON } from "@repo/db";
 import {
   ADMIN_URL,
   CONNECT_URL,
@@ -107,7 +107,7 @@ export function sendBookingEmail(
 ): Promise<void> {
   return sendAll(
     bookingEmails(event, booking, settings),
-    `${event} email for ${booking.reference}`,
+    `${event} email for ${bookingLabelOf(booking)}`,
   );
 }
 
@@ -121,7 +121,7 @@ export function sendDriverEmail(
 ): Promise<void> {
   return sendAll(
     driverEmails(booking, crews, settings),
-    `driver email for ${booking.reference}`,
+    `driver email for ${bookingLabelOf(booking)}`,
   );
 }
 

@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  EMAILS_ON,
-  isMaskedEmail,
-  isReference,
-  normalizeReference,
-} from "@repo/db";
+import { bookingNumberOfPath, EMAILS_ON, isMaskedEmail } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { eyebrow, PageTitle, Panel } from "../../../_components/Page";
@@ -17,10 +12,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * Route: /booking/received/HT-7K3QZM?to=a***@gmail.com
- * Where a guest lands after booking: the reference in large type and where
+ * Route: /booking/received/HTB-1042?to=a***@gmail.com
+ * Where a guest lands after booking: the booking number in large type and where
  * the emails went, while they are on (`EMAILS_ON`). It shows no trip and reads nothing from the database, so
- * it leaks nothing to anyone who guesses a reference and survives a
+ * it leaks nothing to anyone who guesses a number and survives a
  * refresh. Both parts of the URL are shown only in the shape the action
  * makes them, so a crafted link cannot put other words on the page. The
  * guest reads the booking in the emails; an account, offered once here, is
@@ -30,9 +25,9 @@ export const metadata: Metadata = {
 export default async function ReceivedPage({
   params,
   searchParams,
-}: PageProps<"/booking/received/[reference]">) {
-  const reference = normalizeReference((await params).reference);
-  if (!isReference(reference)) notFound();
+}: PageProps<"/booking/received/[number]">) {
+  const reference = decodeURIComponent((await params).number);
+  if (bookingNumberOfPath(reference) === null) notFound();
   const { to } = await searchParams;
   const sentTo = isMaskedEmail(to) ? to : null;
 
@@ -44,19 +39,19 @@ export default async function ReceivedPage({
           : "We will check your booking and contact you to confirm it shortly."}
       </PageTitle>
       <Panel className="max-w-[560px]">
-        <p className={eyebrow}>Your reference</p>
+        <p className={eyebrow}>Your booking number</p>
         <p className="mt-2 font-serif text-display leading-none">{reference}</p>
         <p className="mt-5 text-body">
           {!EMAILS_ON ? (
-            "Keep this reference and quote it when you contact us about your booking."
+            "Keep this number and quote it when you contact us about your booking."
           ) : sentTo ? (
             <>
               We have emailed the details to{" "}
               <strong className="font-semibold">{sentTo}</strong>. Keep this
-              reference and quote it when you contact us about your booking.
+              number and quote it when you contact us about your booking.
             </>
           ) : (
-            "We have emailed you the details. Keep this reference and quote it when you contact us about your booking."
+            "We have emailed you the details. Keep this number and quote it when you contact us about your booking."
           )}
         </p>
         <p className="mt-4 text-copy text-muted">

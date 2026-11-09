@@ -1,6 +1,6 @@
 import {
   accountBookingPath,
-  bookingNumberRows,
+  bookingLabelOf,
   bookingPath,
   consoleBookingPath,
   customerEmailOf,
@@ -91,7 +91,7 @@ function totalBlock(booking: BookingWithItems): Block {
     type: "rows",
     title: null,
     rows: [
-      ...bookingNumberRows(booking),
+      ["Booking number", bookingLabelOf(booking)],
       ["Total", formatMyr(booking.priceTotalSen)],
     ],
   };
@@ -130,7 +130,7 @@ function bookingButton(
       {
         type: "button",
         label: "Manage booking online",
-        href: `${settings.siteUrl}${signUpPath(email, accountBookingPath(booking.reference))}`,
+        href: `${settings.siteUrl}${signUpPath(email, accountBookingPath(bookingLabelOf(booking)))}`,
       },
     ];
   }
@@ -138,7 +138,7 @@ function bookingButton(
     {
       type: "button",
       label: "View booking",
-      href: `${settings.siteUrl}${bookingPath(booking.reference)}`,
+      href: `${settings.siteUrl}${bookingPath(bookingLabelOf(booking))}`,
     },
   ];
 }
@@ -162,14 +162,14 @@ function consoleButton(
 
 /**
  * "KLIA Terminal 1 to Kuala Lumpur", and how many more trips the booking
- * holds; the reference when no trip can be read.
+ * holds; the booking number when no trip can be read.
  */
 function headline(booking: BookingWithItems) {
   const trips = booking.items.flatMap((item) => {
     const trip = tripViewOfItem(item);
     return trip ? [trip] : [];
   });
-  return tripsHeadline(trips) ?? booking.reference;
+  return tripsHeadline(trips) ?? bookingLabelOf(booking);
 }
 
 /** Whether the booking still holds more than one trip to do. */
@@ -220,7 +220,7 @@ function received(
   settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
-  const ref = booking.reference;
+  const ref = bookingLabelOf(booking);
   return [
     ...toCustomer(booking, key, settings, {
       subject: `Booking ${ref} received`,
@@ -228,7 +228,7 @@ function received(
       blocks: [
         {
           type: "paragraph",
-          text: `Hi ${booking.contactName}, thanks for booking with Heavenly Travel. Your reference is ${ref}. We will check ${severalLive(booking) ? "the trips" : "the trip"} and confirm by email shortly.`,
+          text: `Hi ${booking.contactName}, thanks for booking with Heavenly Travel. Your booking number is ${ref}. We will check ${severalLive(booking) ? "the trips" : "the trip"} and confirm by email shortly.`,
         },
         ...itemBlocks(booking),
         totalBlock(booking),
@@ -259,7 +259,7 @@ function confirmed(
   settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
-  const ref = booking.reference;
+  const ref = bookingLabelOf(booking);
   return toCustomer(booking, key, settings, {
     subject: `Booking ${ref} confirmed`,
     heading: "Your booking is confirmed",
@@ -283,7 +283,7 @@ function cancelled(
   settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
-  const ref = booking.reference;
+  const ref = bookingLabelOf(booking);
   // The booking records who cancelled it only once it is fully cancelled.
   // A partial cancel leaves it live; the customer's has its own event
   // (`customerCancelledTrip`), so a live one here is an admin's.
@@ -357,7 +357,7 @@ function updated(
   text: string,
 ): BookingEmail[] {
   return toCustomer(booking, key, settings, {
-    subject: `Booking ${booking.reference} updated`,
+    subject: `Booking ${bookingLabelOf(booking)} updated`,
     heading,
     blocks: [
       { type: "paragraph", text },
@@ -378,7 +378,7 @@ function customerCancelledTrip(
   settings: EmailSettings,
   key: string,
 ): BookingEmail[] {
-  const ref = booking.reference;
+  const ref = bookingLabelOf(booking);
   return [
     ...toCustomer(booking, key, settings, {
       subject: `Booking ${ref} updated`,
@@ -421,7 +421,7 @@ function amended(
     settings,
     key,
     "Your booking is updated",
-    `Hi ${booking.contactName}, we have updated booking ${booking.reference} as agreed. The trip is now as below; please check the pick-up time and place. Message us if anything is not right.`,
+    `Hi ${booking.contactName}, we have updated booking ${bookingLabelOf(booking)} as agreed. The trip is now as below; please check the pick-up time and place. Message us if anything is not right.`,
   );
 }
 
@@ -459,12 +459,12 @@ export function driverEmails(
     .join(",")}`;
   const several = crews.length > 1;
   return toCustomer(booking, key, settings, {
-    subject: `Your driver for ${booking.reference}`,
+    subject: `Your driver for ${bookingLabelOf(booking)}`,
     heading: several ? "Your drivers" : "Your driver",
     blocks: [
       {
         type: "paragraph",
-        text: `Hi ${booking.contactName}, here is who picks you up for booking ${booking.reference}. Your driver may call or message you on ${booking.contactPhone} before the pick-up.`,
+        text: `Hi ${booking.contactName}, here is who picks you up for booking ${bookingLabelOf(booking)}. Your driver may call or message you on ${booking.contactPhone} before the pick-up.`,
       },
       ...crews.map((crew): Block => ({
         type: "rows",

@@ -21,17 +21,17 @@ describe("bookingEmails", () => {
     assert.equal(rest.length, 0);
 
     assert.equal(customer!.message.to, "aina@example.com");
-    assert.equal(customer!.message.subject, "Booking HT-7K3QZM received");
+    assert.equal(customer!.message.subject, "Booking HTB-1042 received");
     assert.match(customer!.message.text, /Pick-up: KLIA Terminal 1/);
     assert.match(customer!.message.text, /Total: RM 184\.80/);
     assert.match(
       customer!.message.text,
-      /https:\/\/site\.test\/booking\/HT-7K3QZM/,
+      /https:\/\/site\.test\/booking\/HTB-1042/,
     );
     assert.match(customer!.message.text, /Sat, 3 Oct 2026, 09:30/);
 
     assert.equal(ops!.message.to, "ops@site.test");
-    assert.equal(ops!.message.subject, "New booking HT-7K3QZM");
+    assert.equal(ops!.message.subject, "New booking HTB-1042");
     assert.match(ops!.message.text, /Phone: \+60123456789/);
     assert.match(ops!.message.text, /https:\/\/admin\.test\/~\/bookings\/b1/);
   });
@@ -63,7 +63,7 @@ describe("bookingEmails", () => {
     assert.equal(customer!.message.to, "aina@gmail.com");
     assert.match(
       customer!.message.text,
-      /Verify your email once to see updates and cancel online\.\n\nManage booking online: https:\/\/site\.test\/sign-up\?email=aina%40gmail\.com&redirect_url=%2Faccount%2Fbookings%2FHT-7K3QZM/,
+      /Verify your email once to see updates and cancel online\.\n\nManage booking online: https:\/\/site\.test\/sign-up\?email=aina%40gmail\.com&redirect_url=%2Faccount%2Fbookings%2FHTB-1042/,
     );
     assert.doesNotMatch(customer!.message.text, /View booking/);
     assert.equal(customer!.message.text.split("Verify your email").length, 2);
@@ -87,7 +87,7 @@ describe("bookingEmails", () => {
       );
       assert.match(
         customer!.message.text,
-        /View booking: https:\/\/site\.test\/booking\/HT-7K3QZM/,
+        /View booking: https:\/\/site\.test\/booking\/HTB-1042/,
       );
       assert.doesNotMatch(customer!.message.text, /Verify your email|sign-up/);
     }
@@ -163,7 +163,7 @@ describe("bookingEmails", () => {
       settings,
     );
     assert.equal(emails.length, 1);
-    assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM confirmed");
+    assert.equal(emails[0]!.message.subject, "Booking HTB-1042 confirmed");
     assert.match(emails[0]!.message.text, /Sat, 3 Oct 2026, 09:30/);
   });
 
@@ -180,8 +180,8 @@ describe("bookingEmails", () => {
     assert.deepEqual(
       emails.map((e) => e.message.subject),
       [
-        "Booking HT-7K3QZM cancelled",
-        "Booking HT-7K3QZM cancelled by the customer",
+        "Booking HTB-1042 cancelled",
+        "Booking HTB-1042 cancelled by the customer",
       ],
     );
     assert.match(emails[0]!.message.text, /you cancelled/);
@@ -214,7 +214,7 @@ describe("bookingEmails", () => {
       settings,
     );
     assert.equal(emails.length, 1);
-    assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM updated");
+    assert.equal(emails[0]!.message.subject, "Booking HTB-1042 updated");
     assert.match(
       emails[0]!.message.text,
       /ITEM 1: CAR WITH DRIVER \(CONFIRMED\)/,
@@ -278,8 +278,8 @@ describe("bookingEmails", () => {
     assert.deepEqual(
       emails.map((e) => e.message.subject),
       [
-        "Booking HT-7K3QZM updated",
-        "Booking HT-7K3QZM: a trip cancelled by the customer",
+        "Booking HTB-1042 updated",
+        "Booking HTB-1042: a trip cancelled by the customer",
       ],
     );
     assert.match(emails[0]!.message.text, /you cancelled a trip/);
@@ -301,16 +301,13 @@ describe("bookingEmails", () => {
     );
     assert.equal(emails.length, 1);
     assert.equal(emails[0]!.message.to, "aina@example.com");
-    assert.equal(emails[0]!.message.subject, "Booking HT-7K3QZM updated");
-    assert.match(
-      emails[0]!.message.text,
-      /updated booking HT-7K3QZM as agreed/,
-    );
+    assert.equal(emails[0]!.message.subject, "Booking HTB-1042 updated");
+    assert.match(emails[0]!.message.text, /updated booking HTB-1042 as agreed/);
     assert.match(emails[0]!.message.text, /Pick-up: KLIA Terminal 1/);
     assert.match(emails[0]!.message.text, /Total: RM 210\.00/);
     assert.match(
       emails[0]!.message.text,
-      /https:\/\/site\.test\/booking\/HT-7K3QZM/,
+      /https:\/\/site\.test\/booking\/HTB-1042/,
     );
   });
 
@@ -367,7 +364,7 @@ describe("driverEmails", () => {
   it("tells the customer the driver, the phone, the vehicle and the plate", () => {
     const [customer, ...rest] = driverEmails(sampleBooking(), [crew], settings);
     assert.equal(rest.length, 0);
-    assert.equal(customer!.message.subject, "Your driver for HT-7K3QZM");
+    assert.equal(customer!.message.subject, "Your driver for HTB-1042");
     assert.match(customer!.message.text, /Driver: Ali bin Abu/);
     assert.match(customer!.message.text, /Plate: VLE1234/);
     assert.match(customer!.message.text, /Toyota Alphard, Black/);

@@ -89,6 +89,7 @@ export function sampleItem(
     updatedAt: at,
     tripDetails: {
       id: "d1",
+      stops: [],
       itemId: "item1",
       vehicleClassId: "vc1",
       vehicleClassName: "Sedan VIP",
@@ -149,14 +150,18 @@ export function sampleBooking(
 ): BookingWithItems {
   return {
     id: "b1",
-    reference: "HT-7K3QZM",
+    number: 1042,
+    reference: null,
     quoteNumber: null,
     invoiceId: null,
     invoiceNumber: null,
     invoiceLine: null,
-    invoice: null,
     agentId: null,
-    agent: null,
+    businessId: null,
+    business: null,
+    legacyInvoiceNumber: null,
+    charges: [],
+    invoiceLines: [],
     userId: "u1",
     user: {
       id: "u1",

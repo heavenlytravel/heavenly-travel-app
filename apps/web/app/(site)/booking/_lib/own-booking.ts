@@ -1,25 +1,26 @@
-import { isReference, normalizeReference } from "@repo/db";
+import { bookingNumberOfPath } from "@repo/db";
 import { getAccess, getBookingForUser } from "@repo/db/server";
 import { notFound, redirect } from "next/navigation";
 import { signInHref } from "../../../_lib/routes";
 
 /**
- * The booking behind a `[reference]` route segment, for its owner only. A
- * malformed reference, an unknown one or someone else's all 404, so the
- * page never hints that a reference exists. Signed-out visitors go to
- * sign-in and come back to `hrefOf(reference)`.
+ * The booking behind a `[number]` route segment (HTB-1042), for its owner
+ * only. A malformed number, an unknown one or someone else's all 404, so
+ * the page never hints that a booking exists; an old random reference
+ * (HT-7K3QZM) opens nothing. Signed-out visitors go to sign-in and come
+ * back to `hrefOf(segment)`.
  */
 export async function requireOwnBooking(
-  raw: string,
-  hrefOf: (reference: string) => string,
+  segment: string,
+  hrefOf: (number: string) => string,
 ) {
-  const reference = normalizeReference(raw);
-  if (!isReference(reference)) notFound();
+  const number = bookingNumberOfPath(segment);
+  if (number === null) notFound();
 
   const access = await getAccess("user");
-  if (access.status === "signed-out") redirect(signInHref(hrefOf(reference)));
+  if (access.status === "signed-out") redirect(signInHref(hrefOf(segment)));
 
-  const booking = await getBookingForUser(reference, access.user.id);
+  const booking = await getBookingForUser(number, access.user.id);
   if (!booking) notFound();
   return booking;
 }

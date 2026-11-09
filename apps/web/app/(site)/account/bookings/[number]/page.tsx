@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { checkCustomerCancel, checkCustomerTripCancel, isLive } from "@repo/db";
+import {
+  bookingLabelOf,
+  checkCustomerCancel,
+  checkCustomerTripCancel,
+  customerChangesOf,
+  isLive,
+} from "@repo/db";
+import { listRevisions } from "@repo/db/server";
 import { PageTitle } from "../../../_components/Page";
 import {
   ACCOUNT_BOOKINGS_PATH,
@@ -18,8 +25,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Route: /account/bookings/HT-7K3QZM
- * One booking under My bookings, with the customer's cancel actions. The
+ * Route: /account/bookings/HTB-1042
+ * One booking under My bookings, with its changes and the customer's
+ * cancel actions. The
  * booking's button is offered while it is received or confirmed, with the
  * deadline as a date under it; past the deadline it shows disabled with
  * the date it ended; afterwards it is gone. A booking with more than one
@@ -28,9 +36,11 @@ export const metadata: Metadata = {
  */
 export default async function AccountBookingPage({
   params,
-}: PageProps<"/account/bookings/[reference]">) {
-  const { reference } = await params;
-  const booking = await requireOwnBooking(reference, accountBookingHref);
+}: PageProps<"/account/bookings/[number]">) {
+  const { number } = await params;
+  const booking = await requireOwnBooking(number, accountBookingHref);
+  const label = bookingLabelOf(booking);
+  const changes = customerChangesOf(await listRevisions(booking.id));
   const cancel = checkCustomerCancel(booking);
   const severalLive = booking.items.filter(isLive).length > 1;
 
@@ -41,18 +51,19 @@ export default async function AccountBookingPage({
           All bookings
         </Link>
       </p>
-      <PageTitle eyebrow="My bookings" title={booking.reference}>
+      <PageTitle eyebrow="My bookings" title={label}>
         {BOOKING_STATUS_LINES[booking.status]}
       </PageTitle>
       <BookingDetail
         booking={booking}
+        changes={changes}
         tripAside={(item) => {
           if (!severalLive) return null;
           const trip = checkCustomerTripCancel(item);
           return trip.ok || trip.reason === "cutoff" ? (
             <div className="mt-5 sm:max-w-[320px]">
               <CancelTrip
-                reference={booking.reference}
+                reference={label}
                 itemId={item.id}
                 position={item.position}
                 blocked={!trip.ok}
@@ -65,7 +76,7 @@ export default async function AccountBookingPage({
           cancel.ok || cancel.reason === "cutoff" ? (
             <div className="mt-6">
               <CancelBooking
-                reference={booking.reference}
+                reference={label}
                 blocked={!cancel.ok}
                 hint={cancel.message}
               />

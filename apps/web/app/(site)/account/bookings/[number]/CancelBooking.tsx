@@ -127,7 +127,7 @@ export function CancelBooking({
 }) {
   return (
     <CancelControl
-      fields={{ reference }}
+      fields={{ booking: reference }}
       action={cancelBookingAction}
       hint={hint}
       blocked={blocked}
@@ -159,7 +159,7 @@ export function CancelTrip({
 }) {
   return (
     <CancelControl
-      fields={{ reference, item: itemId }}
+      fields={{ booking: reference, item: itemId }}
       action={cancelTripAction}
       hint={hint}
       blocked={blocked}

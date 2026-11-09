@@ -10,28 +10,33 @@
 //    terms, 30 days to pay), its bookings point at the business instead.
 // 2. Every booking without a number takes the next HTB number, in the
 //    order they were made: the first booking ever made is HTB-0001.
-// 3. Every invoice number given so far moves into its booking's legacy
-//    invoice number, as it read (HTI-1308, HTI-1295-03), so the booking
-//    is billed outside the system; the old invoice rows and their payment
-//    statuses go (Finance's sheet keeps them).
-// 4. The agent-only vendors are deleted; a vendor that also supplies only
-//    loses "agent".
-// 5. The counters: bookings carry on from the last HTB given; invoices
-//    and credit notes start again, so the first issued is HTI-0001 and
-//    HTC-0001, unless a document of the new series exists already.
-// 6. Every booking's total follows the new rule, what the customer pays
+// 3. Every booking's total follows the new rule, what the customer pays
 //    now: its live trips and its charges. A cancelled one charged its last
 //    total before; it charges its fees alone, none yet, so nothing stale is
 //    ever billed for it.
-// 7. Every booking without a revision gets its Rev 1, "Booked", from what
+// 4. Every booking without a revision gets its Rev 1, "Booked", from what
 //    it holds now.
+// 5. The counters: bookings carry on from the last HTB given; invoices
+//    and credit notes start again, so the first issued is HTI-0001 and
+//    HTC-0001, unless a document of the new series exists already.
+// 6. Each old invoice row is issued again in the new series, oldest
+//    first, dated as it was: a line per booking for its total now, billed
+//    to its agent or contact. The old number (HTI-1308, HTI-1295-03) stays
+//    on the booking as its old invoice number, a note. A row marked fully
+//    paid gets a payment for its total; partly paid and pending ones stay
+//    owed, listed for Finance to record. The old row goes.
+// 7. The agent-only vendors are deleted; a vendor that also supplies only
+//    loses "agent".
+// 8. Every other confirmed booking billed nothing yet follows the rules:
+//    an open invoice while it is live, issued at once when it has ended.
 //
-// It ends listing the confirmed bookings left with no legacy number, which
-// the app bills from their next change, or Finance bills alone. With
-// --dry-run it prints what it would do and writes nothing.
+// See docs/261108-billing-and-revisions.md, "One open invoice per
+// booking". With --dry-run it prints what it would do and writes nothing.
 import { logActivity } from "../src/activity";
 import { SYSTEM_ACTOR } from "../src/activity-actions";
 import { bookingLabelOf, formatDocumentNumber } from "../src/booking-number";
+import { issueOldInvoice, settleBilling } from "../src/billing";
+import { isCredit, PAYMENT_TERMS } from "../src/billing-rules";
 import { db } from "../src/client";
 import { formatRinggit } from "../src/money";
 import {
@@ -46,12 +51,12 @@ const say = (line: string) => console.log(DRY_RUN ? `[dry run] ${line}` : line);
 
 /**
  * What a dry run would have written, so its later steps read as the real
- * run does: bookings by their new number, the legacy numbers and totals
- * set, and the closing list of what is left to bill.
+ * run does: bookings by their new number, their totals set, and the
+ * bookings an old invoice bills.
  */
 const planned = {
   numbers: new Map<string, number>(),
-  legacy: new Set<string>(),
+  reissued: new Set<string>(),
   totals: new Map<string, number>(),
 };
 
@@ -152,59 +157,142 @@ async function numberBookings() {
   return last + unnumbered.length;
 }
 
-async function moveOldInvoices() {
-  const invoiced = await db.booking.findMany({
-    where: { invoiceId: { not: null } },
-    orderBy: { createdAt: "asc" },
+/** Old rows owed in part or in full, for Finance to record what came in. */
+const owed: string[] = [];
+
+async function billOldInvoices() {
+  // The old rows: never issued in the new series, so no issue time.
+  const rows = await db.invoice.findMany({
+    where: { issuedAt: null, status: "issued" },
+    orderBy: [{ createdAt: "asc" }, { number: "asc" }],
     select: {
       id: true,
       number: true,
-      legacyInvoiceNumber: true,
-      invoiceLine: true,
-      invoice: { select: { number: true } },
+      createdAt: true,
+      updatedAt: true,
+      paymentStatus: true,
+      bookings: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          number: true,
+          legacyInvoiceNumber: true,
+          invoiceLine: true,
+          priceTotalSen: true,
+        },
+      },
     },
   });
-  for (const booking of invoiced) {
-    if (!booking.invoice?.number) continue;
-    const legacy =
-      booking.legacyInvoiceNumber ??
-      oldInvoiceLabel(booking.invoice.number, booking.invoiceLine);
-    say(`${labelOf(booking)}: legacy invoice ${legacy}.`);
+  for (const row of rows) {
+    const oldNumber = new Map(
+      row.bookings.map((b) => [
+        b.id,
+        b.legacyInvoiceNumber ??
+          oldInvoiceLabel(row.number ?? 0, b.invoiceLine),
+      ]),
+    );
+    const names = row.bookings.map((b) => labelOf(b)).join(", ") || "none";
+    const paid = row.paymentStatus === "paid";
     if (DRY_RUN) {
-      planned.legacy.add(booking.id);
+      const total = row.bookings.reduce(
+        (sum, b) =>
+          sum + Math.max(0, planned.totals.get(b.id) ?? b.priceTotalSen),
+        0,
+      );
+      say(
+        `Old ${oldInvoiceLabel(row.number ?? 0, null)} (${names}): issued again for RM ${formatRinggit(total)}${paid ? ", paid" : ""}.`,
+      );
+      if (!paid && total > 0) owed.push(`${names} (${row.paymentStatus})`);
+      for (const b of row.bookings) planned.reissued.add(b.id);
       continue;
     }
     await db.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: booking.id },
-        data: {
-          legacyInvoiceNumber: legacy,
-          invoiceId: null,
-          invoiceLine: null,
-        },
-      });
-      if (booking.legacyInvoiceNumber === null) {
-        await logActivity(tx, SYSTEM_ACTOR, {
-          action: "booking.legacy.changed",
-          entityId: booking.id,
-          before: { legacyInvoiceNumber: null },
-          after: { legacyInvoiceNumber: legacy },
+      for (const booking of row.bookings) {
+        const legacy = oldNumber.get(booking.id)!;
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: {
+            legacyInvoiceNumber: legacy,
+            invoiceId: null,
+            invoiceLine: null,
+          },
         });
+        if (booking.legacyInvoiceNumber === null) {
+          await logActivity(tx, SYSTEM_ACTOR, {
+            action: "booking.legacy.changed",
+            entityId: booking.id,
+            before: { legacyInvoiceNumber: null },
+            after: { legacyInvoiceNumber: legacy },
+          });
+        }
       }
+      const issued = await issueOldInvoice(tx, SYSTEM_ACTOR, {
+        bookingIds: row.bookings.map((b) => b.id),
+        oldNumber,
+        issuedAt: row.createdAt,
+        paid: paid ? { at: row.updatedAt } : null,
+      });
+      await tx.invoice.delete({ where: { id: row.id } });
+      say(
+        issued
+          ? `Old ${oldInvoiceLabel(row.number ?? 0, null)} (${names}): ${issued.label} for RM ${formatRinggit(issued.totalSen)}${paid ? ", paid" : ""}.`
+          : `Old ${oldInvoiceLabel(row.number ?? 0, null)} (${names}): charges nothing now, no invoice.`,
+      );
+      if (issued && !paid)
+        owed.push(`${issued.label} ${names} (${row.paymentStatus})`);
     });
   }
-  // The old rows: never issued in the new series, so no issue time.
-  const old = await db.invoice.count({
-    where: { issuedAt: null, status: "issued" },
+}
+
+/**
+ * Every other confirmed booking billed nothing yet, not an agent's on
+ * credit (those wait for the month-end run): an open invoice while live,
+ * issued once ended.
+ */
+async function billTheRest() {
+  const bookings = await db.booking.findMany({
+    where: {
+      confirmedAt: { not: null },
+      invoiceLines: { none: {} },
+      OR: [
+        { businessId: null },
+        {
+          business: { paymentTerms: { notIn: PAYMENT_TERMS.filter(isCredit) } },
+        },
+      ],
+    },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, number: true, status: true, priceTotalSen: true },
   });
-  if (old > 0) {
-    say(`Deleting the ${old} old invoice rows.`);
-    if (!DRY_RUN) {
-      await db.invoice.deleteMany({
-        where: { issuedAt: null, status: "issued", bookings: { none: {} } },
-      });
+  for (const booking of bookings) {
+    if (planned.reissued.has(booking.id)) continue;
+    if ((planned.totals.get(booking.id) ?? booking.priceTotalSen) === 0)
+      continue;
+    if (DRY_RUN) {
+      say(
+        `${labelOf(booking)} (${booking.status}): ${booking.status === "completed" || booking.status === "cancelled" ? "issued now" : "open invoice"}.`,
+      );
+      continue;
     }
+    const billed = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${booking.id} FOR UPDATE`;
+      return settleBilling(tx, SYSTEM_ACTOR, booking.id, new Date());
+    });
+    say(
+      `${labelOf(booking)} (${booking.status}): ${billed.length > 0 ? billed.join(", ") : "open invoice"}.`,
+    );
   }
+}
+
+function reportOwed() {
+  if (owed.length === 0) {
+    console.log("Every old invoice issued again was marked fully paid.");
+    return;
+  }
+  console.log(
+    `${plural(owed.length, "old invoice")} not marked fully paid: Finance records what came in.`,
+  );
+  for (const line of owed) console.log(`  ${line}`);
 }
 
 async function dropAgentVendors(
@@ -348,47 +436,13 @@ async function writeFirstRevisions() {
   }
 }
 
-async function listUnbilled() {
-  const unbilled = await db.booking.findMany({
-    where: {
-      legacyInvoiceNumber: null,
-      confirmedAt: { not: null },
-      invoiceLines: { none: {} },
-    },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      number: true,
-      status: true,
-      contactName: true,
-      priceTotalSen: true,
-    },
-  });
-  const left = unbilled.filter(
-    (b) =>
-      !planned.legacy.has(b.id) &&
-      (planned.totals.get(b.id) ?? b.priceTotalSen) > 0,
-  );
-  if (left.length === 0) {
-    console.log("Every confirmed booking is billed outside the system.");
-    return;
-  }
-  console.log(
-    `${plural(left.length, "confirmed booking")} without a legacy invoice number. The app bills each at its next change, or Finance bills it alone:`,
-  );
-  for (const b of left) {
-    console.log(
-      `  ${labelOf(b)}  ${b.status}  RM ${formatRinggit(b.priceTotalSen)}  ${b.contactName}`,
-    );
-  }
-}
-
 const agents = await moveAgents();
 const lastBooking = await numberBookings();
-await moveOldInvoices();
-await dropAgentVendors(agents);
-await setCounters(lastBooking);
 await retotal();
 await writeFirstRevisions();
-await listUnbilled();
+await setCounters(lastBooking);
+await billOldInvoices();
+await dropAgentVendors(agents);
+await billTheRest();
+reportOwed();
 await db.$disconnect();

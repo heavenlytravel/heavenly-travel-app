@@ -78,6 +78,8 @@ const AREA_OF = {
   "booking.item.completed": "bookings",
   "booking.item.cancelled": "bookings",
   "booking.cancelled": "bookings",
+  "booking.item.reinstated": "bookings",
+  "booking.reinstated": "bookings",
   "booking.item.amended": "bookings",
   "booking.item.added": "bookings",
   "booking.item.reopened": "bookings",

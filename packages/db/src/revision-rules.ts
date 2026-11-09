@@ -20,6 +20,7 @@ export const REVISION_KINDS = [
   "discount",
   "correction",
   "cancel",
+  "reinstate",
 ] as const;
 export type RevisionKind = (typeof REVISION_KINDS)[number];
 export const isRevisionKind = guardFor(REVISION_KINDS);
@@ -33,6 +34,7 @@ export const REVISION_KIND_LABELS: Record<RevisionKind, string> = {
   discount: "Discount",
   correction: "Correction",
   cancel: "Cancelled",
+  reinstate: "Reinstated",
 };
 
 /** The kinds a new price with a reason is: a discount given, or our mistake put right. */

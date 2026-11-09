@@ -93,25 +93,59 @@ describe("periods by Malaysia's calendar", () => {
 });
 
 describe("what a change bills", () => {
-  const base = { legacy: false, confirmed: true, credit: false };
+  // Ended (completed or cancelled): what is due is issued at once.
+  const base = { confirmed: true, credit: false, ended: true };
+  const live = { ...base, ended: false };
   const hti = (id: string, netSen: number) => ({
     invoiceId: id,
     label: id,
     netSen,
   });
 
-  it("bills nothing for a legacy booking, or one not confirmed", () => {
-    assert.deepEqual(
-      billingPlanOf({ ...base, legacy: true, chargedSen: 500, billed: [] }),
-      { kind: "legacy" },
-    );
+  it("bills nothing for a booking not confirmed", () => {
     assert.deepEqual(
       billingPlanOf({ ...base, confirmed: false, chargedSen: 500, billed: [] }),
       { kind: "not-confirmed" },
     );
   });
 
-  it("bills the whole total when first confirmed, the difference after", () => {
+  it("puts a live booking's difference on its open invoice, either way", () => {
+    assert.deepEqual(
+      billingPlanOf({ ...live, chargedSen: 35000, billed: [] }),
+      {
+        kind: "open",
+        amountSen: 35000,
+      },
+    );
+    // Paid HTI 7,400, then extras: they wait on the open invoice.
+    assert.deepEqual(
+      billingPlanOf({
+        ...live,
+        chargedSen: 795000,
+        billed: [hti("a", 740000)],
+      }),
+      { kind: "open", amountSen: 55000 },
+    );
+    // Less to pay waits there too, as a credit to give.
+    assert.deepEqual(
+      billingPlanOf({
+        ...live,
+        chargedSen: 720000,
+        billed: [hti("a", 740000)],
+      }),
+      { kind: "open", amountSen: -20000 },
+    );
+    assert.deepEqual(
+      billingPlanOf({
+        ...live,
+        chargedSen: 740000,
+        billed: [hti("a", 740000)],
+      }),
+      { kind: "none" },
+    );
+  });
+
+  it("bills an ended booking's whole total, the difference after", () => {
     assert.deepEqual(
       billingPlanOf({ ...base, chargedSen: 35000, billed: [] }),
       {
@@ -130,7 +164,8 @@ describe("what a change bills", () => {
   });
 
   it("lets more wait on credit terms, but credits less at once", () => {
-    const credit = { ...base, credit: true };
+    // Live or ended alike: a credit agent has no open invoice.
+    const credit = { ...live, credit: true };
     assert.deepEqual(
       billingPlanOf({ ...credit, chargedSen: 40000, billed: [] }),
       {
@@ -235,8 +270,12 @@ describe("what a change bills", () => {
       /month-end/,
     );
     assert.match(
-      billingPlanSentence({ kind: "legacy" }, next),
-      /outside the system/,
+      billingPlanSentence({ kind: "open", amountSen: 55000 }, next),
+      /issues nothing: its open invoice comes to RM 550.00/,
+    );
+    assert.match(
+      billingPlanSentence({ kind: "open", amountSen: -20000 }, next),
+      /RM 200.00 to credit/,
     );
   });
 });

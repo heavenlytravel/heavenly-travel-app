@@ -104,7 +104,7 @@ export function parseLegacyInvoiceNumber(
   if (value.length > LEGACY_INVOICE_MAX) {
     return {
       ok: false,
-      error: `Keep the legacy invoice number to ${LEGACY_INVOICE_MAX} characters.`,
+      error: `Keep the old invoice number to ${LEGACY_INVOICE_MAX} characters.`,
     };
   }
   return { ok: true, value };

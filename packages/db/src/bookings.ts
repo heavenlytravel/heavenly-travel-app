@@ -30,7 +30,7 @@ import {
 import { checkBookableBusiness } from "./businesses";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
-import { settleCancelledTrips } from "./fulfilment";
+import { releaseParts, settleCancelledTrips } from "./fulfilment";
 import { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
 import {
@@ -164,10 +164,15 @@ export type CreateBookingInput = {
   /** Staff only: the business it was sold through, billed for it: an agent. */
   businessId?: string | null;
   /**
-   * Staff only: the invoice it was billed on outside the system (HT1223),
-   * as typed. It is billed nothing here.
+   * Staff only: the old system's invoice number (HT1223), as typed. A note
+   * for the team; it bills nothing.
    */
   legacyInvoiceNumber?: string | null;
+  /**
+   * Staff only: confirm it at once, every trip with it, opening its
+   * invoice; false saves it as received, for confirming later.
+   */
+  confirm?: boolean;
 };
 
 /** Holds a booking's row to the end of the transaction: its changes, revisions and bills go one at a time. */
@@ -182,9 +187,9 @@ async function lockBooking(tx: Prisma.TransactionClient, bookingId: string) {
  * customer or the guest on the website, or the admin entering a booking
  * for them. An item with an agreed price is charged that price and
  * logged as priced. One from the website is received, for Reservation to
- * confirm, and billed then. One staff enter is confirmed at once, every
- * trip with it, and billed at once (./billing), unless its business is on
- * credit or a legacy invoice number is typed. Emails are the caller's
+ * confirm. One staff enter is confirmed at once, every trip with it, when
+ * they ask (`confirm`), else received. Confirmed, its invoice opens
+ * (./billing), unless its business is on credit. Emails are the caller's
  * job, after this returns.
  */
 export async function createBooking(
@@ -194,12 +199,13 @@ export async function createBooking(
   if (input.items.length === 0) {
     throw new Error("A booking needs at least one item.");
   }
-  const confirmed = actor.kind === "admin";
+  const staff = actor.kind === "admin";
+  const confirmed = staff && input.confirm === true;
   const businessId = input.businessId ?? null;
   const legacy = input.legacyInvoiceNumber ?? null;
-  if ((legacy !== null || businessId !== null) && !confirmed) {
+  if ((legacy !== null || businessId !== null) && !staff) {
     throw new Error(
-      "Only staff may give a booking an agent or a legacy invoice number.",
+      "Only staff may give a booking an agent or an old invoice number.",
     );
   }
   const now = new Date();
@@ -692,6 +698,10 @@ function feeRefusal(fee: CancelFee): Refusal | null {
     : refuse("Enter the fee in RM, or leave it empty for none.", "feeAmount");
 }
 
+/** A cancellation's fee as a charge, and the minus charge that takes it off when it is undone. */
+const FEE_LABEL = "Cancellation fee";
+const FEE_OFF_LABEL = "Cancellation fee taken off";
+
 /** Keeps a fee on a cancelled trip, or on the booking, as a charge of the revision. */
 async function keepFee(
   tx: Prisma.TransactionClient,
@@ -706,7 +716,7 @@ async function keepFee(
       bookingId,
       itemId,
       revisionId: revision.id,
-      label: "Cancellation fee",
+      label: FEE_LABEL,
       amountSen: fee.amountSen,
     },
   });
@@ -1079,9 +1089,9 @@ export function amendWarnings(
 
 /**
  * Adds a trip, priced on the server, to a booking staff took already, as
- * its next item: confirmed at once, as a booking staff enter is, or
- * received with the rest while the booking waits for Reservation. A
- * revision: billing bills the new trip. Refused once the booking is
+ * its next item: confirmed at once when the booking is, or received with
+ * the rest while the booking waits to be confirmed. A revision: billing
+ * follows, the new trip on its open invoice. Refused once the booking is
  * cancelled, or holds the most trips a booking may.
  */
 export function addItem(
@@ -1582,6 +1592,181 @@ export function cancelTripAsCustomer(
 }
 
 /**
+ * Takes off the cancellation fees still kept on these trips, or on the
+ * booking itself (null), as one minus charge each, of the revision: the
+ * charges stay as they were, so every revision reads as it was.
+ */
+async function takeOffFees(
+  tx: Prisma.TransactionClient,
+  bookingId: string,
+  itemIds: readonly (string | null)[],
+  revision: OpenRevision,
+) {
+  const charges = await tx.bookingCharge.findMany({
+    where: { bookingId, label: { in: [FEE_LABEL, FEE_OFF_LABEL] } },
+    select: { itemId: true, amountSen: true },
+  });
+  for (const itemId of itemIds) {
+    const kept = charges
+      .filter((c) => c.itemId === itemId)
+      .reduce((sum, c) => sum + c.amountSen, 0);
+    if (kept <= 0) continue;
+    await tx.bookingCharge.create({
+      data: {
+        bookingId,
+        itemId,
+        revisionId: revision.id,
+        label: FEE_OFF_LABEL,
+        amountSen: -kept,
+      },
+    });
+  }
+}
+
+/**
+ * Puts cancelled trips back: confirmed when they were, else received,
+ * with no vehicle or driver. What was left assigned to them, kept only to
+ * be paid for the late cancel, is let go, so Operation assigns them again.
+ */
+async function putBackTrips(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  bookingId: string,
+  items: readonly { id: string; position: number; confirmedAt: Date | null }[],
+  now: Date,
+) {
+  for (const item of items) {
+    const status: ItemStatus = item.confirmedAt ? "confirmed" : "received";
+    await tx.bookingItem.update({
+      where: { id: item.id },
+      data: { status, cancelledAt: null },
+    });
+    await logActivity(tx, actor, {
+      action: "booking.item.reinstated",
+      entityId: bookingId,
+      before: { position: item.position, status: "cancelled" },
+      after: { position: item.position, status },
+    });
+  }
+  await releaseParts(
+    tx,
+    actor,
+    { itemId: { in: items.map((i) => i.id) } },
+    "released",
+    now,
+    "Reinstated: assign it again",
+  );
+}
+
+/**
+ * Staff undo the cancel of one trip of a live booking: it goes back as it
+ * was before (`putBackTrips`), its fee taken off. A revision; billing
+ * follows, a credit note issued already staying as it is. A cancelled
+ * booking is reinstated whole (`reinstateBooking`).
+ */
+export function reinstateItem(
+  actor: Actor,
+  itemId: string,
+  now: Date = new Date(),
+): Promise<BookingChange> {
+  return db.$transaction(async (tx) => {
+    const item = await lockedItem(tx, itemId);
+    if (!item) return refuse(GONE_ITEM);
+    if (item.booking.status === "cancelled") {
+      return refuse(
+        "The whole booking is cancelled. Reinstate the booking instead.",
+      );
+    }
+    if (item.status !== "cancelled") {
+      return refuse(`Trip is ${item.status} now. Reload the booking.`);
+    }
+    const revision = await openRevision(
+      tx,
+      actor,
+      item.bookingId,
+      { kind: "reinstate", summary: `${tripName(item.position)} reinstated` },
+      now,
+    );
+    await takeOffFees(tx, item.bookingId, [item.id], revision);
+    await putBackTrips(tx, actor, item.bookingId, [item], now);
+    return {
+      ok: true,
+      ...(await refreshBooking(tx, actor, item.bookingId, null, now, revision)),
+    };
+  });
+}
+
+/**
+ * Staff undo a booking's cancel: the trips cancelled with it go back as
+ * they were before (`putBackTrips`), a trip cancelled on its own before
+ * stays cancelled, and the cancellation fees are taken off. A revision;
+ * billing follows, a credit note issued already staying as it is, what it
+ * charges again going on its open invoice.
+ */
+export function reinstateBooking(
+  actor: Actor,
+  bookingId: string,
+  now: Date = new Date(),
+): Promise<BookingChange> {
+  return db.$transaction(async (tx) => {
+    await lockBooking(tx, bookingId);
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        items: {
+          where: { status: "cancelled" },
+          select: {
+            id: true,
+            position: true,
+            confirmedAt: true,
+            cancelledAt: true,
+          },
+        },
+      },
+    });
+    if (!booking) return refuse(GONE_BOOKING);
+    if (booking.status !== "cancelled") {
+      return refuse(`Booking is ${booking.status} now. Reload the booking.`);
+    }
+    const cancelledAt = booking.cancelledAt?.getTime() ?? null;
+    const withIt = booking.items.filter(
+      (i) => cancelledAt === null || i.cancelledAt?.getTime() === cancelledAt,
+    );
+    if (withIt.length === 0) {
+      return refuse("No trip was cancelled with the booking to put back.");
+    }
+    const revision = await openRevision(
+      tx,
+      actor,
+      bookingId,
+      { kind: "reinstate", summary: "Booking reinstated" },
+      now,
+    );
+    await takeOffFees(
+      tx,
+      bookingId,
+      [null, ...withIt.map((i) => i.id)],
+      revision,
+    );
+    await putBackTrips(tx, actor, bookingId, withIt, now);
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { cancelledAt: null, cancelledBy: null },
+    });
+    await logActivity(tx, actor, {
+      action: "booking.reinstated",
+      entityId: bookingId,
+      before: { status: "cancelled" },
+      after: { trips: withIt.length },
+    });
+    return {
+      ok: true,
+      ...(await refreshBooking(tx, actor, bookingId, null, now, revision)),
+    };
+  });
+}
+
+/**
  * Changes who a booking is for, as staff correct it: the name, the phone
  * and the email the booking's emails go to, checked by `parseContact`.
  * The account a booking shows under is left as it is. Not a revision:
@@ -1618,13 +1803,16 @@ export function updateBookingContact(
 
 /**
  * Corrects the agent a booking came through, or makes it direct (null).
- * Billing after this follows the new one; an invoice issued already keeps
- * who it was billed to, for Finance to void and reissue. Not a revision.
+ * Billing follows the new one at once: its open invoice is billed to it,
+ * or gives way to the run when the agent is on credit. An invoice issued
+ * already keeps who it was billed to, for Finance to void and reissue.
+ * Not a revision.
  */
 export function setBookingBusiness(
   actor: Actor,
   bookingId: string,
   businessId: string | null,
+  now: Date = new Date(),
 ): Promise<Change> {
   return db.$transaction(async (tx) => {
     await lockBooking(tx, bookingId);
@@ -1653,42 +1841,28 @@ export function setBookingBusiness(
       before: { agent: booking.business?.name ?? null },
       after: { agent: name },
     });
+    await settleBilling(tx, actor, bookingId, now);
     return { ok: true };
   });
 }
 
 /**
- * Sets the booking's legacy invoice number, the old system's, or clears
- * it. With one the booking is billed outside the system; one with an
- * invoice here already cannot take one (void its invoices first).
- * Clearing it bills the booking here, as a confirmed booking is billed,
- * at once. Not a revision.
+ * Sets the booking's old invoice number, the old system's, or clears it:
+ * a note for the team, apart from the booking's notes. It bills nothing
+ * and changes no bill. Not a revision.
  */
 export function setLegacyInvoiceNumber(
   actor: Actor,
   bookingId: string,
   value: string | null,
-  now: Date = new Date(),
-): Promise<{ ok: true; billed: string[] } | Refusal> {
+): Promise<Change> {
   return db.$transaction(async (tx) => {
-    await lockBooking(tx, bookingId);
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
       select: { legacyInvoiceNumber: true },
     });
     if (!booking) return refuse(GONE_BOOKING);
-    if (booking.legacyInvoiceNumber === value) return { ok: true, billed: [] };
-    if (value !== null) {
-      const billedHere = await tx.invoiceLine.count({
-        where: { bookingId, invoice: { status: { in: ["issued", "draft"] } } },
-      });
-      if (billedHere > 0) {
-        return refuse(
-          "This booking has invoices here. Finance voids them first, or remove it from its draft.",
-          "legacyInvoiceNumber",
-        );
-      }
-    }
+    if (booking.legacyInvoiceNumber === value) return { ok: true };
     await tx.booking.update({
       where: { id: bookingId },
       data: { legacyInvoiceNumber: value },
@@ -1699,6 +1873,6 @@ export function setLegacyInvoiceNumber(
       before: { legacyInvoiceNumber: booking.legacyInvoiceNumber },
       after: { legacyInvoiceNumber: value },
     });
-    return { ok: true, billed: await settleBilling(tx, actor, bookingId, now) };
+    return { ok: true };
   });
 }

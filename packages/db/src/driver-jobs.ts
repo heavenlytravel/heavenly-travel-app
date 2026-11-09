@@ -1,4 +1,5 @@
 import { bookingLabelOf } from "./booking-number";
+import { settleBilling } from "./billing";
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
 import { bookingStatusOf } from "./booking-status";
@@ -482,6 +483,8 @@ export async function reportTripEvent(
           where: { id: item.bookingId },
           data: { status: bookingStatusOf(siblings) },
         });
+        // The last trip done ends the booking: its open invoice is issued.
+        await settleBilling(tx, actor, item.bookingId, new Date());
       }
       return { ok: true };
     });

@@ -113,6 +113,10 @@ const ACTIONS = {
   "booking.item.completed": { entityType: "booking", customerVisible: true },
   "booking.item.cancelled": { entityType: "booking", customerVisible: true },
   "booking.cancelled": { entityType: "booking", customerVisible: true },
+  /** A cancelled trip put back, by staff: its position and its status now. */
+  "booking.item.reinstated": { entityType: "booking", customerVisible: true },
+  /** A cancelled booking put back, by staff, with the trips cancelled with it. */
+  "booking.reinstated": { entityType: "booking", customerVisible: true },
   /** The `AMENDED_FIELDS` that changed; the driver notes and the reason are not in it. */
   "booking.item.amended": { entityType: "booking", customerVisible: true },
   /** A trip staff added to the booking: its position, status and `AMENDED_FIELDS`, priced. */
@@ -994,6 +998,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Completed ${itemName(entry.after)}`;
     case "booking.item.cancelled":
       return `Cancelled ${itemName(entry.after)}`;
+    case "booking.item.reinstated":
+      return `Reinstated ${itemName(entry.after)}`;
     case "booking.item.reopened":
       return `Reopened ${itemName(entry.after)}: it lost its vehicle or driver`;
     case "booking.trip.reported": {
@@ -1049,6 +1055,8 @@ export function describeActivity(entry: DescribableActivity): string {
     }
     case "booking.cancelled":
       return "Cancelled the booking";
+    case "booking.reinstated":
+      return "Reinstated the booking";
     case "user.created":
       return field(entry.after, "existing") === true
         ? "Added the account Clerk already held"
@@ -1360,8 +1368,8 @@ export function describeActivity(entry: DescribableActivity): string {
     case "booking.legacy.changed": {
       const value = field(entry.after, "legacyInvoiceNumber");
       return typeof value === "string"
-        ? `Set the legacy invoice number to ${value}`
-        : "Removed the legacy invoice number";
+        ? `Set the old invoice number to ${value}`
+        : "Removed the old invoice number";
     }
     case "invoice.issued": {
       const document = String(field(entry.after, "document") ?? "");

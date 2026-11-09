@@ -27,8 +27,8 @@ export const BUSINESS_STATUS_LABELS: Record<BusinessStatus, string> = {
 };
 
 /**
- * How a business pays: "none", each booking billed when it is confirmed,
- * as a customer of ours is; or on credit, its bookings billed together
+ * How a business pays: "none", each booking billed on its own open
+ * invoice, as a customer of ours is; or on credit, its bookings billed together
  * for each period by the month-end run, a month or half of one.
  */
 export const PAYMENT_TERMS = ["none", "month", "half-month"] as const;
@@ -40,7 +40,7 @@ export const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
   "half-month": "Twice a month",
 };
 export const PAYMENT_TERMS_HINTS: Record<PaymentTerms, string> = {
-  none: "Each booking is billed to the agent when it is confirmed.",
+  none: "Each booking is billed to the agent on its own invoice, issued when the trip is done or by Finance.",
   month: "Bookings are billed together after each month, by first pick-up.",
   "half-month":
     "Bookings are billed together for the 1st to the 15th, then the 16th to the month's end.",
@@ -340,17 +340,22 @@ export type BilledInvoice = {
 };
 
 /**
- * What saving a booking as it now stands bills. Legacy: billed outside
- * the system, nothing. Not confirmed yet: its total changes, nothing is
- * billed. More to pay: an invoice for the difference, or on credit terms
- * it waits for the run. Less: credit notes against its invoices, newest
- * first, each no more than that invoice nets for it, so no invoice goes
- * below nothing.
+ * What saving a booking as it now stands bills. Not confirmed yet: its
+ * total changes, nothing is billed. On credit terms, more to pay waits for
+ * the run. Otherwise, while the booking is live, the difference goes on
+ * its one open invoice, a draft issued when the booking ends or by
+ * Finance; once ended (completed or cancelled), it is issued at once: an
+ * invoice for more to pay. Less to pay, at once or when the open invoice
+ * is issued, is credit notes against its invoices, newest first, each no
+ * more than that invoice nets for it, so no invoice goes below nothing.
+ * See docs/261108-billing-and-revisions.md, "One open invoice per
+ * booking".
  */
 export type BillingPlan =
-  | { kind: "legacy" }
   | { kind: "not-confirmed" }
   | { kind: "none" }
+  /** The open invoice's amount after the save: what is not invoiced yet, negative for a credit. */
+  | { kind: "open"; amountSen: number }
   | { kind: "invoice"; amountSen: number }
   | { kind: "waits"; amountSen: number }
   | {
@@ -358,27 +363,14 @@ export type BillingPlan =
       notes: { invoiceId: string; label: string; amountSen: number }[];
     };
 
-export function billingPlanOf(input: {
-  legacy: boolean;
-  confirmed: boolean;
-  credit: boolean;
-  chargedSen: number;
-  /** Newest first. */
-  billed: readonly BilledInvoice[];
-}): BillingPlan {
-  if (input.legacy) return { kind: "legacy" };
-  if (!input.confirmed) return { kind: "not-confirmed" };
-  const billedSen = input.billed.reduce((sum, b) => sum + b.netSen, 0);
-  const difference = input.chargedSen - billedSen;
-  if (difference === 0) return { kind: "none" };
-  if (difference > 0) {
-    return input.credit
-      ? { kind: "waits", amountSen: difference }
-      : { kind: "invoice", amountSen: difference };
-  }
-  let left = -difference;
+/** Credit notes for `amountSen` less (a positive number), newest invoice first. */
+export function creditNotesFor(
+  amountSen: number,
+  billed: readonly BilledInvoice[],
+): { invoiceId: string; label: string; amountSen: number }[] {
+  let left = amountSen;
   const notes: { invoiceId: string; label: string; amountSen: number }[] = [];
-  for (const invoice of input.billed) {
+  for (const invoice of billed) {
     if (left === 0) break;
     const take = Math.min(left, invoice.netSen);
     if (take <= 0) continue;
@@ -389,6 +381,32 @@ export function billingPlanOf(input: {
     });
     left -= take;
   }
+  return notes;
+}
+
+export function billingPlanOf(input: {
+  confirmed: boolean;
+  credit: boolean;
+  /** Completed or cancelled: nothing waits on an open invoice any more. */
+  ended: boolean;
+  chargedSen: number;
+  /** Newest first. */
+  billed: readonly BilledInvoice[];
+}): BillingPlan {
+  if (!input.confirmed) return { kind: "not-confirmed" };
+  const billedSen = input.billed.reduce((sum, b) => sum + b.netSen, 0);
+  const difference = input.chargedSen - billedSen;
+  if (difference === 0) return { kind: "none" };
+  if (difference > 0) {
+    if (input.credit) return { kind: "waits", amountSen: difference };
+    return input.ended
+      ? { kind: "invoice", amountSen: difference }
+      : { kind: "open", amountSen: difference };
+  }
+  if (!input.credit && !input.ended) {
+    return { kind: "open", amountSen: difference };
+  }
+  const notes = creditNotesFor(-difference, input.billed);
   return notes.length > 0 ? { kind: "credit", notes } : { kind: "none" };
 }
 
@@ -400,16 +418,18 @@ export function billingPlanSentence(
   verb = "Saving",
 ): string {
   switch (plan.kind) {
-    case "legacy":
-      return `Billed outside the system: ${verb.toLowerCase()} bills nothing here.`;
     case "not-confirmed":
-      return "Not confirmed yet: only its total changes. It is billed when confirmed.";
+      return "Not confirmed yet: only its total changes. Its invoice opens when it is confirmed.";
     case "none":
       return "Nothing to bill: the total billed stays the same.";
+    case "open":
+      return plan.amountSen > 0
+        ? `${verb} issues nothing: its open invoice comes to ${formatMyr(plan.amountSen)}, issued when the trip is done, or by Finance.`
+        : `${verb} issues nothing: ${formatMyr(-plan.amountSen)} to credit waits on its open invoice, credited when the trip is done, or by Finance.`;
     case "invoice":
       return `${verb} issues ${next.invoice} for ${formatMyr(plan.amountSen)}.`;
     case "waits":
-      return `${formatMyr(plan.amountSen)} waits for the agent's next month-end invoice, or Finance bills it alone.`;
+      return `${formatMyr(plan.amountSen)} waits for the agent's next month-end invoice, or Finance issues it now.`;
     case "credit":
       return plan.notes
         .map(

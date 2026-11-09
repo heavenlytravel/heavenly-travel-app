@@ -28,6 +28,8 @@ import {
   isNextItemStatus,
   priceItem,
   quoteItemStop,
+  reinstateBooking,
+  reinstateItem,
   setBookingBusiness,
   setLegacyInvoiceNumber,
   updateBookingContact,
@@ -443,7 +445,7 @@ export async function billingPreviewAction(
     : { error: "This booking was deleted meanwhile." };
 }
 
-/** Sets or clears the booking's legacy invoice number. Clearing it bills the booking here. */
+/** Sets or clears the booking's old invoice number: a note, it bills nothing. */
 export async function setLegacyAction(
   _previous: ActionState,
   formData: FormData,
@@ -464,6 +466,23 @@ export async function setLegacyAction(
   if (!result.ok) return refusalOf(result);
   revalidateLocation();
   return null;
+}
+
+/** Undoes the cancel of the booking, or of one trip of it when `itemId` is posted. */
+export async function reinstateAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
+  const itemId = textOf(formData.get("itemId"));
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!itemId && !bookingId) return STALE;
+  return finish(
+    itemId
+      ? await reinstateItem(actorOf(admin), itemId)
+      : await reinstateBooking(actorOf(admin), bookingId),
+  );
 }
 
 /** Corrects the agent the booking came through, or makes it direct. */

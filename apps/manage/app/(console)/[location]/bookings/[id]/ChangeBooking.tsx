@@ -32,6 +32,7 @@ import {
   cancelItemAction,
   priceItemAction,
   quoteStopAction,
+  reinstateAction,
   type StopQuoteAnswer,
 } from "./actions";
 
@@ -67,6 +68,7 @@ type Open =
   | { kind: "stop"; trip: ChangeTrip }
   | { kind: "price"; trip: ChangeTrip; price: PriceRevisionKind }
   | { kind: "cancel-trip"; trip: ChangeTrip }
+  | { kind: "reinstate-trip"; trip: ChangeTrip }
   | { kind: "charge"; trip: ChangeTrip | null }
   | { kind: "cancel-booking" };
 
@@ -87,7 +89,8 @@ const CHARGE_KIND_TEXT: Record<
 /**
  * "Change booking" in the booking's header: every change to what we
  * deliver or charge, each a revision: amend a trip, add a trip, a stop or
- * a charge, a discount or a correction, cancel a trip or the booking.
+ * a charge, a discount or a correction, cancel a trip or the booking, or
+ * reinstate a cancelled trip.
  * Each dialog says what saving bills before it is saved, as the invoice
  * preview did. Nothing for an admin who may do none of them.
  */
@@ -117,7 +120,9 @@ export function ChangeBookingMenu({
   const [open, setOpen] = useState<Open | null>(null);
   const close = () => setOpen(null);
   const tripRows = trips.filter((t) => t.live);
+  const cancelledRows = rights.manage ? trips.filter((t) => !t.live) : [];
   const any =
+    cancelledRows.length > 0 ||
     addTripHref !== null ||
     rights.extras ||
     (rights.manage && cancellable) ||
@@ -185,6 +190,15 @@ export function ChangeBookingMenu({
             <MenuSeparator />
           </div>
         ))}
+        {cancelledRows.map((trip) => (
+          <MenuItem
+            key={trip.id}
+            onSelect={() => setOpen({ kind: "reinstate-trip", trip })}
+          >
+            Reinstate trip {trip.position}
+          </MenuItem>
+        ))}
+        {cancelledRows.length > 0 ? <MenuSeparator /> : null}
         {addTripHref ? (
           <MenuItem asChild>
             <Link href={addTripHref}>Add trip</Link>
@@ -239,6 +253,14 @@ export function ChangeBookingMenu({
           action={cancelItemAction}
           remainingSen={chargedSen - open.trip.priceSen}
           done={`Trip ${open.trip.position} cancelled.`}
+          onClose={close}
+        />
+      ) : null}
+      {open?.kind === "reinstate-trip" ? (
+        <ReinstateDialog
+          title={`Reinstate trip ${open.trip.position}?`}
+          hidden={{ itemId: open.trip.id }}
+          done={`Trip ${open.trip.position} reinstated.`}
           onClose={close}
         />
       ) : null}
@@ -616,6 +638,68 @@ function CancelDialog({
         chargedSen={feeSen === null ? null : remainingSen + feeSen}
       />
     </ChangeDialog>
+  );
+}
+
+/**
+ * Reinstate: a cancelled trip, or the booking with the trips cancelled
+ * with it, back as they were before, the cancellation fee taken off.
+ */
+function ReinstateDialog({
+  title,
+  hidden,
+  done,
+  onClose,
+}: {
+  title: string;
+  hidden: Record<string, string>;
+  done: string;
+  onClose: () => void;
+}) {
+  return (
+    <ChangeDialog
+      title={title}
+      description="It goes back to confirmed, or received if it never was, with no vehicle or driver: assign it again. Its cancellation fee is taken off. No email is sent: tell the customer."
+      action={reinstateAction}
+      done={done}
+      submit="Reinstate"
+      onClose={onClose}
+    >
+      {Object.entries(hidden).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
+      <Notice tone="info">
+        Billing follows: what it charges again goes on its open invoice. A
+        credit note issued for the cancel stays as it is.
+      </Notice>
+    </ChangeDialog>
+  );
+}
+
+/** Reinstate booking, in a cancelled booking's header. */
+export function ReinstateBookingButton({
+  bookingId,
+  label,
+}: {
+  bookingId: string;
+  /** "HTB-0042". */
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Reinstate booking
+      </Button>
+      {open ? (
+        <ReinstateDialog
+          title={`Reinstate booking ${label}?`}
+          hidden={{ bookingId }}
+          done={`Booking ${label} reinstated.`}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
 

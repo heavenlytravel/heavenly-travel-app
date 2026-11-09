@@ -23,12 +23,13 @@ import {
 import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
 
 /**
- * Creates the booking from the posted form, numbered HTB and confirmed at
- * once with every trip: every trip is resolved and priced again on the
+ * Creates the booking from the posted form, numbered HTB: confirmed at
+ * once with every trip when "Create and confirm" sent it, else received,
+ * for confirming later. Every trip is resolved and priced again on the
  * server, the customer is linked to an account when the email belongs to
  * one, and an agreed price is stored per trip with its reason. Confirmed,
- * it is billed at once, unless its agent is on credit (the month-end run)
- * or a legacy invoice number is typed (billed outside the system). No
+ * its invoice opens, unless its agent is on credit (the month-end run);
+ * an old invoice number is a note. No
  * email goes out: the console's own emails wait for their settings. The
  * booking opens in the location the form was opened in when a trip picks
  * up there, else across every location. Checks `bookings.create` again,
@@ -67,6 +68,7 @@ export async function createManualBookingAction(
       items: prepared.items,
       businessId,
       legacyInvoiceNumber: legacy.value,
+      confirm: formData.get("confirm") === "1",
     });
   } catch (error) {
     // The agent was made inactive or removed meanwhile.
@@ -80,13 +82,12 @@ export async function createManualBookingAction(
 }
 
 /**
- * What making the booking would bill, for the form to show before it is
- * made: an invoice for its total, nothing yet for an agent on credit, or
- * nothing here with a legacy number. Nothing is given.
+ * What making the booking and confirming it would bill, for the form to
+ * show before it is made: its open invoice for its total, or nothing yet
+ * for an agent on credit. Nothing is given.
  */
 export async function previewNewBillingAction(input: {
   agentId: string;
-  legacy: boolean;
   chargedSen: number;
 }): Promise<{ sentence: string } | { error: string }> {
   if (!(await getAdmin("bookings.create"))) return { error: FORBIDDEN_MESSAGE };
@@ -97,7 +98,6 @@ export async function previewNewBillingAction(input: {
   if (!Number.isInteger(chargedSen) || chargedSen < 0) return { error: "" };
   const preview = await newBookingBillingPreview({
     businessId: String(input.agentId ?? "") || null,
-    legacy: input.legacy === true,
     chargedSen,
   });
   return { sentence: preview.sentence };

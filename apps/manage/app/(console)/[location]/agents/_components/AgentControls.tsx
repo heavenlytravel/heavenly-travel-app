@@ -21,7 +21,6 @@ import {
   setAgentStatusAction,
   updateAgentAction,
 } from "../actions";
-import { billAloneAction } from "../../invoices/actions";
 import { AgentProfileFields, PaymentTermsFields } from "./AgentFields";
 
 /** Add agent: who it is, who the team speaks to, how it pays. Opens the agent's page once added. */
@@ -193,40 +192,6 @@ export function CreateRunControl({
         {pending ? "Making the draft…" : `Create invoice for ${period}`}
       </Button>
       <FormError error={error} size="xs" />
-    </form>
-  );
-}
-
-/** Finance's "Bill alone" on one booking: its own invoice for what is not billed yet, now. */
-export function BillAloneControl({
-  bookingId,
-  label,
-  amount,
-}: {
-  bookingId: string;
-  /** "HTB-0042". */
-  label: string;
-  /** "RM 90.00". */
-  amount: string;
-}) {
-  const [dialog, confirm] = useConfirm();
-  const { pending, error, formProps } = useActionForm(billAloneAction, {
-    ask: () =>
-      confirm({
-        title: `Bill ${label} alone?`,
-        description: `An invoice for ${amount} is issued now, on its own. It is left out of the month-end run.`,
-        action: "Issue invoice",
-      }),
-    done: `${label} billed.`,
-  });
-  return (
-    <form {...formProps} className="grid justify-items-end gap-1">
-      <input type="hidden" name="bookingId" value={bookingId} />
-      <Button type="submit" variant="secondary" size="sm" pending={pending}>
-        Bill alone
-      </Button>
-      <FormError error={error} size="xs" />
-      {dialog}
     </form>
   );
 }

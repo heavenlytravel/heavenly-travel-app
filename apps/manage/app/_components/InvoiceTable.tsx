@@ -163,9 +163,7 @@ export function InvoiceTable({
                       }
                     />
                   </Td>
-                  <MoneyCell
-                    sen={row.status === "draft" ? null : row.totalSen}
-                  />
+                  <MoneyCell sen={row.totalSen} />
                   <MoneyCell
                     sen={row.money ? row.money.balanceSen : null}
                     strong

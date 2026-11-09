@@ -9,39 +9,30 @@ import { LEGACY_INVOICE_FIELD } from "../_lib/trip-form";
 import { setBookingAgentAction, setLegacyAction } from "./actions";
 
 /**
- * The booking's legacy invoice number, the old system's, set or cleared.
- * With one it is billed outside the system; cleared, a confirmed booking
- * is billed here at once, which the dialog says.
+ * The booking's old invoice number, the old system's, set or cleared: a
+ * note for the team, apart from the booking's notes. It bills nothing.
  */
-export function LegacyInvoiceControl({
+export function OldInvoiceNumberControl({
   bookingId,
   value,
-  billedHere,
 }: {
   bookingId: string;
   value: string | null;
-  /** It has invoices here: a legacy number cannot be given. */
-  billedHere: boolean;
 }) {
-  if (billedHere && value === null) return null;
   return (
     <ActionDialog
       action={setLegacyAction}
-      label={value ? "Change" : "Billed outside"}
-      title="Legacy invoice number"
-      description={
-        value
-          ? "The old system's invoice it was billed on. Empty the box to bill it here instead: a confirmed booking is billed at once."
-          : "When the old system billed this booking already. With one, the app bills it nothing, and its changes are billed in Finance's sheet."
-      }
-      done="Legacy invoice number saved."
+      label={value ? "Change" : "Add"}
+      title="Old invoice number"
+      description="The old system's invoice number, for the team's reference. It bills nothing: the booking is billed here."
+      done="Old invoice number saved."
       submit="Save"
       hidden={{ bookingId }}
       variant="ghost"
     >
       <Field
-        label="Legacy invoice number"
-        hint="As it was written: HT1223, HTI-1295-03."
+        label="Old invoice number"
+        hint="As it was written: HT1223, HTI-1295-03. Empty to remove it."
       >
         <Input
           name={LEGACY_INVOICE_FIELD}

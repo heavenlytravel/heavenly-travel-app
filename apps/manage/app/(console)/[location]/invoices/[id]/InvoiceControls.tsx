@@ -233,26 +233,48 @@ export function DraftTick({
   );
 }
 
-/** A draft's Issue and Delete. Issuing numbers it and freezes its amounts. */
+/**
+ * A draft's Issue and Delete. Issuing numbers it and freezes its amounts.
+ * A booking's open invoice is not deleted: it follows its booking, and a
+ * credit on it issues as a credit note.
+ */
 export function DraftActions({
   invoiceId,
   total,
   ticked,
+  open = false,
+  credit = false,
 }: {
   invoiceId: string;
   /** "RM 1,240.00". */
   total: string;
   ticked: number;
+  /** A booking's open invoice. */
+  open?: boolean;
+  /** Its amount is below nothing: a credit to give. */
+  credit?: boolean;
 }) {
   const [dialog, confirm] = useConfirm();
   const issue = useActionForm(issueDraftAction, {
     ask: () =>
-      confirm({
-        title: `Issue this invoice for ${total}?`,
-        description: `It takes its number now, for the ${ticked} ticked bookings, and never changes after. The unticked ones wait for the next run.`,
-        action: "Issue invoice",
-      }),
-    done: "Invoice issued.",
+      confirm(
+        open
+          ? {
+              title: credit
+                ? "Issue a credit note now?"
+                : `Issue this invoice for ${total}?`,
+              description: credit
+                ? "The credit is issued now, against the booking's invoices, newest first."
+                : "It takes its number now and never changes after. Later changes to the booking open a new one.",
+              action: credit ? "Issue credit note" : "Issue invoice",
+            }
+          : {
+              title: `Issue this invoice for ${total}?`,
+              description: `It takes its number now, for the ${ticked} ticked bookings, and never changes after. The unticked ones wait for the next run.`,
+              action: "Issue invoice",
+            },
+      ),
+    done: credit ? "Credit note issued." : "Invoice issued.",
   });
   const remove = useActionForm(deleteDraftAction, {
     ask: () =>
@@ -267,16 +289,22 @@ export function DraftActions({
   });
   return (
     <>
-      <form {...remove.formProps}>
-        <input type="hidden" name="invoiceId" value={invoiceId} />
-        <Button type="submit" variant="ghost-danger" pending={remove.pending}>
-          Delete draft
-        </Button>
-      </form>
+      {open ? null : (
+        <form {...remove.formProps}>
+          <input type="hidden" name="invoiceId" value={invoiceId} />
+          <Button type="submit" variant="ghost-danger" pending={remove.pending}>
+            Delete draft
+          </Button>
+        </form>
+      )}
       <form {...issue.formProps}>
         <input type="hidden" name="invoiceId" value={invoiceId} />
         <Button type="submit" disabled={ticked === 0} pending={issue.pending}>
-          {issue.pending ? "Issuing…" : "Issue invoice"}
+          {issue.pending
+            ? "Issuing…"
+            : credit
+              ? "Issue credit note"
+              : "Issue invoice"}
         </Button>
       </form>
       <FormError

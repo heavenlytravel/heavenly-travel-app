@@ -84,10 +84,17 @@ import {
 } from "../../../../_lib/routes";
 import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
-import { BillAloneControl } from "../../agents/_components/AgentControls";
+import { BillNowControl } from "../../invoices/_components/BillNowControl";
 import { ItemActions } from "./BookingControls";
-import { BookingAgentControl, LegacyInvoiceControl } from "./BillingControls";
-import { ChangeBookingMenu, type ChangeTrip } from "./ChangeBooking";
+import {
+  BookingAgentControl,
+  OldInvoiceNumberControl,
+} from "./BillingControls";
+import {
+  ChangeBookingMenu,
+  ReinstateBookingButton,
+  type ChangeTrip,
+} from "./ChangeBooking";
 import { Notes } from "./Notes";
 import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
@@ -264,7 +271,11 @@ export async function bookingScreen({
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
-            {cancelled ? null : (
+            {cancelled ? (
+              manage ? (
+                <ReinstateBookingButton bookingId={booking.id} label={label} />
+              ) : null
+            ) : (
               <ChangeBookingMenu
                 bookingId={booking.id}
                 label={label}
@@ -370,9 +381,10 @@ export async function bookingScreen({
 /**
  * The booking's billing: its invoices and credit notes, each with what it
  * bills this booking and where it stands, what it charges against what is
- * billed, and what is not invoiced yet; Finance bills that alone. A
- * booking with a legacy number says it is billed outside the system; one
- * not confirmed yet, that it is billed when confirmed.
+ * billed, and what is not invoiced yet: its open invoice, which is issued
+ * when the booking ends or by Finance now, in full or a part; or what
+ * waits for an agent's month-end invoice. One not confirmed yet says its
+ * invoice opens when confirmed. The old system's invoice number is a note.
  */
 function BillingCard({
   booking,
@@ -386,13 +398,16 @@ function BillingCard({
   manage: boolean;
 }) {
   const label = bookingLabelOf(booking);
-  const legacyControl = manage ? (
-    <LegacyInvoiceControl
-      bookingId={booking.id}
-      value={billing.legacy}
-      billedHere={billing.documents.some((d) => d.status === "issued")}
-    />
-  ) : null;
+  const unbilled = billing.unbilledSen;
+  const waitsOn = billing.draft?.open
+    ? unbilled > 0
+      ? "On its open invoice: issued when the trip is done, or now."
+      : "A credit to give, on its open invoice: credited when the trip is done, or now."
+    : billing.draft
+      ? `On the month-end draft${billing.draft.period ? ` for ${billing.draft.period}` : ""}.`
+      : billing.credit && unbilled > 0
+        ? "Waits for the agent's month-end invoice, or Finance issues it now."
+        : "Its invoice was voided, or it waits to be issued.";
   return (
     <Card flush>
       <CardTitle
@@ -402,28 +417,30 @@ function BillingCard({
             <PaymentStateBadge state={billing.money.state} />
           ) : null
         }
-        action={billing.legacy === null ? legacyControl : null}
       >
         Billing
       </CardTitle>
-      {billing.legacy !== null ? (
-        <div className="grid gap-2 px-5 pb-4">
-          <p className="text-sm">
-            <span className="font-semibold text-ink">
-              Billed outside the system
+      {billing.oldInvoiceNumber !== null || manage ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 text-sm">
+          <span>
+            <span className="text-muted">Old invoice number </span>
+            <span className="text-ink">
+              {billing.oldInvoiceNumber ?? "None"}
             </span>
-            <span className="block text-muted">
-              Legacy invoice {billing.legacy}. Its changes are billed in
-              Finance&apos;s sheet.
-            </span>
-          </p>
-          <div>{legacyControl}</div>
+          </span>
+          {manage ? (
+            <OldInvoiceNumberControl
+              bookingId={booking.id}
+              value={billing.oldInvoiceNumber}
+            />
+          ) : null}
         </div>
-      ) : booking.confirmedAt === null && billing.documents.length === 0 ? (
+      ) : null}
+      {booking.confirmedAt === null && billing.documents.length === 0 ? (
         <p className="px-5 pb-4 text-sm text-muted">
           {booking.status === "cancelled"
             ? "Cancelled before it was confirmed: nothing was billed."
-            : "Billed when it is confirmed."}
+            : "Its invoice opens when it is confirmed."}
         </p>
       ) : (
         <>
@@ -492,25 +509,21 @@ function BillingCard({
                   : []),
               ]}
             />
-            {billing.unbilledSen !== 0 ? (
+            {unbilled !== 0 ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-warning-tint px-3 py-2 text-sm text-warning-strong">
                 <span>
                   <span className="font-semibold">
-                    Not invoiced yet: {formatMyr(billing.unbilledSen)}
+                    {unbilled > 0
+                      ? `Not invoiced yet: ${formatMyr(unbilled)}`
+                      : `To credit: ${formatMyr(-unbilled)}`}
                   </span>
-                  <span className="block text-caption">
-                    {billing.draft
-                      ? `On the draft${billing.draft.period ? ` for ${billing.draft.period}` : ""}.`
-                      : billing.credit
-                        ? "Waits for the agent's month-end invoice."
-                        : "Its invoice was voided, or it is waiting to be billed."}
-                  </span>
+                  <span className="block text-caption">{waitsOn}</span>
                 </span>
-                {finance && !billing.draft && billing.unbilledSen > 0 ? (
-                  <BillAloneControl
+                {finance && !(billing.draft && !billing.draft.open) ? (
+                  <BillNowControl
                     bookingId={booking.id}
                     label={label}
-                    amount={formatMyr(billing.unbilledSen)}
+                    unbilledSen={unbilled}
                   />
                 ) : null}
               </div>

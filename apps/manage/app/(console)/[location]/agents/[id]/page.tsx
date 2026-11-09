@@ -61,11 +61,11 @@ import { scopeOf } from "../../../../_lib/scope";
 import {
   AddAgentForm,
   AgentStatusControl,
-  BillAloneControl,
   ChangeTermsControl,
   CreateRunControl,
   EditAgentControl,
 } from "../_components/AgentControls";
+import { BillNowControl } from "../../invoices/_components/BillNowControl";
 
 /**
  * Route: /~/agents/[id], and /~/agents/new to add one. An agent's page:
@@ -229,7 +229,11 @@ async function agentScreen(id: string) {
                             bottom={[
                               booking.contactName,
                               formatLocalDateTime(booking.startsAt),
-                              booking.draftId ? "On a draft" : null,
+                              booking.draftId
+                                ? "On the month-end draft"
+                                : booking.openInvoice
+                                  ? "On its open invoice"
+                                  : null,
                             ]
                               .filter(Boolean)
                               .join(" · ")}
@@ -248,12 +252,11 @@ async function agentScreen(id: string) {
                         </Td>
                         {finance ? (
                           <Td className="text-right">
-                            {booking.draftId ||
-                            booking.unbilledSen <= 0 ? null : (
-                              <BillAloneControl
+                            {booking.draftId ? null : (
+                              <BillNowControl
                                 bookingId={booking.id}
                                 label={booking.label}
-                                amount={formatMyr(booking.unbilledSen)}
+                                unbilledSen={booking.unbilledSen}
                               />
                             )}
                           </Td>
@@ -270,7 +273,7 @@ async function agentScreen(id: string) {
               <InvoiceTable
                 rows={invoices}
                 billTo={false}
-                empty="No invoice yet. Bookings before the switch-over are billed outside the system."
+                empty="No invoice yet."
               />
             </Card>
 

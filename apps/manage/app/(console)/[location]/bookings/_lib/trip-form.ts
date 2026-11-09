@@ -67,7 +67,7 @@ export const CATEGORY_FIELD = "category";
 /** A new booking's switch: one vehicle does every trip. Posted "on" when it does. */
 export const SAME_VEHICLE_FIELD = "sameVehicle";
 
-/** A booking's legacy invoice number, when it was billed outside the system (HT1223); empty for none. */
+/** A booking's old invoice number, the old system's (HT1223), a note; empty for none. */
 export const LEGACY_INVOICE_FIELD = "legacyInvoiceNumber";
 /** The agent the booking came through; empty for a customer of ours. */
 export const AGENT_FIELD = "agentId";

@@ -9,12 +9,11 @@ import { LEGACY_INVOICE_FIELD } from "../_lib/trip-form";
 import { previewNewBillingAction } from "../new/actions";
 
 /**
- * What making the booking bills, above its button: confirmed at once, it
- * is billed at once, "Creating issues HTI-0013 for RM 300.00", unless its
- * agent is on credit, or a legacy invoice number is typed, the old
- * system's, which bills nothing here. Asked of the server as the total,
- * the agent or the box changes; the number may go to another booking
- * first.
+ * What confirming the booking bills, above its buttons: its open invoice
+ * for its total, issued when the trip is done or by Finance, or nothing
+ * yet for an agent on credit. Asked of the server as the total or the
+ * agent changes. Beside it, the old system's invoice number, a note for
+ * the team that bills nothing.
  */
 export function NewBookingBilling({
   agentId,
@@ -26,9 +25,7 @@ export function NewBookingBilling({
   totalSen: number | null;
   className?: string;
 }) {
-  const [legacy, setLegacy] = useState("");
-  const typed = legacy.trim() !== "";
-  const key = totalSen === null ? null : `${agentId}:${typed}:${totalSen}`;
+  const key = totalSen === null ? null : `${agentId}:${totalSen}`;
   const [answer, setAnswer] = useState<{ key: string; text: string } | null>(
     null,
   );
@@ -38,11 +35,7 @@ export function NewBookingBilling({
     let live = true;
     const timer = setTimeout(async () => {
       const result = await answerOf(
-        previewNewBillingAction({
-          agentId,
-          legacy: typed,
-          chargedSen: totalSen,
-        }),
+        previewNewBillingAction({ agentId, chargedSen: totalSen }),
       );
       if (live) {
         setAnswer({
@@ -55,21 +48,19 @@ export function NewBookingBilling({
       live = false;
       clearTimeout(timer);
     };
-  }, [key, agentId, typed, totalSen]);
+  }, [key, agentId, totalSen]);
 
   const sentence = answer && answer.key === key ? answer.text : null;
   return (
     <div className={cx("grid gap-2", className)}>
       <Field
-        label="Legacy invoice number"
-        hint="Optional. Only when the old system billed it already: HT1223."
+        label="Old invoice number"
+        hint="Optional. A note for the team, such as HT1223. It bills nothing."
       >
         <Input
           name={LEGACY_INVOICE_FIELD}
           maxLength={LEGACY_INVOICE_MAX}
           autoComplete="off"
-          value={legacy}
-          onChange={(event) => setLegacy(event.currentTarget.value)}
         />
       </Field>
       <p className="text-caption text-muted" aria-live="polite">

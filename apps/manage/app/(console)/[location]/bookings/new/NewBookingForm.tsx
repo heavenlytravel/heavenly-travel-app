@@ -73,9 +73,9 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * detail that changes mid-call is one click away and nothing entered is
  * lost. The summary beside the steps keeps the customer, each trip with
  * its price and what it is made of, the total and the button in view; an
- * agreed price is set there, per trip. The booking is made confirmed;
- * above the button, what making it bills, and a legacy invoice number
- * when the old system billed it already. The server prices every trip again and applies the agreed
+ * agreed price is set there, per trip. The booking is made confirmed or
+ * saved as received; above the buttons, what confirming it bills, and the
+ * old system's invoice number, a note. The server prices every trip again and applies the agreed
  * prices itself. Opened in a location, its place fields suggest that
  * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
@@ -462,24 +462,33 @@ export function NewBookingForm({
                 />
                 <Button
                   type="submit"
+                  name="confirm"
+                  value="1"
                   disabled={missing !== null}
                   pending={create.pending}
                 >
                   {create.pending
                     ? "Creating…"
                     : [
-                        "Create booking",
+                        "Create and confirm",
                         totalSen !== null ? formatMyr(totalSen) : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
+                </Button>
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={missing !== null || create.pending}
+                >
+                  Save as received
                 </Button>
               </>
             }
             missing={missing}
             error={create.error}
             cancelHref={bookingsHref(scope)}
-            foot="The booking and every trip are confirmed at once, ready for Assign."
+            foot="Create and confirm: the booking and every trip are confirmed, ready for Assign, and its invoice opens. Save as received: confirm it later on its page; nothing is billed until then."
           />
         </aside>
       </div>

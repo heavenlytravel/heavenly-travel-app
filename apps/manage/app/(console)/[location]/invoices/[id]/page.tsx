@@ -92,12 +92,14 @@ async function invoiceScreen(id: string) {
   ]);
   if (!doc) notFound();
   const draft = doc.status === "draft";
+  // A booking's open invoice: one booking, nothing to tick.
+  const run = draft && !doc.open;
   const issued = doc.status === "issued";
   const credit = doc.type === "credit";
-  const title = draft ? "Draft invoice" : doc.label;
+  const title = doc.open ? "Open invoice" : draft ? "Draft invoice" : doc.label;
   const ticked = doc.lines.filter((l) => l.ticked);
   const draftTotal = ticked.reduce(
-    (sum, l) => sum + Math.max(0, l.amountSen),
+    (sum, l) => sum + (doc.open ? l.amountSen : Math.max(0, l.amountSen)),
     0,
   );
   const livePaid = doc.payments
@@ -128,6 +130,8 @@ async function invoiceScreen(id: string) {
               invoiceId={doc.id}
               total={formatMyr(draftTotal)}
               ticked={ticked.length}
+              open={doc.open}
+              credit={draftTotal < 0}
             />
           ) : issued ? (
             <>
@@ -178,7 +182,15 @@ async function invoiceScreen(id: string) {
           ) : null}
         </Notice>
       ) : null}
-      {draft ? (
+      {doc.open ? (
+        <Notice className="mb-5">
+          The booking's open invoice: it follows the booking, so each change to
+          it moves the amount, and nothing is numbered yet. It is issued when
+          the trip is done or the booking cancelled, or now with Issue. Less
+          than nothing is a credit to give: issued as a credit note.
+        </Notice>
+      ) : null}
+      {run ? (
         <Notice className="mb-5">
           Tick the bookings this invoice bills. Each shows what it would bill
           now; issuing gives the number and freezes the amounts. Unticked
@@ -193,29 +205,27 @@ async function invoiceScreen(id: string) {
               <CardTitle
                 inset
                 meta={
-                  draft
-                    ? `${ticked.length} of ${doc.lines.length} ticked`
-                    : null
+                  run ? `${ticked.length} of ${doc.lines.length} ticked` : null
                 }
               >
                 {draft ? "Bookings" : "Lines"}
               </CardTitle>
               <Table bare>
                 <THead>
-                  {draft ? <Th /> : null}
+                  {run ? <Th /> : null}
                   <Th>Booking</Th>
                   <Th align="right">Amount</Th>
                 </THead>
                 <TBody>
                   {doc.lines.length === 0 ? (
-                    <EmptyRow colSpan={draft ? 3 : 2}>No lines.</EmptyRow>
+                    <EmptyRow colSpan={run ? 3 : 2}>No lines.</EmptyRow>
                   ) : (
                     doc.lines.map((line) => (
                       <tr
                         key={line.id}
-                        className={cx(draft && !line.ticked && "text-muted")}
+                        className={cx(run && !line.ticked && "text-muted")}
                       >
-                        {draft ? (
+                        {run ? (
                           <Td className="w-10">
                             <DraftTick
                               invoiceId={doc.id}
@@ -252,7 +262,7 @@ async function invoiceScreen(id: string) {
                     ))
                   )}
                   <tr className="border-t border-hairline">
-                    {draft ? <Td /> : null}
+                    {run ? <Td /> : null}
                     <Td className="font-semibold text-ink">Total</Td>
                     <MoneyCell sen={draft ? draftTotal : doc.totalSen} strong />
                   </tr>

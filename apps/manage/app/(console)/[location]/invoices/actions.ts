@@ -8,7 +8,7 @@ import {
   textOf,
 } from "@repo/db";
 import {
-  billBookingAlone,
+  billBookingNow,
   deleteDraft,
   issueDraft,
   recordPayment,
@@ -28,8 +28,8 @@ import { revalidateLocation } from "../../../_lib/revalidate";
 import { invoiceHref, invoicesHref } from "../../../_lib/routes";
 
 /**
- * Finance's moves on invoices and credit notes (`invoices.manage`): bill
- * a booking alone, tick and issue a month-end draft, void and reissue,
+ * Finance's moves on invoices and credit notes (`invoices.manage`): issue
+ * what a booking owes now, in full or a part, tick and issue a month-end draft, void and reissue,
  * record a payment or a refund, reverse a wrong entry. Each re-checks the
  * session and the key. Amounts are never typed on an invoice: they come
  * from its bookings. See docs/261108-billing-and-revisions.md.
@@ -39,8 +39,11 @@ async function finance() {
   return getAdmin("invoices.manage");
 }
 
-/** Bills a booking's unbilled amount on its own invoice now, and opens it. */
-export async function billAloneAction(
+/**
+ * Issues what a booking has not been billed yet, now: an invoice, or credit
+ * notes for less. An amount typed bills part of it (a deposit); empty, all.
+ */
+export async function billNowAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -48,7 +51,17 @@ export async function billAloneAction(
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
   if (!bookingId) return STALE;
-  const result = await billBookingAlone(actorOf(admin), bookingId);
+  const typed = textOf(formData.get("amount"));
+  const amount = typed === "" ? undefined : parseRinggit(typed);
+  if (amount === null) {
+    return {
+      error: "Enter the amount in RM, such as 350.00.",
+      field: "amount",
+    };
+  }
+  const result = await billBookingNow(actorOf(admin), bookingId, {
+    amountSen: amount,
+  });
   if (!result.ok) return refusalOf(result);
   revalidateLocation();
   return null;

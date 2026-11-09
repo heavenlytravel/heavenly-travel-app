@@ -1,46 +1,56 @@
 import {
+  ADVANCE_PERMISSIONS,
+  AMEND_WARNING_TEXT,
   BOOKING_RULES,
   bookingLabelOf,
-  bookingNumberRows,
-  ADVANCE_PERMISSIONS,
   customerEmailOf,
-  formatInvoiceNumber,
+  entriesSeenBy,
+  formatLocalDate,
   formatLocalDateTime,
   formatMyr,
-  isPaymentStatus,
   fullName,
+  isRevisionKind,
   itemHeading,
+  itemQuoteSen,
   ITEM_STATUS_LABELS,
   nextItemStatusOf,
   phoneHrefOf,
   priceBreakdownOf,
   priceRows,
+  REVISION_KIND_LABELS,
+  stopsOf,
   TRIP_MODE_LABELS,
   tripDetailRows,
+  tripHeadline,
   tripViewOfItem,
   whatsappHrefOf,
+  type AmendWarning,
   type ItemStatus,
   type Permission,
   type Place,
-  entriesSeenBy,
 } from "@repo/db";
 import {
+  billingPreviewOf,
+  bookingBillingOf,
   getBookingFulfilment,
   isAmendable,
   listActivityFor,
+  listAgents,
   listBookingNotes,
+  listRevisions,
   listTripEvents,
-  invoicePreviewOf,
   type ActivityEntry,
+  type BookingBilling,
   type BookingItemWithDetails,
   type BookingWithItems,
 } from "@repo/db/server";
+import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { CheckIcon, MessageCircleIcon, PhoneIcon } from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Card, CardTitle } from "@repo/console/Card";
+import { Card, CardRow, CardRows, CardTitle } from "@repo/console/Card";
 import { Notice } from "@repo/ui/notice";
 import { placeAddress, Rows } from "@repo/ui/rows";
 import { DetailColumns } from "@repo/console/PageColumn";
@@ -53,8 +63,9 @@ import {
 import {
   BookingStatusBadge,
   ItemStatusBadge,
-  PaymentStatusBadge,
+  PaymentStateBadge,
 } from "@repo/console/StatusBadges";
+import { DocumentStateBadge } from "../../../../_components/InvoiceTable";
 import {
   HistoryCard,
   HistoryLink,
@@ -63,19 +74,24 @@ import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
   addTripHref,
+  agentHref,
   amendItemHref,
   bookingHref,
+  invoiceHref,
   recordHistoryHref,
+  revisionHref,
   type ScopeSlug,
 } from "../../../../_lib/routes";
 import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
-import { CancelBookingControl, ItemActions } from "./BookingControls";
+import { BillAloneControl } from "../../agents/_components/AgentControls";
+import { ItemActions } from "./BookingControls";
+import { BookingAgentControl, LegacyInvoiceControl } from "./BillingControls";
+import { ChangeBookingMenu, type ChangeTrip } from "./ChangeBooking";
 import { Notes } from "./Notes";
 import { TripReports } from "../../assign/TripReports";
 import { WhoDoesIt } from "./WhoDoesIt";
 import { EditContactControl } from "./EditContact";
-import { GiveInvoiceForm, PaymentControl } from "./InvoiceControls";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -117,54 +133,85 @@ function bookedLine(
   const where = bookingLocations(booking)
     .map((location) => location.name)
     .join(", ");
-  return [
-    `${by}, ${formatLocalDateTime(booking.createdAt)}`,
-    where,
-    // The customer's reference, which they look the booking up by.
-    bookingLabelOf(booking) !== booking.reference
-      ? `Ref ${booking.reference}`
-      : null,
-  ]
+  return [`${by}, ${formatLocalDateTime(booking.createdAt)}`, where]
     .filter(Boolean)
     .join(" · ");
 }
 
 /**
- * One booking for ops, under its reference: who made it, when and where,
- * then who does its trips and what its drivers reported, then a card per
- * trip with its steps, its stops and details, its price
- * and what may be done to it; beside them the booking's summary, the
- * customer, the staff's notes and the last of its history. "History" and
- * "Cancel booking" stand in the header. Every team opens it; the controls
- * follow what the admin may do. It opens under `~` and under any location
- * a trip picks up in; under another location it is not found.
+ * One booking for ops, under its number (HTB-1042): who made it, when and
+ * where, then who does its trips and what its drivers reported, then a
+ * card per trip with its steps, its stops and details and its price, and
+ * the booking's revisions; beside them the booking's summary, its
+ * billing, the customer, the staff's notes and the last of its history.
+ * "History" and "Change booking" stand in the header; every change is
+ * made there, and says what it bills before it is saved. After an amend
+ * that no longer fits what is assigned, the page says so (`warn`). Every
+ * team opens it; the controls follow what the admin may do. It opens
+ * under `~` and under any location a trip picks up in; under another
+ * location it is not found.
  */
 export async function bookingScreen({
   id,
   scope,
+  warn = [],
 }: {
   id: string;
   scope: ConsoleScope;
+  warn?: readonly AmendWarning[];
 }) {
-  const [booking, permissions, notes, entries, fulfilment] = await Promise.all([
-    scopedBooking(id, scope),
-    getPermissions(),
-    listBookingNotes(id),
-    listActivityFor("booking", id),
-    getBookingFulfilment(id),
+  const [booking, permissions, notes, entries, fulfilment, billing, revisions] =
+    await Promise.all([
+      scopedBooking(id, scope),
+      getPermissions(),
+      listBookingNotes(id),
+      listActivityFor("booking", id),
+      getBookingFulfilment(id),
+      bookingBillingOf(id),
+      listRevisions(id),
+    ]);
+  const [events, agents, confirming] = await Promise.all([
+    listTripEvents(fulfilment.map((trip) => trip.id)),
+    permissions.includes("bookings.manage")
+      ? listAgents()
+      : Promise.resolve([]),
+    booking.status === "received"
+      ? billingPreviewOf(id, booking.priceTotalSen, { confirms: true })
+      : Promise.resolve(null),
   ]);
-  const events = await listTripEvents(fulfilment.map((trip) => trip.id));
   const canFulfil = permissions.includes("bookings.fulfil");
   const href = bookingHref(scope.slug, booking.id);
-  const open = booking.status !== "cancelled" && booking.status !== "completed";
+  const label = bookingLabelOf(booking);
+  const manage = permissions.includes("bookings.manage");
+  const cancelled = booking.status === "cancelled";
 
   const summary: [string, ReactNode][] = [
     ["Status", <BookingStatusBadge key="s" status={booking.status} />],
     ["Trips", String(booking.items.length)],
     ["Booked", formatLocalDateTime(booking.createdAt)],
+    [
+      "Agent",
+      <span key="a" className="flex flex-wrap items-center justify-end gap-x-2">
+        {booking.business ? (
+          <Link
+            href={agentHref(booking.business.id)}
+            className="hover:underline"
+          >
+            {booking.business.name}
+          </Link>
+        ) : (
+          <span className="font-normal text-muted">None</span>
+        )}
+        {manage && !cancelled ? (
+          <BookingAgentControl
+            bookingId={booking.id}
+            agentId={booking.business?.id ?? null}
+            agents={agents}
+          />
+        ) : null}
+      </span>,
+    ],
   ];
-  if (booking.agent) summary.push(["Agent", booking.agent.name]);
-  summary.push(...bookingNumberRows(booking));
   if (booking.confirmedAt) {
     summary.push(["Confirmed", formatLocalDateTime(booking.confirmedAt)]);
   }
@@ -176,6 +223,9 @@ export async function bookingScreen({
       }`,
     ]);
   }
+  for (const charge of booking.charges.filter((c) => c.itemId === null)) {
+    summary.push([charge.label, formatMyr(charge.amountSen)]);
+  }
   summary.push([
     "Total",
     <strong key="t" className="font-bold text-ink">
@@ -183,31 +233,74 @@ export async function bookingScreen({
     </strong>,
   ]);
 
+  const trips: ChangeTrip[] = booking.items.map((item) => {
+    const view = tripViewOfItem(item);
+    return {
+      id: item.id,
+      position: item.position,
+      headline: view ? tripHeadline(view) : itemHeading(item),
+      priceSen: item.priceTotalSen,
+      stops: stopsOf(item.tripDetails?.stops).map((s) => s.place.label),
+      amendHref:
+        manage && view !== null && isAmendable(item)
+          ? amendItemHref(scope.slug, booking.id, item.id)
+          : null,
+      open: isAmendable(item),
+      live: item.status !== "cancelled",
+    };
+  });
+  const keptOnCancelSen =
+    booking.items
+      .filter((item) => item.status === "completed")
+      .reduce((sum, item) => sum + item.priceTotalSen, 0) +
+    booking.charges.reduce((sum, c) => sum + c.amountSen, 0);
+
   return (
     <>
       <PageHeader
-        title={bookingLabelOf(booking)}
+        title={label}
         badge={<BookingStatusBadge status={booking.status} />}
         meta={bookedLine(booking, entries)}
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
-            {booking.status !== "cancelled" &&
-            booking.items.length < BOOKING_RULES.maxTripsPerBooking &&
-            permissions.includes("bookings.manage") ? (
-              <Button asChild variant="secondary" size="sm">
-                <Link href={addTripHref(scope.slug, booking.id)}>Add trip</Link>
-              </Button>
-            ) : null}
-            {open && permissions.includes("bookings.manage") ? (
-              <CancelBookingControl
+            {cancelled ? null : (
+              <ChangeBookingMenu
                 bookingId={booking.id}
-                reference={bookingLabelOf(booking)}
+                label={label}
+                chargedSen={booking.priceTotalSen}
+                keptOnCancelSen={keptOnCancelSen}
+                trips={trips}
+                addTripHref={
+                  manage &&
+                  booking.items.length < BOOKING_RULES.maxTripsPerBooking
+                    ? addTripHref(scope.slug, booking.id)
+                    : null
+                }
+                rights={{
+                  manage,
+                  price: permissions.includes("bookings.create"),
+                  extras: manage || canFulfil,
+                }}
+                cancellable={booking.status !== "completed"}
               />
-            ) : null}
+            )}
           </>
         }
       />
+
+      {warn.length > 0 ? (
+        <Notice className="mb-5">
+          <span className="block font-semibold">
+            The vehicle and the driver stay on the trip.
+          </span>
+          {warn.map((w) => (
+            <span key={w} className="block">
+              {AMEND_WARNING_TEXT[w]}
+            </span>
+          ))}
+        </Notice>
+      ) : null}
 
       <DetailColumns
         main={
@@ -229,11 +322,17 @@ export async function bookingScreen({
               <TripCard
                 key={item.id}
                 item={item}
-                reference={bookingLabelOf(booking)}
+                charges={booking.charges.filter((c) => c.itemId === item.id)}
                 permissions={permissions}
                 scope={scope.slug}
+                confirmBills={confirming?.sentence ?? null}
               />
             ))}
+            <RevisionsCard
+              scope={scope.slug}
+              bookingId={booking.id}
+              revisions={revisions}
+            />
           </>
         }
         side={
@@ -242,14 +341,15 @@ export async function bookingScreen({
               <CardTitle>Booking</CardTitle>
               <Rows rows={summary} className="text-sm" />
             </Card>
-            <InvoiceCard
-              booking={booking}
-              editable={permissions.includes("bookings.payment")}
-            />
-            <CustomerCard
-              booking={booking}
-              editable={permissions.includes("bookings.manage")}
-            />
+            {billing ? (
+              <BillingCard
+                booking={booking}
+                billing={billing}
+                finance={permissions.includes("invoices.manage")}
+                manage={manage}
+              />
+            ) : null}
+            <CustomerCard booking={booking} editable={manage} />
             {permissions.includes("bookings.notes") ? (
               <Card>
                 <CardTitle meta="Staff only">Notes</CardTitle>
@@ -267,65 +367,234 @@ export async function bookingScreen({
   );
 }
 
-/** Who the booking is for, with the ways to reach them: a call, WhatsApp and the email; "Edit" for Reservation. */
 /**
- * The booking's invoice: its number, the agent's it is a line of, and
- * whether it is paid, switched by Reservation, Sales or Finance. A
- * confirmed booking from before invoice numbers is given one here; one
- * not confirmed yet shows nothing.
+ * The booking's billing: its invoices and credit notes, each with what it
+ * bills this booking and where it stands, what it charges against what is
+ * billed, and what is not invoiced yet; Finance bills that alone. A
+ * booking with a legacy number says it is billed outside the system; one
+ * not confirmed yet, that it is billed when confirmed.
  */
-async function InvoiceCard({
+function BillingCard({
   booking,
-  editable,
+  billing,
+  finance,
+  manage,
 }: {
   booking: BookingWithItems;
-  editable: boolean;
+  billing: BookingBilling;
+  finance: boolean;
+  manage: boolean;
 }) {
-  const { invoice } = booking;
-  if (!invoice) {
-    const invoiceable =
-      booking.status === "confirmed" || booking.status === "completed";
-    if (!invoiceable || !editable) return null;
-    const preview = await invoicePreviewOf(booking);
-    return (
-      <Card>
-        <CardTitle meta="Not invoiced yet">Invoice</CardTitle>
-        {preview.ok ? (
-          <GiveInvoiceForm bookingId={booking.id} preview={preview.preview} />
-        ) : (
-          <p className="text-sm text-muted">{preview.error}</p>
-        )}
-      </Card>
-    );
-  }
-  const number = formatInvoiceNumber(invoice.number, null);
-  const shared = booking.invoiceLine !== null;
-  const rows: [string, ReactNode][] = [
-    ["Number", number],
-    ...(shared
-      ? [["Line", String(booking.invoiceLine)] as [string, ReactNode]]
-      : []),
-    ["Payment", <PaymentStatusBadge key="p" status={invoice.paymentStatus} />],
-  ];
+  const label = bookingLabelOf(booking);
+  const legacyControl = manage ? (
+    <LegacyInvoiceControl
+      bookingId={booking.id}
+      value={billing.legacy}
+      billedHere={billing.documents.some((d) => d.status === "issued")}
+    />
+  ) : null;
   return (
-    <Card>
-      <CardTitle meta={shared && booking.agent ? booking.agent.name : null}>
-        Invoice
+    <Card flush>
+      <CardTitle
+        inset
+        meta={
+          billing.money ? (
+            <PaymentStateBadge state={billing.money.state} />
+          ) : null
+        }
+        action={billing.legacy === null ? legacyControl : null}
+      >
+        Billing
       </CardTitle>
-      <Rows rows={rows} className="text-sm" />
-      {editable ? (
-        <div className="mt-4">
-          <PaymentControl
-            bookingId={booking.id}
-            status={
-              isPaymentStatus(invoice.paymentStatus)
-                ? invoice.paymentStatus
-                : null
-            }
-            shared={shared ? number : null}
-          />
+      {billing.legacy !== null ? (
+        <div className="grid gap-2 px-5 pb-4">
+          <p className="text-sm">
+            <span className="font-semibold text-ink">
+              Billed outside the system
+            </span>
+            <span className="block text-muted">
+              Legacy invoice {billing.legacy}. Its changes are billed in
+              Finance&apos;s sheet.
+            </span>
+          </p>
+          <div>{legacyControl}</div>
         </div>
-      ) : null}
+      ) : booking.confirmedAt === null && billing.documents.length === 0 ? (
+        <p className="px-5 pb-4 text-sm text-muted">
+          {booking.status === "cancelled"
+            ? "Cancelled before it was confirmed: nothing was billed."
+            : "Billed when it is confirmed."}
+        </p>
+      ) : (
+        <>
+          {billing.documents.length > 0 ? (
+            <CardRows>
+              {billing.documents.map((doc) => (
+                <CardRow
+                  key={doc.id}
+                  className="items-start justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-ink">
+                      {finance ? (
+                        <Link
+                          href={invoiceHref(doc.id)}
+                          className="hover:underline"
+                        >
+                          {doc.label}
+                        </Link>
+                      ) : (
+                        doc.label
+                      )}
+                    </span>
+                    <span className="block text-caption text-muted">
+                      {[
+                        doc.type === "credit"
+                          ? `Credit note${doc.credits ? ` on ${doc.credits}` : ""}`
+                          : (doc.period ?? null),
+                        doc.issuedAt ? formatLocalDate(doc.issuedAt) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
+                  <span className="grid shrink-0 justify-items-end gap-1">
+                    <span className="tabular-nums">
+                      {formatMyr(doc.amountSen)}
+                    </span>
+                    {doc.type === "invoice" ? (
+                      <DocumentStateBadge
+                        status={doc.status}
+                        money={doc.money}
+                      />
+                    ) : null}
+                  </span>
+                </CardRow>
+              ))}
+            </CardRows>
+          ) : null}
+          <div className="grid gap-3 border-t border-hairline px-5 py-4">
+            <Rows
+              className="text-sm"
+              rows={[
+                ["Charged", formatMyr(booking.priceTotalSen)],
+                ["Billed", formatMyr(billing.billedSen)],
+                ...(billing.money
+                  ? ([
+                      ["Paid", formatMyr(billing.money.paidSen)],
+                      [
+                        billing.money.balanceSen < 0 ? "To refund" : "Balance",
+                        <strong key="b" className="font-bold text-ink">
+                          {formatMyr(Math.abs(billing.money.balanceSen))}
+                        </strong>,
+                      ],
+                    ] as [string, ReactNode][])
+                  : []),
+              ]}
+            />
+            {billing.unbilledSen !== 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+                <span>
+                  <span className="font-semibold">
+                    Not invoiced yet: {formatMyr(billing.unbilledSen)}
+                  </span>
+                  <span className="block text-caption">
+                    {billing.draft
+                      ? `On the draft${billing.draft.period ? ` for ${billing.draft.period}` : ""}.`
+                      : billing.credit
+                        ? "Waits for the agent's month-end invoice."
+                        : "Its invoice was voided, or it is waiting to be billed."}
+                  </span>
+                </span>
+                {finance && !billing.draft && billing.unbilledSen > 0 ? (
+                  <BillAloneControl
+                    bookingId={booking.id}
+                    label={label}
+                    amount={formatMyr(billing.unbilledSen)}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Every state the booking went through, oldest first: Rev 1 as booked,
+ * then each change with its kind, the customer's line, the total after it,
+ * who made it and when. Each opens the booking as it stood, read only.
+ */
+function RevisionsCard({
+  scope,
+  bookingId,
+  revisions,
+}: {
+  scope: ScopeSlug;
+  bookingId: string;
+  revisions: Awaited<ReturnType<typeof listRevisions>>;
+}) {
+  if (revisions.length === 0) return null;
+  return (
+    <Card flush>
+      <CardTitle inset meta={`${revisions.length}`}>
+        Revisions
+      </CardTitle>
+      <ol>
+        {[...revisions].reverse().map((revision, index, list) => {
+          const before = list[index + 1];
+          const difference = before
+            ? revision.chargedSen - before.chargedSen
+            : null;
+          return (
+            <li
+              key={revision.id}
+              className="border-t border-hairline first:border-t-0"
+            >
+              <Link
+                href={revisionHref(scope, bookingId, revision.number)}
+                className="grid grid-cols-[3.25rem_1fr_auto] items-start gap-3 px-5 py-3 text-sm hover:bg-hover focus-ring"
+              >
+                <span className="font-semibold text-ink tabular-nums">
+                  Rev {revision.number}
+                </span>
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <Badge>
+                      {isRevisionKind(revision.kind)
+                        ? REVISION_KIND_LABELS[revision.kind]
+                        : revision.kind}
+                    </Badge>
+                    <span className="text-body">{revision.summary}</span>
+                  </span>
+                  <span className="mt-0.5 block text-caption text-muted">
+                    {formatLocalDateTime(revision.createdAt)}
+                    {revision.reason ? ` · ${revision.reason}` : ""}
+                  </span>
+                </span>
+                <span className="text-right tabular-nums">
+                  <span className="block font-semibold text-ink">
+                    {formatMyr(revision.chargedSen)}
+                  </span>
+                  {difference !== null && difference !== 0 ? (
+                    <span
+                      className={cx(
+                        "block text-caption",
+                        difference > 0 ? "text-muted" : "text-success",
+                      )}
+                    >
+                      {difference > 0 ? "+" : "−"}
+                      {formatMyr(Math.abs(difference))}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
     </Card>
   );
 }
@@ -417,21 +686,26 @@ export function CustomerCard({
   );
 }
 
-/** One trip of a booking: its title and status, its steps, its stops and details, its price and its actions. */
+/** One trip of a booking: its title and status, its steps, its stops and details, its price and its next step. */
 function TripCard({
   item,
-  reference,
+  charges,
   permissions,
   scope,
+  confirmBills,
 }: {
   item: BookingItemWithDetails;
-  reference: string;
+  /** The trip's charges besides its price. */
+  charges: readonly { id: string; label: string; amountSen: number }[];
   permissions: readonly Permission[];
   scope: ScopeSlug;
+  /** What confirming bills, while the booking is received. */
+  confirmBills: string | null;
 }) {
   const next = nextItemStatusOf(item.status);
   const trip = tripViewOfItem(item);
   const details = item.tripDetails;
+  const stops = stopsOf(details?.stops);
 
   const rows: [string, ReactNode][] = details
     ? tripDetailRows(details).filter(([label]) => label !== "Vehicle")
@@ -461,43 +735,46 @@ function TripCard({
     ]);
   }
 
-  // The receipt, then the agreed price when one replaces it. The receipt's
-  // total stays on record next to what is charged.
+  // The receipt, each stop's addition, then the agreed price when one
+  // replaces the quote. The quote stays on record next to what is charged.
   const receipt = priceBreakdownOf(item.priceBreakdown);
-  const override =
-    item.priceOverrideSen !== null && item.priceOverrideReason !== null
-      ? { totalSen: item.priceOverrideSen, reason: item.priceOverrideReason }
-      : null;
+  const quote = itemQuoteSen(item);
+  const agreed = item.priceTotalSen !== quote;
   const price: [string, ReactNode][] = receipt ? priceRows(receipt) : [];
-  if (override) {
-    if (receipt) price.push(["Quoted price", formatMyr(receipt.totalSen)]);
+  for (const stop of stops) {
+    if (stop.quoteAddSen > 0) {
+      price.push([
+        `Stop at ${stop.place.label}`,
+        `+${formatMyr(stop.quoteAddSen)}`,
+      ]);
+    }
+  }
+  if (agreed) {
+    price.push(["Quoted price", formatMyr(quote)]);
     price.push([
       "Agreed price",
       <span key="o">
-        <span className="block">{formatMyr(override.totalSen)}</span>
-        <span className="block text-xs font-normal text-muted">
-          {override.reason}
-        </span>
+        <span className="block">{formatMyr(item.priceTotalSen)}</span>
+        {item.priceOverrideReason ? (
+          <span className="block text-xs font-normal text-muted">
+            {item.priceOverrideReason}
+          </span>
+        ) : null}
       </span>,
     ]);
   }
+  for (const charge of charges) {
+    price.push([charge.label, formatMyr(charge.amountSen)]);
+  }
+  const chargesSen = charges.reduce((sum, c) => sum + c.amountSen, 0);
   price.push([
     "Total",
     <strong key="t" className="font-bold text-ink">
-      {formatMyr(item.priceTotalSen)}
+      {formatMyr(
+        (item.status === "cancelled" ? 0 : item.priceTotalSen) + chargesSen,
+      )}
     </strong>,
   ]);
-  const canPrice =
-    permissions.includes("bookings.create") &&
-    item.status !== "cancelled" &&
-    item.status !== "completed";
-  // A trip can be amended until it is done or cancelled; amending one
-  // with a vehicle or driver asked for, or assigned, lets them go, to ask
-  // again.
-  const canAmend =
-    permissions.includes("bookings.manage") &&
-    trip !== null &&
-    isAmendable(item);
 
   return (
     <Card flush>
@@ -525,12 +802,24 @@ function TripCard({
             <Stop
               place={trip.pickup}
               first
-              last={!trip.dropoff}
+              last={!trip.dropoff && stops.length === 0}
               line={[
                 formatLocalDateTime(trip.startsAt),
                 trip.hours !== null ? `${trip.hours} hours` : null,
               ]}
             />
+            {stops.map((stop, index) => (
+              <Stop
+                key={`${stop.place.placeId}-${index}`}
+                place={stop.place}
+                first={false}
+                last={!trip.dropoff && index === stops.length - 1}
+                line={[
+                  "Stop",
+                  stop.waitMinutes > 0 ? `wait ${stop.waitMinutes} min` : null,
+                ]}
+              />
+            ))}
             {trip.dropoff ? (
               <Stop
                 place={trip.dropoff}
@@ -538,7 +827,7 @@ function TripCard({
                 last
                 line={[
                   trip.distanceKm !== null
-                    ? `${trip.distanceKm.toFixed(1)} km by road`
+                    ? `${trip.distanceKm.toFixed(1)} km by road${stops.length > 0 ? " without stops" : ""}`
                     : null,
                 ]}
               />
@@ -553,15 +842,10 @@ function TripCard({
       <ItemActions
         itemId={item.id}
         status={item.status}
-        label={`${reference} trip ${item.position}`}
         canAdvance={
           next !== null && permissions.includes(ADVANCE_PERMISSIONS[next])
         }
-        canCancel={permissions.includes("bookings.manage")}
-        amendHref={
-          canAmend ? amendItemHref(scope, item.bookingId, item.id) : null
-        }
-        price={canPrice ? { current: override } : undefined}
+        confirmBills={confirmBills}
       />
     </Card>
   );

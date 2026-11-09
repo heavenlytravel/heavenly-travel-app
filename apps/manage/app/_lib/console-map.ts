@@ -184,6 +184,32 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     ],
   },
   {
+    key: "billing",
+    label: "Billing",
+    icon: "billing",
+    group: "selling",
+    pages: [
+      {
+        key: "agents",
+        label: "Agents",
+        path: "agents",
+        icon: "agents",
+        permission: "bookings.view",
+        wide: true,
+        words: "travel agents business credit terms payment terms",
+      },
+      {
+        key: "invoices",
+        label: "Invoices",
+        path: "invoices",
+        icon: "invoices",
+        permission: "invoices.manage",
+        wide: true,
+        words: "finance credit notes payments refunds month-end run overdue",
+      },
+    ],
+  },
+  {
     key: "coverage",
     label: "Coverage",
     icon: "coverage",

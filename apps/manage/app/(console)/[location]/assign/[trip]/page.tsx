@@ -236,6 +236,8 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   candidates={candidates.filter(
                     (c) => c.vendor.id === part.offer.vendor.id,
                   )}
+                  payLines={trip.payLines.filter((line) => line.role === role)}
+                  tripClassId={trip.vehicleClassId}
                 />
               );
             })}

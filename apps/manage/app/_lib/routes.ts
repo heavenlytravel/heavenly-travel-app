@@ -131,8 +131,6 @@ export type BookingsListFilter = {
   to?: string;
   /** An agent's id, or `DIRECT` for the bookings that came direct. */
   agent?: string;
-  /** Where the invoice's payment stands: a `PaymentStatus`. */
-  payment?: string;
   /** Car with driver or coach charter: a `TripCategory`. */
   service?: string;
   /** A vehicle class's id. */
@@ -167,7 +165,6 @@ export function bookingsHref(
     [DATE_PARAM]: filter.date,
     [DATE_TO_PARAM]: filter.date ? filter.to : undefined,
     agent: filter.agent,
-    payment: filter.payment,
     service: filter.service,
     class: filter.class,
     trip: filter.trip,
@@ -176,7 +173,7 @@ export function bookingsHref(
   });
 }
 
-/** One booking, by id: the customer site uses the reference; ops uses the id. */
+/** One booking, by id: the customer site uses its number; ops uses the id. */
 export function bookingHref(scope: ScopeSlug, id: string) {
   return consolePath(scope, "bookings", id);
 }
@@ -186,12 +183,21 @@ export function newBookingHref(scope: ScopeSlug) {
   return consolePath(scope, "bookings", "new");
 }
 
-/** The form that amends one item of a booking: its trip, vehicle and details. */
+/** One revision of a booking, by its number, read only: the booking as it stood. */
+export function revisionHref(
+  scope: ScopeSlug,
+  bookingId: string,
+  number: number,
+) {
+  return `${bookingHref(scope, bookingId)}/revisions/${number}`;
+}
+
 /** The form adding a trip to a booking. */
 export function addTripHref(scope: ScopeSlug, bookingId: string) {
   return `${bookingHref(scope, bookingId)}/add-trip`;
 }
 
+/** The form that amends one item of a booking: its trip, vehicle and details. */
 export function amendItemHref(
   scope: ScopeSlug,
   bookingId: string,
@@ -320,6 +326,56 @@ export function guideHref(scope: ScopeSlug, id: string) {
 /** A new tour guide; under a slug, based there. */
 export function newGuideHref(scope: ScopeSlug) {
   return consolePath(scope, "fleet", "guides", "new");
+}
+
+/* Billing */
+
+/** The agents, active first: a status or a search. Console-wide. */
+export function agentsHref(filter: { status?: string; q?: string } = {}) {
+  return listHref(consolePath(null, "agents"), {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/** One agent, by id; "new" for Add agent. */
+export function agentHref(id: string) {
+  return consolePath(null, "agents", id);
+}
+export const NEW_AGENT_HREF = agentHref("new");
+
+/** What Finance's list narrows to, each a field of its address. */
+export type InvoicesListFilter = {
+  /** "invoice" or "credit". */
+  type?: string;
+  /** An `InvoiceStatus`. */
+  status?: string;
+  /** A `PaymentState`. */
+  state?: string;
+  /** A business's id. */
+  agent?: string;
+  /** "1" for those owed past their due date. */
+  overdue?: string;
+  q?: string;
+  page?: number;
+};
+
+/** Finance's list of invoices and credit notes, newest first. Console-wide. */
+export function invoicesHref(filter: InvoicesListFilter = {}) {
+  return listHref(consolePath(null, "invoices"), {
+    type: filter.type,
+    status: filter.status,
+    state: filter.state,
+    agent: filter.agent,
+    overdue: filter.overdue,
+    [SEARCH_PARAM]: filter.q,
+    [PAGE_PARAM]: pageParam(filter.page),
+  });
+}
+
+/** One invoice, credit note or draft, by id. */
+export function invoiceHref(id: string) {
+  return consolePath(null, "invoices", id);
 }
 
 /** The parameter of a vehicle's, a driver's or a guide's add page naming the vendor it starts with. */

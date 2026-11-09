@@ -137,7 +137,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   // What suspending takes it off, read for SUPER while it can be suspended.
   const held =
     reviews && status === "active"
-      ? await heldBookingsOf({ vendorId: id }, "number")
+      ? await heldBookingsOf({ vendorId: id })
       : [];
 
   return (

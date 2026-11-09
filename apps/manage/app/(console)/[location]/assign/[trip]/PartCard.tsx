@@ -12,6 +12,8 @@ import {
   partWaitingOf,
   type PartRole,
 } from "@repo/db";
+import type { PayLine } from "@repo/db/server";
+import { Notice } from "@repo/ui/notice";
 import type { Candidate, TripPartView } from "@repo/db/server";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Badge } from "@repo/ui/badge";
@@ -59,6 +61,8 @@ export function PartCard({
   positions,
   itemIds,
   candidates,
+  payLines,
+  tripClassId,
 }: {
   bookingId: string;
   role: PartRole;
@@ -71,7 +75,15 @@ export function PartCard({
   itemIds: string[];
   /** The vendor's own vehicles, drivers or guides, to name the one it chose. */
   candidates: Candidate[];
+  /** What revisions added to this role's pay on this trip: a stop, a late charge. */
+  payLines: readonly PayLine[];
+  /** The class the trip asks for now: a vehicle of another, after an amend, is warned of. */
+  tripClassId: string | null;
 }) {
+  const otherClass =
+    part.vehicle !== null &&
+    tripClassId !== null &&
+    part.vehicle.vehicleModel.vehicleClassId !== tripClassId;
   const vendor = part.offer.vendor;
   const named = namedOf(part);
   const waiting = partWaitingOf(part, vendor.isOurs);
@@ -98,13 +110,31 @@ export function PartCard({
     ],
   ];
   // The vehicle's pay goes to its vendor; a driver's or guide's to them.
-  if (!vendor.isOurs) {
-    rows.push([
+  // Ours pays nothing for the part; its driver is paid the additions.
+  const added = payLines.reduce((sum, line) => sum + line.amountSen, 0);
+  if (!vendor.isOurs || payLines.length > 0) {
+    const pay =
       role === "vehicle"
         ? "Pay vendor"
-        : `Pay ${PART_ROLE_LABELS[role].toLowerCase()}`,
-      formatMyr(part.costSen),
-    ]);
+        : `Pay ${PART_ROLE_LABELS[role].toLowerCase()}`;
+    if (payLines.length === 0) {
+      rows.push([pay, formatMyr(part.costSen)]);
+    } else {
+      rows.push([
+        pay,
+        <span key="pay" className="grid justify-items-end gap-0.5">
+          <span className="text-caption font-normal text-muted">
+            Base {formatMyr(part.costSen)}
+          </span>
+          {payLines.map((line, index) => (
+            <span key={index} className="text-caption font-normal text-muted">
+              +{formatMyr(line.amountSen)} {line.reason}
+            </span>
+          ))}
+          <span>{formatMyr(part.costSen + added)}</span>
+        </span>,
+      ]);
+    }
   }
   if (part.tipSen > 0) rows.push(["Driver tip", formatMyr(part.tipSen)]);
   if (vendorWaits) {
@@ -123,6 +153,12 @@ export function PartCard({
       >
         {PART_ROLE_LABELS[role]}
       </CardTitle>
+      {otherClass ? (
+        <Notice className="mb-3">
+          The trip was changed to another class: this vehicle is of the old one.
+          Release it and send one of the new class.
+        </Notice>
+      ) : null}
       <Rows rows={rows} className="text-sm" />
       <div className="mt-4 flex flex-wrap items-start gap-2">
         {!named ? (

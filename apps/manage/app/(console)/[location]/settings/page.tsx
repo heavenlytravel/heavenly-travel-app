@@ -56,6 +56,7 @@ import { DeleteLocation } from "./DeleteLocation";
 import { LocationDetailsForm } from "./LocationDetailsForm";
 import { SetupBar } from "./SetupBar";
 import { SafetyBufferForm } from "./SafetyBufferForm";
+import { StopPayForm } from "./StopPayForm";
 import { StateMove } from "./StateMove";
 
 /**
@@ -388,6 +389,21 @@ async function locationSettings({
           <SafetyBufferForm
             locationId={location.id}
             minutes={location.safetyBufferMinutes}
+          />
+        </Card>
+      ) : null}
+      {may("coverage.manage") ? (
+        <Card>
+          <CardTitle>
+            <span className="inline-flex items-center gap-1.5">
+              Stop Pay
+              <InfoTip text="What a stop added to a trip here suggests for its driver: pay for the extra road, plus a fee a stop. Staff can change it on each stop." />
+            </span>
+          </CardTitle>
+          <StopPayForm
+            locationId={location.id}
+            perKmSen={location.driverPayPerKmSen}
+            feeSen={location.stopFeeSen}
           />
         </Card>
       ) : null}

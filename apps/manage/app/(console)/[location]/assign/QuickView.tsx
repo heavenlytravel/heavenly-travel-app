@@ -24,7 +24,7 @@ export function QuickViewButton({
   href,
 }: {
   bookingId: string;
-  /** How the booking is named: its number, else its reference. */
+  /** How the booking is named: its number, HTB-1042. */
   label: string;
   /** The booking's page, in the scope the Assign page is in. */
   href: string;

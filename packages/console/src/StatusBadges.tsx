@@ -4,19 +4,25 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_STATE_LABELS,
   PAGE_STATUS_LABELS,
-  PAYMENT_STATUS_LABELS,
+  INVOICE_STATUS_LABELS,
+  PAYMENT_STATE_LABELS,
+  BUSINESS_STATUS_LABELS,
   VENDOR_STATUS_LABELS,
   isBookingStatus,
   isItemStatus,
   isLocationState,
-  isPaymentStatus,
+  isInvoiceStatus,
+  isPaymentState,
+  isBusinessStatus,
   isVendorStatus,
   type AssignState,
   type BookingStatus,
   type ItemStatus,
   type LocationState,
   type PageStatus,
-  type PaymentStatus,
+  type BusinessStatus,
+  type InvoiceStatus,
+  type PaymentState,
   type VendorStatus,
 } from "@repo/db";
 import { Badge, type BadgeTone } from "@repo/ui/badge";
@@ -106,23 +112,57 @@ export function ItemStatusBadge({ status }: { status: string }) {
 }
 
 /**
- * Where an invoice's payment stands: pending waits (amber), partly paid is
- * under way (brand blue), fully paid is done (green), pay later is agreed
- * (navy).
+ * Where an invoice's money stands, worked out from its payments: owed
+ * and waiting (amber), owed past its due date (red, a real problem),
+ * partly in (brand blue), all in (green), nothing owed (grey), and money
+ * to give back (navy).
  */
-export const PAYMENT_TONES: Record<PaymentStatus, BadgeTone> = {
-  pending: "amber",
-  partial: "brand",
+export const PAYMENT_STATE_TONES: Record<PaymentState, BadgeTone> = {
+  unpaid: "amber",
+  overdue: "red",
+  "partially-paid": "brand",
   paid: "green",
-  "pay-later": "navy",
+  "nothing-due": "neutral",
+  "refund-due": "navy",
 };
 
-/** A booking's invoice, paid or not. */
-export function PaymentStatusBadge({ status }: { status: string }) {
-  if (!isPaymentStatus(status)) return <Badge>{status}</Badge>;
+/** An invoice's, or a booking's, money: unpaid, overdue, partly paid, paid, nothing due, refund due. */
+export function PaymentStateBadge({ state }: { state: string }) {
+  if (!isPaymentState(state)) return <Badge>{state}</Badge>;
   return (
-    <Badge dot tone={PAYMENT_TONES[status]}>
-      {PAYMENT_STATUS_LABELS[status]}
+    <Badge dot tone={PAYMENT_STATE_TONES[state]}>
+      {PAYMENT_STATE_LABELS[state]}
+    </Badge>
+  );
+}
+
+/** A document's own step: a draft not numbered yet (amber), issued (brand blue), void (grey). */
+export const INVOICE_STATUS_TONES: Record<InvoiceStatus, BadgeTone> = {
+  draft: "amber",
+  issued: "brand",
+  void: "neutral",
+};
+
+export function InvoiceStatusBadge({ status }: { status: string }) {
+  if (!isInvoiceStatus(status)) return <Badge>{status}</Badge>;
+  return (
+    <Badge dot tone={INVOICE_STATUS_TONES[status]}>
+      {INVOICE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export const BUSINESS_STATUS_TONES: Record<BusinessStatus, BadgeTone> = {
+  active: "green",
+  inactive: "neutral",
+};
+
+/** An agent taking bookings (green) or not (grey); either is still billed. */
+export function BusinessStatusBadge({ status }: { status: string }) {
+  if (!isBusinessStatus(status)) return <Badge>{status}</Badge>;
+  return (
+    <Badge dot tone={BUSINESS_STATUS_TONES[status]}>
+      {BUSINESS_STATUS_LABELS[status]}
     </Badge>
   );
 }

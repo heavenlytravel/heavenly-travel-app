@@ -15,6 +15,7 @@ import type { Permission } from "./permissions";
 /** The areas, in the order the Activity filter offers them. */
 export const ACTIVITY_AREAS = [
   "bookings",
+  "billing",
   "fleet",
   "coverage",
   "pages",
@@ -28,6 +29,7 @@ export const isActivityArea = guardFor(ACTIVITY_AREAS);
 
 export const ACTIVITY_AREA_LABELS: Record<ActivityArea, string> = {
   bookings: "Bookings",
+  billing: "Invoices and payments",
   fleet: "Fleet",
   coverage: "Coverage and rates",
   pages: "Pages",
@@ -41,6 +43,8 @@ export const ACTIVITY_AREA_LABELS: Record<ActivityArea, string> = {
 export const ACTIVITY_AREA_PERMISSIONS: Record<ActivityArea, Permission> = {
   // Bookings, their trips and their notes.
   bookings: "bookings.view",
+  // Invoices, credit notes, payments and month-end runs.
+  billing: "invoices.manage",
   // Vendors, vehicles and drivers.
   fleet: "fleet.manage",
   // Classes, coverage, zones, rates and their rules.
@@ -91,6 +95,23 @@ const AREA_OF = {
   "booking.contact.updated": "bookings",
   "booking.invoiced": "bookings",
   "booking.payment.updated": "bookings",
+  "booking.revised": "bookings",
+  "booking.billed": "bookings",
+  "booking.stop.added": "bookings",
+  "booking.charge.added": "bookings",
+  "booking.business.changed": "bookings",
+  "booking.legacy.changed": "bookings",
+  "invoice.issued": "billing",
+  "invoice.drafted": "billing",
+  "invoice.draft.deleted": "billing",
+  "invoice.voided": "billing",
+  "payment.recorded": "billing",
+  "payment.refunded": "billing",
+  "payment.reversed": "billing",
+  "business.created": "bookings",
+  "business.updated": "bookings",
+  "business.terms.changed": "bookings",
+  "business.status.changed": "bookings",
   "user.created": "team",
   "user.updated": "team",
   "user.email.changed": "team",
@@ -145,6 +166,7 @@ const AREA_OF = {
   "location.reach.updated": "coverage",
   // Operation sets it beside the rules: the time kept free after a job.
   "location.buffer.updated": "coverage",
+  "location.stop-pay.updated": "coverage",
   "location.weekend.updated": "coverage",
   "vendor.created": "fleet",
   "vendor.updated": "fleet",

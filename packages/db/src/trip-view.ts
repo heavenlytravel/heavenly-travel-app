@@ -14,6 +14,7 @@ import {
 } from "./hourly-input";
 import { formatMyr } from "./money";
 import { isPlace, type Place } from "./place";
+import { stopsOf } from "./stops";
 import {
   CHARGE_LABELS,
   WEEKEND_REASON_LABELS,
@@ -29,6 +30,8 @@ import {
 export type TripView = {
   mode: TripMode;
   pickup: Place;
+  /** The places it stops at on the way, in order: A to C by B is one trip. */
+  stops: Place[];
   dropoff: Place | null;
   startsAt: Date;
   /** Hourly: the hours it runs, the package's plus the extra. */
@@ -46,6 +49,8 @@ export type TripItemLike = {
   tripDetails: {
     mode: string;
     pickupPlace: unknown;
+    /** Its stops, as ./stops keeps them; left out by a query that does not read them. */
+    stops?: unknown;
     dropoffPlace: unknown;
     hours: number | null;
     distanceKm: number | null;
@@ -64,6 +69,7 @@ export function tripViewOfItem(item: TripItemLike): TripView | null {
   return {
     mode,
     pickup: details.pickupPlace,
+    stops: stopsOf(details.stops).map((stop) => stop.place),
     dropoff: isPlace(details.dropoffPlace) ? details.dropoffPlace : null,
     startsAt: item.startsAt,
     hours: details.hours,
@@ -105,12 +111,16 @@ export function itemSummary(item: {
     : heading;
 }
 
-/** The trip in one line, for lists: "KLIA to Kuala Lumpur", "Penang, 4 hours" or "Penang, 4 hours, to KLIA". */
+/** The trip in one line, for lists: "KLIA to Kuala Lumpur", "KLIA to Kuah by Cenang", "Penang, 4 hours" or "Penang, 4 hours, to KLIA". */
 export function tripHeadline(trip: TripView) {
+  const by =
+    trip.stops.length > 0
+      ? ` by ${trip.stops.map((stop) => stop.label).join(", ")}`
+      : "";
   if (trip.hours === null || trip.mode === "oneway") {
     return trip.dropoff
-      ? `${trip.pickup.label} to ${trip.dropoff.label}`
-      : trip.pickup.label;
+      ? `${trip.pickup.label} to ${trip.dropoff.label}${by}`
+      : `${trip.pickup.label}${by}`;
   }
   const hire = `${trip.pickup.label}, ${trip.hours} hours`;
   return trip.dropoff ? `${hire}, to ${trip.dropoff.label}` : hire;
@@ -138,6 +148,7 @@ export function tripRows(trip: TripView): DetailRow[] {
     ["Trip", TRIP_MODE_LABELS[trip.mode]],
     ["Pick-up", trip.pickup],
   ];
+  for (const stop of trip.stops) rows.push(["Stop", stop]);
   if (trip.dropoff) rows.push(["Drop-off", trip.dropoff]);
   rows.push(["Pick-up time", formatLocalDateTime(trip.startsAt)]);
   if (trip.hours !== null) {

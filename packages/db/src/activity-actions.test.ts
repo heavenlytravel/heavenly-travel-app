@@ -378,6 +378,12 @@ describe("activityActionMeta", () => {
     "booking.contact.updated",
     "booking.invoiced",
     "booking.payment.updated",
+    "booking.revised",
+    "booking.billed",
+    "booking.stop.added",
+    "booking.charge.added",
+    "booking.business.changed",
+    "booking.legacy.changed",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

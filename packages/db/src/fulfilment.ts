@@ -44,7 +44,7 @@ import { modelName } from "./vehicle-model-input";
 
 /** A live trip with what fulfilment reads of it. */
 export const tripInclude = {
-  booking: { select: { id: true, reference: true } },
+  booking: { select: BOOKING_NUMBER_SELECT },
   tripDetails: {
     select: {
       vehicleClassId: true,
@@ -75,7 +75,7 @@ export function jobOf(trip: TripRow): Job {
     at: [place.lng, place.lat] as [number, number],
   });
   return {
-    reference: trip.booking.reference,
+    bookingLabel: bookingLabelOf(trip.booking),
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     driveMinutes: details?.driveMinutes ?? null,
@@ -135,7 +135,9 @@ const partInclude = {
       id: true,
       plate: true,
       colour: true,
-      vehicleModel: { select: { brand: true, name: true } },
+      vehicleModel: {
+        select: { brand: true, name: true, vehicleClassId: true },
+      },
     },
   },
   driver: {
@@ -172,7 +174,12 @@ export type FulfilmentTrip = {
   job: Job;
   parts: TripPartView[];
   assigned: boolean;
+  /** What revisions added to each role's pay: "+RM40 stop at Pantai Cenang". */
+  payLines: PayLine[];
 };
+
+/** An addition to a role's pay, from a revision. A role's pay is its part's cost plus these. */
+export type PayLine = { role: string; amountSen: number; reason: string };
 
 /** A booking's trips with who does each, for its page and the assign panel. */
 export async function getBookingFulfilment(
@@ -182,7 +189,14 @@ export async function getBookingFulfilment(
   const items = await db.bookingItem.findMany({
     where: { bookingId },
     orderBy: { position: "asc" },
-    include: { ...tripInclude, parts: { include: partInclude } },
+    include: {
+      ...tripInclude,
+      parts: { include: partInclude },
+      payLines: {
+        orderBy: { createdAt: "asc" },
+        select: { role: true, amountSen: true, reason: true },
+      },
+    },
   });
   return items.map((item) => ({
     id: item.id,
@@ -200,6 +214,7 @@ export async function getBookingFulfilment(
     job: jobOf(item),
     parts: item.parts,
     assigned: tripAssigned(item.parts, hasGuide(item.tripDetails)),
+    payLines: item.payLines,
   }));
 }
 
@@ -228,7 +243,7 @@ export type Candidate = {
    * per trip, so a clash on trip 3 greys it on trip 3 alone.
    */
   trips: Record<string, TripFit>;
-  /** Its other jobs on the trips' days: "08:00 HT-7K3QZM Airport → Datai, until 08:45". */
+  /** Its other jobs on the trips' days: "08:00 HTB-1042 Airport → Datai, until 08:45". */
   day: string[];
 };
 
@@ -237,13 +252,13 @@ function daysOf(jobs: readonly Job[]) {
   return new Set(jobs.map((job) => todayInMalaysia(job.startsAt)));
 }
 
-/** "08:00 HT-7K3QZM Airport → Datai, until 08:45". */
+/** "08:00 HTB-1042 Airport → Datai, until 08:45". */
 function dayLine(job: Job) {
   const where = job.dropoff
     ? `${job.pickup.label} → ${job.dropoff.label}`
     : job.pickup.label;
   const ends = job.endsAt ? `until ${formatLocalTime(job.endsAt)}` : "one-way";
-  return `${formatLocalTime(job.startsAt)} ${job.reference} ${where}, ${ends}`;
+  return `${formatLocalTime(job.startsAt)} ${job.bookingLabel} ${where}, ${ends}`;
 }
 
 /** A document expired on any of the days: "Road tax expired". */
@@ -668,8 +683,7 @@ export async function assignBooking(
     const booking = await tx.booking.findUnique({
       where: { id: input.bookingId },
       select: {
-        id: true,
-        reference: true,
+        ...BOOKING_NUMBER_SELECT,
         items: {
           where: { status: { in: ["confirmed", "assigned"] } },
           orderBy: { position: "asc" },
@@ -1097,7 +1111,7 @@ export type ReleaseCause =
  * Lets parts go, reopening their trips: the parts are deleted, their
  * offers marked when nothing of them is left, and the release logged per
  * booking. Inside the caller's transaction. Answers the bookings touched,
- * by reference.
+ * by number.
  */
 export async function releaseParts(
   tx: Prisma.TransactionClient,
@@ -1121,9 +1135,9 @@ export async function releaseParts(
     list.push(part);
     byBooking.set(part.item.bookingId, list);
   }
-  const references: string[] = [];
+  const labels: string[] = [];
   for (const [bookingId, list] of byBooking) {
-    references.push(list[0]!.item.booking.reference);
+    labels.push(bookingLabelOf(list[0]!.item.booking));
     for (const role of PART_ROLES) {
       const ofRole = list.filter((p) => p.role === role);
       if (ofRole.length === 0) continue;
@@ -1147,7 +1161,7 @@ export async function releaseParts(
     );
   }
   await settleTrips(tx, actor, [...new Set(parts.map((p) => p.itemId))]);
-  return references;
+  return labels;
 }
 
 /** Operation lets a trip's part go, or every part of a booking. */
@@ -1367,12 +1381,10 @@ export type HeldBooking = { label: string; startsAt: Date };
 
 /**
  * The accepted, coming bookings a vendor or a record holds, soonest first,
- * each named by its number (manage) or its reference (Connect, which
- * names a booking as the customer does).
+ * each named by its number.
  */
 export async function heldBookingsOf(
   where: { vendorId: string } | NamedWhere,
-  named: "number" | "reference",
 ): Promise<HeldBooking[]> {
   const parts = await db.tripPart.findMany({
     where: {
@@ -1386,7 +1398,7 @@ export async function heldBookingsOf(
       item: {
         select: {
           startsAt: true,
-          booking: { select: { id: true, ...BOOKING_NUMBER_SELECT } },
+          booking: { select: BOOKING_NUMBER_SELECT },
         },
       },
     },
@@ -1396,10 +1408,7 @@ export async function heldBookingsOf(
   for (const { item } of parts) {
     if (!seen.has(item.booking.id)) {
       seen.set(item.booking.id, {
-        label:
-          named === "number"
-            ? bookingLabelOf(item.booking)
-            : item.booking.reference,
+        label: bookingLabelOf(item.booking),
         startsAt: item.startsAt,
       });
     }

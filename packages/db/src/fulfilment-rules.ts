@@ -150,8 +150,8 @@ export function tripWindow(trip: TripTimes): {
 
 /** A job a vehicle or a driver has, or is asked for: its times and its two ends. */
 export type Job = TripTimes & {
-  /** The booking's reference, to name it: "HT-7K3QZM". */
-  reference: string;
+  /** The booking's number, to name it: "HTB-1042". */
+  bookingLabel: string;
   pickup: { label: string; at: LngLat };
   /** Null for an hourly hire, which ends where it started for all we know. */
   dropoff: { label: string; at: LngLat } | null;
@@ -191,12 +191,12 @@ export function firstClash(
   return null;
 }
 
-/** A sentence for a clash, naming the other job: "Has HT-7K3QZM from 09:00, an hourly hire until 13:00". */
+/** A sentence for a clash, naming the other job: "Has HTB-1042 from 09:00, an hourly hire until 13:00". */
 export function clashSentence(clash: JobClash) {
   const at = formatLocalTime(clash.job.startsAt);
   return clash.kind === "same-time"
-    ? `Has ${clash.job.reference} at the same time, ${at}`
-    : `Has ${clash.job.reference} from ${at}, an hourly hire until ${formatLocalTime(clash.job.endsAt!)}`;
+    ? `Has ${clash.job.bookingLabel} at the same time, ${at}`
+    : `Has ${clash.job.bookingLabel} from ${at}, an hourly hire until ${formatLocalTime(clash.job.endsAt!)}`;
 }
 
 /** The drive between two jobs: Google's when asked for, else the straight line's estimate. */
@@ -215,7 +215,7 @@ export const ESTIMATED_DRIVE: DriveBetween = (from, to) => ({
  * The warnings on taking these jobs with those held: where one job ends,
  * the drive to the next one's pickup and the location's buffer reach past
  * that pickup. They rest on estimates, so they never refuse; whoever
- * accepts sees them and owns the timing. "Ali finishes HT-7K3QZM at Datai
+ * accepts sees them and owns the timing. "Ali finishes HTB-1042 at Datai
  * about 08:45. Cenang is about 60 min away, so he arrives about 09:45 for
  * a 09:00 pickup."
  */
@@ -251,7 +251,7 @@ export function timingWarnings(
     const buffer =
       bufferMinutes > 0 ? ` and a ${bufferMinutes} min buffer` : "";
     warnings.push(
-      `${who} finishes ${before.job.reference} at ${endPlace} ${about}${formatLocalTime(ends.end)}. ${next.job.pickup.label} is ${legAbout}${leg.minutes} min away${buffer}, so ${who === "It" ? "it" : "they"} would be ready ${about || legAbout ? "about " : ""}${formatLocalTime(arrives)} for ${next.job.reference}'s ${formatLocalTime(next.job.startsAt)} pickup.`,
+      `${who} finishes ${before.job.bookingLabel} at ${endPlace} ${about}${formatLocalTime(ends.end)}. ${next.job.pickup.label} is ${legAbout}${leg.minutes} min away${buffer}, so ${who === "It" ? "it" : "they"} would be ready ${about || legAbout ? "about " : ""}${formatLocalTime(arrives)} for ${next.job.bookingLabel}'s ${formatLocalTime(next.job.startsAt)} pickup.`,
     );
   }
   return warnings;

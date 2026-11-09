@@ -1,6 +1,6 @@
 /**
  * What a list's search box typed, read the way the lists match it: the
- * bookings by reference, customer and contact, the vehicles by plate and
+ * bookings by number, customer and contact, the vehicles by plate and
  * model, the drivers by name and phone, the admins by name and email.
  * Pure and browser-safe; the readers build their queries from these.
  */

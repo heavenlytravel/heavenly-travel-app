@@ -1,4 +1,11 @@
-import { isPaymentStatus, PAYMENT_STATUS_LABELS } from "./booking-number";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_TERMS_LABELS,
+  isPaymentMethod,
+  isPaymentTerms,
+} from "./billing-rules";
+import { BUSINESS_FIELD_LABELS } from "./business-input";
+import { REVISION_KIND_LABELS, isRevisionKind } from "./revision-rules";
 import { guardFor } from "./const-enum";
 import { LOCATION_FIELD_LABELS } from "./location-input";
 import { andList } from "./names";
@@ -86,6 +93,8 @@ export const ACTIVITY_ENTITY_TYPES = [
   "media",
   "site-page",
   "vendor",
+  "business",
+  "invoice",
 ] as const;
 export type ActivityEntityType = (typeof ACTIVITY_ENTITY_TYPES)[number];
 export const isActivityEntityType = guardFor(ACTIVITY_ENTITY_TYPES);
@@ -146,17 +155,54 @@ const ACTIONS = {
     customerVisible: false,
   },
   /**
-   * Staff gave a booking from before invoice numbers its invoice: `invoice`,
-   * its number as read ("HTI-1295-03"), and `oldInvoiceNumber` when typed.
+   * Old, before docs/261108-billing-and-revisions.md, written no more and
+   * kept so their entries still read: an invoice given to a booking, and
+   * the payment status set by hand.
    */
   "booking.invoiced": { entityType: "booking", customerVisible: false },
-  /**
-   * Staff changed where the invoice's payment stands: `paymentStatus`
-   * before and after, and `invoice`, its number, in `after`; an agent's
-   * invoice is every booking on it's.
-   */
   "booking.payment.updated": {
     entityType: "booking",
+    customerVisible: false,
+  },
+  /** A revision from Rev 2: its `revision` number, `kind`, `summary`, `chargedSen`, and staff's `reason`. */
+  "booking.revised": { entityType: "booking", customerVisible: false },
+  /** An invoice or a credit note issued with a line for the booking: `document` and `amountSen`. */
+  "booking.billed": { entityType: "booking", customerVisible: false },
+  /** A stop on a trip: its `position`, the `stop`, the wait, the quote added, the new price and the driver's pay. */
+  "booking.stop.added": { entityType: "booking", customerVisible: false },
+  /** A charge: its `kind`, `label`, `amountSen`, the trip's `position` and the driver's pay. */
+  "booking.charge.added": { entityType: "booking", customerVisible: false },
+  /** The agent it came through, by name, before and after; null for direct. */
+  "booking.business.changed": {
+    entityType: "booking",
+    customerVisible: false,
+  },
+  /** Its legacy invoice number, before and after; null for none. */
+  "booking.legacy.changed": { entityType: "booking", customerVisible: false },
+  /** An invoice or credit note issued: `document`, `totalSen`, `billTo`. */
+  "invoice.issued": { entityType: "invoice", customerVisible: false },
+  /** A month-end draft made: its `business`, `period` and how many `bookings`. */
+  "invoice.drafted": { entityType: "invoice", customerVisible: false },
+  "invoice.draft.deleted": { entityType: "invoice", customerVisible: false },
+  /** Voided with its `reason`. */
+  "invoice.voided": { entityType: "invoice", customerVisible: false },
+  /** Money in: `document`, `amountSen`, `method`, `paidOn`. */
+  "payment.recorded": { entityType: "invoice", customerVisible: false },
+  /** A refund out, `amountSen` below nothing, against a credit note. */
+  "payment.refunded": { entityType: "invoice", customerVisible: false },
+  /** A wrong payment entry reversed, with its `reason`. */
+  "payment.reversed": { entityType: "invoice", customerVisible: false },
+  /** An agent added: every field in `after`. */
+  "business.created": { entityType: "business", customerVisible: false },
+  /** Its profile, the fields changed before and after. */
+  "business.updated": { entityType: "business", customerVisible: false },
+  /** Its payment terms and days to pay, before and after, with the `reason`. */
+  "business.terms.changed": {
+    entityType: "business",
+    customerVisible: false,
+  },
+  "business.status.changed": {
+    entityType: "business",
     customerVisible: false,
   },
   /**
@@ -334,6 +380,11 @@ const ACTIONS = {
     entityType: "location",
     customerVisible: false,
   },
+  /** What a stop on a trip here suggests for its driver's pay: `driverPayPerKmSen` and `stopFeeSen`, null when none. */
+  "location.stop-pay.updated": {
+    entityType: "location",
+    customerVisible: false,
+  },
   /** The weekend and holiday surcharge, before and after; empty for none. */
   "location.weekend.updated": {
     entityType: "location",
@@ -349,7 +400,7 @@ const ACTIONS = {
   "vendor.approved": { entityType: "vendor", customerVisible: false },
   /** The reason in `after`. */
   "vendor.refused": { entityType: "vendor", customerVisible: false },
-  /** The reason, and the bookings it was taken off by reference in `released`. */
+  /** The reason, and the bookings it was taken off by number in `released`. */
   "vendor.suspended": { entityType: "vendor", customerVisible: false },
   "vendor.reinstated": { entityType: "vendor", customerVisible: false },
   /** `isOurs`, before and after. */
@@ -429,6 +480,14 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
   flightNumber: "the flight",
   tourGuide: "the tour guide",
   priceTotalSen: "the price",
+};
+
+/** The payment statuses set by hand before payments were recorded, for their old entries. */
+const OLD_PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  partial: "Partially paid",
+  paid: "Fully paid",
+  "pay-later": "Pay later",
 };
 
 /** What `describeActivity` reads of an entry. `before` and `after` are JSON. */
@@ -918,9 +977,10 @@ export function describeActivity(entry: DescribableActivity): string {
     case "booking.payment.updated": {
       const status = field(entry.after, "paymentStatus");
       const invoice = field(entry.after, "invoice");
-      const label = isPaymentStatus(status)
-        ? PAYMENT_STATUS_LABELS[status]
-        : "another status";
+      const label =
+        typeof status === "string" && status in OLD_PAYMENT_STATUS_LABELS
+          ? OLD_PAYMENT_STATUS_LABELS[status]
+          : "another status";
       return typeof invoice === "string"
         ? `Set invoice ${invoice} to ${label}`
         : `Set the invoice to ${label}`;
@@ -1194,6 +1254,17 @@ export function describeActivity(entry: DescribableActivity): string {
           ? `Set the safety buffer to ${minutes} min`
           : "Changed the safety buffer";
     }
+    case "location.stop-pay.updated": {
+      const perKm = field(entry.after, "driverPayPerKmSen");
+      const fee = field(entry.after, "stopFeeSen");
+      const parts = [
+        typeof perKm === "number" ? `${formatMyr(perKm)} a km` : null,
+        typeof fee === "number" ? `${formatMyr(fee)} a stop` : null,
+      ].filter(Boolean);
+      return parts.length > 0
+        ? `Set the driver's stop pay to ${parts.join(" and ")}`
+        : "Removed the driver's stop pay";
+    }
     case "location.weekend.updated": {
       const weekend = weekendIn(entry.after);
       return weekend
@@ -1244,6 +1315,141 @@ export function describeActivity(entry: DescribableActivity): string {
       return field(entry.after, "isOurs") === true
         ? "Made the vendor ours"
         : "Made the vendor not ours";
+    case "booking.revised": {
+      const kind = field(entry.after, "kind");
+      const summary = field(entry.after, "summary");
+      const number = field(entry.after, "revision");
+      const charged = field(entry.after, "chargedSen");
+      const what =
+        typeof summary === "string"
+          ? summary
+          : isRevisionKind(kind)
+            ? REVISION_KIND_LABELS[kind]
+            : "Changed the booking";
+      return [
+        typeof number === "number" ? `Rev ${number}: ${what}` : what,
+        typeof charged === "number" ? `total ${formatMyr(charged)}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    }
+    case "booking.billed": {
+      const document = String(field(entry.after, "document") ?? "a document");
+      const amount = field(entry.after, "amountSen");
+      return typeof amount === "number"
+        ? `Billed on ${document}, ${formatMyr(amount)}`
+        : `Billed on ${document}`;
+    }
+    case "booking.stop.added": {
+      const stop = String(field(entry.after, "stop") ?? "a place");
+      return `Added a stop at ${stop} to ${itemName(entry.after)}`;
+    }
+    case "booking.charge.added": {
+      const label = String(field(entry.after, "label") ?? "a charge");
+      const amount = field(entry.after, "amountSen");
+      return typeof amount === "number"
+        ? `Charged ${label}, ${formatMyr(amount)}`
+        : `Charged ${label}`;
+    }
+    case "booking.business.changed": {
+      const agent = field(entry.after, "agent");
+      return typeof agent === "string"
+        ? `Set the agent to ${agent}`
+        : "Made the booking direct, through no agent";
+    }
+    case "booking.legacy.changed": {
+      const value = field(entry.after, "legacyInvoiceNumber");
+      return typeof value === "string"
+        ? `Set the legacy invoice number to ${value}`
+        : "Removed the legacy invoice number";
+    }
+    case "invoice.issued": {
+      const document = String(field(entry.after, "document") ?? "");
+      const total = field(entry.after, "totalSen");
+      const to = field(entry.after, "billTo");
+      return [
+        `Issued ${document}`,
+        typeof to === "string" ? `to ${to}` : null,
+        typeof total === "number" ? `for ${formatMyr(total)}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+    case "invoice.drafted": {
+      const period = field(entry.after, "period");
+      return typeof period === "string"
+        ? `Made the draft for ${period}`
+        : "Made a month-end draft";
+    }
+    case "invoice.draft.deleted":
+      return "Deleted a month-end draft";
+    case "invoice.voided":
+      return withReason(
+        `Voided ${String(field(entry.after, "document") ?? "the document")}`,
+        entry.after,
+      );
+    case "payment.recorded":
+    case "payment.refunded": {
+      const amount = field(entry.after, "amountSen");
+      const method = field(entry.after, "method");
+      const how = isPaymentMethod(method)
+        ? ` by ${PAYMENT_METHOD_LABELS[method].toLowerCase()}`
+        : "";
+      const money =
+        typeof amount === "number" ? formatMyr(Math.abs(amount)) : "a payment";
+      return entry.action === "payment.refunded"
+        ? `Recorded a refund of ${money}${how}`
+        : `Recorded a payment of ${money}${how}`;
+    }
+    case "payment.reversed": {
+      const amount = field(entry.after, "amountSen");
+      return withReason(
+        typeof amount === "number"
+          ? `Reversed a payment of ${formatMyr(amount)}`
+          : "Reversed a payment",
+        entry.after,
+      );
+    }
+    case "business.created":
+      return "Added the agent";
+    case "business.updated": {
+      const after = entry.after;
+      const names =
+        after && typeof after === "object"
+          ? Object.keys(after).flatMap((key) =>
+              key in BUSINESS_FIELD_LABELS
+                ? [
+                    BUSINESS_FIELD_LABELS[
+                      key as keyof typeof BUSINESS_FIELD_LABELS
+                    ].toLowerCase(),
+                  ]
+                : [],
+            )
+          : [];
+      return names.length > 0
+        ? `Changed the ${andList(names)}`
+        : "Changed the agent";
+    }
+    case "business.terms.changed": {
+      const terms = field(entry.after, "paymentTerms");
+      const days = field(entry.after, "daysToPay");
+      return withReason(
+        [
+          "Changed the payment terms",
+          isPaymentTerms(terms)
+            ? `to ${PAYMENT_TERMS_LABELS[terms].toLowerCase()}`
+            : null,
+          typeof days === "number" ? `with ${days} days to pay` : null,
+        ]
+          .filter(Boolean)
+          .join(" "),
+        entry.after,
+      );
+    }
+    case "business.status.changed":
+      return field(entry.after, "status") === "inactive"
+        ? "Made the agent inactive"
+        : "Made the agent active";
     case "media.deleted": {
       const files = field(entry.before, "files");
       const count = Array.isArray(files) ? files.length : 0;

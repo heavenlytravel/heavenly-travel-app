@@ -7,23 +7,23 @@
 export const ACCOUNT_PATH = "/account";
 export const ACCOUNT_BOOKINGS_PATH = `${ACCOUNT_PATH}/bookings`;
 
-/** The page an account holder lands on after booking, and the link in their emails. */
-export function bookingPath(reference: string) {
-  return `/booking/${reference}`;
+/** The page an account holder lands on after booking, and the link in their emails: by its number, HTB-1042. */
+export function bookingPath(number: string) {
+  return `/booking/${number}`;
 }
 
 /**
- * The page a guest lands on after booking: the reference and where the
- * emails went, nothing else. `to` is the masked email, shown if present.
+ * The page a guest lands on after booking: the booking number and where
+ * the emails went, nothing else. `to` is the masked email, shown if present.
  */
-export function receivedPath(reference: string, to?: string) {
-  const path = `/booking/received/${reference}`;
+export function receivedPath(number: string, to?: string) {
+  const path = `/booking/received/${number}`;
   return to ? `${path}?to=${encodeURIComponent(to)}` : path;
 }
 
 /** The booking under My bookings, where it can be cancelled. */
-export function accountBookingPath(reference: string) {
-  return `${ACCOUNT_BOOKINGS_PATH}/${reference}`;
+export function accountBookingPath(number: string) {
+  return `${ACCOUNT_BOOKINGS_PATH}/${number}`;
 }
 
 /** Sign-in that comes back to `returnTo` afterwards. Clerk reads `redirect_url`. */

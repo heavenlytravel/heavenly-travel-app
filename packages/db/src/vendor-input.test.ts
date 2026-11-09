@@ -47,27 +47,19 @@ describe("parseVendorFields", () => {
         address: "Kuah, Langkawi",
         services: ["car-with-driver", "coach-charter"],
         locationIds: ["loc1", "loc2"],
-        invoicePeriod: "month",
         ...NO_BANK,
       },
     });
   });
 
-  it("takes no agent from a vendor signing up, which our team adds", () => {
-    const values = { ...FORM, invoicePeriod: "half-month" };
-    const staff = parseVendorFields(values, ["agent"], ["loc1"]);
-    assert.ok(staff.ok);
-    assert.deepEqual(staff.value.services, ["agent"]);
-    assert.equal(staff.value.invoicePeriod, "half-month");
-    const applicant = parseVendorFields(
-      values,
+  it("drops a service it does not know, an old agent included", () => {
+    const result = parseVendorFields(
+      FORM,
       ["agent", "coach-charter"],
       ["loc1"],
-      { applicant: true },
     );
-    assert.ok(applicant.ok);
-    assert.deepEqual(applicant.value.services, ["coach-charter"]);
-    assert.equal(applicant.value.invoicePeriod, "month");
+    assert.ok(result.ok);
+    assert.deepEqual(result.value.services, ["coach-charter"]);
   });
 
   it("needs a name, a kind, a contact who can be called and written to, a service and a location", () => {
@@ -88,11 +80,9 @@ describe("vendorFieldsOf", () => {
       ...NO_BANK,
       services: ["driver", "spa"],
       locations: [{ id: "loc2" }, { id: "loc1" }],
-      invoicePeriod: "fortnight",
     });
     assert.deepEqual(fields.locationIds, ["loc1", "loc2"]);
     assert.deepEqual(fields.services, ["driver"]);
-    assert.equal(fields.invoicePeriod, "month");
   });
 });
 

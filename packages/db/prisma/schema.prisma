@@ -126,9 +126,8 @@ model Vendor {
   /// It adds and is offered only what it ticked; "agent" sells our trips
   /// to its own customers and is never offered work.
   services          String[]  @default([])
-  /// An agent's invoice period, INVOICE_PERIODS: "month", one invoice a
-  /// month, or "half-month", one for the 1st to the 15th and one for the
-  /// rest. See src/booking-counter.ts.
+  /// Old, dropped by the next schema change: an agent's invoice period,
+  /// from when agents were vendors. Agents are `Business` rows now.
   invoicePeriod     String    @default("month")
   /// Why it was refused or suspended. Staff only.
   reviewNote        String?
@@ -146,7 +145,7 @@ model Vendor {
   drivers       Driver[]
   guides        Guide[]
   offers        VendorOffer[]
-  /// As an agent: the bookings it brought, and its invoices.
+  /// Old, dropped by the next schema change: as an agent.
   agentBookings Booking[]
   agentInvoices Invoice[]
 
@@ -328,6 +327,11 @@ model Location {
   /// Minutes a vehicle or driver is kept free after a job, on top of the
   /// drive to the next: roads differ by place. 0 turns it off.
   safetyBufferMinutes Int       @default(15)
+  /// What a stop added to a trip suggests for its driver's pay: this much
+  /// per extra km by road, plus `stopFeeSen` a stop. Entered by Operation;
+  /// null when not entered, and staff type the pay. See src/stop-pay.ts.
+  driverPayPerKmSen   Int?
+  stopFeeSen          Int?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -831,68 +835,111 @@ model TripEvent {
   @@index([itemId, at])
 }
 
+/// A business we sell to on account. Only agents for now; corporates and
+/// Biz members come with Biz (docs/261105-biz-business-accounts.md). Its
+/// bookings are billed to it, per booking or, on credit terms, by the
+/// month-end run. See src/businesses.ts and src/billing.ts.
+model Business {
+  id             String   @id @default(cuid())
+  /// BUSINESS_KINDS: "agent"
+  kind           String
+  name           String
+  /// "active" | "inactive": inactive takes no new bookings, is still billed.
+  status         String   @default("active")
+  /// The SSM number; empty when not given.
+  registrationNo String   @default("")
+  contactName    String
+  /// As src/phone.ts keeps it.
+  contactPhone   String
+  contactEmail   String
+  address        String   @default("")
+  /// PAYMENT_TERMS: "none", billed per booking when confirmed, or credit:
+  /// "month" or "half-month", billed by the month-end run.
+  paymentTerms   String
+  /// Days from an invoice's issue to its due date.
+  daysToPay      Int      @default(30)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bookings Booking[]
+  invoices Invoice[]
+
+  @@index([kind, status])
+}
+
 /// An order: one or more items, each one product on one day. `status` is
 /// derived from the items by `bookingStatusOf` and stored for filtering.
 /// The contact fields are copies, so a later profile change never rewrites
 /// a booking. A booking made by a signed-out visitor, or entered by staff
 /// for a customer with no account, has no user; it joins an account when
-/// one is first created with its email. See docs/261008-guest-booking.md.
+/// one is first created with its email. See docs/261008-guest-booking.md
+/// and docs/261108-billing-and-revisions.md.
 model Booking {
-  id            String    @id @default(cuid())
-  /// Short, random, human-readable: HT-7K3QZM. Used in emails and URLs.
-  reference     String    @unique
-  /// The quotation number, HTQ-0001, one running count by
-  /// `BookingNumberCounter`, for the quotations to come; none given yet.
-  /// See src/booking-number.ts.
-  quoteNumber   Int?      @unique
-  /// Its invoice, from when it is first confirmed: its own (HTI-1308), or
-  /// its agent's for the period its first trip is in, where it is a line
-  /// (HTI-1295-03). Null until given. See src/booking-counter.ts.
-  invoiceId     String?
-  invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
-  /// Its line on its agent's invoice, from 1; null on its own invoice.
-  invoiceLine   Int?
-  /// The agent it came through: a vendor offering "agent". Null for a
-  /// customer of ours.
-  agentId       String?
-  agent         Vendor?   @relation(fields: [agentId], references: [id])
-  /// Old: the invoice number before `invoiceId`, read by nothing now. Kept
-  /// one release, without its unique index, so the code still live while
-  /// the schema is pushed ahead of the merge goes on working; dropped by
-  /// the next schema change. db:set-agents numbers again from 1307.
-  invoiceNumber Int?
+  id                  String    @id @default(cuid())
+  /// The booking number, HTB-1042: its id everywhere, one running count by
+  /// `BookingNumberCounter` ("booking"), given when it is made. Null only
+  /// on rows from before it, until db:set-billing numbers them; required
+  /// by the next schema change. See src/booking-number.ts.
+  number              Int?      @unique
+  /// Old: the random reference (HT-7K3QZM), written only by the code
+  /// before booking numbers. Dropped by the next schema change.
+  reference           String?   @unique
+  /// Old, dropped by the next schema change: the quotation number (never
+  /// given), the invoice before `InvoiceLine`, its line on an agent's, the
+  /// agent as a vendor and the invoice number before `invoiceId`.
+  quoteNumber         Int?      @unique
+  invoiceId           String?
+  invoice             Invoice?  @relation("OldBookingInvoice", fields: [invoiceId], references: [id])
+  invoiceLine         Int?
+  agentId             String?
+  agent               Vendor?   @relation(fields: [agentId], references: [id])
+  invoiceNumber       Int?
+  /// The business it was sold through, billed for it: an agent. Null for a
+  /// customer of ours, billed in the booking's contact's name.
+  businessId          String?
+  business            Business? @relation(fields: [businessId], references: [id])
+  /// An invoice of the old system or of before this one, as staff typed it
+  /// (HT1223, HTI-1295-03): for reference, not unique. A booking with one
+  /// is billed outside the system: no invoice is ever made for it here.
+  legacyInvoiceNumber String?
   /// The account the booking shows under; null for a guest.
-  userId        String?
-  user          User?     @relation(fields: [userId], references: [id])
-  status        String
-  contactName   String
-  contactPhone  String
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id])
+  status              String
+  contactName         String
+  contactPhone        String
   /// Where the customer's emails go. Required of every new booking since
   /// docs/261008-guest-booking.md; null on older rows. Read through
   /// `customerEmailOf`, which falls back to the account's email for
   /// bookings made before this column existed.
-  contactEmail  String?
+  contactEmail        String?
   /// The address a website booking came from. Only for the rate limit;
   /// never shown. Null for bookings entered by staff.
-  createdIp     String?
-  /// Sum of the live (not cancelled) items.
-  priceTotalSen Int
-  currency      String    @default("MYR")
-  /// Earliest live item start, for sorting.
-  startsAt      DateTime
-  confirmedAt   DateTime?
-  cancelledAt   DateTime?
+  createdIp           String?
+  /// What the customer pays now: the live items, and every charge (a
+  /// cancelled trip's fee included). Rev by rev in `revisions`.
+  priceTotalSen       Int
+  currency            String    @default("MYR")
+  /// Earliest live item start, for sorting, and the first pick-up the
+  /// month-end run goes by.
+  startsAt            DateTime
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
   /// "customer" | "admin"
-  cancelledBy   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  cancelledBy         String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  items  BookingItem[]
-  notes  BookingNote[]
-  offers VendorOffer[]
+  items        BookingItem[]
+  notes        BookingNote[]
+  offers       VendorOffer[]
+  revisions    BookingRevision[]
+  charges      BookingCharge[]
+  invoiceLines InvoiceLine[]
 
   @@unique([invoiceId, invoiceLine])
   @@index([agentId, startsAt])
+  @@index([businessId, startsAt])
   @@index([userId, createdAt])
   @@index([status, startsAt])
   @@index([contactEmail, createdAt])
@@ -900,37 +947,192 @@ model Booking {
   @@index([createdAt])
 }
 
-/// An invoice: one booking's own, or an agent's for a period, holding
-/// each of its bookings in the period as a line. Its number is one running
-/// count by `BookingNumberCounter`, never started again: no year, since an
-/// invoice is often made long before its trip. HTI-1308 carries on the old
-/// system's HT1307; an old invoice keeps its number, typed by staff. See
-/// src/booking-counter.ts and docs/261102-booking-ops.md.
-model Invoice {
-  id            String    @id @default(cuid())
-  number        Int       @unique
-  /// The agent and the first day of its period ("2026-11-01"), both null
-  /// on a booking's own invoice.
-  agentId       String?
-  agent         Vendor?   @relation(fields: [agentId], references: [id])
-  periodStart   DateTime? @db.Date
-  /// PAYMENT_STATUSES: "pending" | "partial" | "paid" | "pay-later". Set by
-  /// staff for now, freely; payments
-  /// as their own records come with Finance's work.
-  paymentStatus String    @default("pending")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+/// One state of a booking, append only: Rev 1 is the booking as made, and
+/// every change to what we deliver, charge or pay writes the next. See
+/// src/revisions.ts.
+model BookingRevision {
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// 1, 2, 3 within the booking.
+  number      Int
+  /// REVISION_KINDS: "booked" | "change" | "add-trip" | "stop" | "add-on"
+  /// | "late-charge" | "discount" | "correction" | "cancel"
+  kind        String
+  /// Why, as staff gave it. Staff only.
+  reason      String?
+  /// The customer's line: "Stop at Pantai Cenang added".
+  summary     String
+  /// The booking as it stood: `RevisionSnapshot` in src/revisions.ts.
+  snapshot    Json
+  /// What the rates quoted for it: the live trips' quotes and the charges.
+  quotedSen   Int
+  /// What the customer pays at this revision.
+  chargedSen  Int
+  /// No relation, so the record outlives the account; null for the system.
+  createdById String?
+  createdAt   DateTime @default(now())
 
-  bookings Booking[]
+  invoiceLines InvoiceLine[]
+  payLines     ItemPayLine[]
+  charges      BookingCharge[]
 
-  @@unique([agentId, periodStart])
+  @@unique([bookingId, number])
 }
 
-/// The last booking number given, per kind ("quote" or "invoice"), one
-/// running count that never starts again. Taken one at a time inside the
-/// booking's transaction (`nextBookingNumber`), so two bookings never share
-/// one and a rolled-back booking leaves no gap. Set to the old system's
-/// last number when we switch over: `db:set-booking-numbers`.
+/// Something charged on a booking besides its trips' prices: an add-on, a
+/// late charge (toll, parking, overtime), a cancelled trip's fee. Never
+/// edited: a wrong one is taken off by a correction, a charge of minus
+/// the same.
+model BookingCharge {
+  id         String          @id @default(cuid())
+  bookingId  String
+  booking    Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// The trip it is for; null for the booking as a whole.
+  itemId     String?
+  item       BookingItem?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  revisionId String
+  revision   BookingRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  /// The customer's words: "Parking at KLIA", "Cancellation fee".
+  label      String
+  amountSen  Int
+  createdAt  DateTime        @default(now())
+
+  @@index([bookingId])
+}
+
+/// An addition to what we pay for a role of a trip, from a revision:
+/// "+RM40 stop at Pantai Cenang". The role's pay is its part's `costSen`
+/// plus these, whoever holds the role, so a new driver keeps the stop's
+/// pay. See src/stop-pay.ts.
+model ItemPayLine {
+  id         String          @id @default(cuid())
+  itemId     String
+  item       BookingItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// "vehicle" | "driver" | "guide"
+  role       String
+  revisionId String
+  revision   BookingRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  amountSen  Int
+  reason     String
+  createdAt  DateTime        @default(now())
+
+  @@index([itemId, role])
+}
+
+/// An invoice or a credit note, numbered per type when issued: HTI-0001,
+/// HTC-0001. Its amounts are its lines', each from a booking: its first
+/// bill, or a revision's difference. Issued, it never changes; a wrong one
+/// is voided with a reason. See src/billing.ts.
+///
+/// The old invoices (one per booking, or an agent's per period with each
+/// booking a line) are rows of this table too, with `agentId`,
+/// `paymentStatus` and `bookings`; db:set-billing moves their numbers into
+/// `Booking.legacyInvoiceNumber` and deletes them, and the next schema
+/// change drops those columns.
+model Invoice {
+  id           String    @id @default(cuid())
+  /// INVOICE_TYPES: "invoice" | "credit"
+  type         String    @default("invoice")
+  /// Per type, from its counter, when issued; null while a draft.
+  number       Int?
+  /// INVOICE_STATUSES: "draft" | "issued" | "void"
+  status       String    @default("issued")
+  /// The business billed; null for a customer of ours.
+  businessId   String?
+  business     Business? @relation(fields: [businessId], references: [id])
+  /// Who it is billed to, as at issue: `BillTo` in src/billing.ts.
+  billTo       Json      @default("{}")
+  /// A month-end run's period, its first and last day; null on a single
+  /// booking's invoice.
+  periodStart  DateTime? @db.Date
+  periodEnd    DateTime? @db.Date
+  /// A credit note's invoice.
+  creditsId    String?
+  credits      Invoice?  @relation("CreditNote", fields: [creditsId], references: [id])
+  creditNotes  Invoice[] @relation("CreditNote")
+  /// The invoice a void one was replaced by.
+  replacedById String?   @unique
+  replacedBy   Invoice?  @relation("Replacement", fields: [replacedById], references: [id])
+  replaces     Invoice?  @relation("Replacement")
+  /// Its lines' sum, frozen at issue; negative on a credit note.
+  totalSen     Int       @default(0)
+  issuedAt     DateTime?
+  dueAt        DateTime?
+  voidedAt     DateTime?
+  voidReason   String?
+  /// No relations, so the record outlives the accounts.
+  createdById  String?
+  issuedById   String?
+  voidedById   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  /// Old, dropped by the next schema change.
+  agentId       String?
+  agent         Vendor?   @relation(fields: [agentId], references: [id])
+  paymentStatus String    @default("pending")
+  bookings      Booking[] @relation("OldBookingInvoice")
+
+  @@unique([type, number])
+  @@unique([agentId, periodStart])
+  @@index([businessId, periodStart])
+  @@index([status, issuedAt])
+  @@index([creditsId])
+}
+
+/// What one booking adds to an invoice or a credit note. On a draft, a
+/// booking ticked or not, with no amount: issuing writes what the booking
+/// has not been billed yet. See src/billing.ts.
+model InvoiceLine {
+  id          String           @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  bookingId   String
+  booking     Booking          @relation(fields: [bookingId], references: [id])
+  /// The revision it bills up to; null on a draft's line.
+  revisionId  String?
+  revision    BookingRevision? @relation(fields: [revisionId], references: [id])
+  /// "HTB-1042 Rev 3: Stop at Pantai Cenang added".
+  description String           @default("")
+  amountSen   Int              @default(0)
+  /// A draft's line only: whether it goes on the invoice when issued.
+  ticked      Boolean          @default(true)
+
+  @@unique([invoiceId, bookingId])
+  @@index([bookingId])
+}
+
+/// Money in (positive) or a refund out (negative), against an invoice or
+/// a credit note. Reversed with a reason, never deleted.
+model Payment {
+  id            String    @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  amountSen     Int
+  /// PAYMENT_METHODS: "transfer" | "cash" | "cash-to-driver" | "card" | "cheque" | "other"
+  method        String
+  /// The day it came in or went out.
+  paidAt        DateTime  @db.Date
+  /// A bank reference, a receipt, who handed it in.
+  note          String?
+  recordedById  String?
+  reversedAt    DateTime?
+  reversedById  String?
+  reverseReason String?
+  createdAt     DateTime  @default(now())
+
+  @@index([invoiceId])
+}
+
+/// The last number given, per kind: "booking" (HTB), "invoice" (HTI),
+/// "credit" (HTC), and "quote" (HTQ) unused until quotations. One running
+/// count that never starts again. Taken one at a time inside the
+/// transaction that gives it (`nextBookingNumber`), so two never share one
+/// and a rolled-back one leaves no gap. Set by `db:set-billing`.
 model BookingNumberCounter {
   kind String @id
   last Int
@@ -958,7 +1160,7 @@ model BookingItem {
   id                      String    @id @default(cuid())
   bookingId               String
   booking                 Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  /// 1, 2, 3 within the booking; shown as "HT-7K3QZM item 2".
+  /// 1, 2, 3 within the booking; shown as "HTB-1042 trip 2".
   position                Int
   /// "transportation"; later "attraction", "hotel", ...
   product                 String
@@ -998,6 +1200,10 @@ model BookingItem {
   parts       TripPart[]
   /// What its driver reported on the day, in order.
   events      TripEvent[]
+  /// Its charges besides its price: add-ons, late charges, its fee.
+  charges     BookingCharge[]
+  /// What revisions added to the pay of its vehicle, driver or guide.
+  payLines    ItemPayLine[]
 
   @@unique([bookingId, position])
   @@index([status, startsAt])
@@ -1032,6 +1238,10 @@ model TripItemDetails {
   /// "oneway" | "hourly"
   mode                 String
   pickupPlace          Json
+  /// The places it stops at on the way, in order, each a `TripStop` of
+  /// src/stops.ts: the place, the wait, what its revision quoted. Still one
+  /// trip: A to C by B. Empty for none.
+  stops                Json          @default("[]")
   dropoffPlace         Json?
   hours                Int?
   distanceKm           Float?

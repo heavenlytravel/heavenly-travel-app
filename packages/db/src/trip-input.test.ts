@@ -220,6 +220,7 @@ describe("tripSearchOf", () => {
       tripSearchOf({
         mode: "oneway",
         pickup: klia,
+        stops: [],
         dropoff: { ...klia, placeId: "p2" },
         startsAt,
         hours: null,
@@ -241,6 +242,7 @@ describe("tripSearchOf", () => {
     const search = tripSearchOf({
       mode: "hourly",
       pickup: klia,
+      stops: [],
       dropoff: null,
       startsAt,
       hours: 10,
@@ -254,6 +256,7 @@ describe("tripSearchOf", () => {
     const search = tripSearchOf({
       mode: "hourly",
       pickup: klia,
+      stops: [],
       dropoff: null,
       startsAt,
       hours: 7,

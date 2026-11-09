@@ -23,7 +23,7 @@ const HOUR = 60 * 60 * 1000;
 /** A one-way job: 08:00 local is 00:00Z. */
 function job(over: Partial<Job> = {}): Job {
   return {
-    reference: "HT-AAAAAA",
+    bookingLabel: "HTB-0001",
     startsAt: at("2026-11-03T00:00:00Z"),
     endsAt: null,
     driveMinutes: 45,
@@ -62,7 +62,7 @@ describe("tripWindow", () => {
 
 describe("jobsClash", () => {
   it("refuses the same start", () => {
-    assert.equal(jobsClash(job(), job({ reference: "HT-B" })), "same-time");
+    assert.equal(jobsClash(job(), job({ bookingLabel: "HT-B" })), "same-time");
   });
 
   it("refuses a start during an hourly hire, either way round", () => {
@@ -86,7 +86,7 @@ describe("jobsClash", () => {
 
 describe("timingWarnings", () => {
   const next = job({
-    reference: "HT-NEXT",
+    bookingLabel: "HT-NEXT",
     startsAt: at("2026-11-03T01:00:00Z"),
     pickup: { label: "Cenang", at: [99.73, 6.29] },
   });
@@ -98,7 +98,7 @@ describe("timingWarnings", () => {
       who: "Ali",
     });
     assert.equal(warnings.length, 1);
-    assert.match(warnings[0]!, /Ali finishes HT-AAAAAA at Datai about/);
+    assert.match(warnings[0]!, /Ali finishes HTB-0001 at Datai about/);
     assert.match(warnings[0]!, /Cenang is about 60 min away/);
   });
 

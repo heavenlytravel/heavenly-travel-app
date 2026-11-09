@@ -6,7 +6,6 @@ import {
   type BankFields,
 } from "./bank-input";
 import { isValidEmail, normalizeEmail } from "./booking-contact";
-import { isInvoicePeriod, type InvoicePeriod } from "./booking-number";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { textOf, type Parsed } from "./fields";
@@ -48,8 +47,8 @@ export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
 /**
  * What a vendor may supply, asked of every kind at sign-up. Transport and
  * tour guides are worked in Connect; the rest is a supplier list for
- * Reservation. An agent sells our trips to its own customers: its bookings
- * share its invoice for the period, and it is never offered work.
+ * Reservation. Agents, who sell our trips, are businesses
+ * (./businesses), not vendors.
  */
 export const VENDOR_SERVICES = [
   "car-with-driver",
@@ -59,7 +58,6 @@ export const VENDOR_SERVICES = [
   "self-drive",
   "accommodation",
   "attraction",
-  "agent",
 ] as const;
 export type VendorService = (typeof VENDOR_SERVICES)[number];
 export const isVendorService = guardFor(VENDOR_SERVICES);
@@ -71,7 +69,6 @@ export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
   "self-drive": "Self-drive rental",
   accommodation: "Accommodation",
   attraction: "Attraction",
-  agent: "Agent",
 };
 
 /**
@@ -117,7 +114,7 @@ export type VendorAdds = {
 /**
  * What a vendor may add, by the services it ticked (`suppliesIt`): a
  * vehicle with car with driver or coach charter, a driver with those or
- * driver only, a guide with tour guide. An agent-only vendor adds none.
+ * driver only, a guide with tour guide.
  */
 export function vendorAddsOf(vendor: {
   isOurs: boolean;
@@ -184,8 +181,6 @@ export type VendorFields = {
   services: VendorService[];
   /** The locations it serves, each once, sorted. */
   locationIds: string[];
-  /** How often it is invoiced as an agent; "month" for any other vendor. */
-  invoicePeriod: InvoicePeriod;
 } & BankFields;
 
 export type VendorField = keyof VendorFields;
@@ -201,7 +196,6 @@ export const VENDOR_FIELD_LABELS: Record<VendorField, string> = {
   address: "Address",
   services: "What it offers",
   locationIds: "Locations served",
-  invoicePeriod: "Agent invoices",
   ...BANK_FIELD_LABELS,
 };
 
@@ -222,7 +216,6 @@ export function vendorFieldsOf(
     address: string;
     services: readonly string[];
     locations: readonly { id: string }[];
-    invoicePeriod: string;
   } & BankFields,
 ): VendorFields {
   return {
@@ -235,9 +228,6 @@ export function vendorFieldsOf(
     address: vendor.address,
     services: vendorServicesOf(vendor.services),
     locationIds: vendor.locations.map((l) => l.id).sort(),
-    invoicePeriod: isInvoicePeriod(vendor.invoicePeriod)
-      ? vendor.invoicePeriod
-      : "month",
     ...bankFieldsOf(vendor),
   };
 }
@@ -303,12 +293,6 @@ export function checkVendorFields(fields: Partial<VendorFields>): Change {
       VENDOR_LOCATIONS_FIELD,
     );
   }
-  if (
-    fields.invoicePeriod !== undefined &&
-    !isInvoicePeriod(fields.invoicePeriod)
-  ) {
-    return refuse("Choose how often the agent is invoiced.", "invoicePeriod");
-  }
   return checkBankFields(fields);
 }
 
@@ -320,8 +304,6 @@ export function parseVendorFields(
   values: Record<string, unknown>,
   services: readonly unknown[],
   locationIds: readonly unknown[],
-  /** A vendor signing up in Connect: never an agent, which our team adds. */
-  { applicant = false }: { applicant?: boolean } = {},
 ): Parsed<VendorFields> {
   const kind = textOf(values.kind);
   const fields: VendorFields = {
@@ -332,15 +314,8 @@ export function parseVendorFields(
     contactPhone: normalizePhone(textOf(values.contactPhone)),
     contactEmail: normalizeEmail(textOf(values.contactEmail)),
     address: textOf(values.address),
-    services: vendorServicesOf(services.map(textOf)).filter(
-      (service) => !applicant || service !== "agent",
-    ),
+    services: vendorServicesOf(services.map(textOf)),
     locationIds: [...new Set(locationIds.map(textOf).filter(Boolean))].sort(),
-    // Asked of an agent on the admin's form only; monthly otherwise.
-    invoicePeriod:
-      !applicant && isInvoicePeriod(textOf(values.invoicePeriod))
-        ? (textOf(values.invoicePeriod) as InvoicePeriod)
-        : "month",
     ...readBankFields(values),
   };
   const check = checkVendorFields(fields);

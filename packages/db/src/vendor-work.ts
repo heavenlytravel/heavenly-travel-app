@@ -1,3 +1,4 @@
+import { bookingLabelOf } from "./booking-number";
 import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change } from "./change";
@@ -27,6 +28,7 @@ import {
   type PartRole,
 } from "./fulfilment-rules";
 import type { Prisma } from "./generated/prisma/client";
+import { stopsOf } from "./stops";
 import { contactVisible } from "./trip-events-input";
 
 /**
@@ -74,7 +76,7 @@ export type OfferRole = {
 /** An offer as the vendor answers it. */
 export type VendorOfferView = {
   offerId: string;
-  reference: string;
+  bookingLabel: string;
   respondBy: Date;
   trips: DriverTrip[];
   roles: OfferRole[];
@@ -194,7 +196,7 @@ export async function listVendorOffers(
     }
     offers.push({
       offerId,
-      reference: first.item.booking.reference,
+      bookingLabel: bookingLabelOf(first.item.booking),
       respondBy: first.offer.respondBy,
       trips,
       roles,
@@ -362,7 +364,7 @@ export async function getVendorJob(
           booking: {
             select: {
               id: true,
-              reference: true,
+              number: true,
               contactName: true,
               contactPhone: true,
             },
@@ -370,9 +372,14 @@ export async function getVendorJob(
           tripDetails: {
             select: {
               ...jobInclude.item.include.tripDetails.select,
+              stops: true,
               flightNumber: true,
               notes: true,
             },
+          },
+          payLines: {
+            orderBy: { createdAt: "asc" },
+            select: { role: true, amountSen: true, reason: true },
           },
         },
       },
@@ -383,7 +390,18 @@ export async function getVendorJob(
   const vehicle = parts.find((p) => p.role === "vehicle")?.vehicle?.plate;
   const driver = parts.find((p) => p.role === "driver")?.driver?.name;
   const guide = parts.find((p) => p.role === "guide")?.guide?.name;
-  const trip = { ...tripOf(first), accepted: true };
+  // What we pay the vendor: its parts' base, and the additions to the roles it holds.
+  const roles = new Set(parts.map((p) => p.role));
+  const lines = first.item.payLines
+    .filter((line) => roles.has(line.role))
+    .map(({ amountSen, reason }) => ({ amountSen, reason }));
+  const baseSen = parts.reduce((sum, p) => sum + p.costSen, 0);
+  const pay = {
+    baseSen,
+    lines,
+    totalSen: baseSen + lines.reduce((sum, l) => sum + l.amountSen, 0),
+  };
+  const trip = { ...tripOf(first), accepted: true, pay };
   const shows =
     first.item.status !== "cancelled" && contactVisible(jobOf(first.item), now);
   const base = {
@@ -407,6 +425,7 @@ export async function getVendorJob(
       name: first.item.booking.contactName,
       phone: first.item.booking.contactPhone,
       pickup: stopOf(details?.pickupPlace),
+      stops: stopsOf(details?.stops).map((stop) => stopOf(stop.place)!),
       dropoff: stopOf(details?.dropoffPlace),
       flightNumber: details?.flightNumber ?? null,
       notes: details?.notes ?? null,

@@ -226,8 +226,8 @@ web and the HitPay PR never compute money themselves.
 - **On saving a revision** (non-credit, already billed): difference > 0 issues an invoice;
   < 0 issues a credit note against the booking's latest issued invoice. Credit booking:
   > 0 waits; < 0 after its invoice is issued gives a credit note against it. The same
-  function returns the preview for the save dialog (`billingPreviewOf`), as
-  `previewInvoice` does now.
+  > function returns the preview for the save dialog (`billingPreviewOf`), as
+  > `previewInvoice` does now.
 - **Month-end run** (`createPeriodDraft`): refused before the period ends, and when a draft
   for that business and period exists (lock the business row). Lines: each booking of the
   business with a non-zero "Not invoiced yet" and first pick-up in the period, ticked;
@@ -267,6 +267,7 @@ web and the HitPay PR never compute money themselves.
 ## Screens
 
 **Manage**
+
 - **Agents** (new menu item, out of Fleet): list, Add agent (as Add vendor, with payment
   terms and days to pay), agent page: profile, its bookings (HTB numbers), Not invoiced yet
   with the total, its invoices, Create invoice for the last period (credit terms only).
@@ -380,6 +381,46 @@ Known limits: amending a trip that has stops prices it pickup to drop-off again 
 the stops' earlier additions; there are no database-level tests (concurrency, run edges).
 The flows were rehearsed end to end on a throwaway Neon copy of the development database.
 
+## One open invoice per booking (2026-11-09)
+
+Decided with the developer after walking through the build. Where it differs, it replaces
+decisions 5, 8 and 13 above and decision 8 of the build.
+
+1. **Each booking has at most one open invoice**: a draft, with no number, that follows the
+   booking. Confirming opens it; every later change only moves its amount. While the booking is
+   live, a change issues nothing. Its amount is the booking's "not invoiced yet", negative when
+   a credit is owed.
+2. **It is issued** by Finance (Issue now, or a part of it for a deposit, never more than is
+   due), by a payment once HitPay is in, or **on its own when the booking ends**: completed (the
+   last trip done, in Manage or by a driver's tap in Connect) or cancelled. A positive amount
+   issues an invoice, a negative one credit notes against its invoices, newest first.
+3. **After it ends**, a change (a late charge, a correction) issues at once, as before.
+4. **Credit agents are unchanged**: no open invoice; the month-end run, or Finance bills one
+   alone. A reduction after the month is issued is a credit note at once.
+5. **Manual invoicing** is Issue now and part of it only: always from a booking, never an amount
+   the booking does not hold. Something new goes on the booking first (Add charge). To revisit
+   with the team.
+6. **Manage bookings**: the new booking form has **Save as received** and **Create and
+   confirm**. Received bills nothing; confirming opens the invoice.
+7. **Due date** unchanged: a direct customer's invoice is due at the first pick-up, or at issue
+   when that has passed; a business's, its days to pay after issue.
+8. **The legacy invoice number is a note**, shown as "Old invoice number", for the team: not the
+   booking's notes, it bills nothing, search finds it. No booking is "billed outside the system".
+9. **Old bookings are billed in the system** by `db:set-billing`: each old invoice row becomes one
+   issued invoice of the new series, HTI-0001 first by the old row's date, with a line per
+   booking at its total by the new rule, dated as the old row and billed to the booking's agent or
+   contact. Its old number stays as the note. An old row marked fully paid gets a payment for its
+   total ("Paid before the switch-over", method Other), so it reads Paid; partly paid and pending
+   ones stay owed and are listed for Finance. Confirmed bookings with no old invoice then follow
+   the rules: an open invoice while live, issued if ended.
+10. **No child numbers.** One flat series; the booking page lists its documents together, with
+    the total, paid and balance.
+11. **A cancellation can be undone** (Reinstate), the booking's or one trip's: the trips cancelled
+    with it go back to confirmed (or received when never confirmed), with no vehicle or driver
+    (assign them again), and its cancellation fee is taken off as a minus charge. A revision of
+    kind `reinstate`. Billing follows: a credit note issued already stays; what it charges again
+    goes on the open invoice.
+
 ### Production order for this PR
 
 1. `pnpm db:push:prod --accept-data-loss`. The warning is the new unique indexes
@@ -387,6 +428,9 @@ The flows were rehearsed end to end on a throwaway Neon copy of the development 
    dropped is the index `Invoice_number_key`. No row or column is lost.
 2. Right before the merge: `pnpm --filter @repo/db db:set-billing:prod` (it rehearses on a
    copy, asks for "production", backs up, then runs).
+
+The rehearsal below predates "One open invoice per booking": the script now also issues the old
+rows as new invoices and opens or issues the rest, so it is rehearsed again before the merge.
 
 Rehearsed on 2026-11-08 on a fresh copy of production (61 bookings, 11 old invoice rows,
 counter at 1307, 10 agent vendors): the push applied and left no difference; the script
@@ -396,9 +440,7 @@ gave HTB-0001 to HTB-0061 in the order made, moved 60 old numbers into the legac
 HTB-0062, HTI-0001 and HTC-0001, and wrote Rev 1 for all 61. HTB-0054, cancelled and never
 invoiced, is the one booking with no legacy number; its total went from RM 420.00 to
 RM 0.00 (a cancel charges only its fees), so nothing is left to bill. A second run changed
-nothing.
-3. Merge.
-4. Next schema change: drop `Booking.reference`, `quoteNumber`, `invoiceId`, `invoiceLine`,
-   `agentId` and `invoiceNumber`; `Invoice.agentId`, `paymentStatus` and the old relation;
-   `Vendor.invoicePeriod`, `agentBookings` and `agentInvoices`; and `VehicleClass.imageUrl`.
-   Make `Booking.number` required.
+nothing. 3. Merge. 4. Next schema change: drop `Booking.reference`, `quoteNumber`, `invoiceId`, `invoiceLine`,
+`agentId` and `invoiceNumber`; `Invoice.agentId`, `paymentStatus` and the old relation;
+`Vendor.invoicePeriod`, `agentBookings` and `agentInvoices`; and `VehicleClass.imageUrl`.
+Make `Booking.number` required.
